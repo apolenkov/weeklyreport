@@ -92,41 +92,42 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Pending | Pending |
-| AUTH-02 | Pending | Pending |
-| AUTH-03 | Pending | Pending |
-| AUTH-04 | Pending | Pending |
-| ENTRY-01 | Pending | Pending |
-| ENTRY-02 | Pending | Pending |
-| ENTRY-03 | Pending | Pending |
-| ENTRY-04 | Pending | Pending |
-| ENTRY-05 | Pending | Pending |
-| ENTRY-06 | Pending | Pending |
-| ENTRY-07 | Pending | Pending |
-| ENTRY-08 | Pending | Pending |
-| ENTRY-09 | Pending | Pending |
-| ENTRY-10 | Pending | Pending |
-| PUB-01 | Pending | Pending |
-| PUB-02 | Pending | Pending |
-| PUB-03 | Pending | Pending |
-| PUB-04 | Pending | Pending |
-| PUB-05 | Pending | Pending |
-| PUB-06 | Pending | Pending |
-| PUB-07 | Pending | Pending |
-| ADMIN-01 | Pending | Pending |
-| ADMIN-02 | Pending | Pending |
-| ADMIN-03 | Pending | Pending |
-| ADMIN-04 | Pending | Pending |
-| NOTIF-01 | Pending | Pending |
-| NOTIF-02 | Pending | Pending |
-| HIST-01 | Pending | Pending |
-| HIST-02 | Pending | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| ENTRY-01 | Phase 1 | Pending |
+| ENTRY-02 | Phase 1 | Pending |
+| ENTRY-03 | Phase 1 | Pending |
+| ENTRY-04 | Phase 1 | Pending |
+| ENTRY-05 | Phase 1 | Pending |
+| ENTRY-06 | Phase 1 | Pending |
+| ENTRY-07 | Phase 1 | Pending |
+| ENTRY-08 | Phase 3 | Pending |
+| ENTRY-09 | Phase 3 | Pending |
+| ENTRY-10 | Phase 3 | Pending |
+| PUB-01 | Phase 2 | Pending |
+| PUB-02 | Phase 1 | Pending |
+| PUB-03 | Phase 2 | Pending |
+| PUB-04 | Phase 2 | Pending |
+| PUB-05 | Phase 2 | Pending |
+| PUB-06 | Phase 2 | Pending |
+| PUB-07 | Phase 2 | Pending |
+| ADMIN-01 | Phase 3 | Pending |
+| ADMIN-02 | Phase 3 | Pending |
+| ADMIN-03 | Phase 3 | Pending |
+| ADMIN-04 | Phase 3 | Pending |
+| NOTIF-01 | Phase 3 | Pending |
+| NOTIF-02 | Phase 3 | Pending |
+| HIST-01 | Phase 3 | Pending |
+| HIST-02 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 29 total
-- Mapped to phases: 0
-- Unmapped: 29 ⚠️
+- Mapped to phases: 29
+- Unmapped: 0 ✓
 
 ---
+
 *Requirements defined: 2026-04-06*
-*Last updated: 2026-04-06 after initial definition*
+*Last updated: 2026-04-06 after roadmap creation*
