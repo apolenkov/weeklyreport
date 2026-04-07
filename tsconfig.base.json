@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": false,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "baseUrl": ".",
+    "paths": {
+      "@customreport/shared": [
+        "packages/shared/src/index.ts"
+      ],
+      "@customreport/shared/*": [
+        "packages/shared/src/*"
+      ],
+      "@customreport/ui": [
+        "packages/ui/src/index.ts"
+      ],
+      "@customreport/ui/*": [
+        "packages/ui/src/*"
+      ]
+    }
+  }
+}

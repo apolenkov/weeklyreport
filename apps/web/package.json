@@ -1,0 +1,31 @@
+{
+  "name": "@customreport/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --environment jsdom src/server/auth/session.test.ts src/components/report-section/report-section-form.test.tsx src/components/report-section/report-submit.spec.tsx"
+  },
+  "dependencies": {
+    "@customreport/shared": "workspace:*",
+    "@customreport/ui": "workspace:*",
+    "cookie": "^1.0.2",
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/cookie": "^0.6.0",
+    "@types/node": "^24.9.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "jsdom": "^26.1.0"
+  }
+}
