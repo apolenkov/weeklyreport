@@ -34,7 +34,12 @@
   6. Unauthorized users see Keycloak login page and cannot access any report data
   7. Session persists across page refresh via JWT
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [x] 01-01-PLAN.md — Bootstrap monorepo, domain contracts, and auth/session foundation
+- [x] 01-02-PLAN.md — Build lead report entry workspace with autosave and locked submit
+- [ ] 01-03-PLAN.md — Deliver head submission dashboard and role-aware navigation
 
 **UI hint:** yes
 
@@ -90,7 +95,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Report Capture | 0/3 | Not started | - |
+| 1. Core Report Capture | 2/3 | In progress | 01-01, 01-02 |
 | 2. Report Assembly & Publication | 0/2 | Not started | - |
 | 3. Automation & Admin | 0/3 | Not started | - |
 

@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  lead
+  head
+  viewer
+}
+
+enum ReportStatus {
+  draft
+  published
+}
+
+enum ReportSectionStatus {
+  draft
+  submitted
+}
+
+enum TrafficLightStatus {
+  green
+  yellow
+  red
+}
+
+enum ItemType {
+  current
+  next
+}
+
+enum ItemWorkflowStatus {
+  done
+  in_progress
+  blocked
+}
+
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  name           String
+  role           Role
+  samlId         String          @unique
+  authoredReportSections ReportSection[] @relation("ReportSectionAuthor")
+  ledProjects    Project[]
+  publishedReports Report[]      @relation("PublishedBy")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Project {
+  id             String          @id @default(uuid())
+  name           String
+  archived       Boolean         @default(false)
+  leadId         String
+  lead           User            @relation(fields: [leadId], references: [id], onDelete: Restrict)
+  projectStatuses ProjectStatus[]
+  items          Item[]
+  risks          Risk[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Report {
+  id             String          @id @default(uuid())
+  periodStart    DateTime
+  periodEnd      DateTime
+  deadline       DateTime
+  status         ReportStatus    @default(draft)
+  publishedAt    DateTime?
+  publishedById  String?
+  publishedBy    User?           @relation("PublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  sections       ReportSection[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model ReportSection {
+  id             String               @id @default(uuid())
+  reportId       String
+  authorId       String
+  status         ReportSectionStatus  @default(draft)
+  submittedAt    DateTime?
+  report         Report               @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  author         User                 @relation("ReportSectionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  projectStatuses ProjectStatus[]
+  items          Item[]
+  risks          Risk[]
+  decisions      Decision[]
+  priorities     Priority[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([reportId, authorId])
+}
+
+model ProjectStatus {
+  id             String             @id @default(uuid())
+  reportSectionId String
+  projectId       String
+  status          TrafficLightStatus
+  reportSection   ReportSection     @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  project         Project           @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([reportSectionId, projectId])
+}
+
+model Item {
+  id             String             @id @default(uuid())
+  reportSectionId String
+  projectId       String
+  type            ItemType
+  text            String
+  tag             String
+  workflowStatus  ItemWorkflowStatus
+  carriedOver     Boolean           @default(false)
+  completed       Boolean?
+  reportSection   ReportSection     @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  project         Project           @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model Risk {
+  id             String          @id @default(uuid())
+  reportSectionId String
+  projectId       String
+  risk            String
+  impact          String
+  mitigation      String
+  reportSection   ReportSection  @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Decision {
+  id             String          @id @default(uuid())
+  reportSectionId String
+  text           String
+  owner          String
+  deadline       DateTime?
+  impact         String
+  resolvedAt     DateTime?
+  reportSection  ReportSection   @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Priority {
+  id             String          @id @default(uuid())
+  reportSectionId String
+  rank           Int
+  text           String
+  reportSection  ReportSection   @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([reportSectionId, rank])
+}
