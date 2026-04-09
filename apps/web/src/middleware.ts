@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const AUTH_COOKIE_NAME = 'customreport_session';
 
-const PROTECTED_PATH_PREFIXES = ['/lead', '/head'];
+const PROTECTED_PATH_PREFIXES = ['/lead', '/head', '/reports'];
 
 export function buildLoginRedirect(currentUrl: string, loginUrl: string): string {
   const target = new URL(loginUrl);

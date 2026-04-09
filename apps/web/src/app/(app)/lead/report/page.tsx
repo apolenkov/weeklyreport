@@ -78,7 +78,7 @@ export default function LeadReportPage() {
   }
 
   return (
-    <AppShell role={session.role} currentPath="/lead/report">
+    <AppShell activeReportId={session.activeReportId} role={session.role} currentPath="/lead/report">
       <ReportSectionForm
         initialSection={initialSection}
         onSaveDraft={handleSaveDraft}

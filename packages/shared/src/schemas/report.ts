@@ -6,6 +6,7 @@ export const trafficLightStatusSchema = z.enum(['green', 'yellow', 'red']);
 export const itemTypeSchema = z.enum(['current', 'next']);
 export const itemWorkflowStatusSchema = z.enum(['done', 'in_progress', 'blocked']);
 export const reportSectionStatusSchema = z.enum(['draft', 'submitted']);
+export const reportStatusSchema = z.enum(['draft', 'published']);
 
 export const projectStatusInputSchema = z.object({
   projectId: z.string().uuid(),
@@ -93,12 +94,172 @@ export const submissionDashboardRowSchema = z.object({
   submittedAt: z.coerce.date().nullable(),
 });
 
+export const portfolioOverviewSchema = z.object({
+  status: trafficLightStatusSchema,
+  totals: z.object({
+    green: z.number().int().min(0),
+    yellow: z.number().int().min(0),
+    red: z.number().int().min(0),
+  }),
+});
+
+export const assembledReportSchema = z.object({
+  reportId: z.string().uuid(),
+  periodStart: z.coerce.date(),
+  periodEnd: z.coerce.date(),
+  deadline: z.coerce.date(),
+  status: reportStatusSchema,
+  publishedAt: z.coerce.date().nullable().default(null),
+  publishedById: z.string().uuid().nullable().default(null),
+  publishedByName: z.string().min(1).nullable().default(null),
+  portfolioOverview: portfolioOverviewSchema,
+  sections: z.array(reportSectionReadModelSchema),
+});
+
+export const pdfExportStatusSchema = z.enum([
+  'queued',
+  'processing',
+  'completed',
+  'failed',
+]);
+
+export const pdfExportRequestSchema = z.object({
+  reportId: z.string().uuid(),
+});
+
+export const pdfExportJobSchema = z.object({
+  jobId: z.string().uuid(),
+  reportId: z.string().uuid(),
+  status: pdfExportStatusSchema,
+  requestedAt: z.coerce.date(),
+  completedAt: z.coerce.date().nullable(),
+  checksum: z.string().nullable(),
+  templateVersion: z.string().min(1),
+  artifactUrl: z.string().min(1).nullable(),
+});
+
+export const adminUserSchema = z.object({
+  id: z.string().uuid(),
+  email: z.email(),
+  name: z.string().min(1),
+  role: roleSchema,
+});
+
+export const adminProjectSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  archived: z.boolean(),
+  leadId: z.string().uuid(),
+  leadName: z.string().min(1),
+});
+
+export const reportPeriodSchema = z.object({
+  id: z.string().uuid(),
+  periodStart: z.coerce.date(),
+  periodEnd: z.coerce.date(),
+  deadline: z.coerce.date(),
+  status: reportStatusSchema,
+});
+
+export const adminReminderRuleKindSchema = z.enum(['deadline', 'follow_up']);
+export const adminReminderRuleStatusSchema = z.enum(['active', 'paused']);
+
+export const adminReminderRuleSchema = z.object({
+  id: z.string().uuid(),
+  reportId: z.string().uuid(),
+  kind: adminReminderRuleKindSchema,
+  fireAt: z.coerce.date(),
+  timezone: z.string().min(1),
+  status: adminReminderRuleStatusSchema,
+  version: z.number().int().min(1),
+});
+
+export const adminReminderExecutionStatusSchema = z.enum([
+  'queued',
+  'sent',
+  'failed',
+]);
+
+export const adminReminderExecutionSchema = z.object({
+  id: z.string().uuid(),
+  ruleId: z.string().uuid(),
+  reportId: z.string().uuid(),
+  dedupeKey: z.string().min(1),
+  status: adminReminderExecutionStatusSchema,
+  scheduledFor: z.coerce.date(),
+  sentAt: z.coerce.date().nullable(),
+  recipientEmail: z.email(),
+  errorMessage: z.string().nullable(),
+});
+
+export const carryOverStatusSchema = z.enum(['completed']);
+
+export const carryOverRecordSchema = z.object({
+  id: z.string().uuid(),
+  sourceReportId: z.string().uuid(),
+  targetReportId: z.string().uuid(),
+  sourceItemId: z.string().uuid().nullable(),
+  targetItemId: z.string().uuid().nullable(),
+  sourceDecisionId: z.string().uuid().nullable(),
+  targetDecisionId: z.string().uuid().nullable(),
+  status: carryOverStatusSchema,
+  carriedAt: z.coerce.date(),
+});
+
+export const carryOverExecutionSchema = z.object({
+  id: z.string().uuid(),
+  sourceReportId: z.string().uuid(),
+  targetReportId: z.string().uuid(),
+  dedupeKey: z.string().min(1),
+  status: carryOverStatusSchema,
+  startedAt: z.coerce.date(),
+  completedAt: z.coerce.date(),
+  carriedItemCount: z.number().int().min(0),
+  carriedDecisionCount: z.number().int().min(0),
+});
+
+export const archiveReportSummarySchema = z.object({
+  reportId: z.string().uuid(),
+  periodStart: z.coerce.date(),
+  periodEnd: z.coerce.date(),
+  publishedAt: z.coerce.date(),
+  publishedByName: z.string().min(1),
+  portfolioStatus: trafficLightStatusSchema,
+});
+
+export const archiveReportDetailSchema = z.object({
+  summary: archiveReportSummarySchema,
+  report: assembledReportSchema,
+});
+
+export const adminSnapshotSchema = z.object({
+  users: z.array(adminUserSchema),
+  projects: z.array(adminProjectSchema),
+  periods: z.array(reportPeriodSchema),
+  reminderRules: z.array(adminReminderRuleSchema),
+  reminderExecutions: z.array(adminReminderExecutionSchema).default([]),
+});
+
 export type DraftSavePayload = z.input<typeof draftSaveSchema>;
 export type DraftSaveInput = z.infer<typeof draftSaveSchema>;
 export type SubmitSectionPayload = z.input<typeof submitSectionSchema>;
 export type SubmitSectionInput = z.infer<typeof submitSectionSchema>;
 export type ReportSectionReadModel = z.infer<typeof reportSectionReadModelSchema>;
 export type SubmissionDashboardRow = z.infer<typeof submissionDashboardRowSchema>;
+export type PortfolioOverview = z.infer<typeof portfolioOverviewSchema>;
+export type AssembledReport = z.infer<typeof assembledReportSchema>;
+export type PdfExportRequest = z.infer<typeof pdfExportRequestSchema>;
+export type PdfExportJob = z.infer<typeof pdfExportJobSchema>;
+export type AdminUser = z.infer<typeof adminUserSchema>;
+export type AdminProject = z.infer<typeof adminProjectSchema>;
+export type ReportPeriod = z.infer<typeof reportPeriodSchema>;
+export type AdminReminderRule = z.infer<typeof adminReminderRuleSchema>;
+export type AdminReminderExecution = z.infer<typeof adminReminderExecutionSchema>;
+export type AdminSnapshot = z.infer<typeof adminSnapshotSchema>;
+export type CarryOverRecord = z.infer<typeof carryOverRecordSchema>;
+export type CarryOverExecution = z.infer<typeof carryOverExecutionSchema>;
+export type ArchiveReportSummary = z.infer<typeof archiveReportSummarySchema>;
+export type ArchiveReportDetail = z.infer<typeof archiveReportDetailSchema>;
 
 export type DraftSaveValidationErrorCode =
   | 'SECTION_ALREADY_SUBMITTED'

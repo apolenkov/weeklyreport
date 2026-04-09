@@ -8,15 +8,16 @@ import { RoleNav } from './role-nav';
 void React;
 
 type AppShellProps = {
+  activeReportId?: string | null;
   role: Role;
   currentPath: string;
   children: ReactNode;
 };
 
-export function AppShell({ role, currentPath, children }: AppShellProps) {
+export function AppShell({ activeReportId = null, role, currentPath, children }: AppShellProps) {
   return (
     <div>
-      <RoleNav role={role} currentPath={currentPath} />
+      <RoleNav activeReportId={activeReportId} role={role} currentPath={currentPath} />
       <main>{children}</main>
     </div>
   );

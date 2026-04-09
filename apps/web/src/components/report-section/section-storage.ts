@@ -28,3 +28,29 @@ export function persistLeadSection(section: ReportSectionReadModel): ReportSecti
 
   return section;
 }
+
+export function buildCarriedOverLeadSection(
+  sourceSection: ReportSectionReadModel,
+  targetReportId: string,
+): ReportSectionReadModel {
+  const carriedItems = sourceSection.items
+    .filter((item) => item.type === 'next' && !item.carriedOver)
+    .map((item) => ({
+      ...item,
+      type: 'current' as const,
+      carriedOver: true,
+      completed: false,
+    }));
+  const unresolvedDecisions = sourceSection.decisions.filter(
+    (decision) => !decision.resolvedAt,
+  );
+
+  return reportSectionReadModelSchema.parse({
+    ...sourceSection,
+    reportId: targetReportId,
+    status: 'draft',
+    submittedAt: null,
+    items: carriedItems,
+    decisions: unresolvedDecisions,
+  });
+}

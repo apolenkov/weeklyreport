@@ -62,7 +62,12 @@ Plans:
   6. Viewer role can view published reports but cannot edit
   7. When head clicks "Export to PDF", system returns PDF file matching current visual layout (uses BullMQ async job — no HTTP blocking)
 
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [x] 02-01-PLAN.md — Lock assembled report contracts and portfolio overview read model
+- [x] 02-02-PLAN.md — Deliver immutable publish flow and published viewer web route
+- [x] 02-03-PLAN.md — Deliver async PDF export on top of the published report
 
 **UI hint:** yes
 
@@ -85,7 +90,13 @@ Plans:
   6. Email reminders are idempotent: if cron runs twice, lead gets one email (not duplicates)
   7. All published reports are browsable in history view sorted by date; user can click any past report and view it in full detail
 
-**Plans:** TBD
+**Plans:** 4 plans
+
+Plans:
+- [x] 03-01-PLAN.md — Deliver admin contracts, backend CRUD, and head-only admin UI
+- [x] 03-02-PLAN.md — Deliver reminder schedule storage and dedupe-safe reminder execution
+- [x] 03-03-PLAN.md — Deliver idempotent carry-over and report-period rollover flow
+- [x] 03-04-PLAN.md — Deliver immutable history/archive browsing for published reports
 
 **UI hint:** yes
 
@@ -96,8 +107,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Report Capture | 3/3 | Complete | 01-01, 01-02, 01-03 |
-| 2. Report Assembly & Publication | 0/2 | Not started | - |
-| 3. Automation & Admin | 0/3 | Not started | - |
+| 2. Report Assembly & Publication | 3/3 | Complete | 02-01, 02-02, 02-03 |
+| 3. Automation & Admin | 4/4 | Complete | 03-01, 03-02, 03-03, 03-04 |
 
 ---
 

@@ -7,7 +7,7 @@
     "build": "next build",
     "lint": "tsc --noEmit -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run --environment jsdom src/server/auth/session.test.ts src/components/report-section/report-section-form.test.tsx src/components/report-section/report-submit.spec.tsx src/components/head/submission-dashboard.test.tsx src/components/navigation/role-nav.test.tsx"
+    "test": "vitest run --environment jsdom src/server/auth/session.test.ts src/components/report-section/report-section-form.test.tsx src/components/report-section/report-submit.spec.tsx src/components/head/submission-dashboard.test.tsx src/components/head/assembled-report-review.test.tsx src/components/report/published-report.test.tsx src/components/report/archive-report-list.test.tsx src/components/admin/admin-panel.test.tsx src/components/navigation/role-nav.test.tsx"
   },
   "dependencies": {
     "@customreport/shared": "workspace:*",

@@ -26,6 +26,15 @@ export const defaultHeadSession: UserSession = {
   activeReportSectionId: null,
 };
 
+export const defaultViewerSession: UserSession = {
+  userId: '00000000-0000-4000-8000-000000000099',
+  email: 'viewer@customreport.local',
+  name: 'Stakeholder Viewer',
+  role: 'viewer',
+  activeReportId: '22222222-2222-4222-8222-222222222222',
+  activeReportSectionId: null,
+};
+
 function decodeJwtPayload(token: string): unknown {
   const segments = token.split('.');
 
@@ -78,7 +87,15 @@ function readStoredDevSession(): UserSession | null {
 }
 
 export function createDemoSession(role: Role): UserSession {
-  return role === 'head' ? defaultHeadSession : defaultLeadSession;
+  if (role === 'head') {
+    return defaultHeadSession;
+  }
+
+  if (role === 'viewer') {
+    return defaultViewerSession;
+  }
+
+  return defaultLeadSession;
 }
 
 export function readBrowserSession(fallbackSession: UserSession = defaultLeadSession): UserSession {

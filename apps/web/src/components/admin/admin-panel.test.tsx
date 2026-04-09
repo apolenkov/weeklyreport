@@ -1,0 +1,178 @@
+import React from 'react';
+import '@testing-library/jest-dom/vitest';
+
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { AdminSnapshot } from '@customreport/shared';
+
+import { AdminPanel } from './admin-panel';
+
+void React;
+
+afterEach(() => {
+  cleanup();
+});
+
+const snapshot: AdminSnapshot = {
+  periods: [],
+  projects: [],
+  reminderExecutions: [],
+  reminderRules: [],
+  users: [
+    {
+      email: 'head@customreport.local',
+      id: '00000000-0000-4000-8000-000000000001',
+      name: 'Department Head',
+      role: 'head',
+    },
+  ],
+};
+
+describe('AdminPanel', () => {
+  it('renders admin lists and controls', () => {
+    render(
+      <AdminPanel
+        initialSnapshot={snapshot}
+        onRemoveUser={async () => snapshot}
+        onRunCarryOver={async () => true}
+        onRequestReminderExecution={async () => snapshot}
+        onUpsertPeriod={async () => snapshot}
+        onUpsertProject={async () => snapshot}
+        onUpsertReminderRule={async () => snapshot}
+        onUpsertUser={async () => snapshot}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Admin Panel' })).toBeInTheDocument();
+    expect(screen.getByText('Department Head')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add user' })).toBeInTheDocument();
+  });
+
+  it('adds a user through the panel controls', async () => {
+    const user = userEvent.setup();
+    const onUpsertUser = vi.fn(async (nextUser) => ({
+      ...snapshot,
+      users: [...snapshot.users, nextUser],
+    }));
+
+    render(
+      <AdminPanel
+        initialSnapshot={snapshot}
+        onRemoveUser={async () => snapshot}
+        onRunCarryOver={async () => true}
+        onRequestReminderExecution={async () => snapshot}
+        onUpsertPeriod={async () => snapshot}
+        onUpsertProject={async () => snapshot}
+        onUpsertReminderRule={async () => snapshot}
+        onUpsertUser={onUpsertUser}
+      />,
+    );
+
+    await user.type(screen.getByLabelText('New user name'), 'Lead 1');
+    await user.type(screen.getByLabelText('New user email'), 'lead1@customreport.local');
+    await user.selectOptions(screen.getByLabelText('New user role'), 'lead');
+    await user.click(screen.getByRole('button', { name: 'Add user' }));
+
+    expect(onUpsertUser).toHaveBeenCalled();
+    expect(screen.getByText('Lead 1')).toBeInTheDocument();
+  });
+
+  it('shows reminder execution status and dedupe-safe triggering', async () => {
+    const user = userEvent.setup();
+    const reminderSnapshot: AdminSnapshot = {
+      ...snapshot,
+      users: [
+        ...snapshot.users,
+        {
+          email: 'lead1@customreport.local',
+          id: '33333333-3333-4333-8333-333333333333',
+          name: 'Lead 1',
+          role: 'lead',
+        },
+      ],
+      periods: [
+        {
+          deadline: new Date('2026-04-24T15:00:00.000Z'),
+          id: '88888888-8888-4888-8888-888888888888',
+          periodEnd: new Date('2026-04-26T23:59:59.000Z'),
+          periodStart: new Date('2026-04-20T00:00:00.000Z'),
+          status: 'draft',
+        },
+      ],
+      reminderExecutions: [],
+      reminderRules: [
+        {
+          fireAt: new Date('2026-04-24T09:00:00.000Z'),
+          id: '99999999-9999-4999-8999-999999999998',
+          kind: 'deadline',
+          reportId: '88888888-8888-4888-8888-888888888888',
+          status: 'active',
+          timezone: 'Europe/Moscow',
+          version: 1,
+        },
+      ],
+    };
+
+    const onRequestReminderExecution = vi.fn(
+      async (_ruleId: string, _recipientEmail: string): Promise<AdminSnapshot> => ({
+      ...reminderSnapshot,
+      reminderExecutions: [
+        {
+          dedupeKey: '99999999-9999-4999-8999-999999999998:2026-04-24T09:00:00.000Z:lead1@customreport.local',
+          errorMessage: null,
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          recipientEmail: 'lead1@customreport.local',
+          reportId: '88888888-8888-4888-8888-888888888888',
+          ruleId: '99999999-9999-4999-8999-999999999998',
+          scheduledFor: new Date('2026-04-24T09:00:00.000Z'),
+          sentAt: new Date('2026-04-24T09:00:01.000Z'),
+          status: 'sent' as const,
+        },
+      ],
+    }),
+    );
+
+    render(
+      <AdminPanel
+        initialSnapshot={reminderSnapshot}
+        onRemoveUser={async () => reminderSnapshot}
+        onRunCarryOver={async () => true}
+        onRequestReminderExecution={onRequestReminderExecution}
+        onUpsertPeriod={async () => reminderSnapshot}
+        onUpsertProject={async () => reminderSnapshot}
+        onUpsertReminderRule={async () => reminderSnapshot}
+        onUpsertUser={async () => reminderSnapshot}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Run reminder' }));
+
+    await waitFor(() => {
+      expect(onRequestReminderExecution).toHaveBeenCalled();
+      expect(screen.getByText('lead1@customreport.local — sent')).toBeInTheDocument();
+    });
+  });
+
+  it('shows carry-over completion feedback when rollover runs', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <AdminPanel
+        initialSnapshot={snapshot}
+        onRemoveUser={async () => snapshot}
+        onRunCarryOver={async () => true}
+        onRequestReminderExecution={async () => snapshot}
+        onUpsertPeriod={async () => snapshot}
+        onUpsertProject={async () => snapshot}
+        onUpsertReminderRule={async () => snapshot}
+        onUpsertUser={async () => snapshot}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Run carry-over' }));
+
+    expect(screen.getByText('Carry-over completed')).toBeInTheDocument();
+  });
+});
