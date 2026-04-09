@@ -12,18 +12,18 @@
 
 **Why this matters:** Replaces manual OnlyOffice file editing (conflicts, no history) with automated web-based reporting that teams use in parallel, no data loss, full audit trail.
 
-**Current Focus:** Milestone complete. All roadmap phases are implemented and verified.
+**Current Focus:** Post-milestone production hardening after real-browser/runtime validation.
 
 ---
 
 ## Current Position
 
 **Milestone:** v1 Release
-**Phase:** Phase 3 complete (4 of 4 plans complete)
-**Phase Goal:** Phase 3 - Automation & Admin
-**Current Task:** Milestone complete — ready for audit, commit, and next-cycle planning
+**Phase:** Phase 4 in progress (0 of 2 plans complete)
+**Phase Goal:** Phase 4 - Production Hardening
+**Current Task:** Execute `04-01` — hydration/runtime mismatch fixes and browser render stabilization
 
-**Progress bar:** ████████████████████ (100% milestone complete)
+**Progress bar:** ███████████████████░ (core milestone complete, hardening in progress)
 
 ---
 
@@ -95,10 +95,10 @@
 
 ## Next Steps
 
-1. Review the final diff and create a milestone completion commit
-2. Optionally run milestone audit/cleanup and prepare the next roadmap cycle
-3. Keep live Keycloak metadata/cert wiring as environment follow-up, not a blocker for the completed local milestone
-4. Preserve the local app-level Playwright config for web E2E until workspace-root Playwright resolution is normalized
+1. Fix hydration/runtime mismatch caused by browser-state reads during initial render
+2. Add centralized API logging with file rotation and hook it into bootstrap + job-like services
+3. Re-run deep design/E2E review findings against the live app and close material gaps
+4. Keep live Keycloak metadata/cert wiring as an environment follow-up, not a blocker for local hardening
 
 ---
 
