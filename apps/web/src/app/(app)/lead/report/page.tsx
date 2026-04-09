@@ -9,34 +9,18 @@ import {
   type SubmitSectionPayload,
 } from '@customreport/shared';
 
-import { createDemoSection } from '../../../../components/report-section/demo-section';
+import { AppShell } from '../../../../components/navigation/app-shell';
 import { ReportSectionForm } from '../../../../components/report-section/report-section-form';
-
-const STORAGE_KEY = 'customreport:lead-report-section';
-
-function readStoredSection(): ReportSectionReadModel {
-  if (typeof window === 'undefined') {
-    return createDemoSection();
-  }
-
-  const rawValue = window.localStorage.getItem(STORAGE_KEY);
-
-  if (!rawValue) {
-    return createDemoSection();
-  }
-
-  return reportSectionReadModelSchema.parse(JSON.parse(rawValue));
-}
-
-function persistSection(section: ReportSectionReadModel): ReportSectionReadModel {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(section));
-
-  return section;
-}
+import {
+  persistLeadSection,
+  readStoredLeadSection,
+} from '../../../../components/report-section/section-storage';
+import { defaultLeadSession, readBrowserSession } from '../../../../lib/dev-session';
 
 export default function LeadReportPage() {
+  const session = useMemo(() => readBrowserSession(defaultLeadSession), []);
   const [section, setSection] = useState<ReportSectionReadModel>(() =>
-    readStoredSection(),
+    readStoredLeadSection(),
   );
 
   const initialSection = useMemo(() => section, [section]);
@@ -61,7 +45,7 @@ export default function LeadReportPage() {
     });
 
     await new Promise((resolve) => window.setTimeout(resolve, 50));
-    const persisted = persistSection(nextSection);
+    const persisted = persistLeadSection(nextSection);
     setSection(persisted);
 
     return persisted;
@@ -87,19 +71,19 @@ export default function LeadReportPage() {
     });
 
     await new Promise((resolve) => window.setTimeout(resolve, 50));
-    const persisted = persistSection(submittedSection);
+    const persisted = persistLeadSection(submittedSection);
     setSection(persisted);
 
     return persisted;
   }
 
   return (
-    <main>
+    <AppShell role={session.role} currentPath="/lead/report">
       <ReportSectionForm
         initialSection={initialSection}
         onSaveDraft={handleSaveDraft}
         onSubmit={handleSubmit}
       />
-    </main>
+    </AppShell>
   );
 }
