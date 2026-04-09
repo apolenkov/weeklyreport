@@ -175,6 +175,14 @@ export function ReportSectionForm({
       <ItemsEditor
         items={section.items}
         disabled={isReadOnly}
+        onCompletedChange={(itemIndex, completed) => {
+          setSection((currentSection) => ({
+            ...currentSection,
+            items: currentSection.items.map((item, index) =>
+              index === itemIndex ? { ...item, completed } : item,
+            ),
+          }));
+        }}
         onTextChange={(itemIndex, value) => {
           setSection((currentSection) => ({
             ...currentSection,

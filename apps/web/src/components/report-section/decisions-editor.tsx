@@ -14,6 +14,12 @@ export function DecisionsEditor({ decisions, disabled }: DecisionsEditorProps) {
     <fieldset disabled={disabled}>
       <legend>Decisions</legend>
       {decisions.length === 0 ? <p>No decisions added</p> : null}
+      {decisions.map((decision) => (
+        <article key={decision.id ?? decision.text}>
+          <p>{decision.text}</p>
+          {decision.resolvedAt ? null : <p>Unresolved decision</p>}
+        </article>
+      ))}
     </fieldset>
   );
 }

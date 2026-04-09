@@ -136,4 +136,42 @@ describe('ReportSectionForm', () => {
     expect(screen.getByLabelText('Current item 1')).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Submit section' })).not.toBeInTheDocument();
   });
+
+  it('shows carried-over items and unresolved decisions in the next period', async () => {
+    const carriedSection = reportSectionReadModelSchema.parse({
+      ...createDemoSection(),
+      items: [
+        {
+          ...createDemoSection().items[0]!,
+          carriedOver: true,
+          completed: false,
+          text: 'Carried from previous report',
+          type: 'current',
+        },
+      ],
+      decisions: [
+        {
+          id: '99999999-9999-4999-8999-999999999999',
+          text: 'Still unresolved',
+          owner: 'Department Head',
+          deadline: null,
+          impact: 'Needs action',
+          resolvedAt: null,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    const onSaveDraft = vi.fn(async () => carriedSection);
+
+    renderForm({ initialSection: carriedSection, onSaveDraft });
+
+    expect(screen.getByText('Carried over from previous report')).toBeInTheDocument();
+    expect(screen.getByText('Still unresolved')).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText('Carry-over item 1 completed'));
+
+    await waitFor(() => {
+      expect(onSaveDraft).toHaveBeenCalled();
+    });
+  });
 });

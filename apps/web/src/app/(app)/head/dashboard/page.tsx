@@ -18,13 +18,16 @@ export default function HeadDashboardPage() {
   );
 
   return (
-    <AppShell role={session.role} currentPath="/head/dashboard">
+    <AppShell activeReportId={session.activeReportId} role={session.role} currentPath="/head/dashboard">
       <section>
         <h1>Review Dashboard</h1>
         {session.role !== 'head' ? (
           <p>Access denied. This dashboard is available only to head users.</p>
         ) : (
-          <SubmissionDashboard rows={rows} />
+          <>
+            <a href="/head/report">Open assembled report</a>
+            <SubmissionDashboard rows={rows} />
+          </>
         )}
       </section>
     </AppShell>

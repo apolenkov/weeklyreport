@@ -12,18 +12,18 @@
 
 **Why this matters:** Replaces manual OnlyOffice file editing (conflicts, no history) with automated web-based reporting that teams use in parallel, no data loss, full audit trail.
 
-**Current Focus:** Phase 2 planning/execution. Phase 1 lead entry and head review loop are complete.
+**Current Focus:** Milestone complete. All roadmap phases are implemented and verified.
 
 ---
 
 ## Current Position
 
 **Milestone:** v1 Release
-**Phase:** Phase 1 complete (3 of 3 plans complete)
-**Phase Goal:** Phase 1 - Core Report Capture
-**Current Task:** Route to Phase 2 — report assembly, publication, and PDF export
+**Phase:** Phase 3 complete (4 of 4 plans complete)
+**Phase Goal:** Phase 3 - Automation & Admin
+**Current Task:** Milestone complete — ready for audit, commit, and next-cycle planning
 
-**Progress bar:** ██████████ (100%)
+**Progress bar:** ████████████████████ (100% milestone complete)
 
 ---
 
@@ -95,9 +95,9 @@
 
 ## Next Steps
 
-1. Start Phase 2 planning/execution for assembled report review, publication, and PDF export
-2. Reuse the now-complete Phase 1 role/session/navigation surfaces instead of rebuilding access logic
-3. Keep live Keycloak metadata/cert wiring as environment follow-up, not a blocker for Phase 2 local progress
+1. Review the final diff and create a milestone completion commit
+2. Optionally run milestone audit/cleanup and prepare the next roadmap cycle
+3. Keep live Keycloak metadata/cert wiring as environment follow-up, not a blocker for the completed local milestone
 4. Preserve the local app-level Playwright config for web E2E until workspace-root Playwright resolution is normalized
 
 ---
