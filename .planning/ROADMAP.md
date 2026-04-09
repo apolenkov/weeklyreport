@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Core Report Capture** - Leads fill sections, head reviews submissions, data persists
+- [x] **Phase 1: Core Report Capture** - Leads fill sections, head reviews submissions, data persists
 - [ ] **Phase 2: Report Assembly & Publication** - Portfolio overview auto-assembles, reports published to web, PDF export available
 - [ ] **Phase 3: Automation & Admin** - Email reminders, carry-over logic, admin panel, report history
 
@@ -39,7 +39,7 @@
 Plans:
 - [x] 01-01-PLAN.md — Bootstrap monorepo, domain contracts, and auth/session foundation
 - [x] 01-02-PLAN.md — Build lead report entry workspace with autosave and locked submit
-- [ ] 01-03-PLAN.md — Deliver head submission dashboard and role-aware navigation
+- [x] 01-03-PLAN.md — Deliver head submission dashboard and role-aware navigation
 
 **UI hint:** yes
 
@@ -95,7 +95,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Report Capture | 2/3 | In progress | 01-01, 01-02 |
+| 1. Core Report Capture | 3/3 | Complete | 01-01, 01-02, 01-03 |
 | 2. Report Assembly & Publication | 0/2 | Not started | - |
 | 3. Automation & Admin | 0/3 | Not started | - |
 
