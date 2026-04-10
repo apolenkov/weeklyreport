@@ -1,129 +1,125 @@
 'use client';
 
+import { trpc } from '../../../lib/trpc';
+import { QueryError } from '../../../components/common/query-error';
 import { AppShell } from '../../../components/navigation/app-shell';
 import { AdminPanel } from '../../../components/admin/admin-panel';
-import {
-  defaultSnapshot,
-  markAdminReminderSent,
-  persistAdminSnapshot,
-  readAdminSnapshot,
-  removeAdminUser,
-  requestAdminReminderExecution,
-  upsertAdminProject,
-  upsertAdminReminderRule,
-  upsertAdminUser,
-  upsertReportPeriod,
-} from '../../../components/admin/admin-runtime';
-import {
-  buildCarriedOverLeadSection,
-  persistLeadSection,
-  readStoredLeadSection,
-} from '../../../components/report-section/section-storage';
-import { defaultHeadSession, readBrowserSession } from '../../../lib/dev-session';
-import { useBrowserState } from '../../../lib/use-browser-state';
 import type {
   AdminProject,
   AdminReminderRule,
+  AdminSnapshot,
   AdminUser,
   ReportPeriod,
 } from '@customreport/shared';
 
 export default function AdminPage() {
-  const [session] = useBrowserState(defaultHeadSession, () => readBrowserSession(defaultHeadSession));
-  const [snapshot, setSnapshot] = useBrowserState(defaultSnapshot, readAdminSnapshot);
+  const snapshotQuery = trpc.admin.snapshot.useQuery();
+  const utils = trpc.useUtils();
 
-  async function handleUpsertUser(user: AdminUser) {
-    const next = persistAdminSnapshot(upsertAdminUser(snapshot, user));
-    setSnapshot(next);
-    return next;
+  const saveUserMutation = trpc.admin.saveUser.useMutation({
+    onSuccess: () => utils.admin.snapshot.invalidate(),
+  });
+  const deleteUserMutation = trpc.admin.deleteUser.useMutation({
+    onSuccess: () => utils.admin.snapshot.invalidate(),
+  });
+  const saveProjectMutation = trpc.admin.saveProject.useMutation({
+    onSuccess: () => utils.admin.snapshot.invalidate(),
+  });
+  const savePeriodMutation = trpc.admin.savePeriod.useMutation({
+    onSuccess: () => utils.admin.snapshot.invalidate(),
+  });
+  const saveReminderRuleMutation = trpc.admin.saveReminderRule.useMutation({
+    onSuccess: () => utils.admin.snapshot.invalidate(),
+  });
+  const executeReminderMutation = trpc.reminders.execute.useMutation({
+    onSuccess: () => utils.admin.snapshot.invalidate(),
+  });
+  const carryOverMutation = trpc.carryOver.execute.useMutation();
+
+  if (snapshotQuery.isLoading) return <p>Loading...</p>;
+  if (snapshotQuery.isError)
+    return (
+      <QueryError
+        error={snapshotQuery.error}
+        onRetry={() => snapshotQuery.refetch()}
+      />
+    );
+
+  const snapshot = snapshotQuery.data as AdminSnapshot;
+
+  async function handleUpsertUser(user: AdminUser): Promise<AdminSnapshot> {
+    await saveUserMutation.mutateAsync(user);
+    const fresh = await utils.admin.snapshot.fetch();
+    return fresh as AdminSnapshot;
   }
 
-  async function handleRemoveUser(userId: string) {
-    const next = persistAdminSnapshot(removeAdminUser(snapshot, userId));
-    setSnapshot(next);
-    return next;
+  async function handleRemoveUser(userId: string): Promise<AdminSnapshot> {
+    await deleteUserMutation.mutateAsync({ userId });
+    const fresh = await utils.admin.snapshot.fetch();
+    return fresh as AdminSnapshot;
   }
 
-  async function handleUpsertProject(project: AdminProject) {
-    const next = persistAdminSnapshot(upsertAdminProject(snapshot, project));
-    setSnapshot(next);
-    return next;
+  async function handleUpsertProject(
+    project: AdminProject,
+  ): Promise<AdminSnapshot> {
+    await saveProjectMutation.mutateAsync(project);
+    const fresh = await utils.admin.snapshot.fetch();
+    return fresh as AdminSnapshot;
   }
 
-  async function handleUpsertPeriod(period: ReportPeriod) {
-    const next = persistAdminSnapshot(upsertReportPeriod(snapshot, period));
-    setSnapshot(next);
-    return next;
+  async function handleUpsertPeriod(
+    period: ReportPeriod,
+  ): Promise<AdminSnapshot> {
+    await savePeriodMutation.mutateAsync(period);
+    const fresh = await utils.admin.snapshot.fetch();
+    return fresh as AdminSnapshot;
   }
 
-  async function handleUpsertReminderRule(rule: AdminReminderRule) {
-    const next = persistAdminSnapshot(upsertAdminReminderRule(snapshot, rule));
-    setSnapshot(next);
-    return next;
+  async function handleUpsertReminderRule(
+    rule: AdminReminderRule,
+  ): Promise<AdminSnapshot> {
+    await saveReminderRuleMutation.mutateAsync(rule);
+    const fresh = await utils.admin.snapshot.fetch();
+    return fresh as AdminSnapshot;
   }
 
   async function handleRequestReminderExecution(
     ruleId: string,
     recipientEmail: string,
-  ) {
-    const queuedSnapshot = persistAdminSnapshot(
-      requestAdminReminderExecution(snapshot, ruleId, recipientEmail),
-    );
-    setSnapshot(queuedSnapshot);
-
-    const latestExecution = queuedSnapshot.reminderExecutions
-      .filter((row) => row.ruleId === ruleId)
-      .at(-1);
-
-    if (!latestExecution) {
-      return queuedSnapshot;
-    }
-
-    const sentSnapshot = persistAdminSnapshot(
-      markAdminReminderSent(queuedSnapshot, latestExecution.id),
-    );
-    setSnapshot(sentSnapshot);
-
-    return sentSnapshot;
+  ): Promise<AdminSnapshot> {
+    await executeReminderMutation.mutateAsync({ ruleId, recipientEmail });
+    const fresh = await utils.admin.snapshot.fetch();
+    return fresh as AdminSnapshot;
   }
 
-  async function handleRunCarryOver() {
-    const nextPeriod = snapshot.periods.at(-1);
+  async function handleRunCarryOver(): Promise<boolean> {
+    const periods = snapshot.periods;
+    if (periods.length < 2) return false;
 
-    if (!nextPeriod) {
+    const sourceReportId = periods[periods.length - 2]?.id;
+    const targetReportId = periods[periods.length - 1]?.id;
+    if (!sourceReportId || !targetReportId) return false;
+
+    try {
+      await carryOverMutation.mutateAsync({ sourceReportId, targetReportId });
+      return true;
+    } catch {
       return false;
     }
-
-    const sourceSection = readStoredLeadSection();
-    const carriedSection = buildCarriedOverLeadSection(sourceSection, nextPeriod.id);
-    const existingSection = readStoredLeadSection();
-    const hasMatchingCarryOver = existingSection.reportId === nextPeriod.id
-      && existingSection.items.some((item) => item.carriedOver);
-
-    if (hasMatchingCarryOver) {
-      return true;
-    }
-
-    persistLeadSection(carriedSection);
-    return true;
   }
 
   return (
-    <AppShell activeReportId={session.activeReportId} currentPath="/admin" role={session.role}>
-      {session.role !== 'head' ? (
-        <p>Access denied. Admin panel is available only to head users.</p>
-      ) : (
-        <AdminPanel
-          initialSnapshot={snapshot}
-          onRemoveUser={handleRemoveUser}
-          onRunCarryOver={handleRunCarryOver}
-          onRequestReminderExecution={handleRequestReminderExecution}
-          onUpsertPeriod={handleUpsertPeriod}
-          onUpsertProject={handleUpsertProject}
-          onUpsertReminderRule={handleUpsertReminderRule}
-          onUpsertUser={handleUpsertUser}
-        />
-      )}
+    <AppShell activeReportId={null} currentPath="/admin" role="head">
+      <AdminPanel
+        initialSnapshot={snapshot}
+        onRemoveUser={handleRemoveUser}
+        onRunCarryOver={handleRunCarryOver}
+        onRequestReminderExecution={handleRequestReminderExecution}
+        onUpsertPeriod={handleUpsertPeriod}
+        onUpsertProject={handleUpsertProject}
+        onUpsertReminderRule={handleUpsertReminderRule}
+        onUpsertUser={handleUpsertUser}
+      />
     </AppShell>
   );
 }
