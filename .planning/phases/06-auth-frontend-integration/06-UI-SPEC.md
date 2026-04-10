@@ -39,6 +39,8 @@ Phase 6 introduces 3 new UI concerns and modifies all existing pages:
 | TRPCProvider wrapper | Modified layout.tsx | D-06 (CONTEXT.md) |
 | Submit confirmation dialog | Existing (already works) | No change |
 
+**Focal point for `/auth/error`:** Error message text and primary CTA button. The page is a single centered column with the error heading, contextual message, and the "Try signing in again" button as the dominant interactive element.
+
 ---
 
 ## Spacing Scale
@@ -64,7 +66,7 @@ Exceptions: Not enforced in this phase. All spacing is browser-default (unstyled
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 16px | 400 (regular) | 1.5 |
-| Label | 14px | 500 (medium) | 1.4 |
+| Label | 14px | 400 (regular) | 1.4 |
 | Heading | 24px | 600 (semibold) | 1.2 |
 | Subheading | 18px | 600 (semibold) | 1.3 |
 
@@ -78,10 +80,10 @@ Exceptions: Not enforced in this phase. All spacing is browser-default (unstyled
 |------|-------|-------|
 | Dominant (60%) | `#ffffff` (white) | Page background (browser default) |
 | Secondary (30%) | `#f5f5f5` (light gray) | Not used in this phase |
-| Accent (10%) | `#2563eb` (blue-600) | Login redirect link on auth error page, "Try again" button |
+| Accent (10%) | `#2563eb` (blue-600) | Login redirect link on auth error page, "Try signing in again" button |
 | Destructive | `#dc2626` (red-600) | Error state text, validation error messages |
 
-Accent reserved for: "Try again" button on `/auth/error` page only. No other accent-colored elements introduced in this phase.
+Accent reserved for: "Try signing in again" button on `/auth/error` page only. No other accent-colored elements introduced in this phase.
 
 **Semantic colors for states (text only, no background):**
 
@@ -103,7 +105,7 @@ Accent reserved for: "Try again" button on `/auth/error` page only. No other acc
 | Error: Keycloak unavailable | `The authentication service is currently unavailable. Please try again in a few minutes.` |
 | Error: Invalid SAML assertion | `Your login attempt could not be verified. Please try signing in again.` |
 | Error: Generic/unknown | `Something went wrong during sign-in. Please try again.` |
-| Primary CTA | `Try again` (links to `/auth/saml/login`) |
+| Primary CTA | `Try signing in again` (links to `/auth/saml/login`) |
 | Secondary link | `Return to home` (links to `/`) |
 
 **Error code display:** The page receives an error reason via query parameter (`/auth/error?reason=idp_unavailable`). The error message is selected based on the `reason` parameter. If no reason or unknown reason, show the generic message.
@@ -129,7 +131,7 @@ Accent reserved for: "Try again" button on `/auth/error` page only. No other acc
 
 ```
 if (isLoading) return <p>Loading...</p>;
-if (isError) return <ErrorMessage error={error} />;
+if (isError) return <QueryError error={error} />;
 return <MainContent data={data} />;
 ```
 
@@ -142,10 +144,10 @@ return <MainContent data={data} />;
 | Server error heading | `Server Error` |
 | Server error body | `Something went wrong. Please refresh the page or try again later.` |
 | Auth error (401/UNAUTHORIZED) | Redirect to `/auth/saml/login` (no visible error — just redirect) |
-| Forbidden error (403/FORBIDDEN) | `You do not have permission to access this page.` |
-| Retry CTA | `Try again` (button that calls `refetch()`) |
+| Forbidden error (403/FORBIDDEN) | `You do not have permission to access this page. Contact your administrator for access.` |
+| Retry CTA | `Retry` (button that calls `refetch()`) |
 
-**Error pattern:** Create a reusable `<QueryError>` component that accepts a tRPC error and renders the appropriate message with a "Try again" button. All pages use this component for consistent error display.
+**Error pattern:** Create a reusable `<QueryError>` component that accepts a tRPC error and renders the appropriate message with a "Retry" button. All pages use this component for consistent error display.
 
 ### Destructive Actions
 
@@ -183,7 +185,7 @@ User authenticates in Keycloak
     +-- Failure: redirect to /auth/error?reason=<code>
                     |
                     v
-              Auth error page with "Try again" button
+              Auth error page with "Try signing in again" button
 ```
 
 ### Page Loading States (new pattern for all pages)
@@ -267,7 +269,7 @@ All new UI elements MUST meet these minimums:
 | Auth error page | Semantic `<main>`, `<h1>` heading, link with descriptive text |
 | Loading states | `aria-busy="true"` on the container while loading |
 | Error states | `role="alert"` on error message container |
-| Try again button | Native `<button>` element (not `<a>` styled as button) |
+| Try signing in again button | Native `<button>` element (not `<a>` styled as button) |
 | Retry button (QueryError) | Native `<button>` with `type="button"` |
 
 ---
