@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Infrastructure Integration
 status: executing
-last_updated: "2026-04-10T16:44:35.045Z"
+last_updated: "2026-04-10T16:52:59.355Z"
 last_activity: 2026-04-10
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 5
   completed_plans: 2
-  percent: 20
+  percent: 40
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** Ready to execute
+**Status:** Executing Phase 05
 **Last Updated:** 2026-04-10
 
 ---
@@ -34,11 +34,11 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 ## Current Position
 
 Phase: 05 (backend-foundation) — EXECUTING
-Plan: 4 of 5
-Status: Plan 03 complete, ready for Plan 04
-Last activity: 2026-04-10
+Plan: 3 of 5
+Status: Executing Phase 05 -- Plans 01 and 02 complete
+Last activity: 2026-04-10 -- Completed 05-02 (NestJS AppModule + env config + 4 Prisma repositories)
 
-Progress: [████████............] 40% (3/5 plans complete)
+Progress: [########............] 40% (2/5 plans complete)
 
 ---
 
@@ -64,8 +64,8 @@ Progress: [████████............] 40% (3/5 plans complete)
 | Dev bypass auth for Phase 5 | Enables testing tRPC endpoints before SAML is wired | Confirmed |
 | Prisma 7 driver adapter pattern | PrismaClient requires @prisma/adapter-pg + pg.Pool (breaking change from Prisma 6) | Confirmed |
 | datasource config in prisma.config.ts | Prisma 7 moved url/directUrl from schema.prisma to prisma.config.ts | Confirmed |
-| Bridge Prisma-Zod CarryOver gaps | Derive carriedItemCount/carriedDecisionCount from records array; map createdAt to startedAt | Confirmed |
-| Admin soft-delete for projects | Archive removed projects (archived=true) instead of deleting to preserve history | Confirmed |
+| useFactory DI pattern for repos | NestJS modules wire repos to services via useFactory+inject rather than custom DI tokens | Confirmed |
+| Status enum mapping tables | Domain enum values (queued/sent) differ from DB enums (pending/sent); explicit mapping tables | Confirmed |
 
 ---
 
@@ -81,9 +81,11 @@ Progress: [████████............] 40% (3/5 plans complete)
 
 ## Next Steps
 
-1. Execute Plan 05-04: tRPC router expansion (16+ procedures) + NestJS main.ts bootstrap
-2. Execute Plan 05-05: Integration tests against real PostgreSQL
-3. All 8 Prisma repositories are implemented and wired via NestJS DI
+1. Execute Plan 05-03: 4 complex Prisma repositories (report-sections, publication, carry-over, admin)
+2. Execute Plan 05-04: tRPC AppRouter with all domain procedures + main.ts bootstrap
+3. Execute Plan 05-05: Integration tests against real PostgreSQL
+4. Critical for all repos: use PrismaPg adapter pattern (see 05-01 decisions)
+5. Follow useFactory DI pattern established in 05-02 for remaining modules
 
 ---
 
