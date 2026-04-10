@@ -4,7 +4,6 @@ import { defineConfig, env } from 'prisma/config';
 
 type Env = {
   DATABASE_URL: string;
-  DIRECT_URL: string;
 };
 
 export default defineConfig({
@@ -15,6 +14,5 @@ export default defineConfig({
   },
   datasource: {
     url: env<Env>('DATABASE_URL'),
-    directUrl: env<Env>('DIRECT_URL'),
   },
 });
