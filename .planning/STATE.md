@@ -1,20 +1,22 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: infrastructure-integration
-status: ready-to-plan
-last_updated: "2026-04-10T16:00:00.000Z"
+milestone_name: Infrastructure Integration
+status: executing
+last_updated: "2026-04-10T15:17:13.341Z"
+last_activity: 2026-04-10
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 5
+  completed_plans: 1
+  percent: 57
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** Roadmap created for v2.0, ready to plan Phase 5
+**Status:** Executing Phase 05
 **Last Updated:** 2026-04-10
 
 ---
@@ -25,18 +27,18 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 
 **Core Value:** Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
 
-**Current Focus:** v2.0 Infrastructure Integration -- Phase 5: Backend Foundation
+**Current Focus:** Phase 05 — backend-foundation
 
 ---
 
 ## Current Position
 
-Phase: 5 of 7 (Backend Foundation) -- first phase of v2.0
-Plan: --
-Status: Ready to plan
-Last activity: 2026-04-10 -- v2.0 roadmap created (3 phases: 5-7)
+Phase: 05 (backend-foundation) — EXECUTING
+Plan: 2 of 5
+Status: Executing Phase 05 -- Plan 01 complete
+Last activity: 2026-04-10 -- Completed 05-01 (Prisma schema + migration + seed + PrismaService)
 
-Progress: [##########..........] 57% (v1.0 complete, v2.0 starting)
+Progress: [####................] 20% (1/5 plans complete)
 
 ---
 
@@ -60,6 +62,8 @@ Progress: [##########..........] 57% (v1.0 complete, v2.0 starting)
 | Auth as tRPC middleware (not NestJS guards) | Guards silently bypassed on tRPC routes (critical pitfall #3) | Confirmed |
 | PgBouncer 1.22+ with max_prepared_statements | Avoids prepared statement conflict with Prisma (pitfall #1) | Confirmed |
 | Dev bypass auth for Phase 5 | Enables testing tRPC endpoints before SAML is wired | Confirmed |
+| Prisma 7 driver adapter pattern | PrismaClient requires @prisma/adapter-pg + pg.Pool (breaking change from Prisma 6) | Confirmed |
+| datasource config in prisma.config.ts | Prisma 7 moved url/directUrl from schema.prisma to prisma.config.ts | Confirmed |
 
 ---
 
@@ -75,9 +79,11 @@ Progress: [##########..........] 57% (v1.0 complete, v2.0 starting)
 
 ## Next Steps
 
-1. `/gsd:plan-phase 5` -- plan Backend Foundation phase
-2. Highest complexity: 9 Prisma repository implementations with nested relations
-3. Research flag: ReportSectionsPrismaRepository involves 6 Prisma models in a single aggregate
+1. Execute Plan 05-02: NestJS bootstrap + tRPC adapter + env validation
+2. Execute Plan 05-03: 8 Prisma repository implementations
+3. Execute Plan 05-04: tRPC router expansion (16+ procedures)
+4. Execute Plan 05-05: Integration tests
+5. Critical for all repos: use PrismaPg adapter pattern (see 05-01 decisions)
 
 ---
 
