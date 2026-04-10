@@ -1,12 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import type {
-  PdfExportJob,
-  AssembledReport,
-  ReportSectionReadModel,
-  PortfolioOverview,
+import {
+  pdfExportJobSchema,
+  assembledReportSchema,
+  type PdfExportJob,
+  type AssembledReport,
+  type PortfolioOverview,
 } from '@customreport/shared';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
 import type { PdfExportRepository } from './pdf-export.service.js';
+import {
+  reportSectionFullInclude,
+  mapPrismaToReportSection,
+} from '../report-sections/report-sections.prisma-repository.js';
 
 const pdfStatusToDb: Record<string, string> = {
   queued: 'pending',
@@ -22,18 +27,9 @@ const dbStatusToDomain: Record<string, PdfExportJob['status']> = {
   failed: 'failed',
 };
 
-const fullReportInclude = {
+const reportFullInclude = {
+  sections: { include: reportSectionFullInclude },
   publishedBy: true,
-  sections: {
-    include: {
-      author: true,
-      projectStatuses: { include: { project: true } },
-      items: true,
-      risks: true,
-      decisions: true,
-      priorities: { orderBy: { rank: 'asc' as const } },
-    },
-  },
 } as const;
 
 @Injectable()
@@ -43,7 +39,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
   async getPublishedReport(reportId: string): Promise<AssembledReport | null> {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId, status: 'published' },
-      include: fullReportInclude,
+      include: reportFullInclude,
     });
 
     if (!report) {
@@ -104,7 +100,7 @@ function toExportJob(row: {
   createdAt: Date;
   updatedAt: Date;
 }): PdfExportJob {
-  return {
+  return pdfExportJobSchema.parse({
     jobId: row.id,
     reportId: row.reportId,
     status: dbStatusToDomain[row.status] ?? 'queued',
@@ -113,7 +109,7 @@ function toExportJob(row: {
     checksum: null,
     templateVersion: 'phase-2-pdf-v1',
     artifactUrl: row.filePath,
-  };
+  });
 }
 
 function computePortfolioOverview(
@@ -137,57 +133,13 @@ function computePortfolioOverview(
   return { status: overallStatus, totals };
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function toSectionReadModel(section: any): ReportSectionReadModel {
-  return {
-    reportSectionId: section.id,
-    reportId: section.reportId,
-    authorId: section.authorId,
-    authorName: section.author.name,
-    status: section.status,
-    submittedAt: section.submittedAt,
-    projects: section.projectStatuses.map((ps: any) => ({
-      projectId: ps.projectId,
-      projectName: ps.project.name,
-      trafficLight: ps.status,
-    })),
-    items: section.items.map((item: any) => ({
-      id: item.id,
-      projectId: item.projectId,
-      type: item.type,
-      text: item.text,
-      tag: item.tag,
-      workflowStatus: item.workflowStatus,
-      carriedOver: item.carriedOver,
-      completed: item.completed,
-    })),
-    risks: section.risks.map((risk: any) => ({
-      id: risk.id,
-      projectId: risk.projectId,
-      risk: risk.risk,
-      impact: risk.impact,
-      mitigation: risk.mitigation,
-    })),
-    decisions: section.decisions.map((dec: any) => ({
-      id: dec.id,
-      text: dec.text,
-      owner: dec.owner,
-      deadline: dec.deadline,
-      impact: dec.impact,
-      resolvedAt: dec.resolvedAt,
-    })),
-    priorities: section.priorities.map((pri: any) => ({
-      id: pri.id,
-      rank: pri.rank,
-      text: pri.text,
-    })),
-  };
-}
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toAssembledReport(report: any): AssembledReport {
   const portfolio = computePortfolioOverview(report.sections);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sections = (report.sections as any[]).map(mapPrismaToReportSection);
 
-  return {
+  return assembledReportSchema.parse({
     reportId: report.id,
     periodStart: report.periodStart,
     periodEnd: report.periodEnd,
@@ -197,7 +149,6 @@ function toAssembledReport(report: any): AssembledReport {
     publishedById: report.publishedById,
     publishedByName: report.publishedBy?.name ?? null,
     portfolioOverview: portfolio,
-    sections: report.sections.map(toSectionReadModel),
-  };
+    sections,
+  });
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
