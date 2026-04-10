@@ -1,0 +1,284 @@
+import { z } from 'zod';
+
+import {
+  draftSaveSchema,
+  submitSectionSchema,
+  adminUserSchema,
+  adminProjectSchema,
+  reportPeriodSchema,
+  adminReminderRuleSchema,
+} from '@customreport/shared';
+
+import { router, protectedProcedure, headProcedure } from './trpc.middleware.js';
+import { mapDomainError } from './trpc.error-mapper.js';
+
+import type { ReportSectionsService } from '../../modules/report-sections/report-sections.service.js';
+import type { ReviewService } from '../../modules/review/review.service.js';
+import type { PublicationService } from '../../modules/publication/publication.service.js';
+import type { PdfExportService } from '../../modules/pdf-export/pdf-export.service.js';
+import type { AdminService } from '../../modules/admin/admin.service.js';
+import type { RemindersService } from '../../modules/reminders/reminders.service.js';
+import type { CarryOverService } from '../../modules/carry-over/carry-over.service.js';
+import type { ArchiveService } from '../../modules/archive/archive.service.js';
+
+type RouterDeps = {
+  reportSectionsService: ReportSectionsService;
+  reviewService: ReviewService;
+  publicationService: PublicationService;
+  pdfExportService: PdfExportService;
+  adminService: AdminService;
+  remindersService: RemindersService;
+  carryOverService: CarryOverService;
+  archiveService: ArchiveService;
+};
+
+export function createAppRouter(deps: RouterDeps) {
+  return router({
+    // === Reports namespace ===
+    reports: router({
+      getActive: protectedProcedure.query(async ({ ctx }) => {
+        try {
+          return await deps.reportSectionsService.getActiveSection(
+            ctx.session.activeReportSectionId ?? '',
+          );
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      saveDraft: protectedProcedure
+        .input(draftSaveSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.reportSectionsService.saveDraft(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      submit: protectedProcedure
+        .input(submitSectionSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.reportSectionsService.submitSection(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === Review namespace ===
+    review: router({
+      dashboard: protectedProcedure.query(async ({ ctx }) => {
+        try {
+          const activeReportId = ctx.session.activeReportId;
+
+          if (!activeReportId) {
+            throw new Error('Dashboard requires an active report.');
+          }
+
+          return await deps.reviewService.getSubmissionDashboard(activeReportId);
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      assembledReport: headProcedure.query(async ({ ctx }) => {
+        try {
+          const activeReportId = ctx.session.activeReportId;
+
+          if (!activeReportId) {
+            throw new Error('Assembled report requires an active report.');
+          }
+
+          return await deps.publicationService.getAssembledReport(activeReportId);
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      publish: headProcedure.mutation(async ({ ctx }) => {
+        try {
+          const activeReportId = ctx.session.activeReportId;
+
+          if (!activeReportId) {
+            throw new Error('Publish requires an active report.');
+          }
+
+          return await deps.publicationService.publishReport(activeReportId, ctx.session);
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+    }),
+
+    // === PDF Export namespace ===
+    pdfExport: router({
+      request: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.pdfExportService.requestPdfExport(input.reportId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      status: protectedProcedure
+        .input(z.object({ jobId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.pdfExportService.getPdfExportStatus(input.jobId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === Admin namespace ===
+    admin: router({
+      snapshot: headProcedure.query(async () => {
+        try {
+          return await deps.adminService.getSnapshot();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      saveUser: headProcedure
+        .input(adminUserSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.upsertUser(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      saveProject: headProcedure
+        .input(adminProjectSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.upsertProject(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      savePeriod: headProcedure
+        .input(reportPeriodSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.upsertPeriod(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      saveReminderRule: headProcedure
+        .input(adminReminderRuleSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.upsertReminderRule(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      deleteUser: headProcedure
+        .input(z.object({ userId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.removeUser(input.userId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      deleteProject: headProcedure
+        .input(z.object({ projectId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.removeProject(input.projectId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      deleteReminderRule: headProcedure
+        .input(z.object({ ruleId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.removeReminderRule(input.ruleId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === Archive namespace ===
+    archive: router({
+      list: protectedProcedure.query(async () => {
+        try {
+          return await deps.archiveService.listArchiveReports();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      detail: protectedProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.archiveService.getArchiveReport(input.reportId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === Reminders namespace ===
+    reminders: router({
+      execute: headProcedure
+        .input(z.object({ ruleId: z.string().uuid(), recipientEmail: z.string().email() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.remindersService.requestReminderExecution(
+              input.ruleId,
+              input.recipientEmail,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      listExecutions: headProcedure
+        .input(z.object({ ruleId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.remindersService.listExecutions(input.ruleId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === CarryOver namespace ===
+    carryOver: router({
+      execute: headProcedure
+        .input(z.object({ sourceReportId: z.string().uuid(), targetReportId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.carryOverService.executeCarryOver(
+              input.sourceReportId,
+              input.targetReportId,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+  });
+}
+
+export type AppRouter = ReturnType<typeof createAppRouter>;
