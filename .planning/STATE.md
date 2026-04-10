@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Infrastructure Integration
 status: executing
-last_updated: "2026-04-10T17:15:32.693Z"
+last_updated: "2026-04-10T19:20:06.648Z"
 last_activity: 2026-04-10
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 5
-  completed_plans: 4
+  completed_phases: 1
+  total_plans: 6
+  completed_plans: 6
   percent: 40
 ---
 
@@ -33,12 +33,12 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 
 ## Current Position
 
-Phase: 05 (backend-foundation) — EXECUTING
-Plan: 4 of 5
-Status: Ready to execute
+Phase: 05 (backend-foundation) — COMPLETE
+Plan: 6 of 6 (including gap closure plan)
+Status: Phase 5 complete, ready for Phase 6
 Last activity: 2026-04-10
 
-Progress: [########............] 40% (2/5 plans complete)
+Progress: [####################] 100% (6/6 plans complete)
 
 ---
 
@@ -66,6 +66,7 @@ Progress: [########............] 40% (2/5 plans complete)
 | datasource config in prisma.config.ts | Prisma 7 moved url/directUrl from schema.prisma to prisma.config.ts | Confirmed |
 | useFactory DI pattern for repos | NestJS modules wire repos to services via useFactory+inject rather than custom DI tokens | Confirmed |
 | Status enum mapping tables | Domain enum values (queued/sent) differ from DB enums (pending/sent); explicit mapping tables | Confirmed |
+| recipientEmail z.string() not z.email() | DB layer returns empty string for recipientEmail; service layer populates real email | Confirmed |
 
 ---
 
@@ -81,11 +82,10 @@ Progress: [########............] 40% (2/5 plans complete)
 
 ## Next Steps
 
-1. Execute Plan 05-03: 4 complex Prisma repositories (report-sections, publication, carry-over, admin)
-2. Execute Plan 05-04: tRPC AppRouter with all domain procedures + main.ts bootstrap
-3. Execute Plan 05-05: Integration tests against real PostgreSQL
-4. Critical for all repos: use PrismaPg adapter pattern (see 05-01 decisions)
-5. Follow useFactory DI pattern established in 05-02 for remaining modules
+1. Transition to Phase 6: Auth & Frontend Integration
+2. SAML SSO via Keycloak + JWT sessions + role guards
+3. Frontend localStorage -> tRPC migration
+4. Fix 24 failing frontend tests (userEvent.setup crash)
 
 ---
 

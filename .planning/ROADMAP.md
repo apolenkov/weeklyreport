@@ -117,7 +117,7 @@ Plans:
 - [x] 05-03-PLAN.md — 4 complex Prisma repositories (report-sections, publication, carry-over, admin) with deep includes and transactions
 - [x] 05-04-PLAN.md — tRPC AppRouter with all domain procedures, main.ts bootstrap, dev auth bypass, error mapping
 - [x] 05-05-PLAN.md — Verify 51 existing unit tests pass, integration tests for all 8 repositories against real PostgreSQL
-- [ ] 05-06-PLAN.md — Gap closure: Add Zod .parse() to 4 non-compliant repositories (REPO-09), fix REQUIREMENTS.md drift
+- [x] 05-06-PLAN.md — Gap closure: Add Zod .parse() to 4 non-compliant repositories (REPO-09), fix REQUIREMENTS.md drift
 
 ### Phase 6: Auth & Frontend Integration
 **Goal**: Users authenticate via Keycloak SAML, frontend calls real API instead of localStorage; the full user journey works end-to-end in a browser
