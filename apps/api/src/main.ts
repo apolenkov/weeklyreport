@@ -10,6 +10,10 @@ import { createAppRouter } from './infrastructure/trpc/trpc.router.js';
 import { createContextFactory } from './infrastructure/trpc/trpc.context.js';
 import { validateEnv } from './infrastructure/config/env.schema.js';
 import { createAppLogger } from './lib/logger.js';
+import { mountAuthRoutes } from './modules/auth/auth.routes.js';
+import { createAuthController } from './modules/auth/auth.controller.js';
+import { createSamlStrategy, createSamlStrategyOptions } from './modules/auth/saml.strategy.js';
+import { PrismaService } from './infrastructure/prisma/prisma.service.js';
 
 import { ReportSectionsService } from './modules/report-sections/report-sections.service.js';
 import { ReviewService } from './modules/review/review.service.js';
@@ -57,6 +61,13 @@ async function bootstrap() {
       createContext: createContextFactory(app),
     }),
   );
+
+  // Mount SAML auth routes (login, callback, logout, dev-login)
+  const prismaService = app.get(PrismaService);
+  const samlOptions = createSamlStrategyOptions(process.env);
+  const samlStrategy = createSamlStrategy(samlOptions);
+  const authCtrl = createAuthController(process.env);
+  mountAuthRoutes(expressApp, samlStrategy, authCtrl, prismaService, process.env);
 
   await app.listen(env.PORT);
   logger.info(`API server listening on port ${env.PORT}`);
