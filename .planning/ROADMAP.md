@@ -109,14 +109,15 @@ Plans:
   3. All 8 domain services read and write through Prisma repositories -- no in-memory or localStorage fallbacks remain in the API
   4. All 51 existing backend unit tests pass with the new Prisma repository implementations
   5. Integration tests verify repository read/write against real PostgreSQL (not mocked)
-**Plans**: 5 plans
+**Plans**: 6 plans
 
 Plans:
 - [x] 05-01-PLAN.md — Complete Prisma schema (15 models), initial migration, idempotent seed, PrismaService singleton
 - [x] 05-02-PLAN.md — NestJS AppModule, env config, and 4 simpler Prisma repositories (review, archive, pdf-export, reminders)
 - [x] 05-03-PLAN.md — 4 complex Prisma repositories (report-sections, publication, carry-over, admin) with deep includes and transactions
-- [ ] 05-04-PLAN.md — tRPC AppRouter with all domain procedures, main.ts bootstrap, dev auth bypass, error mapping
+- [x] 05-04-PLAN.md — tRPC AppRouter with all domain procedures, main.ts bootstrap, dev auth bypass, error mapping
 - [x] 05-05-PLAN.md — Verify 51 existing unit tests pass, integration tests for all 8 repositories against real PostgreSQL
+- [ ] 05-06-PLAN.md — Gap closure: Add Zod .parse() to 4 non-compliant repositories (REPO-09), fix REQUIREMENTS.md drift
 
 ### Phase 6: Auth & Frontend Integration
 **Goal**: Users authenticate via Keycloak SAML, frontend calls real API instead of localStorage; the full user journey works end-to-end in a browser
@@ -155,7 +156,7 @@ Plans:
 | 2. Report Assembly & Publication | v1.0 | 3/3 | Complete | 2026-04-09 |
 | 3. Automation & Admin | v1.0 | 4/4 | Complete | 2026-04-09 |
 | 4. Production Hardening | v1.0 | 2/2 | Complete | 2026-04-10 |
-| 5. Backend Foundation | v2.0 | 2/5 | In Progress|  |
+| 5. Backend Foundation | v2.0 | 5/6 | In Progress|  |
 | 6. Auth & Frontend Integration | v2.0 | 0/? | Not started | - |
 | 7. Production Infrastructure | v2.0 | 0/? | Not started | - |
 
