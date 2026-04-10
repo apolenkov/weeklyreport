@@ -10,10 +10,10 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 
 ### Database Foundation
 
-- [ ] **DB-01**: Prisma schema includes all domain models (add 5 missing: PdfExportJob, ReminderRule, ReminderExecution, CarryOverExecution, CarryOverRecord)
-- [ ] **DB-02**: Initial migration creates all tables in PostgreSQL
-- [ ] **DB-03**: Seed script creates baseline data (6 leads, 1 head, 1 viewer, projects, current report period)
-- [ ] **DB-04**: Seed is idempotent (safe to run multiple times)
+- [x] **DB-01**: Prisma schema includes all domain models (add 5 missing: PdfExportJob, ReminderRule, ReminderExecution, CarryOverExecution, CarryOverRecord)
+- [x] **DB-02**: Initial migration creates all tables in PostgreSQL
+- [x] **DB-03**: Seed script creates baseline data (6 leads, 1 head, 1 viewer, projects, current report period)
+- [x] **DB-04**: Seed is idempotent (safe to run multiple times)
 
 ### API Server
 
@@ -134,10 +134,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-01 | Phase 5 | Pending |
-| DB-02 | Phase 5 | Pending |
-| DB-03 | Phase 5 | Pending |
-| DB-04 | Phase 5 | Pending |
+| DB-01 | Phase 5 | Complete |
+| DB-02 | Phase 5 | Complete |
+| DB-03 | Phase 5 | Complete |
+| DB-04 | Phase 5 | Complete |
 | API-01 | Phase 5 | Pending |
 | API-02 | Phase 5 | Pending |
 | API-03 | Phase 5 | Pending |
