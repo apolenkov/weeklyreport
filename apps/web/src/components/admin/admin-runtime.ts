@@ -15,7 +15,7 @@ import {
 
 export const ADMIN_SNAPSHOT_STORAGE_KEY = 'customreport:admin-snapshot';
 
-const defaultSnapshot: AdminSnapshot = {
+export const defaultSnapshot: AdminSnapshot = {
   users: [
     {
       id: '00000000-0000-4000-8000-000000000001',

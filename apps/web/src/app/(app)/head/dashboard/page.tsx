@@ -1,7 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
-
 import { AppShell } from '../../../../components/navigation/app-shell';
 import { readStoredLeadSection } from '../../../../components/report-section/section-storage';
 import {
@@ -9,12 +7,13 @@ import {
   SubmissionDashboard,
 } from '../../../../components/head/submission-dashboard';
 import { defaultLeadSession, readBrowserSession } from '../../../../lib/dev-session';
+import { useBrowserState } from '../../../../lib/use-browser-state';
 
 export default function HeadDashboardPage() {
-  const session = useMemo(() => readBrowserSession(defaultLeadSession), []);
-  const rows = useMemo(
+  const [session] = useBrowserState(defaultLeadSession, () => readBrowserSession(defaultLeadSession));
+  const [rows] = useBrowserState(
+    buildSubmissionDashboardRows(null),
     () => buildSubmissionDashboardRows(readStoredLeadSection()),
-    [],
   );
 
   return (

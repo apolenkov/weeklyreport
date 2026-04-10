@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
+
+import type { AssembledReport, PdfExportJob } from '@customreport/shared';
 
 import { AppShell } from '../../../../components/navigation/app-shell';
 import { PublishedReport } from '../../../../components/report/published-report';
@@ -14,11 +15,12 @@ import {
   requestPdfExport,
 } from '../../../../components/report/report-runtime';
 import { defaultViewerSession, readBrowserSession } from '../../../../lib/dev-session';
+import { useBrowserState } from '../../../../lib/use-browser-state';
 
 export default function PublishedReportPage() {
   const params = useParams<{ reportId: string }>();
-  const session = useMemo(() => readBrowserSession(defaultViewerSession), []);
-  const report = useMemo(() => {
+  const [session] = useBrowserState(defaultViewerSession, () => readBrowserSession(defaultViewerSession));
+  const [report] = useBrowserState<AssembledReport | null>(null, () => {
     const requestedReportId = params?.reportId;
 
     if (!requestedReportId) {
@@ -26,8 +28,8 @@ export default function PublishedReportPage() {
     }
 
     return readArchiveReport(requestedReportId)?.report ?? readPublishedReport();
-  }, [params]);
-  const [exportJob, setExportJob] = useState(() => readPdfExportJob());
+  });
+  const [exportJob, setExportJob] = useBrowserState<PdfExportJob | null>(null, readPdfExportJob);
 
   function handleRequestPdfExport() {
     if (!report) {
