@@ -17,24 +17,24 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 
 ### API Server
 
-- [ ] **API-01**: NestJS bootstraps HTTP server listening on configurable port
+- [x] **API-01**: NestJS bootstraps HTTP server listening on configurable port
 - [ ] **API-02**: tRPC adapter mounts AppRouter at `/trpc` as Express middleware
 - [ ] **API-03**: tRPC context factory extracts UserSession from JWT cookie per request
-- [ ] **API-04**: All 8 domain services wired via NestJS dependency injection with Prisma repositories
-- [ ] **API-05**: Environment configuration validated with Zod on startup (fail-fast on missing vars)
+- [x] **API-04**: All 8 domain services wired via NestJS dependency injection with Prisma repositories
+- [x] **API-05**: Environment configuration validated with Zod on startup (fail-fast on missing vars)
 - [ ] **API-06**: CORS configured for frontend origin
 - [ ] **API-07**: Structured error handling maps domain errors to tRPC error codes
 
 ### Prisma Repositories
 
 - [ ] **REPO-01**: ReportSectionsRepository implementation (nested includes: projects, items, risks, decisions, priorities)
-- [ ] **REPO-02**: ReviewService repository (assemble full report with all sections)
+- [x] **REPO-02**: ReviewService repository (assemble full report with all sections)
 - [ ] **REPO-03**: PublicationService repository (publish report, update status)
-- [ ] **REPO-04**: PdfExportRepository implementation (job CRUD)
-- [ ] **REPO-05**: RemindersRepository implementation (rule + execution CRUD with dedupe)
+- [x] **REPO-04**: PdfExportRepository implementation (job CRUD)
+- [x] **REPO-05**: RemindersRepository implementation (rule + execution CRUD with dedupe)
 - [ ] **REPO-06**: CarryOverRepository implementation (transactional cross-report copy)
 - [ ] **REPO-07**: AdminRepository implementation (users, projects, periods, reminder rules CRUD)
-- [ ] **REPO-08**: ArchiveRepository implementation (query published reports by date)
+- [x] **REPO-08**: ArchiveRepository implementation (query published reports by date)
 - [ ] **REPO-09**: All repositories parse output through Zod schemas before returning
 
 ### Authentication
@@ -138,21 +138,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DB-02 | Phase 5 | Complete |
 | DB-03 | Phase 5 | Complete |
 | DB-04 | Phase 5 | Complete |
-| API-01 | Phase 5 | Pending |
+| API-01 | Phase 5 | Complete |
 | API-02 | Phase 5 | Pending |
 | API-03 | Phase 5 | Pending |
-| API-04 | Phase 5 | Pending |
-| API-05 | Phase 5 | Pending |
+| API-04 | Phase 5 | Complete |
+| API-05 | Phase 5 | Complete |
 | API-06 | Phase 5 | Pending |
 | API-07 | Phase 5 | Pending |
 | REPO-01 | Phase 5 | Pending |
-| REPO-02 | Phase 5 | Pending |
+| REPO-02 | Phase 5 | Complete |
 | REPO-03 | Phase 5 | Pending |
-| REPO-04 | Phase 5 | Pending |
-| REPO-05 | Phase 5 | Pending |
+| REPO-04 | Phase 5 | Complete |
+| REPO-05 | Phase 5 | Complete |
 | REPO-06 | Phase 5 | Pending |
 | REPO-07 | Phase 5 | Pending |
-| REPO-08 | Phase 5 | Pending |
+| REPO-08 | Phase 5 | Complete |
 | REPO-09 | Phase 5 | Pending |
 | AUTHZ-01 | Phase 6 | Pending |
 | AUTHZ-02 | Phase 6 | Pending |
