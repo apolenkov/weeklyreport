@@ -12,6 +12,9 @@
   "dependencies": {
     "@customreport/shared": "workspace:*",
     "@customreport/ui": "workspace:*",
+    "@tanstack/react-query": "^5.97.0",
+    "@trpc/client": "^11.16.0",
+    "@trpc/react-query": "^11.16.0",
     "cookie": "^1.0.2",
     "next": "^15.5.0",
     "react": "^19.1.0",

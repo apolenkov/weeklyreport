@@ -8,7 +8,10 @@
         "name": "next"
       }
     ],
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@customreport/api/*": ["../../apps/api/src/*"]
+    }
   },
   "include": [
     "next-env.d.ts",
