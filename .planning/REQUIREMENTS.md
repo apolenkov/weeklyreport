@@ -27,15 +27,15 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 
 ### Prisma Repositories
 
-- [ ] **REPO-01**: ReportSectionsRepository implementation (nested includes: projects, items, risks, decisions, priorities)
+- [x] **REPO-01**: ReportSectionsRepository implementation (nested includes: projects, items, risks, decisions, priorities)
 - [ ] **REPO-02**: ReviewService repository (assemble full report with all sections)
-- [ ] **REPO-03**: PublicationService repository (publish report, update status)
+- [x] **REPO-03**: PublicationService repository (publish report, update status)
 - [ ] **REPO-04**: PdfExportRepository implementation (job CRUD)
 - [ ] **REPO-05**: RemindersRepository implementation (rule + execution CRUD with dedupe)
-- [ ] **REPO-06**: CarryOverRepository implementation (transactional cross-report copy)
-- [ ] **REPO-07**: AdminRepository implementation (users, projects, periods, reminder rules CRUD)
+- [x] **REPO-06**: CarryOverRepository implementation (transactional cross-report copy)
+- [x] **REPO-07**: AdminRepository implementation (users, projects, periods, reminder rules CRUD)
 - [ ] **REPO-08**: ArchiveRepository implementation (query published reports by date)
-- [ ] **REPO-09**: All repositories parse output through Zod schemas before returning
+- [x] **REPO-09**: All repositories parse output through Zod schemas before returning
 
 ### Authentication
 
@@ -145,15 +145,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-05 | Phase 5 | Pending |
 | API-06 | Phase 5 | Pending |
 | API-07 | Phase 5 | Pending |
-| REPO-01 | Phase 5 | Pending |
+| REPO-01 | Phase 5 | Complete |
 | REPO-02 | Phase 5 | Pending |
-| REPO-03 | Phase 5 | Pending |
+| REPO-03 | Phase 5 | Complete |
 | REPO-04 | Phase 5 | Pending |
 | REPO-05 | Phase 5 | Pending |
-| REPO-06 | Phase 5 | Pending |
-| REPO-07 | Phase 5 | Pending |
+| REPO-06 | Phase 5 | Complete |
+| REPO-07 | Phase 5 | Complete |
 | REPO-08 | Phase 5 | Pending |
-| REPO-09 | Phase 5 | Pending |
+| REPO-09 | Phase 5 | Complete |
 | AUTHZ-01 | Phase 6 | Pending |
 | AUTHZ-02 | Phase 6 | Pending |
 | AUTHZ-03 | Phase 6 | Pending |
