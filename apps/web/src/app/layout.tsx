@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { TRPCProvider } from '../components/providers/trpc-provider';
+
 type RootLayoutProps = Readonly<{
   children: ReactNode;
 }>;
@@ -7,7 +9,9 @@ type RootLayoutProps = Readonly<{
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ru">
-      <body>{children}</body>
+      <body>
+        <TRPCProvider>{children}</TRPCProvider>
+      </body>
     </html>
   );
 }
