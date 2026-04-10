@@ -4,6 +4,8 @@ import {
   type PdfExportJob,
 } from '@customreport/shared';
 
+import { createNullLogger, type AppLogger } from '../../lib/logger';
+
 export class PdfExportDomainError extends Error {
   constructor(message: string) {
     super(message);
@@ -19,7 +21,14 @@ export interface PdfExportRepository {
 }
 
 export class PdfExportService {
-  constructor(private readonly repository: PdfExportRepository) {}
+  private readonly logger: AppLogger;
+
+  constructor(
+    private readonly repository: PdfExportRepository,
+    logger?: AppLogger,
+  ) {
+    this.logger = logger ?? createNullLogger();
+  }
 
   async requestPdfExport(reportId: string): Promise<PdfExportJob> {
     const report = await this.repository.getPublishedReport(reportId);
@@ -28,6 +37,7 @@ export class PdfExportService {
       throw new PdfExportDomainError('PDF export requires a published report.');
     }
 
+    this.logger.info('requesting PDF export', { reportId });
     return this.repository.createExportJob(
       pdfExportJobSchema.parse({
         jobId: crypto.randomUUID(),
@@ -59,6 +69,7 @@ export class PdfExportService {
   ): Promise<PdfExportJob> {
     const job = await this.getPdfExportStatus(jobId);
 
+    this.logger.info('marking PDF export completed', { jobId });
     return this.repository.saveExportJob(
       pdfExportJobSchema.parse({
         ...job,

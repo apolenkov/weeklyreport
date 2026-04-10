@@ -7,6 +7,8 @@ import {
   type ReportSectionReadModel,
 } from '@customreport/shared';
 
+import { createNullLogger, type AppLogger } from '../../lib/logger';
+
 export class CarryOverDomainError extends Error {
   constructor(message: string) {
     super(message);
@@ -94,7 +96,14 @@ function cloneUnresolvedDecision(
 }
 
 export class CarryOverService {
-  constructor(private readonly repository: CarryOverRepository) {}
+  private readonly logger: AppLogger;
+
+  constructor(
+    private readonly repository: CarryOverRepository,
+    logger?: AppLogger,
+  ) {
+    this.logger = logger ?? createNullLogger();
+  }
 
   async executeCarryOver(
     sourceReportId: string,
@@ -145,6 +154,12 @@ export class CarryOverService {
       ? []
       : [...carriedItems.map((entry) => entry.record), ...carriedDecisions.map((entry) => entry.record)];
 
+    this.logger.info('executing carry-over', {
+      sourceReportId,
+      targetReportId,
+      carriedItems: carriedItems.length,
+      carriedDecisions: carriedDecisions.length,
+    });
     return this.repository.saveCarryOver(execution, records, nextTargetSection);
   }
 }
