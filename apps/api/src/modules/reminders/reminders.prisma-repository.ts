@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import type {
-  AdminReminderRule,
-  AdminReminderExecution,
+import {
+  adminReminderRuleSchema,
+  adminReminderExecutionSchema,
+  type AdminReminderRule,
+  type AdminReminderExecution,
 } from '@customreport/shared';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
 import type { RemindersRepository } from './reminders.service.js';
@@ -102,15 +104,15 @@ function toRuleDomain(rule: {
   createdAt: Date;
   updatedAt: Date;
 }): AdminReminderRule {
-  return {
+  return adminReminderRuleSchema.parse({
     id: rule.id,
-    reportId: rule.reportId ?? '',
+    reportId: rule.reportId ?? '00000000-0000-0000-0000-000000000000',
     kind: 'deadline',
     fireAt: rule.createdAt,
     timezone: 'Europe/Moscow',
     status: rule.enabled ? 'active' : 'paused',
     version: 1,
-  };
+  });
 }
 
 function toExecutionDomain(execution: {
@@ -124,15 +126,15 @@ function toExecutionDomain(execution: {
   updatedAt: Date;
   rule: { reportId: string | null };
 }): AdminReminderExecution {
-  return {
+  return adminReminderExecutionSchema.parse({
     id: execution.id,
     ruleId: execution.ruleId,
-    reportId: execution.rule.reportId ?? '',
+    reportId: execution.rule.reportId ?? '00000000-0000-0000-0000-000000000000',
     dedupeKey: execution.dedupeKey,
     status: dbExecStatusToDomain[execution.status] ?? 'queued',
     scheduledFor: execution.createdAt,
     sentAt: execution.sentAt,
     recipientEmail: '',
     errorMessage: execution.error,
-  };
+  });
 }

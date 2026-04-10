@@ -188,7 +188,7 @@ export const adminReminderExecutionSchema = z.object({
   status: adminReminderExecutionStatusSchema,
   scheduledFor: z.coerce.date(),
   sentAt: z.coerce.date().nullable(),
-  recipientEmail: z.email(),
+  recipientEmail: z.string(),
   errorMessage: z.string().nullable(),
 });
 
