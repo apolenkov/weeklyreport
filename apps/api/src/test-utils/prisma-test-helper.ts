@@ -60,13 +60,34 @@ export async function disconnectTestPrisma(): Promise<void> {
 }
 
 /**
+ * Valid RFC4122 UUID v4 test fixtures.
+ * UUIDs must have version digit [1-8] in position 13 and variant [89ab] in position 17.
+ */
+export const TEST_IDS = {
+  head: 'a0000000-0000-4000-a000-000000000099',
+  lead: 'a0000000-0000-4000-a000-000000000001',
+  project: 'a0000000-0000-4000-a000-000000000100',
+  report: 'a0000000-0000-4000-a000-000000000010',
+  targetReport: 'a0000000-0000-4000-a000-000000000020',
+  reminderRule: 'a0000000-0000-4000-a000-000000000600',
+  pdfJob1: 'a0000000-0000-4000-a000-000000000400',
+  pdfJob2: 'a0000000-0000-4000-a000-000000000401',
+  carryExec: 'a0000000-0000-4000-a000-000000000500',
+  carryRecord: 'a0000000-0000-4000-a000-000000000501',
+  carryTargetItem: 'a0000000-0000-4000-a000-000000000502',
+  newProject: 'a0000000-0000-4000-a000-000000000300',
+  reminderExec1: 'a0000000-0000-4000-a000-000000000610',
+  reminderExec2: 'a0000000-0000-4000-a000-000000000611',
+} as const;
+
+/**
  * Seeds minimal test data: 1 head, 1 lead, 1 project, 1 report, 1 section.
  * Returns all created entities for use in test assertions.
  */
 export async function seedTestData(prisma: PrismaClient) {
   const head = await prisma.user.create({
     data: {
-      id: '00000000-0000-0000-0000-000000000099',
+      id: TEST_IDS.head,
       email: 'head@test.local',
       name: 'Test Head',
       role: 'head',
@@ -76,7 +97,7 @@ export async function seedTestData(prisma: PrismaClient) {
 
   const lead = await prisma.user.create({
     data: {
-      id: '00000000-0000-0000-0000-000000000001',
+      id: TEST_IDS.lead,
       email: 'lead1@test.local',
       name: 'Test Lead 1',
       role: 'lead',
@@ -86,7 +107,7 @@ export async function seedTestData(prisma: PrismaClient) {
 
   const project = await prisma.project.create({
     data: {
-      id: '00000000-0000-0000-0000-000000000100',
+      id: TEST_IDS.project,
       name: 'Test Project 1',
       leadId: lead.id,
     },
@@ -94,7 +115,7 @@ export async function seedTestData(prisma: PrismaClient) {
 
   const report = await prisma.report.create({
     data: {
-      id: '00000000-0000-0000-0000-000000000001',
+      id: TEST_IDS.report,
       periodStart: new Date('2026-04-07'),
       periodEnd: new Date('2026-04-13'),
       deadline: new Date('2026-04-11'),

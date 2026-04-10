@@ -1,0 +1,104 @@
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import {
+  createTestPrisma,
+  cleanDatabase,
+  seedTestData,
+  disconnectTestPrisma,
+  TEST_IDS,
+} from '../../test-utils/prisma-test-helper';
+import { AdminPrismaRepository } from './admin.prisma-repository';
+
+describe('AdminPrismaRepository (integration)', () => {
+  const prisma = createTestPrisma();
+  let repo: AdminPrismaRepository;
+  let testData: Awaited<ReturnType<typeof seedTestData>>;
+
+  beforeAll(() => {
+    repo = new AdminPrismaRepository(prisma as never);
+  });
+
+  beforeEach(async () => {
+    await cleanDatabase(prisma);
+    testData = await seedTestData(prisma);
+  });
+
+  afterAll(async () => {
+    await cleanDatabase(prisma);
+    await disconnectTestPrisma();
+  });
+
+  it('getSnapshot returns users, projects, periods, and rules', async () => {
+    // Create a reminder rule
+    await prisma.reminderRule.create({
+      data: {
+        id: TEST_IDS.reminderRule,
+        name: 'deadline',
+        cronExpression: '0 9 * * 5',
+        enabled: true,
+        reportId: testData.report.id,
+      },
+    });
+
+    const snapshot = await repo.getSnapshot();
+
+    expect(snapshot.users.length).toBeGreaterThanOrEqual(2); // head + lead
+    expect(snapshot.projects.length).toBeGreaterThanOrEqual(1);
+    expect(snapshot.periods.length).toBeGreaterThanOrEqual(1);
+    expect(snapshot.reminderRules.length).toBeGreaterThanOrEqual(1);
+
+    // Verify user fields
+    const leadUser = snapshot.users.find((u) => u.email === 'lead1@test.local');
+    expect(leadUser).toBeDefined();
+    expect(leadUser!.name).toBe('Test Lead 1');
+    expect(leadUser!.role).toBe('lead');
+
+    // Verify project fields
+    const proj = snapshot.projects.find((p) => p.name === 'Test Project 1');
+    expect(proj).toBeDefined();
+    expect(proj!.leadId).toBe(testData.lead.id);
+    expect(proj!.leadName).toBe('Test Lead 1');
+
+    // Verify period fields
+    const period = snapshot.periods.find((p) => p.id === testData.report.id);
+    expect(period).toBeDefined();
+    expect(period!.status).toBe('draft');
+  });
+
+  it('saveSnapshot updates entities correctly', async () => {
+    const snapshot = await repo.getSnapshot();
+
+    // Modify the snapshot: update the lead's name
+    const updatedUsers = snapshot.users.map((u) =>
+      u.id === testData.lead.id ? { ...u, name: 'Updated Lead Name' } : u,
+    );
+
+    // Add a new project
+    const updatedProjects = [
+      ...snapshot.projects,
+      {
+        id: TEST_IDS.newProject,
+        name: 'New Admin Project',
+        archived: false,
+        leadId: testData.lead.id,
+        leadName: 'Updated Lead Name',
+      },
+    ];
+
+    const updatedSnapshot = {
+      ...snapshot,
+      users: updatedUsers,
+      projects: updatedProjects,
+    };
+
+    const saved = await repo.saveSnapshot(updatedSnapshot);
+
+    // Verify the lead name was updated
+    const savedLead = saved.users.find((u) => u.id === testData.lead.id);
+    expect(savedLead!.name).toBe('Updated Lead Name');
+
+    // Verify the new project was created
+    const savedProject = saved.projects.find((p) => p.id === TEST_IDS.newProject);
+    expect(savedProject).toBeDefined();
+    expect(savedProject!.name).toBe('New Admin Project');
+  });
+});
