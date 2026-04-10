@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-
 import { AppShell } from '../../../components/navigation/app-shell';
 import { AdminPanel } from '../../../components/admin/admin-panel';
 import {
+  defaultSnapshot,
   markAdminReminderSent,
   persistAdminSnapshot,
   readAdminSnapshot,
@@ -21,6 +20,7 @@ import {
   readStoredLeadSection,
 } from '../../../components/report-section/section-storage';
 import { defaultHeadSession, readBrowserSession } from '../../../lib/dev-session';
+import { useBrowserState } from '../../../lib/use-browser-state';
 import type {
   AdminProject,
   AdminReminderRule,
@@ -29,8 +29,8 @@ import type {
 } from '@customreport/shared';
 
 export default function AdminPage() {
-  const session = useMemo(() => readBrowserSession(defaultHeadSession), []);
-  const [snapshot, setSnapshot] = useState(() => readAdminSnapshot());
+  const [session] = useBrowserState(defaultHeadSession, () => readBrowserSession(defaultHeadSession));
+  const [snapshot, setSnapshot] = useBrowserState(defaultSnapshot, readAdminSnapshot);
 
   async function handleUpsertUser(user: AdminUser) {
     const next = persistAdminSnapshot(upsertAdminUser(snapshot, user));

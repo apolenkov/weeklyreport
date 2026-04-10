@@ -1,7 +1,5 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-
 import {
   reportSectionReadModelSchema,
   type DraftSavePayload,
@@ -11,19 +9,20 @@ import {
 
 import { AppShell } from '../../../../components/navigation/app-shell';
 import { ReportSectionForm } from '../../../../components/report-section/report-section-form';
+import { createDemoSection } from '../../../../components/report-section/demo-section';
 import {
   persistLeadSection,
   readStoredLeadSection,
 } from '../../../../components/report-section/section-storage';
 import { defaultLeadSession, readBrowserSession } from '../../../../lib/dev-session';
+import { useBrowserState } from '../../../../lib/use-browser-state';
 
 export default function LeadReportPage() {
-  const session = useMemo(() => readBrowserSession(defaultLeadSession), []);
-  const [section, setSection] = useState<ReportSectionReadModel>(() =>
-    readStoredLeadSection(),
+  const [session] = useBrowserState(defaultLeadSession, () => readBrowserSession(defaultLeadSession));
+  const [section, setSection] = useBrowserState<ReportSectionReadModel>(
+    createDemoSection(),
+    readStoredLeadSection,
   );
-
-  const initialSection = useMemo(() => section, [section]);
 
   async function handleSaveDraft(
     input: DraftSavePayload,
@@ -80,7 +79,7 @@ export default function LeadReportPage() {
   return (
     <AppShell activeReportId={session.activeReportId} role={session.role} currentPath="/lead/report">
       <ReportSectionForm
-        initialSection={initialSection}
+        initialSection={section}
         onSaveDraft={handleSaveDraft}
         onSubmit={handleSubmit}
       />
