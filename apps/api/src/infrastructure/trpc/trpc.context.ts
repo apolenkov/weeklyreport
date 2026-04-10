@@ -2,6 +2,8 @@ import type { CreateExpressContextOptions } from '@trpc/server/adapters/express'
 import type { INestApplication } from '@nestjs/common';
 import type { UserSession } from '@customreport/shared';
 
+import { createAuthController } from '../../modules/auth/auth.controller.js';
+
 const DEV_SESSION: UserSession = {
   userId: '00000000-0000-0000-0000-000000000099',
   email: 'head@customreport.local',
@@ -16,12 +18,25 @@ export type TrpcContext = {
 };
 
 export function createContextFactory(_app: INestApplication) {
-  return async ({ req: _req }: CreateExpressContextOptions): Promise<TrpcContext> => {
+  const authController = createAuthController(process.env);
+
+  return async ({ req }: CreateExpressContextOptions): Promise<TrpcContext> => {
     if (process.env['AUTH_DEV_MODE'] === 'true') {
       return { session: DEV_SESSION };
     }
 
-    // Phase 6: extract JWT from cookie, verify, return session
-    return { session: null };
+    const token = req.cookies?.['customreport_session'] as string | undefined;
+
+    if (!token) {
+      return { session: null };
+    }
+
+    try {
+      const session = authController.verifySessionToken(token);
+
+      return { session };
+    } catch {
+      return { session: null };
+    }
   };
 }
