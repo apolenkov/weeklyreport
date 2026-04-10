@@ -94,7 +94,7 @@ Plans:
 **Milestone Goal:** Connect the domain-logic prototype to real infrastructure -- PostgreSQL persistence, NestJS API, SAML authentication, Docker deployment. Transform localStorage demo into production application.
 
 - [x] **Phase 5: Backend Foundation** - Prisma migrations, NestJS bootstrap, all repository implementations, integration tests against real PostgreSQL
-- [x] **Phase 6: Auth & Frontend Integration** - SAML SSO via Keycloak, JWT sessions, frontend migrated from localStorage to tRPC API calls (completed 2026-04-10)
+- [ ] **Phase 6: Auth & Frontend Integration** - SAML SSO via Keycloak, JWT sessions, frontend migrated from localStorage to tRPC API calls (gap closure in progress)
 - [ ] **Phase 7: Production Infrastructure** - BullMQ async jobs, health/metrics endpoints, Docker Compose orchestration with all services
 
 ## Phase Details
@@ -129,7 +129,7 @@ Plans:
   3. Head reviews submissions, publishes report, and viewers can read published reports -- all against real API
   4. Dev bypass mode (env flag) provides hardcoded session for local development without Keycloak
   5. TypeScript typecheck passes clean across the entire monorepo; all 24 previously-failing frontend tests are fixed
-**Plans**: 5 plans
+**Plans**: 6 plans
 **UI hint**: yes
 
 Plans:
@@ -138,6 +138,7 @@ Plans:
 - [x] 06-03-PLAN.md — Migrate lead/head/report/archive pages from localStorage to tRPC hooks
 - [x] 06-04-PLAN.md — Migrate admin page to tRPC, delete all localStorage helper files
 - [x] 06-05-PLAN.md — Fix Vitest jsdom config, create MSW handlers, fix all frontend tests, typecheck clean
+- [ ] 06-06-PLAN.md — Gap closure: Add superjson transformer to fix 17 Date/string typecheck errors (QA-03)
 
 ### Phase 7: Production Infrastructure
 **Goal**: Application runs as a containerized stack with async job processing, health monitoring, and production-grade operational controls
@@ -164,7 +165,7 @@ Plans:
 | 3. Automation & Admin | v1.0 | 4/4 | Complete | 2026-04-09 |
 | 4. Production Hardening | v1.0 | 2/2 | Complete | 2026-04-10 |
 | 5. Backend Foundation | v2.0 | 6/6 | Complete | 2026-04-10 |
-| 6. Auth & Frontend Integration | v2.0 | 5/5 | Complete   | 2026-04-10 |
+| 6. Auth & Frontend Integration | v2.0 | 5/6 | Gap closure | - |
 | 7. Production Infrastructure | v2.0 | 0/? | Not started | - |
 
 ---
