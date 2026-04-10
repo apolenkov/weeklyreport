@@ -129,8 +129,15 @@ Plans:
   3. Head reviews submissions, publishes report, and viewers can read published reports -- all against real API
   4. Dev bypass mode (env flag) provides hardcoded session for local development without Keycloak
   5. TypeScript typecheck passes clean across the entire monorepo; all 24 previously-failing frontend tests are fixed
-**Plans**: TBD
+**Plans**: 5 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 06-01-PLAN.md — Wire SAML auth routes, tRPC context JWT extraction, env schema, auth error page
+- [ ] 06-02-PLAN.md — Install tRPC client packages, create TRPCProvider, wire into root layout
+- [ ] 06-03-PLAN.md — Migrate lead/head/report/archive pages from localStorage to tRPC hooks
+- [ ] 06-04-PLAN.md — Migrate admin page to tRPC, delete all localStorage helper files
+- [ ] 06-05-PLAN.md — Fix Vitest jsdom config, create MSW handlers, fix all frontend tests, typecheck clean
 
 ### Phase 7: Production Infrastructure
 **Goal**: Application runs as a containerized stack with async job processing, health monitoring, and production-grade operational controls
@@ -157,7 +164,7 @@ Plans:
 | 3. Automation & Admin | v1.0 | 4/4 | Complete | 2026-04-09 |
 | 4. Production Hardening | v1.0 | 2/2 | Complete | 2026-04-10 |
 | 5. Backend Foundation | v2.0 | 6/6 | Complete | 2026-04-10 |
-| 6. Auth & Frontend Integration | v2.0 | 0/? | Not started | - |
+| 6. Auth & Frontend Integration | v2.0 | 0/5 | Planning complete | - |
 | 7. Production Infrastructure | v2.0 | 0/? | Not started | - |
 
 ---
