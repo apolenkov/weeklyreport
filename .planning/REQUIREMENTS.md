@@ -42,13 +42,13 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 - [ ] **AUTHZ-01**: SAML login endpoint (`/auth/saml/login`) redirects to Keycloak
 - [ ] **AUTHZ-02**: SAML callback endpoint processes assertion, creates/updates user, sets JWT cookie
 - [ ] **AUTHZ-03**: tRPC middleware validates JWT and injects UserSession into context
-- [ ] **AUTHZ-04**: tRPC middleware enforces role-based access (lead/head/viewer) per procedure
+- [x] **AUTHZ-04**: tRPC middleware enforces role-based access (lead/head/viewer) per procedure
 - [ ] **AUTHZ-05**: Dev bypass mode (env flag) provides hardcoded session for local development
 - [ ] **AUTHZ-06**: Logout endpoint clears JWT cookie
 
 ### Frontend Integration
 
-- [ ] **FE-01**: tRPC client configured with httpBatchLink pointing to API
+- [x] **FE-01**: tRPC client configured with httpBatchLink pointing to API
 - [ ] **FE-02**: Lead report form uses tRPC mutations instead of localStorage for save/submit
 - [ ] **FE-03**: Head dashboard fetches real submission statuses via tRPC
 - [ ] **FE-04**: Assembled report review page loads data from API
@@ -157,10 +157,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTHZ-01 | Phase 6 | Pending |
 | AUTHZ-02 | Phase 6 | Pending |
 | AUTHZ-03 | Phase 6 | Pending |
-| AUTHZ-04 | Phase 6 | Pending |
+| AUTHZ-04 | Phase 6 | Complete |
 | AUTHZ-05 | Phase 6 | Pending |
 | AUTHZ-06 | Phase 6 | Pending |
-| FE-01 | Phase 6 | Pending |
+| FE-01 | Phase 6 | Complete |
 | FE-02 | Phase 6 | Pending |
 | FE-03 | Phase 6 | Pending |
 | FE-04 | Phase 6 | Pending |

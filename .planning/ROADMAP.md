@@ -134,7 +134,7 @@ Plans:
 
 Plans:
 - [ ] 06-01-PLAN.md — Wire SAML auth routes, tRPC context JWT extraction, env schema, auth error page
-- [ ] 06-02-PLAN.md — Install tRPC client packages, create TRPCProvider, wire into root layout
+- [x] 06-02-PLAN.md — Install tRPC client packages, create TRPCProvider, wire into root layout
 - [ ] 06-03-PLAN.md — Migrate lead/head/report/archive pages from localStorage to tRPC hooks
 - [ ] 06-04-PLAN.md — Migrate admin page to tRPC, delete all localStorage helper files
 - [ ] 06-05-PLAN.md — Fix Vitest jsdom config, create MSW handlers, fix all frontend tests, typecheck clean
