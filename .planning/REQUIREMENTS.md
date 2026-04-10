@@ -134,68 +134,68 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-01 | — | Pending |
-| DB-02 | — | Pending |
-| DB-03 | — | Pending |
-| DB-04 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| API-05 | — | Pending |
-| API-06 | — | Pending |
-| API-07 | — | Pending |
-| REPO-01 | — | Pending |
-| REPO-02 | — | Pending |
-| REPO-03 | — | Pending |
-| REPO-04 | — | Pending |
-| REPO-05 | — | Pending |
-| REPO-06 | — | Pending |
-| REPO-07 | — | Pending |
-| REPO-08 | — | Pending |
-| REPO-09 | — | Pending |
-| AUTHZ-01 | — | Pending |
-| AUTHZ-02 | — | Pending |
-| AUTHZ-03 | — | Pending |
-| AUTHZ-04 | — | Pending |
-| AUTHZ-05 | — | Pending |
-| AUTHZ-06 | — | Pending |
-| FE-01 | — | Pending |
-| FE-02 | — | Pending |
-| FE-03 | — | Pending |
-| FE-04 | — | Pending |
-| FE-05 | — | Pending |
-| FE-06 | — | Pending |
-| FE-07 | — | Pending |
-| FE-08 | — | Pending |
-| FE-09 | — | Pending |
-| FE-10 | — | Pending |
-| JOBS-01 | — | Pending |
-| JOBS-02 | — | Pending |
-| JOBS-03 | — | Pending |
-| JOBS-04 | — | Pending |
-| JOBS-05 | — | Pending |
-| DOCK-01 | — | Pending |
-| DOCK-02 | — | Pending |
-| DOCK-03 | — | Pending |
-| DOCK-04 | — | Pending |
-| DOCK-05 | — | Pending |
-| DOCK-06 | — | Pending |
-| OBS-01 | — | Pending |
-| OBS-02 | — | Pending |
-| OBS-03 | — | Pending |
-| OBS-04 | — | Pending |
-| QA-01 | — | Pending |
-| QA-02 | — | Pending |
-| QA-03 | — | Pending |
-| QA-04 | — | Pending |
+| DB-01 | Phase 5 | Pending |
+| DB-02 | Phase 5 | Pending |
+| DB-03 | Phase 5 | Pending |
+| DB-04 | Phase 5 | Pending |
+| API-01 | Phase 5 | Pending |
+| API-02 | Phase 5 | Pending |
+| API-03 | Phase 5 | Pending |
+| API-04 | Phase 5 | Pending |
+| API-05 | Phase 5 | Pending |
+| API-06 | Phase 5 | Pending |
+| API-07 | Phase 5 | Pending |
+| REPO-01 | Phase 5 | Pending |
+| REPO-02 | Phase 5 | Pending |
+| REPO-03 | Phase 5 | Pending |
+| REPO-04 | Phase 5 | Pending |
+| REPO-05 | Phase 5 | Pending |
+| REPO-06 | Phase 5 | Pending |
+| REPO-07 | Phase 5 | Pending |
+| REPO-08 | Phase 5 | Pending |
+| REPO-09 | Phase 5 | Pending |
+| AUTHZ-01 | Phase 6 | Pending |
+| AUTHZ-02 | Phase 6 | Pending |
+| AUTHZ-03 | Phase 6 | Pending |
+| AUTHZ-04 | Phase 6 | Pending |
+| AUTHZ-05 | Phase 6 | Pending |
+| AUTHZ-06 | Phase 6 | Pending |
+| FE-01 | Phase 6 | Pending |
+| FE-02 | Phase 6 | Pending |
+| FE-03 | Phase 6 | Pending |
+| FE-04 | Phase 6 | Pending |
+| FE-05 | Phase 6 | Pending |
+| FE-06 | Phase 6 | Pending |
+| FE-07 | Phase 6 | Pending |
+| FE-08 | Phase 6 | Pending |
+| FE-09 | Phase 6 | Pending |
+| FE-10 | Phase 6 | Pending |
+| JOBS-01 | Phase 7 | Pending |
+| JOBS-02 | Phase 7 | Pending |
+| JOBS-03 | Phase 7 | Pending |
+| JOBS-04 | Phase 7 | Pending |
+| JOBS-05 | Phase 7 | Pending |
+| DOCK-01 | Phase 7 | Pending |
+| DOCK-02 | Phase 7 | Pending |
+| DOCK-03 | Phase 7 | Pending |
+| DOCK-04 | Phase 7 | Pending |
+| DOCK-05 | Phase 7 | Pending |
+| DOCK-06 | Phase 7 | Pending |
+| OBS-01 | Phase 7 | Pending |
+| OBS-02 | Phase 7 | Pending |
+| OBS-03 | Phase 7 | Pending |
+| OBS-04 | Phase 7 | Pending |
+| QA-01 | Phase 5 | Pending |
+| QA-02 | Phase 6 | Pending |
+| QA-03 | Phase 6 | Pending |
+| QA-04 | Phase 5 | Pending |
 
 **Coverage:**
-- v2 requirements: 50 total
-- Mapped to phases: 0
-- Unmapped: 50 (will be mapped during roadmap creation)
+- v2 requirements: 55 total
+- Mapped to phases: 55
+- Unmapped: 0
 
 ---
 
 *Requirements defined: 2026-04-10*
-*Last updated: 2026-04-10 after initial definition*
+*Traceability updated: 2026-04-10 (roadmap creation)*
