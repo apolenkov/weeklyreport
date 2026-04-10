@@ -1,436 +1,739 @@
-# Technology Stack: CustomReport
+# Technology Stack: v2.0 Infrastructure Integration
 
-**Project:** CustomReport (Team Status Reporting Web App)
-**Researched:** 2026-04-05
-**Current date:** April 2026
-**Overall confidence:** HIGH (verified against official docs and latest releases)
-
----
-
-## Executive Summary
-
-The CustomReport stack is a modern, fully type-safe, full-stack TypeScript monorepo optimized for rapid iteration and enterprise security. All choices are April 2026 stable with active maintenance and proven production usage. The stack prioritizes:
-
-- **Type safety end-to-end** (tRPC + Zod + TypeScript strict mode)
-- **Performance at scale** (Turborepo caching, PgBouncer pooling, BullMQ async jobs)
-- **Developer ergonomics** (AI-friendly shadcn/ui, tRPC type inference, NestJS decorators)
-- **Enterprise requirements** (SAML SSO via Keycloak, PDF generation, async email jobs)
+**Project:** CustomReport
+**Milestone:** v2.0 Infrastructure Integration
+**Researched:** 2026-04-10
+**Overall confidence:** HIGH (verified against npm registry, official docs, codebase audit)
 
 ---
 
-## Recommended Stack
+## Scope
 
-### Frontend
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **Next.js** | 15.5.x (stable, Apr 2026) | React framework + SSR | Turbopack (10x faster cold starts), React 19 native, automatic code-splitting, proven with tRPC |
-| **React** | 19.x | UI library | TC39 decorators stable, concurrent features stable, required by Next.js 15 |
-| **TypeScript** | 6.0+ (strict mode MANDATORY) | Language | Final version with JS/TS implementation, strict by default, zero config needed |
-| **shadcn/ui** | 4.x | Component library | Monorepo-aware CLI (v4), Tailwind v4 native, composable, AI-friendly, no prop-drilling hell |
-| **Tailwind CSS** | 4.x | Styling | @theme directive, CSS variables, faster compilation, RTL support |
-| **tRPC** | 11.x | Type-safe API client | Zero-overhead abstraction, shared types with backend, automatic request validation via Zod |
-
-### Backend
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **NestJS** | 11.x | HTTP + API framework | TC39 decorator support, @nestjs/bullmq native, dependency injection, JWT + SAML guards |
-| **Node.js** | 20.x LTS (minimum) or 22.x LTS | Runtime | Production-stable, required by NestJS 11, long-term support |
-| **TypeScript** | 6.0+ (strict mode MANDATORY) | Language | [See Frontend] |
-| **Prisma** | 7.x (TypeScript-based, Rust-free) | ORM | 3x faster queries vs Prisma 6, 90% smaller bundle (1.6MB vs 14MB), zero serialization overhead |
-| **PostgreSQL** | 15+ (Ubuntu 22.04 LTS ships 14, use 15+) | Database | JSONB native, proven for 10K+ concurrent, pg_stat_statements for query analysis |
-| **PgBouncer** | 1.22+ | Connection pooling | Handles thousands of app connections with <100 real DB connections, transaction mode for OLTP |
-| **Redis** | 7.x+ | Cache + job queue | In-memory caching, BullMQ queue backend, session store |
-| **BullMQ** | 5.x | Job queue | NestJS @nestjs/bullmq native, Redis-backed, supports retries/DLQ/priority |
-
-### Shared Packages
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **Zod** | 4.x+ (JIT compiler) | Runtime validation | Single source of truth for schemas, shared between frontend and backend, 100% type-safe |
-| **Zod OpenAPI** | 0.15.x | API documentation | Auto-generate OpenAPI from Zod + tRPC (optional, for external consumers) |
-
-### Quality & Testing
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **Vitest** | 3.x | Unit tests | Native TypeScript (via esbuild), monorepo projects support, zero Vite config overhead |
-| **Playwright** | 1.50+ | E2E tests | Headless browser testing, PDF/screenshot validation for reports, cross-browser (Chromium/Firefox/WebKit) |
-| **@testing-library/react** | 16.x | React component testing | Recommended by shadcn/ui, accessibility-first queries |
-| **@testing-library/dom** | 10.x | DOM utilities | Core testing utilities |
-
-### PDF Generation
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **Playwright** | 1.50+ | PDF generation | 59–125KB files (smaller than Puppeteer), browser automation, works in NestJS |
-
-**NOTE:** Both Puppeteer and Playwright work. Chose Playwright for:
-- Smaller file sizes (59–125KB vs 197KB PDFs)
-- Cross-browser abstraction (future-proof if rules change)
-- Built-in E2E test integration (same library for tests and PDF generation)
-- Active maintenance and TypeScript-first design
-
-### Authentication
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **@node-saml/passport-saml** | 4.x+ | SAML strategy | Single Sign-On via Keycloak, enterprise requirement |
-| **Keycloak** | 26.x (Apr 2026 stable) | Identity provider | OpenID Connect + SAML 2.0, already in organization, manages users/roles |
-| **Passport.js** | 0.7.x | Authentication middleware | de facto standard in Node.js, integrates with NestJS guards |
-| **JWT** | (via Passport) | Session tokens | Stateless, scalable across multiple backend instances |
-
-### Monorepo
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **Turborepo** | 2.x (latest) | Build orchestrator | Content-aware caching, parallelization, affected-only builds, free Vercel remote caching |
-| **pnpm** | 9.x+ | Package manager | Faster installs (reuses packages), strict peer deps detection, smaller node_modules |
-| **TypeScript references** | 6.0+ config | Monorepo linking | Instead of path aliases—allows proper incremental builds |
-
-### Infrastructure & DevOps
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **Docker** | 27.x+ | Containerization | Compose for local dev, image for Docker Compose deploy |
-| **Docker Compose** | 2.x | Multi-container orchestration | Development and early production, stateless services scale to Kubernetes later |
-| **PostgreSQL** | 15+ (in Docker) | Database container | Alpine-based image (~150MB), proven volume handling |
-| **Redis** | 7.x (in Docker) | Cache/queue container | Official image, small footprint |
-
-### Code Quality
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **ESLint** | 9.x | Linting | @typescript-eslint/strict, sonarjs rules, no-floating-promises for async safety |
-| **Prettier** | 4.x | Formatting | One-way (no debates), 80-char line length, trailing commas |
-| **Husky** | 9.x | Git hooks | Pre-commit: prettier + ESLint, pre-push: full test suite |
-| **lint-staged** | 15.x | Partial file linting | Lint only staged files, faster feedback loop |
+This document covers ONLY the new libraries and integration patterns needed
+for the v2.0 milestone. It does NOT re-research the base stack (Next.js 15.5,
+NestJS 11, Prisma 7, Zod 4, tRPC 11, shadcn/ui, Vitest, Playwright,
+Turborepo, pnpm) -- those are validated and documented in the v1.0 STACK.md
+and CLAUDE.md.
 
 ---
 
-## Installation & Versions
+## 1. NestJS + tRPC Adapter
 
-### Create Monorepo
+### Current State
 
-```bash
-# Create Turborepo with pnpm
-npm create turbo@latest -- --package-manager pnpm custom-report
+The codebase has a **stub architecture**:
+- `packages/shared/src/trpc/router.ts` defines a tRPC router contract using
+  `initTRPC.create()` with Zod schemas (4 procedures: getActiveSection,
+  saveDraft, submitSection, getSubmissionDashboard)
+- `apps/api/src/modules/*/` has hand-rolled router objects (plain functions,
+  not tRPC procedures) and domain services with repository interfaces
+- `apps/api/src/main.ts` is an empty bootstrap -- no NestJS HTTP module, no
+  Express app, no tRPC mounted
 
-# Navigate to monorepo root
-cd custom-report
+### Recommended Approach: tRPC Express Middleware on NestJS
 
-# Install dependencies (pnpm handles workspaces automatically)
-pnpm install
+**Use tRPC's official Express adapter** (`@trpc/server/adapters/express`)
+mounted onto NestJS's underlying Express instance. Do NOT use third-party
+NestJS-tRPC wrapper libraries.
 
-# Verify monorepo structure
-ls -la apps/ packages/
-# apps/web (Next.js), apps/api (NestJS)
-# packages/shared (Zod + types), packages/ui (shadcn/ui), packages/config (ESLint/TS/Prettier)
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `@trpc/server` | `^11.16.0` | Already installed. tRPC server + Express adapter |
+| `@trpc/client` | `^11.16.0` | NEW. Frontend tRPC client for Next.js |
+| `@trpc/next` | `^11.16.0` | NEW. Next.js-specific tRPC integration (optional, can use vanilla client) |
+| `@nestjs/platform-express` | `^11.1.0` | NEW. Required to bootstrap NestJS HTTP server on Express |
+
+**Why NOT nestjs-trpc (v2.9.1) or trpc-nestjs-adapter (alpha)?**
+
+- `nestjs-trpc` (5K weekly downloads, 1K GitHub stars) adds a decorator layer
+  (`@Router`, `@Query`, `@Mutation`) and a Rust CLI that auto-generates tRPC
+  schema from NestJS. This is an unnecessary abstraction -- the codebase
+  already has tRPC routers defined in `packages/shared`. Adding another
+  schema generation layer creates double-maintenance.
+- `trpc-nestjs-adapter` is stuck at `1.0.0-alpha.12` (no releases in 12+
+  months). Dead project.
+- The official tRPC Express adapter is stable, zero-dependency (part of
+  `@trpc/server`), and the approach recommended by tRPC maintainers for
+  non-Next.js backends.
+
+**Integration Pattern:**
+
+```typescript
+// apps/api/src/main.ts (simplified)
+import { NestFactory } from '@nestjs/core';
+import * as trpcExpress from '@trpc/server/adapters/express';
+import type { Express } from 'express';
+
+const app = await NestFactory.create(AppModule);
+const expressApp = app.getHttpAdapter().getInstance() as Express;
+
+// Mount tRPC at /trpc path prefix
+expressApp.use(
+  '/trpc',
+  trpcExpress.createExpressMiddleware({
+    router: appRouter,
+    createContext: ({ req, res }) => createContext({ req, res, app }),
+  }),
+);
+
+await app.listen(3001);
 ```
 
-### Core Dependencies (NPM/pnpm)
+The `createContext` function bridges NestJS DI with tRPC context -- it resolves
+NestJS providers (PrismaService, AuthService) and passes them to tRPC
+procedures. This pattern allows tRPC procedures to call domain services that
+are injected via NestJS.
 
-```bash
-# From monorepo root, in each package:
+**Confidence:** HIGH -- official tRPC adapter, battle-tested pattern, codebase
+already has the router contract.
 
-# apps/web (Next.js frontend)
-pnpm --filter=web add next@15.5.0 react@19 react-dom@19
-pnpm --filter=web add typescript@6.0
-pnpm --filter=web add tailwindcss@4 postcss autoprefixer
-pnpm --filter=web add @radix-ui/react-{slot,dialog,popover} # shadcn/ui deps
-pnpm --filter=web add @trpc/client@11.x @trpc/next@11.x
+### What NOT to Add
 
-# apps/api (NestJS backend)
-pnpm --filter=api add @nestjs/common@11 @nestjs/core@11
-pnpm --filter=api add @nestjs/platform-express@11
-pnpm --filter=api add @nestjs/typeorm@11 typeorm@0.3
-pnpm --filter=api add @prisma/client@7 prisma@7
-pnpm --filter=api add @nestjs/bullmq@11 bullmq@5 redis@4
-pnpm --filter=api add @trpc/server@11.x
-pnpm --filter=api add passport@0.7 @node-saml/passport-saml@4
-pnpm --filter=api add typescript@6.0
+- `nestjs-trpc` or `@mguay/nestjs-trpc` -- adds decorator-based schema
+  generation that conflicts with existing `packages/shared` router contract
+- `@trpc/react-query` -- NOT needed. Use `@trpc/client` with vanilla fetch
+  or `@trpc/next` for SSR. React Query adds unnecessary weight for this app
+  (6 leads, not a high-traffic SPA)
+- REST controllers alongside tRPC -- the only REST endpoints should be the
+  SAML auth callback routes (Passport requires Express routes)
 
-# packages/shared
-pnpm --filter=shared add zod@4 zod-openapi@0.15
+---
 
-# Dev dependencies (all packages)
-pnpm add -D typescript@6.0 @typescript-eslint/{eslint-plugin,parser}@7
-pnpm add -D eslint@9 prettier@4 husky@9 lint-staged@15
-pnpm add -D vitest@3 @testing-library/react@16 @testing-library/dom@10
-pnpm add -D playwright@1.50
-pnpm add -D @tailwindcss/forms @tailwindcss/typography
+## 2. Prisma 7 Repository Pattern for NestJS
+
+### Current State
+
+All 8 domain services define repository interfaces (e.g.,
+`ReportSectionsRepository`, `RemindersRepository`) with async methods. Services
+receive repositories via constructor injection. Tests use in-memory
+implementations. No Prisma Client code exists yet.
+
+### Recommended Approach: Thin PrismaService + Concrete Repositories
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `@prisma/client` | `^7.0.0` | NEW. Generated Prisma Client for PostgreSQL |
+| `prisma` | `^7.0.0` | NEW (devDependency). CLI for migrations, generate |
+
+**Pattern: Injectable PrismaService as NestJS provider**
+
+```typescript
+// apps/api/src/infrastructure/prisma.service.ts
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+
+@Injectable()
+export class PrismaService extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy {
+
+  async onModuleInit() {
+    await this.$connect();
+  }
+
+  async onModuleDestroy() {
+    await this.$disconnect();
+  }
+}
 ```
 
-### Post-Install Setup
+Each domain module gets a concrete repository implementation:
 
-```bash
-# Initialize ESLint + Prettier from shared config
-pnpm eslint --init  # Point to packages/config/eslint.config.js
+```typescript
+// apps/api/src/modules/report-sections/report-sections.prisma-repository.ts
+@Injectable()
+export class ReportSectionsPrismaRepository
+  implements ReportSectionsRepository {
 
-# Initialize Husky
-npx husky install
+  constructor(private readonly prisma: PrismaService) {}
 
-# Initialize Prisma
-pnpm exec prisma init
-# Edit .env with PostgreSQL connection string
-# pnpm exec prisma migrate dev --name init
-
-# Initialize shadcn/ui in web app
-cd apps/web
-pnpm exec shadcn-ui init --monorepo
-
-# Build all packages in dependency order
-pnpm turbo run build
-
-# Run dev servers (Next.js + NestJS in parallel)
-pnpm turbo run dev
+  async getSectionById(id: string) { /* Prisma query */ }
+  async saveSection(section: ReportSectionReadModel) { /* Prisma upsert */ }
+}
 ```
 
----
+NestJS module wires interface to implementation:
 
-## Architecture Decisions & Rationale
+```typescript
+// In the module providers array:
+{
+  provide: 'ReportSectionsRepository',
+  useClass: ReportSectionsPrismaRepository,
+}
+```
 
-### Why tRPC Over REST/GraphQL
+**Transactions:** Use Prisma interactive transactions (`prisma.$transaction`)
+for multi-table operations (e.g., saving a report section with its items,
+risks, and decisions atomically).
 
-| Decision | Rationale | Trade-off |
-|----------|-----------|-----------|
-| **tRPC** | Type-safe RPC, zero codegen, routes are just functions, shared Zod schemas | No OpenAPI auto-gen (use zod-openapi if needed for external APIs) |
-| Alternative: REST | Familiar, easy to document | Manual validation, type gaps between frontend/backend |
-| Alternative: GraphQL | Flexible queries, strong ecosystem | Learning curve, N+1 queries, complexity for CRUD apps |
+**Connection pooling:** Prisma 7 manages its own internal connection pool.
+With PgBouncer in front, set `connection_limit=1` in the Prisma connection
+URL to let PgBouncer handle pooling:
 
-**Decision:** tRPC is the right choice for a monorepo where frontend and backend are always shipped together. Automatic type inference across the network boundary, zero runtime overhead, Zod validation on both sides.
+```
+DATABASE_URL="postgresql://user:pass@pgbouncer:6432/customreport?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://user:pass@postgres:5432/customreport"
+```
 
-### Why Prisma Over TypeORM or Drizzle
+The `DIRECT_URL` bypasses PgBouncer for migrations (Prisma Migrate needs a
+direct connection, not transaction-pooled).
 
-| Decision | Rationale | Trade-off |
-|----------|-----------|-----------|
-| **Prisma 7** | 3x faster queries (TypeScript-based), 90% smaller bundle, type-safe, migrations battle-tested | Generated Prisma Client code (4K-6K lines, regenerated on schema changes) |
-| Alternative: TypeORM | Decorators native to NestJS, active ORM | Slower (Rust-based), larger bundle, more boilerplate |
-| Alternative: Drizzle | Lightweight, explicit SQL-like syntax | Smaller ecosystem, fewer best practices documented |
+**Confidence:** HIGH -- this is the standard NestJS + Prisma pattern documented
+by both NestJS and Prisma officially.
 
-**Decision:** Prisma 7's 3x speed improvement and Rust-free architecture make it the clear winner for new projects in 2026. The generated client is a one-time setup and type safety is unmatched.
+### What NOT to Add
 
-### Why BullMQ Over Bull or Native Redis
-
-| Decision | Rationale | Trade-off |
-|----------|-----------|-----------|
-| **BullMQ** | Native NestJS support (@nestjs/bullmq), FIFO/priority queues, retries, DLQ, Bull Board UI | Redis-only backend (you need Redis anyway) |
-| Alternative: Bull | Similar but unmaintained, BullMQ is the successor | [None] |
-| Alternative: Native Redis | Minimal overhead | No built-in retry logic, monitoring is manual |
-
-**Decision:** BullMQ is the standard. Use it for email jobs, PDF generation (long-running), and report assembly.
-
-### Why Playwright Over Puppeteer for PDF
-
-| Decision | Rationale | Trade-off |
-|----------|-----------|-----------|
-| **Playwright** | 59–125KB PDFs (smaller), cross-browser abstraction, same library for E2E tests | Chromium-only for PDF (same as Puppeteer) |
-| Alternative: Puppeteer | Simpler API, 197KB files | Larger files, Chrome-only abstraction, unmaintained since Playwright took over |
-| Alternative: Sharp + libvips | Fastest, smallest files | Complex for HTML-to-PDF, requires system dependencies |
-
-**Decision:** Playwright. The 50% file size reduction is worth it, and sharing the library with E2E tests reduces dependencies.
-
-### Why Keycloak SAML Over Auth0/Azure AD
-
-| Decision | Rationale | Trade-off |
-|----------|-----------|-----------|
-| **Keycloak + SAML** | Already in organization, open-source, SAML 2.0 standard, @node-saml/passport-saml is stable | Requires IdP infrastructure (already there) |
-| Alternative: Auth0 | Managed, MFA built-in | Costs per active user, vendor lock-in, overkill for internal app |
-| Alternative: NextAuth.js | Easier OAuth setup | SAML support weak, designed for external users |
-
-**Decision:** Keycloak SAML via passport-saml. The corporate IdP is already running; use it.
+- `nestjs-prisma` wrapper package -- unnecessary abstraction over the 10-line
+  PrismaService class above
+- Generic repository base class with generics -- Prisma's generated client
+  provides per-model type safety that a generic base class erases. Keep
+  repositories concrete per domain
+- `@prisma/extension-*` packages -- not needed for this use case
 
 ---
 
-## Alternatives Considered
+## 3. Docker Compose for Monorepo
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Frontend | Next.js 15 | Remix, Astro | Next.js has Turbopack (10x faster builds) + largest ecosystem |
-| Framework | NestJS 11 | FastAPI (Python), Go | NestJS + TypeScript matches frontend ecosystem, tRPC native support |
-| ORM | Prisma 7 | SQLAlchemy, Hibernate | Prisma is TypeScript-first, zero setup in monorepo, type safety unmatched |
-| Validation | Zod 4 | Yup, io-ts | Zod has JIT compiler (2026), best monorepo story, tRPC default |
-| Queue | BullMQ 5 | Resque, Sidekiq | BullMQ is Node.js native, NestJS native, Redis-backed (already have it) |
-| PDF | Playwright 1.50 | wkhtmltopdf, WeasyPrint | Playwright is programmatic, integrates with tests, smaller files |
-| Monorepo | Turborepo 2 | Nx, Lerna | Turborepo is simpler, faster, free caching, fits JavaScript ecosystem |
-| Database | PostgreSQL 15 | MySQL, SQLite | PostgreSQL has JSONB, full-text search, JSON operators, proven at scale |
-| Package Mgr | pnpm 9 | npm, yarn | pnpm has strict peer deps, faster, smaller node_modules, Turborepo optimized |
+### Current State
+
+No Dockerfiles or docker-compose files exist.
+
+### Recommended Approach: Turborepo Prune + Multi-Stage Builds
+
+| Component | Image | Version |
+|-----------|-------|---------|
+| PostgreSQL | `postgres:15-alpine` | 15.x |
+| Redis | `redis:7-alpine` | 7.x |
+| PgBouncer | `bitnami/pgbouncer:latest` | 1.22+ |
+| NestJS API | Custom multi-stage | Node 22-alpine |
+| Next.js Web | Custom multi-stage | Node 22-alpine |
+
+**Docker Compose structure:**
+
+```
+docker/
+  docker-compose.yml          # Production-like
+  docker-compose.dev.yml      # Development overrides (hot reload)
+  api.Dockerfile              # NestJS multi-stage
+  web.Dockerfile              # Next.js multi-stage (standalone output)
+  pgbouncer/
+    pgbouncer.ini             # PgBouncer config
+    userlist.txt              # PgBouncer auth
+```
+
+**Multi-stage Dockerfile pattern for Turborepo + pnpm:**
+
+```dockerfile
+# Stage 1: Prune monorepo to only API workspace
+FROM node:22-alpine AS pruner
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+COPY . .
+RUN npx turbo prune @customreport/api --docker
+
+# Stage 2: Install dependencies
+FROM node:22-alpine AS installer
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+COPY --from=pruner /app/out/json/ .
+RUN pnpm install --frozen-lockfile
+
+# Stage 3: Build
+FROM node:22-alpine AS builder
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+COPY --from=installer /app/ .
+COPY --from=pruner /app/out/full/ .
+RUN pnpm turbo build --filter=@customreport/api
+
+# Stage 4: Production
+FROM node:22-alpine AS runner
+WORKDIR /app
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+CMD ["node", "dist/main.js"]
+```
+
+**Key decisions:**
+- `turbo prune --docker` creates a minimal workspace tree for each app
+- `pnpm install --frozen-lockfile` ensures deterministic installs
+- Node 22-alpine for smaller image size (~180MB vs ~900MB full)
+- Next.js uses `output: 'standalone'` for minimal production image
+
+**Confidence:** HIGH -- Turborepo Docker guide is official, pnpm + multi-stage
+is well-documented.
+
+### What NOT to Add
+
+- Kubernetes manifests -- out of scope for v2.0
+- Nginx reverse proxy -- not needed when Docker Compose exposes ports directly
+- Custom health check scripts in Docker -- NestJS Terminus handles this at
+  application level
 
 ---
 
-## Performance Targets
+## 4. SAML Authentication: @node-saml/passport-saml + NestJS
 
-### Build Performance
+### Current State
 
-| Metric | Target | How |
-|--------|--------|-----|
-| Cold build | <30s | Turborepo with TypeScript references, pnpm fastness |
-| Cached build | <1s | Turborepo content-hashing, local cache hit |
-| Hot reload | <200ms | Next.js Turbopack, Vitest watch mode |
-| Production build | <60s | pnpm install + turbo build + Docker build |
+The codebase has **well-built auth foundations**:
+- `saml.strategy.ts` -- creates SAML strategy with full Keycloak config
+- `jwt.strategy.ts` -- JWT extraction from cookies
+- `roles.guard.ts` -- role-based access control guard (pure function)
+- `auth.controller.ts` -- JWT signing/verification + session cookies
+- `auth.module.ts` -- wires everything together
 
-### Runtime Performance
+All of this is implemented as **pure functions/classes** not yet connected to
+NestJS DI or HTTP server.
 
-| Metric | Target | How |
-|--------|--------|-----|
-| API response (p50) | <50ms | NestJS + Prisma, PgBouncer pooling, Redis caching |
-| PDF generation | <5s per page | Playwright, async BullMQ job, parallel workers |
-| Database query (p99) | <100ms | Prisma query optimization, PgBouncer, proper indexes |
-| Frontend LCP | <1.5s | Next.js automatic code-splitting, shadcn/ui lightweight |
-| Memory (NestJS) | <200MB per instance | Node.js 20, no global state, BullMQ job isolation |
+### Recommended Approach: Wire Existing Code into NestJS Guards
 
-### Database Scaling
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `@node-saml/passport-saml` | `^5.1.0` | Already installed |
+| `@nestjs/passport` | `^11.0.5` | Already installed |
+| `passport` | `^0.7.0` | Already installed |
+| `passport-jwt` | `^4.0.1` | Already installed |
+| `jsonwebtoken` | `^9.0.2` | Already installed |
+| `@nestjs/platform-express` | `^11.1.0` | NEW (needed for HTTP) |
+| `helmet` | `^8.0.0` | NEW. Security headers |
+| `@nestjs/config` | `^4.0.0` | NEW. Environment variable management |
 
-| Concern | At 100 reports | At 10K reports | At 1M reports |
-|---------|----------------|----------------|--------------|
-| Connection pool | 20–30 (via PgBouncer) | 30–50 | 50–100 (add read replicas) |
-| Query index strategy | basic (PK, FK) | compound indexes on (reportId, userId) | add pg_stat_statements monitoring |
-| Report assembly | sequential jobs | BullMQ workers (10) | BullMQ priority queue + DLQ |
-| Cache (Redis) | simple INCR counters | report summaries + user sessions | cache warming with cron |
+**Integration pattern:**
+
+The existing pure-function auth code needs to be wrapped in NestJS
+constructs:
+
+1. **SAML routes** -- Express routes (not tRPC) because Passport SAML
+   requires HTTP redirects (`/auth/saml/login` -> Keycloak ->
+   `/auth/saml/callback`). These are 2 plain Express routes, NOT tRPC
+   procedures.
+
+2. **JWT Guard** -- NestJS `@UseGuards(JwtAuthGuard)` on tRPC middleware
+   context creation. Every tRPC request extracts JWT from cookie, validates
+   it, and puts `UserSession` into tRPC context.
+
+3. **Role Guard** -- The existing `createRoleGuard` becomes a tRPC middleware
+   that checks `ctx.session.role` against required roles.
+
+```typescript
+// tRPC middleware for auth (in appRouter)
+const isAuthed = t.middleware(({ ctx, next }) => {
+  if (!ctx.session) {
+    throw new TRPCError({ code: 'UNAUTHORIZED' });
+  }
+  return next({ ctx: { session: ctx.session } });
+});
+
+const isHead = t.middleware(({ ctx, next }) => {
+  if (ctx.session?.role !== 'head') {
+    throw new TRPCError({ code: 'FORBIDDEN' });
+  }
+  return next({ ctx });
+});
+
+const protectedProcedure = t.procedure.use(isAuthed);
+const headProcedure = t.procedure.use(isAuthed).use(isHead);
+```
+
+**Dev mode bypass:** The existing `AUTH_DEV_MODE=true` pattern is preserved.
+In dev mode, the SAML callback is mocked to return a test user without
+requiring a running Keycloak instance.
+
+**Confidence:** HIGH -- all auth code already exists, just needs NestJS
+wiring. `@node-saml/passport-saml` v5.1.0 is current stable.
+
+### What NOT to Add
+
+- `nest-keycloak-connect` -- designed for OpenID Connect, not SAML. The
+  codebase uses SAML which is an organization requirement
+- `@nestjs/jwt` -- not needed. The codebase already has `jsonwebtoken`
+  with a clean wrapper. Adding @nestjs/jwt is a second JWT library for
+  no benefit
+- NextAuth.js / Auth.js -- weak SAML support, designed for external OAuth
+  providers. Wrong tool for corporate SAML SSO
+- Refresh token rotation -- v2.0 uses simple 1-hour JWT expiry. Add refresh
+  tokens in v3.0 if session length is a complaint
+
+---
+
+## 5. BullMQ + NestJS (@nestjs/bullmq)
+
+### Current State
+
+- `reminders.service.ts` has full domain logic for scheduling reminder
+  executions with dedup
+- `pdf-export.service.ts` has PDF generation domain logic
+- Neither is wired to actual queue infrastructure
+- BullMQ is referenced in CLAUDE.md but not installed
+
+### Recommended Approach
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `@nestjs/bullmq` | `^11.0.0` | NestJS BullMQ integration module |
+| `bullmq` | `^5.0.0` | BullMQ core (peer dependency) |
+| `@bull-board/api` | `^6.20.0` | Bull Board API (for admin dashboard) |
+| `@bull-board/nestjs` | `^6.20.0` | NestJS Bull Board integration |
+| `@bull-board/express` | `^6.20.0` | Express adapter for Bull Board UI |
+
+**Queue design (3 queues):**
+
+| Queue | Job Type | Priority | Retry | DLQ |
+|-------|----------|----------|-------|-----|
+| `pdf-export` | Generate PDF from report HTML | Normal | 3 retries, exponential backoff | Yes |
+| `email` | Send reminder emails via SMTP | Normal | 5 retries, 60s delay | Yes |
+| `report-assembly` | Assemble full report from sections | Low | 2 retries | No |
+
+**Module setup:**
+
+```typescript
+// apps/api/src/infrastructure/queue.module.ts
+@Module({
+  imports: [
+    BullModule.forRoot({
+      connection: {
+        host: process.env.REDIS_HOST ?? 'localhost',
+        port: Number(process.env.REDIS_PORT ?? 6379),
+      },
+    }),
+    BullModule.registerQueue(
+      { name: 'pdf-export' },
+      { name: 'email' },
+      { name: 'report-assembly' },
+    ),
+  ],
+})
+export class QueueModule {}
+```
+
+**Processor pattern:**
+
+```typescript
+@Processor('pdf-export')
+export class PdfExportProcessor extends WorkerHost {
+  constructor(
+    private readonly pdfService: PdfExportService,
+    private readonly prisma: PrismaService,
+  ) { super(); }
+
+  async process(job: Job<{ reportId: string }>): Promise<string> {
+    // 1. Fetch report data from Prisma
+    // 2. Render HTML template
+    // 3. Generate PDF via Playwright
+    // 4. Store PDF (filesystem or S3)
+    // 5. Return PDF URL
+  }
+}
+```
+
+**Bull Board** -- mounted at `/admin/queues` behind the head role guard.
+Provides visual monitoring of all 3 queues, job statuses, retry/replay.
+
+**Confidence:** HIGH -- `@nestjs/bullmq` v11.0.4 is official NestJS package,
+BullMQ v5 is the standard Node.js queue.
+
+### What NOT to Add
+
+- `bull` (predecessor) -- unmaintained, BullMQ is the successor
+- `@nestjs/schedule` for email reminders -- use BullMQ repeatable jobs
+  instead. One queue system, not two
+- Custom Redis pub/sub for job notifications -- BullMQ handles this internally
+- Separate worker process -- for 6 users, co-located workers in the API
+  process are sufficient. Extract to separate process when queue depth
+  exceeds 100 jobs/minute
+
+---
+
+## 6. Observability: Health Checks + Metrics
+
+### Current State
+
+No health checks or metrics exist. The API has a structured JSON logger
+(`apps/api/src/lib/logger.ts`) already built.
+
+### Recommended Approach
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `@nestjs/terminus` | `^11.1.0` | Health check framework |
+| `@willsoto/nestjs-prometheus` | `^6.0.0` | Prometheus metrics for NestJS |
+| `prom-client` | `^15.0.0` | Prometheus client (peer dep) |
+
+**Health checks (3 indicators):**
+
+| Indicator | Endpoint | What It Checks |
+|-----------|----------|----------------|
+| Database | `/health` | Prisma `$queryRaw('SELECT 1')` |
+| Redis | `/health` | Redis `PING` |
+| Memory | `/health` | Heap usage < 200MB |
+
+```typescript
+@Controller('health')
+export class HealthController {
+  constructor(
+    private readonly health: HealthCheckService,
+    private readonly db: PrismaHealthIndicator,
+    private readonly memory: MemoryHealthIndicator,
+  ) {}
+
+  @Get()
+  @HealthCheck()
+  check() {
+    return this.health.check([
+      () => this.db.pingCheck('database'),
+      () => this.memory.checkHeap('memory', 200 * 1024 * 1024),
+    ]);
+  }
+}
+```
+
+**Prometheus metrics:**
+
+Default Node.js metrics (CPU, memory, event loop lag, GC) are collected
+automatically by `@willsoto/nestjs-prometheus`. Custom metrics:
+
+| Metric | Type | Labels |
+|--------|------|--------|
+| `http_request_duration_seconds` | Histogram | method, route, status |
+| `bullmq_jobs_total` | Counter | queue, status (completed/failed) |
+| `report_submissions_total` | Counter | role |
+| `pdf_generation_duration_seconds` | Histogram | - |
+
+Exposed at `GET /metrics` (Prometheus scrape endpoint). Protected behind
+internal-only access (not exposed to frontend).
+
+**Confidence:** HIGH -- `@nestjs/terminus` is official NestJS, prom-client
+is the de facto Prometheus client for Node.js.
+
+### What NOT to Add
+
+- Grafana/Prometheus Docker containers in v2.0 -- the app exposes `/metrics`,
+  the infrastructure team connects their existing monitoring stack
+- OpenTelemetry (`@nestjs/opentelemetry`) -- overkill for a single-service
+  app with 6 users. Add if distributed tracing is needed later
+- Sentry error tracking -- consider for v3.0, not v2.0. Structured logging
+  covers error visibility for now
+- Custom access log middleware -- NestJS + Express + Helmet already log
+  requests. Use the existing structured logger
+
+---
+
+## 7. PgBouncer in Docker Compose
+
+### Current State
+
+No PgBouncer configuration exists.
+
+### Recommended Approach
+
+| Component | Image | Config |
+|-----------|-------|--------|
+| PgBouncer | `bitnami/pgbouncer:latest` | Transaction mode, 20 pool size |
+
+**Docker Compose service:**
+
+```yaml
+pgbouncer:
+  image: bitnami/pgbouncer:latest
+  environment:
+    POSTGRESQL_HOST: postgres
+    POSTGRESQL_PORT: 5432
+    POSTGRESQL_USERNAME: customreport
+    POSTGRESQL_PASSWORD: ${DB_PASSWORD}
+    POSTGRESQL_DATABASE: customreport
+    PGBOUNCER_POOL_MODE: transaction
+    PGBOUNCER_DEFAULT_POOL_SIZE: 20
+    PGBOUNCER_MAX_CLIENT_CONN: 200
+    PGBOUNCER_MAX_PREPARED_STATEMENTS: 100
+  ports:
+    - "6432:6432"
+  depends_on:
+    postgres:
+      condition: service_healthy
+```
+
+**Connection strings:**
+
+```env
+# App connects through PgBouncer (transaction mode)
+DATABASE_URL="postgresql://customreport:${DB_PASSWORD}@pgbouncer:6432/customreport?pgbouncer=true&connection_limit=1"
+
+# Prisma Migrate connects directly (needs session-level features)
+DIRECT_URL="postgresql://customreport:${DB_PASSWORD}@postgres:5432/customreport"
+```
+
+**Key settings:**
+- `PGBOUNCER_POOL_MODE=transaction` -- required by Prisma
+- `PGBOUNCER_MAX_PREPARED_STATEMENTS=100` -- Prisma 7 uses prepared
+  statements by default. Setting this > 0 allows PgBouncer to manage them
+  (PgBouncer 1.21+). For PgBouncer < 1.21, add `?pgbouncer=true` to URL
+  which disables prepared statements
+- `connection_limit=1` in Prisma URL -- lets PgBouncer manage the pool
+  instead of Prisma's internal pool competing with it
+
+**Dev vs Prod:**
+- **Dev:** Skip PgBouncer. Connect directly to PostgreSQL (`localhost:5432`).
+  PgBouncer adds complexity with zero benefit for a single-developer setup
+- **Prod:** PgBouncer mandatory. Handles connection reuse across NestJS
+  restart cycles and BullMQ worker connections
+
+**Confidence:** HIGH -- Prisma + PgBouncer is officially documented, bitnami
+image is well-maintained, transaction mode is standard.
+
+### What NOT to Add
+
+- pgpool-II -- more complex, designed for read replicas and load balancing.
+  PgBouncer is simpler and sufficient
+- Connection pooling at application level (Prisma pool) when PgBouncer is
+  present -- use `connection_limit=1` to avoid double-pooling
+- Redis Sentinel/Cluster -- single Redis instance is sufficient for 6 users
+
+---
+
+## Complete New Dependencies Summary
+
+### apps/api (production dependencies)
+
+```bash
+pnpm --filter=@customreport/api add \
+  @nestjs/platform-express@^11.1.0 \
+  @nestjs/config@^4.0.0 \
+  @nestjs/terminus@^11.1.0 \
+  @nestjs/bullmq@^11.0.0 \
+  bullmq@^5.0.0 \
+  helmet@^8.0.0 \
+  @willsoto/nestjs-prometheus@^6.0.0 \
+  prom-client@^15.0.0 \
+  @bull-board/api@^6.20.0 \
+  @bull-board/nestjs@^6.20.0 \
+  @bull-board/express@^6.20.0
+```
+
+### apps/api (dev dependencies)
+
+```bash
+pnpm --filter=@customreport/api add -D \
+  @prisma/client@^7.0.0 \
+  prisma@^7.0.0
+```
+
+Note: Prisma Client is a dev dependency because it's generated code.
+The `@prisma/client` runtime is included in the generated output.
+Actually, for Prisma 7, `@prisma/client` should be a production dependency
+and `prisma` (CLI) is the dev dependency:
+
+```bash
+pnpm --filter=@customreport/api add @prisma/client@^7.0.0
+pnpm --filter=@customreport/api add -D prisma@^7.0.0
+```
+
+### apps/web (production dependencies)
+
+```bash
+pnpm --filter=@customreport/web add \
+  @trpc/client@^11.16.0
+```
+
+### Root (dev dependencies)
+
+```bash
+pnpm add -D prisma@^7.0.0
+```
+
+(Prisma CLI at root for running migrations from monorepo root.)
+
+---
+
+## What NOT to Add (Anti-Recommendations)
+
+These were considered and explicitly rejected:
+
+| Package/Tool | Why Not |
+|--------------|---------|
+| `nestjs-trpc` / `nestjs-trpc-v2` | Adds decorator-based schema generation that conflicts with existing `packages/shared` tRPC router contract |
+| `trpc-nestjs-adapter` | Alpha, abandoned (no release in 12+ months) |
+| `@trpc/react-query` | Unnecessary weight. Vanilla `@trpc/client` with Next.js RSC is simpler and lighter |
+| `@nestjs/jwt` | Already have `jsonwebtoken` with clean wrappers. Two JWT libraries for no benefit |
+| `nest-keycloak-connect` | OpenID Connect focused, not SAML. Wrong auth protocol |
+| `NextAuth.js` / `Auth.js` | Weak SAML support. Designed for external OAuth, not corporate IdP |
+| `nestjs-prisma` | 10-line PrismaService doesn't need a wrapper package |
+| `@nestjs/typeorm` | Listed in v1.0 STACK.md install commands by mistake. Prisma is the ORM, not TypeORM |
+| `@nestjs/schedule` | BullMQ repeatable jobs handle scheduling. One queue system, not two |
+| `@nestjs/opentelemetry` | Overkill for single-service, 6-user app |
+| `@sentry/node` | Structured logging covers v2.0 error visibility |
+| `nestjs-pino` / `winston` | Already have custom structured logger in `src/lib/logger.ts` |
+| `nginx` / `traefik` | Not needed with Docker Compose direct port exposure |
+| `pgpool-II` | PgBouncer is simpler and sufficient |
+| `Redis Sentinel` | Single Redis node is sufficient |
+| Kubernetes manifests | Out of scope for v2.0 |
+
+---
+
+## Integration Topology
+
+```
+                          Docker Compose Network
+  +----------------------------------------------------------------+
+  |                                                                  |
+  |  +----------+     +----------+     +-----------+                 |
+  |  | Next.js  |     | NestJS   |     | BullMQ    |                 |
+  |  | Web      |---->| API      |---->| Workers   |                 |
+  |  | :3000    |tRPC | :3001    |     | (in-proc) |                 |
+  |  +----------+     +----+-----+     +-----------+                 |
+  |                        |                |                        |
+  |                   +----+----+     +-----+-----+                  |
+  |                   |PgBouncer|     |   Redis    |                  |
+  |                   |  :6432  |     |   :6379    |                  |
+  |                   +----+----+     +-----------+                  |
+  |                        |                                         |
+  |                   +----+------+                                  |
+  |                   |PostgreSQL |                                  |
+  |                   |   :5432   |                                  |
+  |                   +-----------+                                  |
+  +----------------------------------------------------------------+
+
+  External: Keycloak IdP (SAML SSO) -- corporate infrastructure
+  External: SMTP server -- corporate email relay
+```
 
 ---
 
 ## Confidence Assessment
 
-| Area | Confidence | Reason |
-|------|------------|--------|
-| Next.js 15 | **HIGH** | Official stable release (Apr 2026), Vercel backing, React 19 native, Turbopack production-ready |
-| NestJS 11 | **HIGH** | LTS with decorator support, @nestjs/bullmq official, strong TypeScript story |
-| Prisma 7 | **HIGH** | Published Jan 2026, 3x faster, Rust removal completed, production deployments confirm stability |
-| tRPC 11 | **HIGH** | Stable API, monorepo default, thousands of production apps |
-| Zod 4 | **HIGH** | JIT compiler production-ready, industry standard, no breaking changes expected |
-| Playwright 1.50 | **HIGH** | Microsoft-backed, stable API, cross-browser, PDF generation proven |
-| BullMQ 5 | **HIGH** | De facto queue standard in Node.js, NestJS native, Redis-backed proven |
-| Keycloak SAML | **MEDIUM-HIGH** | Organization already uses it, @node-saml/passport-saml stable but lower-velocity than OAuth libraries |
-| Turborepo 2 | **HIGH** | Vercel backing, content-hashing battle-tested, no viable alternative in JavaScript |
-| PostgreSQL 15 | **HIGH** | Enterprise-proven, JSONB native, pg_stat_statements for analysis, 3+ years of stability |
-| PgBouncer 1.22 | **HIGH** | Battle-tested for 10K+ connections, de facto standard, light-weight C implementation |
-
----
-
-## Critical Dependencies & Versions
-
-**Lock to exact versions in `pnpm-lock.yaml`:**
-
-```yaml
-# Keep these synced across all packages
-typescript: 6.0.x (STRICT MODE MANDATORY)
-react: 19.x
-react-dom: 19.x
-next: 15.5.x
-nestjs: 11.x
-prisma: 7.x
-zod: 4.x
-trpc: 11.x
-tailwindcss: 4.x
-vitest: 3.x
-playwright: 1.50.x
-```
-
-**Node.js requirement:** `>=20.0.0` (specify in `package.json` engines)
-
----
-
-## Breaking Changes from Previous Versions
-
-### Next.js 14 → 15
-
-- **Fetch caching removed** — requests no longer cached by default (add `{ next: { revalidate: 3600 } }` explicitly)
-- **React 19 required** — useActionState recommended over useTransition
-- **GET handlers** — no longer cached by route
-- **Turbopack Dev stable** — migration from SWC is automatic
-
-### Prisma 6 → 7
-
-- **Rust removed** — TypeScript implementation, no breaking schema changes
-- **Bundle size** — 14MB → 1.6MB (90% reduction)
-- **Query speed** — up to 3.4x faster
-- No schema.prisma changes needed, just upgrade and regenerate Prisma Client
-
-### TypeScript 5 → 6
-
-- **Strict by default** — must opt-in to non-strict in tsconfig.json (don't do this)
-- **Decorators TC39 Stage 3** — NestJS decorators are now standard
-- **No breaking changes for existing projects** — upgrade is safe
-
----
-
-## Security Defaults
-
-All defaults below are MANDATORY:
-
-| Area | Setting | Why |
-|------|---------|-----|
-| TypeScript | `strict: true` | Catches null/undefined bugs at compile time |
-| ESLint | `@typescript-eslint/strict` ruleset | Prevents common pitfalls (floating promises, unsafe assignment) |
-| Prisma | `@prisma/client` validation | SQL injection prevention, input sanitization |
-| Zod | Shared schemas | Frontend + backend use same validation rules |
-| NestJS Guards | RBAC on every endpoint | @UseGuards(JwtGuard, RolesGuard) required |
-| Helmet | CORS, CSP, HSTS headers | `@nestjs/helmet` on app initialization |
-| JWT | Signed tokens, 1h expiry | Stateless sessions, rotate on refresh token |
-| SAML | Certificate pinning, assertion validation | @node-saml validates IdP response signature |
-| PostgreSQL | `host_based_authentication`, firewall | No public IP, only Docker network access |
-| Redis | No AUTH required (internal only) | Docker Compose network isolation, not exposed |
-
----
-
-## Development Environment
-
-### Local Setup (for team)
-
-```bash
-# Clone monorepo
-git clone <repo> custom-report
-cd custom-report
-
-# Install all dependencies
-pnpm install
-
-# Copy .env.example to .env (for local dev)
-cp .env.example .env
-# .env should have:
-# DATABASE_URL=postgresql://user:pass@localhost:5432/customreport_dev
-# REDIS_URL=redis://localhost:6379
-
-# Start Docker Compose (PostgreSQL + Redis)
-docker-compose up -d
-
-# Run migrations (Prisma)
-pnpm exec prisma migrate dev --name init
-
-# Start dev servers (Next.js + NestJS in parallel, HMR enabled)
-pnpm turbo run dev
-
-# Access:
-# - Frontend: http://localhost:3000
-# - API: http://localhost:3001
-```
+| Area | Confidence | Notes |
+|------|------------|-------|
+| tRPC Express adapter on NestJS | **HIGH** | Official adapter, standard pattern, codebase already has router contract |
+| Prisma 7 + NestJS repositories | **HIGH** | Officially documented by both NestJS and Prisma |
+| Docker Compose + Turborepo | **HIGH** | Official Turborepo Docker guide, well-documented patterns |
+| SAML auth wiring | **HIGH** | All auth code already built, just needs NestJS HTTP wiring |
+| @nestjs/bullmq | **HIGH** | Official NestJS package, v11.0.4 current |
+| @nestjs/terminus health | **HIGH** | Official NestJS package, v11.1.1 current |
+| Prometheus metrics | **MEDIUM-HIGH** | `@willsoto/nestjs-prometheus` is community package (not official NestJS) but widely used and stable |
+| PgBouncer + Prisma | **HIGH** | Officially documented by Prisma, bitnami image battle-tested |
 
 ---
 
 ## Sources
 
-- [Next.js 15 Upgrade Guide](https://nextjs.org/docs/app/guides/upgrading/version-15)
-- [Next.js 15.5 Release Notes](https://nextjs.org/blog/next-15-5)
-- [NestJS Documentation](https://docs.nestjs.com/first-steps)
-- [Prisma 7 Performance Blog](https://www.prisma.io/blog/announcing-prisma-orm-7-0-0)
-- [shadcn/ui Monorepo Support](https://ui.shadcn.com/docs/monorepo)
-- [Tailwind CSS v4](https://ui.shadcn.com/docs/tailwind-v4)
-- [tRPC + NestJS Integration Patterns](https://github.com/nawodyaishan/nestjs-nextjs-trpc-monorepo)
-- [BullMQ Production Guide](https://docs.bullmq.io/guide/going-to-production)
-- [BullMQ + NestJS Guide](https://docs.bullmq.io/guide/nestjs)
-- [Zod Documentation](https://zod.dev/)
-- [Playwright vs Puppeteer 2026 Benchmark](https://pdf4.dev/blog/html-to-pdf-benchmark-2026)
-- [Playwright PDF Generation](https://www.firecrawl.dev/blog/playwright-vs-puppeteer)
-- [Vitest Monorepo Setup](https://vitest.dev/guide/projects)
-- [Turborepo Guide](https://turborepo.dev/docs/guides)
-- [PgBouncer Connection Pooling 2026](https://www.tamiltech.in/article/scaling-postgresql-connections-with-pgbouncer-the-complete-guide-for-2026)
-- [Keycloak + NestJS Integration](https://www.loginradius.com/enterprise-sso/keycloak/nestjs)
-- [SAML + Keycloak + Next.js](https://medium.com/@david_haylock/integrating-keycloak-authentication-into-a-next-js-application-46dd5de0d550)
-- [Monorepo Tools Comparison 2026](https://www.pkgpulse.com/blog/best-monorepo-tools-2026)
-- [Turborepo + pnpm Best Practices](https://www.tinybird.co/blog/frontend-ci-monorepo-turborepo-pnpm)
+- [tRPC Express Adapter (official)](https://trpc.io/docs/server/adapters/express)
+- [tRPC Adapters Overview](https://trpc.io/docs/server/adapters)
+- [NestJS + Prisma Recipe (official)](https://docs.nestjs.com/recipes/prisma)
+- [Prisma 7 + PgBouncer Configuration](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/pgbouncer)
+- [Prisma Connection Management](https://www.prisma.io/docs/guides/performance-and-optimization/connection-management)
+- [BullMQ + NestJS Guide (official BullMQ docs)](https://docs.bullmq.io/guide/nestjs)
+- [NestJS Queues (official)](https://docs.nestjs.com/techniques/queues)
+- [@nestjs/bullmq on npm](https://www.npmjs.com/package/@nestjs/bullmq) -- v11.0.4
+- [@nestjs/terminus on npm](https://www.npmjs.com/package/@nestjs/terminus) -- v11.1.1
+- [@willsoto/nestjs-prometheus on GitHub](https://github.com/willsoto/nestjs-prometheus)
+- [Turborepo Docker Guide (official)](https://turborepo.dev/docs/guides/tools/docker)
+- [Turborepo Prune for Docker](https://turbo.build/repo/docs/handbook/deploying-with-docker)
+- [bitnami/pgbouncer Docker Image](https://hub.docker.com/r/bitnami/pgbouncer)
+- [@node-saml/passport-saml on GitHub](https://github.com/node-saml/passport-saml)
+- [@bull-board/nestjs on npm](https://www.npmjs.com/package/@bull-board/nestjs) -- v6.20.6
+- [Node.js PostgreSQL Connection Pooling with PgBouncer](https://earezki.com/ai-news/2026-04-06-your-nodejs-app-is-probably-killing-your-postgresql-connection-pooling-explained/)
+- [NestJS-tRPC (evaluated, rejected)](https://nestjs-trpc.io/)
+- [Optimized Multi-Stage Docker Builds with TurboRepo and PNPM](https://fintlabs.medium.com/optimized-multi-stage-docker-builds-with-turborepo-and-pnpm-for-nodejs-microservices-in-a-monorepo-c686fdcf051f)
 
 ---
 
-*Last updated: 2026-04-05 (research phase)*
+*Last updated: 2026-04-10 (v2.0 infrastructure research)*
