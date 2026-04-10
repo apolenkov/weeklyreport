@@ -4,6 +4,10 @@ import { ReviewModule } from './modules/review/review.module.js';
 import { ArchiveModule } from './modules/archive/archive.module.js';
 import { PdfExportModule } from './modules/pdf-export/pdf-export.module.js';
 import { RemindersModule } from './modules/reminders/reminders.module.js';
+import { ReportSectionsModule } from './modules/report-sections/report-sections.module';
+import { PublicationModule } from './modules/publication/publication.module';
+import { CarryOverModule } from './modules/carry-over/carry-over.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -12,7 +16,10 @@ import { RemindersModule } from './modules/reminders/reminders.module.js';
     ArchiveModule,
     PdfExportModule,
     RemindersModule,
-    // Plan 03 adds: ReportSectionsModule, PublicationModule, CarryOverModule, AdminModule
+    ReportSectionsModule,
+    PublicationModule,
+    CarryOverModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

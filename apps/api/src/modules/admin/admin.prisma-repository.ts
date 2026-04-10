@@ -1,0 +1,247 @@
+import { Injectable } from '@nestjs/common';
+import {
+  adminSnapshotSchema,
+  adminUserSchema,
+  adminProjectSchema,
+  reportPeriodSchema,
+  adminReminderRuleSchema,
+  adminReminderExecutionSchema,
+  type AdminSnapshot,
+} from '@customreport/shared';
+
+import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import type { AdminRepository } from './admin.service';
+
+/**
+ * Prisma implementation of AdminRepository.
+ * Reads/writes users, projects, periods (reports), and reminder rules as AdminSnapshot.
+ * All output is parsed through Zod schemas before returning (REPO-09).
+ */
+@Injectable()
+export class AdminPrismaRepository implements AdminRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async getSnapshot(): Promise<AdminSnapshot> {
+    const [users, projects, periods, reminderRules, reminderExecutions] =
+      await Promise.all([
+        this.prisma.user.findMany({ orderBy: { name: 'asc' } }),
+        this.prisma.project.findMany({
+          include: { lead: true },
+          orderBy: { name: 'asc' },
+        }),
+        this.prisma.report.findMany({ orderBy: { periodStart: 'desc' } }),
+        this.prisma.reminderRule.findMany({ orderBy: { createdAt: 'desc' } }),
+        this.prisma.reminderExecution.findMany({
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
+
+    return adminSnapshotSchema.parse({
+      users: users.map((u) =>
+        adminUserSchema.parse({
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          role: u.role,
+        }),
+      ),
+      projects: projects.map((p) =>
+        adminProjectSchema.parse({
+          id: p.id,
+          name: p.name,
+          archived: p.archived,
+          leadId: p.leadId,
+          leadName: p.lead.name,
+        }),
+      ),
+      periods: periods.map((r) =>
+        reportPeriodSchema.parse({
+          id: r.id,
+          periodStart: r.periodStart,
+          periodEnd: r.periodEnd,
+          deadline: r.deadline,
+          status: r.status,
+        }),
+      ),
+      reminderRules: reminderRules.map((rule) =>
+        adminReminderRuleSchema.parse({
+          id: rule.id,
+          reportId: rule.reportId ?? '',
+          kind: 'deadline',
+          fireAt: rule.createdAt,
+          timezone: 'Europe/Moscow',
+          status: rule.enabled ? 'active' : 'paused',
+          version: 1,
+        }),
+      ),
+      reminderExecutions: reminderExecutions.map((exec) =>
+        adminReminderExecutionSchema.parse({
+          id: exec.id,
+          ruleId: exec.ruleId,
+          reportId: '',
+          dedupeKey: exec.dedupeKey,
+          status: exec.status === 'pending' ? 'queued' : exec.status,
+          scheduledFor: exec.createdAt,
+          sentAt: exec.sentAt,
+          recipientEmail: 'unknown@example.com',
+          errorMessage: exec.error,
+        }),
+      ),
+    });
+  }
+
+  async saveSnapshot(snapshot: AdminSnapshot): Promise<AdminSnapshot> {
+    const currentUsers = await this.prisma.user.findMany();
+    const currentProjects = await this.prisma.project.findMany();
+    const currentReports = await this.prisma.report.findMany();
+    const currentRules = await this.prisma.reminderRule.findMany();
+
+    // Upsert users
+    const currentUserIds = new Set(currentUsers.map((u) => u.id));
+    const snapshotUserIds = new Set(snapshot.users.map((u) => u.id));
+
+    for (const user of snapshot.users) {
+      if (currentUserIds.has(user.id)) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          },
+        });
+      } else {
+        await this.prisma.user.create({
+          data: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            samlId: user.email,
+          },
+        });
+      }
+    }
+
+    // Delete removed users (only those not referenced by sections/projects)
+    const removedUserIds = [...currentUserIds].filter(
+      (id) => !snapshotUserIds.has(id),
+    );
+    for (const userId of removedUserIds) {
+      const hasReferences =
+        (await this.prisma.reportSection.count({
+          where: { authorId: userId },
+        })) > 0 ||
+        (await this.prisma.project.count({
+          where: { leadId: userId },
+        })) > 0;
+
+      if (!hasReferences) {
+        await this.prisma.user.delete({ where: { id: userId } });
+      }
+    }
+
+    // Upsert projects (archive removed ones instead of deleting)
+    const currentProjectIds = new Set(currentProjects.map((p) => p.id));
+    const snapshotProjectIds = new Set(snapshot.projects.map((p) => p.id));
+
+    for (const project of snapshot.projects) {
+      if (currentProjectIds.has(project.id)) {
+        await this.prisma.project.update({
+          where: { id: project.id },
+          data: {
+            name: project.name,
+            archived: project.archived,
+            leadId: project.leadId,
+          },
+        });
+      } else {
+        await this.prisma.project.create({
+          data: {
+            id: project.id,
+            name: project.name,
+            archived: project.archived,
+            leadId: project.leadId,
+          },
+        });
+      }
+    }
+
+    // Archive removed projects
+    const removedProjectIds = [...currentProjectIds].filter(
+      (id) => !snapshotProjectIds.has(id),
+    );
+    if (removedProjectIds.length > 0) {
+      await this.prisma.project.updateMany({
+        where: { id: { in: removedProjectIds } },
+        data: { archived: true },
+      });
+    }
+
+    // Upsert report periods
+    const currentReportIds = new Set(currentReports.map((r) => r.id));
+
+    for (const period of snapshot.periods) {
+      if (currentReportIds.has(period.id)) {
+        await this.prisma.report.update({
+          where: { id: period.id },
+          data: {
+            periodStart: period.periodStart,
+            periodEnd: period.periodEnd,
+            deadline: period.deadline,
+            status: period.status,
+          },
+        });
+      } else {
+        await this.prisma.report.create({
+          data: {
+            id: period.id,
+            periodStart: period.periodStart,
+            periodEnd: period.periodEnd,
+            deadline: period.deadline,
+            status: period.status,
+          },
+        });
+      }
+    }
+
+    // Upsert reminder rules
+    const currentRuleIds = new Set(currentRules.map((r) => r.id));
+    const snapshotRuleIds = new Set(snapshot.reminderRules.map((r) => r.id));
+
+    for (const rule of snapshot.reminderRules) {
+      if (currentRuleIds.has(rule.id)) {
+        await this.prisma.reminderRule.update({
+          where: { id: rule.id },
+          data: {
+            name: rule.kind,
+            enabled: rule.status === 'active',
+            reportId: rule.reportId || null,
+          },
+        });
+      } else {
+        await this.prisma.reminderRule.create({
+          data: {
+            id: rule.id,
+            name: rule.kind,
+            cronExpression: '0 9 * * 5',
+            enabled: rule.status === 'active',
+            reportId: rule.reportId || null,
+          },
+        });
+      }
+    }
+
+    // Delete removed reminder rules
+    const removedRuleIds = [...currentRuleIds].filter(
+      (id) => !snapshotRuleIds.has(id),
+    );
+    if (removedRuleIds.length > 0) {
+      await this.prisma.reminderRule.deleteMany({
+        where: { id: { in: removedRuleIds } },
+      });
+    }
+
+    return this.getSnapshot();
+  }
+}
