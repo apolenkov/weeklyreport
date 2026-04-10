@@ -18,12 +18,12 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 ### API Server
 
 - [x] **API-01**: NestJS bootstraps HTTP server listening on configurable port
-- [ ] **API-02**: tRPC adapter mounts AppRouter at `/trpc` as Express middleware
-- [ ] **API-03**: tRPC context factory extracts UserSession from JWT cookie per request
+- [x] **API-02**: tRPC adapter mounts AppRouter at `/trpc` as Express middleware
+- [x] **API-03**: tRPC context factory extracts UserSession from JWT cookie per request
 - [x] **API-04**: All 8 domain services wired via NestJS dependency injection with Prisma repositories
 - [x] **API-05**: Environment configuration validated with Zod on startup (fail-fast on missing vars)
-- [ ] **API-06**: CORS configured for frontend origin
-- [ ] **API-07**: Structured error handling maps domain errors to tRPC error codes
+- [x] **API-06**: CORS configured for frontend origin
+- [x] **API-07**: Structured error handling maps domain errors to tRPC error codes
 
 ### Prisma Repositories
 
@@ -139,12 +139,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DB-03 | Phase 5 | Complete |
 | DB-04 | Phase 5 | Complete |
 | API-01 | Phase 5 | Complete |
-| API-02 | Phase 5 | Pending |
-| API-03 | Phase 5 | Pending |
+| API-02 | Phase 5 | Complete |
+| API-03 | Phase 5 | Complete |
 | API-04 | Phase 5 | Complete |
 | API-05 | Phase 5 | Complete |
-| API-06 | Phase 5 | Pending |
-| API-07 | Phase 5 | Pending |
+| API-06 | Phase 5 | Complete |
+| API-07 | Phase 5 | Complete |
 | REPO-01 | Phase 5 | Pending |
 | REPO-02 | Phase 5 | Complete |
 | REPO-03 | Phase 5 | Pending |
