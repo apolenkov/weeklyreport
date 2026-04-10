@@ -8,6 +8,8 @@ import {
   type UserSession,
 } from '@customreport/shared';
 
+import { createNullLogger, type AppLogger } from '../../lib/logger';
+
 export class PublicationAccessError extends Error {
   constructor(message: string) {
     super(message);
@@ -58,7 +60,14 @@ function buildPortfolioOverview(sections: ReportSectionReadModel[]): PortfolioOv
 }
 
 export class PublicationService {
-  constructor(private readonly repository: PublicationRepository) {}
+  private readonly logger: AppLogger;
+
+  constructor(
+    private readonly repository: PublicationRepository,
+    logger?: AppLogger,
+  ) {
+    this.logger = logger ?? createNullLogger();
+  }
 
   async getAssembledReport(activeReportId: string): Promise<AssembledReport> {
     const report = await this.repository.getAssembledReport(activeReportId);
@@ -126,6 +135,7 @@ export class PublicationService {
       throw new PublicationAccessError('Report has already been published.');
     }
 
+    this.logger.info('publishing report', { activeReportId, userId: session.userId });
     return this.repository.saveAssembledReport(
       assembledReportSchema.parse({
         ...report,

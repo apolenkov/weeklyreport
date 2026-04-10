@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type {
-  AdminProject,
-  AdminReminderRule,
-  AdminUser,
-  ReportPeriod,
+  AdminSnapshot,
   UserSession,
 } from '@customreport/shared';
 
@@ -33,13 +30,6 @@ const leadSession: UserSession = {
   activeReportSectionId: '11111111-1111-4111-8111-111111111111',
 };
 
-type AdminSnapshot = {
-  users: AdminUser[];
-  projects: AdminProject[];
-  periods: ReportPeriod[];
-  reminderRules: AdminReminderRule[];
-};
-
 const initialSnapshot: AdminSnapshot = {
   users: [
     {
@@ -52,6 +42,7 @@ const initialSnapshot: AdminSnapshot = {
   projects: [],
   periods: [],
   reminderRules: [],
+  reminderExecutions: [],
 };
 
 function createRepository(snapshot: AdminSnapshot): AdminRepository {

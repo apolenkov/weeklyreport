@@ -109,7 +109,7 @@ Plans:
 | 1. Core Report Capture | 3/3 | Complete | 01-01, 01-02, 01-03 |
 | 2. Report Assembly & Publication | 3/3 | Complete | 02-01, 02-02, 02-03 |
 | 3. Automation & Admin | 4/4 | Complete | 03-01, 03-02, 03-03, 03-04 |
-| 4. Production Hardening | 0/2 | In progress | - |
+| 4. Production Hardening | 2/2 | Complete | 04-01, 04-02 |
 
 ### Phase 4: Production Hardening
 
@@ -120,8 +120,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Fix hydration/runtime mismatch and stabilize browser-backed SSR boundaries
-- [ ] 04-02-PLAN.md — Add rotating system logging and close deep design/E2E production gaps
+- [x] 04-01-PLAN.md — Fix hydration/runtime mismatch and stabilize browser-backed SSR boundaries
+- [x] 04-02-PLAN.md — Add rotating system logging and close deep design/E2E production gaps
 
 **UI hint:** yes
 

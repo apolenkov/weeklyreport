@@ -11,6 +11,8 @@ import {
   type ReportPeriod,
 } from '@customreport/shared';
 
+import { createNullLogger, type AppLogger } from '../../lib/logger';
+
 export class AdminAccessError extends Error {
   constructor(message: string) {
     super(message);
@@ -28,7 +30,14 @@ function sortByName<T extends { name: string }>(rows: T[]): T[] {
 }
 
 export class AdminService {
-  constructor(private readonly repository: AdminRepository) {}
+  private readonly logger: AppLogger;
+
+  constructor(
+    private readonly repository: AdminRepository,
+    logger?: AppLogger,
+  ) {
+    this.logger = logger ?? createNullLogger();
+  }
 
   async getSnapshot(): Promise<AdminSnapshot> {
     return adminSnapshotSchema.parse(await this.repository.getSnapshot());
@@ -43,6 +52,7 @@ export class AdminService {
         : [...snapshot.users, parsedUser],
     );
 
+    this.logger.info('upserted user', { userId: parsedUser.id });
     return this.repository.saveSnapshot(adminSnapshotSchema.parse({ ...snapshot, users: nextUsers }));
   }
 
