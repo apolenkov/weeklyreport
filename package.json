@@ -7,8 +7,10 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.0.0",
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "pg": "^8.20.0"
   },
   "scripts": {
     "dev": "turbo run dev --parallel",
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.9.1",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "prisma": "^7.0.0",
