@@ -86,8 +86,8 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 ### Quality Gates
 
 - [x] **QA-01**: All existing 51 backend tests still pass with Prisma repositories
-- [ ] **QA-02**: Fix 24 failing frontend tests (userEvent.setup crash)
-- [ ] **QA-03**: TypeScript typecheck clean across entire monorepo
+- [x] **QA-02**: Fix 24 failing frontend tests (userEvent.setup crash)
+- [x] **QA-03**: TypeScript typecheck clean across entire monorepo
 - [x] **QA-04**: Integration tests for repository implementations against real PostgreSQL
 
 ## v3 Requirements
@@ -186,8 +186,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBS-03 | Phase 7 | Pending |
 | OBS-04 | Phase 7 | Pending |
 | QA-01 | Phase 5 | Complete |
-| QA-02 | Phase 6 | Pending |
-| QA-03 | Phase 6 | Pending |
+| QA-02 | Phase 6 | Complete |
+| QA-03 | Phase 6 | Complete |
 | QA-04 | Phase 5 | Complete |
 
 **Coverage:**
