@@ -49,15 +49,15 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 ### Frontend Integration
 
 - [x] **FE-01**: tRPC client configured with httpBatchLink pointing to API
-- [x] **FE-02**: Lead report form uses tRPC mutations instead of localStorage for save/submit
-- [x] **FE-03**: Head dashboard fetches real submission statuses via tRPC
-- [x] **FE-04**: Assembled report review page loads data from API
-- [x] **FE-05**: Publication flow calls API to publish report
-- [x] **FE-06**: Published report page loads from API
-- [ ] **FE-07**: Admin panel CRUD operations call API endpoints
-- [x] **FE-08**: Archive/history pages load from API
-- [x] **FE-09**: PDF export triggers async job via API and polls for completion
-- [ ] **FE-10**: localStorage helpers and demo data files removed
+- [ ] **FE-02**: Lead report form uses tRPC mutations instead of localStorage for save/submit
+- [ ] **FE-03**: Head dashboard fetches real submission statuses via tRPC
+- [ ] **FE-04**: Assembled report review page loads data from API
+- [ ] **FE-05**: Publication flow calls API to publish report
+- [ ] **FE-06**: Published report page loads from API
+- [x] **FE-07**: Admin panel CRUD operations call API endpoints
+- [ ] **FE-08**: Archive/history pages load from API
+- [ ] **FE-09**: PDF export triggers async job via API and polls for completion
+- [x] **FE-10**: localStorage helpers and demo data files removed
 
 ### Background Jobs
 
@@ -161,15 +161,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTHZ-05 | Phase 6 | Pending |
 | AUTHZ-06 | Phase 6 | Pending |
 | FE-01 | Phase 6 | Complete |
-| FE-02 | Phase 6 | Complete |
-| FE-03 | Phase 6 | Complete |
-| FE-04 | Phase 6 | Complete |
-| FE-05 | Phase 6 | Complete |
-| FE-06 | Phase 6 | Complete |
-| FE-07 | Phase 6 | Pending |
-| FE-08 | Phase 6 | Complete |
-| FE-09 | Phase 6 | Complete |
-| FE-10 | Phase 6 | Pending |
+| FE-02 | Phase 6 | Pending |
+| FE-03 | Phase 6 | Pending |
+| FE-04 | Phase 6 | Pending |
+| FE-05 | Phase 6 | Pending |
+| FE-06 | Phase 6 | Pending |
+| FE-07 | Phase 6 | Complete |
+| FE-08 | Phase 6 | Pending |
+| FE-09 | Phase 6 | Pending |
+| FE-10 | Phase 6 | Complete |
 | JOBS-01 | Phase 7 | Pending |
 | JOBS-02 | Phase 7 | Pending |
 | JOBS-03 | Phase 7 | Pending |
