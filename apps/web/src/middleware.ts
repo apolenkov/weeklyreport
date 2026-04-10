@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const AUTH_COOKIE_NAME = 'customreport_session';
 
-const PROTECTED_PATH_PREFIXES = ['/lead', '/head', '/reports'];
+const PROTECTED_PATH_PREFIXES = ['/lead', '/head', '/reports', '/admin'];
+
+const PUBLIC_PATH_PREFIXES = ['/auth'];
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export function buildLoginRedirect(currentUrl: string, loginUrl: string): string {
   const target = new URL(loginUrl);
@@ -12,7 +16,12 @@ export function buildLoginRedirect(currentUrl: string, loginUrl: string): string
   return target.toString();
 }
 
+export function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
 export function requiresAuthentication(pathname: string): boolean {
+  if (isPublicPath(pathname)) return false;
   return PROTECTED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
@@ -38,7 +47,7 @@ export function middleware(request: NextRequest) {
       new URL(
         buildLoginRedirect(
           request.url,
-          'http://localhost:3001/auth/saml/login',
+          `${API_URL}/auth/saml/login`,
         ),
       ),
     );
