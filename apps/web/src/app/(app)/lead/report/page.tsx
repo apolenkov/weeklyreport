@@ -1,83 +1,42 @@
 'use client';
 
-import {
-  reportSectionReadModelSchema,
-  type DraftSavePayload,
-  type ReportSectionReadModel,
-  type SubmitSectionPayload,
-} from '@customreport/shared';
-
+import { trpc } from '../../../../lib/trpc';
+import { QueryError } from '../../../../components/common/query-error';
 import { AppShell } from '../../../../components/navigation/app-shell';
 import { ReportSectionForm } from '../../../../components/report-section/report-section-form';
-import { createDemoSection } from '../../../../components/report-section/demo-section';
-import {
-  persistLeadSection,
-  readStoredLeadSection,
-} from '../../../../components/report-section/section-storage';
-import { defaultLeadSession, readBrowserSession } from '../../../../lib/dev-session';
-import { useBrowserState } from '../../../../lib/use-browser-state';
+
+import type {
+  DraftSavePayload,
+  ReportSectionReadModel,
+  SubmitSectionPayload,
+} from '@customreport/shared';
 
 export default function LeadReportPage() {
-  const [session] = useBrowserState(defaultLeadSession, () => readBrowserSession(defaultLeadSession));
-  const [section, setSection] = useBrowserState<ReportSectionReadModel>(
-    createDemoSection(),
-    readStoredLeadSection,
-  );
+  const sectionQuery = trpc.reports.getActive.useQuery();
+  const saveDraftMutation = trpc.reports.saveDraft.useMutation({
+    onSuccess: () => sectionQuery.refetch(),
+  });
+  const submitMutation = trpc.reports.submit.useMutation({
+    onSuccess: () => sectionQuery.refetch(),
+  });
 
-  async function handleSaveDraft(
-    input: DraftSavePayload,
-  ): Promise<ReportSectionReadModel> {
-    const nextSection = reportSectionReadModelSchema.parse({
-      ...section,
-      status: 'draft',
-      submittedAt: null,
-      projects: section.projects.map((project) => ({
-        ...project,
-        trafficLight:
-          input.projectStatuses.find((status) => status.projectId === project.projectId)
-            ?.status ?? null,
-      })),
-      items: input.items,
-      risks: input.risks,
-      decisions: input.decisions,
-      priorities: input.priorities,
-    });
+  if (sectionQuery.isLoading) return <p>Loading...</p>;
+  if (sectionQuery.error) return <QueryError error={sectionQuery.error} onRetry={() => sectionQuery.refetch()} />;
 
-    await new Promise((resolve) => window.setTimeout(resolve, 50));
-    const persisted = persistLeadSection(nextSection);
-    setSection(persisted);
+  const section = sectionQuery.data;
 
-    return persisted;
+  if (!section) return <p>No active report section found.</p>;
+
+  async function handleSaveDraft(input: DraftSavePayload): Promise<ReportSectionReadModel> {
+    return saveDraftMutation.mutateAsync(input);
   }
 
-  async function handleSubmit(
-    input: SubmitSectionPayload,
-  ): Promise<ReportSectionReadModel> {
-    const submittedSection = reportSectionReadModelSchema.parse({
-      ...section,
-      status: 'submitted',
-      submittedAt: new Date(),
-      projects: section.projects.map((project) => ({
-        ...project,
-        trafficLight:
-          input.projectStatuses.find((status) => status.projectId === project.projectId)
-            ?.status ?? null,
-      })),
-      items: input.items,
-      risks: input.risks,
-      decisions: input.decisions,
-      priorities: input.priorities,
-    });
-
-    await new Promise((resolve) => window.setTimeout(resolve, 50));
-    const persisted = persistLeadSection(submittedSection);
-    setSection(persisted);
-
-    return persisted;
+  async function handleSubmit(input: SubmitSectionPayload): Promise<ReportSectionReadModel> {
+    return submitMutation.mutateAsync(input);
   }
 
   return (
-    <AppShell activeReportId={session.activeReportId} role={session.role} currentPath="/lead/report">
+    <AppShell activeReportId={section.reportId} role="lead" currentPath="/lead/report">
       <ReportSectionForm
         initialSection={section}
         onSaveDraft={handleSaveDraft}

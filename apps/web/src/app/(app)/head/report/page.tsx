@@ -1,51 +1,47 @@
 'use client';
 
+import { trpc } from '../../../../lib/trpc';
+import { QueryError } from '../../../../components/common/query-error';
 import { AppShell } from '../../../../components/navigation/app-shell';
 import { AssembledReportReview } from '../../../../components/head/assembled-report-review';
-import { createDemoSection } from '../../../../components/report-section/demo-section';
-import {
-  applyReviewSectionUpdate,
-  buildDraftAssembledReport,
-  persistPublishedReport,
-  publishReportSnapshot,
-  readPublishedReport,
-} from '../../../../components/report/report-runtime';
-import { defaultHeadSession, readBrowserSession } from '../../../../lib/dev-session';
-import { useBrowserState } from '../../../../lib/use-browser-state';
-import type { DraftSavePayload } from '@customreport/shared';
+
+import type { AssembledReport, DraftSavePayload } from '@customreport/shared';
 
 export default function HeadReportPage() {
-  const [session] = useBrowserState(defaultHeadSession, () => readBrowserSession(defaultHeadSession));
-  const [report, setReport] = useBrowserState(
-    buildDraftAssembledReport(createDemoSection()),
-    () => readPublishedReport() ?? buildDraftAssembledReport(),
-  );
+  const reportQuery = trpc.review.assembledReport.useQuery();
+  const saveDraftMutation = trpc.reports.saveDraft.useMutation();
+  const publishMutation = trpc.review.publish.useMutation();
+  const utils = trpc.useUtils();
 
-  async function handleUpdateSection(input: DraftSavePayload) {
-    const nextReport = applyReviewSectionUpdate(report, input);
-    setReport(nextReport);
+  if (reportQuery.isLoading) return <p>Loading...</p>;
+  if (reportQuery.error) return <QueryError error={reportQuery.error} onRetry={() => reportQuery.refetch()} />;
 
-    return nextReport;
+  const report = reportQuery.data;
+
+  if (!report) return <p>No assembled report available.</p>;
+
+  async function handleUpdateSection(input: DraftSavePayload): Promise<AssembledReport> {
+    await saveDraftMutation.mutateAsync(input);
+    await utils.review.assembledReport.invalidate();
+    const refreshed = await reportQuery.refetch();
+
+    return refreshed.data ?? report;
   }
 
-  async function handlePublish() {
-    const publishedReport = persistPublishedReport(publishReportSnapshot(report, session));
-    setReport(publishedReport);
+  async function handlePublish(): Promise<AssembledReport> {
+    const result = await publishMutation.mutateAsync();
+    await utils.review.assembledReport.invalidate();
 
-    return publishedReport;
+    return result as AssembledReport;
   }
 
   return (
-    <AppShell activeReportId={session.activeReportId} currentPath="/head/report" role={session.role}>
-      {session.role !== 'head' ? (
-        <p>Access denied. This review screen is available only to head users.</p>
-      ) : (
-        <AssembledReportReview
-          initialReport={report}
-          onPublish={handlePublish}
-          onUpdateSection={handleUpdateSection}
-        />
-      )}
+    <AppShell activeReportId={null} role="head" currentPath="/head/report">
+      <AssembledReportReview
+        initialReport={report}
+        onPublish={handlePublish}
+        onUpdateSection={handleUpdateSection}
+      />
     </AppShell>
   );
 }
