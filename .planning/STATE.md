@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Infrastructure Integration
-status: planning
-last_updated: "2026-04-10T19:31:44.083Z"
+status: executing
+last_updated: "2026-04-10T21:22:53.916Z"
 last_activity: 2026-04-10
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 11
+  completed_plans: 7
   percent: 100
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** Ready to plan
+**Status:** Executing Phase 06
 **Last Updated:** 2026-04-10
 
 ---
@@ -27,18 +27,18 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 
 **Core Value:** Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
 
-**Current Focus:** Phase 05 — backend-foundation
+**Current Focus:** Phase 06 — auth-frontend-integration
 
 ---
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
-Status: Phase 5 complete, ready for Phase 6
-Last activity: 2026-04-10
+Phase: 06 (auth-frontend-integration) — EXECUTING
+Plan: 2 of 5
+Status: Executing Phase 06 — Plan 02 complete
+Last activity: 2026-04-10 -- Completed 06-02-PLAN.md (tRPC client setup)
 
-Progress: [####################] 100% (6/6 plans complete)
+Progress: [############░░░░░░░░] 64% (7/11 plans complete)
 
 ---
 
@@ -67,6 +67,8 @@ Progress: [####################] 100% (6/6 plans complete)
 | useFactory DI pattern for repos | NestJS modules wire repos to services via useFactory+inject rather than custom DI tokens | Confirmed |
 | Status enum mapping tables | Domain enum values (queued/sent) differ from DB enums (pending/sent); explicit mapping tables | Confirmed |
 | recipientEmail z.string() not z.email() | DB layer returns empty string for recipientEmail; service layer populates real email | Confirmed |
+| TS paths in child tsconfig must duplicate base | TypeScript does not merge paths from extends; child must redeclare all base paths | Confirmed |
+| Paths relative to baseUrl, not config location | baseUrl in tsconfig.base.json is monorepo root; all paths resolve from there | Confirmed |
 
 ---
 
