@@ -93,7 +93,7 @@ Plans:
 
 **Milestone Goal:** Connect the domain-logic prototype to real infrastructure -- PostgreSQL persistence, NestJS API, SAML authentication, Docker deployment. Transform localStorage demo into production application.
 
-- [ ] **Phase 5: Backend Foundation** - Prisma migrations, NestJS bootstrap, all repository implementations, integration tests against real PostgreSQL
+- [x] **Phase 5: Backend Foundation** - Prisma migrations, NestJS bootstrap, all repository implementations, integration tests against real PostgreSQL
 - [ ] **Phase 6: Auth & Frontend Integration** - SAML SSO via Keycloak, JWT sessions, frontend migrated from localStorage to tRPC API calls
 - [ ] **Phase 7: Production Infrastructure** - BullMQ async jobs, health/metrics endpoints, Docker Compose orchestration with all services
 
@@ -156,7 +156,7 @@ Plans:
 | 2. Report Assembly & Publication | v1.0 | 3/3 | Complete | 2026-04-09 |
 | 3. Automation & Admin | v1.0 | 4/4 | Complete | 2026-04-09 |
 | 4. Production Hardening | v1.0 | 2/2 | Complete | 2026-04-10 |
-| 5. Backend Foundation | v2.0 | 5/6 | In Progress|  |
+| 5. Backend Foundation | v2.0 | 6/6 | Complete | 2026-04-10 |
 | 6. Auth & Frontend Integration | v2.0 | 0/? | Not started | - |
 | 7. Production Infrastructure | v2.0 | 0/? | Not started | - |
 
