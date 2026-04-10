@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { reportSectionReadModelSchema } from '@customreport/shared';
 
-import { createDemoSection } from './demo-section';
+import { createDemoSection } from '../../test/fixtures';
 import { ReportSectionForm } from './report-section-form';
 
 void React;
