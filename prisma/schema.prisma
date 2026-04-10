@@ -39,6 +39,25 @@ enum ItemWorkflowStatus {
   blocked
 }
 
+enum PdfExportStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum ReminderExecutionStatus {
+  pending
+  sent
+  failed
+}
+
+enum CarryOverStatus {
+  pending
+  completed
+  failed
+}
+
 model User {
   id             String          @id @default(uuid())
   email          String          @unique
@@ -75,6 +94,10 @@ model Report {
   publishedById  String?
   publishedBy    User?           @relation("PublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
   sections       ReportSection[]
+  pdfExportJobs  PdfExportJob[]
+  reminderRules  ReminderRule[]
+  carryOverSources CarryOverExecution[] @relation("CarryOverSource")
+  carryOverTargets CarryOverExecution[] @relation("CarryOverTarget")
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 }
@@ -163,4 +186,66 @@ model Priority {
   updatedAt      DateTime        @updatedAt
 
   @@unique([reportSectionId, rank])
+}
+
+model PdfExportJob {
+  id          String          @id @default(uuid())
+  reportId    String
+  status      PdfExportStatus @default(pending)
+  filePath    String?
+  error       String?
+  requestedBy String
+  report      Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model ReminderRule {
+  id              String               @id @default(uuid())
+  name            String
+  cronExpression  String
+  enabled         Boolean              @default(true)
+  reportId        String?
+  report          Report?              @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  executions      ReminderExecution[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+}
+
+model ReminderExecution {
+  id          String                   @id @default(uuid())
+  ruleId      String
+  dedupeKey   String                   @unique
+  status      ReminderExecutionStatus  @default(pending)
+  sentAt      DateTime?
+  error       String?
+  rule        ReminderRule             @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+}
+
+model CarryOverExecution {
+  id              String          @id @default(uuid())
+  sourceReportId  String
+  targetReportId  String
+  dedupeKey       String          @unique
+  status          CarryOverStatus @default(pending)
+  records         CarryOverRecord[]
+  sourceReport    Report          @relation("CarryOverSource", fields: [sourceReportId], references: [id], onDelete: Restrict)
+  targetReport    Report          @relation("CarryOverTarget", fields: [targetReportId], references: [id], onDelete: Restrict)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model CarryOverRecord {
+  id               String             @id @default(uuid())
+  executionId      String
+  sourceItemId     String?
+  sourceDecisionId String?
+  targetItemId     String?
+  targetDecisionId String?
+  recordType       String
+  execution        CarryOverExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 }
