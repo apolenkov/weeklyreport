@@ -8,11 +8,32 @@
 
 Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
 
+## Current Milestone: v2.0 Infrastructure Integration
+
+**Goal:** Превратить domain-logic прототип в работающее приложение с реальной БД, API, авторизацией и контейнеризацией.
+
+**Target features:**
+- Docker Compose (PostgreSQL + Redis + API + Web), Dockerfiles для всех сервисов
+- Prisma миграции + seed data
+- NestJS HTTP bootstrap с tRPC endpoints
+- Prisma repository implementations для всех 8 сервисов
+- Frontend: заменить localStorage на tRPC-вызовы к API
+- SAML авторизация через Keycloak + JWT sessions + role guards
+- BullMQ интеграция для PDF export и email jobs
+- Observability: health checks, metrics endpoints, structured error handling
+- Quality gates: fix falling tests, lint/typecheck clean across monorepo
+
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+Shipped in v1.0 (domain logic layer):
+- ✓ Domain services with repository interfaces — v1.0 Phase 1-3
+- ✓ Zod schemas (shared types) — v1.0 Phase 1
+- ✓ Frontend UI components (localStorage prototype) — v1.0 Phase 1-3
+- ✓ Prisma schema (data model definition) — v1.0 Phase 1
+- ✓ Centralized structured JSON logging — v1.0 Phase 4
+- ✓ 51 backend unit tests passing — v1.0 Phase 1-4
 
 ### Active
 
@@ -175,4 +196,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-06 after initialization*
+*Last updated: 2026-04-10 after milestone v2.0 start*
