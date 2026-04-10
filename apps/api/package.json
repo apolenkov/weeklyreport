@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@customreport/shared": "workspace:*",
+    "zod": "^4.1.0",
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
     "@nestjs/passport": "^11.0.5",
