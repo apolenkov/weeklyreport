@@ -7,7 +7,6 @@ import { ReportSectionForm } from '../../../../components/report-section/report-
 
 import type {
   DraftSavePayload,
-  ReportSectionReadModel,
   SubmitSectionPayload,
 } from '@customreport/shared';
 
@@ -27,11 +26,11 @@ export default function LeadReportPage() {
 
   if (!section) return <p>No active report section found.</p>;
 
-  async function handleSaveDraft(input: DraftSavePayload): Promise<ReportSectionReadModel> {
+  async function handleSaveDraft(input: DraftSavePayload) {
     return saveDraftMutation.mutateAsync(input);
   }
 
-  async function handleSubmit(input: SubmitSectionPayload): Promise<ReportSectionReadModel> {
+  async function handleSubmit(input: SubmitSectionPayload) {
     return submitMutation.mutateAsync(input);
   }
 

@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import superjson from 'superjson';
 
 const API_URL = 'http://localhost:3001/trpc';
 
@@ -43,9 +44,9 @@ function createMockDashboardRows() {
 function createMockAssembledReport() {
   return {
     reportId: '00000000-0000-0000-0000-000000000010',
-    periodStart: '2026-04-01T00:00:00.000Z',
-    periodEnd: '2026-04-07T00:00:00.000Z',
-    deadline: '2026-04-04T00:00:00.000Z',
+    periodStart: new Date('2026-04-01T00:00:00.000Z'),
+    periodEnd: new Date('2026-04-07T00:00:00.000Z'),
+    deadline: new Date('2026-04-04T00:00:00.000Z'),
     status: 'draft' as const,
     publishedAt: null,
     publishedById: null,
@@ -83,53 +84,53 @@ export const handlers = [
     const results = procedures.map((proc) => {
       switch (proc) {
         case 'reports.getActive':
-          return { result: { data: createMockSection() } };
+          return { result: { data: superjson.serialize(createMockSection()) } };
         case 'review.dashboard':
-          return { result: { data: createMockDashboardRows() } };
+          return { result: { data: superjson.serialize(createMockDashboardRows()) } };
         case 'review.assembledReport':
-          return { result: { data: createMockAssembledReport() } };
+          return { result: { data: superjson.serialize(createMockAssembledReport()) } };
         case 'admin.snapshot':
-          return { result: { data: createMockAdminSnapshot() } };
+          return { result: { data: superjson.serialize(createMockAdminSnapshot()) } };
         case 'archive.list':
-          return { result: { data: [] } };
+          return { result: { data: superjson.serialize([]) } };
         case 'archive.detail':
           return {
             result: {
-              data: {
+              data: superjson.serialize({
                 summary: {
                   reportId: '00000000-0000-0000-0000-000000000010',
-                  periodStart: '2026-04-01T00:00:00.000Z',
-                  periodEnd: '2026-04-07T00:00:00.000Z',
-                  publishedAt: '2026-04-05T00:00:00.000Z',
+                  periodStart: new Date('2026-04-01T00:00:00.000Z'),
+                  periodEnd: new Date('2026-04-07T00:00:00.000Z'),
+                  publishedAt: new Date('2026-04-05T00:00:00.000Z'),
                   publishedByName: 'Head User',
                   portfolioStatus: 'green' as const,
                 },
                 report: {
                   ...createMockAssembledReport(),
                   status: 'published' as const,
-                  publishedAt: '2026-04-05T00:00:00.000Z',
+                  publishedAt: new Date('2026-04-05T00:00:00.000Z'),
                   publishedByName: 'Head User',
                 },
-              },
+              }),
             },
           };
         case 'pdfExport.status':
           return {
             result: {
-              data: {
+              data: superjson.serialize({
                 jobId: '00000000-0000-0000-0000-000000000030',
                 reportId: '00000000-0000-0000-0000-000000000010',
                 status: 'completed' as const,
-                requestedAt: '2026-04-05T00:00:00.000Z',
-                completedAt: '2026-04-05T00:01:00.000Z',
+                requestedAt: new Date('2026-04-05T00:00:00.000Z'),
+                completedAt: new Date('2026-04-05T00:01:00.000Z'),
                 checksum: 'abc123',
                 templateVersion: '1.0.0',
                 artifactUrl: '/mock.pdf',
-              },
+              }),
             },
           };
         default:
-          return { result: { data: null } };
+          return { result: { data: superjson.serialize(null) } };
       }
     });
 
@@ -145,39 +146,39 @@ export const handlers = [
     const results = procedures.map((proc) => {
       switch (proc) {
         case 'reports.saveDraft':
-          return { result: { data: createMockSection() } };
+          return { result: { data: superjson.serialize(createMockSection()) } };
         case 'reports.submit':
           return {
             result: {
-              data: { ...createMockSection(), status: 'submitted' as const },
+              data: superjson.serialize({ ...createMockSection(), status: 'submitted' as const }),
             },
           };
         case 'review.publish':
           return {
             result: {
-              data: {
+              data: superjson.serialize({
                 ...createMockAssembledReport(),
                 status: 'published' as const,
-              },
+              }),
             },
           };
         case 'pdfExport.request':
           return {
             result: {
-              data: {
+              data: superjson.serialize({
                 jobId: '00000000-0000-0000-0000-000000000030',
                 reportId: '00000000-0000-0000-0000-000000000010',
                 status: 'queued' as const,
-                requestedAt: '2026-04-05T00:00:00.000Z',
+                requestedAt: new Date('2026-04-05T00:00:00.000Z'),
                 completedAt: null,
                 checksum: null,
                 templateVersion: '1.0.0',
                 artifactUrl: null,
-              },
+              }),
             },
           };
         default:
-          return { result: { data: null } };
+          return { result: { data: superjson.serialize(null) } };
       }
     });
 

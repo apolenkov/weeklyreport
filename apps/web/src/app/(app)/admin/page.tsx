@@ -7,7 +7,6 @@ import { AdminPanel } from '../../../components/admin/admin-panel';
 import type {
   AdminProject,
   AdminReminderRule,
-  AdminSnapshot,
   AdminUser,
   ReportPeriod,
 } from '@customreport/shared';
@@ -45,51 +44,41 @@ export default function AdminPage() {
       />
     );
 
-  const snapshot = snapshotQuery.data as AdminSnapshot;
+  const snapshot = snapshotQuery.data;
 
-  async function handleUpsertUser(user: AdminUser): Promise<AdminSnapshot> {
+  if (!snapshot) return <p>No admin data available.</p>;
+
+  async function handleUpsertUser(user: AdminUser) {
     await saveUserMutation.mutateAsync(user);
-    const fresh = await utils.admin.snapshot.fetch();
-    return fresh as AdminSnapshot;
+    return utils.admin.snapshot.fetch();
   }
 
-  async function handleRemoveUser(userId: string): Promise<AdminSnapshot> {
+  async function handleRemoveUser(userId: string) {
     await deleteUserMutation.mutateAsync({ userId });
-    const fresh = await utils.admin.snapshot.fetch();
-    return fresh as AdminSnapshot;
+    return utils.admin.snapshot.fetch();
   }
 
-  async function handleUpsertProject(
-    project: AdminProject,
-  ): Promise<AdminSnapshot> {
+  async function handleUpsertProject(project: AdminProject) {
     await saveProjectMutation.mutateAsync(project);
-    const fresh = await utils.admin.snapshot.fetch();
-    return fresh as AdminSnapshot;
+    return utils.admin.snapshot.fetch();
   }
 
-  async function handleUpsertPeriod(
-    period: ReportPeriod,
-  ): Promise<AdminSnapshot> {
+  async function handleUpsertPeriod(period: ReportPeriod) {
     await savePeriodMutation.mutateAsync(period);
-    const fresh = await utils.admin.snapshot.fetch();
-    return fresh as AdminSnapshot;
+    return utils.admin.snapshot.fetch();
   }
 
-  async function handleUpsertReminderRule(
-    rule: AdminReminderRule,
-  ): Promise<AdminSnapshot> {
+  async function handleUpsertReminderRule(rule: AdminReminderRule) {
     await saveReminderRuleMutation.mutateAsync(rule);
-    const fresh = await utils.admin.snapshot.fetch();
-    return fresh as AdminSnapshot;
+    return utils.admin.snapshot.fetch();
   }
 
   async function handleRequestReminderExecution(
     ruleId: string,
     recipientEmail: string,
-  ): Promise<AdminSnapshot> {
+  ) {
     await executeReminderMutation.mutateAsync({ ruleId, recipientEmail });
-    const fresh = await utils.admin.snapshot.fetch();
-    return fresh as AdminSnapshot;
+    return utils.admin.snapshot.fetch();
   }
 
   async function handleRunCarryOver(): Promise<boolean> {
