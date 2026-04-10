@@ -13,7 +13,7 @@ export default function ReportHistoryPage() {
 
   return (
     <AppShell activeReportId={null} role="viewer" currentPath="/reports/history">
-      <ArchiveReportList reports={archiveQuery.data} />
+      <ArchiveReportList reports={archiveQuery.data ?? []} />
     </AppShell>
   );
 }

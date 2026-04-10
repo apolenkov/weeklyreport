@@ -16,7 +16,7 @@ export default function HeadDashboardPage() {
       <section>
         <h1>Review Dashboard</h1>
         <a href="/head/report">Open assembled report</a>
-        <SubmissionDashboard rows={dashboardQuery.data} />
+        <SubmissionDashboard rows={dashboardQuery.data ?? []} />
       </section>
     </AppShell>
   );

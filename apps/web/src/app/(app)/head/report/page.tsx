@@ -5,7 +5,7 @@ import { QueryError } from '../../../../components/common/query-error';
 import { AppShell } from '../../../../components/navigation/app-shell';
 import { AssembledReportReview } from '../../../../components/head/assembled-report-review';
 
-import type { AssembledReport, DraftSavePayload } from '@customreport/shared';
+import type { DraftSavePayload } from '@customreport/shared';
 
 export default function HeadReportPage() {
   const reportQuery = trpc.review.assembledReport.useQuery();
@@ -20,7 +20,7 @@ export default function HeadReportPage() {
 
   if (!report) return <p>No assembled report available.</p>;
 
-  async function handleUpdateSection(input: DraftSavePayload): Promise<AssembledReport> {
+  async function handleUpdateSection(input: DraftSavePayload) {
     await saveDraftMutation.mutateAsync(input);
     await utils.review.assembledReport.invalidate();
     const refreshed = await reportQuery.refetch();
@@ -28,11 +28,11 @@ export default function HeadReportPage() {
     return refreshed.data ?? report;
   }
 
-  async function handlePublish(): Promise<AssembledReport> {
+  async function handlePublish() {
     const result = await publishMutation.mutateAsync();
     await utils.review.assembledReport.invalidate();
 
-    return result as AssembledReport;
+    return result;
   }
 
   return (
