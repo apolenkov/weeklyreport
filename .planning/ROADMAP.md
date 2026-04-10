@@ -115,8 +115,8 @@ Plans:
 - [x] 05-01-PLAN.md — Complete Prisma schema (15 models), initial migration, idempotent seed, PrismaService singleton
 - [x] 05-02-PLAN.md — NestJS AppModule, env config, and 4 simpler Prisma repositories (review, archive, pdf-export, reminders)
 - [x] 05-03-PLAN.md — 4 complex Prisma repositories (report-sections, publication, carry-over, admin) with deep includes and transactions
-- [x] 05-04-PLAN.md — tRPC AppRouter with all domain procedures, main.ts bootstrap, dev auth bypass, error mapping
-- [ ] 05-05-PLAN.md — Verify 51 existing unit tests pass, integration tests for all 8 repositories against real PostgreSQL
+- [ ] 05-04-PLAN.md — tRPC AppRouter with all domain procedures, main.ts bootstrap, dev auth bypass, error mapping
+- [x] 05-05-PLAN.md — Verify 51 existing unit tests pass, integration tests for all 8 repositories against real PostgreSQL
 
 ### Phase 6: Auth & Frontend Integration
 **Goal**: Users authenticate via Keycloak SAML, frontend calls real API instead of localStorage; the full user journey works end-to-end in a browser
