@@ -54,10 +54,10 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 - [ ] **FE-04**: Assembled report review page loads data from API
 - [ ] **FE-05**: Publication flow calls API to publish report
 - [ ] **FE-06**: Published report page loads from API
-- [ ] **FE-07**: Admin panel CRUD operations call API endpoints
+- [x] **FE-07**: Admin panel CRUD operations call API endpoints
 - [ ] **FE-08**: Archive/history pages load from API
 - [ ] **FE-09**: PDF export triggers async job via API and polls for completion
-- [ ] **FE-10**: localStorage helpers and demo data files removed
+- [x] **FE-10**: localStorage helpers and demo data files removed
 
 ### Background Jobs
 
@@ -166,10 +166,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FE-04 | Phase 6 | Pending |
 | FE-05 | Phase 6 | Pending |
 | FE-06 | Phase 6 | Pending |
-| FE-07 | Phase 6 | Pending |
+| FE-07 | Phase 6 | Complete |
 | FE-08 | Phase 6 | Pending |
 | FE-09 | Phase 6 | Pending |
-| FE-10 | Phase 6 | Pending |
+| FE-10 | Phase 6 | Complete |
 | JOBS-01 | Phase 7 | Pending |
 | JOBS-02 | Phase 7 | Pending |
 | JOBS-03 | Phase 7 | Pending |
