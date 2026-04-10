@@ -100,4 +100,24 @@ export class AdminService {
       adminSnapshotSchema.parse({ ...snapshot, reminderRules: nextRules }),
     );
   }
+
+  async removeProject(projectId: string): Promise<AdminSnapshot> {
+    const snapshot = await this.getSnapshot();
+    const nextProjects = snapshot.projects.map((row) =>
+      row.id === projectId ? { ...row, archived: true } : row,
+    );
+
+    return this.repository.saveSnapshot(
+      adminSnapshotSchema.parse({ ...snapshot, projects: nextProjects }),
+    );
+  }
+
+  async removeReminderRule(ruleId: string): Promise<AdminSnapshot> {
+    const snapshot = await this.getSnapshot();
+    const nextRules = snapshot.reminderRules.filter((row) => row.id !== ruleId);
+
+    return this.repository.saveSnapshot(
+      adminSnapshotSchema.parse({ ...snapshot, reminderRules: nextRules }),
+    );
+  }
 }
