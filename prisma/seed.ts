@@ -1,14 +1,20 @@
+import 'dotenv/config';
+
+import pg from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Role, ReportSectionStatus, ReportStatus, TrafficLightStatus, ItemType, ItemWorkflowStatus } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 const leadSeeds = [
-  { email: 'lead1@customreport.local', name: 'Lead 1', samlId: 'lead-1' },
-  { email: 'lead2@customreport.local', name: 'Lead 2', samlId: 'lead-2' },
-  { email: 'lead3@customreport.local', name: 'Lead 3', samlId: 'lead-3' },
-  { email: 'lead4@customreport.local', name: 'Lead 4', samlId: 'lead-4' },
-  { email: 'lead5@customreport.local', name: 'Lead 5', samlId: 'lead-5' },
-  { email: 'lead6@customreport.local', name: 'Lead 6', samlId: 'lead-6' },
+  { id: '00000000-0000-0000-0000-000000000001', email: 'lead1@customreport.local', name: 'Lead 1', samlId: 'lead-1' },
+  { id: '00000000-0000-0000-0000-000000000002', email: 'lead2@customreport.local', name: 'Lead 2', samlId: 'lead-2' },
+  { id: '00000000-0000-0000-0000-000000000003', email: 'lead3@customreport.local', name: 'Lead 3', samlId: 'lead-3' },
+  { id: '00000000-0000-0000-0000-000000000004', email: 'lead4@customreport.local', name: 'Lead 4', samlId: 'lead-4' },
+  { id: '00000000-0000-0000-0000-000000000005', email: 'lead5@customreport.local', name: 'Lead 5', samlId: 'lead-5' },
+  { id: '00000000-0000-0000-0000-000000000006', email: 'lead6@customreport.local', name: 'Lead 6', samlId: 'lead-6' },
 ] as const;
 
 async function main() {
@@ -16,10 +22,23 @@ async function main() {
     where: { email: 'head@customreport.local' },
     update: {},
     create: {
+      id: '00000000-0000-0000-0000-000000000099',
       email: 'head@customreport.local',
       name: 'Department Head',
       role: Role.head,
       samlId: 'head-1',
+    },
+  });
+
+  const viewer = await prisma.user.upsert({
+    where: { email: 'viewer@customreport.local' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000098',
+      email: 'viewer@customreport.local',
+      name: 'Report Viewer',
+      role: Role.viewer,
+      samlId: 'viewer-1',
     },
   });
 
@@ -29,7 +48,10 @@ async function main() {
         where: { email: lead.email },
         update: {},
         create: {
-          ...lead,
+          id: lead.id,
+          email: lead.email,
+          name: lead.name,
+          samlId: lead.samlId,
           role: Role.lead,
         },
       }),
@@ -50,11 +72,12 @@ async function main() {
   });
 
   for (const [index, lead] of leads.entries()) {
+    const projectId = `00000000-0000-0000-0000-00000000010${index}`;
     const project = await prisma.project.upsert({
-      where: { id: `00000000-0000-0000-0000-00000000010${index}` },
+      where: { id: projectId },
       update: {},
       create: {
-        id: `00000000-0000-0000-0000-00000000010${index}`,
+        id: projectId,
         name: `Project ${index + 1}`,
         leadId: lead.id,
       },
@@ -91,8 +114,12 @@ async function main() {
       },
     });
 
-    await prisma.item.create({
-      data: {
+    const itemId = `00000000-0000-0000-0000-000000020${index}00`;
+    await prisma.item.upsert({
+      where: { id: itemId },
+      update: {},
+      create: {
+        id: itemId,
         reportSectionId: section.id,
         projectId: project.id,
         type: ItemType.current,
@@ -119,14 +146,16 @@ async function main() {
       });
     }
   }
+
+  console.log(`Seeded: ${leads.length} leads, 1 head (${head.id}), 1 viewer (${viewer.id}), 1 report, ${leads.length} projects`);
 }
 
 void main()
   .catch(async (error) => {
     console.error(error);
     process.exitCode = 1;
-    await prisma.$disconnect();
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });
