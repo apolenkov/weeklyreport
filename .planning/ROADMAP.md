@@ -150,7 +150,12 @@ Plans:
   3. Email reminder processor sends test email via SMTP; failed jobs appear in dead-letter queue and Bull Board UI
   4. `/health/ready` returns 200 when DB, Redis, and queues are connected; `/metrics` returns Prometheus-format metrics
   5. `docker compose down && docker compose up` restarts cleanly; data persists across restarts via PostgreSQL volume
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — BullMQ queues, PDF export processor, email reminder processor, Bull Board UI
+- [ ] 07-02-PLAN.md — Health check endpoints, Prometheus metrics, graceful shutdown, correlation IDs
+- [ ] 07-03-PLAN.md — Docker Compose orchestration with PgBouncer, multi-stage Dockerfiles, dev override
 
 ---
 
@@ -166,7 +171,7 @@ Plans:
 | 4. Production Hardening | v1.0 | 2/2 | Complete | 2026-04-10 |
 | 5. Backend Foundation | v2.0 | 6/6 | Complete | 2026-04-10 |
 | 6. Auth & Frontend Integration | v2.0 | 5/6 | Gap closure | - |
-| 7. Production Infrastructure | v2.0 | 0/? | Not started | - |
+| 7. Production Infrastructure | v2.0 | 0/3 | Planned | - |
 
 ---
 
