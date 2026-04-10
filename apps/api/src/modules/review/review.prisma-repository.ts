@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { SubmissionDashboardRow } from '@customreport/shared';
+import {
+  submissionDashboardRowSchema,
+  type SubmissionDashboardRow,
+} from '@customreport/shared';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
 import type { ReviewRepository } from './review.service.js';
 
@@ -38,12 +41,12 @@ type SectionWithAuthor = Awaited<
 };
 
 function toDashboardRow(section: SectionWithAuthor): SubmissionDashboardRow {
-  return {
+  return submissionDashboardRowSchema.parse({
     leadId: section.authorId,
     leadName: section.author.name,
-    role: section.author.role as SubmissionDashboardRow['role'],
+    role: section.author.role,
     projectNames: section.author.ledProjects.map((p) => p.name),
-    status: section.status as SubmissionDashboardRow['status'],
+    status: section.status,
     submittedAt: section.submittedAt,
-  };
+  });
 }
