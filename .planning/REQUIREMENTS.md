@@ -44,9 +44,9 @@
 
 ## CI/CD
 
-- [ ] **CI-01**: GitHub Actions workflow — lint + typecheck + unit tests on push/PR
-- [ ] **CI-02**: E2E test job with Docker services (postgres + redis) and Playwright CLI
-- [ ] **CI-03**: Docker build verification (docker compose build succeeds)
+- [x] **CI-01**: GitHub Actions workflow — lint + typecheck + unit tests on push/PR
+- [x] **CI-02**: E2E test job with Docker services (postgres + redis) and Playwright CLI
+- [x] **CI-03**: Docker build verification (docker compose build succeeds)
 
 ## E2E Testing
 
@@ -122,9 +122,9 @@
 | E2E-04 | Phase 12 | Pending |
 | E2E-05 | Phase 12 | Pending |
 | E2E-06 | Phase 12 | Pending |
-| CI-01 | Phase 12 | Pending |
-| CI-02 | Phase 12 | Pending |
-| CI-03 | Phase 12 | Pending |
+| CI-01 | Phase 12 | Complete |
+| CI-02 | Phase 12 | Complete |
+| CI-03 | Phase 12 | Complete |
 | ANAL-01 | Phase 13 | Pending |
 | ANAL-02 | Phase 13 | Pending |
 | ANAL-03 | Phase 13 | Pending |
