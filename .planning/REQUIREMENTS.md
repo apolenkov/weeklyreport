@@ -91,14 +91,53 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DS-01..DS-09 | TBD | Pending |
-| PAGE-01..PAGE-08 | TBD | Pending |
-| PDF-01..PDF-03 | TBD | Pending |
-| TOOL-01..TOOL-05 | TBD | Pending |
-| CI-01..CI-03 | TBD | Pending |
-| E2E-01..E2E-06 | TBD | Pending |
-| ANAL-01..ANAL-04 | TBD | Pending |
-| SEARCH-01..SEARCH-09 | TBD | Pending |
+| TOOL-01 | Phase 8 | Pending |
+| TOOL-02 | Phase 8 | Pending |
+| TOOL-03 | Phase 8 | Pending |
+| TOOL-04 | Phase 8 | Pending |
+| TOOL-05 | Phase 8 | Pending |
+| DS-01 | Phase 9 | Pending |
+| DS-02 | Phase 9 | Pending |
+| DS-03 | Phase 9 | Pending |
+| DS-04 | Phase 9 | Pending |
+| DS-05 | Phase 9 | Pending |
+| DS-06 | Phase 9 | Pending |
+| DS-07 | Phase 9 | Pending |
+| DS-08 | Phase 9 | Pending |
+| DS-09 | Phase 9 | Pending |
+| PAGE-01 | Phase 10 | Pending |
+| PAGE-02 | Phase 10 | Pending |
+| PAGE-03 | Phase 10 | Pending |
+| PAGE-04 | Phase 10 | Pending |
+| PAGE-05 | Phase 10 | Pending |
+| PAGE-06 | Phase 10 | Pending |
+| PAGE-07 | Phase 10 | Pending |
+| PAGE-08 | Phase 10 | Pending |
+| PDF-01 | Phase 11 | Pending |
+| PDF-02 | Phase 11 | Pending |
+| PDF-03 | Phase 11 | Pending |
+| E2E-01 | Phase 12 | Pending |
+| E2E-02 | Phase 12 | Pending |
+| E2E-03 | Phase 12 | Pending |
+| E2E-04 | Phase 12 | Pending |
+| E2E-05 | Phase 12 | Pending |
+| E2E-06 | Phase 12 | Pending |
+| CI-01 | Phase 12 | Pending |
+| CI-02 | Phase 12 | Pending |
+| CI-03 | Phase 12 | Pending |
+| ANAL-01 | Phase 13 | Pending |
+| ANAL-02 | Phase 13 | Pending |
+| ANAL-03 | Phase 13 | Pending |
+| ANAL-04 | Phase 13 | Pending |
+| SEARCH-01 | Phase 14 | Pending |
+| SEARCH-02 | Phase 14 | Pending |
+| SEARCH-03 | Phase 14 | Pending |
+| SEARCH-04 | Phase 14 | Pending |
+| SEARCH-05 | Phase 14 | Pending |
+| SEARCH-06 | Phase 14 | Pending |
+| SEARCH-07 | Phase 14 | Pending |
+| SEARCH-08 | Phase 14 | Pending |
+| SEARCH-09 | Phase 14 | Pending |
 
 ---
 
