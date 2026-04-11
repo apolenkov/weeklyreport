@@ -2,9 +2,9 @@
   "name": "customreport",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@10.11.0",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.0"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
@@ -28,5 +28,18 @@
     "turbo": "^2.5.6",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "prisma",
+      "@prisma/client",
+      "@prisma/engines",
+      "@nestjs/core",
+      "playwright",
+      "esbuild",
+      "msgpackr-extract",
+      "msw",
+      "sharp"
+    ]
   }
 }

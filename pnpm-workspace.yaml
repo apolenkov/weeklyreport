@@ -1,3 +1,14 @@
 packages:
   - apps/*
   - packages/*
+
+onlyBuiltDependencies:
+  - prisma
+  - '@prisma/client'
+  - '@prisma/engines'
+  - '@nestjs/core'
+  - playwright
+  - esbuild
+  - msgpackr-extract
+  - msw
+  - sharp
