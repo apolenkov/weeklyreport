@@ -24,9 +24,9 @@
 - [ ] **PAGE-03**: Head assembled report — styled read-only report review with section cards, publish action
 - [ ] **PAGE-04**: Published report page — styled public view with portfolio overview, section details
 - [ ] **PAGE-05**: Archive/history page — styled report list with date ranges, status filters
-- [ ] **PAGE-06**: Admin panel — styled DataTables for users, projects, periods, reminders with CRUD dialogs
-- [ ] **PAGE-07**: Auth error page — styled with design system tokens, consistent with app theme
-- [ ] **PAGE-08**: Landing/navigation page — styled role-based entry point
+- [x] **PAGE-06**: Admin panel — styled DataTables for users, projects, periods, reminders with CRUD dialogs
+- [x] **PAGE-07**: Auth error page — styled with design system tokens, consistent with app theme
+- [x] **PAGE-08**: Landing/navigation page — styled role-based entry point
 
 ## PDF Styling
 
@@ -110,9 +110,9 @@
 | PAGE-03 | Phase 10 | Pending |
 | PAGE-04 | Phase 10 | Pending |
 | PAGE-05 | Phase 10 | Pending |
-| PAGE-06 | Phase 10 | Pending |
-| PAGE-07 | Phase 10 | Pending |
-| PAGE-08 | Phase 10 | Pending |
+| PAGE-06 | Phase 10 | Complete |
+| PAGE-07 | Phase 10 | Complete |
+| PAGE-08 | Phase 10 | Complete |
 | PDF-01 | Phase 11 | Pending |
 | PDF-02 | Phase 11 | Pending |
 | PDF-03 | Phase 11 | Pending |
