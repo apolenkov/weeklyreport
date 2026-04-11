@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: UI Polish & Analytics
-status: planning
+status: in-progress
 last_updated: "2026-04-11"
 last_activity: 2026-04-11
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
+  percent: 7
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** Roadmap created, ready to plan Phase 8
+**Status:** Phase 8 in progress (plan 01 complete)
 **Last Updated:** 2026-04-11
 
 ---
@@ -27,18 +27,18 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core Value:** Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
 
-**Current Focus:** v3.0 UI Polish & Analytics — Phase 8 (Tooling Upgrades)
+**Current Focus:** Phase 8 — Tooling Upgrades (plan 01 of 02 complete)
 
 ---
 
 ## Current Position
 
 Phase: 8 of 14 (Tooling Upgrades)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-11 — v3.0 roadmap created (7 phases, 47 requirements)
+Plan: 1 of 2 complete
+Status: Executing
+Last activity: 2026-04-11 — 08-01 pnpm 10 + Next.js 16 migration complete
 
-Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░░░░░░░░░░░] 7% (1/2 plans in phase 8)
 
 ---
 
@@ -68,6 +68,9 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
 | Styling before E2E tests | Research warns shadcn/ui changes DOM structure; E2E selectors break during migration | Confirmed |
 | SQL analytics before RAG | Pure SQL validates analytics UI patterns before adding OpenAI/pgvector complexity | Confirmed |
 | Feature-flag RAG (ANALYTICS_ENABLED) | Most complex, most isolated; can ship disabled without affecting other features | Confirmed |
+| pnpm 10 onlyBuiltDependencies in package.json | pnpm 10 canonical location; 9 packages need lifecycle scripts (prisma, playwright, esbuild, msw, sharp, etc.) | Confirmed |
+| turbopack.root for monorepo | Next.js 16 auto-detects workspace root; explicit setting prevents worktree/multi-lockfile misconfiguration | Confirmed |
+| React Compiler enabled | babel-plugin-react-compiler installed; automatic memoization optimization | Confirmed |
 
 ---
 
@@ -84,7 +87,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
 ## Session Continuity
 
 Last session: 2026-04-11
-Stopped at: v3.0 roadmap created, requirements traceability updated
+Stopped at: Completed 08-01-PLAN.md (pnpm 10 + Next.js 16 migration)
 Resume file: None
 
 ---
