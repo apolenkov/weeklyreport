@@ -17,10 +17,10 @@ export function RisksEditor({ risks, disabled }: RisksEditorProps) {
       ) : (
         <div className="space-y-3">
           {risks.map((risk) => (
-            <Card key={risk.id ?? risk.text}>
+            <Card key={risk.id ?? risk.risk}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm">{risk.text}</p>
+                  <p className="text-sm">{risk.risk}</p>
                   {risk.impact ? (
                     <Badge variant="outline" className="shrink-0">{risk.impact}</Badge>
                   ) : null}
