@@ -112,7 +112,7 @@ Full details: [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 - [ ] **Phase 8: Tooling Upgrades** - pnpm 10, Next.js 16, Vitest 4, ESLint 10; modernize monorepo conventions
 - [ ] **Phase 9: Design System Foundation** - Tailwind v4 + shadcn/ui primitives in packages/ui; design tokens, shared components
 - [x] **Phase 10: Page Styling** - Restyle all 8 application pages using design system components (completed 2026-04-11)
-- [ ] **Phase 11: PDF Styling** - Print-specific CSS, color fallbacks, visual fidelity for exported reports
+- [x] **Phase 11: PDF Styling** - Print-specific CSS, color fallbacks, visual fidelity for exported reports (completed 2026-04-11)
 - [ ] **Phase 12: E2E Tests & CI/CD** - Playwright CLI full journey tests, GitHub Actions pipeline
 - [ ] **Phase 13: SQL Analytics** - Project health trends, submission timeliness, analytics dashboard
 - [ ] **Phase 14: Search & RAG** - Full-text search, pgvector embeddings, hybrid search, chatbot
@@ -238,7 +238,7 @@ Plans:
 | 8. Tooling Upgrades | v3.0 | 2/2 | Complete | 2026-04-11 |
 | 9. Design System | v3.0 | 3/3 | Complete | 2026-04-11 |
 | 10. Page Styling | v3.0 | 4/4 | Complete    | 2026-04-11 |
-| 11. PDF Styling | v3.0 | 1/1 | Complete | 2026-04-11 |
+| 11. PDF Styling | v3.0 | 1/1 | Complete    | 2026-04-11 |
 | 12. E2E Tests & CI/CD | v3.0 | 0/? | Not started | - |
 | 13. SQL Analytics | v3.0 | 0/? | Not started | - |
 | 14. Search & RAG | v3.0 | 0/? | Not started | - |
