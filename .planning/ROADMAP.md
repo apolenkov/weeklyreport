@@ -129,7 +129,11 @@ Full details: [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
   3. `pnpm turbo test` runs all existing unit tests on Vitest 4 without failures
   4. `pnpm turbo lint` runs ESLint 10 flat config with @typescript-eslint/strict rules; zero errors
   5. CLAUDE.md reflects actual installed versions (Next.js 16, Vitest 4, ESLint 10, pnpm 10)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Migrate pnpm 9 to 10 and Next.js 15 to 16 (proxy.ts, React Compiler)
+- [ ] 08-02-PLAN.md — Upgrade Vitest 4, set up ESLint 10 flat config, update CLAUDE.md versions
 
 ### Phase 9: Design System Foundation
 **Goal**: A working component library exists in packages/ui with design tokens and shadcn/ui primitives; any page can import and render styled components
@@ -220,7 +224,7 @@ Full details: [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 | 5. Backend Foundation | v2.0 | 6/6 | Complete | 2026-04-10 |
 | 6. Auth & Frontend | v2.0 | 6/6 | Complete | 2026-04-11 |
 | 7. Production Infra | v2.0 | 3/3 | Complete | 2026-04-11 |
-| 8. Tooling Upgrades | v3.0 | 0/? | Not started | - |
+| 8. Tooling Upgrades | v3.0 | 0/2 | Planning complete | - |
 | 9. Design System | v3.0 | 0/? | Not started | - |
 | 10. Page Styling | v3.0 | 0/? | Not started | - |
 | 11. PDF Styling | v3.0 | 0/? | Not started | - |
