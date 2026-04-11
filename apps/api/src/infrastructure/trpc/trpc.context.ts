@@ -5,11 +5,11 @@ import type { UserSession } from '@customreport/shared';
 import { createAuthController } from '../../modules/auth/auth.controller.js';
 
 const DEV_SESSION: UserSession = {
-  userId: '00000000-0000-0000-0000-000000000099',
+  userId: 'a0000000-0000-4000-8000-000000000099',
   email: 'head@customreport.local',
   name: 'Department Head',
   role: 'head',
-  activeReportId: '00000000-0000-0000-0000-000000000001',
+  activeReportId: 'a0000000-0000-4000-8000-000000000001',
   activeReportSectionId: null,
 };
 

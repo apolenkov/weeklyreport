@@ -19,27 +19,38 @@ type SamlProfile = {
   role: string;
 };
 
+const userInclude = {
+  authoredReportSections: {
+    where: { report: { status: 'draft' as const } },
+    select: { id: true, reportId: true },
+    take: 1,
+  },
+};
+
 async function buildUserSession(
   prisma: PrismaClient,
   profile: SamlProfile,
 ): Promise<UserSession> {
-  const user = await prisma.user.upsert({
-    where: { samlId: profile.samlId },
-    update: { email: profile.email, name: profile.displayName },
-    create: {
-      samlId: profile.samlId,
-      email: profile.email,
-      name: profile.displayName,
-      role: profile.role as 'lead' | 'head' | 'viewer',
-    },
-    include: {
-      authoredReportSections: {
-        where: { report: { status: 'draft' } },
-        select: { id: true, reportId: true },
-        take: 1,
-      },
-    },
+  // Find by email first (seed users may not have samlId), then by samlId
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ samlId: profile.samlId }, { email: profile.email }] },
   });
+
+  const user = existing
+    ? await prisma.user.update({
+        where: { id: existing.id },
+        data: { samlId: profile.samlId, email: profile.email, name: profile.displayName },
+        include: userInclude,
+      })
+    : await prisma.user.create({
+        data: {
+          samlId: profile.samlId,
+          email: profile.email,
+          name: profile.displayName,
+          role: profile.role as 'lead' | 'head' | 'viewer',
+        },
+        include: userInclude,
+      });
 
   const activeSection = user.authoredReportSections[0] ?? null;
 
