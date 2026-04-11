@@ -1,15 +1,22 @@
 'use client';
 
-import { trpc } from '../../../lib/trpc';
-import { QueryError } from '../../../components/common/query-error';
-import { AppShell } from '../../../components/navigation/app-shell';
-import { AdminPanel } from '../../../components/admin/admin-panel';
+import { Alert, AlertDescription, AlertTitle } from '@customreport/ui';
 import type {
   AdminProject,
   AdminReminderRule,
   AdminUser,
   ReportPeriod,
 } from '@customreport/shared';
+import { AlertCircle } from 'lucide-react';
+
+import { trpc } from '../../../lib/trpc';
+import { QueryError } from '../../../components/common/query-error';
+import { AppShell } from '../../../components/navigation/app-shell';
+import { AdminPanel } from '../../../components/admin/admin-panel';
+import {
+  PageTitleSkeleton,
+  TableSkeleton,
+} from '../../../components/common/page-skeleton';
 
 export default function AdminPage() {
   const snapshotQuery = trpc.admin.snapshot.useQuery();
@@ -35,18 +42,45 @@ export default function AdminPage() {
   });
   const carryOverMutation = trpc.carryOver.execute.useMutation();
 
-  if (snapshotQuery.isLoading) return <p>Loading...</p>;
+  if (snapshotQuery.isLoading)
+    return (
+      <AppShell activeReportId={null} currentPath="/admin" role="head">
+        <div className="space-y-6">
+          <PageTitleSkeleton />
+          <TableSkeleton />
+        </div>
+      </AppShell>
+    );
+
   if (snapshotQuery.isError)
     return (
-      <QueryError
-        error={snapshotQuery.error}
-        onRetry={() => snapshotQuery.refetch()}
-      />
+      <AppShell activeReportId={null} currentPath="/admin" role="head">
+        <QueryError
+          error={snapshotQuery.error}
+          onRetry={() => snapshotQuery.refetch()}
+        />
+      </AppShell>
     );
 
   const snapshot = snapshotQuery.data;
 
-  if (!snapshot) return <p>No admin data available.</p>;
+  if (!snapshot)
+    return (
+      <AppShell activeReportId={null} currentPath="/admin" role="head">
+        <div className="flex items-center justify-center p-8">
+          <div className="w-full max-w-md">
+            <Alert>
+              <AlertCircle className="size-4" />
+              <AlertTitle>No data</AlertTitle>
+              <AlertDescription>
+                No admin data available. Check that the server is running
+                and try again.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
+      </AppShell>
+    );
 
   async function handleUpsertUser(user: AdminUser) {
     await saveUserMutation.mutateAsync(user);
@@ -82,7 +116,6 @@ export default function AdminPage() {
   }
 
   async function handleRunCarryOver(): Promise<boolean> {
-    if (!snapshot) return false;
     const periods = snapshot.periods;
     if (periods.length < 2) return false;
 
