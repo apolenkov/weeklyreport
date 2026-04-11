@@ -19,7 +19,7 @@
 
 ## Page Styling
 
-- [ ] **PAGE-01**: Lead report form — styled section editor with traffic light selector, item/risk/decision forms, priority ranking
+- [x] **PAGE-01**: Lead report form — styled section editor with traffic light selector, item/risk/decision forms, priority ranking
 - [ ] **PAGE-02**: Head dashboard — styled submission status table with status badges, progress indicators
 - [ ] **PAGE-03**: Head assembled report — styled read-only report review with section cards, publish action
 - [ ] **PAGE-04**: Published report page — styled public view with portfolio overview, section details
@@ -105,7 +105,7 @@
 | DS-07 | Phase 9 | Pending |
 | DS-08 | Phase 9 | Complete |
 | DS-09 | Phase 9 | Complete |
-| PAGE-01 | Phase 10 | Pending |
+| PAGE-01 | Phase 10 | Complete |
 | PAGE-02 | Phase 10 | Pending |
 | PAGE-03 | Phase 10 | Pending |
 | PAGE-04 | Phase 10 | Pending |
