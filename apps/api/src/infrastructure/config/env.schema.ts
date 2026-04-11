@@ -19,6 +19,20 @@ export const envSchema = z
     KEYCLOAK_SAML_ENTRY_POINT: z.string().url().optional(),
     KEYCLOAK_SAML_ISSUER: z.string().optional(),
     KEYCLOAK_SAML_CERT: z.string().optional(),
+
+    // Redis (BullMQ)
+    REDIS_HOST: z.string().default('localhost'),
+    REDIS_PORT: z.coerce.number().int().positive().default(6379),
+
+    // SMTP (email reminders)
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().int().positive().optional(),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_FROM: z.string().optional(),
+
+    // PDF generation
+    PDF_BASE_URL: z.string().url().default('http://localhost:3000'),
   })
   .superRefine((data, ctx) => {
     if (!data.AUTH_DEV_MODE && !data.AUTH_JWT_SECRET) {
