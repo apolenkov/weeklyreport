@@ -1,9 +1,15 @@
 'use client';
 
+import { Alert, AlertDescription, AlertTitle } from '@customreport/ui';
+
 import { trpc } from '../../../../lib/trpc';
 import { QueryError } from '../../../../components/common/query-error';
 import { AppShell } from '../../../../components/navigation/app-shell';
 import { AssembledReportReview } from '../../../../components/head/assembled-report-review';
+import {
+  PageTitleSkeleton,
+  CardSkeleton,
+} from '../../../../components/common/page-skeleton';
 
 import type { DraftSavePayload } from '@customreport/shared';
 
@@ -13,19 +19,50 @@ export default function HeadReportPage() {
   const publishMutation = trpc.review.publish.useMutation();
   const utils = trpc.useUtils();
 
-  if (reportQuery.isLoading) return <p>Loading...</p>;
-  if (reportQuery.error) return <QueryError error={reportQuery.error} onRetry={() => reportQuery.refetch()} />;
+  if (reportQuery.isLoading) {
+    return (
+      <AppShell activeReportId={null} role="head" currentPath="/head/report">
+        <div className="space-y-6">
+          <PageTitleSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (reportQuery.error) {
+    return (
+      <QueryError
+        error={reportQuery.error}
+        onRetry={() => reportQuery.refetch()}
+      />
+    );
+  }
 
   const report = reportQuery.data;
 
-  if (!report) return <p>No assembled report available.</p>;
+  if (!report) {
+    return (
+      <AppShell activeReportId={null} role="head" currentPath="/head/report">
+        <Alert>
+          <AlertTitle>No data yet</AlertTitle>
+          <AlertDescription>
+            No assembled report available. It will appear here once leads begin
+            submitting their sections.
+          </AlertDescription>
+        </Alert>
+      </AppShell>
+    );
+  }
 
   async function handleUpdateSection(input: DraftSavePayload) {
     await saveDraftMutation.mutateAsync(input);
     await utils.review.assembledReport.invalidate();
     const refreshed = await reportQuery.refetch();
 
-    // Non-null assertion safe: report was checked on line 21, and
+    // Non-null assertion safe: report was checked on line 44, and
     // refetch returns fresh data from the same query.
     return refreshed.data ?? report!;
   }
