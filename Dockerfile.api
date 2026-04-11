@@ -1,0 +1,38 @@
+# Stage 1: Base with pnpm and turbo
+FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN pnpm add -g turbo
+
+# Stage 2: Prune monorepo for api workspace
+FROM base AS pruner
+WORKDIR /app
+COPY . .
+RUN turbo prune @customreport/api --docker
+
+# Stage 3: Install deps and build
+FROM base AS builder
+WORKDIR /app
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=pruner /app/out/json/ .
+RUN pnpm install --frozen-lockfile
+COPY --from=pruner /app/out/full/ .
+# Generate Prisma client
+RUN pnpm exec prisma generate
+RUN pnpm turbo build --filter=@customreport/api
+
+# Stage 4: Production runner
+# Use Playwright base image for PDF generation (Chromium pre-installed)
+FROM mcr.microsoft.com/playwright:v1.59.0-noble AS runner
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 nodejs
+WORKDIR /app
+COPY --from=builder --chown=nodejs:nodejs /app .
+# Create PDF storage directory
+RUN mkdir -p /app/data/pdfs && chown nodejs:nodejs /app/data/pdfs
+USER nodejs
+WORKDIR /app/apps/api
+ENV NODE_ENV=production
+EXPOSE 3001
+CMD ["node", "dist/main.js"]
