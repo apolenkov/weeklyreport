@@ -1,230 +1,210 @@
 # Project Research Summary
 
-**Project:** CustomReport
-**Domain:** Internal enterprise tool -- weekly status report automation (NestJS + Next.js monorepo)
-**Researched:** 2026-04-10
-**Milestone:** v2.0 Infrastructure Integration
+**Project:** CustomReport v3.0 -- UI Polish & Analytics
+**Domain:** Internal weekly status report web application (Next.js + NestJS + Prisma monorepo)
+**Researched:** 2026-04-11
 **Confidence:** HIGH
 
 ## Executive Summary
 
-CustomReport is a working domain-logic prototype that needs infrastructure wiring to become a production application. The v1 codebase already delivers 8 domain services with repository interfaces, shared Zod schemas, tRPC router contracts, SAML/JWT auth primitives, a complete frontend UI on localStorage, and 51 unit tests. This is NOT a greenfield build. The v2.0 milestone is an infrastructure integration task: implement Prisma repository interfaces, wire tRPC transport, connect SAML auth, add BullMQ job processing, and containerize with Docker Compose.
+CustomReport is a functionally complete but visually unpresentable internal tool used by 6 team leads and 1 department head to produce weekly status reports. The v1.0 and v2.0 milestones shipped full domain logic (8 services, 51 unit tests) and infrastructure (Prisma 7, NestJS 11, Docker Compose, SAML auth, BullMQ, tRPC). However, the entire frontend renders raw HTML with zero CSS -- browser-default forms, selects, and buttons. The `packages/ui` workspace is an empty shell. The 7 E2E test skeletons use localStorage injection against a data layer that no longer exists. The v3.0 milestone must fix this: styling is the number one priority, because the PDF report delivered to the director IS the product.
 
-The recommended approach follows the existing architectural seams. Every service accepts a `Repository` interface via constructor injection -- Prisma implementations plug directly into these seams. The tRPC router contract already exists in `packages/shared` -- mounting it via tRPC's official Express adapter on NestJS is the standard pattern. Auth factory functions (`createSamlStrategy`, `createJwtSigner`, `createRoleGuard`) are pure and tested -- they need NestJS `useFactory` wrappers, not rewrites. The critical path is: Prisma schema migration -> repository implementations -> NestJS bootstrap + tRPC -> frontend tRPC wiring. Docker Compose wraps everything last.
+The recommended approach is a strict sequential pipeline: (1) tooling upgrades (pnpm 10, TypeScript 6, Next.js 16, Vitest 4, ESLint 10), (2) shadcn/ui + Tailwind v4 design system setup and component-by-component restyling of all 22 components, (3) PDF print page styling, (4) Playwright E2E tests against the real Docker Compose stack, and (5) pgvector RAG analytics as a feature-flagged addition. All four research files converge on this ordering: the pitfalls research explicitly warns against writing E2E tests before styling (selectors break during shadcn migration), and the architecture research confirms analytics is the most isolated feature that can ship last. The tooling upgrades must come first because Next.js 16 changes fundamental file conventions (middleware to proxy rename) and API patterns (mandatory async params) that would force rework if done after component migration.
 
-The highest risks are infrastructure integration mistakes, not domain logic gaps. Five critical pitfalls dominate: (1) PgBouncer prepared statement conflicts with Prisma, (2) Prisma migrations running through PgBouncer instead of direct connection, (3) NestJS guards being silently bypassed on tRPC routes (security), (4) Redis eviction policy destroying BullMQ jobs, and (5) SAML callback cookie domain mismatches between API and frontend origins. All five are preventable with correct configuration documented in PITFALLS.md, but each one causes production failures that are hard to diagnose retroactively.
+The key risks are: (a) Tailwind v4 classes invisible in the consuming app if `@source` directives and `transpilePackages` are misconfigured -- this is the single most likely day-one blocker; (b) Prisma 7.0-7.1 migration drift bug with pgvector `Unsupported("vector")` columns -- mitigated by requiring Prisma 7.2.0+; and (c) Playwright E2E auth desync when JWT tokens expire during long test runs -- mitigated by per-worker auth fixtures with extended token lifetimes. Corporate network access to OpenAI API for embeddings is an external risk that cannot be mitigated by code.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The base stack (Next.js 15.5, NestJS 11, Prisma 7, Zod 4, tRPC 11, shadcn/ui, Vitest, Playwright, Turborepo, pnpm) is validated and locked from v1. The v2.0 milestone adds only infrastructure integration packages -- no new frameworks or paradigm shifts. All new dependencies are official NestJS packages or battle-tested community libraries.
+The v3.0 milestone adds six capability areas to the existing validated stack. All versions were verified against the npm registry on April 11, 2026. The core additions are Tailwind CSS v4 (CSS-first config via `@theme` directive, no JS config file), shadcn/ui v4 (monorepo-aware CLI, copy-paste component model), and Playwright 1.59.1 for E2E testing. Major version upgrades: Next.js 15->16 (Turbopack default, middleware->proxy rename, async request APIs mandatory), Vitest 3->4 (minor mock behavior changes), ESLint 10 (fresh setup with flat config), pnpm 9->10 (lifecycle scripts blocked by default). The RAG analytics layer adds pgvector 0.2.1 and OpenAI SDK 6.34.0.
 
-**New dependencies for apps/api (production):**
-- `@nestjs/platform-express@^11.1.0`: Bootstrap NestJS HTTP server on Express
-- `@nestjs/config@^4.0.0`: Centralized, Zod-validated environment configuration
-- `@nestjs/terminus@^11.1.0`: Health check endpoints (/health/live, /health/ready)
-- `@nestjs/bullmq@^11.0.0` + `bullmq@^5.0.0`: Job queue for PDF export and email reminders
-- `helmet@^8.0.0`: Security headers (CORS, CSP, HSTS)
-- `@willsoto/nestjs-prometheus@^6.0.0` + `prom-client@^15.0.0`: Prometheus metrics endpoint
-- `@bull-board/api@^6.20.0` + `@bull-board/nestjs@^6.20.0` + `@bull-board/express@^6.20.0`: Queue monitoring UI
-- `@prisma/client@^7.0.0` (prod) + `prisma@^7.0.0` (dev): Database ORM and CLI
+**Core new technologies:**
+- **Tailwind CSS 4.2.2 + shadcn/ui v4**: Design system and component library -- CSS-first config, monorepo-aware, copy-paste components with zero runtime dependency
+- **Next.js 16.2.3**: Framework upgrade -- Turbopack default, React Compiler 1.0, `'use cache'` directive for opt-in caching
+- **Playwright 1.59.1 (E2E)**: Full user journey testing -- CLI-only execution, auth fixtures via `AUTH_DEV_MODE`, single Chromium worker
+- **pgvector 0.2.1 + OpenAI SDK 6.34.0**: Semantic search and RAG chatbot -- pgvector in existing PostgreSQL, no separate vector DB
+- **ESLint 10.2.0**: Fresh setup with flat config, TypeScript strict rules, React Compiler lint rules
+- **pnpm 10.33.0**: Package manager upgrade -- lifecycle scripts require `onlyBuiltDependencies` allowlist for Prisma and Playwright
 
-**New dependency for apps/web (production):**
-- `@trpc/client@^11.16.0`: Frontend tRPC client for API calls
-
-**Explicitly rejected (with rationale):**
-- `nestjs-trpc` / `trpc-nestjs-adapter` -- adds decorator-based schema generation conflicting with existing shared router contract
-- `@trpc/react-query` -- unnecessary weight for 6 users; vanilla `@trpc/client` with Next.js is simpler
-- `@nestjs/jwt` -- codebase already has `jsonwebtoken` with clean wrappers
-- `nest-keycloak-connect` -- OpenID Connect focused, not SAML
-- `NextAuth.js` -- weak SAML support
-- `@nestjs/schedule` -- BullMQ repeatable jobs handle scheduling; one queue system, not two
-- `@nestjs/opentelemetry` -- overkill for single-service, 6-user app
-- Kubernetes manifests -- Docker Compose sufficient at this scale
+**Critical version requirements:**
+- Prisma must be 7.2.0+ to avoid migration drift bug with pgvector columns
+- Node.js must be >=20.19.0 (intersection of ESLint 10, Next.js 16, pnpm 10 requirements)
+- `@playwright/test` and `playwright` core must be the same major.minor (currently mismatched: 1.55.0 vs 1.59.1)
+- `tw-animate-css` replaces deprecated `tailwindcss-animate` for Tailwind v4 compatibility
 
 ### Expected Features
 
-**Table Stakes (7 features -- 80% of effort):**
-- **T1** NestJS HTTP bootstrap + tRPC adapter -- without this, no API exists
-- **T2** Prisma repository implementations (8 services) -- without this, no persistence
-- **T3** Prisma migrations + seed data -- without this, no database tables
-- **T4** Docker Compose orchestration -- without this, no deployment path
-- **T5** Frontend tRPC client wiring -- without this, UI is a localStorage demo
-- **T6** SAML SSO authentication flow -- without this, users cannot log in
-- **T7** BullMQ job queue for PDF + email -- without this, async jobs stay queued forever
+**Must have (table stakes) -- styling is the top priority:**
+- Design system foundation (CSS variables, Tailwind config, design tokens in `packages/ui`)
+- shadcn/ui primitives install (~15 components: Button, Input, Select, Card, Badge, Dialog, Table, etc.)
+- Lead report form restyling (the primary weekly-use surface for 6 leads)
+- Head dashboard + assembled report restyling
+- Published report + archive restyling (the outward-facing deliverable)
+- Admin panel restyling (Tabs + DataTables for CRUD)
+- Navigation shell (sidebar + header + branding)
+- PDF report styling (the deliverable artifact the director sees -- requires `@media print` rules, `break-inside: avoid`, `printBackground: true`)
+- Responsive layout (mobile/tablet for meeting use)
 
-**Differentiators (8 features -- quick wins after foundation):**
-- D1 Health check endpoints (`@nestjs/terminus`)
-- D2 Structured error handling (tRPC error codes mapped from domain errors)
-- D3 Request logging + correlation IDs
-- D4 Graceful shutdown (drain connections on SIGTERM)
-- D5 Rate limiting (`@nestjs/throttler`)
-- D6 CORS configuration
-- D7 Environment configuration module (Zod-validated env vars, fail-fast)
-- D8 PgBouncer connection pooling
+**Should have (differentiators):**
+- Traffic light trend sparklines (project status over 8 weeks -- pure SQL aggregation + shadcn Chart)
+- Submission progress tracker (real-time 4/6 leads submitted with countdown)
+- Project health dashboard (aggregate view: all projects, trends, risks, decisions)
+- Semantic search across reports (hybrid: PostgreSQL `tsvector` full-text + pgvector cosine similarity via RRF)
+- Dark mode (trivial bolt-on after design tokens are correct)
 
-**Explicitly deferred (anti-features):**
-- Kubernetes deployment -- Docker Compose sufficient for 6+1 users
-- S3/MinIO for PDF storage -- filesystem volume sufficient for <1000 PDFs
-- CI/CD pipeline -- orthogonal, add after infrastructure milestone
-- Prometheus/Grafana stack -- health endpoints + structured logs sufficient
-- Redis Sentinel/Cluster -- single instance handles the load
-- Multi-environment config -- single environment sufficient initially
-- Database backup automation -- manual pg_dump documented in README
-- API versioning -- tRPC + Zod handle schema evolution
+**Defer to v4+:**
+- RAG chatbot (most complex, depends on search infrastructure already working)
+- Report comparison diff (useful but not urgent)
+- Auto-generated executive summary (LLM-dependent, nice-to-have)
+- Email report digest, keyboard shortcuts, CI/CD pipeline (independent standalone work)
 
 ### Architecture Approach
 
-The architecture follows a clean layered pattern: NestJS modules wire domain services to Prisma repository implementations via DI. tRPC runs as Express middleware mounted on NestJS (not through NestJS controller layer). SAML auth uses Express routes for the login/callback flow, while JWT validation happens in tRPC context factory middleware. BullMQ processors run in-process with the API (no separate worker service at this scale). Docker Compose orchestrates PostgreSQL, Redis, API, and Web containers with health-check-based startup ordering.
+The v3.0 changes are layered onto a clean existing architecture. shadcn/ui is purely a presentation layer change -- tRPC data flow is completely untouched. Components still receive data via `trpc.*.useQuery()` and dispatch mutations via `trpc.*.useMutation()`. The design tokens and primitives live in `packages/ui`, consumed by `apps/web` via CSS import chain. E2E tests require a dual `webServer` config (NestJS on port 3101 + Next.js on port 3100) because the existing Playwright config only starts the frontend. The RAG analytics pipeline is the most architecturally invasive addition: it introduces a new BullMQ queue (embedding-generation), a new database model (ReportEmbedding with pgvector column), a new external dependency (OpenAI API), and a new tRPC namespace (analytics with 4 procedures). It is feature-flagged via `ANALYTICS_ENABLED=false` by default.
 
-**Major components:**
-1. **PrismaModule** (global) -- singleton PrismaService extending PrismaClient, handles connect/disconnect lifecycle
-2. **TrpcModule** -- mounts unified AppRouter as Express middleware at `/trpc`, context factory extracts JWT session
-3. **AuthNestModule** -- wraps existing factory functions in NestJS providers, 2 Express routes for SAML flow
-4. **QueuesModule** -- BullMQ registration (pdf-export, email-reminders queues), in-process processors
-5. **HealthModule** -- Terminus-based health checks (DB + Redis + memory)
-6. **8x Domain modules** -- each wires service + Prisma repository implementation
-7. **Frontend tRPC client** -- `createTRPCReact<AppRouter>()` replacing all localStorage access
-8. **Docker infrastructure** -- multi-stage Dockerfiles using `turbo prune --docker`, Compose orchestration
-
-**Key architectural decisions:**
-- Auth/role checks implemented as tRPC middleware, NOT NestJS guards (guards are bypassed on tRPC routes)
-- Validate exclusively with Zod via tRPC input schemas -- no class-validator duplication
-- Keep client components for interactive pages (lead form, admin); consider RSC only for read-heavy pages (archive)
-- Single API process with in-process BullMQ workers; extract to separate service only when PDF memory impacts API latency
+**Major components being added/modified:**
+1. **packages/ui** (NEW content) -- shadcn/ui primitives, design tokens, `cn()` utility. Pure UI, no data fetching.
+2. **apps/web** (MODIFIED) -- All 22 components restyled, analytics pages added, E2E tests in `apps/web/e2e/`
+3. **apps/api** (MODIFIED) -- AnalyticsModule (service + repository + router), EmbeddingProcessor (BullMQ), EmbeddingClient (OpenAI wrapper), dev-mode role switching in trpc.context.ts
+4. **packages/shared** (MODIFIED) -- Analytics Zod schemas (SearchResult, ChatMessage, Trend)
 
 ### Critical Pitfalls
 
-All 4 researchers converged on 5 critical and 10 moderate/minor pitfalls. The critical ones must be addressed in configuration during their respective phases:
+1. **Tailwind classes invisible in consuming app (P1)** -- `@source` directive in `globals.css` must point to `../../packages/ui/src/**` AND `transpilePackages: ['@customreport/ui']` must be set in `next.config.ts`. Validate with a single Button component before proceeding with bulk migration.
 
-1. **NestJS guards silently bypassed on tRPC routes (#3)** -- tRPC runs below NestJS decorator pipeline. All auth must be tRPC middleware (`isAuthenticated`, `hasRole`), never `@UseGuards`. Detection: call any tRPC endpoint without auth header; if it returns data, security is broken.
+2. **Next.js 16 middleware.ts silently ignored (P2)** -- File must be renamed to `proxy.ts`, exported function renamed to `proxy`. Authentication bypass in production. The codebase may not have this file yet, but if middleware is added, it MUST use the new name.
 
-2. **PgBouncer prepared statement conflict with Prisma (#1)** -- Prisma generates prepared statements; PgBouncer < 1.21 cannot track them across transactions. Use PgBouncer 1.22+ with `max_prepared_statements = 256`. Do NOT add `?pgbouncer=true` for PgBouncer 1.21+.
+3. **Prisma 7 migration drift with pgvector Unsupported type (P3)** -- Use Prisma 7.2.0+, `--create-only` flag, and hand-edit migration SQL to include explicit vector dimensions and `CREATE EXTENSION vector` as the first line.
 
-3. **Prisma migrations through PgBouncer corrupt schema (#2)** -- DDL needs persistent connections. Always define `directUrl` in schema.prisma pointing to PostgreSQL directly. Migration commands auto-use `directUrl` when defined.
+4. **Playwright auth desync between Web and API (P4)** -- JWT tokens expire in long test runs. Use per-worker auth fixtures with 24h token lifetime in test env. Ensure `AUTH_DEV_MODE=true` is set in BOTH `apps/web` and `apps/api` .env.test files.
 
-4. **Redis eviction destroys BullMQ jobs (#4)** -- default `allkeys-lru` evicts BullMQ metadata. Set `maxmemory-policy noeviction` on queue Redis. Recommended: separate Redis instances for cache vs queue in production.
-
-5. **SAML callback cookie domain mismatch (#9)** -- API on different origin than frontend means cookie is not readable by Next.js. Solution: same-domain reverse proxy or token redirect flow (API callback -> redirect to frontend with JWT param -> frontend sets cookie on its domain).
+5. **tailwindcss-animate incompatible with Tailwind v4 (P11)** -- Use `tw-animate-css` from day one. Without it, all shadcn/ui animations (Dialog, Dropdown, Tooltip) fail silently.
 
 ## Implications for Roadmap
 
-All 4 research files independently converge on the same 7-phase build order, confirming strong consensus. The phasing follows dependency edges: database first, then API bootstrap, then transport, then auth, then frontend, then async jobs, then Docker.
+Based on combined research, the v3.0 milestone should be structured as 8-10 phases organized into four sequential work streams. Styling dominates the phase count because it is the highest priority and touches every component.
 
-### Phase 1: Database Foundation
-**Rationale:** Every subsequent phase depends on a running database with schema and seed data. Cannot test repositories, services, or API endpoints without PostgreSQL tables.
-**Delivers:** Prisma schema with all models (5 new: PdfExportJob, ReminderRule, ReminderExecution, CarryOverExecution, CarryOverRecord), initial migration, seed data (6 leads, 1 head, 1 viewer, projects, current report period).
-**Addresses:** T3 (Prisma migrations + seed)
-**Avoids:** Pitfall #2 (migration through PgBouncer) by establishing `directUrl` pattern from day one.
-**Exit criteria:** `prisma studio` shows seeded data in all tables.
+### Phase 1: Tooling Upgrades
+**Rationale:** Next.js 16 changes fundamental file conventions and API patterns. Doing this after component work would require rework. pnpm 10 and ESLint 10 have Node.js version requirements that must be resolved first.
+**Delivers:** Updated monorepo toolchain -- pnpm 10, TypeScript 6, React 19.2, Next.js 16, Vitest 4, ESLint 10 flat config
+**Addresses:** Framework modernization prerequisite for all subsequent work
+**Avoids:** P2 (middleware.ts rename), P5 (Turbopack default), P7 (next lint removal), P9 (async request APIs), P14 (Node.js version bump)
+**Upgrade order:** pnpm 10 -> TypeScript 6 -> React 19.2 -> Next.js 16 -> Vitest 4 -> ESLint 10 (steps 1-4 sequential, steps 5-6 can parallel)
 
-### Phase 2: NestJS Bootstrap + Prisma Repositories
-**Rationale:** Services need real repository implementations before the transport layer. Must be testable at the service level (integration tests with real DB) before adding tRPC.
-**Delivers:** PrismaModule (singleton PrismaService), 8 Prisma repository implementations, 8 NestJS domain modules, NestJS AppModule with HTTP listener, environment config (D7), CORS (D6), structured error handling (D2).
-**Addresses:** T1 (NestJS bootstrap), T2 (Prisma repositories), D2, D6, D7
-**Avoids:** Pitfall #5 (connection pool exhaustion) via global singleton PrismaService with explicit `connection_limit`; Pitfall #12 (transaction timeout) via explicit timeout on report assembly queries.
-**Exit criteria:** Integration tests pass -- services read/write real PostgreSQL through Prisma repositories.
+### Phase 2: Design System Foundation
+**Rationale:** Every styled component depends on design tokens and shadcn/ui primitives being installed and wired correctly. This phase resolves the most likely day-one blocker (Tailwind source scanning in monorepo).
+**Delivers:** Working `packages/ui` with design tokens, `cn()` utility, ~15 shadcn/ui primitives, Tailwind v4 wiring in `apps/web`, verified with one rendered Button component
+**Addresses:** Design system foundation, shadcn/ui primitives install (FEATURES table stakes)
+**Avoids:** P1 (Tailwind classes invisible), P6 (components.json misalignment), P11 (tailwindcss-animate incompatible), P13 (pnpm workspace resolution)
 
-### Phase 3: tRPC Transport Layer
-**Rationale:** Transport must work before auth (need working endpoints to test auth flow) and before frontend (need API to replace localStorage). Dev bypass (`AUTH_DEV_MODE=true`) provides session context during this phase.
-**Delivers:** Unified tRPC AppRouter mapping all domain services to procedures, tRPC context factory (session extraction from JWT cookie), TrpcModule mounting at `/trpc`, deletion of old plain-object router files.
-**Addresses:** T1 completion (tRPC adapter mounted on NestJS)
-**Avoids:** Pitfall #3 (guards bypassed on tRPC) by implementing auth as tRPC middleware from the start.
-**Exit criteria:** `curl localhost:3001/trpc/getActiveSection` returns data from PostgreSQL with dev bypass session.
+### Phase 3: Navigation Shell + Layout
+**Rationale:** Every page uses the navigation shell. Doing it first gives visible improvement and establishes the layout pattern for all subsequent component work.
+**Delivers:** Sidebar navigation, header with branding, responsive layout skeleton, dark mode toggle (ThemeProvider)
+**Addresses:** Navigation shell, responsive layout, dark mode (FEATURES table stakes)
 
-### Phase 4: SAML Authentication
-**Rationale:** Auth must be wired before frontend migration because the frontend needs a real session cookie to call tRPC endpoints. The auth primitives already exist as tested factory functions -- this phase wraps them in NestJS providers.
-**Delivers:** AuthNestModule, Express routes for SAML login/callback, user find-or-create on SAML callback, JWT cookie lifecycle, Next.js middleware update for env-driven login URL.
-**Addresses:** T6 (SAML SSO), D3 (request logging + correlation IDs)
-**Avoids:** Pitfall #8 (SAML cert PEM format) via single-line base64 cert or volume mount; Pitfall #9 (callback domain mismatch) via same-domain architecture or token redirect flow.
-**Exit criteria:** Full SAML login flow works with Keycloak dev instance -- user authenticates, cookie set, tRPC calls authenticated.
+### Phase 4: Lead Report Form Restyling
+**Rationale:** The primary user-facing surface (6 leads use this every Friday). Largest component batch: ReportSectionForm + 6 child editors (ProjectStatusGrid, ItemsEditor, RisksEditor, DecisionsEditor, PrioritiesEditor, AutosaveIndicator).
+**Delivers:** Fully styled lead report form with traffic light badges, inline editing tables, risk/decision cards
+**Addresses:** Lead report form restyling (FEATURES table stakes)
 
-### Phase 5: Frontend Migration
-**Rationale:** All backend endpoints must be working and authenticated before migrating the frontend. Converting localStorage to tRPC is a systematic page-by-page replacement -- attempting it before the API is stable means constant blocking.
-**Delivers:** tRPC client setup (createTRPCReact, provider, httpBatchLink), migration of all 6 pages from localStorage to tRPC hooks, deletion of localStorage helpers and demo data files.
-**Addresses:** T5 (Frontend tRPC client wiring)
-**Avoids:** Pitfall #10 (hydration mismatch) via atomic cutover per component -- replace ALL data sources at once, no hybrid localStorage + API.
-**Exit criteria:** Full user journey in browser against real API -- lead fills report, head reviews and publishes, archive displays history.
+### Phase 5: Head + Published Report + Admin Restyling
+**Rationale:** Groups the remaining component restyling into one phase. Head dashboard, assembled report review, published report, archive list, and admin panel are all medium-complexity styling tasks that can be batched.
+**Delivers:** All remaining pages styled -- submission dashboard with progress tracker, assembled report with accordions, published report with professional card layout, archive with DataTable, admin with Tabs + Dialog + DataTable
+**Addresses:** Head dashboard, admin panel, published report, archive restyling, submission progress tracker (FEATURES table stakes + differentiator)
 
-### Phase 6: Background Jobs
-**Rationale:** PDF export and email reminders are additive -- the core report workflow is fully usable without them. Placing them after frontend migration means the entire happy path works before adding async complexity.
-**Delivers:** QueuesModule (BullMQ registration), PdfExportProcessor (Playwright PDF generation), EmailReminderProcessor (nodemailer SMTP), Bull Board admin UI, health check for queue status.
-**Addresses:** T7 (BullMQ jobs), D1 (health checks), D5 (rate limiting)
-**Avoids:** Pitfall #4 (Redis eviction) via `noeviction` policy on queue Redis; Pitfall #11 (Date serialization) via explicit ISO string serialization + Zod parsing in workers; Pitfall #15 (worker not started) via in-process workers + health check endpoint.
-**Exit criteria:** PDF export generates downloadable file; email reminder sends via SMTP.
+### Phase 6: PDF Report Styling
+**Rationale:** The PDF is the final deliverable artifact. It must match web styling but needs print-specific overrides (`@media print`, page breaks, margin control). Fiddly work that should be isolated.
+**Delivers:** PDF report renders professionally via Playwright PDF capture with background colors, traffic light badges, compact layout, A4 page format
+**Addresses:** PDF report styling (FEATURES table stakes)
+**Avoids:** Validates that `printBackground: true` works with oklch colors, tests in Docker Compose container chain (api -> web -> PDF file)
 
-### Phase 7: Docker Compose + Production Hardening
-**Rationale:** Docker wraps everything. Building containers before the app works locally wastes debugging time in container context. This phase also adds production-readiness features.
-**Delivers:** Multi-stage Dockerfiles (turbo prune + pnpm), docker-compose.yml (postgres, redis, api, web, migrate), docker-compose.dev.yml (volume mounts, hot reload), graceful shutdown (D4), PgBouncer (D8).
-**Addresses:** T4 (Docker Compose), D4, D8
-**Avoids:** Pitfall #6 (workspace:* in Docker) via turbo prune from monorepo root; Pitfall #7 (Prisma Client not generated) via explicit `prisma generate` in Dockerfile; Pitfall #13 (port conflicts) via non-standard host ports; Pitfall #14 (turbo prune lockfile) by avoiding `injectWorkspacePackages`.
-**Exit criteria:** `docker compose up` starts full stack; E2E test passes in containerized environment.
+### Phase 7: Playwright E2E Tests
+**Rationale:** Tests must be written AFTER styling is stable to avoid selector breakage during shadcn/ui migration. Pitfall research explicitly recommends this order.
+**Delivers:** Full E2E test suite covering lead fill -> head review -> publish -> PDF export -> archive, using dual webServer config (NestJS + Next.js), per-role auth fixtures via `AUTH_DEV_MODE`, `data-testid` attributes on all interactive elements. Playwright executed via CLI only (not MCP).
+**Addresses:** E2E testing (FEATURES priority 2)
+**Avoids:** P4 (auth desync), P10 (fragile selectors)
+**Note:** Requires `docker-compose.test.yml` for postgres + redis, trpc.context.ts modification for dev-mode role switching via `X-Dev-Role` header
+
+### Phase 8: SQL Analytics (Trends + Dashboard)
+**Rationale:** Pure SQL analytics over existing data -- no external APIs, no new infrastructure. High visual impact using shadcn Chart (recharts). Should ship before RAG because it proves the analytics UI patterns.
+**Delivers:** Traffic light trend sparklines, project health dashboard, submission progress tracker enhancements
+**Addresses:** Traffic light trends, project health dashboard (FEATURES differentiators)
+
+### Phase 9: pgvector + Semantic Search
+**Rationale:** Most isolated feature with its own database migration, Docker image change, and raw SQL layer. Feature-flagged via `ANALYTICS_ENABLED`. Depends on Phase 8 analytics UI patterns.
+**Delivers:** pgvector extension enabled, ReportEmbedding model, BullMQ embedding pipeline, hybrid search (PostgreSQL `tsvector` full-text + pgvector cosine similarity via Reciprocal Rank Fusion), search UI
+**Addresses:** Semantic search across reports (FEATURES differentiator)
+**Avoids:** P3 (Prisma migration drift), P8 (HNSW index mismatch), P12 (pgvector Docker image), P15 (raw SQL type safety gap)
+**Note:** Docker image must change from `postgres:15-alpine` to `pgvector/pgvector:pg15`. All vector operations use `$queryRaw` behind a typed `VectorRepository` interface.
 
 ### Phase Ordering Rationale
 
-- **Database before everything** because every service, test, and endpoint depends on it
-- **Repositories before tRPC** because tRPC procedures delegate to services which need repositories; integration-testable at service level
-- **tRPC before auth** because working endpoints are needed to test auth flow end-to-end; dev bypass covers the gap
-- **Auth before frontend** because frontend needs real cookies to call authenticated endpoints
-- **Frontend after all backend** because every page depends on working tRPC endpoints; migrating before API is stable means constant blocking
-- **Jobs late** because they are additive and do not block the core report workflow
-- **Docker last** because it wraps a working application; debugging in containers is slower than debugging locally
+- **Tooling before styling**: Next.js 16 changes async params behavior and file conventions. Styling work done on Next.js 15 would need rework after the upgrade.
+- **Design system before components**: The `@source` directive and Tailwind wiring must be validated before any component migration begins. One configuration mistake makes all 22 components unstyled.
+- **Styling before E2E**: PITFALLS.md explicitly warns that shadcn/ui changes DOM structure (e.g., `<select>` becomes Radix `<Select>` with different ARIA roles). Writing E2E tests first means rewriting selectors after styling.
+- **SQL analytics before RAG**: Traffic light trends use pure SQL over existing data. This validates the analytics UI pattern before adding the complexity of external API calls and vector operations.
+- **RAG last**: Most complex, most isolated, feature-flagged. Can ship disabled. Does not affect any other feature.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 2 (Prisma Repositories):** Highest complexity -- 8 repositories, nested relations, transactional writes. The `ReportSectionsPrismaRepository` involves 6 Prisma models in a single aggregate with nested includes. Needs careful schema-to-Zod mapping design.
-- **Phase 4 (SAML Auth):** Cookie domain architecture needs a firm decision: same-domain reverse proxy vs token redirect flow. Test with actual Keycloak instance, not just dev bypass.
-- **Phase 6 (Background Jobs):** Playwright PDF generation in a server context (headless Chromium inside Docker/NestJS) needs performance testing. Memory and concurrency limits must be established.
+- **Phase 1 (Tooling Upgrades):** pnpm 10 lifecycle script blocking may surface unexpected dependencies. Next.js 16 codemod output should be reviewed manually.
+- **Phase 6 (PDF Styling):** oklch color space rendering in Playwright PDF capture is not well-documented. May need hsl() fallbacks for print stylesheet.
+- **Phase 9 (pgvector + Semantic Search):** Prisma raw SQL for vector operations, hybrid search query combining tsvector + cosine similarity, embedding chunking strategy for Russian-language report text.
 
-Phases with standard patterns (skip deeper research):
-- **Phase 1 (Database Foundation):** Standard Prisma migrate + seed workflow, well-documented.
-- **Phase 3 (tRPC Transport):** Official tRPC Express adapter pattern, codebase already has router contract.
-- **Phase 5 (Frontend Migration):** Systematic localStorage-to-tRPC replacement, well-documented pattern.
-- **Phase 7 (Docker Compose):** Official Turborepo Docker guide, standard multi-stage builds.
+Phases with standard patterns (skip research-phase):
+- **Phase 2 (Design System Foundation):** shadcn/ui monorepo setup is officially documented with exact steps.
+- **Phase 3-5 (Component Restyling):** Component-by-component migration is mechanical work with well-documented shadcn/ui primitives.
+- **Phase 7 (Playwright E2E):** Playwright auth patterns and dual webServer config are standard and well-documented.
+- **Phase 8 (SQL Analytics):** Pure SQL aggregation + shadcn Chart (recharts) -- standard pattern, no external dependencies.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | All packages verified against npm registry and official docs. No experimental or alpha dependencies. Every new package is either official NestJS or widely-used community standard. |
-| Features | **HIGH** | Feature list derived from existing codebase analysis, not speculation. Every table-stakes feature maps to existing interfaces that need implementations. |
-| Architecture | **HIGH** | Architecture follows the seams already present in v1 codebase. Repository pattern, tRPC contract, auth factories -- all designed for this exact integration. |
-| Pitfalls | **HIGH** | All 5 critical pitfalls are documented in official sources (Prisma docs, BullMQ production guide, tRPC docs). None are speculative. |
+| Stack | **HIGH** | All versions npm-verified April 11, 2026. Official upgrade guides exist for every major version bump. |
+| Features | **HIGH** | Feature set is well-scoped based on existing codebase inventory (22 components, 7 E2E skeletons, 14 Prisma models). Anti-features are clearly justified. |
+| Architecture | **HIGH** | Existing v2.0 architecture is clean and well-documented. shadcn/ui is purely presentational (no data flow changes). E2E and RAG integrate at defined extension points. |
+| Pitfalls | **HIGH** | 16 pitfalls identified with prevention strategies. Critical ones (P1-P5) are confirmed by official docs or known bug reports. |
 
-**Overall confidence:** HIGH -- this is an infrastructure integration of a working prototype, not a speculative greenfield design. The domain logic is proven (51 unit tests). The integration patterns are standard and well-documented.
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Cookie domain architecture for SAML:** Must decide between (a) same-domain reverse proxy (nginx), (b) token redirect flow (API callback -> frontend /auth/complete), or (c) Docker Compose network with shared domain. This affects Phase 4 implementation. Decision should be made during Phase 4 planning, not deferred.
-- **Prisma schema for 5 missing models:** `PdfExportJob`, `ReminderRule`, `ReminderExecution`, `CarryOverExecution`, `CarryOverRecord` exist as Zod schemas but not in `schema.prisma`. The Prisma models must match the Zod shapes exactly. Map these during Phase 1.
-- **Shared router expansion:** The shared tRPC router in `packages/shared` currently defines only 4 procedures. Phase 3 needs 16+ procedures. Decide whether to expand the shared contract or generate the `AppRouter` type from the API and re-export.
-- **Playwright in Docker:** Headless Chromium in Alpine-based Node.js containers requires additional OS dependencies (chromium, fonts). The Dockerfile for the API must install these. Test PDF rendering with actual report HTML in container context.
-- **SMTP configuration:** Email reminders need a corporate SMTP relay. Connection details, auth method, and rate limits are not yet documented. Gather during Phase 6 planning.
+- **OpenAI API corporate network access**: External risk. If the corporate network blocks OpenAI, the RAG features (Phase 9) require an alternative embedding provider (Voyage 3 Lite, local Nomic via Ollama). The OpenAI SDK supports custom base URLs, so swapping is a config change.
+- **PostgreSQL full-text search language config**: `tsvector` needs language-specific dictionaries. Russian text requires `to_tsvector('russian', text)` -- verify the PostgreSQL Docker image includes the Russian dictionary (`pg_catalog.russian`).
+- **oklch() color rendering in PDF**: Tailwind v4 uses OKLCH color space. Playwright PDF capture renders via Chromium which supports OKLCH, but older PDF viewers may not display these colors correctly. May need hsl() fallbacks in the print stylesheet.
+- **Prisma native pgvector support timeline**: Prisma has announced first-class pgvector support as "coming soon" but it has not shipped. The raw SQL approach works reliably but loses Prisma type safety. Monitor Prisma releases.
+- **Dark mode scope decision**: Listed as table stakes in FEATURES but marked as "Low" complexity and recommended as last styling bolt-on. Consider whether to include in v3.0 scope or defer.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [tRPC Express Adapter](https://trpc.io/docs/server/adapters/express) -- NestJS integration pattern
-- [NestJS + Prisma Recipe](https://docs.nestjs.com/recipes/prisma) -- repository pattern
-- [Prisma PgBouncer Configuration](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/pgbouncer) -- connection pooling
-- [BullMQ Going to Production](https://docs.bullmq.io/guide/going-to-production) -- Redis eviction policy
-- [BullMQ + NestJS Guide](https://docs.bullmq.io/guide/nestjs) -- queue integration
-- [Turborepo Docker Guide](https://turborepo.dev/docs/guides/tools/docker) -- monorepo containerization
-- [@node-saml/passport-saml](https://github.com/node-saml/passport-saml) -- SAML strategy
-- [Prisma Connection Management](https://www.prisma.io/docs/guides/performance-and-optimization/connection-management) -- pool configuration
-- [Next.js Hydration Errors](https://nextjs.org/docs/messages/react-hydration-error) -- frontend migration
-- [@nestjs/terminus](https://www.npmjs.com/package/@nestjs/terminus) -- v11.1.1 health checks
-- [@nestjs/bullmq](https://www.npmjs.com/package/@nestjs/bullmq) -- v11.0.4 queue integration
-- [@bull-board/nestjs](https://www.npmjs.com/package/@bull-board/nestjs) -- v6.20.6 queue UI
+- [shadcn/ui Monorepo Documentation](https://ui.shadcn.com/docs/monorepo)
+- [shadcn/ui Tailwind v4 Guide](https://ui.shadcn.com/docs/tailwind-v4)
+- [Next.js 16 Upgrade Guide](https://nextjs.org/docs/app/guides/upgrading/version-16)
+- [Playwright Authentication Docs](https://playwright.dev/docs/auth)
+- [Prisma PostgreSQL Extensions](https://www.prisma.io/docs/postgres/database/postgres-extensions)
+- [Vitest 4 Migration Guide](https://vitest.dev/guide/migration.html)
+- [ESLint 10 Migration Guide](https://eslint.org/docs/latest/use/migrate-to-10.0.0)
+- [pnpm 10 Breaking Changes](https://github.com/orgs/pnpm/discussions/8945)
+- [Turborepo shadcn/ui Guide](https://turborepo.dev/docs/guides/tools/shadcn-ui)
 
 ### Secondary (MEDIUM confidence)
-- [PgBouncer 1.21 Prepared Statements](https://pganalyze.com/blog/5mins-postgres-pgbouncer-prepared-statements-transaction-mode) -- prepared statement support
-- [@willsoto/nestjs-prometheus](https://github.com/willsoto/nestjs-prometheus) -- community Prometheus integration
-- [Turborepo issue #10584](https://github.com/vercel/turborepo/issues/10584) -- turbo prune lockfile bug (may be fixed by build time)
-- Existing codebase analysis (all files read directly from repository)
+- [pgvector RAG in PostgreSQL](https://encore.dev/blog/you-probably-dont-need-a-vector-database) -- why pgvector over dedicated vector DBs at this scale
+- [PostgreSQL Vector Search 2026](https://calmops.com/database/postgresql/postgresql-vector-search-pgvector-complete-guide-2026/) -- HNSW indexing, cosine distance operators
+- [Prisma pgvector drift bug #28867](https://github.com/prisma/prisma/issues/28867) -- confirmed fixed in 7.2.0
+- [Next.js 16 Migration Walkthrough (community)](https://www.salmanizhar.com/blog/nextjs-16-migration-guide)
+- [OpenAI Embeddings Pricing](https://costgoat.com/pricing/openai-embeddings) -- $0.02/1M tokens for text-embedding-3-small
+- [Playwright E2E with POM](https://earezki.com/ai-news/2026-03-15-end-to-end-testing-with-playwright-complete-guide-with-page-object-model/)
+
+### npm Registry (verified April 11, 2026)
+- next@16.2.3, react@19.2.5, vitest@4.1.4, eslint@10.2.0
+- pnpm@10.33.0, tailwindcss@4.2.2, @playwright/test@1.59.1
+- pgvector@0.2.1, openai@6.34.0, tw-animate-css@1.4.0
+- typescript@6.0.2, @tailwindcss/postcss@4.2.2
 
 ---
-*Research completed: 2026-04-10*
+*Research completed: 2026-04-11*
 *Ready for roadmap: yes*

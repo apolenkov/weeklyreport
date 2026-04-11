@@ -1,907 +1,500 @@
-# Domain Pitfalls: CustomReport v2.0 Infrastructure Integration
+# Domain Pitfalls
 
-**Domain:** Adding infrastructure to an existing domain-logic app
-**Researched:** 2026-04-10
-**Milestone:** v2.0 Infrastructure Integration
-
----
+**Domain:** Adding shadcn/ui, Playwright E2E, Next.js 15 to 16 migration, pgvector RAG to existing CustomReport monorepo
+**Researched:** 2026-04-11
+**Scope:** Integration pitfalls when adding features to an existing Next.js 15 + NestJS + Prisma 7 + Turborepo system
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, data loss, or complete feature failures. Prevention is mandatory.
+Mistakes that cause rewrites, multi-day debugging, or broken production deploys.
 
-### Pitfall 1: PgBouncer Prepared Statement Conflict with Prisma
+### Pitfall 1: shadcn/ui Tailwind Classes Invisible in Consuming App
 
-**What goes wrong:**
-- Prisma generates prepared statements for every query by default
-- PgBouncer in transaction mode (pre-1.21) does not track prepared statements across transactions
-- Queries fail with `prepared statement "sX" does not exist` errors
-- Happens intermittently under load (when PgBouncer assigns a different backend connection), making it hard to reproduce locally
+**What goes wrong:** You install shadcn/ui components in `packages/ui`, import
+them in `apps/web`, and the components render with zero styling -- raw HTML
+elements without any Tailwind CSS applied. The components "work" but look
+completely broken.
 
-**Why it happens:**
-- Developer sets up PgBouncer for connection pooling (correct decision) but does not configure Prisma to work with it
-- PgBouncer < 1.21 has no prepared statement support in transaction mode
-- PgBouncer >= 1.21 supports prepared statements but requires `max_prepared_statements > 0` in pgbouncer.ini
-- Prisma docs recommend `?pgbouncer=true` for older PgBouncer but this flag is NOT needed for PgBouncer 1.21+
-
-**Consequences:**
-- Random query failures in production (works 90% of the time, fails 10%)
-- Connection pool exhaustion as failed queries hold connections
-- Application appears unstable under load
-
-**Prevention:**
-- Use PgBouncer 1.22+ (current stable) with `max_prepared_statements = 256` in pgbouncer.ini
-- Do NOT add `?pgbouncer=true` to DATABASE_URL if using PgBouncer 1.21+
-- Set `pool_mode = transaction` (required for Prisma)
-- Use separate `directUrl` for Prisma migrations (bypasses PgBouncer)
-
-```prisma
-// schema.prisma
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")       // PgBouncer: postgres://...@pgbouncer:6432/db
-  directUrl = env("DIRECT_DATABASE_URL") // Direct: postgres://...@postgres:5432/db
-}
-```
-
-```ini
-# pgbouncer.ini
-[pgbouncer]
-pool_mode = transaction
-max_prepared_statements = 256
-default_pool_size = 20
-max_client_conn = 100
-```
-
-**Detection:**
-- Load test: 50 concurrent queries through PgBouncer. Any `prepared statement does not exist` error = this pitfall
-- Check PgBouncer version: must be >= 1.21 for prepared statement support
-
-**Phase:** Docker Compose setup (earliest infrastructure phase)
-**Confidence:** HIGH (Prisma docs + PgBouncer 1.21 changelog confirm)
-
-**Sources:**
-- [Prisma PgBouncer Configuration](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/pgbouncer)
-- [PgBouncer 1.21 Prepared Statement Support](https://pganalyze.com/blog/5mins-postgres-pgbouncer-prepared-statements-transaction-mode)
-
----
-
-### Pitfall 2: Prisma Migration Runs Through PgBouncer (Fails Silently)
-
-**What goes wrong:**
-- `prisma migrate deploy` runs through PgBouncer (uses DATABASE_URL)
-- Migrations use DDL statements (CREATE TABLE, ALTER TABLE) which require a single persistent connection
-- PgBouncer in transaction mode may reassign the backend connection mid-migration
-- Migration partially applies, leaving database in inconsistent state
-- Next migration run fails because some tables exist, others do not
-
-**Why it happens:**
-- Developer sets DATABASE_URL to PgBouncer address (correct for app runtime)
-- Forgets that Prisma CLI commands (migrate, seed, studio) need a DIRECT connection
-- Docker Compose entrypoint runs `prisma migrate deploy` using the same DATABASE_URL
+**Why it happens:** Tailwind v4 uses `@source` directives in the main CSS file
+to discover which files to scan for class names. If the CSS file in `apps/web`
+does not include an `@source` directive pointing to `../../packages/ui/src/**`,
+Tailwind never sees the classes used in the shared UI package. Additionally,
+Next.js must be configured with `transpilePackages: ['@customreport/ui']` so it
+processes the TypeScript/CSS from the workspace package rather than treating it
+as a pre-compiled dependency.
 
 **Consequences:**
-- Corrupted database schema (partial migrations)
-- `prisma migrate deploy` stuck in failed state
-- Manual SQL intervention required to recover
-- Data loss if migration includes destructive changes
+- All 22+ components render unstyled
+- Developers waste hours checking import paths when the real problem is Tailwind
+  scanning scope
+- PDF export will generate unstyled HTML, producing garbage output
 
 **Prevention:**
-- ALWAYS use `directUrl` in schema.prisma (see Pitfall 1 code example)
-- Docker Compose migration command must use DIRECT_DATABASE_URL:
+1. The main `globals.css` in `apps/web` must include `@source` for the UI
+   package path: `@source "../../packages/ui/src/**/*.{ts,tsx}"`
+2. Add `transpilePackages: ['@customreport/ui']` to `next.config.ts`
+3. Validate by running `pnpm --filter @customreport/web dev` and inspecting a
+   single Button component before proceeding with bulk component migration
+4. The `packages/ui` workspace should own the `globals.css` with design tokens
+   and `@theme` directives; `apps/web` should `@import` it
 
-```yaml
-# docker-compose.yml
-services:
-  api:
-    environment:
-      DATABASE_URL: postgresql://user:pass@pgbouncer:6432/customreport
-      DIRECT_DATABASE_URL: postgresql://user:pass@postgres:5432/customreport
-    command: >
-      sh -c "
-        npx prisma migrate deploy &&
-        node dist/main.js
-      "
-```
+**Detection:** After adding the first shadcn/ui component, visually inspect it
+in the browser. If the Button has no background color or border-radius, the
+source scanning is broken.
 
-- Prisma CLI automatically uses `directUrl` when defined in schema.prisma
-- Test: run `prisma migrate deploy` in Docker Compose, verify it connects to postgres:5432 (not pgbouncer:6432)
+**Confidence:** HIGH -- multiple Turborepo + shadcn/ui guides document this
+exact issue.
 
-**Detection:**
-- Check Docker logs during migration: connection target must be postgres container, not pgbouncer
-- If migration takes abnormally long or times out, PgBouncer is likely intercepting
+### Pitfall 2: Next.js 16 middleware.ts Silently Ignored
 
-**Phase:** Prisma setup / Docker Compose
-**Confidence:** HIGH (Prisma official docs document this requirement)
+**What goes wrong:** After upgrading to Next.js 16, the authentication
+middleware in `apps/web/src/middleware.ts` stops running entirely. All protected
+routes (`/lead`, `/head`, `/admin`, `/reports`) become accessible without any
+authentication check. No error is thrown -- the middleware file is simply
+ignored.
 
-**Sources:**
-- [Prisma Database Connections](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections)
-
----
-
-### Pitfall 3: NestJS Guards/Interceptors Bypassed by tRPC Adapter
-
-**What goes wrong:**
-- Developer adds `@UseGuards(JwtGuard, RolesGuard)` to NestJS controller
-- tRPC endpoints are mounted via an Express/Fastify middleware adapter, NOT through NestJS controller layer
-- NestJS guards, interceptors, pipes, and exception filters do NOT apply to tRPC routes
-- All tRPC endpoints are effectively unprotected -- no auth, no role checks, no error formatting
-
-**Why it happens:**
-- tRPC operates at the Express/Fastify middleware level, below NestJS's decorator-based pipeline
-- The `trpc-nestjs-adapter` or `nestjs-trpc` packages mount tRPC as raw middleware
-- NestJS DI container is not involved in tRPC request processing unless explicitly wired
-- Developer tests with NestJS-decorated endpoints (which work), assumes tRPC endpoints are equally protected
+**Why it happens:** Next.js 16 renames the middleware file convention to
+`proxy.ts` (or `proxy.js`). The exported function must also be renamed from
+`middleware` to `proxy`. The old `middleware.ts` file is deprecated and silently
+skipped. The existing middleware in this project handles auth cookie validation
+and SAML redirect -- a critical security boundary.
 
 **Consequences:**
-- Authentication bypass on ALL tRPC endpoints (security vulnerability)
-- Error responses have inconsistent format (tRPC errors vs NestJS HttpExceptions)
-- Logging middleware does not capture tRPC requests
-- Role-based access control is completely non-functional
+- Authentication bypass in production -- anyone can access protected routes
+- The `AUTH_DEV_MODE` guard becomes the only protection (and it also skips auth
+  in non-production)
+- SAML redirect flow breaks silently -- users see raw unauthenticated pages
+  instead of being sent to Keycloak
 
 **Prevention:**
-- Implement auth and role checks as tRPC middleware, NOT NestJS guards:
+1. Rename `apps/web/src/middleware.ts` to `apps/web/src/proxy.ts`
+2. Rename the exported function from `middleware` to `proxy`
+3. Update all imports and tests that reference the middleware module
+4. Use the codemod: `npx @next/codemod@canary middleware-to-proxy .`
+5. Verify by hitting a protected route (`/lead/report`) in an incognito window
+   -- must redirect to Keycloak login
 
-```typescript
-// trpc/middleware.ts
-import { TRPCError } from '@trpc/server';
+**Detection:** After upgrade, open `/lead/report` in incognito browser. If the
+page loads without redirect to `/auth/saml/login`, the proxy is not running.
 
-const isAuthenticated = t.middleware(async ({ ctx, next }) => {
-  if (!ctx.user) {
-    throw new TRPCError({ code: 'UNAUTHORIZED' });
-  }
-  return next({ ctx: { ...ctx, user: ctx.user } });
-});
+**Confidence:** HIGH -- confirmed breaking change in Next.js 16 official docs.
 
-const hasRole = (role: Role) =>
-  t.middleware(async ({ ctx, next }) => {
-    if (ctx.user.role !== role && ctx.user.role !== 'head') {
-      throw new TRPCError({ code: 'FORBIDDEN' });
-    }
-    return next({ ctx });
-  });
+### Pitfall 3: Prisma 7 Migration Drift with pgvector Unsupported Type
 
-// Use in router
-export const protectedProcedure = t.procedure.use(isAuthenticated);
-export const headProcedure = protectedProcedure.use(hasRole('head'));
-```
+**What goes wrong:** You add a vector column to the Prisma schema using
+`Unsupported("vector(1536)")`, run `prisma migrate dev`, and get a drift
+detection error: "Altered column 'embedding' (type changed)" -- even though
+nothing actually changed. Every subsequent `migrate dev` reports the same drift,
+making the migration workflow unusable.
 
-- Create a tRPC context factory that extracts user from JWT:
-
-```typescript
-// trpc/context.ts
-export async function createContext({ req }: { req: Request }) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  const user = token ? await verifyJwt(token) : null;
-  return { user, prisma };
-}
-```
-
-- Map tRPC errors to consistent format using onError handler
-- NEVER rely on NestJS @UseGuards for tRPC routes
-
-**Detection:**
-- Security test: call any tRPC endpoint without Authorization header. If it returns data instead of 401 = this pitfall
-- Code review: if tRPC router has no `.use(isAuthenticated)` middleware, auth is missing
-
-**Phase:** NestJS + tRPC integration (early)
-**Confidence:** HIGH (tRPC docs + NestJS-tRPC community docs confirm this architecture)
-
-**Sources:**
-- [NestJS-tRPC Context](https://www.nestjs-trpc.io/docs/context)
-- [NestJS-tRPC Middlewares](https://www.nestjs-trpc.io/docs/middlewares)
-- [tRPC Error Handling](https://trpc.io/docs/server/error-handling)
-
----
-
-### Pitfall 4: BullMQ Redis Eviction Destroys Job Queue
-
-**What goes wrong:**
-- Single Redis instance used for both caching (report summaries, sessions) AND BullMQ job queue (PDF export, email reminders)
-- Redis reaches maxmemory limit
-- Default eviction policy (`allkeys-lru`) kicks in -- Redis starts evicting least-recently-used keys
-- BullMQ job metadata keys are evicted (job data, delayed job markers, queue state)
-- PDF export jobs disappear silently, email reminders never fire
-- No error is thrown -- jobs just vanish
-
-**Why it happens:**
-- Developer uses one Redis for everything (sensible for small deployment)
-- Does not configure `maxmemory-policy` to `noeviction`
-- BullMQ docs explicitly warn: "It is very important to configure the maxmemory-policy setting to noeviction"
-- Caching fills up Redis, eviction evicts BullMQ keys before cache keys (BullMQ keys are accessed less frequently)
+**Why it happens:** Prisma 7.0-7.1 has a known bug where the
+`Unsupported("vector")` type without explicit dimensions in the migration file
+conflicts with the actual database column that has dimensions (e.g.,
+`vector(1536)`). Prisma's introspection sees a type mismatch between the
+migration history and the live database.
 
 **Consequences:**
-- Silent job loss (no errors, no alerts, jobs simply disappear)
-- PDF exports never complete
-- Email reminders never fire
-- Head cannot generate reports, leads never reminded
-- Extremely hard to diagnose (no error logs, Redis reports healthy)
+- `prisma migrate dev` fails on every run, blocking all schema changes
+- CI/CD pipelines that run migrations break
+- Developers resort to `--force` flag, which can cause data loss
+- The "drift" error erodes trust in the migration system
 
 **Prevention:**
-- Option A (recommended for production): Use TWO separate Redis instances:
+1. Use Prisma 7.2.0+ (the drift bug was fixed in 7.2.0)
+2. Use `--create-only` flag when adding vector columns: `prisma migrate dev
+   --create-only --name add_embeddings`
+3. Edit the generated migration SQL to explicitly include dimensions:
+   `CREATE EXTENSION IF NOT EXISTS vector;` then
+   `ALTER TABLE "ReportSection" ADD COLUMN "embedding" vector(1536);`
+4. Never rely on `Unsupported("vector")` alone -- always pair with a hand-edited
+   migration file
+5. Add the pgvector extension creation to the very first line of the migration
+   (before any table that uses the type)
 
-```yaml
-# docker-compose.yml
-services:
-  redis-cache:
-    image: redis:7-alpine
-    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
-    ports: ["6380:6379"]
+**Detection:** Run `prisma migrate dev` after adding a vector column. If you see
+"Drift detected" with no actual schema changes, you have hit this bug.
 
-  redis-queue:
-    image: redis:7-alpine
-    command: redis-server --maxmemory 256mb --maxmemory-policy noeviction
-    ports: ["6381:6379"]
-```
+**Confidence:** HIGH -- confirmed bug in prisma/prisma#28867, fixed in 7.2.0.
 
-- Option B (acceptable for early production): Single Redis with `noeviction` policy, use key-based TTL for cache entries:
+### Pitfall 4: Playwright storageState Auth Desync Between Web and API
 
-```yaml
-services:
-  redis:
-    image: redis:7-alpine
-    command: redis-server --maxmemory 512mb --maxmemory-policy noeviction
-```
+**What goes wrong:** E2E tests authenticate once in global setup and save
+cookies to `storageState`. Tests start passing initially, but then randomly fail
+with "Unauthorized" responses from the API, or fail consistently after a certain
+number of tests.
 
-- In NestJS, configure separate connections for BullMQ and cache:
-
-```typescript
-// app.module.ts
-BullModule.forRoot({
-  connection: {
-    host: process.env.REDIS_QUEUE_HOST,
-    port: Number(process.env.REDIS_QUEUE_PORT),
-  },
-}),
-CacheModule.register({
-  store: redisStore,
-  host: process.env.REDIS_CACHE_HOST,
-  port: Number(process.env.REDIS_CACHE_PORT),
-}),
-```
-
-**Detection:**
-- Check Redis maxmemory-policy: `redis-cli CONFIG GET maxmemory-policy`. If NOT `noeviction` on queue Redis = this pitfall
-- Monitor: alert if BullMQ queue length drops unexpectedly (jobs disappearing)
-- BullMQ health check: compare jobs added vs jobs completed over time
-
-**Phase:** BullMQ integration
-**Confidence:** HIGH (BullMQ production guide explicitly states this)
-
-**Sources:**
-- [BullMQ Going to Production](https://docs.bullmq.io/guide/going-to-production)
-- [BullMQ Connections](https://docs.bullmq.io/guide/connections)
-
----
-
-### Pitfall 5: Prisma Connection Pool Exhaustion (Multiple Instances)
-
-**What goes wrong:**
-- NestJS instantiates PrismaClient in a module
-- Due to NestJS dependency injection or hot-reload, multiple PrismaClient instances are created
-- Each instance opens its own connection pool (default: `num_cpus * 2 + 1` connections)
-- 3 NestJS instances * 5 connections each = 15 connections
-- With PgBouncer default_pool_size = 20, pool is nearly full
-- Under load, "Timed out fetching a new connection from the pool" errors
-
-**Why it happens:**
-- PrismaClient not registered as a true NestJS singleton
-- `new PrismaClient()` called in multiple modules instead of injecting shared instance
-- Hot-reload in development creates new instances without closing old ones
-- Connection limit not tuned for deployment topology
+**Why it happens:** The project uses JWT tokens with a 1-hour expiry (per
+CLAUDE.md security defaults). If the E2E test suite runs longer than the token
+lifetime, later tests use expired tokens from the saved storageState. In
+parallel mode, multiple workers sharing the same storageState file can also
+cause race conditions. Additionally, the existing `AUTH_DEV_MODE` bypass in the
+current middleware skips auth in non-production BUT the API side also checks
+`AUTH_DEV_MODE` -- if these get out of sync (web bypass + API enforce), tests
+break.
 
 **Consequences:**
-- Intermittent timeouts on database queries
-- Application hangs under moderate load
-- "Timed out fetching a new connection from the pool" in logs
-- Users see spinning loaders, think app is broken
+- Flaky tests that pass locally (short run) but fail in CI (full suite)
+- False negatives that erode confidence in the test suite
+- Hours spent debugging "intermittent auth failures" that are actually token
+  expiry
 
 **Prevention:**
-- Create PrismaService as a global NestJS singleton:
+1. Use a dedicated `auth.setup.ts` file that generates fresh JWT tokens per
+   worker, not a single shared storageState
+2. Set JWT token lifetime to 24h in test environment (via `AUTH_JWT_EXPIRY`
+   env var)
+3. Ensure `AUTH_DEV_MODE=true` is set consistently in BOTH `apps/web` and
+   `apps/api` .env.test files
+4. For parallel workers, use worker-scoped auth fixtures with `parallelIndex`
+   to prevent file contention
+5. Add the `playwright/.auth/` directory to `.gitignore`
 
-```typescript
-// prisma.service.ts
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+**Detection:** Run the full E2E suite 3 times in sequence. If later tests fail
+with 401 responses that pass when run individually, token expiry is the cause.
 
-@Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  constructor() {
-    super({
-      datasources: { db: { url: process.env.DATABASE_URL } },
-      log: process.env.NODE_ENV === 'development' ? ['query', 'warn', 'error'] : ['warn', 'error'],
-    });
-  }
+**Confidence:** HIGH -- standard Playwright auth pattern, confirmed by official
+docs and community guides.
 
-  async onModuleInit() {
-    await this.$connect();
-  }
+### Pitfall 5: Turbopack Default Breaks Build in Next.js 16
 
-  async onModuleDestroy() {
-    await this.$disconnect();
-  }
-}
-```
+**What goes wrong:** After upgrading to Next.js 16, `next build` fails with
+cryptic errors about unsupported webpack configuration or missing loaders. The
+existing `output: 'standalone'` config in `next.config.ts` may also behave
+differently.
 
-- Register as global module:
+**Why it happens:** Next.js 16 makes Turbopack the default bundler for both
+`next dev` AND `next build`. If the project has any webpack-specific
+configuration (custom loaders, plugins, or module resolution rules), Turbopack
+will reject them. The current `next.config.ts` is minimal (`reactStrictMode` +
+`output: 'standalone'`), but any future additions or dependencies that rely on
+webpack internals will fail.
 
-```typescript
-// prisma.module.ts
-@Global()
-@Module({
-  providers: [PrismaService],
-  exports: [PrismaService],
-})
-export class PrismaModule {}
-```
+**Consequences:**
+- Production builds break with no clear error pointing to Turbopack
+- Docker builds fail (the Dockerfiles use `next build`)
+- CI/CD pipeline breaks
 
-- Set explicit connection_limit in DATABASE_URL:
+**Prevention:**
+1. Before upgrading, test `next build --turbopack` on Next.js 15 to identify
+   incompatibilities early
+2. The current minimal config should work with Turbopack, but verify
+   `output: 'standalone'` produces the same Docker-compatible output
+3. If Turbopack issues arise, add `--webpack` flag to build scripts as a
+   temporary escape hatch
+4. Check all dependencies for webpack-specific requirements (especially
+   Playwright for PDF generation if it uses any webpack plugins)
 
-```env
-DATABASE_URL="postgresql://user:pass@pgbouncer:6432/customreport?connection_limit=5"
-```
+**Detection:** Run `pnpm --filter @customreport/web build` after upgrade. If it
+fails, check if `--webpack` flag fixes it -- that confirms Turbopack
+incompatibility.
 
-- Formula: `connection_limit = PgBouncer_default_pool_size / number_of_app_instances`
-
-**Detection:**
-- Monitor: `SELECT count(*) FROM pg_stat_activity WHERE datname = 'customreport'`
-- If connection count exceeds PgBouncer pool size, pool exhaustion is happening
-- Check NestJS logs for "Timed out fetching a new connection from the pool"
-
-**Phase:** Prisma repository implementation
-**Confidence:** HIGH (Prisma docs + GitHub issues confirm this is the #1 production issue)
-
-**Sources:**
-- [Prisma Connection Pool](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/connection-pool)
-- [Prisma Connection Management](https://www.prisma.io/docs/guides/performance-and-optimization/connection-management)
-
----
+**Confidence:** MEDIUM-HIGH -- the current config is minimal and likely
+compatible, but `output: 'standalone'` behavior with Turbopack needs
+verification.
 
 ## Moderate Pitfalls
 
-### Pitfall 6: Docker Build Fails on workspace:* Dependencies
+### Pitfall 6: shadcn/ui components.json Misalignment Between Workspaces
 
-**What goes wrong:**
-- `package.json` in `apps/api` references `"@customreport/shared": "workspace:*"`
-- `docker build` from `apps/api/` context cannot resolve workspace protocol
-- pnpm install fails inside Docker with `ERR_PNPM_NO_MATCHING_VERSION_INSIDE_WORKSPACE`
-- Build is completely broken
-
-**Why it happens:**
-- Docker build context is set to individual app directory instead of monorepo root
-- pnpm workspace protocol (`workspace:*`) requires the workspace root (pnpm-workspace.yaml + pnpm-lock.yaml) to resolve
-- Developer copies only `apps/api/` into Docker, missing the workspace context
-
-**Consequences:**
-- Cannot build Docker images at all
-- No containerized deployment
-- Blocks the entire infrastructure phase
+**What goes wrong:** Components install to wrong directories, or imports break
+because `packages/ui/components.json` and `apps/web/components.json` have
+different `style`, `iconLibrary`, or `baseColor` settings.
 
 **Prevention:**
-- Use `turbo prune` to create a minimal Docker-compatible workspace:
+1. Both `components.json` files must share identical `style`, `iconLibrary`,
+   and `baseColor` values
+2. The `aliases` section differs (correctly) between workspaces -- `packages/ui`
+   uses `@workspace/ui/*` paths while `apps/web` uses `@/*` for local
+   components
+3. For Tailwind v4, leave the `tailwind.config` field empty in both
+   `components.json` files -- v4 uses CSS-first configuration
+4. Always run `shadcn add` from `apps/web/` directory, never from monorepo root
 
-```dockerfile
-# Dockerfile (at monorepo root)
-FROM node:22-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+**Detection:** After `shadcn add button`, check that the file lands in
+`packages/ui/src/components/button.tsx`, not in `apps/web/src/components/`.
 
-# Stage 1: Prune workspace for the target app
-FROM base AS pruner
-WORKDIR /app
-COPY . .
-RUN npx turbo prune @customreport/api --docker
+**Confidence:** HIGH -- documented in shadcn/ui monorepo guide.
 
-# Stage 2: Install dependencies
-FROM base AS installer
-WORKDIR /app
-COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
-RUN pnpm install --frozen-lockfile
+### Pitfall 7: next lint Removal Breaks CI Pipeline
 
-# Stage 3: Build
-COPY --from=pruner /app/out/full/ .
-RUN pnpm turbo build --filter=@customreport/api
-
-# Stage 4: Production
-FROM base AS runner
-WORKDIR /app
-COPY --from=installer /app/apps/api/dist ./dist
-COPY --from=installer /app/node_modules ./node_modules
-COPY --from=installer /app/apps/api/node_modules ./apps/api/node_modules
-```
-
-- ALWAYS set Docker build context to monorepo root (not app directory)
-- ALWAYS include `pnpm-lock.yaml` and `pnpm-workspace.yaml` in build context
-- Use `--frozen-lockfile` to prevent pnpm from modifying the lockfile
-
-**Detection:**
-- `docker build .` from monorepo root should succeed
-- If build fails with workspace resolution errors, build context is wrong
-
-**Phase:** Docker Compose setup
-**Confidence:** HIGH (Turborepo docs + pnpm Docker guide confirm this pattern)
-
-**Sources:**
-- [Turborepo Docker Guide](https://turborepo.dev/docs/guides/tools/docker)
-- [pnpm Working with Docker](https://pnpm.io/docker)
-
----
-
-### Pitfall 7: Prisma Client Not Generated in Docker Build
-
-**What goes wrong:**
-- Docker build installs dependencies with `pnpm install`
-- Prisma Client is NOT generated (requires explicit `prisma generate`)
-- Application starts, first database query fails with `@prisma/client did not initialize yet`
-- Runtime crash in production
-
-**Why it happens:**
-- `prisma generate` runs as a `postinstall` hook in development
-- In Docker multi-stage builds, the postinstall hook may not find the schema.prisma at the expected path
-- `turbo prune` may reorganize directories, breaking the relative path from node_modules to prisma/schema.prisma
-- pnpm `--frozen-lockfile` skips lifecycle scripts in some configurations
-
-**Consequences:**
-- Application crashes on first database access
-- Docker image builds "successfully" but is non-functional
-- Discovered only at container startup (late in pipeline)
+**What goes wrong:** After upgrading to Next.js 16, the `next lint` command no
+longer exists. CI pipelines, pre-commit hooks, and `package.json` scripts that
+reference `next lint` fail with "command not found" or similar errors.
+Additionally, `next build` no longer runs linting automatically.
 
 **Prevention:**
-- Add explicit `prisma generate` step in Dockerfile AFTER copying schema:
+1. Replace all `next lint` references with direct `eslint .` commands BEFORE
+   upgrading
+2. Use the codemod: `npx @next/codemod@canary next-lint-to-eslint-cli`
+3. Update `apps/web/package.json` lint script from any `next lint` usage to
+   `eslint .` (the current project uses `tsc --noEmit` for lint, so this may
+   not apply directly, but verify)
+4. Migrate from `.eslintrc` to ESLint flat config format (`eslint.config.js`)
+   since `@next/eslint-plugin-next` now defaults to flat config
+5. Update the `eslint` option in `next.config.ts` -- it has been removed in
+   Next.js 16
 
-```dockerfile
-# In installer stage, after pnpm install:
-COPY --from=pruner /app/out/full/ .
-RUN pnpm exec prisma generate
-RUN pnpm turbo build --filter=@customreport/api
-```
+**Detection:** Run `pnpm --filter @customreport/web lint` after upgrade. If it
+references `next lint` anywhere in the chain, it will fail.
 
-- Verify in CI: `docker run --rm api-image node -e "require('@prisma/client')"`
-- Add health check that exercises a database query on startup
+**Confidence:** HIGH -- confirmed removal in Next.js 16 release notes.
 
-**Detection:**
-- Container logs show `@prisma/client did not initialize yet` or `PrismaClientInitializationError`
-- Health check endpoint returns 503 on startup
+### Pitfall 8: pgvector HNSW Index Not Used Due to Distance Metric Mismatch
 
-**Phase:** Docker Compose setup
-**Confidence:** HIGH (common issue documented in Prisma GitHub issues)
-
----
-
-### Pitfall 8: SAML Certificate PEM Format Breaks in Docker Environment Variables
-
-**What goes wrong:**
-- Keycloak IdP certificate is a multi-line PEM:
-  ```
-  -----BEGIN CERTIFICATE-----
-  MIICmzCCAYMCBgF...
-  -----END CERTIFICATE-----
-  ```
-- Developer puts it in Docker Compose `.env` file or `environment:` block
-- Newlines are stripped or escaped incorrectly
-- `@node-saml/passport-saml` receives malformed certificate
-- SAML assertion validation fails with `Invalid signature` or `Certificate not valid`
-- SSO login completely broken
-
-**Why it happens:**
-- Docker Compose `environment:` does not preserve multi-line strings
-- `.env` files treat `\n` literally (not as newline) in some configurations
-- Developer does not test SAML with the production certificate format
-- Works with `AUTH_DEV_MODE=true` (cert is ignored), fails in production
-
-**Consequences:**
-- SSO login fails for ALL users in production
-- No fallback auth mechanism
-- Deployment rollback required
-- Debugging is hard (error messages from SAML libraries are cryptic)
+**What goes wrong:** You create an HNSW index for vector similarity search, but
+queries remain slow -- the index is silently ignored by PostgreSQL.
 
 **Prevention:**
-- Strip PEM headers/footers and store as single-line base64 in env var:
+1. The index distance operator MUST match the query distance operator:
+   - Cosine: `CREATE INDEX ... USING hnsw (embedding vector_cosine_ops)` pairs
+     with `<=>` operator
+   - L2: `CREATE INDEX ... USING hnsw (embedding vector_l2_ops)` pairs with
+     `<->` operator
+   - Inner product: `vector_ip_ops` pairs with `<#>` operator
+2. Pick one distance metric (cosine is standard for text embeddings) and use it
+   consistently in both index creation and all `$queryRaw` calls
+3. Create indexes with `CONCURRENTLY` to avoid blocking writes -- but this
+   requires a non-transactional migration (add `-- AlterTable` comment or
+   handle separately)
+4. Prisma cannot create HNSW indexes natively -- must be added via custom SQL
+   in migration files
 
-```env
-# .env
-KEYCLOAK_SAML_CERT="MIICmzCCAYMCBgF...entire cert on one line..."
-```
+**Detection:** Run `EXPLAIN ANALYZE` on a vector query. If the plan shows
+"Seq Scan" instead of "Index Scan using hnsw_index", the index is not being
+used.
 
-- In SAML strategy, passport-saml accepts cert without headers
-- Alternative: mount certificate as a Docker volume:
+**Confidence:** HIGH -- well-documented PostgreSQL/pgvector behavior.
 
-```yaml
-services:
-  api:
-    volumes:
-      - ./certs/keycloak-idp.pem:/app/certs/idp.pem:ro
-    environment:
-      KEYCLOAK_SAML_CERT_PATH: /app/certs/idp.pem
-```
+### Pitfall 9: Async Request APIs Break Existing Pages in Next.js 16
 
-- Read cert from file in strategy:
+**What goes wrong:** Pages that access `params` or `searchParams`
+synchronously stop working. Components that use `cookies()` or `headers()`
+synchronously throw runtime errors.
 
-```typescript
-const idpCert = process.env.KEYCLOAK_SAML_CERT_PATH
-  ? fs.readFileSync(process.env.KEYCLOAK_SAML_CERT_PATH, 'utf-8')
-  : process.env.KEYCLOAK_SAML_CERT;
-```
-
-- ALWAYS test SAML login flow with production certificate in Docker Compose before deploying
-
-**Detection:**
-- SAML login returns `Invalid signature` or `Error parsing SAML response`
-- Works in dev mode, fails in Docker environment
-- Certificate value in container: `docker exec api printenv KEYCLOAK_SAML_CERT | wc -l` -- if > 1 line, format is wrong
-
-**Phase:** SAML auth integration
-**Confidence:** HIGH (passport-saml docs confirm cert format requirements)
-
-**Sources:**
-- [passport-saml Configuration](https://www.passportjs.org/packages/passport-saml/)
-- [node-saml/passport-saml GitHub](https://github.com/node-saml/passport-saml)
-
----
-
-### Pitfall 9: SAML Callback URL Mismatch Between SSR and API
-
-**What goes wrong:**
-- Next.js runs on `localhost:3000` (or `app.company.com`)
-- NestJS API runs on `localhost:3001` (or `api.company.com`)
-- SAML Assertion Consumer Service (ACS) URL configured in Keycloak points to API: `https://api.company.com/auth/saml/callback`
-- User initiates login from Next.js frontend, redirected to Keycloak
-- Keycloak POSTs SAML assertion to API callback URL
-- API sets JWT cookie, but cookie domain is `api.company.com`
-- Next.js on `app.company.com` cannot read the cookie -- user appears not logged in
-- SSR pages have no auth context -- hydration mismatch when client-side reads cookie from a different path
-
-**Why it happens:**
-- Frontend and API are on different origins (different ports or subdomains)
-- Cookie domain/path not configured for cross-origin
-- No clear architecture for "who handles SAML callback and where does the session live"
-- Works in development (both on localhost), breaks in production (different domains)
-
-**Consequences:**
-- Login appears to work (Keycloak returns success) but user is never authenticated in the frontend
-- SSR shows "logged out" state, client hydrates with "logged in" state -- hydration error
-- Session cookies not shared between frontend and API
-- Infinite redirect loops (frontend redirects to login, Keycloak says "already logged in", redirects back)
+**Why it happens:** Next.js 15 introduced async request APIs with temporary
+synchronous compatibility. Next.js 16 removes the synchronous fallback
+entirely. All access to `params`, `searchParams`, `cookies()`, and `headers()`
+must be `await`-ed.
 
 **Prevention:**
-- Architecture decision: SAML callback on API, redirect to frontend with short-lived auth code:
+1. Before upgrading, grep for synchronous usage:
+   `grep -r "params\." apps/web/src/app/ --include="*.tsx" --include="*.ts"`
+2. Run the codemod: `npx @next/codemod@canary next-async-request-api .`
+3. Update all dynamic route pages: `params` must be awaited
+4. Update all pages using `searchParams`: must be awaited
+5. Update any server-side code calling `cookies()` or `headers()` without await
 
-```
-User -> Next.js /login -> redirect to Keycloak
-Keycloak -> POST NestJS /auth/saml/callback
-NestJS validates SAML -> issues JWT -> redirects to Next.js /auth/complete?token=<jwt>
-Next.js /auth/complete -> stores JWT in httpOnly cookie (same domain) -> redirects to dashboard
-```
+**Detection:** After upgrade, runtime errors like "Cannot read property of
+Promise" or "params is a Promise, not an object" indicate synchronous access.
 
-- OR: use same domain with path-based routing (nginx/reverse proxy):
-  - `app.company.com/` -> Next.js
-  - `app.company.com/api/` -> NestJS
-  - Cookie set on `app.company.com` is readable by both
+**Confidence:** HIGH -- mandatory breaking change, well-documented.
 
-- Set cookie with correct domain and SameSite attributes:
+### Pitfall 10: Playwright E2E Tests Fragile Without Proper Selectors
 
-```typescript
-res.cookie('auth_token', jwt, {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'lax',
-  domain: '.company.com', // leading dot = all subdomains
-  path: '/',
-  maxAge: 3600 * 1000,
-});
-```
+**What goes wrong:** E2E tests pass initially but break after any UI styling
+changes because they rely on DOM structure, CSS classes, or text content that
+changes during the shadcn/ui migration.
 
-**Detection:**
-- After SAML login, check browser cookies -- is the auth cookie present on the frontend domain?
-- SSR request: does `getServerSideProps` / server component have access to the auth cookie?
-- If cookie exists on API domain but not frontend domain = this pitfall
-
-**Phase:** SAML auth integration
-**Confidence:** HIGH (fundamental web architecture, well-documented cookie domain behavior)
-
----
-
-### Pitfall 10: Frontend localStorage-to-API Migration Causes Hydration Mismatch
-
-**What goes wrong:**
-- Current v1 frontend reads report data from localStorage
-- v2 migration replaces localStorage with tRPC API calls
-- During migration, some components still read localStorage (fallback)
-- Server renders with no data (SSR has no localStorage)
-- Client hydrates with localStorage data
-- React throws `Hydration failed because the initial UI does not match what was rendered on the server`
-- White screen or broken UI on first load
-
-**Why it happens:**
-- Incremental migration: some components migrated to API, others still use localStorage
-- Next.js SSR renders on server where `window.localStorage` does not exist
-- `typeof window !== 'undefined'` checks lead to different render output between server and client
-- React 19 strict mode makes hydration errors more visible
-
-**Consequences:**
-- White screen or React error boundary on first load
-- Flickering UI (server renders empty, client fills in data)
-- Broken user experience during migration period
-- Hard to debug (error only appears on first load, disappears on navigation)
+**Why it happens:** The existing E2E tests use `getByRole` and `getByLabel`
+(good), but also `getByText` with Russian strings that may change during
+redesign. During the shadcn/ui migration, component structure changes
+(e.g., `<select>` becomes shadcn's `<Select>` with different ARIA roles),
+breaking role-based selectors too.
 
 **Prevention:**
-- Cut over atomically: when migrating a component, replace ALL data sources at once (no hybrid localStorage + API)
-- Use React `useSyncExternalStore` for any remaining localStorage access:
+1. Add `data-testid` attributes to all interactive elements during the
+   shadcn/ui migration -- these survive restyling
+2. Review all 7 existing E2E spec files after shadcn/ui component migration
+3. Update selectors that rely on native HTML elements (e.g.,
+   `getByRole('option')`) to match shadcn/ui's Radix-based primitives
+   (`getByRole('menuitem')` or similar)
+4. Run E2E suite after each component batch migration, not only at the end
 
-```typescript
-function useLocalStorageValue(key: string) {
-  return useSyncExternalStore(
-    (callback) => {
-      window.addEventListener('storage', callback);
-      return () => window.removeEventListener('storage', callback);
-    },
-    () => localStorage.getItem(key),
-    () => null, // server snapshot -- always null
-  );
-}
-```
+**Detection:** Run `pnpm exec playwright test` after each batch of component
+changes. Failures in seemingly unrelated tests indicate selector breakage.
 
-- For API data, use tRPC + React Query with `initialData` from SSR:
+**Confidence:** MEDIUM-HIGH -- depends on how much component structure changes.
 
-```typescript
-// In server component or getServerSideProps:
-const report = await trpc.getActiveSection.fetch();
-// Pass to client component as prop, used as initialData
-// No hydration mismatch because server and client start with same data
-```
+### Pitfall 11: Tailwind v4 Migration Breaks tailwindcss-animate
 
-- Delete localStorage data after successful API migration to prevent stale reads
-
-**Detection:**
-- Open browser console: `Hydration failed` error on first load
-- Compare server HTML source vs client-rendered DOM -- if different, this pitfall
-- Test: disable JavaScript, check if server-rendered page shows correct data
-
-**Phase:** Frontend API migration
-**Confidence:** HIGH (Next.js docs + React 19 hydration changes confirm)
-
-**Sources:**
-- [Next.js Hydration Errors](https://nextjs.org/docs/messages/react-hydration-error)
-- [FluentReact localStorage Fix](https://www.fluentreact.com/blog/nextjs-localstorage-hydration-errors-fix)
-
----
-
-### Pitfall 11: BullMQ Job Serialization Loses Date Objects
-
-**What goes wrong:**
-- Job payload contains `Date` objects: `{ deadline: new Date('2026-04-15'), ... }`
-- BullMQ serializes job data to JSON for Redis storage
-- `JSON.stringify(new Date())` produces a string: `"2026-04-15T00:00:00.000Z"`
-- Worker reads job data, `deadline` is now a string, not a Date
-- Code like `if (deadline < new Date())` does string comparison instead of date comparison
-- Deadline check produces wrong results, reminders fire at wrong time
-
-**Why it happens:**
-- JSON.stringify/parse does not preserve Date objects (converts to ISO string)
-- Developer passes domain objects directly as job data without serialization strategy
-- Unit tests work because they don't go through Redis (mock queue)
-- Integration tests work because Date string comparison happens to work for "equal" dates
-
-**Consequences:**
-- Reminder emails sent at wrong time
-- PDF export jobs processed with wrong timestamps
-- Carry-over logic fires at wrong reporting period boundary
-- Subtle: tests pass, production behavior is wrong
+**What goes wrong:** After setting up Tailwind v4 with shadcn/ui, animation
+classes (used by shadcn/ui Dialog, Dropdown, Tooltip, etc.) do not work. The
+`tailwindcss-animate` plugin is incompatible with Tailwind v4.
 
 **Prevention:**
-- ALWAYS serialize dates to ISO strings explicitly in job payload
-- ALWAYS parse dates back in worker with `new Date()` or Zod:
+1. Remove `tailwindcss-animate` from dependencies
+2. Install `tw-animate-css` instead: `pnpm add -D tw-animate-css`
+3. In `globals.css`, replace `@plugin 'tailwindcss-animate'` with
+   `@import "tw-animate-css"`
+4. This applies to `packages/ui` since it owns the global styles
 
-```typescript
-// Producer: explicit serialization
-const jobData = {
-  reportId: report.id,
-  deadline: report.deadline.toISOString(), // explicitly string
-};
-await this.emailQueue.add('send-reminder', jobData);
+**Detection:** Open a shadcn Dialog or Dropdown. If there is no fade/slide
+animation on open/close, the animate plugin is misconfigured.
 
-// Worker: explicit deserialization with Zod
-const reminderJobSchema = z.object({
-  reportId: z.string().uuid(),
-  deadline: z.coerce.date(), // parses ISO string back to Date
-});
-
-@Process('send-reminder')
-async handleReminder(job: Job) {
-  const data = reminderJobSchema.parse(job.data);
-  // data.deadline is now a proper Date object
-}
-```
-
-- Never pass raw domain objects as BullMQ job data
-
-**Detection:**
-- In worker, check `typeof job.data.deadline === 'string'` -- if true, serialization issue exists
-- Integration test: add job with Date, read from Redis directly, verify it round-trips correctly
-
-**Phase:** BullMQ integration
-**Confidence:** HIGH (fundamental JSON serialization behavior)
-
----
+**Confidence:** HIGH -- documented in shadcn/ui Tailwind v4 migration guide.
 
 ## Minor Pitfalls
 
-### Pitfall 12: Prisma Transaction Timeout on Report Assembly
+### Pitfall 12: pgvector Extension Not Available in Docker Image
 
-**What goes wrong:**
-- Report assembly queries 6 sections, each with items, risks, decisions, priorities
-- All wrapped in `prisma.$transaction()` for consistency
-- Default Prisma interactive transaction timeout: 5 seconds
-- Under load, transaction times out before completing
-- Report assembly fails intermittently
+**What goes wrong:** `CREATE EXTENSION vector` fails in the PostgreSQL Docker
+container used for local development and CI.
 
 **Prevention:**
-- Set explicit timeout on heavy transactions:
+1. Use the `pgvector/pgvector:pg15` Docker image instead of the standard
+   `postgres:15` image in `docker-compose.dev.yml` and `docker-compose.yml`
+2. Alternatively, install the extension in a custom Dockerfile:
+   `RUN apt-get update && apt-get install -y postgresql-15-pgvector`
+3. Update the CI pipeline to use the pgvector image as well
+4. The production PostgreSQL must also have pgvector installed (check with
+   cloud provider if using managed PostgreSQL)
 
-```typescript
-const report = await prisma.$transaction(
-  async (tx) => {
-    const sections = await tx.reportSection.findMany({ where: { reportId }, include: { ... } });
-    // ... assemble report
-    return assembledReport;
-  },
-  { timeout: 15000 }, // 15 seconds for heavy read
-);
-```
+**Detection:** `prisma migrate dev` fails with "ERROR: could not open extension
+control file pgvector" or similar.
 
-- For read-only assembly, consider using non-transactional query (single `findUnique` with nested `include`)
-- Monitor transaction durations with Prisma query logging
+**Confidence:** HIGH -- standard Docker/PostgreSQL configuration.
 
-**Phase:** Prisma repository implementation
-**Confidence:** MEDIUM (depends on data volume and query complexity)
+### Pitfall 13: pnpm Workspace Resolution Breaks shadcn CLI
 
----
-
-### Pitfall 13: Docker Compose Port Conflicts with Host Services
-
-**What goes wrong:**
-- Docker Compose exposes PostgreSQL on `5432:5432`
-- Developer already has PostgreSQL running on host port 5432
-- `docker compose up` fails with `port is already allocated`
-- Or worse: app connects to HOST PostgreSQL instead of Docker PostgreSQL
+**What goes wrong:** Running `pnpm dlx shadcn@latest add button` from
+`apps/web/` fails with module resolution errors because the shadcn CLI cannot
+find the `packages/ui` workspace package.
 
 **Prevention:**
-- Use non-standard host ports in docker-compose.yml:
+1. Initialize shadcn with `pnpm dlx shadcn@latest init --monorepo` if starting
+   fresh
+2. Ensure `pnpm-workspace.yaml` correctly lists both `apps/*` and `packages/*`
+3. The `components.json` in `apps/web` must have the correct relative path to
+   `packages/ui` CSS file: `"css": "../../packages/ui/src/styles/globals.css"`
+4. If the CLI fails, install components manually by copying from the shadcn/ui
+   source and adapting imports
 
-```yaml
-services:
-  postgres:
-    ports: ["5433:5432"]  # Host 5433, Container 5432
-  redis:
-    ports: ["6380:6379"]  # Host 6380, Container 6379
-  pgbouncer:
-    ports: ["6433:6432"]  # Host 6433, Container 6432
-```
+**Detection:** CLI error during `shadcn add` with messages about missing
+modules or unresolved paths.
 
-- Use Docker network names in app config (not localhost):
+**Confidence:** MEDIUM -- depends on exact shadcn CLI version and pnpm version.
 
-```env
-# App connects via Docker network (inside container)
-DATABASE_URL=postgresql://user:pass@pgbouncer:6432/customreport
-# Developer tools connect via host port
-# pgAdmin: localhost:5433
-```
+### Pitfall 14: Node.js Version Requirement Bump in Next.js 16
 
-**Phase:** Docker Compose setup
-**Confidence:** HIGH (common development environment issue)
-
----
-
-### Pitfall 14: turbo prune Drops injectWorkspacePackages Setting
-
-**What goes wrong:**
-- Monorepo uses `injectWorkspacePackages: true` in `.npmrc` or pnpm settings
-- `turbo prune --docker` generates output with modified `pnpm-lock.yaml`
-- The `settings.injectWorkspacePackages` option is removed from generated lockfile
-- `pnpm install --frozen-lockfile` fails with `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`
+**What goes wrong:** CI or Docker builds fail because the environment runs
+Node.js 18.x, which is no longer supported by Next.js 16.
 
 **Prevention:**
-- Avoid `injectWorkspacePackages` if possible (use default `workspace:*` protocol)
-- If required: patch the pruned lockfile in Dockerfile before install
-- Track [Turborepo issue #10584](https://github.com/vercel/turborepo/issues/10584) for fix
-- Alternative: use `pnpm deploy` instead of `turbo prune` for production images
+1. Next.js 16 requires Node.js 20.9.0 minimum
+2. Update `engines.node` in root `package.json` from `>=20.0.0` to `>=20.9.0`
+3. Update Dockerfiles (`Dockerfile.web`, `Dockerfile.api`) to use
+   `node:20-alpine` or `node:22-alpine`
+4. Update CI workflow Node.js matrix to drop 18.x if present
 
-**Phase:** Docker Compose setup
-**Confidence:** MEDIUM (known open issue, may be fixed by build time)
+**Detection:** Build error mentioning unsupported Node.js version.
 
-**Sources:**
-- [Turborepo issue #10584](https://github.com/vercel/turborepo/issues/10584)
+**Confidence:** HIGH -- explicit requirement in Next.js 16 release notes.
 
----
+### Pitfall 15: Raw SQL Queries for pgvector Bypass Prisma Type Safety
 
-### Pitfall 15: BullMQ Worker Not Started in Docker Compose
-
-**What goes wrong:**
-- Developer adds jobs to queue (PDF export, email reminders)
-- Jobs sit in Redis indefinitely because no worker is processing them
-- No error is thrown -- BullMQ silently queues jobs
-- User clicks "Export PDF", sees "Processing..." forever
+**What goes wrong:** All vector operations must use `$queryRaw` or
+`$executeRaw` because Prisma does not natively support the vector type. This
+creates a type-safety gap in an otherwise fully type-safe tRPC + Zod + Prisma
+stack.
 
 **Prevention:**
-- BullMQ workers must run in the same NestJS process OR as a separate Docker service
-- For CustomReport scale (6 users): run workers in the main API process:
+1. Use TypedSQL (Prisma's `$queryRawTyped`) where available to retain some
+   type safety
+2. Create a dedicated `VectorRepository` service that encapsulates all raw SQL
+   vector operations behind a typed interface
+3. Use the `pgvector` npm package's `toSql()` method for proper vector
+   serialization -- do not hand-build SQL strings with array concatenation
+4. Write unit tests for every raw SQL query with known input/output pairs
+5. Wrap all vector operations in a Zod schema that validates dimensions match
+   the model (e.g., 1536 for OpenAI `text-embedding-3-small`)
 
-```typescript
-// pdf-export.processor.ts
-@Processor('pdf-export')
-export class PdfExportProcessor {
-  @Process()
-  async handleExport(job: Job<PdfExportJobData>) {
-    // ... generate PDF
-  }
-}
-```
+**Detection:** TypeScript compilation succeeds but runtime errors occur with
+"invalid vector literal" or dimension mismatch errors.
 
-- Add health check endpoint that verifies queue is processing:
+**Confidence:** HIGH -- fundamental Prisma limitation with pgvector.
 
-```typescript
-@Get('health/queues')
-async queueHealth() {
-  const waiting = await this.pdfQueue.getWaitingCount();
-  const active = await this.pdfQueue.getActiveCount();
-  return { pdf: { waiting, active } };
-}
-```
+### Pitfall 16: Cache Behavior Change Affects Data Fetching
 
-- Docker Compose healthcheck:
+**What goes wrong:** After upgrading to Next.js 16, pages that previously
+showed cached data now always fetch fresh data on every request, causing
+performance degradation. Or conversely, pages expected to be dynamic are
+accidentally cached.
 
-```yaml
-api:
-  healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:3001/health/queues"]
-    interval: 30s
-```
+**Prevention:**
+1. Next.js 16 makes all caching opt-in via `'use cache'` directive -- nothing
+   is cached by default
+2. Audit all pages and API routes for caching expectations
+3. For the report listing page, add explicit `'use cache'` if static generation
+   is desired
+4. The report editing pages should remain dynamic (no cache) -- this is now the
+   default, so no change needed
+5. Review `revalidateTag()` / `updateTag()` usage if any cache invalidation
+   patterns were set up
 
-**Phase:** BullMQ integration
-**Confidence:** HIGH (most common BullMQ deployment mistake)
+**Detection:** Page load times increase significantly for read-heavy pages
+(report history, published reports) after upgrade.
 
----
+**Confidence:** MEDIUM -- depends on whether the project relies on implicit
+caching behavior.
 
 ## Phase-Specific Warnings
 
-| Phase Topic | Likely Pitfall | Mitigation | Severity |
-|---|---|---|---|
-| **Docker Compose** | Port conflicts with host services (#13) | Use non-standard host ports, Docker networking | Low |
-| **Docker Compose** | workspace:* fails in Docker (#6) | Use turbo prune, build from monorepo root | Critical |
-| **Docker Compose** | Prisma Client not generated (#7) | Explicit `prisma generate` in Dockerfile | High |
-| **Prisma Setup** | Migration through PgBouncer (#2) | directUrl in schema.prisma | Critical |
-| **Prisma Setup** | Connection pool exhaustion (#5) | Singleton PrismaService, explicit connection_limit | High |
-| **Prisma Setup** | Transaction timeout on assembly (#12) | Explicit timeout, consider non-transactional read | Medium |
-| **PgBouncer** | Prepared statement errors (#1) | PgBouncer 1.22+ with max_prepared_statements | Critical |
-| **NestJS + tRPC** | Guards bypassed on tRPC routes (#3) | Auth as tRPC middleware, not NestJS guards | Critical |
-| **SAML Auth** | Certificate PEM format in Docker (#8) | Single-line cert or volume mount | High |
-| **SAML Auth** | Callback URL domain mismatch (#9) | Same-domain reverse proxy or token redirect flow | High |
-| **BullMQ** | Redis eviction kills jobs (#4) | noeviction policy or separate Redis instances | Critical |
-| **BullMQ** | Job Date serialization (#11) | Explicit ISO string serialization + Zod parsing | Medium |
-| **BullMQ** | Worker not started (#15) | In-process worker + health check endpoint | High |
-| **Frontend Migration** | Hydration mismatch (#10) | Atomic cutover, useSyncExternalStore for localStorage | High |
-| **turbo prune** | Lockfile config mismatch (#14) | Avoid injectWorkspacePackages, track issue | Low |
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| shadcn/ui setup in monorepo | Tailwind classes not scanning packages/ui (P1) | Set up @source directive and transpilePackages before any component work |
+| shadcn/ui component migration | Playwright selectors break (P10) | Add data-testid during migration, run E2E after each batch |
+| shadcn/ui animations | tailwindcss-animate incompatible with v4 (P11) | Use tw-animate-css from day one |
+| Playwright E2E auth setup | Token expiry in long suites (P4) | Use per-worker auth fixtures, extend JWT lifetime in test env |
+| Playwright E2E selectors | Selectors break after shadcn migration (P10) | Do shadcn/ui migration BEFORE writing new E2E tests |
+| Next.js 15 to 16 upgrade | middleware.ts silently ignored (P2) | Rename to proxy.ts as first upgrade step |
+| Next.js 15 to 16 upgrade | Async request APIs mandatory (P9) | Run codemod before manual review |
+| Next.js 15 to 16 upgrade | next lint removed (P7) | Replace with ESLint CLI before upgrade |
+| Next.js 15 to 16 upgrade | Turbopack default (P5) | Test --turbopack flag on Next.js 15 first |
+| pgvector schema addition | Migration drift with Unsupported type (P3) | Use Prisma 7.2.0+, --create-only + hand-edit SQL |
+| pgvector Docker setup | Extension not in standard image (P12) | Switch to pgvector/pgvector Docker image |
+| pgvector query layer | Type safety gap with raw SQL (P15) | Create VectorRepository with typed interface |
+| pgvector index creation | HNSW index silently unused (P8) | Match distance operator in index and query |
 
----
+## Recommended Phase Ordering Based on Pitfalls
+
+The pitfalls above strongly suggest this execution order:
+
+1. **Next.js 16 upgrade FIRST** -- because it changes fundamental file
+   conventions (middleware to proxy) and API patterns (async params) that
+   affect all subsequent work. Doing the upgrade after shadcn/ui migration
+   would mean redoing selectors and potentially breaking newly styled pages.
+
+2. **shadcn/ui + Tailwind v4 setup SECOND** -- after the framework is stable
+   on Next.js 16, set up the UI infrastructure. The setup pitfalls (P1, P6,
+   P11, P13) are all configuration issues that should be resolved once before
+   any component work begins.
+
+3. **Playwright E2E THIRD** -- write E2E tests AFTER the UI is styled and
+   stable. Writing tests on unstyled components means rewriting selectors
+   after shadcn/ui migration. The auth pitfalls (P4) should be solved during
+   setup, not discovered during test authoring.
+
+4. **pgvector RAG LAST** -- this is the most isolated feature with its own
+   database migration (P3, P12), Docker image changes (P12), and raw SQL
+   layer (P15). It does not depend on UI or E2E infrastructure.
 
 ## Sources
 
-- [Prisma PgBouncer Configuration](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/pgbouncer) -- HIGH confidence
-- [Prisma Connection Pool](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/connection-pool) -- HIGH confidence
-- [Prisma Database Connections](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections) -- HIGH confidence
-- [PgBouncer 1.21 Prepared Statements](https://pganalyze.com/blog/5mins-postgres-pgbouncer-prepared-statements-transaction-mode) -- HIGH confidence
-- [BullMQ Going to Production](https://docs.bullmq.io/guide/going-to-production) -- HIGH confidence
-- [BullMQ Connections](https://docs.bullmq.io/guide/connections) -- HIGH confidence
-- [Turborepo Docker Guide](https://turborepo.dev/docs/guides/tools/docker) -- HIGH confidence
-- [pnpm Working with Docker](https://pnpm.io/docker) -- HIGH confidence
-- [tRPC Error Handling](https://trpc.io/docs/server/error-handling) -- HIGH confidence
-- [NestJS-tRPC Context](https://www.nestjs-trpc.io/docs/context) -- MEDIUM confidence (community package)
-- [NestJS-tRPC Middlewares](https://www.nestjs-trpc.io/docs/middlewares) -- MEDIUM confidence (community package)
-- [passport-saml Configuration](https://www.passportjs.org/packages/passport-saml/) -- HIGH confidence
-- [Next.js Hydration Errors](https://nextjs.org/docs/messages/react-hydration-error) -- HIGH confidence
-- [Turborepo issue #10584](https://github.com/vercel/turborepo/issues/10584) -- turbo prune lockfile bug -- MEDIUM confidence
-
----
-
-*Last updated: 2026-04-10 (v2.0 infrastructure integration research)*
+- [shadcn/ui Monorepo Guide](https://ui.shadcn.com/docs/monorepo)
+- [shadcn/ui Tailwind v4 Guide](https://ui.shadcn.com/docs/tailwind-v4)
+- [Turborepo shadcn/ui Guide](https://turborepo.dev/docs/guides/tools/shadcn-ui)
+- [Next.js 16 Upgrade Guide](https://nextjs.org/docs/app/guides/upgrading/version-16)
+- [Next.js 16 Blog Post](https://nextjs.org/blog/next-16)
+- [Next.js 16 middleware-to-proxy](https://nextjs.org/docs/messages/middleware-to-proxy)
+- [Next.js 16 Migration Walkthrough](https://www.salmanizhar.com/blog/nextjs-16-migration-guide)
+- [Next.js 16 Lint Removal Fix](https://zenn.dev/ykbone/articles/2acd8e02d35492?locale=en)
+- [Playwright Authentication Docs](https://playwright.dev/docs/auth)
+- [Playwright Auth Patterns (Checkly)](https://www.checklyhq.com/docs/learn/playwright/authentication/)
+- [SAML with Playwright (Hoop.dev)](https://hoop.dev/blog/the-simplest-way-to-make-playwright-saml-work-like-it-should)
+- [Advanced Playwright Multi-Role Auth](https://medium.com/@faizan4199/advanced-playwright-authentication-a-multi-role-fixture-for-scalable-e2e-testing-9ce89af14223)
+- [Prisma pgvector Drift Bug #28867](https://github.com/prisma/prisma/issues/28867) -- fixed in 7.2.0
+- [Prisma pgvector HNSW Index Issue #21850](https://github.com/prisma/prisma/issues/21850)
+- [Prisma Postgres Extensions Docs](https://www.prisma.io/docs/postgres/database/postgres-extensions)
+- [pgvector Atlas Index Guide](https://atlasgo.io/guides/orms/prisma/vector-index)
+- [pgvector npm Package](https://www.npmjs.com/package/pgvector)
+- [Railway pgvector Hosting Guide](https://blog.railway.com/p/hosting-postgres-with-pgvector)
