@@ -69,6 +69,8 @@ async function bootstrap() {
   const authCtrl = createAuthController(process.env);
   mountAuthRoutes(expressApp, samlStrategy, authCtrl, prismaService, process.env);
 
+  app.enableShutdownHooks();
+
   await app.listen(env.PORT);
   logger.info(`API server listening on port ${env.PORT}`);
 }
