@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildLoginRedirect, shouldRedirectToLogin } from '../../middleware';
+import { buildLoginRedirect, shouldRedirectToLogin } from '../../proxy';
 import { extractSessionToken, parseSessionPayload } from './session';
 
 describe('web auth session helpers', () => {

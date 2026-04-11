@@ -33,7 +33,7 @@ export function shouldRedirectToLogin(pathname: string, cookies: Record<string, 
   return !cookies[AUTH_COOKIE_NAME];
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (process.env.AUTH_DEV_MODE === 'true' || process.env.NODE_ENV !== 'production') {
     return NextResponse.next();
   }

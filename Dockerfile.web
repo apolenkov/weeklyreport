@@ -1,7 +1,7 @@
 # Stage 1: Base with pnpm and turbo
 FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
 RUN pnpm add -g turbo
 
 # Stage 2: Prune monorepo for web workspace
