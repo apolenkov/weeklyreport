@@ -20,7 +20,7 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="ru" className={inter.variable}>
+    <html lang="ru" className={inter.variable} suppressHydrationWarning>
       <body className="min-h-svh bg-background font-sans antialiased">
         <TooltipProvider>
           <TRPCProvider>{children}</TRPCProvider>
