@@ -9,13 +9,13 @@
 
 - [x] **DS-01**: Tailwind CSS v4 initialized with @theme directive, design tokens (colors, spacing, typography), dark/light mode support
 - [x] **DS-02**: shadcn/ui initialized in packages/ui with monorepo-aware CLI, @source directive scanning cross-package components
-- [ ] **DS-03**: Responsive navigation shell — sidebar with role-based menu, header with user info + logout, mobile hamburger menu
+- [x] **DS-03**: Responsive navigation shell — sidebar with role-based menu, header with user info + logout, mobile hamburger menu
 - [ ] **DS-04**: All form inputs styled via shadcn/ui (Input, Select, Textarea, Button, Badge, Checkbox) across all pages
 - [ ] **DS-05**: DataTable component for tabular data (submission dashboard, admin tables, archive list) with sorting
 - [ ] **DS-06**: Card-based layout for report sections, project statuses, risk/decision items
 - [ ] **DS-07**: Dialog/Sheet components for confirmations, admin CRUD forms
-- [ ] **DS-08**: Toast notifications for mutation feedback (save, submit, publish, error)
-- [ ] **DS-09**: Loading skeletons for tRPC query states (replace plain "Loading..." text)
+- [x] **DS-08**: Toast notifications for mutation feedback (save, submit, publish, error)
+- [x] **DS-09**: Loading skeletons for tRPC query states (replace plain "Loading..." text)
 
 ## Page Styling
 
@@ -98,13 +98,13 @@
 | TOOL-05 | Phase 8 | Complete |
 | DS-01 | Phase 9 | Complete |
 | DS-02 | Phase 9 | Complete |
-| DS-03 | Phase 9 | Pending |
+| DS-03 | Phase 9 | Complete |
 | DS-04 | Phase 9 | Pending |
 | DS-05 | Phase 9 | Pending |
 | DS-06 | Phase 9 | Pending |
 | DS-07 | Phase 9 | Pending |
-| DS-08 | Phase 9 | Pending |
-| DS-09 | Phase 9 | Pending |
+| DS-08 | Phase 9 | Complete |
+| DS-09 | Phase 9 | Complete |
 | PAGE-01 | Phase 10 | Pending |
 | PAGE-02 | Phase 10 | Pending |
 | PAGE-03 | Phase 10 | Pending |
