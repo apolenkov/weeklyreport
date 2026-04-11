@@ -111,7 +111,7 @@ Full details: [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 Plans:
 - [x] 12-01-PLAN.md -- Playwright E2E infrastructure: dual webServer, dev-login auth, per-role fixtures
 - [ ] 12-02-PLAN.md -- E2E journey test specs
-- [ ] 12-03-PLAN.md -- CI/CD pipeline setup
+- [x] 12-03-PLAN.md -- CI/CD pipeline setup
 
 ## Phase Details
 
