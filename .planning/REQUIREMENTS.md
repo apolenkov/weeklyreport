@@ -1,201 +1,105 @@
-# Requirements: CustomReport v2.0
+# Requirements: CustomReport v3.0
 
-**Defined:** 2026-04-10
+**Defined:** 2026-04-11
 **Core Value:** Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
-**Milestone:** v2.0 Infrastructure Integration
+**Milestone:** v3.0 UI Polish & Analytics
+**Priority:** Стилизация — главный приоритет milestone
 
-## v2 Requirements
+## Design System & Styling
 
-Requirements for infrastructure integration. Each maps to roadmap phases.
+- [ ] **DS-01**: Tailwind CSS v4 initialized with @theme directive, design tokens (colors, spacing, typography), dark/light mode support
+- [ ] **DS-02**: shadcn/ui initialized in packages/ui with monorepo-aware CLI, @source directive scanning cross-package components
+- [ ] **DS-03**: Responsive navigation shell — sidebar with role-based menu, header with user info + logout, mobile hamburger menu
+- [ ] **DS-04**: All form inputs styled via shadcn/ui (Input, Select, Textarea, Button, Badge, Checkbox) across all pages
+- [ ] **DS-05**: DataTable component for tabular data (submission dashboard, admin tables, archive list) with sorting
+- [ ] **DS-06**: Card-based layout for report sections, project statuses, risk/decision items
+- [ ] **DS-07**: Dialog/Sheet components for confirmations, admin CRUD forms
+- [ ] **DS-08**: Toast notifications for mutation feedback (save, submit, publish, error)
+- [ ] **DS-09**: Loading skeletons for tRPC query states (replace plain "Loading..." text)
 
-### Database Foundation
+## Page Styling
 
-- [x] **DB-01**: Prisma schema includes all domain models (add 5 missing: PdfExportJob, ReminderRule, ReminderExecution, CarryOverExecution, CarryOverRecord)
-- [x] **DB-02**: Initial migration creates all tables in PostgreSQL
-- [x] **DB-03**: Seed script creates baseline data (6 leads, 1 head, 1 viewer, projects, current report period)
-- [x] **DB-04**: Seed is idempotent (safe to run multiple times)
+- [ ] **PAGE-01**: Lead report form — styled section editor with traffic light selector, item/risk/decision forms, priority ranking
+- [ ] **PAGE-02**: Head dashboard — styled submission status table with status badges, progress indicators
+- [ ] **PAGE-03**: Head assembled report — styled read-only report review with section cards, publish action
+- [ ] **PAGE-04**: Published report page — styled public view with portfolio overview, section details
+- [ ] **PAGE-05**: Archive/history page — styled report list with date ranges, status filters
+- [ ] **PAGE-06**: Admin panel — styled DataTables for users, projects, periods, reminders with CRUD dialogs
+- [ ] **PAGE-07**: Auth error page — styled with design system tokens, consistent with app theme
+- [ ] **PAGE-08**: Landing/navigation page — styled role-based entry point
 
-### API Server
+## PDF Styling
 
-- [x] **API-01**: NestJS bootstraps HTTP server listening on configurable port
-- [x] **API-02**: tRPC adapter mounts AppRouter at `/trpc` as Express middleware
-- [x] **API-03**: tRPC context factory extracts UserSession from JWT cookie per request
-- [x] **API-04**: All 8 domain services wired via NestJS dependency injection with Prisma repositories
-- [x] **API-05**: Environment configuration validated with Zod on startup (fail-fast on missing vars)
-- [x] **API-06**: CORS configured for frontend origin
-- [x] **API-07**: Structured error handling maps domain errors to tRPC error codes
+- [ ] **PDF-01**: Print-specific CSS for published report — print:hidden nav, page breaks between sections, header/footer
+- [ ] **PDF-02**: Traffic light colors render correctly in Playwright PDF (no oklch — use hex/rgb fallback)
+- [ ] **PDF-03**: PDF matches visual fidelity of browser view — tables, badges, cards render cleanly
 
-### Prisma Repositories
+## Tooling Upgrades
 
-- [x] **REPO-01**: ReportSectionsRepository implementation (nested includes: projects, items, risks, decisions, priorities)
-- [x] **REPO-02**: ReviewService repository (assemble full report with all sections)
-- [x] **REPO-03**: PublicationService repository (publish report, update status)
-- [x] **REPO-04**: PdfExportRepository implementation (job CRUD)
-- [x] **REPO-05**: RemindersRepository implementation (rule + execution CRUD with dedupe)
-- [x] **REPO-06**: CarryOverRepository implementation (transactional cross-report copy)
-- [x] **REPO-07**: AdminRepository implementation (users, projects, periods, reminder rules CRUD)
-- [x] **REPO-08**: ArchiveRepository implementation (query published reports by date)
-- [x] **REPO-09**: All repositories parse output through Zod schemas before returning
+- [ ] **TOOL-01**: pnpm 9 → 10 migration with onlyBuiltDependencies for prisma, playwright, esbuild
+- [ ] **TOOL-02**: Next.js 15 → 16 migration — middleware.ts → proxy.ts rename, React Compiler enabled, Turbopack default
+- [ ] **TOOL-03**: Vitest 3 → 4 migration — pool option renames, mock behavior updates
+- [ ] **TOOL-04**: ESLint 10 flat config setup — @typescript-eslint/strict, sonarjs rules, monorepo-aware
+- [ ] **TOOL-05**: CLAUDE.md updated with actual current versions (Next.js 16, Vitest 4, ESLint 10, pnpm 10, etc.)
 
-### Authentication
+## CI/CD
 
-- [ ] **AUTHZ-01**: SAML login endpoint (`/auth/saml/login`) redirects to Keycloak
-- [ ] **AUTHZ-02**: SAML callback endpoint processes assertion, creates/updates user, sets JWT cookie
-- [ ] **AUTHZ-03**: tRPC middleware validates JWT and injects UserSession into context
-- [x] **AUTHZ-04**: tRPC middleware enforces role-based access (lead/head/viewer) per procedure
-- [ ] **AUTHZ-05**: Dev bypass mode (env flag) provides hardcoded session for local development
-- [ ] **AUTHZ-06**: Logout endpoint clears JWT cookie
+- [ ] **CI-01**: GitHub Actions workflow — lint + typecheck + unit tests on push/PR
+- [ ] **CI-02**: E2E test job with Docker services (postgres + redis) and Playwright CLI
+- [ ] **CI-03**: Docker build verification (docker compose build succeeds)
 
-### Frontend Integration
+## E2E Testing
 
-- [x] **FE-01**: tRPC client configured with httpBatchLink pointing to API
-- [ ] **FE-02**: Lead report form uses tRPC mutations instead of localStorage for save/submit
-- [ ] **FE-03**: Head dashboard fetches real submission statuses via tRPC
-- [ ] **FE-04**: Assembled report review page loads data from API
-- [ ] **FE-05**: Publication flow calls API to publish report
-- [ ] **FE-06**: Published report page loads from API
-- [x] **FE-07**: Admin panel CRUD operations call API endpoints
-- [ ] **FE-08**: Archive/history pages load from API
-- [ ] **FE-09**: PDF export triggers async job via API and polls for completion
-- [x] **FE-10**: localStorage helpers and demo data files removed
+- [ ] **E2E-01**: Playwright config with dual webServer (Next.js + NestJS), Docker services for DB
+- [ ] **E2E-02**: Auth fixtures — per-role storageState (lead, head, viewer) using dev-login endpoint
+- [ ] **E2E-03**: Full lead journey test — login → fill section → save draft → submit → verify persistence
+- [ ] **E2E-04**: Full head journey test — login → review dashboard → view report → publish → verify published
+- [ ] **E2E-05**: PDF export E2E — trigger export → poll status → verify PDF file generated
+- [ ] **E2E-06**: Admin CRUD E2E — create/edit/delete user, project, period
 
-### Background Jobs
+## SQL Analytics
 
-- [x] **JOBS-01**: BullMQ registered with Redis connection (noeviction policy)
-- [x] **JOBS-02**: PDF export processor generates PDF via Playwright and stores artifact
-- [x] **JOBS-03**: Email reminder processor sends via SMTP with deduplication
-- [x] **JOBS-04**: Bull Board admin UI accessible to head role for queue monitoring
-- [x] **JOBS-05**: Failed jobs go to dead-letter queue with configurable retry
+- [ ] **ANAL-01**: Project health trends API — traffic light history per project over time (SQL aggregation)
+- [ ] **ANAL-02**: Submission timeliness API — when leads submit relative to deadline (SQL aggregation)
+- [ ] **ANAL-03**: Analytics dashboard page — charts (recharts) for project trends, submission stats
+- [ ] **ANAL-04**: Dashboard accessible to head and viewer roles
 
-### Containerization
+## Search & RAG
 
-- [x] **DOCK-01**: Multi-stage Dockerfile for apps/api (turbo prune + pnpm)
-- [x] **DOCK-02**: Multi-stage Dockerfile for apps/web (turbo prune + pnpm)
-- [x] **DOCK-03**: docker-compose.yml orchestrates PostgreSQL, Redis, PgBouncer, API, Web
-- [x] **DOCK-04**: docker-compose.dev.yml adds volume mounts and hot reload for development
-- [x] **DOCK-05**: Health-check-based startup ordering (DB ready -> migrate -> API -> Web)
-- [ ] **DOCK-06**: PgBouncer configured with transaction mode and max_prepared_statements
-
-### Observability
-
-- [x] **OBS-01**: Health check endpoints (/health/live, /health/ready) checking DB + Redis + memory
-- [x] **OBS-02**: Prometheus metrics endpoint (/metrics)
-- [x] **OBS-03**: Graceful shutdown drains connections on SIGTERM
-- [x] **OBS-04**: Request logging with correlation IDs
-
-### Quality Gates
-
-- [x] **QA-01**: All existing 51 backend tests still pass with Prisma repositories
-- [x] **QA-02**: Fix 24 failing frontend tests (userEvent.setup crash)
-- [x] **QA-03**: TypeScript typecheck clean across entire monorepo
-- [x] **QA-04**: Integration tests for repository implementations against real PostgreSQL
-
-## v3 Requirements
-
-Deferred to future release. Tracked but not in current roadmap.
-
-### Analytics
-
-- **ANAL-01**: Trend charts showing project health trajectory over weeks
-- **ANAL-02**: Risk aggregation dashboard
-- **ANAL-03**: Decision resolution timeline
-
-### Extended Integrations
-
-- **INTG-01**: Slack/Teams notification on report publication
-- **INTG-02**: Jira integration for auto-populating items
-
-### Production Scaling
-
-- **SCALE-01**: Kubernetes manifests
-- **SCALE-02**: S3/MinIO for PDF storage
-- **SCALE-03**: Redis Sentinel/Cluster
-- **SCALE-04**: CI/CD pipeline (GitHub Actions)
-- **SCALE-05**: Database backup automation
-- **SCALE-06**: Multi-environment config (staging, production)
+- [ ] **SEARCH-01**: PostgreSQL full-text search — tsvector + GIN indexes on report items, risks, decisions text fields
+- [ ] **SEARCH-02**: Search API endpoint — keyword search across report history with Russian morphology (to_tsvector('russian', ...))
+- [ ] **SEARCH-03**: pgvector extension enabled in PostgreSQL, Prisma schema with Unsupported("vector") columns
+- [ ] **SEARCH-04**: Embedding pipeline — BullMQ job to generate embeddings (OpenAI text-embedding-3-small) on report publish
+- [ ] **SEARCH-05**: Semantic search API — cosine similarity over embeddings for "find similar reports/items"
+- [ ] **SEARCH-06**: Hybrid search — combine tsvector keyword results + pgvector semantic results with RRF ranking
+- [ ] **SEARCH-07**: Search UI — search bar in navigation, results page with highlighted matches
+- [ ] **SEARCH-08**: RAG chatbot backend — question → hybrid search → LLM answer with source citations
+- [ ] **SEARCH-09**: Chatbot UI — conversational chat element embedded in app, accessible to head/viewer roles
 
 ## Out of Scope
 
-| Feature | Reason |
-|---------|--------|
-| Kubernetes deployment | Docker Compose sufficient for 6+1 users |
-| S3/MinIO PDF storage | Filesystem volume sufficient for <1000 PDFs |
-| CI/CD pipeline | Orthogonal, add after infrastructure milestone |
-| Prometheus/Grafana stack | Health endpoints + structured logs sufficient |
-| Redis Sentinel/Cluster | Single instance handles the load |
-| API versioning | tRPC + Zod handle schema evolution |
-| @trpc/react-query | Unnecessary weight for 6 users; vanilla tRPC client simpler |
-| nestjs-trpc decorator lib | Conflicts with existing shared router contract |
-| @nestjs/schedule | BullMQ repeatable jobs handle scheduling |
+- Mobile native app — web responsive is sufficient
+- Elasticsearch/Meilisearch — PostgreSQL handles both full-text and vector search
+- Real-time collaboration (WebSocket) — one lead per section, no conflicts
+- Custom themes / white-labeling — single department app
+- Kubernetes — Docker Compose is sufficient for 10 users
+- PgBouncer — unnecessary for this scale (descoped in v2.0)
+- Grafana/Prometheus monitoring stack — health endpoints sufficient
+- Multi-language support — Russian only
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-01 | Phase 5 | Complete |
-| DB-02 | Phase 5 | Complete |
-| DB-03 | Phase 5 | Complete |
-| DB-04 | Phase 5 | Complete |
-| API-01 | Phase 5 | Complete |
-| API-02 | Phase 5 | Complete |
-| API-03 | Phase 5 | Complete |
-| API-04 | Phase 5 | Complete |
-| API-05 | Phase 5 | Complete |
-| API-06 | Phase 5 | Complete |
-| API-07 | Phase 5 | Complete |
-| REPO-01 | Phase 5 | Complete |
-| REPO-02 | Phase 5 | Complete |
-| REPO-03 | Phase 5 | Complete |
-| REPO-04 | Phase 5 | Complete |
-| REPO-05 | Phase 5 | Complete |
-| REPO-06 | Phase 5 | Complete |
-| REPO-07 | Phase 5 | Complete |
-| REPO-08 | Phase 5 | Complete |
-| REPO-09 | Phase 5 | Complete |
-| AUTHZ-01 | Phase 6 | Pending |
-| AUTHZ-02 | Phase 6 | Pending |
-| AUTHZ-03 | Phase 6 | Pending |
-| AUTHZ-04 | Phase 6 | Complete |
-| AUTHZ-05 | Phase 6 | Pending |
-| AUTHZ-06 | Phase 6 | Pending |
-| FE-01 | Phase 6 | Complete |
-| FE-02 | Phase 6 | Pending |
-| FE-03 | Phase 6 | Pending |
-| FE-04 | Phase 6 | Pending |
-| FE-05 | Phase 6 | Pending |
-| FE-06 | Phase 6 | Pending |
-| FE-07 | Phase 6 | Complete |
-| FE-08 | Phase 6 | Pending |
-| FE-09 | Phase 6 | Pending |
-| FE-10 | Phase 6 | Complete |
-| JOBS-01 | Phase 7 | Complete |
-| JOBS-02 | Phase 7 | Complete |
-| JOBS-03 | Phase 7 | Complete |
-| JOBS-04 | Phase 7 | Complete |
-| JOBS-05 | Phase 7 | Complete |
-| DOCK-01 | Phase 7 | Complete |
-| DOCK-02 | Phase 7 | Complete |
-| DOCK-03 | Phase 7 | Complete |
-| DOCK-04 | Phase 7 | Complete |
-| DOCK-05 | Phase 7 | Complete |
-| DOCK-06 | Phase 7 | Pending |
-| OBS-01 | Phase 7 | Complete |
-| OBS-02 | Phase 7 | Complete |
-| OBS-03 | Phase 7 | Complete |
-| OBS-04 | Phase 7 | Complete |
-| QA-01 | Phase 5 | Complete |
-| QA-02 | Phase 6 | Complete |
-| QA-03 | Phase 6 | Complete |
-| QA-04 | Phase 5 | Complete |
-
-**Coverage:**
-- v2 requirements: 55 total
-- Mapped to phases: 55
-- Unmapped: 0
+| DS-01..DS-09 | TBD | Pending |
+| PAGE-01..PAGE-08 | TBD | Pending |
+| PDF-01..PDF-03 | TBD | Pending |
+| TOOL-01..TOOL-05 | TBD | Pending |
+| CI-01..CI-03 | TBD | Pending |
+| E2E-01..E2E-06 | TBD | Pending |
+| ANAL-01..ANAL-04 | TBD | Pending |
+| SEARCH-01..SEARCH-09 | TBD | Pending |
 
 ---
 
-*Requirements defined: 2026-04-10*
-*Traceability updated: 2026-04-10 (roadmap creation)*
+*Created: 2026-04-11 for milestone v3.0*
