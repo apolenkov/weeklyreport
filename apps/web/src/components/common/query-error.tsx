@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 type QueryErrorProps = {
   readonly error: { readonly message: string };
   readonly onRetry?: () => void;
@@ -8,10 +10,15 @@ type QueryErrorProps = {
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export function QueryError({ error, onRetry }: QueryErrorProps) {
-  if (error.message.includes('UNAUTHORIZED')) {
-    if (typeof window !== 'undefined') {
+  const isUnauthorized = error.message.includes('UNAUTHORIZED');
+
+  useEffect(() => {
+    if (isUnauthorized) {
       window.location.href = `${API_URL}/auth/saml/login`;
     }
+  }, [isUnauthorized]);
+
+  if (isUnauthorized) {
     return null;
   }
 

@@ -21,7 +21,7 @@ export class RedisHealthIndicator extends HealthIndicator implements OnModuleDes
     try {
       await this.redis.ping();
       return this.getStatus(key, true);
-    } catch (error) {
+    } catch (_error) {
       throw new HealthCheckError(
         'Redis check failed',
         this.getStatus(key, false),
