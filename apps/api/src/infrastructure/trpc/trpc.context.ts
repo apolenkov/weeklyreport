@@ -21,22 +21,22 @@ export function createContextFactory(_app: INestApplication) {
   const authController = createAuthController(process.env);
 
   return async ({ req }: CreateExpressContextOptions): Promise<TrpcContext> => {
+    const token = req.cookies?.['customreport_session'] as string | undefined;
+
+    if (token) {
+      try {
+        const session = authController.verifySessionToken(token);
+        return { session };
+      } catch {
+        // Token invalid/expired -- fall through
+      }
+    }
+
+    // In dev mode without a valid cookie, use fallback session
     if (process.env['AUTH_DEV_MODE'] === 'true') {
       return { session: DEV_SESSION };
     }
 
-    const token = req.cookies?.['customreport_session'] as string | undefined;
-
-    if (!token) {
-      return { session: null };
-    }
-
-    try {
-      const session = authController.verifySessionToken(token);
-
-      return { session };
-    } catch {
-      return { session: null };
-    }
+    return { session: null };
   };
 }

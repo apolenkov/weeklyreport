@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v3.0: 47/47
+**Coverage:** v1.0: 29/29 | v2.0: 55/55
 
 ---
 
@@ -11,7 +11,6 @@
 
 - [x] **v1.0 Domain Logic** - Phases 1-4 (shipped 2026-04-10)
 - [x] **v2.0 Infrastructure Integration** - Phases 5-7 (shipped 2026-04-11)
-- [ ] **v3.0 UI Polish & Analytics** - Phases 8-14 (in progress)
 
 ## Phases
 
@@ -101,156 +100,85 @@ Full details: [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 
 </details>
 
----
+## Active Phases
 
-### v3.0 UI Polish & Analytics (In Progress)
+### Phase 12: E2E Tests & CI/CD
+**Goal**: Automated Playwright E2E tests covering full user journey; GitHub Actions CI pipeline
+**Depends on**: Phase 7 (production infrastructure)
+**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, CI-01, CI-02, CI-03
+**Plans**: 1/3 complete
 
-**Milestone Goal:** Turn functional prototype into a visually polished product with comprehensive E2E testing, modernized toolchain, and analytics over report history.
-
-**Priority:** Styling is the #1 priority. Phases 9-11 are the bulk of the milestone.
-
-- [ ] **Phase 8: Tooling Upgrades** - pnpm 10, Next.js 16, Vitest 4, ESLint 10; modernize monorepo conventions
-- [ ] **Phase 9: Design System Foundation** - Tailwind v4 + shadcn/ui primitives in packages/ui; design tokens, shared components
-- [x] **Phase 10: Page Styling** - Restyle all 8 application pages using design system components (completed 2026-04-11)
-- [x] **Phase 11: PDF Styling** - Print-specific CSS, color fallbacks, visual fidelity for exported reports (completed 2026-04-11)
-- [ ] **Phase 12: E2E Tests & CI/CD** - Playwright CLI full journey tests, GitHub Actions pipeline
-- [ ] **Phase 13: SQL Analytics** - Project health trends, submission timeliness, analytics dashboard
-- [ ] **Phase 14: Search & RAG** - Full-text search, pgvector embeddings, hybrid search, chatbot
+Plans:
+- [x] 12-01-PLAN.md -- Playwright E2E infrastructure: dual webServer, dev-login auth, per-role fixtures
+- [ ] 12-02-PLAN.md -- E2E journey test specs
+- [ ] 12-03-PLAN.md -- CI/CD pipeline setup
 
 ## Phase Details
 
-### Phase 8: Tooling Upgrades
-**Goal**: Monorepo runs on current-generation toolchain; all existing tests and builds pass on upgraded dependencies
-**Depends on**: Phase 7 (v2.0 complete)
-**Requirements**: TOOL-01, TOOL-02, TOOL-03, TOOL-04, TOOL-05
+*v2.0 phase details archived to [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)*
+
+<!-- Kept for reference:
+### Phase 5: Backend Foundation
+**Goal**: Domain services persist data in PostgreSQL through Prisma repositories; NestJS serves tRPC endpoints backed by real database; existing tests continue passing
+**Depends on**: Phase 4 (v1.0 complete)
+**Requirements**: DB-01, DB-02, DB-03, DB-04, API-01, API-02, API-03, API-04, API-05, API-06, API-07, REPO-01, REPO-02, REPO-03, REPO-04, REPO-05, REPO-06, REPO-07, REPO-08, REPO-09, QA-01, QA-04
 **Success Criteria** (what must be TRUE):
-  1. `pnpm install` succeeds with pnpm 10; `onlyBuiltDependencies` allowlist includes prisma, playwright, esbuild
-  2. `pnpm turbo build` compiles Next.js 16 app with Turbopack; proxy.ts replaces middleware.ts; async params work
-  3. `pnpm turbo test` runs all existing unit tests on Vitest 4 without failures
-  4. `pnpm turbo lint` runs ESLint 10 flat config with @typescript-eslint/strict rules; zero errors
-  5. CLAUDE.md reflects actual installed versions (Next.js 16, Vitest 4, ESLint 10, pnpm 10)
-**Plans**: 2 plans
+  1. Running `prisma studio` shows all domain tables populated with seed data (6 leads, 1 head, 1 viewer, projects, current report period)
+  2. `curl localhost:3001/trpc/reports.getActive` returns report data from PostgreSQL (using dev bypass auth)
+  3. All 8 domain services read and write through Prisma repositories -- no in-memory or localStorage fallbacks remain in the API
+  4. All 51 existing backend unit tests pass with the new Prisma repository implementations
+  5. Integration tests verify repository read/write against real PostgreSQL (not mocked)
+**Plans**: 6 plans
 
 Plans:
-- [x] 08-01-PLAN.md — Migrate pnpm 9 to 10 and Next.js 15 to 16 (proxy.ts, React Compiler)
-- [x] 08-02-PLAN.md — Upgrade Vitest 4, set up ESLint 10 flat config, update CLAUDE.md versions
+- [x] 05-01-PLAN.md — Complete Prisma schema (15 models), initial migration, idempotent seed, PrismaService singleton
+- [x] 05-02-PLAN.md — NestJS AppModule, env config, and 4 simpler Prisma repositories (review, archive, pdf-export, reminders)
+- [x] 05-03-PLAN.md — 4 complex Prisma repositories (report-sections, publication, carry-over, admin) with deep includes and transactions
+- [x] 05-04-PLAN.md — tRPC AppRouter with all domain procedures, main.ts bootstrap, dev auth bypass, error mapping
+- [x] 05-05-PLAN.md — Verify 51 existing unit tests pass, integration tests for all 8 repositories against real PostgreSQL
+- [x] 05-06-PLAN.md — Gap closure: Add Zod .parse() to 4 non-compliant repositories (REPO-09), fix REQUIREMENTS.md drift
 
-### Phase 9: Design System Foundation
-**Goal**: A working component library exists in packages/ui with design tokens and shadcn/ui primitives; any page can import and render styled components
-**Depends on**: Phase 8
-**Requirements**: DS-01, DS-02, DS-03, DS-04, DS-05, DS-06, DS-07, DS-08, DS-09
+### Phase 6: Auth & Frontend Integration
+**Goal**: Users authenticate via Keycloak SAML, frontend calls real API instead of localStorage; the full user journey works end-to-end in a browser
+**Depends on**: Phase 5
+**Requirements**: AUTHZ-01, AUTHZ-02, AUTHZ-03, AUTHZ-04, AUTHZ-05, AUTHZ-06, FE-01, FE-02, FE-03, FE-04, FE-05, FE-06, FE-07, FE-08, FE-09, FE-10, QA-02, QA-03
 **Success Criteria** (what must be TRUE):
-  1. Tailwind v4 `@theme` directive defines design tokens (colors, spacing, typography); dark/light mode toggle works
-  2. `packages/ui` exports shadcn/ui primitives (Button, Input, Select, Card, Badge, Dialog, Table, Toast, Skeleton); importing any component in `apps/web` renders correctly with full styling
-  3. Navigation shell renders on every page — sidebar with role-based menu items, header with user info and logout, responsive hamburger on mobile
-  4. DataTable component renders tabular data with sorting; Card layout renders grouped content; Dialog/Sheet renders modal forms
-  5. Toast notifications appear on mutation success/error; loading skeletons replace "Loading..." text during tRPC queries
+  1. User clicks login, is redirected to Keycloak, completes SAML flow, and returns to the app with an active session cookie
+  2. Lead fills report section in browser -- data persists in PostgreSQL (not localStorage); page refresh preserves state
+  3. Head reviews submissions, publishes report, and viewers can read published reports -- all against real API
+  4. Dev bypass mode (env flag) provides hardcoded session for local development without Keycloak
+  5. TypeScript typecheck passes clean across the entire monorepo; all 24 previously-failing frontend tests are fixed
+**Plans**: 6 plans
+**UI hint**: yes
+
+Plans:
+- [x] 06-01-PLAN.md — Wire SAML auth routes, tRPC context JWT extraction, env schema, auth error page
+- [x] 06-02-PLAN.md — Install tRPC client packages, create TRPCProvider, wire into root layout
+- [x] 06-03-PLAN.md — Migrate lead/head/report/archive pages from localStorage to tRPC hooks
+- [x] 06-04-PLAN.md — Migrate admin page to tRPC, delete all localStorage helper files
+- [x] 06-05-PLAN.md — Fix Vitest jsdom config, create MSW handlers, fix all frontend tests, typecheck clean
+- [x] 06-06-PLAN.md — Gap closure: Add superjson transformer to fix 17 Date/string typecheck errors (QA-03)
+
+### Phase 7: Production Infrastructure
+**Goal**: Application runs as a containerized stack with async job processing, health monitoring, and production-grade operational controls
+**Depends on**: Phase 6
+**Requirements**: JOBS-01, JOBS-02, JOBS-03, JOBS-04, JOBS-05, DOCK-01, DOCK-02, DOCK-03, DOCK-04, DOCK-05, DOCK-06, OBS-01, OBS-02, OBS-03, OBS-04
+**Success Criteria** (what must be TRUE):
+  1. `docker compose up` starts the full stack (PostgreSQL, Redis, PgBouncer, API, Web) and the app is accessible in a browser
+  2. PDF export button triggers async BullMQ job; user can download the generated PDF file within 10 seconds
+  3. Email reminder processor sends test email via SMTP; failed jobs appear in dead-letter queue and Bull Board UI
+  4. `/health/ready` returns 200 when DB, Redis, and queues are connected; `/metrics` returns Prometheus-format metrics
+  5. `docker compose down && docker compose up` restarts cleanly; data persists across restarts via PostgreSQL volume
 **Plans**: 3 plans
 
 Plans:
-- [x] 09-01-PLAN.md — Initialize Tailwind v4, shadcn/ui component library, design tokens, and monorepo wiring
-- [x] 09-02-PLAN.md — Build responsive navigation shell, QueryError styling, and skeleton patterns
-- [x] 09-03-PLAN.md — Create DataTable, ConfirmDialog, CrudSheet, and TrafficLightBadge composition components
-
-### Phase 10: Page Styling
-**Goal**: Every application page uses the design system; users experience a cohesive, professional interface
-**Depends on**: Phase 9
-**Requirements**: PAGE-01, PAGE-02, PAGE-03, PAGE-04, PAGE-05, PAGE-06, PAGE-07, PAGE-08
-**Success Criteria** (what must be TRUE):
-  1. Lead sees a styled report form with traffic light selector badges, inline item/risk/decision editors, and priority ranking
-  2. Head sees a styled dashboard with status badges per lead, progress indicators, and quick actions
-  3. Published report renders as a professional read-only page with portfolio overview, section cards, and clean typography
-  4. Archive page shows a filterable, sortable DataTable of past reports with date ranges and status indicators
-  5. Admin panel renders Tabs for users/projects/periods/reminders with DataTable + Dialog CRUD; auth error and landing pages are styled consistently
-**Plans**: 4 plans
-
-Plans:
-- [x] 10-01-PLAN.md — Restyle lead report form (7 components: form container + 6 child editors)
-- [x] 10-02-PLAN.md — Restyle head dashboard and assembled report review
-- [x] 10-03-PLAN.md — Restyle published report viewer and archive history page
-- [x] 10-04-PLAN.md — Restyle admin panel (Tabs + DataTable + CrudSheet), auth error, and landing page
-
-### Phase 11: PDF Styling
-**Goal**: The exported PDF report is a professional document that matches the web view quality and prints correctly
-**Depends on**: Phase 10
-**Requirements**: PDF-01, PDF-02, PDF-03
-**Success Criteria** (what must be TRUE):
-  1. PDF generated by Playwright has print-specific CSS: hidden navigation, page breaks between sections, header/footer with report metadata
-  2. Traffic light colors render correctly in PDF using hex/rgb fallbacks (no oklch that fails in older PDF viewers)
-  3. Tables, badges, and cards in the PDF are visually consistent with the browser view; the PDF is presentable to the director without manual editing
-**Plans**: 1 plan
-
-Plans:
-- [x] 11-01-PLAN.md — Print-specific CSS hex fallbacks and styled print page with design system components
-
-### Phase 12: E2E Tests & CI/CD
-**Goal**: Automated tests cover the full user journey; CI pipeline runs on every push
-**Depends on**: Phase 11
-**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, CI-01, CI-02, CI-03
-**Success Criteria** (what must be TRUE):
-  1. Playwright config starts both Next.js and NestJS servers; Docker services (postgres + redis) run during tests
-  2. Auth fixtures provide per-role sessions (lead, head, viewer) via dev-login endpoint; tests do not depend on Keycloak
-  3. Lead journey E2E passes: login -> fill section -> save draft -> submit -> verify data persists
-  4. Head journey E2E passes: login -> review dashboard -> view assembled report -> publish -> verify published page
-  5. GitHub Actions workflow runs lint + typecheck + unit tests + E2E on every push/PR; Docker build verification succeeds
-**Plans**: 3 plans
-
-Plans:
-- [ ] 12-01-PLAN.md — Playwright config with dual webServer and per-role auth fixtures
-- [ ] 12-02-PLAN.md — Full journey E2E tests (lead, head, PDF export, admin CRUD)
-- [ ] 12-03-PLAN.md — GitHub Actions CI/CD pipeline with E2E and Docker build
-
-### Phase 13: SQL Analytics
-**Goal**: Head and viewers can see project health trends and submission timeliness over time through an analytics dashboard
-**Depends on**: Phase 10 (needs styled analytics page)
-**Requirements**: ANAL-01, ANAL-02, ANAL-03, ANAL-04
-**Success Criteria** (what must be TRUE):
-  1. API returns traffic light history per project as time-series data (SQL aggregation over existing report data)
-  2. API returns submission timeliness metrics showing when each lead submits relative to the deadline
-  3. Analytics dashboard page renders charts (recharts) for project trends and submission statistics
-  4. Dashboard is accessible to head and viewer roles; leads cannot access analytics
-**Plans**: TBD
-**UI hint**: yes
-
-### Phase 14: Search & RAG
-**Goal**: Users can search across report history using keywords and semantic similarity; a chatbot answers questions about past reports
-**Depends on**: Phase 13
-**Requirements**: SEARCH-01, SEARCH-02, SEARCH-03, SEARCH-04, SEARCH-05, SEARCH-06, SEARCH-07, SEARCH-08, SEARCH-09
-**Success Criteria** (what must be TRUE):
-  1. Full-text search with Russian morphology returns relevant items, risks, and decisions from report history
-  2. pgvector extension is enabled; embeddings are generated via BullMQ job on report publish; semantic search returns similar reports/items
-  3. Hybrid search combines keyword (tsvector) and semantic (pgvector) results using Reciprocal Rank Fusion; search UI in navigation shows highlighted matches
-  4. Chatbot UI allows head/viewer to ask questions about report history; answers cite source reports
-  5. All search/RAG features are feature-flagged via ANALYTICS_ENABLED; app works normally when disabled
-**Plans**: TBD
-**UI hint**: yes
-
----
-
-## Progress
-
-**Execution Order:** Phases execute in numeric order: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 1. Core Report Capture | v1.0 | 3/3 | Complete | 2026-04-07 |
-| 2. Report Assembly | v1.0 | 3/3 | Complete | 2026-04-08 |
-| 3. Automation & Admin | v1.0 | 4/4 | Complete | 2026-04-09 |
-| 4. Production Hardening | v1.0 | 2/2 | Complete | 2026-04-10 |
-| 5. Backend Foundation | v2.0 | 6/6 | Complete | 2026-04-10 |
-| 6. Auth & Frontend | v2.0 | 6/6 | Complete | 2026-04-11 |
-| 7. Production Infra | v2.0 | 3/3 | Complete | 2026-04-11 |
-| 8. Tooling Upgrades | v3.0 | 2/2 | Complete | 2026-04-11 |
-| 9. Design System | v3.0 | 3/3 | Complete | 2026-04-11 |
-| 10. Page Styling | v3.0 | 4/4 | Complete    | 2026-04-11 |
-| 11. PDF Styling | v3.0 | 1/1 | Complete    | 2026-04-11 |
-| 12. E2E Tests & CI/CD | v3.0 | 0/3 | Not started | - |
-| 13. SQL Analytics | v3.0 | 0/? | Not started | - |
-| 14. Search & RAG | v3.0 | 0/? | Not started | - |
+- [x] 07-01-PLAN.md — BullMQ queues, PDF export processor, email reminder processor, Bull Board UI
+- [x] 07-02-PLAN.md — Health check endpoints, Prometheus metrics, graceful shutdown, correlation IDs
+- [x] 07-03-PLAN.md — Docker Compose orchestration, multi-stage Dockerfiles, dev override
+-->
 
 ---
 
 *Roadmap created: 2026-04-06*
 *v1.0 shipped: 2026-04-10*
 *v2.0 shipped: 2026-04-11*
-*v3.0 roadmap: 2026-04-11*
