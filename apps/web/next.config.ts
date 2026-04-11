@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   reactCompiler: true,
+  transpilePackages: ['@customreport/ui'],
   turbopack: {
     root: resolve(__dirname, '../..'),
   },

@@ -3,8 +3,14 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "outDir": "dist",
+    "rootDir": "src",
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@customreport/ui/*": ["./src/*"]
+    }
   },
   "include": [
     "src/**/*.ts",
