@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { getQueueToken } from '@nestjs/bullmq';
-import type { Queue } from 'bullmq';
 import { RemindersService } from './reminders.service';
 import { RemindersPrismaRepository } from './reminders.prisma-repository';
 
@@ -9,9 +7,9 @@ import { RemindersPrismaRepository } from './reminders.prisma-repository';
     RemindersPrismaRepository,
     {
       provide: RemindersService,
-      useFactory: (repo: RemindersPrismaRepository, emailQueue: Queue) =>
-        new RemindersService(repo, undefined, emailQueue),
-      inject: [RemindersPrismaRepository, getQueueToken('email-reminder')],
+      useFactory: (repo: RemindersPrismaRepository) =>
+        new RemindersService(repo),
+      inject: [RemindersPrismaRepository],
     },
   ],
   exports: [RemindersService],
