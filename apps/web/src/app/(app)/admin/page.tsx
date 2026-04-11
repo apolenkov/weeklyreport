@@ -82,7 +82,8 @@ export default function AdminPage() {
   }
 
   async function handleRunCarryOver(): Promise<boolean> {
-    const periods = snapshot.periods;
+    const periods = snapshot?.periods;
+    if (!periods) return false;
     if (periods.length < 2) return false;
 
     const sourceReportId = periods[periods.length - 2]?.id;

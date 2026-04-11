@@ -24,8 +24,9 @@ export default function HeadReportPage() {
     await saveDraftMutation.mutateAsync(input);
     await utils.review.assembledReport.invalidate();
     const refreshed = await reportQuery.refetch();
-
-    return refreshed.data ?? report;
+    // report is guaranteed non-null here (early return at line 21)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- closure can't see the narrowing
+    return refreshed.data ?? report!;
   }
 
   async function handlePublish() {
