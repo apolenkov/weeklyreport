@@ -106,11 +106,11 @@ Full details: [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 **Goal**: Automated Playwright E2E tests covering full user journey; GitHub Actions CI pipeline
 **Depends on**: Phase 7 (production infrastructure)
 **Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, CI-01, CI-02, CI-03
-**Plans**: 1/3 complete
+**Plans**: 2/3 complete
 
 Plans:
 - [x] 12-01-PLAN.md -- Playwright E2E infrastructure: dual webServer, dev-login auth, per-role fixtures
-- [ ] 12-02-PLAN.md -- E2E journey test specs
+- [x] 12-02-PLAN.md -- E2E journey test specs (lead, head, PDF export, admin CRUD)
 - [ ] 12-03-PLAN.md -- CI/CD pipeline setup
 
 ## Phase Details
