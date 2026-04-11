@@ -25,7 +25,9 @@ export default function HeadReportPage() {
     await utils.review.assembledReport.invalidate();
     const refreshed = await reportQuery.refetch();
 
-    return refreshed.data ?? report;
+    // Non-null assertion safe: report was checked on line 21, and
+    // refetch returns fresh data from the same query.
+    return refreshed.data ?? report!;
   }
 
   async function handlePublish() {
