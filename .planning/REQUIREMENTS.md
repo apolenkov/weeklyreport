@@ -78,10 +78,10 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 
 ### Observability
 
-- [ ] **OBS-01**: Health check endpoints (/health/live, /health/ready) checking DB + Redis + memory
-- [ ] **OBS-02**: Prometheus metrics endpoint (/metrics)
-- [ ] **OBS-03**: Graceful shutdown drains connections on SIGTERM
-- [ ] **OBS-04**: Request logging with correlation IDs
+- [x] **OBS-01**: Health check endpoints (/health/live, /health/ready) checking DB + Redis + memory
+- [x] **OBS-02**: Prometheus metrics endpoint (/metrics)
+- [x] **OBS-03**: Graceful shutdown drains connections on SIGTERM
+- [x] **OBS-04**: Request logging with correlation IDs
 
 ### Quality Gates
 
@@ -181,10 +181,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOCK-04 | Phase 7 | Pending |
 | DOCK-05 | Phase 7 | Pending |
 | DOCK-06 | Phase 7 | Pending |
-| OBS-01 | Phase 7 | Pending |
-| OBS-02 | Phase 7 | Pending |
-| OBS-03 | Phase 7 | Pending |
-| OBS-04 | Phase 7 | Pending |
+| OBS-01 | Phase 7 | Complete |
+| OBS-02 | Phase 7 | Complete |
+| OBS-03 | Phase 7 | Complete |
+| OBS-04 | Phase 7 | Complete |
 | QA-01 | Phase 5 | Complete |
 | QA-02 | Phase 6 | Complete |
 | QA-03 | Phase 6 | Complete |
