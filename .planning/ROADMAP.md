@@ -145,8 +145,12 @@ Plans:
   3. Navigation shell renders on every page — sidebar with role-based menu items, header with user info and logout, responsive hamburger on mobile
   4. DataTable component renders tabular data with sorting; Card layout renders grouped content; Dialog/Sheet renders modal forms
   5. Toast notifications appear on mutation success/error; loading skeletons replace "Loading..." text during tRPC queries
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Initialize Tailwind v4, shadcn/ui component library, design tokens, and monorepo wiring
+- [ ] 09-02-PLAN.md — Build responsive navigation shell, QueryError styling, and skeleton patterns
+- [ ] 09-03-PLAN.md — Create DataTable, ConfirmDialog, CrudSheet, and TrafficLightBadge composition components
 
 ### Phase 10: Page Styling
 **Goal**: Every application page uses the design system; users experience a cohesive, professional interface
@@ -225,7 +229,7 @@ Plans:
 | 6. Auth & Frontend | v2.0 | 6/6 | Complete | 2026-04-11 |
 | 7. Production Infra | v2.0 | 3/3 | Complete | 2026-04-11 |
 | 8. Tooling Upgrades | v3.0 | 2/2 | Complete | 2026-04-11 |
-| 9. Design System | v3.0 | 0/? | Not started | - |
+| 9. Design System | v3.0 | 0/3 | Not started | - |
 | 10. Page Styling | v3.0 | 0/? | Not started | - |
 | 11. PDF Styling | v3.0 | 0/? | Not started | - |
 | 12. E2E Tests & CI/CD | v3.0 | 0/? | Not started | - |
