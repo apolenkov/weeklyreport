@@ -1,17 +1,22 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from './infrastructure/prisma/prisma.module.js';
-import { ReviewModule } from './modules/review/review.module.js';
-import { ArchiveModule } from './modules/archive/archive.module.js';
-import { PdfExportModule } from './modules/pdf-export/pdf-export.module.js';
-import { RemindersModule } from './modules/reminders/reminders.module.js';
+import { PrismaModule } from './infrastructure/prisma/prisma.module';
+import { BullMQModule } from './infrastructure/bullmq/bullmq.module';
+import { ReviewModule } from './modules/review/review.module';
+import { ArchiveModule } from './modules/archive/archive.module';
+import { PdfExportModule } from './modules/pdf-export/pdf-export.module';
+import { RemindersModule } from './modules/reminders/reminders.module';
 import { ReportSectionsModule } from './modules/report-sections/report-sections.module';
 import { PublicationModule } from './modules/publication/publication.module';
 import { CarryOverModule } from './modules/carry-over/carry-over.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { PdfExportProcessor } from './infrastructure/bullmq/pdf-export.processor';
+import { EmailReminderProcessor } from './infrastructure/bullmq/email-reminder.processor';
+import { EmailService } from './infrastructure/email/email.service';
 
 @Module({
   imports: [
     PrismaModule,
+    BullMQModule,
     ReviewModule,
     ArchiveModule,
     PdfExportModule,
@@ -21,5 +26,6 @@ import { AdminModule } from './modules/admin/admin.module';
     CarryOverModule,
     AdminModule,
   ],
+  providers: [PdfExportProcessor, EmailReminderProcessor, EmailService],
 })
 export class AppModule {}
