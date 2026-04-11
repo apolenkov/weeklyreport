@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
+import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { BullMQModule } from './infrastructure/bullmq/bullmq.module';
+import { HealthModule } from './infrastructure/health/health.module';
+import { MetricsModule } from './infrastructure/metrics/metrics.module';
+import { CorrelationIdMiddleware } from './infrastructure/middleware/correlation-id.middleware';
 import { ReviewModule } from './modules/review/review.module';
 import { ArchiveModule } from './modules/archive/archive.module';
 import { PdfExportModule } from './modules/pdf-export/pdf-export.module';
@@ -17,6 +21,8 @@ import { EmailService } from './infrastructure/email/email.service';
   imports: [
     PrismaModule,
     BullMQModule,
+    HealthModule,
+    MetricsModule,
     ReviewModule,
     ArchiveModule,
     PdfExportModule,
@@ -28,4 +34,8 @@ import { EmailService } from './infrastructure/email/email.service';
   ],
   providers: [PdfExportProcessor, EmailReminderProcessor, EmailService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}

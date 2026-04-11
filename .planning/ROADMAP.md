@@ -94,8 +94,8 @@ Plans:
 **Milestone Goal:** Connect the domain-logic prototype to real infrastructure -- PostgreSQL persistence, NestJS API, SAML authentication, Docker deployment. Transform localStorage demo into production application.
 
 - [x] **Phase 5: Backend Foundation** - Prisma migrations, NestJS bootstrap, all repository implementations, integration tests against real PostgreSQL
-- [ ] **Phase 6: Auth & Frontend Integration** - SAML SSO via Keycloak, JWT sessions, frontend migrated from localStorage to tRPC API calls (gap closure in progress)
-- [ ] **Phase 7: Production Infrastructure** - BullMQ async jobs, health/metrics endpoints, Docker Compose orchestration with all services
+- [x] **Phase 6: Auth & Frontend Integration** - SAML SSO via Keycloak, JWT sessions, frontend migrated from localStorage to tRPC API calls
+- [ ] **Phase 7: Production Infrastructure** - BullMQ async jobs, health/metrics endpoints, Docker Compose orchestration with all services (2/3 plans complete)
 
 ## Phase Details
 
@@ -154,7 +154,7 @@ Plans:
 
 Plans:
 - [x] 07-01-PLAN.md — BullMQ queues, PDF export processor, email reminder processor, Bull Board UI
-- [ ] 07-02-PLAN.md — Health check endpoints, Prometheus metrics, graceful shutdown, correlation IDs
+- [x] 07-02-PLAN.md — Health check endpoints, Prometheus metrics, graceful shutdown, correlation IDs
 - [ ] 07-03-PLAN.md — Docker Compose orchestration with PgBouncer, multi-stage Dockerfiles, dev override
 
 ---
@@ -170,8 +170,8 @@ Plans:
 | 3. Automation & Admin | v1.0 | 4/4 | Complete | 2026-04-09 |
 | 4. Production Hardening | v1.0 | 2/2 | Complete | 2026-04-10 |
 | 5. Backend Foundation | v2.0 | 6/6 | Complete | 2026-04-10 |
-| 6. Auth & Frontend Integration | v2.0 | 5/6 | Gap closure | - |
-| 7. Production Infrastructure | v2.0 | 0/3 | Planned | - |
+| 6. Auth & Frontend Integration | v2.0 | 6/6 | Complete | 2026-04-10 |
+| 7. Production Infrastructure | v2.0 | 2/3 | In Progress | - |
 
 ---
 
