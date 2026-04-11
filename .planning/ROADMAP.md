@@ -132,7 +132,7 @@ Full details: [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 **Plans**: 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Migrate pnpm 9 to 10 and Next.js 15 to 16 (proxy.ts, React Compiler)
+- [x] 08-01-PLAN.md — Migrate pnpm 9 to 10 and Next.js 15 to 16 (proxy.ts, React Compiler)
 - [ ] 08-02-PLAN.md — Upgrade Vitest 4, set up ESLint 10 flat config, update CLAUDE.md versions
 
 ### Phase 9: Design System Foundation
@@ -224,7 +224,7 @@ Plans:
 | 5. Backend Foundation | v2.0 | 6/6 | Complete | 2026-04-10 |
 | 6. Auth & Frontend | v2.0 | 6/6 | Complete | 2026-04-11 |
 | 7. Production Infra | v2.0 | 3/3 | Complete | 2026-04-11 |
-| 8. Tooling Upgrades | v3.0 | 0/2 | Planning complete | - |
+| 8. Tooling Upgrades | v3.0 | 1/2 | In progress | - |
 | 9. Design System | v3.0 | 0/? | Not started | - |
 | 10. Page Styling | v3.0 | 0/? | Not started | - |
 | 11. PDF Styling | v3.0 | 0/? | Not started | - |
