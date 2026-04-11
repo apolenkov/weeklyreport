@@ -2,6 +2,14 @@
 
 import { useEffect } from 'react';
 
+import { AlertCircle } from 'lucide-react';
+
+import { Alert, AlertDescription, AlertTitle, Button } from '@customreport/ui';
+
+// Toast usage: import { toast } from 'sonner';
+// toast.success("Section submitted", { description: "Your report section has been locked." });
+// toast.error("Connection error", { description: "Could not reach the server. Try again." });
+
 type QueryErrorProps = {
   readonly error: { readonly message: string };
   readonly onRetry?: () => void;
@@ -28,22 +36,37 @@ export function QueryError({ error, onRetry }: QueryErrorProps) {
 
   const isForbidden = error.message.includes('FORBIDDEN');
 
-  const heading = isNetworkError ? 'Connection Error' : 'Server Error';
+  const heading = isNetworkError
+    ? 'Connection error'
+    : 'Something went wrong';
+
   const body = isNetworkError
     ? 'Could not reach the server. Check your connection and try again.'
     : isForbidden
-      ? 'You do not have permission to access this page. Contact your administrator for access.'
-      : 'Something went wrong. Please refresh the page or try again later.';
+      ? 'You do not have permission to access this page. Contact your administrator.'
+      : 'An unexpected error occurred. Please refresh the page or try again later.';
 
   return (
-    <div role="alert">
-      <h2>{heading}</h2>
-      <p>{body}</p>
-      {onRetry ? (
-        <button type="button" onClick={onRetry}>
-          Retry
-        </button>
-      ) : null}
+    <div className="flex items-center justify-center p-8">
+      <div className="w-full max-w-[480px]">
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>{heading}</AlertTitle>
+          <AlertDescription className="mt-2">
+            <p>{body}</p>
+            {onRetry ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRetry}
+                className="mt-4"
+              >
+                Retry
+              </Button>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+      </div>
     </div>
   );
 }
