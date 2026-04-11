@@ -1,0 +1,35 @@
+:root {
+  /* Green */
+  --color-traffic-green: oklch(0.925 0.084 155);
+  --color-traffic-green-foreground: oklch(0.365 0.110 152);
+  --color-traffic-green-border: oklch(0.723 0.150 152);
+  /* Yellow */
+  --color-traffic-yellow: oklch(0.945 0.080 85);
+  --color-traffic-yellow-foreground: oklch(0.475 0.115 65);
+  --color-traffic-yellow-border: oklch(0.785 0.150 75);
+  /* Red */
+  --color-traffic-red: oklch(0.936 0.060 25);
+  --color-traffic-red-foreground: oklch(0.505 0.195 25);
+  --color-traffic-red-border: oklch(0.715 0.210 25);
+  /* Unset */
+  --color-traffic-unset: oklch(0.97 0 0);
+  --color-traffic-unset-foreground: oklch(0.556 0 0);
+  --color-traffic-unset-border: oklch(0.922 0 0);
+}
+
+@media print {
+  :root {
+    --color-traffic-green: #bbf7d0;
+    --color-traffic-green-foreground: #166534;
+    --color-traffic-green-border: #4ade80;
+    --color-traffic-yellow: #fef08a;
+    --color-traffic-yellow-foreground: #854d0e;
+    --color-traffic-yellow-border: #facc15;
+    --color-traffic-red: #fecaca;
+    --color-traffic-red-foreground: #dc2626;
+    --color-traffic-red-border: #f87171;
+    --color-traffic-unset: #f5f5f5;
+    --color-traffic-unset-foreground: #737373;
+    --color-traffic-unset-border: #e5e5e5;
+  }
+}
