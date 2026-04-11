@@ -153,7 +153,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — BullMQ queues, PDF export processor, email reminder processor, Bull Board UI
+- [x] 07-01-PLAN.md — BullMQ queues, PDF export processor, email reminder processor, Bull Board UI
 - [ ] 07-02-PLAN.md — Health check endpoints, Prometheus metrics, graceful shutdown, correlation IDs
 - [ ] 07-03-PLAN.md — Docker Compose orchestration with PgBouncer, multi-stage Dockerfiles, dev override
 

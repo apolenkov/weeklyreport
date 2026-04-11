@@ -61,11 +61,11 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 
 ### Background Jobs
 
-- [ ] **JOBS-01**: BullMQ registered with Redis connection (noeviction policy)
-- [ ] **JOBS-02**: PDF export processor generates PDF via Playwright and stores artifact
-- [ ] **JOBS-03**: Email reminder processor sends via SMTP with deduplication
-- [ ] **JOBS-04**: Bull Board admin UI accessible to head role for queue monitoring
-- [ ] **JOBS-05**: Failed jobs go to dead-letter queue with configurable retry
+- [x] **JOBS-01**: BullMQ registered with Redis connection (noeviction policy)
+- [x] **JOBS-02**: PDF export processor generates PDF via Playwright and stores artifact
+- [x] **JOBS-03**: Email reminder processor sends via SMTP with deduplication
+- [x] **JOBS-04**: Bull Board admin UI accessible to head role for queue monitoring
+- [x] **JOBS-05**: Failed jobs go to dead-letter queue with configurable retry
 
 ### Containerization
 
@@ -170,11 +170,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FE-08 | Phase 6 | Pending |
 | FE-09 | Phase 6 | Pending |
 | FE-10 | Phase 6 | Complete |
-| JOBS-01 | Phase 7 | Pending |
-| JOBS-02 | Phase 7 | Pending |
-| JOBS-03 | Phase 7 | Pending |
-| JOBS-04 | Phase 7 | Pending |
-| JOBS-05 | Phase 7 | Pending |
+| JOBS-01 | Phase 7 | Complete |
+| JOBS-02 | Phase 7 | Complete |
+| JOBS-03 | Phase 7 | Complete |
+| JOBS-04 | Phase 7 | Complete |
+| JOBS-05 | Phase 7 | Complete |
 | DOCK-01 | Phase 7 | Pending |
 | DOCK-02 | Phase 7 | Pending |
 | DOCK-03 | Phase 7 | Pending |
