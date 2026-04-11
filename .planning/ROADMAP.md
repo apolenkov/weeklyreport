@@ -149,8 +149,8 @@ Plans:
 
 Plans:
 - [x] 09-01-PLAN.md — Initialize Tailwind v4, shadcn/ui component library, design tokens, and monorepo wiring
-- [ ] 09-02-PLAN.md — Build responsive navigation shell, QueryError styling, and skeleton patterns
-- [ ] 09-03-PLAN.md — Create DataTable, ConfirmDialog, CrudSheet, and TrafficLightBadge composition components
+- [x] 09-02-PLAN.md — Build responsive navigation shell, QueryError styling, and skeleton patterns
+- [x] 09-03-PLAN.md — Create DataTable, ConfirmDialog, CrudSheet, and TrafficLightBadge composition components
 
 ### Phase 10: Page Styling
 **Goal**: Every application page uses the design system; users experience a cohesive, professional interface
