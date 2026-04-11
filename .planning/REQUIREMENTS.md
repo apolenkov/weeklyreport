@@ -30,9 +30,9 @@
 
 ## PDF Styling
 
-- [ ] **PDF-01**: Print-specific CSS for published report — print:hidden nav, page breaks between sections, header/footer
-- [ ] **PDF-02**: Traffic light colors render correctly in Playwright PDF (no oklch — use hex/rgb fallback)
-- [ ] **PDF-03**: PDF matches visual fidelity of browser view — tables, badges, cards render cleanly
+- [x] **PDF-01**: Print-specific CSS for published report — print:hidden nav, page breaks between sections, header/footer
+- [x] **PDF-02**: Traffic light colors render correctly in Playwright PDF (no oklch — use hex/rgb fallback)
+- [x] **PDF-03**: PDF matches visual fidelity of browser view — tables, badges, cards render cleanly
 
 ## Tooling Upgrades
 
@@ -113,9 +113,9 @@
 | PAGE-06 | Phase 10 | Complete |
 | PAGE-07 | Phase 10 | Complete |
 | PAGE-08 | Phase 10 | Complete |
-| PDF-01 | Phase 11 | Pending |
-| PDF-02 | Phase 11 | Pending |
-| PDF-03 | Phase 11 | Pending |
+| PDF-01 | Phase 11 | Complete |
+| PDF-02 | Phase 11 | Complete |
+| PDF-03 | Phase 11 | Complete |
 | E2E-01 | Phase 12 | Pending |
 | E2E-02 | Phase 12 | Pending |
 | E2E-03 | Phase 12 | Pending |

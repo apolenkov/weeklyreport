@@ -181,7 +181,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 11-01-PLAN.md — Print-specific CSS hex fallbacks and styled print page with design system components
+- [x] 11-01-PLAN.md — Print-specific CSS hex fallbacks and styled print page with design system components
 
 ### Phase 12: E2E Tests & CI/CD
 **Goal**: Automated tests cover the full user journey; CI pipeline runs on every push
@@ -238,7 +238,7 @@ Plans:
 | 8. Tooling Upgrades | v3.0 | 2/2 | Complete | 2026-04-11 |
 | 9. Design System | v3.0 | 3/3 | Complete | 2026-04-11 |
 | 10. Page Styling | v3.0 | 4/4 | Complete    | 2026-04-11 |
-| 11. PDF Styling | v3.0 | 0/1 | Not started | - |
+| 11. PDF Styling | v3.0 | 1/1 | Complete | 2026-04-11 |
 | 12. E2E Tests & CI/CD | v3.0 | 0/? | Not started | - |
 | 13. SQL Analytics | v3.0 | 0/? | Not started | - |
 | 14. Search & RAG | v3.0 | 0/? | Not started | - |
