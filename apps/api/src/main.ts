@@ -5,24 +5,25 @@ import * as trpcExpress from '@trpc/server/adapters/express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 
-import { AppModule } from './app.module.js';
-import { createAppRouter } from './infrastructure/trpc/trpc.router.js';
-import { createContextFactory } from './infrastructure/trpc/trpc.context.js';
-import { validateEnv } from './infrastructure/config/env.schema.js';
-import { createAppLogger } from './lib/logger.js';
-import { mountAuthRoutes } from './modules/auth/auth.routes.js';
-import { createAuthController } from './modules/auth/auth.controller.js';
-import { createSamlStrategy, createSamlStrategyOptions } from './modules/auth/saml.strategy.js';
-import { PrismaService } from './infrastructure/prisma/prisma.service.js';
+import { AppModule } from './app.module';
+import { createAppRouter } from './infrastructure/trpc/trpc.router';
+import { createContextFactory } from './infrastructure/trpc/trpc.context';
+import { validateEnv } from './infrastructure/config/env.schema';
+import { createAppLogger } from './lib/logger';
+import { mountAuthRoutes } from './modules/auth/auth.routes';
+import { createAuthController } from './modules/auth/auth.controller';
+import { createSamlStrategy, createSamlStrategyOptions } from './modules/auth/saml.strategy';
+import { PrismaService } from './infrastructure/prisma/prisma.service';
+import { mountBullBoard } from './infrastructure/bullmq/bull-board.module';
 
-import { ReportSectionsService } from './modules/report-sections/report-sections.service.js';
-import { ReviewService } from './modules/review/review.service.js';
-import { PublicationService } from './modules/publication/publication.service.js';
-import { PdfExportService } from './modules/pdf-export/pdf-export.service.js';
-import { AdminService } from './modules/admin/admin.service.js';
-import { RemindersService } from './modules/reminders/reminders.service.js';
-import { CarryOverService } from './modules/carry-over/carry-over.service.js';
-import { ArchiveService } from './modules/archive/archive.service.js';
+import { ReportSectionsService } from './modules/report-sections/report-sections.service';
+import { ReviewService } from './modules/review/review.service';
+import { PublicationService } from './modules/publication/publication.service';
+import { PdfExportService } from './modules/pdf-export/pdf-export.service';
+import { AdminService } from './modules/admin/admin.service';
+import { RemindersService } from './modules/reminders/reminders.service';
+import { CarryOverService } from './modules/carry-over/carry-over.service';
+import { ArchiveService } from './modules/archive/archive.service';
 
 async function bootstrap() {
   const env = validateEnv();
@@ -36,6 +37,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  app.enableShutdownHooks();
   app.use(helmet());
   app.use(cookieParser());
   app.enableCors({ origin: env.FRONTEND_URL, credentials: true });
@@ -68,6 +70,9 @@ async function bootstrap() {
   const samlStrategy = createSamlStrategy(samlOptions);
   const authCtrl = createAuthController(process.env);
   mountAuthRoutes(expressApp, samlStrategy, authCtrl, prismaService, process.env);
+
+  // Mount Bull Board monitoring UI at /admin/queues
+  mountBullBoard(app);
 
   await app.listen(env.PORT);
   logger.info(`API server listening on port ${env.PORT}`);

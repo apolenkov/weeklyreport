@@ -3,6 +3,7 @@ import {
   type AssembledReport,
   type PdfExportJob,
 } from '@customreport/shared';
+import type { Queue } from 'bullmq';
 
 import { createNullLogger, type AppLogger } from '../../lib/logger';
 
@@ -22,12 +23,15 @@ export interface PdfExportRepository {
 
 export class PdfExportService {
   private readonly logger: AppLogger;
+  private readonly pdfQueue: Queue | null;
 
   constructor(
     private readonly repository: PdfExportRepository,
     logger?: AppLogger,
+    pdfQueue?: Queue,
   ) {
     this.logger = logger ?? createNullLogger();
+    this.pdfQueue = pdfQueue ?? null;
   }
 
   async requestPdfExport(reportId: string): Promise<PdfExportJob> {
@@ -38,7 +42,7 @@ export class PdfExportService {
     }
 
     this.logger.info('requesting PDF export', { reportId });
-    return this.repository.createExportJob(
+    const job = await this.repository.createExportJob(
       pdfExportJobSchema.parse({
         jobId: crypto.randomUUID(),
         reportId,
@@ -50,6 +54,23 @@ export class PdfExportService {
         artifactUrl: null,
       }),
     );
+
+    if (this.pdfQueue) {
+      await this.pdfQueue.add(
+        'generate',
+        { reportId, jobId: job.jobId },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+        },
+      );
+      this.logger.info('enqueued pdf-export job', {
+        jobId: job.jobId,
+        reportId,
+      });
+    }
+
+    return job;
   }
 
   async getPdfExportStatus(jobId: string): Promise<PdfExportJob> {
