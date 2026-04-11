@@ -4,6 +4,8 @@ import {
   type AdminReminderRule,
 } from '@customreport/shared';
 
+import type { Queue } from 'bullmq';
+
 import { createNullLogger, type AppLogger } from '../../lib/logger';
 
 export class ReminderDomainError extends Error {
@@ -23,12 +25,15 @@ export interface RemindersRepository {
 
 export class RemindersService {
   private readonly logger: AppLogger;
+  private readonly emailQueue: Queue | null;
 
   constructor(
     private readonly repository: RemindersRepository,
     logger?: AppLogger,
+    emailQueue?: Queue,
   ) {
     this.logger = logger ?? createNullLogger();
+    this.emailQueue = emailQueue ?? null;
   }
 
   async requestReminderExecution(
@@ -54,7 +59,7 @@ export class RemindersService {
     }
 
     this.logger.info('creating reminder execution', { ruleId, recipientEmail });
-    return this.repository.saveExecution(
+    const execution = await this.repository.saveExecution(
       adminReminderExecutionSchema.parse({
         id: crypto.randomUUID(),
         ruleId: rule.id,
@@ -67,6 +72,17 @@ export class RemindersService {
         errorMessage: null,
       }),
     );
+
+    if (this.emailQueue) {
+      await this.emailQueue.add(
+        'send',
+        { executionId: execution.id, recipientEmail, reportPeriod: rule.reportId },
+        { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+      );
+      this.logger.info('enqueued email reminder job', { executionId: execution.id });
+    }
+
+    return execution;
   }
 
   async markReminderSent(executionId: string): Promise<AdminReminderExecution> {
