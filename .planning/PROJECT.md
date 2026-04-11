@@ -8,20 +8,18 @@
 
 Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
 
-## Current Milestone: v2.0 Infrastructure Integration
+## Current Milestone: v3.0 UI Polish & Analytics
 
-**Goal:** Превратить domain-logic прототип в работающее приложение с реальной БД, API, авторизацией и контейнеризацией.
+**Goal:** Превратить функциональный прототип в визуально красивый продукт с полным E2E тестированием, актуальным стеком и аналитикой по истории отчётов.
 
 **Target features:**
-- Docker Compose (PostgreSQL + Redis + API + Web), Dockerfiles для всех сервисов
-- Prisma миграции + seed data
-- NestJS HTTP bootstrap с tRPC endpoints
-- Prisma repository implementations для всех 8 сервисов
-- Frontend: заменить localStorage на tRPC-вызовы к API
-- SAML авторизация через Keycloak + JWT sessions + role guards
-- BullMQ интеграция для PDF export и email jobs
-- Observability: health checks, metrics endpoints, structured error handling
-- Quality gates: fix falling tests, lint/typecheck clean across monorepo
+- shadcn/ui + Tailwind CSS: design tokens, стилизация всех 22 компонентов и 7+ страниц, красивый PDF-отчёт
+- E2E тесты Playwright CLI: полный user journey (login → fill → submit → publish → PDF)
+- Обновление стека: Next.js 16, Vitest 4, ESLint 10, pnpm 10; актуализация CLAUDE.md
+- CI/CD: GitHub Actions pipeline для lint + typecheck + test + build
+- Аналитика: pgvector embeddings для истории отчётов, чат-бот по отчётам, тренды проектов
+
+**Priority:** Стилизация — главный приоритет milestone
 
 ## Requirements
 
@@ -196,4 +194,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 after milestone v2.0 start*
+*Last updated: 2026-04-11 after milestone v3.0 start*
