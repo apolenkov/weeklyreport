@@ -34,9 +34,9 @@
 ### Frontend
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| **Next.js** | 15.5.x (stable, Apr 2026) | React framework + SSR | Turbopack (10x faster cold starts), React 19 native, automatic code-splitting, proven with tRPC |
-| **React** | 19.x | UI library | TC39 decorators stable, concurrent features stable, required by Next.js 15 |
-| **TypeScript** | 6.0+ (strict mode MANDATORY) | Language | Final version with JS/TS implementation, strict by default, zero config needed |
+| **Next.js** | 16.x (16.2.3 installed) | React framework + SSR | Turbopack default, React Compiler stable, 'use cache' directive, proxy.ts replaces middleware.ts |
+| **React** | 19.x (19.2.5 installed) | UI library | React Compiler stable, concurrent features stable, required by Next.js 16 |
+| **TypeScript** | 5.8+ (5.9.3 installed, strict mode MANDATORY) | Language | Strict mode enforced, TC39 decorators stable |
 | **shadcn/ui** | 4.x | Component library | Monorepo-aware CLI (v4), Tailwind v4 native, composable, AI-friendly, no prop-drilling hell |
 | **Tailwind CSS** | 4.x | Styling | @theme directive, CSS variables, faster compilation, RTL support |
 | **tRPC** | 11.x | Type-safe API client | Zero-overhead abstraction, shared types with backend, automatic request validation via Zod |
@@ -45,7 +45,7 @@
 |------------|---------|---------|-----|
 | **NestJS** | 11.x | HTTP + API framework | TC39 decorator support, @nestjs/bullmq native, dependency injection, JWT + SAML guards |
 | **Node.js** | 20.x LTS (minimum) or 22.x LTS | Runtime | Production-stable, required by NestJS 11, long-term support |
-| **TypeScript** | 6.0+ (strict mode MANDATORY) | Language | [See Frontend] |
+| **TypeScript** | 5.8+ (5.9.3 installed, strict mode MANDATORY) | Language | [See Frontend] |
 | **Prisma** | 7.x (TypeScript-based, Rust-free) | ORM | 3x faster queries vs Prisma 6, 90% smaller bundle (1.6MB vs 14MB), zero serialization overhead |
 | **PostgreSQL** | 15+ (Ubuntu 22.04 LTS ships 14, use 15+) | Database | JSONB native, proven for 10K+ concurrent, pg_stat_statements for query analysis |
 | **PgBouncer** | 1.22+ | Connection pooling | Handles thousands of app connections with <100 real DB connections, transaction mode for OLTP |
@@ -59,7 +59,7 @@
 ### Quality & Testing
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| **Vitest** | 3.x | Unit tests | Native TypeScript (via esbuild), monorepo projects support, zero Vite config overhead |
+| **Vitest** | 4.x (4.1.4 installed) | Unit tests | Native TypeScript (via esbuild), monorepo projects support, zero Vite config overhead |
 | **Playwright** | 1.50+ | E2E tests | Headless browser testing, PDF/screenshot validation for reports, cross-browser (Chromium/Firefox/WebKit) |
 | **@testing-library/react** | 16.x | React component testing | Recommended by shadcn/ui, accessibility-first queries |
 | **@testing-library/dom** | 10.x | DOM utilities | Core testing utilities |
@@ -82,8 +82,8 @@
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
 | **Turborepo** | 2.x (latest) | Build orchestrator | Content-aware caching, parallelization, affected-only builds, free Vercel remote caching |
-| **pnpm** | 9.x+ | Package manager | Faster installs (reuses packages), strict peer deps detection, smaller node_modules |
-| **TypeScript references** | 6.0+ config | Monorepo linking | Instead of path aliases—allows proper incremental builds |
+| **pnpm** | 10.x (10.11.0 installed) | Package manager | Faster installs (reuses packages), strict peer deps detection, smaller node_modules, onlyBuiltDependencies |
+| **TypeScript references** | 5.8+ config | Monorepo linking | Instead of path aliases — allows proper incremental builds |
 ### Infrastructure & DevOps
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
@@ -94,7 +94,7 @@
 ### Code Quality
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| **ESLint** | 9.x | Linting | @typescript-eslint/strict, sonarjs rules, no-floating-promises for async safety |
+| **ESLint** | 10.x (10.2.0 installed) | Linting | Flat config (eslint.config.ts), @typescript-eslint/strict, react-hooks, react-compiler, no-floating-promises |
 | **Prettier** | 4.x | Formatting | One-way (no debates), 80-char line length, trailing commas |
 | **Husky** | 9.x | Git hooks | Pre-commit: prettier + ESLint, pre-push: full test suite |
 | **lint-staged** | 15.x | Partial file linting | Lint only staged files, faster feedback loop |
@@ -155,7 +155,7 @@
 ## Alternatives Considered
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| Frontend | Next.js 15 | Remix, Astro | Next.js has Turbopack (10x faster builds) + largest ecosystem |
+| Frontend | Next.js 16 | Remix, Astro | Next.js has Turbopack default + React Compiler + largest ecosystem |
 | Framework | NestJS 11 | FastAPI (Python), Go | NestJS + TypeScript matches frontend ecosystem, tRPC native support |
 | ORM | Prisma 7 | SQLAlchemy, Hibernate | Prisma is TypeScript-first, zero setup in monorepo, type safety unmatched |
 | Validation | Zod 4 | Yup, io-ts | Zod has JIT compiler (2026), best monorepo story, tRPC default |
@@ -163,7 +163,7 @@
 | PDF | Playwright 1.50 | wkhtmltopdf, WeasyPrint | Playwright is programmatic, integrates with tests, smaller files |
 | Monorepo | Turborepo 2 | Nx, Lerna | Turborepo is simpler, faster, free caching, fits JavaScript ecosystem |
 | Database | PostgreSQL 15 | MySQL, SQLite | PostgreSQL has JSONB, full-text search, JSON operators, proven at scale |
-| Package Mgr | pnpm 9 | npm, yarn | pnpm has strict peer deps, faster, smaller node_modules, Turborepo optimized |
+| Package Mgr | pnpm 10 | npm, yarn | pnpm has strict peer deps, faster, smaller node_modules, Turborepo optimized |
 ## Performance Targets
 ### Build Performance
 | Metric | Target | How |
@@ -190,7 +190,7 @@
 ## Confidence Assessment
 | Area | Confidence | Reason |
 |------|------------|--------|
-| Next.js 15 | **HIGH** | Official stable release (Apr 2026), Vercel backing, React 19 native, Turbopack production-ready |
+| Next.js 16 | **HIGH** | Official stable release, Vercel backing, React Compiler stable, Turbopack default, proxy.ts |
 | NestJS 11 | **HIGH** | LTS with decorator support, @nestjs/bullmq official, strong TypeScript story |
 | Prisma 7 | **HIGH** | Published Jan 2026, 3x faster, Rust removal completed, production deployments confirm stability |
 | tRPC 11 | **HIGH** | Stable API, monorepo default, thousands of production apps |
@@ -204,20 +204,21 @@
 ## Critical Dependencies & Versions
 # Keep these synced across all packages
 ## Breaking Changes from Previous Versions
-### Next.js 14 → 15
-- **Fetch caching removed** — requests no longer cached by default (add `{ next: { revalidate: 3600 } }` explicitly)
-- **React 19 required** — useActionState recommended over useTransition
-- **GET handlers** — no longer cached by route
-- **Turbopack Dev stable** — migration from SWC is automatic
+### Next.js 15 → 16
+- **middleware.ts renamed to proxy.ts** — file must be renamed, Proxy API replaces middleware
+- **Turbopack default** — no longer needs explicit opt-in, SWC migration automatic
+- **React Compiler stable** — automatic memoization, babel-plugin-react-compiler required
+- **Caching opt-in via 'use cache'** — no default caching, explicit cache directives
+- **turbopack.root for monorepo** — explicit workspace root detection for Turborepo setups
 ### Prisma 6 → 7
 - **Rust removed** — TypeScript implementation, no breaking schema changes
 - **Bundle size** — 14MB → 1.6MB (90% reduction)
 - **Query speed** — up to 3.4x faster
 - No schema.prisma changes needed, just upgrade and regenerate Prisma Client
-### TypeScript 5 → 6
-- **Strict by default** — must opt-in to non-strict in tsconfig.json (don't do this)
-- **Decorators TC39 Stage 3** — NestJS decorators are now standard
-- **No breaking changes for existing projects** — upgrade is safe
+### TypeScript 5.8 → 5.9
+- **Strict mode enforced** — project uses strict: true in tsconfig.base.json
+- **Decorators TC39 Stage 3** — NestJS decorators work natively
+- **No breaking changes** — patch upgrade, fully compatible
 ## Security Defaults
 | Area | Setting | Why |
 |------|---------|-----|
@@ -246,8 +247,8 @@
 # - Frontend: http://localhost:3000
 # - API: http://localhost:3001
 ## Sources
-- [Next.js 15 Upgrade Guide](https://nextjs.org/docs/app/guides/upgrading/version-15)
-- [Next.js 15.5 Release Notes](https://nextjs.org/blog/next-15-5)
+- [Next.js 16 Upgrade Guide](https://nextjs.org/docs/app/guides/upgrading)
+- [Next.js 16 Release Notes](https://nextjs.org/blog/next-16)
 - [NestJS Documentation](https://docs.nestjs.com/first-steps)
 - [Prisma 7 Performance Blog](https://www.prisma.io/blog/announcing-prisma-orm-7-0-0)
 - [shadcn/ui Monorepo Support](https://ui.shadcn.com/docs/monorepo)
