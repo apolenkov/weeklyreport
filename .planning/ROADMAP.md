@@ -193,7 +193,12 @@ Plans:
   3. Lead journey E2E passes: login -> fill section -> save draft -> submit -> verify data persists
   4. Head journey E2E passes: login -> review dashboard -> view assembled report -> publish -> verify published page
   5. GitHub Actions workflow runs lint + typecheck + unit tests + E2E on every push/PR; Docker build verification succeeds
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — Playwright config with dual webServer and per-role auth fixtures
+- [ ] 12-02-PLAN.md — Full journey E2E tests (lead, head, PDF export, admin CRUD)
+- [ ] 12-03-PLAN.md — GitHub Actions CI/CD pipeline with E2E and Docker build
 
 ### Phase 13: SQL Analytics
 **Goal**: Head and viewers can see project health trends and submission timeliness over time through an analytics dashboard
@@ -239,7 +244,7 @@ Plans:
 | 9. Design System | v3.0 | 3/3 | Complete | 2026-04-11 |
 | 10. Page Styling | v3.0 | 4/4 | Complete    | 2026-04-11 |
 | 11. PDF Styling | v3.0 | 1/1 | Complete    | 2026-04-11 |
-| 12. E2E Tests & CI/CD | v3.0 | 0/? | Not started | - |
+| 12. E2E Tests & CI/CD | v3.0 | 0/3 | Not started | - |
 | 13. SQL Analytics | v3.0 | 0/? | Not started | - |
 | 14. Search & RAG | v3.0 | 0/? | Not started | - |
 
