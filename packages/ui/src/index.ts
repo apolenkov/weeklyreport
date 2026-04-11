@@ -132,3 +132,13 @@ export {
   TooltipContent,
   TooltipProvider,
 } from './components/ui/tooltip';
+
+// Composition Components
+export { DataTable } from './components/data-table';
+export type { Column } from './components/data-table';
+export { ConfirmDialog } from './components/confirm-dialog';
+export { CrudSheet } from './components/crud-sheet';
+export {
+  TrafficLightBadge,
+  type TrafficLightStatus,
+} from './components/traffic-light-badge';
