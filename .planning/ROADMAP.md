@@ -10,7 +10,7 @@
 ## Milestones
 
 - [x] **v1.0 Domain Logic** - Phases 1-4 (shipped 2026-04-10)
-- [ ] **v2.0 Infrastructure Integration** - Phases 5-7 (in progress)
+- [x] **v2.0 Infrastructure Integration** - Phases 5-7 (shipped 2026-04-11)
 
 ## Phases
 
@@ -89,16 +89,22 @@ Plans:
 
 ---
 
-### v2.0 Infrastructure Integration (In Progress)
+<details>
+<summary>v2.0 Infrastructure Integration (Phases 5-7) - SHIPPED 2026-04-11</summary>
 
-**Milestone Goal:** Connect the domain-logic prototype to real infrastructure -- PostgreSQL persistence, NestJS API, SAML authentication, Docker deployment. Transform localStorage demo into production application.
+- [x] **Phase 5: Backend Foundation** - Prisma 14 models, 8 repositories, NestJS tRPC API, integration tests
+- [x] **Phase 6: Auth & Frontend Integration** - SAML SSO, JWT sessions, localStorage→tRPC migration, 27 tests
+- [x] **Phase 7: Production Infrastructure** - BullMQ jobs, Docker Compose, health/metrics, graceful shutdown
 
-- [x] **Phase 5: Backend Foundation** - Prisma migrations, NestJS bootstrap, all repository implementations, integration tests against real PostgreSQL
-- [x] **Phase 6: Auth & Frontend Integration** - SAML SSO via Keycloak, JWT sessions, frontend migrated from localStorage to tRPC API calls
-- [ ] **Phase 7: Production Infrastructure** - BullMQ async jobs, health/metrics endpoints, Docker Compose orchestration with all services (2/3 plans complete)
+Full details: [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
+
+</details>
 
 ## Phase Details
 
+*v2.0 phase details archived to [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)*
+
+<!-- Kept for reference:
 ### Phase 5: Backend Foundation
 **Goal**: Domain services persist data in PostgreSQL through Prisma repositories; NestJS serves tRPC endpoints backed by real database; existing tests continue passing
 **Depends on**: Phase 4 (v1.0 complete)
@@ -155,66 +161,11 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — BullMQ queues, PDF export processor, email reminder processor, Bull Board UI
 - [x] 07-02-PLAN.md — Health check endpoints, Prometheus metrics, graceful shutdown, correlation IDs
-- [x] 07-03-PLAN.md — Docker Compose orchestration with PgBouncer, multi-stage Dockerfiles, dev override
-
----
-
-## Progress
-
-**Execution Order:** Phases execute in numeric order: 5 -> 6 -> 7
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 1. Core Report Capture | v1.0 | 3/3 | Complete | 2026-04-08 |
-| 2. Report Assembly & Publication | v1.0 | 3/3 | Complete | 2026-04-09 |
-| 3. Automation & Admin | v1.0 | 4/4 | Complete | 2026-04-09 |
-| 4. Production Hardening | v1.0 | 2/2 | Complete | 2026-04-10 |
-| 5. Backend Foundation | v2.0 | 6/6 | Complete | 2026-04-10 |
-| 6. Auth & Frontend Integration | v2.0 | 6/6 | Complete | 2026-04-10 |
-| 7. Production Infrastructure | v2.0 | 2/3 | In Progress | - |
-
----
-
-## Coverage Validation
-
-**v2.0 requirements:** 55 total
-**Mapped to phases:** 55
-**Orphaned:** 0
-
-**Mapping summary:**
-- Phase 5: 22 requirements (4 DB + 7 API + 9 REPO + 2 QA)
-- Phase 6: 18 requirements (6 AUTHZ + 10 FE + 2 QA)
-- Phase 7: 15 requirements (5 JOBS + 6 DOCK + 4 OBS)
-
-All requirements covered. No gaps.
-
-**QA requirement distribution:**
-- QA-01 (existing tests pass) -> Phase 5 (repositories replace in-memory implementations)
-- QA-02 (fix frontend tests) -> Phase 6 (frontend migration)
-- QA-03 (typecheck clean) -> Phase 6 (frontend + backend must compile together)
-- QA-04 (integration tests) -> Phase 5 (test repositories against real DB)
-
----
-
-## Rationale
-
-**Why 3 phases (coarse):**
-- Each phase delivers one complete, verifiable infrastructure layer
-- Phase 5 is the biggest (22 reqs) but tightly coupled -- DB, API, and repositories cannot be verified independently
-- Phase 6 bundles auth with frontend because the frontend cannot function without auth cookies
-- Phase 7 groups all production-readiness concerns that are additive (app works without them, but not deployable)
-
-**Phase ordering follows dependency edges:**
-1. **Phase 5 first:** Every subsequent phase depends on a working database and API. Cannot test auth, frontend, or jobs without Prisma repositories serving real data.
-2. **Phase 6 after 5:** Auth needs working tRPC endpoints to protect. Frontend needs both working API and auth cookies. Dev bypass covers the gap during Phase 5.
-3. **Phase 7 last:** Docker wraps a working application. Jobs and observability are additive. Debugging infrastructure issues in containers is slower than debugging locally.
-
-**Critical pitfalls addressed per phase:**
-- Phase 5: Pitfall #2 (Prisma migration through PgBouncer -- use directUrl), Pitfall #1 (PgBouncer prepared statements -- PgBouncer 1.22+ with max_prepared_statements)
-- Phase 6: Pitfall #3 (NestJS guards bypassed on tRPC -- auth as tRPC middleware), Pitfall #9 (SAML cookie domain mismatch)
-- Phase 7: Pitfall #4 (Redis noeviction for BullMQ), Pitfall #6 (workspace:* in Docker -- turbo prune)
+- [x] 07-03-PLAN.md — Docker Compose orchestration, multi-stage Dockerfiles, dev override
+-->
 
 ---
 
 *Roadmap created: 2026-04-06*
-*v2.0 phases added: 2026-04-10*
+*v1.0 shipped: 2026-04-10*
+*v2.0 shipped: 2026-04-11*
