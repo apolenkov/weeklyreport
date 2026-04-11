@@ -1,36 +1,20 @@
-import React from 'react';
+'use client';
 
 import {
   submissionDashboardRowSchema,
   type SubmissionDashboardRow,
 } from '@customreport/shared';
 
-void React;
-
-type SubmissionDashboardProps = {
-  rows: SubmissionDashboardRow[];
-};
-
-const statusOrder: Record<SubmissionDashboardRow['status'], number> = {
-  draft: 0,
-  submitted: 1,
-};
-
-function sortRows(rows: SubmissionDashboardRow[]): SubmissionDashboardRow[] {
-  return [...rows].sort((left, right) => {
-    const statusDiff = statusOrder[left.status] - statusOrder[right.status];
-
-    if (statusDiff !== 0) {
-      return statusDiff;
-    }
-
-    return left.leadName.localeCompare(right.leadName, 'ru');
-  });
-}
+import {
+  DataTable,
+  type Column,
+  Badge,
+  Progress,
+} from '@customreport/ui';
 
 function formatSubmittedAt(submittedAt: Date | null): string {
   if (!submittedAt) {
-    return '—';
+    return '\u2014';
   }
 
   return submittedAt.toLocaleString('ru-RU', {
@@ -39,29 +23,69 @@ function formatSubmittedAt(submittedAt: Date | null): string {
   });
 }
 
+const columns: Column<SubmissionDashboardRow>[] = [
+  {
+    key: 'leadName',
+    header: 'Lead',
+    sortable: true,
+  },
+  {
+    key: 'projectNames',
+    header: 'Projects',
+    cell: (row) => (
+      <span className="text-sm text-muted-foreground">
+        {row.projectNames.join(', ')}
+      </span>
+    ),
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    sortable: true,
+    cell: (row) =>
+      row.status === 'submitted' ? (
+        <Badge className="bg-green-100 text-green-800 border-green-200">
+          Submitted
+        </Badge>
+      ) : (
+        <Badge variant="outline" className="text-muted-foreground">
+          Draft
+        </Badge>
+      ),
+  },
+  {
+    key: 'submittedAt',
+    header: 'Submitted',
+    sortable: true,
+    cell: (row) => formatSubmittedAt(row.submittedAt),
+  },
+];
+
+type SubmissionDashboardProps = {
+  rows: SubmissionDashboardRow[];
+};
+
 export function SubmissionDashboard({ rows }: SubmissionDashboardProps) {
-  const sortedRows = sortRows(submissionDashboardRowSchema.array().parse(rows));
+  const parsedRows = submissionDashboardRowSchema.array().parse(rows);
+  const submittedCount = parsedRows.filter(
+    (r) => r.status === 'submitted',
+  ).length;
+  const total = parsedRows.length;
+  const percentage = total > 0 ? Math.round((submittedCount / total) * 100) : 0;
 
   return (
-    <table aria-label="Submission dashboard">
-      <thead>
-        <tr>
-          <th scope="col">Lead</th>
-          <th scope="col">Projects</th>
-          <th scope="col">Status</th>
-          <th scope="col">Submitted</th>
-        </tr>
-      </thead>
-      <tbody>
-        {sortedRows.map((row) => (
-          <tr key={row.leadId} data-status={row.status}>
-            <td>{row.leadName}</td>
-            <td>{row.projectNames.join(', ')}</td>
-            <td>{row.status}</td>
-            <td>{formatSubmittedAt(row.submittedAt)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div>
+      <div className="flex items-center gap-4 mb-6">
+        <Progress value={percentage} className="flex-1" />
+        <span className="text-sm text-muted-foreground whitespace-nowrap">
+          {submittedCount} of {total} leads submitted
+        </span>
+      </div>
+      <DataTable
+        columns={columns}
+        data={parsedRows}
+        aria-label="Submission dashboard"
+      />
+    </div>
   );
 }
