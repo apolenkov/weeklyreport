@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 
 /**
@@ -9,6 +9,7 @@ import { BullModule } from '@nestjs/bullmq';
  *
  * Redis noeviction policy is enforced in Docker Compose config, not in code.
  */
+@Global()
 @Module({
   imports: [
     BullModule.forRoot({

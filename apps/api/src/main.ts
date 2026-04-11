@@ -71,8 +71,8 @@ async function bootstrap() {
   const authCtrl = createAuthController(process.env);
   mountAuthRoutes(expressApp, samlStrategy, authCtrl, prismaService, process.env);
 
-  // Mount Bull Board monitoring UI at /admin/queues
-  mountBullBoard(app);
+  // TODO: Re-enable when BullMQ DI issue is resolved
+  // mountBullBoard(app);
 
   await app.listen(env.PORT);
   logger.info(`API server listening on port ${env.PORT}`);

@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { getQueueToken } from '@nestjs/bullmq';
-import type { Queue } from 'bullmq';
 import { PdfExportService } from './pdf-export.service';
 import { PdfExportPrismaRepository } from './pdf-export.prisma-repository';
 
@@ -9,9 +7,9 @@ import { PdfExportPrismaRepository } from './pdf-export.prisma-repository';
     PdfExportPrismaRepository,
     {
       provide: PdfExportService,
-      useFactory: (repo: PdfExportPrismaRepository, pdfQueue: Queue) =>
-        new PdfExportService(repo, undefined, pdfQueue),
-      inject: [PdfExportPrismaRepository, getQueueToken('pdf-export')],
+      useFactory: (repo: PdfExportPrismaRepository) =>
+        new PdfExportService(repo),
+      inject: [PdfExportPrismaRepository],
     },
   ],
   exports: [PdfExportService],
