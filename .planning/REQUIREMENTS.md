@@ -50,8 +50,8 @@
 
 ## E2E Testing
 
-- [ ] **E2E-01**: Playwright config with dual webServer (Next.js + NestJS), Docker services for DB
-- [ ] **E2E-02**: Auth fixtures — per-role storageState (lead, head, viewer) using dev-login endpoint
+- [x] **E2E-01**: Playwright config with dual webServer (Next.js + NestJS), Docker services for DB
+- [x] **E2E-02**: Auth fixtures — per-role storageState (lead, head, viewer) using dev-login endpoint
 - [ ] **E2E-03**: Full lead journey test — login → fill section → save draft → submit → verify persistence
 - [ ] **E2E-04**: Full head journey test — login → review dashboard → view report → publish → verify published
 - [ ] **E2E-05**: PDF export E2E — trigger export → poll status → verify PDF file generated
@@ -116,8 +116,8 @@
 | PDF-01 | Phase 11 | Complete |
 | PDF-02 | Phase 11 | Complete |
 | PDF-03 | Phase 11 | Complete |
-| E2E-01 | Phase 12 | Pending |
-| E2E-02 | Phase 12 | Pending |
+| E2E-01 | Phase 12 | Complete |
+| E2E-02 | Phase 12 | Complete |
 | E2E-03 | Phase 12 | Pending |
 | E2E-04 | Phase 12 | Pending |
 | E2E-05 | Phase 12 | Pending |
