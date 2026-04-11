@@ -8,10 +8,6 @@ import type { UserSession } from '@customreport/shared';
 
 import type { createAuthController } from './auth.controller.js';
 
-const DEV_SESSION_SAML_ID = 'dev-head-saml-id';
-const DEV_SESSION_EMAIL = 'head@customreport.local';
-const DEV_SESSION_NAME = 'Department Head';
-
 type SamlProfile = {
   samlId: string;
   email: string;
@@ -109,17 +105,43 @@ export function mountAuthRoutes(
 
   // --- GET /auth/dev-login (dev mode only) ---
   if (env.AUTH_DEV_MODE === 'true') {
-    expressApp.get('/auth/dev-login', async (_req: Request, res: Response, next: NextFunction) => {
+    expressApp.get('/auth/dev-login', async (req: Request, res: Response, next: NextFunction) => {
       try {
+        const role = (req.query.role as string) ?? 'head';
+        const validRoles = ['lead', 'head', 'viewer'];
+        if (!validRoles.includes(role)) {
+          res.status(400).json({ error: `Invalid role: ${role}. Must be one of: ${validRoles.join(', ')}` });
+          return;
+        }
+
+        const emailByRole: Record<string, string> = {
+          head: 'head@customreport.local',
+          lead: 'lead1@customreport.local',
+          viewer: 'viewer@customreport.local',
+        };
+        const nameByRole: Record<string, string> = {
+          head: 'Department Head',
+          lead: 'Lead 1',
+          viewer: 'Report Viewer',
+        };
+        const samlIdByRole: Record<string, string> = {
+          head: 'head-1',
+          lead: 'lead-1',
+          viewer: 'viewer-1',
+        };
+
+        const email = (req.query.email as string) ?? emailByRole[role]!;
+        const displayName = nameByRole[role] ?? role;
+        const samlId = samlIdByRole[role] ?? `dev-${role}`;
+
         const session = await buildUserSession(prisma, {
-          samlId: DEV_SESSION_SAML_ID,
-          email: DEV_SESSION_EMAIL,
-          displayName: DEV_SESSION_NAME,
-          role: 'head',
+          samlId,
+          email,
+          displayName,
+          role,
         });
 
         const { setCookieHeader } = authController.issueSessionCookie(session);
-
         res.setHeader('Set-Cookie', setCookieHeader);
         res.redirect(frontendUrl);
       } catch (error) {
