@@ -69,11 +69,11 @@ Requirements for infrastructure integration. Each maps to roadmap phases.
 
 ### Containerization
 
-- [ ] **DOCK-01**: Multi-stage Dockerfile for apps/api (turbo prune + pnpm)
-- [ ] **DOCK-02**: Multi-stage Dockerfile for apps/web (turbo prune + pnpm)
-- [ ] **DOCK-03**: docker-compose.yml orchestrates PostgreSQL, Redis, PgBouncer, API, Web
-- [ ] **DOCK-04**: docker-compose.dev.yml adds volume mounts and hot reload for development
-- [ ] **DOCK-05**: Health-check-based startup ordering (DB ready -> migrate -> API -> Web)
+- [x] **DOCK-01**: Multi-stage Dockerfile for apps/api (turbo prune + pnpm)
+- [x] **DOCK-02**: Multi-stage Dockerfile for apps/web (turbo prune + pnpm)
+- [x] **DOCK-03**: docker-compose.yml orchestrates PostgreSQL, Redis, PgBouncer, API, Web
+- [x] **DOCK-04**: docker-compose.dev.yml adds volume mounts and hot reload for development
+- [x] **DOCK-05**: Health-check-based startup ordering (DB ready -> migrate -> API -> Web)
 - [ ] **DOCK-06**: PgBouncer configured with transaction mode and max_prepared_statements
 
 ### Observability
@@ -175,11 +175,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | JOBS-03 | Phase 7 | Complete |
 | JOBS-04 | Phase 7 | Complete |
 | JOBS-05 | Phase 7 | Complete |
-| DOCK-01 | Phase 7 | Pending |
-| DOCK-02 | Phase 7 | Pending |
-| DOCK-03 | Phase 7 | Pending |
-| DOCK-04 | Phase 7 | Pending |
-| DOCK-05 | Phase 7 | Pending |
+| DOCK-01 | Phase 7 | Complete |
+| DOCK-02 | Phase 7 | Complete |
+| DOCK-03 | Phase 7 | Complete |
+| DOCK-04 | Phase 7 | Complete |
+| DOCK-05 | Phase 7 | Complete |
 | DOCK-06 | Phase 7 | Pending |
 | OBS-01 | Phase 7 | Complete |
 | OBS-02 | Phase 7 | Complete |
