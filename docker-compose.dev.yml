@@ -1,0 +1,28 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: builder
+    command: ["pnpm", "--filter=@customreport/api", "dev"]
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./prisma:/app/prisma
+    environment:
+      NODE_ENV: development
+      AUTH_DEV_MODE: "true"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      target: builder
+    command: ["pnpm", "--filter=@customreport/web", "dev"]
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/app:/app/apps/web/app
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./packages/ui/src:/app/packages/ui/src
+    environment:
+      NODE_ENV: development
