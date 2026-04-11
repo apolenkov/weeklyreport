@@ -1,96 +1,110 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Infrastructure Integration
-status: in_progress
-last_updated: "2026-04-11T22:03:52Z"
-last_activity: 2026-04-11
+milestone: v3.0
+milestone_name: UI Polish & Analytics
+status: executing
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-04-11T21:40:28.565Z"
+last_activity: 2026-04-11 -- Phase 12 execution started
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 18
-  completed_plans: 16
-  percent: 89
+  total_phases: 7
+  completed_phases: 4
+  total_plans: 13
+  completed_plans: 10
+  percent: 18
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** Milestone complete
+**Status:** Executing Phase 12
 **Last Updated:** 2026-04-11
 
 ---
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-10)
+See: .planning/PROJECT.md (updated 2026-04-11)
 
-**Core Value:** Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
+**Core Value:** Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт -- без конфликтов редактирования, с историей и аналитикой.
 
-**Current Focus:** Phase 12 — e2e-tests-ci-cd (1 of 3 complete)
+**Current Focus:** Phase 12 — e2e-tests-ci-cd
 
 ---
 
 ## Current Position
 
-Phase: 12
+Phase: 12 (e2e-tests-ci-cd) — EXECUTING
 Plan: 1 of 3
-Status: In progress
-Last activity: 2026-04-11
+Status: Executing Phase 12
+Last activity: 2026-04-11 -- Phase 12 execution started
 
-Progress: [█████████████████░░░] 89% (16/18 plans complete)
+Progress: [████████████████░░░░] 18% (2/7 phases in v3.0)
+
+---
+
+## Performance Metrics
+
+**Velocity:**
+
+- Total plans completed: 30 (v1.0: 12, v2.0: 15, v3.0: 3)
+- Average duration: ~25 min
+- Total execution time: ~12 hours
+
+**By Milestone:**
+
+| Milestone | Phases | Plans | Status |
+|-----------|--------|-------|--------|
+| v1.0 | 4 | 12 | Shipped |
+| v2.0 | 3 | 15 | Shipped |
+| v3.0 | 7 | 3/TBD | In progress |
 
 ---
 
-## v2.0 Phase Map
-
-- **Phase 5: Backend Foundation** (22 requirements)
-  - Prisma migrations + seed, NestJS bootstrap, 9 Prisma repositories, tRPC endpoints, integration tests
-- **Phase 6: Auth & Frontend Integration** (18 requirements)
-  - SAML SSO, JWT sessions, role guards, frontend localStorage -> tRPC migration, fix failing tests
-- **Phase 7: Production Infrastructure** (15 requirements)
-  - BullMQ jobs (PDF + email), health/metrics, Docker Compose, PgBouncer, graceful shutdown
-
----
+| Phase | Duration | Tasks | Files |
+|-------|----------|-------|-------|
+| 08-01 P01 | 45min | 2 tasks | 7 files |
+| 08-02 P02 | 75min | 3 tasks | 11 files |
+| Phase 09 P01 | 21min | 2 tasks | 30 files |
+| Phase 09-02 P02 | 6min | 2 tasks | 8 files |
+| Phase 10-page-styling P04 | 5min | 2 tasks | 4 files |
+| Phase 11-pdf-styling P01 | 6min | 2 tasks | 2 files |
 
 ## Key Decisions
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
-| Coarse 3-phase split for v2.0 | Backend foundation -> Auth+Frontend -> Production infra; follows dependency edges | Confirmed |
-| QA distributed across phases | QA-01/QA-04 in Phase 5 (repos), QA-02/QA-03 in Phase 6 (frontend) | Confirmed |
-| Auth as tRPC middleware (not NestJS guards) | Guards silently bypassed on tRPC routes (critical pitfall #3) | Confirmed |
-| PgBouncer removed (unnecessary for 10 users/week) | Direct PostgreSQL connection; PgBouncer adds complexity without benefit at this scale | Confirmed |
-| Dev bypass auth for Phase 5 | Enables testing tRPC endpoints before SAML is wired | Confirmed |
-| Prisma 7 driver adapter pattern | PrismaClient requires @prisma/adapter-pg + pg.Pool (breaking change from Prisma 6) | Confirmed |
-| datasource config in prisma.config.ts | Prisma 7 moved url/directUrl from schema.prisma to prisma.config.ts | Confirmed |
-| useFactory DI pattern for repos | NestJS modules wire repos to services via useFactory+inject rather than custom DI tokens | Confirmed |
-| Status enum mapping tables | Domain enum values (queued/sent) differ from DB enums (pending/sent); explicit mapping tables | Confirmed |
-| recipientEmail z.string() not z.email() | DB layer returns empty string for recipientEmail; service layer populates real email | Confirmed |
-| TS paths in child tsconfig must duplicate base | TypeScript does not merge paths from extends; child must redeclare all base paths | Confirmed |
-| Paths relative to baseUrl, not config location | baseUrl in tsconfig.base.json is monorepo root; all paths resolve from there | Confirmed |
-| superjson as tRPC data transformer | Resolves Date/string serialization mismatch; installed in both apps for direct import | Confirmed |
+| 7 phases for v3.0 (coarse) | 47 reqs across 7 distinct capability areas; cannot compress without mixing concerns | Confirmed |
+| Tooling upgrades first (Phase 8) | Next.js 16 changes file conventions (proxy.ts); doing styling first requires rework | Confirmed |
+| Styling before E2E tests | Research warns shadcn/ui changes DOM structure; E2E selectors break during migration | Confirmed |
+| SQL analytics before RAG | Pure SQL validates analytics UI patterns before adding OpenAI/pgvector complexity | Confirmed |
+| Feature-flag RAG (ANALYTICS_ENABLED) | Most complex, most isolated; can ship disabled without affecting other features | Confirmed |
+| pnpm 10 onlyBuiltDependencies in package.json | pnpm 10 canonical location; 9 packages need lifecycle scripts (prisma, playwright, esbuild, msw, sharp, etc.) | Confirmed |
+| turbopack.root for monorepo | Next.js 16 auto-detects workspace root; explicit setting prevents worktree/multi-lockfile misconfiguration | Confirmed |
+| React Compiler enabled | babel-plugin-react-compiler installed; automatic memoization optimization | Confirmed |
+| typescript-eslint unified package | Supports ESLint 10 peer dep (separate parser/plugin packages cap at ESLint 9) | Confirmed |
+| no-extraneous-class disabled | NestJS modules are empty decorated classes by convention | Confirmed |
+| no-non-null-assertion at warn | 76 existing usages across codebase; gradual cleanup path | Confirmed |
 
 ---
 
-## Critical Pitfalls to Watch
+## Critical Pitfalls
 
-1. **PgBouncer prepared statements:** Use 1.22+ with `max_prepared_statements = 256`
-2. **Prisma migrations via directUrl:** Never migrate through PgBouncer
-3. **NestJS guards bypassed on tRPC:** All auth must be tRPC middleware
-4. **Redis noeviction for BullMQ:** Default `allkeys-lru` destroys job metadata
-5. **SAML cookie domain mismatch:** Same-domain or token redirect flow required
+1. **P1: Tailwind classes invisible** -- @source directive must scan packages/ui; transpilePackages required
+2. **P2: Next.js 16 middleware.ts ignored** -- Must rename to proxy.ts
+3. **P3: Prisma migration drift with pgvector** -- Use Prisma 7.2.0+, --create-only, hand-edit SQL
+4. **P4: Playwright auth desync** -- Per-worker auth fixtures with 24h token lifetime
+5. **P11: tailwindcss-animate incompatible** -- Use tw-animate-css from day one
 
 ---
 
-## Next Steps
+## Session Continuity
 
-1. Execute 12-02-PLAN.md: E2E journey test specs (lead, head, viewer flows)
-2. Execute 12-03-PLAN.md: CI/CD pipeline setup
-3. Production deployment preparation
+Last session: 2026-04-11T21:24:40Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: None
 
 ---
 
 *State initialized: 2026-04-06*
-*v2.0 roadmap: 2026-04-10*
-*Phase 12 started: 2026-04-11*
+*v3.0 roadmap: 2026-04-11*
