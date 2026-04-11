@@ -38,9 +38,9 @@
 
 - [x] **TOOL-01**: pnpm 9 → 10 migration with onlyBuiltDependencies for prisma, playwright, esbuild
 - [x] **TOOL-02**: Next.js 15 → 16 migration — middleware.ts → proxy.ts rename, React Compiler enabled, Turbopack default
-- [ ] **TOOL-03**: Vitest 3 → 4 migration — pool option renames, mock behavior updates
-- [ ] **TOOL-04**: ESLint 10 flat config setup — @typescript-eslint/strict, sonarjs rules, monorepo-aware
-- [ ] **TOOL-05**: CLAUDE.md updated with actual current versions (Next.js 16, Vitest 4, ESLint 10, pnpm 10, etc.)
+- [x] **TOOL-03**: Vitest 3 → 4 migration — pool option renames, mock behavior updates
+- [x] **TOOL-04**: ESLint 10 flat config setup — @typescript-eslint/strict, sonarjs rules, monorepo-aware
+- [x] **TOOL-05**: CLAUDE.md updated with actual current versions (Next.js 16, Vitest 4, ESLint 10, pnpm 10, etc.)
 
 ## CI/CD
 
@@ -93,9 +93,9 @@
 |-------------|-------|--------|
 | TOOL-01 | Phase 8 | Complete |
 | TOOL-02 | Phase 8 | Complete |
-| TOOL-03 | Phase 8 | Pending |
-| TOOL-04 | Phase 8 | Pending |
-| TOOL-05 | Phase 8 | Pending |
+| TOOL-03 | Phase 8 | Complete |
+| TOOL-04 | Phase 8 | Complete |
+| TOOL-05 | Phase 8 | Complete |
 | DS-01 | Phase 9 | Pending |
 | DS-02 | Phase 9 | Pending |
 | DS-03 | Phase 9 | Pending |
