@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "10.11.0"
+
+jobs:
+  # ------------------------------------------------------------------
+  # Job 1: Lint + Typecheck + Unit Tests
+  # ------------------------------------------------------------------
+  quality:
+    name: Lint, Typecheck & Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
+      - name: Lint
+        run: pnpm turbo lint
+
+      - name: Typecheck
+        run: pnpm turbo typecheck
+
+      - name: Unit Tests
+        run: pnpm turbo test
+
+  # ------------------------------------------------------------------
+  # Job 2: E2E Tests with Playwright
+  # ------------------------------------------------------------------
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: quality
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: customreport
+          POSTGRES_PASSWORD: localdev
+          POSTGRES_DB: customreport_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U customreport"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_test
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      NODE_ENV: test
+      AUTH_DEV_MODE: "true"
+      AUTH_JWT_SECRET: ci-test-secret-at-least-32-characters-long!!
+      FRONTEND_URL: http://localhost:3100
+      PDF_BASE_URL: http://localhost:3100
+      PORT: 3101
+      NEXT_PUBLIC_API_URL: http://localhost:3101
+      LOG_LEVEL: warn
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
+      - name: Run database migrations
+        run: pnpm exec prisma migrate deploy
+
+      - name: Seed database
+        run: pnpm exec tsx prisma/seed.ts
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build shared packages
+        run: pnpm turbo build --filter=@customreport/shared --filter=@customreport/ui
+
+      - name: Run E2E tests
+        run: pnpm exec playwright test --config=apps/web/playwright.config.ts
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 14
+
+  # ------------------------------------------------------------------
+  # Job 3: Docker Build Verification
+  # ------------------------------------------------------------------
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: quality
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Docker Compose builds
+        run: docker compose -f docker-compose.yml build --no-cache
