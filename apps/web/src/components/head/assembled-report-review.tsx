@@ -95,6 +95,10 @@ export function AssembledReportReview({
     section: ReportSectionReadModel,
     text: string,
   ) {
+    if (!section.items || section.items.length === 0) {
+      return;
+    }
+
     const nextSection: ReportSectionReadModel = {
       ...section,
       items: section.items.map((item, index) =>
