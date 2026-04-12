@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import {
   BookOpen,
@@ -99,10 +100,10 @@ export function RoleNav({ activeReportId = null, role, currentPath }: RoleNavPro
             return (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                  <a href={item.href}>
+                  <Link href={item.href}>
                     <Icon />
                     <span>{item.label}</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );

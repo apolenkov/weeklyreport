@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { formatDate, formatDateTime, formatPeriodDate } from '../../lib/format-date';
+
 import type {
   AdminProject,
   AdminReminderRule,
@@ -52,23 +54,7 @@ function buildUserId(): string {
   return crypto.randomUUID();
 }
 
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
 
-function formatDateTime(date: Date): string {
-  return new Date(date).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export function AdminPanel({
   initialSnapshot,
@@ -332,7 +318,7 @@ export function AdminPanel({
       key: 'period',
       header: 'Period',
       cell: (row) =>
-        `${formatDate(row.periodStart)} -- ${formatDate(row.periodEnd)}`,
+        `${formatPeriodDate(row.periodStart)} \u2013 ${formatPeriodDate(row.periodEnd)}`,
     },
     {
       key: 'deadline',
