@@ -107,9 +107,10 @@ export function mountAuthRoutes(
 
   // --- POST /auth/logout ---
   expressApp.post('/auth/logout', (_request: Request, res: Response) => {
+    const cookieName = env.AUTH_JWT_COOKIE_NAME ?? 'customreport_session';
     res.setHeader(
       'Set-Cookie',
-      'customreport_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+      `${cookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
     );
     res.redirect('/');
   });

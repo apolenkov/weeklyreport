@@ -51,6 +51,9 @@ function createRepository(section: ReportSectionReadModel): ReportSectionsReposi
 
       return structuredClone(currentSection);
     },
+    async getReportStatus() {
+      return 'draft';
+    },
     async saveSection(nextSection) {
       currentSection = structuredClone(nextSection);
 
