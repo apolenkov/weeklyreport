@@ -146,6 +146,178 @@ describe('CarryOverService', () => {
       service.executeCarryOver(sourceReportId, sourceReportId),
     ).rejects.toBeInstanceOf(CarryOverDomainError);
   });
+
+  describe('carry-over — findMany and idempotency', () => {
+    const secondSourceSection: ReportSectionReadModel = {
+      ...sourceSection,
+      reportSectionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      authorId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      authorName: 'Lead 2',
+      items: [
+        {
+          id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+          projectId: '44444444-4444-4444-8444-444444444444',
+          type: 'next',
+          text: 'Lead 2 next item',
+          tag: 'bugfix',
+          workflowStatus: 'in_progress',
+          carriedOver: false,
+        },
+      ],
+      decisions: [],
+    };
+
+    const thirdSourceSection: ReportSectionReadModel = {
+      ...sourceSection,
+      reportSectionId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      authorId: '12345678-1234-4234-8234-123456789abc',
+      authorName: 'Lead 3',
+      items: [
+        {
+          id: 'fafafafa-fafa-4faf-8faf-fafafafafafa',
+          projectId: '44444444-4444-4444-8444-444444444444',
+          type: 'next',
+          text: 'Lead 3 next item',
+          tag: 'infra',
+          workflowStatus: 'blocked',
+          carriedOver: false,
+        },
+      ],
+      decisions: [],
+    };
+
+    function createMultiSectionRepository(
+      sources: ReportSectionReadModel[],
+    ): CarryOverRepository {
+      const executions = new Map<string, CarryOverExecution>();
+      const targetSections = sources.map((s) => ({
+        ...s,
+        reportSectionId: crypto.randomUUID(),
+        reportId: targetReportId,
+        status: 'draft' as const,
+        submittedAt: null,
+        items: [],
+        decisions: [],
+      }));
+      let savedRecords: CarryOverRecord[] = [];
+
+      return {
+        async findExecutionByDedupeKey(dedupeKey: string) {
+          for (const execution of executions.values()) {
+            if (execution.dedupeKey === dedupeKey) {
+              return structuredClone(execution);
+            }
+          }
+          return null;
+        },
+        async getSourceSections() {
+          return sources.map((s) => structuredClone(s));
+        },
+        async getTargetSections() {
+          return targetSections.map((s) => structuredClone(s));
+        },
+        async saveCarryOver(
+          execution: CarryOverExecution,
+          nextRecords: CarryOverRecord[],
+          nextSection: ReportSectionReadModel,
+        ) {
+          executions.set(execution.id, structuredClone(execution));
+          savedRecords = structuredClone(nextRecords);
+          return {
+            execution: structuredClone(execution),
+            records: structuredClone(savedRecords),
+            targetSection: structuredClone(nextSection),
+          };
+        },
+      };
+    }
+
+    it('processes ALL source sections (3 sections = items from all 3)', async () => {
+      const repo = createMultiSectionRepository([
+        sourceSection,
+        secondSourceSection,
+        thirdSourceSection,
+      ]);
+      const service = new CarryOverService(repo);
+      const result = await service.executeCarryOver(sourceReportId, targetReportId);
+
+      // sourceSection has 1 next item + 1 unresolved decision = 2 records
+      // secondSourceSection has 1 next item = 1 record
+      // thirdSourceSection has 1 next item = 1 record
+      // Total: 4 records
+      expect(result.records).toHaveLength(4);
+      expect(result.execution.carriedItemCount).toBe(3);
+      expect(result.execution.carriedDecisionCount).toBe(1);
+    });
+
+    it('returns existing execution without creating new records (idempotency)', async () => {
+      const repo = createRepository(sourceSection);
+      const service = new CarryOverService(repo);
+
+      const first = await service.executeCarryOver(sourceReportId, targetReportId);
+      const second = await service.executeCarryOver(sourceReportId, targetReportId);
+
+      expect(second.execution.id).toBe(first.execution.id);
+      // Idempotent replay returns empty records array
+      expect(second.records).toHaveLength(0);
+    });
+
+    it('creates a new execution when none exists', async () => {
+      const repo = createRepository(sourceSection);
+      const service = new CarryOverService(repo);
+      const result = await service.executeCarryOver(sourceReportId, targetReportId);
+
+      expect(result.execution.status).toBe('completed');
+      expect(result.execution.dedupeKey).toBe(`${sourceReportId}:${targetReportId}`);
+      expect(result.records.length).toBeGreaterThan(0);
+    });
+
+    it('throws when source sections are empty', async () => {
+      const repo: CarryOverRepository = {
+        async findExecutionByDedupeKey() {
+          return null;
+        },
+        async getSourceSections() {
+          return [];
+        },
+        async getTargetSections() {
+          return [structuredClone(sourceSection)];
+        },
+        async saveCarryOver(execution, records, section) {
+          return { execution, records, targetSection: section };
+        },
+      };
+
+      const service = new CarryOverService(repo);
+
+      await expect(
+        service.executeCarryOver(sourceReportId, targetReportId),
+      ).rejects.toBeInstanceOf(CarryOverDomainError);
+    });
+
+    it('throws when target sections are empty', async () => {
+      const repo: CarryOverRepository = {
+        async findExecutionByDedupeKey() {
+          return null;
+        },
+        async getSourceSections() {
+          return [structuredClone(sourceSection)];
+        },
+        async getTargetSections() {
+          return [];
+        },
+        async saveCarryOver(execution, records, section) {
+          return { execution, records, targetSection: section };
+        },
+      };
+
+      const service = new CarryOverService(repo);
+
+      await expect(
+        service.executeCarryOver(sourceReportId, targetReportId),
+      ).rejects.toBeInstanceOf(CarryOverDomainError);
+    });
+  });
 });
 
 describe('carryOverRouter', () => {
