@@ -90,32 +90,24 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
     return execution;
   }
 
-  async getSourceSection(sourceReportId: string): Promise<ReportSectionReadModel | null> {
-    const row = await this.prisma.reportSection.findFirst({
+  async getSourceSections(sourceReportId: string): Promise<ReportSectionReadModel[]> {
+    const rows = await this.prisma.reportSection.findMany({
       where: { reportId: sourceReportId },
       include: reportSectionFullInclude,
     });
 
-    if (!row) {
-      return null;
-    }
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return mapPrismaToReportSection(row as any);
+    return rows.map((row) => mapPrismaToReportSection(row as any));
   }
 
-  async getTargetSection(targetReportId: string): Promise<ReportSectionReadModel | null> {
-    const row = await this.prisma.reportSection.findFirst({
+  async getTargetSections(targetReportId: string): Promise<ReportSectionReadModel[]> {
+    const rows = await this.prisma.reportSection.findMany({
       where: { reportId: targetReportId },
       include: reportSectionFullInclude,
     });
 
-    if (!row) {
-      return null;
-    }
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return mapPrismaToReportSection(row as any);
+    return rows.map((row) => mapPrismaToReportSection(row as any));
   }
 
   async saveCarryOver(
@@ -125,15 +117,25 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
   ): Promise<CarryOverResult> {
     await this.prisma.$transaction(
       async (tx) => {
-        await tx.carryOverExecution.create({
-          data: {
-            id: execution.id,
+        // Idempotency guard: check for existing execution before creating
+        const existing = await tx.carryOverExecution.findFirst({
+          where: {
             sourceReportId: execution.sourceReportId,
             targetReportId: execution.targetReportId,
-            dedupeKey: execution.dedupeKey,
-            status: execution.status,
           },
         });
+
+        if (!existing) {
+          await tx.carryOverExecution.create({
+            data: {
+              id: execution.id,
+              sourceReportId: execution.sourceReportId,
+              targetReportId: execution.targetReportId,
+              dedupeKey: execution.dedupeKey,
+              status: execution.status,
+            },
+          });
+        }
 
         if (records.length > 0) {
           await tx.carryOverRecord.createMany({

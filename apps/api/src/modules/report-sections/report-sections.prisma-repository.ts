@@ -117,6 +117,15 @@ export function mapPrismaToReportSection(
 export class ReportSectionsPrismaRepository implements ReportSectionsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getReportStatus(reportId: string): Promise<string | null> {
+    const report = await this.prisma.report.findUnique({
+      where: { id: reportId },
+      select: { status: true },
+    });
+
+    return report?.status ?? null;
+  }
+
   async getSectionById(reportSectionId: string): Promise<ReportSectionReadModel | null> {
     const row = await this.prisma.reportSection.findUnique({
       where: { id: reportSectionId },

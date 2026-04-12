@@ -98,11 +98,11 @@ function createRepository(section: ReportSectionReadModel): CarryOverRepository 
       }
       return null;
     },
-    async getSourceSection() {
-      return structuredClone(section);
+    async getSourceSections() {
+      return [structuredClone(section)];
     },
-    async getTargetSection() {
-      return structuredClone(targetSection);
+    async getTargetSections() {
+      return [structuredClone(targetSection)];
     },
     async saveCarryOver(execution: CarryOverExecution, nextRecords: CarryOverRecord[], nextSection: ReportSectionReadModel) {
       executions.set(execution.id, structuredClone(execution));
