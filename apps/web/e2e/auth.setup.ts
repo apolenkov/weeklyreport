@@ -1,9 +1,7 @@
 import { test as setup, expect } from '@playwright/test';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve, dirname } from 'node:path';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const authDir = path.join(__dirname, '.auth');
+const authDir = resolve(dirname(__filename), '.auth');
 
 const API_URL = 'http://127.0.0.1:3101';
 
@@ -15,11 +13,11 @@ for (const role of roles) {
     await page.goto(`${API_URL}/auth/dev-login?role=${role}`);
 
     // After redirect, verify cookie was set by checking we can access a page
-    await expect(page).toHaveURL(/localhost:3100/);
+    await expect(page).toHaveURL(/127\.0\.0\.1:3100/);
 
     // Save storageState (cookies + localStorage) for this role
     await page.context().storageState({
-      path: path.join(authDir, `${role}.json`),
+      path: resolve(authDir, `${role}.json`),
     });
   });
 }

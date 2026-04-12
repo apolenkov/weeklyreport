@@ -1,8 +1,4 @@
 import { defineConfig, devices } from '@playwright/test';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const API_PORT = 3101;
 const WEB_PORT = 3100;
@@ -39,11 +35,11 @@ export default defineConfig({
 
   webServer: [
     {
-      command: `node --import @swc-node/register/esm-register ../../apps/api/src/main.ts`,
+      command: `node --import @swc-node/register/esm-register ../api/src/main.ts`,
       url: `${API_URL}/health/live`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
-      cwd: __dirname,
+      cwd: process.cwd(),
       env: {
         ...process.env,
         PORT: String(API_PORT),
