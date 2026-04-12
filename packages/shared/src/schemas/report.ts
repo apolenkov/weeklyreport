@@ -2,6 +2,13 @@ import { z } from 'zod';
 
 import { roleSchema } from './auth';
 
+/** Rejects dates before year 2000 (prevents pre-epoch/nonsensical report dates) */
+const reportDate = () =>
+  z.coerce.date().refine(
+    (d) => d.getFullYear() >= 2000,
+    { message: 'Date must be after year 2000' },
+  );
+
 export const trafficLightStatusSchema = z.enum(['green', 'yellow', 'red']);
 export const itemTypeSchema = z.enum(['current', 'next']);
 export const itemWorkflowStatusSchema = z.enum(['done', 'in_progress', 'blocked']);
@@ -51,10 +58,10 @@ export const draftSaveSchema = z.object({
   reportSectionId: z.string().uuid(),
   status: reportSectionStatusSchema.default('draft'),
   projectStatuses: z.array(projectStatusInputSchema),
-  items: z.array(itemInputSchema),
-  risks: z.array(riskInputSchema),
-  decisions: z.array(decisionInputSchema),
-  priorities: z.array(priorityInputSchema),
+  items: z.array(itemInputSchema).max(100),
+  risks: z.array(riskInputSchema).max(100),
+  decisions: z.array(decisionInputSchema).max(100),
+  priorities: z.array(priorityInputSchema).max(50),
 });
 
 export const submitSectionSchema = draftSaveSchema.extend({
@@ -62,7 +69,13 @@ export const submitSectionSchema = draftSaveSchema.extend({
   projectStatuses: z.array(projectStatusInputSchema.extend({
     status: trafficLightStatusSchema,
   })).min(1),
-  priorities: z.array(priorityInputSchema).length(3),
+  priorities: z.array(priorityInputSchema).length(3).refine(
+    (priorities) => {
+      const ranks = priorities.map((p) => p.rank);
+      return new Set(ranks).size === ranks.length;
+    },
+    { message: 'Priority ranks must be unique' },
+  ),
 });
 
 export const projectReadModelSchema = z.object({
@@ -105,9 +118,9 @@ export const portfolioOverviewSchema = z.object({
 
 export const assembledReportSchema = z.object({
   reportId: z.string().uuid(),
-  periodStart: z.coerce.date(),
-  periodEnd: z.coerce.date(),
-  deadline: z.coerce.date(),
+  periodStart: reportDate(),
+  periodEnd: reportDate(),
+  deadline: reportDate(),
   status: reportStatusSchema,
   publishedAt: z.coerce.date().nullable().default(null),
   publishedById: z.string().uuid().nullable().default(null),
@@ -155,9 +168,9 @@ export const adminProjectSchema = z.object({
 
 export const reportPeriodSchema = z.object({
   id: z.string().uuid(),
-  periodStart: z.coerce.date(),
-  periodEnd: z.coerce.date(),
-  deadline: z.coerce.date(),
+  periodStart: reportDate(),
+  periodEnd: reportDate(),
+  deadline: reportDate(),
   status: reportStatusSchema,
 });
 
@@ -192,7 +205,7 @@ export const adminReminderExecutionSchema = z.object({
   errorMessage: z.string().nullable(),
 });
 
-export const carryOverStatusSchema = z.enum(['completed']);
+export const carryOverStatusSchema = z.enum(['pending', 'completed', 'failed']);
 
 export const carryOverRecordSchema = z.object({
   id: z.string().uuid(),
@@ -220,9 +233,9 @@ export const carryOverExecutionSchema = z.object({
 
 export const archiveReportSummarySchema = z.object({
   reportId: z.string().uuid(),
-  periodStart: z.coerce.date(),
-  periodEnd: z.coerce.date(),
-  publishedAt: z.coerce.date(),
+  periodStart: reportDate(),
+  periodEnd: reportDate(),
+  publishedAt: reportDate(),
   publishedByName: z.string().min(1),
   portfolioStatus: trafficLightStatusSchema,
 });
