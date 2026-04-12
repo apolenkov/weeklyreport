@@ -36,15 +36,15 @@ export function AppShell({
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon" className="border-r" aria-label="Main navigation">
-        <SidebarHeader className="flex items-center px-4 py-3 group-data-[collapsible=icon]:px-2">
-          <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">
+        <SidebarHeader className="flex items-center px-4 py-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+          <span className="text-lg font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
             CustomReport
           </span>
         </SidebarHeader>
         <SidebarContent>
           <RoleNav activeReportId={activeReportId} role={role} currentPath={currentPath} />
         </SidebarContent>
-        <SidebarFooter className="group-data-[collapsible=icon]:px-0">
+        <SidebarFooter className="border-t border-sidebar-border group-data-[collapsible=icon]:px-0">
           <SidebarTrigger className="w-full" />
         </SidebarFooter>
       </Sidebar>
