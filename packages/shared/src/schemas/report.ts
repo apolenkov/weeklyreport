@@ -2,6 +2,24 @@ import { z } from 'zod';
 
 import { roleSchema } from './auth';
 
+/** Rejects strings that contain only whitespace or zero-width characters */
+const noInvisibleOnly = (val: string) =>
+  val.replace(/[\s\u200B\u200C\u200D\uFEFF]/g, '').length > 0;
+
+/** Rejects strings containing null bytes (PostgreSQL incompatible) */
+const noNullBytes = (val: string) => !val.includes('\u0000');
+
+/**
+ * Safe text schema: rejects null bytes and zero-width-space-only strings.
+ * Use in place of z.string().min(N).max(M) for all user-facing text fields.
+ */
+const safeText = (opts: { min?: number; max?: number } = {}) =>
+  z.string()
+    .min(opts.min ?? 1)
+    .max(opts.max ?? 500)
+    .refine(noNullBytes, { message: 'Text must not contain null bytes' })
+    .refine(noInvisibleOnly, { message: 'Text must contain visible characters' });
+
 /** Rejects dates before year 2000 (prevents pre-epoch/nonsensical report dates) */
 const reportDate = () =>
   z.coerce.date().refine(
@@ -24,8 +42,8 @@ export const itemInputSchema = z.object({
   id: z.string().uuid().optional(),
   projectId: z.string().uuid(),
   type: itemTypeSchema,
-  text: z.string().min(1).max(500),
-  tag: z.string().min(1).max(50),
+  text: safeText({ max: 500 }),
+  tag: safeText({ max: 50 }),
   workflowStatus: itemWorkflowStatusSchema,
   carriedOver: z.boolean().default(false),
   completed: z.boolean().nullable().optional(),
@@ -34,24 +52,24 @@ export const itemInputSchema = z.object({
 export const riskInputSchema = z.object({
   id: z.string().uuid().optional(),
   projectId: z.string().uuid(),
-  risk: z.string().min(1).max(500),
-  impact: z.string().min(1).max(500),
-  mitigation: z.string().min(1).max(500),
+  risk: safeText({ max: 500 }),
+  impact: safeText({ max: 500 }),
+  mitigation: safeText({ max: 500 }),
 });
 
 export const decisionInputSchema = z.object({
   id: z.string().uuid().optional(),
-  text: z.string().min(1).max(500),
-  owner: z.string().min(1).max(200),
+  text: safeText({ max: 500 }),
+  owner: safeText({ max: 200 }),
   deadline: z.coerce.date().nullable().optional(),
-  impact: z.string().min(1).max(500),
+  impact: safeText({ max: 500 }),
   resolvedAt: z.coerce.date().nullable().optional(),
 });
 
 export const priorityInputSchema = z.object({
   id: z.string().uuid().optional(),
   rank: z.number().int().min(1).max(3),
-  text: z.string().min(1).max(200),
+  text: safeText({ max: 200 }),
 });
 
 export const draftSaveSchema = z.object({
