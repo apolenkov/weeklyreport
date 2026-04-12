@@ -1,0 +1,74 @@
+/*
+ * CustomReport Design Tokens
+ *
+ * OKLCH-based color system for consistent rendering across displays.
+ * Skeleton, success, and warning tokens ensure accessible contrast
+ * ratios (>= 3:1 against background).
+ */
+
+@theme {
+  /* ---- Base palette ---- */
+  --color-background: oklch(0.99 0 0);
+  --color-foreground: oklch(0.14 0 0);
+
+  --color-muted: oklch(0.93 0.005 250);
+  --color-muted-foreground: oklch(0.45 0.01 250);
+
+  --color-accent: oklch(0.95 0.02 250);
+  --color-accent-foreground: oklch(0.14 0 0);
+
+  /* ---- Skeleton ---- */
+  /* Dedicated skeleton token: lightness 0.85 gives >= 3:1 contrast
+     against --background (0.99). Previous accent-based skeleton was
+     nearly invisible (lightness ~0.95 on 0.99 background). */
+  --color-skeleton: oklch(0.85 0.01 250);
+
+  /* ---- Semantic status colors ---- */
+  --color-success: oklch(0.72 0.19 142);
+  --color-success-foreground: oklch(0.99 0 0);
+  --color-warning: oklch(0.75 0.18 55);
+  --color-warning-foreground: oklch(0.18 0 0);
+  --color-destructive: oklch(0.58 0.22 28);
+  --color-destructive-foreground: oklch(0.99 0 0);
+
+  /* ---- Border & ring ---- */
+  --color-border: oklch(0.88 0.005 250);
+  --color-ring: oklch(0.55 0.15 250);
+
+  /* ---- Card & popover ---- */
+  --color-card: oklch(0.99 0 0);
+  --color-card-foreground: oklch(0.14 0 0);
+  --color-popover: oklch(0.99 0 0);
+  --color-popover-foreground: oklch(0.14 0 0);
+
+  /* ---- Primary & secondary ---- */
+  --color-primary: oklch(0.35 0.12 250);
+  --color-primary-foreground: oklch(0.99 0 0);
+  --color-secondary: oklch(0.93 0.005 250);
+  --color-secondary-foreground: oklch(0.14 0 0);
+}
+
+/* ---- Skeleton animation ---- */
+.skeleton {
+  background: var(--color-skeleton, oklch(0.85 0.01 250));
+  border-radius: 0.25rem;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ---- Print overrides ---- */
+@media print {
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

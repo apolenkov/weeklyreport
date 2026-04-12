@@ -17,7 +17,11 @@ export function DecisionsEditor({ decisions, disabled }: DecisionsEditorProps) {
       {decisions.map((decision) => (
         <article key={decision.id ?? decision.text}>
           <p>{decision.text}</p>
-          {decision.resolvedAt ? null : <p>Unresolved decision</p>}
+          {decision.resolvedAt ? (
+            <p className="text-success">Resolved</p>
+          ) : (
+            <p className="text-warning">Unresolved decision</p>
+          )}
         </article>
       ))}
     </fieldset>
