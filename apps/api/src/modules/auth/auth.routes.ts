@@ -155,7 +155,14 @@ export function mountAuthRoutes(
 
         const { setCookieHeader } = authController.issueSessionCookie(session);
         res.setHeader('Set-Cookie', setCookieHeader);
-        res.redirect(frontendUrl);
+
+        const redirectByRole: Record<string, string> = {
+          head: '/admin',
+          lead: '/lead/report',
+          viewer: '/reports/history',
+        };
+        const redirectPath = (req.query.redirect as string) ?? redirectByRole[role] ?? '/';
+        res.redirect(`${frontendUrl}${redirectPath}`);
       } catch (error) {
         next(error);
       }
