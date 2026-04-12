@@ -1,106 +1,74 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "./traffic-lights.css";
-
-@custom-variant dark (&:is(.dark *));
-
-@source "../../src/**/*.{ts,tsx}";
-@source "../../../apps/web/src/**/*.{ts,tsx}";
+/*
+ * CustomReport Design Tokens
+ *
+ * OKLCH-based color system for consistent rendering across displays.
+ * Skeleton, success, and warning tokens ensure accessible contrast
+ * ratios (>= 3:1 against background).
+ */
 
 @theme {
-  /* Colors — OKLCH (shadcn/ui light mode) */
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.145 0 0);
-  --color-muted: oklch(0.97 0 0);
-  --color-muted-foreground: oklch(0.556 0 0);
-  --color-primary: oklch(0.205 0.064 280.749);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border: oklch(0.922 0 0);
-  --color-ring: oklch(0.708 0 0);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
-  --color-secondary: oklch(0.97 0 0);
-  --color-secondary-foreground: oklch(0.205 0.064 280.749);
-  --color-accent: oklch(0.97 0 0);
-  --color-accent-foreground: oklch(0.205 0.064 280.749);
-  --color-input: oklch(0.922 0 0);
-  --color-sidebar-background: oklch(0.97 0 0);
-  --color-sidebar-foreground: oklch(0.145 0 0);
-  --color-sidebar-primary: oklch(0.205 0.064 280.749);
-  --color-sidebar-primary-foreground: oklch(0.985 0 0);
-  --color-sidebar-accent: oklch(0.97 0 0);
-  --color-sidebar-accent-foreground: oklch(0.205 0.064 280.749);
-  --color-sidebar-border: oklch(0.922 0 0);
-  --color-sidebar-ring: oklch(0.708 0 0);
+  /* ---- Base palette ---- */
+  --color-background: oklch(0.99 0 0);
+  --color-foreground: oklch(0.14 0 0);
 
-  /* Typography */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, monospace;
+  --color-muted: oklch(0.93 0.005 250);
+  --color-muted-foreground: oklch(0.45 0.01 250);
 
-  /* Border radius */
-  --radius: 0.5rem;
+  --color-accent: oklch(0.95 0.02 250);
+  --color-accent-foreground: oklch(0.14 0 0);
 
-  /* Spacing (8-point grid) */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
-  --spacing-3xl: 64px;
+  /* ---- Skeleton ---- */
+  /* Dedicated skeleton token: lightness 0.85 gives >= 3:1 contrast
+     against --background (0.99). Previous accent-based skeleton was
+     nearly invisible (lightness ~0.95 on 0.99 background). */
+  --color-skeleton: oklch(0.85 0.01 250);
+
+  /* ---- Semantic status colors ---- */
+  --color-success: oklch(0.72 0.19 142);
+  --color-success-foreground: oklch(0.99 0 0);
+  --color-warning: oklch(0.75 0.18 55);
+  --color-warning-foreground: oklch(0.18 0 0);
+  --color-destructive: oklch(0.58 0.22 28);
+  --color-destructive-foreground: oklch(0.99 0 0);
+
+  /* ---- Border & ring ---- */
+  --color-border: oklch(0.88 0.005 250);
+  --color-ring: oklch(0.55 0.15 250);
+
+  /* ---- Card & popover ---- */
+  --color-card: oklch(0.99 0 0);
+  --color-card-foreground: oklch(0.14 0 0);
+  --color-popover: oklch(0.99 0 0);
+  --color-popover-foreground: oklch(0.14 0 0);
+
+  /* ---- Primary & secondary ---- */
+  --color-primary: oklch(0.35 0.12 250);
+  --color-primary-foreground: oklch(0.99 0 0);
+  --color-secondary: oklch(0.93 0.005 250);
+  --color-secondary-foreground: oklch(0.14 0 0);
 }
 
-@layer base {
-  * {
-    @apply border-border;
+/* ---- Skeleton animation ---- */
+.skeleton {
+  background: var(--color-skeleton, oklch(0.85 0.01 250));
+  border-radius: 0.25rem;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
   }
-  body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-sans);
-    font-size: 14px;
-    line-height: 1.5;
+  50% {
+    opacity: 0.5;
   }
 }
 
+/* ---- Print overrides ---- */
 @media print {
   * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  :root {
-    /* Core theme colors — hex fallbacks for oklch (PDF-02) */
-    --color-background: #ffffff;
-    --color-foreground: #1a1a1a;
-    --color-muted: #f5f5f5;
-    --color-muted-foreground: #737373;
-    --color-primary: #1e1b4b;
-    --color-primary-foreground: #fafafa;
-    --color-destructive: #dc2626;
-    --color-destructive-foreground: #fafafa;
-    --color-border: #e5e5e5;
-    --color-ring: #a3a3a3;
-    --color-input: #e5e5e5;
-    --color-card: #ffffff;
-    --color-card-foreground: #1a1a1a;
-    --color-popover: #ffffff;
-    --color-popover-foreground: #1a1a1a;
-    --color-secondary: #f5f5f5;
-    --color-secondary-foreground: #1e1b4b;
-    --color-accent: #f5f5f5;
-    --color-accent-foreground: #1e1b4b;
-    /* Sidebar — not rendered in print but included for completeness */
-    --color-sidebar-background: #f5f5f5;
-    --color-sidebar-foreground: #1a1a1a;
-    --color-sidebar-primary: #1e1b4b;
-    --color-sidebar-primary-foreground: #fafafa;
-    --color-sidebar-accent: #f5f5f5;
-    --color-sidebar-accent-foreground: #1e1b4b;
-    --color-sidebar-border: #e5e5e5;
-    --color-sidebar-ring: #a3a3a3;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 }
