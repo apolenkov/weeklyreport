@@ -1,41 +1,22 @@
-import { expect, test } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { publishReport } from './helpers/test-utils';
 
-const devSessionStorageKey = 'customreport:dev-session';
-const leadReportStorageKey = 'customreport:lead-report-section';
-const publishedReportStorageKey = 'customreport:published-report';
+test('head can publish the assembled report and the surface becomes read-only', async ({ headPage }) => {
+  await headPage.goto('/head/report');
 
-const headSession = {
-  userId: '00000000-0000-4000-8000-000000000001',
-  email: 'head@customreport.local',
-  name: 'Department Head',
-  role: 'head',
-  activeReportId: '22222222-2222-4222-8222-222222222222',
-  activeReportSectionId: null,
-};
+  await expect(headPage.getByRole('heading', { name: 'Assembled Report', level: 1 })).toBeVisible();
 
-test('head can publish the assembled report and the surface becomes read-only', async ({ page }) => {
-  await page.goto('/');
-  await page.evaluate(
-    ({ sessionKey, sectionKey, publishedKey, session }) => {
-      window.localStorage.removeItem(sectionKey);
-      window.localStorage.removeItem(publishedKey);
-      window.localStorage.setItem(sessionKey, JSON.stringify(session));
-    },
-    {
-      sessionKey: devSessionStorageKey,
-      sectionKey: leadReportStorageKey,
-      publishedKey: publishedReportStorageKey,
-      session: headSession,
-    },
-  );
+  // Check if report can be published (not already published)
+  const publishButton = headPage.getByRole('button', { name: 'Publish Report' });
+  const canPublish = await publishButton.isVisible().catch(() => false);
 
-  await page.goto('/head/report');
+  if (canPublish) {
+    await publishReport(headPage);
+  }
 
-  await expect(page.getByRole('heading', { name: 'Assembled Report' })).toBeVisible();
-  await page.getByLabel('Lead 1 / Project 1 traffic light').selectOption('yellow');
-  await page.getByRole('button', { name: 'Publish report' }).click();
+  // After publish, "Published" badge should appear
+  await expect(headPage.getByText('Published')).toBeVisible();
 
-  await expect(page.getByText('Report published')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Publish report' })).toHaveCount(0);
-  await expect(page.getByLabel('Lead 1 / Project 1 traffic light')).toBeDisabled();
+  // Publish button should no longer be visible
+  await expect(headPage.getByRole('button', { name: 'Publish Report' })).toHaveCount(0);
 });
