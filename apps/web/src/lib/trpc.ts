@@ -11,9 +11,7 @@ export function createTRPCClient() {
     links: [
       httpBatchLink({
         transformer: superjson,
-        url: process.env.NEXT_PUBLIC_API_URL
-          ? `${process.env.NEXT_PUBLIC_API_URL}/trpc`
-          : 'http://localhost:3001/trpc',
+        url: '/trpc',
         fetch: (url, options) =>
           fetch(url, { ...options, credentials: 'include' }),
       }),

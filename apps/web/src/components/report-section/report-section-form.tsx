@@ -55,10 +55,12 @@ function toSubmitInput(section: ReportSectionReadModel): SubmitSectionPayload {
   return {
     ...toDraftSaveInput(section),
     confirmed: true,
-    projectStatuses: section.projects.map((project) => ({
-      projectId: project.projectId,
-      status: project.trafficLight ?? undefined,
-    })),
+    projectStatuses: section.projects
+      .filter((p) => p.trafficLight != null)
+      .map((p) => ({
+        projectId: p.projectId,
+        status: p.trafficLight!,
+      })),
     priorities: section.priorities,
   };
 }

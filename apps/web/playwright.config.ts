@@ -57,7 +57,7 @@ export default defineConfig({
       },
     },
     {
-      command: `pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
+      command: `pnpm --filter @customreport/web exec next start -p ${WEB_PORT}`,
       url: WEB_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
