@@ -67,6 +67,11 @@
 }
 
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   :root {
     /* Core theme colors — hex fallbacks for oklch (PDF-02) */
     --color-background: #ffffff;
