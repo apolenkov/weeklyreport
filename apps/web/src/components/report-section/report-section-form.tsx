@@ -57,7 +57,7 @@ function toSubmitInput(section: ReportSectionReadModel): SubmitSectionPayload {
     confirmed: true,
     projectStatuses: section.projects.map((project) => ({
       projectId: project.projectId,
-      status: project.trafficLight ?? 'red',
+      status: project.trafficLight ?? undefined,
     })),
     priorities: section.priorities,
   };
@@ -135,10 +135,15 @@ export function ReportSectionForm({
 
     const timeoutId = window.setTimeout(async () => {
       setSaveState('saving');
-      const saved = await onSaveDraft(toDraftSaveInput(section));
-      lastSavedSnapshot.current = JSON.stringify(toDraftSaveInput(saved));
-      setSection(saved);
-      setSaveState('saved');
+      try {
+        const saved = await onSaveDraft(toDraftSaveInput(section));
+        lastSavedSnapshot.current = JSON.stringify(toDraftSaveInput(saved));
+        setSection(saved);
+        setSaveState('saved');
+      } catch (error) {
+        console.error('Autosave failed:', error);
+        setSaveState('idle');
+      }
     }, 300);
 
     return () => {
@@ -156,13 +161,19 @@ export function ReportSectionForm({
       return;
     }
 
-    const submitted = await onSubmit(toSubmitInput(section));
-    setSection(submitted);
-    setErrors([]);
-    setShowSubmitDialog(false);
-    toast.success('Section submitted', {
-      description: 'Your report section has been locked.',
-    });
+    try {
+      const submitted = await onSubmit(toSubmitInput(section));
+      setSection(submitted);
+      setErrors([]);
+      setShowSubmitDialog(false);
+      toast.success('Section submitted', {
+        description: 'Your report section has been locked.',
+      });
+    } catch (error) {
+      console.error('Submit failed:', error);
+      setShowSubmitDialog(false);
+      toast.error('Failed to submit section. Please try again.');
+    }
   }
 
   return (
