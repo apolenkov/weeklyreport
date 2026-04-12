@@ -17,7 +17,9 @@ type AppShellProps = {
 export function AppShell({ activeReportId = null, role, currentPath, children }: AppShellProps) {
   return (
     <div>
-      <RoleNav activeReportId={activeReportId} role={role} currentPath={currentPath} />
+      <aside aria-label="Sidebar">
+        <RoleNav activeReportId={activeReportId} role={role} currentPath={currentPath} />
+      </aside>
       <main>{children}</main>
     </div>
   );

@@ -151,7 +151,7 @@ export function ReportSectionForm({
   }
 
   return (
-    <form>
+    <form aria-disabled={isReadOnly || undefined}>
       <h1>Мой отчёт</h1>
       <p>Author: {section.authorName}</p>
       <p>Status: {section.status}</p>
