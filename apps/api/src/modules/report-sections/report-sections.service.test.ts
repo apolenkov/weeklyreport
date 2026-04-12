@@ -126,6 +126,120 @@ describe('ReportSectionsService', () => {
     });
   });
 
+  describe('saveDraft — published report guard', () => {
+    it('rejects editing a section when the report is published', async () => {
+      const repo = createRepository(baseSection);
+      // Override getReportStatus to return 'published'
+      repo.getReportStatus = async () => 'published';
+
+      const service = new ReportSectionsService(repo);
+
+      await expect(
+        service.saveDraft({
+          reportSectionId: baseSection.reportSectionId,
+          status: 'draft',
+          projectStatuses: [
+            {
+              projectId: baseSection.projects[0]!.projectId,
+              status: 'yellow',
+            },
+          ],
+          items: baseSection.items,
+          risks: [],
+          decisions: [],
+          priorities: baseSection.priorities,
+        }),
+      ).rejects.toMatchObject({
+        code: 'SECTION_ALREADY_SUBMITTED',
+        message: 'Cannot edit sections of a published report.',
+      });
+    });
+
+    it('allows editing when the report is still a draft', async () => {
+      const repo = createRepository(baseSection);
+      // getReportStatus already returns 'draft' by default
+      const service = new ReportSectionsService(repo);
+
+      const saved = await service.saveDraft({
+        reportSectionId: baseSection.reportSectionId,
+        status: 'draft',
+        projectStatuses: [
+          {
+            projectId: baseSection.projects[0]!.projectId,
+            status: 'green',
+          },
+        ],
+        items: baseSection.items,
+        risks: [],
+        decisions: [],
+        priorities: baseSection.priorities,
+      });
+
+      expect(saved.status).toBe('draft');
+      expect(saved.projects[0]?.trafficLight).toBe('green');
+    });
+
+    it('calls getReportStatus with the correct reportId', async () => {
+      const repo = createRepository(baseSection);
+      const calls: string[] = [];
+      const originalGetReportStatus = repo.getReportStatus.bind(repo);
+      repo.getReportStatus = async (reportId: string) => {
+        calls.push(reportId);
+        return originalGetReportStatus(reportId);
+      };
+
+      const service = new ReportSectionsService(repo);
+
+      await service.saveDraft({
+        reportSectionId: baseSection.reportSectionId,
+        status: 'draft',
+        projectStatuses: [
+          {
+            projectId: baseSection.projects[0]!.projectId,
+            status: 'yellow',
+          },
+        ],
+        items: baseSection.items,
+        risks: [],
+        decisions: [],
+        priorities: baseSection.priorities,
+      });
+
+      expect(calls).toEqual([baseSection.reportId]);
+    });
+
+    it('rejects saveDraft on an already-submitted section', async () => {
+      const service = new ReportSectionsService(
+        createRepository({
+          ...baseSection,
+          status: 'submitted',
+          submittedAt: new Date('2026-04-06T12:00:00.000Z'),
+          projects: [{ ...baseSection.projects[0]!, trafficLight: 'green' }],
+        }),
+      );
+
+      await expect(
+        service.saveDraft({
+          reportSectionId: baseSection.reportSectionId,
+          status: 'draft',
+          projectStatuses: [
+            {
+              projectId: baseSection.projects[0]!.projectId,
+              status: 'yellow',
+            },
+          ],
+          items: baseSection.items,
+          risks: [],
+          decisions: [],
+          priorities: baseSection.priorities,
+        }),
+      ).rejects.toMatchObject({
+        code: 'SECTION_ALREADY_SUBMITTED',
+        message: 'Submitted sections are read-only.',
+      });
+    });
+  });
+
   it('rejects a second submit for an already-submitted section', async () => {
     const service = new ReportSectionsService(
       createRepository({
