@@ -39,6 +39,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "jsdom": "^26.1.0",
     "msw": "^2.13.0",
-    "postcss": "^8.5.9"
+    "postcss": "^8.5.9",
+    "tailwindcss": "^4.2.2"
   }
 }

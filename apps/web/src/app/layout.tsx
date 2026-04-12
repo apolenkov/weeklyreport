@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Inter } from 'next/font/google';
 
 import { Toaster, TooltipProvider } from '@customreport/ui';
-import '@customreport/ui/styles/globals.css';
+import '../styles/app.css';
 
 import { TRPCProvider } from '../components/providers/trpc-provider';
 
