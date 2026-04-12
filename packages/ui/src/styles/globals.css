@@ -48,6 +48,27 @@
   --color-primary-foreground: oklch(0.99 0 0);
   --color-secondary: oklch(0.93 0.005 250);
   --color-secondary-foreground: oklch(0.14 0 0);
+
+  /* ---- Input & chart (required by shadcn components) ---- */
+  --color-input: oklch(0.88 0.005 250);
+  --color-chart-1: oklch(0.55 0.15 250);
+  --color-chart-2: oklch(0.72 0.19 142);
+  --color-chart-3: oklch(0.75 0.18 55);
+  --color-chart-4: oklch(0.58 0.22 28);
+  --color-chart-5: oklch(0.65 0.15 300);
+
+  /* ---- Sidebar ---- */
+  --color-sidebar: oklch(0.97 0.005 250);
+  --color-sidebar-foreground: oklch(0.14 0 0);
+  --color-sidebar-primary: oklch(0.35 0.12 250);
+  --color-sidebar-primary-foreground: oklch(0.99 0 0);
+  --color-sidebar-accent: oklch(0.93 0.01 250);
+  --color-sidebar-accent-foreground: oklch(0.14 0 0);
+  --color-sidebar-border: oklch(0.88 0.005 250);
+  --color-sidebar-ring: oklch(0.55 0.15 250);
+
+  /* ---- Radius ---- */
+  --radius: 0.625rem;
 }
 
 /* ---- Skeleton animation ---- */

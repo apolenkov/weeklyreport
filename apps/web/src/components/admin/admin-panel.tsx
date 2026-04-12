@@ -384,7 +384,7 @@ export function AdminPanel({
       </h1>
 
       <Tabs defaultValue="users">
-        <TabsList>
+        <TabsList className="mb-2">
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="periods">Periods</TabsTrigger>
