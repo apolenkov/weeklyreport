@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v3.0: 4/8
 
 ---
 
@@ -11,6 +11,7 @@
 
 - [x] **v1.0 Domain Logic** - Phases 1-4 (shipped 2026-04-10)
 - [x] **v2.0 Infrastructure Integration** - Phases 5-7 (shipped 2026-04-11)
+- [ ] **v3.0 Quality Assurance & Polish** - Phase 13 (4/8 plans complete)
 
 ## Phases
 
@@ -163,6 +164,28 @@ Plans:
 - [x] 07-02-PLAN.md — Health check endpoints, Prometheus metrics, graceful shutdown, correlation IDs
 - [x] 07-03-PLAN.md — Docker Compose orchestration, multi-stage Dockerfiles, dev override
 -->
+
+---
+
+<details>
+<summary>v3.0 Quality Assurance & Polish (Phase 13) - IN PROGRESS</summary>
+
+### Phase 13: Quality Assurance & Polish
+**Goal**: Fix all 25 regression bugs, add comprehensive test coverage, improve accessibility and integration quality
+**Depends on**: Phase 12 (E2E + CI/CD)
+**Plans**: 4/8 complete
+
+Plans:
+- [x] 13-01-PLAN.md -- API-layer bug fixes (10 bugs)
+- [x] 13-02-PLAN.md -- Schema-layer bug fixes (safeText, reportDate, array limits, etc.)
+- [x] 13-03-PLAN.md -- Frontend bug fixes (dates, keyboard a11y, print CSS, etc.)
+- [x] 13-04-PLAN.md -- Schema boundary tests (115 Vitest tests for Zod schemas)
+- [ ] 13-05-PLAN.md -- Service-layer tests
+- [ ] 13-06-PLAN.md -- Accessibility improvements
+- [ ] 13-07-PLAN.md -- Integration tests
+- [ ] 13-08-PLAN.md -- Final verification
+
+</details>
 
 ---
 
