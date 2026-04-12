@@ -1,9 +1,7 @@
 import { test as base, expect, type Page } from '@playwright/test';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve, join, dirname } from 'node:path';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const authDir = path.join(__dirname, '.auth');
+const authDir = resolve(dirname(__filename), '.auth');
 
 type RoleFixtures = {
   leadPage: Page;
@@ -14,7 +12,7 @@ type RoleFixtures = {
 export const test = base.extend<RoleFixtures>({
   leadPage: async ({ browser }, use) => {
     const context = await browser.newContext({
-      storageState: path.join(authDir, 'lead.json'),
+      storageState: join(authDir, 'lead.json'),
     });
     const page = await context.newPage();
     await use(page);
@@ -23,7 +21,7 @@ export const test = base.extend<RoleFixtures>({
 
   headPage: async ({ browser }, use) => {
     const context = await browser.newContext({
-      storageState: path.join(authDir, 'head.json'),
+      storageState: join(authDir, 'head.json'),
     });
     const page = await context.newPage();
     await use(page);
@@ -32,7 +30,7 @@ export const test = base.extend<RoleFixtures>({
 
   viewerPage: async ({ browser }, use) => {
     const context = await browser.newContext({
-      storageState: path.join(authDir, 'viewer.json'),
+      storageState: join(authDir, 'viewer.json'),
     });
     const page = await context.newPage();
     await use(page);

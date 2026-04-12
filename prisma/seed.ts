@@ -9,12 +9,12 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 const leadSeeds = [
-  { id: '00000000-0000-0000-0000-000000000001', email: 'lead1@customreport.local', name: 'Lead 1', samlId: 'lead-1' },
-  { id: '00000000-0000-0000-0000-000000000002', email: 'lead2@customreport.local', name: 'Lead 2', samlId: 'lead-2' },
-  { id: '00000000-0000-0000-0000-000000000003', email: 'lead3@customreport.local', name: 'Lead 3', samlId: 'lead-3' },
-  { id: '00000000-0000-0000-0000-000000000004', email: 'lead4@customreport.local', name: 'Lead 4', samlId: 'lead-4' },
-  { id: '00000000-0000-0000-0000-000000000005', email: 'lead5@customreport.local', name: 'Lead 5', samlId: 'lead-5' },
-  { id: '00000000-0000-0000-0000-000000000006', email: 'lead6@customreport.local', name: 'Lead 6', samlId: 'lead-6' },
+  { id: 'a0000000-0000-4000-8000-000000000001', email: 'lead1@customreport.local', name: 'Lead 1', samlId: 'lead-1' },
+  { id: 'a0000000-0000-4000-8000-000000000002', email: 'lead2@customreport.local', name: 'Lead 2', samlId: 'lead-2' },
+  { id: 'a0000000-0000-4000-8000-000000000003', email: 'lead3@customreport.local', name: 'Lead 3', samlId: 'lead-3' },
+  { id: 'a0000000-0000-4000-8000-000000000004', email: 'lead4@customreport.local', name: 'Lead 4', samlId: 'lead-4' },
+  { id: 'a0000000-0000-4000-8000-000000000005', email: 'lead5@customreport.local', name: 'Lead 5', samlId: 'lead-5' },
+  { id: 'a0000000-0000-4000-8000-000000000006', email: 'lead6@customreport.local', name: 'Lead 6', samlId: 'lead-6' },
 ] as const;
 
 async function main() {
@@ -22,7 +22,7 @@ async function main() {
     where: { email: 'head@customreport.local' },
     update: {},
     create: {
-      id: '00000000-0000-0000-0000-000000000099',
+      id: 'a0000000-0000-4000-8000-000000000099',
       email: 'head@customreport.local',
       name: 'Department Head',
       role: Role.head,
@@ -34,7 +34,7 @@ async function main() {
     where: { email: 'viewer@customreport.local' },
     update: {},
     create: {
-      id: '00000000-0000-0000-0000-000000000098',
+      id: 'a0000000-0000-4000-8000-000000000098',
       email: 'viewer@customreport.local',
       name: 'Report Viewer',
       role: Role.viewer,
@@ -59,10 +59,10 @@ async function main() {
   );
 
   const report = await prisma.report.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000001' },
+    where: { id: 'a0000000-0000-4000-8000-000000000101' },
     update: {},
     create: {
-      id: '00000000-0000-0000-0000-000000000001',
+      id: 'a0000000-0000-4000-8000-000000000101',
       periodStart: new Date('2026-04-06T00:00:00.000Z'),
       periodEnd: new Date('2026-04-12T23:59:59.000Z'),
       deadline: new Date('2026-04-10T15:00:00.000Z'),
@@ -72,7 +72,7 @@ async function main() {
   });
 
   for (const [index, lead] of leads.entries()) {
-    const projectId = `00000000-0000-0000-0000-00000000010${index}`;
+    const projectId = `a0000000-0000-4000-8000-00000000020${index}`;
     const project = await prisma.project.upsert({
       where: { id: projectId },
       update: {},
@@ -114,7 +114,7 @@ async function main() {
       },
     });
 
-    const itemId = `00000000-0000-0000-0000-000000020${index}00`;
+    const itemId = `a0000000-0000-4000-8000-00000003${index}000`;
     await prisma.item.upsert({
       where: { id: itemId },
       update: {},
