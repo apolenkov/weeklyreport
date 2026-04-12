@@ -88,6 +88,14 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
 
     return toExportJob(updated);
   }
+
+  /** Called by BullMQ onFailed event handler to mark a PDF export job as failed. */
+  async markExportFailed(jobId: string, error: string): Promise<void> {
+    await this.prisma.pdfExportJob.update({
+      where: { id: jobId },
+      data: { status: 'failed', error },
+    });
+  }
 }
 
 function toExportJob(row: {

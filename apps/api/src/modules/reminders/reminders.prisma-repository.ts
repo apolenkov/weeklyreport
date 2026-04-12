@@ -115,6 +115,20 @@ function toRuleDomain(rule: {
   });
 }
 
+/**
+ * Extracts recipientEmail from dedupeKey format: "ruleId:isoDate:email".
+ * The dedupeKey includes recipientEmail for per-recipient uniqueness (BUG-023).
+ */
+function extractRecipientEmail(dedupeKey: string): string {
+  // dedupeKey format: "ruleId:isoDate:recipientEmail"
+  const parts = dedupeKey.split(':');
+  // The email is everything after the second colon (ISO date contains colons too)
+  // Format: uuid:2026-04-12T10:00:00.000Z:user@example.com
+  // UUID has 4 dashes, so after splitting we need to reconstruct the email part
+  const emailMatch = dedupeKey.match(/Z:(.+)$/);
+  return emailMatch?.[1] ?? '';
+}
+
 function toExecutionDomain(execution: {
   id: string;
   ruleId: string;
@@ -134,7 +148,7 @@ function toExecutionDomain(execution: {
     status: dbExecStatusToDomain[execution.status] ?? 'queued',
     scheduledFor: execution.createdAt,
     sentAt: execution.sentAt,
-    recipientEmail: '',
+    recipientEmail: extractRecipientEmail(execution.dedupeKey),
     errorMessage: execution.error,
   });
 }

@@ -19,6 +19,7 @@ export interface PdfExportRepository {
   createExportJob(job: PdfExportJob): Promise<PdfExportJob>;
   getExportJob(jobId: string): Promise<PdfExportJob | null>;
   saveExportJob(job: PdfExportJob): Promise<PdfExportJob>;
+  markExportFailed(jobId: string, error: string): Promise<void>;
 }
 
 export class PdfExportService {
@@ -100,5 +101,37 @@ export class PdfExportService {
         checksum,
       }),
     );
+  }
+
+  /** Called by BullMQ onFailed event handler when PDF generation fails. */
+  async markExportFailed(jobId: string, error: string): Promise<void> {
+    this.logger.error('PDF export job failed', { jobId, error });
+    await this.repository.markExportFailed(jobId, error);
+  }
+
+  /**
+   * Builds the Playwright browser cookie configuration for authenticated PDF rendering.
+   * The auth cookie must be set before Playwright navigates to the print page.
+   */
+  buildAuthCookies(authToken: string): Array<{
+    name: string;
+    value: string;
+    domain: string;
+    path: string;
+    httpOnly: boolean;
+    secure: boolean;
+  }> {
+    const cookieName = process.env.AUTH_JWT_COOKIE_NAME ?? 'customreport_session';
+    const baseUrl = process.env.PDF_BASE_URL ?? 'http://localhost:3000';
+    const url = new URL(baseUrl);
+
+    return [{
+      name: cookieName,
+      value: authToken,
+      domain: url.hostname,
+      path: '/',
+      httpOnly: true,
+      secure: url.protocol === 'https:',
+    }];
   }
 }
