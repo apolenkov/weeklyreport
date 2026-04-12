@@ -177,7 +177,7 @@ export function ReportSectionForm({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-disabled={isReadOnly || undefined}>
       {/* Page header */}
       <div className="space-y-1">
         <h1 className="text-[28px] font-semibold leading-[1.2]">My Report</h1>
