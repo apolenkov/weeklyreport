@@ -166,6 +166,17 @@ Plans:
 
 ---
 
+## v3.0 Progress (in-progress)
+
+### Phase 13: Quality Assurance & Polish
+
+Plans:
+- [x] 13-03-PLAN.md -- Wave 1 bug fixes: a11y, keyboard nav, print CSS
+- [x] 13-06-PLAN.md -- UX/UI polish: ARIA landmarks, skeleton contrast, design tokens
+
+---
+
 *Roadmap created: 2026-04-06*
 *v1.0 shipped: 2026-04-10*
 *v2.0 shipped: 2026-04-11*
+*v3.0 in progress: 2026-04-12*
