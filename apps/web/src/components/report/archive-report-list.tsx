@@ -11,6 +11,8 @@ import {
 } from '@customreport/ui';
 import type { Column, TrafficLightStatus } from '@customreport/ui';
 
+import { formatDate, formatPeriodDate } from '../../lib/format-date';
+
 type ArchiveReportListProps = {
   readonly reports: ArchiveReportSummary[];
 };
@@ -20,18 +22,12 @@ function toTrafficLightStatus(value: string): TrafficLightStatus {
   return 'unset';
 }
 
-function formatDate(date: Date | string | null | undefined): string {
-  if (!date) return '\u2014';
-  const d = date instanceof Date ? date : new Date(date);
-  return d.toLocaleDateString('ru-RU', { dateStyle: 'medium' });
-}
-
 const columns: Column<ArchiveReportSummary>[] = [
   {
     key: 'periodStart',
     header: 'Period',
     sortable: true,
-    cell: (row) => `${formatDate(row.periodStart)} \u2013 ${formatDate(row.periodEnd)}`,
+    cell: (row) => `${formatPeriodDate(row.periodStart)} \u2013 ${formatPeriodDate(row.periodEnd)}`,
   },
   {
     key: 'portfolioStatus',

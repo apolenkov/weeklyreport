@@ -12,16 +12,7 @@ import {
   Progress,
 } from '@customreport/ui';
 
-function formatSubmittedAt(submittedAt: Date | null): string {
-  if (!submittedAt) {
-    return '\u2014';
-  }
-
-  return submittedAt.toLocaleString('ru-RU', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  });
-}
+import { formatDateTime } from '../../lib/format-date';
 
 const columns: Column<SubmissionDashboardRow>[] = [
   {
@@ -57,7 +48,7 @@ const columns: Column<SubmissionDashboardRow>[] = [
     key: 'submittedAt',
     header: 'Submitted',
     sortable: true,
-    cell: (row) => formatSubmittedAt(row.submittedAt),
+    cell: (row) => formatDateTime(row.submittedAt),
   },
 ];
 

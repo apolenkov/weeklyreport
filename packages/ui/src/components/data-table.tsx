@@ -102,10 +102,22 @@ export function DataTable<T>({
                   isActive && "font-semibold",
                   column.className,
                 )}
-                aria-sort={ariaSortValue}
+                tabIndex={column.sortable ? 0 : undefined}
+                role={column.sortable ? "columnheader" : undefined}
+                aria-sort={column.sortable ? (ariaSortValue ?? "none") : undefined}
                 onClick={
                   column.sortable
                     ? () => setSort((prev) => cycleSort(prev, column.key))
+                    : undefined
+                }
+                onKeyDown={
+                  column.sortable
+                    ? (e: React.KeyboardEvent) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSort((prev) => cycleSort(prev, column.key));
+                        }
+                      }
                     : undefined
                 }
               >
