@@ -1,4 +1,5 @@
-@import "tailwindcss";
+/* Design tokens and base styles for @customreport/ui.
+   Tailwind @import and @source are in apps/web/src/styles/app.css */
 
 /*
  * CustomReport Design Tokens

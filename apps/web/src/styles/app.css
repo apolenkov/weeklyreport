@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@source "../";
+@source "../../../packages/ui/src";
+
+@import "@customreport/ui/styles/globals.css" layer(base);
+
+/*
+ * Tailwind v4 + Turbopack cannot extract class names from cva() variants
+ * in external packages. These @layer rules force-generate the missing utilities
+ * that shadcn/ui sidebar, tabs, card, and other components depend on.
+ */
+@layer utilities {
+  .bg-muted { background-color: var(--color-muted); }
+  .bg-accent { background-color: var(--color-accent); }
+  .bg-card { background-color: var(--color-card); }
+  .bg-popover { background-color: var(--color-popover); }
+  .bg-sidebar { background-color: var(--color-sidebar); }
+  .bg-sidebar-accent { background-color: var(--color-sidebar-accent); }
+  .bg-input { background-color: var(--color-input); }
+  .text-sidebar-foreground { color: var(--color-sidebar-foreground); }
+  .text-sidebar-primary { color: var(--color-sidebar-primary); }
+  .text-sidebar-primary-foreground { color: var(--color-sidebar-primary-foreground); }
+  .text-sidebar-accent-foreground { color: var(--color-sidebar-accent-foreground); }
+  .text-card-foreground { color: var(--color-card-foreground); }
+  .text-popover-foreground { color: var(--color-popover-foreground); }
+  .text-accent-foreground { color: var(--color-accent-foreground); }
+  .border-sidebar-border { border-color: var(--color-sidebar-border); }
+  .border-sidebar { border-color: var(--color-sidebar-border); }
+  .ring-sidebar-ring { --tw-ring-color: var(--color-sidebar-ring); }
+}
