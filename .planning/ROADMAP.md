@@ -72,8 +72,8 @@ Full details: [v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 **Plans**: 8 plans
 
 Plans:
-- [ ] 13-01-PLAN.md — Fix API-layer bugs (BUG-001,003,004,005,007,008,021,022,023,024)
-- [x] 13-02-PLAN.md — Fix schema-layer bugs (BUG-002,006,009,013,014,015,016)
+- [x] 13-01-PLAN.md — Fix API-layer bugs (BUG-001,003,004,005,007,008,021,022,023,024)
+- [ ] 13-02-PLAN.md — Fix schema-layer bugs (BUG-002,006,009,013,014,015,016)
 - [ ] 13-03-PLAN.md — Fix frontend-layer bugs (BUG-010,011,012,017,018,019,020,025)
 - [ ] 13-04-PLAN.md — Vitest schema boundary tests (75+ test cases)
 - [ ] 13-05-PLAN.md — Vitest service/integration tests for bug-fix branches

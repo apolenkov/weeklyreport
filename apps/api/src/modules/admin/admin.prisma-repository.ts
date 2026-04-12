@@ -67,7 +67,7 @@ export class AdminPrismaRepository implements AdminRepository {
         adminReminderRuleSchema.parse({
           id: rule.id,
           reportId: rule.reportId ?? '',
-          kind: 'deadline',
+          kind: rule.name,
           fireAt: rule.createdAt,
           timezone: 'Europe/Moscow',
           status: rule.enabled ? 'active' : 'paused',
@@ -137,7 +137,17 @@ export class AdminPrismaRepository implements AdminRepository {
         })) > 0;
 
       if (!hasReferences) {
-        await this.prisma.user.delete({ where: { id: userId } });
+        try {
+          await this.prisma.user.delete({ where: { id: userId } });
+        } catch (error: unknown) {
+          // Handle FK constraint violations (Prisma P2003)
+          const prismaError = error as { code?: string };
+          if (prismaError.code === 'P2003') {
+            // Skip deletion if user is referenced by other tables
+            continue;
+          }
+          throw error;
+        }
       }
     }
 
