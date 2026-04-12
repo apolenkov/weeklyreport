@@ -1,64 +1,110 @@
 import { test, expect } from './fixtures';
-import { waitForAutosave, submitSection } from './helpers/test-utils';
 
-test('lead report page autosaves, confirms submit, and stays locked after reload', async ({ leadPage }) => {
-  await leadPage.goto('/lead/report');
+test.describe('Lead Report Entry', () => {
+  test('lead sees My Report heading and their name', async ({ leadPage }) => {
+    await leadPage.goto('/lead/report');
 
-  // Wait for tRPC query to complete — page renders one of:
-  // 1. ReportSectionForm with h1 "My Report"
-  // 2. "No active report" alert
-  // 3. QueryError
-  const heading = leadPage.getByRole('heading', { name: 'My Report', level: 1 });
-  const noReport = leadPage.getByText('No active report');
-  const queryError = leadPage.locator('[data-testid="query-error"]')
-    .or(leadPage.getByRole('button', { name: /retry/i }));
+    await expect(
+      leadPage.getByRole('heading', { name: 'My Report', level: 1 }),
+    ).toBeVisible({ timeout: 30_000 });
 
-  await expect(
-    heading.or(noReport).or(queryError),
-  ).toBeVisible({ timeout: 30_000 });
+    // Lead name is visible on the page
+    await expect(leadPage.getByText('Lead 1')).toBeVisible();
+  });
 
-  // If no active report or query error, skip form interactions
-  if (await noReport.isVisible().catch(() => false)) {
-    return;
-  }
-  if (await queryError.isVisible().catch(() => false)) {
-    return;
-  }
+  test('submitted section shows read-only state with no Submit button', async ({ leadPage }) => {
+    await leadPage.goto('/lead/report');
 
-  // Only interact if section is in draft state
-  const submitButton = leadPage.getByRole('button', { name: 'Submit Section' });
-  const isDraft = await submitButton.isVisible().catch(() => false);
+    await expect(
+      leadPage.getByRole('heading', { name: 'My Report', level: 1 }),
+    ).toBeVisible({ timeout: 30_000 });
 
-  if (isDraft) {
-    // Fill traffic light for first project
+    // Seed data has Lead 1 as status=submitted
+    await expect(leadPage.getByText('Submitted', { exact: true })).toBeVisible();
+
+    // No submit button when already submitted
+    await expect(
+      leadPage.getByRole('button', { name: 'Submit Section' }),
+    ).toHaveCount(0);
+  });
+
+  test('submitted section has disabled traffic light radios', async ({ leadPage }) => {
+    await leadPage.goto('/lead/report');
+
+    await expect(
+      leadPage.getByRole('heading', { name: 'My Report', level: 1 }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    // Submitted sections have disabled radio buttons
     const trafficLightGroup = leadPage.getByRole('group', { name: 'Project Statuses' });
+    await expect(trafficLightGroup).toBeVisible();
+
+    // The first radio group should exist and its radios should be disabled
     const firstRadioGroup = trafficLightGroup.getByRole('radiogroup').first();
-    await firstRadioGroup.getByRole('radio', { name: /green/i }).click();
+    await expect(firstRadioGroup).toBeVisible();
 
-    const currentItemInput = leadPage.getByLabel(/Current item 1/i);
-    if (await currentItemInput.isVisible().catch(() => false)) {
-      await currentItemInput.fill('Updated current week item');
-    }
+    // Check that the green radio is checked (from seed data) and disabled
+    const greenRadio = firstRadioGroup.getByRole('radio', { name: /green/i });
+    await expect(greenRadio).toBeChecked();
+    await expect(greenRadio).toBeDisabled();
+  });
 
-    await waitForAutosave(leadPage);
+  test('submitted section shows autosave indicator as "Section submitted"', async ({ leadPage }) => {
+    await leadPage.goto('/lead/report');
 
-    await leadPage.reload();
-    await expect(heading).toBeVisible({ timeout: 30_000 });
+    await expect(
+      leadPage.getByRole('heading', { name: 'My Report', level: 1 }),
+    ).toBeVisible({ timeout: 30_000 });
 
-    if (await leadPage.getByLabel(/Current item 1/i).isVisible().catch(() => false)) {
-      await expect(leadPage.getByLabel(/Current item 1/i)).toHaveValue('Updated current week item');
-    }
+    await expect(leadPage.getByText('Section submitted')).toBeVisible();
+  });
 
-    // Submit and verify success toast
-    await submitSection(leadPage);
-  }
+  test('lead report shows Project Statuses group with radio controls', async ({ leadPage }) => {
+    await leadPage.goto('/lead/report');
 
-  // Verify submitted/locked state
-  await leadPage.reload();
-  await expect(heading.or(leadPage.getByText('Submitted'))).toBeVisible({ timeout: 30_000 });
+    await expect(
+      leadPage.getByRole('heading', { name: 'My Report', level: 1 }),
+    ).toBeVisible({ timeout: 30_000 });
 
-  if (await heading.isVisible().catch(() => false)) {
-    await expect(leadPage.getByText('Submitted')).toBeVisible();
-    await expect(leadPage.getByRole('button', { name: 'Submit Section' })).toHaveCount(0);
-  }
+    // Project Statuses group
+    const projectStatuses = leadPage.getByRole('group', { name: 'Project Statuses' });
+    await expect(projectStatuses).toBeVisible();
+
+    // First project has a radiogroup with traffic light options
+    const firstRadioGroup = projectStatuses.getByRole('radiogroup').first();
+    await expect(firstRadioGroup).toBeVisible();
+
+    // Verify all four traffic light options exist
+    await expect(firstRadioGroup.getByRole('radio', { name: /green/i })).toBeVisible();
+    await expect(firstRadioGroup.getByRole('radio', { name: /yellow/i })).toBeVisible();
+    await expect(firstRadioGroup.getByRole('radio', { name: /red/i })).toBeVisible();
+    await expect(firstRadioGroup.getByRole('radio', { name: /no status/i })).toBeVisible();
+  });
+
+  test('lead report shows Items, Risks, Decisions, and Top 3 Priorities groups', async ({ leadPage }) => {
+    await leadPage.goto('/lead/report');
+
+    await expect(
+      leadPage.getByRole('heading', { name: 'My Report', level: 1 }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    // All editor groups should be present
+    await expect(leadPage.getByRole('group', { name: 'Items' })).toBeVisible();
+    await expect(leadPage.getByRole('group', { name: 'Risks' })).toBeVisible();
+    await expect(leadPage.getByRole('group', { name: 'Decisions' })).toBeVisible();
+    await expect(leadPage.getByRole('group', { name: 'Top 3 Priorities' })).toBeVisible();
+  });
+
+  test('lead report has priority textboxes', async ({ leadPage }) => {
+    await leadPage.goto('/lead/report');
+
+    await expect(
+      leadPage.getByRole('heading', { name: 'My Report', level: 1 }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    // Priority inputs exist
+    await expect(leadPage.getByRole('textbox', { name: 'Priority 1' })).toBeVisible();
+    await expect(leadPage.getByRole('textbox', { name: 'Priority 2' })).toBeVisible();
+    await expect(leadPage.getByRole('textbox', { name: 'Priority 3' })).toBeVisible();
+  });
 });

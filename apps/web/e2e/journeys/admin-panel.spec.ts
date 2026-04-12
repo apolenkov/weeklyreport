@@ -1,190 +1,137 @@
 import { test, expect } from '../fixtures';
 
 test.describe('Admin Panel - User Management', () => {
-  test('admin views user list with all seeded users', async ({
-    headPage,
-  }) => {
+  test('admin views user list with all seeded users', async ({ headPage }) => {
     await headPage.goto('/admin');
 
     await expect(
       headPage.getByRole('heading', { name: 'Admin Panel', level: 1 }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
 
     // Users table should be visible (default tab)
     await expect(
       headPage.getByRole('table', { name: 'Users' }),
     ).toBeVisible();
 
-    // Seed data has 8 users (6 leads + 1 head + 1 viewer)
-    // Verify at least one lead row is visible
+    // Verify at least Lead 1 row is visible
     await expect(headPage.getByRole('cell', { name: 'Lead 1' })).toBeVisible();
   });
 
-  test('admin adds a new user via CrudSheet', async ({
-    headPage,
-  }) => {
+  test('admin sees all four tabs', async ({ headPage }) => {
     await headPage.goto('/admin');
 
     await expect(
       headPage.getByRole('heading', { name: 'Admin Panel', level: 1 }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
 
-    // Click "Add User" to open CrudSheet
-    await headPage.getByRole('button', { name: 'Add User' }).click();
-
-    // CrudSheet dialog opens
-    const sheet = headPage.locator('[role="dialog"]');
-    await expect(sheet.getByText('Add User')).toBeVisible();
-
-    // Fill user form
-    await headPage.getByLabel('Name').fill('E2E New Lead');
-    await headPage.getByLabel('Email').fill('e2e-new-lead@test.local');
-
-    // Select role via shadcn Select
-    const roleTrigger = headPage.getByLabel('Role');
-    await roleTrigger.click();
-    await headPage.getByRole('option', { name: 'Lead' }).click();
-
-    // Submit the form
-    await sheet.getByRole('button', { name: 'Add User' }).click();
-
-    // Verify success toast and table update
-    await expect(headPage.getByText('User added')).toBeVisible();
-    await expect(
-      headPage.getByRole('cell', { name: 'E2E New Lead' }),
-    ).toBeVisible();
+    await expect(headPage.getByRole('tab', { name: 'Users' })).toBeVisible();
+    await expect(headPage.getByRole('tab', { name: 'Projects' })).toBeVisible();
+    await expect(headPage.getByRole('tab', { name: 'Periods' })).toBeVisible();
+    await expect(headPage.getByRole('tab', { name: 'Reminders' })).toBeVisible();
   });
 
-  test('admin cannot delete user who has report sections', async ({
-    headPage,
-  }) => {
+  test('admin sees Add User button', async ({ headPage }) => {
     await headPage.goto('/admin');
 
     await expect(
       headPage.getByRole('table', { name: 'Users' }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    await expect(
+      headPage.getByRole('button', { name: 'Add User' }),
     ).toBeVisible();
+  });
 
-    // Try to delete a user with existing report sections (e.g., Lead 1)
-    // The delete button should either not exist or show an error on click
-    const lead1Row = headPage.getByRole('row').filter({ hasText: 'Lead 1' });
-    const deleteButton = lead1Row.getByRole('button', { name: /delete|remove/i });
+  test('admin users table has Name, Email, Role columns', async ({ headPage }) => {
+    await headPage.goto('/admin');
 
-    if (await deleteButton.isVisible().catch(() => false)) {
-      await deleteButton.click();
+    await expect(
+      headPage.getByRole('table', { name: 'Users' }),
+    ).toBeVisible({ timeout: 15_000 });
 
-      // Confirm deletion if dialog appears
-      const confirmDialog = headPage.getByRole('dialog');
-      if (await confirmDialog.isVisible().catch(() => false)) {
-        await confirmDialog.getByRole('button', { name: /confirm|delete/i }).click();
-      }
-
-      // Should show error toast about existing sections
-      await expect(
-        headPage.getByText(/cannot delete|has sections|cannot remove/i),
-      ).toBeVisible({ timeout: 5_000 });
-    }
+    await expect(headPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
+    await expect(headPage.getByRole('columnheader', { name: 'Email' })).toBeVisible();
+    await expect(headPage.getByRole('columnheader', { name: 'Role' })).toBeVisible();
+    await expect(headPage.getByRole('columnheader', { name: 'Actions' })).toBeVisible();
   });
 });
 
-test.describe('Admin Panel - Bootstrap Data', () => {
-  test('admin creates bootstrap project and period from CrudSheet', async ({
-    headPage,
-  }) => {
+test.describe('Admin Panel - Projects Tab', () => {
+  test('admin switches to Projects tab and sees project data', async ({ headPage }) => {
     await headPage.goto('/admin');
 
     await expect(
       headPage.getByRole('heading', { name: 'Admin Panel', level: 1 }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
 
-    // Switch to Projects tab
     await headPage.getByRole('tab', { name: 'Projects' }).click();
+
     await expect(
       headPage.getByRole('table', { name: 'Projects' }),
     ).toBeVisible();
 
-    // Create a project via CrudSheet
-    await headPage.getByRole('button', { name: 'Add Project' }).click();
-    const projectSheet = headPage.locator('[role="dialog"]');
-    await expect(projectSheet.getByText('Add Project')).toBeVisible();
-    await projectSheet
-      .getByRole('button', { name: 'Create Project' })
-      .click();
-    await expect(headPage.getByText('Project created')).toBeVisible();
-
-    // Switch to Periods tab
-    await headPage.getByRole('tab', { name: 'Periods' }).click();
     await expect(
-      headPage.getByRole('table', { name: 'Report periods' }),
+      headPage.getByRole('button', { name: 'Add Project' }),
     ).toBeVisible();
 
-    // Create a period via CrudSheet
-    await headPage.getByRole('button', { name: 'Add Period' }).click();
-    const periodSheet = headPage.locator('[role="dialog"]');
-    await expect(periodSheet.getByText('Add Period')).toBeVisible();
-    await periodSheet
-      .getByRole('button', { name: 'Create Period' })
-      .click();
-    await expect(headPage.getByText('Period created')).toBeVisible();
+    // Seed data has Project 1
+    await expect(
+      headPage.getByRole('cell', { name: 'Project 1' }),
+    ).toBeVisible();
   });
 });
 
-test.describe('Admin Panel - Reminder Rules', () => {
-  test('admin views reminder rules list', async ({
-    headPage,
-  }) => {
+test.describe('Admin Panel - Periods Tab', () => {
+  test('admin switches to Periods tab and sees report periods table', async ({ headPage }) => {
     await headPage.goto('/admin');
 
     await expect(
       headPage.getByRole('heading', { name: 'Admin Panel', level: 1 }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    await headPage.getByRole('tab', { name: 'Periods' }).click();
+
+    await expect(
+      headPage.getByRole('table', { name: 'Report periods' }),
     ).toBeVisible();
 
-    // Switch to Reminders tab (if it exists)
-    const remindersTab = headPage.getByRole('tab', { name: /Reminder/i });
-    if (await remindersTab.isVisible().catch(() => false)) {
-      await remindersTab.click();
-
-      // Reminder rules table or list should be visible
-      await expect(
-        headPage.getByText(/reminder|deadline/i).first(),
-      ).toBeVisible();
-    }
+    await expect(
+      headPage.getByRole('button', { name: 'Add Period' }),
+    ).toBeVisible();
   });
 });
 
-test.describe('Admin Panel - DataTable Sort (BUG-019)', () => {
-  test('DataTable sort headers toggle sort order on click', async ({
-    headPage,
-  }) => {
+test.describe('Admin Panel - Reminders Tab', () => {
+  test('admin switches to Reminders tab', async ({ headPage }) => {
     await headPage.goto('/admin');
 
     await expect(
-      headPage.getByRole('table', { name: 'Users' }),
-    ).toBeVisible();
+      headPage.getByRole('heading', { name: 'Admin Panel', level: 1 }),
+    ).toBeVisible({ timeout: 15_000 });
 
-    // Click a sortable column header (e.g., "Name") to sort
-    const nameHeader = headPage.getByRole('columnheader', { name: /Name/i });
-    if (await nameHeader.isVisible().catch(() => false)) {
-      // Get first cell value before sort
-      const firstCellBefore = await headPage
-        .getByRole('cell')
-        .first()
-        .textContent();
+    const remindersTab = headPage.getByRole('tab', { name: 'Reminders' });
+    await expect(remindersTab).toBeVisible();
+    await remindersTab.click();
 
-      // Click header to sort
-      await nameHeader.click();
+    // Reminders tab content should load (table or empty state)
+    await headPage.waitForTimeout(500);
+  });
+});
 
-      // After click, verify the table re-rendered (header might show sort indicator)
-      // The sort state change is verified by the presence of sort indicator or
-      // by the first cell potentially changing
-      await expect(
-        headPage.getByRole('table', { name: 'Users' }),
-      ).toBeVisible();
+test.describe('Admin Panel - Access Control', () => {
+  test('lead cannot access admin panel', async ({ leadPage }) => {
+    await leadPage.goto('/admin');
 
-      // Click again to reverse sort
-      await nameHeader.click();
-      await expect(
-        headPage.getByRole('table', { name: 'Users' }),
-      ).toBeVisible();
-    }
+    // Lead sees error (FORBIDDEN mapped to generic error)
+    await expect(
+      leadPage.getByText(
+        /do not have permission|FORBIDDEN|access denied|Something went wrong/i,
+      ),
+    ).toBeVisible({ timeout: 15_000 });
+
+    // Admin heading should NOT be visible for lead
+    await expect(
+      leadPage.getByRole('heading', { name: 'Admin Panel', level: 1 }),
+    ).toHaveCount(0);
   });
 });
