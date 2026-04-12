@@ -7,8 +7,8 @@ export const userSessionSchema = z.object({
   email: z.email(),
   name: z.string().min(1),
   role: roleSchema,
-  activeReportId: z.string().uuid().nullable(),
-  activeReportSectionId: z.string().uuid().nullable(),
+  activeReportId: z.string().uuid().nullable().optional(),
+  activeReportSectionId: z.string().uuid().nullable().optional(),
 });
 
 export type Role = z.infer<typeof roleSchema>;
