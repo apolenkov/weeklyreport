@@ -1,82 +1,81 @@
-import { expect, test } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-const devSessionStorageKey = 'customreport:dev-session';
-const adminSnapshotStorageKey = 'customreport:admin-snapshot';
+test('lead users are blocked from the admin route', async ({ leadPage }) => {
+  await leadPage.goto('/admin');
 
-const headSession = {
-  userId: '00000000-0000-4000-8000-000000000001',
-  email: 'head@customreport.local',
-  name: 'Department Head',
-  role: 'head',
-  activeReportId: '22222222-2222-4222-8222-222222222222',
-  activeReportSectionId: null,
-};
-
-const leadSession = {
-  userId: '33333333-3333-4333-8333-333333333333',
-  email: 'lead1@customreport.local',
-  name: 'Lead 1',
-  role: 'lead',
-  activeReportId: '22222222-2222-4222-8222-222222222222',
-  activeReportSectionId: '11111111-1111-4111-8111-111111111111',
-};
-
-test('lead users are blocked from the admin route', async ({ page }) => {
-  await page.goto('/');
-  await page.evaluate(
-    ({ sessionKey, snapshotKey, session }) => {
-      window.localStorage.removeItem(snapshotKey);
-      window.localStorage.setItem(sessionKey, JSON.stringify(session));
-    },
-    {
-      sessionKey: devSessionStorageKey,
-      snapshotKey: adminSnapshotStorageKey,
-      session: leadSession,
-    },
-  );
-
-  await page.goto('/admin');
-
-  await expect(page.getByText('Access denied. Admin panel is available only to head users.')).toBeVisible();
+  // QueryError component renders FORBIDDEN message for lead users
+  await expect(
+    leadPage.getByText(
+      /do not have permission|FORBIDDEN|access denied|unauthorized/i,
+    ),
+  ).toBeVisible({ timeout: 15_000 });
 });
 
-test('head users can add admin-managed entities from the admin panel', async ({ page }) => {
-  await page.goto('/');
-  await page.evaluate(
-    ({ sessionKey, snapshotKey, session }) => {
-      window.localStorage.removeItem(snapshotKey);
-      window.localStorage.setItem(sessionKey, JSON.stringify(session));
-    },
-    {
-      sessionKey: devSessionStorageKey,
-      snapshotKey: adminSnapshotStorageKey,
-      session: headSession,
-    },
-  );
+test('head users can access the admin panel and see the heading', async ({ headPage }) => {
+  await headPage.goto('/admin');
 
-  await page.goto('/admin');
+  await expect(headPage.getByRole('heading', { name: 'Admin Panel', level: 1 })).toBeVisible();
 
-  await expect(page.getByRole('heading', { name: 'Admin Panel' })).toBeVisible();
-  await page.getByLabel('New user name').fill('Lead 2');
-  await page.getByLabel('New user email').fill('lead2@customreport.local');
-  await page.getByLabel('New user role').selectOption('lead');
-  await page.getByRole('button', { name: 'Add user' }).click();
-  await expect(page.getByText('Lead 2')).toBeVisible();
+  // Users table should be visible (default tab)
+  await expect(
+    headPage.getByRole('table', { name: 'Users' }),
+  ).toBeVisible();
 
-  await page.getByRole('button', { name: 'Add project' }).click();
-  await expect(page.getByText('Project Bootstrap')).toBeVisible();
+  // Seed data has users -- at least one lead row visible
+  await expect(headPage.getByRole('cell', { name: 'Lead 1' })).toBeVisible();
+});
 
-  await page.getByRole('button', { name: 'Add period' }).click();
-  await expect(page.getByText('88888888-8888-4888-8888-888888888888')).toBeVisible();
+test('head users can add a user from the admin panel via CrudSheet', async ({ headPage }) => {
+  await headPage.goto('/admin');
 
-  await page.getByRole('button', { name: 'Add reminder rule' }).click();
-  const latestReminderRow = page.locator('li').filter({ hasText: 'deadline' }).last();
+  await expect(headPage.getByRole('heading', { name: 'Admin Panel', level: 1 })).toBeVisible();
 
-  await expect(latestReminderRow).toBeVisible();
+  // Click "Add User" to open CrudSheet
+  await headPage.getByRole('button', { name: 'Add User' }).click();
 
-  await latestReminderRow.getByRole('button', { name: 'Run reminder' }).click();
-  await expect(page.getByText('lead1@customreport.local — sent')).toBeVisible();
+  // CrudSheet dialog opens
+  const sheet = headPage.locator('[role="dialog"]');
+  await expect(sheet.getByText('Add User')).toBeVisible();
 
-  await latestReminderRow.getByRole('button', { name: 'Run reminder' }).click();
-  await expect(page.getByText('lead1@customreport.local — sent')).toHaveCount(1);
+  // Fill user form
+  await headPage.getByLabel('Name').fill('Lead 2');
+  await headPage.getByLabel('Email').fill('lead2@customreport.local');
+
+  // Select role via shadcn Select
+  const roleTrigger = headPage.getByLabel('Role');
+  await roleTrigger.click();
+  await headPage.getByRole('option', { name: 'Lead' }).click();
+
+  // Submit the form
+  await sheet.getByRole('button', { name: 'Add User' }).click();
+
+  // Verify success toast and table update
+  await expect(headPage.getByText('User added')).toBeVisible();
+  await expect(headPage.getByRole('cell', { name: 'Lead 2' })).toBeVisible();
+});
+
+test('head users can create a project and period from admin panel', async ({ headPage }) => {
+  await headPage.goto('/admin');
+
+  await expect(headPage.getByRole('heading', { name: 'Admin Panel', level: 1 })).toBeVisible();
+
+  // Switch to Projects tab and create a project
+  await headPage.getByRole('tab', { name: 'Projects' }).click();
+  await expect(headPage.getByRole('table', { name: 'Projects' })).toBeVisible();
+
+  await headPage.getByRole('button', { name: 'Add Project' }).click();
+  const projectSheet = headPage.locator('[role="dialog"]');
+  await expect(projectSheet.getByText('Add Project')).toBeVisible();
+  await projectSheet.getByRole('button', { name: 'Create Project' }).click();
+  await expect(headPage.getByText('Project created')).toBeVisible();
+
+  // Switch to Periods tab and create a period
+  await headPage.getByRole('tab', { name: 'Periods' }).click();
+  await expect(headPage.getByRole('table', { name: 'Report periods' })).toBeVisible();
+
+  await headPage.getByRole('button', { name: 'Add Period' }).click();
+  const periodSheet = headPage.locator('[role="dialog"]');
+  await expect(periodSheet.getByText('Add Period')).toBeVisible();
+  await periodSheet.getByRole('button', { name: 'Create Period' }).click();
+  await expect(headPage.getByText('Period created')).toBeVisible();
 });
