@@ -13,6 +13,7 @@ import {
   TrafficLightBadge,
 } from '@customreport/ui';
 
+import { formatDate, formatPeriodDate } from '../../../../../lib/format-date';
 import { trpc } from '../../../../../lib/trpc';
 
 function isTrafficLightStatus(
@@ -26,15 +27,6 @@ function toTrafficLightStatus(
 ): TrafficLightStatus {
   if (value && isTrafficLightStatus(value)) return value;
   return 'unset';
-}
-
-function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
 }
 
 export default function PrintReportPage() {
@@ -63,8 +55,8 @@ export default function PrintReportPage() {
           Weekly Status Report
         </h1>
         <p className="text-base text-muted-foreground mt-1">
-          {formatDate(report.periodStart)} &mdash;{' '}
-          {formatDate(report.periodEnd)}
+          {formatPeriodDate(report.periodStart)} &mdash;{' '}
+          {formatPeriodDate(report.periodEnd)}
         </p>
         {report.publishedAt ? (
           <p className="text-sm text-muted-foreground mt-1">
