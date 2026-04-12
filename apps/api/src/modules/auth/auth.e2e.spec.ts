@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createAuthController } from './auth.controller';
+import { createAuthController, createSessionCookie } from './auth.controller';
 import { createRoleGuard } from './roles.guard';
 
 const env = {
@@ -51,5 +51,46 @@ describe('auth controller and roles guard', () => {
 
     expect(guard.canActivate({ user: { role: 'lead' } })).toBe(false);
     expect(guard.canActivate({ user: { role: 'head' } })).toBe(true);
+  });
+
+  describe('logout cookie clearing', () => {
+    it('createSessionCookie uses AUTH_JWT_COOKIE_NAME from env', () => {
+      const cookie = createSessionCookie('test-token', env);
+
+      expect(cookie).toContain('customreport_session=');
+      expect(cookie).toContain('HttpOnly');
+    });
+
+    it('uses custom cookie name when AUTH_JWT_COOKIE_NAME is set', () => {
+      const customEnv = { ...env, AUTH_JWT_COOKIE_NAME: 'custom_session' };
+      const cookie = createSessionCookie('test-token', customEnv);
+
+      expect(cookie).toContain('custom_session=');
+      expect(cookie).not.toContain('customreport_session=');
+    });
+
+    it('falls back to customreport_session when AUTH_JWT_COOKIE_NAME is not set', () => {
+      const envWithout = { ...env } as NodeJS.ProcessEnv;
+      delete envWithout.AUTH_JWT_COOKIE_NAME;
+      const cookie = createSessionCookie('test-token', envWithout);
+
+      expect(cookie).toContain('customreport_session=');
+    });
+
+    it('issueSessionCookie produces a cookie with the configured name', () => {
+      const customEnv = { ...env, AUTH_JWT_COOKIE_NAME: 'my_app_cookie' };
+      const controller = createAuthController(customEnv);
+      const issued = controller.issueSessionCookie({
+        userId: '11111111-1111-4111-8111-111111111111',
+        email: 'lead1@customreport.local',
+        name: 'Lead 1',
+        role: 'lead',
+        activeReportId: '22222222-2222-4222-8222-222222222222',
+        activeReportSectionId: '33333333-3333-4333-8333-333333333333',
+      });
+
+      expect(issued.setCookieHeader).toContain('my_app_cookie=');
+      expect(issued.setCookieHeader).toContain('HttpOnly');
+    });
   });
 });
