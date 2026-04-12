@@ -118,6 +118,109 @@ describe('AdminService', () => {
   });
 });
 
+  describe('removeUser — DB deletion via repository', () => {
+    it('removes the user from the snapshot users list', async () => {
+      const snapshotWithLead: AdminSnapshot = {
+        ...initialSnapshot,
+        users: [
+          ...initialSnapshot.users,
+          {
+            id: leadSession.userId,
+            email: leadSession.email,
+            name: leadSession.name,
+            role: 'lead',
+          },
+        ],
+      };
+      const service = new AdminService(createRepository(snapshotWithLead));
+      const result = await service.removeUser(leadSession.userId);
+
+      // Verify the user was removed from the snapshot
+      expect(result.users).toHaveLength(1);
+      expect(result.users.find((u) => u.id === leadSession.userId)).toBeUndefined();
+    });
+
+    it('preserves other users when one is removed', async () => {
+      const snapshotWithMultipleUsers: AdminSnapshot = {
+        ...initialSnapshot,
+        users: [
+          ...initialSnapshot.users,
+          {
+            id: leadSession.userId,
+            email: leadSession.email,
+            name: leadSession.name,
+            role: 'lead',
+          },
+          {
+            id: '44444444-4444-4444-8444-444444444444',
+            email: 'lead2@customreport.local',
+            name: 'Lead 2',
+            role: 'lead',
+          },
+        ],
+      };
+      const service = new AdminService(createRepository(snapshotWithMultipleUsers));
+      const result = await service.removeUser(leadSession.userId);
+
+      expect(result.users).toHaveLength(2);
+      expect(result.users.find((u) => u.id === leadSession.userId)).toBeUndefined();
+      expect(result.users.find((u) => u.email === 'lead2@customreport.local')).toBeDefined();
+    });
+
+    it('handles removal of non-existent user gracefully (no-op)', async () => {
+      const service = new AdminService(createRepository(initialSnapshot));
+      const result = await service.removeUser('99999999-9999-4999-8999-999999999999');
+
+      // User didn't exist, so snapshot remains unchanged
+      expect(result.users).toHaveLength(1);
+    });
+  });
+
+  describe('removeProject — archive behavior', () => {
+    it('archives the project instead of deleting it', async () => {
+      const snapshotWithProject: AdminSnapshot = {
+        ...initialSnapshot,
+        projects: [
+          {
+            id: '44444444-4444-4444-8444-444444444444',
+            name: 'Project 1',
+            archived: false,
+            leadId: headSession.userId,
+            leadName: headSession.name,
+          },
+        ],
+      };
+      const service = new AdminService(createRepository(snapshotWithProject));
+      const result = await service.removeProject('44444444-4444-4444-8444-444444444444');
+
+      expect(result.projects).toHaveLength(1);
+      expect(result.projects[0]?.archived).toBe(true);
+    });
+  });
+
+  describe('removeReminderRule — deletion', () => {
+    it('removes the reminder rule from the snapshot', async () => {
+      const snapshotWithRule: AdminSnapshot = {
+        ...initialSnapshot,
+        reminderRules: [
+          {
+            id: '66666666-6666-4666-8666-666666666666',
+            reportId: '22222222-2222-4222-8222-222222222222',
+            kind: 'deadline',
+            fireAt: new Date('2026-04-17T09:00:00.000Z'),
+            timezone: 'Europe/Moscow',
+            status: 'active',
+            version: 1,
+          },
+        ],
+      };
+      const service = new AdminService(createRepository(snapshotWithRule));
+      const result = await service.removeReminderRule('66666666-6666-4666-8666-666666666666');
+
+      expect(result.reminderRules).toHaveLength(0);
+    });
+  });
+
 describe('adminRouter', () => {
   it('returns the admin snapshot for head users', async () => {
     const service = new AdminService(createRepository(initialSnapshot));
