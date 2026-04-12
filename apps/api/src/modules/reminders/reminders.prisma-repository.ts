@@ -107,7 +107,7 @@ function toRuleDomain(rule: {
   return adminReminderRuleSchema.parse({
     id: rule.id,
     reportId: rule.reportId ?? '00000000-0000-0000-0000-000000000000',
-    kind: 'deadline',
+    kind: rule.name,
     fireAt: rule.createdAt,
     timezone: 'Europe/Moscow',
     status: rule.enabled ? 'active' : 'paused',

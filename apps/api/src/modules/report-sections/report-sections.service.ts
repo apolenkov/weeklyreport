@@ -21,6 +21,7 @@ export class ReportSectionDomainError extends Error {
 
 export interface ReportSectionsRepository {
   getSectionById(reportSectionId: string): Promise<ReportSectionReadModel | null>;
+  getReportStatus(reportId: string): Promise<string | null>;
   saveSection(section: ReportSectionReadModel): Promise<ReportSectionReadModel>;
 }
 
@@ -62,6 +63,15 @@ export class ReportSectionsService {
   async saveDraft(input: DraftSavePayload): Promise<ReportSectionReadModel> {
     const parsedInput = draftSaveSchema.parse(input);
     const section = await this.getActiveSection(parsedInput.reportSectionId);
+
+    const reportStatus = await this.repository.getReportStatus(section.reportId);
+
+    if (reportStatus === 'published') {
+      throw new ReportSectionDomainError(
+        'SECTION_ALREADY_SUBMITTED',
+        'Cannot edit sections of a published report.',
+      );
+    }
 
     if (section.status === 'submitted') {
       throw new ReportSectionDomainError(

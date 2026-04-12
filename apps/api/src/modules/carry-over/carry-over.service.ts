@@ -24,8 +24,8 @@ export type CarryOverResult = {
 
 export interface CarryOverRepository {
   findExecutionByDedupeKey(dedupeKey: string): Promise<CarryOverExecution | null>;
-  getSourceSection(sourceReportId: string): Promise<ReportSectionReadModel | null>;
-  getTargetSection(targetReportId: string): Promise<ReportSectionReadModel | null>;
+  getSourceSections(sourceReportId: string): Promise<ReportSectionReadModel[]>;
+  getTargetSections(targetReportId: string): Promise<ReportSectionReadModel[]>;
   saveCarryOver(
     execution: CarryOverExecution,
     records: CarryOverRecord[],
@@ -115,28 +115,51 @@ export class CarryOverService {
 
     const dedupeKey = `${sourceReportId}:${targetReportId}`;
     const existingExecution = await this.repository.findExecutionByDedupeKey(dedupeKey);
-    const sourceSection = await this.repository.getSourceSection(sourceReportId);
-    const targetSection = await this.repository.getTargetSection(targetReportId);
+    const sourceSections = await this.repository.getSourceSections(sourceReportId);
+    const targetSections = await this.repository.getTargetSections(targetReportId);
 
-    if (!sourceSection || !targetSection) {
+    if (sourceSections.length === 0 || targetSections.length === 0) {
       throw new CarryOverDomainError('Carry-over requires both source and target sections.');
     }
 
-    const carriedItems = sourceSection.items
-      .filter((item) => item.type === 'next' && !item.carriedOver)
-      .map((item) => cloneCarriedItem(sourceReportId, targetReportId, item));
-    const carriedDecisions = sourceSection.decisions
-      .filter((decision) => !decision.resolvedAt)
-      .map((decision) => cloneUnresolvedDecision(sourceReportId, targetReportId, decision));
+    const allCarriedItems: Array<{ item: ReportSectionReadModel['items'][number]; record: CarryOverRecord }> = [];
+    const allCarriedDecisions: Array<{ decision: ReportSectionReadModel['decisions'][number]; record: CarryOverRecord }> = [];
 
-    const nextTargetSection = reportSectionReadModelSchema.parse({
-      ...targetSection,
-      items: existingExecution
-        ? targetSection.items
-        : [...targetSection.items, ...carriedItems.map((entry) => entry.item)],
-      decisions: existingExecution
-        ? targetSection.decisions
-        : [...targetSection.decisions, ...carriedDecisions.map((entry) => entry.decision)],
+    for (const sourceSection of sourceSections) {
+      const sectionItems = sourceSection.items
+        .filter((item) => item.type === 'next' && !item.carriedOver)
+        .map((item) => cloneCarriedItem(sourceReportId, targetReportId, item));
+      const sectionDecisions = sourceSection.decisions
+        .filter((decision) => !decision.resolvedAt)
+        .map((decision) => cloneUnresolvedDecision(sourceReportId, targetReportId, decision));
+
+      allCarriedItems.push(...sectionItems);
+      allCarriedDecisions.push(...sectionDecisions);
+    }
+
+    // Match carried items/decisions to target sections by authorId
+    const nextTargetSections = targetSections.map((targetSection) => {
+      const sourceSection = sourceSections.find((s) => s.authorId === targetSection.authorId);
+      if (!sourceSection) {
+        return targetSection;
+      }
+
+      const sectionCarriedItems = allCarriedItems.filter((entry) =>
+        sourceSection.items.some((i) => i.id === entry.record.sourceItemId),
+      );
+      const sectionCarriedDecisions = allCarriedDecisions.filter((entry) =>
+        sourceSection.decisions.some((d) => d.id === entry.record.sourceDecisionId),
+      );
+
+      return reportSectionReadModelSchema.parse({
+        ...targetSection,
+        items: existingExecution
+          ? targetSection.items
+          : [...targetSection.items, ...sectionCarriedItems.map((entry) => entry.item)],
+        decisions: existingExecution
+          ? targetSection.decisions
+          : [...targetSection.decisions, ...sectionCarriedDecisions.map((entry) => entry.decision)],
+      });
     });
 
     const execution = existingExecution ?? carryOverExecutionSchema.parse({
@@ -147,19 +170,20 @@ export class CarryOverService {
       status: 'completed',
       startedAt: new Date(),
       completedAt: new Date(),
-      carriedItemCount: carriedItems.length,
-      carriedDecisionCount: carriedDecisions.length,
+      carriedItemCount: allCarriedItems.length,
+      carriedDecisionCount: allCarriedDecisions.length,
     });
     const records = existingExecution
       ? []
-      : [...carriedItems.map((entry) => entry.record), ...carriedDecisions.map((entry) => entry.record)];
+      : [...allCarriedItems.map((entry) => entry.record), ...allCarriedDecisions.map((entry) => entry.record)];
 
     this.logger.info('executing carry-over', {
       sourceReportId,
       targetReportId,
-      carriedItems: carriedItems.length,
-      carriedDecisions: carriedDecisions.length,
+      sourceSections: sourceSections.length,
+      carriedItems: allCarriedItems.length,
+      carriedDecisions: allCarriedDecisions.length,
     });
-    return this.repository.saveCarryOver(execution, records, nextTargetSection);
+    return this.repository.saveCarryOver(execution, records, nextTargetSections.length > 0 ? nextTargetSections[0]! : targetSections[0]!);
   }
 }
