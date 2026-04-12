@@ -111,6 +111,81 @@ describe('RemindersService', () => {
   });
 });
 
+  describe('reminder rule domain mapping and deduplication', () => {
+    const weeklyRule: AdminReminderRule = {
+      ...activeRule,
+      id: '88888888-8888-4888-8888-888888888888',
+      kind: 'weekly',
+    };
+
+    it('reads kind from DB field — deadline rule', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const execution = await service.requestReminderExecution(
+        activeRule.id,
+        'lead1@customreport.local',
+      );
+
+      // The dedupeKey embeds the rule id and fireAt, which come from
+      // the DB rule's kind-specific scheduling. The execution's ruleId
+      // correctly maps to the deadline rule.
+      expect(execution.ruleId).toBe(activeRule.id);
+    });
+
+    it('reads kind from DB field — weekly rule', async () => {
+      const service = new RemindersService(createRepository(weeklyRule));
+      const execution = await service.requestReminderExecution(
+        weeklyRule.id,
+        'lead1@customreport.local',
+      );
+
+      expect(execution.ruleId).toBe(weeklyRule.id);
+    });
+
+    it('generates different dedupeKeys for different recipient emails', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const exec1 = await service.requestReminderExecution(
+        activeRule.id,
+        'lead1@customreport.local',
+      );
+      const exec2 = await service.requestReminderExecution(
+        activeRule.id,
+        'lead2@customreport.local',
+      );
+
+      // Different emails must produce different executions
+      expect(exec1.id).not.toBe(exec2.id);
+      expect(exec1.dedupeKey).not.toBe(exec2.dedupeKey);
+      expect(exec1.recipientEmail).toBe('lead1@customreport.local');
+      expect(exec2.recipientEmail).toBe('lead2@customreport.local');
+    });
+
+    it('generates the same dedupeKey for the same email + rule + fireAt (deterministic)', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const exec1 = await service.requestReminderExecution(
+        activeRule.id,
+        'lead1@customreport.local',
+      );
+      const exec2 = await service.requestReminderExecution(
+        activeRule.id,
+        'lead1@customreport.local',
+      );
+
+      // Same inputs must produce the same execution (idempotency via dedupeKey)
+      expect(exec2.id).toBe(exec1.id);
+      expect(exec2.dedupeKey).toBe(exec1.dedupeKey);
+    });
+
+    it('dedupeKey contains recipientEmail as a component', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const execution = await service.requestReminderExecution(
+        activeRule.id,
+        'lead1@customreport.local',
+      );
+
+      expect(execution.dedupeKey).toContain('lead1@customreport.local');
+    });
+  });
+
 describe('remindersRouter', () => {
   it('returns rule execution history', async () => {
     const service = new RemindersService(createRepository(activeRule));

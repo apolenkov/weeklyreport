@@ -94,6 +94,108 @@ describe('PdfExportService', () => {
   });
 });
 
+  describe('markExportFailed', () => {
+    it('updates job status to failed with error message', async () => {
+      const repo = createRepository(publishedReport);
+      const service = new PdfExportService(repo);
+
+      // Create a job first
+      const queued = await service.requestPdfExport(reportId);
+
+      // Mark it as failed
+      await service.markExportFailed(queued.jobId, 'timeout error');
+
+      // Verify the job status was updated
+      const job = await service.getPdfExportStatus(queued.jobId);
+      expect(job.status).toBe('failed');
+    });
+
+    it('calls repository.markExportFailed with correct parameters', async () => {
+      const repo = createRepository(publishedReport);
+      const markExportFailedCalls: Array<{ jobId: string; error: string }> = [];
+      const originalMarkExportFailed = repo.markExportFailed.bind(repo);
+      repo.markExportFailed = async (jobId: string, error: string) => {
+        markExportFailedCalls.push({ jobId, error });
+        return originalMarkExportFailed(jobId, error);
+      };
+
+      const service = new PdfExportService(repo);
+      const queued = await service.requestPdfExport(reportId);
+
+      await service.markExportFailed(queued.jobId, 'browser crashed');
+
+      expect(markExportFailedCalls).toHaveLength(1);
+      expect(markExportFailedCalls[0]).toEqual({
+        jobId: queued.jobId,
+        error: 'browser crashed',
+      });
+    });
+  });
+
+  describe('buildAuthCookies', () => {
+    it('uses AUTH_JWT_COOKIE_NAME env for cookie name', () => {
+      const originalEnv = process.env.AUTH_JWT_COOKIE_NAME;
+      process.env.AUTH_JWT_COOKIE_NAME = 'my_custom_session';
+
+      try {
+        const service = new PdfExportService(createRepository(publishedReport));
+        const cookies = service.buildAuthCookies('test-jwt-token');
+
+        expect(cookies).toHaveLength(1);
+        expect(cookies[0]?.name).toBe('my_custom_session');
+        expect(cookies[0]?.value).toBe('test-jwt-token');
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.AUTH_JWT_COOKIE_NAME;
+        } else {
+          process.env.AUTH_JWT_COOKIE_NAME = originalEnv;
+        }
+      }
+    });
+
+    it('falls back to default cookie name when env is not set', () => {
+      const originalEnv = process.env.AUTH_JWT_COOKIE_NAME;
+      delete process.env.AUTH_JWT_COOKIE_NAME;
+
+      try {
+        const service = new PdfExportService(createRepository(publishedReport));
+        const cookies = service.buildAuthCookies('test-jwt-token');
+
+        expect(cookies[0]?.name).toBe('customreport_session');
+      } finally {
+        if (originalEnv !== undefined) {
+          process.env.AUTH_JWT_COOKIE_NAME = originalEnv;
+        }
+      }
+    });
+
+    it('sets httpOnly to true for security', () => {
+      const service = new PdfExportService(createRepository(publishedReport));
+      const cookies = service.buildAuthCookies('test-jwt-token');
+
+      expect(cookies[0]?.httpOnly).toBe(true);
+    });
+
+    it('extracts domain from PDF_BASE_URL', () => {
+      const originalEnv = process.env.PDF_BASE_URL;
+      process.env.PDF_BASE_URL = 'https://reports.example.com';
+
+      try {
+        const service = new PdfExportService(createRepository(publishedReport));
+        const cookies = service.buildAuthCookies('test-jwt-token');
+
+        expect(cookies[0]?.domain).toBe('reports.example.com');
+        expect(cookies[0]?.secure).toBe(true);
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.PDF_BASE_URL;
+        } else {
+          process.env.PDF_BASE_URL = originalEnv;
+        }
+      }
+    });
+  });
+
 describe('pdfExportRouter', () => {
   it('returns the latest async export status for an existing job', async () => {
     const service = new PdfExportService(createRepository(publishedReport));
