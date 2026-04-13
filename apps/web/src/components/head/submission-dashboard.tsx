@@ -77,7 +77,7 @@ export function SubmissionDashboard({ rows }: SubmissionDashboardProps) {
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="line-clamp-2 text-sm text-muted-foreground">
                     {row.projectNames.join(' · ')}
                   </p>
                   {row.submittedAt ? (
