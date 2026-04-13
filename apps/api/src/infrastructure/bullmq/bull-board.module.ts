@@ -4,20 +4,24 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { Queue } from 'bullmq';
 import type { INestApplication } from '@nestjs/common';
-import { getQueueToken } from '@nestjs/bullmq';
 
 import { createAuthController } from '../../modules/auth/auth.controller';
+
+const redisConnection = {
+  host: process.env['REDIS_HOST'] ?? 'localhost',
+  port: Number(process.env['REDIS_PORT'] ?? 6379),
+};
 
 /**
  * Mount Bull Board monitoring UI at /admin/queues.
  *
- * Retrieves the registered BullMQ queues from the NestJS DI container
- * and wires them into the Bull Board Express adapter.
+ * Creates Queue instances directly (bypasses @nestjs/bullmq DI) to avoid
+ * the DiscoveryService bug in @nestjs/bullmq 11 + NestJS 11.
  * Protected by JWT auth — only head role can access.
  */
-export function mountBullBoard(app: INestApplication): void {
-  const pdfQueue = app.get<Queue>(getQueueToken('pdf-export'));
-  const emailQueue = app.get<Queue>(getQueueToken('email-reminder'));
+export function mountBullBoard(_app: INestApplication): void {
+  const pdfQueue = new Queue('pdf-export', { connection: redisConnection });
+  const emailQueue = new Queue('email-reminder', { connection: redisConnection });
 
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
@@ -54,6 +58,6 @@ export function mountBullBoard(app: INestApplication): void {
     }
   };
 
-  const expressApp = app.getHttpAdapter().getInstance();
+  const expressApp = _app.getHttpAdapter().getInstance();
   expressApp.use('/admin/queues', requireHead, serverAdapter.getRouter());
 }
