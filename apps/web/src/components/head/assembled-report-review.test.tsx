@@ -109,7 +109,8 @@ describe('AssembledReportReview', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Assembled Report' })).toBeInTheDocument();
-    expect(screen.getByText('Portfolio status: red')).toBeInTheDocument();
+    // Portfolio status is shown as a Badge with just the status text
+    expect(screen.getByText('red')).toBeInTheDocument();
     expect(screen.getByText('Lead 1')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Current update')).toBeInTheDocument();
   });
@@ -126,14 +127,21 @@ describe('AssembledReportReview', () => {
       />,
     );
 
-    await user.selectOptions(
-      screen.getByLabelText('Lead 1 / Project 1 traffic light'),
-      'yellow',
-    );
+    // Traffic light is a radiogroup — click the "Yellow" radio button
+    const radioGroup = screen.getByRole('radiogroup', {
+      name: 'Lead 1 / Project 1 traffic light',
+    });
+    const yellowButton = radioGroup.querySelector('[aria-label="Yellow"]') as HTMLElement;
+    await user.click(yellowButton);
 
     await waitFor(() => {
       expect(onUpdateSection).toHaveBeenCalled();
-      expect(screen.getByLabelText('Lead 1 / Project 1 traffic light')).toHaveValue('yellow');
+      // After update the Yellow button should be checked
+      const updatedRadioGroup = screen.getByRole('radiogroup', {
+        name: 'Lead 1 / Project 1 traffic light',
+      });
+      const updatedYellow = updatedRadioGroup.querySelector('[aria-label="Yellow"]');
+      expect(updatedYellow).toHaveAttribute('aria-checked', 'true');
     });
   });
 
@@ -155,12 +163,23 @@ describe('AssembledReportReview', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Publish report' }));
+    // Button says "Publish Report" (capital R)
+    await user.click(screen.getByRole('button', { name: 'Publish Report' }));
+
+    // ConfirmDialog appears — click the "Publish" confirm button
+    await user.click(await screen.findByRole('button', { name: 'Publish' }));
 
     await waitFor(() => {
       expect(screen.getByText('Report published')).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Publish report' })).not.toBeInTheDocument();
-      expect(screen.getByLabelText('Lead 1 / Project 1 traffic light')).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Publish Report' })).not.toBeInTheDocument();
+      // After publish all radio buttons in the radiogroup should be disabled
+      const radioGroup = screen.getByRole('radiogroup', {
+        name: 'Lead 1 / Project 1 traffic light',
+      });
+      const buttons = radioGroup.querySelectorAll('button');
+      buttons.forEach((button) => {
+        expect(button).toBeDisabled();
+      });
     });
   });
 });

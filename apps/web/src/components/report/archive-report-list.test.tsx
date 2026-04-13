@@ -34,13 +34,29 @@ const reports: ArchiveReportSummary[] = [
 ];
 
 describe('ArchiveReportList', () => {
-  it('renders reports sorted by publish date with browse links', () => {
+  it('renders report cards as links with correct hrefs', () => {
     render(<ArchiveReportList reports={reports} />);
 
-    expect(screen.getByRole('heading', { name: 'Report History' })).toBeInTheDocument();
-    const links = screen.getAllByRole('link', { name: 'Open report' });
+    // Component renders report links (no heading element in this component)
+    const links = screen.getAllByRole('link');
 
+    expect(links).toHaveLength(2);
     expect(links[0]).toHaveAttribute('href', '/reports/22222222-2222-4222-8222-222222222222');
     expect(links[1]).toHaveAttribute('href', '/reports/11111111-1111-4111-8111-111111111111');
+  });
+
+  it('shows published-by names in report cards', () => {
+    render(<ArchiveReportList reports={reports} />);
+
+    // Each report card shows "by Department Head"
+    const byLabels = screen.getAllByText(/by Department Head/);
+    expect(byLabels).toHaveLength(2);
+  });
+
+  it('renders empty state when there are no reports', () => {
+    render(<ArchiveReportList reports={[]} />);
+
+    expect(screen.getByText('No published reports yet')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 });
