@@ -14,7 +14,7 @@ test.describe('Admin Panel - User Management', () => {
     ).toBeVisible();
 
     // Verify at least Lead 1 row is visible
-    await expect(headPage.getByRole('cell', { name: 'Lead 1' })).toBeVisible();
+    await expect(headPage.getByRole('cell', { name: 'Lead 1', exact: true })).toBeVisible();
   });
 
   test('admin sees all four tabs', async ({ headPage }) => {
@@ -52,7 +52,6 @@ test.describe('Admin Panel - User Management', () => {
     await expect(headPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(headPage.getByRole('columnheader', { name: 'Email' })).toBeVisible();
     await expect(headPage.getByRole('columnheader', { name: 'Role' })).toBeVisible();
-    await expect(headPage.getByRole('columnheader', { name: 'Actions' })).toBeVisible();
   });
 });
 

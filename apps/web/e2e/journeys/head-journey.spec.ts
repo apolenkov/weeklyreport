@@ -12,7 +12,7 @@ test.describe('Head Journey', () => {
       headPage.getByRole('table', { name: 'Users' }),
     ).toBeVisible();
 
-    await expect(headPage.getByRole('cell', { name: 'Lead 1' })).toBeVisible();
+    await expect(headPage.getByRole('cell', { name: 'Lead 1', exact: true })).toBeVisible();
   });
 
   test('head can navigate to assembled report page', async ({ headPage }) => {

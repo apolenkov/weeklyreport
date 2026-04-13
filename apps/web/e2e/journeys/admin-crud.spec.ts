@@ -13,7 +13,7 @@ test.describe('Admin CRUD', () => {
     ).toBeVisible();
 
     // Seed data has 8 users (6 leads + 1 head + 1 viewer)
-    await expect(headPage.getByRole('cell', { name: 'Lead 1' })).toBeVisible();
+    await expect(headPage.getByRole('cell', { name: 'Lead 1', exact: true })).toBeVisible();
   });
 
   test('head sees Add User button on Users tab', async ({ headPage }) => {

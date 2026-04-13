@@ -54,7 +54,7 @@ export function AppShell({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-background/80 px-6 backdrop-blur-md">
+        <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-background/80 px-6 backdrop-blur-md">
           <MobileNav activeReportId={activeReportId} role={role} currentPath={currentPath} />
           <div className="flex-1" />
           <NavUser userName={userName} userRole={role} />

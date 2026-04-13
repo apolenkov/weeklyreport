@@ -30,7 +30,7 @@ test.describe('Admin Panel', () => {
     ).toBeVisible();
 
     // Seed data has users -- Lead 1 row visible
-    await expect(headPage.getByRole('cell', { name: 'Lead 1' })).toBeVisible();
+    await expect(headPage.getByRole('cell', { name: 'Lead 1', exact: true })).toBeVisible();
   });
 
   test('admin panel has four tabs: Users, Projects, Periods, Reminders', async ({ headPage }) => {
