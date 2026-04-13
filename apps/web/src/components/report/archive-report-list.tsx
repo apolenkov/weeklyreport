@@ -64,7 +64,7 @@ export function ArchiveReportList({ reports }: ArchiveReportListProps) {
             asChild
           >
             <span>
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-5 w-5" />
             </span>
           </Button>
         </Link>
