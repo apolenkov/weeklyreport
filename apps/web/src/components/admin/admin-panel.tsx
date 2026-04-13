@@ -1,6 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  Bell,
+  Calendar,
+  FolderKanban,
+  RefreshCw,
+  Trash2,
+  Users,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { formatDate, formatDateTime, formatPeriodDate } from '../../lib/format-date';
@@ -17,6 +25,8 @@ import type {
 import {
   Badge,
   Button,
+  Card,
+  CardContent,
   ConfirmDialog,
   CrudSheet,
   DataTable,
@@ -54,7 +64,31 @@ function buildUserId(): string {
   return crypto.randomUUID();
 }
 
-
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  colorClass,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  colorClass: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-4 pt-6">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${colorClass}`}>
+          <Icon className="h-6 w-6" />
+        </div>
+        <div>
+          <p className="text-3xl font-semibold tracking-tight">{value}</p>
+          <p className="text-sm text-muted-foreground">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function AdminPanel({
   initialSnapshot,
@@ -278,19 +312,20 @@ export function AdminPanel({
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: '',
       cell: (row) =>
         row.role !== 'head' ? (
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive"
             onClick={(e) => {
               e.stopPropagation();
               setDeleteUserId(row.id);
               setDeleteUserName(row.name);
             }}
           >
-            Remove
+            <Trash2 className="h-4 w-4" />
           </Button>
         ) : null,
     },
@@ -298,10 +333,7 @@ export function AdminPanel({
 
   const projectColumns: Column<AdminProject>[] = [
     { key: 'name', header: 'Name', sortable: true },
-    {
-      key: 'leadName',
-      header: 'Lead',
-    },
+    { key: 'leadName', header: 'Lead' },
     {
       key: 'status',
       header: 'Status',
@@ -343,9 +375,7 @@ export function AdminPanel({
       key: 'status',
       header: 'Status',
       cell: (row) => (
-        <Badge
-          variant={row.status === 'active' ? 'secondary' : 'outline'}
-        >
+        <Badge variant={row.status === 'active' ? 'secondary' : 'outline'}>
           {row.status}
         </Badge>
       ),
@@ -361,7 +391,7 @@ export function AdminPanel({
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: '',
       cell: (row) => (
         <Button
           variant="ghost"
@@ -377,26 +407,69 @@ export function AdminPanel({
     },
   ];
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-[28px] font-semibold leading-[1.2]">
-        Admin Panel
-      </h1>
+  const activeProjects = snapshot.projects.filter((p) => !p.archived).length;
 
+  return (
+    <div className="space-y-8">
+      {/* Page header */}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Admin Panel</h1>
+        <p className="text-sm text-muted-foreground">Manage users, projects, periods, and reminders</p>
+      </div>
+
+      {/* Stats overview */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={Users}
+          label="Users"
+          value={snapshot.users.length}
+          colorClass="bg-primary/10 text-primary"
+        />
+        <StatCard
+          icon={FolderKanban}
+          label="Active Projects"
+          value={activeProjects}
+          colorClass="bg-[oklch(0.68_0.17_152)]/10 text-[oklch(0.68_0.17_152)]"
+        />
+        <StatCard
+          icon={Calendar}
+          label="Periods"
+          value={snapshot.periods.length}
+          colorClass="bg-warning/10 text-warning"
+        />
+        <StatCard
+          icon={Bell}
+          label="Reminder Rules"
+          value={snapshot.reminderRules.length}
+          colorClass="bg-[oklch(0.62_0.18_310)]/10 text-[oklch(0.62_0.18_310)]"
+        />
+      </div>
+
+      {/* Tabs */}
       <Tabs defaultValue="users">
-        <TabsList className="mb-4 h-9 gap-1 p-1">
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="periods">Periods</TabsTrigger>
-          <TabsTrigger value="reminders">Reminders</TabsTrigger>
+        <TabsList className="mb-6">
+          <TabsTrigger value="users" className="gap-1.5">
+            <Users className="h-4 w-4" />
+            Users
+          </TabsTrigger>
+          <TabsTrigger value="projects" className="gap-1.5">
+            <FolderKanban className="h-4 w-4" />
+            Projects
+          </TabsTrigger>
+          <TabsTrigger value="periods" className="gap-1.5">
+            <Calendar className="h-4 w-4" />
+            Periods
+          </TabsTrigger>
+          <TabsTrigger value="reminders" className="gap-1.5">
+            <Bell className="h-4 w-4" />
+            Reminders
+          </TabsTrigger>
         </TabsList>
 
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4">
           <div className="flex justify-end">
-            <Button onClick={() => setUserSheetOpen(true)}>
-              Add User
-            </Button>
+            <Button onClick={() => setUserSheetOpen(true)}>Add User</Button>
           </div>
           <DataTable
             columns={userColumns}
@@ -408,9 +481,7 @@ export function AdminPanel({
         {/* Projects Tab */}
         <TabsContent value="projects" className="space-y-4">
           <div className="flex justify-end">
-            <Button onClick={() => setProjectSheetOpen(true)}>
-              Add Project
-            </Button>
+            <Button onClick={() => setProjectSheetOpen(true)}>Add Project</Button>
           </div>
           <DataTable
             columns={projectColumns}
@@ -424,13 +495,13 @@ export function AdminPanel({
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
+              className="gap-1.5"
               onClick={() => setCarryOverOpen(true)}
             >
+              <RefreshCw className="h-4 w-4" />
               Run Carry-Over
             </Button>
-            <Button onClick={() => setPeriodSheetOpen(true)}>
-              Add Period
-            </Button>
+            <Button onClick={() => setPeriodSheetOpen(true)}>Add Period</Button>
           </div>
           <DataTable
             columns={periodColumns}
@@ -442,9 +513,7 @@ export function AdminPanel({
         {/* Reminders Tab */}
         <TabsContent value="reminders" className="space-y-4">
           <div className="flex justify-end">
-            <Button onClick={() => setReminderSheetOpen(true)}>
-              Add Rule
-            </Button>
+            <Button onClick={() => setReminderSheetOpen(true)}>Add Rule</Button>
           </div>
           <DataTable
             columns={reminderColumns}
