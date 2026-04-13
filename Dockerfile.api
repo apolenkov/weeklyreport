@@ -21,14 +21,32 @@ COPY --from=pruner /app/out/full/ .
 # Generate Prisma client
 RUN pnpm exec prisma generate
 RUN pnpm turbo build --filter=@customreport/api
+# Remove devDependencies before copying to runner stage
+RUN pnpm prune --prod --config.ignore-scripts=true
 
 # Stage 4: Production runner
-# Use Playwright base image for PDF generation (Chromium pre-installed)
+# Use Playwright base image for PDF generation (Chromium pre-installed).
+# NOTE: This image is ~1.4GB due to the Chromium dependency required for PDF export.
+# The 200MB size target applies to the web image (alpine-based, ~150MB).
+# The API image cannot meet 200MB due to Playwright/Chromium — this is an architectural constraint.
 FROM mcr.microsoft.com/playwright:v1.59.0-noble AS runner
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 nodejs
 WORKDIR /app
-COPY --from=builder --chown=nodejs:nodejs /app .
+
+# Copy pruned monorepo structure with production deps only
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nodejs:nodejs /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder --chown=nodejs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/apps/api/dist ./apps/api/dist
+COPY --from=builder --chown=nodejs:nodejs /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder --chown=nodejs:nodejs /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/packages ./packages
+
+# Prisma client and schema needed at runtime
+COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
+
 # Create PDF storage directory
 RUN mkdir -p /app/data/pdfs && chown nodejs:nodejs /app/data/pdfs
 USER nodejs
