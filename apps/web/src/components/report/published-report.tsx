@@ -162,17 +162,17 @@ export function PublishedReport({
             <Separator orientation="vertical" className="h-6" />
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1.5 text-sm">
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-traffic-green)]" />
+                <span aria-hidden="true" className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-traffic-green)]" />
                 <span className="font-medium">{report.portfolioOverview.totals.green}</span>
                 <span className="text-muted-foreground">Green</span>
               </span>
               <span className="inline-flex items-center gap-1.5 text-sm">
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-traffic-yellow)]" />
+                <span aria-hidden="true" className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-traffic-yellow)]" />
                 <span className="font-medium">{report.portfolioOverview.totals.yellow}</span>
                 <span className="text-muted-foreground">Yellow</span>
               </span>
               <span className="inline-flex items-center gap-1.5 text-sm">
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-traffic-red)]" />
+                <span aria-hidden="true" className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-traffic-red)]" />
                 <span className="font-medium">{report.portfolioOverview.totals.red}</span>
                 <span className="text-muted-foreground">Red</span>
               </span>
