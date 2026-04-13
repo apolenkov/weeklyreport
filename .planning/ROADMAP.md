@@ -197,7 +197,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 14-01-PLAN.md — Unit tests for BullMQ processors (pdf-export, email-reminder) and tRPC auth middleware
+- [x] 14-01-PLAN.md — Unit tests for BullMQ processors (pdf-export, email-reminder) and tRPC auth middleware
 - [ ] 14-02-PLAN.md — Docker image optimization (Dockerfile.api) and production docker-compose.prod.yml
 - [ ] 14-03-PLAN.md — CI pipeline integration tests, test script updates, full suite verification
 
@@ -206,7 +206,7 @@ Plans:
 **Goal:** All pages visually polished with consistent design system, every screen verified via Playwright screenshots, deferred P3 findings resolved, empty states and error states properly styled
 **Requirements**: TBD
 **Depends on:** Phase 13
-**Plans:** 0 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 15 to break down)
