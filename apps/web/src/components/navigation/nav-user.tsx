@@ -54,7 +54,7 @@ export function NavUser({ userName, userRole }: NavUserProps) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-2.5 rounded-lg p-1.5 text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex items-center gap-2.5 rounded-lg p-2 text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="User menu"
         >
           <Avatar className="size-9 border border-border">
@@ -62,7 +62,7 @@ export function NavUser({ userName, userRole }: NavUserProps) {
               {getInitials(userName)}
             </AvatarFallback>
           </Avatar>
-          <div className="hidden items-start gap-1.5 lg:flex lg:flex-col">
+          <div className="hidden items-start gap-2 lg:flex lg:flex-col">
             <span className="max-w-[140px] truncate text-sm font-medium leading-tight">
               {userName}
             </span>

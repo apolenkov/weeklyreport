@@ -51,7 +51,7 @@ export function ArchiveReportList({ reports }: ArchiveReportListProps) {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="size-4" />
               Published {formatDate(report.publishedAt)}
-              <span className="text-muted-foreground/60">by {report.publishedByName}</span>
+              <span>· by {report.publishedByName}</span>
             </div>
           </div>
           <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-1 group-hover:text-muted-foreground" />

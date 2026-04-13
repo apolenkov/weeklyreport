@@ -42,10 +42,10 @@ export function MobileNav({ activeReportId = null, role, currentPath }: MobileNa
         >
           <Menu className="size-5" />
         </Button>
-        <SheetContent side="left" className="w-[280px] p-0">
-          <SheetHeader className="border-b bg-[oklch(0.22_0.06_260)] px-6 py-5">
-            <SheetTitle className="flex items-center gap-3 text-white">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[oklch(0.75_0.15_70)] text-sm font-semibold text-[oklch(0.15_0.03_260)]">
+        <SheetContent side="left" className="w-[min(280px,85vw)] p-0">
+          <SheetHeader className="border-b bg-sidebar px-6 py-5">
+            <SheetTitle className="flex items-center gap-3 text-sidebar-foreground">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
                 CR
               </div>
               <span className="text-lg font-semibold">CustomReport</span>
@@ -63,7 +63,7 @@ export function MobileNav({ activeReportId = null, role, currentPath }: MobileNa
                   onClick={() => setOpen(false)}
                   className={`flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                     isActive
-                      ? 'bg-primary font-medium text-primary-foreground'
+                      ? 'bg-primary font-semibold text-primary-foreground'
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   }`}
                   aria-current={isActive ? 'page' : undefined}

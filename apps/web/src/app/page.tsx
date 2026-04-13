@@ -39,33 +39,33 @@ export default function HomePage() {
   return (
     <main className="flex min-h-svh">
       {/* Left panel — branded */}
-      <div className="relative hidden w-1/2 overflow-hidden bg-[oklch(0.22_0.06_260)] lg:flex lg:flex-col lg:justify-between lg:p-12">
+      <div className="relative hidden w-1/2 overflow-hidden bg-sidebar lg:flex lg:flex-col lg:justify-between lg:p-12">
         {/* Gradient overlay */}
         <div
           className="absolute inset-0 opacity-30"
           style={{
             background:
-              'radial-gradient(ellipse at 30% 20%, oklch(0.75 0.15 70 / 0.4), transparent 60%), radial-gradient(ellipse at 70% 80%, oklch(0.55 0.18 260 / 0.3), transparent 60%)',
+              'radial-gradient(ellipse at 30% 20%, var(--color-sidebar-primary) / 0.4, transparent 60%), radial-gradient(ellipse at 70% 80%, var(--color-chart-1) / 0.3, transparent 60%)',
           }}
         />
 
         {/* Content */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[oklch(0.75_0.15_70)] font-semibold text-[oklch(0.15_0.03_260)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
               CR
             </div>
-            <span className="text-xl font-semibold text-white">CustomReport</span>
+            <span className="text-xl font-semibold text-sidebar-foreground">CustomReport</span>
           </div>
         </div>
 
         <div className="relative z-10 space-y-6">
-          <h1 className="text-4xl font-semibold leading-tight text-white">
+          <h1 className="text-4xl font-semibold leading-tight text-sidebar-foreground">
             Weekly status reports,
             <br />
-            <span className="text-[oklch(0.75_0.15_70)]">simplified.</span>
+            <span className="text-sidebar-primary">simplified.</span>
           </h1>
-          <p className="max-w-md text-lg text-[oklch(0.7_0.01_260)]">
+          <p className="max-w-md text-lg text-sidebar-foreground/80">
             Collect, review, and publish department reports with structure, clarity, and zero editing conflicts.
           </p>
         </div>
@@ -74,11 +74,11 @@ export default function HomePage() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="rounded-xl border border-[oklch(0.3_0.06_260)] bg-[oklch(0.18_0.05_260)]/60 p-4 backdrop-blur-sm"
+              className="rounded-xl border border-sidebar-border bg-sidebar-accent/60 p-4 backdrop-blur-sm"
             >
-              <feature.icon className="mb-2 h-5 w-5 text-[oklch(0.75_0.15_70)]" />
-              <p className="text-sm font-medium text-white">{feature.title}</p>
-              <p className="mt-1 text-sm text-[oklch(0.6_0.01_260)]">{feature.description}</p>
+              <feature.icon className="mb-2 h-5 w-5 text-sidebar-primary" />
+              <p className="text-sm font-medium text-sidebar-foreground">{feature.title}</p>
+              <p className="mt-1 text-sm text-sidebar-foreground/60">{feature.description}</p>
             </div>
           ))}
         </div>
@@ -94,12 +94,12 @@ export default function HomePage() {
           <span className="text-xl font-semibold">CustomReport</span>
         </div>
 
-        <Card className="w-full max-w-sm animate-fade-in border-0 shadow-lg">
+        <Card className="w-full max-w-md animate-fade-in border-0 shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-semibold tracking-tight">
               Welcome back
             </CardTitle>
-            <CardDescription className="text-sm">
+            <CardDescription className="text-base">
               Sign in to access your reports
             </CardDescription>
           </CardHeader>
