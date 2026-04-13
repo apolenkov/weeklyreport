@@ -81,10 +81,12 @@ export function NavUser({ userName, userRole }: NavUserProps) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <a href={`${API_URL}/auth/logout`} className="flex cursor-pointer items-center gap-2">
-            <LogOut className="size-5" />
-            <span>Log out</span>
-          </a>
+          <form action={`${API_URL}/auth/logout`} method="post">
+            <button type="submit" className="flex w-full cursor-pointer items-center gap-2">
+              <LogOut className="size-5" />
+              <span>Log out</span>
+            </button>
+          </form>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

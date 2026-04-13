@@ -70,7 +70,7 @@ export function AppShell({
         <SidebarContent className="px-2 py-3">
           <RoleNav activeReportId={activeReportId} role={role} currentPath={currentPath} />
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border p-2 group-data-[collapsible=icon]:px-0">
+        <SidebarFooter className="border-t border-sidebar-border p-2 group-data-[collapsible=icon]:px-2">
           <SidebarTrigger className="w-full text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent" />
         </SidebarFooter>
       </Sidebar>

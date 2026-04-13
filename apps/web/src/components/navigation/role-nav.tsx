@@ -16,6 +16,7 @@ import type { Role } from '@customreport/shared';
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -26,6 +27,7 @@ type NavItem = {
   label: string;
   icon: LucideIcon;
   roles: Role[];
+  group: string;
 };
 
 const navItems: NavItem[] = [
@@ -34,36 +36,42 @@ const navItems: NavItem[] = [
     label: 'My Report',
     icon: FileText,
     roles: ['lead'],
+    group: 'Reports',
   },
   {
     href: '/head/dashboard',
     label: 'Review Dashboard',
     icon: LayoutDashboard,
     roles: ['head'],
+    group: 'Reports',
   },
   {
     href: '/head/report',
     label: 'Assembled Report',
     icon: FileStack,
     roles: ['head'],
+    group: 'Reports',
   },
   {
     href: '/reports/:reportId',
     label: 'Published Report',
     icon: BookOpen,
     roles: ['head', 'viewer'],
+    group: 'Reports',
   },
   {
     href: '/reports/history',
     label: 'Report History',
     icon: History,
     roles: ['head', 'viewer'],
+    group: 'Reports',
   },
   {
     href: '/admin',
     label: 'Admin',
     icon: Settings,
     roles: ['head'],
+    group: 'Administration',
   },
 ];
 
@@ -89,28 +97,40 @@ export function RoleNav({ activeReportId = null, role, currentPath }: RoleNavPro
     return null;
   }
 
-  return (
-    <SidebarGroup>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {visibleItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentPath === item.href;
+  const grouped = visibleItems.reduce<Record<string, typeof visibleItems>>((acc, item) => {
+    const group = acc[item.group] ?? [];
+    group.push(item);
+    acc[item.group] = group;
+    return acc;
+  }, {});
 
-            return (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                  <Link href={item.href}>
-                    <Icon className="h-5 w-5 shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+  return (
+    <>
+      {Object.entries(grouped).map(([groupName, items]) => (
+        <SidebarGroup key={groupName}>
+          <SidebarGroupLabel>{groupName}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {items.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentPath === item.href;
+
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                      <Link href={item.href}>
+                        <Icon className="h-5 w-5 shrink-0" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      ))}
+    </>
   );
 }
 
