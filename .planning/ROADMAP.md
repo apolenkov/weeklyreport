@@ -191,11 +191,15 @@ Plans:
   2. BullMQ worker tests verify pdf-export and email-reminder processors with mocked Playwright/EmailService
   3. tRPC auth middleware tests verify protectedProcedure blocks unauthenticated and headProcedure blocks non-head roles
   4. Multi-stage Dockerfiles for api and web produce working images under 200MB each
-  5. docker-compose.prod.yml starts full stack (PostgreSQL, Redis, PgBouncer, API, Web) with health checks
+  5. docker-compose.prod.yml starts full stack (PostgreSQL, Redis, API, Web) with health checks
   6. GitHub Actions CI pipeline runs lint, typecheck, unit tests, and E2E tests on every push
   7. All existing 183 unit tests + 85 E2E tests continue passing
+**Plans**: 3 plans
 
 Plans:
+- [ ] 14-01-PLAN.md — Unit tests for BullMQ processors (pdf-export, email-reminder) and tRPC auth middleware
+- [ ] 14-02-PLAN.md — Docker image optimization (Dockerfile.api) and production docker-compose.prod.yml
+- [ ] 14-03-PLAN.md — CI pipeline integration tests, test script updates, full suite verification
 
 ---
 
