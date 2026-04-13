@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @source "../";
-@source "../../../packages/ui/src";
+@source "../../../../packages/ui/src";
 @source "./tailwind-safelist.txt";
 
 @import "@customreport/ui/styles/globals.css" layer(base);
@@ -40,4 +40,8 @@
   .bg-black\/50 { background-color: rgb(0 0 0 / 0.5); }
   .bg-black\/80 { background-color: rgb(0 0 0 / 0.8); }
   .shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+
+  /* --- Sidebar widths: Tailwind v4 scanner can't extract w-(--var) syntax --- */
+  .w-\(--sidebar-width\) { width: var(--sidebar-width); }
+  .w-\(--sidebar-width-icon\) { width: var(--sidebar-width-icon); }
 }

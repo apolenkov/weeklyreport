@@ -34,10 +34,12 @@ export default function HeadReportPage() {
 
   if (reportQuery.error) {
     return (
-      <QueryError
-        error={reportQuery.error}
-        onRetry={() => reportQuery.refetch()}
-      />
+      <AppShell activeReportId={null} role="head" currentPath="/head/report">
+        <QueryError
+          error={reportQuery.error}
+          onRetry={() => reportQuery.refetch()}
+        />
+      </AppShell>
     );
   }
 

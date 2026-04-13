@@ -31,3 +31,15 @@ bg-muted bg-accent bg-card bg-popover bg-sidebar bg-sidebar-accent bg-input bg-s
 text-sidebar-foreground text-sidebar-primary text-sidebar-primary-foreground
 text-sidebar-accent-foreground text-card-foreground text-popover-foreground text-accent-foreground
 border-sidebar-border
+
+<!-- Responsive variants from packages/ui that @source misses in monorepo -->
+<!-- sidebar.tsx: core layout -->
+md:block md:flex sm:flex
+md:after:hidden md:opacity-0
+md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0
+md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm
+md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2
+<!-- input.tsx, textarea.tsx -->
+md:text-sm
+<!-- dialog.tsx -->
+sm:text-left sm:flex-row sm:justify-end

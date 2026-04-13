@@ -36,10 +36,12 @@ export default function HeadDashboardPage() {
 
   if (dashboardQuery.error) {
     return (
-      <QueryError
-        error={dashboardQuery.error}
-        onRetry={() => dashboardQuery.refetch()}
-      />
+      <AppShell activeReportId={null} role="head" currentPath="/head/dashboard">
+        <QueryError
+          error={dashboardQuery.error}
+          onRetry={() => dashboardQuery.refetch()}
+        />
+      </AppShell>
     );
   }
 
