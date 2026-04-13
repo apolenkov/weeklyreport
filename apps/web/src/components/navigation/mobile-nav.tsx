@@ -43,8 +43,13 @@ export function MobileNav({ activeReportId = null, role, currentPath }: MobileNa
           <Menu className="size-5" />
         </Button>
         <SheetContent side="left" className="w-[280px] p-0">
-          <SheetHeader className="border-b px-6 py-4">
-            <SheetTitle className="text-lg font-semibold">CustomReport</SheetTitle>
+          <SheetHeader className="border-b bg-[oklch(0.22_0.06_260)] px-6 py-5">
+            <SheetTitle className="flex items-center gap-3 text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[oklch(0.75_0.15_70)] text-xs font-semibold text-[oklch(0.15_0.03_260)]">
+                CR
+              </div>
+              <span className="text-lg font-semibold">CustomReport</span>
+            </SheetTitle>
           </SheetHeader>
           <nav aria-label="Mobile navigation" className="flex flex-col gap-1 p-4">
             {visibleItems.map((item) => {
@@ -56,10 +61,10 @@ export function MobileNav({ activeReportId = null, role, currentPath }: MobileNa
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors min-h-[44px] ${
+                  className={`flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                     isActive
-                      ? 'bg-primary text-primary-foreground font-medium'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      ? 'bg-primary font-medium text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
                 >

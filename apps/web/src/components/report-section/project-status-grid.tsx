@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardTitle, TrafficLightBadge, cn } from '@customreport/ui';
+import { Card, CardContent, TrafficLightBadge, cn } from '@customreport/ui';
 import type { TrafficLightStatus } from '@customreport/ui';
 
 import type { ReportSectionReadModel } from '@customreport/shared';
@@ -18,12 +18,19 @@ const statuses: Array<{ value: TrafficLightStatus; raw: 'green' | 'yellow' | 're
   { value: 'unset', raw: '' },
 ];
 
+const selectedBorderMap: Record<TrafficLightStatus, string> = {
+  green: 'border-[var(--color-traffic-green-border)] bg-[var(--color-traffic-green)]/5',
+  yellow: 'border-[var(--color-traffic-yellow-border)] bg-[var(--color-traffic-yellow)]/5',
+  red: 'border-[var(--color-traffic-red-border)] bg-[var(--color-traffic-red)]/5',
+  unset: '',
+};
+
 export function ProjectStatusGrid({ projects, disabled, onChange }: ProjectStatusGridProps) {
   return (
     <div
       className={cn(
-        'grid grid-cols-1 md:grid-cols-2 gap-4',
-        disabled && 'opacity-50 pointer-events-none',
+        'grid grid-cols-1 gap-4 md:grid-cols-2',
+        disabled && 'pointer-events-none opacity-50',
       )}
       role="group"
       aria-label="Project Statuses"
@@ -33,12 +40,23 @@ export function ProjectStatusGrid({ projects, disabled, onChange }: ProjectStatu
           (project.trafficLight as TrafficLightStatus | null) ?? 'unset';
 
         return (
-          <Card key={project.projectId}>
-            <CardContent className="pt-4 pb-4">
-              <CardTitle className="text-sm font-semibold mb-3">
-                {project.projectName}
-              </CardTitle>
-              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={`${project.projectName} traffic light`}>
+          <Card
+            key={project.projectId}
+            className={cn(
+              'transition-all duration-200',
+              currentStatus !== 'unset' && selectedBorderMap[currentStatus],
+            )}
+          >
+            <CardContent className="space-y-3 pb-4 pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">{project.projectName}</span>
+                <TrafficLightBadge status={currentStatus} />
+              </div>
+              <div
+                className="flex flex-wrap gap-2"
+                role="radiogroup"
+                aria-label={`${project.projectName} traffic light`}
+              >
                 {statuses.map((s) => (
                   <button
                     key={s.value}
@@ -47,8 +65,12 @@ export function ProjectStatusGrid({ projects, disabled, onChange }: ProjectStatu
                     aria-checked={currentStatus === s.value}
                     role="radio"
                     className={cn(
-                      'rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                      currentStatus === s.value && 'ring-2 ring-ring',
+                      'rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      'border',
+                      currentStatus === s.value
+                        ? 'ring-2 ring-ring ring-offset-1 shadow-sm'
+                        : 'border-border hover:border-foreground/20 hover:bg-accent',
                     )}
                     onClick={() => onChange(project.projectId, s.raw)}
                     disabled={disabled}
