@@ -72,7 +72,7 @@ export function SubmissionDashboard({ rows }: SubmissionDashboardProps) {
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="gap-1 text-muted-foreground">
-                        <Clock className="h-4 w-4" />
+                        <Clock className="h-5 w-5" />
                         Draft
                       </Badge>
                     )}
