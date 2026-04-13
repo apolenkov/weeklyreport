@@ -72,15 +72,17 @@ describe('PublishedReport', () => {
     render(<PublishedReport report={publishedReport} />);
 
     expect(screen.getByRole('heading', { name: 'Published Report' })).toBeInTheDocument();
-    expect(screen.getByText('Published by Department Head')).toBeInTheDocument();
-    expect(screen.getByText('Portfolio status: yellow')).toBeInTheDocument();
+    // publishedByName is shown with a User icon — just "Department Head", not "Published by Department Head"
+    expect(screen.getByText('Department Head')).toBeInTheDocument();
+    // Portfolio uses TrafficLightBadge with label "Overall: yellow"
+    expect(screen.getByText('Overall: yellow')).toBeInTheDocument();
     expect(screen.getByText('Current update')).toBeInTheDocument();
   });
 
   it('does not expose edit or publish controls to viewers', () => {
     render(<PublishedReport report={publishedReport} />);
 
-    expect(screen.queryByRole('button', { name: 'Publish report' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publish Report' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
@@ -99,11 +101,12 @@ describe('PublishedReport', () => {
 
     render(<PublishedReport exportJob={exportJob} onRequestPdfExport={() => {}} report={publishedReport} />);
 
-    expect(screen.getByRole('button', { name: 'Export PDF' })).toBeInTheDocument();
-    expect(screen.getByText('Export status: completed')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Download PDF' })).toHaveAttribute(
+    // When export is completed, shows a download link (Button asChild wrapping <a>)
+    expect(screen.getByRole('link', { name: /Download PDF/i })).toHaveAttribute(
       'href',
       '/exports/report.pdf',
     );
+    // Export status badge shows just the status text
+    expect(screen.getByText('completed')).toBeInTheDocument();
   });
 });

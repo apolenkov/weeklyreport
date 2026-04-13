@@ -47,7 +47,8 @@ describe('AdminPanel', () => {
 
     expect(screen.getByRole('heading', { name: 'Admin Panel' })).toBeInTheDocument();
     expect(screen.getByText('Department Head')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add user' })).toBeInTheDocument();
+    // Button name is "Add User" (capital U) — matches the component exactly
+    expect(screen.getByRole('button', { name: 'Add User' })).toBeInTheDocument();
   });
 
   it('adds a user through the panel controls', async () => {
@@ -70,13 +71,20 @@ describe('AdminPanel', () => {
       />,
     );
 
-    await user.type(screen.getByLabelText('New user name'), 'Lead 1');
-    await user.type(screen.getByLabelText('New user email'), 'lead1@customreport.local');
-    await user.selectOptions(screen.getByLabelText('New user role'), 'lead');
-    await user.click(screen.getByRole('button', { name: 'Add user' }));
+    // Open the CrudSheet slide-over by clicking "Add User"
+    await user.click(screen.getByRole('button', { name: 'Add User' }));
 
-    expect(onUpsertUser).toHaveBeenCalled();
-    expect(screen.getByText('Lead 1')).toBeInTheDocument();
+    // The sheet is now open — fill in the form fields (labels are "Name", "Email", "Role")
+    await user.type(await screen.findByLabelText('Name'), 'Lead 1');
+    await user.type(screen.getByLabelText('Email'), 'lead1@customreport.local');
+
+    // The sheet submit button also says "Add User"
+    await user.click(screen.getAllByRole('button', { name: 'Add User' }).at(-1)!);
+
+    await waitFor(() => {
+      expect(onUpsertUser).toHaveBeenCalled();
+      expect(screen.getByText('Lead 1')).toBeInTheDocument();
+    });
   });
 
   it('shows reminder execution status and dedupe-safe triggering', async () => {
@@ -147,11 +155,18 @@ describe('AdminPanel', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Run reminder' }));
+    // Navigate to Reminders tab first
+    await user.click(screen.getByRole('tab', { name: /reminders/i }));
+
+    // Click the "Run" button in the reminders table
+    await user.click(await screen.findByRole('button', { name: 'Run' }));
+
+    // Confirm in the dialog
+    await user.click(await screen.findByRole('button', { name: 'Send Reminder' }));
 
     await waitFor(() => {
       expect(onRequestReminderExecution).toHaveBeenCalled();
-      expect(screen.getByText('lead1@customreport.local — sent')).toBeInTheDocument();
+      expect(screen.getByText('lead1@customreport.local -- sent')).toBeInTheDocument();
     });
   });
 
@@ -171,8 +186,17 @@ describe('AdminPanel', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Run carry-over' }));
+    // Navigate to Periods tab
+    await user.click(screen.getByRole('tab', { name: /periods/i }));
 
-    expect(screen.getByText('Carry-over completed')).toBeInTheDocument();
+    // Click "Run Carry-Over" button — this opens a ConfirmDialog
+    await user.click(await screen.findByRole('button', { name: 'Run Carry-Over' }));
+
+    // Confirm in the dialog
+    await user.click(await screen.findByRole('button', { name: 'Run Carry-Over' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Carry-over completed')).toBeInTheDocument();
+    });
   });
 });

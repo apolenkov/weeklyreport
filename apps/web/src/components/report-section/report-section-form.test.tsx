@@ -58,8 +58,9 @@ describe('ReportSectionForm', () => {
     expect(screen.getByLabelText('Project 1 traffic light')).toBeInTheDocument();
     expect(screen.getByLabelText('Current item 1')).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Priority \d/)).toHaveLength(3);
-    expect(screen.getByText('No risks added')).toBeInTheDocument();
-    expect(screen.getByText('No decisions added')).toBeInTheDocument();
+    // Empty state texts from the redesigned subcomponents
+    expect(screen.getByText('No active risks')).toBeInTheDocument();
+    expect(screen.getByText('No decisions pending')).toBeInTheDocument();
   });
 
   it('shows autosave transitions after a debounced change', async () => {
@@ -91,12 +92,12 @@ describe('ReportSectionForm', () => {
     await user.type(screen.getByLabelText('Current item 1'), ' updated');
 
     await waitFor(() => {
-      expect(screen.getByText('Сохраняется...')).toBeInTheDocument();
+      expect(screen.getByText('Saving...')).toBeInTheDocument();
     });
 
     await waitFor(() => {
       expect(onSaveDraft).toHaveBeenCalled();
-      expect(screen.getByText('Сохранено')).toBeInTheDocument();
+      expect(screen.getByText('Saved')).toBeInTheDocument();
     });
   });
 
@@ -134,7 +135,8 @@ describe('ReportSectionForm', () => {
 
     expect(screen.getByLabelText('Project 1 traffic light')).toBeDisabled();
     expect(screen.getByLabelText('Current item 1')).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Submit section' })).not.toBeInTheDocument();
+    // In read-only mode the submit button is not shown
+    expect(screen.queryByRole('button', { name: 'Submit Section' })).not.toBeInTheDocument();
   });
 
   it('shows carried-over items and unresolved decisions in the next period', async () => {
