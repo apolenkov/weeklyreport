@@ -4,89 +4,140 @@
 /*
  * CustomReport Design Tokens
  *
- * OKLCH-based color system for consistent rendering across displays.
- * Skeleton, success, and warning tokens ensure accessible contrast
- * ratios (>= 3:1 against background).
+ * Deep navy + warm amber palette. OKLCH-based for consistent rendering.
+ * Designed for corporate reporting tool with distinctive visual identity.
  */
 
 @theme {
-  /* ---- Base palette ---- */
-  --color-background: oklch(0.99 0 0);
-  --color-foreground: oklch(0.14 0 0);
+  /* ---- Typography ---- */
+  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
 
-  --color-muted: oklch(0.93 0.005 250);
-  --color-muted-foreground: oklch(0.45 0.01 250);
+  /* ---- Base palette — Deep Navy ---- */
+  --color-background: oklch(0.985 0.002 260);
+  --color-foreground: oklch(0.145 0.02 260);
 
-  --color-accent: oklch(0.95 0.02 250);
-  --color-accent-foreground: oklch(0.14 0 0);
+  --color-muted: oklch(0.94 0.008 260);
+  --color-muted-foreground: oklch(0.46 0.015 260);
+
+  --color-accent: oklch(0.95 0.012 260);
+  --color-accent-foreground: oklch(0.145 0.02 260);
 
   /* ---- Skeleton ---- */
-  /* Dedicated skeleton token: lightness 0.85 gives >= 3:1 contrast
-     against --background (0.99). Previous accent-based skeleton was
-     nearly invisible (lightness ~0.95 on 0.99 background). */
-  --color-skeleton: oklch(0.85 0.01 250);
+  --color-skeleton: oklch(0.88 0.012 260);
 
   /* ---- Semantic status colors ---- */
-  --color-success: oklch(0.72 0.19 142);
+  --color-success: oklch(0.68 0.17 152);
   --color-success-foreground: oklch(0.99 0 0);
-  --color-warning: oklch(0.75 0.18 55);
+  --color-warning: oklch(0.78 0.16 70);
   --color-warning-foreground: oklch(0.18 0 0);
-  --color-destructive: oklch(0.58 0.22 28);
+  --color-destructive: oklch(0.57 0.21 25);
   --color-destructive-foreground: oklch(0.99 0 0);
 
   /* ---- Border & ring ---- */
-  --color-border: oklch(0.88 0.005 250);
-  --color-ring: oklch(0.55 0.15 250);
+  --color-border: oklch(0.90 0.006 260);
+  --color-ring: oklch(0.55 0.18 260);
 
-  /* ---- Card & popover ---- */
-  --color-card: oklch(0.99 0 0);
-  --color-card-foreground: oklch(0.14 0 0);
-  --color-popover: oklch(0.99 0 0);
-  --color-popover-foreground: oklch(0.14 0 0);
+  /* ---- Card & popover — subtle elevation ---- */
+  --color-card: oklch(0.995 0.001 260);
+  --color-card-foreground: oklch(0.145 0.02 260);
+  --color-popover: oklch(0.995 0.001 260);
+  --color-popover-foreground: oklch(0.145 0.02 260);
 
-  /* ---- Primary & secondary ---- */
-  --color-primary: oklch(0.35 0.12 250);
+  /* ---- Primary — Deep Navy ---- */
+  --color-primary: oklch(0.32 0.14 260);
   --color-primary-foreground: oklch(0.99 0 0);
-  --color-secondary: oklch(0.93 0.005 250);
-  --color-secondary-foreground: oklch(0.14 0 0);
 
-  /* ---- Input & chart (required by shadcn components) ---- */
-  --color-input: oklch(0.88 0.005 250);
-  --color-chart-1: oklch(0.55 0.15 250);
-  --color-chart-2: oklch(0.72 0.19 142);
-  --color-chart-3: oklch(0.75 0.18 55);
-  --color-chart-4: oklch(0.58 0.22 28);
-  --color-chart-5: oklch(0.65 0.15 300);
+  /* ---- Secondary ---- */
+  --color-secondary: oklch(0.94 0.008 260);
+  --color-secondary-foreground: oklch(0.20 0.03 260);
 
-  /* ---- Sidebar ---- */
-  --color-sidebar: oklch(0.97 0.005 250);
-  --color-sidebar-foreground: oklch(0.14 0 0);
-  --color-sidebar-primary: oklch(0.35 0.12 250);
-  --color-sidebar-primary-foreground: oklch(0.99 0 0);
-  --color-sidebar-accent: oklch(0.93 0.01 250);
-  --color-sidebar-accent-foreground: oklch(0.14 0 0);
-  --color-sidebar-border: oklch(0.88 0.005 250);
-  --color-sidebar-ring: oklch(0.55 0.15 250);
+  /* ---- Input ---- */
+  --color-input: oklch(0.90 0.006 260);
 
-  /* ---- Radius ---- */
+  /* ---- Chart palette ---- */
+  --color-chart-1: oklch(0.55 0.18 260);
+  --color-chart-2: oklch(0.68 0.17 152);
+  --color-chart-3: oklch(0.78 0.16 70);
+  --color-chart-4: oklch(0.57 0.21 25);
+  --color-chart-5: oklch(0.62 0.18 310);
+
+  /* ---- Sidebar — Branded dark ---- */
+  --color-sidebar: oklch(0.22 0.06 260);
+  --color-sidebar-foreground: oklch(0.88 0.01 260);
+  --color-sidebar-primary: oklch(0.75 0.15 70);
+  --color-sidebar-primary-foreground: oklch(0.15 0.03 260);
+  --color-sidebar-accent: oklch(0.28 0.07 260);
+  --color-sidebar-accent-foreground: oklch(0.92 0.005 260);
+  --color-sidebar-border: oklch(0.30 0.06 260);
+  --color-sidebar-ring: oklch(0.75 0.15 70);
+
+  /* ---- Radius hierarchy ---- */
   --radius: 0.625rem;
+  --radius-sm: 0.375rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }
 
-/* ---- Skeleton animation ---- */
+/* ---- Skeleton animation (shimmer) ---- */
 .skeleton {
-  background: var(--color-skeleton, oklch(0.85 0.01 250));
+  background: linear-gradient(
+    90deg,
+    var(--color-skeleton) 25%,
+    oklch(0.92 0.008 260) 50%,
+    var(--color-skeleton) 75%
+  );
+  background-size: 200% 100%;
   border-radius: 0.25rem;
-  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
 
-@keyframes skeleton-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ---- Fade-in animation ---- */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
+/* ---- Stagger children ---- */
+.stagger-children > * {
+  animation: fade-in 0.4s ease-out both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+
+/* ---- Slide-in from left (sidebar items) ---- */
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out both;
+}
+
+/* ---- Scale-in (modals, popovers) ---- */
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out both;
 }
 
 /* ---- Print overrides ---- */

@@ -1,6 +1,5 @@
-import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
-import type { Job } from 'bullmq';
-import { Injectable } from '@nestjs/common';
+import { Injectable, type OnModuleInit, type OnModuleDestroy } from '@nestjs/common';
+import { Worker, type Job } from 'bullmq';
 
 import { RemindersService } from '../../modules/reminders/reminders.service';
 import { EmailService } from '../email/email.service';
@@ -12,51 +11,69 @@ type EmailReminderJobData = {
 };
 
 /**
- * BullMQ processor for the email-reminder queue.
+ * BullMQ worker for the email-reminder queue.
  *
- * Sends an SMTP reminder email to the lead and marks the execution as sent.
- * Deduplication is handled upstream by RemindersService (dedupeKey check).
+ * Uses raw Worker (not @Processor/WorkerHost) to avoid the DiscoveryService
+ * DI bug in @nestjs/bullmq 11 with NestJS 11.
  */
 @Injectable()
-@Processor('email-reminder')
-export class EmailReminderProcessor extends WorkerHost {
+export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
+  private worker: Worker<EmailReminderJobData> | undefined;
+
   constructor(
     private readonly remindersService: RemindersService,
     private readonly emailService: EmailService,
-  ) {
-    super();
+  ) {}
+
+  onModuleInit(): void {
+    this.worker = new Worker<EmailReminderJobData>(
+      'email-reminder',
+      async (job: Job<EmailReminderJobData>) => {
+        await this.processJob(job);
+      },
+      {
+        connection: {
+          host: process.env['REDIS_HOST'] ?? 'localhost',
+          port: Number(process.env['REDIS_PORT'] ?? 6379),
+          maxRetriesPerRequest: null,
+        },
+      },
+    );
+
+    this.worker.on('failed', (job, error) => {
+      process.stderr.write(
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          level: 'error',
+          message: 'email-reminder job failed',
+          executionId: job?.data.executionId,
+          recipientEmail: job?.data.recipientEmail,
+          attempt: job?.attemptsMade,
+          error: error.message,
+        }) + '\n',
+      );
+    });
   }
 
-  async process(job: Job<EmailReminderJobData>): Promise<void> {
+  async onModuleDestroy(): Promise<void> {
+    await this.worker?.close();
+  }
+
+  private async processJob(job: Job<EmailReminderJobData>): Promise<void> {
     const { executionId, recipientEmail, reportPeriod } = job.data;
 
     const subject = 'Reminder: Weekly Status Report Due';
     const body = [
-      `Hello,`,
-      ``,
+      'Hello,',
+      '',
       `This is a reminder to fill in your section for the status report period: ${reportPeriod}.`,
-      ``,
-      `Please log in to CustomReport and submit your section before the deadline.`,
-      ``,
-      `Thank you.`,
+      '',
+      'Please log in to CustomReport and submit your section before the deadline.',
+      '',
+      'Thank you.',
     ].join('\n');
 
     await this.emailService.sendMail(recipientEmail, subject, body);
     await this.remindersService.markReminderSent(executionId);
-  }
-
-  @OnWorkerEvent('failed')
-  onFailed(job: Job<EmailReminderJobData>, error: Error): void {
-    process.stderr.write(
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        level: 'error',
-        message: 'email-reminder job failed',
-        executionId: job.data.executionId,
-        recipientEmail: job.data.recipientEmail,
-        attempt: job.attemptsMade,
-        error: error.message,
-      }) + '\n',
-    );
   }
 }

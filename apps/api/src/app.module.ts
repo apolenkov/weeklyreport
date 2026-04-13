@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
-import { BullModule } from '@nestjs/bullmq';
 import { HealthModule } from './infrastructure/health/health.module';
 import { MetricsModule } from './infrastructure/metrics/metrics.module';
 import { CorrelationIdMiddleware } from './infrastructure/middleware/correlation-id.middleware';
@@ -20,10 +19,6 @@ import { EmailService } from './infrastructure/email/email.service';
 @Module({
   imports: [
     PrismaModule,
-    // TODO: BullModule disabled temporarily — @nestjs/bullmq BullExplorer ModuleRef bug
-    // BullModule.forRoot({ connection: { host: process.env['REDIS_HOST'] ?? 'localhost', port: Number(process.env['REDIS_PORT'] ?? 6379), maxRetriesPerRequest: null } }),
-    // BullModule.registerQueue({ name: 'pdf-export' }),
-    // BullModule.registerQueue({ name: 'email-reminder' }),
     HealthModule,
     MetricsModule,
     ReviewModule,
@@ -35,9 +30,7 @@ import { EmailService } from './infrastructure/email/email.service';
     CarryOverModule,
     AdminModule,
   ],
-  // TODO: Re-enable when BullMQ DI issue is resolved
-  // providers: [PdfExportProcessor, EmailReminderProcessor, EmailService],
-  providers: [EmailService],
+  providers: [PdfExportProcessor, EmailReminderProcessor, EmailService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
