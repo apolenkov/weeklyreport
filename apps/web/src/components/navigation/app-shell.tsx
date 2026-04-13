@@ -79,13 +79,13 @@ export function AppShell({
           <MobileNav activeReportId={activeReportId} role={role} currentPath={currentPath} />
           <nav aria-label="Breadcrumb" className="hidden items-center gap-2 text-sm lg:flex">
             <span className="text-muted-foreground">{getRoleLabel(role)}</span>
-            <span className="text-muted-foreground/40">/</span>
-            <span className="font-medium">{pageTitle}</span>
+            <span className="text-muted-foreground/60">/</span>
+            <span className="text-base font-semibold">{pageTitle}</span>
           </nav>
           <div className="flex-1" />
           <NavUser userName={userName} userRole={role} />
         </header>
-        <main className="flex-1 p-4 lg:p-8">
+        <main className="flex-1 p-6 lg:p-8">
           <div className="mx-auto max-w-[1200px] animate-fade-in">{children}</div>
         </main>
       </SidebarInset>

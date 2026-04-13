@@ -5,7 +5,6 @@ import Link from 'next/link';
 
 import type { ArchiveReportSummary } from '@customreport/shared';
 import {
-  Button,
   TrafficLightBadge,
 } from '@customreport/ui';
 import type { TrafficLightStatus } from '@customreport/ui';
@@ -24,7 +23,7 @@ function toTrafficLightStatus(value: string): TrafficLightStatus {
 export function ArchiveReportList({ reports }: ArchiveReportListProps) {
   if (reports.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-12">
+      <div className="flex animate-fade-in flex-col items-center justify-center rounded-xl border border-dashed py-12">
         <FileText className="mb-3 h-10 w-10 text-muted-foreground/40" />
         <p className="text-base text-muted-foreground">No published reports yet</p>
       </div>
@@ -55,18 +54,7 @@ export function ArchiveReportList({ reports }: ArchiveReportListProps) {
               <span className="text-muted-foreground/60">by {report.publishedByName}</span>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-            tabIndex={-1}
-            aria-hidden
-            asChild
-          >
-            <span>
-              <ArrowRight className="h-5 w-5" />
-            </span>
-          </Button>
+          <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-1 group-hover:text-muted-foreground" />
         </Link>
       ))}
     </div>
