@@ -101,7 +101,7 @@ export function RoleNav({ activeReportId = null, role, currentPath }: RoleNavPro
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
                   <Link href={item.href}>
-                    <Icon />
+                    <Icon className="h-5 w-5 shrink-0" />
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>

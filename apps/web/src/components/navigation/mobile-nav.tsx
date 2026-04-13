@@ -45,13 +45,13 @@ export function MobileNav({ activeReportId = null, role, currentPath }: MobileNa
         <SheetContent side="left" className="w-[280px] p-0">
           <SheetHeader className="border-b bg-[oklch(0.22_0.06_260)] px-6 py-5">
             <SheetTitle className="flex items-center gap-3 text-white">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[oklch(0.75_0.15_70)] text-xs font-semibold text-[oklch(0.15_0.03_260)]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[oklch(0.75_0.15_70)] text-sm font-semibold text-[oklch(0.15_0.03_260)]">
                 CR
               </div>
               <span className="text-lg font-semibold">CustomReport</span>
             </SheetTitle>
           </SheetHeader>
-          <nav aria-label="Mobile navigation" className="flex flex-col gap-1 p-4">
+          <nav aria-label="Mobile navigation" className="flex flex-col gap-2 p-4">
             {visibleItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentPath === item.href;

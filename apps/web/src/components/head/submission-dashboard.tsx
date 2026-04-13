@@ -33,7 +33,7 @@ export function SubmissionDashboard({ rows }: SubmissionDashboardProps) {
 
   if (parsedRows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-12">
+      <div className="flex animate-fade-in flex-col items-center justify-center rounded-xl border border-dashed py-12">
         <Users className="mb-3 h-10 w-10 text-muted-foreground/40" />
         <p className="text-base text-muted-foreground">No leads assigned to this period</p>
       </div>
@@ -41,9 +41,9 @@ export function SubmissionDashboard({ rows }: SubmissionDashboardProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <h2 className="text-xl font-semibold">Lead Submissions</h2>
-      <div className="stagger-children grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="stagger-children grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {parsedRows.map((row) => {
           const isSubmitted = row.status === 'submitted';
 
@@ -56,7 +56,7 @@ export function SubmissionDashboard({ rows }: SubmissionDashboardProps) {
             >
               <CardContent className="flex items-start gap-4 p-5">
                 <Avatar className="mt-0.5 size-12 shrink-0 border">
-                  <AvatarFallback className={`text-sm font-medium ${
+                  <AvatarFallback className={`text-base font-semibold ${
                     isSubmitted ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
                   }`}>
                     {getInitials(row.leadName)}
