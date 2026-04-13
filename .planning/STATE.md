@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Progress
-status: executing
-stopped_at: "Completed 14-01-PLAN.md: Unit tests for untested backend components"
-last_updated: "2026-04-13T12:15:28.884Z"
+status: ready
+stopped_at: "Completed Phase 14: Backend Hardening & Containerization (3/3 plans, 6/7 SC verified)"
+last_updated: "2026-04-13T15:35:00.000Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 26
-  completed_plans: 24
-  percent: 80
+  completed_phases: 5
+  total_plans: 29
+  completed_plans: 27
+  percent: 87
 ---
 
 # Project State: CustomReport
@@ -28,19 +28,18 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core Value:** Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт -- без конфликтов редактирования, с историей и аналитикой.
 
-**Current Focus:** Phase 14 — backend-hardening-containerization
+**Current Focus:** Phase 15 — UI/UX Polish & Visual Verification
 
 ---
 
 ## Current Position
 
-Phase: 14 (backend-hardening-containerization) — EXECUTING
-Plan: 2 of 3
-Plans: 3 created (14-01, 14-02, 14-03), 0 executed
-Status: Ready to execute
+Phase: 14 (backend-hardening-containerization) — COMPLETE ✅
+Phase: 15 (ui-ux-polish-visual-verification) — NOT STARTED
+Status: Ready for Phase 15 planning
 Last activity: 2026-04-13
 
-Progress: [████████████████████] 80% (v3.0: Phase 14 planned, ready to execute)
+Progress: [█████████████████░░░] 87% (v3.0: Phase 14 complete, Phase 15 ready to plan)
 
 ---
 
@@ -125,13 +124,24 @@ Full UI/UX redesign completed via `/cp-design create` (outside GSD plans):
 
 Commits: `0618de8`..`4ec7415` (8 commits on main, all pushed)
 
+### Phase 14 Summary (2026-04-13)
+
+All 3 plans executed in 2 waves:
+- Wave 1 (parallel): 14-01 (BullMQ + tRPC unit tests: 15 new tests) + 14-02 (Dockerfile.api optimization, docker-compose.prod.yml)
+- Wave 2: 14-03 (Integration tests step added to GitHub Actions CI e2e job)
+
+Verification: 6/7 SC pass. Known gaps:
+- SC-4 PARTIAL: Dockerfile.api runner uses Playwright base image (~1.4GB for Chromium) — architectural constraint for PDF generation, documented in Dockerfile
+- SC-7 PARTIAL: 97 unit tests pass (not 183 aspirational); web package has 24 pre-existing jsdom failures (React not defined) — not regressions from Phase 14
+
 ### Next Action
 
-Run `/gsd:execute-phase 14` — 3 plans in 2 waves (Wave 1: tests + Docker, Wave 2: CI integration).
+Run `/gsd:plan-phase 15` to plan UI/UX Polish & Visual Verification phase.
 
 ---
 
 *State initialized: 2026-04-06*
 *v3.0 roadmap: 2026-04-11*
 *Phase 13 started: 2026-04-12*
-*Phase 13 plans done: 2026-04-13 (verification pending)*
+*Phase 13 complete: 2026-04-13*
+*Phase 14 complete: 2026-04-13*
