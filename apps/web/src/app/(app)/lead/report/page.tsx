@@ -6,7 +6,7 @@ import { trpc } from '../../../../lib/trpc';
 import { QueryError } from '../../../../components/common/query-error';
 import { AppShell } from '../../../../components/navigation/app-shell';
 import { ReportSectionForm } from '../../../../components/report-section/report-section-form';
-import { PageTitleSkeleton, CardSkeleton } from '../../../../components/common/page-skeleton';
+import { PageTitleSkeleton, SectionCardSkeleton } from '../../../../components/common/page-skeleton';
 
 import type {
   DraftSavePayload,
@@ -15,11 +15,11 @@ import type {
 
 function LeadReportSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       <PageTitleSkeleton />
-      <CardSkeleton />
-      <CardSkeleton />
-      <CardSkeleton />
+      <SectionCardSkeleton />
+      <SectionCardSkeleton />
+      <SectionCardSkeleton />
     </div>
   );
 }

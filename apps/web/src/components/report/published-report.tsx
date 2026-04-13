@@ -70,7 +70,7 @@ function PdfExportControls({
       {exportJob?.status === 'completed' && exportJob.artifactUrl ? (
         <Button asChild>
           <a href={exportJob.artifactUrl} download>
-            <Download className="size-4" />
+            <Download className="size-5" />
             Download PDF
           </a>
         </Button>
@@ -82,12 +82,12 @@ function PdfExportControls({
         >
           {isExporting ? (
             <>
-              <Loader2 className="size-4 animate-spin" />
+              <Loader2 className="size-5 animate-spin" />
               Exporting...
             </>
           ) : (
             <>
-              <FileDown className="size-4" />
+              <FileDown className="size-5" />
               Export PDF
             </>
           )}
@@ -102,8 +102,8 @@ function PdfExportControls({
 
 function SectionIcon({ icon: Icon, colorClass }: { icon: React.ComponentType<{ className?: string }>; colorClass: string }) {
   return (
-    <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${colorClass}`}>
-      <Icon className="h-4 w-4" />
+    <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${colorClass}`}>
+      <Icon className="h-5 w-5" />
     </div>
   );
 }
@@ -116,19 +116,19 @@ export function PublishedReport({
   const periodLabel = `${formatPeriodDate(report.periodStart)} — ${formatPeriodDate(report.periodEnd)}`;
 
   return (
-    <div className="space-y-8">
+    <div className="animate-fade-in stagger-children space-y-8">
       {/* Page header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Published Report</h1>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight">Published Report</h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <Calendar className="size-3.5" />
+              <Calendar className="size-4" />
               {periodLabel}
             </span>
             {report.publishedByName ? (
               <span className="inline-flex items-center gap-1.5">
-                <User className="size-3.5" />
+                <User className="size-4" />
                 {report.publishedByName}
               </span>
             ) : null}
@@ -201,8 +201,8 @@ export function PublishedReport({
                       .toUpperCase()}
                   </div>
                   <div>
-                    <CardTitle className="text-lg">{section.authorName}</CardTitle>
-                    <p className="text-xs text-muted-foreground">
+                    <CardTitle className="text-xl">{section.authorName}</CardTitle>
+                    <p className="text-sm text-muted-foreground">
                       {section.projects.length} project{section.projects.length !== 1 ? 's' : ''}
                     </p>
                   </div>
@@ -216,12 +216,12 @@ export function PublishedReport({
             <CardContent className="space-y-6 pt-6">
               {/* Projects */}
               {section.projects.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <SectionIcon icon={Target} colorClass="bg-primary/10 text-primary" />
-                    <span className="text-sm font-semibold">Projects</span>
+                    <span className="text-base font-semibold">Projects</span>
                   </div>
-                  <div className="flex flex-wrap gap-2 pl-9">
+                  <div className="flex flex-wrap gap-2 pl-4">
                     {section.projects.map((project) => (
                       <TrafficLightBadge
                         key={project.projectId}
@@ -235,29 +235,29 @@ export function PublishedReport({
 
               {/* Current Week Items */}
               {currentItems.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <SectionIcon icon={ListOrdered} colorClass="bg-[oklch(0.68_0.17_152)]/10 text-[oklch(0.68_0.17_152)]" />
-                    <span className="text-sm font-semibold">Current Week</span>
+                    <span className="text-base font-semibold">Current Week</span>
                     <Badge variant="secondary" className="text-xs">{currentItems.length}</Badge>
                   </div>
-                  <div className="space-y-1.5 pl-9">
+                  <div className="space-y-3 pl-4">
                     {currentItems.map((item) => (
                       <div
                         key={item.id ?? `${section.reportSectionId}-current-${item.text}`}
-                        className="flex items-start gap-2 rounded-md border bg-card px-3 py-2"
+                        className="flex items-start gap-3 rounded-lg border bg-card px-4 py-3"
                       >
                         {item.carriedOver && item.completed ? (
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                         ) : (
                           <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                         )}
-                        <span className="flex-1 text-sm">{item.text}</span>
+                        <span className="flex-1 text-base">{item.text}</span>
                         {item.tag ? (
-                          <Badge variant="outline" className="shrink-0 text-[10px]">{item.tag}</Badge>
+                          <Badge variant="outline" className="shrink-0 text-xs">{item.tag}</Badge>
                         ) : null}
                         {item.carriedOver ? (
-                          <Badge variant="outline" className="shrink-0 text-[10px]">Carried Over</Badge>
+                          <Badge variant="outline" className="shrink-0 text-xs">Carried Over</Badge>
                         ) : null}
                       </div>
                     ))}
@@ -267,22 +267,22 @@ export function PublishedReport({
 
               {/* Next Week Items */}
               {nextItems.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <SectionIcon icon={ListOrdered} colorClass="bg-muted text-muted-foreground" />
-                    <span className="text-sm font-semibold">Next Week</span>
+                    <span className="text-base font-semibold">Next Week</span>
                     <Badge variant="secondary" className="text-xs">{nextItems.length}</Badge>
                   </div>
-                  <div className="space-y-1.5 pl-9">
+                  <div className="space-y-3 pl-4">
                     {nextItems.map((item) => (
                       <div
                         key={item.id ?? `${section.reportSectionId}-next-${item.text}`}
-                        className="flex items-start gap-2 rounded-md border bg-card px-3 py-2"
+                        className="flex items-start gap-3 rounded-lg border bg-card px-4 py-3"
                       >
                         <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />
-                        <span className="flex-1 text-sm">{item.text}</span>
+                        <span className="flex-1 text-base">{item.text}</span>
                         {item.tag ? (
-                          <Badge variant="outline" className="shrink-0 text-[10px]">{item.tag}</Badge>
+                          <Badge variant="outline" className="shrink-0 text-xs">{item.tag}</Badge>
                         ) : null}
                       </div>
                     ))}
@@ -292,20 +292,20 @@ export function PublishedReport({
 
               {/* Risks */}
               {section.risks.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <SectionIcon icon={AlertTriangle} colorClass="bg-destructive/10 text-destructive" />
-                    <span className="text-sm font-semibold">Risks</span>
+                    <span className="text-base font-semibold">Risks</span>
                     <Badge variant="secondary" className="text-xs">{section.risks.length}</Badge>
                   </div>
-                  <div className="space-y-1.5 pl-9">
+                  <div className="space-y-3 pl-4">
                     {section.risks.map((risk) => (
                       <div
                         key={risk.id ?? `${section.reportSectionId}-risk-${risk.risk}`}
-                        className="rounded-lg border border-destructive/20 bg-destructive/5 p-3"
+                        className="rounded-lg border border-destructive/20 bg-destructive/5 p-4"
                       >
-                        <p className="text-sm font-medium">{risk.risk}</p>
-                        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <p className="text-base font-medium">{risk.risk}</p>
+                        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                           {risk.impact ? <span>Impact: {risk.impact}</span> : null}
                           {risk.mitigation ? <span>Mitigation: {risk.mitigation}</span> : null}
                         </div>
@@ -317,33 +317,33 @@ export function PublishedReport({
 
               {/* Decisions */}
               {section.decisions.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <SectionIcon icon={Lightbulb} colorClass="bg-warning/10 text-warning" />
-                    <span className="text-sm font-semibold">Decisions</span>
+                    <span className="text-base font-semibold">Decisions</span>
                     <Badge variant="secondary" className="text-xs">{section.decisions.length}</Badge>
                   </div>
-                  <div className="space-y-1.5 pl-9">
+                  <div className="space-y-3 pl-4">
                     {section.decisions.map((decision) => {
                       const isResolved = Boolean(decision.resolvedAt);
                       return (
                         <div
                           key={decision.id ?? `${section.reportSectionId}-dec-${decision.text}`}
-                          className={`flex items-start gap-3 rounded-lg border p-3 ${
+                          className={`flex items-start gap-3 rounded-lg border p-4 ${
                             isResolved
                               ? 'border-success/20 bg-success/5'
                               : 'border-warning/20 bg-warning/5'
                           }`}
                         >
                           {isResolved ? (
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                           ) : (
-                            <CircleDot className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                            <CircleDot className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
                           )}
                           <div className="flex-1">
-                            <p className="text-sm">{decision.text}</p>
+                            <p className="text-base">{decision.text}</p>
                             {decision.owner ? (
-                              <p className="mt-1 text-xs text-muted-foreground">Owner: {decision.owner}</p>
+                              <p className="mt-1 text-sm text-muted-foreground">Owner: {decision.owner}</p>
                             ) : null}
                           </div>
                           <Badge
@@ -363,24 +363,24 @@ export function PublishedReport({
 
               {/* Priorities */}
               {section.priorities.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <SectionIcon icon={TrendingUp} colorClass="bg-[oklch(0.62_0.18_310)]/10 text-[oklch(0.62_0.18_310)]" />
-                    <span className="text-sm font-semibold">Top 3 Priorities</span>
+                    <span className="text-base font-semibold">Top 3 Priorities</span>
                   </div>
-                  <div className="space-y-1.5 pl-9">
+                  <div className="space-y-3 pl-4">
                     {section.priorities
                       .slice()
                       .sort((a, b) => a.rank - b.rank)
                       .map((priority) => (
                         <div
                           key={priority.id ?? `${section.reportSectionId}-pri-${priority.rank}`}
-                          className="flex items-center gap-3 rounded-md border bg-card px-3 py-2"
+                          className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3"
                         >
-                          <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
+                          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
                             {priority.rank}
                           </span>
-                          <span className="text-sm">{priority.text}</span>
+                          <span className="text-base">{priority.text}</span>
                         </div>
                       ))}
                   </div>

@@ -188,13 +188,13 @@ export function ReportSectionForm({
   }
 
   return (
-    <div className="space-y-8" aria-disabled={isReadOnly || undefined}>
+    <div className="animate-fade-in space-y-8" aria-disabled={isReadOnly || undefined}>
       {/* Page header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">My Report</h1>
+          <h1 className="text-3xl font-bold tracking-tight">My Report</h1>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{section.authorName}</span>
+            <span className="text-base text-muted-foreground">{section.authorName}</span>
             <Badge variant={section.status === 'submitted' ? 'default' : 'outline'}>
               {section.status === 'submitted' ? 'Submitted' : 'Draft'}
             </Badge>
@@ -207,8 +207,8 @@ export function ReportSectionForm({
             Section submitted and locked
           </Badge>
         ) : (
-          <Button onClick={() => setShowSubmitDialog(true)} className="gap-2">
-            <Send className="h-4 w-4" />
+          <Button size="lg" onClick={() => setShowSubmitDialog(true)} className="gap-2">
+            <Send className="h-5 w-5" />
             Submit Section
           </Button>
         )}
@@ -216,7 +216,7 @@ export function ReportSectionForm({
 
       {/* Validation errors */}
       {errors.length > 0 ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" role="alert">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Please fix these issues</AlertTitle>
           <AlertDescription>

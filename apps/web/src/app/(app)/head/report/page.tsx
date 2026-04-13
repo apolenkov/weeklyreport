@@ -8,7 +8,7 @@ import { AppShell } from '../../../../components/navigation/app-shell';
 import { AssembledReportReview } from '../../../../components/head/assembled-report-review';
 import {
   PageTitleSkeleton,
-  CardSkeleton,
+  SectionCardSkeleton,
 } from '../../../../components/common/page-skeleton';
 
 import type { DraftSavePayload } from '@customreport/shared';
@@ -22,11 +22,11 @@ export default function HeadReportPage() {
   if (reportQuery.isLoading) {
     return (
       <AppShell activeReportId={null} role="head" currentPath="/head/report">
-        <div className="space-y-6">
+        <div className="animate-fade-in space-y-6">
           <PageTitleSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
+          <SectionCardSkeleton />
+          <SectionCardSkeleton />
+          <SectionCardSkeleton />
         </div>
       </AppShell>
     );

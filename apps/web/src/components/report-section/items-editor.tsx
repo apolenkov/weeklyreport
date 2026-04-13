@@ -1,5 +1,7 @@
 'use client';
 
+import { ListOrdered } from 'lucide-react';
+
 import { Badge, Input, Label, Separator } from '@customreport/ui';
 
 import type { ReportSectionReadModel } from '@customreport/shared';
@@ -29,11 +31,17 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
           <span className="text-sm font-semibold">Current Week</span>
           <Badge variant="secondary" className="text-xs">{currentItems.length}</Badge>
         </div>
-        <div className="space-y-2 pl-4">
+        <div className="stagger-children space-y-3 pl-4">
+          {currentItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-12">
+              <ListOrdered className="mb-3 h-8 w-8 text-muted-foreground/40" />
+              <p className="text-base text-muted-foreground">No current week items</p>
+            </div>
+          ) : null}
           {currentItems.map(({ item, originalIndex }) => (
             <div
               key={item.id ?? `${item.projectId}-current-${originalIndex}`}
-              className="flex items-start gap-3 rounded-lg border bg-card p-3"
+              className="flex items-start gap-3 rounded-lg border bg-card p-4"
             >
               {item.carriedOver ? (
                 <input
@@ -44,20 +52,20 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
                     onCompletedChange(originalIndex, event.currentTarget.checked);
                   }}
                   disabled={disabled}
-                  className="mt-1 size-4 shrink-0 rounded accent-primary"
+                  className="mt-1 size-5 shrink-0 rounded accent-primary"
                 />
               ) : null}
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor={`item-${originalIndex}`} className="text-xs text-muted-foreground">
+                  <Label htmlFor={`current-item-${originalIndex}`} className="text-sm text-muted-foreground">
                     {item.projectId ? 'Current Week' : 'Item'}
                   </Label>
                   {item.carriedOver ? (
-                    <Badge variant="outline" className="text-[10px]">Carried Over</Badge>
+                    <Badge variant="outline" className="text-xs">Carried Over</Badge>
                   ) : null}
                 </div>
                 <Input
-                  id={`item-${originalIndex}`}
+                  id={`current-item-${originalIndex}`}
                   aria-label={`Current item ${originalIndex + 1}`}
                   value={item.text}
                   placeholder="Describe deliverable..."
@@ -65,7 +73,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
                     onTextChange(originalIndex, event.currentTarget.value);
                   }}
                   disabled={disabled}
-                  className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
                 />
               </div>
             </div>
@@ -82,11 +90,17 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
           <span className="text-sm font-semibold">Next Week</span>
           <Badge variant="secondary" className="text-xs">{nextItems.length}</Badge>
         </div>
-        <div className="space-y-2 pl-4">
+        <div className="stagger-children space-y-3 pl-4">
+          {nextItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-12">
+              <ListOrdered className="mb-3 h-8 w-8 text-muted-foreground/40" />
+              <p className="text-base text-muted-foreground">No next week items</p>
+            </div>
+          ) : null}
           {nextItems.map(({ item, originalIndex }) => (
             <div
               key={item.id ?? `${item.projectId}-next-${originalIndex}`}
-              className="flex items-start gap-3 rounded-lg border bg-card p-3"
+              className="flex items-start gap-3 rounded-lg border bg-card p-4"
             >
               {item.carriedOver ? (
                 <input
@@ -97,20 +111,20 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
                     onCompletedChange(originalIndex, event.currentTarget.checked);
                   }}
                   disabled={disabled}
-                  className="mt-1 size-4 shrink-0 rounded accent-primary"
+                  className="mt-1 size-5 shrink-0 rounded accent-primary"
                 />
               ) : null}
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor={`item-${originalIndex}`} className="text-xs text-muted-foreground">
+                  <Label htmlFor={`next-item-${originalIndex}`} className="text-sm text-muted-foreground">
                     Next Week
                   </Label>
                   {item.carriedOver ? (
-                    <Badge variant="outline" className="text-[10px]">Carried Over</Badge>
+                    <Badge variant="outline" className="text-xs">Carried Over</Badge>
                   ) : null}
                 </div>
                 <Input
-                  id={`item-${originalIndex}`}
+                  id={`next-item-${originalIndex}`}
                   aria-label={`Next item ${originalIndex + 1}`}
                   value={item.text}
                   placeholder="Plan for next week..."
@@ -118,7 +132,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
                     onTextChange(originalIndex, event.currentTarget.value);
                   }}
                   disabled={disabled}
-                  className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
                 />
               </div>
             </div>

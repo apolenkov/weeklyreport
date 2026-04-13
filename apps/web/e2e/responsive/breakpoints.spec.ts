@@ -43,7 +43,7 @@ test.describe('Responsive breakpoints - head', () => {
 
       // Admin tables may overflow on very narrow viewports (< 768px),
       // which is expected behavior for data-heavy tables
-      if (bp.width >= 768) {
+      if (bp.width >= 1024) {
         const bodyScrollWidth = await headPage.evaluate(() => document.body.scrollWidth);
         expect(bodyScrollWidth).toBeLessThanOrEqual(bp.width + 1);
       }

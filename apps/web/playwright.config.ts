@@ -18,6 +18,10 @@ export default defineConfig({
     baseURL: WEB_URL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Disable CSS animations so fade-in/stagger don't cause flaky toBeVisible checks
+    launchOptions: {
+      args: ['--force-prefers-reduced-motion'],
+    },
   },
 
   projects: [

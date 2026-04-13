@@ -17,12 +17,12 @@ export function AutosaveIndicator({ state }: AutosaveIndicatorProps) {
     <div aria-live="polite">
       {state === 'saving' ? (
         <Badge variant="outline" className="gap-1.5">
-          <Loader2 className="size-3 animate-spin" />
+          <Loader2 className="size-4 animate-spin" />
           Saving...
         </Badge>
       ) : (
         <Badge variant="outline" className="gap-1.5">
-          <Check className="size-3" />
+          <Check className="size-4" />
           Saved
         </Badge>
       )}
