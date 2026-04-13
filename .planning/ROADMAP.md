@@ -174,6 +174,20 @@ Plans:
 - [x] 13-03-PLAN.md -- Wave 1 bug fixes: a11y, keyboard nav, print CSS
 - [x] 13-06-PLAN.md -- UX/UI polish: ARIA landmarks, skeleton contrast, design tokens
 
+### Phase 14: Backend Hardening & Containerization
+**Goal**: Backend fully tested with integration tests against real PostgreSQL, BullMQ workers tested, Docker multi-stage builds for production, CI/CD pipeline with GitHub Actions
+**Depends on**: Phase 13
+**Success Criteria** (what must be TRUE):
+  1. Integration tests for all 8 repositories run against real PostgreSQL (via Docker test container or local DB) and pass
+  2. BullMQ worker tests verify pdf-export and email-reminder processors with mocked Playwright/EmailService
+  3. tRPC auth middleware tests verify protectedProcedure blocks unauthenticated and headProcedure blocks non-head roles
+  4. Multi-stage Dockerfiles for api and web produce working images under 200MB each
+  5. docker-compose.prod.yml starts full stack (PostgreSQL, Redis, PgBouncer, API, Web) with health checks
+  6. GitHub Actions CI pipeline runs lint, typecheck, unit tests, and E2E tests on every push
+  7. All existing 183 unit tests + 85 E2E tests continue passing
+
+Plans:
+
 ---
 
 *Roadmap created: 2026-04-06*
