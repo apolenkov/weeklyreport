@@ -168,11 +168,18 @@ Plans:
 
 ## v3.0 Progress (in-progress)
 
-### Phase 13: Quality Assurance & Polish
+### Phase 13: Quality Assurance & Polish ✅ COMPLETE
 
 Plans:
+- [x] 13-01-PLAN.md -- P0 bug fixes (saveDraft publish check, Zod refinements, carry-over)
+- [x] 13-02-PLAN.md -- P1 bug fixes (export failed, carry-over status, removeUser)
 - [x] 13-03-PLAN.md -- Wave 1 bug fixes: a11y, keyboard nav, print CSS
+- [x] 13-04-PLAN.md -- Validation hardening (trim, null bytes, array limits)
+- [x] 13-05-PLAN.md -- Date formatting, locale standardization
 - [x] 13-06-PLAN.md -- UX/UI polish: ARIA landmarks, skeleton contrast, design tokens
+- [x] 13-07-PLAN.md -- E2E test stabilization and visual baselines
+- [x] 13-08-PLAN.md -- Comprehensive test coverage expansion
+- [x] UI/UX redesign (3 Sonnet review cycles, 27/35 findings applied)
 
 ### Phase 14: Backend Hardening & Containerization
 **Goal**: Backend fully tested with integration tests against real PostgreSQL, BullMQ workers tested, Docker multi-stage builds for production, CI/CD pipeline with GitHub Actions
