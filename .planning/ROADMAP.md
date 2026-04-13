@@ -201,6 +201,16 @@ Plans:
 - [ ] 14-02-PLAN.md — Docker image optimization (Dockerfile.api) and production docker-compose.prod.yml
 - [ ] 14-03-PLAN.md — CI pipeline integration tests, test script updates, full suite verification
 
+### Phase 15: UI/UX Polish & Visual Verification
+
+**Goal:** All pages visually polished with consistent design system, every screen verified via Playwright screenshots, deferred P3 findings resolved, empty states and error states properly styled
+**Requirements**: TBD
+**Depends on:** Phase 13
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 15 to break down)
+
 ---
 
 *Roadmap created: 2026-04-06*
