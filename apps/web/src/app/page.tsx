@@ -78,7 +78,7 @@ export default function HomePage() {
             >
               <feature.icon className="mb-2 h-5 w-5 text-[oklch(0.75_0.15_70)]" />
               <p className="text-sm font-medium text-white">{feature.title}</p>
-              <p className="mt-1 text-xs text-[oklch(0.6_0.01_260)]">{feature.description}</p>
+              <p className="mt-1 text-sm text-[oklch(0.6_0.01_260)]">{feature.description}</p>
             </div>
           ))}
         </div>
@@ -109,19 +109,19 @@ export default function HomePage() {
                 <div className="flex w-full flex-col gap-2">
                   <Button size="lg" className="w-full gap-2" asChild>
                     <a href="/auth/dev-login?role=head">
-                      <Shield className="h-4 w-4" />
+                      <Shield className="h-5 w-5" />
                       Sign In as Head
                     </a>
                   </Button>
                   <Button size="lg" variant="outline" className="w-full gap-2" asChild>
                     <a href="/auth/dev-login?role=lead">
-                      <FileText className="h-4 w-4" />
+                      <FileText className="h-5 w-5" />
                       Sign In as Lead
                     </a>
                   </Button>
                   <Button size="lg" variant="ghost" className="w-full gap-2" asChild>
                     <a href="/auth/dev-login?role=viewer">
-                      <Users className="h-4 w-4" />
+                      <Users className="h-5 w-5" />
                       Sign In as Viewer
                     </a>
                   </Button>
