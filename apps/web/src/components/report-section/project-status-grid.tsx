@@ -1,5 +1,7 @@
 'use client';
 
+import { Target } from 'lucide-react';
+
 import { Card, CardContent, TrafficLightBadge, cn } from '@customreport/ui';
 import type { TrafficLightStatus } from '@customreport/ui';
 
@@ -26,10 +28,19 @@ const selectedBorderMap: Record<TrafficLightStatus, string> = {
 };
 
 export function ProjectStatusGrid({ projects, disabled, onChange }: ProjectStatusGridProps) {
+  if (projects.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-12">
+        <Target className="mb-3 h-10 w-10 text-muted-foreground/40" />
+        <p className="text-base text-muted-foreground">No projects assigned</p>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
-        'grid grid-cols-1 gap-4 md:grid-cols-2',
+        'stagger-children grid grid-cols-1 gap-4 md:grid-cols-2',
         disabled && 'pointer-events-none opacity-50',
       )}
       role="group"
@@ -47,9 +58,9 @@ export function ProjectStatusGrid({ projects, disabled, onChange }: ProjectStatu
               currentStatus !== 'unset' && selectedBorderMap[currentStatus],
             )}
           >
-            <CardContent className="space-y-3 pb-4 pt-4">
+            <CardContent className="space-y-3 p-5">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">{project.projectName}</span>
+                <span className="text-base font-semibold">{project.projectName}</span>
                 <TrafficLightBadge status={currentStatus} />
               </div>
               <div
@@ -65,7 +76,7 @@ export function ProjectStatusGrid({ projects, disabled, onChange }: ProjectStatu
                     aria-checked={currentStatus === s.value}
                     role="radio"
                     className={cn(
-                      'rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150',
+                      'rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-150',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                       'border',
                       currentStatus === s.value

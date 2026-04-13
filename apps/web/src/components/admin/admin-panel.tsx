@@ -318,6 +318,7 @@ export function AdminPanel({
           <Button
             variant="ghost"
             size="icon"
+            aria-label={`Remove ${row.name}`}
             className="text-muted-foreground hover:text-destructive"
             onClick={(e) => {
               e.stopPropagation();
@@ -325,7 +326,7 @@ export function AdminPanel({
               setDeleteUserName(row.name);
             }}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-5 w-5" />
           </Button>
         ) : null,
     },
@@ -410,15 +411,15 @@ export function AdminPanel({
   const activeProjects = snapshot.projects.filter((p) => !p.archived).length;
 
   return (
-    <div className="space-y-8">
+    <div className="animate-fade-in space-y-8">
       {/* Page header */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Admin Panel</h1>
-        <p className="text-sm text-muted-foreground">Manage users, projects, periods, and reminders</p>
+        <h1 className="text-3xl font-bold tracking-tight">Admin Panel</h1>
+        <p className="text-base text-muted-foreground">Manage users, projects, periods, and reminders</p>
       </div>
 
       {/* Stats overview */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger-children grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={Users}
           label="Users"
@@ -449,19 +450,19 @@ export function AdminPanel({
       <Tabs defaultValue="users">
         <TabsList className="mb-6">
           <TabsTrigger value="users" className="gap-1.5">
-            <Users className="h-4 w-4" />
+            <Users className="h-5 w-5" />
             Users
           </TabsTrigger>
           <TabsTrigger value="projects" className="gap-1.5">
-            <FolderKanban className="h-4 w-4" />
+            <FolderKanban className="h-5 w-5" />
             Projects
           </TabsTrigger>
           <TabsTrigger value="periods" className="gap-1.5">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="h-5 w-5" />
             Periods
           </TabsTrigger>
           <TabsTrigger value="reminders" className="gap-1.5">
-            <Bell className="h-4 w-4" />
+            <Bell className="h-5 w-5" />
             Reminders
           </TabsTrigger>
         </TabsList>
@@ -498,7 +499,7 @@ export function AdminPanel({
               className="gap-1.5"
               onClick={() => setCarryOverOpen(true)}
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-5 w-5" />
               Run Carry-Over
             </Button>
             <Button onClick={() => setPeriodSheetOpen(true)}>Add Period</Button>

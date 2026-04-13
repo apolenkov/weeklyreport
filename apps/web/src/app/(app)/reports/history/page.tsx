@@ -36,10 +36,12 @@ export default function ReportHistoryPage() {
 
   return (
     <AppShell activeReportId={null} role="viewer" currentPath="/reports/history">
-      <h1 className="text-[28px] font-semibold leading-[1.2] mb-6">
-        Report History
-      </h1>
-      <ArchiveReportList reports={archiveQuery.data ?? []} />
+      <div className="animate-fade-in space-y-6">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Report History
+        </h1>
+        <ArchiveReportList reports={archiveQuery.data ?? []} />
+      </div>
     </AppShell>
   );
 }

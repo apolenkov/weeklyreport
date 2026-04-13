@@ -15,6 +15,7 @@ import { AppShell } from '../../../components/navigation/app-shell';
 import { AdminPanel } from '../../../components/admin/admin-panel';
 import {
   PageTitleSkeleton,
+  StatCardSkeleton,
   TableSkeleton,
 } from '../../../components/common/page-skeleton';
 
@@ -47,6 +48,12 @@ export default function AdminPage() {
       <AppShell activeReportId={null} currentPath="/admin" role="head">
         <div className="space-y-6">
           <PageTitleSkeleton />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </div>
           <TableSkeleton />
         </div>
       </AppShell>

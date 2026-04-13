@@ -15,31 +15,31 @@ export function DecisionsEditor({ decisions, disabled }: DecisionsEditorProps) {
   return (
     <div className={disabled ? 'pointer-events-none opacity-50' : undefined} role="group" aria-label="Decisions">
       {decisions.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-8">
-          <CircleDot className="mb-2 h-8 w-8 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">No decisions pending</p>
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-12">
+          <CircleDot className="mb-3 h-8 w-8 text-muted-foreground/40" />
+          <p className="text-base text-muted-foreground">No decisions pending</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="stagger-children space-y-3">
           {decisions.map((decision) => {
             const isResolved = Boolean(decision.resolvedAt);
 
             return (
               <div
                 key={decision.id ?? decision.text}
-                className={`flex items-start gap-3 rounded-lg border p-3 ${
+                className={`flex items-start gap-3 rounded-lg border p-4 ${
                   isResolved
                     ? 'border-success/20 bg-success/5'
                     : 'border-warning/20 bg-warning/5'
                 }`}
               >
                 {isResolved ? (
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
                 ) : (
-                  <CircleDot className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                  <CircleDot className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
                 )}
                 <div className="flex-1">
-                  <p className="text-sm">{decision.text}</p>
+                  <p className="text-base">{decision.text}</p>
                 </div>
                 <Badge
                   variant="outline"

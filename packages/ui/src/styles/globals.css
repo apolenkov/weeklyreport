@@ -140,6 +140,19 @@
   animation: scale-in 0.2s ease-out both;
 }
 
+/* ---- Reduced motion: disable all custom animations ---- */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-in-left,
+  .animate-scale-in,
+  .stagger-children > *,
+  .skeleton {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 /* ---- Print overrides ---- */
 @media print {
   * {

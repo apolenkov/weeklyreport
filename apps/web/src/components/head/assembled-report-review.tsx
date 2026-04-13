@@ -124,9 +124,9 @@ export function AssembledReportReview({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-[28px] font-semibold leading-[1.2]">
+        <h1 className="text-3xl font-bold tracking-tight">
           Assembled Report
         </h1>
         <div className="flex items-center gap-3">
@@ -154,8 +154,8 @@ export function AssembledReportReview({
               </CardHeader>
               <CardContent className="space-y-4">
                 {firstProject ? (
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">
                       {firstProject.projectName} status
                     </Label>
                     <div
@@ -177,11 +177,11 @@ export function AssembledReportReview({
                             aria-checked={isActive}
                             aria-label={option.label}
                             disabled={isPublished}
-                            className={`rounded-full transition-all ${
+                            className={`rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                               isActive
                                 ? 'ring-2 ring-ring ring-offset-2'
                                 : 'opacity-60 hover:opacity-100'
-                            } ${isPublished ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                            } ${isPublished ? 'pointer-events-none cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                             onClick={() =>
                               void handleTrafficLightChange(
                                 section,
@@ -198,7 +198,7 @@ export function AssembledReportReview({
                   </div>
                 ) : null}
                 {firstItem ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Label htmlFor={`item-${section.reportSectionId}`}>
                       First item
                     </Label>

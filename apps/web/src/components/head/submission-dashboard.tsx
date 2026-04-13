@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Clock } from 'lucide-react';
+import { CheckCircle2, Clock, Users } from 'lucide-react';
 
 import {
   submissionDashboardRowSchema,
@@ -34,15 +34,16 @@ export function SubmissionDashboard({ rows }: SubmissionDashboardProps) {
   if (parsedRows.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-12">
-        <p className="text-sm text-muted-foreground">No leads assigned to this period</p>
+        <Users className="mb-3 h-10 w-10 text-muted-foreground/40" />
+        <p className="text-base text-muted-foreground">No leads assigned to this period</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold">Lead Submissions</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold">Lead Submissions</h2>
+      <div className="stagger-children grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {parsedRows.map((row) => {
           const isSubmitted = row.status === 'submitted';
 
@@ -53,34 +54,34 @@ export function SubmissionDashboard({ rows }: SubmissionDashboardProps) {
                 isSubmitted ? 'border-success/30 bg-success/5' : ''
               }`}
             >
-              <CardContent className="flex items-start gap-4 p-4">
-                <Avatar className="mt-0.5 size-10 shrink-0 border">
-                  <AvatarFallback className={`text-xs font-medium ${
+              <CardContent className="flex items-start gap-4 p-5">
+                <Avatar className="mt-0.5 size-12 shrink-0 border">
+                  <AvatarFallback className={`text-sm font-medium ${
                     isSubmitted ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
                   }`}>
                     {getInitials(row.leadName)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 space-y-1.5">
+                <div className="flex-1 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{row.leadName}</span>
+                    <span className="text-base font-semibold">{row.leadName}</span>
                     {isSubmitted ? (
                       <Badge variant="outline" className="gap-1 border-success/30 bg-success/10 text-success">
-                        <CheckCircle2 className="h-3 w-3" />
+                        <CheckCircle2 className="h-5 w-5" />
                         Submitted
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="gap-1 text-muted-foreground">
-                        <Clock className="h-3 w-3" />
+                        <Clock className="h-4 w-4" />
                         Draft
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     {row.projectNames.join(' · ')}
                   </p>
                   {row.submittedAt ? (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {formatDateTime(row.submittedAt)}
                     </p>
                   ) : null}

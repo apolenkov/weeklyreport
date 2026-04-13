@@ -26,31 +26,31 @@ export function ArchiveReportList({ reports }: ArchiveReportListProps) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-12">
         <FileText className="mb-3 h-10 w-10 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">No published reports yet</p>
+        <p className="text-base text-muted-foreground">No published reports yet</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="stagger-children space-y-4">
       {reports.map((report) => (
         <Link
           key={report.reportId}
           href={`/reports/${report.reportId}`}
-          className="group flex items-center gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
+          className="group flex items-center gap-4 rounded-xl border bg-card p-5 transition-colors hover:bg-muted/50"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
             <FileText className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">
+              <span className="text-base font-semibold">
                 {formatPeriodDate(report.periodStart)} — {formatPeriodDate(report.periodEnd)}
               </span>
               <TrafficLightBadge status={toTrafficLightStatus(report.portfolioStatus)} />
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Calendar className="size-3" />
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="size-4" />
               Published {formatDate(report.publishedAt)}
               <span className="text-muted-foreground/60">by {report.publishedByName}</span>
             </div>

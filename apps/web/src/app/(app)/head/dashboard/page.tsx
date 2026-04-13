@@ -51,20 +51,20 @@ export default function HeadDashboardPage() {
 
   return (
     <AppShell activeReportId={null} role="head" currentPath="/head/dashboard">
-      <div className="space-y-8">
+      <div className="animate-fade-in space-y-8">
         {/* Page header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Review Dashboard</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="text-3xl font-bold tracking-tight">Review Dashboard</h1>
+            <p className="mt-1 text-base text-muted-foreground">
               Track lead submissions and assemble the weekly report
             </p>
           </div>
           <Button asChild className="gap-2">
             <Link href="/head/report">
-              <FileStack className="h-4 w-4" />
+              <FileStack className="h-5 w-5" />
               Open Assembled Report
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-5 w-5" />
             </Link>
           </Button>
         </div>
@@ -73,10 +73,10 @@ export default function HeadDashboardPage() {
         <div className="stagger-children grid gap-4 sm:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-base font-semibold text-muted-foreground">
                 Total Leads
               </CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-semibold">{total}</div>
@@ -84,10 +84,10 @@ export default function HeadDashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-base font-semibold text-muted-foreground">
                 Submitted
               </CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-success" />
+              <CheckCircle2 className="h-5 w-5 text-success" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-semibold text-success">{submittedCount}</div>
@@ -96,16 +96,17 @@ export default function HeadDashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-base font-semibold text-muted-foreground">
                 Awaiting
               </CardTitle>
-              <Clock className="h-4 w-4 text-warning" />
+              <Clock className="h-5 w-5 text-warning" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-semibold text-warning">{draftCount}</div>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {draftCount === 0 ? 'All leads submitted' : 'Still in draft'}
               </p>
+
             </CardContent>
           </Card>
         </div>
