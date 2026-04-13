@@ -1,0 +1,33 @@
+<!--
+  Tailwind v4 safelist: classes used by shadcn/ui components in packages/ui
+  that the scanner cannot extract from cva() template literals.
+  Referenced via @source in app.css.
+-->
+fixed absolute relative sticky
+inset-0 inset-y-0 inset-x-0
+top-0 right-0 bottom-0 left-0 top-4 right-4
+z-50 z-40
+bg-black/50 bg-black/80
+shadow-lg shadow-md shadow-sm
+border-l border-r border-t border-b
+h-full w-full w-3/4
+sm:max-w-sm sm:max-w-lg sm:max-w-xl
+slide-in-from-right slide-in-from-left slide-in-from-top slide-in-from-bottom
+slide-out-to-right slide-out-to-left slide-out-to-top slide-out-to-bottom
+animate-in animate-out
+fade-in-0 fade-out-0
+data-[state=open]:animate-in data-[state=closed]:animate-out
+data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0
+data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right
+duration-300 duration-500
+ease-in-out
+sr-only
+outline-hidden
+ring-offset-background
+pointer-events-none
+opacity-70 opacity-50
+rounded-xs
+bg-muted bg-accent bg-card bg-popover bg-sidebar bg-sidebar-accent bg-input bg-secondary
+text-sidebar-foreground text-sidebar-primary text-sidebar-primary-foreground
+text-sidebar-accent-foreground text-card-foreground text-popover-foreground text-accent-foreground
+border-sidebar-border
