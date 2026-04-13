@@ -21,31 +21,21 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
     .filter(({ item }) => item.type === 'next');
 
   return (
-    <div className={disabled ? 'opacity-50 pointer-events-none' : undefined} role="group" aria-label="Items">
+    <div className={disabled ? 'pointer-events-none opacity-50' : undefined} role="group" aria-label="Items">
       {/* Current Week */}
       <div className="space-y-3">
-        <p className="text-sm font-semibold">Current Week</p>
-        {currentItems.map(({ item, originalIndex }) => (
-          <div key={item.id ?? `${item.projectId}-current-${originalIndex}`} className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <Label htmlFor={`item-${originalIndex}`}>
-                Current Week Item
-              </Label>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-primary" />
+          <span className="text-sm font-semibold">Current Week</span>
+          <Badge variant="secondary" className="text-xs">{currentItems.length}</Badge>
+        </div>
+        <div className="space-y-2 pl-4">
+          {currentItems.map(({ item, originalIndex }) => (
+            <div
+              key={item.id ?? `${item.projectId}-current-${originalIndex}`}
+              className="flex items-start gap-3 rounded-lg border bg-card p-3"
+            >
               {item.carriedOver ? (
-                <Badge variant="outline">Carried Over</Badge>
-              ) : null}
-            </div>
-            <Input
-              id={`item-${originalIndex}`}
-              aria-label={`Current item ${originalIndex + 1}`}
-              value={item.text}
-              onChange={(event) => {
-                onTextChange(originalIndex, event.currentTarget.value);
-              }}
-              disabled={disabled}
-            />
-            {item.carriedOver ? (
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <input
                   type="checkbox"
                   aria-label={`Carry-over item ${originalIndex + 1} completed`}
@@ -53,42 +43,52 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
                   onChange={(event) => {
                     onCompletedChange(originalIndex, event.currentTarget.checked);
                   }}
-                  className="rounded accent-primary size-4"
                   disabled={disabled}
+                  className="mt-1 size-4 shrink-0 rounded accent-primary"
                 />
-                Completed
-              </label>
-            ) : null}
-          </div>
-        ))}
+              ) : null}
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor={`item-${originalIndex}`} className="text-xs text-muted-foreground">
+                    {item.projectId ? 'Current Week' : 'Item'}
+                  </Label>
+                  {item.carriedOver ? (
+                    <Badge variant="outline" className="text-[10px]">Carried Over</Badge>
+                  ) : null}
+                </div>
+                <Input
+                  id={`item-${originalIndex}`}
+                  aria-label={`Current item ${originalIndex + 1}`}
+                  value={item.text}
+                  placeholder="Describe deliverable..."
+                  onChange={(event) => {
+                    onTextChange(originalIndex, event.currentTarget.value);
+                  }}
+                  disabled={disabled}
+                  className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <Separator className="my-4" />
+      <Separator className="my-6" />
 
       {/* Next Week */}
       <div className="space-y-3">
-        <p className="text-sm font-semibold">Next Week</p>
-        {nextItems.map(({ item, originalIndex }) => (
-          <div key={item.id ?? `${item.projectId}-next-${originalIndex}`} className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <Label htmlFor={`item-${originalIndex}`}>
-                Next Week Item
-              </Label>
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+          <span className="text-sm font-semibold">Next Week</span>
+          <Badge variant="secondary" className="text-xs">{nextItems.length}</Badge>
+        </div>
+        <div className="space-y-2 pl-4">
+          {nextItems.map(({ item, originalIndex }) => (
+            <div
+              key={item.id ?? `${item.projectId}-next-${originalIndex}`}
+              className="flex items-start gap-3 rounded-lg border bg-card p-3"
+            >
               {item.carriedOver ? (
-                <Badge variant="outline">Carried Over</Badge>
-              ) : null}
-            </div>
-            <Input
-              id={`item-${originalIndex}`}
-              aria-label={`Next item ${originalIndex + 1}`}
-              value={item.text}
-              onChange={(event) => {
-                onTextChange(originalIndex, event.currentTarget.value);
-              }}
-              disabled={disabled}
-            />
-            {item.carriedOver ? (
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <input
                   type="checkbox"
                   aria-label={`Carry-over item ${originalIndex + 1} completed`}
@@ -96,14 +96,34 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
                   onChange={(event) => {
                     onCompletedChange(originalIndex, event.currentTarget.checked);
                   }}
-                  className="rounded accent-primary size-4"
                   disabled={disabled}
+                  className="mt-1 size-4 shrink-0 rounded accent-primary"
                 />
-                Completed
-              </label>
-            ) : null}
-          </div>
-        ))}
+              ) : null}
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor={`item-${originalIndex}`} className="text-xs text-muted-foreground">
+                    Next Week
+                  </Label>
+                  {item.carriedOver ? (
+                    <Badge variant="outline" className="text-[10px]">Carried Over</Badge>
+                  ) : null}
+                </div>
+                <Input
+                  id={`item-${originalIndex}`}
+                  aria-label={`Next item ${originalIndex + 1}`}
+                  value={item.text}
+                  placeholder="Plan for next week..."
+                  onChange={(event) => {
+                    onTextChange(originalIndex, event.currentTarget.value);
+                  }}
+                  disabled={disabled}
+                  className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

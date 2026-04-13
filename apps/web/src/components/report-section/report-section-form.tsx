@@ -1,7 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Check } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Lightbulb,
+  ListOrdered,
+  Send,
+  Target,
+  TrendingUp,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -18,6 +26,7 @@ import {
   Button,
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
   ConfirmDialog,
@@ -179,25 +188,39 @@ export function ReportSectionForm({
   }
 
   return (
-    <div className="space-y-6" aria-disabled={isReadOnly || undefined}>
+    <div className="space-y-8" aria-disabled={isReadOnly || undefined}>
       {/* Page header */}
-      <div className="space-y-1">
-        <h1 className="text-[28px] font-semibold leading-[1.2]">My Report</h1>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{section.authorName}</span>
-          <Badge variant={section.status === 'submitted' ? 'default' : 'outline'}>
-            {section.status === 'submitted' ? 'Submitted' : 'Draft'}
-          </Badge>
-          <AutosaveIndicator state={saveState} />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">My Report</h1>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{section.authorName}</span>
+            <Badge variant={section.status === 'submitted' ? 'default' : 'outline'}>
+              {section.status === 'submitted' ? 'Submitted' : 'Draft'}
+            </Badge>
+            <AutosaveIndicator state={saveState} />
+          </div>
         </div>
+        {isReadOnly ? (
+          <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-sm">
+            <CheckCircle2 className="size-4 text-success" />
+            Section submitted and locked
+          </Badge>
+        ) : (
+          <Button onClick={() => setShowSubmitDialog(true)} className="gap-2">
+            <Send className="h-4 w-4" />
+            Submit Section
+          </Button>
+        )}
       </div>
 
       {/* Validation errors */}
       {errors.length > 0 ? (
         <Alert variant="destructive">
-          <AlertTitle>Invalid data</AlertTitle>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Please fix these issues</AlertTitle>
           <AlertDescription>
-            <ul className="list-disc pl-4 space-y-1">
+            <ul className="list-disc space-y-1 pl-4">
               {errors.map((error) => (
                 <li key={error}>{error}</li>
               ))}
@@ -206,10 +229,18 @@ export function ReportSectionForm({
         </Alert>
       ) : null}
 
-      {/* Project Statuses */}
+      {/* Section 1: Project Statuses */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold leading-[1.3]">Project Statuses</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+              <Target className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Project Statuses</CardTitle>
+              <CardDescription>Set traffic light for each project</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <ProjectStatusGrid
@@ -224,10 +255,18 @@ export function ReportSectionForm({
         </CardContent>
       </Card>
 
-      {/* Items */}
+      {/* Section 2: Weekly Items */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold leading-[1.3]">Items</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[oklch(0.68_0.17_152)]/10">
+              <ListOrdered className="h-5 w-5 text-[oklch(0.68_0.17_152)]" />
+            </div>
+            <div>
+              <CardTitle>Weekly Items</CardTitle>
+              <CardDescription>Current and next week deliverables</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <ItemsEditor
@@ -253,30 +292,54 @@ export function ReportSectionForm({
         </CardContent>
       </Card>
 
-      {/* Risks */}
+      {/* Section 3: Risks */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold leading-[1.3]">Risks</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive/10">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+            </div>
+            <div>
+              <CardTitle>Risks</CardTitle>
+              <CardDescription>Active risks with impact assessment</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <RisksEditor risks={section.risks} disabled={isReadOnly} />
         </CardContent>
       </Card>
 
-      {/* Decisions */}
+      {/* Section 4: Decisions */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold leading-[1.3]">Decisions</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning/10">
+              <Lightbulb className="h-5 w-5 text-warning" />
+            </div>
+            <div>
+              <CardTitle>Decisions Required</CardTitle>
+              <CardDescription>Items requiring management decision</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <DecisionsEditor decisions={section.decisions} disabled={isReadOnly} />
         </CardContent>
       </Card>
 
-      {/* Priorities */}
+      {/* Section 5: Priorities */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold leading-[1.3]">Top 3 Priorities</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[oklch(0.62_0.18_310)]/10">
+              <TrendingUp className="h-5 w-5 text-[oklch(0.62_0.18_310)]" />
+            </div>
+            <div>
+              <CardTitle>Top 3 Priorities</CardTitle>
+              <CardDescription>Key focus areas for next week</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <PrioritiesEditor
@@ -293,20 +356,6 @@ export function ReportSectionForm({
           />
         </CardContent>
       </Card>
-
-      {/* Submit button / submitted state */}
-      {!isReadOnly ? (
-        <Button onClick={() => setShowSubmitDialog(true)}>
-          Submit Section
-        </Button>
-      ) : null}
-
-      {isReadOnly ? (
-        <Badge variant="outline" className="gap-1.5">
-          <Check className="size-3" />
-          Section submitted
-        </Badge>
-      ) : null}
 
       {/* Submit confirmation dialog */}
       <ConfirmDialog

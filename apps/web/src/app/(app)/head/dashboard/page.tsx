@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowRight, CheckCircle2, Clock, FileStack, Users } from 'lucide-react';
 
-import { Button } from '@customreport/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, Progress } from '@customreport/ui';
 
 import { trpc } from '../../../../lib/trpc';
 import { QueryError } from '../../../../components/common/query-error';
@@ -10,6 +11,7 @@ import { AppShell } from '../../../../components/navigation/app-shell';
 import { SubmissionDashboard } from '../../../../components/head/submission-dashboard';
 import {
   PageTitleSkeleton,
+  CardSkeleton,
   TableSkeleton,
 } from '../../../../components/common/page-skeleton';
 
@@ -19,8 +21,13 @@ export default function HeadDashboardPage() {
   if (dashboardQuery.isLoading) {
     return (
       <AppShell activeReportId={null} role="head" currentPath="/head/dashboard">
-        <div className="space-y-6">
+        <div className="space-y-8">
           <PageTitleSkeleton />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
           <TableSkeleton />
         </div>
       </AppShell>
@@ -36,17 +43,76 @@ export default function HeadDashboardPage() {
     );
   }
 
+  const rows = dashboardQuery.data ?? [];
+  const submittedCount = rows.filter((r) => r.status === 'submitted').length;
+  const total = rows.length;
+  const percentage = total > 0 ? Math.round((submittedCount / total) * 100) : 0;
+  const draftCount = total - submittedCount;
+
   return (
     <AppShell activeReportId={null} role="head" currentPath="/head/dashboard">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-[28px] font-semibold leading-[1.2]">
-          Review Dashboard
-        </h1>
-        <Button variant="outline" asChild>
-          <Link href="/head/report">Open assembled report</Link>
-        </Button>
+      <div className="space-y-8">
+        {/* Page header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Review Dashboard</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Track lead submissions and assemble the weekly report
+            </p>
+          </div>
+          <Button asChild className="gap-2">
+            <Link href="/head/report">
+              <FileStack className="h-4 w-4" />
+              Open Assembled Report
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+
+        {/* KPI cards */}
+        <div className="stagger-children grid gap-4 sm:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Leads
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-semibold">{total}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Submitted
+              </CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-success" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-semibold text-success">{submittedCount}</div>
+              <Progress value={percentage} className="mt-2" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Awaiting
+              </CardTitle>
+              <Clock className="h-4 w-4 text-warning" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-semibold text-warning">{draftCount}</div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {draftCount === 0 ? 'All leads submitted' : 'Still in draft'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Lead submissions */}
+        <SubmissionDashboard rows={rows} />
       </div>
-      <SubmissionDashboard rows={dashboardQuery.data ?? []} />
     </AppShell>
   );
 }
