@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import type { Role } from '@customreport/shared';
 
 import {
+  Separator,
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -12,12 +13,11 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-  Separator,
 } from '@customreport/ui';
 
 import { MobileNav } from './mobile-nav';
 import { NavUser } from './nav-user';
-import { RoleNav } from './role-nav';
+import { RoleNav, navItems } from './role-nav';
 
 type AppShellProps = {
   readonly activeReportId?: string | null;
@@ -27,6 +27,25 @@ type AppShellProps = {
   readonly children: ReactNode;
 };
 
+function getRoleLabel(role: Role): string {
+  const labels: Record<Role, string> = {
+    lead: 'Lead',
+    head: 'Head',
+    viewer: 'Viewer',
+  };
+  return labels[role];
+}
+
+function getPageTitle(currentPath: string, activeReportId: string | null): string {
+  const match = navItems.find((item) => {
+    const href = item.href === '/reports/:reportId' && activeReportId
+      ? `/reports/${activeReportId}`
+      : item.href;
+    return href === currentPath;
+  });
+  return match?.label ?? 'Page';
+}
+
 export function AppShell({
   activeReportId = null,
   role,
@@ -34,6 +53,8 @@ export function AppShell({
   userName = 'User',
   children,
 }: AppShellProps) {
+  const pageTitle = getPageTitle(currentPath, activeReportId);
+
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon" className="border-r border-sidebar-border" aria-label="Main navigation">
@@ -56,6 +77,11 @@ export function AppShell({
       <SidebarInset>
         <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-background/80 px-6 backdrop-blur-md">
           <MobileNav activeReportId={activeReportId} role={role} currentPath={currentPath} />
+          <nav aria-label="Breadcrumb" className="hidden items-center gap-2 text-sm lg:flex">
+            <span className="text-muted-foreground">{getRoleLabel(role)}</span>
+            <span className="text-muted-foreground/40">/</span>
+            <span className="font-medium">{pageTitle}</span>
+          </nav>
           <div className="flex-1" />
           <NavUser userName={userName} userRole={role} />
         </header>
