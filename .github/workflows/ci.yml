@@ -134,6 +134,9 @@ jobs:
       - name: Seed database
         run: pnpm exec tsx prisma/seed.ts
 
+      - name: Integration Tests
+        run: pnpm --filter=@customreport/api test:integration
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
