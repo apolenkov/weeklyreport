@@ -16,4 +16,4 @@ pnpm-lock.yaml
 .remember
 .rtk
 .sisyphus
-.idea
+.ideagraphify-out/
