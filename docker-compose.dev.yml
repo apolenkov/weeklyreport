@@ -28,8 +28,8 @@ services:
       DIRECT_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      PORT: 3001
-      FRONTEND_URL: http://localhost:3000
+      PORT: 3002
+      FRONTEND_URL: http://localhost:3001
       AUTH_DEV_MODE: "true"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-production-min-32-chars!!}
       PDF_BASE_URL: http://localhost:3000
@@ -40,7 +40,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "3001:3001"
+      - "3002:3002"
 
   web:
     build:
@@ -55,7 +55,7 @@ services:
       - ./packages/ui/src:/app/packages/ui/src
     environment:
       NODE_ENV: development
-      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_API_URL: http://localhost:3002
       AUTH_DEV_MODE: "true"
     depends_on:
       - api
