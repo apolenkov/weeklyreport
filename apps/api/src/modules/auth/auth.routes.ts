@@ -15,14 +15,6 @@ type SamlProfile = {
   role: string;
 };
 
-const userInclude = {
-  authoredReportSections: {
-    where: { report: { status: 'draft' as const } },
-    select: { id: true, reportId: true },
-    take: 1,
-  },
-};
-
 async function buildUserSession(
   prisma: PrismaClient,
   profile: SamlProfile,
@@ -36,7 +28,6 @@ async function buildUserSession(
     ? await prisma.user.update({
         where: { id: existing.id },
         data: { samlId: profile.samlId, email: profile.email, name: profile.displayName },
-        include: userInclude,
       })
     : await prisma.user.create({
         data: {
@@ -45,17 +36,29 @@ async function buildUserSession(
           name: profile.displayName,
           role: profile.role as 'lead' | 'head' | 'viewer',
         },
-        include: userInclude,
       });
 
-  const activeSection = user.authoredReportSections[0] ?? null;
+  // Lead users: find their section in the active (draft) report
+  const activeSection = await prisma.reportSection.findFirst({
+    where: { authorId: user.id, report: { status: 'draft' } },
+    select: { id: true, reportId: true },
+  });
+
+  // All roles: find the active report (head/viewer have no section but need the reportId)
+  const activeReport = activeSection
+    ? null
+    : await prisma.report.findFirst({
+        where: { status: 'draft' },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      });
 
   return {
     userId: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
-    activeReportId: activeSection?.reportId ?? null,
+    activeReportId: activeSection?.reportId ?? activeReport?.id ?? null,
     activeReportSectionId: activeSection?.id ?? null,
   };
 }
