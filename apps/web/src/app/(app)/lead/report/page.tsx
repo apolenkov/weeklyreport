@@ -1,12 +1,13 @@
 'use client';
 
-import { Alert, AlertDescription, AlertTitle } from '@customreport/ui';
+import { FileText } from 'lucide-react';
 
 import { trpc } from '../../../../lib/trpc';
 import { QueryError } from '../../../../components/common/query-error';
 import { AppShell } from '../../../../components/navigation/app-shell';
 import { ReportSectionForm } from '../../../../components/report-section/report-section-form';
 import { PageTitleSkeleton, SectionCardSkeleton } from '../../../../components/common/page-skeleton';
+import { EmptyState } from '../../../../components/common/empty-state';
 
 import type {
   DraftSavePayload,
@@ -54,12 +55,11 @@ export default function LeadReportPage() {
   if (!section) {
     return (
       <AppShell role="lead" currentPath="/lead/report">
-        <Alert>
-          <AlertTitle>No active report</AlertTitle>
-          <AlertDescription>
-            There is no active report section for the current period. It will appear here once a new period is created.
-          </AlertDescription>
-        </Alert>
+        <EmptyState
+          icon={FileText}
+          title="No active report"
+          description="There is no active report section for the current period. It will appear here once a new period is created."
+        />
       </AppShell>
     );
   }
