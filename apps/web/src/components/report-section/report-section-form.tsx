@@ -53,9 +53,10 @@ function toDraftSaveInput(section: ReportSectionReadModel): DraftSavePayload {
       projectId: project.projectId,
       status: project.trafficLight ?? undefined,
     })),
-    items: section.items,
-    risks: section.risks,
-    decisions: section.decisions,
+    // Filter out items/risks/decisions with empty required text (not yet filled by user)
+    items: section.items.filter((item) => item.text.trim().length > 0),
+    risks: section.risks.filter((risk) => risk.risk.trim().length > 0),
+    decisions: section.decisions.filter((decision) => decision.text.trim().length > 0),
     priorities: section.priorities,
   };
 }
@@ -129,6 +130,7 @@ export function ReportSectionForm({
   const lastSavedSnapshot = useRef(JSON.stringify(toDraftSaveInput(initialSection)));
 
   const isReadOnly = section.status === 'submitted';
+  const defaultProjectId = section.projects[0]?.projectId ?? '';
 
   useEffect(() => {
     const currentSnapshot = JSON.stringify(toDraftSaveInput(section));
@@ -147,9 +149,8 @@ export function ReportSectionForm({
     const timeoutId = window.setTimeout(async () => {
       setSaveState('saving');
       try {
-        const saved = await onSaveDraft(toDraftSaveInput(section));
-        lastSavedSnapshot.current = JSON.stringify(toDraftSaveInput(saved));
-        setSection(saved);
+        await onSaveDraft(toDraftSaveInput(section));
+        lastSavedSnapshot.current = currentSnapshot;
         setSaveState('saved');
       } catch (error) {
         console.error('Autosave failed:', error);
@@ -288,6 +289,29 @@ export function ReportSectionForm({
                 ),
               }));
             }}
+            onAdd={(type) => {
+              setSection((currentSection) => ({
+                ...currentSection,
+                items: [
+                  ...currentSection.items,
+                  {
+                    projectId: defaultProjectId,
+                    type,
+                    text: '',
+                    tag: '',
+                    workflowStatus: 'in_progress' as const,
+                    carriedOver: false,
+                    completed: null,
+                  },
+                ],
+              }));
+            }}
+            onRemove={(itemIndex) => {
+              setSection((currentSection) => ({
+                ...currentSection,
+                items: currentSection.items.filter((_, index) => index !== itemIndex),
+              }));
+            }}
           />
         </CardContent>
       </Card>
@@ -306,7 +330,33 @@ export function ReportSectionForm({
           </div>
         </CardHeader>
         <CardContent>
-          <RisksEditor risks={section.risks} disabled={isReadOnly} />
+          <RisksEditor
+            risks={section.risks}
+            disabled={isReadOnly}
+            onAdd={() => {
+              setSection((currentSection) => ({
+                ...currentSection,
+                risks: [
+                  ...currentSection.risks,
+                  { projectId: defaultProjectId, risk: '', impact: '', mitigation: '' },
+                ],
+              }));
+            }}
+            onRemove={(riskIndex) => {
+              setSection((currentSection) => ({
+                ...currentSection,
+                risks: currentSection.risks.filter((_, index) => index !== riskIndex),
+              }));
+            }}
+            onFieldChange={(riskIndex, field, value) => {
+              setSection((currentSection) => ({
+                ...currentSection,
+                risks: currentSection.risks.map((risk, index) =>
+                  index === riskIndex ? { ...risk, [field]: value } : risk,
+                ),
+              }));
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -324,7 +374,33 @@ export function ReportSectionForm({
           </div>
         </CardHeader>
         <CardContent>
-          <DecisionsEditor decisions={section.decisions} disabled={isReadOnly} />
+          <DecisionsEditor
+            decisions={section.decisions}
+            disabled={isReadOnly}
+            onAdd={() => {
+              setSection((currentSection) => ({
+                ...currentSection,
+                decisions: [
+                  ...currentSection.decisions,
+                  { text: '', owner: '', impact: '', deadline: null, resolvedAt: null },
+                ],
+              }));
+            }}
+            onRemove={(decisionIndex) => {
+              setSection((currentSection) => ({
+                ...currentSection,
+                decisions: currentSection.decisions.filter((_, index) => index !== decisionIndex),
+              }));
+            }}
+            onFieldChange={(decisionIndex, field, value) => {
+              setSection((currentSection) => ({
+                ...currentSection,
+                decisions: currentSection.decisions.map((decision, index) =>
+                  index === decisionIndex ? { ...decision, [field]: value } : decision,
+                ),
+              }));
+            }}
+          />
         </CardContent>
       </Card>
 

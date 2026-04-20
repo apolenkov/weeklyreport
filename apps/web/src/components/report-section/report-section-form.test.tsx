@@ -59,8 +59,8 @@ describe('ReportSectionForm', () => {
     expect(screen.getByLabelText('Current item 1')).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Priority \d/)).toHaveLength(3);
     // Empty state texts from the redesigned subcomponents
-    expect(screen.getByText('No active risks')).toBeInTheDocument();
-    expect(screen.getByText('No decisions pending')).toBeInTheDocument();
+    expect(screen.getByText('Активных рисков нет')).toBeInTheDocument();
+    expect(screen.getByText('Нет решений, требующих внимания')).toBeInTheDocument();
   });
 
   it('shows autosave transitions after a debounced change', async () => {
@@ -101,7 +101,7 @@ describe('ReportSectionForm', () => {
     });
   });
 
-  it('rehydrates saved values after a successful draft save', async () => {
+  it('preserves local text after a successful draft save', async () => {
     const user = userEvent.setup();
     const savedSection = {
       ...createDemoSection(),
@@ -120,7 +120,9 @@ describe('ReportSectionForm', () => {
     await user.type(screen.getByLabelText('Current item 1'), 'New text');
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('Saved from backend')).toBeInTheDocument();
+      expect(onSaveDraft).toHaveBeenCalled();
+      // Local state is preserved — not overwritten by backend response
+      expect(screen.getByDisplayValue('New text')).toBeInTheDocument();
     });
   });
 
@@ -170,7 +172,7 @@ describe('ReportSectionForm', () => {
     renderForm({ initialSection: carriedSection, onSaveDraft });
 
     expect(screen.getByText('Carried Over')).toBeInTheDocument();
-    expect(screen.getByText('Still unresolved')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Still unresolved')).toBeInTheDocument();
 
     await user.click(screen.getByLabelText('Carry-over item 1 completed'));
 
