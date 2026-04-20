@@ -4,6 +4,9 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { toast } from 'sonner';
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { reportSectionReadModelSchema } from '@customreport/shared';
 
@@ -32,9 +35,9 @@ describe('ReportSectionForm submit flow', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Submit section' }));
+    await user.click(screen.getByRole('button', { name: 'Submit Section' }));
 
-    expect(screen.getByRole('dialog')).toHaveTextContent('Вы уверены?');
+    expect(screen.getByRole('dialog')).toHaveTextContent('Submit Section');
   });
 
   it('renders validation errors when D-03 conditions are missing', async () => {
@@ -61,8 +64,8 @@ describe('ReportSectionForm submit flow', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Submit section' }));
-    await user.click(screen.getByRole('button', { name: 'Confirm submit' }));
+    await user.click(screen.getByRole('button', { name: 'Submit Section' }));
+    await user.click(await screen.findByRole('button', { name: 'Submit Section' }));
 
     expect(screen.getByText(/must have a traffic light status/i)).toBeInTheDocument();
     expect(screen.getByText(/needs at least one Current Week item/i)).toBeInTheDocument();
@@ -101,14 +104,17 @@ describe('ReportSectionForm submit flow', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Submit section' }));
-    await user.click(screen.getByRole('button', { name: 'Confirm submit' }));
+    await user.click(screen.getByRole('button', { name: 'Submit Section' }));
+    await user.click(await screen.findByRole('button', { name: 'Submit Section' }));
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalled();
-      expect(screen.getByText('Секция отправлена')).toBeInTheDocument();
-      expect(screen.getByLabelText('Project 1 traffic light')).toBeDisabled();
-      expect(screen.queryByRole('button', { name: 'Submit section' })).not.toBeInTheDocument();
+      // toast fires in Sonner portal (outside JSDOM) — assert on the mock
+      expect(toast.success).toHaveBeenCalled();
+      // RadioGroup is a div — check child buttons are disabled
+      const radioGroup = screen.getByLabelText('Project 1 traffic light');
+      radioGroup.querySelectorAll('button').forEach((btn) => expect(btn).toBeDisabled());
+      expect(screen.queryByRole('button', { name: 'Submit Section' })).not.toBeInTheDocument();
     });
   });
 });
