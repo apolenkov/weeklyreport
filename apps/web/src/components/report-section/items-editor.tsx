@@ -1,8 +1,8 @@
 'use client';
 
-import { ListOrdered } from 'lucide-react';
+import { ListOrdered, Plus, Trash2 } from 'lucide-react';
 
-import { Badge, Input, Label, Separator } from '@customreport/ui';
+import { Badge, Button, Input, Label, Separator } from '@customreport/ui';
 
 import type { ReportSectionReadModel } from '@customreport/shared';
 
@@ -11,9 +11,11 @@ type ItemsEditorProps = {
   disabled: boolean;
   onCompletedChange: (itemIndex: number, completed: boolean) => void;
   onTextChange: (itemIndex: number, value: string) => void;
+  onAdd: (type: 'current' | 'next') => void;
+  onRemove: (itemIndex: number) => void;
 };
 
-export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }: ItemsEditorProps) {
+export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, onAdd, onRemove }: ItemsEditorProps) {
   const currentItems = items
     .map((item, originalIndex) => ({ item, originalIndex }))
     .filter(({ item }) => item.type === 'current');
@@ -33,9 +35,9 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
         </div>
         <div className="stagger-children space-y-3 pl-4">
           {currentItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-12">
-              <ListOrdered className="mb-3 h-8 w-8 text-muted-foreground/40" />
-              <p className="text-base text-muted-foreground">No current week items</p>
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-8">
+              <ListOrdered className="mb-2 h-6 w-6 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">Пока нет пунктов за текущую неделю</p>
             </div>
           ) : null}
           {currentItems.map(({ item, originalIndex }) => (
@@ -68,7 +70,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
                   id={`current-item-${originalIndex}`}
                   aria-label={`Current item ${originalIndex + 1}`}
                   value={item.text}
-                  placeholder="Describe deliverable..."
+                  placeholder="Опишите, что сделано..."
                   onChange={(event) => {
                     onTextChange(originalIndex, event.currentTarget.value);
                   }}
@@ -76,8 +78,30 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
                   className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
                 />
               </div>
+              {!disabled && !item.carriedOver ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="mt-1 size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => onRemove(originalIndex)}
+                  aria-label={`Удалить пункт ${originalIndex + 1}`}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              ) : null}
             </div>
           ))}
+          {!disabled ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => onAdd('current')}
+            >
+              <Plus className="size-4" />
+              Добавить пункт
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -92,9 +116,9 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
         </div>
         <div className="stagger-children space-y-3 pl-4">
           {nextItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-12">
-              <ListOrdered className="mb-3 h-8 w-8 text-muted-foreground/40" />
-              <p className="text-base text-muted-foreground">No next week items</p>
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-8">
+              <ListOrdered className="mb-2 h-6 w-6 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">Пока нет планов на следующую неделю</p>
             </div>
           ) : null}
           {nextItems.map(({ item, originalIndex }) => (
@@ -127,7 +151,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
                   id={`next-item-${originalIndex}`}
                   aria-label={`Next item ${originalIndex + 1}`}
                   value={item.text}
-                  placeholder="Plan for next week..."
+                  placeholder="Что планируется..."
                   onChange={(event) => {
                     onTextChange(originalIndex, event.currentTarget.value);
                   }}
@@ -135,8 +159,30 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange }
                   className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
                 />
               </div>
+              {!disabled && !item.carriedOver ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="mt-1 size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => onRemove(originalIndex)}
+                  aria-label={`Удалить пункт ${originalIndex + 1}`}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              ) : null}
             </div>
           ))}
+          {!disabled ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => onAdd('next')}
+            >
+              <Plus className="size-4" />
+              Добавить пункт
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>
