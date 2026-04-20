@@ -19,15 +19,15 @@ async function buildUserSession(
   prisma: PrismaClient,
   profile: SamlProfile,
 ): Promise<UserSession> {
-  // Find by email first (seed users may not have samlId), then by samlId
-  const existing = await prisma.user.findFirst({
-    where: { OR: [{ samlId: profile.samlId }, { email: profile.email }] },
-  });
+  // Prefer email match (seed users may not have samlId), fall back to samlId
+  const existing =
+    (await prisma.user.findFirst({ where: { email: profile.email } })) ??
+    (await prisma.user.findFirst({ where: { samlId: profile.samlId } }));
 
   const user = existing
     ? await prisma.user.update({
         where: { id: existing.id },
-        data: { samlId: profile.samlId, email: profile.email, name: profile.displayName },
+        data: { samlId: profile.samlId, name: profile.displayName },
       })
     : await prisma.user.create({
         data: {
@@ -146,8 +146,13 @@ export function mountAuthRoutes(
         };
 
         const email = (req.query.email as string) ?? emailByRole[role]!;
-        const displayName = nameByRole[role] ?? role;
-        const samlId = samlIdByRole[role] ?? `dev-${role}`;
+
+        // Derive samlId and displayName from email when custom email is provided
+        const isCustomEmail = req.query.email && req.query.email !== emailByRole[role];
+        const samlId = isCustomEmail ? `dev-${email}` : (samlIdByRole[role] ?? `dev-${role}`);
+        const displayName = isCustomEmail
+          ? (await prisma.user.findFirst({ where: { email }, select: { name: true } }))?.name ?? email
+          : (nameByRole[role] ?? role);
 
         const session = await buildUserSession(prisma, {
           samlId,
