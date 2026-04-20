@@ -4,6 +4,9 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { toast } from 'sonner';
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import type { AdminSnapshot } from '@customreport/shared';
 
@@ -196,7 +199,8 @@ describe('AdminPanel', () => {
     await user.click(await screen.findByRole('button', { name: 'Run Carry-Over' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Carry-over completed')).toBeInTheDocument();
+      // toast.success fires in Sonner portal (outside JSDOM) — assert on the mock
+      expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('Carry-over'), expect.anything());
     });
   });
 });

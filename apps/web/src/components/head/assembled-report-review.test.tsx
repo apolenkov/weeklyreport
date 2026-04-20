@@ -5,6 +5,10 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+import { toast } from 'sonner';
+
 import {
   reportSectionReadModelSchema,
   type AssembledReport,
@@ -170,7 +174,8 @@ describe('AssembledReportReview', () => {
     await user.click(await screen.findByRole('button', { name: 'Publish' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Report published')).toBeInTheDocument();
+      // toast.success fires in Sonner portal (outside JSDOM) — assert on the mock
+      expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('published'), expect.anything());
       expect(screen.queryByRole('button', { name: 'Publish Report' })).not.toBeInTheDocument();
       // After publish all radio buttons in the radiogroup should be disabled
       const radioGroup = screen.getByRole('radiogroup', {

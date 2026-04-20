@@ -133,7 +133,9 @@ describe('ReportSectionForm', () => {
       },
     });
 
-    expect(screen.getByLabelText('Project 1 traffic light')).toBeDisabled();
+    // RadioGroup is a div — check its child buttons are disabled
+    const radioGroup = screen.getByLabelText('Project 1 traffic light');
+    radioGroup.querySelectorAll('button').forEach((btn) => expect(btn).toBeDisabled());
     expect(screen.getByLabelText('Current item 1')).toBeDisabled();
     // In read-only mode the submit button is not shown
     expect(screen.queryByRole('button', { name: 'Submit Section' })).not.toBeInTheDocument();
@@ -167,7 +169,7 @@ describe('ReportSectionForm', () => {
 
     renderForm({ initialSection: carriedSection, onSaveDraft });
 
-    expect(screen.getByText('Carried over from previous report')).toBeInTheDocument();
+    expect(screen.getByText('Carried Over')).toBeInTheDocument();
     expect(screen.getByText('Still unresolved')).toBeInTheDocument();
 
     await user.click(screen.getByLabelText('Carry-over item 1 completed'));
