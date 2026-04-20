@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Lightbulb,
   ListOrdered,
+  Loader2,
   Send,
   Target,
   TrendingUp,
@@ -125,6 +126,7 @@ export function ReportSectionForm({
   const [section, setSection] = useState(initialSection);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const isFirstRender = useRef(true);
   const lastSavedSnapshot = useRef(JSON.stringify(toDraftSaveInput(initialSection)));
@@ -173,6 +175,7 @@ export function ReportSectionForm({
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const submitted = await onSubmit(toSubmitInput(section));
       setSection(submitted);
@@ -185,6 +188,8 @@ export function ReportSectionForm({
       console.error('Submit failed:', error);
       setShowSubmitDialog(false);
       toast.error('Failed to submit section. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -208,9 +213,9 @@ export function ReportSectionForm({
             Section submitted and locked
           </Badge>
         ) : (
-          <Button size="lg" onClick={() => setShowSubmitDialog(true)} className="gap-2">
-            <Send className="h-5 w-5" />
-            Submit Section
+          <Button size="lg" onClick={() => setShowSubmitDialog(true)} disabled={isSubmitting} className="gap-2">
+            {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            {isSubmitting ? 'Submitting...' : 'Submit Section'}
           </Button>
         )}
       </div>
