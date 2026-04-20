@@ -57,9 +57,9 @@ export default function HeadDashboardPage() {
       <AppShell activeReportId={null} role="head" currentPath="/head/dashboard">
         <EmptyState
           icon={Users}
-          title="No submissions yet"
-          description="No leads have been assigned to the current period. Configure users and periods in the admin panel."
-          action={{ label: 'Open Admin', href: '/admin' }}
+          title="Секций пока нет"
+          description="Ни один лид не назначен на текущий период. Настройте пользователей и периоды в панели администратора."
+          action={{ label: 'Администрирование', href: '/admin' }}
         />
       </AppShell>
     );

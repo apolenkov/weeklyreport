@@ -76,8 +76,8 @@ export default function AdminPage() {
       <AppShell activeReportId={null} currentPath="/admin" role="head">
         <EmptyState
           icon={Settings}
-          title="No data"
-          description="No users, projects, or periods configured yet."
+          title="Данных нет"
+          description="Пользователи, проекты и периоды ещё не настроены."
         />
       </AppShell>
     );

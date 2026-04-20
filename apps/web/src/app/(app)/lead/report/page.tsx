@@ -57,8 +57,8 @@ export default function LeadReportPage() {
       <AppShell role="lead" currentPath="/lead/report">
         <EmptyState
           icon={FileText}
-          title="No active report"
-          description="There is no active report section for the current period. It will appear here once a new period is created."
+          title="Нет активного отчёта"
+          description="Секция отчёта для текущего периода отсутствует. Она появится здесь, когда будет создан новый период."
         />
       </AppShell>
     );
