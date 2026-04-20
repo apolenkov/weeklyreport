@@ -14,6 +14,7 @@ import {
   CardSkeleton,
   TableSkeleton,
 } from '../../../../components/common/page-skeleton';
+import { EmptyState } from '../../../../components/common/empty-state';
 
 export default function HeadDashboardPage() {
   const dashboardQuery = trpc.review.dashboard.useQuery();
@@ -50,6 +51,19 @@ export default function HeadDashboardPage() {
   const total = rows.length;
   const percentage = total > 0 ? Math.round((submittedCount / total) * 100) : 0;
   const draftCount = total - submittedCount;
+
+  if (rows.length === 0) {
+    return (
+      <AppShell activeReportId={null} role="head" currentPath="/head/dashboard">
+        <EmptyState
+          icon={Users}
+          title="No submissions yet"
+          description="No leads have been assigned to the current period. Configure users and periods in the admin panel."
+          action={{ label: 'Open Admin', href: '/admin' }}
+        />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell activeReportId={null} role="head" currentPath="/head/dashboard">
