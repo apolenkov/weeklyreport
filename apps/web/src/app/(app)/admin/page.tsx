@@ -1,13 +1,12 @@
 'use client';
 
-import { Alert, AlertDescription, AlertTitle } from '@customreport/ui';
+import { Settings } from 'lucide-react';
 import type {
   AdminProject,
   AdminReminderRule,
   AdminUser,
   ReportPeriod,
 } from '@customreport/shared';
-import { AlertCircle } from 'lucide-react';
 
 import { trpc } from '../../../lib/trpc';
 import { QueryError } from '../../../components/common/query-error';
@@ -18,6 +17,7 @@ import {
   StatCardSkeleton,
   TableSkeleton,
 } from '../../../components/common/page-skeleton';
+import { EmptyState } from '../../../components/common/empty-state';
 
 export default function AdminPage() {
   const snapshotQuery = trpc.admin.snapshot.useQuery();
@@ -74,18 +74,11 @@ export default function AdminPage() {
   if (!snapshot)
     return (
       <AppShell activeReportId={null} currentPath="/admin" role="head">
-        <div className="flex items-center justify-center p-8">
-          <div className="w-full max-w-md">
-            <Alert>
-              <AlertCircle className="size-4" />
-              <AlertTitle>No data</AlertTitle>
-              <AlertDescription>
-                No admin data available. Check that the server is running
-                and try again.
-              </AlertDescription>
-            </Alert>
-          </div>
-        </div>
+        <EmptyState
+          icon={Settings}
+          title="No data"
+          description="No users, projects, or periods configured yet."
+        />
       </AppShell>
     );
 
