@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, AlertDescription, AlertTitle } from '@customreport/ui';
+import { FileStack } from 'lucide-react';
 
 import { trpc } from '../../../../lib/trpc';
 import { QueryError } from '../../../../components/common/query-error';
@@ -10,6 +10,7 @@ import {
   PageTitleSkeleton,
   SectionCardSkeleton,
 } from '../../../../components/common/page-skeleton';
+import { EmptyState } from '../../../../components/common/empty-state';
 
 import type { DraftSavePayload } from '@customreport/shared';
 
@@ -48,13 +49,12 @@ export default function HeadReportPage() {
   if (!report) {
     return (
       <AppShell activeReportId={null} role="head" currentPath="/head/report">
-        <Alert>
-          <AlertTitle>No data yet</AlertTitle>
-          <AlertDescription>
-            No assembled report available. It will appear here once leads begin
-            submitting their sections.
-          </AlertDescription>
-        </Alert>
+        <EmptyState
+          icon={FileStack}
+          title="No data yet"
+          description="No assembled report available. It will appear here once leads begin submitting their sections."
+          action={{ label: 'View Dashboard', href: '/head/dashboard' }}
+        />
       </AppShell>
     );
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Calendar, FileText } from 'lucide-react';
+import { ArrowRight, BookOpen, Calendar, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 import type { ArchiveReportSummary } from '@customreport/shared';
@@ -10,6 +10,7 @@ import {
 import type { TrafficLightStatus } from '@customreport/ui';
 
 import { formatDate, formatPeriodDate } from '../../lib/format-date';
+import { EmptyState } from '../common/empty-state';
 
 type ArchiveReportListProps = {
   readonly reports: ArchiveReportSummary[];
@@ -23,10 +24,11 @@ function toTrafficLightStatus(value: string): TrafficLightStatus {
 export function ArchiveReportList({ reports }: ArchiveReportListProps) {
   if (reports.length === 0) {
     return (
-      <div className="flex animate-fade-in flex-col items-center justify-center rounded-xl border border-dashed py-12">
-        <FileText className="mb-3 h-10 w-10 text-muted-foreground/40" />
-        <p className="text-base text-muted-foreground">No published reports yet</p>
-      </div>
+      <EmptyState
+        icon={BookOpen}
+        title="No published reports"
+        description="No reports have been published yet. Published reports will appear in this list."
+      />
     );
   }
 
