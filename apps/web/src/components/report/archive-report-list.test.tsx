@@ -56,7 +56,7 @@ describe('ArchiveReportList', () => {
   it('renders empty state when there are no reports', () => {
     render(<ArchiveReportList reports={[]} />);
 
-    expect(screen.getByText('Опубликованных отчётов нет')).toBeInTheDocument();
+    expect(screen.getByText('No published reports')).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 });

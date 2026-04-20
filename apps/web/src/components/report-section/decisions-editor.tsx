@@ -20,7 +20,7 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
       {decisions.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-8">
           <CircleDot className="mb-2 h-6 w-6 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">Нет решений, требующих внимания</p>
+          <p className="text-sm text-muted-foreground">No decisions pending</p>
         </div>
       ) : (
         <div className="stagger-children space-y-3">
@@ -34,12 +34,12 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
                 <div className="flex-1 space-y-3">
                   <div>
                     <Label htmlFor={`decision-text-${index}`} className="text-xs text-muted-foreground">
-                      Вопрос / решение
+                      Decision
                     </Label>
                     <Input
                       id={`decision-text-${index}`}
                       value={decision.text}
-                      placeholder="Что требует решения руководства..."
+                      placeholder="What needs management decision..."
                       onChange={(e) => onFieldChange(index, 'text', e.currentTarget.value)}
                       disabled={disabled}
                       className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
@@ -48,12 +48,12 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor={`decision-owner-${index}`} className="text-xs text-muted-foreground">
-                        Ответственный
+                        Owner
                       </Label>
                       <Input
                         id={`decision-owner-${index}`}
                         value={decision.owner}
-                        placeholder="Кто принимает решение"
+                        placeholder="Who decides"
                         onChange={(e) => onFieldChange(index, 'owner', e.currentTarget.value)}
                         disabled={disabled}
                         className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
@@ -61,12 +61,12 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
                     </div>
                     <div>
                       <Label htmlFor={`decision-impact-${index}`} className="text-xs text-muted-foreground">
-                        Влияние при отсутствии решения
+                        Impact if unresolved
                       </Label>
                       <Input
                         id={`decision-impact-${index}`}
                         value={decision.impact}
-                        placeholder="Что произойдёт, если не решить"
+                        placeholder="What happens if not resolved"
                         onChange={(e) => onFieldChange(index, 'impact', e.currentTarget.value)}
                         disabled={disabled}
                         className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
@@ -80,7 +80,7 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
                     size="icon"
                     className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
                     onClick={() => onRemove(index)}
-                    aria-label={`Удалить решение ${index + 1}`}
+                    aria-label={`Remove decision ${index + 1}`}
                   >
                     <Trash2 className="size-4" />
                   </Button>
@@ -93,7 +93,7 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
       {!disabled ? (
         <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={onAdd}>
           <Plus className="size-4" />
-          Добавить решение
+          Add Decision
         </Button>
       ) : null}
     </div>

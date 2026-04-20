@@ -59,8 +59,8 @@ describe('ReportSectionForm', () => {
     expect(screen.getByLabelText('Current item 1')).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Priority \d/)).toHaveLength(3);
     // Empty state texts from the redesigned subcomponents
-    expect(screen.getByText('Активных рисков нет')).toBeInTheDocument();
-    expect(screen.getByText('Нет решений, требующих внимания')).toBeInTheDocument();
+    expect(screen.getByText('No active risks')).toBeInTheDocument();
+    expect(screen.getByText('No decisions pending')).toBeInTheDocument();
   });
 
   it('shows autosave transitions after a debounced change', async () => {

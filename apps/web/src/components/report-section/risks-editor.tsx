@@ -20,7 +20,7 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
       {risks.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-8">
           <AlertTriangle className="mb-2 h-6 w-6 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">Активных рисков нет</p>
+          <p className="text-sm text-muted-foreground">No active risks</p>
         </div>
       ) : (
         <div className="stagger-children space-y-3">
@@ -34,12 +34,12 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
                 <div className="flex-1 space-y-3">
                   <div>
                     <Label htmlFor={`risk-text-${index}`} className="text-xs text-muted-foreground">
-                      Описание риска
+                      Risk description
                     </Label>
                     <Input
                       id={`risk-text-${index}`}
                       value={risk.risk}
-                      placeholder="Опишите риск..."
+                      placeholder="Describe the risk..."
                       onChange={(e) => onFieldChange(index, 'risk', e.currentTarget.value)}
                       disabled={disabled}
                       className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
@@ -48,12 +48,12 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor={`risk-impact-${index}`} className="text-xs text-muted-foreground">
-                        Влияние
+                        Impact
                       </Label>
                       <Input
                         id={`risk-impact-${index}`}
                         value={risk.impact}
-                        placeholder="Высокое / Среднее / Низкое"
+                        placeholder="High / Medium / Low"
                         onChange={(e) => onFieldChange(index, 'impact', e.currentTarget.value)}
                         disabled={disabled}
                         className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
@@ -61,12 +61,12 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
                     </div>
                     <div>
                       <Label htmlFor={`risk-mitigation-${index}`} className="text-xs text-muted-foreground">
-                        Митигация
+                        Mitigation
                       </Label>
                       <Input
                         id={`risk-mitigation-${index}`}
                         value={risk.mitigation}
-                        placeholder="Как снижаем..."
+                        placeholder="How to mitigate..."
                         onChange={(e) => onFieldChange(index, 'mitigation', e.currentTarget.value)}
                         disabled={disabled}
                         className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
@@ -80,7 +80,7 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
                     size="icon"
                     className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
                     onClick={() => onRemove(index)}
-                    aria-label={`Удалить риск ${index + 1}`}
+                    aria-label={`Remove risk ${index + 1}`}
                   >
                     <Trash2 className="size-4" />
                   </Button>
@@ -93,7 +93,7 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
       {!disabled ? (
         <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={onAdd}>
           <Plus className="size-4" />
-          Добавить риск
+          Add Risk
         </Button>
       ) : null}
     </div>
