@@ -1,28 +1,63 @@
 services:
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: installer
+    environment:
+      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport
+
   api:
     build:
       context: .
       dockerfile: Dockerfile.api
-      target: builder
-    command: ["pnpm", "--filter=@customreport/api", "dev"]
+      target: installer
+    # Run dev server directly (no --env-file; env comes from 'environment' below)
+    command: >
+      sh -c "cd apps/api &&
+      exec node
+      --import @swc-node/register/esm-register
+      --watch src/main.ts"
     volumes:
       - ./apps/api/src:/app/apps/api/src
       - ./packages/shared/src:/app/packages/shared/src
       - ./prisma:/app/prisma
     environment:
       NODE_ENV: development
+      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport
+      DIRECT_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3001
+      FRONTEND_URL: http://localhost:3000
       AUTH_DEV_MODE: "true"
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-production-min-32-chars!!}
+      PDF_BASE_URL: http://localhost:3000
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
 
   web:
     build:
       context: .
       dockerfile: Dockerfile.web
-      target: builder
+      target: installer
     command: ["pnpm", "--filter=@customreport/web", "dev"]
     volumes:
       - ./apps/web/src:/app/apps/web/src
-      - ./apps/web/app:/app/apps/web/app
+      - ./apps/web/public:/app/apps/web/public
       - ./packages/shared/src:/app/packages/shared/src
       - ./packages/ui/src:/app/packages/ui/src
     environment:
       NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      AUTH_DEV_MODE: "true"
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"

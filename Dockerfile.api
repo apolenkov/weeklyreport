@@ -10,21 +10,22 @@ WORKDIR /app
 COPY . .
 RUN turbo prune @customreport/api --docker
 
-# Stage 3: Install deps and build
-FROM base AS builder
+# Stage 3: Install deps + generate Prisma (devDeps intact — used for dev hot-reload)
+FROM base AS installer
 WORKDIR /app
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
-# Generate Prisma client
 RUN pnpm exec prisma generate
+
+# Stage 4: Build and prune devDeps for production
+FROM installer AS builder
 RUN pnpm turbo build --filter=@customreport/api
-# Remove devDependencies before copying to runner stage
 RUN pnpm prune --prod --config.ignore-scripts=true
 
-# Stage 4: Production runner
+# Stage 5: Production runner
 # Use Playwright base image for PDF generation (Chromium pre-installed).
 # NOTE: This image is ~1.4GB due to the Chromium dependency required for PDF export.
 # The 200MB size target applies to the web image (alpine-based, ~150MB).

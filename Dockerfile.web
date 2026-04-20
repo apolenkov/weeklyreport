@@ -10,17 +10,20 @@ WORKDIR /app
 COPY . .
 RUN turbo prune @customreport/web --docker
 
-# Stage 3: Install deps and build
-FROM base AS builder
+# Stage 3: Install deps (devDeps intact — used for dev hot-reload)
+FROM base AS installer
 WORKDIR /app
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
+
+# Stage 4: Build for production
+FROM installer AS builder
 RUN pnpm turbo build --filter=@customreport/web
 
-# Stage 4: Production runner with Next.js standalone
+# Stage 5: Production runner with Next.js standalone
 FROM node:20-alpine AS runner
 RUN apk add --no-cache libc6-compat
 RUN addgroup --system --gid 1001 nodejs && \
