@@ -37,7 +37,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
           {currentItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-8">
               <ListOrdered className="mb-2 h-6 w-6 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">Пока нет пунктов за текущую неделю</p>
+              <p className="text-sm text-muted-foreground">No current week items</p>
             </div>
           ) : null}
           {currentItems.map(({ item, originalIndex }) => (
@@ -70,7 +70,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
                   id={`current-item-${originalIndex}`}
                   aria-label={`Current item ${originalIndex + 1}`}
                   value={item.text}
-                  placeholder="Опишите, что сделано..."
+                  placeholder="Describe deliverable..."
                   onChange={(event) => {
                     onTextChange(originalIndex, event.currentTarget.value);
                   }}
@@ -84,7 +84,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
                   size="icon"
                   className="mt-1 size-8 shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => onRemove(originalIndex)}
-                  aria-label={`Удалить пункт ${originalIndex + 1}`}
+                  aria-label={`Remove item ${originalIndex + 1}`}
                 >
                   <Trash2 className="size-4" />
                 </Button>
@@ -99,7 +99,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
               onClick={() => onAdd('current')}
             >
               <Plus className="size-4" />
-              Добавить пункт
+              Add Item
             </Button>
           ) : null}
         </div>
@@ -118,7 +118,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
           {nextItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-8">
               <ListOrdered className="mb-2 h-6 w-6 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">Пока нет планов на следующую неделю</p>
+              <p className="text-sm text-muted-foreground">No next week items</p>
             </div>
           ) : null}
           {nextItems.map(({ item, originalIndex }) => (
@@ -151,7 +151,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
                   id={`next-item-${originalIndex}`}
                   aria-label={`Next item ${originalIndex + 1}`}
                   value={item.text}
-                  placeholder="Что планируется..."
+                  placeholder="Plan for next week..."
                   onChange={(event) => {
                     onTextChange(originalIndex, event.currentTarget.value);
                   }}
@@ -165,7 +165,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
                   size="icon"
                   className="mt-1 size-8 shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => onRemove(originalIndex)}
-                  aria-label={`Удалить пункт ${originalIndex + 1}`}
+                  aria-label={`Remove item ${originalIndex + 1}`}
                 >
                   <Trash2 className="size-4" />
                 </Button>
@@ -180,7 +180,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
               onClick={() => onAdd('next')}
             >
               <Plus className="size-4" />
-              Добавить пункт
+              Add Item
             </Button>
           ) : null}
         </div>

@@ -51,9 +51,9 @@ export default function HeadReportPage() {
       <AppShell activeReportId={null} role="head" currentPath="/head/report">
         <EmptyState
           icon={FileStack}
-          title="Данных пока нет"
-          description="Сборный отчёт ещё не готов. Он появится здесь, когда лиды начнут отправлять свои секции."
-          action={{ label: 'Открыть дашборд', href: '/head/dashboard' }}
+          title="No data yet"
+          description="No assembled report available. It will appear here once leads begin submitting their sections."
+          action={{ label: 'View Dashboard', href: '/head/dashboard' }}
         />
       </AppShell>
     );

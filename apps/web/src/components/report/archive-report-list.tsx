@@ -26,8 +26,8 @@ export function ArchiveReportList({ reports }: ArchiveReportListProps) {
     return (
       <EmptyState
         icon={BookOpen}
-        title="Опубликованных отчётов нет"
-        description="Отчёты ещё не публиковались. Опубликованные отчёты появятся в этом списке."
+        title="No published reports"
+        description="No reports have been published yet. Published reports will appear in this list."
       />
     );
   }
