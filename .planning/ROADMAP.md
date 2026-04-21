@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 23/23
 
 ---
 
@@ -12,7 +12,7 @@
 - [x] **v1.0 Domain Logic** - Phases 1-4 (shipped 2026-04-10)
 - [x] **v2.0 Infrastructure Integration** - Phases 5-7 (shipped 2026-04-11)
 - [x] **v3.0 Progress** - Phases 13-15 (shipped 2026-04-21)
-- [ ] **v4.0 Backend Completeness & UI Redesign** - Phases 16+ (in progress)
+- [ ] **v4.0 Backend Completeness & UI Redesign** - Phases 16-18 (in progress)
 
 ## Phases
 
@@ -210,14 +210,58 @@ Plans:
 
 ---
 
-## v4.0 Backend Completeness & UI Redesign (in-progress)
+## v4.0 Backend Completeness & UI Redesign
 
-Phases to be planned via `/gsd:new-milestone`.
+- [ ] **Phase 16: Backend Hardening** - Prisma migration, BullMQ re-enabled, 81 regression scenarios pass, test infrastructure clean
+- [ ] **Phase 17: UI Redesign** - AssembledReport defect fixed, full professional redesign across all pages, a11y and responsive
+- [ ] **Phase 18: E2E Tests** - Role journeys, cross-role lifecycle, visual regression baselines
 
-**Focus areas:**
-1. Backend API contracts verified with 422+ unit tests
-2. Prisma migration for reminder schema alignment
-3. Full UI redesign through design skills (dark theme, dynamic content, responsive)
+### Phase 16: Backend Hardening
+**Goal**: Backend fully conforms to all API contracts; BullMQ queues functional; test infrastructure clean and ready to support UI redesign
+**Depends on**: Phase 15
+**Requirements**: BE-01, BE-02, BE-03, BE-04, BE-05, BE-06
+**Success Criteria** (what must be TRUE):
+  1. Prisma ReminderRule table has kind/fireAt/timezone/status/version columns; existing seed data survives the migration without loss
+  2. BullMQ PDF export job transitions from queued to completed within 30 seconds when triggered from the browser
+  3. All 81 regression scenarios pass as API integration tests (extending the existing 191 contract test suite)
+  4. `pnpm typecheck` passes clean across the entire monorepo after all backend changes (no broken window between commits)
+  5. `pnpm --filter @customreport/web test` reports 0 failures (24 pre-existing jsdom failures resolved; MSW handlers match current tRPC contracts)
+**Plans**: TBD
+
+### Phase 17: UI Redesign
+**Goal**: Every page has a professional, polished UI — AssembledReport functional defect fixed, dark theme consistent, a11y complete, responsive
+**Depends on**: Phase 16
+**Requirements**: UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07, UI-08, UI-09, UI-10
+**Success Criteria** (what must be TRUE):
+  1. User approves visual direction after viewing the redesigned lead form page before any other pages are styled
+  2. Head can see all projects, all items, all risks, all decisions, and all priorities for every lead section in AssembledReportReview
+  3. Lead form shows colorful circular traffic light buttons with hover ring; new items auto-focus; delete actions require confirmation
+  4. All interactive elements have visible focus rings (focus-visible:ring-2); touch targets are at least 44px on all pages
+  5. Print/PDF template renders at the same visual quality as the web report (print-color-adjust: exact, no nav elements)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 18: E2E Tests
+**Goal**: Full role journeys, cross-role lifecycle, and visual regression baselines cover the redesigned application end-to-end
+**Depends on**: Phase 17
+**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, E2E-07
+**Success Criteria** (what must be TRUE):
+  1. Lead journey passes end-to-end: login → auto-create section → fill all fields → draft save → submit → section shows locked state
+  2. Head journey passes end-to-end: dashboard shows correct submission count → assembled report review → publish → PDF download completes
+  3. Cross-role lifecycle passes: lead submits → head publishes → viewer reads the published report — all in one Playwright test
+  4. Error paths verified: submitting an incomplete section shows validation errors; accessing a role-restricted page redirects correctly
+  5. Visual regression baselines established against the final approved design; `pnpm playwright test` passes with 0 failures
+**Plans**: TBD
+
+---
+
+## Progress Table — v4.0
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 16. Backend Hardening | 0/TBD | Not started | - |
+| 17. UI Redesign | 0/TBD | Not started | - |
+| 18. E2E Tests | 0/TBD | Not started | - |
 
 ---
 
@@ -226,3 +270,4 @@ Phases to be planned via `/gsd:new-milestone`.
 *v2.0 shipped: 2026-04-11*
 *v3.0 shipped: 2026-04-21*
 *v4.0 started: 2026-04-21*
+*v4.0 roadmap: 2026-04-21*
