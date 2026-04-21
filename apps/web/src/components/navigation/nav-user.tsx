@@ -1,6 +1,7 @@
 'use client';
 
-import { LogOut } from 'lucide-react';
+import { LogOut, Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 import type { Role } from '@customreport/shared';
 
@@ -49,6 +50,8 @@ function getRoleBadgeVariant(role: Role): 'default' | 'secondary' | 'outline' {
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export function NavUser({ userName, userRole }: NavUserProps) {
+  const { theme, setTheme } = useTheme();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -79,6 +82,13 @@ export function NavUser({ userName, userRole }: NavUserProps) {
             {getRoleLabel(userRole)}
           </Badge>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        >
+          {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
+          <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <form action={`${API_URL}/auth/logout`} method="post">
