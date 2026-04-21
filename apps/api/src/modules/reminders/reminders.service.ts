@@ -2,6 +2,8 @@ import {
   adminReminderExecutionSchema,
   type AdminReminderExecution,
   type AdminReminderRule,
+  type PaginationInput,
+  type PaginatedResult,
 } from '@customreport/shared';
 
 import type { Queue } from 'bullmq';
@@ -102,9 +104,27 @@ export class RemindersService {
     );
   }
 
-  async listExecutions(ruleId: string): Promise<AdminReminderExecution[]> {
-    return adminReminderExecutionSchema.array().parse(
+  async listExecutions(
+    ruleId: string,
+    pagination?: PaginationInput,
+  ): Promise<PaginatedResult<AdminReminderExecution>> {
+    const all = adminReminderExecutionSchema.array().parse(
       await this.repository.listExecutions(ruleId),
     );
+
+    if (!pagination) {
+      return { items: all, nextCursor: null };
+    }
+
+    const limit = pagination.limit ?? 20;
+    const startIndex = pagination.cursor
+      ? all.findIndex((e) => e.id === pagination.cursor) + 1
+      : 0;
+    const page = all.slice(startIndex, startIndex + limit);
+    const nextCursor = startIndex + limit < all.length
+      ? all[startIndex + limit - 1]!.id
+      : null;
+
+    return { items: page, nextCursor };
   }
 }

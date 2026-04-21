@@ -200,11 +200,23 @@ model PdfExportJob {
   updatedAt   DateTime        @updatedAt
 }
 
+enum ReminderRuleKind {
+  deadline
+  follow_up
+}
+
+enum ReminderRuleStatus {
+  active
+  paused
+}
+
 model ReminderRule {
   id              String               @id @default(uuid())
-  name            String
-  cronExpression  String
-  enabled         Boolean              @default(true)
+  kind            ReminderRuleKind
+  fireAt          DateTime
+  timezone        String               @default("Europe/Moscow")
+  status          ReminderRuleStatus   @default(active)
+  version         Int                  @default(1)
   reportId        String?
   report          Report?              @relation(fields: [reportId], references: [id], onDelete: SetNull)
   executions      ReminderExecution[]

@@ -360,27 +360,28 @@ describe('submitSectionSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects submit with 2 priorities (needs exactly 3)', () => {
+  it('accepts submit with 1 priority (dynamic: min 1)', () => {
     const submit = {
       ...validSubmit(),
-      priorities: [validPriority(1), validPriority(2)],
+      priorities: [validPriority(1)],
     };
     const result = submitSectionSchema.safeParse(submit);
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
-  it('rejects submit with 4 priorities (exceeds 3)', () => {
+  it('accepts submit with 5 priorities (dynamic: no upper limit)', () => {
     const submit = {
       ...validSubmit(),
       priorities: [
         validPriority(1),
         validPriority(2),
         validPriority(3),
-        { rank: 1, text: 'Extra' },
+        validPriority(4),
+        validPriority(5),
       ],
     };
     const result = submitSectionSchema.safeParse(submit);
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('accepts valid traffic light values (green/yellow/red)', () => {
@@ -459,18 +460,18 @@ describe('priorityInputSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts rank at max boundary (3)', () => {
+  it('accepts rank 3', () => {
     const result = priorityInputSchema.safeParse({ rank: 3, text: 'Go' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts rank 10 (dynamic: no upper limit)', () => {
+    const result = priorityInputSchema.safeParse({ rank: 10, text: 'Go' });
     expect(result.success).toBe(true);
   });
 
   it('rejects rank below min (0)', () => {
     const result = priorityInputSchema.safeParse({ rank: 0, text: 'Go' });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects rank above max (4)', () => {
-    const result = priorityInputSchema.safeParse({ rank: 4, text: 'Go' });
     expect(result.success).toBe(false);
   });
 
@@ -807,8 +808,19 @@ describe('validateSubmitInput', () => {
       priorities: [
         { rank: 1, text: '  ' },
         { rank: 2, text: 'OK' },
-        { rank: 3, text: 'OK' },
       ],
+    };
+    const errors = validateSubmitInput(section, input as any);
+    expect(errors.some((e) => e.code === 'MISSING_PRIORITIES')).toBe(true);
+  });
+
+  it('returns MISSING_PRIORITIES when priorities array is empty', () => {
+    const section = makeSection();
+    const input = {
+      ...validSubmit(),
+      projectStatuses: [{ projectId: PROJECT_UUID, status: 'green' as const }],
+      items: [{ ...validItem(), projectId: PROJECT_UUID, type: 'current' as const }],
+      priorities: [],
     };
     const errors = validateSubmitInput(section, input as any);
     expect(errors.some((e) => e.code === 'MISSING_PRIORITIES')).toBe(true);

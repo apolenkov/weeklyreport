@@ -115,7 +115,7 @@ describe('RemindersService', () => {
     const weeklyRule: AdminReminderRule = {
       ...activeRule,
       id: '88888888-8888-4888-8888-888888888888',
-      kind: 'weekly',
+      kind: 'follow_up',
     };
 
     it('reads kind from DB field — deadline rule', async () => {
@@ -191,8 +191,9 @@ describe('remindersRouter', () => {
     const service = new RemindersService(createRepository(activeRule));
     await service.requestReminderExecution(activeRule.id, 'lead1@customreport.local');
 
-    await expect(
-      remindersRouter.listExecutions({ remindersService: service, ruleId: activeRule.id }),
-    ).resolves.toHaveLength(1);
+    const result = await remindersRouter.listExecutions({ remindersService: service, ruleId: activeRule.id });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.nextCursor).toBeNull();
   });
 });

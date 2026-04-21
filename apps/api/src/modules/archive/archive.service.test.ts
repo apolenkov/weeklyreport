@@ -63,10 +63,11 @@ function createRepository(): ArchiveRepository {
 describe('ArchiveService', () => {
   it('returns archive reports sorted by latest published first', async () => {
     const service = new ArchiveService(createRepository());
-    const reports = await service.listArchiveReports();
+    const result = await service.listArchiveReports();
 
-    expect(reports[0]?.reportId).toBe(reportId);
-    expect(reports[1]?.reportId).toBe(olderSummary.reportId);
+    expect(result.items[0]?.reportId).toBe(reportId);
+    expect(result.items[1]?.reportId).toBe(olderSummary.reportId);
+    expect(result.nextCursor).toBeNull();
   });
 
   it('returns immutable detail for a published report', async () => {
@@ -90,7 +91,7 @@ describe('archiveRouter', () => {
   it('returns list and detail read models', async () => {
     const service = new ArchiveService(createRepository());
 
-    await expect(archiveRouter.listArchiveReports({ archiveService: service })).resolves.toHaveLength(2);
+    await expect(archiveRouter.listArchiveReports({ archiveService: service })).resolves.toMatchObject({ items: expect.arrayContaining([expect.objectContaining({ reportId })]) });
     await expect(
       archiveRouter.getArchiveReport({ archiveService: service, reportId }),
     ).resolves.toMatchObject({

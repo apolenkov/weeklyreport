@@ -68,7 +68,7 @@ export const decisionInputSchema = z.object({
 
 export const priorityInputSchema = z.object({
   id: z.string().uuid().optional(),
-  rank: z.number().int().min(1).max(3),
+  rank: z.number().int().min(1),
   text: safeText({ max: 200 }),
 });
 
@@ -87,7 +87,7 @@ export const submitSectionSchema = draftSaveSchema.extend({
   projectStatuses: z.array(projectStatusInputSchema.extend({
     status: trafficLightStatusSchema,
   })).min(1),
-  priorities: z.array(priorityInputSchema).length(3).refine(
+  priorities: z.array(priorityInputSchema).min(1).refine(
     (priorities) => {
       const ranks = priorities.map((p) => p.rank);
       return new Set(ranks).size === ranks.length;
@@ -292,6 +292,35 @@ export type CarryOverExecution = z.infer<typeof carryOverExecutionSchema>;
 export type ArchiveReportSummary = z.infer<typeof archiveReportSummarySchema>;
 export type ArchiveReportDetail = z.infer<typeof archiveReportDetailSchema>;
 
+export const myHistoryEntrySchema = z.object({
+  sectionId: z.string().uuid(),
+  reportId: z.string().uuid(),
+  periodStart: z.coerce.date(),
+  periodEnd: z.coerce.date(),
+  reportStatus: reportStatusSchema,
+  sectionStatus: reportSectionStatusSchema,
+  submittedAt: z.coerce.date().nullable(),
+  publishedAt: z.coerce.date().nullable(),
+});
+
+export type MyHistoryEntry = z.infer<typeof myHistoryEntrySchema>;
+
+// ---------------------------------------------------------------------------
+// Pagination
+// ---------------------------------------------------------------------------
+
+export const paginationInputSchema = z.object({
+  cursor: z.string().uuid().optional(),
+  limit: z.number().int().min(1).max(100).default(20),
+});
+
+export type PaginationInput = z.infer<typeof paginationInputSchema>;
+
+export type PaginatedResult<T> = {
+  items: T[];
+  nextCursor: string | null;
+};
+
 export type DraftSaveValidationErrorCode =
   | 'SECTION_ALREADY_SUBMITTED'
   | 'MISSING_TRAFFIC_LIGHT'
@@ -342,13 +371,15 @@ export function validateSubmitInput(
     }
   }
 
-  if (
-    input.priorities.length !== 3 ||
-    input.priorities.some((priority) => priority.text.trim().length === 0)
-  ) {
+  if (input.priorities.length === 0) {
     errors.push({
       code: 'MISSING_PRIORITIES',
-      message: 'Top 3 priorities must be filled before submit.',
+      message: 'At least one priority must be added before submit.',
+    });
+  } else if (input.priorities.some((priority) => priority.text.trim().length === 0)) {
+    errors.push({
+      code: 'MISSING_PRIORITIES',
+      message: 'All priorities must be filled before submit.',
     });
   }
 

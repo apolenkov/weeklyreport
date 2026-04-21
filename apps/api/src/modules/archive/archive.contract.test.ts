@@ -144,7 +144,8 @@ describe('ArchiveService — contract tests', () => {
       const repo = createInMemoryRepository([], new Map());
       const service = new ArchiveService(repo);
 
-      const reports = await service.listArchiveReports();
+      const result = await service.listArchiveReports();
+      const reports = result.items;
 
       expect(reports).toEqual([]);
       expect(reports).toHaveLength(0);
@@ -171,7 +172,8 @@ describe('ArchiveService — contract tests', () => {
       );
       const service = new ArchiveService(repo);
 
-      const reports = await service.listArchiveReports();
+      const result = await service.listArchiveReports();
+      const reports = result.items;
 
       expect(reports).toHaveLength(3);
       expect(reports[0]!.reportId).toBe(newest.reportId);
@@ -200,7 +202,8 @@ describe('ArchiveService — contract tests', () => {
       const repo = createInMemoryRepository([summary], new Map());
       const service = new ArchiveService(repo);
 
-      const reports = await service.listArchiveReports();
+      const result = await service.listArchiveReports();
+      const reports = result.items;
 
       expect(reports).toHaveLength(1);
       // Verify each report passes schema independently
@@ -216,7 +219,8 @@ describe('ArchiveService — contract tests', () => {
       const repo = createInMemoryRepository([single], new Map());
       const service = new ArchiveService(repo);
 
-      const reports = await service.listArchiveReports();
+      const result = await service.listArchiveReports();
+      const reports = result.items;
 
       expect(reports).toHaveLength(1);
       expect(reports[0]!.reportId).toBe(single.reportId);
@@ -243,7 +247,8 @@ describe('ArchiveService — contract tests', () => {
       const repo = createInMemoryRepository(summaries, new Map());
       const service = new ArchiveService(repo);
 
-      const reports = await service.listArchiveReports();
+      const result = await service.listArchiveReports();
+      const reports = result.items;
 
       expect(reports).toHaveLength(7);
       // Verify descending sort

@@ -1,8 +1,11 @@
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import {
   draftSaveSchema,
   submitSectionSchema,
+  myHistoryEntrySchema,
+  paginationInputSchema,
   adminUserSchema,
   adminProjectSchema,
   reportPeriodSchema,
@@ -62,16 +65,18 @@ export function createAppRouter(deps: RouterDeps) {
           },
         });
 
-        return sections.map((s) => ({
-          sectionId: s.id,
-          reportId: s.report.id,
-          periodStart: s.report.periodStart,
-          periodEnd: s.report.periodEnd,
-          reportStatus: s.report.status,
-          sectionStatus: s.status,
-          submittedAt: s.submittedAt,
-          publishedAt: s.report.publishedAt,
-        }));
+        return myHistoryEntrySchema.array().parse(
+          sections.map((s) => ({
+            sectionId: s.id,
+            reportId: s.report.id,
+            periodStart: s.report.periodStart,
+            periodEnd: s.report.periodEnd,
+            reportStatus: s.report.status,
+            sectionStatus: s.status,
+            submittedAt: s.submittedAt,
+            publishedAt: s.report.publishedAt,
+          })),
+        );
       }),
 
       saveDraft: protectedProcedure
@@ -102,7 +107,7 @@ export function createAppRouter(deps: RouterDeps) {
           const activeReportId = ctx.session.activeReportId;
 
           if (!activeReportId) {
-            throw new Error('Dashboard requires an active report.');
+            return [];
           }
 
           return await deps.reviewService.getSubmissionDashboard(activeReportId);
@@ -116,7 +121,7 @@ export function createAppRouter(deps: RouterDeps) {
           const activeReportId = ctx.session.activeReportId;
 
           if (!activeReportId) {
-            throw new Error('Assembled report requires an active report.');
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'No active report in session.' });
           }
 
           return await deps.publicationService.getAssembledReport(activeReportId);
@@ -130,7 +135,7 @@ export function createAppRouter(deps: RouterDeps) {
           const activeReportId = ctx.session.activeReportId;
 
           if (!activeReportId) {
-            throw new Error('Publish requires an active report.');
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'No active report in session.' });
           }
 
           return await deps.publicationService.publishReport(activeReportId, ctx.session);
@@ -246,13 +251,15 @@ export function createAppRouter(deps: RouterDeps) {
 
     // === Archive namespace ===
     archive: router({
-      list: protectedProcedure.query(async () => {
-        try {
-          return await deps.archiveService.listArchiveReports();
-        } catch (error) {
-          throw mapDomainError(error);
-        }
-      }),
+      list: protectedProcedure
+        .input(paginationInputSchema.optional())
+        .query(async ({ input }) => {
+          try {
+            return await deps.archiveService.listArchiveReports(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
 
       detail: protectedProcedure
         .input(z.object({ reportId: z.string().uuid() }))
@@ -281,10 +288,13 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       listExecutions: headProcedure
-        .input(z.object({ ruleId: z.string().uuid() }))
+        .input(z.object({ ruleId: z.string().uuid() }).merge(paginationInputSchema.partial()))
         .query(async ({ input }) => {
           try {
-            return await deps.remindersService.listExecutions(input.ruleId);
+            const { ruleId, cursor, limit } = input;
+            const pagination = cursor || limit ? { cursor, limit: limit ?? 20 } : undefined;
+
+            return await deps.remindersService.listExecutions(ruleId, pagination);
           } catch (error) {
             throw mapDomainError(error);
           }

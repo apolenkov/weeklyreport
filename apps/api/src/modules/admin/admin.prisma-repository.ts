@@ -13,6 +13,14 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import type { AdminRepository } from './admin.service';
 
 /**
+ * Extracts recipientEmail from dedupeKey format: "ruleId:isoDate:email".
+ */
+function extractRecipientEmail(dedupeKey: string): string {
+  const emailMatch = dedupeKey.match(/Z:(.+)$/);
+  return emailMatch?.[1] ?? '';
+}
+
+/**
  * Prisma implementation of AdminRepository.
  * Reads/writes users, projects, periods (reports), and reminder rules as AdminSnapshot.
  * All output is parsed through Zod schemas before returning (REPO-09).
@@ -66,12 +74,12 @@ export class AdminPrismaRepository implements AdminRepository {
       reminderRules: reminderRules.map((rule) =>
         adminReminderRuleSchema.parse({
           id: rule.id,
-          reportId: rule.reportId ?? '',
-          kind: rule.name,
-          fireAt: rule.createdAt,
-          timezone: 'Europe/Moscow',
-          status: rule.enabled ? 'active' : 'paused',
-          version: 1,
+          reportId: rule.reportId ?? '00000000-0000-0000-0000-000000000000',
+          kind: rule.kind,
+          fireAt: rule.fireAt,
+          timezone: rule.timezone,
+          status: rule.status,
+          version: rule.version,
         }),
       ),
       reminderExecutions: reminderExecutions.map((exec) =>
@@ -83,7 +91,7 @@ export class AdminPrismaRepository implements AdminRepository {
           status: exec.status === 'pending' ? 'queued' : exec.status,
           scheduledFor: exec.createdAt,
           sentAt: exec.sentAt,
-          recipientEmail: 'unknown@example.com',
+          recipientEmail: extractRecipientEmail(exec.dedupeKey),
           errorMessage: exec.error,
         }),
       ),
@@ -220,24 +228,23 @@ export class AdminPrismaRepository implements AdminRepository {
     const snapshotRuleIds = new Set(snapshot.reminderRules.map((r) => r.id));
 
     for (const rule of snapshot.reminderRules) {
+      const ruleData = {
+        kind: rule.kind as 'deadline' | 'follow_up',
+        fireAt: rule.fireAt,
+        timezone: rule.timezone,
+        status: rule.status as 'active' | 'paused',
+        version: rule.version,
+        reportId: rule.reportId || null,
+      };
+
       if (currentRuleIds.has(rule.id)) {
         await this.prisma.reminderRule.update({
           where: { id: rule.id },
-          data: {
-            name: rule.kind,
-            enabled: rule.status === 'active',
-            reportId: rule.reportId || null,
-          },
+          data: ruleData,
         });
       } else {
         await this.prisma.reminderRule.create({
-          data: {
-            id: rule.id,
-            name: rule.kind,
-            cronExpression: '0 9 * * 5',
-            enabled: rule.status === 'active',
-            reportId: rule.reportId || null,
-          },
+          data: { id: rule.id, ...ruleData },
         });
       }
     }
