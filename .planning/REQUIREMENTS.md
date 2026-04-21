@@ -9,7 +9,7 @@
 
 ## Backend Hardening
 
-- [ ] **BE-01**: Prisma migration aligns ReminderRule schema (kind/fireAt/timezone/status/version) with Zod contract
+- [x] **BE-01**: Prisma migration aligns ReminderRule schema (kind/fireAt/timezone/status/version) with Zod contract
 - [ ] **BE-02**: BullMQ re-enabled in AppModule (PDF export + email reminders functional)
 - [ ] **BE-03**: All 81 regression scenarios pass as API integration tests
 - [ ] **BE-04**: MSW handlers updated to match current tRPC contracts (superjson serialization)
@@ -63,7 +63,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BE-01 | Phase 16 | Pending |
+| BE-01 | Phase 16 | Complete |
 | BE-02 | Phase 16 | Pending |
 | BE-03 | Phase 16 | Pending |
 | BE-04 | Phase 16 | Pending |
