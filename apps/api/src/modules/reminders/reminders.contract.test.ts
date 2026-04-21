@@ -276,19 +276,19 @@ describe('RemindersService — contract tests', () => {
       await service.requestReminderExecution(activeRule.id, recipientEmail);
       await service.requestReminderExecution(activeRule.id, recipientEmail2);
 
-      const executions = await service.listExecutions(activeRule.id);
+      const result = await service.listExecutions(activeRule.id);
 
-      expect(executions).toHaveLength(2);
-      const emails = executions.map((e) => e.recipientEmail).sort();
+      expect(result.items).toHaveLength(2);
+      const emails = result.items.map((e) => e.recipientEmail).sort();
       expect(emails).toEqual([recipientEmail, recipientEmail2].sort());
     });
 
     // 13. returns empty array when no executions
     it('returns an empty array when no executions exist', async () => {
       const service = new RemindersService(createRepository(activeRule));
-      const executions = await service.listExecutions(activeRule.id);
+      const result = await service.listExecutions(activeRule.id);
 
-      expect(executions).toEqual([]);
+      expect(result.items).toEqual([]);
     });
 
     // 14. validates output through Zod schema
@@ -296,12 +296,12 @@ describe('RemindersService — contract tests', () => {
       const service = new RemindersService(createRepository(activeRule));
       await service.requestReminderExecution(activeRule.id, recipientEmail);
 
-      const executions = await service.listExecutions(activeRule.id);
+      const result = await service.listExecutions(activeRule.id);
 
       // listExecutions internally calls adminReminderExecutionSchema.array().parse(),
       // so no ZodError means validation passed. Verify the shape is correct.
-      expect(executions).toHaveLength(1);
-      const execution = executions[0]!;
+      expect(result.items).toHaveLength(1);
+      const execution = result.items[0]!;
 
       // Verify Zod coercion produced correct types
       expect(execution.scheduledFor).toBeInstanceOf(Date);

@@ -463,31 +463,39 @@ describe('ReportSectionsService — submitSection validation errors', () => {
     ).rejects.toThrow(); // Zod rejects empty text before validateSubmitInput
   });
 
-  it('rejects when fewer than 3 priorities', async () => {
+  it('rejects when zero priorities', async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
       service.submitSection(validSubmit({
-        priorities: [
-          { rank: 1, text: 'Only one' },
-        ],
+        priorities: [],
       })),
-    ).rejects.toThrow(); // Zod .length(3) check
+    ).rejects.toThrow(); // Zod .min(1) check
   });
 
-  it('rejects when more than 3 priorities', async () => {
+  it('accepts 1 priority (dynamic: min 1)', async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
+    const result = await service.submitSection(validSubmit({
+      priorities: [{ rank: 1, text: 'Only one' }],
+    }));
 
-    await expect(
-      service.submitSection(validSubmit({
-        priorities: [
-          { rank: 1, text: 'P1' },
-          { rank: 2, text: 'P2' },
-          { rank: 3, text: 'P3' },
-          { rank: 1, text: 'P4' },
-        ],
-      })),
-    ).rejects.toThrow(); // Zod .length(3) check
+    expect(result.status).toBe('submitted');
+    expect(result.priorities).toHaveLength(1);
+  });
+
+  it('accepts 5 priorities (dynamic: no upper limit)', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+    const result = await service.submitSection(validSubmit({
+      priorities: [
+        { rank: 1, text: 'P1' },
+        { rank: 2, text: 'P2' },
+        { rank: 3, text: 'P3' },
+        { rank: 4, text: 'P4' },
+        { rank: 5, text: 'P5' },
+      ],
+    }));
+
+    expect(result.priorities).toHaveLength(5);
   });
 
   it('rejects duplicate priority ranks', async () => {
@@ -498,7 +506,6 @@ describe('ReportSectionsService — submitSection validation errors', () => {
         priorities: [
           { rank: 1, text: 'P1' },
           { rank: 1, text: 'P2' },
-          { rank: 2, text: 'P3' },
         ],
       })),
     ).rejects.toThrow(); // Zod refine: unique ranks

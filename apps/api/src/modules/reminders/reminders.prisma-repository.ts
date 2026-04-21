@@ -97,9 +97,11 @@ export class RemindersPrismaRepository implements RemindersRepository {
 
 function toRuleDomain(rule: {
   id: string;
-  name: string;
-  cronExpression: string;
-  enabled: boolean;
+  kind: string;
+  fireAt: Date;
+  timezone: string;
+  status: string;
+  version: number;
   reportId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -107,11 +109,11 @@ function toRuleDomain(rule: {
   return adminReminderRuleSchema.parse({
     id: rule.id,
     reportId: rule.reportId ?? '00000000-0000-0000-0000-000000000000',
-    kind: rule.name,
-    fireAt: rule.createdAt,
-    timezone: 'Europe/Moscow',
-    status: rule.enabled ? 'active' : 'paused',
-    version: 1,
+    kind: rule.kind,
+    fireAt: rule.fireAt,
+    timezone: rule.timezone,
+    status: rule.status,
+    version: rule.version,
   });
 }
 
