@@ -229,7 +229,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — Prisma migration (ReminderRule schema alignment) + Zod reportId nullable + repository cascade
+- [x] 16-01-PLAN.md — Prisma migration (ReminderRule schema alignment) + Zod reportId nullable + repository cascade
 - [ ] 16-02-PLAN.md — BullMQ re-enablement (module wiring + queue injection) + health indicator + Docker fixes
 - [ ] 16-03-PLAN.md — ThemeProvider wiring + theme toggle + MSW/web test verification (BE-04, BE-05, BE-06)
 - [ ] 16-04-PLAN.md — Regression contract tests (P0/P1 scenarios extending existing test suite)
@@ -265,7 +265,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 16. Backend Hardening | 0/4 | Planned | - |
+| 16. Backend Hardening | 1/4 | In Progress|  |
 | 17. UI Redesign | 0/TBD | Not started | - |
 | 18. E2E Tests | 0/TBD | Not started | - |
 
