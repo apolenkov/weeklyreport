@@ -61,11 +61,31 @@
 
 ## Traceability
 
-| Requirement | Phase | Plan |
-|-------------|-------|------|
-| BE-01..BE-06 | 16 | TBD |
-| UI-01..UI-10 | 17 | TBD |
-| E2E-01..E2E-07 | 18 | TBD |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| BE-01 | Phase 16 | Pending |
+| BE-02 | Phase 16 | Pending |
+| BE-03 | Phase 16 | Pending |
+| BE-04 | Phase 16 | Pending |
+| BE-05 | Phase 16 | Pending |
+| BE-06 | Phase 16 | Pending |
+| UI-01 | Phase 17 | Pending |
+| UI-02 | Phase 17 | Pending |
+| UI-03 | Phase 17 | Pending |
+| UI-04 | Phase 17 | Pending |
+| UI-05 | Phase 17 | Pending |
+| UI-06 | Phase 17 | Pending |
+| UI-07 | Phase 17 | Pending |
+| UI-08 | Phase 17 | Pending |
+| UI-09 | Phase 17 | Pending |
+| UI-10 | Phase 17 | Pending |
+| E2E-01 | Phase 18 | Pending |
+| E2E-02 | Phase 18 | Pending |
+| E2E-03 | Phase 18 | Pending |
+| E2E-04 | Phase 18 | Pending |
+| E2E-05 | Phase 18 | Pending |
+| E2E-06 | Phase 18 | Pending |
+| E2E-07 | Phase 18 | Pending |
 
 ---
 
