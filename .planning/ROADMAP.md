@@ -226,7 +226,13 @@ Plans:
   3. All 81 regression scenarios pass as API integration tests (extending the existing 191 contract test suite)
   4. `pnpm typecheck` passes clean across the entire monorepo after all backend changes (no broken window between commits)
   5. `pnpm --filter @customreport/web test` reports 0 failures (24 pre-existing jsdom failures resolved; MSW handlers match current tRPC contracts)
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — Prisma migration (ReminderRule schema alignment) + Zod reportId nullable + repository cascade
+- [ ] 16-02-PLAN.md — BullMQ re-enablement (module wiring + queue injection) + health indicator + Docker fixes
+- [ ] 16-03-PLAN.md — ThemeProvider wiring + theme toggle + MSW/web test verification (BE-04, BE-05, BE-06)
+- [ ] 16-04-PLAN.md — Regression contract tests (P0/P1 scenarios extending existing test suite)
 
 ### Phase 17: UI Redesign
 **Goal**: Every page has a professional, polished UI — AssembledReport functional defect fixed, dark theme consistent, a11y complete, responsive
@@ -259,7 +265,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 16. Backend Hardening | 0/TBD | Not started | - |
+| 16. Backend Hardening | 0/4 | Planned | - |
 | 17. UI Redesign | 0/TBD | Not started | - |
 | 18. E2E Tests | 0/TBD | Not started | - |
 
