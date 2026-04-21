@@ -11,6 +11,8 @@
 
 - [x] **v1.0 Domain Logic** - Phases 1-4 (shipped 2026-04-10)
 - [x] **v2.0 Infrastructure Integration** - Phases 5-7 (shipped 2026-04-11)
+- [x] **v3.0 Progress** - Phases 13-15 (shipped 2026-04-21)
+- [ ] **v4.0 Backend Completeness & UI Redesign** - Phases 16+ (in progress)
 
 ## Phases
 
@@ -166,7 +168,7 @@ Plans:
 
 ---
 
-## v3.0 Progress (in-progress)
+## v3.0 Progress — SHIPPED 2026-04-21
 
 ### Phase 13: Quality Assurance & Polish ✅ VERIFIED
 
@@ -208,7 +210,19 @@ Plans:
 
 ---
 
+## v4.0 Backend Completeness & UI Redesign (in-progress)
+
+Phases to be planned via `/gsd:new-milestone`.
+
+**Focus areas:**
+1. Backend API contracts verified with 422+ unit tests
+2. Prisma migration for reminder schema alignment
+3. Full UI redesign through design skills (dark theme, dynamic content, responsive)
+
+---
+
 *Roadmap created: 2026-04-06*
 *v1.0 shipped: 2026-04-10*
 *v2.0 shipped: 2026-04-11*
-*v3.0 in progress: 2026-04-12*
+*v3.0 shipped: 2026-04-21*
+*v4.0 started: 2026-04-21*
