@@ -16,3 +16,6 @@ coverage
 **/*.integration.test.ts
 .env
 .env.local
+.claude/
+.graphifyignore
+*.png
