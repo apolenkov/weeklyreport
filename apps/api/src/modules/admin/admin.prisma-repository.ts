@@ -74,7 +74,7 @@ export class AdminPrismaRepository implements AdminRepository {
       reminderRules: reminderRules.map((rule) =>
         adminReminderRuleSchema.parse({
           id: rule.id,
-          reportId: rule.reportId ?? '00000000-0000-0000-0000-000000000000',
+          reportId: rule.reportId,
           kind: rule.kind,
           fireAt: rule.fireAt,
           timezone: rule.timezone,
@@ -86,7 +86,7 @@ export class AdminPrismaRepository implements AdminRepository {
         adminReminderExecutionSchema.parse({
           id: exec.id,
           ruleId: exec.ruleId,
-          reportId: '',
+          reportId: null,
           dedupeKey: exec.dedupeKey,
           status: exec.status === 'pending' ? 'queued' : exec.status,
           scheduledFor: exec.createdAt,
