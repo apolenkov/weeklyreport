@@ -126,6 +126,8 @@ describe('createAppLogger', () => {
 });
 
 describe('child logger', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('inherits parent context and adds its own', () => {
     const spy = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
     const parent = createAppLogger({ service: 'api' });
@@ -151,6 +153,8 @@ describe('child logger', () => {
 });
 
 describe('createNullLogger', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('does not write to stdout or stderr', () => {
     const stdoutSpy = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
     const stderrSpy = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
