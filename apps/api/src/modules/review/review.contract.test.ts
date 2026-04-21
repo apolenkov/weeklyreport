@@ -220,6 +220,46 @@ describe('ReviewService — contract tests', () => {
     expect(result.map((r) => r.leadName)).toEqual(['Андрей', 'Борис', 'Яков']);
   });
 
+  it('returns correct submitted count (DASH-010)', async () => {
+    const rows: SubmissionDashboardRow[] = [
+      makeRow({ leadId: '00000000-0000-4000-8000-000000000001', leadName: 'A', status: 'submitted', submittedAt: new Date() }),
+      makeRow({ leadId: '00000000-0000-4000-8000-000000000002', leadName: 'B', status: 'draft' }),
+      makeRow({ leadId: '00000000-0000-4000-8000-000000000003', leadName: 'C', status: 'submitted', submittedAt: new Date() }),
+    ];
+
+    const service = new ReviewService(createRepository(rows));
+    const result = await service.getSubmissionDashboard(reportId);
+
+    const submittedCount = result.filter((r) => r.status === 'submitted').length;
+    const draftCount = result.filter((r) => r.status === 'draft').length;
+    expect(submittedCount).toBe(2);
+    expect(draftCount).toBe(1);
+    expect(result).toHaveLength(3);
+  });
+
+  it('returns empty for non-matching reportId (DASH-011 edge)', async () => {
+    const rows: SubmissionDashboardRow[] = [
+      makeRow({ leadId: '00000000-0000-4000-8000-000000000001', leadName: 'A' }),
+    ];
+
+    const service = new ReviewService(createRepository(rows));
+    const result = await service.getSubmissionDashboard('99999999-9999-4999-8999-999999999999');
+
+    expect(result).toEqual([]);
+  });
+
+  it('excludes non-lead roles from dashboard (DASH-015 P1)', async () => {
+    const rows: SubmissionDashboardRow[] = [
+      makeRow({ leadId: '00000000-0000-4000-8000-000000000001', leadName: 'Lead A', role: 'lead' }),
+      // Only leads appear in the dashboard
+    ];
+
+    const service = new ReviewService(createRepository(rows));
+    const result = await service.getSubmissionDashboard(reportId);
+
+    expect(result.every((r) => r.role === 'lead')).toBe(true);
+  });
+
   it('mixed statuses with Russian names sort correctly', async () => {
     const rows: SubmissionDashboardRow[] = [
       makeRow({

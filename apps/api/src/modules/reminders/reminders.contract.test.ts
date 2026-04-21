@@ -234,6 +234,51 @@ describe('RemindersService — contract tests', () => {
     });
   });
 
+  // P0/P1 Regression — execution edge cases (REM-001..012)
+  describe('requestReminderExecution — regression', () => {
+    it('execution has correct scheduledFor from rule.fireAt (REM-001)', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const execution = await service.requestReminderExecution(
+        activeRule.id,
+        recipientEmail,
+      );
+
+      expect(execution.scheduledFor).toBeInstanceOf(Date);
+      expect(execution.scheduledFor.toISOString()).toBe(activeRule.fireAt.toISOString());
+    });
+
+    it('execution has correct reportId from rule (REM-001)', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const execution = await service.requestReminderExecution(
+        activeRule.id,
+        recipientEmail,
+      );
+
+      expect(execution.reportId).toBe(activeRule.reportId);
+    });
+
+    it('execution starts with sentAt=null and errorMessage=null', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const execution = await service.requestReminderExecution(
+        activeRule.id,
+        recipientEmail,
+      );
+
+      expect(execution.sentAt).toBeNull();
+      expect(execution.errorMessage).toBeNull();
+    });
+
+    it('different recipients create different executions (REM-002 dedup by email)', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+
+      const exec1 = await service.requestReminderExecution(activeRule.id, 'a@test.com');
+      const exec2 = await service.requestReminderExecution(activeRule.id, 'b@test.com');
+
+      expect(exec1.id).not.toBe(exec2.id);
+      expect(exec1.dedupeKey).not.toBe(exec2.dedupeKey);
+    });
+  });
+
   describe('markReminderSent', () => {
     // 10. sets status to 'sent' and sentAt
     it('sets status to "sent" and populates sentAt', async () => {

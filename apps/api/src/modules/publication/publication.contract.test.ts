@@ -391,6 +391,63 @@ describe('PublicationService — contract tests', () => {
   });
 
   /* ---------------------------------------------------------------- */
+  /*  publishReport — P0/P1 regression (REV scenarios)                 */
+  /* ---------------------------------------------------------------- */
+
+  describe('publishReport — regression', () => {
+    it('publish sets status to published and makes report immutable (REV-011)', async () => {
+      const report = makeReport({ sections: [sectionAlpha] });
+      const service = new PublicationService(createRepository(report));
+
+      const published = await service.publishReport(reportId, headSession);
+      expect(published.status).toBe('published');
+
+      // Attempt to update a section after publish — should be immutable
+      const update = {
+        reportSectionId: sectionAlpha.reportSectionId,
+        status: 'draft' as const,
+        projectStatuses: [{ projectId: sectionAlpha.projects[0]!.projectId, status: 'green' as const }],
+        items: [],
+        risks: [],
+        decisions: [],
+        priorities: [{ rank: 1, text: 'P1' }, { rank: 2, text: 'P2' }, { rank: 3, text: 'P3' }],
+      };
+      await expect(
+        service.updateSectionForReview(reportId, update),
+      ).rejects.toThrow('Published reports are immutable.');
+    });
+
+    it('re-publish of already published report rejected (REV-012)', async () => {
+      const report = makeReport({
+        status: 'published',
+        publishedAt: new Date('2026-04-10T16:00:00.000Z'),
+        publishedById: headSession.userId,
+        publishedByName: headSession.name,
+        sections: [sectionAlpha],
+      });
+      const service = new PublicationService(createRepository(report));
+
+      await expect(
+        service.publishReport(reportId, headSession),
+      ).rejects.toThrow('Report has already been published.');
+    });
+
+    it('published report includes all lead sections data (REV-020)', async () => {
+      const report = makeReport({
+        sections: [sectionAlpha, sectionBravo, sectionCharlie],
+      });
+      const service = new PublicationService(createRepository(report));
+      const published = await service.publishReport(reportId, headSession);
+
+      expect(published.sections).toHaveLength(3);
+      const names = published.sections.map((s) => s.authorName);
+      expect(names).toContain('Alpha Lead');
+      expect(names).toContain('Bravo Lead');
+      expect(names).toContain('Charlie Lead');
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
   /*  updateSectionForReview                                           */
   /* ---------------------------------------------------------------- */
 

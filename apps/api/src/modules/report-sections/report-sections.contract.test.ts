@@ -706,3 +706,164 @@ describe('ReportSectionsService — edge cases', () => {
     expect(saved.projects[0]?.trafficLight).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// P0/P1 Regression — traffic light statuses (LEAD-060)
+// ---------------------------------------------------------------------------
+
+describe('ReportSectionsService — traffic light all valid statuses', () => {
+  it('sets traffic light to green', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+    const saved = await service.saveDraft(validDraft({
+      projectStatuses: [{ projectId: PROJECT_ID_1, status: 'green' }],
+    }));
+    expect(saved.projects[0]?.trafficLight).toBe('green');
+  });
+
+  it('sets traffic light to yellow', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+    const saved = await service.saveDraft(validDraft({
+      projectStatuses: [{ projectId: PROJECT_ID_1, status: 'yellow' }],
+    }));
+    expect(saved.projects[0]?.trafficLight).toBe('yellow');
+  });
+
+  it('sets traffic light to red', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+    const saved = await service.saveDraft(validDraft({
+      projectStatuses: [{ projectId: PROJECT_ID_1, status: 'red' }],
+    }));
+    expect(saved.projects[0]?.trafficLight).toBe('red');
+  });
+
+  it('sets traffic light to null when status is omitted', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+    const saved = await service.saveDraft(validDraft({
+      projectStatuses: [{ projectId: PROJECT_ID_1 }],
+    }));
+    expect(saved.projects[0]?.trafficLight).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1 Regression — items with varied tag/workflowStatus combos (LEAD-070)
+// ---------------------------------------------------------------------------
+
+describe('ReportSectionsService — item tag and workflowStatus combinations', () => {
+  const tags = ['feature', 'bugfix', 'infra', 'ops', 'support', 'tech-debt'] as const;
+  const statuses = ['done', 'in_progress', 'blocked'] as const;
+
+  for (const tag of tags) {
+    for (const ws of statuses) {
+      it(`accepts item with tag="${tag}" workflowStatus="${ws}"`, async () => {
+        const service = new ReportSectionsService(createRepository(baseSection));
+        const saved = await service.saveDraft(validDraft({
+          items: [{
+            projectId: PROJECT_ID_1,
+            type: 'current',
+            text: `Test item ${tag}/${ws}`,
+            tag,
+            workflowStatus: ws,
+            carriedOver: false,
+          }],
+        }));
+        expect(saved.items).toHaveLength(1);
+        expect(saved.items[0]?.tag).toBe(tag);
+        expect(saved.items[0]?.workflowStatus).toBe(ws);
+      });
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// P0 Regression — submit double-submit idempotency (LEAD-050)
+// ---------------------------------------------------------------------------
+
+describe('ReportSectionsService — double submit rejected', () => {
+  it('second submit on same section throws SECTION_ALREADY_SUBMITTED', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+
+    // First submit succeeds
+    const submitted = await service.submitSection(validSubmit());
+    expect(submitted.status).toBe('submitted');
+
+    // Second submit rejects
+    await expect(
+      service.submitSection(validSubmit()),
+    ).rejects.toMatchObject({ code: 'SECTION_ALREADY_SUBMITTED' });
+  });
+
+  it('saveDraft after submit is rejected (LEAD-051)', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+
+    await service.submitSection(validSubmit());
+
+    await expect(
+      service.saveDraft(validDraft()),
+    ).rejects.toMatchObject({ code: 'SECTION_ALREADY_SUBMITTED' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1 Regression — Zod validation for risks and decisions (LEAD-080, LEAD-085)
+// ---------------------------------------------------------------------------
+
+describe('ReportSectionsService — risk/decision Zod validation', () => {
+  it('rejects risk with empty risk text', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+
+    await expect(
+      service.saveDraft(validDraft({
+        risks: [{
+          projectId: PROJECT_ID_1,
+          risk: '',
+          impact: 'Some impact',
+          mitigation: 'Some mitigation',
+        }],
+      })),
+    ).rejects.toThrow();
+  });
+
+  it('rejects risk with empty impact text', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+
+    await expect(
+      service.saveDraft(validDraft({
+        risks: [{
+          projectId: PROJECT_ID_1,
+          risk: 'A valid risk',
+          impact: '',
+          mitigation: 'Some mitigation',
+        }],
+      })),
+    ).rejects.toThrow();
+  });
+
+  it('rejects decision with empty text', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+
+    await expect(
+      service.saveDraft(validDraft({
+        decisions: [{
+          text: '',
+          owner: 'Owner',
+          impact: 'Impact',
+        }],
+      })),
+    ).rejects.toThrow();
+  });
+
+  it('rejects decision with empty owner', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+
+    await expect(
+      service.saveDraft(validDraft({
+        decisions: [{
+          text: 'Valid decision',
+          owner: '',
+          impact: 'Impact',
+        }],
+      })),
+    ).rejects.toThrow();
+  });
+});
