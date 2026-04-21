@@ -119,10 +119,12 @@ Current state:
 
 Required changes:
 1. Add `BullMQModule` to `AppModule.imports[]`
-2. Update `PdfExportModule` factory to inject `getQueueToken('pdf-export')` and pass to `PdfExportService` constructor
-3. Update `RemindersModule` factory to inject `getQueueToken('email-reminder')` and pass to `RemindersService` constructor
+2. Update `PdfExportModule` to import `BullMQModule` and inject `getQueueToken('pdf-export')` into the factory -- NestJS DI is module-scoped, so the queue token must be available within `PdfExportModule`'s scope, not just in AppModule
+3. Update `RemindersModule` to import `BullMQModule` and inject `getQueueToken('email-reminder')` -- same module-scope rule applies
 4. Verify processors already handle graceful shutdown via `onModuleDestroy` (they do -- both call `this.worker?.close()`)
 5. Add BullMQ health indicator to the readiness endpoint
+
+**CRITICAL NestJS DI note:** `AppModule` importing `BullMQModule` does NOT make queue tokens available inside `PdfExportModule` or `RemindersModule`. NestJS DI is module-scoped. Each module that needs to inject a queue token must either: (a) import `BullMQModule` directly, or (b) `BullMQModule` must be decorated with `@Global()`. Option (a) is cleaner since `BullMQModule` already exports `BullModule`.
 
 ### BullMQ Queue Health Check
 
@@ -138,7 +140,7 @@ The health module (`apps/api/src/infrastructure/health/`) already has `PrismaHea
 | `docker-compose.dev.yml` | PORT=3002 | 3002:3002 | -- |
 | `docker-compose.prod.yml` | NOT SET (defaults 3001) | 3001:3001 | hits :3001/health/live |
 
-**`docker-compose.yml` is the broken file** -- it maps ports to 3002 and healthchecks 3002, but never sets `PORT=3002`, so the app listens on 3001. Fix: either add `PORT: 3002` to environment, or change ports/healthcheck to 3001. The prod file is consistent at 3001.
+**`docker-compose.yml` is the broken file.** Fix: change ports to `3001:3001` and healthcheck to `localhost:3001`, aligning with `env.schema.ts` default (3001), `Dockerfile.api` EXPOSE (3001), and `docker-compose.prod.yml` (3001). The dev compose explicitly overrides to 3002 which is fine.
 
 ### ThemeProvider Wiring Pattern
 
@@ -149,7 +151,7 @@ Current state:
 - Design tokens in `globals.css` are currently dark-mode only (no light-mode @theme block)
 - Dark mode is the only defined palette -- light mode tokens must be added in Phase 17
 
-ThemeProvider wiring:
+ThemeProvider wiring per D-11 (system detection as default):
 ```tsx
 // apps/web/src/app/layout.tsx
 import { ThemeProvider } from 'next-themes';
@@ -162,6 +164,8 @@ import { ThemeProvider } from 'next-themes';
   </body>
 </html>
 ```
+
+**Note on light mode:** With `defaultTheme="system"` per D-11, users with OS light mode will see the dark palette applied to light mode since only dark tokens are defined. This is acceptable -- D-11 is a locked decision (system detection), and dark mode token fine-tuning is explicitly deferred to Phase 17. The ThemeProvider infrastructure will be correct; the visual palette just needs light tokens added later.
 
 Cookie persistence: `next-themes` v0.4.x handles cookie storage automatically with `storageKey` prop (defaults to `"theme"`). No manual cookie handling needed.
 
@@ -222,6 +226,15 @@ However, the existing 250 passing tests already cover a significant portion of t
 
 The original requirement says "81 regression scenarios" which likely refers to a subset selection from the 882 P0+P1 pool. D-08 clarifies "may be more or fewer than 81."
 
+### Zod reportId Nullable Cascade
+
+When `adminReminderRuleSchema.reportId` changes from required to nullable (D-15), the following repository mappings must also change:
+- `RemindersPrismaRepository.toRuleDomain()` currently uses `rule.reportId ?? '00000000-...'` fallback UUID -- should pass `null` instead
+- `AdminPrismaRepository.getSnapshot()` also uses the same fallback pattern -- should pass `null`
+- `toExecutionDomain()` in `RemindersPrismaRepository` derives `reportId` from `execution.rule.reportId` with the same fallback -- should pass `null`
+
+These are not separate tasks but must be included in the BE-01 Zod schema fix scope.
+
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
@@ -264,7 +277,13 @@ The original requirement says "81 regression scenarios" which likely refers to a
 **How to avoid:** After migration, update admin integration test to use `kind`, `fireAt`, `timezone`, `status`, `version` fields
 **Warning signs:** TypeScript compilation errors in test file after schema change
 
-### Pitfall 6: BullMQ Queue Not Injected in Service Modules
+### Pitfall 6: NestJS Module-Scoped DI for Queue Tokens
+**What goes wrong:** `PdfExportModule` tries to inject `getQueueToken('pdf-export')` but gets "Nest can't resolve dependencies of PdfExportService"
+**Why it happens:** NestJS DI is module-scoped. Importing `BullMQModule` in `AppModule` does NOT make queue tokens visible inside `PdfExportModule`
+**How to avoid:** Each module that injects a queue token must import `BullMQModule` directly (or `BullMQModule` must use `@Global()`)
+**Warning signs:** Runtime DI error on application startup -- "Nest can't resolve dependencies"
+
+### Pitfall 7: BullMQ Queue Not Injected in Service Modules
 **What goes wrong:** Services created without queue parameter, silently skip job enqueueing
 **Why it happens:** PdfExportModule and RemindersModule useFactory creates service with `new Service(repo)` -- no queue arg
 **How to avoid:** After importing BullMQModule, update module factories to inject queue tokens and pass them to service constructors
@@ -290,13 +309,16 @@ import { BullMQModule } from './infrastructure/bullmq/bullmq.module';
 export class AppModule implements NestModule { ... }
 ```
 
-### Queue Injection in PdfExportModule
+### Queue Injection in PdfExportModule (with BullMQModule import)
 ```typescript
 // apps/api/src/modules/pdf-export/pdf-export.module.ts
+import { Module } from '@nestjs/common';
 import { getQueueToken } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
+import { BullMQModule } from '../../infrastructure/bullmq/bullmq.module';
 
 @Module({
+  imports: [BullMQModule],  // <-- Required for module-scoped DI
   providers: [
     PdfExportPrismaRepository,
     {
@@ -309,6 +331,30 @@ import type { Queue } from 'bullmq';
   exports: [PdfExportService],
 })
 export class PdfExportModule {}
+```
+
+### Queue Injection in RemindersModule (same pattern)
+```typescript
+// apps/api/src/modules/reminders/reminders.module.ts
+import { Module } from '@nestjs/common';
+import { getQueueToken } from '@nestjs/bullmq';
+import type { Queue } from 'bullmq';
+import { BullMQModule } from '../../infrastructure/bullmq/bullmq.module';
+
+@Module({
+  imports: [BullMQModule],  // <-- Required for module-scoped DI
+  providers: [
+    RemindersPrismaRepository,
+    {
+      provide: RemindersService,
+      useFactory: (repo: RemindersPrismaRepository, queue: Queue) =>
+        new RemindersService(repo, undefined, queue),
+      inject: [RemindersPrismaRepository, getQueueToken('email-reminder')],
+    },
+  ],
+  exports: [RemindersService],
+})
+export class RemindersModule {}
 ```
 
 ### Prisma Migration SQL (hand-edited template)
@@ -338,7 +384,7 @@ ALTER TABLE "ReminderRule" DROP COLUMN "enabled";
 ALTER TABLE "ReminderRule" ALTER COLUMN "fireAt" DROP DEFAULT;
 ```
 
-### Zod reportId Fix (D-15)
+### Zod reportId Fix (D-15) + Repository Cascade
 ```typescript
 // packages/shared/src/schemas/report.ts
 export const adminReminderRuleSchema = z.object({
@@ -350,6 +396,11 @@ export const adminReminderRuleSchema = z.object({
   status: adminReminderRuleStatusSchema,
   version: z.number().int().min(1),
 });
+
+// Then update repository mappings to pass null instead of fake UUID:
+// RemindersPrismaRepository.toRuleDomain():   reportId: rule.reportId  (remove ?? fallback)
+// AdminPrismaRepository.getSnapshot():         reportId: rule.reportId  (remove ?? fallback)
+// toExecutionDomain():                         reportId: execution.rule.reportId  (remove ?? fallback)
 ```
 
 ### ThemeProvider in layout.tsx
@@ -382,6 +433,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
 | `docker-compose.yml` | NOT SET (3001) | 3002:3002 | localhost:3002 | BROKEN |
 | `docker-compose.dev.yml` | PORT=3002 | 3002:3002 | (none) | OK |
 | `docker-compose.prod.yml` | NOT SET (3001) | 3001:3001 | localhost:3001 | OK |
+
+**Fix:** Change `docker-compose.yml` ports to `3001:3001` and healthcheck to `localhost:3001`. This aligns with env.schema.ts default (3001), Dockerfile.api EXPOSE (3001), and docker-compose.prod.yml (3001).
 
 ### .dockerignore Audit
 
@@ -435,12 +488,7 @@ Bull Board is **already fully implemented** in `apps/api/src/infrastructure/bull
    - What's unclear: Exact count of new tests needed (depends on coverage gap analysis)
    - Recommendation: Planner should allocate a coverage audit task before writing tests, then scope regression work to uncovered P0+P1 scenarios
 
-2. **Light mode tokens**
-   - What we know: globals.css only has dark mode tokens. ThemeProvider will default to system, which may resolve to light.
-   - What's unclear: Whether light mode should be functional in Phase 16 or just wired up (visual polish in Phase 17)
-   - Recommendation: Wire ThemeProvider with `defaultTheme="dark"` for Phase 16 (safe default with existing tokens), Phase 17 adds light mode tokens. Deferred per context -- "Dark mode token fine-tuning -- Phase 17 UI redesign scope."
-
-3. **Integration test DB connectivity**
+2. **Integration test DB connectivity**
    - What we know: 19 integration tests fail with `P1000 AuthenticationFailed` (wrong Postgres credentials)
    - What's unclear: Whether Docker DB is expected to be running for these tests, or if they should be converted
    - Recommendation: These are true integration tests that need a running DB. D-10 says use in-memory mocks, so new regression tests should use contract test pattern, not integration pattern. Existing integration test failures are separate from BE-03 scope.
@@ -453,13 +501,14 @@ Bull Board is **already fully implemented** in `apps/api/src/infrastructure/bull
 - `prisma/schema.prisma` lines 203-225 -- confirmed new ReminderRule schema (kind/fireAt/timezone/status/version)
 - `packages/shared/src/schemas/report.ts` lines 198-206 -- confirmed Zod adminReminderRuleSchema with required reportId
 - `apps/api/src/modules/pdf-export/pdf-export.prisma-repository.ts` -- confirmed mapping layer handles PdfExportJob drift
+- `apps/api/src/modules/reminders/reminders.prisma-repository.ts` -- confirmed toRuleDomain expects kind/fireAt/timezone/status/version
 - `apps/web/src/test/msw-handlers.ts` -- confirmed superjson serialization already in place
 - Test run: `pnpm --filter @customreport/web exec vitest run` -- 29/29 pass
 - Test run: `pnpm --filter @customreport/api exec vitest run` -- 250 pass, 19 fail (DB auth only)
 
 ### Secondary (MEDIUM confidence)
 - `next-themes` v0.4.6 docs -- ThemeProvider attribute="class" pattern, cookie persistence
-- `@nestjs/bullmq` docs -- getQueueToken() for DI injection
+- `@nestjs/bullmq` docs -- getQueueToken() for DI injection, module-scoped resolution
 - `@bull-board/express` docs -- ExpressAdapter pattern (confirmed by existing code)
 
 ## Metadata
