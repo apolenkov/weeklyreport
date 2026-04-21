@@ -44,6 +44,7 @@ async function bootstrap() {
 
   // Resolve all 8 services from NestJS DI container
   const appRouter = createAppRouter({
+    prisma: app.get(PrismaService),
     reportSectionsService: app.get(ReportSectionsService),
     reviewService: app.get(ReviewService),
     publicationService: app.get(PublicationService),
