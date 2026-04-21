@@ -12,6 +12,8 @@ import {
 import { router, protectedProcedure, headProcedure } from './trpc.middleware.js';
 import { mapDomainError } from './trpc.error-mapper.js';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { ReportSectionsService } from '../../modules/report-sections/report-sections.service.js';
 import type { ReviewService } from '../../modules/review/review.service.js';
 import type { PublicationService } from '../../modules/publication/publication.service.js';
@@ -22,6 +24,7 @@ import type { CarryOverService } from '../../modules/carry-over/carry-over.servi
 import type { ArchiveService } from '../../modules/archive/archive.service.js';
 
 type RouterDeps = {
+  prisma: PrismaClient;
   reportSectionsService: ReportSectionsService;
   reviewService: ReviewService;
   publicationService: PublicationService;
@@ -38,12 +41,37 @@ export function createAppRouter(deps: RouterDeps) {
     reports: router({
       getActive: protectedProcedure.query(async ({ ctx }) => {
         try {
+          if (!ctx.session.activeReportSectionId) {
+            return null;
+          }
+
           return await deps.reportSectionsService.getActiveSection(
-            ctx.session.activeReportSectionId ?? '',
+            ctx.session.activeReportSectionId,
           );
         } catch (error) {
           throw mapDomainError(error);
         }
+      }),
+
+      myHistory: protectedProcedure.query(async ({ ctx }) => {
+        const sections = await deps.prisma.reportSection.findMany({
+          where: { authorId: ctx.session.userId },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            report: { select: { id: true, periodStart: true, periodEnd: true, status: true, publishedAt: true } },
+          },
+        });
+
+        return sections.map((s) => ({
+          sectionId: s.id,
+          reportId: s.report.id,
+          periodStart: s.report.periodStart,
+          periodEnd: s.report.periodEnd,
+          reportStatus: s.report.status,
+          sectionStatus: s.status,
+          submittedAt: s.submittedAt,
+          publishedAt: s.report.publishedAt,
+        }));
       }),
 
       saveDraft: protectedProcedure

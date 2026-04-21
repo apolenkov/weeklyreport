@@ -15,6 +15,101 @@ type SamlProfile = {
   role: string;
 };
 
+/**
+ * Get Monday 00:00 and Sunday 23:59:59 for the week containing `date`.
+ */
+function getCurrentWeekBounds(date: Date = new Date()): { periodStart: Date; periodEnd: Date } {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun, 1=Mon...
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  return { periodStart: monday, periodEnd: sunday };
+}
+
+/**
+ * Auto-create a draft report + sections for the current week if none exists.
+ * Returns the created ReportSection for this lead, or null if user is not a lead.
+ */
+async function ensureWeeklyReport(
+  prisma: PrismaClient,
+  userId: string,
+): Promise<{ reportId: string; sectionId: string } | null> {
+  const { periodStart, periodEnd } = getCurrentWeekBounds();
+
+  // Create report for this week if it doesn't exist
+  const existingReport = await prisma.report.findFirst({
+    where: { status: 'draft', periodStart: { gte: periodStart }, periodEnd: { lte: periodEnd } },
+    select: { id: true },
+  });
+
+  let reportId: string;
+
+  if (existingReport) {
+    reportId = existingReport.id;
+  } else {
+    const deadline = new Date(periodEnd);
+    deadline.setDate(deadline.getDate() - 2); // Friday
+    deadline.setHours(15, 0, 0, 0);
+
+    const report = await prisma.report.create({
+      data: { periodStart, periodEnd, deadline },
+    });
+    reportId = report.id;
+  }
+
+  // Ensure this lead has a section in the report
+  const existingSection = await prisma.reportSection.findUnique({
+    where: { reportId_authorId: { reportId, authorId: userId } },
+    select: { id: true },
+  });
+
+  if (existingSection) {
+    return { reportId, sectionId: existingSection.id };
+  }
+
+  // Create section + priorities + project statuses
+  const projects = await prisma.project.findMany({
+    where: { leadId: userId, archived: false },
+    select: { id: true },
+  });
+
+  const section = await prisma.reportSection.create({
+    data: {
+      reportId,
+      authorId: userId,
+      priorities: {
+        createMany: {
+          data: [
+            { rank: 1, text: 'Priority 1' },
+            { rank: 2, text: 'Priority 2' },
+            { rank: 3, text: 'Priority 3' },
+          ],
+        },
+      },
+    },
+  });
+
+  if (projects.length > 0) {
+    await prisma.projectStatus.createMany({
+      data: projects.map((p) => ({
+        reportSectionId: section.id,
+        projectId: p.id,
+        status: 'green' as const,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  return { reportId, sectionId: section.id };
+}
+
 async function buildUserSession(
   prisma: PrismaClient,
   profile: SamlProfile,
@@ -38,11 +133,19 @@ async function buildUserSession(
         },
       });
 
-  // Lead users: find their section in the active (draft) report
-  const activeSection = await prisma.reportSection.findFirst({
+  // Lead users: find or auto-create their section in the active (draft) report
+  let activeSection = await prisma.reportSection.findFirst({
     where: { authorId: user.id, report: { status: 'draft' } },
     select: { id: true, reportId: true },
   });
+
+  // Auto-create weekly report if lead has no active section
+  if (!activeSection && user.role === 'lead') {
+    const created = await ensureWeeklyReport(prisma, user.id);
+    if (created) {
+      activeSection = { id: created.sectionId, reportId: created.reportId };
+    }
+  }
 
   // All roles: find the active report (head/viewer have no section but need the reportId)
   const activeReport = activeSection
