@@ -92,4 +92,46 @@ describe('tRPC auth middleware', () => {
       expect(err).toBeInstanceOf(TRPCError);
     }
   });
+
+  // -----------------------------------------------------------------------
+  // P0 Regression — AUTH tRPC middleware scenarios
+  // -----------------------------------------------------------------------
+
+  it('protectedProcedure with null session throws UNAUTHORIZED (AUTH-038 P0)', async () => {
+    await expect(nullCaller.protectedRoute()).rejects.toMatchObject(
+      expect.objectContaining({ code: 'UNAUTHORIZED' }),
+    );
+  });
+
+  it('headProcedure with viewer session throws FORBIDDEN', async () => {
+    const viewerCaller = testRouter.createCaller({
+      session: {
+        userId: 'u3',
+        email: 'viewer@test.com',
+        name: 'Viewer User',
+        role: 'viewer' as const,
+        activeReportId: null,
+        activeReportSectionId: null,
+      },
+    });
+
+    await expect(viewerCaller.headRoute()).rejects.toMatchObject(
+      expect.objectContaining({ code: 'FORBIDDEN' }),
+    );
+  });
+
+  it('protectedProcedure allows head session', async () => {
+    const result = await headCaller.protectedRoute();
+    expect(result).toBe('auth-ok');
+  });
+
+  it('publicProcedure allows any session type', async () => {
+    const result1 = await nullCaller.publicRoute();
+    const result2 = await leadCaller.publicRoute();
+    const result3 = await headCaller.publicRoute();
+
+    expect(result1).toBe('public-ok');
+    expect(result2).toBe('public-ok');
+    expect(result3).toBe('public-ok');
+  });
 });

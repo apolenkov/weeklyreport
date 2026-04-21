@@ -114,6 +114,39 @@ describe('createRoleGuard', () => {
   // Edge cases
   // -----------------------------------------------------------------------
 
+  // -----------------------------------------------------------------------
+  // P0 Regression — AUTH scenarios
+  // -----------------------------------------------------------------------
+
+  describe('head guard — regression (AUTH-039..041)', () => {
+    const headGuard = createRoleGuard('head');
+
+    it('allows head for headProcedure (AUTH-041 P0)', () => {
+      const ctx: GuardContext = { user: { role: 'head' } };
+      expect(headGuard.canActivate(ctx)).toBe(true);
+    });
+
+    it('denies lead for headProcedure (AUTH-039 P0)', () => {
+      const ctx: GuardContext = { user: { role: 'lead' } };
+      expect(headGuard.canActivate(ctx)).toBe(false);
+    });
+
+    it('denies viewer for headProcedure (AUTH-040 P0)', () => {
+      const ctx: GuardContext = { user: { role: 'viewer' } };
+      expect(headGuard.canActivate(ctx)).toBe(false);
+    });
+
+    it('denies when role is null', () => {
+      const ctx: GuardContext = { user: { role: null as any } };
+      expect(headGuard.canActivate(ctx)).toBe(false);
+    });
+
+    it('denies when role is an arbitrary string', () => {
+      const ctx: GuardContext = { user: { role: 'superadmin' as any } };
+      expect(headGuard.canActivate(ctx)).toBe(false);
+    });
+  });
+
   describe('edge cases', () => {
     it('each guard is independent (no shared state)', () => {
       const headGuard = createRoleGuard('head');

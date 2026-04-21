@@ -167,6 +167,46 @@ describe('PdfExportService — contract tests', () => {
     });
   });
 
+  // P0 Regression — export job status transitions (PDF-010, PDF-011)
+  describe('requestPdfExport — job lifecycle', () => {
+    it('export job transitions: queued -> completed (PDF-010)', async () => {
+      const service = new PdfExportService(createRepository(publishedReport));
+      const job = await service.requestPdfExport(reportId);
+      expect(job.status).toBe('queued');
+
+      const completed = await service.markExportCompleted(
+        job.jobId,
+        '/exports/test.pdf',
+        'sha256-test',
+      );
+      expect(completed.status).toBe('completed');
+      expect(completed.completedAt).toBeInstanceOf(Date);
+    });
+
+    it('export job failure marks status as failed (PDF-011)', async () => {
+      const repo = createRepository(publishedReport);
+      const service = new PdfExportService(repo);
+      const job = await service.requestPdfExport(reportId);
+
+      await service.markExportFailed(job.jobId, 'Browser crashed');
+
+      const fetched = await service.getPdfExportStatus(job.jobId);
+      expect(fetched.status).toBe('failed');
+    });
+
+    it('created job has correct reportId and templateVersion', async () => {
+      const service = new PdfExportService(createRepository(publishedReport));
+      const job = await service.requestPdfExport(reportId);
+
+      expect(job.reportId).toBe(reportId);
+      expect(job.templateVersion).toBe('phase-2-pdf-v1');
+      expect(job.status).toBe('queued');
+      expect(job.artifactUrl).toBeNull();
+      expect(job.checksum).toBeNull();
+      expect(job.completedAt).toBeNull();
+    });
+  });
+
   // 8. getPdfExportStatus — returns job when found
   describe('getPdfExportStatus', () => {
     it('returns the job when found', async () => {

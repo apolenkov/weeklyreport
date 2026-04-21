@@ -116,6 +116,266 @@ describe('AdminService', () => {
       adminRouter.getSnapshot({ adminService: service, session: leadSession }),
     ).rejects.toBeInstanceOf(AdminAccessError);
   });
+
+  // -----------------------------------------------------------------------
+  // P0/P1 Regression — ADM scenarios
+  // -----------------------------------------------------------------------
+
+  describe('getSnapshot — regression (ADM-010)', () => {
+    it('returns snapshot with all entity types', async () => {
+      const fullSnapshot: AdminSnapshot = {
+        users: [{
+          id: headSession.userId,
+          email: headSession.email,
+          name: headSession.name,
+          role: 'head',
+        }],
+        projects: [{
+          id: '44444444-4444-4444-8444-444444444444',
+          name: 'Project X',
+          archived: false,
+          leadId: headSession.userId,
+          leadName: headSession.name,
+        }],
+        periods: [{
+          id: '55555555-5555-4555-8555-555555555555',
+          periodStart: new Date('2026-04-13T00:00:00.000Z'),
+          periodEnd: new Date('2026-04-19T23:59:59.000Z'),
+          deadline: new Date('2026-04-17T15:00:00.000Z'),
+          status: 'draft',
+        }],
+        reminderRules: [{
+          id: '66666666-6666-4666-8666-666666666666',
+          reportId: '55555555-5555-4555-8555-555555555555',
+          kind: 'deadline',
+          fireAt: new Date('2026-04-17T09:00:00.000Z'),
+          timezone: 'Europe/Moscow',
+          status: 'active',
+          version: 1,
+        }],
+        reminderExecutions: [],
+      };
+
+      const service = new AdminService(createRepository(fullSnapshot));
+      const result = await service.getSnapshot();
+
+      expect(result.users).toHaveLength(1);
+      expect(result.projects).toHaveLength(1);
+      expect(result.periods).toHaveLength(1);
+      expect(result.reminderRules).toHaveLength(1);
+      expect(result.reminderExecutions).toHaveLength(0);
+    });
+
+    it('returns empty snapshot when no entities exist', async () => {
+      const emptySnapshot: AdminSnapshot = {
+        users: [],
+        projects: [],
+        periods: [],
+        reminderRules: [],
+        reminderExecutions: [],
+      };
+
+      const service = new AdminService(createRepository(emptySnapshot));
+      const result = await service.getSnapshot();
+
+      expect(result.users).toEqual([]);
+      expect(result.projects).toEqual([]);
+      expect(result.periods).toEqual([]);
+      expect(result.reminderRules).toEqual([]);
+    });
+  });
+
+  describe('upsertUser — regression (ADM-020, ADM-021)', () => {
+    it('creates a new user (ADM-020)', async () => {
+      const service = new AdminService(createRepository(initialSnapshot));
+
+      const result = await service.upsertUser({
+        id: '77777777-7777-4777-8777-777777777777',
+        email: 'newlead@customreport.local',
+        name: 'New Lead',
+        role: 'lead',
+      });
+
+      expect(result.users).toHaveLength(2);
+      expect(result.users.find((u) => u.email === 'newlead@customreport.local')).toBeDefined();
+    });
+
+    it('updates existing user by ID (ADM-021)', async () => {
+      const service = new AdminService(createRepository(initialSnapshot));
+
+      // First add the user
+      await service.upsertUser({
+        id: leadSession.userId,
+        email: leadSession.email,
+        name: 'Old Name',
+        role: 'lead',
+      });
+
+      // Update the same user by ID
+      const result = await service.upsertUser({
+        id: leadSession.userId,
+        email: 'updated@customreport.local',
+        name: 'Updated Name',
+        role: 'lead',
+      });
+
+      expect(result.users).toHaveLength(2); // not 3 — updated, not duplicated
+      const updated = result.users.find((u) => u.id === leadSession.userId);
+      expect(updated?.name).toBe('Updated Name');
+      expect(updated?.email).toBe('updated@customreport.local');
+    });
+
+    it('sorts users by name after upsert', async () => {
+      const service = new AdminService(createRepository(initialSnapshot));
+
+      await service.upsertUser({
+        id: '77777777-7777-4777-8777-777777777777',
+        email: 'a@test.com',
+        name: 'Alpha',
+        role: 'lead',
+      });
+      const result = await service.upsertUser({
+        id: '88888888-8888-4888-8888-888888888888',
+        email: 'z@test.com',
+        name: 'Zulu',
+        role: 'lead',
+      });
+
+      const names = result.users.map((u) => u.name);
+      expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'ru')));
+    });
+  });
+
+  describe('upsertProject — regression (ADM-030)', () => {
+    it('creates a new project (ADM-030)', async () => {
+      const service = new AdminService(createRepository(initialSnapshot));
+
+      const result = await service.upsertProject({
+        id: '44444444-4444-4444-8444-444444444444',
+        name: 'New Project',
+        archived: false,
+        leadId: headSession.userId,
+        leadName: headSession.name,
+      });
+
+      expect(result.projects).toHaveLength(1);
+      expect(result.projects[0]?.name).toBe('New Project');
+    });
+
+    it('updates existing project by ID', async () => {
+      const service = new AdminService(createRepository(initialSnapshot));
+
+      await service.upsertProject({
+        id: '44444444-4444-4444-8444-444444444444',
+        name: 'Original',
+        archived: false,
+        leadId: headSession.userId,
+        leadName: headSession.name,
+      });
+
+      const result = await service.upsertProject({
+        id: '44444444-4444-4444-8444-444444444444',
+        name: 'Updated',
+        archived: false,
+        leadId: headSession.userId,
+        leadName: headSession.name,
+      });
+
+      expect(result.projects).toHaveLength(1);
+      expect(result.projects[0]?.name).toBe('Updated');
+    });
+  });
+
+  describe('upsertReminderRule — regression (ADM-040)', () => {
+    it('creates a new reminder rule with kind/fireAt/status fields (ADM-040)', async () => {
+      const service = new AdminService(createRepository(initialSnapshot));
+
+      const result = await service.upsertReminderRule({
+        id: '66666666-6666-4666-8666-666666666666',
+        reportId: '22222222-2222-4222-8222-222222222222',
+        kind: 'deadline',
+        fireAt: new Date('2026-04-17T09:00:00.000Z'),
+        timezone: 'Europe/Moscow',
+        status: 'active',
+        version: 1,
+      });
+
+      expect(result.reminderRules).toHaveLength(1);
+      const rule = result.reminderRules[0]!;
+      expect(rule.kind).toBe('deadline');
+      expect(rule.fireAt).toBeInstanceOf(Date);
+      expect(rule.status).toBe('active');
+      expect(rule.timezone).toBe('Europe/Moscow');
+      expect(rule.version).toBe(1);
+    });
+
+    it('updates existing reminder rule by ID', async () => {
+      const service = new AdminService(createRepository(initialSnapshot));
+
+      await service.upsertReminderRule({
+        id: '66666666-6666-4666-8666-666666666666',
+        reportId: '22222222-2222-4222-8222-222222222222',
+        kind: 'deadline',
+        fireAt: new Date('2026-04-17T09:00:00.000Z'),
+        timezone: 'Europe/Moscow',
+        status: 'active',
+        version: 1,
+      });
+
+      const result = await service.upsertReminderRule({
+        id: '66666666-6666-4666-8666-666666666666',
+        reportId: '22222222-2222-4222-8222-222222222222',
+        kind: 'deadline',
+        fireAt: new Date('2026-04-18T09:00:00.000Z'),
+        timezone: 'Europe/Moscow',
+        status: 'paused',
+        version: 2,
+      });
+
+      expect(result.reminderRules).toHaveLength(1);
+      expect(result.reminderRules[0]?.status).toBe('paused');
+      expect(result.reminderRules[0]?.version).toBe(2);
+    });
+  });
+
+  describe('upsertPeriod — regression', () => {
+    it('creates a new period', async () => {
+      const service = new AdminService(createRepository(initialSnapshot));
+
+      const result = await service.upsertPeriod({
+        id: '55555555-5555-4555-8555-555555555555',
+        periodStart: new Date('2026-04-13T00:00:00.000Z'),
+        periodEnd: new Date('2026-04-19T23:59:59.000Z'),
+        deadline: new Date('2026-04-17T15:00:00.000Z'),
+        status: 'draft',
+      });
+
+      expect(result.periods).toHaveLength(1);
+      expect(result.periods[0]?.status).toBe('draft');
+    });
+
+    it('updates existing period by ID', async () => {
+      const service = new AdminService(createRepository(initialSnapshot));
+
+      await service.upsertPeriod({
+        id: '55555555-5555-4555-8555-555555555555',
+        periodStart: new Date('2026-04-13T00:00:00.000Z'),
+        periodEnd: new Date('2026-04-19T23:59:59.000Z'),
+        deadline: new Date('2026-04-17T15:00:00.000Z'),
+        status: 'draft',
+      });
+
+      const result = await service.upsertPeriod({
+        id: '55555555-5555-4555-8555-555555555555',
+        periodStart: new Date('2026-04-13T00:00:00.000Z'),
+        periodEnd: new Date('2026-04-19T23:59:59.000Z'),
+        deadline: new Date('2026-04-17T15:00:00.000Z'),
+        status: 'published' as any,
+      });
+
+      expect(result.periods).toHaveLength(1);
+    });
+  });
 });
 
   describe('removeUser — DB deletion via repository', () => {

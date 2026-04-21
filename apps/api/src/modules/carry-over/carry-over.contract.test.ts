@@ -493,6 +493,76 @@ describe('CarryOverService — contract tests', () => {
     expect(result.targetSection.decisions).toHaveLength(0);
   });
 
+  // -----------------------------------------------------------------------
+  // P0/P1 Regression — carry-over edge cases (EDGE-SM-020..024)
+  // -----------------------------------------------------------------------
+
+  it('carry-over creates items in target section (EDGE-SM-020)', async () => {
+    const target = makeTargetSection(sourceAlpha);
+    expect(target.items).toHaveLength(0); // target starts empty
+
+    const repo = createInMemoryRepository({
+      sourceSections: [sourceAlpha],
+      targetSections: [target],
+    });
+    const service = new CarryOverService(repo);
+
+    const result = await service.executeCarryOver(sourceReportId, targetReportId);
+
+    // Target section now has carried items
+    expect(result.targetSection.items.length).toBeGreaterThan(0);
+  });
+
+  it('carry-over marks items as carriedOver=true (EDGE-SM-022)', async () => {
+    const target = makeTargetSection(sourceAlpha);
+    const repo = createInMemoryRepository({
+      sourceSections: [sourceAlpha],
+      targetSections: [target],
+    });
+    const service = new CarryOverService(repo);
+
+    const result = await service.executeCarryOver(sourceReportId, targetReportId);
+
+    // All items in target from carry-over should be marked carriedOver
+    const carriedItems = result.targetSection.items.filter((i) => i.carriedOver);
+    expect(carriedItems.length).toBeGreaterThan(0);
+    expect(result.targetSection.items.every((i) => i.carriedOver)).toBe(true);
+  });
+
+  it('carry-over with source having no eligible items produces 0 items (EDGE-SM-024)', async () => {
+    // Source with only current items (no next items to carry)
+    const sourceNoNext: ReportSectionReadModel = makeSection({
+      reportSectionId: 'x1x10000-x1x1-4x1x-8x1x-x1x1x1x1x1x1',
+      reportId: sourceReportId,
+      authorId: leadAlphaId,
+      authorName: 'Lead Alpha',
+      items: [
+        {
+          id: 'e7e70000-e7e7-4e7e-8e7e-e7e7e7e7e7e7',
+          projectId: projectAlphaId,
+          type: 'current',
+          text: 'Current only',
+          tag: 'feature',
+          workflowStatus: 'done',
+          carriedOver: false,
+        },
+      ],
+      decisions: [],
+    });
+    const target = makeTargetSection(sourceNoNext);
+    const repo = createInMemoryRepository({
+      sourceSections: [sourceNoNext],
+      targetSections: [target],
+    });
+    const service = new CarryOverService(repo);
+
+    const result = await service.executeCarryOver(sourceReportId, targetReportId);
+
+    expect(result.execution.carriedItemCount).toBe(0);
+    expect(result.execution.carriedDecisionCount).toBe(0);
+    expect(result.targetSection.items).toHaveLength(0);
+  });
+
   it('sets carriedItemCount and carriedDecisionCount correctly', async () => {
     const targetAlpha = makeTargetSection(sourceAlpha);
     const targetBeta = makeTargetSection(sourceBeta);

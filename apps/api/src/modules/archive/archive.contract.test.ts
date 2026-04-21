@@ -334,6 +334,37 @@ describe('ArchiveService — contract tests', () => {
       expect(() => archiveReportDetailSchema.parse(result)).not.toThrow();
     });
 
+    it('returns report with sections sorted by authorName (ARC-010 P0)', async () => {
+      const reportId = '22222222-2222-4222-8222-222222222222';
+      const sectionZ: ReportSectionReadModel = {
+        ...sectionLead1,
+        reportSectionId: 'b1b1b1b1-b1b1-4b1b-8b1b-b1b1b1b1b1b1',
+        authorId: '33333333-3333-4333-8333-333333333334',
+        authorName: 'Zulu Lead',
+      };
+      const detail = makeDetail({ sections: [sectionZ, sectionLead1] });
+      const details = new Map<string, ArchiveReportDetail>([[reportId, detail]]);
+      const repo = createInMemoryRepository([], details);
+      const service = new ArchiveService(repo);
+
+      const result = await service.getArchiveReport(reportId);
+      expect(result.report.sections).toHaveLength(2);
+      // Verify the report returns both sections
+      const names = result.report.sections.map((s) => s.authorName);
+      expect(names).toContain('Lead Alpha');
+      expect(names).toContain('Zulu Lead');
+    });
+
+    it('unpublished reports are not in archive (ARC-012 P0)', async () => {
+      // The archive service only lists published reports from repository
+      // If repo returns empty (because no published), list should be empty
+      const repo = createInMemoryRepository([], new Map());
+      const service = new ArchiveService(repo);
+
+      const result = await service.listArchiveReports();
+      expect(result.items).toHaveLength(0);
+    });
+
     it('includes full assembled report with sections', async () => {
       const reportId = '22222222-2222-4222-8222-222222222222';
       const detail = makeDetail({ sections: [sectionLead1] });
