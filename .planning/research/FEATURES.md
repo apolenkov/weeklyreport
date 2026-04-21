@@ -1,244 +1,250 @@
-# Feature Landscape: UI Polish & Analytics (v3.0)
+# Feature Landscape: CustomReport v4.0
 
-**Domain:** Weekly status report web application (v3.0 milestone)
-**Researched:** 2026-04-11
-**Existing state:** Fully functional app with raw HTML (zero CSS), 7 basic E2E specs using localStorage injection, PostgreSQL + tRPC + BullMQ infrastructure shipped in v2.0
-**Prior milestones:** v1.0 domain logic (8 services, 51 unit tests), v2.0 infrastructure (Prisma, NestJS, Docker Compose, SAML, BullMQ)
+**Domain:** Corporate weekly status reporting tool — internal, desktop-first, 3 roles
+**Researched:** 2026-04-21
+**Supersedes:** v3.0 FEATURES.md (2026-04-11)
+**Sources:** PROJECT.md, ROLES.md, REGRESSION-SCENARIOS.md, codebase audit of apps/web/src/, UX audit memory
 
 ---
 
-## Executive Summary
+## Context: What Already Exists
 
-The application is functionally complete but visually unpresentable. Every component renders raw HTML -- browser-default `<select>`, `<button>`, `<input>` with no styling at all. The `packages/ui` package exports a single string constant. The 7 E2E tests bypass real auth via localStorage injection and test against the old localStorage-based data layer, not the tRPC+PostgreSQL backend shipped in v2.0.
+This is a redesign + completion milestone, not a greenfield build. What's already functional:
 
-This milestone has three goals in strict priority order:
-1. **UI Styling** -- Transform all 22 components and 7+ pages from raw HTML to shadcn/ui + Tailwind CSS. This includes the PDF report template that gets delivered to the director.
-2. **E2E Testing** -- Rewrite tests to run against the real Docker Compose stack with proper auth fixtures, covering the full user journey.
-3. **Analytics** -- Add pgvector embeddings for report history search and a trend dashboard, transitioning from "reporting tool" to "reporting + analytics platform."
+**Working backend (422 unit tests passing):**
+- 20+ tRPC endpoints across 7 namespaces: reports, review, pdfExport, admin, archive, reminders, carryOver
+- SAML SSO via Keycloak, dev-login bypass for testing
+- BullMQ async jobs for PDF export and email reminders
+- Auto-create weekly report on lead login
+
+**Working frontend components:**
+- `ReportSectionForm` — lead form with 5 collapsible sections, 300ms autosave debounce, submit dialog
+- `SubmissionDashboard` — card grid showing lead submission status with submitted/draft badges
+- `AssembledReportReview` — head review page (currently incomplete — shows only first project + first item per section)
+- `AdminPanel` — tabbed CRUD for users/projects/periods/reminders with DataTable + CrudSheet
+- `PublishedReport` — archive detail view with PDF export controls
+- `AppShell` — collapsible sidebar, breadcrumb header, role-aware nav
+
+**Existing design infrastructure:**
+- Dark theme CSS tokens applied, Tailwind v4 `@theme` directive in use
+- shadcn/ui components: Card, Badge, Button, Collapsible, DataTable, CrudSheet, TrafficLightBadge, ConfirmDialog, AutosaveIndicator, Separator, Avatar, Tabs, and more
+
+**Core user complaint (from UX audit 2026-04-20):**
+- "Куцо, как 90-е" — functional but visually bare, no visual hierarchy, elements don't feel interactive
+- P0: Delete item/risk/decision without confirmation (accidental data loss)
+- P1: Traffic light buttons have no hover effect, not obviously clickable; new item does not auto-focus; no focus-visible rings
+- P1: Assembled report review shows only first project/item — head cannot actually review the full report
 
 ---
 
 ## Table Stakes
 
-Features users expect. Missing = product feels incomplete and unprofessional.
+Features a professional corporate reporting tool must have. Missing = tool feels unfinished.
 
-| Feature | Why Expected | Complexity | Depends On | Notes |
-|---------|--------------|------------|------------|-------|
-| **Design system foundation** (CSS variables, Tailwind config, design tokens in `packages/ui`) | No styling exists. The app renders browser-default HTML. Users see 1998-era forms. | Med | Nothing | shadcn/ui v4 uses `@theme` directive in CSS with semantic variable pairs (`--primary` / `--primary-foreground`). Define tokens once in `packages/ui/src/styles/globals.css`, import from `apps/web`. [Confidence: HIGH] |
-| **shadcn/ui primitives install** (~15 components: Button, Input, Select, Card, Badge, Dialog, Table, Tabs, Form, Alert, Separator, Sheet, Sidebar, DropdownMenu, Tooltip) | `packages/ui` is empty. Every component uses raw `<select>`, `<button>`, `<input>`. | Med | Design tokens | `npx shadcn@latest add` into `packages/ui/src/components/ui/`. Copy-paste model = zero runtime dependency. shadcn v4 is monorepo-aware. [Confidence: HIGH] |
-| **Lead report form restyling** (report-section-form.tsx + 6 child components) | The primary user-facing surface. 6 team leads use this every Friday. Currently unstyled raw `<form>`. | High | shadcn primitives | Touches: ProjectStatusGrid (traffic light circles), ItemsEditor (table with inline edit), RisksEditor (card list), DecisionsEditor (card with deadline badge), PrioritiesEditor (numbered inputs), AutosaveIndicator (animated badge). |
-| **Head dashboard + assembled report restyling** | Head uses submission-dashboard.tsx and assembled-report-review.tsx to review and publish. Both are raw HTML `<select>` and `<article>` tags. | Med | shadcn primitives | Traffic-light Badge components (green/yellow/red colored circles) are the key visual pattern. Submission dashboard needs progress indicator showing 4/6 leads submitted. |
-| **Admin panel restyling** | admin-panel.tsx has CRUD for users, projects, periods, reminders -- all unstyled `<input>` and `<button>` in flat lists. | Med | shadcn primitives | Use shadcn Tabs (Users / Projects / Periods / Reminders), DataTable with TanStack Table for each entity list, Dialog for add/edit forms. |
-| **Published report + archive restyling** | published-report.tsx and archive-report-list.tsx are consumed by viewers (director, other departments). The director judges the app by this surface. | Med | shadcn primitives | Published report: Card-based layout per lead section, colored traffic light badges, structured tables for items/risks/decisions. Archive: DataTable with date sorting, status badges. |
-| **Navigation shell** (sidebar + header + branding) | app-shell.tsx is `<div><RoleNav/><main>children</main></div>`. No sidebar, no header, no logo. | Med | shadcn Sidebar, Sheet | shadcn/ui v4 has a native Sidebar component with collapsible sections and mobile Sheet fallback. RoleNav becomes Sidebar items. |
-| **PDF report styling** (print/page.tsx) | The PDF is the deliverable artifact. The director receives it. Currently renders as unstyled HTML tables and lists. | High | Design tokens | Must use Tailwind `print:` variant for print-specific styles. Traffic light colors must render in Playwright PDF capture. Requires separate print stylesheet that hides nav, adjusts margins, forces `break-inside: avoid` on sections. |
-| **Responsive layout** (mobile/tablet support) | Internal app used on laptops and occasionally tablets during meetings. | Low | Tailwind config, Sidebar | Tailwind responsive breakpoints (`md:`, `lg:`). shadcn Sheet for mobile nav. Grid layouts collapse to single column on small screens. |
-| **Dark mode** | Team leads are all developers. Dark mode is expected in 2026 dev tools. | Low | Design tokens | shadcn/ui dark mode = single `class="dark"` toggle on `<html>`. CSS variables handle all color swaps automatically when tokens are set up correctly. ThemeProvider component (next-themes). |
+### Lead Workflow
+
+| Feature | Why Expected | Current State | What Needs Work |
+|---------|--------------|---------------|-----------------|
+| Dynamic add/remove for all content types | Items/risks/decisions grow unpredictably per week; user explicitly requested this | Implemented in all editors | P0: No deletion confirmation — accidental data loss. Add `ConfirmDialog` before remove |
+| Autosave with visible feedback | Form data must not be lost on nav | 300ms debounce + AutosaveIndicator | Indicator exists; add unsaved-changes warning on navigation away |
+| Traffic light picker — clearly interactive | Traffic lights are the core status signal read by the director | Plain radio text buttons | P1 (UX audit): needs colorful circular buttons with hover ring; currently looks like an unstyled form |
+| Submit-gate validation that guides, not blocks | Lead must know what's missing before submit | Errors shown after submit attempt only | Add per-section completeness indicator in collapsible header; show "complete / incomplete" visually alongside count badge |
+| Draft vs submitted state — strong visual mode switch | Submitted section is immutable; UI must make this obvious | Badge + isReadOnly flag | "Section submitted and locked" badge is too subtle; need full form visual dimming, section headers greyed, submit button replaced by locked state |
+| New item auto-focus | After "Add item", cursor should land in the new field | Missing (P1 UX audit) | `useEffect` + `ref.focus()` on add event |
+| Keyboard navigation — focus-visible rings | Weekly power users rely on keyboard | Missing (P1 UX audit) | Add `focus-visible:ring-2 ring-ring ring-offset-2` to all interactive elements |
+| Section completeness summary | Lead sees at a glance which of the 5 sections need attention | Count badges only | Distinguish "count > 0" from "section complete for submit"; show green checkmark on section header when complete |
+
+### Head Workflow
+
+| Feature | Why Expected | Current State | What Needs Work |
+|---------|--------------|---------------|-----------------|
+| Dashboard: at-a-glance status with count | Head's Friday question: "Who's done?" — needs immediate answer | Card grid with badges | Missing: "N of 6 submitted" summary at top; no visual urgency for near-deadline |
+| Assembled report: full section display | Head reviews all content before publishing; currently reviewing blind | Shows only first project + first item per section | Critical functional gap — full items/risks/decisions/priorities must be visible for all leads. This is the most important feature fix in v4.0 |
+| Portfolio overview — visual traffic light | Worst-case traffic light is the department's headline signal | Text badge only | Replace with `TrafficLightBadge` component (already exists) + summary counts (green/yellow/red totals) |
+| Publish confirmation with irreversibility warning | Publishing is irreversible; must be explicit | ConfirmDialog exists with correct warning text | Good; verify it's clear enough |
+| PDF export — clear status tracking | Head needs to know when the PDF is ready for download | Request + poll pattern exists | Status polling UX is undefined — needs progress indicator or toast chain: "Export requested → Processing → Ready. Download." |
+| Admin CRUD ergonomics — all 4 entities | Users/projects/periods/reminders management | DataTable + CrudSheet pattern implemented | Verify delete project uses soft-delete (archived: true, not hard delete); verify success toasts fire for all mutations |
+| Reminder execution feedback | Manual trigger must show if already sent (deduplication) | Implemented at backend | Front-end must distinguish "queued" vs "already sent (deduplicated)" in the execution list |
+| Carry-over trigger with feedback | One-click carry of next items; head must know it succeeded | Implemented | UX unverified — needs success toast with count of items/decisions carried |
+
+### Viewer Workflow
+
+| Feature | Why Expected | Current State | What Needs Work |
+|---------|--------------|---------------|-----------------|
+| Archive list — chronological, scannable | Viewers browse historical reports | List sorted by publishedAt desc | Sufficient for v4; no filter needed (small dataset) |
+| Archive detail — full report content | Viewers need complete data, not a summary | PublishedReport component exists | Content fidelity needs verification; must match what head saw before publishing |
+| PDF download | Primary distribution artifact for director and other units | Download button in PublishedReport | Async job polling UX same concern as head's PDF export |
+| No edit affordances rendered | Viewer must never see edit controls | Enforced at tRPC middleware level | Front-end must not render edit buttons/forms when role is viewer; verify in code |
+
+### Cross-Role / Global
+
+| Feature | Why Expected | Current State | What Needs Work |
+|---------|--------------|---------------|-----------------|
+| Loading skeletons on every data fetch | Network calls take time; blank screens feel broken | `page-skeleton.tsx` exists | Wire into all 6+ pages consistently; verify not showing after data loads |
+| Error states with actionable messages | tRPC errors must surface meaningfully, not as 500 screens | `query-error.tsx` exists | Verify all pages handle error state; include retry action |
+| Empty states wired into all pages | First-time use, no-data conditions need clear messaging | `empty-state.tsx` exists but not wired into all pages | Phase 15 handoff: wire into 6 pages — this is in-progress |
+| Toast notifications for all mutations | Save/submit/publish/admin CRUD must confirm success or failure | Sonner used in form + review; not verified everywhere | Audit: admin CRUD mutations, reminder execution, carry-over — all need toasts |
+| SAML login error handling | Login failure must be comprehensible, not a blank page | Auth error page exists | Verify error messages are human-readable |
+
+---
 
 ## Differentiators
 
-Features that set this product apart from the OnlyOffice shared document it replaces. Not expected, but valued.
+Features that elevate the tool beyond "functional form." Not expected by users who have never had this, but valued once seen.
 
-| Feature | Value Proposition | Complexity | Depends On | Notes |
-|---------|-------------------|------------|------------|-------|
-| **Traffic light trend sparklines** | Show how each project's status changed over the last 8 weeks. Head sees at a glance which projects are improving/degrading. Impossible with OnlyOffice. | Med | Archive data (exists), charting | Use shadcn/ui Chart component (built on recharts). Pure SQL aggregation: `SELECT project_id, traffic_light, report.period_start FROM project_status JOIN ... ORDER BY period_start`. No embeddings needed. |
-| **Submission progress tracker** | Real-time visual showing 4/6 leads submitted, with time-to-deadline countdown. The head's number one pain point is chasing people. | Low | Existing tRPC data | Enhance submission-dashboard.tsx with Progress bar + Avatar badges per lead. Data already available via `review.getSubmissionStatus`. |
-| **Project health dashboard** | Aggregate view: all projects with current traffic light, trend arrow (up/down/flat), open risks count, unresolved decisions count. One screen to understand department health. | Med | Trend data query | Pure SQL aggregation over existing data. Dashboard layout with shadcn Cards in a responsive grid. |
-| **Report comparison diff** | Compare two reports side-by-side to see what changed week-over-week. | Med | Archive data | Structured data makes this straightforward: diff items arrays, traffic light changes, new/resolved risks. Highlight added/removed/changed with color coding. |
-| **Semantic search across reports** | Find reports by meaning, not just exact keywords. "Show me all infrastructure blockers" finds items tagged `infra` + `blocked` AND items with similar semantic meaning even if worded differently. | Med | pgvector setup, embeddings | Hybrid search: PostgreSQL `tsvector` full-text search + pgvector cosine similarity combined via `UNION` or RRF (Reciprocal Rank Fusion). |
-| **RAG chatbot over report history** | "What risks did Team Alpha raise in the last month?" Natural language queries over structured report data with LLM-generated answers. | High | pgvector, embeddings API, LLM API | Requires: pgvector extension, embedding model (OpenAI text-embedding-3-small at $0.02/1M tokens or Cohere embed-v4 for better multilingual), LLM for answer generation (GPT-4o-mini at ~$0.01-0.05 per query). Prisma uses `Unsupported("vector")` + `$queryRaw` for vector queries. |
-| **Auto-generated executive summary** | LLM generates a 2-3 paragraph summary after report publication highlighting key changes, escalations, and achievements. | Med | LLM API (OpenAI/Anthropic) | BullMQ job triggered after publication. Store summary text in Report model. Cost: ~$0.01-0.05 per summary with GPT-4o-mini. |
-| **Email report digest** | Send published report summary via email. Director doesn't need to open the app. | Low | Existing email infra, publication event | Extend email.service.ts with HTML template rendered from report data. BullMQ job triggered after publication alongside PDF export. |
-| **Keyboard shortcuts** (Cmd+K navigation, section shortcuts) | Power users (leads filling reports weekly) benefit from keyboard navigation between form sections. | Low | shadcn Command component | shadcn/ui Command component is built on `cmdk`. Cmd+K opens command palette with navigation to sections. |
+### Visual Design
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Professional dark theme with proper visual hierarchy | Replaces "wall of cards" — content breathes, sections are visually distinct | Medium | Design token pass needed; tokens exist but not consistently applied |
+| Traffic light buttons as colored circular indicators | Core status signal becomes immediately legible — green circle = safe, red = crisis | Low | CSS-only change; UX audit explicitly requests this |
+| Micro-animations on add/remove | Items fade in/out instead of snap-appearing; feels polished | Low | Tailwind `animate-fade-in` already exists in codebase; apply to new/removed items |
+| Section header with completion state | Header shows green checkmark when section is ready for submit | Low | New logic in collapsible header; no new components needed |
+| Submission readiness bar | Lead sees "3 of 5 sections ready" before hitting Submit | Medium | New component; sticky summary near the Submit button area |
+
+### Head-Specific Intelligence
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Dashboard: "N of M submitted" summary header | Instant answer to the head's primary question — no counting cards | Low | Computed from `rows.length` and `rows.filter(r => r.status === 'submitted').length` |
+| Portfolio overview as large visual traffic light | "Department is YELLOW this week" is a one-second message | Low | `TrafficLightBadge` already exists; just needs prominent placement |
+| Section jump navigation in assembled report | 6 sections is a lot to scroll; sticky left index with smooth scroll-to | Medium | Sticky `<nav>` with `scrollIntoView` — no library needed |
+| Deadline proximity indicator | If period.deadline is configured, "Due in 2 hours" on dashboard adds urgency | Medium | Requires period.deadline surfaced in the dashboard query response |
+
+### E2E Testing Infrastructure
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Page Object Model (POM) per role | 81 test scenarios remain maintainable when tests are organized by role with shared selectors | Medium | `tests/e2e/pages/lead.page.ts`, `head.page.ts`, `viewer.page.ts` |
+| Auth session fixtures via dev-login | Pre-authenticated sessions bypass SAML in tests — fast, reliable, no IdP dependency | Medium | Playwright `storageState` + `GET /auth/dev-login?email=...` endpoint (already exists) |
+| Seed database fixtures | Deterministic test data prevents flaky tests from state pollution | Medium | Playwright `globalSetup` runs Prisma seed: 2 leads, 1 head, 1 viewer, 3 projects, 1 period |
+| Visual regression baselines | Capture design baseline after redesign; catch accidental style regressions | Low-Medium | `expect.toHaveScreenshot()` — establish after redesign is stable |
+| PDF output validation | Assert that PDF export completes and produces a non-empty file | Medium | Playwright downloads API + file size assertion; text content via pdf-parse if needed |
+
+---
 
 ## Anti-Features
 
-Features to explicitly NOT build in v3.0.
+Things to explicitly NOT build in v4.0.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **Real-time collaborative editing** | Each lead works on their own isolated section. Zero conflicts by design. CRDT/OT + WebSocket infra adds massive complexity for zero user value. | Keep per-section isolation. Autosave with 300ms debounce (already built) is sufficient. |
-| **Mobile-native app** | 6 leads + 1 head use laptops. Director reads PDFs. React Native adds a second codebase for <10 users. | Responsive web layout handles tablet use cases at meetings. |
-| **Jira/GitLab integration** | External API credentials, mapping logic, ongoing maintenance. Manual entry IS the product -- leads add context and judgment that raw ticket data lacks. | Keep manual entry. Consider in v4+ only if users explicitly request. |
-| **Custom report templates** | Report format is well-defined and standardized for the department. Configurability adds schema complexity and confuses the one process. | Hardcode the known format. Change via code when format evolves. |
-| **Multi-tenant / multi-department** | Scope creep. The app serves one department (~8 users). Multi-tenancy adds auth complexity, data isolation, and admin overhead for zero current benefit. | Single-tenant. Fork or add tenancy in v4+ if other departments adopt. |
-| **Standalone vector database** (Pinecone, Weaviate, Qdrant) | pgvector handles <5M vectors at <20ms query with HNSW indexing. The corpus will be ~500-2000 documents over years. Separate vector DB adds infrastructure, cost, and sync complexity. | pgvector in existing PostgreSQL. SQL joins between vectors and relational data are a major advantage at this scale. |
-| **Fine-tuned embedding model** | text-embedding-3-small costs $0.02/1M tokens and handles Russian + English adequately. Corpus is tiny (<100K tokens total). Fine-tuning costs more than years of embedding API usage. | Use OpenAI text-embedding-3-small (1536 dims) or Cohere embed-v4 for better multilingual. Pre-built models, no training needed. |
-| **Complex RBAC beyond 3 roles** | lead/head/viewer covers all real use cases. Per-project or per-field permissions add complexity nobody asked for. | Keep 3 roles. Leads see their section. Head sees everything. Viewers see published reports. |
-| **CI/CD pipeline in this milestone** | Listed in PROJECT.md targets but should be a separate quick phase, not interleaved with styling work. | Add GitHub Actions as a standalone phase after styling is complete -- it's independent work. |
+| Real-time collaborative editing | Each lead has their own section — no shared editing conflict exists; adds WebSocket/CRDT complexity for zero benefit | Autosave is sufficient; leads work in isolation |
+| Drag-and-drop item reordering | Priorities have explicit ranks; items have no user-visible order requirement | Rank field for priorities; append-only for items |
+| Custom theme switcher (light/dark toggle) | Internal tool, not a consumer product; one dark theme, done | Enforce dark theme globally; no toggle |
+| Jira/GitLab integration | External auth, webhooks, error handling for zero-requested-feature in v4 | Manual entry is the intentional v4 design; defer to v5+ |
+| Trend analytics / history charts | Data model supports it; UI does not — this is v5 work | Archive exists; analytics deferred per PROJECT.md |
+| Mobile app or true mobile layout | Desktop-first internal tool; 6 leads use corporate workstations | Sidebar collapses on small screens; min-width ~1024px acceptable |
+| Telegram/Slack notifications | Email SMTP is the notification channel; messaging integrations are out of scope | Email reminders via BullMQ already implemented |
+| Rich text / Markdown in item fields | Plain text keeps data clean for PDF rendering; Markdown adds parsing complexity | Plain textarea with 500-char max |
+| Inline comments / back-and-forth review | No review dialogue is defined; head edits sections directly in draft mode if needed | Head can edit sections via AssembledReportReview before publish |
+| pgvector / semantic search / RAG | Listed in v3.0 FEATURES.md as differentiators; v4.0 scope is completeness + redesign, not analytics | Defer to v5+ per PROJECT.md |
+| Submission deadline countdown | Requires period.deadline surfaced in dashboard query — schema change | Defer unless period.deadline already flows through to the frontend |
+
+---
 
 ## Feature Dependencies
 
 ```
-Design tokens (CSS vars, @theme directive, Tailwind config)
-  |
-  +-> shadcn/ui primitives install (15 components into packages/ui)
-  |     |
-  |     +-> Lead report form restyling (6 child components)
-  |     +-> Head dashboard + assembled report restyling
-  |     +-> Admin panel restyling (Tabs + DataTables)
-  |     +-> Published report + archive restyling
-  |     +-> Navigation shell (Sidebar component)
-  |     +-> PDF report styling (print: variant, separate stylesheet)
-  |     +-> Dark mode (next-themes ThemeProvider)
-  |     +-> Keyboard shortcuts (Command component)
-  |
-  +-> Traffic light trend sparklines (recharts via shadcn Chart)
-  +-> Submission progress tracker (Progress + Avatar)
-  +-> Project health dashboard (Cards + Chart)
+Backend edge-cases passing (all 81 regression scenarios)
+  → E2E tests (tests will fail if backend responses are wrong)
 
-E2E test infrastructure (Playwright fixtures, POM classes, global setup)
-  |
-  +-> Auth flow test (storageState pattern with dev bypass)
-  |     |
-  |     +-> Full user journey test (login -> fill -> submit -> publish -> PDF)
-  |           |
-  |           +-> PDF visual validation test (screenshot or file-size check)
-  |
-  +-> 7 existing specs refactored (localStorage -> real backend)
+Auth fixture (dev-login + Playwright storageState per role)
+  → All E2E test suites (no test can run without a session)
 
-pgvector extension + Prisma raw SQL setup (CREATE EXTENSION, migrations)
-  |
-  +-> Embedding pipeline (BullMQ job, OpenAI/Cohere API call)
-  |     |
-  |     +-> Semantic search (hybrid: tsvector + vector cosine)
-  |     +-> RAG chatbot (search + LLM answer generation)
-  |
-  +-> Report comparison diff (pure structured diff, no vectors needed)
+Seed database fixtures (globalSetup)
+  → All E2E test suites (deterministic data required for assertions)
 
-Existing archive data + SQL aggregation
-  |
-  +-> Traffic light trends (GROUP BY project_id, period_start)
-  +-> Project health dashboard (aggregation queries)
-  +-> Auto-generated executive summary (LLM post-publication)
-  +-> Email report digest (HTML template + BullMQ job)
+Assembled report full display (all sections, all fields)
+  → Head publish flow (head cannot properly review a partial view)
+  → PDF content fidelity (PDF must mirror the full assembled report)
+  → E2E: head journey tests (tests that assert section content will fail on partial display)
+
+Design token pass (spacing, color, typography consistency)
+  → Traffic light circular buttons
+  → Section completion state
+  → Visual regression baselines (baselines must be established after design is final)
+
+Empty states wired into pages
+  → Visual regression baselines (baselines must capture empty state correctly)
+
+Delete confirmation dialogs
+  → E2E tests (tests that verify delete must also test the confirmation step)
 ```
 
-## MVP Recommendation
+---
 
-### Priority 1: UI Styling (highest business value -- the deliverable is a PDF the director sees)
+## MVP for v4.0 — Priority Order
 
-Suggested phase ordering for styling work:
+**Strict sequence: backend first, then UI, then E2E.**
 
-1. **Design tokens + shadcn primitives** -- unlocks all component work, zero user-visible change yet
-2. **Navigation shell (Sidebar + header)** -- every page uses it, do once, visible improvement
-3. **Lead report form + autosave indicator** -- primary weekly-use surface (6 leads)
-4. **Head dashboard + assembled report review** -- second most-used surface
-5. **Published report + archive** -- the outward-facing deliverable
-6. **Admin panel** -- lowest traffic but needs DataTable styling
-7. **PDF report styling** -- the final deliverable artifact, must match web styling
-8. **Dark mode** -- trivial bolt-on after tokens are correct
+**1. Backend completeness (before anything else)**
+- Prisma migration for reminder schema (kind/fireAt/timezone/status/version)
+- Fix all remaining edge-cases to make 81 regression scenarios pass
+- Do not start UI redesign until backend is stable — E2E tests will catch regressions
 
-### Priority 2: E2E Testing (regression safety net)
+**2. Assembled report full display (critical functional fix, not cosmetic)**
+- `AssembledReportReview` must show all items/risks/decisions/priorities per section
+- This is the most important UI fix — head cannot do their job without it
 
-1. **Test infrastructure** (Playwright fixtures, auth setup via dev bypass storageState, Page Object Model classes)
-2. **Full user journey test** (login -> fill -> submit -> publish -> PDF download -- the critical path)
-3. **7 existing specs refactored** (replace localStorage injection with auth fixtures, point at real tRPC backend)
-4. **PDF visual validation** (Playwright page.pdf() screenshot comparison or artifact download check)
+**3. UI redesign — highest-value surfaces first**
+- Traffic light buttons → colorful circular indicators
+- Section headers → completion state (checkmark when ready)
+- Delete confirmation for all destructive actions
+- New item auto-focus
+- Focus-visible rings on all interactive elements
+- Form visual mode: submitted = dimmed/locked state
+- Dashboard summary: "N of 6 submitted"
+- Portfolio overview: visual traffic light badge prominently displayed
 
-### Priority 3: Analytics (differentiator, builds on existing data)
+**4. E2E test suite**
+- Auth fixtures (dev-login + storageState per role)
+- Seed script (globalSetup)
+- Page Object Model classes per role
+- Test suites mapped to regression scenarios: L-*, H-*, V-*, X-*, D-*
+- PDF output validation
 
-Start with pure SQL analytics (no ML, no external APIs), then add RAG:
+**5. Polish pass**
+- Toast audit: verify all mutations have success/error toasts
+- Empty state wiring into remaining pages
+- Loading skeleton consistency
+- Visual regression baselines (after design is stable)
 
-1. **Traffic light trends** -- pure SQL aggregation, high visual impact, uses shadcn Chart
-2. **Submission progress tracker** -- trivial UI enhancement with existing data
-3. **Project health dashboard** -- pure SQL, Card-based layout
-4. **pgvector + embedding pipeline setup** -- infrastructure for RAG (migration, BullMQ embedding job, API key config)
-5. **Semantic search** -- simpler than chatbot, first user-facing RAG feature
-6. **RAG chatbot** -- most complex, defer if time-constrained
+**Defer from v4.0:**
+- Section jump navigation in assembled report (useful, not blocking)
+- Deadline proximity indicator (needs schema change)
+- Trend analytics, pgvector, RAG (v5+)
 
-### Defer to v4+
+---
 
-| Feature | Reason to Defer |
-|---------|----------------|
-| Report comparison diff | Useful but not urgent; pure structured diff can be added anytime |
-| Auto-generated executive summary | Nice-to-have; dependent on LLM API setup already done for RAG |
-| Email report digest | Nice-to-have; trivial once email templates exist |
-| Keyboard shortcuts | Polish feature; add after core styling is stable |
-| CI/CD pipeline | Independent work; add as a quick standalone phase |
+## E2E Test Coverage Map
 
-## Complexity Budget
+The 81 regression scenarios map directly to Playwright test suites.
 
-| Feature Group | Estimated Phases | Risk Level | Key Risk |
-|---------------|-----------------|------------|----------|
-| Design system + all component restyling | 4-5 phases | **Low** | Well-understood work. shadcn/ui copy-paste model is predictable. Main risk: PDF print styling is fiddly (Playwright renders CSS differently from browsers in edge cases). |
-| E2E test rewrite + new tests | 1-2 phases | **Medium** | Need Playwright running against real Docker Compose stack. Auth fixture for SAML uses dev bypass mode (already built). Risk: flaky tests from async operations (BullMQ PDF job). |
-| SQL-based analytics (trends, dashboard, progress) | 1-2 phases | **Low** | Pure queries over existing data. No new infrastructure. Chart rendering is well-documented in shadcn/ui. |
-| pgvector + RAG infrastructure | 2-3 phases | **High** | Prisma pgvector uses raw SQL (`$queryRaw`), losing type safety. Embedding pipeline needs external API key (OpenAI or Cohere). LLM response quality for Russian-language report text is unpredictable -- needs evaluation. Cohere embed-v4 reportedly handles 100+ languages well but costs more. |
+| Suite | Scenarios | Playwright File |
+|-------|-----------|-----------------|
+| Lead: auth + form | L-001 to L-013 | `tests/e2e/lead/form.spec.ts` |
+| Lead: validation | L-014 to L-022 | `tests/e2e/lead/validation.spec.ts` |
+| Head: dashboard + review | H-001 to H-012 | `tests/e2e/head/review.spec.ts` |
+| Head: admin CRUD | H-013 to H-021 | `tests/e2e/head/admin.spec.ts` |
+| Head: reminders + carry-over | H-022 to H-032 | `tests/e2e/head/operations.spec.ts` |
+| Viewer | V-001 to V-011 | `tests/e2e/viewer/archive.spec.ts` |
+| Cross-role lifecycle | X-001 to X-006 | `tests/e2e/cross-role/lifecycle.spec.ts` |
+| Data integrity | D-001 to D-010 | `tests/e2e/data/validation.spec.ts` |
 
-## Existing Code Inventory (v3.0 Touch Points)
+**Auth fixture pattern:** Use existing `GET /auth/dev-login?email=...` endpoint to create sessions. In Playwright `globalSetup`, authenticate once per role and save to `storageState` files. Each test imports the relevant `storageState` via `use: { storageState: 'lead.json' }` in the fixture.
 
-### Components to Restyle (22 files)
+**Seed pattern:** `globalSetup` runs a Prisma seed: 2 lead users (lead1@test.com with 2 projects, lead2@test.com with 1 project), 1 head user, 1 viewer user, 1 active report period. Each suite uses `beforeEach` to reset transient state (draft sections, submissions) while preserving the seeded entities.
 
-| Component | File | Current State | Restyling Scope |
-|-----------|------|---------------|-----------------|
-| RootLayout | `app/layout.tsx` | Bare `<html><body>` with no CSS | Add Tailwind globals, font import, ThemeProvider wrapper |
-| AppShell | `navigation/app-shell.tsx` | `<div>` wrapper around `<RoleNav>` + `<main>` | Replace with Sidebar layout + collapsible header |
-| RoleNav | `navigation/role-nav.tsx` | Flat `<nav>` with text links | Sidebar navigation items with icons and active state |
-| ReportSectionForm | `report-section/report-section-form.tsx` | Raw `<form>` with `<h1>`, `<p>`, `<ul>`, `<button>` | Card layout, form field groups with labels, styled dialog |
-| ProjectStatusGrid | `report-section/project-status-grid.tsx` | Raw `<select>` dropdowns | Traffic light Badge components (colored circles with Select) |
-| ItemsEditor | `report-section/items-editor.tsx` | Raw HTML | Table with inline text editing, tag badges |
-| RisksEditor | `report-section/risks-editor.tsx` | Unstyled list | Card-based risk entries with impact badges |
-| DecisionsEditor | `report-section/decisions-editor.tsx` | Unstyled list | Card with owner and deadline badges, resolved state |
-| PrioritiesEditor | `report-section/priorities-editor.tsx` | Unstyled list | Numbered priority inputs with rank indicators |
-| AutosaveIndicator | `report-section/autosave-indicator.tsx` | Plain text "Saved" | Animated subtle Badge with check icon |
-| SubmissionDashboard | `head/submission-dashboard.tsx` | Raw list of lead statuses | Progress bar + Avatar cards per lead |
-| AssembledReportReview | `head/assembled-report-review.tsx` | Raw `<article>` sections | Accordion per lead section, inline edit controls |
-| PublishedReport | `report/published-report.tsx` | Raw `<section>` with `<article>` per lead | Professional report layout with Cards, Badges, Tables |
-| ArchiveReportList | `report/archive-report-list.tsx` | Raw list | DataTable with date sorting, status Badge filters |
-| AdminPanel | `admin/admin-panel.tsx` | Raw `<input>`, `<select>`, `<button>`, `<ul>` | Tabs interface, DataTables per entity, Dialog forms |
-| QueryError | `common/query-error.tsx` | Unknown state | Alert component with retry action |
-| PrintReportPage | `reports/[reportId]/print/page.tsx` | Raw HTML tables and lists | Print-optimized layout with `@media print` styles |
-| 5 page wrappers | `(app)/lead/report`, `head/dashboard`, `head/report`, `admin`, `reports/history` | Minimal page shells | Layout spacing, page titles, breadcrumbs |
-
-### E2E Tests to Refactor (7 specs)
-
-| Test | File | Current Auth Pattern | Needed Change |
-|------|------|---------------------|---------------|
-| Lead report entry | `lead-report-entry.spec.ts` | No auth setup | Add auth fixture with lead role |
-| Head dashboard | `head-dashboard.spec.ts` | localStorage session injection | Auth fixture, test against real API |
-| Head publication | `head-publication.spec.ts` | localStorage session injection | Auth fixture, test publish flow against real API |
-| Published report | `published-report.spec.ts` | Unknown | Auth fixture with viewer role |
-| Admin panel | `admin-panel.spec.ts` | localStorage session injection | Auth fixture with head role, test CRUD against real API |
-| Carry-over | `carry-over.spec.ts` | Unknown | Auth fixture, test carry-over against real DB state |
-| Archive history | `archive-history.spec.ts` | Unknown | Auth fixture with viewer role |
-
-### Database Changes Needed (Analytics/RAG)
-
-| Change | SQL | Complexity | Notes |
-|--------|-----|-----------|-------|
-| Enable pgvector extension | `CREATE EXTENSION IF NOT EXISTS vector;` | Trivial | Single migration, one line |
-| Add embedding columns | `ALTER TABLE "Item" ADD COLUMN embedding vector(1536);` (same for Risk, Decision) | Low | 3 ALTER TABLE statements |
-| Add HNSW indexes | `CREATE INDEX ON "Item" USING hnsw (embedding vector_cosine_ops);` | Low | Index creation is fast at <10K rows |
-| Prisma schema update | `embedding Unsupported("vector(1536)")?` on Item, Risk, Decision models | Medium | All vector queries must use `$queryRaw` -- no type-safe Prisma client access. Prisma native pgvector support is "coming soon" but not shipped yet. |
-| Full-text search columns | `ALTER TABLE "Item" ADD COLUMN tsv tsvector GENERATED ALWAYS AS (to_tsvector('russian', text)) STORED;` | Low | PostgreSQL built-in, index with GIN |
+**Isolation strategy:** Do not reset the full database between tests — too slow. Reset only the tables affected by the test scenario (ReportSection, Item, Risk, Decision, Priority, ProjectStatus). Keep User, Project, ReportPeriod stable across the suite.
 
 ---
 
 ## Sources
 
-- [shadcn/ui Theming](https://ui.shadcn.com/docs/theming) -- CSS variable system, background/foreground pairs
-- [shadcn/ui Tailwind v4](https://ui.shadcn.com/docs/tailwind-v4) -- `@theme` directive, `data-slot` attributes
-- [shadcn/ui Data Table](https://ui.shadcn.com/docs/components/radix/data-table) -- TanStack Table integration for admin panel
-- [Shadcn UI Best Practices 2026](https://medium.com/write-a-catalyst/shadcn-ui-best-practices-for-2026-444efd204f44) -- Versioning, layering, composition patterns
-- [Building a Scalable Design System with shadcn/ui](https://shadisbaih.medium.com/building-a-scalable-design-system-with-shadcn-ui-tailwind-css-and-design-tokens-031474b03690) -- Design token architecture
-- [PDFx: shadcn/ui for PDFs](https://allshadcn.com/components/pdfx/) -- React-pdf renderer with shadcn styling (alternative to Playwright capture)
-- [shadcn/ui Dashboard Tutorial](https://designrevision.com/blog/shadcn-dashboard-tutorial) -- Production dashboard patterns
-- [Playwright Authentication](https://playwright.dev/docs/auth) -- `storageState` pattern, global setup file
-- [Playwright Best Practices](https://playwright.dev/docs/best-practices) -- Locator strategy (`getByRole`), test isolation, parallel workers
-- [Playwright E2E with POM](https://earezki.com/ai-news/2026-03-15-end-to-end-testing-with-playwright-complete-guide-with-page-object-model/) -- Page Object Model pattern, fixtures, monorepo organization
-- [Next.js Playwright Auth + CI](https://dev.to/whoffagents/playwright-e2e-testing-for-nextjs-auth-setup-stripe-checkout-and-ci-integration-4ndg) -- Auth flow testing, production build testing
-- [Next.js Playwright Guide](https://www.getautonoma.com/blog/nextjs-playwright-testing-guide) -- Production build testing, auth patterns
-- [pgvector 2026 Guide](https://www.instaclustr.com/education/vector-database/pgvector-key-features-tutorial-and-pros-and-cons-2026-guide/) -- HNSW indexing, similarity metrics, production tuning
-- [pgvector RAG in PostgreSQL](https://encore.dev/blog/you-probably-dont-need-a-vector-database) -- Why pgvector beats standalone vector DBs at small scale
-- [Prisma pgvector Integration](https://www.prisma.io/docs/postgres/database/postgres-extensions) -- `Unsupported` type, `$queryRaw`, custom migrations
-- [Prisma Native pgvector Support Roadmap](https://www.prisma.io/blog/the-next-evolution-of-prisma-orm) -- First-class pgvector support coming
-- [Best Embedding Models 2026](https://blog.premai.io/best-embedding-models-for-rag-2026-ranked-by-mteb-score-cost-and-self-hosting/) -- Model comparison: text-embedding-3-small vs Voyage 4 vs Cohere embed-v4
-- [OpenAI Embeddings Pricing](https://costgoat.com/pricing/openai-embeddings) -- $0.02/1M tokens for text-embedding-3-small
-- [Vector DB Comparison 2026](https://www.cloudmagazin.com/en/2026/04/02/vector-databases-rag-pinecone-weaviate-qdrant-pgvector-comparison/) -- pgvector vs dedicated vector DBs
-- [Status Reporting Software 2026](https://gitnux.org/best/status-reporting-software/) -- Market context, competitor features
-- [Weekly Status Reports Best Practices](https://reclaim.ai/blog/weekly-status-reports) -- Structured async updates, report formatting
-
----
-
-*Researched: 2026-04-11 (v3.0 UI Polish & Analytics milestone)*
+- `/home/user/work/sdlc/customreport/.planning/PROJECT.md` — scope, requirements, decisions
+- `/home/user/work/sdlc/customreport/docs/api/ROLES.md` — role capability matrix (22 capabilities across 3 roles)
+- `/home/user/work/sdlc/customreport/docs/api/REGRESSION-SCENARIOS.md` — 81 acceptance scenarios (L-001..L-022, H-001..H-032, V-001..V-011, X-001..X-006, D-001..D-010)
+- `/home/user/.claude/projects/-Users-ap-work-sdlc-customreport/memory/project_ux_audit.md` — UX audit P0/P1/P2 issues from 2026-04-20 session
+- Codebase inspection: `apps/web/src/components/**/*.tsx`, `apps/web/src/app/**/*.tsx`
+- Confidence: HIGH — all findings derived from live codebase and project documentation, not from training data or web search

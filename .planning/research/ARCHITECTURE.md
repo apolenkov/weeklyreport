@@ -1,844 +1,418 @@
-# Architecture Patterns: v3.0 UI Polish & Analytics Integration
+# Architecture Patterns: v4.0 Backend Completeness & UI Redesign
 
-**Domain:** Weekly status report system (NestJS + Next.js + Prisma monorepo)
-**Researched:** 2026-04-11
-**Focus:** How shadcn/ui, Playwright E2E tests, and pgvector RAG integrate with the existing v2.0 architecture
-
-## Current Architecture Snapshot (Post-v2.0)
-
-The v2.0 milestone shipped a fully operational full-stack system. All infrastructure is wired and running.
-
-```text
-  Current State (v2.0 — shipped)
-  ================================
-
-  apps/web (Next.js 15.5)
-  ├── 9 pages (layout + 7 route pages + auth error page)
-  ├── 22 components — ALL UNSTYLED (raw HTML, no CSS framework)
-  │   ├── navigation/: AppShell, RoleNav
-  │   ├── report-section/: ReportSectionForm + 6 sub-editors
-  │   ├── head/: SubmissionDashboard, AssembledReportReview
-  │   ├── report/: PublishedReport, ArchiveReportList
-  │   ├── admin/: AdminPanel
-  │   ├── common/: QueryError
-  │   └── providers/: TRPCProvider
-  ├── tRPC client (httpBatchLink + superjson) — calls NestJS API
-  ├── middleware.ts — cookie-based auth redirect (bypassed in dev)
-  ├── 7 E2E test skeletons in apps/web/e2e/ (Playwright)
-  └── No Tailwind, no shadcn/ui, no CSS whatsoever
-
-  apps/api (NestJS 11)
-  ├── Full DI container: 8 domain modules wired
-  ├── tRPC router: 7 namespaces (reports, review, pdfExport, admin,
-  │   archive, reminders, carryOver) — 20+ procedures
-  ├── Prisma repositories: 8 *PrismaRepository implementations
-  ├── BullMQ: pdf-export + email-reminder queues
-  ├── Auth: SAML + JWT + dev mode (AUTH_DEV_MODE=true)
-  ├── Infrastructure: health, metrics, correlation-id middleware
-  └── PDF: Playwright chromium renders /reports/[id]/print page
-
-  packages/shared
-  ├── Zod schemas (report.ts, auth.ts) — types exported via z.infer
-  └── tRPC contract (router.ts — typed but routes live in api)
-
-  packages/ui
-  ├── Empty shell — only exports package name string
-  ├── Has react dependency, JSX in tsconfig
-  └── RESERVED for shadcn/ui components
-
-  prisma/
-  ├── schema.prisma: 14 models, migrated and seeded
-  ├── seed.ts: head + 6 leads + projects + sample report
-  └── Prisma 7 + @prisma/adapter-pg
-
-  Docker Compose
-  ├── postgres:15-alpine (port 5432)
-  ├── redis:7-alpine (port 6379)
-  ├── migrate service (prisma migrate deploy)
-  ├── api (Playwright base image for PDF, port 3001)
-  └── web (Next.js standalone, port 3000)
-```
-
-### Key Architectural Properties Carried Forward
-
-1. **All components are `'use client'`** — form state is managed client-side with useState/useEffect
-2. **Auth dev mode** — `AUTH_DEV_MODE=true` returns a hardcoded head session for all requests, E2E tests rely on this
-3. **tRPC data flow** — Frontend uses `trpc.namespace.procedure.useQuery/useMutation` via react-query
-4. **PDF generation** — API's BullMQ worker launches Playwright, navigates to `web:3000/reports/[id]/print`, renders PDF
-5. **Monorepo** — Turborepo orchestrates build/lint/test, pnpm workspaces, `@customreport/*` packages
-6. **No CSS exists** — Every component outputs bare HTML elements (`<div>`, `<button>`, `<form>`, `<table>`)
+**Domain:** Weekly status report system (Next.js 16 + NestJS 11 + Prisma + tRPC monorepo)
+**Researched:** 2026-04-21
+**Focus:** How UI redesign and E2E testing integrate with the already-wired v3.0 architecture
 
 ---
 
-## Integration Area 1: shadcn/ui + Tailwind CSS in Monorepo
+## Current Architecture Baseline (Post-v3.0)
 
-### What Needs to Happen
-
-Transform `packages/ui` from an empty shell into a full shadcn/ui component library consumed by `apps/web`. All 22 existing components need styling. The print page needs a separate PDF-optimized design.
-
-### Architecture: Component Layer Topology
+v3.0 delivered a fully styled, fully wired application. This is the starting point for v4.0 — not a blank canvas.
 
 ```text
-  packages/ui/                          apps/web/
-  ├── src/                              ├── src/
-  │   ├── components/                   │   ├── components/
-  │   │   ├── button.tsx   (shadcn)     │   │   ├── report-section/
-  │   │   ├── card.tsx     (shadcn)     │   │   │   ├── report-section-form.tsx
-  │   │   ├── badge.tsx    (shadcn)     │   │   │   │   imports from @workspace/ui
-  │   │   ├── dialog.tsx   (shadcn)     │   │   │   └── ...
-  │   │   ├── table.tsx    (shadcn)     │   │   ├── head/
-  │   │   ├── select.tsx   (shadcn)     │   │   ├── report/
-  │   │   ├── input.tsx    (shadcn)     │   │   ├── admin/
-  │   │   ├── textarea.tsx (shadcn)     │   │   └── navigation/
-  │   │   ├── alert.tsx    (shadcn)     │   ├── app/
-  │   │   ├── tabs.tsx     (shadcn)     │   │   ├── layout.tsx
-  │   │   ├── tooltip.tsx  (shadcn)     │   │   │   imports globals.css
-  │   │   └── ...                       │   │   │   wraps with ThemeProvider
-  │   ├── hooks/                        │   │   └── (app)/reports/[id]/print/
-  │   │   └── use-theme.ts             │   │       └── page.tsx
-  │   ├── lib/                          │   │           uses @media print styles
-  │   │   └── utils.ts    (cn helper)  │   └── styles/
-  │   └── styles/                       │       └── globals.css
-  │       └── globals.css               │           @import "@workspace/ui/styles"
-  │           @theme { ... }            │           + app-specific overrides
-  │           @layer base { ... }
-  ├── components.json
-  └── package.json
-```
+apps/web (Next.js 16)
+├── 9 pages (layout + 7 route pages + auth error page + print page)
+├── components/
+│   ├── navigation/: AppShell, RoleNav, MobileNav, NavUser
+│   ├── report-section/: ReportSectionForm + 6 sub-editors
+│   ├── head/: SubmissionDashboard, AssembledReportReview
+│   ├── report/: PublishedReport, ArchiveReportList
+│   ├── admin/: AdminPanel
+│   ├── common/: QueryError, PageSkeleton, EmptyState
+│   └── providers/: TRPCProvider (wraps all pages in root layout)
+├── tRPC client: httpBatchLink + superjson transformer
+│   credentials: 'include', proxied through /trpc (Next.js rewrites)
+├── proxy.ts: cookie-based auth redirect (renamed from middleware.ts)
+├── styles/app.css: @import "tailwindcss" + @source directives
+├── e2e/: Playwright test infrastructure + spec files
+└── Design system: OKLCH deep navy palette, Geist fonts, animation tokens
 
-### Integration Points (What Changes)
+packages/ui
+├── src/
+│   ├── components/: shadcn/ui primitives (Button, Card, Badge, Dialog,
+│   │   Table, Input, Select, Textarea, Alert, Tabs, Sidebar,
+│   │   Avatar, Progress, Separator, Collapsible, ConfirmDialog, ...)
+│   ├── styles/globals.css: Tailwind @theme tokens (OKLCH palette)
+│   └── index.ts: all primitives re-exported
+└── components.json: shadcn CLI config (Tailwind v4, monorepo-aware)
 
-| File/Area | Change Type | Description |
-|-----------|-------------|-------------|
-| `packages/ui/package.json` | **MODIFY** | Add tailwindcss, @radix-ui/*, class-variance-authority, clsx, tailwind-merge, lucide-react |
-| `packages/ui/src/styles/globals.css` | **NEW** | Tailwind v4 entry: `@import "tailwindcss"`, `@theme { ... }` with design tokens, `@source "../"` |
-| `packages/ui/src/lib/utils.ts` | **NEW** | `cn()` helper (clsx + twMerge) |
-| `packages/ui/src/components/*.tsx` | **NEW** | ~15-20 shadcn primitives (Button, Card, Badge, Dialog, Table, Input, Select, Textarea, Alert, Tabs, Tooltip, DropdownMenu, Sheet, Separator, ScrollArea) |
-| `packages/ui/components.json` | **NEW** | shadcn CLI config: aliases point to `@workspace/ui/*`, Tailwind v4 (empty config path), RSC: true |
-| `apps/web/components.json` | **NEW** | shadcn CLI config for app: ui alias to `@workspace/ui/components`, local components to `@/components` |
-| `apps/web/src/app/layout.tsx` | **MODIFY** | Import globals.css, add ThemeProvider, add `<html className>` with font |
-| `apps/web/src/styles/globals.css` | **NEW** | `@import "@workspace/ui/styles/globals.css"`, app-specific `@source` directives |
-| All 22 components in `apps/web/src/components/` | **MODIFY** | Replace bare HTML with shadcn/ui primitives. Major rewrite of every component |
-| `apps/web/src/app/(app)/reports/[id]/print/page.tsx` | **MODIFY** | PDF-optimized layout with `@media print` styles, no navigation, compact spacing |
+apps/api (NestJS 11)
+├── 8 domain modules: reportSections, review, publication, pdfExport,
+│   admin, reminders, carryOver, archive
+├── tRPC router: 7 namespaces, 20+ procedures
+│   protectedProcedure: any authenticated user
+│   headProcedure: head role only
+├── Prisma repositories: 8 *PrismaRepository implementations
+├── BullMQ: pdf-export + email-reminder queues (pdf-export active,
+│   email-reminder wired but requires SMTP config)
+├── Auth: SAML + JWT + dev mode (AUTH_DEV_MODE=true bypasses SAML)
+│   dev-login endpoint: /auth/dev-login?role={lead|head|viewer}
+└── Health endpoint: /health/live (used by Playwright webServer)
 
-### Data Flow: No Changes
+packages/shared
+├── Zod schemas: report.ts, auth.ts — all domain types
+├── tRPC router type: AppRouter (exported for frontend type inference)
+└── Validation schemas: paginationInputSchema, draftSaveSchema,
+    submitSectionSchema, adminUserSchema, adminProjectSchema,
+    reportPeriodSchema, adminReminderRuleSchema, myHistoryEntrySchema
 
-The tRPC data flow is completely untouched. shadcn/ui is purely a presentation layer change. Components still receive data via `trpc.*.useQuery()` and dispatch mutations via `trpc.*.useMutation()`. No API changes required.
+prisma/
+├── schema.prisma: 14 models (Report, ReportSection, Item, Risk,
+│   Decision, Priority, ProjectStatus, Project, User, ReminderRule, ...)
+├── seed.ts: 1 head + 6 leads + projects + sample report with Lead 1 submitted
+└── Prisma 7 (TypeScript-based, no Rust, 3x faster queries)
 
-```text
-  trpc.reports.getActive.useQuery()
-       │
-       ▼
-  ReportSectionForm (same props, same state management)
-       │
-       ▼
-  <Card> + <Input> + <Badge> + <Button>   ← NEW (was <div> + <input> + <p> + <button>)
-       │
-       ▼
-  trpc.reports.saveDraft.useMutation()     ← UNCHANGED
-```
-
-### shadcn/ui Monorepo Configuration
-
-**Tailwind v4 key insight**: No `tailwind.config.ts` file needed. Tailwind v4 uses CSS-based configuration:
-
-```css
-/* packages/ui/src/styles/globals.css */
-@import "tailwindcss";
-
-@source "../";    /* scan packages/ui/src for classes */
-
-@theme {
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.141 0.005 285.823);
-  --color-primary: oklch(0.21 0.006 285.885);
-  /* ... design tokens */
-}
-```
-
-**apps/web** consumes via CSS import chain:
-
-```css
-/* apps/web/src/styles/globals.css */
-@import "@workspace/ui/styles/globals.css";
-@source "../../";   /* scan apps/web/src for Tailwind classes */
-```
-
-### Component Mapping: Existing to shadcn/ui
-
-| Existing Component | Primary shadcn/ui Primitives Needed |
-|-------------------|--------------------------------------|
-| AppShell | Sheet (sidebar), NavigationMenu |
-| RoleNav | NavigationMenu, Badge (role indicator) |
-| ReportSectionForm | Card, Form wrapper |
-| ProjectStatusGrid | Table, Select (traffic light), Badge (green/yellow/red) |
-| ItemsEditor | Card, Input, Badge (tag), Select (status), Checkbox (completed) |
-| RisksEditor | Table, Input, Textarea |
-| DecisionsEditor | Table, Input, Textarea, Badge (resolved/pending) |
-| PrioritiesEditor | Card, Input (ranked 1-2-3) |
-| AutosaveIndicator | Badge or custom (small indicator) |
-| SubmissionDashboard | Card, Table, Badge (submitted/draft) |
-| AssembledReportReview | Card sections, Button (publish) |
-| PublishedReport | Card, Badge (traffic lights), Button (export PDF) |
-| ArchiveReportList | Table, Button (view) |
-| AdminPanel | Tabs (users/projects/periods/reminders), Table, Dialog (add/edit), Input |
-| QueryError | Alert (destructive variant) |
-| TRPCProvider | No change (no UI) |
-
-### PDF Print Page Architecture
-
-The print page (`/reports/[id]/print`) is the source HTML that Playwright renders to PDF. It needs special treatment:
-
-```text
-  PDF Generation Flow (existing, unchanged):
-  ───────────────────��───────────────────────
-  API: pdfExportService.requestPdfExport(reportId)
-       │
-       ▼
-  BullMQ: pdf-export queue
-       │
-       ▼
-  PdfExportProcessor:
-       chromium.launch()
-       page.goto("http://web:3000/reports/{id}/print")
-       page.pdf({ format: 'A4', printBackground: true })
-       │
-       ▼
-  Writes PDF to /app/data/pdfs/{jobId}.pdf
-
-  Print Page Styling Strategy:
-  ────────────────────────────
-  - Same shadcn/ui components BUT with @media print overrides
-  - Hide navigation, footers, interactive elements
-  - Compact spacing, professional typography
-  - Traffic light badges render as colored circles in PDF
-  - printBackground: true ensures color badges appear in PDF
-```
-
-### Build Order for shadcn/ui
-
-```text
-  1. packages/ui foundation
-     ├── Install deps (tailwindcss, @radix-ui/*, cva, clsx, tw-merge, lucide-react)
-     ├── Create globals.css with Tailwind v4 @theme tokens
-     ├── Create lib/utils.ts (cn helper)
-     ├── Create components.json for shadcn CLI
-     └── Add 5 core primitives: Button, Card, Input, Badge, Table
-
-  2. apps/web Tailwind wiring
-     ├── Create components.json for web app
-     ├── Create globals.css importing from @workspace/ui
-     ├── Modify layout.tsx: import CSS, add font, ThemeProvider
-     └── Verify one component renders with styles
-
-  3. Component migration (batch by page)
-     ├── Batch 1: Navigation (AppShell, RoleNav) — needed by all pages
-     ├── Batch 2: Lead report form (ReportSectionForm + 6 sub-editors)
-     ├── Batch 3: Head views (SubmissionDashboard, AssembledReportReview)
-     ├── Batch 4: Reports (PublishedReport, ArchiveReportList, print page)
-     └── Batch 5: Admin (AdminPanel — heaviest, uses Tabs + Dialog + Table)
-
-  4. PDF print page styling
-     ├── Add @media print CSS rules
-     ├── Verify Playwright PDF renders correctly with background colors
-     └── Test in Docker Compose (api container → web container)
+E2E infrastructure (apps/web/e2e/)
+├── playwright.config.ts: dual webServer (API port 3101, Web port 3100),
+│   reuseExistingServer in dev, AUTH_DEV_MODE=true, LOG_LEVEL=warn
+├── auth.setup.ts: visits /auth/dev-login?role= per role, saves storageState
+├── fixtures.ts: leadPage, headPage, viewerPage (per-role browser contexts)
+├── helpers/test-utils.ts: waitForAutosave, expectToast, submitSection,
+│   publishReport — reusable helpers
+├── *.spec.ts (root level): shallow smoke tests — page navigation,
+│   heading visibility, basic data assertions
+└── journeys/*.spec.ts: role journey stubs (lead, head, admin, carry-over,
+    pdf-export, archive) — mostly shallow, need depth
 ```
 
 ---
 
-## Integration Area 2: Playwright E2E Tests
+## Component Boundaries for UI Redesign
 
-### What Needs to Happen
+### What "redesign" means in v4.0 context
 
-The 7 E2E test files in `apps/web/e2e/` exist but are skeleton-level. They need to become comprehensive tests covering the full user journey. Additionally, the test infrastructure needs improvements for reliability.
+v3.0 installed shadcn/ui, defined OKLCH design tokens, animated all transitions, and added skeletons/empty states. The current UI is styled and functional. The v4.0 "UI redesign" targets visual overhaul and UX polish — not structural rewiring.
 
-### Current E2E Test State
+The 35-item audit from v3.0 (P1/P2/P3 findings) drove changes through `4ec7415`. Eight P3 items were explicitly deferred. The v4.0 redesign addresses remaining deficiencies and a ground-up design refresh.
 
-```text
-  apps/web/e2e/
-  ├── admin-panel.spec.ts            (skeleton)
-  ├── archive-history.spec.ts        (skeleton)
-  ├── carry-over.spec.ts             (skeleton)
-  ├── head-dashboard.spec.ts         (skeleton)
-  ├── head-publication.spec.ts       (1 test — uses localStorage seeding)
-  ├── lead-report-entry.spec.ts      (1 test — basic autosave + submit)
-  └── published-report.spec.ts       (skeleton)
+**What does NOT change during UI redesign:**
+- tRPC data flow — all `trpc.*.useQuery()` / `trpc.*.useMutation()` call sites
+- Route structure — `(app)/lead/report`, `(app)/head/dashboard`, etc.
+- Component boundaries — AppShell > [page content], ReportSectionForm > [6 sub-editors]
+- packages/shared Zod schemas (unless backend fixes require new fields)
+- packages/ui primitive APIs (Button, Card, Badge, etc.) — only design tokens change
 
-  playwright.config.ts (root)
-  ├── testDir: apps/web/e2e
-  ├── baseURL: http://127.0.0.1:3100
-  └── webServer: next dev -p 3100 (web only, no API!)
-```
-
-### Architecture: E2E Test Infrastructure
-
-**Problem with current config**: The Playwright config starts only the Next.js dev server, NOT the NestJS API. Since v2.0 wired real tRPC calls, E2E tests now require both servers running.
+**What changes during UI redesign:**
 
 ```text
-  Current (broken for full-stack tests):
-  ────────────��─────────────────────────
-  playwright.config.ts
-  └── webServer: next dev -p 3100     ← only frontend
-      tRPC calls go to localhost:3001  ← nothing is listening!
+packages/ui/src/styles/globals.css
+  Purpose: Design tokens only. Palette, typography scale, radius, shadows.
+  Change type: MODIFY — update OKLCH values, add new semantic tokens if needed.
+  Owner: UI redesign phase.
 
-  Required (full-stack E2E):
-  ────────────────────────────────────��─
-  playwright.config.ts
-  ├── webServer[0]: apps/api dev       ← NestJS on port 3101
-  │   depends_on: postgres + redis     ← need Docker services
-  └── webServer[1]: apps/web dev       ← Next.js on port 3100
-      NEXT_PUBLIC_API_URL=http://127.0.0.1:3101
+apps/web/src/styles/app.css
+  Purpose: @import chain, @source directives, Tailwind utility safelist.
+  Change type: MODIFY only if new packages need @source, or safelist grows.
+  Owner: UI redesign phase (if needed).
+
+All components in apps/web/src/components/**
+  Purpose: Business components with shadcn/ui primitives.
+  Change type: MODIFY className strings, layout proportions, icon choices.
+  Critical: No component API changes unless backend contract changes.
+  Owner: UI redesign phase.
+
+apps/web/src/app/(app)/*/page.tsx (all pages)
+  Purpose: Page-level layout wrappers using AppShell.
+  Change type: MODIFY className on outer divs, spacing tokens.
+  Not in scope: Moving AppShell into (app)/layout.tsx — see tech debt note below.
+  Owner: UI redesign phase.
+
+apps/web/src/app/(app)/reports/[reportId]/print/page.tsx
+  Purpose: PDF print template — rendered by Playwright's headless Chromium.
+  Change type: MODIFY — visual quality improvements only.
+  Constraint: Must use print-color-adjust: exact, no navigation elements,
+    break-inside: avoid on sections. printBackground: true in PDF options.
+  Owner: UI redesign phase.
 ```
 
-### Test Infrastructure Design
+### Component dependency graph (build order within UI redesign)
 
 ```text
-  E2E Test Stack
-  ═══════════════
+Step 1: packages/ui/src/styles/globals.css (design tokens)
+  ↳ Everything depends on tokens. Change tokens first.
 
-  Playwright Test Runner
-       │
-       ├── Global Setup (new)
-       │   ├── Start Docker Compose (postgres + redis)
-       │   ├── Run prisma migrate + seed
-       │   ├── Verify API health endpoint
-       │   └── Create auth storage states
-       │
-       ├── projects (Playwright config)
-       │   ├── "setup" project → global-setup.ts
-       │   ├── "lead" project → lead-*.spec.ts (lead session)
-       │   ├── "head" project → head-*.spec.ts (head session)
-       │   └── "viewer" project → viewer-*.spec.ts (viewer session)
-       │
-       ├── webServer (Playwright config, multiple servers)
-       │   ├── API: pnpm --filter @customreport/api dev (port 3101)
-       │   └── Web: pnpm --filter @customreport/web dev (port 3100)
-       │
-       └── Global Teardown (new)
-           └── Stop Docker Compose (or leave running for speed)
+Step 2: AppShell + RoleNav (navigation/app-shell.tsx, navigation/role-nav.tsx)
+  ↳ Wraps every page. Changes here affect all pages.
+  ↳ Deferred P3 items: nav grouping, collapsed sidebar padding, POST logout.
+
+Step 3: Lead form components (report-section/ directory — 7 files)
+  ↳ Primary user-facing surface (6 leads use this weekly).
+  ↳ Priority: ProjectStatusGrid (traffic lights), ReportSectionForm (outer shell),
+    AutosaveIndicator, ItemsEditor, RisksEditor, DecisionsEditor, PrioritiesEditor.
+
+Step 4: Head views (head/ directory — 2 files)
+  ↳ SubmissionDashboard (KPI cards + lead cards grid).
+  ↳ AssembledReportReview (full report preview + publish flow).
+
+Step 5: Report views (report/ directory — 2 files)
+  ↳ PublishedReport (public-facing, director sees this).
+  ↳ ArchiveReportList (table with date sorting, status badges).
+
+Step 6: Admin panel (admin/admin-panel.tsx)
+  ↳ Tabs + DataTable + Dialog pattern. Most complex, least user-visible.
+
+Step 7: Print template (/reports/[reportId]/print/page.tsx)
+  ↳ PDF output. Visual quality matters — this is delivered to director.
+  ↳ Validate with: pnpm playwright -- test --grep pdf
 ```
 
-### Authentication Strategy for E2E
+### Tech debt note: AppShell ownership
 
-The system has `AUTH_DEV_MODE=true` which returns a hardcoded head session. For E2E tests with multiple roles, two approaches:
+Every page (`head/dashboard/page.tsx`, `lead/report/page.tsx`, etc.) imports and renders `<AppShell role="..." currentPath="...">` itself. The `(app)/layout.tsx` is an explicit passthrough with a code comment: "When server-side session extraction is implemented, this layout will read the session cookie and provide AppShell here."
 
-**Option A: Dev mode role switching (recommended for v3.0)**
-
-The API's `trpc.context.ts` already has `DEV_SESSION` that returns when `AUTH_DEV_MODE=true`. Extend this to support role switching via a query parameter or header in dev mode only:
-
-```text
-  Dev Mode Auth Flow:
-  ───────────────────
-  1. AUTH_DEV_MODE=true (set in test env)
-  2. API reads X-Dev-Role header (only in dev mode!)
-  3. Returns corresponding seed user session
-  4. Each Playwright project sets the header in extraHTTPHeaders
-
-  Playwright Config:
-  ──────────────────
-  projects: [
-    { name: "lead",   use: { extraHTTPHeaders: { "X-Dev-Role": "lead" } } },
-    { name: "head",   use: { extraHTTPHeaders: { "X-Dev-Role": "head" } } },
-    { name: "viewer", use: { extraHTTPHeaders: { "X-Dev-Role": "viewer" } } },
-  ]
-```
-
-**Option B: Real JWT storage state** (for later milestones)
-
-Use Playwright's `storageState` with real JWT cookies obtained from the SAML flow. More realistic but requires Keycloak in the test environment.
-
-### Integration Points (What Changes)
-
-| File/Area | Change Type | Description |
-|-----------|-------------|-------------|
-| `playwright.config.ts` | **MODIFY** | Add dual webServer (api + web), projects per role, globalSetup/Teardown |
-| `apps/web/e2e/global-setup.ts` | **NEW** | Docker Compose up, migrate, seed, health check |
-| `apps/web/e2e/global-teardown.ts` | **NEW** | Optional Docker Compose down |
-| `apps/web/e2e/fixtures.ts` | **NEW** | Custom test fixtures: authenticated page, seed data references |
-| `apps/api/src/infrastructure/trpc/trpc.context.ts` | **MODIFY** | Add X-Dev-Role header reading in dev mode for role switching |
-| `prisma/seed.ts` | **MODIFY** | Ensure deterministic UUIDs for E2E assertions |
-| `docker-compose.test.yml` | **NEW** | Test-specific compose: postgres + redis only (no api/web — Playwright starts those) |
-| All 7 E2E spec files | **MODIFY** | Expand from skeletons to full user journey tests |
-
-### E2E Test Coverage Plan
-
-```text
-  Full User Journey (Linear E2E Flow):
-  ─────────────────────────────────────
-  1. Lead logs in → sees report form
-  2. Lead fills section (traffic lights, items, risks, decisions, priorities)
-  3. Lead autosave fires → data persists
-  4. Lead submits section → section becomes read-only
-  5. Head opens dashboard → sees submission status
-  6. Head reviews assembled report → all sections visible
-  7. Head publishes report → status changes
-  8. Published report visible to viewers
-  9. Head exports PDF → job queued → PDF generated
-  10. Archive shows report in history
-
-  Cross-Cutting Tests:
-  ────────────────────
-  - Role access control (viewer cannot publish, lead cannot admin)
-  - Carry-over execution (decisions + next-week items)
-  - Admin CRUD (users, projects, periods, reminders)
-  - Error states (network failure, validation errors)
-```
-
-### Build Order for E2E Tests
-
-```text
-  1. Test infrastructure
-     ├── docker-compose.test.yml (postgres + redis)
-     ├── Update playwright.config.ts (dual webServer, projects)
-     ├── global-setup.ts (Docker, migrate, seed)
-     ├── fixtures.ts (custom test, seed data constants)
-     └── Extend trpc.context.ts for dev-mode role switching
-
-  2. Core journey tests (depends on shadcn/ui for selectors)
-     ├── lead-report-entry.spec.ts — full form fill + submit
-     ├── head-dashboard.spec.ts — view submissions
-     ├── head-publication.spec.ts — review + publish
-     └── published-report.spec.ts — view + PDF export
-
-  3. Supporting tests
-     ├── archive-history.spec.ts — browse past reports
-     ├── carry-over.spec.ts — decision/item carry-over
-     └── admin-panel.spec.ts — CRUD operations
-
-  4. CI integration
-     ├── GitHub Actions workflow (setup postgres + redis services)
-     └── Playwright report upload as artifact
-```
-
-**Critical dependency**: E2E tests for styled components depend on shadcn/ui being integrated first. Test selectors use `getByRole`, `getByLabel`, `getByText` which remain stable across styling changes, but the page structure and interactive elements will change. Run E2E test updates AFTER each shadcn/ui component batch.
+v4.0 UI redesign does NOT move AppShell into the shared layout. That requires server-side session reading, which is a separate architectural concern. Phases should treat each page independently wrapping AppShell as the stable pattern.
 
 ---
 
-## Integration Area 3: pgvector RAG Analytics
+## E2E Test Architecture
 
-### What Needs to Happen
+### Current state (what exists and works)
 
-Add vector embeddings to published reports for semantic search, trend analysis, and a chatbot that answers questions about report history. This is the most architecturally invasive change because it adds a new data pipeline (embedding generation) and a new query path (vector similarity search).
-
-### Architecture: RAG Pipeline
+The E2E infrastructure is operational. Auth, fixtures, dual-server config, and utility helpers are wired. The gap is test depth, not plumbing.
 
 ```text
-  Embedding Generation Pipeline
-  ══════════════════════════════
+What works today:
+  auth.setup.ts     — authenticates all 3 roles, saves storageState to .auth/
+  fixtures.ts       — provides leadPage, headPage, viewerPage (isolated contexts)
+  playwright.config — dual webServer (API on 3101, Web on 3100)
+  test-utils.ts     — waitForAutosave, expectToast, submitSection, publishReport
+  journeys/         — directory exists with stubs for all major flows
 
-  Report Published (existing event)
-       │
-       ▼
-  PublicationService.publishReport()
-       │
-       ├── existing: update report status
-       │
-       └── NEW: enqueue embedding-generation job
-            │
-            ▼
-       BullMQ: embedding-generation queue
-            │
-            ▼
-       EmbeddingProcessor (NEW)
-            │
-            ├── Fetch assembled report data
-            ├── Chunk report into sections:
-            │   - Per-lead summary (traffic lights + items)
-            │   - Risks aggregate
-            │   - Decisions aggregate
-            │   - Portfolio overview
-            ├── Call OpenAI text-embedding-3-small API
-            │   (or alternative embedding provider)
-            ├── Store vectors in ReportEmbedding table
-            └── Mark embedding job as completed
-
-
-  RAG Query Pipeline
-  ══════════════════
-
-  User asks question in chat UI
-       │
-       ▼
-  tRPC: analytics.chat.mutate({ question })
-       │
-       ▼
-  AnalyticsService (NEW)
-       │
-       ├── Generate embedding for user question
-       │   (same model: text-embedding-3-small)
-       │
-       ├── Vector similarity search via pgvector
-       │   SELECT * FROM "ReportEmbedding"
-       │   ORDER BY embedding <=> $queryVector
-       │   LIMIT 5
-       │
-       ├── Assemble context from top-K chunks
-       │
-       ├── Call LLM with context + question
-       │   (OpenAI GPT-4o-mini or similar)
-       │
-       └── Return answer + source references
-            │
-            ▼
-       Frontend: chat UI displays answer
-       with links to source reports
+What needs depth:
+  Root-level *.spec.ts — shallow (navigation + heading check only)
+  journeys/*.spec.ts   — shallow (same pattern as root specs, not actual journeys)
 ```
 
-### Database Schema Changes
+### Seed data contract (hard dependency for all E2E)
+
+All E2E tests depend on `prisma/seed.ts` being run before tests. The seed creates deterministic users and data that assertions rely on.
 
 ```text
-  Prisma Schema Additions
-  ═══════════════════════
+Seed contract (must remain stable across all phases):
+  Users:   lead1@customreport.dev → "Lead 1" (role: lead)
+           head@customreport.dev  → "Head"   (role: head)
+           viewer@customreport.dev → "Viewer" (role: viewer)
+           (+ 5 more leads: Lead 2 through Lead 6)
 
-  NEW: ReportEmbedding model
-  ──────────────────────���───
-  model ReportEmbedding {
-    id          String   @id @default(uuid())
-    reportId    String
-    chunkType   String              // "lead_summary", "risks", "decisions", "overview"
-    chunkIndex  Int
-    content     String              // The text that was embedded
-    metadata    Json?               // { leadId, projectIds, period }
-    embedding   Unsupported("vector(1536)")   // pgvector column
-    report      Report   @relation(fields: [reportId], references: [id])
-    createdAt   DateTime @default(now())
+  Report:  1 active report period
+  Lead 1 section: status = submitted (HARD constraint — tests assert on this)
+  Lead 2-6 sections: status = draft
 
-    @@index([reportId])
-  }
-
-  NEW: EmbeddingJob model
-  ───────────────────────
-  model EmbeddingJob {
-    id          String   @id @default(uuid())
-    reportId    String
-    status      String   @default("pending")  // pending, processing, completed, failed
-    error       String?
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-  }
-
-  MODIFY: Report model
-  ────────────────────
-  model Report {
-    ...existing fields...
-    embeddings  ReportEmbedding[]    // NEW relation
-  }
+  Auth dev mode:
+    /auth/dev-login?role=lead   → authenticates as Lead 1
+    /auth/dev-login?role=head   → authenticates as Head
+    /auth/dev-login?role=viewer → authenticates as Viewer
 ```
 
-**pgvector + Prisma 7 constraint**: Prisma 7 does not natively support the `vector` column type. The `embedding` column must be defined as `Unsupported("vector(1536)")` in the schema, and all vector operations (insert, similarity search) must use `$queryRawUnsafe()` or `$executeRawUnsafe()`. The migration must be created with `--create-only` and manually edited to add:
+Any changes to seed.ts that alter Lead 1's status, user names, or active period must be accompanied by E2E spec updates. Backend edge-case fixes that add new seed rows are safe as long as existing rows are unchanged.
 
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-ALTER TABLE "ReportEmbedding" ADD COLUMN "embedding" vector(1536);
-CREATE INDEX ON "ReportEmbedding" USING hnsw (embedding vector_cosine_ops);
-```
-
-### New Backend Modules
+### E2E test organization (established pattern, extend it)
 
 ```text
-  apps/api/src/modules/analytics/
-  ├── analytics.module.ts           ← NestJS module
-  ├── analytics.service.ts          ← Core logic: embed, search, chat
-  ├── analytics.service.test.ts     ← Unit tests
-  ├── analytics.router.ts           ← tRPC procedures
-  ├── analytics.prisma-repository.ts ← Raw SQL for pgvector ops
-  └── analytics.integration.test.ts ← Integration tests
-
-  apps/api/src/infrastructure/
-  ├── bullmq/
-  │   └── embedding.processor.ts    ← BullMQ worker: generates embeddings
-  └── embedding/
-      └── embedding.client.ts       ← OpenAI API wrapper (or pluggable)
+apps/web/e2e/
+├── auth.setup.ts              — one-time auth per test run
+├── fixtures.ts                — extend here if new roles or contexts needed
+├── helpers/test-utils.ts      — add reusable helpers here (not inline in specs)
+├── *.spec.ts (root)           — smoke tests: page loads, heading visible, basic data
+└── journeys/
+    ├── lead-journey.spec.ts   — full lead workflow: view form → fill → autosave → submit
+    ├── head-journey.spec.ts   — full head workflow: dashboard → assembled report → publish
+    ├── admin-crud.spec.ts     — CRUD: create user, project, period, reminder
+    ├── carry-over.spec.ts     — head executes carry-over, verifies items moved
+    ├── pdf-export.spec.ts     — head requests PDF, polls status, verifies completion
+    ├── archive-history.spec.ts — viewer browses archive, opens report detail
+    └── head-publication.spec.ts — isolated publish flow assertions
 ```
 
-### New Frontend Components
+**Root specs vs. journeys distinction:**
+- Root specs: single-role, single-page navigation checks. Run fast, always pass.
+- Journey specs: multi-step flows that follow a real user workflow. Cross-page, stateful.
+- Never put `submitSection()` or `publishReport()` logic in root specs — those belong in journeys.
+
+### E2E selectors: what to use and what to avoid
 
 ```text
-  apps/web/src/components/analytics/
-  ├── report-chat.tsx               ← Chat UI: input + message history
-  ├── trend-dashboard.tsx           ← Traffic light trends over time
-  ├── search-results.tsx            ← Semantic search results list
-  └── source-reference.tsx          ← Link back to source report/section
+Stable selectors (use these):
+  getByRole('heading', { name: 'My Report', level: 1 })
+  getByRole('button', { name: 'Submit Section' })
+  getByRole('table', { name: 'Submission dashboard' })
+  getByRole('group', { name: 'Project Statuses' })
+  getByRole('radiogroup').first()
+  getByRole('radio', { name: /green/i })
+  getByRole('textbox', { name: 'Priority 1' })
+  getByText('Lead 1')
+  getByText('Submitted', { exact: true })
+  locator('[data-sonner-toast]')   ← toast assertions
+
+Fragile selectors (avoid):
+  locator('.bg-success')           ← breaks on any Tailwind refactor
+  locator('.text-3xl')             ← no semantic meaning
+  locator('div.space-y-8')         ← layout classes change during redesign
+  page.evaluate(() => localStorage) ← removed in v3.0, never bring back
 ```
 
-### tRPC Router Extension
+### E2E and UI redesign ordering constraint
+
+E2E tests must be written or updated AFTER the component they test has its final DOM structure from the redesign. During active UI redesign, component role/aria attributes can shift (e.g., a div converted to a semantic button, a role added to a table). Writing E2E tests against an intermediate state wastes effort.
+
+**Correct ordering:**
+```text
+1. Backend edge-case fixes (prisma migration, regression scenarios)
+2. UI redesign (components get final DOM/aria structure)
+3. E2E depth (write journey tests against stable, redesigned UI)
+```
+
+### Per-role access matrix (enforced by E2E role fixture)
 
 ```text
-  Existing router (unchanged):
-  ────────────────────────────
-  reports, review, pdfExport, admin, archive, reminders, carryOver
+Page                       lead    head    viewer
+/lead/report               own     yes     no (redirect)
+/lead/history              own     yes     no (redirect)
+/head/dashboard            yes*    yes     no (redirect)
+/head/report               no      yes     no (redirect)
+/admin                     no      yes     no (redirect)
+/reports/[id]              yes     yes     yes
+/reports/history           no      yes     yes
+/reports/[id]/print        internal (API renders, not user-navigated)
 
-  NEW namespace:
-  ──────────────
-  analytics: router({
-    search:    protectedProcedure  // Semantic search across reports
-                .input(z.object({ query: z.string(), limit: z.number().default(10) }))
-                .query(...)
-
-    chat:      protectedProcedure  // RAG chat: question → answer + sources
-                .input(z.object({ question: z.string() }))
-                .mutation(...)
-
-    trends:    protectedProcedure  // Traffic light trends for a project
-                .input(z.object({ projectId: z.string().uuid(), periods: z.number().default(12) }))
-                .query(...)
-
-    embedding: headProcedure       // Trigger re-embedding for a report
-                .input(z.object({ reportId: z.string().uuid() }))
-                .mutation(...)
-  })
-```
-
-### Integration Points (What Changes)
-
-| File/Area | Change Type | Description |
-|-----------|-------------|-------------|
-| `prisma/schema.prisma` | **MODIFY** | Add ReportEmbedding + EmbeddingJob models, add `postgresqlExtensions` preview feature |
-| `prisma/migrations/XXXX_add_pgvector/` | **NEW** | Manual migration: CREATE EXTENSION vector, ADD COLUMN, CREATE INDEX hnsw |
-| `docker-compose.yml` (postgres) | **MODIFY** | Nothing needed — pgvector extension is available in postgres:15-alpine |
-| `docker-compose.dev.yml` | No change | pgvector auto-available |
-| `apps/api/src/modules/analytics/` | **NEW** | Entire new module (6 files) |
-| `apps/api/src/infrastructure/embedding/` | **NEW** | OpenAI embedding client |
-| `apps/api/src/infrastructure/bullmq/embedding.processor.ts` | **NEW** | BullMQ worker for async embedding generation |
-| `apps/api/src/infrastructure/bullmq/bullmq.module.ts` | **MODIFY** | Register embedding-generation queue |
-| `apps/api/src/app.module.ts` | **MODIFY** | Import AnalyticsModule + EmbeddingProcessor |
-| `apps/api/src/infrastructure/trpc/trpc.router.ts` | **MODIFY** | Add analytics namespace (4 new procedures) |
-| `apps/api/src/infrastructure/config/env.schema.ts` | **MODIFY** | Add OPENAI_API_KEY, EMBEDDING_MODEL env vars |
-| `packages/shared/src/schemas/report.ts` | **MODIFY** | Add analytics-related Zod schemas (search result, chat message) |
-| `apps/web/src/components/analytics/` | **NEW** | 4 new components (chat, trends, search, source) |
-| `apps/web/src/app/(app)/analytics/page.tsx` | **NEW** | Analytics page |
-| `apps/web/src/app/(app)/analytics/chat/page.tsx` | **NEW** | Chat page |
-
-### Docker: pgvector Availability
-
-PostgreSQL 15 Alpine image (`postgres:15-alpine`) includes pgvector support. The extension just needs to be enabled via the migration SQL:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-```
-
-No Dockerfile changes required. The `docker-compose.yml` postgres service works as-is.
-
-### Environment Variables Added
-
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `OPENAI_API_KEY` | Embedding + LLM API calls | Required for analytics |
-| `EMBEDDING_MODEL` | Model name | `text-embedding-3-small` |
-| `EMBEDDING_DIMENSIONS` | Vector size | `1536` |
-| `LLM_MODEL` | Chat completion model | `gpt-4o-mini` |
-| `ANALYTICS_ENABLED` | Feature flag | `false` |
-
-### Build Order for RAG Analytics
-
-```text
-  1. Database foundation
-     ├── Enable postgresqlExtensions in Prisma schema
-     ├── Add ReportEmbedding + EmbeddingJob models
-     ├── Create migration (--create-only, manual SQL for vector column + index)
-     └── Verify: prisma migrate dev works, vector extension active
-
-  2. Embedding pipeline (backend)
-     ├── EmbeddingClient (OpenAI wrapper, pluggable interface)
-     ├── EmbeddingProcessor (BullMQ worker)
-     ├── AnalyticsService (core logic)
-     ├── AnalyticsPrismaRepository (raw SQL for pgvector queries)
-     ├── Unit tests with mocked embedding client
-     └── Wire into app.module.ts + trpc.router.ts
-
-  3. Publication hook
-     ├── Modify PublicationService to enqueue embedding job on publish
-     └── Integration test: publish → embedding job created
-
-  4. Analytics frontend (depends on shadcn/ui)
-     ├── Analytics page with search
-     ├── Chat page with RAG interface
-     ├── Trend dashboard
-     └── Source references linking back to reports
-
-  5. Feature flag
-     ├── ANALYTICS_ENABLED=false by default
-     ├── Hide analytics UI when disabled
-     └── Skip embedding generation when disabled
+* review.dashboard uses protectedProcedure (any auth user), so lead CAN load
+  /head/dashboard — this is intentional and tested in head-dashboard.spec.ts
 ```
 
 ---
 
-## Cross-Cutting: Component Boundaries Summary
+## Data Flow: v4.0 (unchanged from v3.0)
 
 ```text
-  packages/ui (NEW content)
-  ═════════════════════════
-  Responsibility: shadcn/ui primitives, design tokens, cn() utility
-  Communicates with: Nothing (pure UI, no data fetching)
-  Consumed by: apps/web
-
-  apps/web (MODIFIED)
-  ═══════════════════
-  Responsibility: Pages, business components, tRPC client, routing
-  New additions:
-    ├── Analytics pages + components
-    ├── All existing components restyled with shadcn/ui
-    └── E2E tests (apps/web/e2e/)
-  Communicates with: apps/api via tRPC
-
-  apps/api (MODIFIED)
-  ═══════════════════
-  Responsibility: Business logic, data access, job processing
-  New additions:
-    ├── AnalyticsModule (service, repository, router)
-    ├── EmbeddingProcessor (BullMQ)
-    ├── EmbeddingClient (OpenAI wrapper)
-    └── Dev-mode role switching in trpc.context.ts
-  Communicates with: PostgreSQL, Redis, OpenAI API
-
-  packages/shared (MODIFIED)
-  ══════════════════════════
-  Responsibility: Zod schemas, TypeScript types
-  New additions:
-    └── Analytics schemas (SearchResult, ChatMessage, Trend)
-  Communicates with: Nothing (pure types)
-
-  External Services (NEW)
-  ═══════════════════════
-  ├── OpenAI API (embeddings + chat completions)
-  └── pgvector (PostgreSQL extension, not a separate service)
+User browser
+    │
+    ├── Auth (SAML or dev-login) ──► JWT cookie stored in browser
+    │
+    └── tRPC calls via httpBatchLink
+           url: '/trpc' (proxied by Next.js to API:3001/trpc)
+           transformer: superjson (handles Date serialization)
+           credentials: 'include' (sends JWT cookie)
+                │
+                ▼
+           NestJS API (port 3001)
+                │
+                ├── trpc.context.ts → verifies JWT → attaches session
+                │   (or DEV_SESSION when AUTH_DEV_MODE=true)
+                │
+                ├── protectedProcedure (any role)
+                │   or headProcedure (role === 'head' check)
+                │
+                └── Domain services
+                        │
+                        ├── PrismaRepositories → PostgreSQL (port 5432)
+                        └── BullMQ producers → Redis (port 6379)
+                                 │
+                                 └── BullMQ workers
+                                       ├── pdf-export: Playwright renders
+                                       │   /reports/[id]/print → PDF file
+                                       └── email-reminder: nodemailer → SMTP
 ```
+
+No new network paths are added in v4.0. The data flow diagram is identical.
 
 ---
 
-## Data Flow: Before and After
+## Backend Edge-Case Fix: Ripple Analysis
 
-### Before (v2.0)
-
-```text
-  User ──► Next.js ──tRPC──► NestJS ──Prisma──► PostgreSQL
-                                   ──BullMQ──► Redis
-                                   ──Playwright──► PDF file
-                                   ──nodemailer──► SMTP
-```
-
-### After (v3.0)
+Backend fixes for the 81 regression scenarios may touch packages/shared Zod schemas. Any schema change propagates:
 
 ```text
-  User ──► Next.js ──tRPC──► NestJS ──Prisma──► PostgreSQL
-       │                          │               ├── pgvector (NEW)
-       │                          │               └── ReportEmbedding table (NEW)
-       │                          ├──BullMQ──► Redis
-       │                          │             ├── pdf-export queue (existing)
-       │                          │             ├── email-reminder queue (existing)
-       │                          │             └── embedding-generation queue (NEW)
-       │                          ├──Playwright──► PDF file
-       │                          ├──nodemailer──► SMTP
-       │                          └──OpenAI API──► Embeddings + Chat (NEW)
-       │
-       └── shadcn/ui components (presentation only, no new data flow)
+packages/shared schema change
+    │
+    ├── apps/api: service input/output types update (must pass TypeScript strict)
+    ├── apps/web: component props types update (may require component changes)
+    └── apps/web/e2e: assertions that check field values may need update
+
+Specifically:
+  adminReminderRuleSchema: reminder kind/fireAt/timezone/status/version
+    → Prisma migration required (already identified in v4.0 scope)
+    → AdminPanel component reminder tab may need new fields
+    → E2E admin-crud.spec.ts assertions on reminder fields need update
 ```
+
+Build order enforced by this ripple: prisma migrate → backend fix → shared schema → frontend component → E2E assertion.
 
 ---
 
-## Build Order: Cross-Feature Dependencies
+## Phase Structure Recommendations
 
-The three features have specific dependency relationships:
+Based on the dependency analysis above, v4.0 phases should follow this ordering:
 
 ```text
-  Phase ordering rationale:
-  ═════════════════════════
+Phase A: Backend completeness
+  ├── Prisma migration for reminder schema (kind/fireAt/timezone/status/version)
+  ├── Backend edge-case fixes for all 81 regression scenarios
+  └── Validate: 81 regression scenarios pass, 422+ unit tests still pass
 
-  1. shadcn/ui FIRST
-     │  Why: All other features need styled UI to test against.
-     │  E2E tests need stable selectors from styled components.
-     │  Analytics frontend needs shadcn/ui primitives.
-     │
-     ├── 1a. packages/ui foundation (deps, tokens, cn, 5 primitives)
-     ├── 1b. apps/web wiring (CSS import, layout, verify)
-     ├── 1c. Navigation components (AppShell, RoleNav)
-     ├── 1d. Lead form components (biggest batch: 7 files)
-     ├── 1e. Head + report view components
-     ├── 1f. Admin panel
-     └── 1g. PDF print page styling
+Phase B: UI redesign
+  ├── Dependency: Phase A complete (API contract is stable for components to consume)
+  ├── Design token update in packages/ui/src/styles/globals.css
+  ├── AppShell + navigation (wraps everything — redesign first)
+  ├── Lead report form (primary user surface — highest priority)
+  ├── Head views (dashboard, assembled report, publish flow)
+  ├── Report views (published report, archive — director-facing)
+  ├── Admin panel (internal, lower visual priority)
+  └── Print template (PDF output — verify with Playwright)
 
-  2. E2E Tests SECOND
-     │  Why: Needs styled components (from step 1) for meaningful selectors.
-     │  Needs running API + DB (infrastructure already exists from v2.0).
-     │  Does NOT need analytics (can be added later).
-     │
-     ├── 2a. Test infrastructure (config, global setup, fixtures)
-     ├── 2b. Core journey tests (lead fill → head publish → PDF)
-     ├── 2c. Supporting tests (archive, carry-over, admin)
-     └── 2d. CI pipeline (GitHub Actions)
-
-  3. RAG Analytics THIRD
-     │  Why: Depends on published reports existing (v2.0 data).
-     │  Independent of UI styling but needs shadcn/ui for its own pages.
-     │  Feature-flagged, so it can ship disabled initially.
-     │
-     ├── 3a. Database (pgvector extension, models, migration)
-     ├── 3b. Embedding pipeline (client, processor, service)
-     ├── 3c. Publication hook (trigger on publish)
-     ├── 3d. tRPC analytics router
-     ├── 3e. Analytics frontend (search, chat, trends)
-     └── 3f. E2E tests for analytics flows
+Phase C: E2E journey depth
+  ├── Dependency: Phase B complete (DOM structure stable, aria labels final)
+  ├── Deepen journeys/lead-journey.spec.ts (fill form fields, verify autosave)
+  ├── Deepen journeys/head-journey.spec.ts (submit check, publish, verify viewer)
+  ├── Deepen journeys/admin-crud.spec.ts (user + project + period + reminder CRUD)
+  ├── Deepen journeys/carry-over.spec.ts (execute carry-over, verify items moved)
+  ├── journeys/pdf-export.spec.ts (request PDF, poll status, verify file)
+  └── Cross-role scenarios: lead submits → head sees update → viewer can view
 ```
 
----
-
-## Scalability Considerations
-
-| Concern | At 50 reports | At 500 reports | At 5000 reports |
-|---------|---------------|----------------|-----------------|
-| Embedding storage | ~200 vectors (4 chunks/report) | ~2000 vectors | ~20000 vectors |
-| pgvector index | IVFFlat sufficient | HNSW recommended | HNSW + partitioning |
-| Embedding generation | Synchronous OK | BullMQ queue (existing) | BullMQ + rate limiter |
-| Vector search latency | <10ms | <50ms with HNSW | <100ms with HNSW |
-| OpenAI API cost | ~$0.01/report embed | ~$0.10/month | ~$1/month |
-| Chat query cost | ~$0.005/query | Same | Same |
-
-At the scale of this system (6 leads, weekly reports), pgvector in PostgreSQL is massively overprovisioned. No separate vector database needed.
+**Why this order:**
+1. Backend fixes first — avoids UI components being built on incorrect API responses.
+2. UI before E2E — avoids writing E2E selectors against intermediate DOM structures that will change during redesign.
+3. Navigation before content pages — AppShell wraps everything; token changes ripple into it first.
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Styling in packages/shared
-**What:** Putting Tailwind classes or UI logic in packages/shared
-**Why bad:** packages/shared is for types and schemas. Adding UI concerns creates circular deps.
-**Instead:** UI primitives in packages/ui, business components in apps/web.
+### AP-1: E2E tests written during UI redesign
+**What goes wrong:** Selectors written against intermediate component structure break when the redesign completes.
+**Prevention:** Freeze E2E writing during active redesign phases. Only deepen journeys after final DOM is stable.
 
-### Anti-Pattern 2: Embedding generation in request path
-**What:** Generating embeddings synchronously when a report is published
-**Why bad:** OpenAI API calls take 500ms-2s. Blocks the publish response.
-**Instead:** Always use BullMQ queue for async embedding generation.
+### AP-2: Design token changes in apps/web instead of packages/ui
+**What goes wrong:** Tokens defined in app layer are not reusable, override the package layer inconsistently.
+**Prevention:** All OKLCH palette, radius, and typography variables live exclusively in `packages/ui/src/styles/globals.css`. `apps/web/src/styles/app.css` only adds `@source` directives and utility safelists.
 
-### Anti-Pattern 3: Prisma Client for vector operations
-**What:** Trying to use `prisma.reportEmbedding.create()` for vector columns
-**Why bad:** Prisma 7 treats `Unsupported("vector")` as opaque. Create/query will fail.
-**Instead:** Use `$queryRawUnsafe()` for all vector insert/search operations. Use Prisma for non-vector columns on the same table.
+### AP-3: Component API changes during UI redesign
+**What goes wrong:** Changing component props (e.g., adding a required field to `<SubmissionDashboard rows={...}>`) during the redesign creates cascading compile errors across the monorepo.
+**Prevention:** Treat redesign as className-only changes. If props need to change due to backend API changes, that happens in Phase A (backend fixes), not Phase B (UI redesign).
 
-### Anti-Pattern 4: E2E tests depending on specific CSS classes
-**What:** Using `page.locator('.bg-green-500')` for traffic light assertions
-**Why bad:** Fragile — any Tailwind class refactor breaks tests.
-**Instead:** Use semantic selectors: `getByRole`, `getByLabel`, `getByTestId` for traffic lights.
+### AP-4: CSS class selectors in E2E tests
+**What goes wrong:** `locator('.bg-success')` breaks on any Tailwind refactor.
+**Prevention:** Enforce semantic selectors: `getByRole`, `getByLabel`, `getByText`, `getByTestId`. See selector table above.
 
-### Anti-Pattern 5: Shared globals.css with all tokens
-**What:** Putting all Tailwind tokens in apps/web/globals.css
-**Why bad:** The tokens are not reusable if you add another app later.
-**Instead:** Design tokens live in packages/ui/styles/globals.css. Apps import and extend.
+### AP-5: Touching seed.ts without updating E2E
+**What goes wrong:** Tests that assert `getByText('Lead 1')` or `getByText('Submitted')` break silently if seed data changes.
+**Prevention:** Lead 1 stays submitted in seed data. New regression fixtures go into separate seed helpers, not replacing existing rows. Any seed.ts change must be accompanied by E2E spec review.
 
-### Anti-Pattern 6: Full report text as single embedding
-**What:** Embedding an entire report (all sections) as one vector
-**Why bad:** Diluted semantic signal. A search for "Project X risks" matches poorly against a full report embedding.
-**Instead:** Chunk by section type (lead summary, risks, decisions, overview). 4-6 chunks per report.
+### AP-6: Moving AppShell into shared layout during redesign
+**What goes wrong:** `(app)/layout.tsx` is a passthrough by design — server-side session extraction is not implemented. Centralizing AppShell there requires reading the session cookie in a React Server Component, which is a different architectural undertaking than visual redesign.
+**Prevention:** Keep per-page `<AppShell role="..." currentPath="...">` pattern. Document as deferred tech debt for a future phase.
 
 ---
 
-## Sources
+## Confidence Assessment
 
-- [shadcn/ui Monorepo Documentation](https://ui.shadcn.com/docs/monorepo) -- official setup guide for monorepo with Turborepo (HIGH confidence)
-- [Turborepo shadcn/ui Guide](https://turborepo.dev/docs/guides/tools/shadcn-ui) -- official Turborepo integration guide (HIGH confidence)
-- [shadcn/ui Tailwind v4](https://ui.shadcn.com/docs/tailwind-v4) -- Tailwind v4 configuration for shadcn/ui (HIGH confidence)
-- [Playwright Authentication Docs](https://playwright.dev/docs/auth) -- storageState and global setup patterns (HIGH confidence)
-- [Prisma PostgreSQL Extensions](https://www.prisma.io/docs/postgres/database/postgres-extensions) -- pgvector with Prisma: Unsupported type, raw queries (HIGH confidence)
-- [Prisma 7 pgvector migration issue](https://github.com/prisma/prisma/issues/28867) -- known regression with Unsupported("vector") in Prisma 7 migrate (MEDIUM confidence)
-- [pgvector RAG with PostgreSQL](https://encore.dev/blog/you-probably-dont-need-a-vector-database) -- architectural patterns for RAG without separate vector DB (MEDIUM confidence)
-- [PostgreSQL Vector Search Complete Guide 2026](https://calmops.com/database/postgresql/postgresql-vector-search-pgvector-complete-guide-2026/) -- HNSW indexing, cosine distance operators (MEDIUM confidence)
+| Area | Confidence | Basis |
+|------|------------|-------|
+| Current architecture state | HIGH | Read from actual source files |
+| tRPC data flow | HIGH | trpc.ts, trpc.router.ts, playwright.config.ts verified |
+| E2E infrastructure | HIGH | auth.setup.ts, fixtures.ts, test-utils.ts, playwright.config.ts read directly |
+| Seed data contract | HIGH | auth.setup.ts + lead-report-entry.spec.ts assertions confirm "Lead 1" / "Submitted" |
+| UI redesign scope | HIGH | globals.css OKLCH tokens, component files, STATE.md v3.0 history all read |
+| Build order (A→B→C) | HIGH | Ripple analysis from schema → component → E2E is deterministic |
+| AppShell tech debt | HIGH | (app)/layout.tsx passthrough comment is explicit in the file |

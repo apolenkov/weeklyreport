@@ -1,500 +1,332 @@
-# Domain Pitfalls
+# Domain Pitfalls — v4.0
 
-**Domain:** Adding shadcn/ui, Playwright E2E, Next.js 15 to 16 migration, pgvector RAG to existing CustomReport monorepo
-**Researched:** 2026-04-11
-**Scope:** Integration pitfalls when adding features to an existing Next.js 15 + NestJS + Prisma 7 + Turborepo system
+**Domain:** CustomReport v4.0 — Backend edge-cases, UI redesign from scratch, E2E tests
+**Researched:** 2026-04-21
+**Scope:** Pitfalls specific to this milestone. v3.0 pitfalls (Next.js 16 upgrade, shadcn/ui setup, pgvector) are resolved and NOT repeated here.
+
+---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, multi-day debugging, or broken production deploys.
+### Pitfall 1: Another Full Redesign Rejected Because No Early User Validation
 
-### Pitfall 1: shadcn/ui Tailwind Classes Invisible in Consuming App
+**What goes wrong:** An agent completes a full UI redesign pass (all 8+ pages, all components, dark theme, animations) and delivers the final result — only for the user to reject the entire aesthetic direction again, as happened before ("куцо, как 90-е").
 
-**What goes wrong:** You install shadcn/ui components in `packages/ui`, import
-them in `apps/web`, and the components render with zero styling -- raw HTML
-elements without any Tailwind CSS applied. The components "work" but look
-completely broken.
-
-**Why it happens:** Tailwind v4 uses `@source` directives in the main CSS file
-to discover which files to scan for class names. If the CSS file in `apps/web`
-does not include an `@source` directive pointing to `../../packages/ui/src/**`,
-Tailwind never sees the classes used in the shared UI package. Additionally,
-Next.js must be configured with `transpilePackages: ['@customreport/ui']` so it
-processes the TypeScript/CSS from the workspace package rather than treating it
-as a pre-compiled dependency.
+**Why it happens:** "Redesign from scratch via design skills" is interpreted as "produce final result, then show." The user has strong visual opinions (the UX audit captured them: flat design, modern feel, colorful traffic lights, micro-animations, no wall-of-cards). Without a checkpoint on the very first styled surface, the entire effort can miss the aesthetic target.
 
 **Consequences:**
-- All 22+ components render unstyled
-- Developers waste hours checking import paths when the real problem is Tailwind
-  scanning scope
-- PDF export will generate unstyled HTML, producing garbage output
+- Complete rework of all styled components
+- Wasted E2E test effort if selectors were written against the rejected design
+- User trust erosion in the redesign phase
 
 **Prevention:**
-1. The main `globals.css` in `apps/web` must include `@source` for the UI
-   package path: `@source "../../packages/ui/src/**/*.{ts,tsx}"`
-2. Add `transpilePackages: ['@customreport/ui']` to `next.config.ts`
-3. Validate by running `pnpm --filter @customreport/web dev` and inspecting a
-   single Button component before proceeding with bulk component migration
-4. The `packages/ui` workspace should own the `globals.css` with design tokens
-   and `@theme` directives; `apps/web` should `@import` it
+1. Do NOT redesign all pages before showing the user anything. Style one high-visibility surface first — the lead report form (the primary weekly-use surface) — and show it to the user before continuing.
+2. The UX audit's specific complaints (P0-P2) are the success criteria: confirmation before delete, collapsible sections, colorful traffic light buttons, focus-visible rings, micro-animations on add/remove.
+3. Get explicit user sign-off on the first page before starting the remaining 7 pages.
+4. Do the full-page screenshot comparison so the user can see the visual direction, not just describe it.
 
-**Detection:** After adding the first shadcn/ui component, visually inspect it
-in the browser. If the Button has no background color or border-radius, the
-source scanning is broken.
+**Detection:** The user has not seen any rendered output before a complete redesign pass is submitted.
 
-**Confidence:** HIGH -- multiple Turborepo + shadcn/ui guides document this
-exact issue.
+**Phase:** Redesign Phase — address on first plan, not at the end.
 
-### Pitfall 2: Next.js 16 middleware.ts Silently Ignored
+**Confidence:** HIGH — this happened in this exact project; the UX audit memory records it.
 
-**What goes wrong:** After upgrading to Next.js 16, the authentication
-middleware in `apps/web/src/middleware.ts` stops running entirely. All protected
-routes (`/lead`, `/head`, `/admin`, `/reports`) become accessible without any
-authentication check. No error is thrown -- the middleware file is simply
-ignored.
+---
 
-**Why it happens:** Next.js 16 renames the middleware file convention to
-`proxy.ts` (or `proxy.js`). The exported function must also be renamed from
-`middleware` to `proxy`. The old `middleware.ts` file is deprecated and silently
-skipped. The existing middleware in this project handles auth cookie validation
-and SAML redirect -- a critical security boundary.
+### Pitfall 2: Existing E2E Tests Are Invalidated by Redesign and Become Noise
+
+**What goes wrong:** The 8 existing E2E spec files (lead-report-entry, head-journey, lead-journey, head-dashboard, admin-panel, etc.) use ARIA selectors tied to the current DOM structure — headings like `'My Report'`, group names like `'Project Statuses'`, `'Items'`, `'Risks'`. After a redesign, heading text, ARIA group names, and component structure change. All these tests fail. The visual regression baselines in `screenshots.spec.ts-snapshots/` fail from pixel 1.
+
+**Why it happens:** The redesign changes the semantic structure (new section names, different heading hierarchy, potentially redesigned traffic light from radio inputs to button groups). The specs are not resilient to these changes.
 
 **Consequences:**
-- Authentication bypass in production -- anyone can access protected routes
-- The `AUTH_DEV_MODE` guard becomes the only protection (and it also skips auth
-  in non-production)
-- SAML redirect flow breaks silently -- users see raw unauthenticated pages
-  instead of being sent to Keycloak
+- E2E test suite fails entirely during redesign — 0 signal about actual breakage
+- Visual baselines are all stale — any comparison produces a failure
+- Developers either ignore failures (worse) or spend time updating specs mid-redesign (fragile)
 
 **Prevention:**
-1. Rename `apps/web/src/middleware.ts` to `apps/web/src/proxy.ts`
-2. Rename the exported function from `middleware` to `proxy`
-3. Update all imports and tests that reference the middleware module
-4. Use the codemod: `npx @next/codemod@canary middleware-to-proxy .`
-5. Verify by hitting a protected route (`/lead/report`) in an incognito window
-   -- must redirect to Keycloak login
+1. Before starting the redesign: delete all `screenshots.spec.ts-snapshots/` baseline images. These will be regenerated after redesign is complete.
+2. Decide upfront: either (a) freeze existing E2E specs and accept they fail during redesign, then update them after; or (b) update specs incrementally with each redesigned page. Option (a) is lower risk.
+3. After redesign is complete: do a single full E2E spec update pass. Do not interleave spec updates with component changes.
+4. New E2E journeys for v4.0 (lead journey, head journey, viewer journey, cross-role lifecycle) should be written AFTER redesign is stable — same principle as v3.0.
+5. Add `data-testid` attributes during redesign so selectors are not ARIA-structure-dependent.
 
-**Detection:** After upgrade, open `/lead/report` in incognito browser. If the
-page loads without redirect to `/auth/saml/login`, the proxy is not running.
+**Detection:** Run `pnpm exec playwright test` at start of redesign phase. If more than 3 tests fail for reasons unrelated to backend, the specs are already stale.
 
-**Confidence:** HIGH -- confirmed breaking change in Next.js 16 official docs.
+**Phase:** Redesign Phase — plan for baseline deletion at start; E2E update at end.
 
-### Pitfall 3: Prisma 7 Migration Drift with pgvector Unsupported Type
+**Confidence:** HIGH — the specific ARIA selectors in the current specs (`getByRole('group', { name: 'Project Statuses' })`, `getByRole('radiogroup')`) will break if traffic light moves from native radio to shadcn/ui Button group.
 
-**What goes wrong:** You add a vector column to the Prisma schema using
-`Unsupported("vector(1536)")`, run `prisma migrate dev`, and get a drift
-detection error: "Altered column 'embedding' (type changed)" -- even though
-nothing actually changed. Every subsequent `migrate dev` reports the same drift,
-making the migration workflow unusable.
+---
 
-**Why it happens:** Prisma 7.0-7.1 has a known bug where the
-`Unsupported("vector")` type without explicit dimensions in the migration file
-conflicts with the actual database column that has dimensions (e.g.,
-`vector(1536)`). Prisma's introspection sees a type mismatch between the
-migration history and the live database.
+### Pitfall 3: Prisma Reminder Migration Requires Data Transformation, Not Just Schema Rename
+
+**What goes wrong:** The migration for the reminder schema (`kind/fireAt/timezone/status/version` replacing `cronExpression/name`) is treated as a simple column rename. The generated migration SQL drops the old columns and adds new ones, silently deleting all existing reminder rule rows in the database.
+
+**Why it happens:** `prisma migrate dev` does not automatically generate `UPDATE` statements to migrate existing data. A schema rename generates `DROP COLUMN` + `ADD COLUMN`, which loses all data. If the dev/staging database has seed reminder rules or user-created rules, they are gone after migration.
 
 **Consequences:**
-- `prisma migrate dev` fails on every run, blocking all schema changes
-- CI/CD pipelines that run migrations break
-- Developers resort to `--force` flag, which can cause data loss
-- The "drift" error erodes trust in the migration system
+- Silent data loss of all reminder rules in non-empty databases
+- Seed data must be re-run after migration
+- If production database is migrated (future), reminder rules are lost
+- Integration tests fail with `ReferenceError: reminder rule not found` until re-seeded
 
 **Prevention:**
-1. Use Prisma 7.2.0+ (the drift bug was fixed in 7.2.0)
-2. Use `--create-only` flag when adding vector columns: `prisma migrate dev
-   --create-only --name add_embeddings`
-3. Edit the generated migration SQL to explicitly include dimensions:
-   `CREATE EXTENSION IF NOT EXISTS vector;` then
-   `ALTER TABLE "ReportSection" ADD COLUMN "embedding" vector(1536);`
-4. Never rely on `Unsupported("vector")` alone -- always pair with a hand-edited
-   migration file
-5. Add the pgvector extension creation to the very first line of the migration
-   (before any table that uses the type)
+1. Use `--create-only` flag: `prisma migrate dev --create-only --name reminder-schema-v2`.
+2. Manually edit the generated SQL to add `UPDATE` statements that map old field values to new fields before dropping old columns. Example: `UPDATE "ReminderRule" SET "kind" = 'absolute', "fireAt" = ...` derived from the old `cronExpression` value.
+3. If no existing data needs preservation (dev-only database), document this explicitly in the migration SQL with a comment: `-- No data migration needed; dev database only`.
+4. Run the migration against a copy of the current database schema first (`prisma migrate dev --name test-reminder` on a clean branch) to verify the generated SQL is correct before applying to the actual dev database.
+5. Verify via `prisma studio` that reminder rules table is populated after migration.
 
-**Detection:** Run `prisma migrate dev` after adding a vector column. If you see
-"Drift detected" with no actual schema changes, you have hit this bug.
+**Detection:** After `prisma migrate dev`, check `SELECT COUNT(*) FROM "ReminderRule"`. If count drops to 0 and seed data had rules, data was lost.
 
-**Confidence:** HIGH -- confirmed bug in prisma/prisma#28867, fixed in 7.2.0.
+**Phase:** Backend Phase — first migration task.
 
-### Pitfall 4: Playwright storageState Auth Desync Between Web and API
+**Confidence:** HIGH — standard Prisma behavior; `migrate dev` generates schema diff, not data migration.
 
-**What goes wrong:** E2E tests authenticate once in global setup and save
-cookies to `storageState`. Tests start passing initially, but then randomly fail
-with "Unauthorized" responses from the API, or fail consistently after a certain
-number of tests.
+---
 
-**Why it happens:** The project uses JWT tokens with a 1-hour expiry (per
-CLAUDE.md security defaults). If the E2E test suite runs longer than the token
-lifetime, later tests use expired tokens from the saved storageState. In
-parallel mode, multiple workers sharing the same storageState file can also
-cause race conditions. Additionally, the existing `AUTH_DEV_MODE` bypass in the
-current middleware skips auth in non-production BUT the API side also checks
-`AUTH_DEV_MODE` -- if these get out of sync (web bypass + API enforce), tests
-break.
+### Pitfall 4: jsdom Test Failures Multiply During Redesign if Root Cause Is Not Fixed First
+
+**What goes wrong:** 24 pre-existing unit test failures in `apps/web` ("React is not defined" / jsdom errors) become worse during redesign. New components added during redesign inherit the broken test environment and generate additional failures. By the end of redesign, the test suite has grown from 24 failures to 40+, making it impossible to distinguish regressions from pre-existing issues.
+
+**Why it happens:** The root cause is the Vitest React plugin configuration or the `void React;` workaround in test files. The Phase 15 handoff notes that a `@vitejs/plugin-react` fix was committed (Wave 1 of Phase 15). However, if that fix was incomplete or reverted, any new component files that don't include the `void React;` workaround will fail.
 
 **Consequences:**
-- Flaky tests that pass locally (short run) but fail in CI (full suite)
-- False negatives that erode confidence in the test suite
-- Hours spent debugging "intermittent auth failures" that are actually token
-  expiry
+- Unable to run a clean test suite against redesigned components
+- Redesign verification is blocked — you cannot tell if a new component works
+- The 24 failures hide actual regressions introduced during redesign
 
 **Prevention:**
-1. Use a dedicated `auth.setup.ts` file that generates fresh JWT tokens per
-   worker, not a single shared storageState
-2. Set JWT token lifetime to 24h in test environment (via `AUTH_JWT_EXPIRY`
-   env var)
-3. Ensure `AUTH_DEV_MODE=true` is set consistently in BOTH `apps/web` and
-   `apps/api` .env.test files
-4. For parallel workers, use worker-scoped auth fixtures with `parallelIndex`
-   to prevent file contention
-5. Add the `playwright/.auth/` directory to `.gitignore`
+1. Before touching any component files: run `pnpm --filter @customreport/web test` and record the exact failure count.
+2. If the count is >0, fix the Vitest React configuration FIRST. The vitest.config.ts already has `plugins: [react()]` per the Phase 15 memory — verify this is in the committed file before assuming it is fixed.
+3. The `void React;` pattern is fragile (it is a workaround, not a fix). The correct fix is `@vitejs/plugin-react` in vitest.config.ts AND `@vitejs/plugin-react` in devDependencies — both must be present.
+4. After fixing, run the full test suite and verify 0 failures (or document any remaining known failures) before starting redesign.
 
-**Detection:** Run the full E2E suite 3 times in sequence. If later tests fail
-with 401 responses that pass when run individually, token expiry is the cause.
+**Detection:** `pnpm --filter @customreport/web test 2>&1 | grep -c "FAIL"` — non-zero means pre-existing failures are still present.
 
-**Confidence:** HIGH -- standard Playwright auth pattern, confirmed by official
-docs and community guides.
+**Phase:** Backend Phase (fix before redesign), or first step of Redesign Phase.
 
-### Pitfall 5: Turbopack Default Breaks Build in Next.js 16
+**Confidence:** HIGH — directly observed in Phase 14 verification gap (STATE.md records "24 pre-existing jsdom failures — not regressions from Phase 14").
 
-**What goes wrong:** After upgrading to Next.js 16, `next build` fails with
-cryptic errors about unsupported webpack configuration or missing loaders. The
-existing `output: 'standalone'` config in `next.config.ts` may also behave
-differently.
+---
 
-**Why it happens:** Next.js 16 makes Turbopack the default bundler for both
-`next dev` AND `next build`. If the project has any webpack-specific
-configuration (custom loaders, plugins, or module resolution rules), Turbopack
-will reject them. The current `next.config.ts` is minimal (`reactStrictMode` +
-`output: 'standalone'`), but any future additions or dependencies that rely on
-webpack internals will fail.
+### Pitfall 5: MSW Handlers Diverge from Real API After Backend Edge-Case Fixes
+
+**What goes wrong:** The 81 regression scenarios require backend fixes — reminder schema, new error codes, changed response shapes. The MSW handlers in `apps/web/src/test/msw-handlers.ts` are hardcoded to return specific shapes. After backend fixes change error codes or add new fields, unit tests pass against stale mocks while the actual app integration fails. The divergence is invisible until E2E tests run against real services.
+
+**Why it happens:** MSW handlers have no type safety against the real backend. They return hardcoded objects that matched the API at time of writing. Backend changes that add fields, rename fields, or change error shapes do not propagate to MSW handlers automatically.
 
 **Consequences:**
-- Production builds break with no clear error pointing to Turbopack
-- Docker builds fail (the Dockerfiles use `next build`)
-- CI/CD pipeline breaks
+- Unit tests give a false green signal — they test "does the component handle the old mock shape" not "does the component handle the current API"
+- Integration bugs are only caught in E2E, which requires running services
+- The more backend fixes applied, the more diverged MSW becomes
 
 **Prevention:**
-1. Before upgrading, test `next build --turbopack` on Next.js 15 to identify
-   incompatibilities early
-2. The current minimal config should work with Turbopack, but verify
-   `output: 'standalone'` produces the same Docker-compatible output
-3. If Turbopack issues arise, add `--webpack` flag to build scripts as a
-   temporary escape hatch
-4. Check all dependencies for webpack-specific requirements (especially
-   Playwright for PDF generation if it uses any webpack plugins)
+1. After each backend fix that changes an API response shape, update the corresponding MSW handler in the same commit.
+2. Use the Zod schemas from `packages/shared` to generate or validate MSW mock data — if the schema changes, TypeScript will catch divergence. The current MSW handlers import from `@customreport/shared` implicitly via type `as const` — add explicit typed assertions.
+3. For new endpoints added during backend completeness phase, add corresponding MSW handlers before writing unit tests for the frontend consumers.
+4. Before starting E2E tests: do a manual spot-check — navigate to the page in the browser with real services running and compare the network tab response shape to what the MSW handler returns.
 
-**Detection:** Run `pnpm --filter @customreport/web build` after upgrade. If it
-fails, check if `--webpack` flag fixes it -- that confirms Turbopack
-incompatibility.
+**Detection:** A frontend unit test passes in `vitest` but the same page throws a runtime error when running against real services. TypeScript errors in MSW mock data creation (if you add typed return assertions) will catch divergence at compile time.
 
-**Confidence:** MEDIUM-HIGH -- the current config is minimal and likely
-compatible, but `output: 'standalone'` behavior with Turbopack needs
-verification.
+**Phase:** Backend Phase — synchronize MSW with each API fix.
+
+**Confidence:** HIGH — observed in this project (superjson mismatch was a direct consequence of MSW divergence).
+
+---
+
+### Pitfall 6: Backend 81 Regression Scenarios Need Integration Test Infrastructure, Not Browser E2E
+
+**What goes wrong:** The 81 regression scenarios (L-001 to D-010) are planned for Playwright E2E coverage. But many scenarios test pure backend behavior: deduplication (H-023), carry-over filtering (H-031, H-032), status transition blocking (D-010), validation boundaries (D-001 to D-009). Writing these as browser E2E tests is 10-50x slower per scenario, requires seeding specific database states before each test, and makes tests brittle (UI changes break business logic tests).
+
+**Why it happens:** "E2E test coverage" is interpreted as "Playwright browser tests" for all scenarios. But the regression scenarios were written as acceptance criteria for backend behavior, not UI behavior.
+
+**Consequences:**
+- E2E suite takes 30+ minutes for 81 scenarios
+- Test reliability drops because browser startup, auth setup, and page load are involved for pure API tests
+- Scenarios that require specific data states (carry-over source report, deduplication keys) are very difficult to set up via browser interactions
+
+**Prevention:**
+1. Separate the 81 scenarios into two layers:
+   - **API integration tests** (Vitest + real Prisma + real database, no browser): all D-0xx data integrity, all validation scenarios (L-019 to L-022), status transitions, error codes (L-006, L-007, L-009, L-010, L-013, H-008, H-023 to H-025, H-028 to H-032). These already exist as 191 contract tests — the gaps are the edge cases.
+   - **Browser E2E tests** (Playwright): full user journeys (X-001 to X-006), role-based access control UI behavior (L-016 to L-018, V-007 to V-011), and UI state rendering (form shows submitted state, dashboard shows correct lead count).
+2. The NestJS test environment with a real test database is already set up (see `apps/api/src/test-utils/`). Extend that infrastructure rather than creating browser tests for backend logic.
+3. Reserve Playwright for: journeys that require actual browser interaction (fill form, click submit, see toast, navigate to next page) and role-based UI enforcement (does the button disappear for the correct role).
+
+**Detection:** If a planned Playwright test would need `page.request.post()` (API call, not UI interaction) to set up state, that scenario belongs in the API integration layer instead.
+
+**Phase:** E2E Phase — split test plan into API integration vs browser E2E before writing any tests.
+
+**Confidence:** HIGH — the 191 existing contract tests already cover the service layer; extending them is cheaper than rewriting as browser tests.
+
+---
+
+### Pitfall 7: Backend-First Ordering Creates a Broken Frontend Window
+
+**What goes wrong:** Backend edge-case fixes change API response shapes (reminder schema migration, new error codes, changed field names). The existing frontend was built against the pre-fix API. During the backend phase, the frontend is broken — pages throw TypeScript errors or runtime exceptions against the changed API. This makes local development harder and can block verification.
+
+**Why it happens:** The priority is "backend first, then UI." Backend fixes are committed. The redesign hasn't started yet. The old frontend code references fields that were renamed or error codes that changed.
+
+**Consequences:**
+- Cannot visually verify backend fixes in the browser during development
+- TypeScript compilation may fail if shared Zod schemas change
+- Increased risk of carrying over frontend bugs into the redesign (the redesign starts from broken components)
+
+**Prevention:**
+1. When a backend fix changes a `packages/shared` Zod schema, fix all TypeScript compilation errors in `apps/web` in the same commit — even if the fix is minimal (add a null check, rename a field reference). Do not allow `tsc --noEmit` to fail between commits.
+2. If a backend schema change is large (reminder model restructure), do it in one atomic commit: schema migration + shared Zod update + frontend type fix.
+3. Run `pnpm typecheck` (from monorepo root, not per-package) after each backend commit to catch cross-package type breakage immediately.
+4. This is explicitly NOT "do the full redesign now." It is "keep TypeScript green while backend fixes land."
+
+**Detection:** After a backend fix commit, run `pnpm --filter @customreport/web typecheck`. Any errors are the broken window.
+
+**Phase:** Backend Phase — enforce per-commit.
+
+**Confidence:** HIGH — tRPC shares types via `packages/shared`; schema renames propagate to the frontend as TypeScript errors immediately.
+
+---
 
 ## Moderate Pitfalls
 
-### Pitfall 6: shadcn/ui components.json Misalignment Between Workspaces
+### Pitfall 8: Visual Regression Baseline Workflow Is Inverted
 
-**What goes wrong:** Components install to wrong directories, or imports break
-because `packages/ui/components.json` and `apps/web/components.json` have
-different `style`, `iconLibrary`, or `baseColor` settings.
+**What goes wrong:** `screenshots.spec.ts` baselines are created before the redesign is complete. Individual pages are baselined as they are redesigned. Then subsequent redesign passes (based on user feedback) invalidate the early baselines. Each feedback cycle deletes and regenerates a subset of baselines, creating inconsistent snapshot history.
 
 **Prevention:**
-1. Both `components.json` files must share identical `style`, `iconLibrary`,
-   and `baseColor` values
-2. The `aliases` section differs (correctly) between workspaces -- `packages/ui`
-   uses `@workspace/ui/*` paths while `apps/web` uses `@/*` for local
-   components
-3. For Tailwind v4, leave the `tailwind.config` field empty in both
-   `components.json` files -- v4 uses CSS-first configuration
-4. Always run `shadcn add` from `apps/web/` directory, never from monorepo root
+1. Do NOT create visual regression baselines during the redesign.
+2. Baselines belong only at the end: one baseline-creation run against the final approved design.
+3. Use `--update-snapshots` flag as a single batch operation after user sign-off, not incrementally.
+4. The `screenshots.spec.ts-snapshots/` directory should be deleted at redesign start and left empty until the final baseline pass.
 
-**Detection:** After `shadcn add button`, check that the file lands in
-`packages/ui/src/components/button.tsx`, not in `apps/web/src/components/`.
+**Phase:** Redesign Phase (start), E2E Phase (final baseline creation).
 
-**Confidence:** HIGH -- documented in shadcn/ui monorepo guide.
+**Confidence:** HIGH — the existing snapshots will be stale from the first redesigned page onward.
 
-### Pitfall 7: next lint Removal Breaks CI Pipeline
+---
 
-**What goes wrong:** After upgrading to Next.js 16, the `next lint` command no
-longer exists. CI pipelines, pre-commit hooks, and `package.json` scripts that
-reference `next lint` fail with "command not found" or similar errors.
-Additionally, `next build` no longer runs linting automatically.
+### Pitfall 9: BullMQ Re-enablement Required Before E2E PDF Tests
+
+**What goes wrong:** BullMQ is disabled in AppModule (as of v3.0 handoff — `BullModule.forRoot` commented out, PDF and reminder queue injection removed). E2E scenarios H-009 (PDF export), H-022 (reminder execute), and X-006 (reminder flow) require BullMQ to be functional. Running these E2E tests against a backend with disabled BullMQ will result in jobs being created in the database but never processed — tests waiting for `status: 'sent'` or `status: 'completed'` will timeout.
 
 **Prevention:**
-1. Replace all `next lint` references with direct `eslint .` commands BEFORE
-   upgrading
-2. Use the codemod: `npx @next/codemod@canary next-lint-to-eslint-cli`
-3. Update `apps/web/package.json` lint script from any `next lint` usage to
-   `eslint .` (the current project uses `tsc --noEmit` for lint, so this may
-   not apply directly, but verify)
-4. Migrate from `.eslintrc` to ESLint flat config format (`eslint.config.js`)
-   since `@next/eslint-plugin-next` now defaults to flat config
-5. Update the `eslint` option in `next.config.ts` -- it has been removed in
-   Next.js 16
+1. Fix BullMQ DI before writing E2E tests that cover PDF or reminder flows.
+2. The v3.0 memory identifies the issue: `@nestjs/bullmq BullExplorer ModuleRef` DI bug. The fix is likely `@nestjs/bullmq@latest` or downgrade to a compatible version — check the NestJS/BullMQ compatibility matrix.
+3. Verify BullMQ is working by running the NestJS API locally and calling `pdfExport.request` — the job status must transition from `queued` to `completed` within 30 seconds.
+4. If BullMQ re-enablement is complex, stub the queue in E2E test environment only (use `AUTH_DEV_MODE` parallel to a `QUEUE_DEV_MODE` that synchronously executes jobs).
 
-**Detection:** Run `pnpm --filter @customreport/web lint` after upgrade. If it
-references `next lint` anywhere in the chain, it will fail.
+**Detection:** Call `pdfExport.request` via the browser or API client. If `pdfExport.status` stays `queued` indefinitely, BullMQ is disabled.
 
-**Confidence:** HIGH -- confirmed removal in Next.js 16 release notes.
+**Phase:** Backend Phase (fix BullMQ) before E2E Phase.
 
-### Pitfall 8: pgvector HNSW Index Not Used Due to Distance Metric Mismatch
+**Confidence:** HIGH — directly documented in v3.0 handoff memory.
 
-**What goes wrong:** You create an HNSW index for vector similarity search, but
-queries remain slow -- the index is silently ignored by PostgreSQL.
+---
+
+### Pitfall 10: Seed Data State Dependency Makes E2E Fragile
+
+**What goes wrong:** The existing E2E specs depend on specific seed data state: Lead 1 has `status: submitted`, there are 6 leads, there is 1 head user with a specific UUID. Backend edge-case fixes and Prisma migrations may require re-seeding. If re-seeding changes UUIDs, user names, or submission state, E2E tests that check for `getByText('Lead 1')` or expect `status: submitted` start failing.
+
+**Why it happens:** Seed data is not isolated per test — all E2E tests share the same database state. Tests that modify state (submit a section, create a user, trigger carry-over) pollute the database for subsequent tests. With parallel execution (`fullyParallel: true`), the order is non-deterministic.
 
 **Prevention:**
-1. The index distance operator MUST match the query distance operator:
-   - Cosine: `CREATE INDEX ... USING hnsw (embedding vector_cosine_ops)` pairs
-     with `<=>` operator
-   - L2: `CREATE INDEX ... USING hnsw (embedding vector_l2_ops)` pairs with
-     `<->` operator
-   - Inner product: `vector_ip_ops` pairs with `<#>` operator
-2. Pick one distance metric (cosine is standard for text embeddings) and use it
-   consistently in both index creation and all `$queryRaw` calls
-3. Create indexes with `CONCURRENTLY` to avoid blocking writes -- but this
-   requires a non-transactional migration (add `-- AlterTable` comment or
-   handle separately)
-4. Prisma cannot create HNSW indexes natively -- must be added via custom SQL
-   in migration files
+1. E2E tests that are read-only (checking text, navigating pages) are safe as-is.
+2. E2E tests that mutate state (fill form, submit, delete user, trigger PDF) must reset to known state before and after. Use database seeding hooks (`beforeEach` reset) or dedicated test-isolated database snapshots.
+3. For the full lifecycle scenario (X-001), run it with `workers: 1` serialized, not in parallel.
+4. The seed script should be idempotent — running it twice produces the same state, not double the data.
+5. After Prisma migration, always re-run seed and verify E2E auth setup produces valid session cookies.
 
-**Detection:** Run `EXPLAIN ANALYZE` on a vector query. If the plan shows
-"Seq Scan" instead of "Index Scan using hnsw_index", the index is not being
-used.
+**Detection:** Run E2E suite twice sequentially without resetting the database. If the second run has different results than the first, tests are modifying shared state.
 
-**Confidence:** HIGH -- well-documented PostgreSQL/pgvector behavior.
+**Phase:** E2E Phase — design test isolation upfront.
 
-### Pitfall 9: Async Request APIs Break Existing Pages in Next.js 16
+**Confidence:** MEDIUM-HIGH — the current specs assume `status: submitted` for Lead 1, which is set only by seed data; any test that submits another section for Lead 1 breaks this assumption.
 
-**What goes wrong:** Pages that access `params` or `searchParams`
-synchronously stop working. Components that use `cookies()` or `headers()`
-synchronously throw runtime errors.
+---
 
-**Why it happens:** Next.js 15 introduced async request APIs with temporary
-synchronous compatibility. Next.js 16 removes the synchronous fallback
-entirely. All access to `params`, `searchParams`, `cookies()`, and `headers()`
-must be `await`-ed.
+### Pitfall 11: superjson Transformer Must Stay Synchronized Across MSW, tRPC Client, and tRPC Server
+
+**What goes wrong:** MSW handlers wrap data with `superjson.serialize()`. The tRPC client uses `transformer: superjson`. The tRPC server uses `transformer: superjson`. If any one of these three is changed or missing, Date fields serialize to strings at runtime but TypeScript still expects `Date` — causing 17+ TS2322 errors across page components (this exact bug was already fixed once in this project).
 
 **Prevention:**
-1. Before upgrading, grep for synchronous usage:
-   `grep -r "params\." apps/web/src/app/ --include="*.tsx" --include="*.ts"`
-2. Run the codemod: `npx @next/codemod@canary next-async-request-api .`
-3. Update all dynamic route pages: `params` must be awaited
-4. Update all pages using `searchParams`: must be awaited
-5. Update any server-side code calling `cookies()` or `headers()` without await
+1. Never change the tRPC server transformer (`initTRPC.create({ transformer: superjson })`) without updating the client and MSW handlers in the same commit.
+2. When adding a new tRPC procedure that returns `Date` fields, add a corresponding MSW handler that uses `superjson.serialize()` wrapping — not plain `HttpResponse.json()`.
+3. After any backend schema change that adds `Date` fields, run `pnpm typecheck` — TS2322 on `Date` vs `string` is the diagnostic.
 
-**Detection:** After upgrade, runtime errors like "Cannot read property of
-Promise" or "params is a Promise, not an object" indicate synchronous access.
+**Detection:** TypeScript error `Type 'string' is not assignable to type 'Date'` in any page component after a backend change.
 
-**Confidence:** HIGH -- mandatory breaking change, well-documented.
+**Phase:** Backend Phase — enforce per-commit type check.
 
-### Pitfall 10: Playwright E2E Tests Fragile Without Proper Selectors
+**Confidence:** HIGH — this already caused 17 errors in this project (feedback memory: `feedback_trpc_superjson.md`).
 
-**What goes wrong:** E2E tests pass initially but break after any UI styling
-changes because they rely on DOM structure, CSS classes, or text content that
-changes during the shadcn/ui migration.
-
-**Why it happens:** The existing E2E tests use `getByRole` and `getByLabel`
-(good), but also `getByText` with Russian strings that may change during
-redesign. During the shadcn/ui migration, component structure changes
-(e.g., `<select>` becomes shadcn's `<Select>` with different ARIA roles),
-breaking role-based selectors too.
-
-**Prevention:**
-1. Add `data-testid` attributes to all interactive elements during the
-   shadcn/ui migration -- these survive restyling
-2. Review all 7 existing E2E spec files after shadcn/ui component migration
-3. Update selectors that rely on native HTML elements (e.g.,
-   `getByRole('option')`) to match shadcn/ui's Radix-based primitives
-   (`getByRole('menuitem')` or similar)
-4. Run E2E suite after each component batch migration, not only at the end
-
-**Detection:** Run `pnpm exec playwright test` after each batch of component
-changes. Failures in seemingly unrelated tests indicate selector breakage.
-
-**Confidence:** MEDIUM-HIGH -- depends on how much component structure changes.
-
-### Pitfall 11: Tailwind v4 Migration Breaks tailwindcss-animate
-
-**What goes wrong:** After setting up Tailwind v4 with shadcn/ui, animation
-classes (used by shadcn/ui Dialog, Dropdown, Tooltip, etc.) do not work. The
-`tailwindcss-animate` plugin is incompatible with Tailwind v4.
-
-**Prevention:**
-1. Remove `tailwindcss-animate` from dependencies
-2. Install `tw-animate-css` instead: `pnpm add -D tw-animate-css`
-3. In `globals.css`, replace `@plugin 'tailwindcss-animate'` with
-   `@import "tw-animate-css"`
-4. This applies to `packages/ui` since it owns the global styles
-
-**Detection:** Open a shadcn Dialog or Dropdown. If there is no fade/slide
-animation on open/close, the animate plugin is misconfigured.
-
-**Confidence:** HIGH -- documented in shadcn/ui Tailwind v4 migration guide.
+---
 
 ## Minor Pitfalls
 
-### Pitfall 12: pgvector Extension Not Available in Docker Image
+### Pitfall 12: Playwright `auth.setup.ts` Depends on Seed Data Being Present
 
-**What goes wrong:** `CREATE EXTENSION vector` fails in the PostgreSQL Docker
-container used for local development and CI.
-
-**Prevention:**
-1. Use the `pgvector/pgvector:pg15` Docker image instead of the standard
-   `postgres:15` image in `docker-compose.dev.yml` and `docker-compose.yml`
-2. Alternatively, install the extension in a custom Dockerfile:
-   `RUN apt-get update && apt-get install -y postgresql-15-pgvector`
-3. Update the CI pipeline to use the pgvector image as well
-4. The production PostgreSQL must also have pgvector installed (check with
-   cloud provider if using managed PostgreSQL)
-
-**Detection:** `prisma migrate dev` fails with "ERROR: could not open extension
-control file pgvector" or similar.
-
-**Confidence:** HIGH -- standard Docker/PostgreSQL configuration.
-
-### Pitfall 13: pnpm Workspace Resolution Breaks shadcn CLI
-
-**What goes wrong:** Running `pnpm dlx shadcn@latest add button` from
-`apps/web/` fails with module resolution errors because the shadcn CLI cannot
-find the `packages/ui` workspace package.
+**What goes wrong:** `auth.setup.ts` calls `/auth/dev-login?role=lead` which creates or finds a user with `role=lead` in the database. If the database is empty (migration just ran, seed not yet applied), dev-login creates a new user but may fail if the seed data (projects, report period) that the lead's section depends on doesn't exist. The E2E auth setup passes but subsequent tests fail with "no active report" errors.
 
 **Prevention:**
-1. Initialize shadcn with `pnpm dlx shadcn@latest init --monorepo` if starting
-   fresh
-2. Ensure `pnpm-workspace.yaml` correctly lists both `apps/*` and `packages/*`
-3. The `components.json` in `apps/web` must have the correct relative path to
-   `packages/ui` CSS file: `"css": "../../packages/ui/src/styles/globals.css"`
-4. If the CLI fails, install components manually by copying from the shadcn/ui
-   source and adapting imports
+1. Always run seed BEFORE running E2E tests: `prisma db seed` must be a prerequisite in the E2E startup script.
+2. In `playwright.config.ts` `webServer` config, add a seed step to the API startup command, or use a `globalSetup` script that runs seed before auth setup.
+3. Verify by checking that `reports.getActive` returns a valid section for the lead after auth setup.
 
-**Detection:** CLI error during `shadcn add` with messages about missing
-modules or unresolved paths.
+**Phase:** E2E Phase setup.
 
-**Confidence:** MEDIUM -- depends on exact shadcn CLI version and pnpm version.
+**Confidence:** MEDIUM — depends on whether dev-login is resilient to missing seed data (it may auto-create a section, or it may throw).
 
-### Pitfall 14: Node.js Version Requirement Bump in Next.js 16
+---
 
-**What goes wrong:** CI or Docker builds fail because the environment runs
-Node.js 18.x, which is no longer supported by Next.js 16.
+### Pitfall 13: Collapsible Sections Must Not Hide Required Fields from Playwright
+
+**What goes wrong:** The UX audit requested collapsible sections to reduce scroll. If sections are collapsed by default, Playwright tests that look for `getByRole('textbox', { name: 'Priority 1' })` or `getByRole('group', { name: 'Risks' })` will return 0 visible elements. The test fails with "element not visible" rather than "element not found."
 
 **Prevention:**
-1. Next.js 16 requires Node.js 20.9.0 minimum
-2. Update `engines.node` in root `package.json` from `>=20.0.0` to `>=20.9.0`
-3. Update Dockerfiles (`Dockerfile.web`, `Dockerfile.api`) to use
-   `node:20-alpine` or `node:22-alpine`
-4. Update CI workflow Node.js matrix to drop 18.x if present
+1. Sections should be expanded by default on first load (collapsed is a user preference, not the initial state).
+2. If sections are collapsed by default, E2E tests must explicitly click the section header to expand before interacting with child elements.
+3. Add `data-testid="section-toggle-risks"` etc. to collapsible triggers so tests can expand them reliably regardless of label text.
 
-**Detection:** Build error mentioning unsupported Node.js version.
+**Detection:** After adding collapsible sections, run `pnpm exec playwright test lead-report-entry.spec.ts`. Any "element not visible" failures for form fields indicate hidden elements.
 
-**Confidence:** HIGH -- explicit requirement in Next.js 16 release notes.
+**Phase:** Redesign Phase — when implementing collapsible sections.
 
-### Pitfall 15: Raw SQL Queries for pgvector Bypass Prisma Type Safety
+**Confidence:** MEDIUM — depends on whether default state is open or closed.
 
-**What goes wrong:** All vector operations must use `$queryRaw` or
-`$executeRaw` because Prisma does not natively support the vector type. This
-creates a type-safety gap in an otherwise fully type-safe tRPC + Zod + Prisma
-stack.
-
-**Prevention:**
-1. Use TypedSQL (Prisma's `$queryRawTyped`) where available to retain some
-   type safety
-2. Create a dedicated `VectorRepository` service that encapsulates all raw SQL
-   vector operations behind a typed interface
-3. Use the `pgvector` npm package's `toSql()` method for proper vector
-   serialization -- do not hand-build SQL strings with array concatenation
-4. Write unit tests for every raw SQL query with known input/output pairs
-5. Wrap all vector operations in a Zod schema that validates dimensions match
-   the model (e.g., 1536 for OpenAI `text-embedding-3-small`)
-
-**Detection:** TypeScript compilation succeeds but runtime errors occur with
-"invalid vector literal" or dimension mismatch errors.
-
-**Confidence:** HIGH -- fundamental Prisma limitation with pgvector.
-
-### Pitfall 16: Cache Behavior Change Affects Data Fetching
-
-**What goes wrong:** After upgrading to Next.js 16, pages that previously
-showed cached data now always fetch fresh data on every request, causing
-performance degradation. Or conversely, pages expected to be dynamic are
-accidentally cached.
-
-**Prevention:**
-1. Next.js 16 makes all caching opt-in via `'use cache'` directive -- nothing
-   is cached by default
-2. Audit all pages and API routes for caching expectations
-3. For the report listing page, add explicit `'use cache'` if static generation
-   is desired
-4. The report editing pages should remain dynamic (no cache) -- this is now the
-   default, so no change needed
-5. Review `revalidateTag()` / `updateTag()` usage if any cache invalidation
-   patterns were set up
-
-**Detection:** Page load times increase significantly for read-heavy pages
-(report history, published reports) after upgrade.
-
-**Confidence:** MEDIUM -- depends on whether the project relies on implicit
-caching behavior.
+---
 
 ## Phase-Specific Warnings
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| shadcn/ui setup in monorepo | Tailwind classes not scanning packages/ui (P1) | Set up @source directive and transpilePackages before any component work |
-| shadcn/ui component migration | Playwright selectors break (P10) | Add data-testid during migration, run E2E after each batch |
-| shadcn/ui animations | tailwindcss-animate incompatible with v4 (P11) | Use tw-animate-css from day one |
-| Playwright E2E auth setup | Token expiry in long suites (P4) | Use per-worker auth fixtures, extend JWT lifetime in test env |
-| Playwright E2E selectors | Selectors break after shadcn migration (P10) | Do shadcn/ui migration BEFORE writing new E2E tests |
-| Next.js 15 to 16 upgrade | middleware.ts silently ignored (P2) | Rename to proxy.ts as first upgrade step |
-| Next.js 15 to 16 upgrade | Async request APIs mandatory (P9) | Run codemod before manual review |
-| Next.js 15 to 16 upgrade | next lint removed (P7) | Replace with ESLint CLI before upgrade |
-| Next.js 15 to 16 upgrade | Turbopack default (P5) | Test --turbopack flag on Next.js 15 first |
-| pgvector schema addition | Migration drift with Unsupported type (P3) | Use Prisma 7.2.0+, --create-only + hand-edit SQL |
-| pgvector Docker setup | Extension not in standard image (P12) | Switch to pgvector/pgvector Docker image |
-| pgvector query layer | Type safety gap with raw SQL (P15) | Create VectorRepository with typed interface |
-| pgvector index creation | HNSW index silently unused (P8) | Match distance operator in index and query |
+| Prisma reminder migration | Silent data loss (P3) | Use --create-only, hand-edit SQL with data transform |
+| Backend schema changes | Frontend TypeScript breakage (P7) | Run pnpm typecheck after every backend commit |
+| Backend fixes + MSW | MSW diverges from real API (P5) | Update MSW handler in same commit as API change |
+| BullMQ re-enablement | PDF/reminder E2E blocked (P9) | Fix BullMQ before any queue-dependent E2E |
+| UI redesign — first page | User rejects aesthetic direction (P1) | Show first styled page, get sign-off before continuing |
+| UI redesign — existing specs | E2E specs break immediately (P2) | Delete baselines at redesign start, freeze specs |
+| UI redesign — jsdom failures | Failures multiply (P4) | Fix Vitest React config before touching components |
+| E2E — 81 regression scenarios | All as browser tests is too slow (P6) | Split: API integration tests vs browser journeys |
+| E2E — seed data | State contamination across tests (P10) | Read-only tests are safe; mutating tests need isolation |
+| E2E — auth setup | Fails on empty database (P12) | Seed before auth setup in startup sequence |
+| E2E — collapsible sections | Hidden elements cause false failures (P13) | Default-open sections OR explicit expand in tests |
+| superjson everywhere | Date → string type errors (P11) | Never change transformer without syncing MSW + client |
+| Visual baselines | Stale snapshots from redesign start (P8) | Delete all baselines at start, recreate only at end |
 
 ## Recommended Phase Ordering Based on Pitfalls
 
-The pitfalls above strongly suggest this execution order:
+1. **Backend Phase first** — Fix Prisma migration + BullMQ + edge-cases + MSW sync. Keep TypeScript green after every commit.
 
-1. **Next.js 16 upgrade FIRST** -- because it changes fundamental file
-   conventions (middleware to proxy) and API patterns (async params) that
-   affect all subsequent work. Doing the upgrade after shadcn/ui migration
-   would mean redoing selectors and potentially breaking newly styled pages.
+2. **Vitest fix before Redesign** — Fix `@vitejs/plugin-react` root cause so redesigned components can be unit tested from day one. This is a 5-minute fix that prevents 40+ test failures accumulating.
 
-2. **shadcn/ui + Tailwind v4 setup SECOND** -- after the framework is stable
-   on Next.js 16, set up the UI infrastructure. The setup pitfalls (P1, P6,
-   P11, P13) are all configuration issues that should be resolved once before
-   any component work begins.
+3. **Redesign Phase with checkpoint** — Style first page, show user, get sign-off, then continue. Delete visual baselines and freeze existing E2E specs at the start of this phase.
 
-3. **Playwright E2E THIRD** -- write E2E tests AFTER the UI is styled and
-   stable. Writing tests on unstyled components means rewriting selectors
-   after shadcn/ui migration. The auth pitfalls (P4) should be solved during
-   setup, not discovered during test authoring.
-
-4. **pgvector RAG LAST** -- this is the most isolated feature with its own
-   database migration (P3, P12), Docker image changes (P12), and raw SQL
-   layer (P15). It does not depend on UI or E2E infrastructure.
+4. **E2E Phase last** — Write new E2E tests after redesign is approved and stable. Split 81 regression scenarios into API integration tests (extend existing 191 contract tests) vs browser E2E journeys. Recreate visual baselines at the very end of this phase.
 
 ## Sources
 
-- [shadcn/ui Monorepo Guide](https://ui.shadcn.com/docs/monorepo)
-- [shadcn/ui Tailwind v4 Guide](https://ui.shadcn.com/docs/tailwind-v4)
-- [Turborepo shadcn/ui Guide](https://turborepo.dev/docs/guides/tools/shadcn-ui)
-- [Next.js 16 Upgrade Guide](https://nextjs.org/docs/app/guides/upgrading/version-16)
-- [Next.js 16 Blog Post](https://nextjs.org/blog/next-16)
-- [Next.js 16 middleware-to-proxy](https://nextjs.org/docs/messages/middleware-to-proxy)
-- [Next.js 16 Migration Walkthrough](https://www.salmanizhar.com/blog/nextjs-16-migration-guide)
-- [Next.js 16 Lint Removal Fix](https://zenn.dev/ykbone/articles/2acd8e02d35492?locale=en)
-- [Playwright Authentication Docs](https://playwright.dev/docs/auth)
-- [Playwright Auth Patterns (Checkly)](https://www.checklyhq.com/docs/learn/playwright/authentication/)
-- [SAML with Playwright (Hoop.dev)](https://hoop.dev/blog/the-simplest-way-to-make-playwright-saml-work-like-it-should)
-- [Advanced Playwright Multi-Role Auth](https://medium.com/@faizan4199/advanced-playwright-authentication-a-multi-role-fixture-for-scalable-e2e-testing-9ce89af14223)
-- [Prisma pgvector Drift Bug #28867](https://github.com/prisma/prisma/issues/28867) -- fixed in 7.2.0
-- [Prisma pgvector HNSW Index Issue #21850](https://github.com/prisma/prisma/issues/21850)
-- [Prisma Postgres Extensions Docs](https://www.prisma.io/docs/postgres/database/postgres-extensions)
-- [pgvector Atlas Index Guide](https://atlasgo.io/guides/orms/prisma/vector-index)
-- [pgvector npm Package](https://www.npmjs.com/package/pgvector)
-- [Railway pgvector Hosting Guide](https://blog.railway.com/p/hosting-postgres-with-pgvector)
+- Project memory files (confirmed from current codebase): `project_phase15_handoff.md`, `project_ux_audit.md`, `project_v3_handoff.md`, `feedback_trpc_superjson.md`
+- Current codebase: `apps/web/e2e/*.spec.ts`, `apps/web/src/test/msw-handlers.ts`, `apps/web/vitest.config.ts`, `apps/web/playwright.config.ts`
+- Project STATE.md: Phase 14 verification gap — 24 pre-existing jsdom failures documented
+- REGRESSION-SCENARIOS.md: 81 scenarios, categorized as backend vs frontend behavior
+- General Playwright patterns: official auth docs, `auth.setup.ts` pattern with storageState
