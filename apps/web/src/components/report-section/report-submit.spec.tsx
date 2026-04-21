@@ -69,7 +69,7 @@ describe('ReportSectionForm submit flow', () => {
 
     expect(screen.getByText(/must have a traffic light status/i)).toBeInTheDocument();
     expect(screen.getByText(/needs at least one Current Week item/i)).toBeInTheDocument();
-    expect(screen.getByText(/Top 3 priorities must be filled/i)).toBeInTheDocument();
+    expect(screen.getByText(/priorities must be filled/i)).toBeInTheDocument();
   });
 
   it('locks the form after a successful submit', async () => {

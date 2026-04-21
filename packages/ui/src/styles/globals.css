@@ -13,54 +13,54 @@
   --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
 
-  /* ---- Base palette — Deep Navy ---- */
-  --color-background: oklch(0.985 0.002 260);
-  --color-foreground: oklch(0.145 0.02 260);
+  /* ---- Base palette — Dark Mode ---- */
+  --color-background: oklch(0.16 0.02 260);
+  --color-foreground: oklch(0.93 0.01 260);
 
-  --color-muted: oklch(0.94 0.008 260);
-  --color-muted-foreground: oklch(0.46 0.015 260);
+  --color-muted: oklch(0.22 0.02 260);
+  --color-muted-foreground: oklch(0.60 0.02 260);
 
-  --color-accent: oklch(0.95 0.012 260);
-  --color-accent-foreground: oklch(0.145 0.02 260);
+  --color-accent: oklch(0.24 0.03 260);
+  --color-accent-foreground: oklch(0.93 0.01 260);
 
   /* ---- Skeleton ---- */
-  --color-skeleton: oklch(0.88 0.012 260);
+  --color-skeleton: oklch(0.24 0.02 260);
 
   /* ---- Semantic status colors ---- */
-  --color-success: oklch(0.68 0.17 152);
+  --color-success: oklch(0.72 0.19 152);
   --color-success-foreground: oklch(0.99 0 0);
-  --color-warning: oklch(0.78 0.16 70);
-  --color-warning-foreground: oklch(0.18 0 0);
-  --color-destructive: oklch(0.57 0.21 25);
+  --color-warning: oklch(0.80 0.16 70);
+  --color-warning-foreground: oklch(0.15 0 0);
+  --color-destructive: oklch(0.62 0.22 25);
   --color-destructive-foreground: oklch(0.99 0 0);
 
   /* ---- Border & ring ---- */
-  --color-border: oklch(0.90 0.006 260);
-  --color-ring: oklch(0.55 0.18 260);
+  --color-border: oklch(0.28 0.02 260);
+  --color-ring: oklch(0.60 0.20 260);
 
-  /* ---- Card & popover — subtle elevation ---- */
-  --color-card: oklch(0.995 0.001 260);
-  --color-card-foreground: oklch(0.145 0.02 260);
-  --color-popover: oklch(0.995 0.001 260);
-  --color-popover-foreground: oklch(0.145 0.02 260);
+  /* ---- Card & popover — elevated surfaces ---- */
+  --color-card: oklch(0.20 0.02 260);
+  --color-card-foreground: oklch(0.93 0.01 260);
+  --color-popover: oklch(0.22 0.02 260);
+  --color-popover-foreground: oklch(0.93 0.01 260);
 
-  /* ---- Primary — Deep Navy ---- */
-  --color-primary: oklch(0.32 0.14 260);
+  /* ---- Primary — Bright Indigo ---- */
+  --color-primary: oklch(0.65 0.22 260);
   --color-primary-foreground: oklch(0.99 0 0);
 
   /* ---- Secondary ---- */
-  --color-secondary: oklch(0.94 0.008 260);
-  --color-secondary-foreground: oklch(0.20 0.03 260);
+  --color-secondary: oklch(0.25 0.03 260);
+  --color-secondary-foreground: oklch(0.85 0.01 260);
 
   /* ---- Input ---- */
-  --color-input: oklch(0.90 0.006 260);
+  --color-input: oklch(0.28 0.02 260);
 
   /* ---- Chart palette ---- */
-  --color-chart-1: oklch(0.55 0.18 260);
-  --color-chart-2: oklch(0.68 0.17 152);
-  --color-chart-3: oklch(0.78 0.16 70);
-  --color-chart-4: oklch(0.57 0.21 25);
-  --color-chart-5: oklch(0.62 0.18 310);
+  --color-chart-1: oklch(0.65 0.22 260);
+  --color-chart-2: oklch(0.72 0.19 152);
+  --color-chart-3: oklch(0.80 0.16 70);
+  --color-chart-4: oklch(0.62 0.22 25);
+  --color-chart-5: oklch(0.68 0.20 310);
 
   /* ---- Sidebar — Branded dark ---- */
   --color-sidebar: oklch(0.22 0.06 260);
@@ -84,7 +84,7 @@
   background: linear-gradient(
     90deg,
     var(--color-skeleton) 25%,
-    oklch(0.92 0.008 260) 50%,
+    oklch(0.28 0.02 260) 50%,
     var(--color-skeleton) 75%
   );
   background-size: 200% 100%;
@@ -140,13 +140,36 @@
   animation: scale-in 0.2s ease-out both;
 }
 
+/* ---- Collapsible slide animation ---- */
+[data-slot="collapsible-content"] {
+  overflow: hidden;
+}
+[data-slot="collapsible-content"][data-state="open"] {
+  animation: collapsible-down 0.2s ease-out;
+}
+[data-slot="collapsible-content"][data-state="closed"] {
+  animation: collapsible-up 0.2s ease-out;
+}
+
+@keyframes collapsible-down {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-collapsible-content-height); opacity: 1; }
+}
+
+@keyframes collapsible-up {
+  from { height: var(--radix-collapsible-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+
 /* ---- Reduced motion: disable all custom animations ---- */
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
   .animate-slide-in-left,
   .animate-scale-in,
   .stagger-children > *,
-  .skeleton {
+  .skeleton,
+  [data-slot="collapsible-content"][data-state="open"],
+  [data-slot="collapsible-content"][data-state="closed"] {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

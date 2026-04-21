@@ -66,7 +66,9 @@ export function AppShell({
             CustomReport
           </span>
         </SidebarHeader>
-        <Separator className="mx-4 w-auto bg-sidebar-border" />
+        <div className="px-4 group-data-[collapsible=icon]:px-2">
+          <Separator className="bg-sidebar-border" />
+        </div>
         <SidebarContent className="px-2 py-3">
           <RoleNav activeReportId={activeReportId} role={role} currentPath={currentPath} />
         </SidebarContent>
