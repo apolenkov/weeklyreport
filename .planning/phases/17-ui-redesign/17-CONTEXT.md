@@ -13,11 +13,23 @@ Every page has a professional, polished UI — AssembledReport functional defect
 <decisions>
 ## Implementation Decisions
 
-### Design Direction & Layout
-- **D-01:** Lead form uses collapsible accordion sections — each category (items, risks, decisions, priorities) in a collapsible card, all closed by default except first. Reduces scroll.
-- **D-02:** Traffic light selector: circular colored buttons with ring on hover, inline row of 3 (green/yellow/red). Per audit feedback — "colorful circular buttons, not plain radio text."
+### Design System (from DESIGN.md — Starbucks-inspired)
+- **D-01:** Warm cream canvas (#f2f0eb) — single theme, no dark/light toggle. White cards on cream. Starbucks-inspired per DESIGN.md.
+- **D-02:** Status chips: fixed-width 120px pill buttons with icon+text (✓ On Track / ! At Risk / ✕ Blocked). NOT traffic light circles.
 - **D-03:** AssembledReport (UI-01): Fix data mapping — ensure router returns ALL sections/items from all leads, then render with expandable lead sections.
-- **D-04:** Dark theme: Slate-based OKLCH palette — deepen contrast, add surface-hover states. Extend existing globals.css tokens.
+- **D-04:** Teal primary (#006241/#00754A) instead of indigo. Gold (#cba258) for priorities only. Per DESIGN.md color system.
+
+### Layout & Navigation
+- **D-18:** Top navigation bar (not sidebar). Role-aware: Lead sees "My Report, History"; Head sees "Dashboard, Assembled, Published, Archive, Admin".
+- **D-19:** Pill buttons (50px radius), scale(0.95) on press. 12px card radius. Soft shadows (0.14/0.24 alpha).
+- **D-20:** Lexend headings + Source Sans 3 body. Both with excellent Cyrillic. Tight letter-spacing (-0.01em).
+
+### Product-Centric Data Model
+- **D-21:** "Product Status" (not "Project Status"). Products grouped by product lines: CRM Platform, Data Analytics Suite, Mobile Applications, Cloud Infrastructure.
+- **D-22:** Each product displays SDLC pipeline: Analysis → Design → Dev → Testing → DevOps. Each stage has a responsible person and a traffic light status.
+- **D-23:** One person can fill status for multiple SDLC stages across multiple products.
+- **D-24:** Current Week / Next Week items displayed as Kanban board with product columns (not flat list).
+- **D-25:** Items, Risks, Decisions tagged with product badges showing which product they relate to.
 
 ### Component Interactions & UX
 - **D-05:** Delete confirmation: shadcn AlertDialog — "Delete this item?" with destructive red button. Prevents accidental data loss (P0 from audit).
