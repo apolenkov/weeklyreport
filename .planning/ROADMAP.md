@@ -212,7 +212,7 @@ Plans:
 
 ## v4.0 Backend Completeness & UI Redesign
 
-- [ ] **Phase 16: Backend Hardening** - Prisma migration, BullMQ re-enabled, 81 regression scenarios pass, test infrastructure clean
+- [x] **Phase 16: Backend Hardening** - Prisma migration, BullMQ re-enabled, 81 regression scenarios pass, test infrastructure clean (completed 2026-04-21)
 - [ ] **Phase 17: UI Redesign** - AssembledReport defect fixed, full professional redesign across all pages, a11y and responsive
 - [ ] **Phase 18: E2E Tests** - Role journeys, cross-role lifecycle, visual regression baselines
 
@@ -230,9 +230,9 @@ Plans:
 
 Plans:
 - [x] 16-01-PLAN.md — Prisma migration (ReminderRule schema alignment) + Zod reportId nullable + repository cascade
-- [ ] 16-02-PLAN.md — BullMQ re-enablement (module wiring + queue injection) + health indicator + Docker fixes
-- [ ] 16-03-PLAN.md — ThemeProvider wiring + theme toggle + MSW/web test verification (BE-04, BE-05, BE-06)
-- [ ] 16-04-PLAN.md — Regression contract tests (P0/P1 scenarios extending existing test suite)
+- [x] 16-02-PLAN.md — BullMQ re-enablement (module wiring + queue injection) + health indicator + Docker fixes
+- [x] 16-03-PLAN.md — ThemeProvider wiring + theme toggle + MSW/web test verification (BE-04, BE-05, BE-06)
+- [x] 16-04-PLAN.md — Regression contract tests (P0/P1 scenarios extending existing test suite)
 
 ### Phase 17: UI Redesign
 **Goal**: Every page has a professional, polished UI — AssembledReport functional defect fixed, dark theme consistent, a11y complete, responsive
@@ -265,7 +265,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 16. Backend Hardening | 1/4 | In Progress|  |
+| 16. Backend Hardening | 4/4 | Complete   | 2026-04-21 |
 | 17. UI Redesign | 0/TBD | Not started | - |
 | 18. E2E Tests | 0/TBD | Not started | - |
 

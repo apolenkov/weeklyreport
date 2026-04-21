@@ -11,7 +11,7 @@
 
 - [x] **BE-01**: Prisma migration aligns ReminderRule schema (kind/fireAt/timezone/status/version) with Zod contract
 - [ ] **BE-02**: BullMQ re-enabled in AppModule (PDF export + email reminders functional)
-- [ ] **BE-03**: All 81 regression scenarios pass as API integration tests
+- [x] **BE-03**: All 81 regression scenarios pass as API integration tests
 - [ ] **BE-04**: MSW handlers updated to match current tRPC contracts (superjson serialization)
 - [ ] **BE-05**: Pre-existing 24 jsdom test failures in web package fixed
 - [ ] **BE-06**: ThemeProvider wired into layout.tsx (next-themes installed, not connected)
@@ -65,7 +65,7 @@
 |-------------|-------|--------|
 | BE-01 | Phase 16 | Complete |
 | BE-02 | Phase 16 | Pending |
-| BE-03 | Phase 16 | Pending |
+| BE-03 | Phase 16 | Complete |
 | BE-04 | Phase 16 | Pending |
 | BE-05 | Phase 16 | Pending |
 | BE-06 | Phase 16 | Pending |
