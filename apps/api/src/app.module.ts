@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
+import { BullMQModule } from './infrastructure/bullmq/bullmq.module';
 import { HealthModule } from './infrastructure/health/health.module';
 import { MetricsModule } from './infrastructure/metrics/metrics.module';
 import { CorrelationIdMiddleware } from './infrastructure/middleware/correlation-id.middleware';
@@ -19,6 +20,7 @@ import { EmailService } from './infrastructure/email/email.service';
 @Module({
   imports: [
     PrismaModule,
+    BullMQModule,
     HealthModule,
     MetricsModule,
     ReviewModule,
