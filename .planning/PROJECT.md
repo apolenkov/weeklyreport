@@ -8,53 +8,54 @@
 
 Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
 
-## Current Milestone: v3.0 UI Polish & Analytics
+## Current Milestone: v4.0 Backend Completeness & UI Redesign
 
-**Goal:** Превратить функциональный прототип в визуально красивый продукт с полным E2E тестированием, актуальным стеком и аналитикой по истории отчётов.
+**Goal:** Довести бэкенд до 100% соответствия контрактам и регрессионным сценариям, полностью переделать UI через дизайн-скиллы, покрыть E2E тестами.
 
 **Target features:**
-- shadcn/ui + Tailwind CSS: design tokens, стилизация всех 22 компонентов и 7+ страниц, красивый PDF-отчёт
-- E2E тесты Playwright CLI: полный user journey (login → fill → submit → publish → PDF)
-- Обновление стека: Next.js 16, Vitest 4, ESLint 10, pnpm 10; актуализация CLAUDE.md
-- CI/CD: GitHub Actions pipeline для lint + typecheck + test + build
-- Аналитика: pgvector embeddings для истории отчётов, чат-бот по отчётам, тренды проектов
+- Backend 100%: Prisma миграция, оставшиеся edge-cases, полное соответствие 81 регрессионному сценарию
+- UI Redesign: полный редизайн с нуля через дизайн-скиллы — тёмная тема, динамический контент, responsive
+- E2E тесты: Playwright сценарии по ролям (lead/head/viewer полные user journeys)
 
-**Priority:** Стилизация — главный приоритет milestone
+**Priority:** Backend-first, затем UI, затем E2E
+
+**Already done (this session):**
+- 191 contract test (all services), 422 unit tests total
+- API contracts doc, role matrix, 81 regression scenarios
+- 5 backend fixes (reminder schema, dashboard 500, myHistory validation, dynamic priorities, pagination)
 
 ## Requirements
 
 ### Validated
 
-Shipped in v1.0 (domain logic layer):
-- ✓ Domain services with repository interfaces — v1.0 Phase 1-3
-- ✓ Zod schemas (shared types) — v1.0 Phase 1
-- ✓ Frontend UI components (localStorage prototype) — v1.0 Phase 1-3
-- ✓ Prisma schema (data model definition) — v1.0 Phase 1
-- ✓ Centralized structured JSON logging — v1.0 Phase 4
-- ✓ 51 backend unit tests passing — v1.0 Phase 1-4
+Shipped in v1.0-v3.0:
+- ✓ Domain services with repository interfaces — v1.0
+- ✓ Zod schemas (shared types) — v1.0
+- ✓ Prisma schema (14 models, all enums) — v2.0
+- ✓ NestJS tRPC API (20+ endpoints) — v2.0
+- ✓ SAML SSO via Keycloak — v2.0
+- ✓ Lead: заполнение секции (items, risks, decisions, priorities) — v1.0-v2.0
+- ✓ Lead: светофоры проектов — v1.0-v2.0
+- ✓ Lead: submit с валидацией — v1.0-v2.0
+- ✓ Head: dashboard, assembled report, publish — v1.0-v2.0
+- ✓ Head: PDF export (BullMQ async) — v2.0
+- ✓ Head: admin CRUD (users, projects, periods, reminders) — v1.0-v2.0
+- ✓ Head: carry-over, email reminders — v1.0-v2.0
+- ✓ Viewer: archive list/detail — v1.0-v2.0
+- ✓ Auto-create weekly report for leads on login — v3.0+
+- ✓ Dynamic priorities (1+ instead of fixed 3) — v3.0+
+- ✓ Cursor pagination (archive, reminders) — v3.0+
+- ✓ 422 unit tests passing — v3.0+
+- ✓ API contracts documented (docs/api/) — v3.0+
+- ✓ Dark theme, collapsible sections — v3.0
 
-### Active
+### Active (v4.0)
 
-- [ ] Лид может заполнить секцию отчёта за свои проекты (структурированные айтемы: проект, текст, тег, статус)
-- [ ] Лид может проставить светофор (green/yellow/red) для каждого своего проекта
-- [ ] Лид может добавить риски (проект, риск, влияние, митигация)
-- [ ] Лид может добавить решения для руководства (Management Attention: текст, owner, deadline, impact)
-- [ ] Незакрытые решения автоматически переносятся в следующий отчёт
-- [ ] Айтемы "следующая неделя" автоматически переносятся в "текущая неделя" нового отчёта
-- [ ] Лид может отметить перенесённые айтемы как выполненные или невыполненные
-- [ ] Лид может указать Top 3 priorities
-- [ ] Portfolio Status Overview собирается автоматически из светофоров лидов
-- [ ] Head может просматривать кто из лидов сдал секцию, кто нет
-- [ ] Head может ревьюить собранный отчёт и публиковать его
-- [ ] Система отправляет email-напоминания лидам о заполнении (по расписанию)
-- [ ] Опубликованный отчёт доступен в веб-формате
-- [ ] Опубликованный отчёт можно экспортировать в PDF (визуально как текущий формат)
-- [ ] История всех прошлых отчётов с возможностью просмотра
-- [ ] SSO SAML авторизация через Keycloak
-- [ ] Админ-панель: управление пользователями и ролями (lead/head/viewer)
-- [ ] Админ-панель: управление проектами (создание, архивация, привязка к лиду)
-- [ ] Админ-панель: создание отчётных периодов с дедлайнами
-- [ ] Админ-панель: настройка расписания email-напоминаний
+- [ ] Prisma migration for reminder schema (kind/fireAt/timezone/status/version)
+- [ ] Backend edge-cases: all 81 regression scenarios pass
+- [ ] UI redesign from scratch via design skills
+- [ ] E2E Playwright tests: lead journey, head journey, viewer journey
+- [ ] E2E: cross-role scenarios (full lifecycle)
 
 ### Out of Scope
 
@@ -194,4 +195,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-11 after milestone v3.0 start*
+*Last updated: 2026-04-21 after milestone v4.0 start*
