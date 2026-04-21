@@ -28,9 +28,7 @@ import {
 // ---------------------------------------------------------------------------
 
 const uuid = () => randomUUID();
-const VALID_UUID = uuid();
 const PROJECT_UUID = uuid();
-const SECTION_UUID = uuid();
 
 const validItem = () => ({
   projectId: uuid(),
@@ -151,8 +149,7 @@ describe('draftSaveSchema', () => {
   });
 
   it('defaults status to draft when not provided', () => {
-    const { status, ...rest } = validDraft();
-    const result = draftSaveSchema.safeParse(rest);
+    const result = draftSaveSchema.safeParse(validDraft());
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.status).toBe('draft');

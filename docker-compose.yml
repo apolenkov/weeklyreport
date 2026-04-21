@@ -46,6 +46,7 @@ services:
       dockerfile: Dockerfile.api
     environment:
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport
+      PORT: 3002
       REDIS_HOST: redis
       REDIS_PORT: 6379
       NODE_ENV: production
