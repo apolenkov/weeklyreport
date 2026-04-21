@@ -25,9 +25,11 @@ describe('RemindersPrismaRepository (integration)', () => {
     await prisma.reminderRule.create({
       data: {
         id: TEST_IDS.reminderRule,
-        name: 'deadline',
-        cronExpression: '0 9 * * 5',
-        enabled: true,
+        kind: 'deadline',
+        fireAt: new Date('2026-04-11T09:00:00.000Z'),
+        timezone: 'Europe/Moscow',
+        status: 'active',
+        version: 1,
         reportId: testData.report.id,
       },
     });

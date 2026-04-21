@@ -197,7 +197,7 @@ export const adminReminderRuleStatusSchema = z.enum(['active', 'paused']);
 
 export const adminReminderRuleSchema = z.object({
   id: z.string().uuid(),
-  reportId: z.string().uuid(),
+  reportId: z.string().uuid().nullable(),
   kind: adminReminderRuleKindSchema,
   fireAt: z.coerce.date(),
   timezone: z.string().min(1),
@@ -214,7 +214,7 @@ export const adminReminderExecutionStatusSchema = z.enum([
 export const adminReminderExecutionSchema = z.object({
   id: z.string().uuid(),
   ruleId: z.string().uuid(),
-  reportId: z.string().uuid(),
+  reportId: z.string().uuid().nullable(),
   dedupeKey: z.string().min(1),
   status: adminReminderExecutionStatusSchema,
   scheduledFor: z.coerce.date(),

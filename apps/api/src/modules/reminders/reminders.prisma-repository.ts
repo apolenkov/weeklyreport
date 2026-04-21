@@ -108,7 +108,7 @@ function toRuleDomain(rule: {
 }): AdminReminderRule {
   return adminReminderRuleSchema.parse({
     id: rule.id,
-    reportId: rule.reportId ?? '00000000-0000-0000-0000-000000000000',
+    reportId: rule.reportId,
     kind: rule.kind,
     fireAt: rule.fireAt,
     timezone: rule.timezone,
@@ -123,10 +123,8 @@ function toRuleDomain(rule: {
  */
 function extractRecipientEmail(dedupeKey: string): string {
   // dedupeKey format: "ruleId:isoDate:recipientEmail"
-  const parts = dedupeKey.split(':');
-  // The email is everything after the second colon (ISO date contains colons too)
+  // The email is everything after the ISO date suffix "Z:"
   // Format: uuid:2026-04-12T10:00:00.000Z:user@example.com
-  // UUID has 4 dashes, so after splitting we need to reconstruct the email part
   const emailMatch = dedupeKey.match(/Z:(.+)$/);
   return emailMatch?.[1] ?? '';
 }
@@ -145,7 +143,7 @@ function toExecutionDomain(execution: {
   return adminReminderExecutionSchema.parse({
     id: execution.id,
     ruleId: execution.ruleId,
-    reportId: execution.rule.reportId ?? '00000000-0000-0000-0000-000000000000',
+    reportId: execution.rule.reportId,
     dedupeKey: execution.dedupeKey,
     status: dbExecStatusToDomain[execution.status] ?? 'queued',
     scheduledFor: execution.createdAt,
