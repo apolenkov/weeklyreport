@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { AlertTriangle, Plus, Trash2 } from 'lucide-react';
 
-import { Badge, Button, Input, Label } from '@customreport/ui';
+import { Button, ConfirmDialog, Input, Label } from '@customreport/ui';
 
 import type { ReportSectionReadModel } from '@customreport/shared';
 
@@ -15,6 +16,15 @@ type RisksEditorProps = {
 };
 
 export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }: RisksEditorProps) {
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+
+  function handleConfirmDelete() {
+    if (pendingDeleteIndex !== null) {
+      onRemove(pendingDeleteIndex);
+      setPendingDeleteIndex(null);
+    }
+  }
+
   return (
     <div className={disabled ? 'pointer-events-none opacity-50' : undefined} role="group" aria-label="Risks">
       {risks.length === 0 ? (
@@ -27,7 +37,7 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
           {risks.map((risk, index) => (
             <div
               key={risk.id ?? `risk-${index}`}
-              className="space-y-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4"
+              className="group space-y-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4 transition-colors hover:border-destructive/30"
             >
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
@@ -42,7 +52,7 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
                       placeholder="Describe the risk..."
                       onChange={(e) => onFieldChange(index, 'risk', e.currentTarget.value)}
                       disabled={disabled}
-                      className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none transition-colors focus-visible:border-destructive focus-visible:ring-0"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -56,7 +66,7 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
                         placeholder="High / Medium / Low"
                         onChange={(e) => onFieldChange(index, 'impact', e.currentTarget.value)}
                         disabled={disabled}
-                        className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none transition-colors focus-visible:border-destructive focus-visible:ring-0"
                       />
                     </div>
                     <div>
@@ -69,7 +79,7 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
                         placeholder="How to mitigate..."
                         onChange={(e) => onFieldChange(index, 'mitigation', e.currentTarget.value)}
                         disabled={disabled}
-                        className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none transition-colors focus-visible:border-destructive focus-visible:ring-0"
                       />
                     </div>
                   </div>
@@ -78,8 +88,8 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => onRemove(index)}
+                    className="size-8 shrink-0 text-muted-foreground/40 opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
+                    onClick={() => setPendingDeleteIndex(index)}
                     aria-label={`Remove risk ${index + 1}`}
                   >
                     <Trash2 className="size-4" />
@@ -91,11 +101,26 @@ export function RisksEditor({ risks, disabled, onAdd, onRemove, onFieldChange }:
         </div>
       )}
       {!disabled ? (
-        <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={onAdd}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-3 gap-1.5 transition-colors hover:border-destructive/30 hover:bg-destructive/5"
+          onClick={onAdd}
+        >
           <Plus className="size-4" />
           Add Risk
         </Button>
       ) : null}
+
+      <ConfirmDialog
+        open={pendingDeleteIndex !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteIndex(null); }}
+        title="Remove Risk"
+        description="This risk entry will be removed from your report. Continue?"
+        confirmLabel="Remove"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

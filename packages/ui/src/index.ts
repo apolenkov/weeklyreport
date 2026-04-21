@@ -17,6 +17,11 @@ export {
 export { Badge, badgeVariants } from './components/ui/badge';
 export { Button, buttonVariants } from './components/ui/button';
 export {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from './components/ui/collapsible';
+export {
   Card,
   CardHeader,
   CardFooter,

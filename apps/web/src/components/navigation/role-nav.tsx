@@ -39,6 +39,13 @@ const navItems: NavItem[] = [
     group: 'Reports',
   },
   {
+    href: '/lead/history',
+    label: 'My History',
+    icon: History,
+    roles: ['lead'],
+    group: 'Reports',
+  },
+  {
     href: '/head/dashboard',
     label: 'Review Dashboard',
     icon: LayoutDashboard,

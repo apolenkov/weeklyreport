@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { CircleDot, Plus, Trash2 } from 'lucide-react';
 
-import { Button, Input, Label } from '@customreport/ui';
+import { Button, ConfirmDialog, Input, Label } from '@customreport/ui';
 
 import type { ReportSectionReadModel } from '@customreport/shared';
 
@@ -15,6 +16,15 @@ type DecisionsEditorProps = {
 };
 
 export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldChange }: DecisionsEditorProps) {
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+
+  function handleConfirmDelete() {
+    if (pendingDeleteIndex !== null) {
+      onRemove(pendingDeleteIndex);
+      setPendingDeleteIndex(null);
+    }
+  }
+
   return (
     <div className={disabled ? 'pointer-events-none opacity-50' : undefined} role="group" aria-label="Decisions">
       {decisions.length === 0 ? (
@@ -27,7 +37,7 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
           {decisions.map((decision, index) => (
             <div
               key={decision.id ?? `decision-${index}`}
-              className="space-y-3 rounded-lg border border-warning/20 bg-warning/5 p-4"
+              className="group space-y-3 rounded-lg border border-warning/20 bg-warning/5 p-4 transition-colors hover:border-warning/30"
             >
               <div className="flex items-start gap-3">
                 <CircleDot className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
@@ -42,7 +52,7 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
                       placeholder="What needs management decision..."
                       onChange={(e) => onFieldChange(index, 'text', e.currentTarget.value)}
                       disabled={disabled}
-                      className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none transition-colors focus-visible:border-warning focus-visible:ring-0"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -56,7 +66,7 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
                         placeholder="Who decides"
                         onChange={(e) => onFieldChange(index, 'owner', e.currentTarget.value)}
                         disabled={disabled}
-                        className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none transition-colors focus-visible:border-warning focus-visible:ring-0"
                       />
                     </div>
                     <div>
@@ -69,7 +79,7 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
                         placeholder="What happens if not resolved"
                         onChange={(e) => onFieldChange(index, 'impact', e.currentTarget.value)}
                         disabled={disabled}
-                        className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                        className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none transition-colors focus-visible:border-warning focus-visible:ring-0"
                       />
                     </div>
                   </div>
@@ -78,8 +88,8 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => onRemove(index)}
+                    className="size-8 shrink-0 text-muted-foreground/40 opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
+                    onClick={() => setPendingDeleteIndex(index)}
                     aria-label={`Remove decision ${index + 1}`}
                   >
                     <Trash2 className="size-4" />
@@ -91,11 +101,26 @@ export function DecisionsEditor({ decisions, disabled, onAdd, onRemove, onFieldC
         </div>
       )}
       {!disabled ? (
-        <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={onAdd}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-3 gap-1.5 transition-colors hover:border-warning/30 hover:bg-warning/5"
+          onClick={onAdd}
+        >
           <Plus className="size-4" />
           Add Decision
         </Button>
       ) : null}
+
+      <ConfirmDialog
+        open={pendingDeleteIndex !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteIndex(null); }}
+        title="Remove Decision"
+        description="This decision entry will be removed from your report. Continue?"
+        confirmLabel="Remove"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

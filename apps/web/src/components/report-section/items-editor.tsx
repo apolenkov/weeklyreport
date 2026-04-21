@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { ListOrdered, Plus, Trash2 } from 'lucide-react';
 
-import { Badge, Button, Input, Label, Separator } from '@customreport/ui';
+import { Badge, Button, ConfirmDialog, Input, Label, Separator } from '@customreport/ui';
 
 import type { ReportSectionReadModel } from '@customreport/shared';
 
@@ -16,6 +17,8 @@ type ItemsEditorProps = {
 };
 
 export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, onAdd, onRemove }: ItemsEditorProps) {
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+
   const currentItems = items
     .map((item, originalIndex) => ({ item, originalIndex }))
     .filter(({ item }) => item.type === 'current');
@@ -23,6 +26,13 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
   const nextItems = items
     .map((item, originalIndex) => ({ item, originalIndex }))
     .filter(({ item }) => item.type === 'next');
+
+  function handleConfirmDelete() {
+    if (pendingDeleteIndex !== null) {
+      onRemove(pendingDeleteIndex);
+      setPendingDeleteIndex(null);
+    }
+  }
 
   return (
     <div className={disabled ? 'pointer-events-none opacity-50' : undefined} role="group" aria-label="Items">
@@ -43,7 +53,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
           {currentItems.map(({ item, originalIndex }) => (
             <div
               key={item.id ?? `${item.projectId}-current-${originalIndex}`}
-              className="flex items-start gap-3 rounded-lg border bg-card p-4"
+              className="group flex items-start gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-primary/20 hover:bg-primary/[0.02]"
             >
               {item.carriedOver ? (
                 <input
@@ -59,7 +69,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
               ) : null}
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor={`current-item-${originalIndex}`} className="text-sm text-muted-foreground">
+                  <Label htmlFor={`current-item-${originalIndex}`} className="text-xs text-muted-foreground">
                     {item.projectId ? 'Current Week' : 'Item'}
                   </Label>
                   {item.carriedOver ? (
@@ -75,15 +85,15 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
                     onTextChange(originalIndex, event.currentTarget.value);
                   }}
                   disabled={disabled}
-                  className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none transition-colors focus-visible:border-primary focus-visible:ring-0"
                 />
               </div>
               {!disabled && !item.carriedOver ? (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="mt-1 size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => onRemove(originalIndex)}
+                  className="mt-1 size-8 shrink-0 text-muted-foreground/40 opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
+                  onClick={() => setPendingDeleteIndex(originalIndex)}
                   aria-label={`Remove item ${originalIndex + 1}`}
                 >
                   <Trash2 className="size-4" />
@@ -95,7 +105,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5"
+              className="gap-1.5 transition-colors hover:border-primary/30 hover:bg-primary/5"
               onClick={() => onAdd('current')}
             >
               <Plus className="size-4" />
@@ -124,7 +134,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
           {nextItems.map(({ item, originalIndex }) => (
             <div
               key={item.id ?? `${item.projectId}-next-${originalIndex}`}
-              className="flex items-start gap-3 rounded-lg border bg-card p-4"
+              className="group flex items-start gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-primary/20 hover:bg-primary/[0.02]"
             >
               {item.carriedOver ? (
                 <input
@@ -140,7 +150,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
               ) : null}
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor={`next-item-${originalIndex}`} className="text-sm text-muted-foreground">
+                  <Label htmlFor={`next-item-${originalIndex}`} className="text-xs text-muted-foreground">
                     Next Week
                   </Label>
                   {item.carriedOver ? (
@@ -156,15 +166,15 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
                     onTextChange(originalIndex, event.currentTarget.value);
                   }}
                   disabled={disabled}
-                  className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  className="border-0 border-b border-border/40 bg-transparent px-0 shadow-none transition-colors focus-visible:border-primary focus-visible:ring-0"
                 />
               </div>
               {!disabled && !item.carriedOver ? (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="mt-1 size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => onRemove(originalIndex)}
+                  className="mt-1 size-8 shrink-0 text-muted-foreground/40 opacity-0 transition-all group-hover:opacity-100 hover:text-destructive"
+                  onClick={() => setPendingDeleteIndex(originalIndex)}
                   aria-label={`Remove item ${originalIndex + 1}`}
                 >
                   <Trash2 className="size-4" />
@@ -176,7 +186,7 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5"
+              className="gap-1.5 transition-colors hover:border-primary/30 hover:bg-primary/5"
               onClick={() => onAdd('next')}
             >
               <Plus className="size-4" />
@@ -185,6 +195,16 @@ export function ItemsEditor({ items, disabled, onCompletedChange, onTextChange, 
           ) : null}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingDeleteIndex !== null}
+        onOpenChange={(open) => { if (!open) setPendingDeleteIndex(null); }}
+        title="Remove Item"
+        description="This item will be removed from your report. Continue?"
+        confirmLabel="Remove"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
