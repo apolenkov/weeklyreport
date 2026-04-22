@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en" class="dark" style="color-scheme:dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0c0d1a">
+<title>CustomReport v4.0 — Final Mockup v4</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{h:['Lexend','sans-serif'],b:['"Source Sans 3"','sans-serif']}}}}</script>
+<style>
+/* ===== DARK THEME — warmer, deeper blues, more surface contrast ===== */
+:root{
+--bg:#0c0d1a;--sf:#151728;--sf2:#1c1f38;--sfh:#242850;
+--bd:#2d3060;--bdl:#3d4180;--bda:#4d5290;
+--pr:#818cf8;--prh:#a5b4fc;--prbtn:#6366f1;--prtxt:#a5b4fc;
+--ac:#fbbf24;--acfg:#0c0d1a;
+--fg:#eef0fa;--fgm:#9498c0;--fgs:#6b70a0;
+--ok:#34d399;--okbg:#34d39918;--okbd:#34d39940;
+--wn:#fbbf24;--wnbg:#fbbf2418;--wnbd:#fbbf2440;
+--err:#f87171;--errbg:#f8717118;--errbd:#f8717140;
+--ring:#818cf8;
+--sb:#10122a;--sba:#1a1d3a;--sbbd:#252860;
+}
+/* ===== LIGHT THEME ===== */
+.light{
+--bg:#f5f6fc;--sf:#ffffff;--sf2:#f0f1fa;--sfh:#e8e9f4;
+--bd:#d0d2e8;--bdl:#b8bbe0;--bda:#a0a4d0;
+--pr:#4f46e5;--prh:#4338ca;--prbtn:#4f46e5;--prtxt:#4338ca;
+--ac:#d97706;--acfg:#fff;
+--fg:#1a1b30;--fgm:#5a5e80;--fgs:#8085a8;
+--ok:#16a34a;--okbg:#16a34a12;--okbd:#16a34a30;
+--wn:#ca8a04;--wnbg:#ca8a0412;--wnbd:#ca8a0430;
+--err:#dc2626;--errbg:#dc262610;--errbd:#dc262630;
+--ring:#4f46e5;
+--sb:#f0f1fa;--sba:#e2e4f2;--sbbd:#d0d2e8;
+}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:'Source Sans 3',system-ui,sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.hd{font-family:'Lexend',sans-serif;line-height:1.25;text-wrap:balance}
+h1{font-size:26px;font-weight:700;letter-spacing:-0.02em}
+h2{font-size:19px;font-weight:600}
+.slide{display:none;min-height:100vh}.slide.active{display:flex}
+
+/* ===== STATUS CHIPS — very clear selected/unselected ===== */
+.chip{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;font-family:'Lexend';font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--bd);background:transparent;color:var(--fgm);transition:all .15s;touch-action:manipulation;min-height:42px;min-width:100px;justify-content:center}
+.chip:hover{border-color:var(--bdl);color:var(--fg);background:var(--sf2)}
+.chip:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+/* Selected states — VERY prominent */
+.chip[data-s="green"].on{border-color:var(--ok);background:var(--ok);color:#0c0d1a}
+.chip[data-s="yellow"].on{border-color:var(--wn);background:var(--wn);color:#0c0d1a}
+.chip[data-s="red"].on{border-color:var(--err);background:var(--err);color:#fff}
+
+/* Accordion */
+.ab{display:grid;grid-template-rows:0fr;transition:grid-template-rows .25s ease}.ab.open{grid-template-rows:1fr}.ab>div{overflow:hidden}
+.aa{transition:transform .25s}
+
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.fi{animation:fadeSlideIn .25s ease forwards}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}.pulse{animation:pulse 1.8s ease infinite}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Focus ring */
+button:focus-visible,input:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:none;box-shadow:0 0 0 2.5px var(--ring);border-radius:8px}
+
+/* Card — clear elevation */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;transition:border-color .15s,box-shadow .15s}
+.card:hover{border-color:var(--bdl);box-shadow:0 4px 20px #0004}
+
+/* Input — bigger, clearer */
+.inp{background:var(--sf2);border:1.5px solid var(--bd);border-radius:10px;padding:11px 14px;color:var(--fg);font-family:inherit;font-size:15px;line-height:1.5;width:100%;transition:border-color .15s}
+.inp:focus{border-color:var(--pr);outline:none;box-shadow:0 0 0 3px oklch(.55 .22 270/.2)}
+.inp::placeholder{color:var(--fgs)}
+.inp-err{border-color:var(--err)!important}
+
+/* Buttons — BIGGER, clearer */
+.btn{padding:11px 22px;border-radius:10px;font-family:'Lexend';font-size:14px;font-weight:500;cursor:pointer;transition:all .12s;border:none;display:inline-flex;align-items:center;gap:8px;touch-action:manipulation;min-height:44px}
+.btn-pr{background:var(--prbtn);color:#fff}.btn-pr:hover{background:var(--pr)}
+.btn-sc{background:var(--sf2);color:var(--fg);border:1.5px solid var(--bd)}.btn-sc:hover{background:var(--sfh);border-color:var(--bdl)}
+.btn-gh{background:transparent;color:var(--fgm);padding:8px;border-radius:10px;min-height:40px;min-width:40px;justify-content:center}
+.btn-gh:hover{background:var(--sf2);color:var(--fg)}
+/* Delete button — RED and visible */
+.btn-del{background:var(--errbg);color:var(--err);padding:8px 12px;border-radius:10px;min-height:40px;border:1.5px solid var(--errbd);display:inline-flex;align-items:center;gap:4px;font-size:13px;font-family:'Lexend';font-weight:500;cursor:pointer;transition:all .12s}
+.btn-del:hover{background:var(--err);color:#fff;border-color:var(--err)}
+
+.sep{height:1px;background:var(--bd)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:99px;font-size:13px;font-weight:600;letter-spacing:.01em}
+.b-ok{background:var(--okbg);color:var(--ok);border:1px solid var(--okbd)}
+.b-wn{background:var(--wnbg);color:var(--wn);border:1px solid var(--wnbd)}
+.b-err{background:var(--errbg);color:var(--err);border:1px solid var(--errbd)}
+.b-m{background:var(--sf2);color:var(--fgm);border:1px solid var(--bd)}
+.b-pr{background:oklch(.55 .22 270/.12);color:var(--prtxt);border:1px solid oklch(.55 .22 270/.25)}
+.av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Lexend';font-weight:600;font-size:15px;flex-shrink:0}
+.td{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.td-g{background:var(--ok)}.td-y{background:var(--wn)}.td-r{background:var(--err)}
+.sk{background:var(--sf2);border-radius:10px;animation:pulse 1.8s ease infinite}
+.icon{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.i20{width:20px;height:20px}.i22{width:22px;height:22px}
+
+/* Slide nav — elevated, no overlap */
+#sn{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--sb);border-top:1.5px solid var(--sbbd);padding:10px 16px;display:flex;align-items:center;gap:8px;overflow-x:auto;backdrop-filter:blur(12px)}
+#sn b{padding:7px 16px;border-radius:10px;font-family:'Lexend';font-size:13px;font-weight:500;white-space:nowrap;border:1.5px solid var(--bd);background:transparent;color:var(--fgm);cursor:pointer;transition:all .15s;min-height:38px;display:inline-flex;align-items:center}
+#sn b:hover{background:var(--sf2);color:var(--fg);border-color:var(--bdl)}
+#sn b.on{background:var(--prbtn);color:#fff;border-color:var(--prbtn)}
+</style>
+</head>
+<body>
+
+<!-- ============== SLIDE 1: LEAD FORM ============== -->
+<div class="slide active" id="s1">
+<div class="flex min-h-screen w-full" style="padding-bottom:64px">
+<!-- Sidebar -->
+<aside class="hidden w-[256px] flex-shrink-0 border-r md:flex flex-col" style="border-color:var(--sbbd);background:var(--sb)" role="navigation" aria-label="Sidebar">
+  <div class="p-5 border-b" style="border-color:var(--sbbd)">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold" style="background:var(--prbtn);font-family:Lexend;font-size:16px">CR</div>
+      <div><div class="hd font-semibold" style="font-size:15px">CustomReport</div><div class="text-xs" style="color:var(--fgs)">v4.0</div></div>
+    </div>
+  </div>
+  <nav class="flex-1 p-3 space-y-1">
+    <div class="text-[11px] font-bold uppercase px-3 py-2" style="color:var(--fgs);letter-spacing:.12em">Reports</div>
+    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium" style="background:var(--sba);border-left:3px solid var(--pr);color:var(--fg)" aria-current="page">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8m8 4H8m2-8H8"/></svg>
+      My Report</a>
+    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm" style="color:var(--fgm)">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      My History</a>
+  </nav>
+  <div class="p-3 border-t" style="border-color:var(--sbbd)">
+    <div class="flex items-center gap-2 px-2 mb-3">
+      <button onclick="tT()" class="btn-gh" aria-label="Toggle theme" title="Switch dark/light">
+        <svg class="icon thd" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg class="icon thl" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.73 12.73l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+      <button onclick="tL()" class="btn-gh lb" style="font-family:Lexend;font-size:12px;font-weight:700;min-width:36px" aria-label="Switch language">EN</button>
+    </div>
+    <div class="flex items-center gap-3 px-2 py-2 rounded-xl" style="background:var(--sba)">
+      <div class="av" style="background:oklch(.55 .22 270/.15);color:var(--prtxt)">АП</div>
+      <div class="flex-1 min-w-0"><div class="text-sm font-medium truncate">Александр П.</div><div class="text-xs" style="color:var(--fgs)">Lead</div></div>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-1 overflow-y-auto" id="main">
+  <div class="max-w-3xl mx-auto p-6 md:p-8 space-y-7">
+    <header class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1>Weekly Report</h1>
+        <p class="text-sm mt-1" style="color:var(--fgm)">Apr 14 – Apr 20, 2026 · Development</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="badge b-ok"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Autosaved</span>
+        <button class="btn btn-pr"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Submit Report</button>
+      </div>
+    </header>
+
+    <!-- PROJECT STATUS — chips with very clear states -->
+    <section class="card p-6" aria-label="Project statuses">
+      <h2 class="mb-5">Project Status</h2>
+      <div class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl" style="background:var(--bg)">
+          <span class="text-sm font-semibold flex-1">CRM Integration Platform</span>
+          <div class="flex gap-2.5 flex-wrap" role="radiogroup" aria-label="CRM status">
+            <button class="chip on" data-s="green" role="radio" aria-checked="true" tabindex="0">
+              <svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> On Track</button>
+            <button class="chip" data-s="yellow" role="radio" aria-checked="false" tabindex="-1">
+              <svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01"/></svg> At Risk</button>
+            <button class="chip" data-s="red" role="radio" aria-checked="false" tabindex="-1">
+              <svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg> Blocked</button>
+          </div>
+        </div>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl" style="background:var(--bg)">
+          <span class="text-sm font-semibold flex-1">Data Pipeline v3</span>
+          <div class="flex gap-2.5 flex-wrap" role="radiogroup" aria-label="Pipeline status">
+            <button class="chip" data-s="green" role="radio" aria-checked="false" tabindex="-1"> On Track</button>
+            <button class="chip on" data-s="yellow" role="radio" aria-checked="true" tabindex="0">
+              <svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01"/></svg> At Risk</button>
+            <button class="chip" data-s="red" role="radio" aria-checked="false" tabindex="-1"> Blocked</button>
+          </div>
+        </div>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl" style="background:var(--bg)">
+          <span class="text-sm font-semibold flex-1">Mobile App Redesign</span>
+          <div class="flex gap-2.5 flex-wrap" role="radiogroup" aria-label="Mobile status">
+            <button class="chip" data-s="green" role="radio" aria-checked="false" tabindex="-1"> On Track</button>
+            <button class="chip" data-s="yellow" role="radio" aria-checked="false" tabindex="-1"> At Risk</button>
+            <button class="chip on" data-s="red" role="radio" aria-checked="true" tabindex="0">
+              <svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg> Blocked</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ITEMS — Current Week -->
+    <section class="card overflow-hidden">
+      <button onclick="tA(this)" class="w-full flex items-center justify-between p-5 hover:bg-[var(--sf2)] transition-colors" aria-expanded="true">
+        <div class="flex items-center gap-3">
+          <svg class="icon i22" style="color:var(--prtxt)" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+          <h2>Current Week</h2>
+          <span class="badge b-m">3 items</span>
+        </div>
+        <svg class="icon aa" style="color:var(--fgm)" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="ab open"><div>
+        <div class="px-5 pb-5 space-y-3">
+          <!-- Item 1 -->
+          <div class="p-4 rounded-xl fi" style="background:var(--bg);border:1.5px solid var(--bd)">
+            <div class="flex items-center gap-2 mb-2 flex-wrap">
+              <span class="badge b-ok">in_progress</span>
+              <span class="text-xs" style="color:var(--fgs)">#feature</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <input class="inp flex-1" value="Implement OAuth2 flow for partner integrations" aria-label="Item description" autocomplete="off">
+              <button class="btn-del" aria-label="Delete item">
+                <svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                Delete
+              </button>
+            </div>
+          </div>
+          <!-- Item 2 -->
+          <div class="p-4 rounded-xl fi" style="background:var(--bg);border:1.5px solid var(--bd)">
+            <div class="flex items-center gap-2 mb-2 flex-wrap">
+              <span class="badge b-wn">blocked</span>
+              <span class="text-xs" style="color:var(--fgs)">#bugfix</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <input class="inp flex-1" value="Fix memory leak in real-time sync module" aria-label="Item description" autocomplete="off">
+              <button class="btn-del" aria-label="Delete item">
+                <svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                Delete
+              </button>
+            </div>
+          </div>
+          <!-- Item 3 -->
+          <div class="p-4 rounded-xl fi" style="background:var(--bg);border:1.5px solid var(--bd)">
+            <div class="flex items-center gap-2 mb-2 flex-wrap">
+              <span class="badge b-ok">completed</span>
+              <span class="text-xs" style="color:var(--fgs)">#infra</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <input class="inp flex-1" value="Deploy monitoring dashboard with Grafana alerts" aria-label="Item description" autocomplete="off">
+              <button class="btn-del" aria-label="Delete item">
+                <svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                Delete
+              </button>
+            </div>
+          </div>
+          <button class="btn btn-sc w-full justify-center"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-7-7h14"/></svg> Add Item</button>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- Risks -->
+    <section class="card overflow-hidden">
+      <button onclick="tA(this)" class="w-full flex items-center justify-between p-5 hover:bg-[var(--sf2)] transition-colors" aria-expanded="true">
+        <div class="flex items-center gap-3">
+          <svg class="icon i22" style="color:var(--wn)" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01"/></svg>
+          <h2>Risks</h2>
+          <span class="badge b-wn">2</span>
+        </div>
+        <svg class="icon aa" style="color:var(--fgm)" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="ab open"><div>
+        <div class="px-5 pb-5 space-y-3">
+          <div class="p-4 rounded-xl" style="background:var(--bg);border:1.5px solid var(--bd)">
+            <div class="flex items-center gap-3">
+              <input class="inp flex-1" value="Third-party API rate limits may delay integration testing" aria-label="Risk description" autocomplete="off">
+              <button class="btn-del" aria-label="Delete risk"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Delete</button>
+            </div>
+          </div>
+          <div class="p-4 rounded-xl" style="background:var(--bg);border:1.5px solid var(--bd)">
+            <div class="flex items-center gap-3">
+              <input class="inp flex-1" value="New GDPR requirements may require data model changes in Q3" aria-label="Risk description" autocomplete="off">
+              <button class="btn-del" aria-label="Delete risk"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Delete</button>
+            </div>
+          </div>
+          <button class="btn btn-sc w-full justify-center"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-7-7h14"/></svg> Add Risk</button>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- Collapsed: Decisions + Priorities -->
+    <section class="card overflow-hidden">
+      <button onclick="tA(this)" class="w-full flex items-center justify-between p-5 hover:bg-[var(--sf2)] transition-colors" aria-expanded="false">
+        <div class="flex items-center gap-3"><svg class="icon i22" style="color:var(--prtxt)" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg><h2>Decisions Needed</h2><span class="badge b-pr">1</span></div>
+        <svg class="icon aa" style="color:var(--fgm);transform:rotate(-90deg)" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="ab"><div></div></div>
+    </section>
+    <section class="card overflow-hidden">
+      <button onclick="tA(this)" class="w-full flex items-center justify-between p-5 hover:bg-[var(--sf2)] transition-colors" aria-expanded="false">
+        <div class="flex items-center gap-3"><svg class="icon i22" style="color:var(--ac)" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><h2>Top 3 Priorities</h2><span class="badge b-m">3/3</span></div>
+        <svg class="icon aa" style="color:var(--fgm);transform:rotate(-90deg)" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="ab"><div></div></div>
+    </section>
+  </div>
+</main>
+</div>
+</div>
+
+<!-- ============== SLIDE 2: DASHBOARD ============== -->
+<div class="slide" id="s2">
+<div class="flex min-h-screen w-full" style="padding-bottom:64px">
+<aside class="hidden w-[256px] flex-shrink-0 border-r md:flex flex-col" style="border-color:var(--sbbd);background:var(--sb)">
+  <div class="p-5 border-b" style="border-color:var(--sbbd)"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold" style="background:var(--prbtn);font-family:Lexend;font-size:16px">CR</div><div><div class="hd font-semibold" style="font-size:15px">CustomReport</div></div></div></div>
+  <nav class="flex-1 p-3 space-y-1">
+    <div class="text-[11px] font-bold uppercase px-3 py-2" style="color:var(--fgs);letter-spacing:.12em">Reports</div>
+    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium" style="background:var(--sba);border-left:3px solid var(--pr);color:var(--fg)"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Dashboard</a>
+    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm" style="color:var(--fgm)"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg> Assembled Report</a>
+    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm" style="color:var(--fgm)"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg> Published</a>
+    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm" style="color:var(--fgm)"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> History</a>
+    <div class="text-[11px] font-bold uppercase px-3 py-2 mt-3" style="color:var(--fgs);letter-spacing:.12em">System</div>
+    <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm" style="color:var(--fgm)"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.73 12.73l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg> Admin</a>
+  </nav>
+  <div class="p-3 border-t" style="border-color:var(--sbbd)">
+    <div class="flex items-center gap-2 px-2 mb-3">
+      <button onclick="tT()" class="btn-gh" aria-label="Theme"><svg class="icon thd" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg class="icon thl" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.73 12.73l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+      <button onclick="tL()" class="btn-gh lb" style="font-family:Lexend;font-size:12px;font-weight:700;min-width:36px">EN</button>
+    </div>
+    <div class="flex items-center gap-3 px-2 py-2 rounded-xl" style="background:var(--sba)"><div class="av" style="background:var(--wnbg);color:var(--wn)">РД</div><div><div class="text-sm font-medium">Руководитель Д.</div><div class="text-xs" style="color:var(--fgs)">Head</div></div></div>
+  </div>
+</aside>
+<main class="flex-1 overflow-y-auto">
+  <div class="max-w-6xl mx-auto p-6 md:p-8 space-y-7">
+    <header><h1>Review Dashboard</h1><p class="text-sm mt-1" style="color:var(--fgm)">Apr 14 – Apr 20, 2026</p></header>
+
+    <!-- ALERT BANNER -->
+    <div class="card p-4 flex items-center gap-4 flex-wrap" style="border-color:var(--err);background:var(--errbg);border-width:1.5px">
+      <svg class="icon i22" style="color:var(--err)" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+      <div class="flex-1"><span class="font-semibold" style="color:var(--err)">2 leads have not submitted:</span> Ольга Н., Сергей Т.</div>
+      <button class="btn" style="background:var(--err);color:#fff;padding:10px 20px;min-height:44px">
+        <svg class="icon" style="width:16px;height:16px" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+        Send Reminder</button>
+    </div>
+
+    <!-- KPI -->
+    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+      <div class="card p-5 lg:col-span-2" style="border-left:4px solid var(--pr)">
+        <div class="text-sm" style="color:var(--fgm)">Submissions</div>
+        <div class="flex items-baseline gap-2 mt-2">
+          <span class="hd" style="font-size:44px;font-weight:700;font-variant-numeric:tabular-nums">4</span>
+          <span class="hd" style="font-size:20px;color:var(--fgm)">/ 6</span>
+        </div>
+        <div class="mt-3 h-2.5 rounded-full" style="background:var(--sf2)"><div class="h-full rounded-full" style="background:var(--pr);width:66%"></div></div>
+        <div class="text-xs mt-2" style="color:var(--fgs)">Last week: 6/6 · Avg: 5.2</div>
+      </div>
+      <div class="card p-5" style="border-left:4px solid var(--wn)">
+        <div class="text-sm" style="color:var(--fgm)">Deadline</div>
+        <div class="hd mt-2" style="font-size:32px;font-weight:700;color:var(--wn);font-variant-numeric:tabular-nums">2d 5h</div>
+        <div class="text-xs mt-1" style="color:var(--fgs)">Friday 18:00</div>
+      </div>
+      <div class="card p-5">
+        <div class="text-sm mb-3" style="color:var(--fgm)">Portfolio</div>
+        <div class="flex gap-5">
+          <div class="text-center"><div class="td td-g mx-auto mb-1.5" style="width:14px;height:14px"></div><div class="hd text-lg font-bold">8</div><div class="text-xs font-semibold" style="color:var(--ok)">+1</div></div>
+          <div class="text-center"><div class="td td-y mx-auto mb-1.5" style="width:14px;height:14px"></div><div class="hd text-lg font-bold">4</div><div class="text-xs" style="color:var(--fgs)">—</div></div>
+          <div class="text-center"><div class="td td-r mx-auto mb-1.5" style="width:14px;height:14px"></div><div class="hd text-lg font-bold">2</div><div class="text-xs font-semibold" style="color:var(--err)">+1</div></div>
+        </div>
+      </div>
+      <div class="card p-5" style="border-left:4px solid var(--err)">
+        <div class="text-sm mb-2" style="color:var(--fgm)">Escalations</div>
+        <div><span class="hd" style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums">3</span> <span class="text-sm" style="color:var(--fgm)">risks</span></div>
+        <div><span class="hd" style="font-size:20px;font-weight:600;font-variant-numeric:tabular-nums">1</span> <span class="text-sm" style="color:var(--fgm)">decision</span></div>
+      </div>
+    </div>
+
+    <!-- LEADS -->
+    <h2>Lead Submissions</h2>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="card p-5" style="border-left:4px solid var(--ok)"><div class="flex items-start gap-3"><div class="av" style="background:var(--okbg);color:var(--ok)">АП</div><div class="flex-1"><div class="text-sm font-semibold">Александр П.</div><div class="text-xs mt-0.5" style="color:var(--fgs)">2h ago · 3 projects</div><div class="flex gap-1.5 mt-2"><div class="td td-g"></div><div class="td td-g"></div><div class="td td-y"></div></div></div><span class="badge b-ok text-xs">Submitted</span></div></div>
+      <div class="card p-5" style="border-left:4px solid var(--ok)"><div class="flex items-start gap-3"><div class="av" style="background:var(--okbg);color:var(--ok)">МК</div><div class="flex-1"><div class="text-sm font-semibold">Мария К.</div><div class="text-xs mt-0.5" style="color:var(--fgs)">5h ago · 2 projects</div><div class="flex gap-1.5 mt-2"><div class="td td-g"></div><div class="td td-r"></div></div></div><span class="badge b-ok text-xs">Submitted</span></div></div>
+      <div class="card p-5" style="border-left:4px solid var(--ok)"><div class="flex items-start gap-3"><div class="av" style="background:var(--okbg);color:var(--ok)">ИВ</div><div class="flex-1"><div class="text-sm font-semibold">Игорь В.</div><div class="text-xs mt-0.5" style="color:var(--fgs)">1d ago · 3 projects</div><div class="flex gap-1.5 mt-2"><div class="td td-g"></div><div class="td td-g"></div><div class="td td-g"></div></div></div><span class="badge b-ok text-xs">Submitted</span></div></div>
+      <div class="card p-5" style="border-left:4px solid var(--ok)"><div class="flex items-start gap-3"><div class="av" style="background:var(--okbg);color:var(--ok)">ДС</div><div class="flex-1"><div class="text-sm font-semibold">Дмитрий С.</div><div class="text-xs mt-0.5" style="color:var(--fgs)">3h ago</div></div><span class="badge b-ok text-xs">Submitted</span></div></div>
+      <div class="card p-5" style="border-left:4px solid var(--wn)"><div class="flex items-start gap-3"><div class="av" style="background:var(--wnbg);color:var(--wn)">ОН</div><div class="flex-1"><div class="text-sm font-semibold">Ольга Н.</div><div class="text-xs mt-0.5" style="color:var(--fgs)">Saved 1h ago</div></div><span class="badge b-wn text-xs">Draft</span></div></div>
+      <div class="card p-5" style="border-left:4px dashed var(--bd);opacity:.6"><div class="flex items-start gap-3"><div class="av" style="background:var(--sf2);color:var(--fgs)">СТ</div><div class="flex-1"><div class="text-sm font-semibold">Сергей Т.</div><div class="text-xs mt-0.5" style="color:var(--fgs)">Not started</div></div><span class="badge b-m text-xs">Pending</span></div></div>
+    </div>
+  </div>
+</main>
+</div>
+</div>
+
+<!-- ============== SLIDE 3: LIGHT + RU ============== -->
+<div class="slide" id="s3">
+<div class="flex min-h-screen w-full light" style="padding-bottom:64px;background:var(--bg)">
+<main class="flex-1 p-8" style="color:var(--fg)">
+  <div class="max-w-5xl mx-auto space-y-7">
+    <header><h1 style="color:var(--fg)">Светлая тема + Русский</h1><p class="text-sm mt-1" style="color:var(--fgm)">Light Theme · RU Language Preview</p></header>
+    <div class="card p-4 flex items-center gap-4 flex-wrap" style="border-color:var(--err);background:var(--errbg);border-width:1.5px"><svg class="icon i22" style="color:var(--err)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg><div class="flex-1"><span class="font-semibold" style="color:var(--err)">2 лида не отправили отчёт:</span> <span style="color:var(--fg)">Ольга Н., Сергей Т.</span></div><button class="btn" style="background:var(--err);color:#fff;min-height:44px;padding:10px 20px">Напомнить</button></div>
+    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="card p-5" style="border-left:4px solid var(--pr)"><div class="text-sm" style="color:var(--fgm)">Отправлено</div><div class="hd" style="font-size:36px;font-weight:700;color:var(--fg)">4<span style="font-size:18px;color:var(--fgm)"> / 6</span></div></div>
+      <div class="card p-5" style="border-left:4px solid var(--wn)"><div class="text-sm" style="color:var(--fgm)">Дедлайн</div><div class="hd" style="font-size:28px;font-weight:700;color:var(--wn)">2д 5ч</div></div>
+      <div class="card p-5"><div class="text-sm mb-2" style="color:var(--fgm)">Портфолио</div><div class="flex gap-4"><div class="flex items-center gap-1"><div class="td td-g"></div><span class="hd text-lg font-bold" style="color:var(--fg)">8</span></div><div class="flex items-center gap-1"><div class="td td-y"></div><span class="hd text-lg font-bold" style="color:var(--fg)">4</span></div><div class="flex items-center gap-1"><div class="td td-r"></div><span class="hd text-lg font-bold" style="color:var(--fg)">2</span></div></div></div>
+      <div class="card p-5" style="border-left:4px solid var(--err)"><div class="text-sm" style="color:var(--fgm)">Эскалации</div><div class="hd" style="font-size:24px;font-weight:700;color:var(--fg)">3 <span style="font-size:13px;color:var(--fgm)">риска</span></div></div>
+    </div>
+    <h2 style="color:var(--fg)">Статус-чипы (светлая тема)</h2>
+    <div class="card p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl" style="background:var(--sf2)">
+        <span class="text-sm font-semibold flex-1" style="color:var(--fg)">CRM Интеграция</span>
+        <div class="flex gap-2.5"><button class="chip on" data-s="green">On Track</button><button class="chip" data-s="yellow">At Risk</button><button class="chip" data-s="red">Blocked</button></div>
+      </div>
+    </div>
+    <h2 style="color:var(--fg)">Карточки лидов</h2>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="card p-5" style="border-left:4px solid var(--ok)"><div class="flex items-start gap-3"><div class="av" style="background:var(--okbg);color:var(--ok)">АП</div><div class="flex-1"><div class="text-sm font-semibold" style="color:var(--fg)">Александр П.</div><div class="text-xs" style="color:var(--fgm)">Отправлено 2ч назад</div></div><span class="badge b-ok text-xs">Отправлено</span></div></div>
+      <div class="card p-5" style="border-left:4px solid var(--wn)"><div class="flex items-start gap-3"><div class="av" style="background:var(--wnbg);color:var(--wn)">ОН</div><div class="flex-1"><div class="text-sm font-semibold" style="color:var(--fg)">Ольга Н.</div><div class="text-xs" style="color:var(--fgm)">Черновик</div></div><span class="badge b-wn text-xs">Черновик</span></div></div>
+    </div>
+  </div>
+</main>
+</div>
+</div>
+
+<!-- ============== SLIDE 4: UI STATES ============== -->
+<div class="slide" id="s4">
+<div class="flex min-h-screen w-full" style="padding-bottom:64px">
+<main class="flex-1 p-8 overflow-y-auto">
+  <div class="max-w-5xl mx-auto space-y-8">
+    <header><h1>UI States</h1><p class="text-sm mt-1" style="color:var(--fgm)">Loading, error, empty, locked, validation, toast, dialog</p></header>
+    <div class="grid gap-6 sm:grid-cols-2">
+      <div>
+        <h2 class="mb-3">Skeleton Loading</h2>
+        <div class="card p-5 space-y-3"><div class="sk" style="width:50%;height:14px"></div><div class="sk" style="width:35%;height:36px"></div><div class="sk" style="width:100%;height:10px"></div></div>
+      </div>
+      <div>
+        <h2 class="mb-3">Error State</h2>
+        <div class="card p-8 text-center">
+          <svg class="icon mx-auto mb-3" style="color:var(--err);width:40px;height:40px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+          <div class="hd" style="font-size:17px">Failed to load</div>
+          <p class="text-sm mt-1" style="color:var(--fgm)">Check connection and try again.</p>
+          <button class="btn btn-pr mt-3" style="margin:12px auto 0"><svg class="icon" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg> Retry</button>
+        </div>
+      </div>
+      <div>
+        <h2 class="mb-3">Empty State</h2>
+        <div class="card p-8 text-center" style="border-style:dashed">
+          <svg class="icon mx-auto mb-3" style="color:var(--fgs);width:40px;height:40px" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6m-3 3h6"/></svg>
+          <div class="hd" style="font-size:17px">No submissions yet</div>
+          <p class="text-sm mt-1" style="color:var(--fgm)">Leads have until Friday 18:00.</p>
+        </div>
+      </div>
+      <div>
+        <h2 class="mb-3">Locked Form</h2>
+        <div class="card p-5" style="border-color:var(--ok);background:var(--okbg)">
+          <div class="flex items-center gap-3"><svg class="icon i22" style="color:var(--ok)" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><div><div class="font-semibold">Report locked</div><div class="text-sm" style="color:var(--fgm)">Submitted Apr 20 at 14:32</div></div></div>
+        </div>
+      </div>
+      <div>
+        <h2 class="mb-3">Success Toast</h2>
+        <div class="card px-4 py-3 flex items-center gap-3" style="border-color:var(--ok);max-width:340px">
+          <svg class="icon" style="color:var(--ok)" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+          <div class="flex-1"><div class="text-sm font-semibold">Report submitted</div><div class="text-xs" style="color:var(--fgm)">Sent to head for review.</div></div>
+          <button class="btn-gh" style="padding:4px" aria-label="Close"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+        </div>
+      </div>
+      <div>
+        <h2 class="mb-3">Validation Error</h2>
+        <div class="card p-5">
+          <div class="p-4 rounded-xl" style="background:var(--bg);border:1.5px solid var(--err)">
+            <div class="flex items-center gap-2 mb-2"><span class="badge b-pr">current</span></div>
+            <input class="inp inp-err" placeholder="Enter item description…" aria-invalid="true" aria-describedby="e1" autocomplete="off">
+            <p id="e1" class="text-xs mt-1.5 font-medium" style="color:var(--err)" role="alert">Description is required</p>
+          </div>
+        </div>
+      </div>
+      <div class="sm:col-span-2">
+        <h2 class="mb-3">Delete Confirmation</h2>
+        <div class="card p-6 max-w-md" role="dialog" aria-modal="true" aria-labelledby="dt">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-11 h-11 rounded-full flex items-center justify-center" style="background:var(--errbg)"><svg class="icon i20" style="color:var(--err)" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg></div>
+            <div><div class="hd" id="dt" style="font-size:17px">Delete Item?</div><p class="text-sm" style="color:var(--fgm)">This cannot be undone.</p></div>
+          </div>
+          <div class="p-3 rounded-xl text-sm" style="background:var(--bg)">"Implement OAuth2 flow for partner integrations"</div>
+          <div class="flex gap-3 justify-end mt-5">
+            <button class="btn btn-sc">Cancel</button>
+            <button class="btn" style="background:var(--err);color:#fff;min-height:44px"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+</div>
+
+<!-- SLIDE NAV -->
+<div id="sn">
+  <span class="text-xs font-semibold mr-3 hd" style="color:var(--fgs);white-space:nowrap">Pages:</span>
+  <b class="on" onclick="go(1)">Lead Form</b>
+  <b onclick="go(2)">Dashboard</b>
+  <b onclick="go(3)">Light + RU</b>
+  <b onclick="go(4)">UI States</b>
+</div>
+
+<script>
+function go(n){document.querySelectorAll('.slide').forEach(s=>s.classList.remove('active'));document.getElementById('s'+n).classList.add('active');document.querySelectorAll('#sn b').forEach((b,i)=>b.classList.toggle('on',i===n-1))}
+function tA(b){const d=b.nextElementSibling;const a=b.querySelector('.aa');const o=d.classList.toggle('open');b.setAttribute('aria-expanded',o);if(a)a.style.transform=o?'rotate(0)':'rotate(-90deg)'}
+function tT(){const h=document.documentElement;const d=h.classList.contains('dark');h.classList.toggle('dark');h.classList.toggle('light');h.style.colorScheme=d?'light':'dark';document.querySelectorAll('.thd').forEach(e=>e.style.display=d?'none':'');document.querySelectorAll('.thl').forEach(e=>e.style.display=d?'':'none')}
+let cl='en';function tL(){cl=cl==='en'?'ru':'en';document.querySelectorAll('.lb').forEach(b=>b.textContent=cl.toUpperCase())}
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;const c=document.querySelector('.slide.active');const n=+c.id.replace('s','');if(e.key==='ArrowRight'&&n<4)go(n+1);if(e.key==='ArrowLeft'&&n>1)go(n-1)})
+</script>
+</body>
+</html>
