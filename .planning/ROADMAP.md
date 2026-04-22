@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 23/23
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 (SCH:7 + API:13 + UI:20 + E2E:10 — via MANIFEST D-1→D-70)
 
 ---
 
@@ -213,8 +213,8 @@ Plans:
 ## v4.0 Backend Completeness & UI Redesign
 
 - [x] **Phase 16: Backend Hardening** - Prisma migration, BullMQ re-enabled, 81 regression scenarios pass, test infrastructure clean (completed 2026-04-21)
-- [ ] **Phase 17: UI Redesign** - AssembledReport defect fixed, full professional redesign across all pages, a11y and responsive
-- [ ] **Phase 18: E2E Tests** - Role journeys, cross-role lifecycle, visual regression baselines
+- [ ] **Phase 17: Fullstack UI Redesign** - Schema migration + 13 new API endpoints + 7 frontend pages + Starbucks design + URL routing (spec: MANIFEST D-1→D-70, 223 regression scenarios, mockup v14)
+- [ ] **Phase 18: E2E Tests** - 223 regression scenarios as Playwright tests, role journeys, visual baselines
 
 ### Phase 16: Backend Hardening
 **Goal**: Backend fully conforms to all API contracts; BullMQ queues functional; test infrastructure clean and ready to support UI redesign
@@ -234,29 +234,44 @@ Plans:
 - [x] 16-03-PLAN.md — ThemeProvider wiring + theme toggle + MSW/web test verification (BE-04, BE-05, BE-06)
 - [x] 16-04-PLAN.md — Regression contract tests (P0/P1 scenarios extending existing test suite)
 
-### Phase 17: UI Redesign
-**Goal**: Every page has a professional, polished UI — AssembledReport functional defect fixed, dark theme consistent, a11y complete, responsive
+### Phase 17: Fullstack UI Redesign (Schema + API + Frontend)
+**Goal**: Complete application rewrite driven by mockup v14 — new data model (period lifecycle, version history), 13 new API endpoints (publish/lock, revoke, fill-from, versions), 7 frontend pages (Starbucks design, URL-based routing)
 **Depends on**: Phase 16
-**Requirements**: UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07, UI-08, UI-09, UI-10
+**Spec sources**: MANIFEST.md (D-1→D-70), REGRESSION-SCENARIOS.md (223 scenarios), mockup-v17-v14.html
+**Requirements**: SCH-01..07, API-01..13, UI-01..20
 **Success Criteria** (what must be TRUE):
-  1. User approves visual direction after viewing the redesigned lead form page before any other pages are styled
-  2. Head can see all projects, all items, all risks, all decisions, and all priorities for every lead section in AssembledReportReview
-  3. Lead form shows colorful circular traffic light buttons with hover ring; new items auto-focus; delete actions require confirmation
-  4. All interactive elements have visible focus rings (focus-visible:ring-2); touch targets are at least 44px on all pages
-  5. Print/PDF template renders at the same visual quality as the web report (print-color-adjust: exact, no nav elements)
+  1. Prisma schema has Period lifecycle (Open/Published/Reopened), VersionSnapshot model, stage unique constraints — migration runs without data loss
+  2. tRPC API: period.publish, period.reopen, leadSubmission.revoke, leadForm.fillFrom, leadForm.versions — all functional with integration tests
+  3. Login stub: 4 role buttons redirect to correct pages, guarded by NEXT_PUBLIC_AUTH_STUB env
+  4. Lead Form: SDLC pipeline, period navigator, Fill from, version history, submit → locked — matches mockup v14 s1
+  5. Dashboard: KPIs, Lead Reports with locks + traffic lights, Report Archive with pagination — matches mockup v14 s2
+  6. Weekly Report: auto-compiled, period navigator, per-lead accordions, Publish & Lock — matches mockup v14 s3
+  7. Admin Panel: 5 tabs, stage assignment validation — matches mockup v14 s4
+  8. URL-based routing: every state in URL, browser back/forward works, bookmarkable (D-69)
+  9. All pages: Starbucks design (cream/teal/gold), max-w-6xl, skip-link, aria-labels, touch targets 44px
+  10. 223 regression scenarios used as acceptance criteria — P0 scenarios must pass
 **Plans**: TBD
 **UI hint**: yes
+**Suggested waves**:
+  - Wave 1: Schema migration + Login stub + URL routing skeleton
+  - Wave 2: Backend API (period lifecycle, revoke, fill-from, versions)
+  - Wave 3: Frontend — Lead Form + Lead History
+  - Wave 4: Frontend — Dashboard + Weekly Report
+  - Wave 5: Frontend — Admin Panel + Login + all UI States/modals
+  - Wave 6: Integration tests + visual verification + Print/PDF
 
 ### Phase 18: E2E Tests
-**Goal**: Full role journeys, cross-role lifecycle, and visual regression baselines cover the redesigned application end-to-end
+**Goal**: 223 regression scenarios implemented as Playwright E2E tests covering all role journeys, cross-role lifecycles, error paths, and visual baselines
 **Depends on**: Phase 17
-**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, E2E-07
+**Requirements**: E2E-01..E2E-10
 **Success Criteria** (what must be TRUE):
-  1. Lead journey passes end-to-end: login → auto-create section → fill all fields → draft save → submit → section shows locked state
-  2. Head journey passes end-to-end: dashboard shows correct submission count → assembled report review → publish → PDF download completes
-  3. Cross-role lifecycle passes: lead submits → head publishes → viewer reads the published report — all in one Playwright test
-  4. Error paths verified: submitting an incomplete section shows validation errors; accessing a role-restricted page redirects correctly
-  5. Visual regression baselines established against the final approved design; `pnpm playwright test` passes with 0 failures
+  1. Lead journey: login stub → period select → fill all sections → submit → locked — passes E2E
+  2. Head journey: dashboard → weekly report → publish & lock → PDF export — passes E2E
+  3. Cross-role lifecycle: lead submits → head publishes → lead sees locked → head reopens → lead re-edits — passes E2E
+  4. Revoke flow: admin revokes → lead re-edits → re-submits — passes E2E
+  5. Error paths: 403 wrong role, 404 invalid period, network disconnect — passes E2E
+  6. Visual regression baselines established; `pnpm playwright test` passes with 0 failures
+  7. P0 regression scenarios (83) all pass as automated tests
 **Plans**: TBD
 
 ---
@@ -266,7 +281,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 16. Backend Hardening | 4/4 | Complete    | 2026-04-21 |
-| 17. UI Redesign | 0/TBD | Not started | - |
+| 17. Fullstack UI Redesign | 0/TBD | Spec complete, planning next | - |
 | 18. E2E Tests | 0/TBD | Not started | - |
 
 ---
