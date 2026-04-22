@@ -17,3 +17,5 @@ pnpm-lock.yaml
 .rtk
 .sisyphus
 .ideagraphify-out/
+.claude/worktrees/
+.claude/settings.local.json
