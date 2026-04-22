@@ -9,7 +9,7 @@
  */
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const { chromium } = require('./node_modules/.pnpm/playwright@1.59.1/node_modules/playwright');
+const { chromium } = require('../node_modules/.pnpm/playwright@1.59.1/node_modules/playwright');
 import { existsSync, mkdirSync, readdirSync } from 'fs';
 import { resolve, basename } from 'path';
 
@@ -49,7 +49,7 @@ const slidesToCapture = requestedIds.length > 0
   ? SLIDES.filter(s => requestedIds.includes(s.id))
   : SLIDES;
 
-const outDir = resolve('mockup-screenshots');
+const outDir = resolve('screenshots');
 mkdirSync(outDir, { recursive: true });
 
 console.log(`📸 ${basename(mockupFile)} → ${slidesToCapture.length} slides`);

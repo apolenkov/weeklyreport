@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CustomReport v4.0 — v11 Interactive SDLC</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{
+--canvas:#f2f0eb;--ceramic:#edebe9;--white:#ffffff;--cool:#f9f9f9;
+--house:#1E3932;--teal:#006241;--tealA:#00754A;--tealL:#d4e9e2;
+--gold:#8a6d1b;--goldBg:#cba258;--goldL:#dfc49d;--goldLL:#faf6ee;
+--fg:rgba(0,0,0,.87);--fgm:rgba(0,0,0,.58);--fgw:#fff;--fgws:rgba(255,255,255,.7);
+--red:#c82014;--yellow:#fbbc05;
+--card-r:12px;--pill:50px;
+--shadow:0 0 .5px 0 rgba(0,0,0,.14),0 1px 1px 0 rgba(0,0,0,.24);
+--shadow-nav:0 1px 3px rgba(0,0,0,.1),0 2px 2px rgba(0,0,0,.06),0 0 2px rgba(0,0,0,.07);
+}
+*{box-sizing:border-box;margin:0}
+body{background:var(--canvas);color:var(--fg);font-family:'Source Sans 3','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,.hd{font-family:'Lexend',sans-serif;font-size:24px;font-weight:600;line-height:1.25;letter-spacing:-.01em;color:var(--teal)}
+h2{font-family:'Lexend',sans-serif;font-size:20px;font-weight:400;line-height:1.5;color:var(--fg)}
+.st{font-family:'Lexend';font-size:16px;font-weight:600;letter-spacing:-.01em}
+.slide{display:none;min-height:100vh;flex-direction:column}.slide.active{display:flex}
+/* NAV — Starbucks-style */
+.tn{background:var(--white);box-shadow:var(--shadow-nav);padding:0 24px;display:flex;align-items:center;height:56px;gap:20px;position:sticky;top:0;z-index:40}
+.tn .lo{display:flex;align-items:center;gap:8px;font-family:'Lexend';font-weight:700;font-size:16px;color:var(--teal);text-decoration:none}
+.tn .lo i{width:32px;height:32px;border-radius:50%;background:var(--tealA);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-family:'Lexend';font-style:normal;font-weight:700}
+.tn nav{display:flex;gap:4px;flex:1}
+.tn nav a{padding:8px 14px;border-radius:var(--pill);font-family:'Lexend';font-size:14px;font-weight:400;color:var(--fg);text-decoration:none;transition:all .15s;letter-spacing:-.01em}
+.tn nav a:hover{background:var(--cool);color:var(--teal)}
+.tn nav a.on{background:var(--tealL);color:var(--teal);font-weight:600}
+.tn .rt{display:flex;align-items:center;gap:8px;margin-left:auto}
+/* CHIPS — pill, fixed width */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:7px 0;border-radius:var(--pill);font-family:'Lexend';font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(0,0,0,.2);background:transparent;color:var(--fgm);transition:all .15s;min-height:44px;width:120px;justify-content:center;letter-spacing:-.01em;flex-shrink:0}
+.chip:hover{border-color:rgba(0,0,0,.4);color:var(--fg);background:var(--cool)}
+.chip:active{transform:scale(.95)}
+.chip:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(0,98,65,.3)}
+.chip[data-s="green"].on{border-color:#00754A;background:#00754A;color:#fff}
+.chip[data-s="yellow"].on{border-color:#d4a017;background:#f0c060;color:rgba(0,0,0,.87)}
+.chip[data-s="red"].on{border-color:#c82014;background:#c82014;color:#fff}
+/* Accordion */
+.ab{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.25,.46,.45,.94)}.ab.open{grid-template-rows:1fr}.ab>div{overflow:hidden}
+.aa{transition:transform .3s cubic-bezier(.25,.46,.45,.94)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(0,98,65,.3);border-radius:8px}
+/* CARD — white on cream, soft shadow */
+.card{background:var(--white);border-radius:var(--card-r);box-shadow:var(--shadow);transition:box-shadow .15s}
+.card:hover{box-shadow:0 0 1px 0 rgba(0,0,0,.14),0 2px 4px 0 rgba(0,0,0,.2)}
+.card-house{background:#eef5f3;border-radius:var(--card-r);color:var(--fg);border:1px solid var(--tealL)}
+/* INPUT — floating label style */
+.inp{background:var(--white);border:1px solid rgba(0,0,0,.2);border-radius:8px;padding:10px 12px;color:var(--fg);font-family:inherit;font-size:15px;line-height:1.5;width:100%;transition:border-color .15s}
+.inp:focus{border-color:var(--tealA);outline:none;box-shadow:0 0 0 3px rgba(0,117,74,.15)}
+.inp::placeholder{color:var(--fgm)}
+/* BUTTONS — pill */
+.btn{padding:7px 16px;border-radius:var(--pill);font-family:'Lexend';font-size:14px;font-weight:600;cursor:pointer;transition:all .2s ease;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;min-height:44px;letter-spacing:-.01em}
+.btn:active{transform:scale(.95)}
+.btn-pr{background:var(--tealA);color:#fff;border-color:var(--tealA)}.btn-pr:hover{background:var(--teal)}
+.btn-out{background:transparent;color:var(--tealA);border-color:var(--tealA)}.btn-out:hover{background:var(--tealL)}
+.btn-dark{background:#000;color:#fff;border-color:#000}.btn-dark:hover{background:#222}
+.btn-sc{background:transparent;color:var(--fg);border-color:rgba(0,0,0,.2)}.btn-sc:hover{background:var(--cool)}
+.btn-gh{background:transparent;color:var(--fgm);padding:8px;border-radius:50%;min-height:36px;min-width:36px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:none}
+.btn-gh:hover{background:var(--cool);color:var(--fg)}
+.btn-del{background:transparent;color:rgba(0,0,0,.25);padding:10px;border-radius:50%;border:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;min-width:44px;min-height:44px}
+.btn-del:hover{background:rgba(200,32,20,.1);color:var(--red)}
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:var(--pill);font-size:13px;font-weight:600;font-family:'Lexend';letter-spacing:-.01em}
+.b-ok{background:var(--tealL);color:var(--teal)}
+.b-wn{background:#fef3c7;color:#92400e}
+.b-err{background:#fee2e2;color:#991b1b}
+.b-m{background:var(--ceramic);color:var(--fgm)}
+.b-pr{background:var(--tealL);color:var(--tealA)}
+.b-gold{background:var(--goldLL);color:var(--gold)}
+.b-fw{min-width:80px;justify-content:center}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Lexend';font-weight:600;font-size:14px;flex-shrink:0}
+.td{width:14px;height:14px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;flex-shrink:0}
+.td-g{background:var(--tealA)}.td-y{background:#d4a017}.td-r{background:var(--red)}
+.num{font-family:'Lexend';font-variant-numeric:tabular-nums}
+.meta{color:var(--fgm);font-size:14px}
+.area{font-family:'Lexend';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--fgm);padding:12px 0 4px}
+.sep{height:1px;background:var(--ceramic)}
+.ic{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+/* SDLC clickable stages */
+.sdlc-stage{cursor:pointer;transition:all .15s;position:relative}
+.sdlc-stage:hover{transform:translateY(-2px);box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.sdlc-stage:active{transform:scale(.95)}
+.sdlc-stage[data-empty]{border-style:dashed!important;cursor:pointer}
+.sdlc-stage[data-empty]:hover{background:var(--tealL)!important;border-color:var(--tealA)!important;color:var(--teal)!important}
+.sdlc-stage[data-empty]:hover::after{content:'Click to assign';position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--tealA);white-space:nowrap;font-weight:600}
+/* Risk indicator on product cards */
+.risk-dot{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--red);margin-left:8px}
+.risk-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse-risk 2s infinite}
+@keyframes pulse-risk{0%,100%{opacity:1}50%{opacity:.4}}
+/* Product line group header */
+.pl-group{font-family:'Lexend';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--fgm);padding:8px 0 2px;display:flex;align-items:center;gap:6px}
+.pl-group::after{content:'';flex:1;height:1px;background:var(--ceramic)}
+#sn{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--white);box-shadow:0 -1px 3px rgba(0,0,0,.08);padding:6px 12px;display:flex;align-items:center;gap:4px;overflow-x:auto}
+#sn b{padding:6px 14px;border-radius:var(--pill);font-family:'Lexend';font-size:12px;font-weight:500;white-space:nowrap;border:1px solid rgba(0,0,0,.15);background:transparent;color:var(--fgm);cursor:pointer;transition:all .12s}
+#sn b:hover{background:var(--cool);color:var(--fg)}
+#sn b.on{background:var(--tealA);color:#fff;border-color:var(--tealA)}
+</style>
+</head>
+<body>
+
+<!-- S1: LEAD FORM -->
+<div class="slide active" id="s1">
+<div class="tn"><a href="#" class="lo"><i>CR</i>CustomReport</a><nav><a href="#" class="on">My Report</a><a href="#" onclick="go(5);return false">History</a></nav><div class="rt"><span class="badge b-pr num">Week 16</span><button onclick="tL()" class="btn-gh lb" style="font-family:Lexend;font-size:12px;font-weight:700">EN</button><div style="border-left:1px solid var(--ceramic);padding-left:10px;margin-left:4px;display:flex;align-items:center;gap:6px"><div class="av" style="background:var(--tealL);color:var(--teal)">АП</div><span style="font-size:14px;font-weight:500">Поленков А. · Dev Lead</span></div></div></div>
+<main class="flex-1 overflow-y-auto" style="padding-bottom:52px">
+<div class="max-w-5xl mx-auto p-6 space-y-6">
+  <header class="flex flex-wrap items-center justify-between gap-4"><div><h1>Weekly Report</h1><p class="meta mt-1">Apr 14 – Apr 20, 2026 · CoreDev Department</p></div><div class="flex items-center gap-3"><span class="badge b-ok">✓ Autosaved</span><button class="btn btn-pr">Submit Report</button></div></header>
+
+  <!-- PRODUCT STATUS — SDLC stages per product -->
+  <div class="card p-6">
+    <h2 class="mb-5">Product Status</h2>
+
+    <!-- Product 1: CRM Platform -->
+    <div class="p-4 rounded-xl mb-4" style="background:var(--canvas);border:1px solid var(--ceramic)">
+      <div class="flex items-center justify-between mb-3">
+        <span class="st" style="color:var(--teal)">CRM Platform</span>
+        <span class="badge b-ok" style="font-size:11px">3/5 On Track</span>
+      </div>
+      <!-- SDLC Pipeline -->
+      <div class="flex gap-2 overflow-x-auto pb-1" style="scrollbar-width:thin">
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ Analysis</div>
+          <span style="font-size:11px;color:var(--fgm)">Иванов А.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ Design</div>
+          <span style="font-size:11px;color:var(--fgm)">Петрова М.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:#fef3c7;color:#92400e;border:1.5px solid #d4a017">! Dev</div>
+          <span style="font-size:11px;color:var(--fgm)">Козлов Д.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--cool);color:var(--fgm);border:1.5px dashed rgba(0,0,0,.15)">○ Testing</div>
+          <span style="font-size:11px;color:var(--fgm)">—</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ DevOps</div>
+          <span style="font-size:11px;color:var(--fgm)">Сидоров П.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product 2: Data Analytics Suite -->
+    <div class="p-4 rounded-xl mb-4" style="background:var(--canvas);border:1px solid var(--ceramic)">
+      <div class="flex items-center justify-between mb-3">
+        <span class="st" style="color:var(--teal)">Data Analytics Suite</span>
+        <span class="badge b-err" style="font-size:11px">1/4 Blocked</span>
+      </div>
+      <div class="flex gap-2 overflow-x-auto pb-1">
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ Analysis</div>
+          <span style="font-size:11px;color:var(--fgm)">Иванов А.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ Design</div>
+          <span style="font-size:11px;color:var(--fgm)">Петрова М.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:#fee2e2;color:#991b1b;border:1.5px solid var(--red)">✕ Dev</div>
+          <span style="font-size:11px;color:var(--fgm)">Козлов Д.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--cool);color:var(--fgm);border:1.5px dashed rgba(0,0,0,.15)">○ Testing</div>
+          <span style="font-size:11px;color:var(--fgm)">Новикова Е.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product 3: Mobile App -->
+    <div class="p-4 rounded-xl mb-4" style="background:var(--canvas);border:1px solid var(--ceramic)">
+      <div class="flex items-center justify-between mb-3">
+        <span class="st" style="color:var(--teal)">Mobile Applications</span>
+        <span class="badge b-wn" style="font-size:11px">2/5 At Risk</span>
+      </div>
+      <div class="flex gap-2 overflow-x-auto pb-1">
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ Analysis</div>
+          <span style="font-size:11px;color:var(--fgm)">Иванов А.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:#fef3c7;color:#92400e;border:1.5px solid #d4a017">! Design</div>
+          <span style="font-size:11px;color:var(--fgm)">Петрова М.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:#fef3c7;color:#92400e;border:1.5px solid #d4a017">! Dev</div>
+          <span style="font-size:11px;color:var(--fgm)">Смирнов К.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ Testing</div>
+          <span style="font-size:11px;color:var(--fgm)">Новикова Е.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ DevOps</div>
+          <span style="font-size:11px;color:var(--fgm)">Сидоров П.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product 4: Cloud Infrastructure -->
+    <div class="p-4 rounded-xl" style="background:var(--canvas);border:1px solid var(--ceramic)">
+      <div class="flex items-center justify-between mb-3">
+        <span class="st" style="color:var(--teal)">Cloud Infrastructure</span>
+        <span class="badge b-ok" style="font-size:11px">4/4 On Track</span>
+      </div>
+      <div class="flex gap-2 overflow-x-auto pb-1">
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ Analysis</div>
+          <span style="font-size:11px;color:var(--fgm)">Иванов А.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ Dev</div>
+          <span style="font-size:11px;color:var(--fgm)">Козлов Д.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ Testing</div>
+          <span style="font-size:11px;color:var(--fgm)">Новикова Е.</span>
+        </div>
+        <div style="display:flex;align-items:center;color:var(--tealA);font-size:20px;margin-top:-14px;font-weight:700">→</div>
+        <div class="flex flex-col items-center gap-1 min-w-[100px]">
+          <div class="w-full p-2 rounded-lg text-center text-xs font-semibold" style="background:var(--tealL);color:var(--teal);border:1.5px solid var(--tealA)">✓ DevOps</div>
+          <span style="font-size:11px;color:var(--fgm)">Сидоров П.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CURRENT WEEK — Kanban by products -->
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-4"><span class="st" style="color:var(--teal)">Current Week</span><span class="badge b-m num">7 items</span></div>
+    <div class="grid gap-3" style="grid-template-columns:repeat(4,1fr)">
+      <!-- CRM Platform column -->
+      <div>
+        <div class="area mb-2" style="font-size:12px">CRM Platform</div>
+        <div class="space-y-2">
+          <div class="p-3 rounded-lg" style="background:var(--canvas);border:1px solid var(--ceramic)"><div class="badge b-ok mb-2" style="font-size:10px">In Progress</div><div class="text-sm">OAuth2 flow for partner API</div><div class="meta mt-1" style="font-size:11px">Козлов Д.</div></div>
+          <div class="p-3 rounded-lg" style="background:var(--canvas);border:1px solid var(--ceramic)"><div class="badge b-ok mb-2" style="font-size:10px">Completed</div><div class="text-sm">API rate limiter config</div><div class="meta mt-1" style="font-size:11px">Козлов Д.</div></div>
+          <button class="btn btn-sc w-full justify-center text-xs" style="padding:6px;min-height:32px">+ Add</button>
+        </div>
+      </div>
+      <!-- Data Analytics column -->
+      <div>
+        <div class="area mb-2" style="font-size:12px">Data Analytics</div>
+        <div class="space-y-2">
+          <div class="p-3 rounded-lg" style="background:#fee2e2;border:1px solid rgba(200,32,20,.2)"><div class="badge b-err mb-2" style="font-size:10px">Blocked</div><div class="text-sm">ETL pipeline memory leak fix</div><div class="meta mt-1" style="font-size:11px">Козлов Д.</div></div>
+          <div class="p-3 rounded-lg" style="background:var(--canvas);border:1px solid var(--ceramic)"><div class="badge b-ok mb-2" style="font-size:10px">In Progress</div><div class="text-sm">BI Dashboard data sources</div><div class="meta mt-1" style="font-size:11px">Иванов А.</div></div>
+          <button class="btn btn-sc w-full justify-center text-xs" style="padding:6px;min-height:32px">+ Add</button>
+        </div>
+      </div>
+      <!-- Mobile Apps column -->
+      <div>
+        <div class="area mb-2" style="font-size:12px">Mobile Apps</div>
+        <div class="space-y-2">
+          <div class="p-3 rounded-lg" style="background:#fef3c7;border:1px solid rgba(212,160,23,.2)"><div class="badge b-wn mb-2" style="font-size:10px">At Risk</div><div class="text-sm">iOS navigation redesign</div><div class="meta mt-1" style="font-size:11px">Смирнов К.</div></div>
+          <button class="btn btn-sc w-full justify-center text-xs" style="padding:6px;min-height:32px">+ Add</button>
+        </div>
+      </div>
+      <!-- Cloud Infra column -->
+      <div>
+        <div class="area mb-2" style="font-size:12px">Cloud Infra</div>
+        <div class="space-y-2">
+          <div class="p-3 rounded-lg" style="background:var(--canvas);border:1px solid var(--ceramic)"><div class="badge b-ok mb-2" style="font-size:10px">Completed</div><div class="text-sm">K8s monitoring + Grafana alerts</div><div class="meta mt-1" style="font-size:11px">Сидоров П.</div></div>
+          <div class="p-3 rounded-lg" style="background:var(--canvas);border:1px solid var(--ceramic)"><div class="badge b-ok mb-2" style="font-size:10px">In Progress</div><div class="text-sm">PgBouncer connection pooling</div><div class="meta mt-1" style="font-size:11px">Сидоров П.</div></div>
+          <button class="btn btn-sc w-full justify-center text-xs" style="padding:6px;min-height:32px">+ Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEXT WEEK — Kanban by products -->
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-4"><span class="st">Next Week</span><span class="badge b-m num">4 items</span></div>
+    <div class="grid gap-3" style="grid-template-columns:repeat(4,1fr)">
+      <div>
+        <div class="area mb-2" style="font-size:12px">CRM Platform</div>
+        <div class="space-y-2">
+          <div class="p-3 rounded-lg" style="background:var(--canvas);border:1px dashed var(--ceramic)"><div class="badge b-m mb-2" style="font-size:10px">Planned</div><div class="text-sm">A/B testing framework setup</div><div class="meta mt-1" style="font-size:11px">Козлов Д.</div></div>
+          <button class="btn btn-sc w-full justify-center text-xs" style="padding:6px;min-height:32px">+ Add</button>
+        </div>
+      </div>
+      <div>
+        <div class="area mb-2" style="font-size:12px">Data Analytics</div>
+        <div class="space-y-2">
+          <div class="p-3 rounded-lg" style="background:var(--canvas);border:1px dashed var(--ceramic)"><div class="badge b-m mb-2" style="font-size:10px">Planned</div><div class="text-sm">Data quality validation rules</div><div class="meta mt-1" style="font-size:11px">Иванов А.</div></div>
+          <button class="btn btn-sc w-full justify-center text-xs" style="padding:6px;min-height:32px">+ Add</button>
+        </div>
+      </div>
+      <div>
+        <div class="area mb-2" style="font-size:12px">Mobile Apps</div>
+        <div class="space-y-2">
+          <div class="p-3 rounded-lg" style="background:var(--canvas);border:1px dashed var(--ceramic)"><div class="badge b-m mb-2" style="font-size:10px">Planned</div><div class="text-sm">Push notification service MVP</div><div class="meta mt-1" style="font-size:11px">Смирнов К.</div></div>
+          <button class="btn btn-sc w-full justify-center text-xs" style="padding:6px;min-height:32px">+ Add</button>
+        </div>
+      </div>
+      <div>
+        <div class="area mb-2" style="font-size:12px">Cloud Infra</div>
+        <div class="space-y-2">
+          <div class="p-3 rounded-lg" style="background:var(--canvas);border:1px dashed var(--ceramic)"><div class="badge b-m mb-2" style="font-size:10px">Planned</div><div class="text-sm">CI/CD → GitHub Actions migration</div><div class="meta mt-1" style="font-size:11px">Сидоров П.</div></div>
+          <button class="btn btn-sc w-full justify-center text-xs" style="padding:6px;min-height:32px">+ Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- RISKS — tied to products -->
+  <div class="card overflow-hidden">
+    <button onclick="tA(this)" class="w-full flex items-center justify-between p-5 hover:bg-[var(--cool)] transition-colors" aria-expanded="true"><div class="flex items-center gap-3"><span class="st" style="color:var(--red)">⚠ Risks</span><span class="badge b-wn num">2</span></div><svg class="ic aa" style="color:var(--fgm)" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="ab open"><div><div class="px-5 pb-5 space-y-3">
+      <div class="p-4 rounded-lg" style="background:var(--canvas)"><div class="flex items-center gap-2 mb-2"><span class="badge b-pr" style="font-size:11px">CRM Platform</span></div><div class="flex items-center gap-2"><input class="inp flex-1" value="Third-party API rate limits may delay OAuth2 integration testing"><button class="btn-del"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg></button></div></div>
+      <div class="p-4 rounded-lg" style="background:var(--canvas)"><div class="flex items-center gap-2 mb-2"><span class="badge b-pr" style="font-size:11px">Data Analytics</span></div><div class="flex items-center gap-2"><input class="inp flex-1" value="GDPR requirements may require ETL data model changes in Q3"><button class="btn-del"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg></button></div></div>
+      <button class="btn btn-sc w-full justify-center">+ Add Risk</button>
+    </div></div></div>
+  </div>
+  <!-- DECISIONS -->
+  <div class="card overflow-hidden">
+    <button onclick="tA(this)" class="w-full flex items-center justify-between p-5 hover:bg-[var(--cool)] transition-colors" aria-expanded="true"><div class="flex items-center gap-3"><span class="st" style="color:var(--tealA)">💡 Decisions</span><span class="badge b-pr num">1</span></div><svg class="ic aa" style="color:var(--fgm)" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="ab open"><div><div class="px-5 pb-5 space-y-3">
+      <div class="p-4 rounded-lg" style="background:var(--canvas)"><div class="flex items-center gap-2"><input class="inp flex-1" value="Need approval for additional Redis cluster for caching layer"><button class="btn-del"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg></button></div></div>
+      <button class="btn btn-sc w-full justify-center">+ Add Decision</button>
+    </div></div></div>
+  </div>
+  <!-- PRIORITIES -->
+  <div class="card overflow-hidden">
+    <button onclick="tA(this)" class="w-full flex items-center justify-between p-5 hover:bg-[var(--cool)] transition-colors" aria-expanded="true"><div class="flex items-center gap-3"><span class="st" style="color:var(--gold)">🎯 Top 3 Priorities</span><span class="badge b-m num">3/3</span></div><svg class="ic aa" style="color:var(--fgm)" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="ab open"><div><div class="px-5 pb-5 space-y-3">
+      <div class="flex items-center gap-3 p-4 rounded-lg" style="background:var(--goldLL)"><span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold num" style="background:var(--goldBg);color:#fff;flex-shrink:0">1</span><input class="inp flex-1" value="Complete OAuth2 integration by Friday"></div>
+      <div class="flex items-center gap-3 p-4 rounded-lg" style="background:var(--goldLL)"><span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold num" style="background:var(--goldL);color:var(--gold);flex-shrink:0">2</span><input class="inp flex-1" value="Resolve memory leak blocking QA"></div>
+      <div class="flex items-center gap-3 p-4 rounded-lg" style="background:var(--canvas)"><span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold num" style="background:var(--ceramic);color:var(--fgm);flex-shrink:0">3</span><input class="inp flex-1" value="Deploy monitoring dashboard to staging"></div>
+    </div></div></div>
+  </div>
+</div>
+</main>
+</div>
+
+<!-- S2: DASHBOARD -->
+<div class="slide" id="s2">
+<div class="tn"><a href="#" class="lo"><i>CR</i>CustomReport</a><nav><a href="#" class="on">Dashboard</a><a href="#" onclick="go(3);return false">Assembled</a><a href="#" onclick="go(6);return false">Published</a><a href="#" onclick="go(5);return false">Archive</a><a href="#" onclick="go(4);return false">Admin</a></nav><div class="rt"><span class="badge b-pr num">Week 16</span><button onclick="tL()" class="btn-gh lb" style="font-family:Lexend;font-size:12px;font-weight:700">EN</button><div style="border-left:1px solid var(--ceramic);padding-left:10px;margin-left:4px;display:flex;align-items:center;gap:6px"><div class="av" style="background:var(--goldLL);color:var(--gold)">РД</div><span style="font-size:14px;font-weight:500">Руководитель Д. · Head</span></div></div></div>
+<main class="flex-1 overflow-y-auto" style="padding-bottom:52px">
+<div class="max-w-5xl mx-auto p-6 space-y-6">
+  <header><h1>Review Dashboard</h1><p class="meta mt-1">Apr 14 – Apr 20, 2026 · CoreDev Department</p></header>
+  <!-- ALERT -->
+  <div class="card p-4 flex items-center gap-4 flex-wrap" style="border-left:3px solid var(--yellow);background:#fffbeb"><span class="font-semibold" style="color:#92400e">⚠ 2 leads pending:</span> Ольга Н., Сергей Т.<button class="btn btn-pr" style="margin-left:auto">Send Reminder</button></div>
+  <!-- KPI -->
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div class="card p-5 lg:col-span-2" style="border-left:3px solid var(--tealA)"><div class="meta">Submissions</div><div class="flex items-baseline gap-2 mt-1"><span class="num" style="font-size:42px;font-weight:700;color:var(--teal)">4</span><span class="num" style="font-size:18px;color:var(--fgm)">/ 6</span></div><div class="mt-2 h-2 rounded-full" style="background:var(--ceramic)"><div class="h-full rounded-full" style="background:var(--tealA);width:66%"></div></div><div class="meta mt-1" style="font-size:13px">Last week: 6/6 · Avg: 5.2</div></div>
+    <div class="card p-5" style="border-left:3px solid var(--yellow)"><div class="meta">Deadline</div><div class="num mt-1" style="font-size:28px;font-weight:700;color:#92400e">2d 5h</div><div class="meta" style="font-size:13px">Friday 18:00</div></div>
+    <div class="card p-5"><div class="meta mb-2">Portfolio</div><div class="flex gap-5"><div class="text-center"><div class="td td-g mx-auto mb-1">✓</div><div class="num text-base font-bold">8</div><div style="color:var(--tealA);font-size:11px;font-weight:600">+1</div></div><div class="text-center"><div class="td td-y mx-auto mb-1" style="color:#fff">!</div><div class="num text-base font-bold">4</div><div style="font-size:11px;color:var(--fgm)">—</div></div><div class="text-center"><div class="td td-r mx-auto mb-1">✕</div><div class="num text-base font-bold">2</div><div style="color:var(--red);font-size:11px;font-weight:600">+1</div></div></div></div>
+    <div class="card p-5" style="border-left:3px solid var(--red)"><div class="meta mb-1">Escalations</div><div><span class="num" style="font-size:24px;font-weight:700">3</span> <span class="meta">risks</span></div><div><span class="num" style="font-size:18px;font-weight:600">1</span> <span class="meta">decision</span></div></div>
+  </div>
+  <!-- BLOCKED -->
+  <div class="card-house p-5"><div class="flex items-center gap-2 mb-3"><span class="st" style="color:var(--red)">⚠ Blocked Projects</span></div><table style="width:100%;font-size:14px;border-collapse:collapse"><thead><tr style="color:var(--fgm);border-bottom:1px solid var(--ceramic)"><th style="text-align:left;padding:6px 10px;font-weight:500">Project</th><th style="text-align:left;padding:6px 10px;font-weight:500">Area</th><th style="text-align:left;padding:6px 10px;font-weight:500">Lead</th><th style="text-align:left;padding:6px 10px;font-weight:500;width:110px">Duration</th></tr></thead><tbody><tr style="border-bottom:1px solid var(--ceramic)"><td style="padding:8px 10px;font-weight:500;color:var(--fg)">Event-Driven Refactor</td><td style="padding:8px 10px;color:var(--fgm)">Architecture</td><td style="padding:8px 10px;color:var(--fgm)">Поленков А. · Dev Lead</td><td style="padding:8px 10px"><span class="badge b-err b-fw num">2 weeks</span></td></tr><tr><td style="padding:8px 10px;font-weight:500;color:var(--fg)">Mobile App Redesign</td><td style="padding:8px 10px;color:var(--fgm)">Development</td><td style="padding:8px 10px;color:var(--fgm)">Мария К.</td><td style="padding:8px 10px"><span class="badge b-err b-fw num">1 week</span></td></tr></tbody></table></div>
+  <!-- LEADS -->
+  <h2>Lead Submissions</h2>
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <a href="#" class="card p-4 group" style="border-left:3px solid var(--tealA);text-decoration:none;color:inherit"><div class="flex items-start gap-3"><div class="av" style="background:var(--tealL);color:var(--teal)">АП</div><div class="flex-1"><div class="text-sm font-semibold">Поленков А. · Dev Lead</div><div class="meta" style="font-size:13px">2h ago · 4 projects</div><div class="flex gap-1 mt-1.5"><div class="td td-g">✓</div><div class="td td-g">✓</div><div class="td td-y" style="color:#fff">!</div><div class="td td-r">✕</div></div></div><span class="badge b-ok" style="font-size:11px">Submitted</span></div></a>
+    <a href="#" class="card p-4 group" style="border-left:3px solid var(--tealA);text-decoration:none;color:inherit"><div class="flex items-start gap-3"><div class="av" style="background:var(--tealL);color:var(--teal)">МК</div><div class="flex-1"><div class="text-sm font-semibold">Мария К.</div><div class="meta" style="font-size:13px">5h ago · 3 projects</div><div class="flex gap-1 mt-1.5"><div class="td td-g">✓</div><div class="td td-r">✕</div><div class="td td-g">✓</div></div></div><span class="badge b-ok" style="font-size:11px">Submitted</span></div></a>
+    <a href="#" class="card p-4 group" style="border-left:3px solid var(--tealA);text-decoration:none;color:inherit"><div class="flex items-start gap-3"><div class="av" style="background:var(--tealL);color:var(--teal)">ИВ</div><div class="flex-1"><div class="text-sm font-semibold">Игорь В.</div><div class="meta" style="font-size:13px">1d ago</div></div><span class="badge b-ok" style="font-size:11px">Submitted</span></div></a>
+    <div class="card p-4" style="border-left:3px solid var(--tealA)"><div class="flex items-start gap-3"><div class="av" style="background:var(--tealL);color:var(--teal)">ДС</div><div class="flex-1"><div class="text-sm font-semibold">Дмитрий С.</div><div class="meta" style="font-size:13px">3h ago</div></div><span class="badge b-ok" style="font-size:11px">Submitted</span></div></div>
+    <div class="card p-4" style="border-left:3px solid var(--yellow)"><div class="flex items-start gap-3"><div class="av" style="background:#fef3c7;color:#92400e">ОН</div><div class="flex-1"><div class="text-sm font-semibold">Ольга Н.</div><div class="meta" style="font-size:13px">Saved 1h ago</div></div><span class="badge b-wn" style="font-size:11px">Draft</span></div></div>
+    <div class="card p-4" style="border-left:3px dashed var(--ceramic);opacity:.6"><div class="flex items-start gap-3"><div class="av" style="background:var(--ceramic);color:var(--fgm)">СТ</div><div class="flex-1"><div class="text-sm font-semibold">Сергей Т.</div><div class="meta" style="font-size:13px">Not started</div></div><span class="badge b-m" style="font-size:11px">Pending</span></div></div>
+  </div>
+</div>
+</main>
+</div>
+
+<!-- S3-S7: placeholder nav -->
+<div class="slide" id="s3"><div class="tn"><a href="#" class="lo"><i>CR</i>CustomReport</a><nav><a href="#" onclick="go(2);return false">Dashboard</a><a href="#" class="on">Assembled</a><a href="#" onclick="go(6);return false">Published</a><a href="#" onclick="go(5);return false">Archive</a><a href="#" onclick="go(4);return false">Admin</a></nav><div class="rt"><span class="badge b-pr num">Week 16</span><button onclick="tL()" class="btn-gh lb" style="font-family:Lexend;font-size:12px;font-weight:700">EN</button><div style="border-left:1px solid var(--ceramic);padding-left:10px;margin-left:4px;display:flex;align-items:center;gap:6px"><div class="av" style="background:var(--goldLL);color:var(--gold)">РД</div><span style="font-size:14px;font-weight:500">Руководитель Д. · Head</span></div></div></div><main class="flex-1 p-6"><div class="max-w-5xl mx-auto"><h1>Assembled Report</h1><p class="meta mt-1">4 of 6 sections · Apr 14 – Apr 20</p><div class="flex gap-3 mt-4"><button class="btn btn-out">Export PDF</button><button class="btn btn-pr">Publish</button></div><div class="card p-5 mt-6"><h2 class="mb-3">Portfolio Overview</h2><div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><div class="flex items-center gap-2 p-2.5 rounded-lg" style="background:var(--tealL)"><div class="td td-g">✓</div><div><div class="text-sm font-medium">CRM Integration</div><div class="meta" style="font-size:12px">Александр</div></div></div><div class="flex items-center gap-2 p-2.5 rounded-lg" style="background:#fef3c7"><div class="td td-y" style="color:#fff">!</div><div><div class="text-sm font-medium">Data Quality</div><div class="meta" style="font-size:12px">Александр</div></div></div><div class="flex items-center gap-2 p-2.5 rounded-lg" style="background:#fee2e2"><div class="td td-r">✕</div><div><div class="text-sm font-medium">Mobile Redesign</div><div class="meta" style="font-size:12px">Мария</div></div></div><div class="flex items-center gap-2 p-2.5 rounded-lg" style="background:var(--tealL)"><div class="td td-g">✓</div><div><div class="text-sm font-medium">K8s Migration</div><div class="meta" style="font-size:12px">Игорь</div></div></div></div></div>
+<div class="card overflow-hidden mt-4"><button onclick="tA(this)" class="w-full flex items-center justify-between p-4 hover:bg-[var(--cool)] transition-colors" aria-expanded="true"><div class="flex items-center gap-3"><div class="av" style="background:var(--tealL);color:var(--teal);width:32px;height:32px;font-size:11px">АП</div><span class="st">Поленков А. · Dev Lead</span><span class="badge b-ok" style="font-size:11px">Submitted</span></div><svg class="ic aa" style="color:var(--fgm)" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><div class="ab open"><div><div class="px-4 pb-4 space-y-3"><div><div class="area">Current Week</div><div class="space-y-1"><div class="flex items-center gap-2 text-sm p-2 rounded" style="background:var(--canvas)"><span class="badge b-ok" style="font-size:10px">In Progress</span> Implement OAuth2 flow</div><div class="flex items-center gap-2 text-sm p-2 rounded" style="background:var(--canvas)"><span class="badge b-wn" style="font-size:10px">Blocked</span> Fix memory leak</div></div></div><div><div class="area" style="color:var(--red)">⚠ Risks</div><div class="p-2.5 rounded text-sm" style="background:#fee2e2">Third-party API rate limits may delay testing</div></div><div><div class="area">Top Priorities</div><ol class="space-y-1 text-sm"><li class="flex items-center gap-2 p-2 rounded" style="background:var(--goldLL)"><span class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style="background:var(--goldBg);color:#fff">1</span> Complete OAuth2 by Friday</li></ol></div></div></div></div></div>
+</div></main></div>
+
+<div class="slide" id="s4"><div class="tn"><a href="#" class="lo"><i>CR</i>CustomReport</a><nav><a href="#" onclick="go(2);return false">Dashboard</a><a href="#" onclick="go(3);return false">Assembled</a><a href="#" onclick="go(6);return false">Published</a><a href="#" onclick="go(5);return false">Archive</a><a href="#" class="on">Admin</a></nav><div class="rt"><span class="badge b-pr num">Week 16</span><button onclick="tL()" class="btn-gh lb" style="font-family:Lexend;font-size:12px;font-weight:700">EN</button><div style="border-left:1px solid var(--ceramic);padding-left:10px;margin-left:4px;display:flex;align-items:center;gap:6px"><div class="av" style="background:var(--goldLL);color:var(--gold)">РД</div><span style="font-size:14px;font-weight:500">Руководитель Д. · Head</span></div></div></div><main class="flex-1 p-6"><div class="max-w-5xl mx-auto"><h1 style="color:var(--teal)">Admin Panel</h1><div class="flex gap-1 p-1 mt-4 rounded-lg" style="background:var(--white);box-shadow:var(--shadow)"><button class="btn btn-pr flex-1 justify-center" style="border-radius:var(--pill)">Users</button><button class="btn-gh flex-1 justify-center" style="font-family:Lexend;font-size:14px;border-radius:var(--pill)">Projects</button><button class="btn-gh flex-1 justify-center" style="font-family:Lexend;font-size:14px;border-radius:var(--pill)">Periods</button><button class="btn-gh flex-1 justify-center" style="font-family:Lexend;font-size:14px;border-radius:var(--pill)">Reminders</button></div><div class="card overflow-hidden mt-4"><div class="flex items-center justify-between p-4" style="border-bottom:1px solid var(--ceramic)"><span class="meta">6 users</span><button class="btn btn-pr" style="font-size:13px">+ Add User</button></div><table style="width:100%;font-size:14px;border-collapse:collapse"><thead><tr style="color:var(--fgm);border-bottom:1px solid var(--ceramic)"><th style="text-align:left;padding:8px 12px;font-weight:500">Name</th><th style="text-align:left;padding:8px 12px;font-weight:500">Email</th><th style="text-align:left;padding:8px 12px;font-weight:500">Role</th><th style="padding:8px"></th></tr></thead><tbody><tr style="border-bottom:1px solid var(--ceramic)"><td style="padding:8px 12px;font-weight:500">Поленков А. · Dev Lead</td><td style="padding:8px 12px;color:var(--fgm)">a.polenkov@co.com</td><td style="padding:8px 12px"><span class="badge b-pr">Lead</span></td><td style="padding:8px;text-align:right"><button class="btn btn-sc" style="font-size:12px;padding:4px 12px;min-height:32px">Edit</button></td></tr><tr style="border-bottom:1px solid var(--ceramic)"><td style="padding:8px 12px;font-weight:500">Руководитель Д. · Head</td><td style="padding:8px 12px;color:var(--fgm)">director@co.com</td><td style="padding:8px 12px"><span class="badge b-gold">Head</span></td><td style="padding:8px;text-align:right"><button class="btn btn-sc" style="font-size:12px;padding:4px 12px;min-height:32px">Edit</button></td></tr></tbody></table></div></div></main></div>
+
+<div class="slide" id="s5"><div class="tn"><a href="#" class="lo"><i>CR</i>CustomReport</a><nav><a href="#" onclick="go(2);return false">Dashboard</a><a href="#" onclick="go(3);return false">Assembled</a><a href="#" onclick="go(6);return false">Published</a><a href="#" class="on">Archive</a><a href="#" onclick="go(4);return false">Admin</a></nav><div class="rt"><span class="badge b-pr num">Week 16</span><button onclick="tL()" class="btn-gh lb" style="font-family:Lexend;font-size:12px;font-weight:700">EN</button><div style="border-left:1px solid var(--ceramic);padding-left:10px;margin-left:4px;display:flex;align-items:center;gap:6px"><div class="av" style="background:var(--goldLL);color:var(--gold)">РД</div><span style="font-size:14px;font-weight:500">Руководитель Д. · Head</span></div></div></div><main class="flex-1 p-6"><div class="max-w-5xl mx-auto"><h1 style="color:var(--teal)">Report Archive</h1><div class="area mt-4">April 2026</div><div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><a href="#" class="card p-4" style="text-decoration:none;color:inherit"><div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold">Apr 14 – Apr 20</span><div class="flex gap-1"><div class="td td-g">✓</div><div class="td td-g">✓</div><div class="td td-y" style="color:#fff">!</div></div></div><div class="meta mb-2" style="font-size:13px">Published Apr 21</div><span class="badge b-ok" style="font-size:11px">Published</span></a><a href="#" class="card p-4" style="text-decoration:none;color:inherit"><span class="text-sm font-semibold">Apr 7 – Apr 13</span><div class="meta mt-1 mb-2" style="font-size:13px">Published Apr 14</div><span class="badge b-ok" style="font-size:11px">Published</span></a></div><div class="area">March 2026</div><div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><a href="#" class="card p-4" style="text-decoration:none;color:inherit"><span class="text-sm font-semibold">Mar 31 – Apr 6</span><div class="meta mt-1 mb-2" style="font-size:13px">Published Apr 7</div><span class="badge b-ok" style="font-size:11px">Published</span></a></div></div></main></div>
+
+<div class="slide" id="s6"><div class="tn"><a href="#" class="lo"><i>CR</i>CustomReport</a><nav><a href="#" onclick="go(2);return false">Dashboard</a><a href="#" onclick="go(3);return false">Assembled</a><a href="#" class="on">Published</a><a href="#" onclick="go(5);return false">Archive</a><a href="#" onclick="go(4);return false">Admin</a></nav><div class="rt"><span class="badge b-pr num">Week 16</span><button onclick="tL()" class="btn-gh lb" style="font-family:Lexend;font-size:12px;font-weight:700">EN</button><div style="border-left:1px solid var(--ceramic);padding-left:10px;margin-left:4px;display:flex;align-items:center;gap:6px"><div class="av" style="background:var(--goldLL);color:var(--gold)">РД</div><span style="font-size:14px;font-weight:500">Руководитель Д. · Head</span></div></div></div><main class="flex-1 p-6"><div class="max-w-5xl mx-auto"><header class="flex items-center justify-between"><div><h1 style="color:var(--teal)">Weekly Status Report</h1><p class="meta mt-1">Apr 14 – Apr 20, 2026 · Published</p></div><button class="btn btn-out">Download PDF</button></header><div class="card p-5 mt-6"><h2 class="mb-3">Portfolio Overview</h2><div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><div class="flex items-center gap-2 p-2.5 rounded-lg" style="background:var(--tealL)"><div class="td td-g">✓</div><div><div class="text-sm font-medium">CRM Integration</div><div class="meta" style="font-size:12px">Александр</div></div></div><div class="flex items-center gap-2 p-2.5 rounded-lg" style="background:#fef3c7"><div class="td td-y" style="color:#fff">!</div><div><div class="text-sm font-medium">Data Quality</div><div class="meta" style="font-size:12px">Александр</div></div></div><div class="flex items-center gap-2 p-2.5 rounded-lg" style="background:#fee2e2"><div class="td td-r">✕</div><div><div class="text-sm font-medium">Event-Driven</div><div class="meta" style="font-size:12px">Александр</div></div></div><div class="flex items-center gap-2 p-2.5 rounded-lg" style="background:var(--tealL)"><div class="td td-g">✓</div><div><div class="text-sm font-medium">API Gateway</div><div class="meta" style="font-size:12px">Игорь</div></div></div></div></div>
+<!-- Dark feature band -->
+<div class="card p-6 mt-6"><div class="flex items-center gap-3"><div class="av" style="background:var(--tealL);color:var(--teal)">АП</div><h2>Поленков А. · Dev Lead</h2></div><div class="sep mt-3 mb-3"></div><div class="area">Current Week</div><ul class="space-y-1.5 text-sm"><li class="flex items-center gap-2 p-2 rounded" style="background:var(--canvas)"><span class="badge b-ok" style="font-size:10px">In Progress</span> Implement OAuth2 flow <span class="meta ml-auto">#feature</span></li><li class="flex items-center gap-2 p-2 rounded" style="background:var(--canvas)"><span class="badge b-wn" style="font-size:10px">Blocked</span> Fix memory leak <span class="meta ml-auto">#bugfix</span></li></ul><div class="area" style="color:var(--red)">⚠ Risks</div><div class="p-2.5 rounded text-sm" style="background:#fee2e2;color:#991b1b">Third-party API rate limits may delay testing</div></div>
+</div></main></div>
+
+<div class="slide" id="s7"><div class="tn"><a href="#" class="lo"><i>CR</i>CustomReport</a><nav><a href="#" onclick="go(2);return false">Dashboard</a><a href="#" onclick="go(3);return false">Assembled</a><a href="#" onclick="go(6);return false">Published</a><a href="#" onclick="go(5);return false">Archive</a><a href="#" onclick="go(4);return false">Admin</a></nav><div class="rt"><span class="badge b-pr num">Week 16</span><button onclick="tL()" class="btn-gh lb" style="font-family:Lexend;font-size:12px;font-weight:700">EN</button><div style="border-left:1px solid var(--ceramic);padding-left:10px;margin-left:4px;display:flex;align-items:center;gap:6px"><div class="av" style="background:var(--goldLL);color:var(--gold)">РД</div><span style="font-size:14px;font-weight:500">Руководитель Д. · Head</span></div></div></div><main class="flex-1 overflow-y-auto p-6" style="padding-bottom:52px"><div class="max-w-5xl mx-auto space-y-6"><h1 style="color:var(--teal)">UI States</h1><div class="grid gap-4 sm:grid-cols-2">
+<div><h2 class="mb-2">Skeleton</h2><div class="card p-5 space-y-3"><div class="pulse rounded" style="width:50%;height:14px;background:var(--ceramic)"></div><div class="pulse rounded" style="width:35%;height:32px;background:var(--ceramic)"></div><div class="pulse rounded" style="width:100%;height:8px;background:var(--ceramic)"></div></div></div>
+<div><h2 class="mb-2">Error + Retry</h2><div class="card p-8 text-center"><div style="color:var(--red);font-size:36px">⚠</div><h2 class="mt-2">Failed to load</h2><p class="meta mt-1">Check connection and try again.</p><button class="btn btn-pr mt-3" style="margin:0 auto">Retry</button></div></div>
+<div><h2 class="mb-2">Empty State</h2><div class="card p-8 text-center" style="border:2px dashed var(--ceramic)"><div style="font-size:36px;color:var(--fgm)">📄</div><h2 class="mt-2">No submissions yet</h2><p class="meta mt-1">Leads have until Friday 18:00.</p></div></div>
+<div><h2 class="mb-2">Locked Form</h2><div class="card p-5" style="background:var(--tealL);border:1px solid rgba(0,98,65,.2)"><div class="flex items-center gap-3"><span style="font-size:20px">🔒</span><div><div class="font-semibold" style="color:var(--teal)">Report locked</div><div class="meta">Submitted Apr 20 at 14:32</div></div></div></div></div>
+<div><h2 class="mb-2">Toasts</h2><div class="space-y-2"><div class="card px-4 py-3 flex items-center gap-3" style="border-left:3px solid var(--tealA);max-width:340px"><span style="color:var(--tealA)">✓</span><div class="flex-1"><div class="text-sm font-semibold">Report submitted</div><div class="meta" style="font-size:13px">Sent to head for review.</div></div><button class="btn-gh" style="font-size:12px">✕</button></div><div class="card px-4 py-3 flex items-center gap-3" style="border-left:3px solid var(--red);max-width:340px"><span style="color:var(--red)">⚠</span><div class="flex-1"><div class="text-sm font-semibold">Save failed</div><div class="meta" style="font-size:13px">Check connection and try again.</div></div><button class="btn-gh" style="font-size:12px">✕</button></div><div class="card px-4 py-3 flex items-center gap-3" style="border-left:3px solid var(--yellow);max-width:340px"><span style="color:var(--yellow)">!</span><div class="flex-1"><div class="text-sm font-semibold">Deadline approaching</div><div class="meta" style="font-size:13px">Submit before Friday 18:00.</div></div><button class="btn-gh" style="font-size:12px">✕</button></div></div></div>
+<div><h2 class="mb-2">Validation Error</h2><div class="card p-5"><div class="p-3 rounded-lg" style="background:rgba(200,32,20,.03);border:1.5px solid var(--red)"><input class="inp" placeholder="Enter item description…" style="border-color:var(--red)"><div class="flex items-center gap-1.5 mt-1.5"><span style="color:var(--red);font-size:13px">⚠ Description is required</span></div></div></div></div>
+<div class="sm:col-span-2"><h2 class="mb-2">Delete Confirmation</h2><div class="card p-6 max-w-md"><div class="flex items-center gap-3 mb-3"><span style="font-size:24px">⚠</span><div><h2>Delete Current Week item?</h2><p class="meta">This cannot be undone.</p></div></div><div class="p-3 rounded-lg text-sm" style="background:var(--canvas)">"Implement OAuth2 flow for partner integrations"</div><div class="flex gap-3 justify-end mt-4"><button class="btn btn-sc">Cancel</button><button class="btn" style="background:var(--red);color:#fff;border-color:var(--red)">Delete Item</button></div></div></div>
+</div></div></main></div>
+
+<div id="sn"><b class="on" onclick="go(1)">Lead Form</b><b onclick="go(2)">Dashboard</b><b onclick="go(3)">Assembled</b><b onclick="go(4)">Admin</b><b onclick="go(5)">Archive</b><b onclick="go(6)">Published</b><b onclick="go(7)">UI States</b></div>
+
+<script>
+function go(n){document.querySelectorAll('.slide').forEach(s=>s.classList.remove('active'));document.getElementById('s'+n).classList.add('active');document.querySelectorAll('#sn b').forEach((b,i)=>b.classList.toggle('on',i===n-1))}
+function tA(b){const d=b.nextElementSibling;const a=b.querySelector('.aa');const o=d.classList.toggle('open');b.setAttribute('aria-expanded',o);if(a)a.style.transform=o?'rotate(0)':'rotate(-90deg)'}
+let cl='en';function tL(){cl=cl==='en'?'ru':'en';document.querySelectorAll('.lb').forEach(b=>b.textContent=cl.toUpperCase())}
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;const c=document.querySelector('.slide.active');const n=+c.id.replace('s','');if(e.key==='ArrowRight'&&n<7)go(n+1);if(e.key==='ArrowLeft'&&n>1)go(n-1)})
+</script>
+</body>
+</html>
