@@ -8,7 +8,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root{
---canvas:#f2f0eb;--ceramic:#edebe9;--white:#ffffff;--cool:#f9f9f9;
+--canvas:#f4f1eb;--ceramic:#ece8e2;--white:#ffffff;--cool:#f8f6f2;
 --house:#1E3932;--teal:#006241;--tealA:#00754A;--tealL:#d4e9e2;
 --gold:#8a6d1b;--goldBg:#cba258;--goldL:#dfc49d;--goldLL:#faf6ee;
 --fg:rgba(0,0,0,.87);--fgm:#6b7280;--fgw:#fff;--fgws:rgba(255,255,255,.7);
@@ -18,14 +18,14 @@
 --shadow-nav:0 1px 3px rgba(0,0,0,.1),0 2px 2px rgba(0,0,0,.06),0 0 2px rgba(0,0,0,.07);
 }
 *{box-sizing:border-box;margin:0}
-body{background:var(--canvas);color:var(--fg);font-family:'Source Sans 3','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{background:linear-gradient(180deg,#f7f4ee 0%,#f3f0ea 32%,#efebe4 100%);color:var(--fg);font-family:'Source Sans 3','Helvetica Neue',sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
 h1,.hd{font-family:'Lexend',sans-serif;font-size:24px;font-weight:600;line-height:1.5;letter-spacing:-.01em;color:var(--teal)}
 h2{font-family:'Lexend',sans-serif;font-size:24px;font-weight:400;line-height:1.5;color:var(--fg)}
 .st{font-family:'Lexend';font-size:16px;font-weight:600;letter-spacing:-.01em}
 .slide{display:none;min-height:100vh;flex-direction:column}.slide.active{display:flex}
-.slide>main{position:relative;isolation:isolate;overflow-x:hidden;background:transparent}
-.slide>main::before{content:none}
-.slide>main::after{content:none}
+.slide>main{position:relative;isolation:isolate;overflow-x:hidden;background:linear-gradient(180deg,rgba(255,255,255,.44) 0%,rgba(255,255,255,.12) 18%,rgba(255,255,255,0) 34%),radial-gradient(980px 340px at 8% 0%,rgba(0,117,74,.028),transparent 60%),radial-gradient(760px 280px at 92% 4%,rgba(203,162,88,.03),transparent 56%),linear-gradient(180deg,#f6f3ee 0%,#f3f0ea 45%,#efebe4 100%)}
+.slide>main::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(180deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,0) 22%,rgba(255,255,255,0) 100%),linear-gradient(90deg,rgba(0,117,74,.05) 0%,rgba(0,117,74,0) 100%),linear-gradient(270deg,rgba(203,162,88,.045) 0%,rgba(203,162,88,0) 100%),repeating-linear-gradient(180deg,rgba(0,117,74,.055) 0 1px,transparent 1px 18px),repeating-linear-gradient(180deg,rgba(203,162,88,.05) 0 1px,transparent 1px 20px);background-size:100% 100%,240px 100%,220px 100%,112px calc(100% - 150px),96px calc(100% - 170px);background-position:0 0,0 0,100% 0,26px 112px,calc(100% - 30px) 126px;background-repeat:no-repeat;opacity:.88}
+.slide>main::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(220px 220px at 0% 18%,rgba(0,117,74,.045),transparent 72%),radial-gradient(200px 200px at 100% 22%,rgba(203,162,88,.042),transparent 72%)}
 .slide>main>*{position:relative;z-index:1}
 /* NAV */
 .tn{background:var(--white);box-shadow:var(--shadow-nav);padding:0 max(24px,calc((100vw - 1152px)/2 + 24px));display:flex;align-items:center;height:64px;gap:24px;position:sticky;top:0;z-index:40;border-bottom:none}
@@ -55,8 +55,8 @@ h2{font-family:'Lexend',sans-serif;font-size:24px;font-weight:400;line-height:1.
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(0,98,65,.3);border-radius:8px}
 /* CARD */
-.card{background:var(--white);border-radius:var(--card-r);box-shadow:var(--shadow);transition:box-shadow .15s;overflow:hidden;border:1px solid rgba(0,0,0,.12)}
-.card:hover{box-shadow:0 0 1px 0 rgba(0,0,0,.14),0 2px 4px 0 rgba(0,0,0,.2)}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.97) 0%,rgba(255,255,255,.94) 100%);border-radius:var(--card-r);box-shadow:0 0 .5px 0 rgba(0,0,0,.08),0 8px 18px -14px rgba(0,0,0,.18),0 1px 2px rgba(0,0,0,.05);transition:box-shadow .15s;overflow:hidden;border:1px solid rgba(0,0,0,.10)}
+.card:hover{box-shadow:0 0 .5px 0 rgba(0,0,0,.12),0 12px 26px -18px rgba(0,0,0,.22),0 2px 4px rgba(0,0,0,.06)}
 .portfolio-overview-card{position:sticky;top:76px;z-index:4}
 .product-summary-card{width:100%;border:none;padding:0;text-align:left;background:transparent;font:inherit;cursor:pointer;position:relative;transition:filter .15s,box-shadow .15s,transform .15s}
 .product-summary-card>:nth-child(2){flex:1}
@@ -67,14 +67,21 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{
 .product-summary-card:active{transform:translateY(1px)}
 .product-summary-metrics{display:block;margin-top:2px;font-size:11px;color:var(--fgm)}
 .product-detail{scroll-margin-top:92px}
-#s2 main,#s3 main,#s4 main,#s7 main{background:transparent}
-#s1 main::before,#s9 main::before{content:none}
-#s1 main::after,#s9 main::after{content:none}
-#s9 main{position:relative;overflow-x:hidden;isolation:isolate;background:transparent}
+.overview-grid-compact{display:grid;gap:10px}
+@media(min-width:1024px){.overview-grid-compact{grid-template-columns:repeat(4,minmax(0,1fr))}}
+#s2 main,#s3 main,#s4 main,#s7 main{background:linear-gradient(180deg,rgba(255,255,255,.40) 0%,rgba(255,255,255,.08) 18%,rgba(255,255,255,0) 34%),radial-gradient(920px 300px at 10% 0%,rgba(0,117,74,.02),transparent 62%),linear-gradient(180deg,#f6f3ee 0%,#f3f0ea 45%,#efebe4 100%)}
+#s1 main::before,#s9 main::before{content:''}
+#s1 main::after,#s9 main::after{content:''}
+#s9 main{position:relative;overflow-x:hidden;isolation:isolate;background:linear-gradient(180deg,rgba(255,255,255,.46) 0%,rgba(255,255,255,.12) 18%,rgba(255,255,255,0) 34%),radial-gradient(980px 360px at 12% 0%,rgba(0,117,74,.03),transparent 58%),radial-gradient(760px 300px at 92% 8%,rgba(203,162,88,.034),transparent 54%),linear-gradient(180deg,#f7f4ee 0%,#f3f0ea 46%,#efeae3 100%)}
 #s9 .max-w-6xl{position:relative;z-index:1}
 /* Force strong spacing between collapsed accordion sections */
 .space-y-8>.card+.card{margin-top:24px!important}
 .card-house{background:#eef5f3;border-radius:var(--card-r);color:var(--fg);border:1px solid var(--tealL)}
+.history-layout{display:grid;gap:24px;align-items:start}
+@media(min-width:1024px){.history-layout{grid-template-columns:minmax(0,1fr) 320px}.history-sidebar{position:sticky;top:88px}}
+.history-rail-card{padding:18px;border-radius:16px;border:1px solid rgba(0,0,0,.08);background:linear-gradient(180deg,rgba(255,255,255,.90) 0%,rgba(255,255,255,.82) 100%);box-shadow:0 0 .5px 0 rgba(0,0,0,.07),0 12px 28px -22px rgba(0,0,0,.24),0 1px 2px rgba(0,0,0,.05)}
+.history-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.history-stat{padding:12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.76) 0%,rgba(248,246,242,.92) 100%);border:1px solid rgba(0,0,0,.06)}
 /* INPUT */
 .inp{background:var(--white);border:1px solid rgba(0,0,0,.2);border-radius:12px;padding:10px 12px;color:var(--fg);font-family:inherit;font-size:15px;line-height:1.5;width:100%;transition:border-color .15s}
 .inp:focus{border-color:var(--tealA);outline:none;box-shadow:0 0 0 3px rgba(0,117,74,.15)}
@@ -87,6 +94,12 @@ textarea.inp{resize:vertical;min-height:60px}
 .btn-out{background:transparent;color:var(--tealA);border-color:var(--tealA)}.btn-out:hover{background:var(--tealL)}
 .btn-dark{background:#000;color:#fff;border-color:#000}.btn-dark:hover{background:#222}
 .btn-sc{background:transparent;color:var(--fg);border-color:rgba(0,0,0,.2)}.btn-sc:hover{background:var(--cool)}
+.context-shell{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 18px;border:1px solid rgba(0,0,0,.08);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.88) 0%,rgba(255,255,255,.78) 100%);box-shadow:0 0 .5px 0 rgba(0,0,0,.06),0 10px 24px -20px rgba(0,0,0,.22),0 1px 2px 0 rgba(0,0,0,.05)}
+.context-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.context-shell .meta{font-size:13px}
+.section-kicker{display:block;margin-top:4px;font-size:12px;color:var(--fgm);font-weight:400;letter-spacing:0;text-transform:none}
+.kb-add{background:rgba(0,117,74,.08);color:var(--teal);border-color:rgba(0,117,74,.18);font-size:12px;padding:6px 12px;min-height:34px}
+.kb-add:hover{background:var(--tealL);border-color:rgba(0,117,74,.28)}
 .btn-gh{background:transparent;color:var(--fgm);padding:8px;border-radius:50%;min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:none}
 .btn-gh:hover{background:var(--cool);color:var(--fg)}
 .btn-del{background:transparent;color:rgba(0,0,0,.25);padding:10px;border-radius:50%;border:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;min-width:44px;min-height:44px}
@@ -171,7 +184,7 @@ textarea.inp{resize:vertical;min-height:60px}
 .pl-group{font-family:'Lexend';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--fgm);padding:8px 0 2px;display:flex;align-items:center;gap:6px}
 .pl-group::after{content:'';flex:1;height:1px;background:var(--ceramic)}
 /* Slide nav */
-#sn{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--white);box-shadow:0 -1px 3px rgba(0,0,0,.08);padding:6px 12px;display:flex;align-items:center;gap:4px;overflow-x:auto}
+#sn{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(255,255,255,.94);box-shadow:0 10px 26px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.06);padding:8px 10px;display:flex;align-items:center;gap:4px;overflow-x:auto;max-width:calc(100% - 24px);border:1px solid rgba(0,0,0,.08);border-radius:999px;backdrop-filter:blur(8px)}
 #sn b{padding:6px 14px;border-radius:var(--pill);font-family:'Lexend';font-size:12px;font-weight:500;white-space:nowrap;border:1px solid rgba(0,0,0,.15);background:transparent;color:var(--fgm);cursor:pointer;transition:all .12s}
 #sn b:hover{background:var(--cool);color:var(--fg)}
 #sn b.on{background:var(--tealA);color:#fff;border-color:var(--tealA)}
@@ -183,10 +196,10 @@ textarea.inp{resize:vertical;min-height:60px}
 <!-- S1: LEAD FORM -->
 <div class="slide active" id="s1">
 <div class="tn"><a href="#" class="lo"><i>CR</i>CustomReport</a><nav><a href="#" class="on" style="display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> My Report</a><a href="#" onclick="go(9);return false" style="display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> History</a></nav><div class="rt"><span class="badge b-pr num">Apr 14–20 · Week 16</span><div style="border-left:1px solid var(--ceramic);padding-left:10px;margin-left:4px;display:flex;align-items:center;gap:6px"><div class="av" style="background:var(--tealL);color:var(--teal)">АП</div><span style="font-size:14px;font-weight:500">Polenkov A. · Dev Lead</span></div></div></div>
-<main id="main" class="flex-1 overflow-y-auto" style="padding-bottom:52px">
-<div class="max-w-6xl mx-auto p-6 space-y-8">
-  <header class="flex flex-wrap items-center justify-between gap-4"><div class="flex items-center gap-3"><h1>My Report</h1><span class="badge b-ok">✓ Autosaved</span></div><div class="flex items-center gap-3"><div style="position:relative;display:inline-flex" id="fill-from-wrap">
-<button class="btn btn-sc" style="gap:4px;border-top-right-radius:0;border-bottom-right-radius:0"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Fill from Previous</button><button class="btn btn-sc" style="padding:4px 12px;min-width:44px;border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid var(--ceramic)" title="Fill from a specific past report" onclick="const dd=document.getElementById('fill-from-dd');dd.style.display=dd.style.display==='none'?'block':'none'"><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><path d="M6 9l6 6 6-6"/></svg></button>
+<main id="main" class="flex-1 overflow-y-auto" style="padding-bottom:88px">
+<div class="max-w-6xl mx-auto p-6 space-y-6">
+  <header class="flex flex-wrap items-center justify-between gap-4"><div class="flex items-center gap-3"><h1>My Report</h1><span class="badge b-ok" style="font-size:12px;padding:4px 10px">Autosaved</span></div><div class="flex items-center gap-3"><div style="position:relative;display:inline-flex" id="fill-from-wrap">
+<button class="btn btn-out" style="gap:4px;border-top-right-radius:0;border-bottom-right-radius:0"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Fill from Previous</button><button class="btn btn-sc" style="padding:4px 12px;min-width:44px;border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid var(--ceramic)" title="Fill from a specific past report" onclick="const dd=document.getElementById('fill-from-dd');dd.style.display=dd.style.display==='none'?'block':'none'"><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><path d="M6 9l6 6 6-6"/></svg></button>
 <!-- Fill from dropdown -->
 <div id="fill-from-dd" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;width:340px;z-index:50;background:#fff;border:1px solid var(--ceramic);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:12px">
   <input class="inp" placeholder="Search reports..." style="font-size:13px;padding:7px 12px 7px 32px;margin-bottom:8px;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2214%22 height=%2214%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23999%22 stroke-width=%222%22><circle cx=%2211%22 cy=%2211%22 r=%228%22/><path d=%22M21 21l-4.35-4.35%22/></svg>');background-repeat:no-repeat;background-position:10px center">
@@ -200,8 +213,8 @@ textarea.inp{resize:vertical;min-height:60px}
 </div>
 </div><button class="btn btn-sc" style="gap:4px" onclick="const abs=document.querySelectorAll('#s1 .ab');const anyOpen=[...abs].some(a=>a.classList.contains('open'));abs.forEach(a=>{a.classList.toggle('open',!anyOpen);const b=a.previousElementSibling;b.setAttribute('aria-expanded',!anyOpen);const ar=b.querySelector('.aa');if(ar)ar.style.transform=anyOpen?'rotate(-90deg)':'rotate(0)'})" title="Collapse All / Expand All"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>Toggle All</button><button class="btn btn-pr">Submit Report</button></div></header>
   <!-- Period navigator for Lead Form -->
-  <div class="flex items-center gap-3">
-    <div class="flex items-center gap-1">
+  <div class="context-shell">
+    <div class="context-group">
       <button class="btn-gh" style="min-width:44px;min-height:44px;border:1px solid var(--ceramic);border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0" title="Previous period" aria-label="Previous period"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><path d="M15 18l-6-6 6-6"/></svg></button>
       <select aria-label="Select reporting period" style="font-family:Lexend;font-size:13px;font-weight:500;padding:5px 28px 5px 10px;border:1px solid var(--ceramic);border-radius:8px;background:var(--canvas) url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22><path d=%22M6 9l6 6 6-6%22/></svg>') no-repeat right 8px center;-webkit-appearance:none;appearance:none;cursor:pointer;min-height:32px">
         <option selected>Week 16 · Apr 14–20 (current)</option>
@@ -211,8 +224,9 @@ textarea.inp{resize:vertical;min-height:60px}
       </select>
       <button class="btn-gh" style="min-width:44px;min-height:44px;border:1px solid var(--ceramic);border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0;opacity:.35;cursor:not-allowed" disabled title="Latest period" aria-label="Next period"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><path d="M9 18l6-6-6-6"/></svg></button>
     </div>
-    <span class="meta">CoreDev Department · Polenkov A.</span>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:2px">
+    <div class="context-group" style="flex:1;justify-content:center;min-width:220px"><span class="meta">CoreDev Department</span><span class="meta">·</span><span class="meta">Polenkov A. · Dev Lead</span></div>
+    <div class="context-group" style="margin-left:auto">
+      <span class="meta" style="font-size:12px">Editing version</span>
       <button class="btn-gh" style="min-width:44px;min-height:44px;border:1px solid var(--ceramic);border-radius:6px;display:flex;align-items:center;justify-content:center;padding:0" title="Previous version (v2)" aria-label="Previous version"><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><path d="M15 18l-6-6 6-6"/></svg></button>
       <button class="btn-gh" style="font-size:11px;padding:2px 10px;display:inline-flex;align-items:center;gap:4px;color:var(--fgm);border:1px solid var(--ceramic);border-radius:6px;min-height:36px" title="View version history — compare and roll back"><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>v3</button>
       <button class="btn-gh" style="min-width:44px;min-height:44px;border:1px solid var(--ceramic);border-radius:6px;display:flex;align-items:center;justify-content:center;padding:0;opacity:.35;cursor:not-allowed" disabled title="Latest version" aria-label="Next version"><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2"><path d="M9 18l6-6-6-6"/></svg></button>
@@ -221,7 +235,7 @@ textarea.inp{resize:vertical;min-height:60px}
 
   <!-- PRODUCT STATUS — collapsible -->
   <div class="card">
-    <button onclick="tA(this)" class="w-full flex items-center justify-between p-5 hover:bg-[var(--cool)] transition-colors" aria-expanded="true"><div class="flex items-center gap-3"><svg class="ic" viewBox="0 0 24 24" style="color:var(--teal);flex-shrink:0"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg><span class="st" style="color:var(--teal)">Product Status</span><span class="badge b-m num">6 assigned products</span></div><svg class="ic aa" style="color:var(--fgm)" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+    <button onclick="tA(this)" class="w-full flex items-center justify-between p-5 hover:bg-[var(--cool)] transition-colors" aria-expanded="true"><div><div class="flex items-center gap-3"><svg class="ic" viewBox="0 0 24 24" style="color:var(--teal);flex-shrink:0"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M3 14h7v7H3z"/><path d="M14 14h7v7h-7z"/></svg><span class="st" style="color:var(--teal)">Product Status</span><span class="badge b-m num">6 assigned products</span></div><span class="section-kicker">Assigned stages are highlighted. Blocked and at-risk stages link to the context you need to resolve them.</span></div><svg class="ic aa" style="color:var(--fgm)" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
     <div class="ab open"><div><div class="px-5 pb-5">
 
     <!-- Product 1: CRM Platform — full SDLC: Planning → Analysis → Design → Dev → Testing → DevOps → Support -->
@@ -721,8 +735,8 @@ textarea.inp{resize:vertical;min-height:60px}
 <!-- S3: ASSEMBLED REPORT — same products -->
 <div class="slide" id="s3"><div class="tn"><a href="#" class="lo"><i>CR</i>CustomReport</a><nav><a href="#" onclick="go(2);return false" style="display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Dashboard</a><a href="#" class="on" style="display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg> Report</a><a href="#" onclick="go(4);return false" style="display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg> Admin</a></nav><div class="rt"><span class="badge b-pr num">Apr 14–20 · Week 16</span><div style="border-left:1px solid var(--ceramic);padding-left:10px;margin-left:4px;display:flex;align-items:center;gap:6px"><div class="av" style="background:var(--goldLL);color:var(--gold)">DH</div><span style="font-size:14px;font-weight:500">Director H. · Department Head</span></div></div></div><main class="flex-1 overflow-y-auto" style="padding-bottom:52px"><div class="max-w-6xl mx-auto p-6"><div class="flex items-center justify-between flex-wrap gap-4"><div class="flex items-center gap-3"><h1>Weekly Report</h1><span class="badge b-ok" style="font-size:12px">Live · 4/6 Submitted</span></div><div class="flex items-center gap-3"><button class="btn btn-sc" style="gap:4px" onclick="const abs=document.querySelectorAll('#s3 .ab');const anyOpen=[...abs].some(a=>a.classList.contains('open'));abs.forEach(a=>{a.classList.toggle('open',!anyOpen);const b=a.previousElementSibling;b.setAttribute('aria-expanded',!anyOpen);const ar=b.querySelector('.aa');if(ar)ar.style.transform=anyOpen?'rotate(-90deg)':'rotate(0)'})" title="Toggle All"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>Toggle All</button><button class="btn btn-out">Export PDF</button><button class="btn btn-pr">Publish &amp; Lock</button></div></div>
 <!-- Period navigator -->
-<div class="flex items-center gap-3 mt-2">
-  <div class="flex items-center gap-1">
+<div class="context-shell mt-2">
+  <div class="context-group">
     <button class="btn-gh" style="min-width:44px;min-height:44px;border:1px solid var(--ceramic);border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0" title="Previous week" aria-label="Previous week"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><path d="M15 18l-6-6 6-6"/></svg></button>
     <select aria-label="Select reporting period" style="font-family:Lexend;font-size:13px;font-weight:500;padding:5px 28px 5px 10px;border:1px solid var(--ceramic);border-radius:8px;background:var(--canvas) url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22><path d=%22M6 9l6 6 6-6%22/></svg>') no-repeat right 8px center;-webkit-appearance:none;appearance:none;cursor:pointer;min-height:32px">
       <option selected>Week 16 · Apr 14–20 (current)</option>
@@ -734,10 +748,10 @@ textarea.inp{resize:vertical;min-height:60px}
     </select>
     <button class="btn-gh" style="min-width:44px;min-height:44px;border:1px solid var(--ceramic);border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0;opacity:.35;cursor:not-allowed" title="Next week (latest)" aria-label="Next week" disabled><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2"><path d="M9 18l6-6-6-6"/></svg></button>
   </div>
-  <span class="meta">CoreDev Department</span>
+  <div class="context-group" style="flex:1;justify-content:center;min-width:180px"><span class="meta">CoreDev Department</span><span class="meta">·</span><span class="meta">Live portfolio review</span></div>
 </div>
 <!-- Portfolio overview — collapsible -->
-<div class="card mt-6 portfolio-overview-card"><button onclick="tA(this)" class="w-full flex items-center justify-between p-5 hover:bg-[var(--cool)] transition-colors" aria-expanded="true"><div class="flex items-center gap-3"><svg class="ic" viewBox="0 0 24 24" style="color:var(--teal);flex-shrink:0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="st" style="color:var(--teal)">Portfolio Overview</span><span class="badge b-m num">12 products</span></div><svg class="ic aa" style="color:var(--fgm)" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><div class="ab open"><div><div class="px-5 pb-5"><div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+<div class="card mt-4 portfolio-overview-card"><button onclick="tA(this)" class="w-full flex items-center justify-between p-4 hover:bg-[var(--cool)] transition-colors" aria-expanded="true"><div><div class="flex items-center gap-3"><svg class="ic" viewBox="0 0 24 24" style="color:var(--teal);flex-shrink:0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="st" style="color:var(--teal)">Portfolio Overview</span><span class="badge b-m num">12 products</span></div><span class="section-kicker">Risk products surface first. Click any card to open its matching detailed section below.</span></div><svg class="ic aa" style="color:var(--fgm)" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><div class="ab open"><div><div class="px-4 pb-4"><div class="overview-grid-compact sm:grid-cols-2">
   <button type="button" class="product-summary-card flex items-center gap-2 p-2.5 rounded-lg" style="background:#fef3c7" data-target="report-product-crm-platform" onclick="openReportProduct('report-product-crm-platform')" onmouseover="this.style.filter='brightness(.98)'" onmouseout="this.style.filter='none'"><div class="td td-y" style="color:#fff">!</div><div><div class="text-sm font-medium">CRM Platform</div><div class="meta" style="font-size:12px">At Risk · OAuth2 dependency delay</div><span class="product-summary-metrics">5 current · 3 next · 1 risk</span></div></button>
   <button type="button" class="product-summary-card flex items-center gap-2 p-2.5 rounded-lg" style="background:#fee2e2" data-target="report-product-data-analytics-suite" onclick="openReportProduct('report-product-data-analytics-suite')" onmouseover="this.style.filter='brightness(.98)'" onmouseout="this.style.filter='none'"><div class="td td-r">✕</div><div><div class="text-sm font-medium">Data Analytics Suite</div><div class="meta" style="font-size:12px">Blocked · ETL memory issue</div><span class="product-summary-metrics">4 current · 2 next · 2 risks</span></div></button>
   <button type="button" class="product-summary-card flex items-center gap-2 p-2.5 rounded-lg" style="background:#fef3c7" data-target="report-product-mobile-applications" onclick="openReportProduct('report-product-mobile-applications')" onmouseover="this.style.filter='brightness(.98)'" onmouseout="this.style.filter='none'"><div class="td td-y" style="color:#fff">!</div><div><div class="text-sm font-medium">Mobile Applications</div><div class="meta" style="font-size:12px">At Risk · Navigation redesign</div><span class="product-summary-metrics">4 current · 1 next · 1 risk</span></div></button>
@@ -1135,12 +1149,16 @@ textarea.inp{resize:vertical;min-height:60px}
 <!-- S9: LEAD HISTORY -->
 <div class="slide" id="s9">
 <div class="tn"><a href="#" class="lo"><i>CR</i>CustomReport</a><nav><a href="#" onclick="go(1);return false" style="display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> My Report</a><a href="#" class="on" style="display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> History</a></nav><div class="rt"><span class="badge b-pr num">Apr 14–20 · Week 16</span><div style="border-left:1px solid var(--ceramic);padding-left:10px;margin-left:4px;display:flex;align-items:center;gap:6px"><div class="av" style="background:var(--tealL);color:var(--teal)">АП</div><span style="font-size:14px;font-weight:500">Polenkov A. · Dev Lead</span></div></div></div>
-<main class="flex-1 overflow-y-auto" style="padding-bottom:52px"><div class="max-w-6xl mx-auto p-6">
+<main class="flex-1 overflow-y-auto" style="padding-bottom:88px"><div class="max-w-6xl mx-auto p-6 space-y-6">
 <!-- History shows all periods — no navigator needed -->
+<div>
 <h1 style="color:var(--teal)">My Report History</h1>
 <p class="meta mt-1">Polenkov A. · Dev Lead · 6 assigned products</p>
+</div>
 
-<div class="area mt-6">April 2026</div>
+<div class="history-layout">
+<div>
+<div class="area mt-2">April 2026</div>
 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
   <a href="#" class="card p-4" style="text-decoration:none;color:inherit;border-left:3px solid var(--tealA)"><div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold">Apr 14 – Apr 20</span><span class="badge b-ok" style="font-size:11px">Submitted</span></div><div class="meta mb-1" style="font-size:13px">6 assigned products · 11 items · 1 risk · 2 decisions</div><div class="flex gap-1 mt-2"><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-r" style="width:16px;height:16px;font-size:8px">✕</div><div class="td td-y" style="width:16px;height:16px;font-size:8px;color:#fff">!</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div></div><div class="meta mt-1" style="font-size:13px">Submitted Apr 20, 14:32</div></a>
   <a href="#" class="card p-4" style="text-decoration:none;color:inherit;border-left:3px solid var(--tealA)"><div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold">Apr 7 – Apr 13</span><span class="badge b-ok" style="font-size:11px">Submitted</span></div><div class="meta mb-1" style="font-size:13px">6 assigned products · 9 items · 0 risks</div><div class="flex gap-1 mt-2"><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div></div><div class="meta mt-1" style="font-size:13px">Submitted Apr 13, 16:45</div></a>
@@ -1150,6 +1168,32 @@ textarea.inp{resize:vertical;min-height:60px}
   <a href="#" class="card p-4" style="text-decoration:none;color:inherit;border-left:3px solid var(--tealA)"><div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold">Mar 31 – Apr 6</span><span class="badge b-ok" style="font-size:11px">Submitted</span></div><div class="meta mb-1" style="font-size:13px">5 products · 8 items · 1 risk</div><div class="flex gap-1 mt-2"><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-y" style="width:16px;height:16px;font-size:8px;color:#fff">!</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div></div><div class="meta mt-1" style="font-size:13px">Submitted Apr 4, 17:00</div></a>
   <a href="#" class="card p-4" style="text-decoration:none;color:inherit;border-left:3px solid var(--tealA)"><div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold">Mar 24 – Mar 30</span><span class="badge b-ok" style="font-size:11px">Submitted</span></div><div class="meta mb-1" style="font-size:13px">5 products · 7 items</div><div class="flex gap-1 mt-2"><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div></div><div class="meta mt-1" style="font-size:13px">Submitted Mar 28, 15:20</div></a>
   <a href="#" class="card p-4" style="text-decoration:none;color:inherit;border-left:3px solid var(--tealA)"><div class="flex items-center justify-between mb-2"><span class="text-sm font-semibold">Mar 17 – Mar 23</span><span class="badge b-ok" style="font-size:11px">Submitted</span></div><div class="meta mb-1" style="font-size:13px">4 products · 6 items · 2 risks</div><div class="flex gap-1 mt-2"><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-r" style="width:16px;height:16px;font-size:8px">✕</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div><div class="td td-g" style="width:16px;height:16px;font-size:8px">✓</div></div><div class="meta mt-1" style="font-size:13px">Submitted Mar 21, 17:55</div></a>
+</div>
+</div>
+<aside class="history-sidebar space-y-4">
+  <div class="history-rail-card space-y-4">
+    <div>
+      <div class="area" style="padding-top:0">Reporting Overview</div>
+      <p class="meta" style="font-size:13px">A compact summary of recent rhythm so the history screen feels like a working area, not just an archive.</p>
+    </div>
+    <div class="history-stat-grid">
+      <div class="history-stat"><div class="meta" style="font-size:12px">Submitted reports</div><div class="st" style="font-size:22px;color:var(--teal);margin-top:2px">5</div></div>
+      <div class="history-stat"><div class="meta" style="font-size:12px">Open risks</div><div class="st" style="font-size:22px;color:var(--gold);margin-top:2px">4</div></div>
+      <div class="history-stat"><div class="meta" style="font-size:12px">Latest version</div><div class="st" style="font-size:22px;color:var(--teal);margin-top:2px">v3</div></div>
+      <div class="history-stat"><div class="meta" style="font-size:12px">Current streak</div><div class="st" style="font-size:22px;color:var(--teal);margin-top:2px">5w</div></div>
+    </div>
+  </div>
+  <div class="history-rail-card space-y-3">
+    <div class="area" style="padding-top:0">Recent Pattern</div>
+    <div class="history-stat"><div class="text-sm font-semibold">Most active week</div><div class="meta" style="font-size:12px;margin-top:2px">Apr 14–20 · 11 items · 2 decisions</div></div>
+    <div class="history-stat"><div class="text-sm font-semibold">Risk-heavy period</div><div class="meta" style="font-size:12px;margin-top:2px">Mar 17–23 · 2 risks surfaced across 4 products</div></div>
+    <div class="history-stat"><div class="text-sm font-semibold">Suggested compare</div><div class="meta" style="font-size:12px;margin-top:2px">Open Apr 14–20 and Apr 7–13 to review growth in risks and decisions.</div></div>
+  </div>
+  <div class="history-rail-card space-y-3">
+    <div class="area" style="padding-top:0">Quick Filters</div>
+    <div class="flex flex-wrap gap-2"><button class="btn btn-sc" style="min-height:34px;font-size:12px;padding:5px 12px">All periods</button><button class="btn btn-sc" style="min-height:34px;font-size:12px;padding:5px 12px">With risks</button><button class="btn btn-sc" style="min-height:34px;font-size:12px;padding:5px 12px">With decisions</button><button class="btn btn-sc" style="min-height:34px;font-size:12px;padding:5px 12px">Current quarter</button></div>
+  </div>
+</aside>
 </div>
 </div></main></div>
 
