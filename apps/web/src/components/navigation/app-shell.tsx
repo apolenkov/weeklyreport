@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react';
 
+import { ApiReadinessPlaceholder } from '../common/api-readiness-placeholder';
+
 import type { Role } from '@customreport/shared';
 
 import {
@@ -35,6 +37,8 @@ function getRoleLabel(role: Role): string {
   };
   return labels[role];
 }
+
+const APP_UI_PLACEHOLDER_ENABLED = true;
 
 function getPageTitle(currentPath: string, activeReportId: string | null): string {
   const match = navItems.find((item) => {
@@ -88,7 +92,13 @@ export function AppShell({
           <NavUser userName={userName} userRole={role} />
         </header>
         <main className="flex-1 p-6 lg:p-8">
-          <div className="mx-auto max-w-[1200px] animate-fade-in">{children}</div>
+          <div className="mx-auto max-w-[1200px] animate-fade-in">
+            {APP_UI_PLACEHOLDER_ENABLED ? (
+              <ApiReadinessPlaceholder pageTitle={pageTitle} />
+            ) : (
+              children
+            )}
+          </div>
         </main>
       </SidebarInset>
     </SidebarProvider>

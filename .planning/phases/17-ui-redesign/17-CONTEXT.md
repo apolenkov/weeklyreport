@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Every page has a professional, polished UI — AssembledReport functional defect fixed, dark theme consistent, a11y complete, responsive. Lead form redesigned first for user approval before proceeding to other pages.
+Phase 17 now proceeds API-first from the approved mockups. The authenticated Next.js UI stays behind a temporary placeholder while backend contracts, workflow states, and archive/versioning semantics are completed end-to-end. Once API parity is reached, the polished UI can be rebuilt on stable contracts.
 
 </domain>
 
@@ -16,8 +16,9 @@ Every page has a professional, polished UI — AssembledReport functional defect
 ### Design System (from DESIGN.md — Starbucks-inspired)
 - **D-01:** Warm cream canvas (#f2f0eb) — single theme, no dark/light toggle. White cards on cream. Starbucks-inspired per DESIGN.md.
 - **D-02:** Status chips: fixed-width 120px pill buttons with icon+text (✓ On Track / ! At Risk / ✕ Blocked). NOT traffic light circles.
-- **D-03:** AssembledReport (UI-01): Fix data mapping — ensure router returns ALL sections/items from all leads, then render with expandable lead sections.
+- **D-03:** API-first sequencing — pause real authenticated app UI behind a placeholder until the backend matches the approved mockups end-to-end.
 - **D-04:** Teal primary (#006241/#00754A) instead of indigo. Gold (#cba258) for priorities only. Per DESIGN.md color system.
+- **D-05:** Mockup semantics must become explicit contracts: product status pipeline, current week items, next week items, blockers/risks, decisions, priorities, head review, publish approval, archive, and version history.
 
 ### Layout & Navigation
 - **D-18:** Top navigation bar (not sidebar). Role-aware: Lead sees "My Report, History"; Head sees "Dashboard, Assembled, Published, Archive, Admin".
