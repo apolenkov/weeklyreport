@@ -213,8 +213,9 @@ Plans:
 ## v4.0 Backend Completeness & UI Redesign
 
 - [x] **Phase 16: Backend Hardening** - Prisma migration, BullMQ re-enabled, 81 regression scenarios pass, test infrastructure clean (completed 2026-04-21)
-- [ ] **Phase 17: API Completion From Approved Mockups** - Shared schemas, explicit lifecycle contracts, archive/versioning semantics, and temporary Hello World + API frontend hold until parity is reached
-- [ ] **Phase 18: E2E Tests** - 223 regression scenarios as Playwright tests, role journeys, visual baselines
+- [ ] **Phase 17: Fullstack UI Redesign** - Schema + API + Frontend per mockup v14 (6 waves)
+- [ ] **Phase 18: E2E Tests** - 223 regression scenarios as Playwright tests, 7 plans
+- [ ] **Phase 19: Documentation** - API reference, deployment guide, developer + user docs
 
 ### Phase 16: Backend Hardening
 **Goal**: Backend fully conforms to all API contracts; BullMQ queues functional; test infrastructure clean and ready to support UI redesign
@@ -255,8 +256,8 @@ Plans:
 
 Plans:
 - [x] 17-01-PLAN.md — Index & overview (superseded by wave plans)
-- [ ] 17-02-PLAN.md — Wave 1: Schema migration (SCH-01..07) + Login stub (API-13) + URL routing (UI-14)
-- [ ] 17-03-PLAN.md — Wave 2: Backend API endpoints (API-01..12) + contract tests
+- [x] 17-02-PLAN.md — Wave 1: Schema migration (SCH-01..07) + Login stub (API-13) + URL routing (UI-14) ✅
+- [ ] 17-03-PLAN.md — Wave 2 gaps: Remaining 3 API endpoints (API-04, API-11, API-12) + service tests
 - [ ] 17-04-PLAN.md — Wave 3: Lead Form + Lead History UI (UI-01..04, UI-13)
 - [ ] 17-05-PLAN.md — Wave 4: Dashboard + Weekly Report UI (UI-05..10)
 - [ ] 17-06-PLAN.md — Wave 5: Admin Panel + Login + Design Polish (UI-11,12,15..19)
@@ -274,7 +275,32 @@ Plans:
   5. Error paths: 403 wrong role, 404 invalid period, network disconnect — passes E2E
   6. Visual regression baselines established; `pnpm playwright test` passes with 0 failures
   7. P0 regression scenarios (83) all pass as automated tests
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+- [ ] 18-01-PLAN.md — Auth fixtures + Lead journey (E2E-01)
+- [ ] 18-02-PLAN.md — Head journey: dashboard + weekly report + PDF (E2E-02)
+- [ ] 18-03-PLAN.md — Admin journey (E2E-03)
+- [ ] 18-04-PLAN.md — Cross-role lifecycle + Revoke (E2E-04, E2E-05)
+- [ ] 18-05-PLAN.md — Period nav + Fill From + Version History (E2E-06..08)
+- [ ] 18-06-PLAN.md — Error paths + edge cases (E2E-09)
+- [ ] 18-07-PLAN.md — Visual regression baselines + accessibility (E2E-10)
+
+### Phase 19: Documentation
+**Goal**: Complete project documentation for handoff — API reference, deployment guide, developer onboarding, user guide
+**Depends on**: Phase 17, Phase 18
+**Requirements**: DOC-01..DOC-03
+**Success Criteria** (what must be TRUE):
+  1. `docs/API-REFERENCE.md` covers all ~30 tRPC endpoints with input/output shapes
+  2. `docs/DEPLOYMENT.md` enables production deploy from scratch
+  3. `docs/DEVELOPER.md` enables new developer local setup in < 30 minutes
+  4. `docs/USER-GUIDE.md` covers all role workflows with screenshot references
+**Plans**: 3 plans
+
+Plans:
+- [ ] 19-01-PLAN.md — API reference documentation
+- [ ] 19-02-PLAN.md — Deployment guide
+- [ ] 19-03-PLAN.md — Developer onboarding + User guide
 
 ---
 
@@ -282,9 +308,18 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 16. Backend Hardening | 4/4 | Complete    | 2026-04-21 |
-| 17. Fullstack UI Redesign | 0/7 | Wave plans ready, executing Wave 1 | - |
-| 18. E2E Tests | 0/TBD | Not started | - |
+| 16. Backend Hardening | 4/4 | Complete | 2026-04-21 |
+| 17. Fullstack UI Redesign | 2/7 | Wave 1-2 done, 5 remaining | - |
+| 18. E2E Tests | 0/7 | Plans ready | - |
+| 19. Documentation | 0/3 | Plans ready | - |
+
+## Execution Order (for /gsd:next)
+
+```
+17-03 → 17-04 → 17-05 → 17-06 → 17-07 → 18-01 → 18-02 → 18-03 → 18-04 → 18-05 → 18-06 → 18-07 → 19-01 → 19-02 → 19-03
+```
+
+15 plans remaining. Each plan is self-contained and ready for `/gsd:execute-phase`.
 
 ---
 
@@ -293,4 +328,4 @@ Plans:
 *v2.0 shipped: 2026-04-11*
 *v3.0 shipped: 2026-04-21*
 *v4.0 started: 2026-04-21*
-*v4.0 roadmap: 2026-04-21*
+*v4.0 roadmap updated: 2026-04-24*
