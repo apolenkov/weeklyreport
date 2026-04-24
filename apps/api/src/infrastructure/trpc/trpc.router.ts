@@ -25,6 +25,9 @@ import type { AdminService } from '../../modules/admin/admin.service.js';
 import type { RemindersService } from '../../modules/reminders/reminders.service.js';
 import type { CarryOverService } from '../../modules/carry-over/carry-over.service.js';
 import type { ArchiveService } from '../../modules/archive/archive.service.js';
+import type { PeriodService } from '../../modules/period/period.service.js';
+import type { WeeklyReportService } from '../../modules/weekly-report/weekly-report.service.js';
+import type { LeadFormService } from '../../modules/report-sections/lead-form.service.js';
 
 type RouterDeps = {
   prisma: PrismaClient;
@@ -36,6 +39,9 @@ type RouterDeps = {
   remindersService: RemindersService;
   carryOverService: CarryOverService;
   archiveService: ArchiveService;
+  periodService: PeriodService;
+  weeklyReportService: WeeklyReportService;
+  leadFormService: LeadFormService;
 };
 
 export function createAppRouter(deps: RouterDeps) {
@@ -311,6 +317,95 @@ export function createAppRouter(deps: RouterDeps) {
               input.sourceReportId,
               input.targetReportId,
             );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === Period lifecycle namespace (v4.0) ===
+    period: router({
+      publish: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await deps.periodService.publishPeriod(input.reportId, ctx.session);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      reopen: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.periodService.reopenPeriod(input.reportId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === Weekly Report namespace (v4.0) ===
+    weeklyReport: router({
+      get: protectedProcedure
+        .input(z.object({ reportId: z.string().uuid().optional() }).optional())
+        .query(async ({ input }) => {
+          try {
+            return await deps.weeklyReportService.getWeeklyReport(input?.reportId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === Lead Form namespace (v4.0) ===
+    leadForm: router({
+      byPeriod: protectedProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .query(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.getByPeriod(input.reportId, ctx.session.userId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      fillFrom: protectedProcedure
+        .input(z.object({ targetSectionId: z.string().uuid(), sourceSectionId: z.string().uuid() }))
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.fillFrom(input.targetSectionId, input.sourceSectionId, ctx.session.userId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      versions: protectedProcedure
+        .input(z.object({ reportSectionId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.leadFormService.listVersions(input.reportSectionId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      restoreVersion: protectedProcedure
+        .input(z.object({ reportSectionId: z.string().uuid(), version: z.number().int().positive() }))
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.restoreVersion(input.reportSectionId, input.version, ctx.session.userId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      revoke: headProcedure
+        .input(z.object({ reportSectionId: z.string().uuid() }))
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.revokeSubmission(input.reportSectionId, ctx.session.userId);
           } catch (error) {
             throw mapDomainError(error);
           }
