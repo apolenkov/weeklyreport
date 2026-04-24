@@ -1,82 +1,91 @@
 /* Design tokens and base styles for @customreport/ui.
-   Tailwind @import and @source are in apps/web/src/styles/app.css */
+   Tailwind @import and @source are in apps/web/src/styles/app.css
 
-/*
- * CustomReport Design Tokens
- *
- * Deep navy + warm amber palette. OKLCH-based for consistent rendering.
- * Designed for corporate reporting tool with distinctive visual identity.
- */
+   Starbucks-inspired design system (DESIGN.md):
+   - Cream canvas, not cold white
+   - 4-tier green hierarchy
+   - Gold for priorities/rewards only
+   - Lexend + Source Sans 3 typography
+*/
 
 @theme {
   /* ---- Typography ---- */
-  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Lexend', 'Source Sans 3', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Source Sans 3', 'Lexend', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
 
-  /* ---- Base palette — Dark Mode ---- */
-  --color-background: oklch(0.16 0.02 260);
-  --color-foreground: oklch(0.93 0.01 260);
+  /* ---- Canvas & surfaces ---- */
+  --color-background: #f2f0eb;
+  --color-foreground: rgba(0, 0, 0, 0.87);
 
-  --color-muted: oklch(0.22 0.02 260);
-  --color-muted-foreground: oklch(0.60 0.02 260);
+  --color-muted: #e8e5df;
+  --color-muted-foreground: rgba(0, 0, 0, 0.54);
 
-  --color-accent: oklch(0.24 0.03 260);
-  --color-accent-foreground: oklch(0.93 0.01 260);
+  --color-accent: #e0ddd6;
+  --color-accent-foreground: rgba(0, 0, 0, 0.87);
 
   /* ---- Skeleton ---- */
-  --color-skeleton: oklch(0.24 0.02 260);
+  --color-skeleton: #ddd9d2;
 
-  /* ---- Semantic status colors ---- */
-  --color-success: oklch(0.72 0.19 152);
-  --color-success-foreground: oklch(0.99 0 0);
-  --color-warning: oklch(0.80 0.16 70);
-  --color-warning-foreground: oklch(0.15 0 0);
-  --color-destructive: oklch(0.62 0.22 25);
-  --color-destructive-foreground: oklch(0.99 0 0);
+  /* ---- Semantic status colors (traffic lights) ---- */
+  --color-success: #d4e9e2;
+  --color-success-foreground: #006241;
+  --color-warning: #fbbc05;
+  --color-warning-foreground: #1a1a1a;
+  --color-destructive: #c82014;
+  --color-destructive-foreground: #ffffff;
 
   /* ---- Border & ring ---- */
-  --color-border: oklch(0.28 0.02 260);
-  --color-ring: oklch(0.60 0.20 260);
+  --color-border: #d6d1c9;
+  --color-ring: rgba(0, 98, 65, 0.3);
 
   /* ---- Card & popover — elevated surfaces ---- */
-  --color-card: oklch(0.20 0.02 260);
-  --color-card-foreground: oklch(0.93 0.01 260);
-  --color-popover: oklch(0.22 0.02 260);
-  --color-popover-foreground: oklch(0.93 0.01 260);
+  --color-card: #ffffff;
+  --color-card-foreground: rgba(0, 0, 0, 0.87);
+  --color-popover: #ffffff;
+  --color-popover-foreground: rgba(0, 0, 0, 0.87);
 
-  /* ---- Primary — Bright Indigo ---- */
-  --color-primary: oklch(0.65 0.22 260);
-  --color-primary-foreground: oklch(0.99 0 0);
+  /* ---- Primary — Starbucks Green ---- */
+  --color-primary: #006241;
+  --color-primary-foreground: #ffffff;
 
   /* ---- Secondary ---- */
-  --color-secondary: oklch(0.25 0.03 260);
-  --color-secondary-foreground: oklch(0.85 0.01 260);
+  --color-secondary: #e8e5df;
+  --color-secondary-foreground: #1e3932;
 
   /* ---- Input ---- */
-  --color-input: oklch(0.28 0.02 260);
+  --color-input: #d6d1c9;
+
+  /* ---- Starbucks extended palette ---- */
+  --color-starbucks-green: #006241;
+  --color-starbucks-accent: #00754a;
+  --color-starbucks-house: #1e3932;
+  --color-starbucks-gold: #cba258;
+  --color-starbucks-cream: #f2f0eb;
 
   /* ---- Chart palette ---- */
-  --color-chart-1: oklch(0.65 0.22 260);
-  --color-chart-2: oklch(0.72 0.19 152);
-  --color-chart-3: oklch(0.80 0.16 70);
-  --color-chart-4: oklch(0.62 0.22 25);
-  --color-chart-5: oklch(0.68 0.20 310);
+  --color-chart-1: #006241;
+  --color-chart-2: #00754a;
+  --color-chart-3: #cba258;
+  --color-chart-4: #c82014;
+  --color-chart-5: #1e3932;
 
   /* ---- Sidebar — Branded dark ---- */
-  --color-sidebar: oklch(0.22 0.06 260);
-  --color-sidebar-foreground: oklch(0.88 0.01 260);
-  --color-sidebar-primary: oklch(0.75 0.15 70);
-  --color-sidebar-primary-foreground: oklch(0.15 0.03 260);
-  --color-sidebar-accent: oklch(0.28 0.07 260);
-  --color-sidebar-accent-foreground: oklch(0.92 0.005 260);
-  --color-sidebar-border: oklch(0.30 0.06 260);
-  --color-sidebar-ring: oklch(0.75 0.15 70);
+  --color-sidebar: #1e3932;
+  --color-sidebar-foreground: #f2f0eb;
+  --color-sidebar-primary: #00754a;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: #2d4f47;
+  --color-sidebar-accent-foreground: #f2f0eb;
+  --color-sidebar-border: #3a6359;
+  --color-sidebar-ring: #00754a;
 
   /* ---- Radius hierarchy ---- */
-  --radius: 0.625rem;
-  --radius-sm: 0.375rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-pill: 3.125rem;
 }
 
 /* ---- Skeleton animation (shimmer) ---- */
@@ -84,7 +93,7 @@
   background: linear-gradient(
     90deg,
     var(--color-skeleton) 25%,
-    oklch(0.28 0.02 260) 50%,
+    #ccc8c0 50%,
     var(--color-skeleton) 75%
   );
   background-size: 200% 100%;
@@ -120,16 +129,6 @@
 .stagger-children > *:nth-child(7) { animation-delay: 360ms; }
 .stagger-children > *:nth-child(8) { animation-delay: 420ms; }
 
-/* ---- Slide-in from left (sidebar items) ---- */
-@keyframes slide-in-left {
-  from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.animate-slide-in-left {
-  animation: slide-in-left 0.3s ease-out both;
-}
-
 /* ---- Scale-in (modals, popovers) ---- */
 @keyframes scale-in {
   from { opacity: 0; transform: scale(0.95); }
@@ -161,10 +160,14 @@
   to { height: 0; opacity: 0; }
 }
 
+/* ---- Button active press effect ---- */
+.btn-press:active {
+  transform: scale(0.95);
+}
+
 /* ---- Reduced motion: disable all custom animations ---- */
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
-  .animate-slide-in-left,
   .animate-scale-in,
   .stagger-children > *,
   .skeleton,
@@ -172,6 +175,9 @@
   [data-slot="collapsible-content"][data-state="closed"] {
     animation: none !important;
     opacity: 1 !important;
+    transform: none !important;
+  }
+  .btn-press:active {
     transform: none !important;
   }
 }

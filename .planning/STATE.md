@@ -35,11 +35,11 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 17
-Plan: 17-01-PLAN.md
+Plan: 17-02-PLAN.md (Wave 1: Schema + Login + Routing)
 Status: In progress
 Last activity: 2026-04-24
 
-Progress: [██████████████████░░] 90% (v3.0: API-first hold active, frontend reduced to Hello World + API shell)
+Progress: [██████████████████░░] 90% (v4.0: 6 wave plans written, executing Wave 1)
 
 ---
 

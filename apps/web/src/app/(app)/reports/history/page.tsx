@@ -1,9 +1,5 @@
-import { AppShell } from '../../../../components/navigation/app-shell';
+import { redirect } from 'next/navigation';
 
 export default function ReportHistoryPage() {
-  return (
-    <AppShell activeReportId={null} role="viewer" currentPath="/reports/history">
-      {null}
-    </AppShell>
-  );
+  redirect('/head/dashboard');
 }

@@ -32,6 +32,7 @@ export const itemTypeSchema = z.enum(['current', 'next']);
 export const itemWorkflowStatusSchema = z.enum(['done', 'in_progress', 'blocked']);
 export const reportSectionStatusSchema = z.enum(['draft', 'submitted']);
 export const reportStatusSchema = z.enum(['draft', 'published']);
+export const periodStatusSchema = z.enum(['open', 'published', 'reopened']);
 
 export const projectStatusInputSchema = z.object({
   projectId: z.string().uuid(),
@@ -270,6 +271,111 @@ export const adminSnapshotSchema = z.object({
   reminderRules: z.array(adminReminderRuleSchema),
   reminderExecutions: z.array(adminReminderExecutionSchema).default([]),
 });
+
+// ---------------------------------------------------------------------------
+// v4.0: Stage & Assignment schemas (D-63)
+// ---------------------------------------------------------------------------
+
+export const stageSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  sortOrder: z.number().int().min(0),
+});
+
+export const stageAssignmentSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  stageId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  stageName: z.string().min(1),
+  userName: z.string().min(1).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// v4.0: Version snapshot (D-67)
+// ---------------------------------------------------------------------------
+
+export const versionSnapshotSchema = z.object({
+  id: z.string().uuid(),
+  reportSectionId: z.string().uuid(),
+  version: z.number().int().positive(),
+  createdAt: z.coerce.date(),
+});
+
+// ---------------------------------------------------------------------------
+// v4.0: App settings (D-68)
+// ---------------------------------------------------------------------------
+
+export const appSettingsSchema = z.object({
+  departmentName: z.string().min(1).max(200),
+  autoCreatePeriods: z.boolean(),
+  defaultDeadlineDays: z.number().int().min(1).max(30),
+});
+
+export const appSettingsUpdateSchema = appSettingsSchema.partial();
+
+// ---------------------------------------------------------------------------
+// v4.0: Period read model (extended)
+// ---------------------------------------------------------------------------
+
+export const periodReadModelSchema = z.object({
+  id: z.string().uuid(),
+  periodStart: reportDate(),
+  periodEnd: reportDate(),
+  deadline: reportDate(),
+  status: reportStatusSchema,
+  periodStatus: periodStatusSchema,
+  weekLabel: z.string().nullable(),
+  publishedAt: z.coerce.date().nullable(),
+  reopenedAt: z.coerce.date().nullable(),
+});
+
+// ---------------------------------------------------------------------------
+// v4.0: Weekly report read model (D-58)
+// ---------------------------------------------------------------------------
+
+export const portfolioProductOverviewSchema = z.object({
+  productId: z.string().uuid(),
+  productName: z.string().min(1),
+  worstStatus: trafficLightStatusSchema.nullable(),
+  stageCount: z.number().int().min(0),
+  leadNames: z.array(z.string().min(1)),
+});
+
+export const escalationSchema = z.object({
+  type: z.enum(['blocked', 'at_risk', 'unresolved_risk']),
+  productName: z.string().min(1),
+  stageName: z.string().nullable(),
+  leadName: z.string().min(1),
+  description: z.string(),
+});
+
+export const weeklyReportReadModelSchema = z.object({
+  reportId: z.string().uuid(),
+  periodStart: reportDate(),
+  periodEnd: reportDate(),
+  periodStatus: periodStatusSchema,
+  weekLabel: z.string().nullable(),
+  submissionCount: z.number().int().min(0),
+  totalLeads: z.number().int().min(0),
+  portfolioOverview: z.array(portfolioProductOverviewSchema),
+  leadSections: z.array(reportSectionReadModelSchema),
+  escalations: z.array(escalationSchema),
+});
+
+// ---------------------------------------------------------------------------
+// v4.0: Type exports
+// ---------------------------------------------------------------------------
+
+export type PeriodStatus = z.infer<typeof periodStatusSchema>;
+export type Stage = z.infer<typeof stageSchema>;
+export type StageAssignment = z.infer<typeof stageAssignmentSchema>;
+export type VersionSnapshot = z.infer<typeof versionSnapshotSchema>;
+export type AppSettings = z.infer<typeof appSettingsSchema>;
+export type PeriodReadModel = z.infer<typeof periodReadModelSchema>;
+export type PortfolioProductOverview = z.infer<typeof portfolioProductOverviewSchema>;
+export type Escalation = z.infer<typeof escalationSchema>;
+export type WeeklyReportReadModel = z.infer<typeof weeklyReportReadModelSchema>;
 
 export type DraftSavePayload = z.input<typeof draftSaveSchema>;
 export type DraftSaveInput = z.infer<typeof draftSaveSchema>;
