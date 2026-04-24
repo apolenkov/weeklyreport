@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ReportSectionReadModel, VersionSnapshot } from '@customreport/shared';
+import type { ReportSectionReadModel } from '@customreport/shared';
 
 import { LeadFormService, type LeadFormRepository } from './lead-form.service';
 

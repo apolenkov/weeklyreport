@@ -2,7 +2,6 @@ import {
   MOCK_KPI,
   MOCK_PORTFOLIO,
   MOCK_PRODUCT_REPORTS,
-  MOCK_LEADS,
   type ProductReport,
   type PortfolioProduct,
 } from '../../../../../components/dashboard/mock-data';
