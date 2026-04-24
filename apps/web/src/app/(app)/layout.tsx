@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { NavBar } from '../../components/navigation/nav-bar';
+
 type AppGroupLayoutProps = Readonly<{
   children: ReactNode;
 }>;
@@ -7,13 +9,18 @@ type AppGroupLayoutProps = Readonly<{
 /**
  * Route group layout for all authenticated app pages.
  *
- * Currently a passthrough layout. Each page wraps itself with <AppShell>
- * passing role, currentPath, and activeReportId from its own tRPC context.
+ * Provides the top navigation bar for all (app) routes.
+ * Each page wraps its own content with <main id="main-content">.
  *
  * When server-side session extraction is implemented (Phase 10+),
  * this layout will read the session cookie, resolve the user, and
- * provide AppShell here — eliminating per-page wrapper boilerplate.
+ * provide full role context — eliminating per-page role inference.
  */
 export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
-  return <>{children}</>;
+  return (
+    <>
+      <NavBar />
+      {children}
+    </>
+  );
 }
