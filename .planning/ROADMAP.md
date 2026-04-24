@@ -213,7 +213,7 @@ Plans:
 ## v4.0 Backend Completeness & UI Redesign
 
 - [x] **Phase 16: Backend Hardening** - Prisma migration, BullMQ re-enabled, 81 regression scenarios pass, test infrastructure clean (completed 2026-04-21)
-- [ ] **Phase 17: Fullstack UI Redesign** - Schema + API + Frontend per mockup v14 (6 waves)
+- [x] **Phase 17: Fullstack UI Redesign** - Schema + API + Frontend per mockup v14 (6 waves) (completed 2026-04-24)
 - [ ] **Phase 18: E2E Tests** - 223 regression scenarios as Playwright tests, 7 plans
 - [ ] **Phase 19: Documentation** - API reference, deployment guide, developer + user docs
 
@@ -261,7 +261,7 @@ Plans:
 - [x] 17-04-PLAN.md — Wave 3: Lead Form + Lead History UI (UI-01..04, UI-13)
 - [x] 17-05-PLAN.md — Wave 4: Dashboard + Weekly Report UI (UI-05..10)
 - [x] 17-06-PLAN.md — Wave 5: Admin Panel + Login + Design Polish (UI-11,12,15..19)
-- [ ] 17-07-PLAN.md — Wave 6: Print/PDF (UI-20) + Integration Tests
+- [x] 17-07-PLAN.md — Wave 6: Print/PDF (UI-20) + Integration Tests
 
 ### Phase 18: E2E Tests
 **Goal**: 223 regression scenarios implemented as Playwright E2E tests covering all role journeys, cross-role lifecycles, error paths, and visual baselines
@@ -309,7 +309,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 16. Backend Hardening | 4/4 | Complete | 2026-04-21 |
-| 17. Fullstack UI Redesign | 6/7 | In Progress|  |
+| 17. Fullstack UI Redesign | 7/7 | Complete   | 2026-04-24 |
 | 18. E2E Tests | 0/7 | Plans ready | - |
 | 19. Documentation | 0/3 | Plans ready | - |
 

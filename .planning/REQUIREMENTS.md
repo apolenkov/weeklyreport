@@ -65,7 +65,7 @@
 - [x] **UI-17**: Starbucks design system: cream canvas, teal primary, gold accents, Lexend + Source Sans 3
 - [x] **UI-18**: Accessibility: skip-link, aria-labels, focus rings, touch targets 44px, reduced motion
 - [x] **UI-19**: UI States: all modals/dialogs per mockup s7 (Submit, Publish, Reopen, Revoke, Fill, Version, etc.)
-- [ ] **UI-20**: Print/PDF template consistent with web design
+- [x] **UI-20**: Print/PDF template consistent with web design
 
 ## E2E Tests (Phase 18)
 
