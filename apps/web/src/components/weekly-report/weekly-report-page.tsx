@@ -32,7 +32,7 @@ function CollapseIcon() {
   );
 }
 
-export function WeeklyReportPage({ period }: WeeklyReportPageProps) {
+export function WeeklyReportPage({ period: _period }: WeeklyReportPageProps) {
   const submitted = MOCK_KPI.submitted;
   const total = MOCK_KPI.total;
   const pendingCount = MOCK_KPI.pendingCount;
