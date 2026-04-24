@@ -214,7 +214,7 @@ Plans:
 
 - [x] **Phase 16: Backend Hardening** - Prisma migration, BullMQ re-enabled, 81 regression scenarios pass, test infrastructure clean (completed 2026-04-21)
 - [x] **Phase 17: Fullstack UI Redesign** - Schema + API + Frontend per mockup v14 (6 waves) (completed 2026-04-24)
-- [ ] **Phase 18: E2E Tests** - 223 regression scenarios as Playwright tests, 7 plans
+- [x] **Phase 18: E2E Tests** - 223 regression scenarios as Playwright tests, 7 plans (completed 2026-04-24)
 - [ ] **Phase 19: Documentation** - API reference, deployment guide, developer + user docs
 
 ### Phase 16: Backend Hardening
@@ -310,7 +310,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 16. Backend Hardening | 4/4 | Complete | 2026-04-21 |
 | 17. Fullstack UI Redesign | 7/7 | Complete    | 2026-04-24 |
-| 18. E2E Tests | 6/7 | In Progress|  |
+| 18. E2E Tests | 6/7 | Complete    | 2026-04-24 |
 | 19. Documentation | 0/3 | Plans ready | - |
 
 ## Execution Order (for /gsd:next)
