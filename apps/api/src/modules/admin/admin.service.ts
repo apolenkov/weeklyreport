@@ -5,6 +5,7 @@ import {
   adminUserSchema,
   appSettingsSchema,
   appSettingsUpdateSchema,
+  stageAssignmentSchema,
   reportPeriodSchema,
   type AdminProject,
   type AdminReminderRule,
@@ -12,6 +13,7 @@ import {
   type AdminUser,
   type AppSettings,
   type ReportPeriod,
+  type StageAssignment,
 } from '@customreport/shared';
 
 import { createNullLogger, type AppLogger } from '../../lib/logger';
@@ -28,6 +30,9 @@ export interface AdminRepository {
   saveSnapshot(snapshot: AdminSnapshot): Promise<AdminSnapshot>;
   getSettings(): Promise<AppSettings>;
   updateSettings(data: Partial<AppSettings>): Promise<AppSettings>;
+  saveStageAssignment(data: { userId: string; stageId: string; projectId: string }): Promise<StageAssignment>;
+  deleteStageAssignment(id: string): Promise<void>;
+  listStageAssignments(projectId: string): Promise<StageAssignment[]>;
 }
 
 function sortByName<T extends { name: string }>(rows: T[]): T[] {
@@ -126,6 +131,29 @@ export class AdminService {
     return this.repository.saveSnapshot(
       adminSnapshotSchema.parse({ ...snapshot, projects: nextProjects }),
     );
+  }
+
+  /** API-12: Upsert a stage assignment (unique on userId+stageId+projectId). */
+  async saveStageAssignment(data: {
+    userId: string;
+    stageId: string;
+    projectId: string;
+  }): Promise<StageAssignment> {
+    return stageAssignmentSchema.parse(
+      await this.repository.saveStageAssignment(data),
+    );
+  }
+
+  /** API-12: Delete a stage assignment by ID. */
+  async deleteStageAssignment(id: string): Promise<{ success: true }> {
+    await this.repository.deleteStageAssignment(id);
+    return { success: true };
+  }
+
+  /** API-12: List stage assignments for a project. */
+  async listStageAssignments(projectId: string): Promise<StageAssignment[]> {
+    const rows = await this.repository.listStageAssignments(projectId);
+    return rows.map((r) => stageAssignmentSchema.parse(r));
   }
 
   async removeReminderRule(ruleId: string): Promise<AdminSnapshot> {
