@@ -298,7 +298,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 19-01-PLAN.md — API reference documentation
+- [x] 19-01-PLAN.md — API reference documentation
 - [x] 19-02-PLAN.md — Deployment guide
 - [ ] 19-03-PLAN.md — Developer onboarding + User guide
 
@@ -311,7 +311,7 @@ Plans:
 | 16. Backend Hardening | 4/4 | Complete | 2026-04-21 |
 | 17. Fullstack UI Redesign | 7/7 | Complete    | 2026-04-24 |
 | 18. E2E Tests | 6/7 | Complete    | 2026-04-24 |
-| 19. Documentation | 1/3 | In Progress|  |
+| 19. Documentation | 2/3 | In Progress|  |
 
 ## Execution Order (for /gsd:next)
 
