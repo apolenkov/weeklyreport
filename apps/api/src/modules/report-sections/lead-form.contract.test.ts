@@ -83,6 +83,7 @@ function createMockRepository(overrides: Partial<LeadFormRepository> = {}): Lead
     listVersions: vi.fn().mockResolvedValue([]),
     restoreVersion: vi.fn().mockResolvedValue(1),
     createVersionSnapshot: vi.fn().mockResolvedValue(undefined),
+    createReopenRequest: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -313,5 +314,34 @@ describe('LeadFormService — getByPeriod', () => {
     await expect(
       service.getByPeriod(REPORT_ID, AUTHOR_ID),
     ).rejects.toThrow(`No section found for user in report ${REPORT_ID}.`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// requestReopen (API-04)
+// ---------------------------------------------------------------------------
+
+describe('LeadFormService — requestReopen', () => {
+  it('succeeds for a submitted section by the author', async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(submittedSection)),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.requestReopen(SECTION_ID, AUTHOR_ID, 'Need to fix a typo');
+
+    expect(result).toEqual({ success: true });
+    expect(repo.createReopenRequest).toHaveBeenCalledWith(SECTION_ID, AUTHOR_ID, 'Need to fix a typo');
+  });
+
+  it('fails when caller is not the section author', async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(submittedSection)),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.requestReopen(SECTION_ID, OTHER_USER_ID),
+    ).rejects.toThrow('Can only request reopen for your own section.');
   });
 });
