@@ -69,7 +69,7 @@
 
 ## E2E Tests (Phase 18)
 
-- [ ] **E2E-01**: Lead journey: login stub → select period → fill all sections → submit → locked
+- [x] **E2E-01**: Lead journey: login stub → select period → fill all sections → submit → locked
 - [ ] **E2E-02**: Head journey: login → dashboard KPIs → weekly report → publish & lock → PDF
 - [ ] **E2E-03**: Admin journey: login → admin panel → CRUD users/products/periods/settings
 - [ ] **E2E-04**: Cross-role lifecycle: lead submits → head publishes → lead sees locked → head reopens

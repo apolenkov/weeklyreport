@@ -278,7 +278,7 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — Auth fixtures + Lead journey (E2E-01)
+- [x] 18-01-PLAN.md — Auth fixtures + Lead journey (E2E-01)
 - [ ] 18-02-PLAN.md — Head journey: dashboard + weekly report + PDF (E2E-02)
 - [ ] 18-03-PLAN.md — Admin journey (E2E-03)
 - [ ] 18-04-PLAN.md — Cross-role lifecycle + Revoke (E2E-04, E2E-05)
@@ -310,7 +310,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 16. Backend Hardening | 4/4 | Complete | 2026-04-21 |
 | 17. Fullstack UI Redesign | 7/7 | Complete    | 2026-04-24 |
-| 18. E2E Tests | 0/7 | Plans ready | - |
+| 18. E2E Tests | 1/7 | In Progress|  |
 | 19. Documentation | 0/3 | Plans ready | - |
 
 ## Execution Order (for /gsd:next)
