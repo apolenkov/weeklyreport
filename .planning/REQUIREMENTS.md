@@ -56,15 +56,15 @@
 - [ ] **UI-08**: Dashboard — Toggle All button for collapsible sections
 - [ ] **UI-09**: Weekly Report — auto-compiled, period navigator, Toggle All, Export PDF, Publish & Lock (D-58)
 - [ ] **UI-10**: Weekly Report — per-lead accordions with full data (Current/Next Week, Risks, Decisions, Priorities)
-- [ ] **UI-11**: Admin Panel — 5 tabs: Users, Products, Periods, Reminders, Settings (D-63)
-- [ ] **UI-12**: Login — split-screen: Demo brand left, SSO/stub right, all English (D-61, D-68)
+- [x] **UI-11**: Admin Panel — 5 tabs: Users, Products, Periods, Reminders, Settings (D-63)
+- [x] **UI-12**: Login — split-screen: Demo brand left, SSO/stub right, all English (D-61, D-68)
 - [ ] **UI-13**: Lead History — traffic light dots per report card
 - [ ] **UI-14**: URL-based routing — every state in URL, no SPA, query params for period/tab (D-69)
-- [ ] **UI-15**: Nav bar teal border constrained to content width (D-70)
-- [ ] **UI-16**: All pages: max-w-6xl standardized, padding uniform, alignment consistent
-- [ ] **UI-17**: Starbucks design system: cream canvas, teal primary, gold accents, Lexend + Source Sans 3
-- [ ] **UI-18**: Accessibility: skip-link, aria-labels, focus rings, touch targets 44px, reduced motion
-- [ ] **UI-19**: UI States: all modals/dialogs per mockup s7 (Submit, Publish, Reopen, Revoke, Fill, Version, etc.)
+- [x] **UI-15**: Nav bar teal border constrained to content width (D-70)
+- [x] **UI-16**: All pages: max-w-6xl standardized, padding uniform, alignment consistent
+- [x] **UI-17**: Starbucks design system: cream canvas, teal primary, gold accents, Lexend + Source Sans 3
+- [x] **UI-18**: Accessibility: skip-link, aria-labels, focus rings, touch targets 44px, reduced motion
+- [x] **UI-19**: UI States: all modals/dialogs per mockup s7 (Submit, Publish, Reopen, Revoke, Fill, Version, etc.)
 - [ ] **UI-20**: Print/PDF template consistent with web design
 
 ## E2E Tests (Phase 18)
