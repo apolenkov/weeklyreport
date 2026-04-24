@@ -77,7 +77,7 @@
 - [ ] **E2E-06**: Period navigation: lead switches periods → past read-only → current editable
 - [ ] **E2E-07**: Fill from: lead fills from Week 15 → warning on overwrite → data populated
 - [ ] **E2E-08**: Version history: autosave creates versions → rollback → linear discard
-- [ ] **E2E-09**: Error paths: 403 wrong role, 404 invalid period, network disconnect
+- [x] **E2E-09**: Error paths: 403 wrong role, 404 invalid period, network disconnect
 - [ ] **E2E-10**: Visual regression baselines (Playwright screenshots, 223 scenarios as reference)
 
 ---
