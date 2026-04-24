@@ -19,6 +19,15 @@ import {
   projectStatusInputSchema,
   portfolioOverviewSchema,
   archiveReportSummarySchema,
+  periodStatusSchema,
+  stageSchema,
+  stageAssignmentSchema,
+  versionSnapshotSchema,
+  appSettingsSchema,
+  appSettingsUpdateSchema,
+  weeklyReportReadModelSchema,
+  escalationSchema,
+  portfolioProductOverviewSchema,
   validateSubmitInput,
   type ReportSectionReadModel,
 } from '../report';
@@ -832,5 +841,492 @@ describe('validateSubmitInput', () => {
     };
     const errors = validateSubmitInput(section, input as any);
     expect(errors).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 14: periodStatusSchema (v4.0)
+// ---------------------------------------------------------------------------
+
+describe('periodStatusSchema', () => {
+  it('accepts "open"', () => {
+    expect(periodStatusSchema.safeParse('open').success).toBe(true);
+  });
+
+  it('accepts "published"', () => {
+    expect(periodStatusSchema.safeParse('published').success).toBe(true);
+  });
+
+  it('accepts "reopened"', () => {
+    expect(periodStatusSchema.safeParse('reopened').success).toBe(true);
+  });
+
+  it('rejects unknown value "closed"', () => {
+    expect(periodStatusSchema.safeParse('closed').success).toBe(false);
+  });
+
+  it('rejects empty string', () => {
+    expect(periodStatusSchema.safeParse('').success).toBe(false);
+  });
+
+  it('rejects null', () => {
+    expect(periodStatusSchema.safeParse(null).success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 15: stageSchema (v4.0 D-63)
+// ---------------------------------------------------------------------------
+
+describe('stageSchema', () => {
+  it('accepts valid stage', () => {
+    const result = stageSchema.safeParse({
+      id: uuid(),
+      name: 'Development',
+      sortOrder: 0,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty name', () => {
+    const result = stageSchema.safeParse({
+      id: uuid(),
+      name: '',
+      sortOrder: 0,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects negative sortOrder', () => {
+    const result = stageSchema.safeParse({
+      id: uuid(),
+      name: 'Testing',
+      sortOrder: -1,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects non-integer sortOrder', () => {
+    const result = stageSchema.safeParse({
+      id: uuid(),
+      name: 'Testing',
+      sortOrder: 1.5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects non-UUID id', () => {
+    const result = stageSchema.safeParse({
+      id: 'not-a-uuid',
+      name: 'Dev',
+      sortOrder: 0,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 16: stageAssignmentSchema (v4.0 D-63)
+// ---------------------------------------------------------------------------
+
+describe('stageAssignmentSchema', () => {
+  it('accepts valid assignment with all fields', () => {
+    const result = stageAssignmentSchema.safeParse({
+      id: uuid(),
+      userId: uuid(),
+      stageId: uuid(),
+      projectId: uuid(),
+      stageName: 'Development',
+      userName: 'Alice',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts assignment without optional userName', () => {
+    const result = stageAssignmentSchema.safeParse({
+      id: uuid(),
+      userId: uuid(),
+      stageId: uuid(),
+      projectId: uuid(),
+      stageName: 'Testing',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty stageName', () => {
+    const result = stageAssignmentSchema.safeParse({
+      id: uuid(),
+      userId: uuid(),
+      stageId: uuid(),
+      projectId: uuid(),
+      stageName: '',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects non-UUID userId', () => {
+    const result = stageAssignmentSchema.safeParse({
+      id: uuid(),
+      userId: 'not-uuid',
+      stageId: uuid(),
+      projectId: uuid(),
+      stageName: 'Dev',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects missing required fields', () => {
+    const result = stageAssignmentSchema.safeParse({
+      id: uuid(),
+      stageName: 'Dev',
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 17: versionSnapshotSchema (v4.0 D-67)
+// ---------------------------------------------------------------------------
+
+describe('versionSnapshotSchema', () => {
+  it('accepts valid version snapshot', () => {
+    const result = versionSnapshotSchema.safeParse({
+      id: uuid(),
+      reportSectionId: uuid(),
+      version: 1,
+      createdAt: new Date(),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('coerces string date to Date', () => {
+    const result = versionSnapshotSchema.safeParse({
+      id: uuid(),
+      reportSectionId: uuid(),
+      version: 3,
+      createdAt: '2026-04-20T10:00:00.000Z',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.createdAt).toBeInstanceOf(Date);
+    }
+  });
+
+  it('rejects version 0 (must be positive)', () => {
+    const result = versionSnapshotSchema.safeParse({
+      id: uuid(),
+      reportSectionId: uuid(),
+      version: 0,
+      createdAt: new Date(),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects negative version', () => {
+    const result = versionSnapshotSchema.safeParse({
+      id: uuid(),
+      reportSectionId: uuid(),
+      version: -1,
+      createdAt: new Date(),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects non-integer version', () => {
+    const result = versionSnapshotSchema.safeParse({
+      id: uuid(),
+      reportSectionId: uuid(),
+      version: 1.5,
+      createdAt: new Date(),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects non-UUID reportSectionId', () => {
+    const result = versionSnapshotSchema.safeParse({
+      id: uuid(),
+      reportSectionId: 'not-uuid',
+      version: 1,
+      createdAt: new Date(),
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 18: appSettingsSchema (v4.0 D-68)
+// ---------------------------------------------------------------------------
+
+describe('appSettingsSchema', () => {
+  it('accepts valid settings', () => {
+    const result = appSettingsSchema.safeParse({
+      departmentName: 'Development',
+      autoCreatePeriods: false,
+      defaultDeadlineDays: 5,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty departmentName', () => {
+    const result = appSettingsSchema.safeParse({
+      departmentName: '',
+      autoCreatePeriods: false,
+      defaultDeadlineDays: 5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects departmentName exceeding 200 chars', () => {
+    const result = appSettingsSchema.safeParse({
+      departmentName: 'A'.repeat(201),
+      autoCreatePeriods: false,
+      defaultDeadlineDays: 5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects defaultDeadlineDays below 1', () => {
+    const result = appSettingsSchema.safeParse({
+      departmentName: 'Dept',
+      autoCreatePeriods: true,
+      defaultDeadlineDays: 0,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects defaultDeadlineDays above 30', () => {
+    const result = appSettingsSchema.safeParse({
+      departmentName: 'Dept',
+      autoCreatePeriods: true,
+      defaultDeadlineDays: 31,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects non-boolean autoCreatePeriods', () => {
+    const result = appSettingsSchema.safeParse({
+      departmentName: 'Dept',
+      autoCreatePeriods: 'yes',
+      defaultDeadlineDays: 5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts max boundary values', () => {
+    const result = appSettingsSchema.safeParse({
+      departmentName: 'A'.repeat(200),
+      autoCreatePeriods: true,
+      defaultDeadlineDays: 30,
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 19: appSettingsUpdateSchema (partial)
+// ---------------------------------------------------------------------------
+
+describe('appSettingsUpdateSchema', () => {
+  it('accepts partial update with one field', () => {
+    const result = appSettingsUpdateSchema.safeParse({
+      defaultDeadlineDays: 7,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts empty object (no fields)', () => {
+    const result = appSettingsUpdateSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it('still validates field constraints on partial', () => {
+    const result = appSettingsUpdateSchema.safeParse({
+      defaultDeadlineDays: 0,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 20: weeklyReportReadModelSchema (v4.0 D-58)
+// ---------------------------------------------------------------------------
+
+describe('weeklyReportReadModelSchema', () => {
+  const validWeeklyReport = () => ({
+    reportId: uuid(),
+    periodStart: '2026-04-14',
+    periodEnd: '2026-04-18',
+    periodStatus: 'open' as const,
+    weekLabel: 'W16-2026',
+    submissionCount: 3,
+    totalLeads: 6,
+    portfolioOverview: [],
+    leadSections: [],
+    escalations: [],
+  });
+
+  it('accepts valid weekly report', () => {
+    const result = weeklyReportReadModelSchema.safeParse(validWeeklyReport());
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts report with null weekLabel', () => {
+    const result = weeklyReportReadModelSchema.safeParse({
+      ...validWeeklyReport(),
+      weekLabel: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects negative submissionCount', () => {
+    const result = weeklyReportReadModelSchema.safeParse({
+      ...validWeeklyReport(),
+      submissionCount: -1,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects negative totalLeads', () => {
+    const result = weeklyReportReadModelSchema.safeParse({
+      ...validWeeklyReport(),
+      totalLeads: -1,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts all periodStatus values', () => {
+    for (const status of ['open', 'published', 'reopened'] as const) {
+      const result = weeklyReportReadModelSchema.safeParse({
+        ...validWeeklyReport(),
+        periodStatus: status,
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it('rejects invalid periodStatus', () => {
+    const result = weeklyReportReadModelSchema.safeParse({
+      ...validWeeklyReport(),
+      periodStatus: 'closed',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects missing required fields', () => {
+    const result = weeklyReportReadModelSchema.safeParse({
+      reportId: uuid(),
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 21: portfolioProductOverviewSchema
+// ---------------------------------------------------------------------------
+
+describe('portfolioProductOverviewSchema', () => {
+  it('accepts valid product overview', () => {
+    const result = portfolioProductOverviewSchema.safeParse({
+      productId: uuid(),
+      productName: 'CRM Platform',
+      worstStatus: 'red',
+      stageCount: 3,
+      leadNames: ['Alice', 'Bob'],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts null worstStatus (no stages reported)', () => {
+    const result = portfolioProductOverviewSchema.safeParse({
+      productId: uuid(),
+      productName: 'New Product',
+      worstStatus: null,
+      stageCount: 0,
+      leadNames: ['Alice'],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty productName', () => {
+    const result = portfolioProductOverviewSchema.safeParse({
+      productId: uuid(),
+      productName: '',
+      worstStatus: 'green',
+      stageCount: 1,
+      leadNames: ['Alice'],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects negative stageCount', () => {
+    const result = portfolioProductOverviewSchema.safeParse({
+      productId: uuid(),
+      productName: 'X',
+      worstStatus: 'green',
+      stageCount: -1,
+      leadNames: [],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 22: escalationSchema
+// ---------------------------------------------------------------------------
+
+describe('escalationSchema', () => {
+  it('accepts valid escalation with stageName', () => {
+    const result = escalationSchema.safeParse({
+      type: 'blocked',
+      productName: 'CRM',
+      stageName: 'Dev',
+      leadName: 'Alice',
+      description: 'ETL memory leak',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts escalation with null stageName', () => {
+    const result = escalationSchema.safeParse({
+      type: 'at_risk',
+      productName: 'Mobile',
+      stageName: null,
+      leadName: 'Bob',
+      description: 'Design tokens pending',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts unresolved_risk type', () => {
+    const result = escalationSchema.safeParse({
+      type: 'unresolved_risk',
+      productName: 'Cloud',
+      stageName: 'DevOps',
+      leadName: 'Charlie',
+      description: 'PgBouncer migration window',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects unknown type', () => {
+    const result = escalationSchema.safeParse({
+      type: 'warning',
+      productName: 'X',
+      stageName: null,
+      leadName: 'Y',
+      description: 'Something',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects empty productName', () => {
+    const result = escalationSchema.safeParse({
+      type: 'blocked',
+      productName: '',
+      stageName: null,
+      leadName: 'Alice',
+      description: 'Issue',
+    });
+    expect(result.success).toBe(false);
   });
 });
