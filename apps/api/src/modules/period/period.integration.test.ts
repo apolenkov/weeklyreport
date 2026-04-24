@@ -23,14 +23,8 @@ const headSession: UserSession = {
   activeReportSectionId: null,
 };
 
-const leadSession: UserSession = {
-  userId: 'bbbb2222-2222-4222-8222-222222222222',
-  email: 'lead@customreport.local',
-  name: 'Lead 1',
-  role: 'lead',
-  activeReportId: reportId,
-  activeReportSectionId: 'cccc3333-3333-4333-8333-333333333333',
-};
+// Lead session reserved for future authorization-level tests
+// const leadSession: UserSession = { ... };
 
 /* ------------------------------------------------------------------ */
 /*  Mock repository                                                    */
