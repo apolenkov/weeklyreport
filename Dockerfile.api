@@ -2,7 +2,7 @@
 FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
-RUN pnpm add -g turbo
+RUN npm install -g turbo
 
 # Stage 2: Prune monorepo for api workspace
 FROM base AS pruner
@@ -18,7 +18,9 @@ COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
-RUN pnpm exec prisma generate
+COPY prisma.config.ts ./prisma.config.ts
+COPY prisma ./prisma
+RUN DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport pnpm exec prisma generate
 
 # Stage 4: Build and prune devDeps for production
 FROM installer AS builder
@@ -39,6 +41,7 @@ WORKDIR /app
 COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nodejs:nodejs /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder --chown=nodejs:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=builder --chown=nodejs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=nodejs:nodejs /app/apps/api/package.json ./apps/api/package.json

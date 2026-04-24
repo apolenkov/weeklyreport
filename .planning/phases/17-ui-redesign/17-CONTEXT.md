@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Phase 17 now proceeds API-first from the approved mockups. The authenticated Next.js UI stays behind a temporary placeholder while backend contracts, workflow states, and archive/versioning semantics are completed end-to-end. Once API parity is reached, the polished UI can be rebuilt on stable contracts.
+Phase 17 now proceeds API-first from the approved mockups. The active Next.js app shell is intentionally reduced to a Hello World + API placeholder while backend contracts, workflow states, archive/versioning semantics, and publication flow are completed end-to-end. Once API parity is reached, the polished UI can be rebuilt on stable contracts.
 
 </domain>
 

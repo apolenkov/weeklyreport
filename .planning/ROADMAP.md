@@ -213,7 +213,7 @@ Plans:
 ## v4.0 Backend Completeness & UI Redesign
 
 - [x] **Phase 16: Backend Hardening** - Prisma migration, BullMQ re-enabled, 81 regression scenarios pass, test infrastructure clean (completed 2026-04-21)
-- [ ] **Phase 17: Fullstack UI Redesign** - Schema migration + 13 new API endpoints + 7 frontend pages + Starbucks design + URL routing (spec: MANIFEST D-1→D-70, 223 regression scenarios, mockup v14)
+- [ ] **Phase 17: API Completion From Approved Mockups** - Shared schemas, explicit lifecycle contracts, archive/versioning semantics, and temporary Hello World + API frontend hold until parity is reached
 - [ ] **Phase 18: E2E Tests** - 223 regression scenarios as Playwright tests, role journeys, visual baselines
 
 ### Phase 16: Backend Hardening
