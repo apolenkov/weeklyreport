@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type {
   AdminSnapshot,
+  AppSettings,
   UserSession,
 } from '@customreport/shared';
 
@@ -45,8 +46,18 @@ const initialSnapshot: AdminSnapshot = {
   reminderExecutions: [],
 };
 
-function createRepository(snapshot: AdminSnapshot): AdminRepository {
+const defaultSettings: AppSettings = {
+  departmentName: 'Development',
+  autoCreatePeriods: false,
+  defaultDeadlineDays: 5,
+};
+
+function createRepository(
+  snapshot: AdminSnapshot,
+  settings: AppSettings = defaultSettings,
+): AdminRepository {
   let currentSnapshot = structuredClone(snapshot);
+  let currentSettings = structuredClone(settings);
 
   return {
     async getSnapshot() {
@@ -55,6 +66,13 @@ function createRepository(snapshot: AdminSnapshot): AdminRepository {
     async saveSnapshot(nextSnapshot) {
       currentSnapshot = structuredClone(nextSnapshot);
       return structuredClone(currentSnapshot);
+    },
+    async getSettings() {
+      return structuredClone(currentSettings);
+    },
+    async updateSettings(data) {
+      currentSettings = { ...currentSettings, ...data };
+      return structuredClone(currentSettings);
     },
   };
 }
@@ -488,5 +506,55 @@ describe('adminRouter', () => {
     await expect(
       adminRouter.getSnapshot({ adminService: service, session: headSession }),
     ).resolves.toMatchObject({ users: [{ role: 'head' }] });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getSettings / updateSettings (API-11)
+// ---------------------------------------------------------------------------
+
+describe('AdminService — settings', () => {
+  it('returns default settings', async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+    const result = await service.getSettings();
+
+    expect(result).toEqual({
+      departmentName: 'Development',
+      autoCreatePeriods: false,
+      defaultDeadlineDays: 5,
+    });
+  });
+
+  it('updates settings fully', async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+    const result = await service.updateSettings({
+      departmentName: 'NewDept',
+      autoCreatePeriods: true,
+      defaultDeadlineDays: 7,
+    });
+
+    expect(result.departmentName).toBe('NewDept');
+    expect(result.autoCreatePeriods).toBe(true);
+    expect(result.defaultDeadlineDays).toBe(7);
+  });
+
+  it('applies partial update preserving other fields', async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+
+    // First do a full update
+    await service.updateSettings({
+      departmentName: 'DeptA',
+      autoCreatePeriods: true,
+      defaultDeadlineDays: 10,
+    });
+
+    // Partial update only changes one field
+    const result = await service.updateSettings({
+      defaultDeadlineDays: 3,
+    });
+
+    expect(result.departmentName).toBe('DeptA');
+    expect(result.autoCreatePeriods).toBe(true);
+    expect(result.defaultDeadlineDays).toBe(3);
   });
 });
