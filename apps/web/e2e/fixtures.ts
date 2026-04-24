@@ -7,9 +7,9 @@
  */
 
 import { test as base, expect, type Page } from '@playwright/test';
-import { resolve } from 'node:path';
+import * as path from 'path';
 
-const AUTH_DIR = resolve(import.meta.dirname, '.auth');
+const AUTH_DIR = path.join(__dirname, '.auth');
 
 // ---------------------------------------------------------------------------
 // Helpers exposed as fixture methods
@@ -41,7 +41,7 @@ type Fixtures = {
 export const test = base.extend<Fixtures>({
   leadPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({
-      storageState: resolve(AUTH_DIR, 'lead.json'),
+      storageState: path.join(AUTH_DIR, 'lead.json'),
     });
     const page = await ctx.newPage();
     await use(page);
@@ -50,7 +50,7 @@ export const test = base.extend<Fixtures>({
 
   headPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({
-      storageState: resolve(AUTH_DIR, 'head.json'),
+      storageState: path.join(AUTH_DIR, 'head.json'),
     });
     const page = await ctx.newPage();
     await use(page);

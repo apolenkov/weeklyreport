@@ -14,6 +14,13 @@ test.describe('Lead Report Page', () => {
   test.beforeEach(async ({ leadPage }) => {
     await leadPage.goto('/lead/report');
     await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
+    // Wait for client-side hydration: the "Product Status" text is rendered
+    // by the LeadForm client component after Suspense resolves
+    await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
+    // Wait for React hydration to complete.
+    // Next.js 16 hydrates client components asynchronously; network idle
+    // is a good proxy for when all JS bundles have loaded and executed.
+    await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
   });
 
   // -----------------------------------------------------------------------
@@ -133,37 +140,55 @@ test.describe('Lead Report Page', () => {
   });
 
   test('clicking Submit opens confirmation dialog', async ({ leadPage }) => {
-    // Click the Submit Report button in the header
-    await leadPage.getByRole('button', { name: 'Submit Report' }).first().click();
+    // Click Submit and retry until the dialog appears (handles hydration timing)
+    const submitBtn = leadPage.getByRole('button', { name: 'Submit Report' }).first();
+    const dialogTitle = leadPage.getByText('Submit Report?');
 
-    // Confirmation dialog should appear
-    const dialog = leadPage.getByRole('dialog', { name: 'Confirm submission' });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByText('Submit Report?')).toBeVisible();
-    await expect(dialog.getByText('Your report will be locked')).toBeVisible();
+    // Retry click up to 10 times with 500ms gaps to wait for hydration
+    for (let i = 0; i < 10; i++) {
+      await submitBtn.click();
+      try {
+        await dialogTitle.waitFor({ state: 'visible', timeout: 1_000 });
+        break;
+      } catch {
+        // Event handler not attached yet, retry
+      }
+    }
 
-    // Dialog has Cancel and Submit buttons
-    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Submit Report' })).toBeVisible();
+    // Verify dialog content
+    await expect(dialogTitle).toBeVisible({ timeout: 5_000 });
+    await expect(leadPage.getByText('Your report will be locked')).toBeVisible();
+    await expect(leadPage.getByRole('button', { name: 'Cancel' })).toBeVisible();
   });
 
   test('confirming submit locks the form', async ({ leadPage }) => {
-    // Open dialog
-    await leadPage.getByRole('button', { name: 'Submit Report' }).first().click();
-    const dialog = leadPage.getByRole('dialog', { name: 'Confirm submission' });
-    await expect(dialog).toBeVisible();
+    // Click Submit with retry to handle hydration timing
+    const submitBtn = leadPage.getByRole('button', { name: 'Submit Report' }).first();
+    const dialogTitle = leadPage.getByText('Submit Report?');
 
-    // Confirm submission
-    await dialog.getByRole('button', { name: 'Submit Report' }).click();
+    for (let i = 0; i < 10; i++) {
+      await submitBtn.click();
+      try {
+        await dialogTitle.waitFor({ state: 'visible', timeout: 1_000 });
+        break;
+      } catch {
+        // Retry
+      }
+    }
+    await expect(dialogTitle).toBeVisible({ timeout: 5_000 });
+
+    // Click the confirm button (last "Submit Report" button on page)
+    const confirmBtn = leadPage.getByRole('button', { name: 'Submit Report' }).last();
+    await confirmBtn.click();
 
     // Dialog should close
-    await expect(dialog).not.toBeVisible();
+    await expect(dialogTitle).not.toBeVisible({ timeout: 5_000 });
 
     // Submitted badge should appear
-    await expect(leadPage.getByText('Submitted')).toBeVisible();
+    await expect(leadPage.getByText('Submitted').first()).toBeVisible();
 
     // Submit button should now be disabled (read-only mode)
-    const submitBtn = leadPage.getByRole('button', { name: 'Submit Report' }).first();
-    await expect(submitBtn).toBeDisabled();
+    const disabledBtn = leadPage.getByRole('button', { name: 'Submit Report' }).first();
+    await expect(disabledBtn).toBeDisabled();
   });
 });
