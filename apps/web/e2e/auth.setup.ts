@@ -7,16 +7,16 @@
  */
 
 import { test as setup } from '@playwright/test';
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import * as fs from 'fs';
+import * as path from 'path';
 
-const STORAGE_DIR = resolve(import.meta.dirname, '.auth');
+const STORAGE_DIR = path.join(__dirname, '.auth');
 const EMPTY_STATE = JSON.stringify({ cookies: [], origins: [] });
 
 function writeState(filename: string) {
-  const target = resolve(STORAGE_DIR, filename);
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, EMPTY_STATE, 'utf-8');
+  const target = path.join(STORAGE_DIR, filename);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, EMPTY_STATE, 'utf-8');
 }
 
 setup('create lead auth state', () => {

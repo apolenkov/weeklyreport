@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   reactCompiler: true,
   transpilePackages: ['@customreport/ui'],
+  allowedDevOrigins: ['127.0.0.1', 'localhost'],
   turbopack: {
     root: resolve(__dirname, '../..'),
   },
