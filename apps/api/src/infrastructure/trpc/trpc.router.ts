@@ -272,6 +272,40 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+
+      saveStageAssignment: headProcedure
+        .input(z.object({
+          userId: z.string().uuid(),
+          stageId: z.string().uuid(),
+          projectId: z.string().uuid(),
+        }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.saveStageAssignment(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      deleteStageAssignment: headProcedure
+        .input(z.object({ id: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.deleteStageAssignment(input.id);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      listStageAssignments: headProcedure
+        .input(z.object({ projectId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.adminService.listStageAssignments(input.projectId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
 
     // === Archive namespace ===

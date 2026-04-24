@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type {
   AdminSnapshot,
   AppSettings,
+  StageAssignment,
   UserSession,
 } from '@customreport/shared';
 
@@ -58,6 +59,7 @@ function createRepository(
 ): AdminRepository {
   let currentSnapshot = structuredClone(snapshot);
   let currentSettings = structuredClone(settings);
+  const assignments = new Map<string, StageAssignment>();
 
   return {
     async getSnapshot() {
@@ -73,6 +75,36 @@ function createRepository(
     async updateSettings(data) {
       currentSettings = { ...currentSettings, ...data };
       return structuredClone(currentSettings);
+    },
+    async saveStageAssignment(data) {
+      const key = `${data.userId}:${data.stageId}:${data.projectId}`;
+      const existing = [...assignments.values()].find(
+        (a) => `${a.userId}:${a.stageId}:${a.projectId}` === key,
+      );
+      if (existing) {
+        return structuredClone(existing);
+      }
+      const assignment: StageAssignment = {
+        id: crypto.randomUUID(),
+        userId: data.userId,
+        stageId: data.stageId,
+        projectId: data.projectId,
+        stageName: 'Development',
+        userName: 'Test User',
+      };
+      assignments.set(assignment.id, assignment);
+      return structuredClone(assignment);
+    },
+    async deleteStageAssignment(id) {
+      if (!assignments.has(id)) {
+        throw new Error(`StageAssignment ${id} not found.`);
+      }
+      assignments.delete(id);
+    },
+    async listStageAssignments(projectId) {
+      return [...assignments.values()]
+        .filter((a) => a.projectId === projectId)
+        .map((a) => structuredClone(a));
     },
   };
 }
@@ -556,5 +588,71 @@ describe('AdminService — settings', () => {
     expect(result.departmentName).toBe('DeptA');
     expect(result.autoCreatePeriods).toBe(true);
     expect(result.defaultDeadlineDays).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// saveStageAssignment / deleteStageAssignment / listStageAssignments (API-12)
+// ---------------------------------------------------------------------------
+
+describe('AdminService — stage assignments', () => {
+  const USER_ID = '11111111-1111-4111-8111-111111111111';
+  const STAGE_ID = '22222222-2222-4222-8222-222222222222';
+  const PROJECT_ID = '33333333-3333-4333-8333-333333333333';
+
+  it('creates a stage assignment and lists it', async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+
+    const created = await service.saveStageAssignment({
+      userId: USER_ID,
+      stageId: STAGE_ID,
+      projectId: PROJECT_ID,
+    });
+
+    expect(created.userId).toBe(USER_ID);
+    expect(created.stageId).toBe(STAGE_ID);
+    expect(created.projectId).toBe(PROJECT_ID);
+    expect(created.id).toBeDefined();
+
+    const list = await service.listStageAssignments(PROJECT_ID);
+    expect(list).toHaveLength(1);
+    expect(list[0]!.id).toBe(created.id);
+  });
+
+  it('deletes a stage assignment', async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+
+    const created = await service.saveStageAssignment({
+      userId: USER_ID,
+      stageId: STAGE_ID,
+      projectId: PROJECT_ID,
+    });
+
+    const result = await service.deleteStageAssignment(created.id);
+    expect(result).toEqual({ success: true });
+
+    const list = await service.listStageAssignments(PROJECT_ID);
+    expect(list).toHaveLength(0);
+  });
+
+  it('returns existing assignment for duplicate unique key (idempotent)', async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+
+    const first = await service.saveStageAssignment({
+      userId: USER_ID,
+      stageId: STAGE_ID,
+      projectId: PROJECT_ID,
+    });
+
+    const second = await service.saveStageAssignment({
+      userId: USER_ID,
+      stageId: STAGE_ID,
+      projectId: PROJECT_ID,
+    });
+
+    expect(second.id).toBe(first.id);
+
+    const list = await service.listStageAssignments(PROJECT_ID);
+    expect(list).toHaveLength(1);
   });
 });

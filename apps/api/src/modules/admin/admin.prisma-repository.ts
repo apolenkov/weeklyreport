@@ -4,11 +4,13 @@ import {
   adminUserSchema,
   adminProjectSchema,
   appSettingsSchema,
+  stageAssignmentSchema,
   reportPeriodSchema,
   adminReminderRuleSchema,
   adminReminderExecutionSchema,
   type AdminSnapshot,
   type AppSettings,
+  type StageAssignment,
 } from '@customreport/shared';
 
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
@@ -60,6 +62,57 @@ export class AdminPrismaRepository implements AdminRepository {
       autoCreatePeriods: row.autoCreatePeriods,
       defaultDeadlineDays: row.defaultDeadlineDays,
     });
+  }
+
+  async saveStageAssignment(data: {
+    userId: string;
+    stageId: string;
+    projectId: string;
+  }): Promise<StageAssignment> {
+    const row = await this.prisma.stageAssignment.upsert({
+      where: {
+        userId_stageId_projectId: {
+          userId: data.userId,
+          stageId: data.stageId,
+          projectId: data.projectId,
+        },
+      },
+      create: data,
+      update: {},
+      include: { stage: { select: { name: true } }, user: { select: { name: true } } },
+    });
+
+    return stageAssignmentSchema.parse({
+      id: row.id,
+      userId: row.userId,
+      stageId: row.stageId,
+      projectId: row.projectId,
+      stageName: row.stage.name,
+      userName: row.user.name,
+    });
+  }
+
+  async deleteStageAssignment(id: string): Promise<void> {
+    await this.prisma.stageAssignment.delete({ where: { id } });
+  }
+
+  async listStageAssignments(projectId: string): Promise<StageAssignment[]> {
+    const rows = await this.prisma.stageAssignment.findMany({
+      where: { projectId },
+      include: { stage: { select: { name: true } }, user: { select: { name: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return rows.map((row) =>
+      stageAssignmentSchema.parse({
+        id: row.id,
+        userId: row.userId,
+        stageId: row.stageId,
+        projectId: row.projectId,
+        stageName: row.stage.name,
+        userName: row.user.name,
+      }),
+    );
   }
 
   async getSnapshot(): Promise<AdminSnapshot> {
