@@ -3,10 +3,12 @@ import {
   adminSnapshotSchema,
   adminUserSchema,
   adminProjectSchema,
+  appSettingsSchema,
   reportPeriodSchema,
   adminReminderRuleSchema,
   adminReminderExecutionSchema,
   type AdminSnapshot,
+  type AppSettings,
 } from '@customreport/shared';
 
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
@@ -28,6 +30,37 @@ function extractRecipientEmail(dedupeKey: string): string {
 @Injectable()
 export class AdminPrismaRepository implements AdminRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getSettings(): Promise<AppSettings> {
+    const row = await this.prisma.appSettings.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton' },
+      update: {},
+    });
+
+    return appSettingsSchema.parse({
+      departmentName: row.departmentName,
+      autoCreatePeriods: row.autoCreatePeriods,
+      defaultDeadlineDays: row.defaultDeadlineDays,
+    });
+  }
+
+  async updateSettings(data: Partial<AppSettings>): Promise<AppSettings> {
+    const row = await this.prisma.appSettings.upsert({
+      where: { id: 'singleton' },
+      create: {
+        id: 'singleton',
+        ...data,
+      },
+      update: data,
+    });
+
+    return appSettingsSchema.parse({
+      departmentName: row.departmentName,
+      autoCreatePeriods: row.autoCreatePeriods,
+      defaultDeadlineDays: row.defaultDeadlineDays,
+    });
+  }
 
   async getSnapshot(): Promise<AdminSnapshot> {
     const [users, projects, periods, reminderRules, reminderExecutions] =

@@ -3,11 +3,14 @@ import {
   adminReminderRuleSchema,
   adminSnapshotSchema,
   adminUserSchema,
+  appSettingsSchema,
+  appSettingsUpdateSchema,
   reportPeriodSchema,
   type AdminProject,
   type AdminReminderRule,
   type AdminSnapshot,
   type AdminUser,
+  type AppSettings,
   type ReportPeriod,
 } from '@customreport/shared';
 
@@ -23,6 +26,8 @@ export class AdminAccessError extends Error {
 export interface AdminRepository {
   getSnapshot(): Promise<AdminSnapshot>;
   saveSnapshot(snapshot: AdminSnapshot): Promise<AdminSnapshot>;
+  getSettings(): Promise<AppSettings>;
+  updateSettings(data: Partial<AppSettings>): Promise<AppSettings>;
 }
 
 function sortByName<T extends { name: string }>(rows: T[]): T[] {
@@ -37,6 +42,17 @@ export class AdminService {
     logger?: AppLogger,
   ) {
     this.logger = logger ?? createNullLogger();
+  }
+
+  /** API-11: Get application settings singleton. */
+  async getSettings(): Promise<AppSettings> {
+    return appSettingsSchema.parse(await this.repository.getSettings());
+  }
+
+  /** API-11: Update application settings (partial). */
+  async updateSettings(data: Partial<AppSettings>): Promise<AppSettings> {
+    const parsed = appSettingsUpdateSchema.parse(data);
+    return appSettingsSchema.parse(await this.repository.updateSettings(parsed));
   }
 
   async getSnapshot(): Promise<AdminSnapshot> {

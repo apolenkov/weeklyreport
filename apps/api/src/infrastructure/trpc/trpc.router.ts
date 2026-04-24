@@ -10,6 +10,7 @@ import {
   adminProjectSchema,
   reportPeriodSchema,
   adminReminderRuleSchema,
+  appSettingsUpdateSchema,
 } from '@customreport/shared';
 
 import { router, protectedProcedure, headProcedure } from './trpc.middleware.js';
@@ -183,6 +184,24 @@ export function createAppRouter(deps: RouterDeps) {
           throw mapDomainError(error);
         }
       }),
+
+      getSettings: headProcedure.query(async () => {
+        try {
+          return await deps.adminService.getSettings();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      updateSettings: headProcedure
+        .input(appSettingsUpdateSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.updateSettings(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
 
       saveUser: headProcedure
         .input(adminUserSchema)
