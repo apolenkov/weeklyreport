@@ -1,0 +1,53 @@
+{
+  "title": "API-first cleanup checkpoint",
+  "timestamp": "2026-04-24 17:01:38 MSK",
+  "repository": "/Users/ap/work/sdlc/customreport",
+  "branch": "main",
+  "user": "ap",
+  "host": "wrk.local",
+  "status": "dirty",
+  "currentFocus": "Phase 17 — API completion from approved mockups; active Next.js UI intentionally reduced to Hello World + API placeholder",
+  "runtime": {
+    "api": {
+      "live": "http://localhost:3002/health/live",
+      "ready": "http://localhost:3002/health/ready",
+      "metrics": "http://localhost:3002/metrics"
+    },
+    "web": {
+      "url": "http://localhost:3005",
+      "note": "3000 is occupied by another Docker stack; web is running as a one-off container on 3005"
+    }
+  },
+  "planningFiles": [
+    ".planning/ROADMAP.md",
+    ".planning/STATE.md",
+    ".planning/phases/17-ui-redesign/17-CONTEXT.md",
+    ".planning/phases/17-ui-redesign/17-01-PLAN.md"
+  ],
+  "modifiedAreas": [
+    "Dockerfile.api",
+    "Dockerfile.web",
+    "docker-compose.dev.yml",
+    "apps/web/src/app/**",
+    "apps/web/src/components/navigation/app-shell.tsx",
+    "apps/web/src/components/common/api-readiness-placeholder.tsx",
+    "apps/web legacy UI components/tests/e2e removed"
+  ],
+  "tasks": [
+    {
+      "id": "T-12a688f2-638f-49d5-9e35-b39e8efbdd65",
+      "subject": "Commit API-first cleanup"
+    },
+    {
+      "id": "T-898221a3-8249-4035-8413-dd5bc7a874b4",
+      "subject": "Implement shared API contracts"
+    }
+  ],
+  "nextSteps": [
+    "Review and commit the current API-first cleanup",
+    "Normalize web startup/port strategy for local compose",
+    "Execute Phase 17 Step 1 shared schema expansion",
+    "Update tRPC and backend read models after schema expansion",
+    "Rebuild frontend only after API parity is complete"
+  ]
+}

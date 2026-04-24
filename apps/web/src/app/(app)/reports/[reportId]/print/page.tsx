@@ -1,232 +1,34 @@
-'use client';
-
-import { useParams } from 'next/navigation';
-
-import type { TrafficLightStatus } from '@customreport/ui';
-import {
-  Badge,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Separator,
-  TrafficLightBadge,
-} from '@customreport/ui';
-
-import { formatDate, formatPeriodDate } from '../../../../../lib/format-date';
-import { trpc } from '../../../../../lib/trpc';
-
-function isTrafficLightStatus(
-  value: string | null,
-): value is TrafficLightStatus {
-  return value === 'green' || value === 'yellow' || value === 'red';
-}
-
-function toTrafficLightStatus(
-  value: string | null | undefined,
-): TrafficLightStatus {
-  if (value && isTrafficLightStatus(value)) return value;
-  return 'unset';
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3002';
 
 export default function PrintReportPage() {
-  const params = useParams<{ reportId: string }>();
-  const reportId = params?.reportId ?? '';
-
-  const reportQuery = trpc.archive.detail.useQuery(
-    { reportId },
-    { enabled: Boolean(reportId) },
-  );
-
-  if (reportQuery.isLoading) return <p>Loading report for print...</p>;
-  if (reportQuery.error) return <p>Error loading report.</p>;
-
-  const detail = reportQuery.data;
-
-  if (!detail) return <p>Report not found.</p>;
-
-  const { report } = detail;
-
   return (
-    <main className="max-w-[1100px] mx-auto p-8 print:p-0 print:bg-white">
-      {/* Report header */}
-      <div className="mb-8">
-        <h1 className="text-[28px] font-semibold leading-[1.2]">
-          Weekly Status Report
-        </h1>
-        <p className="text-base text-muted-foreground mt-1">
-          {formatPeriodDate(report.periodStart)} &mdash;{' '}
-          {formatPeriodDate(report.periodEnd)}
-        </p>
-        {report.publishedAt ? (
-          <p className="text-sm text-muted-foreground mt-1">
-            Published {formatDate(report.publishedAt)}
-            {report.publishedByName
-              ? ` by ${report.publishedByName}`
-              : null}
+    <main className="min-h-screen bg-background px-6 py-10 lg:px-10">
+      <div className="mx-auto max-w-3xl space-y-6 rounded-2xl border bg-card p-8 shadow-sm">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Frontend stub
           </p>
-        ) : null}
+          <h1 className="text-4xl font-semibold tracking-tight">Hello world</h1>
+          <p className="max-w-xl text-sm text-muted-foreground">
+            Printable report UI is intentionally disabled while the API-first
+            contracts and archive/publication pipeline are being completed.
+          </p>
+        </div>
+
+        <div className="rounded-xl border bg-background p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            API endpoints
+          </p>
+          <div className="mt-2 space-y-2 text-sm">
+            <a className="block text-primary underline-offset-4 hover:underline" href={`${API_BASE_URL}/health/live`} rel="noreferrer" target="_blank">
+              {API_BASE_URL}/health/live
+            </a>
+            <a className="block text-primary underline-offset-4 hover:underline" href={`${API_BASE_URL}/health/ready`} rel="noreferrer" target="_blank">
+              {API_BASE_URL}/health/ready
+            </a>
+          </div>
+        </div>
       </div>
-
-      <Separator className="mb-6" />
-
-      {/* Portfolio overview card */}
-      <Card className="mb-6 print:shadow-none print:border">
-        <CardHeader>
-          <CardTitle>Portfolio Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TrafficLightBadge
-            status={toTrafficLightStatus(report.portfolioOverview.status)}
-            label={`Overall: ${report.portfolioOverview.status}`}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Lead sections */}
-      {report.sections.map((section, sectionIndex) => (
-        <Card
-          key={section.reportSectionId}
-          className={`mb-6 break-inside-avoid print:shadow-none print:border ${
-            sectionIndex > 0 ? 'break-before-page' : ''
-          }`}
-        >
-          <CardHeader>
-            <CardTitle>{section.authorName}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Projects row */}
-            {section.projects.length > 0 ? (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">
-                  Projects
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {section.projects.map((project) => (
-                    <TrafficLightBadge
-                      key={project.projectId}
-                      status={toTrafficLightStatus(project.trafficLight)}
-                      label={project.projectName}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {/* Items */}
-            {section.items.length > 0 ? (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">
-                  Items
-                </p>
-                <ul className="list-disc pl-6 space-y-1">
-                  {section.items.map((item) => (
-                    <li
-                      key={
-                        item.id ??
-                        `${section.reportSectionId}-${item.text}`
-                      }
-                      className="text-sm"
-                    >
-                      {item.text}
-                      {item.tag ? (
-                        <Badge
-                          variant="outline"
-                          className="ml-2 text-xs"
-                        >
-                          {item.tag}
-                        </Badge>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {/* Risks */}
-            {section.risks.length > 0 ? (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">
-                  Risks
-                </p>
-                <ul className="list-disc pl-6 space-y-1">
-                  {section.risks.map((risk) => (
-                    <li
-                      key={
-                        risk.id ??
-                        `${section.reportSectionId}-risk-${risk.risk}`
-                      }
-                      className="text-sm"
-                    >
-                      <span className="font-medium">{risk.risk}</span>
-                      <span className="text-muted-foreground">
-                        {' '}
-                        &mdash; Impact: {risk.impact}, Mitigation:{' '}
-                        {risk.mitigation}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {/* Decisions */}
-            {section.decisions.length > 0 ? (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">
-                  Decisions
-                </p>
-                <ul className="list-disc pl-6 space-y-1">
-                  {section.decisions.map((decision) => (
-                    <li
-                      key={
-                        decision.id ??
-                        `${section.reportSectionId}-dec-${decision.text}`
-                      }
-                      className="text-sm"
-                    >
-                      {decision.text}
-                      <Badge
-                        variant={
-                          decision.resolvedAt ? 'default' : 'outline'
-                        }
-                        className="ml-2 text-xs"
-                      >
-                        {decision.resolvedAt ? 'Resolved' : 'Unresolved'}
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {/* Priorities */}
-            {section.priorities.length > 0 ? (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">
-                  Priorities
-                </p>
-                <ol className="list-decimal pl-6 space-y-1">
-                  {section.priorities
-                    .slice()
-                    .sort((a, b) => a.rank - b.rank)
-                    .map((priority) => (
-                      <li
-                        key={
-                          priority.id ??
-                          `${section.reportSectionId}-pri-${priority.rank}`
-                        }
-                        className="text-sm"
-                      >
-                        {priority.text}
-                      </li>
-                    ))}
-                </ol>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      ))}
     </main>
   );
 }

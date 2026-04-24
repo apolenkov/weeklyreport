@@ -28,19 +28,18 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core Value:** Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт -- без конфликтов редактирования, с историей и аналитикой.
 
-**Current Focus:** Phase 15 — ui-ux-polish-visual-verification
+**Current Focus:** Phase 17 — API completion from approved mockups; active Next.js UI intentionally reduced to Hello World + API placeholder
 
 ---
 
 ## Current Position
 
-Phase: 16
-Plan: Not started
-Phase: 15 (ui-ux-polish-visual-verification) — NOT STARTED
-Status: Ready to execute
-Last activity: 2026-04-21
+Phase: 17
+Plan: 17-01-PLAN.md
+Status: In progress
+Last activity: 2026-04-24
 
-Progress: [█████████████████░░░] 87% (v3.0: Phase 14 complete, Phase 15 ready to plan)
+Progress: [██████████████████░░] 90% (v3.0: API-first hold active, frontend reduced to Hello World + API shell)
 
 ---
 

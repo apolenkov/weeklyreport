@@ -1,153 +1,37 @@
-import { BarChart3, FileText, Shield, Users } from 'lucide-react';
-
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@customreport/ui';
-
-const IS_DEV = process.env.AUTH_DEV_MODE === 'true' || process.env.NODE_ENV !== 'production';
-const SAML_LOGIN_URL = '/auth/saml/login';
-
-const features = [
-  {
-    icon: FileText,
-    title: 'Structured Reports',
-    description: 'Traffic lights, priorities, risks — all in one place',
-  },
-  {
-    icon: Users,
-    title: 'Team Collaboration',
-    description: '6 leads fill sections independently, no conflicts',
-  },
-  {
-    icon: BarChart3,
-    title: 'Analytics & History',
-    description: 'Track trends across weeks, export to PDF',
-  },
-  {
-    icon: Shield,
-    title: 'Enterprise SSO',
-    description: 'Secure SAML authentication via Keycloak',
-  },
-];
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3002';
 
 export default function HomePage() {
   return (
-    <main className="flex min-h-svh">
-      {/* Left panel — branded */}
-      <div className="relative hidden w-1/2 overflow-hidden bg-sidebar lg:flex lg:flex-col lg:justify-between lg:p-12">
-        {/* Gradient overlay */}
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            background:
-              'radial-gradient(ellipse at 30% 20%, var(--color-sidebar-primary) / 0.4, transparent 60%), radial-gradient(ellipse at 70% 80%, var(--color-chart-1) / 0.3, transparent 60%)',
-          }}
-        />
-
-        {/* Content */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
-              CR
-            </div>
-            <span className="text-xl font-semibold text-sidebar-foreground">CustomReport</span>
-          </div>
-        </div>
-
-        <div className="relative z-10 space-y-6">
-          <h1 className="text-4xl font-semibold leading-tight text-sidebar-foreground">
-            Weekly status reports,
-            <br />
-            <span className="text-sidebar-primary">simplified.</span>
-          </h1>
-          <p className="max-w-md text-lg text-sidebar-foreground/80">
-            Collect, review, and publish department reports with structure, clarity, and zero editing conflicts.
+    <main className="min-h-screen bg-background px-6 py-10 lg:px-10">
+      <div className="mx-auto max-w-3xl space-y-6 rounded-2xl border bg-card p-8 shadow-sm">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Frontend stub
+          </p>
+          <h1 className="text-4xl font-semibold tracking-tight">Hello world</h1>
+          <p className="max-w-xl text-sm text-muted-foreground">
+            The frontend is intentionally reduced while we finish the API from
+            the approved mockups. Use the API links below to verify the active
+            backend surface.
           </p>
         </div>
 
-        <div className="relative z-10 grid grid-cols-2 gap-4">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="rounded-xl border border-sidebar-border bg-sidebar-accent/60 p-4 backdrop-blur-sm"
-            >
-              <feature.icon className="mb-2 h-5 w-5 text-sidebar-primary" />
-              <p className="text-sm font-medium text-sidebar-foreground">{feature.title}</p>
-              <p className="mt-1 text-sm text-sidebar-foreground/60">{feature.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Right panel — auth form */}
-      <div className="flex w-full flex-col items-center justify-center p-8 lg:w-1/2">
-        {/* Mobile logo */}
-        <div className="mb-8 flex items-center gap-3 lg:hidden">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground">
-            CR
+        <div className="rounded-xl border bg-background p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            API endpoints
+          </p>
+          <div className="mt-2 space-y-2 text-sm">
+            <a className="block text-primary underline-offset-4 hover:underline" href={`${API_BASE_URL}/health/live`} rel="noreferrer" target="_blank">
+              {API_BASE_URL}/health/live
+            </a>
+            <a className="block text-primary underline-offset-4 hover:underline" href={`${API_BASE_URL}/health/ready`} rel="noreferrer" target="_blank">
+              {API_BASE_URL}/health/ready
+            </a>
+            <a className="block text-primary underline-offset-4 hover:underline" href={`${API_BASE_URL}/metrics`} rel="noreferrer" target="_blank">
+              {API_BASE_URL}/metrics
+            </a>
           </div>
-          <span className="text-xl font-semibold">CustomReport</span>
         </div>
-
-        <Card className="w-full max-w-md animate-fade-in border-0 shadow-lg">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-semibold tracking-tight">
-              Welcome back
-            </CardTitle>
-            <CardDescription className="text-base">
-              Sign in to access your reports
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center gap-3">
-            {IS_DEV ? (
-              <>
-                <div className="flex w-full flex-col gap-2">
-                  <Button size="lg" className="w-full gap-2" asChild>
-                    <a href="/auth/dev-login?role=head">
-                      <Shield className="h-5 w-5" />
-                      Sign In as Head
-                    </a>
-                  </Button>
-                  <Button size="lg" variant="outline" className="w-full gap-2" asChild>
-                    <a href="/auth/dev-login?role=lead">
-                      <FileText className="h-5 w-5" />
-                      Sign In as Lead
-                    </a>
-                  </Button>
-                  <Button size="lg" variant="ghost" className="w-full gap-2" asChild>
-                    <a href="/auth/dev-login?role=viewer">
-                      <Users className="h-5 w-5" />
-                      Sign In as Viewer
-                    </a>
-                  </Button>
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="h-px flex-1 bg-border" />
-                  <span className="text-xs text-muted-foreground">Development mode</span>
-                  <div className="h-px flex-1 bg-border" />
-                </div>
-              </>
-            ) : (
-              <>
-                <Button size="lg" className="w-full" asChild>
-                  <a href={SAML_LOGIN_URL}>Sign In with SSO</a>
-                </Button>
-                <p className="mt-1 text-center text-xs text-muted-foreground">
-                  Sign in with your corporate Keycloak account
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <p className="mt-8 text-center text-xs text-muted-foreground">
-          CoreDev Department · Weekly Reporting System
-        </p>
       </div>
     </main>
   );

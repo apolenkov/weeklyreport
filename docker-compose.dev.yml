@@ -22,6 +22,7 @@ services:
       - ./apps/api/src:/app/apps/api/src
       - ./packages/shared/src:/app/packages/shared/src
       - ./prisma:/app/prisma
+      - ./tsconfig.base.json:/app/tsconfig.base.json:ro
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport
@@ -53,6 +54,7 @@ services:
       - ./apps/web/public:/app/apps/web/public
       - ./packages/shared/src:/app/packages/shared/src
       - ./packages/ui/src:/app/packages/ui/src
+      - ./tsconfig.base.json:/app/tsconfig.base.json:ro
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_API_URL: http://localhost:3002
