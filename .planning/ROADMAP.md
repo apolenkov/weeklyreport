@@ -257,7 +257,7 @@ Plans:
 Plans:
 - [x] 17-01-PLAN.md — Index & overview (superseded by wave plans)
 - [x] 17-02-PLAN.md — Wave 1: Schema migration (SCH-01..07) + Login stub (API-13) + URL routing (UI-14) ✅
-- [ ] 17-03-PLAN.md — Wave 2 gaps: Remaining 3 API endpoints (API-04, API-11, API-12) + service tests
+- [x] 17-03-PLAN.md — Wave 2 gaps: Remaining 3 API endpoints (API-04, API-11, API-12) + service tests
 - [ ] 17-04-PLAN.md — Wave 3: Lead Form + Lead History UI (UI-01..04, UI-13)
 - [ ] 17-05-PLAN.md — Wave 4: Dashboard + Weekly Report UI (UI-05..10)
 - [ ] 17-06-PLAN.md — Wave 5: Admin Panel + Login + Design Polish (UI-11,12,15..19)
@@ -309,7 +309,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 16. Backend Hardening | 4/4 | Complete | 2026-04-21 |
-| 17. Fullstack UI Redesign | 2/7 | Wave 1-2 done, 5 remaining | - |
+| 17. Fullstack UI Redesign | 3/7 | In Progress|  |
 | 18. E2E Tests | 0/7 | Plans ready | - |
 | 19. Documentation | 0/3 | Plans ready | - |
 
