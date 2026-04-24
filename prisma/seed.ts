@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient, Role, ReportSectionStatus, ReportStatus, TrafficLightStatus, ItemType, ItemWorkflowStatus } from '@prisma/client';
+import { PrismaClient, Role, ReportSectionStatus, ReportStatus, TrafficLightStatus, ItemType, ItemWorkflowStatus, PeriodStatus } from '@prisma/client';
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -147,7 +147,81 @@ async function main() {
     }
   }
 
-  console.log(`Seeded: ${leads.length} leads, 1 head (${head.id}), 1 viewer (${viewer.id}), 1 report, ${leads.length} projects`);
+  // --- v4.0: Seed SDLC stages ---
+  const stageNames = ['Planning', 'Analysis', 'Design', 'Dev', 'Testing', 'DevOps', 'Support'];
+  const stages = await Promise.all(
+    stageNames.map((name, idx) =>
+      prisma.stage.upsert({
+        where: { name },
+        update: {},
+        create: {
+          id: `a0000000-0000-4000-8000-00000000070${idx}`,
+          name,
+          sortOrder: idx,
+        },
+      }),
+    ),
+  );
+
+  // --- v4.0: Seed stage assignments (each lead owns 1-2 stages per their project) ---
+  for (const [index, lead] of leads.entries()) {
+    const projectId = `a0000000-0000-4000-8000-00000000020${index}`;
+    // Assign lead to 2 stages on their own project
+    const primaryStage = stages[index % stages.length]!;
+    const secondaryStage = stages[(index + 1) % stages.length]!;
+    for (const stage of [primaryStage, secondaryStage]) {
+      await prisma.stageAssignment.upsert({
+        where: {
+          userId_stageId_projectId: {
+            userId: lead.id,
+            stageId: stage.id,
+            projectId,
+          },
+        },
+        update: {},
+        create: {
+          userId: lead.id,
+          stageId: stage.id,
+          projectId,
+        },
+      });
+    }
+  }
+
+  // --- v4.0: Seed AppSettings singleton ---
+  await prisma.appSettings.upsert({
+    where: { id: 'singleton' },
+    update: {},
+    create: {
+      id: 'singleton',
+      departmentName: 'Software Development',
+      autoCreatePeriods: false,
+      defaultDeadlineDays: 5,
+    },
+  });
+
+  // --- v4.0: Add a second report period for history/navigation ---
+  await prisma.report.upsert({
+    where: { id: 'a0000000-0000-4000-8000-000000000102' },
+    update: {},
+    create: {
+      id: 'a0000000-0000-4000-8000-000000000102',
+      periodStart: new Date('2026-04-13T00:00:00.000Z'),
+      periodEnd: new Date('2026-04-19T23:59:59.000Z'),
+      deadline: new Date('2026-04-17T15:00:00.000Z'),
+      status: ReportStatus.draft,
+      periodStatus: PeriodStatus.open,
+      weekLabel: 'Week 16',
+    },
+  });
+
+  // Update first report with week label
+  await prisma.report.update({
+    where: { id: 'a0000000-0000-4000-8000-000000000101' },
+    data: { weekLabel: 'Week 15', periodStatus: PeriodStatus.open },
+  });
+
+  console.log(`Seeded: ${leads.length} leads, 1 head, 1 viewer, 2 reports, ${leads.length} projects, ${stages.length} stages, stage assignments, app settings`);
 }
 
 void main()

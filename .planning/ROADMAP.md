@@ -250,15 +250,17 @@ Plans:
   8. URL-based routing: every state in URL, browser back/forward works, bookmarkable (D-69)
   9. All pages: Starbucks design (cream/teal/gold), max-w-6xl, skip-link, aria-labels, touch targets 44px
   10. 223 regression scenarios used as acceptance criteria — P0 scenarios must pass
-**Plans**: TBD
+**Plans**: 7 plans (01=index, 02-07=waves)
 **UI hint**: yes
-**Suggested waves**:
-  - Wave 1: Schema migration + Login stub + URL routing skeleton
-  - Wave 2: Backend API (period lifecycle, revoke, fill-from, versions)
-  - Wave 3: Frontend — Lead Form + Lead History
-  - Wave 4: Frontend — Dashboard + Weekly Report
-  - Wave 5: Frontend — Admin Panel + Login + all UI States/modals
-  - Wave 6: Integration tests + visual verification + Print/PDF
+
+Plans:
+- [x] 17-01-PLAN.md — Index & overview (superseded by wave plans)
+- [ ] 17-02-PLAN.md — Wave 1: Schema migration (SCH-01..07) + Login stub (API-13) + URL routing (UI-14)
+- [ ] 17-03-PLAN.md — Wave 2: Backend API endpoints (API-01..12) + contract tests
+- [ ] 17-04-PLAN.md — Wave 3: Lead Form + Lead History UI (UI-01..04, UI-13)
+- [ ] 17-05-PLAN.md — Wave 4: Dashboard + Weekly Report UI (UI-05..10)
+- [ ] 17-06-PLAN.md — Wave 5: Admin Panel + Login + Design Polish (UI-11,12,15..19)
+- [ ] 17-07-PLAN.md — Wave 6: Print/PDF (UI-20) + Integration Tests
 
 ### Phase 18: E2E Tests
 **Goal**: 223 regression scenarios implemented as Playwright E2E tests covering all role journeys, cross-role lifecycles, error paths, and visual baselines
@@ -281,7 +283,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 16. Backend Hardening | 4/4 | Complete    | 2026-04-21 |
-| 17. Fullstack UI Redesign | 0/TBD | Spec complete, planning next | - |
+| 17. Fullstack UI Redesign | 0/7 | Wave plans ready, executing Wave 1 | - |
 | 18. E2E Tests | 0/TBD | Not started | - |
 
 ---

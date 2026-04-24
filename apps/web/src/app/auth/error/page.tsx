@@ -1,35 +1,38 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3002';
+type Props = {
+  searchParams: Promise<{ reason?: string }>;
+};
 
-export default function AuthErrorPage() {
+export default async function AuthErrorPage({ searchParams }: Props) {
+  const { reason } = await searchParams;
+
+  const messages: Record<string, string> = {
+    invalid_assertion: 'The SSO response was invalid. Please try again.',
+    session_expired: 'Your session has expired. Please sign in again.',
+    unauthorized: 'You do not have access to this resource.',
+  };
+
+  const message = messages[reason ?? ''] ?? 'An authentication error occurred.';
+
   return (
-    <main className="min-h-screen bg-background px-6 py-10 lg:px-10">
-      <div className="mx-auto max-w-3xl space-y-6 rounded-2xl border bg-card p-8 shadow-sm">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Frontend stub
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight">Hello world</h1>
-          <p className="max-w-xl text-sm text-muted-foreground">
-            Authentication UI is intentionally reduced while API-first work is
-            in progress. Use the backend endpoints below to verify service
-            readiness.
-          </p>
+    <div className="flex min-h-svh items-center justify-center bg-[var(--color-background)]">
+      <div className="w-full max-w-sm space-y-6 text-center">
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-destructive)]">
+          <span className="text-2xl text-white">!</span>
         </div>
-
-        <div className="rounded-xl border bg-background p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            API endpoints
-          </p>
-          <div className="mt-2 space-y-2 text-sm">
-            <a className="block text-primary underline-offset-4 hover:underline" href={`${API_BASE_URL}/health/live`} rel="noreferrer" target="_blank">
-              {API_BASE_URL}/health/live
-            </a>
-            <a className="block text-primary underline-offset-4 hover:underline" href={`${API_BASE_URL}/health/ready`} rel="noreferrer" target="_blank">
-              {API_BASE_URL}/health/ready
-            </a>
-          </div>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
+          Authentication Error
+        </h1>
+        <p className="text-sm text-[var(--color-muted-foreground)]">
+          {message}
+        </p>
+        <a
+          href="/"
+          className="btn-press inline-flex items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-3 text-sm font-medium text-white shadow-sm transition-shadow hover:shadow-md"
+          style={{ minHeight: '44px' }}
+        >
+          Return to Login
+        </a>
       </div>
-    </main>
+    </div>
   );
 }
