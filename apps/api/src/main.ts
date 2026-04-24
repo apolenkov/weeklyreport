@@ -24,6 +24,9 @@ import { AdminService } from './modules/admin/admin.service';
 import { RemindersService } from './modules/reminders/reminders.service';
 import { CarryOverService } from './modules/carry-over/carry-over.service';
 import { ArchiveService } from './modules/archive/archive.service';
+import { PeriodService } from './modules/period/period.service';
+import { WeeklyReportService } from './modules/weekly-report/weekly-report.service';
+import { LeadFormService } from './modules/report-sections/lead-form.service';
 
 async function bootstrap() {
   const env = validateEnv();
@@ -42,7 +45,7 @@ async function bootstrap() {
   app.use(cookieParser());
   app.enableCors({ origin: env.FRONTEND_URL, credentials: true });
 
-  // Resolve all 8 services from NestJS DI container
+  // Resolve all services from NestJS DI container
   const appRouter = createAppRouter({
     prisma: app.get(PrismaService),
     reportSectionsService: app.get(ReportSectionsService),
@@ -53,6 +56,9 @@ async function bootstrap() {
     remindersService: app.get(RemindersService),
     carryOverService: app.get(CarryOverService),
     archiveService: app.get(ArchiveService),
+    periodService: app.get(PeriodService),
+    weeklyReportService: app.get(WeeklyReportService),
+    leadFormService: app.get(LeadFormService),
   });
 
   // Mount tRPC as Express middleware at /trpc

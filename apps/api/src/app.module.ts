@@ -13,6 +13,8 @@ import { ReportSectionsModule } from './modules/report-sections/report-sections.
 import { PublicationModule } from './modules/publication/publication.module';
 import { CarryOverModule } from './modules/carry-over/carry-over.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { PeriodModule } from './modules/period/period.module';
+import { WeeklyReportModule } from './modules/weekly-report/weekly-report.module';
 import { PdfExportProcessor } from './infrastructure/bullmq/pdf-export.processor';
 import { EmailReminderProcessor } from './infrastructure/bullmq/email-reminder.processor';
 import { EmailService } from './infrastructure/email/email.service';
@@ -31,6 +33,8 @@ import { EmailService } from './infrastructure/email/email.service';
     PublicationModule,
     CarryOverModule,
     AdminModule,
+    PeriodModule,
+    WeeklyReportModule,
   ],
   providers: [PdfExportProcessor, EmailReminderProcessor, EmailService],
 })
