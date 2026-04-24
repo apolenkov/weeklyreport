@@ -410,6 +410,16 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+
+      requestReopen: protectedProcedure
+        .input(z.object({ reportSectionId: z.string().uuid(), reason: z.string().max(500).optional() }))
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.requestReopen(input.reportSectionId, ctx.session.userId, input.reason);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
   });
 }

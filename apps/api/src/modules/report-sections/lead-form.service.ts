@@ -11,6 +11,7 @@ export interface LeadFormRepository {
   listVersions(sectionId: string): Promise<VersionSnapshot[]>;
   restoreVersion(sectionId: string, version: number): Promise<number>;
   createVersionSnapshot(sectionId: string): Promise<void>;
+  createReopenRequest(sectionId: string, userId: string, reason?: string): Promise<void>;
 }
 
 export class LeadFormService {
@@ -95,6 +96,30 @@ export class LeadFormService {
     const restoredVersion = await this.repository.restoreVersion(sectionId, version);
 
     return { success: true, restoredVersion };
+  }
+
+  /** API-04: Request the head to reopen a submitted section. */
+  async requestReopen(
+    sectionId: string,
+    userId: string,
+    reason?: string,
+  ): Promise<{ success: true }> {
+    const section = await this.repository.getSectionById(sectionId);
+
+    if (!section) {
+      throw new Error(`Section ${sectionId} not found.`);
+    }
+
+    if (section.authorId !== userId) {
+      throw new Error('Can only request reopen for your own section.');
+    }
+
+    if (section.status !== 'submitted') {
+      throw new Error('Only submitted sections can request reopen.');
+    }
+
+    await this.repository.createReopenRequest(sectionId, userId, reason);
+    return { success: true };
   }
 
   /** API-10: Get lead form for a specific period. */

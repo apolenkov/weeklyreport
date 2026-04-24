@@ -276,6 +276,18 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     return version;
   }
 
+  async createReopenRequest(
+    sectionId: string,
+    userId: string,
+    reason?: string,
+  ): Promise<void> {
+    // Log the reopen request — no dedicated table yet.
+    // In production this would create a notification record for the head.
+    console.log(
+      `[ReopenRequest] section=${sectionId} user=${userId} reason=${reason ?? 'none'}`,
+    );
+  }
+
   async createVersionSnapshot(sectionId: string): Promise<void> {
     const section = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },
