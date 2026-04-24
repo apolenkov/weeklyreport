@@ -1,86 +1,106 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3002';
 const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
 
 const stubRoles = [
-  { role: 'lead', label: 'Enter as Lead', redirect: '/lead/report', icon: '📝' },
-  { role: 'head', label: 'Enter as Head', redirect: '/head/dashboard', icon: '👔' },
-  { role: 'head', label: 'Enter as Admin', redirect: '/admin', icon: '⚙️' },
-  { role: 'viewer', label: 'Enter as Viewer', redirect: '/reports/history', icon: '👁' },
+  { label: 'Enter as Lead', redirect: '/lead/report', icon: '📝' },
+  { label: 'Enter as Head', redirect: '/head/dashboard', icon: '👔' },
+  { label: 'Enter as Admin', redirect: '/admin', icon: '⚙️' },
+  { label: 'Enter as Viewer', redirect: '/reports/history', icon: '👁' },
 ] as const;
 
 export default function LoginPage() {
   return (
     <main id="main-content" className="flex min-h-svh">
-      {/* Left panel — brand */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-gradient-to-br from-[var(--color-starbucks-green)] to-[var(--color-starbucks-house)] p-12 text-white">
-        <div>
-          <div className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight">CustomReport</div>
-          <div className="mt-1 text-sm font-light opacity-80">Software Development</div>
-        </div>
+      {/* Left panel — Demo brand */}
+      <div className="relative hidden flex-1 flex-col items-center justify-center overflow-hidden p-16 text-white lg:flex"
+        style={{
+          background: 'linear-gradient(135deg, #1E3932 0%, #006241 40%, #00754A 70%, #2d8f6f 100%)',
+        }}
+      >
+        {/* SVG pattern overlay */}
+        <div className="absolute inset-0 opacity-100"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+        {/* Abstract shapes */}
+        <div className="absolute -right-20 -top-24 h-[400px] w-[400px] rounded-full opacity-[0.08]"
+          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%)' }}
+        />
+        <div className="absolute -bottom-16 -left-10 h-[300px] w-[300px] rounded-full opacity-[0.08]"
+          style={{ background: 'radial-gradient(circle, rgba(203,162,88,0.2), transparent 70%)' }}
+        />
+        <div className="absolute left-[10%] top-[20%] h-[200px] w-[200px] opacity-[0.08]"
+          style={{ border: '3px solid rgba(255,255,255,0.1)', borderRadius: '40% 60% 50% 50%' }}
+        />
+        <div className="absolute bottom-[30%] right-[10%] h-20 w-40 -rotate-[15deg] opacity-[0.08]"
+          style={{ border: '2px solid rgba(203,162,88,0.15)', borderRadius: '50%' }}
+        />
 
-        <div className="space-y-4">
-          <h1 className="font-[family-name:var(--font-sans)] text-4xl font-semibold leading-tight tracking-tight">
-            Weekly Status
-            <br />
-            Reporting
-          </h1>
-          <p className="max-w-sm text-base font-light leading-relaxed opacity-80">
-            Structured reports from team leads, auto-compiled into a single
-            department overview. No conflicts, full history, instant PDF.
+        {/* Brand content */}
+        <div className="relative z-10 max-w-[400px] text-center">
+          <div className="font-[family-name:var(--font-sans)] text-[56px] font-extrabold leading-none tracking-[0.08em]"
+            style={{ textShadow: '0 2px 20px rgba(0,0,0,0.15)' }}
+          >
+            Demo
+          </div>
+          <div className="mb-8 mt-3 text-sm font-normal uppercase tracking-[0.16em] text-white/70">
+            Example Software Department
+          </div>
+          <div className="mx-auto mb-8 h-0.5 w-16 rounded-full bg-[var(--color-starbucks-gold)]" />
+          <p className="mx-auto max-w-xs text-lg leading-relaxed text-white/60">
+            Unified weekly status reporting system for department leads and management
           </p>
-        </div>
-
-        {/* Decorative shapes */}
-        <div className="flex gap-4 opacity-20">
-          <div className="h-16 w-16 rounded-full border-2 border-white" />
-          <div className="h-16 w-16 rotate-45 border-2 border-white" />
-          <div className="h-16 w-16 rounded-full bg-white/10" />
         </div>
       </div>
 
-      {/* Right panel — auth */}
-      <div className="flex w-full flex-col items-center justify-center px-8 lg:w-1/2">
-        <div className="w-full max-w-sm space-y-8">
-          {/* Logo */}
-          <div className="space-y-2 text-center">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-starbucks-green)]">
-              <span className="text-2xl font-bold text-white">C</span>
-            </div>
-            <h2 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
-              CustomReport
-            </h2>
-            <p className="text-sm text-[var(--color-muted-foreground)]">
-              Sign in to your account
-            </p>
-          </div>
+      {/* Right panel — login form */}
+      <div className="relative flex w-full flex-col items-center justify-center bg-white px-16 lg:w-[480px] lg:flex-none">
+        {/* Left border accent */}
+        <div className="absolute bottom-[10%] left-0 top-[10%] hidden w-px lg:block"
+          style={{ background: 'linear-gradient(to bottom, transparent, #ece8e2, transparent)' }}
+        />
 
-          {/* SSO button */}
-          <a
-            href={`${API_BASE_URL}/auth/saml/login`}
-            className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-3 font-[family-name:var(--font-sans)] text-base font-medium text-white shadow-sm transition-shadow hover:shadow-md focus:outline-none focus:ring-3 focus:ring-[var(--color-ring)]"
-            style={{ minHeight: '44px' }}
-            aria-label="Sign in with Single Sign-On"
-          >
-            Sign in with SSO
-          </a>
+        <div className="w-full max-w-[320px] text-center">
+          <h1 className="font-[family-name:var(--font-sans)] text-[32px] font-bold tracking-[-0.02em] text-[var(--color-primary)]">
+            CustomReport
+          </h1>
+          <p className="mb-12 mt-2 text-[15px] text-[var(--color-muted-foreground)]">
+            Weekly Status Reporting System
+          </p>
 
-          {/* Dev stub buttons */}
-          {AUTH_STUB && (
+          {/* SSO button — or direct entry when stub */}
+          {AUTH_STUB ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-[var(--color-border)]" />
-                <span className="text-xs font-medium uppercase tracking-widest text-[var(--color-muted-foreground)]">
-                  Development Mode
+              <a
+                href="/head/dashboard"
+                className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-all hover:bg-[var(--color-primary)] hover:-translate-y-px"
+                style={{
+                  minHeight: '52px',
+                  boxShadow: '0 2px 12px rgba(0,98,65,0.2)',
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                Enter Application
+              </a>
+
+              <div className="flex items-center gap-3 py-2">
+                <div className="h-px flex-1 bg-[#ece8e2]" />
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                  or select role
                 </span>
-                <div className="h-px flex-1 bg-[var(--color-border)]" />
+                <div className="h-px flex-1 bg-[#ece8e2]" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {stubRoles.map(({ role, label, redirect, icon }) => (
+              <div className="grid grid-cols-2 gap-2.5">
+                {stubRoles.map(({ label, redirect, icon }) => (
                   <a
                     key={label}
-                    href={`${API_BASE_URL}/auth/dev-login?role=${role}&redirect=${redirect}`}
-                    className="btn-press flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-sm font-medium text-[var(--color-foreground)] shadow-sm transition-shadow hover:shadow-md focus:outline-none focus:ring-3 focus:ring-[var(--color-ring)]"
+                    href={redirect}
+                    className="flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-foreground)] transition-all hover:border-[rgba(0,0,0,0.24)] hover:bg-[#f8f6f2]"
                     style={{ minHeight: '44px' }}
                   >
                     <span>{icon}</span>
@@ -89,7 +109,33 @@ export default function LoginPage() {
                 ))}
               </div>
             </div>
+          ) : (
+            <button
+              className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-all hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"
+              style={{
+                minHeight: '52px',
+                boxShadow: '0 2px 12px rgba(0,98,65,0.2)',
+              }}
+              aria-label="Sign in with corporate SSO"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+              Sign in with SSO
+            </button>
           )}
+
+          <p className="mt-6 text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
+            Keycloak · SAML 2.0 · Corporate SSO
+          </p>
+
+          <div className="mx-auto my-10 h-px w-full max-w-[320px] bg-[#ece8e2]" />
+
+          <p className="text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
+            Development Department · v4.0
+          </p>
         </div>
       </div>
     </main>
