@@ -10,16 +10,16 @@ const stubRoles = [
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-svh">
+    <main id="main-content" className="flex min-h-svh">
       {/* Left panel — brand */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-gradient-to-br from-[var(--color-starbucks-green)] to-[var(--color-starbucks-house)] p-12 text-white">
         <div>
-          <div className="text-2xl font-semibold tracking-tight">CustomReport</div>
+          <div className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight">CustomReport</div>
           <div className="mt-1 text-sm font-light opacity-80">Core Development</div>
         </div>
 
         <div className="space-y-4">
-          <h1 className="text-4xl font-semibold leading-tight tracking-tight">
+          <h1 className="font-[family-name:var(--font-sans)] text-4xl font-semibold leading-tight tracking-tight">
             Weekly Status
             <br />
             Reporting
@@ -46,7 +46,7 @@ export default function LoginPage() {
             <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-starbucks-green)]">
               <span className="text-2xl font-bold text-white">C</span>
             </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
+            <h2 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
               CustomReport
             </h2>
             <p className="text-sm text-[var(--color-muted-foreground)]">
@@ -57,8 +57,9 @@ export default function LoginPage() {
           {/* SSO button */}
           <a
             href={`${API_BASE_URL}/auth/saml/login`}
-            className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-3 text-base font-medium text-white shadow-sm transition-shadow hover:shadow-md focus:outline-none focus:ring-3 focus:ring-[var(--color-ring)]"
+            className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-3 font-[family-name:var(--font-sans)] text-base font-medium text-white shadow-sm transition-shadow hover:shadow-md focus:outline-none focus:ring-3 focus:ring-[var(--color-ring)]"
             style={{ minHeight: '44px' }}
+            aria-label="Sign in with Single Sign-On"
           >
             Sign in with SSO
           </a>
@@ -91,6 +92,6 @@ export default function LoginPage() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
