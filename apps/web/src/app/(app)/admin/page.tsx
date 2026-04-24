@@ -1,4 +1,4 @@
-import { AdminPanel } from '../../../../components/admin/admin-panel';
+import { AdminPanel } from '../../../components/admin/admin-panel';
 
 type Props = {
   searchParams: Promise<{ tab?: string }>;
