@@ -328,7 +328,7 @@ Plans:
 | 20. Seed & Type Foundation | 1/2 | Complete    | 2026-04-25 |
 | 21. tRPC Provider & Client Wiring | 4/4 | Complete    | 2026-04-25 |
 | 22. Interactivity & Status-Risk Sync | 5/5 | Complete    | 2026-04-25 |
-| 23. PDF & Jobs | 1/1 | Complete   | 2026-04-25 |
+| 23. PDF & Jobs | 1/1 | Complete    | 2026-04-25 |
 | 24. Auth Guards & Session | 0/TBD | Not started | - |
 | 25. Production Logging | 0/TBD | Not started | - |
 | 26. E2E Integration Tests | 0/TBD | Not started | - |
