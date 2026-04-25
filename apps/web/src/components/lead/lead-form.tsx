@@ -13,13 +13,12 @@ import {
 import { mapLeadFormData } from '../../lib/mappers';
 import { useLeadFormAutosave, stableStringify } from '../../hooks/use-lead-form-autosave';
 import { LeadFormSkeleton } from './lead-form-skeleton';
-import { SdlcPipeline } from './sdlc-pipeline';
+import { LeadFormSyncBridge } from './lead-form-sync-bridge';
 import { PeriodNavigator } from './period-navigator';
 import { FillFromButton } from './fill-from-button';
 import { VersionHistoryNav } from './version-history-nav';
 import { CurrentWeekSection } from './current-week-section';
 import { NextWeekSection } from './next-week-section';
-import { RisksSection } from './risks-section';
 import { DecisionsSection } from './decisions-section';
 import { PrioritiesSection } from './priorities-section';
 
@@ -455,6 +454,53 @@ export function LeadForm({ period }: LeadFormProps) {
     });
   }
 
+  function handleProductsChange(next: Product[]) {
+    setDraftSection((prev) => {
+      if (!prev) return prev;
+      // Map presentation Product[] (with stage statuses) back onto raw projects.
+      // Mirror the *worst* status across stages onto the report-level traffic light.
+      const worstByProduct = new Map<string, 'green' | 'yellow' | 'red'>();
+      for (const p of next) {
+        let worst: 'green' | 'yellow' | 'red' = 'green';
+        for (const s of p.stages) {
+          if (s.status === 'blocked') worst = 'red';
+          else if (s.status === 'at-risk' && worst !== 'red') worst = 'yellow';
+        }
+        worstByProduct.set(p.id, worst);
+      }
+      const merged = prev.projects.map((ps) =>
+        worstByProduct.has(ps.projectId)
+          ? { ...ps, trafficLight: worstByProduct.get(ps.projectId)! }
+          : ps,
+      );
+      return { ...prev, projects: merged };
+    });
+  }
+
+  function handleRisksChange(next: RiskEntry[]) {
+    setDraftSection((prev) => {
+      if (!prev) return prev;
+      // Merge presentation risks back into raw section. RiskEntry has
+      // { id, productId, productName, stageName, severity, text }.
+      // Raw section.risks has { id, projectId, risk, impact, mitigation }.
+      const existingById = new Map(prev.risks.filter((r) => r.id).map((r) => [r.id!, r] as const));
+      const merged = next.map((r) => {
+        const existing = r.id ? existingById.get(r.id) : undefined;
+        if (existing) {
+          return { ...existing, risk: r.text };
+        }
+        return {
+          id: r.id ?? `tmp-${crypto.randomUUID()}`,
+          projectId: r.productId,
+          risk: r.text,
+          impact: r.severity === 'blocked' ? 'high' : 'medium',
+          mitigation: '',
+        };
+      });
+      return { ...prev, risks: merged };
+    });
+  }
+
   function handlePrioritiesChange(next: PriorityEntry[]) {
     setDraftSection((prev) => {
       if (!prev) return prev;
@@ -626,46 +672,52 @@ export function LeadForm({ period }: LeadFormProps) {
           </div>
         )}
 
-        {/* Product Status (SDLC Pipeline) */}
-        {/* TODO(Phase 22): wire reports.saveDraft on stage status change */}
-        <AccordionSection
-          icon={<GridIcon />}
-          title="Product Status"
-          badge={`${products.length} assigned products`}
-          subtitle="Assigned stages are highlighted. Blocked and at-risk stages link to the context you need to resolve them."
+        <LeadFormSyncBridge.Provider
+          products={products}
+          risks={risks}
+          onProductsChange={handleProductsChange}
+          onRisksChange={handleRisksChange}
+          readOnly={isReadOnly}
         >
-          <SdlcPipeline products={products} readOnly={isReadOnly} />
-        </AccordionSection>
+          {/* Product Status (SDLC Pipeline) */}
+          <AccordionSection
+            icon={<GridIcon />}
+            title="Product Status"
+            badge={`${products.length} assigned products`}
+            subtitle="Assigned stages are highlighted. Blocked and at-risk stages link to the context you need to resolve them."
+          >
+            <LeadFormSyncBridge.Pipeline />
+          </AccordionSection>
 
-        {/* Current Week */}
-        <AccordionSection
-          icon={<CalendarIcon />}
-          title="Current Week"
-          badge={`${currentWeekItems.length} items`}
-        >
-          <CurrentWeekSection items={currentWeekItems} readOnly={isReadOnly} />
-        </AccordionSection>
+          {/* Current Week */}
+          <AccordionSection
+            icon={<CalendarIcon />}
+            title="Current Week"
+            badge={`${currentWeekItems.length} items`}
+          >
+            <CurrentWeekSection items={currentWeekItems} readOnly={isReadOnly} />
+          </AccordionSection>
 
-        {/* Next Week */}
-        <AccordionSection
-          icon={<NextWeekIcon />}
-          title="Next Week"
-          badge={`${nextWeekItems.length} items`}
-        >
-          <NextWeekSection items={nextWeekItems} readOnly={isReadOnly} />
-        </AccordionSection>
+          {/* Next Week */}
+          <AccordionSection
+            icon={<NextWeekIcon />}
+            title="Next Week"
+            badge={`${nextWeekItems.length} items`}
+          >
+            <NextWeekSection items={nextWeekItems} readOnly={isReadOnly} />
+          </AccordionSection>
 
-        {/* Risks & Blockers */}
-        {/* TODO(Phase 22): wire reports.saveDraft when risks change */}
-        <AccordionSection
-          icon={<AlertIcon />}
-          title="Risks & Blockers"
-          titleColor="var(--color-destructive)"
-          badge={`${risks.length}`}
-          badgeStyle={{ background: '#fee2e2', color: 'var(--color-destructive)' }}
-        >
-          <RisksSection risks={risks} readOnly={isReadOnly} />
-        </AccordionSection>
+          {/* Risks & Blockers */}
+          <AccordionSection
+            icon={<AlertIcon />}
+            title="Risks & Blockers"
+            titleColor="var(--color-destructive)"
+            badge={`${risks.length}`}
+            badgeStyle={{ background: '#fee2e2', color: 'var(--color-destructive)' }}
+          >
+            <LeadFormSyncBridge.Risks />
+          </AccordionSection>
+        </LeadFormSyncBridge.Provider>
 
         {/* Decisions */}
         <AccordionSection

@@ -32,7 +32,7 @@
  */
 
 import { useMemo } from 'react';
-import { useInfiniteQuery, type UseInfiniteQueryOptions } from '@tanstack/react-query';
+import { useInfiniteQuery, type InfiniteData, type UseInfiniteQueryOptions } from '@tanstack/react-query';
 
 export type CursorPaginationInput = {
   cursor?: string;
@@ -110,9 +110,10 @@ export function useCursorPagination<
   const query = useInfiniteQuery(queryOptions);
 
   const items = useMemo<TItem[]>(() => {
-    const pages = query.data?.pages;
+    const data = query.data as InfiniteData<CursorPage<TItem>> | undefined;
+    const pages = data?.pages;
     if (!pages) return [];
-    return pages.flatMap((p) => p.items);
+    return pages.flatMap((p: CursorPage<TItem>) => p.items);
   }, [query.data]);
 
   return {
