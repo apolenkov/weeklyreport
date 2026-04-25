@@ -40,8 +40,8 @@ Requirements for v5.0 Production Integration. Each maps to roadmap phases.
 - [ ] **INT-05**: Version History навигация и Restore вызывают leadForm.versions/restoreVersion
 - [ ] **INT-06**: Autosave drafts через debounced tRPC mutation (3-5 сек)
 - [ ] **INT-07**: Dirty state tracking + предупреждение при уходе с несохранённой формой
-- [ ] **INT-08**: Real cursor pagination в archive list и version history
-- [ ] **INT-09**: Period Navigator переключает периоды через URL + useQuery
+- [x] **INT-08**: Real cursor pagination в archive list и version history
+- [x] **INT-09**: Period Navigator переключает периоды через URL + useQuery
 - [ ] **INT-10**: Admin CRUD (users, products, stages, periods, settings) через реальные tRPC mutations
 
 ### Status-Risk Sync
@@ -139,8 +139,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INT-05 | Phase 22 | Pending |
 | INT-06 | Phase 22 | Pending |
 | INT-07 | Phase 22 | Pending |
-| INT-08 | Phase 22 | Pending |
-| INT-09 | Phase 22 | Pending |
+| INT-08 | Phase 22 | Complete |
+| INT-09 | Phase 22 | Complete |
 | INT-10 | Phase 22 | Pending |
 | SYNC-01 | Phase 22 | Pending |
 | SYNC-02 | Phase 22 | Pending |
