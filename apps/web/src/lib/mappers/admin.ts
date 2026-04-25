@@ -32,6 +32,13 @@ import type {
   AppSettings,
 } from '@customreport/shared';
 
+// ---- Form-state -> API-input mappers (Phase 22 / Plan 22-04) ----
+//
+// These helpers translate the mock-shaped form state stored in each admin tab
+// into the Zod-validated input expected by the corresponding mutation. They
+// live in the mapper module so they can be unit-tested in isolation and so
+// any contract drift (e.g. schema field renames) collects in one place.
+
 // ---- Self-contained re-declarations of presentation types ----
 
 export type UserRole = 'lead' | 'head' | 'viewer';
@@ -216,6 +223,138 @@ export function mapAdminSettings(api: AppSettings): MockSettings {
     departmentName: api.departmentName,
     autoCreatePeriods: api.autoCreatePeriods,
     defaultDeadlineDays: api.defaultDeadlineDays,
+  };
+}
+
+// ---- Form-state -> API-input helpers ----
+
+/**
+ * Generates a v4 UUID. The browser's `crypto.randomUUID` is required by every
+ * env that runs this code (Next.js 16 + Node 20+). The fallback throws because
+ * Zod will reject a non-UUID id at the API boundary.
+ */
+function newId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  throw new Error('crypto.randomUUID is required to generate ids for admin mutations');
+}
+
+export type AdminUserFormInput = {
+  name: string;
+  email: string;
+  role: UserRole;
+  // department is currently presentation-only (no API field) — accepted but ignored.
+  department?: string;
+};
+
+/**
+ * Maps the Users tab form state to the `adminUserSchema` payload. When editing
+ * an existing user, pass `existingId`; when adding a new user, omit it and a
+ * fresh UUID is generated client-side (the server will accept the inserted id
+ * as-is per the schema's `id: uuid()`).
+ */
+export function toAdminUserInput(
+  form: AdminUserFormInput,
+  existingId?: string,
+): { id: string; email: string; name: string; role: UserRole } {
+  return {
+    id: existingId ?? newId(),
+    email: form.email.trim(),
+    name: form.name.trim(),
+    role: form.role,
+  };
+}
+
+export type AdminProjectFormInput = {
+  name: string;
+  leadOwnerId: string;
+  leadName?: string;
+  archived?: boolean;
+};
+
+/**
+ * Maps the Products tab form state to the `adminProjectSchema` payload.
+ * `leadName` is required by the schema; if the form does not carry it, callers
+ * resolve it from the users list before invoking this helper.
+ */
+export function toAdminProjectInput(
+  form: AdminProjectFormInput,
+  existingId?: string,
+): { id: string; name: string; archived: boolean; leadId: string; leadName: string } {
+  return {
+    id: existingId ?? newId(),
+    name: form.name.trim(),
+    archived: form.archived ?? false,
+    leadId: form.leadOwnerId,
+    leadName: (form.leadName ?? '').trim() || 'Unknown Lead',
+  };
+}
+
+export type ReportPeriodFormInput = {
+  startDate: string; // YYYY-MM-DD
+  endDate: string;
+  deadline: string;
+  status?: 'draft' | 'published';
+};
+
+/**
+ * Maps the Periods tab form state to the `reportPeriodSchema` payload.
+ * Date strings are coerced via `new Date(...)`; the schema then re-validates
+ * them with `reportDate()` (year >= 2000).
+ */
+export function toReportPeriodInput(
+  form: ReportPeriodFormInput,
+  existingId?: string,
+): {
+  id: string;
+  periodStart: Date;
+  periodEnd: Date;
+  deadline: Date;
+  status: 'draft' | 'published';
+} {
+  return {
+    id: existingId ?? newId(),
+    periodStart: new Date(form.startDate),
+    periodEnd: new Date(form.endDate),
+    deadline: new Date(form.deadline),
+    status: form.status ?? 'draft',
+  };
+}
+
+export type AdminReminderRuleFormInput = {
+  kind: 'deadline' | 'follow_up';
+  fireAt: Date | string;
+  timezone?: string;
+  status?: 'active' | 'paused';
+  reportId?: string | null;
+  version?: number;
+};
+
+/**
+ * Maps the Reminders tab form state to the `adminReminderRuleSchema` payload.
+ */
+export function toAdminReminderRuleInput(
+  form: AdminReminderRuleFormInput,
+  existingId?: string,
+): {
+  id: string;
+  reportId: string | null;
+  kind: 'deadline' | 'follow_up';
+  fireAt: Date;
+  timezone: string;
+  status: 'active' | 'paused';
+  version: number;
+} {
+  const fireAt = form.fireAt instanceof Date ? form.fireAt : new Date(form.fireAt);
+  return {
+    id: existingId ?? newId(),
+    reportId: form.reportId ?? null,
+    kind: form.kind,
+    fireAt,
+    timezone: form.timezone ?? 'UTC',
+    status: form.status ?? 'active',
+    version: form.version ?? 1,
   };
 }
 

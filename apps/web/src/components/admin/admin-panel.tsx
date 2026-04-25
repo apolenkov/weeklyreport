@@ -56,7 +56,7 @@ export function AdminPanel({ activeTab }: AdminPanelProps) {
     if (!settings) {
       return <AdminTabSkeleton variant="form" />;
     }
-    return <SettingsTab initialData={settings} />;
+    return <SettingsTab settings={settings} />;
   }
 
   if (!data) {
@@ -65,14 +65,14 @@ export function AdminPanel({ activeTab }: AdminPanelProps) {
 
   switch (activeTab) {
     case 'users':
-      return <UsersTab initialUsers={data.users} />;
+      return <UsersTab users={data.users} />;
     case 'products':
-      return <ProductsTab initialProducts={data.products} initialUsers={data.users} />;
+      return <ProductsTab products={data.products} users={data.users} />;
     case 'periods':
-      return <PeriodsTab initialPeriods={data.periods} />;
+      return <PeriodsTab periods={data.periods} />;
     case 'reminders':
-      return <RemindersTab initialReminders={data.reminders} />;
+      return <RemindersTab reminders={data.reminders} />;
     default:
-      return <UsersTab initialUsers={data.users} />;
+      return <UsersTab users={data.users} />;
   }
 }
