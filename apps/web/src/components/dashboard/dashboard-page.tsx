@@ -1,25 +1,60 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+import { useTRPC } from '../../lib/trpc-context';
+import { mapDashboardData } from '../../lib/mappers';
+
 import { KpiCards } from './kpi-cards';
 import { AlertBar } from './alert-bar';
 import { BlockedAtRiskTable } from './blocked-at-risk-table';
 import { LeadReportsGrid } from './lead-reports-grid';
 import { ReportArchiveSection } from './report-archive-section';
 import { ToggleAllButton } from './toggle-all-button';
-import {
-  MOCK_KPI,
-  MOCK_LEADS,
-  MOCK_BLOCKED_AT_RISK,
-  MOCK_ARCHIVE,
-  MOCK_PENDING_LEADS,
-} from './mock-data';
+import { DashboardSkeleton } from './dashboard-skeleton';
 
 export function DashboardPage() {
+  const trpc = useTRPC();
+
+  const reviewQ = useQuery(trpc.review.dashboard.queryOptions());
+  const archiveQ = useQuery(trpc.archive.list.queryOptions({ limit: 12 }));
+  const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
+
+  useEffect(() => {
+    if (reviewQ.isError) {
+      toast.error(
+        reviewQ.error instanceof Error
+          ? `Failed to load dashboard: ${reviewQ.error.message}`
+          : 'Failed to load dashboard',
+      );
+    }
+  }, [reviewQ.isError, reviewQ.error]);
+
+  useEffect(() => {
+    if (archiveQ.isError) {
+      toast.error(
+        archiveQ.error instanceof Error
+          ? `Failed to load archive: ${archiveQ.error.message}`
+          : 'Failed to load archive',
+      );
+    }
+  }, [archiveQ.isError, archiveQ.error]);
+
+  useEffect(() => {
+    if (weeklyQ.isError) {
+      toast.error(
+        weeklyQ.error instanceof Error
+          ? `Failed to load weekly report: ${weeklyQ.error.message}`
+          : 'Failed to load weekly report',
+      );
+    }
+  }, [weeklyQ.isError, weeklyQ.error]);
+
   function handleToggleAll() {
-    // Toggle all accordion sections on the page
-    const buttons = document.querySelectorAll<HTMLButtonElement>(
-      '[aria-expanded]',
-    );
+    // Toggle all accordion sections on the page.
+    const buttons = document.querySelectorAll<HTMLButtonElement>('[aria-expanded]');
     const anyExpanded = Array.from(buttons).some(
       (btn) => btn.getAttribute('aria-expanded') === 'true',
     );
@@ -33,6 +68,33 @@ export function DashboardPage() {
     });
   }
 
+  const isLoading = reviewQ.isLoading || archiveQ.isLoading || weeklyQ.isLoading;
+
+  if (isLoading || !reviewQ.data || !archiveQ.data || !weeklyQ.data) {
+    return (
+      <div className="space-y-6">
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+              Dashboard
+            </h1>
+            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+              Loading current period &hellip;
+            </p>
+          </div>
+        </header>
+        <DashboardSkeleton />
+      </div>
+    );
+  }
+
+  const dashboard = mapDashboardData({
+    review: reviewQ.data,
+    archive: archiveQ.data,
+    weeklyReport: weeklyQ.data,
+  });
+  const { kpi, leads, blockedAtRisk, archive, pendingLeads } = dashboard;
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -42,8 +104,7 @@ export function DashboardPage() {
             Dashboard
           </h1>
           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            Apr 14 &ndash; Apr 20, 2026 &middot; Week 16 &middot; Development
-            Department
+            {weeklyQ.data.weekLabel ?? 'Current period'} &middot; Development Department
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -58,19 +119,19 @@ export function DashboardPage() {
       </header>
 
       {/* KPI Cards */}
-      <KpiCards data={MOCK_KPI} />
+      <KpiCards data={kpi} />
 
       {/* Alert bar for pending leads */}
-      <AlertBar pendingLeads={MOCK_PENDING_LEADS} />
+      <AlertBar pendingLeads={pendingLeads} />
 
       {/* Blocked & At Risk */}
-      <BlockedAtRiskTable items={MOCK_BLOCKED_AT_RISK} />
+      <BlockedAtRiskTable items={blockedAtRisk} />
 
       {/* Lead Reports */}
-      <LeadReportsGrid leads={MOCK_LEADS} />
+      <LeadReportsGrid leads={leads} />
 
       {/* Report Archive */}
-      <ReportArchiveSection reports={MOCK_ARCHIVE} totalCount={12} />
+      <ReportArchiveSection reports={archive} totalCount={archive.length} />
     </div>
   );
 }
