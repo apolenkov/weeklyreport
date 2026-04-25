@@ -84,6 +84,24 @@ describe('mapWeeklyReport', () => {
     expect(result.submissionLabel).toBe('0/0 submitted');
   });
 
+  it('surfaces reportId and periodStatus on the period object (Phase 22, plan 22-05)', () => {
+    const result = mapWeeklyReport(baseReport({ periodStatus: 'open' }));
+    expect(result.period.reportId).toBe(REPORT_ID);
+    expect(result.period.periodStatus).toBe('open');
+  });
+
+  it('reflects published periodStatus on the period object', () => {
+    const result = mapWeeklyReport(baseReport({ periodStatus: 'published' }));
+    expect(result.period.periodStatus).toBe('published');
+    expect(result.period.isCurrent).toBe(false);
+  });
+
+  it('reflects reopened periodStatus on the period object', () => {
+    const result = mapWeeklyReport(baseReport({ periodStatus: 'reopened' }));
+    expect(result.period.periodStatus).toBe('reopened');
+    expect(result.period.isCurrent).toBe(true);
+  });
+
   it('groups items by project across multiple lead sections', () => {
     const report = baseReport({
       submissionCount: 2,
