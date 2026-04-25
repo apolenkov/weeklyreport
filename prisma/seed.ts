@@ -36,34 +36,45 @@ function toRole(role: 'head' | 'viewer' | 'lead'): Role {
   return Role[role];
 }
 
-// Deterministic UUID for ReportSection so re-running stays idempotent.
-// Pattern: a0000000-0000-4000-8000-000000004{r}{N} where r=report digit, N=lead index 1-6
+// Deterministic UUIDs for child rows so re-running stays idempotent.
+// Last UUID segment is exactly 12 hex chars: 8-4-4-4-12 = 36 char UUID.
+//
+// Layout (12 chars total in last segment):
+//   sectionId:         0000000040{r}{N}     -> 10 + 1 + 1 = 12
+//   itemId:            000000005{r}{N}{S}   -> 9 + 1 + 1 + 1 = 12
+//   projectStatusId:   000000006{r}{N}{P}   -> 9 + 1 + 1 + 1 = 12
+//   priorityId:        000000008{r}{N}{R}   -> 9 + 1 + 1 + 1 = 12
+//   stageAssignmentId: 00000000b0{P}{S}     -> 10 + 1 + 1 = 12 (P is hex 0..b)
+//   riskId:            00000000090{NN}      -> 11 + 2-digit seq with padStart(2)
+//   decisionId:        00000000000a{S}      -> 11 + 1 = 12
 function sectionId(reportSuffix: '1' | '2', leadIndex: number): string {
-  return `a0000000-0000-4000-8000-00000000040${reportSuffix}${leadIndex}`;
+  return `a0000000-0000-4000-8000-0000000040${reportSuffix}${leadIndex}`;
 }
 
 function itemId(reportSuffix: '1' | '2', leadIndex: number, itemSeq: number): string {
-  return `a0000000-0000-4000-8000-00000000050${reportSuffix}${leadIndex}${itemSeq}`;
+  return `a0000000-0000-4000-8000-000000005${reportSuffix}${leadIndex}${itemSeq}`;
 }
 
 function projectStatusId(reportSuffix: '1' | '2', leadIndex: number, prodSeq: number): string {
-  return `a0000000-0000-4000-8000-00000000060${reportSuffix}${leadIndex}${prodSeq}`;
+  return `a0000000-0000-4000-8000-000000006${reportSuffix}${leadIndex}${prodSeq}`;
 }
 
 function priorityId(reportSuffix: '1' | '2', leadIndex: number, rank: number): string {
-  return `a0000000-0000-4000-8000-00000000080${reportSuffix}${leadIndex}${rank}`;
+  return `a0000000-0000-4000-8000-000000008${reportSuffix}${leadIndex}${rank}`;
 }
 
 function riskId(seq: number): string {
+  // 0000000009 (10) + 2-digit seq = 12
   return `a0000000-0000-4000-8000-0000000009${seq.toString().padStart(2, '0')}`;
 }
 
 function decisionId(seq: number): string {
-  return `a0000000-0000-4000-8000-0000000000a${seq}`;
+  // 00000000000a (12) + seq -> would overflow; use 00000000a (9) + 3-digit pad = 12
+  return `a0000000-0000-4000-8000-00000000a${seq.toString().padStart(3, '0')}`;
 }
 
 function stageAssignmentId(prodSeq: number, stageSeq: number): string {
-  return `a0000000-0000-4000-8000-0000000000b${prodSeq.toString(16)}${stageSeq}`;
+  return `a0000000-0000-4000-8000-00000000b0${prodSeq.toString(16)}${stageSeq}`;
 }
 
 async function main() {
