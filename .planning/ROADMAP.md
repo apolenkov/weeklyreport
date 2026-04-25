@@ -208,7 +208,7 @@ Plans:
 ## v5.0 Production Integration
 
 - [x] **Phase 20: Seed & Type Foundation** - Seed DB with mockup-aligned data, mapper layer for type translation (completed 2026-04-25)
-- [ ] **Phase 21: tRPC Provider & Client Wiring** - TRPCProvider, React Compiler migration, 7 container conversions
+- [x] **Phase 21: tRPC Provider & Client Wiring** - TRPCProvider, React Compiler migration, 7 container conversions (completed 2026-04-25)
 - [ ] **Phase 22: Interactivity & Status-Risk Sync** - All buttons wired to real mutations, autosave, pagination, Status-to-Risk auto-sync
 - [ ] **Phase 23: PDF & Jobs** - BullMQ re-enabled, PDF export pipeline end-to-end
 - [ ] **Phase 24: Auth Guards & Session** - proxy.ts cookie check, 401 interceptor, session context
@@ -244,10 +244,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 21-01-PLAN.md — Provider + tanstack-react-query swap + cache-keys + error boundary (Wave 1)
-- [ ] 21-02-PLAN.md — Lead History migration: smallest container proof-of-life (Wave 2)
-- [ ] 21-03-PLAN.md — Admin Panel (5 tabs) + Dashboard read-path migration (Wave 2)
-- [ ] 21-04-PLAN.md — Lead Form + Weekly Report + reports/[reportId] migrations (Wave 3, after 21-03 to avoid mappers/index.ts conflict)
+- [x] 21-01-PLAN.md — Provider + tanstack-react-query swap + cache-keys + error boundary (Wave 1)
+- [x] 21-02-PLAN.md — Lead History migration: smallest container proof-of-life (Wave 2)
+- [x] 21-03-PLAN.md — Admin Panel (5 tabs) + Dashboard read-path migration (Wave 2)
+- [x] 21-04-PLAN.md — Lead Form + Weekly Report + reports/[reportId] migrations (Wave 3, after 21-03 to avoid mappers/index.ts conflict)
 **UI hint**: yes
 
 ### Phase 22: Interactivity & Status-Risk Sync
@@ -316,7 +316,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 20. Seed & Type Foundation | 1/2 | Complete    | 2026-04-25 |
-| 21. tRPC Provider & Client Wiring | 0/4 | Planned | - |
+| 21. tRPC Provider & Client Wiring | 4/4 | Complete   | 2026-04-25 |
 | 22. Interactivity & Status-Risk Sync | 0/TBD | Not started | - |
 | 23. PDF & Jobs | 0/TBD | Not started | - |
 | 24. Auth Guards & Session | 0/TBD | Not started | - |
