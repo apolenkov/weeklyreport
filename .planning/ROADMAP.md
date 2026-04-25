@@ -241,7 +241,13 @@ Plans:
   3. The tRPC client uses @trpc/tanstack-react-query (not classic @trpc/react-query) with superjson -- Date objects roundtrip correctly
   4. Cache invalidation works: submitting a form and navigating to dashboard shows updated data without manual refresh
   5. `pnpm typecheck` passes clean across the monorepo after all container migrations
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 21-01-PLAN.md — Provider + tanstack-react-query swap + cache-keys + error boundary (Wave 1)
+- [ ] 21-02-PLAN.md — Lead History migration: smallest container proof-of-life (Wave 2)
+- [ ] 21-03-PLAN.md — Admin Panel (5 tabs) + Dashboard read-path migration (Wave 2)
+- [ ] 21-04-PLAN.md — Lead Form + Weekly Report + reports/[reportId] migrations (Wave 3, after 21-03 to avoid mappers/index.ts conflict)
 **UI hint**: yes
 
 ### Phase 22: Interactivity & Status-Risk Sync
@@ -310,7 +316,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 20. Seed & Type Foundation | 1/2 | Complete    | 2026-04-25 |
-| 21. tRPC Provider & Client Wiring | 0/TBD | Not started | - |
+| 21. tRPC Provider & Client Wiring | 0/4 | Planned | - |
 | 22. Interactivity & Status-Risk Sync | 0/TBD | Not started | - |
 | 23. PDF & Jobs | 0/TBD | Not started | - |
 | 24. Auth Guards & Session | 0/TBD | Not started | - |
