@@ -1,16 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { toast } from 'sonner';
 
+/**
+ * Phase 22 surface stub.
+ *
+ * The PDF export job is owned by Phase 23 (PDF & Jobs). For Phase 22 we keep
+ * the button visually correct so the head sees the affordance, but clicking
+ * it surfaces a toast.info indicating that the feature ships in v5.0
+ * Phase 23 rather than silently doing nothing.
+ *
+ * TODO(Phase 23): wire pdfExport.request mutation.
+ */
 export function ExportPdfButton() {
-  const [exporting, setExporting] = useState(false);
-
   function handleExport() {
-    setExporting(true);
-    // Simulate export delay
-    setTimeout(() => {
-      setExporting(false);
-    }, 2000);
+    toast.info('PDF export will be available in v5.0 Phase 23');
   }
 
   return (
@@ -18,19 +22,9 @@ export function ExportPdfButton() {
       type="button"
       className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
       onClick={handleExport}
-      disabled={exporting}
+      title="PDF export ships in v5.0 Phase 23"
     >
-      {exporting ? (
-        <>
-          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          Exporting...
-        </>
-      ) : (
-        'Export PDF'
-      )}
+      Export PDF
     </button>
   );
 }
