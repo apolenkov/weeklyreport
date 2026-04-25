@@ -1,3 +1,7 @@
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+
 const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
 
 const stubRoles = [
@@ -7,7 +11,32 @@ const stubRoles = [
   { label: 'Enter as Viewer', redirect: '/reports/history', icon: '👁' },
 ] as const;
 
+const DEFAULT_REDIRECT = '/head/dashboard';
+
+/**
+ * Reject open-redirect attempts. The `next` query param must be a same-origin
+ * relative path: must start with '/' and must not contain '://' (which would
+ * indicate a scheme-relative URL like //evil.com).
+ */
+function sanitizeNext(value: string | null): string {
+  if (!value) return DEFAULT_REDIRECT;
+  if (!value.startsWith('/')) return DEFAULT_REDIRECT;
+  if (value.includes('://')) return DEFAULT_REDIRECT;
+  // Disallow protocol-relative URLs explicitly even though the above check
+  // catches '://' — a leading '//' would be parsed by browsers as scheme-
+  // relative, so reject anything with two leading slashes.
+  if (value.startsWith('//')) return DEFAULT_REDIRECT;
+  return value;
+}
+
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const safeNext = sanitizeNext(searchParams?.get('next') ?? null);
+  const ssoHref =
+    safeNext === DEFAULT_REDIRECT
+      ? '/auth/saml/login'
+      : `/auth/saml/login?next=${encodeURIComponent(safeNext)}`;
+
   return (
     <main id="main-content" className="flex min-h-svh">
       {/* Left panel — PEO brand */}
@@ -72,7 +101,7 @@ export default function LoginPage() {
           {AUTH_STUB ? (
             <div className="space-y-3">
               <a
-                href="/head/dashboard"
+                href={safeNext}
                 className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-all hover:bg-[var(--color-primary)] hover:-translate-y-px"
                 style={{
                   minHeight: '52px',
@@ -96,21 +125,27 @@ export default function LoginPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
-                {stubRoles.map(({ label, redirect, icon }) => (
-                  <a
-                    key={label}
-                    href={redirect}
-                    className="flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-foreground)] transition-all hover:border-[rgba(0,0,0,0.24)] hover:bg-[#f8f6f2]"
-                    style={{ minHeight: '44px' }}
-                  >
-                    <span>{icon}</span>
-                    {label}
-                  </a>
-                ))}
+                {stubRoles.map(({ label, redirect, icon }) => {
+                  // When ?next= is explicitly provided, all role buttons honor it.
+                  // Otherwise each button uses its role's natural landing page.
+                  const href = safeNext === DEFAULT_REDIRECT ? redirect : safeNext;
+                  return (
+                    <a
+                      key={label}
+                      href={href}
+                      className="flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-foreground)] transition-all hover:border-[rgba(0,0,0,0.24)] hover:bg-[#f8f6f2]"
+                      style={{ minHeight: '44px' }}
+                    >
+                      <span>{icon}</span>
+                      {label}
+                    </a>
+                  );
+                })}
               </div>
             </div>
           ) : (
-            <button
+            <a
+              href={ssoHref}
               className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-all hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"
               style={{
                 minHeight: '52px',
@@ -124,7 +159,7 @@ export default function LoginPage() {
                 <line x1="15" y1="12" x2="3" y2="12" />
               </svg>
               Sign in with SSO
-            </button>
+            </a>
           )}
 
           <p className="mt-6 text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
