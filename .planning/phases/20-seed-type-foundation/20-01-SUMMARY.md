@@ -1,10 +1,9 @@
 ---
 plan: 20-01
 phase: 20-seed-type-foundation
-status: code-complete
+status: complete
 completed: 2026-04-25
-runtime_verified: false
-runtime_verify_blocker: docker-not-running
+runtime_verified: true
 ---
 
 # Plan 20-01: Database Seed + DEV_SESSION Fix — SUMMARY
@@ -38,20 +37,15 @@ Mockup-aligned database seed with idempotent upserts and dynamic DEV_SESSION res
 - All UUIDs match standard regex
 - Cross-file invariants verified (constants ↔ trpc.context)
 
-**Runtime (DEFERRED — Docker not running in this session):**
-- `pnpm prisma db seed` — needs running PostgreSQL
-- Idempotency check (2× run) — needs running PostgreSQL
-- tRPC queries return non-empty data — needs running PostgreSQL
+**Runtime (PASSED, 2026-04-25):**
+- 1st seed: `Seeded: 8 users, 12 products, 7 stages, 36 assignments, 2 reports, 12 sections, 35 items, 22 project statuses, 4 risks, 3 decisions, 20 priorities`
+- 2nd seed (idempotency): identical output, no errors
+- DEV_SESSION user `a0000000-0000-4000-8000-000000000099` exists with role=head
+- DEV_SESSION report `a0000000-0000-4000-8000-000000000001` exists with weekLabel=Week 16
 
-## Next steps
+## Bug fixed during runtime verification
 
-Once Docker Desktop is running:
-```bash
-docker compose up -d postgres redis
-pnpm exec prisma migrate deploy
-apps/api/node_modules/.bin/tsx prisma/seed.ts        # 1st run
-apps/api/node_modules/.bin/tsx prisma/seed.ts        # 2nd run (idempotency)
-```
+`feb1edd` fix(20-01): remove `id` from upsert update branches — Prisma 7 cannot update primary key, caused P2002 UniqueConstraintViolation on Stage and StageAssignment upserts.
 
 ## Requirements completed
 
