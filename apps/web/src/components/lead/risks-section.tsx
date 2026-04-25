@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-
 import type { RiskEntry } from './mock-data';
 
 type RisksSectionProps = {
   readonly risks: RiskEntry[];
   readonly readOnly?: boolean;
+  /** Controlled-component callback fired with the next risks array on add/edit/delete. */
+  readonly onChange?: (next: RiskEntry[]) => void;
+  /** Fired when the text of a risk transitions empty -> non-empty (used by status<->risk sync). */
+  readonly onRiskFilled?: (riskId: string) => void;
 };
 
 function DeleteIcon() {
@@ -17,17 +19,30 @@ function DeleteIcon() {
   );
 }
 
-export function RisksSection({ risks: initialRisks, readOnly = false }: RisksSectionProps) {
-  const [risks, setRisks] = useState(initialRisks);
-
+export function RisksSection({
+  risks,
+  readOnly = false,
+  onChange,
+  onRiskFilled,
+}: RisksSectionProps) {
   function handleDelete(id: string) {
-    setRisks((prev) => prev.filter((r) => r.id !== id));
+    if (readOnly) return;
+    onChange?.(risks.filter((r) => r.id !== id));
   }
 
   function handleTextChange(id: string, newText: string) {
-    setRisks((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, text: newText } : r)),
+    if (readOnly) return;
+    const previous = risks.find((r) => r.id === id);
+    const wasEmpty = (previous?.text ?? '').trim().length === 0;
+    const isNowFilled = newText.trim().length > 0;
+
+    onChange?.(
+      risks.map((r) => (r.id === id ? { ...r, text: newText } : r)),
     );
+
+    if (wasEmpty && isNowFilled) {
+      onRiskFilled?.(id);
+    }
   }
 
   return (

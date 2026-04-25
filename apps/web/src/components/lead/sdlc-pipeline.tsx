@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-
 import { StageChip } from './stage-chip';
 import type { Product, StageStatus } from './mock-data';
 
 type SdlcPipelineProps = {
   readonly products: Product[];
   readonly readOnly?: boolean;
+  readonly onStatusChange?: (
+    productId: string,
+    stageName: string,
+    newStatus: StageStatus,
+  ) => void;
 };
 
 function ProductStatusBadge({ status }: { readonly status: StageStatus }) {
@@ -35,26 +38,15 @@ function getProductBorderColor(status: StageStatus): string {
   return 'var(--color-muted)';
 }
 
-export function SdlcPipeline({ products, readOnly = false }: SdlcPipelineProps) {
-  const [localProducts, setLocalProducts] = useState(products);
-
+export function SdlcPipeline({ products, readOnly = false, onStatusChange }: SdlcPipelineProps) {
   function handleStatusChange(productId: string, stageName: string, newStatus: StageStatus) {
-    setLocalProducts((prev) =>
-      prev.map((p) => {
-        if (p.id !== productId) return p;
-        return {
-          ...p,
-          stages: p.stages.map((s) =>
-            s.stageName === stageName ? { ...s, status: newStatus } : s,
-          ),
-        };
-      }),
-    );
+    if (readOnly) return;
+    onStatusChange?.(productId, stageName, newStatus);
   }
 
   return (
     <div className="space-y-4">
-      {localProducts.map((product) => (
+      {products.map((product) => (
         <div
           key={product.id}
           className="rounded-xl p-4"
