@@ -66,11 +66,11 @@ Requirements for v5.0 Production Integration. Each maps to roadmap phases.
 
 ### Logging
 
-- [ ] **LOG-01**: Correlation ID propagation через nestjs-cls (AsyncLocalStorage)
-- [ ] **LOG-02**: Request/response logging на каждом tRPC endpoint
-- [ ] **LOG-03**: Логи пишутся в файл (не только console)
-- [ ] **LOG-04**: File rotation — архивация по размеру/времени
-- [ ] **LOG-05**: Structured JSON format с timestamp, level, correlationId, module
+- [x] **LOG-01**: Correlation ID propagation через nestjs-cls (AsyncLocalStorage)
+- [x] **LOG-02**: Request/response logging на каждом tRPC endpoint
+- [x] **LOG-03**: Логи пишутся в файл (не только console)
+- [x] **LOG-04**: File rotation — архивация по размеру/времени
+- [x] **LOG-05**: Structured JSON format с timestamp, level, correlationId, module
 
 ### E2E Integration
 
@@ -153,11 +153,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-02 | Phase 24 | Pending |
 | AUTH-03 | Phase 24 | Pending |
 | AUTH-04 | Phase 24 | Pending |
-| LOG-01 | Phase 25 | Pending |
-| LOG-02 | Phase 25 | Pending |
-| LOG-03 | Phase 25 | Pending |
-| LOG-04 | Phase 25 | Pending |
-| LOG-05 | Phase 25 | Pending |
+| LOG-01 | Phase 25 | Complete |
+| LOG-02 | Phase 25 | Complete |
+| LOG-03 | Phase 25 | Complete |
+| LOG-04 | Phase 25 | Complete |
+| LOG-05 | Phase 25 | Complete |
 | E2E-01 | Phase 26 | Pending |
 | E2E-02 | Phase 26 | Pending |
 | E2E-03 | Phase 26 | Pending |
