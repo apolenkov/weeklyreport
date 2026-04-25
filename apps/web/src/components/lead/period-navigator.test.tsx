@@ -26,6 +26,7 @@ import type { ReportPeriod } from './mock-data';
 const PERIODS: ReportPeriod[] = [
   {
     id: '2026-W17',
+    sourceSectionId: 'sec-W17',
     weekLabel: 'Week 17',
     dateRange: 'Apr 21–27',
     isCurrent: true,
@@ -33,6 +34,7 @@ const PERIODS: ReportPeriod[] = [
   },
   {
     id: '2026-W16',
+    sourceSectionId: 'sec-W16',
     weekLabel: 'Week 16',
     dateRange: 'Apr 14–20',
     isCurrent: false,
@@ -40,6 +42,7 @@ const PERIODS: ReportPeriod[] = [
   },
   {
     id: '2026-W15',
+    sourceSectionId: 'sec-W15',
     weekLabel: 'Week 15',
     dateRange: 'Apr 7–13',
     isCurrent: false,

@@ -22,15 +22,25 @@ export type UseLeadFormAutosaveArgs = {
   readonly payload: DraftSavePayload | null;
   readonly enabled: boolean;
   readonly debounceMs?: number;
+  /**
+   * Optional baseline-payload key. When provided, the hook treats this exact
+   * key as the last-saved snapshot — so a fresh load from the server is not
+   * considered dirty until the user actually edits a field. The caller is
+   * responsible for stable serialization (e.g. via the same stringify the
+   * hook would produce). When omitted, dirty starts true on first non-null
+   * payload (legacy behavior).
+   */
+  readonly initialSavedKey?: string | null;
 };
 
 const DEFAULT_DEBOUNCE_MS = 3000;
 
 /**
  * Stable JSON serialization with sorted keys so payload diffs are deterministic
- * regardless of object construction order.
+ * regardless of object construction order. Exported so callers can compute
+ * the same baseline key when priming `initialSavedKey`.
  */
-function stableStringify(value: unknown): string {
+export function stableStringify(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
   if (Array.isArray(value)) {
     return '[' + value.map(stableStringify).join(',') + ']';
@@ -60,6 +70,7 @@ export function useLeadFormAutosave(
 ): AutosaveSnapshot {
   const { reportSectionId, payload, enabled } = args;
   const debounceMs = args.debounceMs ?? DEFAULT_DEBOUNCE_MS;
+  const initialSavedKey = args.initialSavedKey ?? null;
 
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -69,6 +80,15 @@ export function useLeadFormAutosave(
 
   const lastSavedRef = useRef<string>('');
   const inFlightRef = useRef<string>('');
+
+  // Prime lastSavedRef from caller-supplied baseline whenever it changes.
+  // Lets the LeadForm tell us "this freshly-loaded server payload is already
+  // saved" so the user doesn't see a dirty state on initial render.
+  useEffect(() => {
+    if (initialSavedKey !== null) {
+      lastSavedRef.current = initialSavedKey;
+    }
+  }, [initialSavedKey]);
 
   const saveDraftMut = useMutation(
     trpc.reports.saveDraft.mutationOptions({

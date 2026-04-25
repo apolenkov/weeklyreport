@@ -61,6 +61,11 @@ export type PriorityEntry = {
 
 export type ReportPeriod = {
   id: string;
+  /**
+   * Section id (per-lead) used for fillFrom mutation. Matches
+   * `LeadReportPeriod.sourceSectionId` so cast-through stays structural.
+   */
+  sourceSectionId: string;
   weekLabel: string;
   dateRange: string;
   isCurrent: boolean;
@@ -233,11 +238,11 @@ export const MOCK_PRIORITIES: PriorityEntry[] = [
 ];
 
 export const MOCK_PERIODS: ReportPeriod[] = [
-  { id: '2026-W16', weekLabel: 'Week 16', dateRange: 'Apr 14-20', isCurrent: true, isSubmitted: false },
-  { id: '2026-W15', weekLabel: 'Week 15', dateRange: 'Apr 7-13', isCurrent: false, isSubmitted: true, productCount: 6, itemCount: 9, riskCount: 0 },
-  { id: '2026-W14', weekLabel: 'Week 14', dateRange: 'Mar 31-Apr 6', isCurrent: false, isSubmitted: true, productCount: 5, itemCount: 8, riskCount: 1 },
-  { id: '2026-W13', weekLabel: 'Week 13', dateRange: 'Mar 24-30', isCurrent: false, isSubmitted: true, productCount: 5, itemCount: 7, riskCount: 0 },
-  { id: '2026-W12', weekLabel: 'Week 12', dateRange: 'Mar 17-23', isCurrent: false, isSubmitted: true, productCount: 4, itemCount: 6, riskCount: 2 },
+  { id: '2026-W16', sourceSectionId: 'sec-W16', weekLabel: 'Week 16', dateRange: 'Apr 14-20', isCurrent: true, isSubmitted: false },
+  { id: '2026-W15', sourceSectionId: 'sec-W15', weekLabel: 'Week 15', dateRange: 'Apr 7-13', isCurrent: false, isSubmitted: true, productCount: 6, itemCount: 9, riskCount: 0 },
+  { id: '2026-W14', sourceSectionId: 'sec-W14', weekLabel: 'Week 14', dateRange: 'Mar 31-Apr 6', isCurrent: false, isSubmitted: true, productCount: 5, itemCount: 8, riskCount: 1 },
+  { id: '2026-W13', sourceSectionId: 'sec-W13', weekLabel: 'Week 13', dateRange: 'Mar 24-30', isCurrent: false, isSubmitted: true, productCount: 5, itemCount: 7, riskCount: 0 },
+  { id: '2026-W12', sourceSectionId: 'sec-W12', weekLabel: 'Week 12', dateRange: 'Mar 17-23', isCurrent: false, isSubmitted: true, productCount: 4, itemCount: 6, riskCount: 2 },
 ];
 
 export const MOCK_VERSIONS: VersionSnapshot[] = [
