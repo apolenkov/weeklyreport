@@ -207,7 +207,7 @@ Plans:
 
 ## v5.0 Production Integration
 
-- [ ] **Phase 20: Seed & Type Foundation** - Seed DB with mockup-aligned data, mapper layer for type translation
+- [x] **Phase 20: Seed & Type Foundation** - Seed DB with mockup-aligned data, mapper layer for type translation (completed 2026-04-25)
 - [ ] **Phase 21: tRPC Provider & Client Wiring** - TRPCProvider, React Compiler migration, 7 container conversions
 - [ ] **Phase 22: Interactivity & Status-Risk Sync** - All buttons wired to real mutations, autosave, pagination, Status-to-Risk auto-sync
 - [ ] **Phase 23: PDF & Jobs** - BullMQ re-enabled, PDF export pipeline end-to-end
@@ -309,7 +309,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 20. Seed & Type Foundation | 1/2 | In Progress|  |
+| 20. Seed & Type Foundation | 1/2 | Complete    | 2026-04-25 |
 | 21. tRPC Provider & Client Wiring | 0/TBD | Not started | - |
 | 22. Interactivity & Status-Risk Sync | 0/TBD | Not started | - |
 | 23. PDF & Jobs | 0/TBD | Not started | - |
