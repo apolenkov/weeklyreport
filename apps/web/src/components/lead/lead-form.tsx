@@ -1,7 +1,12 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
+import { useTRPC } from '../../lib/trpc-context';
+import { mapLeadFormData } from '../../lib/mappers';
+import { LeadFormSkeleton } from './lead-form-skeleton';
 import { SdlcPipeline } from './sdlc-pipeline';
 import { PeriodNavigator } from './period-navigator';
 import { FillFromButton } from './fill-from-button';
@@ -11,16 +16,15 @@ import { NextWeekSection } from './next-week-section';
 import { RisksSection } from './risks-section';
 import { DecisionsSection } from './decisions-section';
 import { PrioritiesSection } from './priorities-section';
-import {
-  CURRENT_USER,
-  MOCK_PRODUCTS,
-  MOCK_CURRENT_WEEK_ITEMS,
-  MOCK_NEXT_WEEK_ITEMS,
-  MOCK_RISKS,
-  MOCK_DECISIONS,
-  MOCK_PRIORITIES,
-  MOCK_PERIODS,
-  MOCK_VERSIONS,
+
+import type {
+  Product,
+  KanbanItem,
+  RiskEntry,
+  DecisionEntry,
+  PriorityEntry,
+  ReportPeriod,
+  VersionSnapshot,
 } from './mock-data';
 
 type LeadFormProps = {
@@ -171,22 +175,130 @@ function AccordionSection({
 }
 
 export function LeadForm({ period }: LeadFormProps) {
+  const trpc = useTRPC();
+
+  // Four queries compose the lead-form view. `byPeriod` and `versions` depend
+  // on identifiers from `getActive`, so they're gated by `enabled`.
+  const activeQ = useQuery(trpc.reports.getActive.queryOptions());
+  const activeReportId = activeQ.data?.reportId ?? '';
+  const activeSectionId = activeQ.data?.reportSectionId ?? '';
+
+  const byPeriodQ = useQuery({
+    ...trpc.leadForm.byPeriod.queryOptions({ reportId: activeReportId }),
+    enabled: activeReportId !== '',
+  });
+  const versionsQ = useQuery({
+    ...trpc.leadForm.versions.queryOptions({ reportSectionId: activeSectionId }),
+    enabled: activeSectionId !== '',
+  });
+  const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
+
+  // Toast on per-query errors.
+  useEffect(() => {
+    if (activeQ.isError) {
+      toast.error(
+        activeQ.error instanceof Error
+          ? `Failed to load active report: ${activeQ.error.message}`
+          : 'Failed to load active report',
+      );
+    }
+  }, [activeQ.isError, activeQ.error]);
+
+  useEffect(() => {
+    if (byPeriodQ.isError) {
+      toast.error(
+        byPeriodQ.error instanceof Error
+          ? `Failed to load form: ${byPeriodQ.error.message}`
+          : 'Failed to load form',
+      );
+    }
+  }, [byPeriodQ.isError, byPeriodQ.error]);
+
+  useEffect(() => {
+    if (versionsQ.isError) {
+      toast.error(
+        versionsQ.error instanceof Error
+          ? `Failed to load versions: ${versionsQ.error.message}`
+          : 'Failed to load versions',
+      );
+    }
+  }, [versionsQ.isError, versionsQ.error]);
+
+  useEffect(() => {
+    if (historyQ.isError) {
+      toast.error(
+        historyQ.error instanceof Error
+          ? `Failed to load history: ${historyQ.error.message}`
+          : 'Failed to load history',
+      );
+    }
+  }, [historyQ.isError, historyQ.error]);
+
+  // Local UI state (mutation handlers stay local-only in this plan).
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [autosaveStatus] = useState('Autosaved');
 
-  const isReadOnly = !!period || isSubmitted;
+  // Re-seed isSubmitted from the API once data resolves.
+  useEffect(() => {
+    if (byPeriodQ.data?.section.status === 'submitted') {
+      setIsSubmitted(true);
+    }
+  }, [byPeriodQ.data]);
+
+  const isLoading =
+    activeQ.isLoading ||
+    byPeriodQ.isLoading ||
+    versionsQ.isLoading ||
+    historyQ.isLoading;
+
+  // No active report bound to session — render skeleton (best effort) until
+  // session populates a report. Active period auto-selection is a server-side
+  // concern owned by middleware.
+  if (
+    isLoading ||
+    !activeQ.data ||
+    !byPeriodQ.data ||
+    !versionsQ.data ||
+    !historyQ.data
+  ) {
+    return <LeadFormSkeleton />;
+  }
+
+  const data = mapLeadFormData({
+    active: activeQ.data,
+    byPeriod: byPeriodQ.data,
+    versions: versionsQ.data,
+    history: historyQ.data,
+  });
+
+  // The mapper produces structurally compatible shapes but carries Lead*
+  // type names; cast to mock-data presentation types so existing children
+  // keep their imports unchanged.
+  const products: Product[] = data.products as Product[];
+  const currentWeekItems: KanbanItem[] = data.currentWeekItems as KanbanItem[];
+  const nextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
+  const risks: RiskEntry[] = data.risks as RiskEntry[];
+  const decisions: DecisionEntry[] = data.decisions as DecisionEntry[];
+  const priorities: PriorityEntry[] = data.priorities as PriorityEntry[];
+  const periods: ReportPeriod[] = data.periods as ReportPeriod[];
+  const versions: VersionSnapshot[] = data.versions as VersionSnapshot[];
+  const currentUser = data.currentUser;
+
+  const isReadOnly = data.readOnly || !!period || isSubmitted;
 
   function handleToggleAll() {
     // Toggle all is managed through individual accordion state;
-    // for simplicity, this is a visual placeholder
+    // for simplicity, this is a visual placeholder.
   }
 
   function handleSubmit() {
+    // TODO(Phase 22): wire reports.submit mutation + invalidateLeadForm(qc, trpc) onSuccess
     setShowSubmitConfirm(true);
   }
 
   function handleConfirmSubmit() {
+    // TODO(Phase 22): wire reports.submit mutation + invalidateLeadForm(qc, trpc) onSuccess
     setIsSubmitted(true);
     setShowSubmitConfirm(false);
   }
@@ -211,8 +323,9 @@ export function LeadForm({ period }: LeadFormProps) {
             )}
           </div>
           <div className="flex items-center gap-3">
+            {/* TODO(Phase 22): wire leadForm.fillFrom mutation in onFillFrom */}
             <FillFromButton
-              periods={MOCK_PERIODS}
+              periods={periods}
               disabled={isReadOnly}
             />
             <button
@@ -237,20 +350,19 @@ export function LeadForm({ period }: LeadFormProps) {
 
         {/* Context shell: Period nav + User info + Version history */}
         <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">
-          <Suspense fallback={<div className="h-11 w-60 animate-pulse rounded-lg bg-[var(--color-skeleton)]" />}>
-            <PeriodNavigator periods={MOCK_PERIODS} />
-          </Suspense>
+          <PeriodNavigator periods={periods} />
 
           <div className="flex min-w-[220px] flex-1 items-center justify-center gap-2">
             <span className="text-sm text-[var(--color-muted-foreground)]">Development Department</span>
             <span className="text-[var(--color-muted-foreground)]">&middot;</span>
             <span className="text-sm text-[var(--color-muted-foreground)]">
-              {CURRENT_USER.name} &middot; {CURRENT_USER.role}
+              {currentUser.name} &middot; {currentUser.role}
             </span>
           </div>
 
           <div className="ml-auto">
-            <VersionHistoryNav versions={MOCK_VERSIONS} />
+            {/* TODO(Phase 22): wire leadForm.restoreVersion mutation in onRestore */}
+            <VersionHistoryNav versions={versions} />
           </div>
         </div>
 
@@ -277,63 +389,67 @@ export function LeadForm({ period }: LeadFormProps) {
         )}
 
         {/* Product Status (SDLC Pipeline) */}
+        {/* TODO(Phase 22): wire reports.saveDraft on stage status change */}
         <AccordionSection
           icon={<GridIcon />}
           title="Product Status"
-          badge={`${MOCK_PRODUCTS.length} assigned products`}
+          badge={`${products.length} assigned products`}
           subtitle="Assigned stages are highlighted. Blocked and at-risk stages link to the context you need to resolve them."
         >
-          <SdlcPipeline products={MOCK_PRODUCTS} readOnly={isReadOnly} />
+          <SdlcPipeline products={products} readOnly={isReadOnly} />
         </AccordionSection>
 
         {/* Current Week */}
         <AccordionSection
           icon={<CalendarIcon />}
           title="Current Week"
-          badge={`${MOCK_CURRENT_WEEK_ITEMS.length} items`}
+          badge={`${currentWeekItems.length} items`}
         >
-          <CurrentWeekSection items={MOCK_CURRENT_WEEK_ITEMS} readOnly={isReadOnly} />
+          <CurrentWeekSection items={currentWeekItems} readOnly={isReadOnly} />
         </AccordionSection>
 
         {/* Next Week */}
         <AccordionSection
           icon={<NextWeekIcon />}
           title="Next Week"
-          badge={`${MOCK_NEXT_WEEK_ITEMS.length} items`}
+          badge={`${nextWeekItems.length} items`}
         >
-          <NextWeekSection items={MOCK_NEXT_WEEK_ITEMS} readOnly={isReadOnly} />
+          <NextWeekSection items={nextWeekItems} readOnly={isReadOnly} />
         </AccordionSection>
 
         {/* Risks & Blockers */}
+        {/* TODO(Phase 22): wire reports.saveDraft when risks change */}
         <AccordionSection
           icon={<AlertIcon />}
           title="Risks & Blockers"
           titleColor="var(--color-destructive)"
-          badge={`${MOCK_RISKS.length}`}
+          badge={`${risks.length}`}
           badgeStyle={{ background: '#fee2e2', color: 'var(--color-destructive)' }}
         >
-          <RisksSection risks={MOCK_RISKS} readOnly={isReadOnly} />
+          <RisksSection risks={risks} readOnly={isReadOnly} />
         </AccordionSection>
 
         {/* Decisions */}
+        {/* TODO(Phase 22): wire reports.saveDraft when decisions change */}
         <AccordionSection
           icon={<ChatIcon />}
           title="Decisions"
           titleColor="var(--color-starbucks-accent)"
-          badge={`${MOCK_DECISIONS.length}`}
+          badge={`${decisions.length}`}
           badgeStyle={{ background: 'var(--color-success)', color: 'var(--color-starbucks-accent)' }}
         >
-          <DecisionsSection decisions={MOCK_DECISIONS} readOnly={isReadOnly} />
+          <DecisionsSection decisions={decisions} readOnly={isReadOnly} />
         </AccordionSection>
 
         {/* Top 3 Priorities */}
+        {/* TODO(Phase 22): wire reports.saveDraft when priorities change */}
         <AccordionSection
           icon={<StarIcon />}
           title="Top 3 Priorities"
           titleColor="var(--color-starbucks-gold)"
-          badge="3/3"
+          badge={`${Math.min(priorities.length, 3)}/3`}
         >
-          <PrioritiesSection priorities={MOCK_PRIORITIES} readOnly={isReadOnly} />
+          <PrioritiesSection priorities={priorities} readOnly={isReadOnly} />
         </AccordionSection>
       </div>
 
@@ -355,19 +471,19 @@ export function LeadForm({ period }: LeadFormProps) {
             </p>
             <div className="mt-3 space-y-1 text-sm">
               <div className="flex items-center gap-2">
-                <span className="font-medium">{MOCK_CURRENT_WEEK_ITEMS.length}</span>
+                <span className="font-medium">{currentWeekItems.length}</span>
                 <span className="text-[var(--color-muted-foreground)]">current week items</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-medium">{MOCK_NEXT_WEEK_ITEMS.length}</span>
+                <span className="font-medium">{nextWeekItems.length}</span>
                 <span className="text-[var(--color-muted-foreground)]">next week items</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-medium">{MOCK_RISKS.length}</span>
+                <span className="font-medium">{risks.length}</span>
                 <span className="text-[var(--color-muted-foreground)]">risks</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-medium">{MOCK_DECISIONS.length}</span>
+                <span className="font-medium">{decisions.length}</span>
                 <span className="text-[var(--color-muted-foreground)]">decisions</span>
               </div>
             </div>
