@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-import type { HistoryEntry } from './mock-data';
+import type { HistoryEntry } from '../../lib/mappers';
 
 type LeadHistoryListProps = {
   readonly entries: HistoryEntry[];
