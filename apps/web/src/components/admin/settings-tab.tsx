@@ -1,15 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { MockSettings } from './mock-data';
-import { MOCK_SETTINGS } from './mock-data';
 
-export function SettingsTab() {
-  const [settings, setSettings] = useState<MockSettings>(MOCK_SETTINGS);
+type SettingsTabProps = {
+  readonly initialData: MockSettings;
+};
+
+export function SettingsTab({ initialData }: SettingsTabProps) {
+  const [settings, setSettings] = useState<MockSettings>(initialData);
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    setSettings(initialData);
+  }, [initialData]);
+
   function handleSave() {
+    // TODO(Phase 22): replace local saved-flash with admin.updateSettings mutation + invalidateAdmin onSuccess.
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }

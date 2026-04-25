@@ -1,20 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import type { MockProduct, StageName } from './mock-data';
-import { MOCK_PRODUCTS, MOCK_USERS, getUserById, getLeadUsers } from './mock-data';
+import type { MockProduct, MockUser, StageName } from './mock-data';
 import { StageAssignmentEditor } from './stage-assignment-editor';
 
-export function ProductsTab() {
-  const [products, setProducts] = useState<MockProduct[]>(MOCK_PRODUCTS);
+type ProductsTabProps = {
+  readonly initialProducts: MockProduct[];
+  readonly initialUsers: MockUser[];
+};
+
+export function ProductsTab({ initialProducts, initialUsers }: ProductsTabProps) {
+  const [products, setProducts] = useState<MockProduct[]>(initialProducts);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<MockProduct | null>(null);
   const [formName, setFormName] = useState('');
   const [formLeadId, setFormLeadId] = useState('');
 
-  const leads = getLeadUsers();
+  // Reset local CRUD state when the source query revalidates.
+  useEffect(() => {
+    setProducts(initialProducts);
+  }, [initialProducts]);
+
+  const leads = useMemo(
+    () => initialUsers.filter((u) => u.role === 'lead'),
+    [initialUsers],
+  );
+
+  const getUserById = (id: string): MockUser | undefined =>
+    initialUsers.find((u) => u.id === id);
 
   function openAdd() {
     setEditingProduct(null);
@@ -32,6 +47,7 @@ export function ProductsTab() {
 
   function handleSave() {
     if (editingProduct) {
+      // TODO(Phase 22): replace local setState with admin.saveProject mutation + invalidateAdmin(qc, trpc) onSuccess.
       setProducts((prev) =>
         prev.map((p) =>
           p.id === editingProduct.id ? { ...p, name: formName, leadOwnerId: formLeadId } : p,
@@ -53,12 +69,14 @@ export function ProductsTab() {
           { stage: 'Support', assigneeId: null },
         ],
       };
+      // TODO(Phase 22): replace local setState with admin.saveProject mutation + invalidateAdmin(qc, trpc) onSuccess.
       setProducts((prev) => [...prev, newProduct]);
     }
     setShowDialog(false);
   }
 
   function handleArchive(productId: string) {
+    // TODO(Phase 22): replace local setState with admin.deleteProject (archive) mutation + invalidateAdmin onSuccess.
     setProducts((prev) =>
       prev.map((p) =>
         p.id === productId
@@ -69,6 +87,7 @@ export function ProductsTab() {
   }
 
   function handleStageAssign(productId: string, stage: StageName, userId: string | null) {
+    // TODO(Phase 22): replace local setState with admin.saveStageAssignment / deleteStageAssignment + invalidateAdmin onSuccess.
     setProducts((prev) =>
       prev.map((p) =>
         p.id === productId
@@ -168,6 +187,7 @@ export function ProductsTab() {
                     <div className="border-t border-[var(--color-border)] px-4 pb-4">
                       <StageAssignmentEditor
                         product={product}
+                        leads={leads}
                         onAssign={handleStageAssign}
                       />
                     </div>
@@ -239,7 +259,7 @@ export function ProductsTab() {
                   onChange={(e) => setFormLeadId(e.target.value)}
                   className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
                 >
-                  {MOCK_USERS.filter((u) => u.role === 'lead').map((lead) => (
+                  {leads.map((lead) => (
                     <option key={lead.id} value={lead.id}>
                       {lead.name}
                     </option>

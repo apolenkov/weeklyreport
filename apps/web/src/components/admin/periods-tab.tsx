@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { MockPeriod, PeriodStatus } from './mock-data';
-import { MOCK_PERIODS } from './mock-data';
 
 type PeriodFormData = {
   weekLabel: string;
@@ -14,8 +13,16 @@ type PeriodFormData = {
 
 const EMPTY_FORM: PeriodFormData = { weekLabel: '', startDate: '', endDate: '', deadline: '' };
 
-export function PeriodsTab() {
-  const [periods, setPeriods] = useState<MockPeriod[]>(MOCK_PERIODS);
+type PeriodsTabProps = {
+  readonly initialPeriods: MockPeriod[];
+};
+
+export function PeriodsTab({ initialPeriods }: PeriodsTabProps) {
+  const [periods, setPeriods] = useState<MockPeriod[]>(initialPeriods);
+
+  useEffect(() => {
+    setPeriods(initialPeriods);
+  }, [initialPeriods]);
   const [editingPeriod, setEditingPeriod] = useState<MockPeriod | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState<PeriodFormData>(EMPTY_FORM);
@@ -39,6 +46,7 @@ export function PeriodsTab() {
 
   function handleSave() {
     if (editingPeriod) {
+      // TODO(Phase 22): replace local setState with admin.savePeriod mutation + invalidateAdmin onSuccess.
       setPeriods((prev) =>
         prev.map((p) =>
           p.id === editingPeriod.id
@@ -52,6 +60,7 @@ export function PeriodsTab() {
         ...form,
         status: 'open',
       };
+      // TODO(Phase 22): replace local setState with admin.savePeriod mutation + invalidateAdmin onSuccess.
       setPeriods((prev) => [...prev, newPeriod]);
     }
     setShowDialog(false);
