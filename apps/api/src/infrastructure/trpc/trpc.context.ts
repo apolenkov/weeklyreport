@@ -4,6 +4,7 @@ import type { UserSession } from '@customreport/shared';
 
 import { createAuthController } from '../../modules/auth/auth.controller.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import type { AppLogger } from '../../lib/logger.js';
 
 const DEV_SESSION: UserSession = {
   userId: 'a0000000-0000-4000-8000-000000000099',
@@ -16,9 +17,10 @@ const DEV_SESSION: UserSession = {
 
 export type TrpcContext = {
   session: UserSession | null;
+  logger: AppLogger;
 };
 
-export function createContextFactory(_app: INestApplication) {
+export function createContextFactory(_app: INestApplication, logger: AppLogger) {
   const authController = createAuthController(process.env);
   // Resolve PrismaService once (not per request) from the NestJS DI container.
   const prisma = _app.get(PrismaService);
@@ -29,7 +31,7 @@ export function createContextFactory(_app: INestApplication) {
     if (token) {
       try {
         const session = authController.verifySessionToken(token);
-        return { session: await resolveSectionId(session, prisma) };
+        return { session: await resolveSectionId(session, prisma), logger };
       } catch {
         // Token invalid/expired -- fall through
       }
@@ -37,10 +39,10 @@ export function createContextFactory(_app: INestApplication) {
 
     // In dev mode without a valid cookie, use fallback session
     if (process.env['AUTH_DEV_MODE'] === 'true') {
-      return { session: await resolveSectionId({ ...DEV_SESSION }, prisma) };
+      return { session: await resolveSectionId({ ...DEV_SESSION }, prisma), logger };
     }
 
-    return { session: null };
+    return { session: null, logger };
   };
 }
 
