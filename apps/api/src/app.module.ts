@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { ClsModule } from 'nestjs-cls';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { BullMQModule } from './infrastructure/bullmq/bullmq.module';
 import { HealthModule } from './infrastructure/health/health.module';
@@ -21,6 +22,12 @@ import { EmailService } from './infrastructure/email/email.service';
 
 @Module({
   imports: [
+    // ClsModule must be first so its AsyncLocalStorage middleware mounts
+    // before CorrelationIdMiddleware writes into the active store.
+    ClsModule.forRoot({
+      global: true,
+      middleware: { mount: true, generateId: false },
+    }),
     PrismaModule,
     BullMQModule,
     HealthModule,
