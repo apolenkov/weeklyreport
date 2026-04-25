@@ -33,6 +33,10 @@ export const envSchema = z
 
     // PDF generation
     PDF_BASE_URL: z.string().url().default('http://localhost:3000'),
+    // Phase 23-01: directory where the BullMQ worker writes generated PDFs and
+    // where /pdfs static mount serves them. Default works on a dev workstation;
+    // production overrides via .env (e.g. /var/lib/customreport/pdfs).
+    PDF_OUTPUT_DIR: z.string().default('./apps/api/storage/pdfs'),
   })
   .superRefine((data, ctx) => {
     if (!data.AUTH_DEV_MODE && !data.AUTH_JWT_SECRET) {

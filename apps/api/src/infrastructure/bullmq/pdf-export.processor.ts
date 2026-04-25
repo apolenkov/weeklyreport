@@ -3,7 +3,7 @@ import { Worker, type Job } from 'bullmq';
 import { chromium } from 'playwright';
 import { createHash } from 'node:crypto';
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import { PdfExportService } from '../../modules/pdf-export/pdf-export.service';
 
@@ -66,13 +66,20 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
     const browser = await chromium.launch({ headless: true });
     try {
       const page = await browser.newPage();
+      // TODO(Phase 24): inject session cookie via PdfExportService.buildAuthCookies +
+      // page.context().addCookies() once auth guards land on tRPC. v5.0 relies on
+      // AUTH_DEV_MODE=true on the API for unauthenticated tRPC fetches from
+      // Playwright; the print page calls trpc.weeklyReport.get client-side.
       await page.goto(reportUrl, { waitUntil: 'networkidle' });
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
       });
 
-      const outputDir = join(process.env['PDF_OUTPUT_DIR'] ?? '/app/data/pdfs');
+      // Phase 23-01: resolve to an absolute path so the API's express.static
+      // mount on /pdfs (apps/api/src/main.ts) and this worker write to the
+      // same directory regardless of the process cwd.
+      const outputDir = resolve(process.env['PDF_OUTPUT_DIR'] ?? './apps/api/storage/pdfs');
       mkdirSync(outputDir, { recursive: true });
 
       const filePath = join(outputDir, `${jobId}.pdf`);
