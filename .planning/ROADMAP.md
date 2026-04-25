@@ -323,7 +323,10 @@ Plans:
   4. Cross-role lifecycle passes: lead submits -> head publishes -> lead sees locked -> head reopens -> lead re-edits
   5. Existing 339 mock-based E2E tests continue to pass unchanged (no big-bang migration)
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 26-01-PLAN.md — Dual-server Playwright config + global seed + ~25 integration tests across 7 spec files
 
 ---
 
@@ -337,7 +340,7 @@ Plans:
 | 23. PDF & Jobs | 1/1 | Complete    | 2026-04-25 |
 | 24. Auth Guards & Session | 1/1 | Complete    | 2026-04-25 |
 | 25. Production Logging | 1/1 | Complete    | 2026-04-25 |
-| 26. E2E Integration Tests | 0/TBD | Not started | - |
+| 26. E2E Integration Tests | 0/1 | Planned     | - |
 
 ## Execution Order (for /gsd:next)
 
