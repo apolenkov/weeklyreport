@@ -1,13 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+/**
+ * Report archive list with real cursor pagination via TanStack Query's
+ * useInfiniteQuery (wrapped by `useCursorPagination`).
+ *
+ * Self-contained: the section owns its own data fetching against
+ * `trpc.archive.list` with `paginationInputSchema` (limit, cursor). Replaces
+ * the previous static page-number pagination over the dashboard composer's
+ * pre-loaded slice.
+ *
+ * Closes INT-08 (cursor pagination) for archive.list. Version history and
+ * lead history use a client-side reveal because their tRPC endpoints are
+ * not yet cursor-paginated at v5.0 — see SUMMARY.md.
+ */
 
-import type { ArchiveReport } from './mock-data';
-
-type ReportArchiveSectionProps = {
-  readonly reports: ArchiveReport[];
-  readonly totalCount?: number;
-};
+import { useTRPC } from '../../lib/trpc-context';
+import { mapArchiveSummary } from '../../lib/mappers';
+import { useCursorPagination } from '../../lib/use-cursor-pagination';
+import type { ArchiveReportSummary } from '@customreport/shared';
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   active: {
@@ -27,14 +37,30 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
   },
 };
 
-const ITEMS_PER_PAGE = 4;
+const PAGE_SIZE = 12;
 
-export function ReportArchiveSection({ reports, totalCount = 12 }: ReportArchiveSectionProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+export function ReportArchiveSection() {
+  const trpc = useTRPC();
 
-  // In real app, pages would fetch from API. Using mock data for page 1.
-  const visibleReports = reports.slice(0, ITEMS_PER_PAGE);
+  const archive = useCursorPagination<ArchiveReportSummary>(
+    (input) =>
+      // The trpc proxy exposes `infiniteQueryOptions` per
+      // @trpc/tanstack-react-query 11.16+. Cast to satisfy the hook's
+      // useInfiniteQuery typings; runtime shape matches.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (trpc.archive.list as any).infiniteQueryOptions(
+        { limit: input.limit ?? PAGE_SIZE },
+        {
+          getNextPageParam: (last: { nextCursor: string | null }) =>
+            last.nextCursor ?? undefined,
+          initialCursor: undefined,
+        },
+      ),
+    { limit: PAGE_SIZE },
+  );
+
+  const reports = archive.items.map(mapArchiveSummary);
+  const totalLoaded = reports.length;
 
   return (
     <div>
@@ -43,12 +69,12 @@ export function ReportArchiveSection({ reports, totalCount = 12 }: ReportArchive
           Report Archive
         </h2>
         <span className="text-xs text-[var(--color-muted-foreground)]">
-          {totalCount} reports total
+          {archive.isLoading ? 'Loading…' : `${totalLoaded} loaded${archive.hasNextPage ? '+' : ''}`}
         </span>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {visibleReports.map((report) => {
+        {reports.map((report) => {
           const config = STATUS_CONFIG[report.status] ?? STATUS_CONFIG.draft!;
           const isActive = report.status === 'active';
 
@@ -73,66 +99,33 @@ export function ReportArchiveSection({ reports, totalCount = 12 }: ReportArchive
                 </span>
               </div>
               <div className="text-xs text-[var(--color-muted-foreground)]">
-                {report.dateRange} &middot; {report.submissionLabel}
-              </div>
-              <div className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
-                {report.productCount} products
-                {report.riskCount > 0 && ` \u00b7 ${report.riskCount} risks`}
-                {report.decisionCount > 0 && ` \u00b7 ${report.decisionCount} decisions`}
+                {report.dateRange}
               </div>
             </a>
           );
         })}
       </div>
 
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-center gap-2">
-        <button
-          type="button"
-          className="flex h-9 min-w-[36px] items-center justify-center rounded-lg border border-[var(--color-border)] bg-transparent font-[family-name:var(--font-sans)] text-[13px] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-35"
-          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1}
-          aria-label="Previous page"
-        >
-          &lsaquo;
-        </button>
-
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+      {/* Load more */}
+      {archive.hasNextPage && (
+        <div className="mt-4 flex items-center justify-center">
           <button
-            key={page}
             type="button"
-            className="flex h-9 min-w-[36px] items-center justify-center rounded-lg font-[family-name:var(--font-sans)] text-[13px] transition-colors"
-            style={
-              page === currentPage
-                ? {
-                    background: 'var(--color-starbucks-accent)',
-                    color: '#fff',
-                    border: 'none',
-                  }
-                : {
-                    background: 'transparent',
-                    color: 'inherit',
-                    border: '1px solid var(--color-border)',
-                  }
-            }
-            onClick={() => setCurrentPage(page)}
-            aria-label={`Page ${page}`}
-            aria-current={page === currentPage ? 'page' : undefined}
+            className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => archive.fetchNextPage()}
+            disabled={archive.isFetchingNextPage}
+            aria-label="Load more archived reports"
           >
-            {page}
+            {archive.isFetchingNextPage ? 'Loading…' : 'Load more'}
           </button>
-        ))}
+        </div>
+      )}
 
-        <button
-          type="button"
-          className="flex h-9 min-w-[36px] items-center justify-center rounded-lg border border-[var(--color-border)] bg-transparent font-[family-name:var(--font-sans)] text-[13px] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-35"
-          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-          disabled={currentPage === totalPages}
-          aria-label="Next page"
-        >
-          &rsaquo;
-        </button>
-      </div>
+      {!archive.isLoading && reports.length === 0 && (
+        <p className="mt-4 text-center text-xs text-[var(--color-muted-foreground)]">
+          No archived reports yet.
+        </p>
+      )}
     </div>
   );
 }

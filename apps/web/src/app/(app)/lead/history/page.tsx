@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -11,15 +11,22 @@ import { useTRPC } from '../../../../lib/trpc-context';
 
 /**
  * Per CONTEXT.md migration order, this is migration 1/5 -- smallest container
- * first to validate the provider+mapper+skeleton+toast pattern. Children
- * (`LeadHistoryList`) are untouched per ARCHITECTURE.md container/presentation
- * split: only the type import is rewired to the mappers barrel.
+ * first to validate the provider+mapper+skeleton+toast pattern.
+ *
+ * Phase 22 (plan 22-03, INT-08): `reports.myHistory` is not cursor-paginated
+ * at v5.0 (returns the full array). To keep the page responsive and the spec
+ * truthful, we apply a client-side reveal: render the first
+ * `HISTORY_INITIAL_VISIBLE` entries, then expand on demand. Server cursor
+ * support is deferred to Phase 23+.
  */
+const HISTORY_INITIAL_VISIBLE = 10;
+
 export default function LeadHistoryPage() {
   const trpc = useTRPC();
   const { data, isLoading, isError, error } = useQuery(
     trpc.reports.myHistory.queryOptions(),
   );
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (isError) {
@@ -28,6 +35,8 @@ export default function LeadHistoryPage() {
   }, [isError, error]);
 
   const entries = data ? mapHistoryEntries(data) : [];
+  const visibleEntries = showAll ? entries : entries.slice(0, HISTORY_INITIAL_VISIBLE);
+  const hasMore = entries.length > HISTORY_INITIAL_VISIBLE && !showAll;
 
   return (
     <main id="main-content" className="min-h-screen bg-[var(--color-background)]">
@@ -47,7 +56,21 @@ export default function LeadHistoryPage() {
           {isLoading ? (
             <LeadHistorySkeleton />
           ) : (
-            <LeadHistoryList entries={entries} />
+            <>
+              <LeadHistoryList entries={visibleEntries} />
+              {hasMore && (
+                <div className="flex items-center justify-center">
+                  <button
+                    type="button"
+                    className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
+                    onClick={() => setShowAll(true)}
+                    aria-label={`Show all ${entries.length} past submissions`}
+                  >
+                    Show all ({entries.length})
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

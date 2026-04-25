@@ -34,9 +34,16 @@ function HistoryIcon() {
   );
 }
 
+// Default number of versions to show inside the history modal before revealing
+// the rest via a "Show all" button. v5.0 has no server-side cursor for
+// `leadForm.versions` (returns the full array in one call), so we paginate
+// client-side. Tracked as a deferral in the plan SUMMARY.
+const VERSIONS_INITIAL_VISIBLE = 5;
+
 export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [showAllVersions, setShowAllVersions] = useState(false);
 
   const currentVersion = versions[currentIndex];
   const hasPrev = currentIndex < versions.length - 1;
@@ -119,7 +126,10 @@ export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProp
             </div>
 
             <div className="space-y-2">
-              {versions.map((v, idx) => (
+              {(showAllVersions
+                ? versions
+                : versions.slice(0, VERSIONS_INITIAL_VISIBLE)
+              ).map((v, idx) => (
                 <div
                   key={v.version}
                   className="flex items-center gap-3 rounded-lg p-3"
@@ -154,6 +164,17 @@ export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProp
                 </div>
               ))}
             </div>
+
+            {versions.length > VERSIONS_INITIAL_VISIBLE && !showAllVersions && (
+              <button
+                type="button"
+                className="mt-3 w-full rounded-md border border-[var(--color-border)] bg-transparent py-2 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
+                onClick={() => setShowAllVersions(true)}
+                aria-label={`Show all ${versions.length} versions`}
+              >
+                Show all ({versions.length})
+              </button>
+            )}
 
             <p className="mt-4 text-[11px] text-[var(--color-muted-foreground)]">
               Editing from a past version will discard all newer versions. This action cannot be undone.
