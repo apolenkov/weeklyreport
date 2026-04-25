@@ -293,7 +293,10 @@ Plans:
   2. AUTH_STUB=true bypasses all auth checks -- the application works identically to pre-auth behavior for development and testing
   3. When a session expires mid-use, the next API call triggers a redirect to /login with the current URL preserved as return path
   4. Session context (user name, role, avatar) is available in all (app)/ layouts -- the NavBar displays the logged-in user
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 24-01-PLAN.md — proxy.ts cookie guard + SessionProvider/useSession + 401 interceptor + login ?next= + auth.me tRPC query
 
 ### Phase 25: Production Logging
 **Goal**: Every API request is traceable through structured, file-persisted logs with correlation IDs
@@ -332,7 +335,7 @@ Plans:
 | 21. tRPC Provider & Client Wiring | 4/4 | Complete    | 2026-04-25 |
 | 22. Interactivity & Status-Risk Sync | 5/5 | Complete    | 2026-04-25 |
 | 23. PDF & Jobs | 1/1 | Complete    | 2026-04-25 |
-| 24. Auth Guards & Session | 0/TBD | Not started | - |
+| 24. Auth Guards & Session | 0/1 | In progress | - |
 | 25. Production Logging | 0/1 | Not started | - |
 | 26. E2E Integration Tests | 0/TBD | Not started | - |
 
