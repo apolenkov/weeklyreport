@@ -59,10 +59,10 @@ Requirements for v5.0 Production Integration. Each maps to roadmap phases.
 
 ### Auth
 
-- [ ] **AUTH-01**: proxy.ts проверяет session cookie, redirect на /login для неаутентифицированных
-- [ ] **AUTH-02**: AUTH_STUB=true полностью обходит auth (для dev/test)
-- [ ] **AUTH-03**: 401 interceptor — при истечении сессии redirect на login с return URL
-- [ ] **AUTH-04**: Session context доступен во всех (app)/ layouts
+- [x] **AUTH-01**: proxy.ts проверяет session cookie, redirect на /login для неаутентифицированных
+- [x] **AUTH-02**: AUTH_STUB=true полностью обходит auth (для dev/test)
+- [x] **AUTH-03**: 401 interceptor — при истечении сессии redirect на login с return URL
+- [x] **AUTH-04**: Session context доступен во всех (app)/ layouts
 
 ### Logging
 
@@ -149,10 +149,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PDF-01 | Phase 23 | Complete |
 | PDF-02 | Phase 23 | Complete |
 | PDF-03 | Phase 23 | Complete |
-| AUTH-01 | Phase 24 | Pending |
-| AUTH-02 | Phase 24 | Pending |
-| AUTH-03 | Phase 24 | Pending |
-| AUTH-04 | Phase 24 | Pending |
+| AUTH-01 | Phase 24 | Complete |
+| AUTH-02 | Phase 24 | Complete |
+| AUTH-03 | Phase 24 | Complete |
+| AUTH-04 | Phase 24 | Complete |
 | LOG-01 | Phase 25 | Complete |
 | LOG-02 | Phase 25 | Complete |
 | LOG-03 | Phase 25 | Complete |

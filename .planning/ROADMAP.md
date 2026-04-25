@@ -211,7 +211,7 @@ Plans:
 - [x] **Phase 21: tRPC Provider & Client Wiring** - TRPCProvider, React Compiler migration, 7 container conversions (completed 2026-04-25)
 - [x] **Phase 22: Interactivity & Status-Risk Sync** - All buttons wired to real mutations, autosave, pagination, Status-to-Risk auto-sync (completed 2026-04-25)
 - [x] **Phase 23: PDF & Jobs** - BullMQ re-enabled, PDF export pipeline end-to-end (completed 2026-04-25)
-- [ ] **Phase 24: Auth Guards & Session** - proxy.ts cookie check, 401 interceptor, session context
+- [x] **Phase 24: Auth Guards & Session** - proxy.ts cookie check, 401 interceptor, session context (completed 2026-04-25)
 - [x] **Phase 25: Production Logging** - Correlation IDs via nestjs-cls, structured file logging with rotation (completed 2026-04-25)
 - [ ] **Phase 26: E2E Integration Tests** - Dual-server Playwright config, 20-30 real API integration tests
 
@@ -296,7 +296,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 24-01-PLAN.md — proxy.ts cookie guard + SessionProvider/useSession + 401 interceptor + login ?next= + auth.me tRPC query
+- [x] 24-01-PLAN.md — proxy.ts cookie guard + SessionProvider/useSession + 401 interceptor + login ?next= + auth.me tRPC query
 
 ### Phase 25: Production Logging
 **Goal**: Every API request is traceable through structured, file-persisted logs with correlation IDs
@@ -335,7 +335,7 @@ Plans:
 | 21. tRPC Provider & Client Wiring | 4/4 | Complete    | 2026-04-25 |
 | 22. Interactivity & Status-Risk Sync | 5/5 | Complete    | 2026-04-25 |
 | 23. PDF & Jobs | 1/1 | Complete    | 2026-04-25 |
-| 24. Auth Guards & Session | 0/1 | In progress | - |
+| 24. Auth Guards & Session | 1/1 | Complete   | 2026-04-25 |
 | 25. Production Logging | 1/1 | Complete   | 2026-04-25 |
 | 26. E2E Integration Tests | 0/TBD | Not started | - |
 
