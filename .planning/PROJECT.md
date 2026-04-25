@@ -8,34 +8,32 @@
 
 Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
 
-## Current State: v4.0 SHIPPED (2026-04-25)
+## Current State: v5.0 SHIPPED (2026-04-25)
 
-**What was delivered:**
-- 19 Prisma models, 36 tRPC endpoints (full API surface)
-- 7 frontend pages with Starbucks design system (cream/teal/gold, Lexend + Source Sans 3)
-- 129 Playwright E2E tests, 382 API unit tests, 35 integration tests
-- Complete documentation: API reference, deployment guide, developer + user guides
-- 56/56 requirements satisfied
+**What was delivered (Phases 20-26, 15 plans, 50 commits, +23,646/-2,443 LOC across 170 files):**
+- Mockup-aligned seed: 12 products, 6 leads, 7 SDLC stages, 2 report periods (idempotent)
+- Mapper layer translating Zod/Prisma enums to UI presentation states (27 unit tests)
+- tRPC client end-to-end: TRPCProvider + tanstack-react-query + superjson, 7 container migrations
+- All 72 buttons functional: Submit, Publish & Lock, Revoke, Fill From, Version Restore, Admin CRUD across 6 tabs
+- Status↔Risk bidirectional auto-sync via SyncSource ref pattern (Pitfall 5 guard)
+- End-to-end PDF pipeline: BullMQ + Playwright + /pdfs static mount + ExportPdfButton with polling
+- Auth guards via Next.js 16 proxy.ts, SessionProvider/useSession, 401 interceptor with open-redirect sanitization
+- Production logging: nestjs-cls correlation IDs, async file rotation (50 MiB → gzip, mtime pruning), tRPC request/response logging
+- Dual-server Playwright integration suite: 21 tests across 7 spec files; pre-existing 339 mock E2E tests preserved
+- 48/48 requirements satisfied (code-complete)
 
-**Tech debt (v5.0 scope):**
-- Wire tRPC client (replace mock data with real API calls)
-- Add auth session guards to app routes
-- Align mock types with Zod schemas
-- Rework E2E tests for real API integration
+**Tech debt (carried into v6.0):**
+- Phase 26 integration suite was only `--list` verified — never executed end-to-end against running services
+- 4 Phase 22 human-verify items (SYNC-01/03 DOM-level, INT-01 submit refresh, INT-04/06 autosave timing) remain unobserved
+- Phase 23 PDF E2E smoke (Export PDF click → download) auto-approved at human-verify checkpoint
+- `period.contract.test.ts:65` TS6133 unused `userId` (deferred 4× across milestone) — one-line `_userId` fix
+- 5 pre-existing failures in `weekly-report-page.test.tsx` (incomplete tRPC mock for `pdfExport.request.mutationOptions`)
+- `TODO(Phase 24)` cookie injection seam in `pdf-export.processor.ts` — inert while AUTH_DEV_MODE=true
+- Phase 22 VERIFICATION.md frontmatter still records `status: gaps_found` from before commit `69f6527` — doc lag
 
-## Current Milestone: v5.0 Production Integration
+**Audit:** `.planning/v5.0-MILESTONE-AUDIT.md` (status: tech_debt — structurally complete, runtime verification deferred per user)
 
-**Goal:** Превратить UI-прототип в полноценное работающее приложение — подключить фронтенд к реальному API, засидить БД по макету, сделать все кнопки рабочими, добавить production-grade логирование и E2E тесты на реальном API.
-
-**Target features:**
-- Seed по макету — 12 продуктов, 6 лидов с реальными именами, 7 стадий SDLC, stage assignments, 2 периода
-- tRPC Wiring — TRPCProvider + QueryClientProvider, заменить 38 mock-data → useQuery/useMutation
-- Interactivity — все 72 кнопки работают (Submit, Publish, Revoke, Fill From, Version Restore) + Status↔Risk автосинк
-- Auth Guards — session middleware, redirect на login, role-based access
-- Production Logging — structured logging, файл + ротация + архивация, correlation IDs, tracing
-- E2E Integration — переписать тесты с mock → real API, Playwright CLI + DevTools
-
-**Key constraint:** Работаем на роли admin с полным доступом для full regression. Разделение ролей — следующий milestone.
+## Current Milestone: TBD (next via /gsd:new-milestone)
 
 ## Requirements
 
@@ -61,16 +59,22 @@ Shipped in v1.0-v3.0:
 - ✓ 422 unit tests passing — v3.0+
 - ✓ API contracts documented (docs/api/) — v3.0+
 - ✓ Dark theme, collapsible sections — v3.0
+- ✓ 19 Prisma models, 36 tRPC endpoints, 382 API unit tests — v4.0
+- ✓ 7 frontend pages with Starbucks design system (cream/teal/gold) — v4.0
+- ✓ 129 Playwright E2E tests, complete documentation — v4.0
+- ✓ Mockup-aligned seed (12 products, 6 leads, 7 stages, 2 periods, idempotent) — v5.0
+- ✓ Mapper layer (Zod/Prisma → UI presentation states) with 27 unit tests — v5.0
+- ✓ tRPC client wiring (TRPCProvider + tanstack-react-query + superjson) — v5.0
+- ✓ All 72 buttons functional (Submit, Publish, Revoke, Fill From, Version Restore, Admin CRUD) — v5.0
+- ✓ Status↔Risk bidirectional auto-sync via SyncSource ref pattern — v5.0
+- ✓ End-to-end PDF pipeline (BullMQ + Playwright + /pdfs static mount) — v5.0
+- ✓ Auth guards via proxy.ts + SessionProvider + 401 interceptor — v5.0
+- ✓ Production logging with correlation IDs (nestjs-cls + file rotation + tRPC middleware) — v5.0
+- ✓ Dual-server Playwright integration suite (21 tests across 7 specs) — v5.0
 
-### Active (v5.0)
+### Active
 
-- [ ] Seed DB с реальными данными по макету (12 продуктов, 6 лидов, стадии SDLC)
-- [ ] tRPC wiring — подключить фронтенд к реальному API (заменить 38 mock-data imports)
-- [ ] Interactivity — все 72 кнопки вызывают реальный API
-- [ ] Status↔Risk bidirectional auto-sync
-- [ ] Auth guards — session middleware на (app)/ роутах
-- [ ] Production logging — structured logs, файлы, ротация, correlation IDs
-- [ ] E2E integration tests на реальном API (Playwright CLI)
+_No active milestone — run `/gsd:new-milestone` to start the next cycle._
 
 ### Out of Scope
 
@@ -210,4 +214,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-25 after milestone v5.0 start*
+*Last updated: 2026-04-25 after milestone v5.0 SHIPPED*

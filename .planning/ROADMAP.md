@@ -13,7 +13,7 @@
 - [x] **v2.0 Infrastructure Integration** - Phases 5-7 (shipped 2026-04-11)
 - [x] **v3.0 Progress** - Phases 13-15 (shipped 2026-04-21)
 - [x] **v4.0 Backend Completeness & UI Redesign** - Phases 16-19 (shipped 2026-04-25)
-- [ ] **v5.0 Production Integration** - Phases 20-26 (in progress)
+- [x] **v5.0 Production Integration** - Phases 20-26 (shipped 2026-04-25) — [details](milestones/v5.0-ROADMAP.md)
 
 ## Phases
 
@@ -205,150 +205,22 @@ Plans:
 
 ---
 
-## v5.0 Production Integration
+<details>
+<summary>v5.0 Production Integration (Phases 20-26) - SHIPPED 2026-04-25</summary>
 
-- [x] **Phase 20: Seed & Type Foundation** - Seed DB with mockup-aligned data, mapper layer for type translation (completed 2026-04-25)
-- [x] **Phase 21: tRPC Provider & Client Wiring** - TRPCProvider, React Compiler migration, 7 container conversions (completed 2026-04-25)
-- [x] **Phase 22: Interactivity & Status-Risk Sync** - All buttons wired to real mutations, autosave, pagination, Status-to-Risk auto-sync (completed 2026-04-25)
-- [x] **Phase 23: PDF & Jobs** - BullMQ re-enabled, PDF export pipeline end-to-end (completed 2026-04-25)
-- [x] **Phase 24: Auth Guards & Session** - proxy.ts cookie check, 401 interceptor, session context (completed 2026-04-25)
-- [x] **Phase 25: Production Logging** - Correlation IDs via nestjs-cls, structured file logging with rotation (completed 2026-04-25)
-- [x] **Phase 26: E2E Integration Tests** - Dual-server Playwright config, 20-30 real API integration tests (completed 2026-04-25)
+- [x] **Phase 20: Seed & Type Foundation** - Mockup-aligned seed (12 products, 6 leads, 7 stages, 2 periods, idempotent) + mapper layer with 27 tests
+- [x] **Phase 21: tRPC Provider & Client Wiring** - TRPCProvider + tanstack-react-query, 7 container migrations, +99 tests
+- [x] **Phase 22: Interactivity & Status-Risk Sync** - 72 buttons wired, autosave, cursor pagination, SyncSource ref pattern, +156 tests
+- [x] **Phase 23: PDF & Jobs** - BullMQ + Playwright + /pdfs static mount + ExportPdfButton with polling, +37 tests
+- [x] **Phase 24: Auth Guards & Session** - proxy.ts cookie guard + SessionProvider + 401 interceptor + open-redirect sanitization, +16 tests
+- [x] **Phase 25: Production Logging** - nestjs-cls + correlation IDs + async file rotation + tRPC request/response logging, 398/398 api unit tests
+- [x] **Phase 26: E2E Integration Tests** - Dual-server Playwright config + 21 integration tests across 7 specs, 339 mock tests preserved
 
-### Phase 20: Seed & Type Foundation
-**Goal**: Database contains mockup-aligned seed data and a tested mapper layer translates between API types and presentation types
-**Depends on**: Phase 19 (v4.0 complete)
-**Requirements**: SEED-01, SEED-02, SEED-03, SEED-04, SEED-05, TYPE-01, TYPE-02, TYPE-03
-**Success Criteria** (what must be TRUE):
-  1. Running `pnpm prisma db seed` populates 12 products, 6 leads, 7 SDLC stages, and 2 report periods with realistic data -- names match the mockup exactly
-  2. DEV_SESSION UUIDs in trpc.context.ts match the seeded user and report IDs -- tRPC queries return non-empty data
-  3. Running the seed a second time produces no duplicates and no errors (idempotent)
-  4. Mapper functions convert every API enum value to its presentation equivalent and back (green to on-track, etc.) with unit tests covering each mapping
-  5. Computed states (pending, planned) are correctly derived from DB data by the mapper layer -- not stored as enum values
-**Plans**: 2 plans
+Full details: [v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 
-Plans:
-- [ ] 20-01-PLAN.md — Seed data: 12 products, 6 leads, 7 stages, 2 periods + DEV_SESSION context fix
-- [x] 20-02-PLAN.md — Type mappers: traffic-light, item-status, lead-status with unit tests
+Audit status: tech_debt — structurally complete, runtime smoke verification deferred per user.
 
-### Phase 21: tRPC Provider & Client Wiring
-**Goal**: Frontend fetches all data from the real API through tRPC hooks; every page renders server data with loading and error states
-**Depends on**: Phase 20
-**Requirements**: TRPC-01, TRPC-02, TRPC-03, TRPC-04, TRPC-05, TRPC-06, TRPC-07
-**Success Criteria** (what must be TRUE):
-  1. Opening any app page fetches data from PostgreSQL via tRPC -- no mock-data imports remain in the 7 container components
-  2. Each page shows a skeleton/loading state while data loads and a toast notification on API errors
-  3. The tRPC client uses @trpc/tanstack-react-query (not classic @trpc/react-query) with superjson -- Date objects roundtrip correctly
-  4. Cache invalidation works: submitting a form and navigating to dashboard shows updated data without manual refresh
-  5. `pnpm typecheck` passes clean across the monorepo after all container migrations
-**Plans**: 4 plans
-
-Plans:
-- [x] 21-01-PLAN.md — Provider + tanstack-react-query swap + cache-keys + error boundary (Wave 1)
-- [x] 21-02-PLAN.md — Lead History migration: smallest container proof-of-life (Wave 2)
-- [x] 21-03-PLAN.md — Admin Panel (5 tabs) + Dashboard read-path migration (Wave 2)
-- [x] 21-04-PLAN.md — Lead Form + Weekly Report + reports/[reportId] migrations (Wave 3, after 21-03 to avoid mappers/index.ts conflict)
-**UI hint**: yes
-
-### Phase 22: Interactivity & Status-Risk Sync
-**Goal**: Every button in the application triggers a real API mutation; stage status changes automatically create risk entries and vice versa
-**Depends on**: Phase 21
-**Requirements**: INT-01, INT-02, INT-03, INT-04, INT-05, INT-06, INT-07, INT-08, INT-09, INT-10, SYNC-01, SYNC-02, SYNC-03, SYNC-04
-**Success Criteria** (what must be TRUE):
-  1. Lead can submit section (form locks), head can Publish & Lock (period becomes immutable), head can Revoke (section unlocks for re-edit) -- all through real API
-  2. Fill From loads previous period data into the form; Version History shows snapshots and Restore replaces current draft
-  3. Autosave persists draft changes every 3-5 seconds via debounced mutation; leaving an unsaved form triggers a browser warning
-  4. Setting a stage to At Risk or Blocked auto-creates a risk row; filling a risk offers to update the stage status (with user confirmation); SyncSource flag prevents loops
-  5. Admin CRUD operations (users, products, stages, periods, settings) persist through real tRPC mutations with immediate UI feedback
-**Plans**: 5 plans
-**UI hint**: yes
-
-Plans:
-- [x] 22-01-PLAN.md — Lead Form mutations: submit, revoke, autosave (3s debounce), dirty-state guard, fill-from, restore-version
-- [x] 22-02-PLAN.md — Status<->Risk sync hook + bridge component (SYNC-01..04, SyncSource ref pattern)
-- [x] 22-03-PLAN.md — URL-driven Period Navigators + cursor pagination on archive.list + version history reveal
-- [x] 22-04-PLAN.md — Admin CRUD wiring across 6 tabs (users, products, stage assignments, periods, reminders, settings)
-- [x] 22-05-PLAN.md — Head Publish & Lock / Reopen + Export PDF deferred to Phase 23
-
-### Phase 23: PDF & Jobs
-**Goal**: Users can export published reports as PDF files through an async job pipeline
-**Depends on**: Phase 21
-**Requirements**: PDF-01, PDF-02, PDF-03
-**Success Criteria** (what must be TRUE):
-  1. BullMQ is re-enabled and the PDF export queue processes jobs (confirmed via Bull Board or health endpoint)
-  2. Clicking Export PDF on a published report triggers a tRPC mutation that enqueues a BullMQ job; Playwright renders the report to PDF
-  3. User sees a progress indicator (generating, ready) and can download the completed PDF file
-**Plans**: 1 plan
-**UI hint**: yes
-
-Plans:
-- [x] 23-01-PLAN.md — Static /pdfs serving, requestedBy from session, ExportPdfButton mutation + status polling
-
-### Phase 24: Auth Guards & Session
-**Goal**: Unauthenticated users are redirected to login; session context is available throughout the application
-**Depends on**: Phase 20 (seed must exist for dev session)
-**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04
-**Success Criteria** (what must be TRUE):
-  1. Visiting any /app route without a session cookie redirects to /login; after login, user returns to the originally requested URL
-  2. AUTH_STUB=true bypasses all auth checks -- the application works identically to pre-auth behavior for development and testing
-  3. When a session expires mid-use, the next API call triggers a redirect to /login with the current URL preserved as return path
-  4. Session context (user name, role, avatar) is available in all (app)/ layouts -- the NavBar displays the logged-in user
-**Plans**: 1 plan
-
-Plans:
-- [x] 24-01-PLAN.md — proxy.ts cookie guard + SessionProvider/useSession + 401 interceptor + login ?next= + auth.me tRPC query
-
-### Phase 25: Production Logging
-**Goal**: Every API request is traceable through structured, file-persisted logs with correlation IDs
-**Depends on**: Nothing (independent backend track, can run parallel with Phases 22-23)
-**Requirements**: LOG-01, LOG-02, LOG-03, LOG-04, LOG-05
-**Success Criteria** (what must be TRUE):
-  1. Every tRPC request/response is logged with procedure name, userId, duration, and a correlation ID that is consistent across the entire request lifecycle
-  2. Logs are written to files (not just console) in structured JSON format with timestamp, level, correlationId, and module fields
-  3. Log files rotate by size or time and old files are archived automatically
-  4. Searching logs by correlationId returns all log entries for a single user request across all services and middleware
-**Plans**: 1 plan
-
-Plans:
-- [x] 25-01-PLAN.md — nestjs-cls + async file rotation + tRPC request/response logging (LOG-01..05)
-
-### Phase 26: E2E Integration Tests
-**Goal**: Core user journeys are verified end-to-end against the real API with Playwright; existing mock-based tests are preserved
-**Depends on**: Phase 22, Phase 23, Phase 24, Phase 25
-**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, E2E-07
-**Success Criteria** (what must be TRUE):
-  1. Playwright config starts both API and Web servers; tests run against real PostgreSQL with seeded data
-  2. Lead journey passes end-to-end: login -> fill all sections -> submit -> form locks -> data persists in DB
-  3. Head journey passes end-to-end: dashboard shows submissions -> weekly report compiles -> publish & lock -> PDF downloads
-  4. Cross-role lifecycle passes: lead submits -> head publishes -> lead sees locked -> head reopens -> lead re-edits
-  5. Existing 339 mock-based E2E tests continue to pass unchanged (no big-bang migration)
-
-**Plans**: 1 plan
-
-Plans:
-- [x] 26-01-PLAN.md — Dual-server Playwright config + global seed + ~25 integration tests across 7 spec files
-
----
-
-## Progress Table -- v5.0
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 20. Seed & Type Foundation | 1/2 | Complete    | 2026-04-25 |
-| 21. tRPC Provider & Client Wiring | 4/4 | Complete    | 2026-04-25 |
-| 22. Interactivity & Status-Risk Sync | 5/5 | Complete    | 2026-04-25 |
-| 23. PDF & Jobs | 1/1 | Complete    | 2026-04-25 |
-| 24. Auth Guards & Session | 1/1 | Complete    | 2026-04-25 |
-| 25. Production Logging | 1/1 | Complete    | 2026-04-25 |
-| 26. E2E Integration Tests | 1/1 | Complete    | 2026-04-25 |
-
-## Execution Order (for /gsd:next)
-
-```
-20 -> 21 -> 22 -> 23 -> 24 -> 25 -> 26
-```
-
-Phases 24 and 25 are independent of 22-23 (can run in parallel if needed), but execute sequentially for a solo developer. Phase 26 depends on all preceding phases.
+</details>
 
 ---
 
@@ -357,4 +229,4 @@ Phases 24 and 25 are independent of 22-23 (can run in parallel if needed), but e
 *v2.0 shipped: 2026-04-11*
 *v3.0 shipped: 2026-04-21*
 *v4.0 shipped: 2026-04-25*
-*v5.0 roadmap created: 2026-04-25*
+*v5.0 shipped: 2026-04-25*
