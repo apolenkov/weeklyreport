@@ -1,11 +1,16 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { useTRPC } from '../../lib/trpc-context';
 import { mapWeeklyReport } from '../../lib/mappers';
+import {
+  invalidateDashboard,
+  invalidateLeadForm,
+  invalidateLeadHistory,
+} from '../../lib/cache-keys';
 import type {
   PortfolioProduct,
   ProductReport,
@@ -51,12 +56,48 @@ function CollapseIcon() {
 
 export function WeeklyReportPage({ period: _period, reportId }: WeeklyReportPageProps) {
   const trpc = useTRPC();
+  const qc = useQueryClient();
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
   // session's active period (server-side default).
   const queryInput = reportId ? { reportId } : {};
   const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions(queryInput));
+
+  // Phase 22 (plan 22-05): wire period.publish + period.reopen to the head's
+  // Publish & Lock / Reopen button. On success, cascade cache invalidation
+  // across dashboard, lead form, and lead history surfaces so all consumers
+  // refetch fresh state without a manual refresh.
+  const publishMut = useMutation(
+    trpc.period.publish.mutationOptions({
+      onSuccess: () => {
+        invalidateDashboard(qc, trpc);
+        invalidateLeadHistory(qc, trpc);
+        toast.success('Period published & locked');
+      },
+      onError: (err: unknown) => {
+        toast.error(
+          err instanceof Error ? err.message : 'Failed to publish period',
+        );
+      },
+    }),
+  );
+
+  const reopenMut = useMutation(
+    trpc.period.reopen.mutationOptions({
+      onSuccess: () => {
+        invalidateDashboard(qc, trpc);
+        invalidateLeadForm(qc, trpc);
+        invalidateLeadHistory(qc, trpc);
+        toast.success('Period reopened');
+      },
+      onError: (err: unknown) => {
+        toast.error(
+          err instanceof Error ? err.message : 'Failed to reopen period',
+        );
+      },
+    }),
+  );
 
   useEffect(() => {
     if (weeklyQ.isError) {
@@ -132,10 +173,20 @@ export function WeeklyReportPage({ period: _period, reportId }: WeeklyReportPage
             <CollapseIcon />
             Toggle All
           </button>
-          {/* TODO(Phase 22): wire pdfExport.request mutation for ExportPdfButton onExport */}
+          {/* TODO(Phase 23): wire pdfExport.request mutation for ExportPdfButton onExport */}
           <ExportPdfButton />
-          {/* TODO(Phase 22): wire period.publish mutation for PublishLockButton onPublish */}
-          <PublishLockButton pendingCount={pendingCount} totalLeads={total} />
+          <PublishLockButton
+            pendingCount={pendingCount}
+            totalLeads={total}
+            periodStatus={view.period.periodStatus}
+            onPublish={() =>
+              publishMut.mutate({ reportId: view.period.reportId })
+            }
+            onReopen={() =>
+              reopenMut.mutate({ reportId: view.period.reportId })
+            }
+            isPending={publishMut.isPending || reopenMut.isPending}
+          />
         </div>
       </div>
 

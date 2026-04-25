@@ -5,26 +5,52 @@ import { useState } from 'react';
 type PublishLockButtonProps = {
   readonly pendingCount: number;
   readonly totalLeads: number;
+  /**
+   * Period lifecycle state. Drives the visible action: when `open` or
+   * `reopened`, the button shows "Publish & Lock"; when `published`, it shows
+   * "Reopen Period".
+   */
+  readonly periodStatus: 'open' | 'published' | 'reopened';
+  /** Invoked after the user confirms the publish dialog. */
+  readonly onPublish: () => void;
+  /** Invoked when the user clicks Reopen Period. No confirmation gate. */
+  readonly onReopen: () => void;
+  /** Disable the trigger while the parent's mutation is in-flight. */
+  readonly isPending?: boolean;
 };
 
-export function PublishLockButton({ pendingCount, totalLeads }: PublishLockButtonProps) {
+export function PublishLockButton({
+  pendingCount,
+  totalLeads,
+  periodStatus,
+  onPublish,
+  onReopen,
+  isPending = false,
+}: PublishLockButtonProps) {
   const [showDialog, setShowDialog] = useState(false);
-  const [isPublished, setIsPublished] = useState(false);
 
-  function handlePublish() {
-    setIsPublished(true);
+  function handleConfirm() {
     setShowDialog(false);
+    onPublish();
   }
 
-  if (isPublished) {
+  if (periodStatus === 'published') {
     return (
-      <span className="inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white">
+      <button
+        type="button"
+        className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={onReopen}
+        disabled={isPending}
+        aria-label="Reopen Period"
+      >
         <svg viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={2}>
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0110 0v4" />
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+          <path d="M21 3v5h-5" />
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+          <path d="M3 21v-5h5" />
         </svg>
-        Published
-      </span>
+        Reopen Period
+      </button>
     );
   }
 
@@ -32,8 +58,9 @@ export function PublishLockButton({ pendingCount, totalLeads }: PublishLockButto
     <>
       <button
         type="button"
-        className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+        className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => setShowDialog(true)}
+        disabled={isPending}
       >
         Publish & Lock
       </button>
@@ -75,13 +102,15 @@ export function PublishLockButton({ pendingCount, totalLeads }: PublishLockButto
                 type="button"
                 className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
                 onClick={() => setShowDialog(false)}
+                disabled={isPending}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-                onClick={handlePublish}
+                className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleConfirm}
+                disabled={isPending}
               >
                 {pendingCount > 0 ? 'Publish Anyway' : 'Publish & Lock'}
               </button>
