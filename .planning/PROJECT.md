@@ -23,13 +23,19 @@
 - Align mock types with Zod schemas
 - Rework E2E tests for real API integration
 
-## Next Milestone: v5.0 (not started)
+## Current Milestone: v5.0 Production Integration
 
-Goals TBD. Candidates:
-- tRPC integration (wire frontend to real API)
-- Full Keycloak SAML SSO
-- Real-time features
-- Analytics/trends
+**Goal:** Превратить UI-прототип в полноценное работающее приложение — подключить фронтенд к реальному API, засидить БД по макету, сделать все кнопки рабочими, добавить production-grade логирование и E2E тесты на реальном API.
+
+**Target features:**
+- Seed по макету — 12 продуктов, 6 лидов с реальными именами, 7 стадий SDLC, stage assignments, 2 периода
+- tRPC Wiring — TRPCProvider + QueryClientProvider, заменить 38 mock-data → useQuery/useMutation
+- Interactivity — все 72 кнопки работают (Submit, Publish, Revoke, Fill From, Version Restore) + Status↔Risk автосинк
+- Auth Guards — session middleware, redirect на login, role-based access
+- Production Logging — structured logging, файл + ротация + архивация, correlation IDs, tracing
+- E2E Integration — переписать тесты с mock → real API, Playwright CLI + DevTools
+
+**Key constraint:** Работаем на роли admin с полным доступом для full regression. Разделение ролей — следующий milestone.
 
 ## Requirements
 
@@ -56,13 +62,15 @@ Shipped in v1.0-v3.0:
 - ✓ API contracts documented (docs/api/) — v3.0+
 - ✓ Dark theme, collapsible sections — v3.0
 
-### Active (v4.0)
+### Active (v5.0)
 
-- [ ] Prisma migration for reminder schema (kind/fireAt/timezone/status/version)
-- [ ] Backend edge-cases: all 81 regression scenarios pass
-- [ ] UI redesign from scratch via design skills
-- [ ] E2E Playwright tests: lead journey, head journey, viewer journey
-- [ ] E2E: cross-role scenarios (full lifecycle)
+- [ ] Seed DB с реальными данными по макету (12 продуктов, 6 лидов, стадии SDLC)
+- [ ] tRPC wiring — подключить фронтенд к реальному API (заменить 38 mock-data imports)
+- [ ] Interactivity — все 72 кнопки вызывают реальный API
+- [ ] Status↔Risk bidirectional auto-sync
+- [ ] Auth guards — session middleware на (app)/ роутах
+- [ ] Production logging — structured logs, файлы, ротация, correlation IDs
+- [ ] E2E integration tests на реальном API (Playwright CLI)
 
 ### Out of Scope
 
@@ -202,4 +210,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 after milestone v4.0 start*
+*Last updated: 2026-04-25 after milestone v5.0 start*
