@@ -197,6 +197,27 @@ function escalationToBlockedItem(escalation: Escalation, index: number): Blocked
   };
 }
 
+/**
+ * Map a single ArchiveReportSummary to the presentation-layer ArchiveReport
+ * shape. Exported so the cursor-paginated archive list can map page items
+ * incrementally without re-running the full dashboard composer.
+ */
+export function mapArchiveSummary(
+  summary: ArchiveReportSummary,
+): ArchiveReport {
+  return {
+    id: summary.reportId,
+    weekLabel: isoWeekLabel(summary.periodStart),
+    dateRange: `${shortDate(summary.periodStart)}\u2013${shortDate(summary.periodEnd)}`,
+    status: 'published',
+    // Submission counts aren't on ArchiveReportSummary at v5.0.
+    submissionLabel: '',
+    productCount: 0,
+    riskCount: 0,
+    decisionCount: 0,
+  };
+}
+
 // ---- Composer ----
 
 export type MapDashboardArgs = {
@@ -301,17 +322,7 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
     .filter((item): item is BlockedAtRiskItem => item !== null);
 
   // -------- Archive --------
-  const archiveItems = archive.items.map<ArchiveReport>((summary) => ({
-    id: summary.reportId,
-    weekLabel: isoWeekLabel(summary.periodStart),
-    dateRange: `${shortDate(summary.periodStart)}\u2013${shortDate(summary.periodEnd)}`,
-    status: 'published',
-    // Submission counts aren't on ArchiveReportSummary at v5.0.
-    submissionLabel: '',
-    productCount: 0,
-    riskCount: 0,
-    decisionCount: 0,
-  }));
+  const archiveItems = archive.items.map<ArchiveReport>(mapArchiveSummary);
 
   return {
     kpi,

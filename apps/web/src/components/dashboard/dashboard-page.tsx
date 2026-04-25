@@ -93,7 +93,7 @@ export function DashboardPage() {
     archive: archiveQ.data,
     weeklyReport: weeklyQ.data,
   });
-  const { kpi, leads, blockedAtRisk, archive, pendingLeads } = dashboard;
+  const { kpi, leads, blockedAtRisk, pendingLeads } = dashboard;
 
   return (
     <div className="space-y-6">
@@ -130,8 +130,8 @@ export function DashboardPage() {
       {/* Lead Reports */}
       <LeadReportsGrid leads={leads} />
 
-      {/* Report Archive */}
-      <ReportArchiveSection reports={archive} totalCount={archive.length} />
+      {/* Report Archive — self-contained: owns its own cursor pagination */}
+      <ReportArchiveSection />
     </div>
   );
 }
