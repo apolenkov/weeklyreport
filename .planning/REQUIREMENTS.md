@@ -53,9 +53,9 @@ Requirements for v5.0 Production Integration. Each maps to roadmap phases.
 
 ### PDF and Jobs
 
-- [ ] **PDF-01**: BullMQ re-enabled, PDF export job работает end-to-end
-- [ ] **PDF-02**: Кнопка Export PDF -> tRPC mutation -> BullMQ job -> Playwright renders -> download
-- [ ] **PDF-03**: Индикатор прогресса (generating -> ready -> download link)
+- [x] **PDF-01**: BullMQ re-enabled, PDF export job работает end-to-end
+- [x] **PDF-02**: Кнопка Export PDF -> tRPC mutation -> BullMQ job -> Playwright renders -> download
+- [x] **PDF-03**: Индикатор прогресса (generating -> ready -> download link)
 
 ### Auth
 
@@ -146,9 +146,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SYNC-02 | Phase 22 | Pending |
 | SYNC-03 | Phase 22 | Pending |
 | SYNC-04 | Phase 22 | Pending |
-| PDF-01 | Phase 23 | Pending |
-| PDF-02 | Phase 23 | Pending |
-| PDF-03 | Phase 23 | Pending |
+| PDF-01 | Phase 23 | Complete |
+| PDF-02 | Phase 23 | Complete |
+| PDF-03 | Phase 23 | Complete |
 | AUTH-01 | Phase 24 | Pending |
 | AUTH-02 | Phase 24 | Pending |
 | AUTH-03 | Phase 24 | Pending |
