@@ -173,8 +173,10 @@ export function WeeklyReportPage({ period: _period, reportId }: WeeklyReportPage
             <CollapseIcon />
             Toggle All
           </button>
-          {/* TODO(Phase 23): wire pdfExport.request mutation for ExportPdfButton onExport */}
-          <ExportPdfButton />
+          <ExportPdfButton
+            reportId={view.period.reportId}
+            periodStatus={view.period.periodStatus}
+          />
           <PublishLockButton
             pendingCount={pendingCount}
             totalLeads={total}
