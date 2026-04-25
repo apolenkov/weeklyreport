@@ -334,7 +334,7 @@ test.describe('SC-310: Navigating to root shows login', () => {
 
     // Login page title
     await expect(leadPage.getByRole('heading', { name: 'CustomReport' })).toBeVisible();
-    await expect(leadPage.getByText('Weekly Status Reporting System')).toBeVisible();
+    await expect(leadPage.getByText('Weekly Status Reporting System', { exact: true })).toBeVisible();
   });
 });
 

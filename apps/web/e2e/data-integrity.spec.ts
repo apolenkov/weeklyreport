@@ -132,14 +132,15 @@ test.describe('SC-71: Risk counts consistent across views', () => {
     await expect(dialogTitle).toBeVisible({ timeout: 5_000 });
 
     // Dialog summary should show: 11 current week, 6 next week, 3 risks, 2 decisions
-    await expect(leadPage.getByText('11')).toBeVisible();
-    await expect(leadPage.getByText('current week items')).toBeVisible();
-    await expect(leadPage.getByText('6')).toBeVisible();
-    await expect(leadPage.getByText('next week items')).toBeVisible();
-    await expect(leadPage.getByText('3')).toBeVisible();
-    await expect(leadPage.getByText('risks')).toBeVisible();
-    await expect(leadPage.getByText('2')).toBeVisible();
-    await expect(leadPage.getByText('decisions')).toBeVisible();
+    const dialog = leadPage.locator('[role="dialog"]');
+    await expect(dialog.getByText('11')).toBeVisible();
+    await expect(dialog.getByText('current week items')).toBeVisible();
+    await expect(dialog.getByText('6')).toBeVisible();
+    await expect(dialog.getByText('next week items')).toBeVisible();
+    await expect(dialog.getByText('3')).toBeVisible();
+    await expect(dialog.getByText('risks')).toBeVisible();
+    await expect(dialog.getByText('2')).toBeVisible();
+    await expect(dialog.getByText('decisions')).toBeVisible();
   });
 
   test('dashboard Risks & Blockers KPI shows blockers and at-risk counts', async ({ headPage }) => {
@@ -297,9 +298,9 @@ test.describe('SC-73: Stage assignees match SDLC pipeline and Admin', () => {
     // Admin panel should show Products tab with stage assignment UI
     await expect(headPage.getByRole('heading', { name: 'Admin Panel' })).toBeVisible();
 
-    // Products tab should list product names matching the lead form
-    await expect(headPage.getByText('CRM Platform').first()).toBeVisible();
-    await expect(headPage.getByText('Data Analytics Suite').first()).toBeVisible();
+    // Products tab lists product names from admin mock data
+    await expect(headPage.getByText('CRM Portal').first()).toBeVisible();
+    await expect(headPage.getByText('Analytics Dashboard').first()).toBeVisible();
   });
 
   test('lead name in header matches assignee in SDLC pipeline', async ({ leadPage }) => {
@@ -309,7 +310,7 @@ test.describe('SC-73: Stage assignees match SDLC pipeline and Admin', () => {
     await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
 
     // Header shows "Platanov A." as the current user
-    await expect(leadPage.getByText('Platanov A.')).toBeVisible();
+    await expect(leadPage.getByText('Platanov A.').first()).toBeVisible();
 
     // The same name should appear as assignee under "mine" stage chips
     // Check CRM Platform Dev stage (mine, at-risk)

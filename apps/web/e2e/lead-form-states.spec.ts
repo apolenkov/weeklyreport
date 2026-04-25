@@ -179,7 +179,7 @@ test.describe('Lead Form States & Interactions', () => {
     for (let i = 0; i < 10; i++) {
       await chip.click();
       try {
-        await leadPage.getByRole('button', { name: /Clear/ }).waitFor({ state: 'visible', timeout: 1_000 });
+        await leadPage.locator('.absolute.z-50').getByRole('button', { name: /Clear/ }).waitFor({ state: 'visible', timeout: 1_000 });
         break;
       } catch {
         // Retry
@@ -187,10 +187,11 @@ test.describe('Lead Form States & Interactions', () => {
     }
 
     // Dropdown shows all 4 status options
-    await expect(leadPage.getByRole('button', { name: /On Track/ })).toBeVisible({ timeout: 5_000 });
-    await expect(leadPage.getByRole('button', { name: /At Risk/ })).toBeVisible();
-    await expect(leadPage.getByRole('button', { name: /Blocked/ })).toBeVisible();
-    await expect(leadPage.getByRole('button', { name: /Clear/ })).toBeVisible();
+    const dropdown = leadPage.locator('.absolute.z-50');
+    await expect(dropdown.getByRole('button', { name: /On Track/ })).toBeVisible({ timeout: 5_000 });
+    await expect(dropdown.getByRole('button', { name: /At Risk/ })).toBeVisible();
+    await expect(dropdown.getByRole('button', { name: /Blocked/ })).toBeVisible();
+    await expect(dropdown.getByRole('button', { name: /Clear/ })).toBeVisible();
   });
 
   test('SC-13: Clicking outside the dropdown closes it', async ({ leadPage }) => {
@@ -236,9 +237,9 @@ test.describe('Lead Form States & Interactions', () => {
   // -----------------------------------------------------------------------
 
   test('SC-17: Empty editable stage has dashed border style', async ({ leadPage }) => {
-    // AI/ML Platform -> Testing stage is empty + mine (editable)
-    // Integration Gateway -> Dev stage is empty + mine
-    const emptyChip = leadPage.getByLabel('Testing: empty').first();
+    // Integration Gateway -> Dev stage is empty + mine (editable)
+    // Use Dev: empty which is only present as editable (mine) on Gateway
+    const emptyChip = leadPage.getByLabel('Dev: empty').first();
     await expect(emptyChip).toBeVisible();
     await expect(emptyChip).toBeEnabled();
 
@@ -246,13 +247,13 @@ test.describe('Lead Form States & Interactions', () => {
     for (let i = 0; i < 10; i++) {
       await emptyChip.click();
       try {
-        await leadPage.getByRole('button', { name: /On Track/ }).waitFor({ state: 'visible', timeout: 1_000 });
+        await leadPage.locator('.absolute.z-50').getByRole('button', { name: /On Track/ }).waitFor({ state: 'visible', timeout: 1_000 });
         break;
       } catch {
         // Retry
       }
     }
-    await expect(leadPage.getByRole('button', { name: /On Track/ })).toBeVisible({ timeout: 5_000 });
+    await expect(leadPage.locator('.absolute.z-50').getByRole('button', { name: /On Track/ })).toBeVisible({ timeout: 5_000 });
   });
 
   // -----------------------------------------------------------------------
@@ -276,8 +277,8 @@ test.describe('Lead Form States & Interactions', () => {
     // Data Analytics Suite has riskSummary: '2 blockers'
     await expect(leadPage.getByText('2 blockers')).toBeVisible();
 
-    // Mobile Applications has riskSummary: '1 risk'
-    await expect(leadPage.getByText('1 risk')).toBeVisible();
+    // Mobile Applications and Cloud Infrastructure both have riskSummary: '1 risk'
+    await expect(leadPage.getByText('1 risk').first()).toBeVisible();
   });
 
   test('SC-19: Products show overall status badges', async ({ leadPage }) => {
@@ -381,12 +382,13 @@ test.describe('Lead Form States & Interactions', () => {
     await expect(dialogTitle).toBeVisible({ timeout: 5_000 });
 
     // Dialog shows counts from mock data
-    await expect(leadPage.getByText('11')).toBeVisible(); // current week items
-    await expect(leadPage.getByText('current week items')).toBeVisible();
-    await expect(leadPage.getByText('6')).toBeVisible(); // next week items
-    await expect(leadPage.getByText('next week items')).toBeVisible();
-    await expect(leadPage.getByText('risks')).toBeVisible();
-    await expect(leadPage.getByText('decisions')).toBeVisible();
+    const dialog = leadPage.locator('[role="dialog"]');
+    await expect(dialog.getByText('11')).toBeVisible(); // current week items
+    await expect(dialog.getByText('current week items')).toBeVisible();
+    await expect(dialog.getByText('6')).toBeVisible(); // next week items
+    await expect(dialog.getByText('next week items')).toBeVisible();
+    await expect(dialog.getByText('risks')).toBeVisible();
+    await expect(dialog.getByText('decisions')).toBeVisible();
   });
 
   test('SC-195: Submit dialog has Cancel and Submit buttons', async ({ leadPage }) => {

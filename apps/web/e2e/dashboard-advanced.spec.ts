@@ -107,7 +107,7 @@ test.describe('Dashboard Advanced', () => {
 
   test('SC-173: Alert bar is visible when there are pending leads', async ({ headPage }) => {
     // Mock data has 2 pending leads: Olga N. and Sergey T.
-    await expect(headPage.getByText("haven't submitted")).toBeVisible();
+    await expect(headPage.getByText("haven't submitted").first()).toBeVisible();
     await expect(headPage.getByRole('button', { name: 'Send Reminder' })).toBeVisible();
   });
 
