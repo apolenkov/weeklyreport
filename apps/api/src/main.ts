@@ -1,8 +1,12 @@
 import 'reflect-metadata';
 
+import { mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { NestFactory } from '@nestjs/core';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import cookieParser from 'cookie-parser';
+import express from 'express';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
@@ -63,6 +67,26 @@ async function bootstrap() {
 
   // Mount tRPC as Express middleware at /trpc
   const expressApp = app.getHttpAdapter().getInstance();
+
+  // Phase 23-01: serve generated PDF artefacts.
+  // The BullMQ worker writes to `pdfDir/{jobId}.pdf` and stores
+  // `artifactUrl='/pdfs/{jobId}.pdf'` on the export job row. The frontend
+  // calls `window.open(artifactUrl)` once status === 'completed', so this
+  // mount must agree with the worker's output dir on an absolute path.
+  const pdfDir = resolve(env.PDF_OUTPUT_DIR);
+  mkdirSync(pdfDir, { recursive: true });
+  expressApp.use(
+    '/pdfs',
+    express.static(pdfDir, {
+      fallthrough: false,
+      setHeaders: (res) => {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment');
+      },
+    }),
+  );
+  logger.info('mounted PDF static serving', { route: '/pdfs', pdfDir });
+
   expressApp.use(
     '/trpc',
     trpcExpress.createExpressMiddleware({
