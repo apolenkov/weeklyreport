@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { QueryErrorBoundary } from '../components/error-boundary';
+import { TRPCProvider } from '../lib/trpc-provider';
 import '../styles/app.css';
 
 type RootLayoutProps = Readonly<{
@@ -24,7 +26,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
         >
           Skip to content
         </a>
-        {children}
+        <TRPCProvider>
+          <QueryErrorBoundary>{children}</QueryErrorBoundary>
+        </TRPCProvider>
       </body>
     </html>
   );
