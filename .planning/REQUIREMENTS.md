@@ -74,13 +74,13 @@ Requirements for v5.0 Production Integration. Each maps to roadmap phases.
 
 ### E2E Integration
 
-- [ ] **E2E-01**: Playwright config с dual webServer (API + Web)
-- [ ] **E2E-02**: Global setup seeds БД перед тестами, cleanup после
-- [ ] **E2E-03**: 20-30 core integration tests в отдельной e2e/integration/ директории
-- [ ] **E2E-04**: Lead journey end-to-end через реальный API (login -> fill -> submit -> locked)
-- [ ] **E2E-05**: Head journey end-to-end (dashboard -> report -> publish -> PDF)
-- [ ] **E2E-06**: Cross-role lifecycle (lead submits -> head publishes -> lead sees locked)
-- [ ] **E2E-07**: Существующие 339 mock-based тестов сохранены (не big-bang миграция)
+- [x] **E2E-01**: Playwright config с dual webServer (API + Web)
+- [x] **E2E-02**: Global setup seeds БД перед тестами, cleanup после
+- [x] **E2E-03**: 20-30 core integration tests в отдельной e2e/integration/ директории
+- [x] **E2E-04**: Lead journey end-to-end через реальный API (login -> fill -> submit -> locked)
+- [x] **E2E-05**: Head journey end-to-end (dashboard -> report -> publish -> PDF)
+- [x] **E2E-06**: Cross-role lifecycle (lead submits -> head publishes -> lead sees locked)
+- [x] **E2E-07**: Существующие 339 mock-based тестов сохранены (не big-bang миграция)
 
 ## v6.0 Requirements (Deferred)
 
@@ -158,13 +158,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOG-03 | Phase 25 | Complete |
 | LOG-04 | Phase 25 | Complete |
 | LOG-05 | Phase 25 | Complete |
-| E2E-01 | Phase 26 | Pending |
-| E2E-02 | Phase 26 | Pending |
-| E2E-03 | Phase 26 | Pending |
-| E2E-04 | Phase 26 | Pending |
-| E2E-05 | Phase 26 | Pending |
-| E2E-06 | Phase 26 | Pending |
-| E2E-07 | Phase 26 | Pending |
+| E2E-01 | Phase 26 | Complete |
+| E2E-02 | Phase 26 | Complete |
+| E2E-03 | Phase 26 | Complete |
+| E2E-04 | Phase 26 | Complete |
+| E2E-05 | Phase 26 | Complete |
+| E2E-06 | Phase 26 | Complete |
+| E2E-07 | Phase 26 | Complete |
 
 **Coverage:**
 - v5.0 requirements: 48 total (SEED:5 + TYPE:3 + TRPC:7 + INT:10 + SYNC:4 + PDF:3 + AUTH:4 + LOG:5 + E2E:7)
