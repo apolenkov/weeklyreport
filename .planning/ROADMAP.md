@@ -278,8 +278,11 @@ Plans:
   1. BullMQ is re-enabled and the PDF export queue processes jobs (confirmed via Bull Board or health endpoint)
   2. Clicking Export PDF on a published report triggers a tRPC mutation that enqueues a BullMQ job; Playwright renders the report to PDF
   3. User sees a progress indicator (generating, ready) and can download the completed PDF file
-**Plans**: TBD
+**Plans**: 1 plan
 **UI hint**: yes
+
+Plans:
+- [ ] 23-01-PLAN.md — Static /pdfs serving, requestedBy from session, ExportPdfButton mutation + status polling
 
 ### Phase 24: Auth Guards & Session
 **Goal**: Unauthenticated users are redirected to login; session context is available throughout the application
@@ -325,7 +328,7 @@ Plans:
 | 20. Seed & Type Foundation | 1/2 | Complete    | 2026-04-25 |
 | 21. tRPC Provider & Client Wiring | 4/4 | Complete    | 2026-04-25 |
 | 22. Interactivity & Status-Risk Sync | 5/5 | Complete    | 2026-04-25 |
-| 23. PDF & Jobs | 0/TBD | Not started | - |
+| 23. PDF & Jobs | 0/1 | Not started | - |
 | 24. Auth Guards & Session | 0/TBD | Not started | - |
 | 25. Production Logging | 0/TBD | Not started | - |
 | 26. E2E Integration Tests | 0/TBD | Not started | - |
