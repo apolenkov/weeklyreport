@@ -212,7 +212,7 @@ Plans:
 - [x] **Phase 22: Interactivity & Status-Risk Sync** - All buttons wired to real mutations, autosave, pagination, Status-to-Risk auto-sync (completed 2026-04-25)
 - [x] **Phase 23: PDF & Jobs** - BullMQ re-enabled, PDF export pipeline end-to-end (completed 2026-04-25)
 - [ ] **Phase 24: Auth Guards & Session** - proxy.ts cookie check, 401 interceptor, session context
-- [ ] **Phase 25: Production Logging** - Correlation IDs via nestjs-cls, structured file logging with rotation
+- [x] **Phase 25: Production Logging** - Correlation IDs via nestjs-cls, structured file logging with rotation (completed 2026-04-25)
 - [ ] **Phase 26: E2E Integration Tests** - Dual-server Playwright config, 20-30 real API integration tests
 
 ### Phase 20: Seed & Type Foundation
@@ -310,7 +310,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 25-01-PLAN.md — nestjs-cls + async file rotation + tRPC request/response logging (LOG-01..05)
+- [x] 25-01-PLAN.md — nestjs-cls + async file rotation + tRPC request/response logging (LOG-01..05)
 
 ### Phase 26: E2E Integration Tests
 **Goal**: Core user journeys are verified end-to-end against the real API with Playwright; existing mock-based tests are preserved
@@ -336,7 +336,7 @@ Plans:
 | 22. Interactivity & Status-Risk Sync | 5/5 | Complete    | 2026-04-25 |
 | 23. PDF & Jobs | 1/1 | Complete    | 2026-04-25 |
 | 24. Auth Guards & Session | 0/1 | In progress | - |
-| 25. Production Logging | 0/1 | Not started | - |
+| 25. Production Logging | 1/1 | Complete   | 2026-04-25 |
 | 26. E2E Integration Tests | 0/TBD | Not started | - |
 
 ## Execution Order (for /gsd:next)
