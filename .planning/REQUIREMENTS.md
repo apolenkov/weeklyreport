@@ -26,9 +26,9 @@ Requirements for v5.0 Production Integration. Each maps to roadmap phases.
 - [ ] **TRPC-01**: TRPCProvider + QueryClientProvider в (app)/layout.tsx с useState pattern (без SSR leak)
 - [ ] **TRPC-02**: superjson transformer на клиенте и сервере (Date serialization)
 - [ ] **TRPC-03**: @trpc/tanstack-react-query установлен (React Compiler совместимость)
-- [ ] **TRPC-04**: 7 container-компонентов переведены с mock-data на useQuery/useMutation
-- [ ] **TRPC-05**: Loading states (skeleton) на каждой странице при загрузке данных
-- [ ] **TRPC-06**: Error boundaries + toast notifications для ошибок API
+- [x] **TRPC-04**: 7 container-компонентов переведены с mock-data на useQuery/useMutation
+- [x] **TRPC-05**: Loading states (skeleton) на каждой странице при загрузке данных
+- [x] **TRPC-06**: Error boundaries + toast notifications для ошибок API
 - [ ] **TRPC-07**: Cache invalidation после каждой мутации (submit->refetch dashboard, etc.)
 
 ### Interactivity
@@ -128,9 +128,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRPC-01 | Phase 21 | Pending |
 | TRPC-02 | Phase 21 | Pending |
 | TRPC-03 | Phase 21 | Pending |
-| TRPC-04 | Phase 21 | Pending |
-| TRPC-05 | Phase 21 | Pending |
-| TRPC-06 | Phase 21 | Pending |
+| TRPC-04 | Phase 21 | Complete |
+| TRPC-05 | Phase 21 | Complete |
+| TRPC-06 | Phase 21 | Complete |
 | TRPC-07 | Phase 21 | Pending |
 | INT-01 | Phase 22 | Pending |
 | INT-02 | Phase 22 | Pending |
