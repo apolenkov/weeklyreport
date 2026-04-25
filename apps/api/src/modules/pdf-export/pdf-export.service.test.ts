@@ -35,11 +35,17 @@ const draftReport: AssembledReport = {
   publishedByName: null,
 };
 
-function createRepository(report: AssembledReport): PdfExportRepository {
+function createRepository(
+  report: AssembledReport,
+  capture?: { lastRequestedBy?: string | undefined },
+): PdfExportRepository {
   const jobs = new Map<string, PdfExportJob>();
 
   return {
-    async createExportJob(job: PdfExportJob) {
+    async createExportJob(job: PdfExportJob, requestedBy?: string) {
+      if (capture) {
+        capture.lastRequestedBy = requestedBy;
+      }
       jobs.set(job.jobId, structuredClone(job));
       return structuredClone(job);
     },
@@ -91,6 +97,34 @@ describe('PdfExportService', () => {
     expect(completed.status).toBe('completed');
     expect(completed.checksum).toBe('phase-2-demo-checksum');
     expect(completed.artifactUrl).toBe('/exports/report.pdf');
+  });
+
+  // Phase 23-01: requestedBy session threading
+  it('threads requestedBy from the session userId into createExportJob', async () => {
+    const capture: { lastRequestedBy?: string | undefined } = {};
+    const service = new PdfExportService(createRepository(publishedReport, capture));
+    const sessionUserId = '00000000-0000-4000-8000-00000000abcd';
+
+    await service.requestPdfExport(reportId, sessionUserId);
+
+    expect(capture.lastRequestedBy).toBe(sessionUserId);
+  });
+
+  it('falls back to undefined requestedBy for non-session callers (repo defaults to system)', async () => {
+    const capture: { lastRequestedBy?: string | undefined } = {};
+    const service = new PdfExportService(createRepository(publishedReport, capture));
+
+    await service.requestPdfExport(reportId);
+
+    expect(capture.lastRequestedBy).toBeUndefined();
+  });
+
+  it('still rejects unpublished reports even when a requestedBy is supplied', async () => {
+    const service = new PdfExportService(createRepository(draftReport));
+
+    await expect(
+      service.requestPdfExport(reportId, '00000000-0000-4000-8000-00000000abcd'),
+    ).rejects.toBeInstanceOf(PdfExportDomainError);
   });
 });
 
@@ -215,5 +249,20 @@ describe('pdfExportRouter', () => {
         pdfExportService: service,
       }),
     ).resolves.toMatchObject(completed);
+  });
+
+  // Phase 23-01: ensure router fixture forwards session userId to service
+  it('threads requestedBy from the router context into the service call', async () => {
+    const capture: { lastRequestedBy?: string | undefined } = {};
+    const service = new PdfExportService(createRepository(publishedReport, capture));
+    const sessionUserId = '00000000-0000-4000-8000-00000000beef';
+
+    await pdfExportRouter.requestPdfExport({
+      pdfExportService: service,
+      reportId,
+      requestedBy: sessionUserId,
+    });
+
+    expect(capture.lastRequestedBy).toBe(sessionUserId);
   });
 });
