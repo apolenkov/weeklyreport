@@ -316,7 +316,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 20. Seed & Type Foundation | 1/2 | Complete    | 2026-04-25 |
-| 21. tRPC Provider & Client Wiring | 4/4 | Complete   | 2026-04-25 |
+| 21. tRPC Provider & Client Wiring | 4/4 | Complete    | 2026-04-25 |
 | 22. Interactivity & Status-Risk Sync | 0/TBD | Not started | - |
 | 23. PDF & Jobs | 0/TBD | Not started | - |
 | 24. Auth Guards & Session | 0/TBD | Not started | - |
