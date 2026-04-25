@@ -61,6 +61,7 @@ export {
 
 export {
   mapDashboardData,
+  mapArchiveSummary,
   formatRelativeDeadline,
   type KpiData,
   type LeadInfo,
