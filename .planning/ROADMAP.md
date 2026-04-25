@@ -209,7 +209,7 @@ Plans:
 
 - [x] **Phase 20: Seed & Type Foundation** - Seed DB with mockup-aligned data, mapper layer for type translation (completed 2026-04-25)
 - [x] **Phase 21: tRPC Provider & Client Wiring** - TRPCProvider, React Compiler migration, 7 container conversions (completed 2026-04-25)
-- [ ] **Phase 22: Interactivity & Status-Risk Sync** - All buttons wired to real mutations, autosave, pagination, Status-to-Risk auto-sync
+- [x] **Phase 22: Interactivity & Status-Risk Sync** - All buttons wired to real mutations, autosave, pagination, Status-to-Risk auto-sync (completed 2026-04-25)
 - [ ] **Phase 23: PDF & Jobs** - BullMQ re-enabled, PDF export pipeline end-to-end
 - [ ] **Phase 24: Auth Guards & Session** - proxy.ts cookie check, 401 interceptor, session context
 - [ ] **Phase 25: Production Logging** - Correlation IDs via nestjs-cls, structured file logging with rotation
@@ -264,11 +264,11 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 22-01-PLAN.md — Lead Form mutations: submit, revoke, autosave (3s debounce), dirty-state guard, fill-from, restore-version
-- [ ] 22-02-PLAN.md — Status<->Risk sync hook + bridge component (SYNC-01..04, SyncSource ref pattern)
+- [x] 22-01-PLAN.md — Lead Form mutations: submit, revoke, autosave (3s debounce), dirty-state guard, fill-from, restore-version
+- [x] 22-02-PLAN.md — Status<->Risk sync hook + bridge component (SYNC-01..04, SyncSource ref pattern)
 - [x] 22-03-PLAN.md — URL-driven Period Navigators + cursor pagination on archive.list + version history reveal
 - [x] 22-04-PLAN.md — Admin CRUD wiring across 6 tabs (users, products, stage assignments, periods, reminders, settings)
-- [ ] 22-05-PLAN.md — Head Publish & Lock / Reopen + Export PDF deferred to Phase 23
+- [x] 22-05-PLAN.md — Head Publish & Lock / Reopen + Export PDF deferred to Phase 23
 
 ### Phase 23: PDF & Jobs
 **Goal**: Users can export published reports as PDF files through an async job pipeline
@@ -324,7 +324,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 20. Seed & Type Foundation | 1/2 | Complete    | 2026-04-25 |
 | 21. tRPC Provider & Client Wiring | 4/4 | Complete    | 2026-04-25 |
-| 22. Interactivity & Status-Risk Sync | 2/5 | In Progress|  |
+| 22. Interactivity & Status-Risk Sync | 5/5 | Complete   | 2026-04-25 |
 | 23. PDF & Jobs | 0/TBD | Not started | - |
 | 24. Auth Guards & Session | 0/TBD | Not started | - |
 | 25. Production Logging | 0/TBD | Not started | - |
