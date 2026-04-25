@@ -1,35 +1,58 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
-import type { MockProduct, MockUser, StageName } from './mock-data';
+import { invalidateAdmin } from '../../lib/cache-keys';
+import { toAdminProjectInput } from '../../lib/mappers';
+import { useTRPC } from '../../lib/trpc-context';
+
+import type { MockProduct, MockUser } from './mock-data';
 import { StageAssignmentEditor } from './stage-assignment-editor';
 
 type ProductsTabProps = {
-  readonly initialProducts: MockProduct[];
-  readonly initialUsers: MockUser[];
+  readonly products: MockProduct[];
+  readonly users: MockUser[];
 };
 
-export function ProductsTab({ initialProducts, initialUsers }: ProductsTabProps) {
-  const [products, setProducts] = useState<MockProduct[]>(initialProducts);
+export function ProductsTab({ products, users }: ProductsTabProps) {
+  const trpc = useTRPC();
+  const qc = useQueryClient();
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<MockProduct | null>(null);
   const [formName, setFormName] = useState('');
   const [formLeadId, setFormLeadId] = useState('');
 
-  // Reset local CRUD state when the source query revalidates.
-  useEffect(() => {
-    setProducts(initialProducts);
-  }, [initialProducts]);
+  const leads = useMemo(() => users.filter((u) => u.role === 'lead'), [users]);
+  const getUserById = (id: string): MockUser | undefined => users.find((u) => u.id === id);
 
-  const leads = useMemo(
-    () => initialUsers.filter((u) => u.role === 'lead'),
-    [initialUsers],
+  const saveProjectMut = useMutation(
+    trpc.admin.saveProject.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success('Product saved');
+        setShowDialog(false);
+      },
+      onError: (err) => {
+        toast.error(err.message ?? 'Failed to save product');
+      },
+    }),
   );
 
-  const getUserById = (id: string): MockUser | undefined =>
-    initialUsers.find((u) => u.id === id);
+  const deleteProjectMut = useMutation(
+    trpc.admin.deleteProject.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success('Product archived');
+      },
+      onError: (err) => {
+        toast.error(err.message ?? 'Failed to archive product');
+      },
+    }),
+  );
 
   function openAdd() {
     setEditingProduct(null);
@@ -46,64 +69,29 @@ export function ProductsTab({ initialProducts, initialUsers }: ProductsTabProps)
   }
 
   function handleSave() {
-    if (editingProduct) {
-      // TODO(Phase 22): replace local setState with admin.saveProject mutation + invalidateAdmin(qc, trpc) onSuccess.
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === editingProduct.id ? { ...p, name: formName, leadOwnerId: formLeadId } : p,
-        ),
-      );
-    } else {
-      const newProduct: MockProduct = {
-        id: `p${Date.now()}`,
-        name: formName,
-        leadOwnerId: formLeadId,
-        status: 'active',
-        stages: [
-          { stage: 'Planning', assigneeId: null },
-          { stage: 'Analysis', assigneeId: null },
-          { stage: 'Design', assigneeId: null },
-          { stage: 'Development', assigneeId: null },
-          { stage: 'Testing', assigneeId: null },
-          { stage: 'DevOps', assigneeId: null },
-          { stage: 'Support', assigneeId: null },
-        ],
-      };
-      // TODO(Phase 22): replace local setState with admin.saveProject mutation + invalidateAdmin(qc, trpc) onSuccess.
-      setProducts((prev) => [...prev, newProduct]);
-    }
-    setShowDialog(false);
+    const lead = getUserById(formLeadId);
+    saveProjectMut.mutate(
+      toAdminProjectInput(
+        {
+          name: formName,
+          leadOwnerId: formLeadId,
+          leadName: lead?.name,
+          archived: editingProduct?.status === 'archived',
+        },
+        editingProduct?.id,
+      ),
+    );
   }
 
   function handleArchive(productId: string) {
-    // TODO(Phase 22): replace local setState with admin.deleteProject (archive) mutation + invalidateAdmin onSuccess.
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === productId
-          ? { ...p, status: p.status === 'archived' ? 'active' : 'archived' }
-          : p,
-      ),
-    );
-  }
-
-  function handleStageAssign(productId: string, stage: StageName, userId: string | null) {
-    // TODO(Phase 22): replace local setState with admin.saveStageAssignment / deleteStageAssignment + invalidateAdmin onSuccess.
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === productId
-          ? {
-              ...p,
-              stages: p.stages.map((s) =>
-                s.stage === stage ? { ...s, assigneeId: userId } : s,
-              ),
-            }
-          : p,
-      ),
-    );
+    deleteProjectMut.mutate({ projectId: productId });
   }
 
   const activeProducts = products.filter((p) => p.status === 'active');
   const archivedProducts = products.filter((p) => p.status === 'archived');
+
+  const isSaving = saveProjectMut.isPending;
+  const isArchiving = deleteProjectMut.isPending;
 
   return (
     <>
@@ -170,7 +158,8 @@ export function ProductsTab({ initialProducts, initialUsers }: ProductsTabProps)
                     <button
                       type="button"
                       onClick={() => handleArchive(product.id)}
-                      className="btn-press rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+                      disabled={isArchiving}
+                      className="btn-press rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50"
                       aria-label={`Archive ${product.name}`}
                     >
                       Archive
@@ -185,11 +174,13 @@ export function ProductsTab({ initialProducts, initialUsers }: ProductsTabProps)
                 >
                   <div className="min-h-0 overflow-hidden">
                     <div className="border-t border-[var(--color-border)] px-4 pb-4">
-                      <StageAssignmentEditor
-                        product={product}
-                        leads={leads}
-                        onAssign={handleStageAssign}
-                      />
+                      {isExpanded && (
+                        <StageAssignmentEditor
+                          projectId={product.id}
+                          projectName={product.name}
+                          leads={leads}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -213,7 +204,8 @@ export function ProductsTab({ initialProducts, initialUsers }: ProductsTabProps)
                 <button
                   type="button"
                   onClick={() => handleArchive(product.id)}
-                  className="btn-press rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
+                  disabled={isArchiving}
+                  className="btn-press rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label={`Restore ${product.name}`}
                 >
                   Restore
@@ -271,16 +263,18 @@ export function ProductsTab({ initialProducts, initialUsers }: ProductsTabProps)
               <button
                 type="button"
                 onClick={() => setShowDialog(false)}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+                disabled={isSaving}
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSave}
-                className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+                disabled={isSaving}
+                className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {editingProduct ? 'Save Changes' : 'Add Product'}
+                {isSaving ? 'Saving...' : editingProduct ? 'Save Changes' : 'Add Product'}
               </button>
             </div>
           </div>

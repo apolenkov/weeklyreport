@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+import { invalidateAdmin } from '../../lib/cache-keys';
+import { toAdminUserInput } from '../../lib/mappers';
+import { useTRPC } from '../../lib/trpc-context';
 
 import type { MockUser, UserRole } from './mock-data';
 
@@ -14,20 +20,43 @@ type UserFormData = {
 const EMPTY_FORM: UserFormData = { name: '', email: '', role: 'lead', department: 'Development' };
 
 type UsersTabProps = {
-  readonly initialUsers: MockUser[];
+  readonly users: MockUser[];
 };
 
-export function UsersTab({ initialUsers }: UsersTabProps) {
-  const [users, setUsers] = useState<MockUser[]>(initialUsers);
+export function UsersTab({ users }: UsersTabProps) {
+  const trpc = useTRPC();
+  const qc = useQueryClient();
 
-  // Reset local state when the source query revalidates.
-  useEffect(() => {
-    setUsers(initialUsers);
-  }, [initialUsers]);
   const [editingUser, setEditingUser] = useState<MockUser | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
   const [form, setForm] = useState<UserFormData>(EMPTY_FORM);
+
+  const saveUserMut = useMutation(
+    trpc.admin.saveUser.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success('User saved');
+        setShowDialog(false);
+      },
+      onError: (err) => {
+        toast.error(err.message ?? 'Failed to save user');
+      },
+    }),
+  );
+
+  const deleteUserMut = useMutation(
+    trpc.admin.deleteUser.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success('User deleted');
+        setDeleteTarget(null);
+      },
+      onError: (err) => {
+        toast.error(err.message ?? 'Failed to delete user');
+      },
+    }),
+  );
 
   function openAdd() {
     setEditingUser(null);
@@ -42,29 +71,17 @@ export function UsersTab({ initialUsers }: UsersTabProps) {
   }
 
   function handleSave() {
-    if (editingUser) {
-      // TODO(Phase 22): replace local setState with admin.saveUser mutation + invalidateAdmin(qc, trpc) onSuccess.
-      setUsers((prev) =>
-        prev.map((u) => (u.id === editingUser.id ? { ...u, ...form } : u)),
-      );
-    } else {
-      const newUser: MockUser = {
-        id: `u${Date.now()}`,
-        ...form,
-      };
-      // TODO(Phase 22): replace local setState with admin.saveUser mutation + invalidateAdmin(qc, trpc) onSuccess.
-      setUsers((prev) => [...prev, newUser]);
-    }
-    setShowDialog(false);
+    saveUserMut.mutate(toAdminUserInput(form, editingUser?.id));
   }
 
   function handleDelete() {
     if (deleteTarget) {
-      // TODO(Phase 22): replace local setState with admin.deleteUser mutation + invalidateAdmin(qc, trpc) onSuccess.
-      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
-      setDeleteTarget(null);
+      deleteUserMut.mutate({ userId: deleteTarget.id });
     }
   }
+
+  const isSaving = saveUserMut.isPending;
+  const isDeleting = deleteUserMut.isPending;
 
   return (
     <>
@@ -204,16 +221,18 @@ export function UsersTab({ initialUsers }: UsersTabProps) {
               <button
                 type="button"
                 onClick={() => setShowDialog(false)}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+                disabled={isSaving}
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSave}
-                className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+                disabled={isSaving}
+                className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {editingUser ? 'Save Changes' : 'Add User'}
+                {isSaving ? 'Saving...' : editingUser ? 'Save Changes' : 'Add User'}
               </button>
             </div>
           </div>
@@ -239,16 +258,18 @@ export function UsersTab({ initialUsers }: UsersTabProps) {
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+                disabled={isDeleting}
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleDelete}
-                className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                disabled={isDeleting}
+                className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Delete
+                {isDeleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
