@@ -49,13 +49,15 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     return toAssembledReport(report);
   }
 
-  async createExportJob(job: PdfExportJob): Promise<PdfExportJob> {
+  async createExportJob(job: PdfExportJob, requestedBy?: string): Promise<PdfExportJob> {
     const created = await this.prisma.pdfExportJob.create({
       data: {
         id: job.jobId,
         reportId: job.reportId,
         status: (pdfStatusToDb[job.status] ?? 'pending') as 'pending',
-        requestedBy: 'system',
+        // Phase 23-01: thread session userId for audit; fall back to 'system'
+        // for non-tRPC callers (workers, scripts) so the column stays NOT NULL.
+        requestedBy: requestedBy ?? 'system',
         filePath: job.artifactUrl,
         error: null,
       },

@@ -16,7 +16,15 @@ export class PdfExportDomainError extends Error {
 
 export interface PdfExportRepository {
   getPublishedReport(reportId: string): Promise<AssembledReport | null>;
-  createExportJob(job: PdfExportJob): Promise<PdfExportJob>;
+  /**
+   * Persist a queued PDF export job.
+   *
+   * @param job          Domain export job (Zod-parsed shape).
+   * @param requestedBy  Session user id of the head who requested the export.
+   *                     Optional for non-tRPC callers (workers, scripts) where
+   *                     the prisma repository falls back to `'system'`.
+   */
+  createExportJob(job: PdfExportJob, requestedBy?: string): Promise<PdfExportJob>;
   getExportJob(jobId: string): Promise<PdfExportJob | null>;
   saveExportJob(job: PdfExportJob): Promise<PdfExportJob>;
   markExportFailed(jobId: string, error: string): Promise<void>;
@@ -35,14 +43,14 @@ export class PdfExportService {
     this.pdfQueue = pdfQueue ?? null;
   }
 
-  async requestPdfExport(reportId: string): Promise<PdfExportJob> {
+  async requestPdfExport(reportId: string, requestedBy?: string): Promise<PdfExportJob> {
     const report = await this.repository.getPublishedReport(reportId);
 
     if (!report || report.status !== 'published') {
       throw new PdfExportDomainError('PDF export requires a published report.');
     }
 
-    this.logger.info('requesting PDF export', { reportId });
+    this.logger.info('requesting PDF export', { reportId, requestedBy });
     const job = await this.repository.createExportJob(
       pdfExportJobSchema.parse({
         jobId: crypto.randomUUID(),
@@ -54,6 +62,7 @@ export class PdfExportService {
         templateVersion: 'phase-2-pdf-v1',
         artifactUrl: null,
       }),
+      requestedBy,
     );
 
     if (this.pdfQueue) {
