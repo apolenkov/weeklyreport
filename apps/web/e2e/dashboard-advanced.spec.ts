@@ -1,0 +1,289 @@
+/**
+ * Dashboard Advanced E2E Tests
+ *
+ * Covers missing scenarios from the traceability matrix for the Head Dashboard:
+ * - SC-21: Blocked products table accuracy
+ * - SC-25: Historical comparison in Submissions KPI
+ * - SC-171: Toggle All expands all sections
+ * - SC-173: Alert bar hidden when all submitted
+ * - SC-174: Send Reminder success flow
+ * - SC-176: Report Archive pagination (page 2)
+ * - SC-177: Report Archive card links to correct routes
+ * - SC-178: KPI escalations count accuracy
+ * - SC-179: Lead Reports traffic light accuracy
+ *
+ * All data is currently mock; tests verify UI rendering and interactions.
+ */
+
+import { test, expect } from './fixtures';
+
+test.describe('Dashboard Advanced', () => {
+  test.beforeEach(async ({ headPage }) => {
+    await headPage.goto('/head/dashboard');
+    await headPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
+    await headPage.getByRole('heading', { name: 'Dashboard' }).waitFor({ state: 'visible', timeout: 15_000 });
+    await headPage.waitForLoadState('networkidle', { timeout: 15_000 });
+  });
+
+  // -----------------------------------------------------------------------
+  // SC-21: Blocked & At Risk table accuracy
+  // -----------------------------------------------------------------------
+
+  test('SC-21: Blocked & At Risk table shows correct issue count badge', async ({ headPage }) => {
+    // Mock data has 5 blocked/at-risk items
+    await expect(headPage.getByText('5 issues')).toBeVisible();
+  });
+
+  test('SC-21: Blocked & At Risk table shows severity labels', async ({ headPage }) => {
+    // Table should show both "Blocked" and "At Risk" severity badges
+    const blockedBadges = headPage.locator('.rounded-\\[var\\(--radius-pill\\)\\]').filter({ hasText: 'Blocked' });
+    const atRiskBadges = headPage.locator('.rounded-\\[var\\(--radius-pill\\)\\]').filter({ hasText: 'At Risk' });
+
+    // 2 blocked items (Data Analytics Dev + Testing)
+    expect(await blockedBadges.count()).toBeGreaterThanOrEqual(2);
+    // 3 at-risk items (CRM Dev, Cloud Dev, Mobile)
+    expect(await atRiskBadges.count()).toBeGreaterThanOrEqual(3);
+  });
+
+  test('SC-21: Blocked & At Risk table shows product and assignee details', async ({ headPage }) => {
+    // Verify specific items from mock data render with product + assignee
+    await expect(headPage.getByText('Data Analytics').first()).toBeVisible();
+    await expect(headPage.getByText('CRM Platform').first()).toBeVisible();
+    await expect(headPage.getByText('Cloud Infrastructure').first()).toBeVisible();
+    await expect(headPage.getByText('Mobile Applications').first()).toBeVisible();
+  });
+
+  // -----------------------------------------------------------------------
+  // SC-25: Submissions KPI historical comparison
+  // -----------------------------------------------------------------------
+
+  test('SC-25: Submissions KPI shows last week comparison', async ({ headPage }) => {
+    // Mock data: lastWeekSubmitted=6, lastWeekTotal=6
+    await expect(headPage.getByText('Last week: 6/6')).toBeVisible();
+  });
+
+  test('SC-25: Submissions KPI shows pending count badge', async ({ headPage }) => {
+    // Mock data: pendingCount=2
+    await expect(headPage.getByText('2 pending')).toBeVisible();
+  });
+
+  test('SC-25: Submissions KPI conic gradient ring is rendered', async ({ headPage }) => {
+    // The conic gradient container holds the submission fraction
+    const kpiCard = headPage.locator('[aria-label*="Submissions"]');
+    await expect(kpiCard).toBeVisible();
+    // The inner ring shows the fraction
+    await expect(kpiCard.getByText('4/6')).toBeVisible();
+  });
+
+  // -----------------------------------------------------------------------
+  // SC-171: Toggle All expands all sections
+  // -----------------------------------------------------------------------
+
+  test('SC-171: Toggle All collapses and re-expands all accordion sections', async ({ headPage }) => {
+    // Initially, Lead Reports and Blocked & At Risk are expanded (useState(true))
+    const expandedButtons = headPage.locator('button[aria-expanded="true"]');
+    const initialCount = await expandedButtons.count();
+    expect(initialCount).toBeGreaterThanOrEqual(2);
+
+    // Click Toggle All -- should collapse all
+    const toggleBtn = headPage.getByRole('button', { name: 'Toggle All' });
+    await toggleBtn.click();
+    await headPage.waitForTimeout(500); // Allow animation
+
+    const afterCollapseCount = await headPage.locator('button[aria-expanded="true"]').count();
+    expect(afterCollapseCount).toBe(0);
+
+    // Click Toggle All again -- should expand all
+    await toggleBtn.click();
+    await headPage.waitForTimeout(500);
+
+    const afterExpandCount = await headPage.locator('button[aria-expanded="true"]').count();
+    expect(afterExpandCount).toBeGreaterThanOrEqual(2);
+  });
+
+  // -----------------------------------------------------------------------
+  // SC-173: Alert bar hidden when all submitted
+  // -----------------------------------------------------------------------
+
+  test('SC-173: Alert bar is visible when there are pending leads', async ({ headPage }) => {
+    // Mock data has 2 pending leads: Olga N. and Sergey T.
+    await expect(headPage.getByText("haven't submitted")).toBeVisible();
+    await expect(headPage.getByRole('button', { name: 'Send Reminder' })).toBeVisible();
+  });
+
+  // NOTE: SC-173 full test (alert hidden when all submitted) requires dynamic
+  // state where pendingLeads=[] -- the AlertBar component returns null in that case.
+  // This is validated at the component level; E2E confirms the conditional rendering
+  // with current mock data (pending leads present).
+
+  // -----------------------------------------------------------------------
+  // SC-174: Send Reminder button
+  // -----------------------------------------------------------------------
+
+  test('SC-174: Send Reminder button is visible and clickable', async ({ headPage }) => {
+    const reminderBtn = headPage.getByRole('button', { name: 'Send Reminder' });
+    await expect(reminderBtn).toBeVisible();
+    await expect(reminderBtn).toBeEnabled();
+
+    // Click the button (currently no-op handler; verify no crash)
+    await reminderBtn.click();
+    // Page should remain stable after click
+    await expect(headPage.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  });
+
+  test.fixme('SC-174: Send Reminder shows success toast after sending', async ({ headPage }) => {
+    // TODO: Implement when Send Reminder has an onClick handler wired to API
+    // Expected: click Send Reminder -> API call -> success toast -> alert bar updates
+    const reminderBtn = headPage.getByRole('button', { name: 'Send Reminder' });
+    await reminderBtn.click();
+    await expect(headPage.getByText('Reminder sent')).toBeVisible();
+  });
+
+  // -----------------------------------------------------------------------
+  // SC-176: Report Archive pagination
+  // -----------------------------------------------------------------------
+
+  test('SC-176: Report Archive pagination shows correct page count', async ({ headPage }) => {
+    // 12 reports total / 4 per page = 3 pages
+    const page1Btn = headPage.getByLabel('Page 1');
+    const page2Btn = headPage.getByLabel('Page 2');
+    const page3Btn = headPage.getByLabel('Page 3');
+
+    await expect(page1Btn).toBeVisible();
+    await expect(page2Btn).toBeVisible();
+    await expect(page3Btn).toBeVisible();
+
+    // Page 1 is active by default
+    await expect(page1Btn).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('SC-176: Report Archive Previous button disabled on page 1', async ({ headPage }) => {
+    const prevBtn = headPage.getByLabel('Previous page');
+    await expect(prevBtn).toBeDisabled();
+  });
+
+  test('SC-176: Report Archive navigates to page 2', async ({ headPage }) => {
+    const page2Btn = headPage.getByLabel('Page 2');
+    await page2Btn.click();
+
+    // Page 2 should become active
+    await expect(page2Btn).toHaveAttribute('aria-current', 'page');
+    // Page 1 should no longer be current
+    await expect(headPage.getByLabel('Page 1')).not.toHaveAttribute('aria-current', 'page');
+
+    // Previous button should now be enabled
+    await expect(headPage.getByLabel('Previous page')).toBeEnabled();
+  });
+
+  test('SC-176: Report Archive Next button disabled on last page', async ({ headPage }) => {
+    // Navigate to page 3 (last page)
+    await headPage.getByLabel('Page 3').click();
+
+    const nextBtn = headPage.getByLabel('Next page');
+    await expect(nextBtn).toBeDisabled();
+  });
+
+  // -----------------------------------------------------------------------
+  // SC-177: Report Archive card links
+  // -----------------------------------------------------------------------
+
+  test('SC-177: Active report card links to /head/report', async ({ headPage }) => {
+    // Week 16 is "active" status -> should link to /head/report
+    const week16Card = headPage.locator('a').filter({ hasText: 'Week 16' }).filter({ hasText: 'Active' });
+    await expect(week16Card).toBeVisible();
+    await expect(week16Card).toHaveAttribute('href', '/head/report');
+  });
+
+  test('SC-177: Published report card links to /reports/{id}', async ({ headPage }) => {
+    // Week 15 is "published" -> should link to /reports/w15
+    const week15Card = headPage.locator('a').filter({ hasText: 'Week 15' }).filter({ hasText: 'Published' });
+    await expect(week15Card).toBeVisible();
+    await expect(week15Card).toHaveAttribute('href', '/reports/w15');
+  });
+
+  test('SC-177: Report Archive cards show submission labels', async ({ headPage }) => {
+    // Each card shows submission counts
+    await expect(headPage.getByText('4/6 submitted').first()).toBeVisible();
+    await expect(headPage.getByText('6/6 submitted').first()).toBeVisible();
+  });
+
+  // -----------------------------------------------------------------------
+  // SC-178: KPI Escalations accuracy
+  // -----------------------------------------------------------------------
+
+  test('SC-178: Risks & Blockers KPI shows accurate counts from mock data', async ({ headPage }) => {
+    // Mock data: blockedCount=2, atRiskCount=3, decisionCount=2
+    const kpiCard = headPage.locator('[aria-label*="Risks"]');
+    await expect(kpiCard).toBeVisible();
+
+    // The large numbers are rendered as text
+    await expect(kpiCard.getByText('2').first()).toBeVisible(); // blockedCount
+    await expect(kpiCard.getByText('3')).toBeVisible(); // atRiskCount
+  });
+
+  // -----------------------------------------------------------------------
+  // SC-179: Lead Reports traffic light accuracy
+  // -----------------------------------------------------------------------
+
+  test('SC-179: Submitted lead cards show traffic light dots matching product count', async ({ headPage }) => {
+    // Polenkov A. has 6 traffic lights (6 products), Maria K. has 4, Igor V. has 3, Dmitry S. has 5
+    // Traffic lights are 18x18 rounded-full elements inside lead cards
+
+    // Polenkov A. card is a link (current user)
+    const polenkovCard = headPage.locator('a').filter({ hasText: 'Polenkov A.' });
+    await expect(polenkovCard).toBeVisible();
+    const polenkovDots = polenkovCard.locator('.rounded-full').filter({ has: headPage.locator(':scope:not(:empty)') });
+    // Should have avatar (1) + 6 traffic dots
+    expect(await polenkovDots.count()).toBeGreaterThanOrEqual(6);
+  });
+
+  test('SC-179: Pending lead cards show no traffic lights', async ({ headPage }) => {
+    // Sergey T. is "pending" with 0 traffic lights
+    const sergeyCard = headPage.locator('div[role="listitem"]').filter({ hasText: 'Sergey T.' });
+    await expect(sergeyCard).toBeVisible();
+    // Only the avatar should be a rounded-full, no traffic light dots
+    const dots = sergeyCard.locator('.rounded-full');
+    // Avatar is 1 rounded-full element; no traffic light dots
+    expect(await dots.count()).toBe(1);
+  });
+
+  test('SC-179: Draft lead card shows no traffic lights', async ({ headPage }) => {
+    // Olga N. is "draft" with 0 traffic lights
+    const olgaCard = headPage.locator('div[role="listitem"]').filter({ hasText: 'Olga N.' });
+    await expect(olgaCard).toBeVisible();
+    const dots = olgaCard.locator('.rounded-full');
+    // Only avatar, no traffic dots
+    expect(await dots.count()).toBe(1);
+  });
+
+  // -----------------------------------------------------------------------
+  // SC-63: Head can view lead forms from Dashboard (drill into)
+  // -----------------------------------------------------------------------
+
+  test('SC-63: Current user lead card is a clickable link to /lead/report', async ({ headPage }) => {
+    // Polenkov A. is the current user; their card is an <a> linking to /lead/report
+    const polenkovLink = headPage.locator('a').filter({ hasText: 'Polenkov A.' });
+    await expect(polenkovLink).toBeVisible();
+    await expect(polenkovLink).toHaveAttribute('href', '/lead/report');
+  });
+
+  test('SC-63: Non-current-user submitted cards are disabled (not clickable)', async ({ headPage }) => {
+    // Maria K. is submitted but not current user -- aria-disabled="true"
+    const mariaCard = headPage.locator('div[role="listitem"]').filter({ hasText: 'Maria K.' });
+    await expect(mariaCard).toBeVisible();
+    await expect(mariaCard).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  // -----------------------------------------------------------------------
+  // SC-22: Lead Reports show correct status distribution
+  // -----------------------------------------------------------------------
+
+  test('SC-22: Lead Reports shows correct status distribution', async ({ headPage }) => {
+    // Mock: 4 submitted, 1 draft, 1 pending
+    const submittedBadges = headPage.getByText('Submitted', { exact: true });
+    expect(await submittedBadges.count()).toBe(4);
+
+    await expect(headPage.getByText('Draft', { exact: true }).first()).toBeVisible();
+    await expect(headPage.getByText('Pending', { exact: true }).first()).toBeVisible();
+  });
+});
