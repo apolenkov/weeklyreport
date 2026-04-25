@@ -45,9 +45,15 @@ export function HeadPeriodNavigator({ periods, basePath = '/head/report' }: Peri
     (periodId: string) => {
       const period = periods.find((p) => p.id === periodId);
       if (period?.isCurrent) {
+        // Current period -> live head report page (handles weeklyReport.get
+        // without a period filter; basePath is '/head/report' by default).
         router.push(basePath);
       } else {
-        router.push(`${basePath}?period=${periodId}`);
+        // Past / archived period -> /reports/[reportId]. Per 21-04 SUMMARY
+        // (path "a"), the reportId-based query handles the data load. Period
+        // ids here are concrete report UUIDs surfaced by mapWeeklyReport
+        // (`view.period.id === api.reportId`).
+        router.push(`/reports/${periodId}`);
       }
     },
     [router, periods, basePath],
