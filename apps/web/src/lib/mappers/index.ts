@@ -27,3 +27,11 @@ export {
   type ReportSectionStatus,
   type LeadStatus,
 } from './lead-status';
+
+export {
+  mapHistoryEntries,
+  formatDateRange,
+  formatSubmittedAt,
+  isoWeekNumber,
+  type HistoryEntry,
+} from './lead-history';
