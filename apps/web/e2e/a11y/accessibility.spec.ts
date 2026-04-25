@@ -125,7 +125,7 @@ base.describe('Accessibility — Focus Visibility', () => {
     await page.keyboard.press('Tab'); // skip-link
     await page.keyboard.press('Tab'); // SSO button
 
-    const ssoLink = page.getByText('Sign in with SSO');
+    const ssoLink = page.getByText('Enter Application');
     await expect(ssoLink).toBeFocused();
 
     // Verify the focused element has a visible focus ring (outline/ring CSS)
@@ -156,7 +156,7 @@ base.describe('Accessibility — Touch Targets', () => {
     await page.waitForLoadState('networkidle', { timeout: 15_000 });
 
     // Check the SSO button (explicitly styled with min-height: 44px)
-    const ssoButton = page.getByText('Sign in with SSO');
+    const ssoButton = page.getByText('Enter Application');
     const ssoBox = await ssoButton.boundingBox();
     expect(ssoBox).toBeTruthy();
     expect(ssoBox!.height).toBeGreaterThanOrEqual(44);
@@ -261,9 +261,9 @@ base.describe('Accessibility — Color Contrast', () => {
 
     // Verify heading text color is set and readable
     const headingColor = await page.evaluate(() => {
-      const h2 = document.querySelector('h2');
-      if (!h2) return null;
-      return window.getComputedStyle(h2).color;
+      const heading = document.querySelector('h1, h2');
+      if (!heading) return null;
+      return window.getComputedStyle(heading).color;
     });
     expect(headingColor).toBeTruthy();
     // Color should not be fully transparent

@@ -29,7 +29,7 @@ base.describe('Responsive — Mobile 375px', () => {
     const brandPanel = page.locator('main > div').first();
     // The brand panel has the green gradient background and "hidden lg:flex"
     // At 375px, the SSO sign-in should be visible without the panel
-    await expect(page.getByText('Sign in with SSO')).toBeVisible();
+    await expect(page.getByText('Enter Application')).toBeVisible();
     await expect(page.getByText('CustomReport').first()).toBeVisible();
 
     // The brand panel text "Weekly Status Reporting" should be hidden at mobile
@@ -132,7 +132,7 @@ base.describe('Responsive — Touch Targets', () => {
     await page.waitForLoadState('networkidle', { timeout: 15_000 });
 
     // Check that the SSO button has minimum 44px height
-    const ssoButton = page.getByText('Sign in with SSO');
+    const ssoButton = page.getByText('Enter Application');
     await expect(ssoButton).toBeVisible();
 
     const box = await ssoButton.boundingBox();
