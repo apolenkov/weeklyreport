@@ -13,7 +13,7 @@ import {
   appSettingsUpdateSchema,
 } from '@customreport/shared';
 
-import { router, protectedProcedure, headProcedure } from './trpc.middleware.js';
+import { router, publicProcedure, protectedProcedure, headProcedure } from './trpc.middleware.js';
 import { mapDomainError } from './trpc.error-mapper.js';
 
 import type { PrismaClient } from '@prisma/client';
@@ -47,6 +47,17 @@ type RouterDeps = {
 
 export function createAppRouter(deps: RouterDeps) {
   return router({
+    // === Auth namespace (v5.0 — AUTH-04) ===
+    auth: router({
+      me: publicProcedure.query(({ ctx }) => {
+        // ctx.session is UserSession | null; null means unauthenticated.
+        // Returning null lets the client distinguish "loaded, no session"
+        // from "still loading" without throwing — preventing the 401
+        // interceptor from triggering an immediate redirect on every load.
+        return ctx.session;
+      }),
+    }),
+
     // === Reports namespace ===
     reports: router({
       getActive: protectedProcedure.query(async ({ ctx }) => {
