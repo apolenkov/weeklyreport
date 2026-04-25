@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TRPCError } from '@trpc/server';
 
 import {
@@ -7,6 +7,7 @@ import {
   protectedProcedure,
   headProcedure,
 } from './trpc.middleware.js';
+import { createNullLogger, type AppLogger } from '../../lib/logger.js';
 
 // ---------------------------------------------------------------------------
 // Test router
@@ -19,10 +20,12 @@ const testRouter = router({
 });
 
 // ---------------------------------------------------------------------------
-// Caller contexts
+// Caller helpers
 // ---------------------------------------------------------------------------
 
-const nullCaller = testRouter.createCaller({ session: null });
+const nullLogger = createNullLogger();
+
+const nullCaller = testRouter.createCaller({ session: null, logger: nullLogger });
 
 const leadCaller = testRouter.createCaller({
   session: {
@@ -33,6 +36,7 @@ const leadCaller = testRouter.createCaller({
     activeReportId: 'r1',
     activeReportSectionId: 's1',
   },
+  logger: nullLogger,
 });
 
 const headCaller = testRouter.createCaller({
@@ -44,7 +48,33 @@ const headCaller = testRouter.createCaller({
     activeReportId: 'r1',
     activeReportSectionId: null,
   },
+  logger: nullLogger,
 });
+
+function makeFakeLogger(): AppLogger & {
+  info: ReturnType<typeof vi.fn>;
+  error: ReturnType<typeof vi.fn>;
+  warn: ReturnType<typeof vi.fn>;
+  debug: ReturnType<typeof vi.fn>;
+} {
+  const info = vi.fn();
+  const error = vi.fn();
+  const warn = vi.fn();
+  const debug = vi.fn();
+  const fake = {
+    info,
+    error,
+    warn,
+    debug,
+    child: () => fake,
+  };
+  return fake as unknown as AppLogger & {
+    info: typeof info;
+    error: typeof error;
+    warn: typeof warn;
+    debug: typeof debug;
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -113,6 +143,7 @@ describe('tRPC auth middleware', () => {
         activeReportId: null,
         activeReportSectionId: null,
       },
+      logger: nullLogger,
     });
 
     await expect(viewerCaller.headRoute()).rejects.toMatchObject(
@@ -133,5 +164,103 @@ describe('tRPC auth middleware', () => {
     expect(result1).toBe('public-ok');
     expect(result2).toBe('public-ok');
     expect(result3).toBe('public-ok');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Logging middleware tests
+// ---------------------------------------------------------------------------
+
+describe('tRPC logging middleware', () => {
+  it('logs entry and exit on a successful query', async () => {
+    const logger = makeFakeLogger();
+    const caller = testRouter.createCaller({ session: null, logger });
+
+    const result = await caller.publicRoute();
+    expect(result).toBe('public-ok');
+
+    expect(logger.info).toHaveBeenCalledTimes(2);
+
+    const [startMsg, startMeta] = logger.info.mock.calls[0]!;
+    expect(startMsg).toBe('trpc request start');
+    expect(startMeta).toMatchObject({
+      phase: 'trpc.request',
+      stage: 'start',
+      procedure: 'publicRoute',
+      type: 'query',
+      userId: null,
+    });
+
+    const [endMsg, endMeta] = logger.info.mock.calls[1]!;
+    expect(endMsg).toBe('trpc request end');
+    expect(endMeta).toMatchObject({
+      phase: 'trpc.request',
+      stage: 'end',
+      procedure: 'publicRoute',
+      type: 'query',
+      userId: null,
+      status: 'success',
+    });
+    expect(typeof (endMeta as { duration: number }).duration).toBe('number');
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("logs status:'error' with code+message when a procedure throws", async () => {
+    const logger = makeFakeLogger();
+    // null session triggers UNAUTHORIZED inside isAuthed, which runs after
+    // loggingMiddleware — so we expect the entry log on info() and the exit
+    // log on error().
+    const caller = testRouter.createCaller({ session: null, logger });
+
+    await expect(caller.protectedRoute()).rejects.toBeInstanceOf(TRPCError);
+
+    expect(logger.info).toHaveBeenCalledTimes(1);
+    expect(logger.info.mock.calls[0]![1]).toMatchObject({ stage: 'start', userId: null });
+
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    const [endMsg, endMeta] = logger.error.mock.calls[0]!;
+    expect(endMsg).toBe('trpc request end');
+    expect(endMeta).toMatchObject({
+      phase: 'trpc.request',
+      stage: 'end',
+      procedure: 'protectedRoute',
+      type: 'query',
+      userId: null,
+      status: 'error',
+      error: { code: 'UNAUTHORIZED' },
+    });
+    // No stack trace leaks into logs.
+    expect(endMeta).not.toHaveProperty('error.stack');
+  });
+
+  it('records userId from the session on both entry and exit logs (authed)', async () => {
+    const logger = makeFakeLogger();
+    const caller = testRouter.createCaller({
+      session: {
+        userId: 'authed-42',
+        email: 'a@b.c',
+        name: 'A',
+        role: 'lead' as const,
+        activeReportId: 'r1',
+        activeReportSectionId: 's1',
+      },
+      logger,
+    });
+
+    await caller.protectedRoute();
+
+    expect(logger.info).toHaveBeenCalledTimes(2);
+    expect(logger.info.mock.calls[0]![1]).toMatchObject({ userId: 'authed-42', stage: 'start' });
+    expect(logger.info.mock.calls[1]![1]).toMatchObject({ userId: 'authed-42', stage: 'end' });
+  });
+
+  it('records userId:null for an anonymous public procedure', async () => {
+    const logger = makeFakeLogger();
+    const caller = testRouter.createCaller({ session: null, logger });
+
+    await caller.publicRoute();
+
+    expect(logger.info.mock.calls[0]![1]).toMatchObject({ userId: null });
+    expect(logger.info.mock.calls[1]![1]).toMatchObject({ userId: null });
   });
 });

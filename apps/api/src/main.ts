@@ -100,7 +100,7 @@ async function bootstrap() {
     '/trpc',
     trpcExpress.createExpressMiddleware({
       router: appRouter,
-      createContext: createContextFactory(app),
+      createContext: createContextFactory(app, logger),
     }),
   );
 
