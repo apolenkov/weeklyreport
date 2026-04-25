@@ -213,7 +213,7 @@ Plans:
 - [x] **Phase 23: PDF & Jobs** - BullMQ re-enabled, PDF export pipeline end-to-end (completed 2026-04-25)
 - [x] **Phase 24: Auth Guards & Session** - proxy.ts cookie check, 401 interceptor, session context (completed 2026-04-25)
 - [x] **Phase 25: Production Logging** - Correlation IDs via nestjs-cls, structured file logging with rotation (completed 2026-04-25)
-- [ ] **Phase 26: E2E Integration Tests** - Dual-server Playwright config, 20-30 real API integration tests
+- [x] **Phase 26: E2E Integration Tests** - Dual-server Playwright config, 20-30 real API integration tests (completed 2026-04-25)
 
 ### Phase 20: Seed & Type Foundation
 **Goal**: Database contains mockup-aligned seed data and a tested mapper layer translates between API types and presentation types
@@ -326,7 +326,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 26-01-PLAN.md — Dual-server Playwright config + global seed + ~25 integration tests across 7 spec files
+- [x] 26-01-PLAN.md — Dual-server Playwright config + global seed + ~25 integration tests across 7 spec files
 
 ---
 
@@ -340,7 +340,7 @@ Plans:
 | 23. PDF & Jobs | 1/1 | Complete    | 2026-04-25 |
 | 24. Auth Guards & Session | 1/1 | Complete    | 2026-04-25 |
 | 25. Production Logging | 1/1 | Complete    | 2026-04-25 |
-| 26. E2E Integration Tests | 0/1 | Planned     | - |
+| 26. E2E Integration Tests | 1/1 | Complete   | 2026-04-25 |
 
 ## Execution Order (for /gsd:next)
 
