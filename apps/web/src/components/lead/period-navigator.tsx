@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
 import type { ReportPeriod } from './mock-data';
@@ -27,6 +27,7 @@ function ChevronRight() {
 
 export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentPeriodParam = searchParams.get('period');
 
@@ -43,13 +44,18 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
   const navigateTo = useCallback(
     (periodId: string) => {
       const period = periods.find((p) => p.id === periodId);
+      const params = new URLSearchParams(searchParams.toString());
       if (period?.isCurrent) {
-        router.push('/lead/report');
+        params.delete('period');
       } else {
-        router.push(`/lead/report?period=${periodId}`);
+        params.set('period', periodId);
       }
+      const qs = params.toString();
+      const target = qs ? `${pathname}?${qs}` : pathname;
+      // Use replace so back-button history doesn't accumulate period selections.
+      router.replace(target);
     },
-    [router, periods],
+    [router, pathname, searchParams, periods],
   );
 
   function handlePrev() {
