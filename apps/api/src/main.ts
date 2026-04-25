@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { NestFactory } from '@nestjs/core';
+import { ClsService } from 'nestjs-cls';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import cookieParser from 'cookie-parser';
 import express from 'express';
@@ -34,15 +35,23 @@ import { LeadFormService } from './modules/report-sections/lead-form.service';
 
 async function bootstrap() {
   const env = validateEnv();
+
+  // We resolve ClsService from the container, so the app must exist first.
+  // Pre-Nest output goes to console (no logger available yet).
+  // eslint-disable-next-line no-console
+  console.log('[bootstrap] starting customreport-api');
+
+  const app = await NestFactory.create(AppModule);
+
+  const cls = app.get(ClsService);
   const logger = createAppLogger({
     service: 'customreport-api',
     minLevel: env.LOG_LEVEL,
     logDir: env.LOG_DIR,
+    clsService: cls,
   });
 
   logger.info('bootstrap started');
-
-  const app = await NestFactory.create(AppModule);
 
   app.enableShutdownHooks();
   app.use(helmet());
