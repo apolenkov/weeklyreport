@@ -17,9 +17,9 @@ Requirements for v5.0 Production Integration. Each maps to roadmap phases.
 
 ### Type System
 
-- [ ] **TYPE-01**: Mapper layer преобразует Zod/Prisma типы в presentation model (green->on-track, etc.)
-- [ ] **TYPE-02**: Mapper покрыт unit тестами (каждое значение enum в обе стороны)
-- [ ] **TYPE-03**: Computed states (pending, planned) корректно вычисляются из DB данных
+- [x] **TYPE-01**: Mapper layer преобразует Zod/Prisma типы в presentation model (green->on-track, etc.)
+- [x] **TYPE-02**: Mapper покрыт unit тестами (каждое значение enum в обе стороны)
+- [x] **TYPE-03**: Computed states (pending, planned) корректно вычисляются из DB данных
 
 ### tRPC Wiring
 
@@ -122,9 +122,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEED-03 | Phase 20 | Pending |
 | SEED-04 | Phase 20 | Pending |
 | SEED-05 | Phase 20 | Pending |
-| TYPE-01 | Phase 20 | Pending |
-| TYPE-02 | Phase 20 | Pending |
-| TYPE-03 | Phase 20 | Pending |
+| TYPE-01 | Phase 20 | Complete |
+| TYPE-02 | Phase 20 | Complete |
+| TYPE-03 | Phase 20 | Complete |
 | TRPC-01 | Phase 21 | Pending |
 | TRPC-02 | Phase 21 | Pending |
 | TRPC-03 | Phase 21 | Pending |

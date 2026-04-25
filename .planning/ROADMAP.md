@@ -229,7 +229,7 @@ Plans:
 
 Plans:
 - [ ] 20-01-PLAN.md — Seed data: 12 products, 6 leads, 7 stages, 2 periods + DEV_SESSION context fix
-- [ ] 20-02-PLAN.md — Type mappers: traffic-light, item-status, lead-status with unit tests
+- [x] 20-02-PLAN.md — Type mappers: traffic-light, item-status, lead-status with unit tests
 
 ### Phase 21: tRPC Provider & Client Wiring
 **Goal**: Frontend fetches all data from the real API through tRPC hooks; every page renders server data with loading and error states
@@ -309,7 +309,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 20. Seed & Type Foundation | 0/2 | Planned | - |
+| 20. Seed & Type Foundation | 1/2 | In Progress|  |
 | 21. tRPC Provider & Client Wiring | 0/TBD | Not started | - |
 | 22. Interactivity & Status-Risk Sync | 0/TBD | Not started | - |
 | 23. PDF & Jobs | 0/TBD | Not started | - |
