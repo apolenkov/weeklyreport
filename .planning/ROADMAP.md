@@ -304,7 +304,10 @@ Plans:
   2. Logs are written to files (not just console) in structured JSON format with timestamp, level, correlationId, and module fields
   3. Log files rotate by size or time and old files are archived automatically
   4. Searching logs by correlationId returns all log entries for a single user request across all services and middleware
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 25-01-PLAN.md — nestjs-cls + async file rotation + tRPC request/response logging (LOG-01..05)
 
 ### Phase 26: E2E Integration Tests
 **Goal**: Core user journeys are verified end-to-end against the real API with Playwright; existing mock-based tests are preserved
@@ -330,7 +333,7 @@ Plans:
 | 22. Interactivity & Status-Risk Sync | 5/5 | Complete    | 2026-04-25 |
 | 23. PDF & Jobs | 1/1 | Complete    | 2026-04-25 |
 | 24. Auth Guards & Session | 0/TBD | Not started | - |
-| 25. Production Logging | 0/TBD | Not started | - |
+| 25. Production Logging | 0/1 | Not started | - |
 | 26. E2E Integration Tests | 0/TBD | Not started | - |
 
 ## Execution Order (for /gsd:next)
