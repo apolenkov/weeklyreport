@@ -118,7 +118,7 @@ async function main() {
   for (const stage of SEED_STAGES) {
     await prisma.stage.upsert({
       where: { name: stage.name },
-      update: { id: stage.id, sortOrder: stage.sortOrder },
+      update: { sortOrder: stage.sortOrder },
       create: {
         id: stage.id,
         name: stage.name,
@@ -147,7 +147,7 @@ async function main() {
             projectId: product.id,
           },
         },
-        update: { id: recordId },
+        update: {},
         create: {
           id: recordId,
           userId: product.leadId,
