@@ -266,8 +266,8 @@ Plans:
 Plans:
 - [ ] 22-01-PLAN.md — Lead Form mutations: submit, revoke, autosave (3s debounce), dirty-state guard, fill-from, restore-version
 - [ ] 22-02-PLAN.md — Status<->Risk sync hook + bridge component (SYNC-01..04, SyncSource ref pattern)
-- [ ] 22-03-PLAN.md — URL-driven Period Navigators + cursor pagination on archive.list + version history reveal
-- [ ] 22-04-PLAN.md — Admin CRUD wiring across 6 tabs (users, products, stage assignments, periods, reminders, settings)
+- [x] 22-03-PLAN.md — URL-driven Period Navigators + cursor pagination on archive.list + version history reveal
+- [x] 22-04-PLAN.md — Admin CRUD wiring across 6 tabs (users, products, stage assignments, periods, reminders, settings)
 - [ ] 22-05-PLAN.md — Head Publish & Lock / Reopen + Export PDF deferred to Phase 23
 
 ### Phase 23: PDF & Jobs
@@ -324,7 +324,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 20. Seed & Type Foundation | 1/2 | Complete    | 2026-04-25 |
 | 21. tRPC Provider & Client Wiring | 4/4 | Complete    | 2026-04-25 |
-| 22. Interactivity & Status-Risk Sync | 0/TBD | Not started | - |
+| 22. Interactivity & Status-Risk Sync | 2/5 | In Progress|  |
 | 23. PDF & Jobs | 0/TBD | Not started | - |
 | 24. Auth Guards & Session | 0/TBD | Not started | - |
 | 25. Production Logging | 0/TBD | Not started | - |
