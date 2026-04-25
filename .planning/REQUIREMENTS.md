@@ -33,13 +33,13 @@ Requirements for v5.0 Production Integration. Each maps to roadmap phases.
 
 ### Interactivity
 
-- [ ] **INT-01**: Submit секции вызывает реальный tRPC mutation, форма блокируется после submit
+- [x] **INT-01**: Submit секции вызывает реальный tRPC mutation, форма блокируется после submit
 - [ ] **INT-02**: Publish & Lock вызывает period.publish, обновляет weekly report и dashboard
-- [ ] **INT-03**: Revoke вызывает leadForm.revoke, разблокирует секцию для повторного редактирования
-- [ ] **INT-04**: Fill From вызывает leadForm.fillFrom, заполняет форму данными из предыдущего периода
-- [ ] **INT-05**: Version History навигация и Restore вызывают leadForm.versions/restoreVersion
-- [ ] **INT-06**: Autosave drafts через debounced tRPC mutation (3-5 сек)
-- [ ] **INT-07**: Dirty state tracking + предупреждение при уходе с несохранённой формой
+- [x] **INT-03**: Revoke вызывает leadForm.revoke, разблокирует секцию для повторного редактирования
+- [x] **INT-04**: Fill From вызывает leadForm.fillFrom, заполняет форму данными из предыдущего периода
+- [x] **INT-05**: Version History навигация и Restore вызывают leadForm.versions/restoreVersion
+- [x] **INT-06**: Autosave drafts через debounced tRPC mutation (3-5 сек)
+- [x] **INT-07**: Dirty state tracking + предупреждение при уходе с несохранённой формой
 - [x] **INT-08**: Real cursor pagination в archive list и version history
 - [x] **INT-09**: Period Navigator переключает периоды через URL + useQuery
 - [ ] **INT-10**: Admin CRUD (users, products, stages, periods, settings) через реальные tRPC mutations
@@ -132,13 +132,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRPC-05 | Phase 21 | Complete |
 | TRPC-06 | Phase 21 | Complete |
 | TRPC-07 | Phase 21 | Pending |
-| INT-01 | Phase 22 | Pending |
+| INT-01 | Phase 22 | Complete |
 | INT-02 | Phase 22 | Pending |
-| INT-03 | Phase 22 | Pending |
-| INT-04 | Phase 22 | Pending |
-| INT-05 | Phase 22 | Pending |
-| INT-06 | Phase 22 | Pending |
-| INT-07 | Phase 22 | Pending |
+| INT-03 | Phase 22 | Complete |
+| INT-04 | Phase 22 | Complete |
+| INT-05 | Phase 22 | Complete |
+| INT-06 | Phase 22 | Complete |
+| INT-07 | Phase 22 | Complete |
 | INT-08 | Phase 22 | Complete |
 | INT-09 | Phase 22 | Complete |
 | INT-10 | Phase 22 | Pending |
