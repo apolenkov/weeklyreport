@@ -1,15 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { MockReminder } from './mock-data';
-import { MOCK_REMINDERS } from './mock-data';
 
-export function RemindersTab() {
-  const [reminders, setReminders] = useState<MockReminder[]>(MOCK_REMINDERS);
+type RemindersTabProps = {
+  readonly initialReminders: MockReminder[];
+};
+
+export function RemindersTab({ initialReminders }: RemindersTabProps) {
+  const [reminders, setReminders] = useState<MockReminder[]>(initialReminders);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setReminders(initialReminders);
+  }, [initialReminders]);
+
   function handleToggle(id: string) {
+    // TODO(Phase 22): replace local setState with admin.saveReminderRule (status toggle) mutation + invalidateAdmin onSuccess.
     setReminders((prev) =>
       prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r)),
     );

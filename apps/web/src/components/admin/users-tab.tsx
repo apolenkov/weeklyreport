@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { MockUser, UserRole } from './mock-data';
-import { MOCK_USERS } from './mock-data';
 
 type UserFormData = {
   name: string;
@@ -14,8 +13,17 @@ type UserFormData = {
 
 const EMPTY_FORM: UserFormData = { name: '', email: '', role: 'lead', department: 'Development' };
 
-export function UsersTab() {
-  const [users, setUsers] = useState<MockUser[]>(MOCK_USERS);
+type UsersTabProps = {
+  readonly initialUsers: MockUser[];
+};
+
+export function UsersTab({ initialUsers }: UsersTabProps) {
+  const [users, setUsers] = useState<MockUser[]>(initialUsers);
+
+  // Reset local state when the source query revalidates.
+  useEffect(() => {
+    setUsers(initialUsers);
+  }, [initialUsers]);
   const [editingUser, setEditingUser] = useState<MockUser | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
@@ -35,6 +43,7 @@ export function UsersTab() {
 
   function handleSave() {
     if (editingUser) {
+      // TODO(Phase 22): replace local setState with admin.saveUser mutation + invalidateAdmin(qc, trpc) onSuccess.
       setUsers((prev) =>
         prev.map((u) => (u.id === editingUser.id ? { ...u, ...form } : u)),
       );
@@ -43,6 +52,7 @@ export function UsersTab() {
         id: `u${Date.now()}`,
         ...form,
       };
+      // TODO(Phase 22): replace local setState with admin.saveUser mutation + invalidateAdmin(qc, trpc) onSuccess.
       setUsers((prev) => [...prev, newUser]);
     }
     setShowDialog(false);
@@ -50,6 +60,7 @@ export function UsersTab() {
 
   function handleDelete() {
     if (deleteTarget) {
+      // TODO(Phase 22): replace local setState with admin.deleteUser mutation + invalidateAdmin(qc, trpc) onSuccess.
       setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
       setDeleteTarget(null);
     }

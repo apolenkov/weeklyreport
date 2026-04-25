@@ -1,10 +1,11 @@
 'use client';
 
 import type { MockProduct, MockUser, StageName } from './mock-data';
-import { STAGE_NAMES, getLeadUsers } from './mock-data';
+import { STAGE_NAMES } from './mock-data';
 
 type StageAssignmentEditorProps = {
   readonly product: MockProduct;
+  readonly leads: MockUser[];
   readonly onAssign: (productId: string, stage: StageName, userId: string | null) => void;
 };
 
@@ -18,9 +19,7 @@ const STAGE_COLORS: Record<StageName, string> = {
   Support: 'var(--color-muted-foreground)',
 };
 
-export function StageAssignmentEditor({ product, onAssign }: StageAssignmentEditorProps) {
-  const leads: MockUser[] = getLeadUsers();
-
+export function StageAssignmentEditor({ product, leads, onAssign }: StageAssignmentEditorProps) {
   return (
     <div className="mt-3 grid grid-cols-7 gap-2">
       {STAGE_NAMES.map((stage) => {
