@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+import { invalidateAdmin } from '../../lib/cache-keys';
+import { toReportPeriodInput } from '../../lib/mappers';
+import { useTRPC } from '../../lib/trpc-context';
 
 import type { MockPeriod, PeriodStatus } from './mock-data';
 
@@ -14,18 +20,35 @@ type PeriodFormData = {
 const EMPTY_FORM: PeriodFormData = { weekLabel: '', startDate: '', endDate: '', deadline: '' };
 
 type PeriodsTabProps = {
-  readonly initialPeriods: MockPeriod[];
+  readonly periods: MockPeriod[];
 };
 
-export function PeriodsTab({ initialPeriods }: PeriodsTabProps) {
-  const [periods, setPeriods] = useState<MockPeriod[]>(initialPeriods);
+/**
+ * Periods Tab.
+ *
+ * Backend gap (deferred): the admin tRPC router exposes `savePeriod` (upsert)
+ * but no `deletePeriod`. The UI therefore supports add + edit only.
+ */
+export function PeriodsTab({ periods }: PeriodsTabProps) {
+  const trpc = useTRPC();
+  const qc = useQueryClient();
 
-  useEffect(() => {
-    setPeriods(initialPeriods);
-  }, [initialPeriods]);
   const [editingPeriod, setEditingPeriod] = useState<MockPeriod | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState<PeriodFormData>(EMPTY_FORM);
+
+  const savePeriodMut = useMutation(
+    trpc.admin.savePeriod.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success('Period saved');
+        setShowDialog(false);
+      },
+      onError: (err) => {
+        toast.error(err.message ?? 'Failed to save period');
+      },
+    }),
+  );
 
   function openAdd() {
     setEditingPeriod(null);
@@ -45,25 +68,21 @@ export function PeriodsTab({ initialPeriods }: PeriodsTabProps) {
   }
 
   function handleSave() {
-    if (editingPeriod) {
-      // TODO(Phase 22): replace local setState with admin.savePeriod mutation + invalidateAdmin onSuccess.
-      setPeriods((prev) =>
-        prev.map((p) =>
-          p.id === editingPeriod.id
-            ? { ...p, ...form }
-            : p,
-        ),
-      );
-    } else {
-      const newPeriod: MockPeriod = {
-        id: `per${Date.now()}`,
-        ...form,
-        status: 'open',
-      };
-      // TODO(Phase 22): replace local setState with admin.savePeriod mutation + invalidateAdmin onSuccess.
-      setPeriods((prev) => [...prev, newPeriod]);
-    }
-    setShowDialog(false);
+    // mock 'open'|'reopened' both map to 'draft' on the API side; 'published'
+    // is preserved so editing a published period does not silently demote it.
+    const apiStatus: 'draft' | 'published' =
+      editingPeriod?.status === 'published' ? 'published' : 'draft';
+    savePeriodMut.mutate(
+      toReportPeriodInput(
+        {
+          startDate: form.startDate,
+          endDate: form.endDate,
+          deadline: form.deadline,
+          status: apiStatus,
+        },
+        editingPeriod?.id,
+      ),
+    );
   }
 
   function formatDate(iso: string): string {
@@ -73,6 +92,8 @@ export function PeriodsTab({ initialPeriods }: PeriodsTabProps) {
       year: 'numeric',
     });
   }
+
+  const isSaving = savePeriodMut.isPending;
 
   return (
     <>
@@ -212,16 +233,18 @@ export function PeriodsTab({ initialPeriods }: PeriodsTabProps) {
               <button
                 type="button"
                 onClick={() => setShowDialog(false)}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+                disabled={isSaving}
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSave}
-                className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+                disabled={isSaving}
+                className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {editingPeriod ? 'Save Changes' : 'Create Period'}
+                {isSaving ? 'Saving...' : editingPeriod ? 'Save Changes' : 'Create Period'}
               </button>
             </div>
           </div>

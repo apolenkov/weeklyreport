@@ -99,6 +99,14 @@ export type MockReminder = {
   name: string;
   description: string;
   active: boolean;
+  // API round-trip fields preserved from `adminReminderRuleSchema`. Surfaced
+  // on the mock so the Reminders tab can rebuild a valid `saveReminderRule`
+  // input (e.g. when toggling status without re-entering kind/fireAt).
+  kind: 'deadline' | 'follow_up';
+  fireAt: Date;
+  timezone: string;
+  version: number;
+  reportId: string | null;
 };
 
 export type MockSettings = {
@@ -185,6 +193,11 @@ function mapReminder(api: AdminReminderRule): MockReminder {
     name: reminderName(api.kind),
     description: reminderDescription(api),
     active: api.status === 'active',
+    kind: api.kind,
+    fireAt: api.fireAt,
+    timezone: api.timezone,
+    version: api.version,
+    reportId: api.reportId,
   };
 }
 

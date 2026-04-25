@@ -63,6 +63,11 @@ export type MockReminder = {
   name: string;
   description: string;
   active: boolean;
+  kind: 'deadline' | 'follow_up';
+  fireAt: Date;
+  timezone: string;
+  version: number;
+  reportId: string | null;
 };
 
 export type MockSettings = {
@@ -278,18 +283,33 @@ export const MOCK_REMINDERS: MockReminder[] = [
     name: 'On Deadline Day',
     description: 'Send reminder to leads who have not submitted on the deadline day',
     active: true,
+    kind: 'deadline',
+    fireAt: new Date('2026-04-25T15:00:00.000Z'),
+    timezone: 'Europe/Moscow',
+    version: 1,
+    reportId: null,
   },
   {
     id: 'rem2',
     name: '24h Before Deadline',
     description: 'Send reminder to leads 24 hours before the period deadline',
     active: true,
+    kind: 'deadline',
+    fireAt: new Date('2026-04-24T15:00:00.000Z'),
+    timezone: 'Europe/Moscow',
+    version: 1,
+    reportId: null,
   },
   {
     id: 'rem3',
     name: 'Weekly Summary',
     description: 'Send weekly summary of submission status to the department head',
     active: false,
+    kind: 'follow_up',
+    fireAt: new Date('2026-04-26T15:00:00.000Z'),
+    timezone: 'Europe/Moscow',
+    version: 1,
+    reportId: null,
   },
 ];
 

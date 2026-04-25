@@ -1,33 +1,78 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+import { invalidateAdmin } from '../../lib/cache-keys';
+import { toAdminReminderRuleInput } from '../../lib/mappers';
+import { useTRPC } from '../../lib/trpc-context';
 
 import type { MockReminder } from './mock-data';
 
 type RemindersTabProps = {
-  readonly initialReminders: MockReminder[];
+  readonly reminders: MockReminder[];
 };
 
-export function RemindersTab({ initialReminders }: RemindersTabProps) {
-  const [reminders, setReminders] = useState<MockReminder[]>(initialReminders);
+export function RemindersTab({ reminders }: RemindersTabProps) {
+  const trpc = useTRPC();
+  const qc = useQueryClient();
+
   const [sendingId, setSendingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setReminders(initialReminders);
-  }, [initialReminders]);
+  const saveRuleMut = useMutation(
+    trpc.admin.saveReminderRule.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success('Reminder updated');
+      },
+      onError: (err) => {
+        toast.error(err.message ?? 'Failed to update reminder');
+      },
+    }),
+  );
 
-  function handleToggle(id: string) {
-    // TODO(Phase 22): replace local setState with admin.saveReminderRule (status toggle) mutation + invalidateAdmin onSuccess.
-    setReminders((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r)),
+  const deleteRuleMut = useMutation(
+    trpc.admin.deleteReminderRule.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success('Reminder deleted');
+      },
+      onError: (err) => {
+        toast.error(err.message ?? 'Failed to delete reminder');
+      },
+    }),
+  );
+
+  function handleToggle(reminder: MockReminder) {
+    const nextStatus: 'active' | 'paused' = reminder.active ? 'paused' : 'active';
+    saveRuleMut.mutate(
+      toAdminReminderRuleInput(
+        {
+          kind: reminder.kind,
+          fireAt: reminder.fireAt,
+          timezone: reminder.timezone,
+          status: nextStatus,
+          reportId: reminder.reportId,
+          version: reminder.version,
+        },
+        reminder.id,
+      ),
     );
+  }
+
+  function handleDelete(reminder: MockReminder) {
+    deleteRuleMut.mutate({ ruleId: reminder.id });
   }
 
   function handleSendNow(id: string) {
     setSendingId(id);
-    // Simulate send delay
+    // Send-now is an admin trigger; no dedicated endpoint exists yet — keep
+    // the visual feedback for now and surface a backend gap in SUMMARY.
     setTimeout(() => setSendingId(null), 1500);
   }
+
+  const isMutating = saveRuleMut.isPending || deleteRuleMut.isPending;
 
   return (
     <div className="space-y-4">
@@ -48,8 +93,9 @@ export function RemindersTab({ initialReminders }: RemindersTabProps) {
                 role="switch"
                 aria-checked={reminder.active}
                 aria-label={`Toggle ${reminder.name}`}
-                onClick={() => handleToggle(reminder.id)}
-                className="relative h-6 w-11 flex-shrink-0 rounded-full transition-colors duration-200"
+                onClick={() => handleToggle(reminder)}
+                disabled={isMutating}
+                className="relative h-6 w-11 flex-shrink-0 rounded-full transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                 style={{
                   backgroundColor: reminder.active ? 'var(--color-starbucks-accent)' : 'var(--color-border)',
                 }}
@@ -83,25 +129,36 @@ export function RemindersTab({ initialReminders }: RemindersTabProps) {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => handleSendNow(reminder.id)}
-              disabled={sendingId === reminder.id}
-              className="btn-press inline-flex min-h-[36px] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label={`Send ${reminder.name} now`}
-            >
-              {sendingId === reminder.id ? (
-                <>
-                  <SpinnerIcon />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <SendIcon />
-                  Send Now
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleSendNow(reminder.id)}
+                disabled={sendingId === reminder.id}
+                className="btn-press inline-flex min-h-[36px] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={`Send ${reminder.name} now`}
+              >
+                {sendingId === reminder.id ? (
+                  <>
+                    <SpinnerIcon />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <SendIcon />
+                    Send Now
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(reminder)}
+                disabled={isMutating}
+                className="btn-press rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium text-[var(--color-destructive)] transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={`Delete ${reminder.name}`}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         ))}
       </div>
