@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import type { UserSession } from '@customreport/shared';
 
 import { createAuthController } from '../../modules/auth/auth.controller.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 const DEV_SESSION: UserSession = {
   userId: 'a0000000-0000-4000-8000-000000000099',
@@ -19,6 +20,8 @@ export type TrpcContext = {
 
 export function createContextFactory(_app: INestApplication) {
   const authController = createAuthController(process.env);
+  // Resolve PrismaService once (not per request) from the NestJS DI container.
+  const prisma = _app.get(PrismaService);
 
   return async ({ req }: CreateExpressContextOptions): Promise<TrpcContext> => {
     const token = req.cookies?.['customreport_session'] as string | undefined;
@@ -26,7 +29,7 @@ export function createContextFactory(_app: INestApplication) {
     if (token) {
       try {
         const session = authController.verifySessionToken(token);
-        return { session };
+        return { session: await resolveSectionId(session, prisma) };
       } catch {
         // Token invalid/expired -- fall through
       }
@@ -34,9 +37,38 @@ export function createContextFactory(_app: INestApplication) {
 
     // In dev mode without a valid cookie, use fallback session
     if (process.env['AUTH_DEV_MODE'] === 'true') {
-      return { session: DEV_SESSION };
+      return { session: await resolveSectionId({ ...DEV_SESSION }, prisma) };
     }
 
     return { session: null };
   };
+}
+
+/**
+ * DEV_SESSION sets activeReportSectionId to null because it is a head user.
+ * For lead users in production, the JWT will contain the sectionId.
+ * This dynamic lookup serves as a fallback for any session missing the sectionId
+ * (e.g. dev mode, or token issued before the section was created).
+ *
+ * Heads have no ReportSection of their own, so findFirst returns null and the
+ * session keeps activeReportSectionId = null. That is correct -- head users
+ * use the review.* endpoints which filter by reportId, not sectionId.
+ */
+async function resolveSectionId(
+  session: UserSession,
+  prisma: PrismaService,
+): Promise<UserSession> {
+  if (!session.activeReportSectionId && session.activeReportId && session.userId) {
+    const section = await prisma.reportSection.findFirst({
+      where: {
+        reportId: session.activeReportId,
+        authorId: session.userId,
+      },
+      select: { id: true },
+    });
+    if (section) {
+      session.activeReportSectionId = section.id;
+    }
+  }
+  return session;
 }
