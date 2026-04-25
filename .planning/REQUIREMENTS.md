@@ -1,117 +1,137 @@
-# Requirements: CustomReport v4.0
+# Requirements: CustomReport v5.0
 
-**Defined:** 2026-04-21
-**Updated:** 2026-04-22
-**Core Value:** Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
-**Milestone:** v4.0 Backend Completeness & UI Redesign
-**Priority:** Mockup-first → Schema migration → Backend API → Frontend → E2E
-**Spec Sources:** MANIFEST.md (D-1→D-70), REGRESSION-SCENARIOS.md (223 scenarios), mockup-v17-v14.html
+**Defined:** 2026-04-25
+**Core Value:** Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт ��� без конфликтов редактирования, с историей и аналитикой.
 
----
+## v5.0 Requirements
 
-## Backend Hardening (Phase 16 — COMPLETE)
+Requirements for v5.0 Production Integration. Each maps to roadmap phases.
 
-- [x] **BE-01**: Prisma migration aligns ReminderRule schema (kind/fireAt/timezone/status/version) with Zod contract
-- [x] **BE-02**: BullMQ re-enabled in AppModule (PDF export + email reminders functional)
-- [x] **BE-03**: All 81 regression scenarios pass as API integration tests
-- [x] **BE-04**: MSW handlers updated to match current tRPC contracts (superjson serialization)
-- [x] **BE-05**: Pre-existing 24 jsdom test failures in web package fixed
-- [x] **BE-06**: ThemeProvider wired into layout.tsx (next-themes installed, connected)
+### Seed Data
 
-## Schema & Data Model (Phase 17 — NEW)
+- [ ] **SEED-01**: БД содержит 12 продуктов с именами из макета (CRM Platform, Data Analytics Suite, etc.)
+- [ ] **SEED-02**: БД содержит 6 лидов с реальными именами (Platanov, Ivanova, etc.) и UUID, совпадающими с DEV_SESSION
+- [ ] **SEED-03**: 7 SDLC стадий назначены ли��ам по продуктам (StageAssignment)
+- [ ] **SEED-04**: 2 отчётных периода с реалистичными данными (items, risks, decisions, priorities)
+- [ ] **SEED-05**: Seed idempotent — повторный запуск не дублирует данные
 
-- [x] **SCH-01**: Period lifecycle states enum: Open, Published, Reopened (D-56)
-- [x] **SCH-02**: Period `publishedAt`, `publishedBy`, `reopenedAt` fields
-- [x] **SCH-03**: LeadSubmission `revokedAt`, `revokedBy` fields for Revoke Submit (D-57)
-- [x] **SCH-04**: VersionSnapshot model — autosave snapshots per lead per period (D-67)
-- [x] **SCH-05**: Stage assignment unique constraint (userId + stageId + productId) (D-63)
-- [x] **SCH-06**: Period model extended: auto-create flag, default deadline settings (D-68 admin settings)
-- [x] **SCH-07**: Migration preserves all existing v3 data without loss
+### Type System
 
-## Backend API (Phase 17 — NEW)
+- [ ] **TYPE-01**: Mapper layer преобразует Zod/Prisma типы в presentation model (green→on-track, etc.)
+- [ ] **TYPE-02**: Mapper покрыт unit тестами (каждое значение enum в обе стороны)
+- [ ] **TYPE-03**: Computed states (pending, planned) корректно вычисляются из DB данных
 
-- [x] **API-01**: `period.publish` — Publish & Lock: set period to Published, lock all lead forms (D-56)
-- [x] **API-02**: `period.reopen` — Reopen: return period to Open state (D-56)
-- [x] **API-03**: `leadSubmission.revoke` — Revoke: return specific lead's form to Draft (D-57)
-- [x] **API-04**: `leadSubmission.requestReopen` — Lead requests reopen, notification to Head (D-56)
-- [x] **API-05**: `report.weekly` — Auto-compiled Weekly Report from all submitted leads (D-58)
-- [x] **API-06**: `report.weekly.byPeriod` — Historical Weekly Report by period param (D-66)
-- [x] **API-07**: `leadForm.fillFrom` — Fill current form from past period's data (D-65)
-- [x] **API-08**: `leadForm.versions` — List autosave version snapshots (D-67)
-- [x] **API-09**: `leadForm.restoreVersion` — Restore to a specific version snapshot (D-67)
-- [x] **API-10**: `leadForm.byPeriod` — Lead form data for specific period (read-only for past) (D-64)
-- [x] **API-11**: `admin.settings` — CRUD for general settings (deadline, auto-create, department name) (D-68)
-- [x] **API-12**: Stage assignment validation — reject duplicate user+stage+product (D-63)
-- [x] **API-13**: Login stub — mock JWT with role selection, guarded by env flag (D-68)
+### tRPC Wiring
 
-## UI Redesign (Phase 17 — UPDATED)
+- [ ] **TRPC-01**: TRPCProvider + QueryClientProvider в (app)/layout.tsx с useState pattern (без SSR leak)
+- [ ] **TRPC-02**: superjson transformer на клиенте и сервере (Date serialization)
+- [ ] **TRPC-03**: @trpc/tanstack-react-query установлен (React Compiler совместимость)
+- [ ] **TRPC-04**: 7 container-компонентов переведены с mock-data на useQuery/useMutation
+- [ ] **TRPC-05**: Loading states (skeleton) на каждой странице при загрузке данных
+- [ ] **TRPC-06**: Error boundaries + toast notifications для ошибок API
+- [ ] **TRPC-07**: Cache invalidation после каждой мутации (submit→refetch dashboard, etc.)
 
-- [x] **UI-01**: Lead Form — SDLC pipeline with 7 stages, product ownership, locked/editable stages (MANIFEST §2-3)
-- [x] **UI-02**: Lead Form — period navigator (← combobox →), past periods read-only (D-64)
-- [x] **UI-03**: Lead Form — "Fill from Previous" split button with searchable dropdown (D-65)
-- [x] **UI-04**: Lead Form — version history (← v3 →) with diff preview and rollback (D-67)
-- [x] **UI-05**: Dashboard — central hub: KPIs, Alert bar, Blocked & At Risk, Lead Reports, Report Archive (D-59)
-- [x] **UI-06**: Dashboard — Lead Reports: own card clickable, others locked with 🔒, traffic light dots (D-62)
-- [x] **UI-07**: Dashboard — Report Archive with pagination, integrated (no separate Archive page) (D-60)
-- [x] **UI-08**: Dashboard — Toggle All button for collapsible sections
-- [x] **UI-09**: Weekly Report — auto-compiled, period navigator, Toggle All, Export PDF, Publish & Lock (D-58)
-- [x] **UI-10**: Weekly Report — per-lead accordions with full data (Current/Next Week, Risks, Decisions, Priorities)
-- [x] **UI-11**: Admin Panel — 5 tabs: Users, Products, Periods, Reminders, Settings (D-63)
-- [x] **UI-12**: Login — split-screen: Demo brand left, SSO/stub right, all English (D-61, D-68)
-- [x] **UI-13**: Lead History — traffic light dots per report card
-- [x] **UI-14**: URL-based routing — every state in URL, no SPA, query params for period/tab (D-69)
-- [x] **UI-15**: Nav bar teal border constrained to content width (D-70)
-- [x] **UI-16**: All pages: max-w-6xl standardized, padding uniform, alignment consistent
-- [x] **UI-17**: Starbucks design system: cream canvas, teal primary, gold accents, Lexend + Source Sans 3
-- [x] **UI-18**: Accessibility: skip-link, aria-labels, focus rings, touch targets 44px, reduced motion
-- [x] **UI-19**: UI States: all modals/dialogs per mockup s7 (Submit, Publish, Reopen, Revoke, Fill, Version, etc.)
-- [x] **UI-20**: Print/PDF template consistent with web design
+### Interactivity
 
-## E2E Tests (Phase 18)
+- [ ] **INT-01**: Submit секции вызывает реальный tRPC mutation, форма ��локируется после submit
+- [ ] **INT-02**: Publish & Lock вызывает period.publish, обновляет weekly report и dashboard
+- [ ] **INT-03**: Revoke вызывает leadForm.revoke, разблокирует секцию для повторного редактирования
+- [ ] **INT-04**: Fill From вызывает leadForm.fillFrom, заполняет форму данными из предыдущего периода
+- [ ] **INT-05**: Version History навигация и Restore вызывают leadForm.versions/restoreVersion
+- [ ] **INT-06**: Autosave drafts через debounced tRPC mutation (3-5 сек)
+- [ ] **INT-07**: Dirty state tracking + предупреждение при уходе с несохранённой формой
+- [ ] **INT-08**: Real cursor pagination в archive list и version history
+- [ ] **INT-09**: Period Navigator переключа��т периоды через URL + useQuery
+- [ ] **INT-10**: Admin CRUD (users, products, stages, periods, settings) через реальные tRPC mutations
 
-- [x] **E2E-01**: Lead journey: login stub → select period → fill all sections → submit → locked
-- [x] **E2E-02**: Head journey: login → dashboard KPIs → weekly report → publish & lock → PDF
-- [x] **E2E-03**: Admin journey: login → admin panel → CRUD users/products/periods/settings
-- [x] **E2E-04**: Cross-role lifecycle: lead submits → head publishes → lead sees locked → head reopens
-- [x] **E2E-05**: Revoke flow: admin revokes → lead re-edits → re-submits
-- [x] **E2E-06**: Period navigation: lead switches periods → past read-only → current editable
-- [x] **E2E-07**: Fill from: lead fills from Week 15 → warning on overwrite → data populated
-- [x] **E2E-08**: Version history: autosave creates versions → rollback → linear discard
-- [x] **E2E-09**: Error paths: 403 wrong role, 404 invalid period, network disconnect
-- [x] **E2E-10**: Visual regression baselines (Playwright screenshots, 223 scenarios as reference)
+### Status-Risk Sync
 
----
+- [ ] **SYNC-01**: При установке стадии в At Risk/Blocked — автоматически добавляется пустая строка в Risks секцию
+- [ ] **SYNC-02**: Пустая risk-строка обязательна к заполнению перед сохранением
+- [ ] **SYNC-03**: При заполнении risk — предложение обновить статус ��тадии (с подтверждением пользователя)
+- [ ] **SYNC-04**: SyncSource flag предотвращает infinite loops ('user' | 'auto-sync')
 
-## Deferred (v5.0+)
+### PDF and Jobs
 
-- Analytics/trends (pgvector, charts)
-- Telegram/Slack notifications
-- Real-time collaboration
-- Jira/GitLab integration
-- Mobile app
-- Full Keycloak SAML SSO (replacing login stub)
-- Dark theme
+- [ ] **PDF-01**: BullMQ re-enabled, PDF export job работает end-to-end
+- [ ] **PDF-02**: Кнопка Export PDF → tRPC mutation → BullMQ job → Playwright renders → download
+- [ ] **PDF-03**: Индикатор прогресса (generating → ready → download link)
 
-## Out of Scope for v4.0
+### Auth
 
-- Real-time WebSocket updates
-- Multi-department support
-- i18n (UI stays English per D-61)
-- Offline mode
+- [ ] **AUTH-01**: proxy.ts проверяет session cookie, redirect на /login для неаутентифицированных
+- [ ] **AUTH-02**: AUTH_STUB=true полностью обходит auth (для dev/test)
+- [ ] **AUTH-03**: 401 interceptor — при истечении сессии redirect на login с return URL
+- [ ] **AUTH-04**: Session context доступен во всех (app)/ layouts
 
----
+### Logging
+
+- [ ] **LOG-01**: Correlation ID propagation через nestjs-cls (AsyncLocalStorage)
+- [ ] **LOG-02**: Request/response logging на каждом tRPC endpoint
+- [ ] **LOG-03**: Логи пишутся в файл (не только console)
+- [ ] **LOG-04**: File rotation — архивация по размеру/времени
+- [ ] **LOG-05**: Structured JSON format с timestamp, level, correlationId, module
+
+### E2E Integration
+
+- [ ] **E2E-01**: Playwright config с dual webServer (API + Web)
+- [ ] **E2E-02**: Global setup seeds БД перед тестами, cleanup после
+- [ ] **E2E-03**: 20-30 core integration tests в отде��ьной e2e/integration/ директор��и
+- [ ] **E2E-04**: Lead journey end-to-end через реальный API (login → fill → submit → locked)
+- [ ] **E2E-05**: Head journey end-to-end (dashboard → report → publish → PDF)
+- [ ] **E2E-06**: Cross-role lifecycle (lead submits → head publishes → lead sees locked)
+- [ ] **E2E-07**: Существующие 339 mock-based тестов сохранены (не big-bang миграция)
+
+## v6.0 Requirements (Deferred)
+
+### Role Separation
+
+- **ROLE-01**: Разделение доступа по ролям (lead/head/viewer) на уровн�� UI
+- **ROLE-02**: Backend role guards на каждом endpoint
+- **ROLE-03**: Role-specific navigation и menu items
+
+### Notifications
+
+- **NOTIF-01**: Email reminders через BullMQ job
+- **NOTIF-02**: In-app notifications для submission events
+
+### Analytics
+
+- **ANAL-01**: Trend analytics (светофоры по неделям)
+- **ANAL-02**: Team velocity metrics
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Real-time collaboration | Ка��дый лид работает в своей секции, конфликтов нет |
+| Mobile app | Web-first, responsive достаточно |
+| Jira/GitLab integration | Ручной ввод для v5.0 |
+| Telegram/Slack notifications | Email only |
+| Full SAML SSO flow | AUTH_STUB режим дл�� v5.0, Keycloak в v6.0+ |
+| Replace custom logger with pino | Research says enhance existing, not replace |
 
 ## Traceability
 
-| Requirement | Phase | MANIFEST | Scenarios | Status |
-|-------------|-------|----------|-----------|--------|
-| BE-01..06 | 16 | — | SC-01..SC-19 | Complete |
-| SCH-01..07 | 17 | D-56,D-57,D-63,D-67,D-68 | SC-100..SC-116 | Complete |
-| API-01..13 | 17 | D-56..D-68 | SC-100..SC-310 | Complete |
-| UI-01..20 | 17 | D-01..D-70 | SC-01..SC-311 | Complete |
-| E2E-01..10 | 18 | All | All 223 | Complete |
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SEED-01..05 | Phase 20 | Pending |
+| TYPE-01..03 | Phase 20 | Pending |
+| TRPC-01..07 | Phase 21 | Pending |
+| INT-01..10 | Phase 22 | Pending |
+| SYNC-01..04 | Phase 22 | Pending |
+| PDF-01..03 | Phase 23 | Pending |
+| AUTH-01..04 | Phase 24 | Pending |
+| LOG-01..05 | Phase 25 | Pending |
+| E2E-01..07 | Phase 26 | Pending |
+
+**Coverage:**
+- v5.0 requirements: 42 total
+- Mapped to phases: 42
+- Unmapped: 0 ✓
 
 ---
-
-*Created: 2026-04-21*
-*Updated: 2026-04-25 — all requirements complete (v4.0 milestone)*
+*Requirements defined: 2026-04-25*
+*Last updated: 2026-04-25 after initial definition*
