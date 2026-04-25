@@ -1,0 +1,161 @@
+/**
+ * Tests for useCursorPagination — the generic cursor pagination hook that
+ * wraps useInfiniteQuery for any cursor-paginated tRPC endpoint.
+ *
+ * The hook accepts a factory that mirrors the shape produced by
+ * `trpc.<router>.<proc>.infiniteQueryOptions(input, opts)` from
+ * `@trpc/tanstack-react-query`. We mock that factory directly with a plain
+ * `infiniteQueryOptions` object so the tests do not depend on a real tRPC
+ * client.
+ */
+import { describe, it, expect, vi } from 'vitest';
+import { renderHook, waitFor, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as React from 'react';
+
+import { useCursorPagination } from './use-cursor-pagination';
+
+type Page<T> = { items: T[]; nextCursor: string | null };
+
+function makeWrapper() {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+    },
+  });
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client }, children);
+  }
+  return { client, Wrapper };
+}
+
+/** Build a factory compatible with the hook signature. */
+function makeFactory<T>(
+  pages: Record<string, Page<T>>,
+  baseQueryKey: readonly unknown[],
+) {
+  return (input: { cursor?: string; limit?: number }) => ({
+    queryKey: [...baseQueryKey, { limit: input.limit }] as const,
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
+      const key = pageParam ?? '__first__';
+      const page = pages[key];
+      if (!page) throw new Error(`Unknown page cursor: ${key}`);
+      return page;
+    },
+    getNextPageParam: (last: Page<T>) => last.nextCursor ?? undefined,
+  });
+}
+
+describe('useCursorPagination', () => {
+  it('returns first page items + hasNextPage=true after initial load', async () => {
+    const { Wrapper } = makeWrapper();
+    const factory = makeFactory(
+      {
+        __first__: { items: ['a', 'b', 'c'], nextCursor: 'cursor-2' },
+        'cursor-2': { items: ['d', 'e', 'f'], nextCursor: null },
+      },
+      ['archive', 'list'],
+    );
+
+    const { result } = renderHook(
+      () => useCursorPagination(factory, { limit: 3 }),
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.items).toEqual(['a', 'b', 'c']);
+    expect(result.current.hasNextPage).toBe(true);
+    expect(result.current.isError).toBe(false);
+  });
+
+  it('appends next page items when fetchNextPage is called', async () => {
+    const { Wrapper } = makeWrapper();
+    const factory = makeFactory(
+      {
+        __first__: { items: ['a', 'b', 'c'], nextCursor: 'cursor-2' },
+        'cursor-2': { items: ['d', 'e', 'f'], nextCursor: null },
+      },
+      ['archive', 'list'],
+    );
+
+    const { result } = renderHook(
+      () => useCursorPagination(factory, { limit: 3 }),
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.items).toHaveLength(3);
+
+    await act(async () => {
+      result.current.fetchNextPage();
+    });
+
+    await waitFor(() =>
+      expect(result.current.items).toEqual(['a', 'b', 'c', 'd', 'e', 'f']),
+    );
+  });
+
+  it('sets hasNextPage=false once the server returns nextCursor=null', async () => {
+    const { Wrapper } = makeWrapper();
+    const factory = makeFactory(
+      {
+        __first__: { items: ['only'], nextCursor: null },
+      },
+      ['archive', 'list'],
+    );
+
+    const { result } = renderHook(
+      () => useCursorPagination(factory, { limit: 1 }),
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.hasNextPage).toBe(false);
+  });
+
+  it('exposes isError and error when the queryFn throws', async () => {
+    const { Wrapper } = makeWrapper();
+    // Silence TanStack's expected error log for this test.
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const factory = (input: { cursor?: string; limit?: number }) => ({
+      queryKey: ['archive', 'list', { limit: input.limit }] as const,
+      initialPageParam: undefined as string | undefined,
+      queryFn: async () => {
+        throw new Error('boom');
+      },
+      getNextPageParam: () => undefined,
+    });
+
+    const { result } = renderHook(
+      () => useCursorPagination(factory, { limit: 5 }),
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect((result.current.error as Error).message).toBe('boom');
+    expect(result.current.items).toEqual([]);
+
+    errSpy.mockRestore();
+  });
+
+  it('does not fetch when enabled=false', async () => {
+    const { Wrapper } = makeWrapper();
+    const queryFn = vi.fn(async () => ({ items: [], nextCursor: null }));
+    const factory = (input: { cursor?: string; limit?: number }) => ({
+      queryKey: ['archive', 'list', { limit: input.limit }] as const,
+      initialPageParam: undefined as string | undefined,
+      queryFn,
+      getNextPageParam: () => undefined,
+    });
+
+    renderHook(
+      () => useCursorPagination(factory, { limit: 5 }, { enabled: false }),
+      { wrapper: Wrapper },
+    );
+
+    // Wait a microtask + a couple rAFs to be sure no fetch happens.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(queryFn).not.toHaveBeenCalled();
+  });
+});
