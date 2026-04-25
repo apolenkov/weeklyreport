@@ -99,6 +99,19 @@ export type WeeklyProductReport = {
 
 export type WeeklyReportPeriod = {
   id: string;
+  /**
+   * Concrete report identifier (UUID). Equal to `id` (which historically was
+   * set to `api.reportId`); surfaced explicitly so consumers wiring publish /
+   * reopen mutations can read `period.reportId` without relying on the
+   * implicit `id === reportId` invariant. Added in Phase 22 (plan 22-05).
+   */
+  reportId: string;
+  /**
+   * Period lifecycle state mirrored from the API. Used by the head's
+   * Publish & Lock / Reopen toggle to decide which action to render.
+   * Phase 22 (plan 22-05).
+   */
+  periodStatus: 'open' | 'published' | 'reopened';
   weekLabel: string;
   dateRange: string;
   isCurrent: boolean;
@@ -396,6 +409,8 @@ export function mapWeeklyReport(
 
   const period: WeeklyReportPeriod = {
     id: api.reportId,
+    reportId: api.reportId,
+    periodStatus: api.periodStatus,
     weekLabel: api.weekLabel ?? isoWeekLabel(api.periodStart),
     dateRange: formatWeekRange(api.periodStart, api.periodEnd),
     isCurrent: api.periodStatus !== 'published',
