@@ -67,16 +67,27 @@ type Capture = {
   submitOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
   revokeOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
   saveDraftOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
+  fillFromOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
+  restoreOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
 };
 
 async function flushAll() {
-  for (let i = 0; i < 10; i++) await Promise.resolve();
+  // Three rounds of flushing handles the cascade:
+  //   1. getActive resolves -> activeSectionId populates
+  //   2. dependent queries (byPeriod / versions) fire and resolve
+  //   3. useEffect re-seeds draftSection from byPeriod data -> form leaves skeleton
+  for (let i = 0; i < 30; i++) await Promise.resolve();
+  await new Promise((r) => setTimeout(r, 0));
+  for (let i = 0; i < 30; i++) await Promise.resolve();
+  await new Promise((r) => setTimeout(r, 0));
+  for (let i = 0; i < 30; i++) await Promise.resolve();
 }
 
 function buildHarness(opts: {
   sectionStatus?: 'draft' | 'submitted';
   submitFn?: () => Promise<unknown>;
   revokeFn?: () => Promise<unknown>;
+  versions?: Array<{ id: string; reportSectionId: string; version: number; createdAt: Date }>;
 } = {}) {
   const cap: Capture = {};
   const calls: { type: string; vars: unknown }[] = [];
@@ -136,7 +147,7 @@ function buildHarness(opts: {
       versions: {
         queryOptions: () => ({
           queryKey: ['leadForm.versions'],
-          queryFn: async () => [],
+          queryFn: async () => opts.versions ?? [],
         }),
         pathFilter: () => ({ queryKey: ['leadForm.versions'] }),
       },
@@ -155,11 +166,29 @@ function buildHarness(opts: {
         pathFilter: () => ({ queryKey: ['leadForm.revoke'] }),
       },
       fillFrom: {
-        mutationOptions: (passed: object) => ({ ...passed, mutationFn: async () => ({}) }),
+        mutationOptions: (passed: NonNullable<Capture['fillFromOpts']>) => {
+          cap.fillFromOpts = passed;
+          return {
+            ...passed,
+            mutationFn: async (vars: unknown) => {
+              calls.push({ type: 'fillFrom', vars });
+              return { ok: true };
+            },
+          };
+        },
         pathFilter: () => ({ queryKey: ['leadForm.fillFrom'] }),
       },
       restoreVersion: {
-        mutationOptions: (passed: object) => ({ ...passed, mutationFn: async () => ({}) }),
+        mutationOptions: (passed: NonNullable<Capture['restoreOpts']>) => {
+          cap.restoreOpts = passed;
+          return {
+            ...passed,
+            mutationFn: async (vars: unknown) => {
+              calls.push({ type: 'restoreVersion', vars });
+              return { ok: true };
+            },
+          };
+        },
         pathFilter: () => ({ queryKey: ['leadForm.restoreVersion'] }),
       },
     },
@@ -312,5 +341,98 @@ describe('LeadForm mutation wiring', () => {
     // invalidateLeadForm (3 keys) + invalidateDashboard (3 keys) +
     // invalidateLeadHistory (1 key) -> at least 7 invalidateQueries calls.
     expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(7);
+  });
+
+  it('fillFrom success: invalidates leadForm, fires toast.success', async () => {
+    const { Wrapper, cap, queryClient } = buildHarness();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await act(async () => {
+      await flushAll();
+    });
+
+    expect(cap.fillFromOpts).toBeDefined();
+    act(() => {
+      cap.fillFromOpts!.onSuccess?.();
+    });
+    expect(toast.success).toHaveBeenCalledWith('Form filled from selected period');
+    expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('restoreVersion error: fires toast.error with the error message', async () => {
+    const { Wrapper, cap } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await act(async () => {
+      await flushAll();
+    });
+
+    expect(cap.restoreOpts).toBeDefined();
+    cap.restoreOpts!.onError?.(new Error('Version not found'));
+    expect(toast.error).toHaveBeenCalledWith('Version not found');
+  });
+
+  it('restoreVersion: window.confirm guards dirty state and cancels mutation', async () => {
+    // Provide a version snapshot so the Version History modal renders a
+    // Restore button that we can click.
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => false);
+    const versionId = '88888888-8888-8888-8888-888888888888';
+
+    const { Wrapper, calls } = buildHarness({
+      versions: [
+        { id: versionId, reportSectionId: SECTION_ID, version: 2, createdAt: new Date('2026-04-20T10:00:00Z') },
+        { id: '99999999-9999-9999-9999-999999999999', reportSectionId: SECTION_ID, version: 1, createdAt: new Date('2026-04-19T10:00:00Z') },
+      ],
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await act(async () => {
+      await flushAll();
+    });
+
+    // Make form dirty: edit the decision text.
+    const inputs = screen.getAllByRole('textbox');
+    const decisionInput = inputs.find(
+      (el) => (el as HTMLInputElement).value === 'Existing decision',
+    ) as HTMLInputElement;
+    act(() => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value',
+      )!.set!;
+      setter.call(decisionInput, 'edited');
+      decisionInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      await flushAll();
+    });
+
+    // Open the version history modal via its trigger button.
+    const historyTrigger = screen.getByTitle(/View version history/i);
+    act(() => {
+      historyTrigger.click();
+    });
+
+    // Click "Restore" on the older (non-latest) version.
+    const restoreBtn = screen.getByRole('button', { name: /^Restore$/ });
+    act(() => {
+      restoreBtn.click();
+    });
+
+    // The dirty guard fired (confirm returned false) so the mutation never ran.
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(calls.filter((c) => c.type === 'restoreVersion')).toHaveLength(0);
+
+    confirmSpy.mockRestore();
   });
 });

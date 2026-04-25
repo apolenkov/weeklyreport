@@ -6,7 +6,11 @@ import type { ReportPeriod } from './mock-data';
 
 type FillFromButtonProps = {
   readonly periods: ReportPeriod[];
-  readonly onFillFrom?: (periodId: string) => void;
+  /**
+   * Called with the SECTION id of the chosen period (NOT the report id) so the
+   * parent can wire `leadForm.fillFrom({ targetSectionId, sourceSectionId })`.
+   */
+  readonly onFillFrom?: (sourceSectionId: string) => void;
   readonly disabled?: boolean;
 };
 
@@ -67,7 +71,7 @@ export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFr
 
   function handleConfirm() {
     if (selectedPeriod) {
-      onFillFrom?.(selectedPeriod.id);
+      onFillFrom?.(selectedPeriod.sourceSectionId);
     }
     setShowConfirm(false);
     setSelectedPeriod(null);

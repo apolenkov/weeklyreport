@@ -11,7 +11,7 @@ import {
   invalidateDashboard,
 } from '../../lib/cache-keys';
 import { mapLeadFormData } from '../../lib/mappers';
-import { useLeadFormAutosave } from '../../hooks/use-lead-form-autosave';
+import { useLeadFormAutosave, stableStringify } from '../../hooks/use-lead-form-autosave';
 import { LeadFormSkeleton } from './lead-form-skeleton';
 import { SdlcPipeline } from './sdlc-pipeline';
 import { PeriodNavigator } from './period-navigator';
@@ -344,6 +344,32 @@ export function LeadForm({ period }: LeadFormProps) {
     }),
   );
 
+  const fillFromMut = useMutation(
+    trpc.leadForm.fillFrom.mutationOptions({
+      onSuccess: () => {
+        invalidateLeadForm(qc, trpc);
+        toast.success('Form filled from selected period');
+      },
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : 'Fill from failed';
+        toast.error(msg);
+      },
+    }),
+  );
+
+  const restoreMut = useMutation(
+    trpc.leadForm.restoreVersion.mutationOptions({
+      onSuccess: () => {
+        invalidateLeadForm(qc, trpc);
+        toast.success('Version restored');
+      },
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : 'Restore failed';
+        toast.error(msg);
+      },
+    }),
+  );
+
   // ---- Build draft payload ----
   const draftPayload = useMemo(
     () => (draftSection ? sectionToDraftPayload(draftSection) : null),
@@ -363,11 +389,19 @@ export function LeadForm({ period }: LeadFormProps) {
     isSubmitted ||
     (byPeriodQ.data ? byPeriodQ.data.readOnly : true);
 
+  // Compute the baseline key from the *server-side* section so the autosave
+  // hook treats freshly-loaded data as already-saved (no dirty flicker).
+  const initialSavedKey = useMemo(() => {
+    if (!byPeriodQ.data?.section) return null;
+    return stableStringify(sectionToDraftPayload(byPeriodQ.data.section));
+  }, [byPeriodQ.data]);
+
   // Autosave wiring — runs unconditionally to keep hook order stable.
   const autosave = useLeadFormAutosave({
     reportSectionId: activeSectionId || null,
     payload: draftPayload,
     enabled: !isReadOnlyEarly && !isSubmitted && draftSection !== null,
+    initialSavedKey,
   });
 
   // Skeleton until all queries settle.
@@ -459,6 +493,28 @@ export function LeadForm({ period }: LeadFormProps) {
     revokeMut.mutate({ reportSectionId: activeSectionId });
   }
 
+  function handleFillFrom(sourceSectionId: string) {
+    if (!activeSectionId) return;
+    if (
+      autosave.dirty &&
+      !window.confirm('You have unsaved changes. Continue and overwrite?')
+    ) {
+      return;
+    }
+    fillFromMut.mutate({ targetSectionId: activeSectionId, sourceSectionId });
+  }
+
+  function handleRestoreVersion(version: number) {
+    if (!activeSectionId) return;
+    if (
+      autosave.dirty &&
+      !window.confirm('You have unsaved changes. Continue and overwrite?')
+    ) {
+      return;
+    }
+    restoreMut.mutate({ reportSectionId: activeSectionId, version });
+  }
+
   function handleToggleAll() {
     // Visual placeholder; individual accordion state owns its own toggle.
   }
@@ -497,7 +553,8 @@ export function LeadForm({ period }: LeadFormProps) {
           <div className="flex items-center gap-3">
             <FillFromButton
               periods={periods}
-              disabled={isReadOnly}
+              disabled={isReadOnly || fillFromMut.isPending}
+              onFillFrom={handleFillFrom}
             />
             <button
               type="button"
@@ -543,7 +600,7 @@ export function LeadForm({ period }: LeadFormProps) {
           </div>
 
           <div className="ml-auto">
-            <VersionHistoryNav versions={versions} />
+            <VersionHistoryNav versions={versions} onRestore={handleRestoreVersion} />
           </div>
         </div>
 

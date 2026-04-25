@@ -117,6 +117,12 @@ export type LeadPriorityEntry = {
 
 export type LeadReportPeriod = {
   id: string;
+  /**
+   * The source section id for this period (the lead's section within that
+   * historical report). Required by `leadForm.fillFrom` which routes by
+   * section, not report. Sourced from `MyHistoryEntry.sectionId`.
+   */
+  sourceSectionId: string;
   weekLabel: string;
   dateRange: string;
   isCurrent: boolean;
@@ -373,6 +379,7 @@ export function mapLeadPeriods(
 ): LeadReportPeriod[] {
   return history.map((e) => ({
     id: e.reportId,
+    sourceSectionId: e.sectionId,
     weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
     dateRange: formatDateRange(e.periodStart, e.periodEnd),
     isCurrent: activeReportId !== null && e.reportId === activeReportId,
