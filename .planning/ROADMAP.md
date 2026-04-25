@@ -260,8 +260,15 @@ Plans:
   3. Autosave persists draft changes every 3-5 seconds via debounced mutation; leaving an unsaved form triggers a browser warning
   4. Setting a stage to At Risk or Blocked auto-creates a risk row; filling a risk offers to update the stage status (with user confirmation); SyncSource flag prevents loops
   5. Admin CRUD operations (users, products, stages, periods, settings) persist through real tRPC mutations with immediate UI feedback
-**Plans**: TBD
+**Plans**: 5 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 22-01-PLAN.md — Lead Form mutations: submit, revoke, autosave (3s debounce), dirty-state guard, fill-from, restore-version
+- [ ] 22-02-PLAN.md — Status<->Risk sync hook + bridge component (SYNC-01..04, SyncSource ref pattern)
+- [ ] 22-03-PLAN.md — URL-driven Period Navigators + cursor pagination on archive.list + version history reveal
+- [ ] 22-04-PLAN.md — Admin CRUD wiring across 6 tabs (users, products, stage assignments, periods, reminders, settings)
+- [ ] 22-05-PLAN.md — Head Publish & Lock / Reopen + Export PDF deferred to Phase 23
 
 ### Phase 23: PDF & Jobs
 **Goal**: Users can export published reports as PDF files through an async job pipeline
