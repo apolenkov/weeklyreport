@@ -172,7 +172,10 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
 
     await waitFor(() => {
       expect(captured.publishMutationFn).toHaveBeenCalledTimes(1);
-      expect(captured.publishMutationFn).toHaveBeenCalledWith({ reportId: REPORT_ID });
+    });
+    // TanStack Query invokes mutationFn(variables, context); assert the first arg only.
+    expect(captured.publishMutationFn.mock.calls[0]?.[0]).toEqual({
+      reportId: REPORT_ID,
     });
   });
 
@@ -226,7 +229,9 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
 
     await waitFor(() => {
       expect(captured.reopenMutationFn).toHaveBeenCalledTimes(1);
-      expect(captured.reopenMutationFn).toHaveBeenCalledWith({ reportId: REPORT_ID });
+    });
+    expect(captured.reopenMutationFn.mock.calls[0]?.[0]).toEqual({
+      reportId: REPORT_ID,
     });
   });
 
