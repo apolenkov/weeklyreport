@@ -8,21 +8,28 @@
 
 Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
 
-## Current Milestone: v4.0 Backend Completeness & UI Redesign
+## Current State: v4.0 SHIPPED (2026-04-25)
 
-**Goal:** Довести бэкенд до 100% соответствия контрактам и регрессионным сценариям, полностью переделать UI через дизайн-скиллы, покрыть E2E тестами.
+**What was delivered:**
+- 19 Prisma models, 36 tRPC endpoints (full API surface)
+- 7 frontend pages with Starbucks design system (cream/teal/gold, Lexend + Source Sans 3)
+- 129 Playwright E2E tests, 382 API unit tests, 35 integration tests
+- Complete documentation: API reference, deployment guide, developer + user guides
+- 56/56 requirements satisfied
 
-**Target features:**
-- Backend 100%: Prisma миграция, оставшиеся edge-cases, полное соответствие 81 регрессионному сценарию
-- UI Redesign: полный редизайн с нуля через дизайн-скиллы — тёмная тема, динамический контент, responsive
-- E2E тесты: Playwright сценарии по ролям (lead/head/viewer полные user journeys)
+**Tech debt (v5.0 scope):**
+- Wire tRPC client (replace mock data with real API calls)
+- Add auth session guards to app routes
+- Align mock types with Zod schemas
+- Rework E2E tests for real API integration
 
-**Priority:** Backend-first, затем UI, затем E2E
+## Next Milestone: v5.0 (not started)
 
-**Already done (this session):**
-- 191 contract test (all services), 422 unit tests total
-- API contracts doc, role matrix, 81 regression scenarios
-- 5 backend fixes (reminder schema, dashboard 500, myHistory validation, dynamic priorities, pagination)
+Goals TBD. Candidates:
+- tRPC integration (wire frontend to real API)
+- Full Keycloak SAML SSO
+- Real-time features
+- Analytics/trends
 
 ## Requirements
 
