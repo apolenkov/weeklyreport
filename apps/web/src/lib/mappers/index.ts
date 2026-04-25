@@ -35,3 +35,31 @@ export {
   isoWeekNumber,
   type HistoryEntry,
 } from './lead-history';
+
+export {
+  mapAdminSnapshot,
+  mapAdminSettings,
+  type MockUser,
+  type MockProduct,
+  type MockPeriod,
+  type MockReminder,
+  type MockSettings,
+  type MappedAdminSnapshot,
+  type StageName,
+  type StageAssignment,
+  type PeriodStatus,
+  type UserRole,
+} from './admin';
+
+export {
+  mapDashboardData,
+  formatRelativeDeadline,
+  type KpiData,
+  type LeadInfo,
+  type BlockedAtRiskItem,
+  type ArchiveReport,
+  type ProductStatus,
+  type TrafficLight,
+  type MapDashboardArgs,
+  type MappedDashboard,
+} from './dashboard';
