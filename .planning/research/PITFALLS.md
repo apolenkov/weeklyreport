@@ -1,332 +1,482 @@
-# Domain Pitfalls — v4.0
+# Domain Pitfalls -- v5.0 Production Integration
 
-**Domain:** CustomReport v4.0 — Backend edge-cases, UI redesign from scratch, E2E tests
-**Researched:** 2026-04-21
-**Scope:** Pitfalls specific to this milestone. v3.0 pitfalls (Next.js 16 upgrade, shadcn/ui setup, pgvector) are resolved and NOT repeated here.
+**Domain:** Mock-to-real API migration in existing Next.js 16 + NestJS 11 + tRPC 11 monorepo
+**Researched:** 2026-04-25
+**Confidence:** HIGH (all findings verified against actual codebase files)
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Another Full Redesign Rejected Because No Early User Validation
-
-**What goes wrong:** An agent completes a full UI redesign pass (all 8+ pages, all components, dark theme, animations) and delivers the final result — only for the user to reject the entire aesthetic direction again, as happened before ("куцо, как 90-е").
-
-**Why it happens:** "Redesign from scratch via design skills" is interpreted as "produce final result, then show." The user has strong visual opinions (the UX audit captured them: flat design, modern feel, colorful traffic lights, micro-animations, no wall-of-cards). Without a checkpoint on the very first styled surface, the entire effort can miss the aesthetic target.
-
-**Consequences:**
-- Complete rework of all styled components
-- Wasted E2E test effort if selectors were written against the rejected design
-- User trust erosion in the redesign phase
-
-**Prevention:**
-1. Do NOT redesign all pages before showing the user anything. Style one high-visibility surface first — the lead report form (the primary weekly-use surface) — and show it to the user before continuing.
-2. The UX audit's specific complaints (P0-P2) are the success criteria: confirmation before delete, collapsible sections, colorful traffic light buttons, focus-visible rings, micro-animations on add/remove.
-3. Get explicit user sign-off on the first page before starting the remaining 7 pages.
-4. Do the full-page screenshot comparison so the user can see the visual direction, not just describe it.
-
-**Detection:** The user has not seen any rendered output before a complete redesign pass is submitted.
-
-**Phase:** Redesign Phase — address on first plan, not at the end.
-
-**Confidence:** HIGH — this happened in this exact project; the UX audit memory records it.
+Mistakes that cause white-screens, broken test suites, or require architectural rework.
 
 ---
 
-### Pitfall 2: Existing E2E Tests Are Invalidated by Redesign and Become Noise
+### Pitfall 1: Type System Divergence Is Semantic, Not Cosmetic
 
-**What goes wrong:** The 8 existing E2E spec files (lead-report-entry, head-journey, lead-journey, head-dashboard, admin-panel, etc.) use ARIA selectors tied to the current DOM structure — headings like `'My Report'`, group names like `'Project Statuses'`, `'Items'`, `'Risks'`. After a redesign, heading text, ARIA group names, and component structure change. All these tests fail. The visual regression baselines in `screenshots.spec.ts-snapshots/` fail from pixel 1.
+**What goes wrong:** The mock types and Zod API types represent fundamentally different data models. A search-and-replace will not work -- a mapping/adapter layer is required.
 
-**Why it happens:** The redesign changes the semantic structure (new section names, different heading hierarchy, potentially redesigned traffic light from radio inputs to button groups). The specs are not resilient to these changes.
+**Specific mismatches found in this codebase:**
 
-**Consequences:**
-- E2E test suite fails entirely during redesign — 0 signal about actual breakage
-- Visual baselines are all stale — any comparison produces a failure
-- Developers either ignore failures (worse) or spend time updating specs mid-redesign (fragile)
+| Mock Type (UI) | Zod/Prisma Type (API) | Problem |
+|---|---|---|
+| `StageStatus: 'on-track' \| 'at-risk' \| 'blocked' \| 'empty'` | `TrafficLightStatus: 'green' \| 'yellow' \| 'red'` | Entirely different semantic models. "empty" has no API equivalent. "on-track" is not "green" -- the UI concept includes stage ownership context. |
+| `ItemStatus: 'in-progress' \| 'completed' \| 'blocked' \| 'planned'` | `ItemWorkflowStatus: 'done' \| 'in_progress' \| 'blocked'` | 4 values vs 3. `'planned'` does not exist in DB. `'completed'` vs `'done'` naming. Hyphen vs underscore (`in-progress` vs `in_progress`). |
+| `Product.stages: StageAssignment[]` with `ownership: 'mine' \| 'locked' \| 'unassigned'` | `stageAssignmentSchema` is a flat admin entity (`userId, stageId, projectId`) | Ownership is computed from current user's session vs stage assignment records -- not stored as an enum value. |
+| Dates: `"2 min ago"`, `"Apr 13, 17:42"`, `"2026-04-18"` (display strings) | `z.coerce.date()` returns `Date` objects via superjson | Every component touching dates needs formatting logic added. |
+| `MockReminder: { name, description, active: boolean }` | `adminReminderRuleSchema: { kind: 'deadline' \| 'follow_up', status: 'active' \| 'paused', fireAt: Date, ... }` | Completely different shape. Mock is a display label; API is a rule engine config with 7 fields. |
+| `MockPeriod: { weekLabel, startDate: string, status: 'open' \| 'published' \| 'reopened' }` | `periodReadModelSchema: { periodStart: Date, periodEnd: Date, deadline: Date, status: ReportStatus, periodStatus: PeriodStatus }` | Period has TWO status fields in API (`status` for report, `periodStatus` for period lifecycle). Dates are `Date` objects, not strings. `weekLabel` is computed server-side and nullable. |
 
-**Prevention:**
-1. Before starting the redesign: delete all `screenshots.spec.ts-snapshots/` baseline images. These will be regenerated after redesign is complete.
-2. Decide upfront: either (a) freeze existing E2E specs and accept they fail during redesign, then update them after; or (b) update specs incrementally with each redesigned page. Option (a) is lower risk.
-3. After redesign is complete: do a single full E2E spec update pass. Do not interleave spec updates with component changes.
-4. New E2E journeys for v4.0 (lead journey, head journey, viewer journey, cross-role lifecycle) should be written AFTER redesign is stable — same principle as v3.0.
-5. Add `data-testid` attributes during redesign so selectors are not ARIA-structure-dependent.
+**Why it happens:** The UI was designed from mockups (product-centric view with stage ownership and traffic metaphors), while the API was designed from domain models (report-section-centric with traffic light enums). These are intentionally different abstractions.
 
-**Detection:** Run `pnpm exec playwright test` at start of redesign phase. If more than 3 tests fail for reasons unrelated to backend, the specs are already stale.
+**Consequences:** If you try to directly replace mock imports with tRPC query results, TypeScript will reject nearly every component. If you `as any` your way through, runtime crashes will follow because components access properties that do not exist on API types.
 
-**Phase:** Redesign Phase — plan for baseline deletion at start; E2E update at end.
+**Prevention -- build a mapping layer:**
 
-**Confidence:** HIGH — the specific ARIA selectors in the current specs (`getByRole('group', { name: 'Project Statuses' })`, `getByRole('radiogroup')`) will break if traffic light moves from native radio to shadcn/ui Button group.
+```typescript
+// apps/web/src/lib/api-mappers.ts
 
----
+// Map API traffic light to UI stage status
+export function trafficToStageStatus(
+  trafficLight: 'green' | 'yellow' | 'red' | null
+): StageStatus {
+  switch (trafficLight) {
+    case 'green': return 'on-track';
+    case 'yellow': return 'at-risk';
+    case 'red': return 'blocked';
+    case null: return 'empty';
+  }
+}
 
-### Pitfall 3: Prisma Reminder Migration Requires Data Transformation, Not Just Schema Rename
+// Map API workflow status to UI item status
+export function workflowToItemStatus(
+  ws: 'done' | 'in_progress' | 'blocked'
+): 'completed' | 'in-progress' | 'blocked' {
+  switch (ws) {
+    case 'done': return 'completed';
+    case 'in_progress': return 'in-progress';
+    case 'blocked': return 'blocked';
+  }
+}
+// Note: 'planned' items are Next Week items with no workflowStatus yet --
+// derive from item.type === 'next' rather than a DB enum value.
+```
 
-**What goes wrong:** The migration for the reminder schema (`kind/fireAt/timezone/status/version` replacing `cronExpression/name`) is treated as a simple column rename. The generated migration SQL drops the old columns and adds new ones, silently deleting all existing reminder rule rows in the database.
-
-**Why it happens:** `prisma migrate dev` does not automatically generate `UPDATE` statements to migrate existing data. A schema rename generates `DROP COLUMN` + `ADD COLUMN`, which loses all data. If the dev/staging database has seed reminder rules or user-created rules, they are gone after migration.
-
-**Consequences:**
-- Silent data loss of all reminder rules in non-empty databases
-- Seed data must be re-run after migration
-- If production database is migrated (future), reminder rules are lost
-- Integration tests fail with `ReferenceError: reminder rule not found` until re-seeded
-
-**Prevention:**
-1. Use `--create-only` flag: `prisma migrate dev --create-only --name reminder-schema-v2`.
-2. Manually edit the generated SQL to add `UPDATE` statements that map old field values to new fields before dropping old columns. Example: `UPDATE "ReminderRule" SET "kind" = 'absolute', "fireAt" = ...` derived from the old `cronExpression` value.
-3. If no existing data needs preservation (dev-only database), document this explicitly in the migration SQL with a comment: `-- No data migration needed; dev database only`.
-4. Run the migration against a copy of the current database schema first (`prisma migrate dev --name test-reminder` on a clean branch) to verify the generated SQL is correct before applying to the actual dev database.
-5. Verify via `prisma studio` that reminder rules table is populated after migration.
-
-**Detection:** After `prisma migrate dev`, check `SELECT COUNT(*) FROM "ReminderRule"`. If count drops to 0 and seed data had rules, data was lost.
-
-**Phase:** Backend Phase — first migration task.
-
-**Confidence:** HIGH — standard Prisma behavior; `migrate dev` generates schema diff, not data migration.
-
----
-
-### Pitfall 4: jsdom Test Failures Multiply During Redesign if Root Cause Is Not Fixed First
-
-**What goes wrong:** 24 pre-existing unit test failures in `apps/web` ("React is not defined" / jsdom errors) become worse during redesign. New components added during redesign inherit the broken test environment and generate additional failures. By the end of redesign, the test suite has grown from 24 failures to 40+, making it impossible to distinguish regressions from pre-existing issues.
-
-**Why it happens:** The root cause is the Vitest React plugin configuration or the `void React;` workaround in test files. The Phase 15 handoff notes that a `@vitejs/plugin-react` fix was committed (Wave 1 of Phase 15). However, if that fix was incomplete or reverted, any new component files that don't include the `void React;` workaround will fail.
-
-**Consequences:**
-- Unable to run a clean test suite against redesigned components
-- Redesign verification is blocked — you cannot tell if a new component works
-- The 24 failures hide actual regressions introduced during redesign
-
-**Prevention:**
-1. Before touching any component files: run `pnpm --filter @customreport/web test` and record the exact failure count.
-2. If the count is >0, fix the Vitest React configuration FIRST. The vitest.config.ts already has `plugins: [react()]` per the Phase 15 memory — verify this is in the committed file before assuming it is fixed.
-3. The `void React;` pattern is fragile (it is a workaround, not a fix). The correct fix is `@vitejs/plugin-react` in vitest.config.ts AND `@vitejs/plugin-react` in devDependencies — both must be present.
-4. After fixing, run the full test suite and verify 0 failures (or document any remaining known failures) before starting redesign.
-
-**Detection:** `pnpm --filter @customreport/web test 2>&1 | grep -c "FAIL"` — non-zero means pre-existing failures are still present.
-
-**Phase:** Backend Phase (fix before redesign), or first step of Redesign Phase.
-
-**Confidence:** HIGH — directly observed in Phase 14 verification gap (STATE.md records "24 pre-existing jsdom failures — not regressions from Phase 14").
+**Detection:** If you see `as any` or `@ts-ignore` near tRPC query results, the mapping layer is missing.
 
 ---
 
-### Pitfall 5: MSW Handlers Diverge from Real API After Backend Edge-Case Fixes
+### Pitfall 2: No TRPCProvider Exists -- Big-Bang Rendering Risk
 
-**What goes wrong:** The 81 regression scenarios require backend fixes — reminder schema, new error codes, changed response shapes. The MSW handlers in `apps/web/src/test/msw-handlers.ts` are hardcoded to return specific shapes. After backend fixes change error codes or add new fields, unit tests pass against stale mocks while the actual app integration fails. The divergence is invisible until E2E tests run against real services.
+**What goes wrong:** The root layout (`apps/web/src/app/layout.tsx`) contains no `QueryClientProvider` and no `trpc.Provider`. Adding these is a prerequisite for ANY tRPC wiring, but it changes the rendering context for every page simultaneously.
 
-**Why it happens:** MSW handlers have no type safety against the real backend. They return hardcoded objects that matched the API at time of writing. Backend changes that add fields, rename fields, or change error shapes do not propagate to MSW handlers automatically.
+**Current state:** Root layout is bare:
+```tsx
+<html><body>{children}</body></html>
+```
 
-**Consequences:**
-- Unit tests give a false green signal — they test "does the component handle the old mock shape" not "does the component handle the current API"
-- Integration bugs are only caught in E2E, which requires running services
-- The more backend fixes applied, the more diverged MSW becomes
+The `(app)/layout.tsx` adds only `<NavBar />`. No providers anywhere in the tree.
+
+**Why it happens:** The tRPC client was created (`apps/web/src/lib/trpc.ts` -- exists with superjson, httpBatchLink, credentials: include) but never wrapped into the component tree. This was intentionally deferred to v5.0. Dependencies are already installed (`@tanstack/react-query` ^5.97.0, `@trpc/react-query` ^11.16.0).
+
+**Consequences:** The moment you add `<TRPCProvider>` + `<QueryClientProvider>`, every `'use client'` component now lives inside a React Query context. If ANY child component has an unconditional `useQuery` that calls a nonexistent endpoint or fails auth, the entire app white-screens with an unhandled promise rejection. No page loads until all initial queries succeed or are error-handled.
 
 **Prevention:**
-1. After each backend fix that changes an API response shape, update the corresponding MSW handler in the same commit.
-2. Use the Zod schemas from `packages/shared` to generate or validate MSW mock data — if the schema changes, TypeScript will catch divergence. The current MSW handlers import from `@customreport/shared` implicitly via type `as const` — add explicit typed assertions.
-3. For new endpoints added during backend completeness phase, add corresponding MSW handlers before writing unit tests for the frontend consumers.
-4. Before starting E2E tests: do a manual spot-check — navigate to the page in the browser with real services running and compare the network tab response shape to what the MSW handler returns.
+1. Add React Error Boundaries BEFORE wiring the provider. Each major page section should be wrapped in a `QueryErrorBoundary` so one failing query does not cascade.
+2. Wire TRPCProvider in a dedicated `'use client'` component that wraps the `(app)/layout.tsx`, NOT the root layout -- this way the login page (`/auth/error`) remains unaffected.
+3. Use `<Suspense>` boundaries around each tRPC-dependent section so loading states are contained.
+4. Test the provider with a single harmless query (e.g., `reports.getActive`) on one page before wiring all pages.
 
-**Detection:** A frontend unit test passes in `vitest` but the same page throws a runtime error when running against real services. TypeScript errors in MSW mock data creation (if you add typed return assertions) will catch divergence at compile time.
-
-**Phase:** Backend Phase — synchronize MSW with each API fix.
-
-**Confidence:** HIGH — observed in this project (superjson mismatch was a direct consequence of MSW divergence).
+**Detection:** White screen on any page after adding provider = missing error boundary or failing auth context.
 
 ---
 
-### Pitfall 6: Backend 81 Regression Scenarios Need Integration Test Infrastructure, Not Browser E2E
+### Pitfall 3: DEV_SESSION UUID Mismatch Will Return Empty Data
 
-**What goes wrong:** The 81 regression scenarios (L-001 to D-010) are planned for Playwright E2E coverage. But many scenarios test pure backend behavior: deduplication (H-023), carry-over filtering (H-031, H-032), status transition blocking (D-010), validation boundaries (D-001 to D-009). Writing these as browser E2E tests is 10-50x slower per scenario, requires seeding specific database states before each test, and makes tests brittle (UI changes break business logic tests).
+**What goes wrong:** The tRPC context factory (`trpc.context.ts`) hardcodes a dev session with specific UUIDs:
+```typescript
+const DEV_SESSION: UserSession = {
+  userId: 'a0000000-0000-4000-8000-000000000099',
+  activeReportId: 'a0000000-0000-4000-8000-000000000001',
+  activeReportSectionId: null,
+};
+```
 
-**Why it happens:** "E2E test coverage" is interpreted as "Playwright browser tests" for all scenarios. But the regression scenarios were written as acceptance criteria for backend behavior, not UI behavior.
+Two separate failures hide here:
+1. If the seed script generates different UUIDs (which it will by default using `randomUUID()`), every tRPC query that filters by `ctx.session.userId` or `ctx.session.activeReportId` returns null or empty arrays.
+2. `activeReportSectionId` is hardcoded to `null`. The `reports.getActive` endpoint checks this field and returns `null` when it is not set. Even with correct user and report UUIDs, the lead form's "get my active section" call returns nothing. The seed or the context factory must look up the section ID from the DB by `userId + reportId`.
 
-**Consequences:**
-- E2E suite takes 30+ minutes for 81 scenarios
-- Test reliability drops because browser startup, auth setup, and page load are involved for pure API tests
-- Scenarios that require specific data states (carry-over source report, deduplication keys) are very difficult to set up via browser interactions
+The app looks "connected" but shows no data.
+
+**Why it happens:** The seed is built in isolation from the auth context. Nobody checks that the two UUID sets match because in production they come from the same database -- but in dev mode, the session is faked.
+
+**Consequences:** You wire up tRPC, see empty pages, and spend hours debugging the API layer when the real problem is a UUID mismatch in the seed.
 
 **Prevention:**
-1. Separate the 81 scenarios into two layers:
-   - **API integration tests** (Vitest + real Prisma + real database, no browser): all D-0xx data integrity, all validation scenarios (L-019 to L-022), status transitions, error codes (L-006, L-007, L-009, L-010, L-013, H-008, H-023 to H-025, H-028 to H-032). These already exist as 191 contract tests — the gaps are the edge cases.
-   - **Browser E2E tests** (Playwright): full user journeys (X-001 to X-006), role-based access control UI behavior (L-016 to L-018, V-007 to V-011), and UI state rendering (form shows submitted state, dashboard shows correct lead count).
-2. The NestJS test environment with a real test database is already set up (see `apps/api/src/test-utils/`). Extend that infrastructure rather than creating browser tests for backend logic.
-3. Reserve Playwright for: journeys that require actual browser interaction (fill form, click submit, see toast, navigate to next page) and role-based UI enforcement (does the button disappear for the correct role).
+1. The seed script MUST create a user with `id = 'a0000000-0000-4000-8000-000000000099'` (the head user) and a report with `id = 'a0000000-0000-4000-8000-000000000001'`.
+2. The context factory should dynamically resolve `activeReportSectionId` from the database when it is null:
+```typescript
+if (!session.activeReportSectionId && session.activeReportId && session.userId) {
+  const section = await prisma.reportSection.findFirst({
+    where: { reportId: session.activeReportId, authorId: session.userId },
+    select: { id: true },
+  });
+  if (section) session.activeReportSectionId = section.id;
+}
+```
+3. OR make DEV_SESSION configurable via env vars so the seed can set them.
+4. Add a startup health check: on app boot in dev mode, verify `DEV_SESSION.userId` exists in the database. Log a loud warning if it does not.
+5. Document the required UUIDs in a `prisma/seed-constants.ts` file so seed and context stay in sync.
 
-**Detection:** If a planned Playwright test would need `page.request.post()` (API call, not UI interaction) to set up state, that scenario belongs in the API integration layer instead.
-
-**Phase:** E2E Phase — split test plan into API integration vs browser E2E before writing any tests.
-
-**Confidence:** HIGH — the 191 existing contract tests already cover the service layer; extending them is cheaper than rewriting as browser tests.
+**Detection:** All pages render but show "No data" or empty states after seed + tRPC wiring.
 
 ---
 
-### Pitfall 7: Backend-First Ordering Creates a Broken Frontend Window
+### Pitfall 4: 339 E2E Tests Break Three Different Ways Simultaneously
 
-**What goes wrong:** Backend edge-case fixes change API response shapes (reminder schema migration, new error codes, changed field names). The existing frontend was built against the pre-fix API. During the backend phase, the frontend is broken — pages throw TypeScript errors or runtime exceptions against the changed API. This makes local development harder and can block verification.
+**What goes wrong:** Current Playwright tests assert on specific strings from mock data:
+```typescript
+// lead-journey.spec.ts line 45
+await expect(leadPage.getByText('CRM Platform').first()).toBeVisible();
+// line 73
+await expect(periodSelect).toHaveValue('2026-W16');
+```
 
-**Why it happens:** The priority is "backend first, then UI." Backend fixes are committed. The redesign hasn't started yet. The old frontend code references fields that were renamed or error codes that changed.
+When switching from mock to real API, tests break in three separate failure modes simultaneously, making individual failures impossible to diagnose.
 
-**Consequences:**
-- Cannot visually verify backend fixes in the browser during development
-- TypeScript compilation may fail if shared Zod schemas change
-- Increased risk of carrying over frontend bugs into the redesign (the redesign starts from broken components)
+**Three failure modes:**
+1. **Data mismatch:** Seed produces different names/values than mocks. Admin mock says "CRM Portal", lead mock says "CRM Platform" -- which does the seed use?
+2. **Format mismatch:** API returns `Date` objects that must be formatted. If formatting produces "Apr 14, 2026" instead of "Apr 14-20", string assertions break.
+3. **Loading state mismatch:** Mock data is synchronous and immediate. Real API calls go through React Query -- components render a loading/skeleton state first. Tests that do not wait for data loading will assert against empty elements.
+
+**Why it happens:** Tests were written against deterministic mock data. Real API adds network latency, database state, and async rendering into the assertion chain.
+
+**Consequences:** 100+ test failures on the first run. Without a clear migration strategy, debugging each failure individually takes 5-10 minutes each.
+
+**Prevention -- phased migration (this ordering is load-bearing):**
+
+**Phase A: Seed matches mock data exactly**
+- Product names MUST match the canonical set from lead/dashboard mocks: "CRM Platform", "Data Analytics Suite", "Mobile Applications", "Cloud Infrastructure", "AI/ML Platform", "Integration Gateway", "Payment Gateway", "Auth Service", "Notification Hub", "Admin Portal", "Logging Platform", "CDN Service".
+- User names MUST match: "Polenkov A.", "Maria K.", "Igor V.", "Dmitry S.", "Olga N.", "Sergey T."
+- Period dates MUST include Week 16 (Apr 14-20) as the current period.
+
+**Phase B: Wire tRPC, verify same rendering**
+- Replace mock imports with tRPC queries one page at a time.
+- Run that page's E2E test file after each replacement.
+- If a test breaks, the issue is in the wiring or mapping layer, not the data.
+
+**Phase C: Update assertions for legitimate format changes**
+- Only NOW update test assertions for real format differences (date formatting, etc.).
+- Each change is isolated and traceable.
+
+**Detection:** If more than 10 tests fail when switching one page from mock to real, the seed data does not match the mock data. Stop and fix the seed first.
+
+---
+
+### Pitfall 5: Status-to-Risk Bidirectional Sync Creates Infinite Loops
+
+**What goes wrong:** The requirement says: "When stage status changes to At Risk/Blocked, auto-add a risk row. When a risk is added, auto-update stage status." This is a textbook infinite loop trigger: change A triggers B, B triggers A, A triggers B...
+
+**Why it happens:** Both directions use the same `onChange`/`useMutation` handlers. Without a guard, the auto-sync triggers itself recursively.
+
+**Consequences:** Browser tab freezes (React re-renders infinitely), or the mutation fires in a tight loop until rate-limited or the request queue overflows.
+
+**Prevention -- use a sync source flag (not debounce):**
+
+```typescript
+// apps/web/src/hooks/use-status-risk-sync.ts
+
+type SyncSource = 'user' | 'auto-sync';
+
+function useStatusRiskSync() {
+  const syncSourceRef = useRef<SyncSource>('user');
+
+  const handleStageStatusChange = useCallback((
+    productId: string, stageName: string,
+    newStatus: StageStatus, source: SyncSource = 'user'
+  ) => {
+    updateStageStatus(productId, stageName, newStatus);
+
+    // Only auto-create risk if this was a USER action, not an auto-sync
+    if (source === 'user' && (newStatus === 'at-risk' || newStatus === 'blocked')) {
+      syncSourceRef.current = 'auto-sync';
+      addRiskRow(productId, stageName, newStatus === 'blocked' ? 'blocked' : 'at-risk');
+      syncSourceRef.current = 'user';
+    }
+  }, []);
+
+  const handleRiskAdded = useCallback((
+    productId: string, stageName: string,
+    severity: 'at-risk' | 'blocked', source: SyncSource = 'user'
+  ) => {
+    addRisk(productId, stageName, severity);
+
+    // Only auto-update status if this was a USER action
+    if (source === 'user') {
+      syncSourceRef.current = 'auto-sync';
+      handleStageStatusChange(productId, stageName,
+        severity === 'blocked' ? 'blocked' : 'at-risk', 'auto-sync');
+      syncSourceRef.current = 'user';
+    }
+  }, []);
+
+  return { handleStageStatusChange, handleRiskAdded };
+}
+```
+
+**Why not debounce:** Debounce is time-based -- it delays but does not prevent the loop. With async mutations, timing is unpredictable. A 200ms debounce might work locally but fail under network latency. The source flag is deterministic.
+
+**Why not one-direction-only:** The requirement explicitly says bidirectional. Restricting to one direction violates the spec.
+
+**Detection:** Browser DevTools shows rapidly increasing React renders on the lead form page, or the Network tab shows repeated mutation calls to the same endpoint in quick succession.
+
+---
+
+### Pitfall 6: Admin Mock Data Uses Different Names Than Lead/Dashboard Mock Data
+
+**What goes wrong:** The three mock-data files use inconsistent product and user names:
+
+| Entity | Lead Mock | Dashboard Mock | Admin Mock |
+|---|---|---|---|
+| CRM product | "CRM Platform" | "CRM Platform" | "CRM Portal" |
+| Analytics | "Data Analytics Suite" | "Data Analytics Suite" | "Analytics Dashboard" |
+| Mobile | "Mobile Applications" | "Mobile Applications" | "Mobile App" |
+| Lead 1 | "Polenkov A." | "Polenkov A." | "Alexey Petrov" |
+| Lead 2 | "Maria K." | "Maria K." | "Maria Ivanova" |
+| Stage name | "Dev" | "Dev" | "Development" |
+
+**Why it happens:** Mock files were written independently for different UI sections, not as a shared data contract.
+
+**Consequences:** The seed script must commit to ONE canonical set of names. Whichever you pick, some existing E2E assertions will break. If you do not notice the divergence, admin panel tests break while lead tests pass (or vice versa).
 
 **Prevention:**
-1. When a backend fix changes a `packages/shared` Zod schema, fix all TypeScript compilation errors in `apps/web` in the same commit — even if the fix is minimal (add a null check, rename a field reference). Do not allow `tsc --noEmit` to fail between commits.
-2. If a backend schema change is large (reminder model restructure), do it in one atomic commit: schema migration + shared Zod update + frontend type fix.
-3. Run `pnpm typecheck` (from monorepo root, not per-package) after each backend commit to catch cross-package type breakage immediately.
-4. This is explicitly NOT "do the full redesign now." It is "keep TypeScript green while backend fixes land."
+1. Create a single `prisma/seed-constants.ts` file that defines ALL canonical names, used by both the seed script and referenced by E2E test expectations.
+2. Use lead/dashboard mock names as canonical (they have more test coverage) -- update admin panel tests to expect these names.
+3. Stage names: use full name ("Development") in DB `Stage` table, abbreviate to "Dev" in the UI mapping layer.
 
-**Detection:** After a backend fix commit, run `pnpm --filter @customreport/web typecheck`. Any errors are the broken window.
-
-**Phase:** Backend Phase — enforce per-commit.
-
-**Confidence:** HIGH — tRPC shares types via `packages/shared`; schema renames propagate to the frontend as TypeScript errors immediately.
+**Detection:** Admin panel E2E tests break while lead/dashboard tests pass, or vice versa.
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 8: Visual Regression Baseline Workflow Is Inverted
+### Pitfall 7: Next.js 16 API Proxying Requires Configuration -- tRPC Requests Will 404
 
-**What goes wrong:** `screenshots.spec.ts` baselines are created before the redesign is complete. Individual pages are baselined as they are redesigned. Then subsequent redesign passes (based on user feedback) invalidate the early baselines. Each feedback cycle deletes and regenerates a subset of baselines, creating inconsistent snapshot history.
+**What goes wrong:** The tRPC client is configured to call `/trpc` on the same origin (`url: '/trpc'` in `apps/web/src/lib/trpc.ts`). The Next.js dev server runs on port 3000, the NestJS API on port 3001. Without proxy configuration, all `/trpc` requests hit Next.js's own server, return 404, and every query fails silently.
 
-**Prevention:**
-1. Do NOT create visual regression baselines during the redesign.
-2. Baselines belong only at the end: one baseline-creation run against the final approved design.
-3. Use `--update-snapshots` flag as a single batch operation after user sign-off, not incrementally.
-4. The `screenshots.spec.ts-snapshots/` directory should be deleted at redesign start and left empty until the final baseline pass.
+**Current state:** No `proxy.ts` file exists. No API rewrites in `next.config.ts`.
 
-**Phase:** Redesign Phase (start), E2E Phase (final baseline creation).
+**Prevention:** Add rewrites to `next.config.ts`:
+```typescript
+// next.config.ts
+export default {
+  async rewrites() {
+    return [
+      { source: '/trpc/:path*', destination: 'http://localhost:3001/trpc/:path*' },
+    ];
+  },
+};
+```
 
-**Confidence:** HIGH — the existing snapshots will be stale from the first redesigned page onward.
+This approach is more reliable than `proxy.ts` for API forwarding and works in both dev and production (with proper URL configuration).
 
----
-
-### Pitfall 9: BullMQ Re-enablement Required Before E2E PDF Tests
-
-**What goes wrong:** BullMQ is disabled in AppModule (as of v3.0 handoff — `BullModule.forRoot` commented out, PDF and reminder queue injection removed). E2E scenarios H-009 (PDF export), H-022 (reminder execute), and X-006 (reminder flow) require BullMQ to be functional. Running these E2E tests against a backend with disabled BullMQ will result in jobs being created in the database but never processed — tests waiting for `status: 'sent'` or `status: 'completed'` will timeout.
-
-**Prevention:**
-1. Fix BullMQ DI before writing E2E tests that cover PDF or reminder flows.
-2. The v3.0 memory identifies the issue: `@nestjs/bullmq BullExplorer ModuleRef` DI bug. The fix is likely `@nestjs/bullmq@latest` or downgrade to a compatible version — check the NestJS/BullMQ compatibility matrix.
-3. Verify BullMQ is working by running the NestJS API locally and calling `pdfExport.request` — the job status must transition from `queued` to `completed` within 30 seconds.
-4. If BullMQ re-enablement is complex, stub the queue in E2E test environment only (use `AUTH_DEV_MODE` parallel to a `QUEUE_DEV_MODE` that synchronously executes jobs).
-
-**Detection:** Call `pdfExport.request` via the browser or API client. If `pdfExport.status` stays `queued` indefinitely, BullMQ is disabled.
-
-**Phase:** Backend Phase (fix BullMQ) before E2E Phase.
-
-**Confidence:** HIGH — directly documented in v3.0 handoff memory.
+**Detection:** Network tab shows 404 on all `/trpc/*` requests. Console shows `TRPCClientError: Not Found`.
 
 ---
 
-### Pitfall 10: Seed Data State Dependency Makes E2E Fragile
+### Pitfall 8: superjson Date Serialization Breaks Without Transformer on BOTH Sides
 
-**What goes wrong:** The existing E2E specs depend on specific seed data state: Lead 1 has `status: submitted`, there are 6 leads, there is 1 head user with a specific UUID. Backend edge-case fixes and Prisma migrations may require re-seeding. If re-seeding changes UUIDs, user names, or submission state, E2E tests that check for `getByText('Lead 1')` or expect `status: submitted` start failing.
+**What goes wrong:** tRPC with superjson serializes `Date` objects to `{ __type: "Date", value: "..." }`. If the transformer is missing on either the client or server, dates arrive as plain strings and `Date` methods fail at runtime.
 
-**Why it happens:** Seed data is not isolated per test — all E2E tests share the same database state. Tests that modify state (submit a section, create a user, trigger carry-over) pollute the database for subsequent tests. With parallel execution (`fullyParallel: true`), the order is non-deterministic.
+**Current state:** Server has superjson transformer (`trpc.middleware.ts` line 7: `initTRPC...create({ transformer: superjson })`). Client has it too (`trpc.ts` line 13: `transformer: superjson` in httpBatchLink). Both are correctly configured. But since no TRPCProvider exists yet, when adding it, the transformer must be passed correctly.
 
-**Prevention:**
-1. E2E tests that are read-only (checking text, navigating pages) are safe as-is.
-2. E2E tests that mutate state (fill form, submit, delete user, trigger PDF) must reset to known state before and after. Use database seeding hooks (`beforeEach` reset) or dedicated test-isolated database snapshots.
-3. For the full lifecycle scenario (X-001), run it with `workers: 1` serialized, not in parallel.
-4. The seed script should be idempotent — running it twice produces the same state, not double the data.
-5. After Prisma migration, always re-run seed and verify E2E auth setup produces valid session cookies.
+**Known history:** This exact bug already caused 17 TypeScript errors in this project (documented in `feedback_trpc_superjson.md`).
 
-**Detection:** Run E2E suite twice sequentially without resetting the database. If the second run has different results than the first, tests are modifying shared state.
+**Prevention:** After wiring the TRPCProvider, write a smoke test:
+```typescript
+test('superjson roundtrips Date objects', async () => {
+  const result = await trpc.reports.myHistory.query();
+  expect(result[0]?.periodStart).toBeInstanceOf(Date);
+});
+```
 
-**Phase:** E2E Phase — design test isolation upfront.
-
-**Confidence:** MEDIUM-HIGH — the current specs assume `status: submitted` for Lead 1, which is set only by seed data; any test that submits another section for Lead 1 breaks this assumption.
+**Detection:** `TypeError: periodStart.toLocaleDateString is not a function` -- date was deserialized as string, not Date.
 
 ---
 
-### Pitfall 11: superjson Transformer Must Stay Synchronized Across MSW, tRPC Client, and tRPC Server
+### Pitfall 9: Auth Guards + DEV_MODE Split-Brain State
 
-**What goes wrong:** MSW handlers wrap data with `superjson.serialize()`. The tRPC client uses `transformer: superjson`. The tRPC server uses `transformer: superjson`. If any one of these three is changed or missing, Date fields serialize to strings at runtime but TypeScript still expects `Date` — causing 17+ TS2322 errors across page components (this exact bug was already fixed once in this project).
+**What goes wrong:** Adding session middleware/guards to `(app)/` routes will redirect unauthenticated users to `/auth/login`. But in development with `AUTH_DEV_MODE=true`, the tRPC context provides a fake session on the backend while the frontend has no session cookie. Split-brain: API calls succeed, but frontend route guards redirect to login.
+
+**Current state:** `(app)/layout.tsx` has a TODO comment about session extraction ("Phase 10+"). No auth guard exists on frontend routes.
 
 **Prevention:**
-1. Never change the tRPC server transformer (`initTRPC.create({ transformer: superjson })`) without updating the client and MSW handlers in the same commit.
-2. When adding a new tRPC procedure that returns `Date` fields, add a corresponding MSW handler that uses `superjson.serialize()` wrapping — not plain `HttpResponse.json()`.
-3. After any backend schema change that adds `Date` fields, run `pnpm typecheck` — TS2322 on `Date` vs `string` is the diagnostic.
+1. Frontend auth guard must also respect `AUTH_DEV_MODE`:
+```typescript
+// In (app)/layout.tsx server component
+export default async function AppGroupLayout({ children }) {
+  if (process.env.AUTH_DEV_MODE !== 'true') {
+    const session = await getServerSession();
+    if (!session) redirect('/auth/login');
+  }
+  return <><NavBar />{children}</>;
+}
+```
+2. In E2E tests, either set `AUTH_DEV_MODE=true` or use the auth.setup.ts fixture (which already creates storage state files for lead/head roles).
 
-**Detection:** TypeScript error `Type 'string' is not assignable to type 'Date'` in any page component after a backend change.
+**Detection:** Redirect loop between `/auth/login` and `/(app)/` pages in dev mode.
 
-**Phase:** Backend Phase — enforce per-commit type check.
+---
 
-**Confidence:** HIGH — this already caused 17 errors in this project (feedback memory: `feedback_trpc_superjson.md`).
+### Pitfall 10: Custom Logger Is NOT Pino -- Milestone Description Is Incorrect
+
+**What goes wrong:** The milestone context states "pino already exists, adding file rotation + correlation IDs." Reality from the actual codebase:
+
+`apps/api/src/lib/logger.ts` is a **custom hand-rolled JSON logger** with these capabilities:
+
+| Feature | Status |
+|---|---|
+| JSON structured output to stdout/stderr | Has |
+| Daily file rotation with configurable retention (14 days) | Has |
+| Child loggers with base context | Has |
+| Log level filtering (debug/info/warn/error) | Has |
+| Correlation IDs / request tracing | Missing |
+| Async-safe writes | Missing (uses `appendFileSync`) |
+
+**Decision needed:** Either (a) add correlation IDs to the existing custom logger, or (b) replace with pino + pino-http for production-grade async logging with built-in correlation ID support.
+
+**Prevention if keeping custom logger:**
+```typescript
+// Add correlationId to TrpcContext creation
+import { randomUUID } from 'node:crypto';
+
+return async ({ req }) => {
+  const correlationId =
+    req.headers['x-correlation-id'] as string ?? randomUUID();
+  // ...
+  return { session, correlationId };
+};
+```
+
+**Prevention if replacing with pino:**
+- Replace `appendFileSync` with `pino.destination({ sync: false })`.
+- Use `pino-http` for automatic request logging with correlation IDs.
+- Keep the `AppLogger` interface so all 8 service files that import logger do not need signature changes.
+- Use `pino.transport` for file rotation instead of the hand-rolled `pruneOldFiles`.
+
+**Detection:** Reviewing production logs and finding no way to correlate a frontend error to the backend request that caused it.
+
+---
+
+### Pitfall 11: Loading States Do Not Exist in Current Components
+
+**What goes wrong:** All current components render synchronously from mock constants. When switched to tRPC queries, there is a loading period where data is `undefined`. Components will crash with `Cannot read property 'name' of undefined` because they assume data is always present.
+
+**Example of the pattern that breaks:**
+```typescript
+// Current: data is always defined (from mock-data.ts)
+const products = MOCK_PRODUCTS; // always a populated array
+
+// After tRPC wiring:
+const { data: products, isLoading } = trpc.leadForm.byPeriod.useQuery({
+  reportId: activeReportId
+});
+// products is undefined during loading!
+// products.map(...) throws TypeError
+```
+
+This affects ALL 38 mock-data import sites across 25+ component files.
+
+**Prevention:**
+1. Add loading skeletons to each major section BEFORE wiring tRPC -- not as an afterthought.
+2. Use either `useSuspenseQuery` (pushes loading state up to nearest `<Suspense>` boundary) or explicit `if (isLoading)` guards at each query site.
+3. For server components: use RSC data fetching with `initialData` to avoid client-side loading entirely for the first render.
+4. Type-safety approach: use a pattern that makes `undefined` data a compile error:
+```typescript
+const { data } = trpc.leadForm.byPeriod.useSuspenseQuery({ reportId });
+// data is guaranteed non-null after Suspense resolves
+```
+
+**Detection:** White flash or "Cannot read property" errors immediately after adding `useQuery` to any component.
 
 ---
 
 ## Minor Pitfalls
 
-### Pitfall 12: Playwright `auth.setup.ts` Depends on Seed Data Being Present
+### Pitfall 12: tRPC Batching Can Mask Individual Query Failures
 
-**What goes wrong:** `auth.setup.ts` calls `/auth/dev-login?role=lead` which creates or finds a user with `role=lead` in the database. If the database is empty (migration just ran, seed not yet applied), dev-login creates a new user but may fail if the seed data (projects, report period) that the lead's section depends on doesn't exist. The E2E auth setup passes but subsequent tests fail with "no active report" errors.
+**What goes wrong:** The tRPC client uses `httpBatchLink`, which batches multiple queries into a single HTTP request. If one query in the batch fails auth (401), the entire batch fails -- including queries that would have succeeded independently. On pages with 3-4 queries (dashboard, lead form), a single failing query takes down all data on the page.
 
-**Prevention:**
-1. Always run seed BEFORE running E2E tests: `prisma db seed` must be a prerequisite in the E2E startup script.
-2. In `playwright.config.ts` `webServer` config, add a seed step to the API startup command, or use a `globalSetup` script that runs seed before auth setup.
-3. Verify by checking that `reports.getActive` returns a valid section for the lead after auth setup.
-
-**Phase:** E2E Phase setup.
-
-**Confidence:** MEDIUM — depends on whether dev-login is resilient to missing seed data (it may auto-create a section, or it may throw).
+**Prevention:** Add a `splitLink` to separate critical queries, or handle 401 globally with a redirect to login rather than per-query error handling.
 
 ---
 
-### Pitfall 13: Collapsible Sections Must Not Hide Required Fields from Playwright
+### Pitfall 13: Playwright Storage State Files Need Updating for Real Auth
 
-**What goes wrong:** The UX audit requested collapsible sections to reduce scroll. If sections are collapsed by default, Playwright tests that look for `getByRole('textbox', { name: 'Priority 1' })` or `getByRole('group', { name: 'Risks' })` will return 0 visible elements. The test fails with "element not visible" rather than "element not found."
+**What goes wrong:** E2E fixtures expect `.auth/lead.json` and `.auth/head.json` storage state files. When switching to real API, these must contain valid session cookies from actual auth flow (or a seed-based bypass). If `auth.setup.ts` is not updated for the new auth context, every test fails before any assertion runs.
 
-**Prevention:**
-1. Sections should be expanded by default on first load (collapsed is a user preference, not the initial state).
-2. If sections are collapsed by default, E2E tests must explicitly click the section header to expand before interacting with child elements.
-3. Add `data-testid="section-toggle-risks"` etc. to collapsible triggers so tests can expand them reliably regardless of label text.
+**Prevention:** Update `auth.setup.ts` to either (a) perform real SAML login and save cookies, or (b) call a dev-only `/api/dev/login` endpoint that issues a `customreport_session` cookie (matching the cookie name in `trpc.context.ts`) for a seed user.
 
-**Detection:** After adding collapsible sections, run `pnpm exec playwright test lead-report-entry.spec.ts`. Any "element not visible" failures for form fields indicate hidden elements.
+---
 
-**Phase:** Redesign Phase — when implementing collapsible sections.
+### Pitfall 14: React Query Cache Serves Stale Data During Incremental Migration
 
-**Confidence:** MEDIUM — depends on whether default state is open or closed.
+**What goes wrong:** During incremental migration (some pages on mock data, some on real API), React Query caches real API responses. If a user navigates from a real-API page to a mock-data page and back, cached data from different shapes can cause runtime errors.
+
+**Prevention:** Either migrate all pages in a single PR (cleaner), or use separate query keys that clearly distinguish mock vs real data paths. The single-PR approach is strongly recommended for this project given the small number of pages (7).
 
 ---
 
 ## Phase-Specific Warnings
 
 | Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Prisma reminder migration | Silent data loss (P3) | Use --create-only, hand-edit SQL with data transform |
-| Backend schema changes | Frontend TypeScript breakage (P7) | Run pnpm typecheck after every backend commit |
-| Backend fixes + MSW | MSW diverges from real API (P5) | Update MSW handler in same commit as API change |
-| BullMQ re-enablement | PDF/reminder E2E blocked (P9) | Fix BullMQ before any queue-dependent E2E |
-| UI redesign — first page | User rejects aesthetic direction (P1) | Show first styled page, get sign-off before continuing |
-| UI redesign — existing specs | E2E specs break immediately (P2) | Delete baselines at redesign start, freeze specs |
-| UI redesign — jsdom failures | Failures multiply (P4) | Fix Vitest React config before touching components |
-| E2E — 81 regression scenarios | All as browser tests is too slow (P6) | Split: API integration tests vs browser journeys |
-| E2E — seed data | State contamination across tests (P10) | Read-only tests are safe; mutating tests need isolation |
-| E2E — auth setup | Fails on empty database (P12) | Seed before auth setup in startup sequence |
-| E2E — collapsible sections | Hidden elements cause false failures (P13) | Default-open sections OR explicit expand in tests |
-| superjson everywhere | Date → string type errors (P11) | Never change transformer without syncing MSW + client |
-| Visual baselines | Stale snapshots from redesign start (P8) | Delete all baselines at start, recreate only at end |
+|---|---|---|
+| Seed Data | UUID mismatch with DEV_SESSION (P3), name inconsistency across mocks (P6) | Seed must use hardcoded DEV_SESSION UUIDs, canonical names from a single constants file |
+| TRPCProvider Setup | White-screen on all pages (P2), 404 on /trpc (P7) | Error boundaries first, provider in (app) layout only, add next.config.ts rewrites |
+| Mapping Layer | Type errors from semantic mismatch (P1), undefined data crashes (P11) | Build api-mappers.ts + loading skeletons before any query wiring |
+| Per-Page Wiring | 339 tests break three different ways (P4), superjson Date issues (P8) | Phased: seed matches mocks, wire one page at a time, run tests after each |
+| Status-Risk Sync | Infinite render loop (P5) | Source flag pattern (`'user' \| 'auto-sync'`), not debounce |
+| Auth Guards | DEV_MODE split-brain (P9), Playwright auth setup stale (P13) | Frontend guard respects AUTH_DEV_MODE, update auth.setup.ts |
+| Production Logging | Logger is NOT pino (P10), missing correlation IDs | Decide: enhance custom logger or replace with pino |
+| E2E Migration | Batch test failures from query failures (P12), stale cache (P14) | Migrate all pages in single PR, add splitLink for critical queries |
 
 ## Recommended Phase Ordering Based on Pitfalls
 
-1. **Backend Phase first** — Fix Prisma migration + BullMQ + edge-cases + MSW sync. Keep TypeScript green after every commit.
+1. **Seed Data** (unblocks everything) -- addresses Pitfalls 3, 6
+2. **TRPCProvider + API Proxy Setup** (unblocks all wiring) -- addresses Pitfalls 2, 7, 8
+3. **Mapping Layer + Loading States** (unblocks per-page wiring) -- addresses Pitfalls 1, 11
+4. **Per-Page tRPC Wiring** (one page at a time, run tests after each) -- addresses Pitfall 4
+5. **Status-Risk Sync** (isolated UI feature, no test dependencies) -- addresses Pitfall 5
+6. **Auth Guards** (after wiring is stable) -- addresses Pitfalls 9, 13
+7. **Production Logging** (independent, can run in parallel with 4-6) -- addresses Pitfall 10
+8. **E2E Test Cleanup** (final pass for legitimate format changes) -- addresses Pitfall 4 Phase C
 
-2. **Vitest fix before Redesign** — Fix `@vitejs/plugin-react` root cause so redesigned components can be unit tested from day one. This is a 5-minute fix that prevents 40+ test failures accumulating.
+## Time Estimates -- What Takes Longer Than Expected
 
-3. **Redesign Phase with checkpoint** — Style first page, show user, get sign-off, then continue. Delete visual baselines and freeze existing E2E specs at the start of this phase.
-
-4. **E2E Phase last** — Write new E2E tests after redesign is approved and stable. Split 81 regression scenarios into API integration tests (extend existing 191 contract tests) vs browser E2E journeys. Recreate visual baselines at the very end of this phase.
+| Task | Naive estimate | Realistic estimate | Why longer |
+|---|---|---|---|
+| Build mapping layer (P1) | "Just rename some types" -- 2h | 8-12h | 6 different semantic mismatches, each needs careful bidirectional mapping + date formatting |
+| Seed matching mock data (P3, P6) | "Quick prisma seed" -- 1h | 4-6h | UUID coordination with DEV_SESSION, name reconciliation across 3 mock files, relationship wiring (stages, assignments, reports, sections) |
+| Add TRPCProvider (P2) | "Wrap layout in provider" -- 30min | 2-4h | Error boundaries, Suspense boundaries, verify no white-screens across all 7 pages |
+| E2E migration (P4) | "Update imports" -- 4h | 16-24h | Each of 25+ components needs loading states, type mapping, and test verification. Three failure modes require sequential debugging. |
+| Status-Risk sync (P5) | "Two event handlers" -- 1h | 4-6h | Bidirectional sync with source flags, testing all combinations (status->risk, risk->status, delete risk->status reset), edge cases (multiple risks per product) |
 
 ## Sources
 
-- Project memory files (confirmed from current codebase): `project_phase15_handoff.md`, `project_ux_audit.md`, `project_v3_handoff.md`, `feedback_trpc_superjson.md`
-- Current codebase: `apps/web/e2e/*.spec.ts`, `apps/web/src/test/msw-handlers.ts`, `apps/web/vitest.config.ts`, `apps/web/playwright.config.ts`
-- Project STATE.md: Phase 14 verification gap — 24 pre-existing jsdom failures documented
-- REGRESSION-SCENARIOS.md: 81 scenarios, categorized as backend vs frontend behavior
-- General Playwright patterns: official auth docs, `auth.setup.ts` pattern with storageState
+All findings verified against actual codebase files:
+- `apps/web/src/components/lead/mock-data.ts` -- mock types and data (248 lines)
+- `apps/web/src/components/dashboard/mock-data.ts` -- dashboard mock types (494 lines)
+- `apps/web/src/components/admin/mock-data.ts` -- admin mock types with divergent names (310 lines)
+- `packages/shared/src/schemas/report.ts` -- Zod schemas, canonical API types (493 lines)
+- `prisma/schema.prisma` -- Prisma enums: `TrafficLightStatus(green,yellow,red)`, `ItemWorkflowStatus(done,in_progress,blocked)`, `PeriodStatus(open,published,reopened)`
+- `apps/api/src/infrastructure/trpc/trpc.context.ts` -- DEV_SESSION hardcoded UUIDs, `activeReportSectionId: null`
+- `apps/api/src/infrastructure/trpc/trpc.middleware.ts` -- superjson transformer, auth guards
+- `apps/api/src/infrastructure/trpc/trpc.router.ts` -- 36 endpoints in 9 namespaces, `reports.getActive` checks `activeReportSectionId`
+- `apps/api/src/lib/logger.ts` -- custom logger, NOT pino (157 lines, appendFileSync)
+- `apps/web/src/lib/trpc.ts` -- tRPC client exists with superjson but is unused
+- `apps/web/package.json` -- `@tanstack/react-query` ^5.97.0 and `@trpc/react-query` ^11.16.0 already installed
+- `apps/web/src/app/layout.tsx` -- root layout, no providers (31 lines)
+- `apps/web/src/app/(app)/layout.tsx` -- app group layout, no auth guard (26 lines)
+- `apps/web/e2e/fixtures.ts` -- Playwright fixtures with storage state
+- `apps/web/e2e/lead-journey.spec.ts` -- E2E tests asserting mock data strings
+- Grep: 38 `from.*mock-data` import sites across 25+ component files

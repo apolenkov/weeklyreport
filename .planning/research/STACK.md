@@ -1,273 +1,480 @@
-# Technology Stack: v4.0 UI Redesign + E2E Testing + Backend Hardening
+# Technology Stack Additions for v5.0
 
 **Project:** CustomReport
-**Milestone:** v4.0 Backend Completeness & UI Redesign
-**Researched:** 2026-04-21
-**Overall confidence:** HIGH (versions verified against installed package.json files)
+**Milestone:** v5.0 Production Integration
+**Researched:** 2026-04-25
+**Overall confidence:** HIGH
 
 ---
 
 ## Scope
 
 This document covers ONLY the new libraries, patterns, and integration concerns
-for v4.0. It does NOT re-research the base stack from v1.0–v3.0 (NestJS 11,
-Prisma 7, Zod 4, tRPC 11, BullMQ, Docker Compose, SAML auth, PgBouncer,
-Next.js 16, shadcn/ui 4, Tailwind v4, Vitest 4, Playwright 1.55).
+for v5.0. It does NOT re-research the base stack (NestJS 11, Prisma 7, Zod 4,
+tRPC 11, BullMQ, Next.js 16, shadcn/ui, Tailwind v4, Vitest 4, Playwright 1.55).
 
-**v4.0 adds three capability areas:**
+**v5.0 adds five capability areas:**
 
-1. Professional dark-theme UI redesign (design tokens, animation, components)
-2. Comprehensive Playwright E2E suite (full role journeys, cross-role lifecycle)
-3. Prisma migration hardening (reminder schema, edge-case fixes)
-
----
-
-## 1. UI Redesign
-
-### What Is Already Installed
-
-All core UI libraries are already present — no new packages needed for the redesign:
-
-| Library | Installed Version | Location | Purpose |
-|---------|-------------------|----------|---------|
-| `next-themes` | 0.4.6 | `packages/ui` | Dark/light mode toggle |
-| `sonner` | 2.0.7 | `packages/ui`, `apps/web` | Toast notifications |
-| `tw-animate-css` | 1.4.0 | `packages/ui` | CSS-based Tailwind animations |
-| `tailwindcss` | 4.2.2 | Both | Utility classes |
-| `radix-ui` | 1.4.3 | `packages/ui` | Headless primitives |
-| `lucide-react` | 0.500.0 | Both | Icon system |
-| `class-variance-authority` | 0.7.1 | `packages/ui` | Component variants |
-| `tailwind-merge` | 3.5.0 | `packages/ui` | Class deduplication |
-| `geist` | 1.7.0 | `apps/web` | Primary typeface |
-
-**Design token system is live:** `packages/ui/src/styles/globals.css` already
-has a complete OKLCH-based dark palette (deep navy + bright indigo + amber
-accents) in a Tailwind v4 `@theme` block. Colors cover background, foreground,
-muted, accent, card, popover, primary, secondary, sidebar, border, ring, and
-chart tokens.
-
-**Custom animations are live:** `globals.css` already defines `animate-fade-in`,
-`animate-slide-in-left`, `animate-scale-in`, and collapsible keyframes. Radix
-data-state-driven transitions are in use in sheet and tooltip components.
-
-### What Is Missing
-
-**`next-themes` is imported in `packages/ui/src/components/ui/sonner.tsx` via
-`useTheme` but `ThemeProvider` is NOT wired into `apps/web/src/app/layout.tsx`.**
-The root layout renders without a `ThemeProvider`, so `useTheme()` will always
-return `"system"` and theme switching will not work. This is a wiring gap, not
-a package gap.
-
-**No `motion` / `framer-motion` package is installed.** The project uses
-Tailwind CSS animations and Radix data-state transitions for all current
-animations. Do NOT add `motion` — the existing CSS-based approach is sufficient
-for a corporate reporting tool with 6 users, and `motion` adds 30KB+ bundle
-weight. If a specific interactive animation is needed later, use
-`tw-animate-css` utilities or plain `@keyframes` in `globals.css`.
-
-**No `recharts` or chart library is installed.** The design tokens define chart
-colors (`--color-chart-1` through `--color-chart-5`) but no chart components
-exist. The v4.0 milestone does not require charts (dashboard shows submission
-status table, not graphs). Do NOT add a chart library unless the roadmap
-explicitly calls for trend analytics.
-
-### Prescriptive Recommendations
-
-**Wire ThemeProvider:** Add `<ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>` to `apps/web/src/app/layout.tsx`. The HTML element already has `suppressHydrationWarning`. Set `defaultTheme="dark"` since the entire palette is dark-first.
-
-**Extend design tokens in `globals.css`, not in component files.** Any new
-surface (status badge, timeline, progress indicator) should add OKLCH tokens to
-the `@theme` block and consume them via `var(--color-*)`. Never hardcode hex or
-rgb values in component styles.
-
-**Use `tw-animate-css` for page transitions.** Import `tw-animate-css` utilities
-(`animate-in`, `fade-in-0`, `slide-in-from-top-4`, etc.) in component class
-strings. Radix components already consume these via `data-[state=open]:animate-in`.
-
-**What NOT to add:**
-- `motion` / `framer-motion` — overkill, adds bundle weight, CSS animations are enough
-- `@emotion/react` or any CSS-in-JS — incompatible with Tailwind v4 approach
-- `react-spring` — same reason as motion
-- Storybook — overkill for 6-user internal app with no design system consumers
+1. tRPC client wiring (migrate to React Compiler-safe package)
+2. Production logging with pino + file rotation + correlation IDs
+3. Correlation ID propagation via AsyncLocalStorage
+4. Playwright dual-server config for real API integration tests
+5. Session middleware / auth guards (no new packages -- wiring only)
 
 ---
 
-## 2. E2E Testing (Playwright)
+## 1. tRPC Client Migration: @trpc/tanstack-react-query
 
-### What Is Already Installed and Wired
+### New Packages
 
-Playwright is fully operational at `@playwright/test` 1.55.0. The infrastructure
-is complete:
+| Package | Version | Install To | Purpose |
+|---------|---------|------------|---------|
+| **@trpc/tanstack-react-query** | ^11.16.0 | apps/web | New TanStack-native tRPC integration |
+| **client-only** | ^0.0.1 | apps/web | Required by tRPC RSC setup (client boundary marker) |
+| **server-only** | ^0.0.1 | apps/web | Required by tRPC RSC setup (server boundary marker) |
 
-| Pattern | Status | Where |
-|---------|--------|-------|
-| `storageState` per-role auth | Done | `e2e/auth.setup.ts` + `e2e/.auth/*.json` |
-| Fixture-based role pages | Done | `e2e/fixtures.ts` (`leadPage`, `headPage`, `viewerPage`) |
-| Visual regression screenshots | Done | `e2e/visual/screenshots.spec.ts` |
-| Accessibility audits | Done | `e2e/a11y/accessibility.spec.ts` via `@axe-core/playwright` |
-| Responsive breakpoint tests | Done | `e2e/responsive/breakpoints.spec.ts` |
-| Per-role journey files | Done | `e2e/journeys/` (lead, head, admin, carry-over, pdf, archive) |
-| `webServer` auto-start (API + web) | Done | `playwright.config.ts` |
-| CI retries + `github` reporter | Done | `playwright.config.ts` |
+### Package to Remove
 
-### What Is Missing
+| Package | Why Remove |
+|---------|------------|
+| **@trpc/react-query** | Breaks under React Compiler. Creates proxy hooks that violate rules of hooks. |
 
-**The existing journey tests are shallow.** They verify page load and heading
-visibility, but do NOT exercise the actual user actions from the 81 regression
-scenarios. The `head-publication.spec.ts` journey, for example, only checks that
-the "Publish Report" button OR "Published" badge is visible — it never clicks
-the button and verifies the state transition.
+### Why This Is a Migration, Not Just Wiring
 
-**No Page Object Model (POM).** All locators are inline in every test. When the
-redesign changes element labels or ARIA roles, dozens of tests will break and
-each one requires manual locator fixes. With POM, one file changes.
+The project already has `babel-plugin-react-compiler` and `eslint-plugin-react-compiler`
+installed. The classic `@trpc/react-query` package creates proxy-based hooks
+(`trpc.report.list.useQuery()`) that:
 
-**Cross-role lifecycle scenario is absent.** No test exercises the complete flow:
-Lead submits → Head reviews → Head publishes → Viewer sees the report. This is
-the most critical regression scenario.
+- Break under React Compiler (hooks-as-props pattern)
+- Violate rules of hooks (dynamic hook creation)
+- Are explicitly deprecated in favor of `@trpc/tanstack-react-query`
 
-**No `helpers/` directory.** The `e2e/helpers/` directory listed in the folder
-structure is empty. Common actions (fill a report section, add a risk, submit)
-should be helpers consumed by journeys.
+The new package uses a `queryOptions()` factory pattern that is React Compiler-safe
+and TanStack Query-native. Both packages can coexist during migration, but the
+classic one must be fully removed before enabling React Compiler optimizations.
 
-### Prescriptive Recommendations
-
-**Add a Page Object layer at `e2e/pages/`.** Create one class per page with
-typed locators and action methods. Example structure:
+### Migration Pattern
 
 ```typescript
-// e2e/pages/lead-report.page.ts
-export class LeadReportPage {
-  constructor(private page: Page) {}
-  readonly heading = this.page.getByRole('heading', { name: 'My Report', level: 1 });
-  async goto() { await this.page.goto('/lead/report'); }
-  async fillPriority(n: number, text: string) {
-    await this.page.getByRole('textbox', { name: `Priority ${n}` }).fill(text);
+// OLD (classic @trpc/react-query) -- current apps/web/src/lib/trpc.ts
+import { createTRPCReact } from '@trpc/react-query';
+export const trpc = createTRPCReact<AppRouter>();
+// Usage: trpc.report.list.useQuery()
+
+// NEW (@trpc/tanstack-react-query)
+// NOTE: verify exact import names against @trpc/tanstack-react-query package exports during implementation
+import { createTRPCClient } from '@trpc/client';
+import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
+export const trpc = createTRPCOptionsProxy<AppRouter>({ client, queryClient });
+// Usage: useQuery(trpc.report.list.queryOptions())
+```
+
+### TRPCProvider for Next.js 16 App Router
+
+Create a `'use client'` provider component that wraps `QueryClientProvider`.
+
+**Files to create:**
+- `apps/web/src/trpc/query-client.ts` -- QueryClient factory with SSR-safe defaults
+- `apps/web/src/trpc/client.tsx` -- `'use client'` TRPCReactProvider component
+- `apps/web/src/trpc/server.ts` -- `'server-only'` prefetch utilities (optional, for RSC optimization later)
+
+**Key QueryClient settings:**
+- `staleTime: 30 * 1000` -- prevents immediate refetch after SSR hydration
+- `shouldDehydrateQuery` -- dehydrate pending queries for streaming
+- `credentials: 'include'` on httpBatchLink (already in existing code)
+- `superjson` transformer (already in existing code)
+
+**Mount location:** `apps/web/src/app/(app)/layout.tsx` (the authenticated layout),
+not the root layout. The login page does not need tRPC.
+
+### Packages That Stay Unchanged
+
+| Package | Version | Reason |
+|---------|---------|--------|
+| `@trpc/client` | ^11.16.0 | Shared by both old and new integrations |
+| `@trpc/server` | ^11.16.0 | Backend, no change |
+| `@tanstack/react-query` | ^5.97.0 | Compatible, no version bump needed |
+| `superjson` | ^2.2.6 | Still used as transformer on both client and server |
+
+**Confidence:** HIGH -- official tRPC docs recommend this migration, React Compiler incompatibility is documented.
+
+---
+
+## 2. Production Logging: pino + pino-roll
+
+### New Packages
+
+| Package | Version | Install To | Purpose |
+|---------|---------|------------|---------|
+| **pino** | ^10.3.1 | apps/api | Structured JSON logger with worker-thread transports |
+| **pino-roll** | ^4.0.0 | apps/api | File rotation transport (daily + size-based + retention) |
+| **pino-pretty** | ^13.0.0 | apps/api (devDep) | Human-readable dev output |
+
+### Why Replace the Custom AppLogger Internals
+
+The existing `AppLoggerImpl` at `apps/api/src/lib/logger.ts` has four
+production blockers:
+
+1. **Synchronous file writes** -- `appendFileSync()` blocks the event loop on every log call
+2. **O(n) directory scan on every write** -- `pruneOldFiles()` calls `readdirSync()` + sort on every single log line
+3. **No compression** -- old log files sit uncompressed on disk
+4. **No size-based rotation** -- only date-based naming, no rotation on file size
+
+pino solves all of these:
+- Writes to a worker thread via `pino.transport()` -- zero main-thread blocking
+- pino-roll handles rotation in the worker thread (daily + size-based + retention limit)
+- Structured JSON output is already the format the custom logger produces
+
+### Integration Approach: Keep the AppLogger Interface
+
+The `AppLogger` interface is used throughout the API codebase. Replacing internals
+without changing the interface means zero changes in any consuming module.
+
+```typescript
+// apps/api/src/lib/logger.ts -- rewrite internals, keep interface
+import pino from 'pino';
+import { join } from 'node:path';
+
+export function createAppLogger(options: LoggerOptions = {}): AppLogger {
+  const targets: pino.TransportTargetOptions[] = [
+    // Always log to stdout (Docker captures this)
+    {
+      target: 'pino/file',
+      options: { destination: 1 },
+      level: options.minLevel ?? 'info',
+    },
+  ];
+
+  // File rotation when logDir is configured
+  if (options.logDir) {
+    targets.push({
+      target: 'pino-roll',
+      options: {
+        file: join(options.logDir, 'customreport'),
+        frequency: 'daily',
+        size: '50m',
+        limit: { count: 14 },
+        mkdir: true,
+        dateFormat: 'yyyy-MM-dd',
+      },
+      level: options.minLevel ?? 'info',
+    });
   }
-  async submit() {
-    await this.page.getByRole('button', { name: 'Submit Section' }).click();
+
+  // Dev-only pretty printing
+  if (process.env.NODE_ENV === 'development') {
+    targets.push({
+      target: 'pino-pretty',
+      options: { colorize: true },
+      level: 'debug',
+    });
+  }
+
+  const pinoLogger = pino({
+    level: options.minLevel ?? 'info',
+    transport: { targets },
+  });
+
+  return new PinoAppLoggerAdapter(pinoLogger);
+}
+```
+
+### pino-roll Configuration Options
+
+| Option | Value | Purpose |
+|--------|-------|---------|
+| `file` | `join(logDir, 'customreport')` | Base filename. Rotation appends date + counter. |
+| `frequency` | `'daily'` | Rotate at midnight. Also supports `'hourly'`, `'weekly'`, or milliseconds. |
+| `size` | `'50m'` | Rotate when file exceeds 50MB. Accepts `k`, `m`, `g` suffixes. |
+| `limit.count` | `14` | Keep 14 rotated files + 1 active. Older files auto-deleted. |
+| `mkdir` | `true` | Create log directory if missing. |
+| `dateFormat` | `'yyyy-MM-dd'` | Filename pattern: `customreport.2026-04-25.1.log` |
+
+**Note:** pino-roll does NOT support gzip compression. If compression is needed
+later, add a cron job or use `pino-transport-rotating-file` (lower adoption).
+For v5.0, uncompressed daily rotation with 14-file retention is sufficient.
+
+### Compatibility Note
+
+pino-roll 4.0.0 (Oct 2025) + pino 10.3.1 (Feb 2026): Both use NDJSON transport
+protocol and are maintained by the same author (Matteo Collina). No explicit
+compatibility statement found in docs. **Verify in dev before deploying.**
+
+**Confidence:** HIGH (approach), MEDIUM (pino 10 + pino-roll 4 exact compat)
+
+---
+
+## 3. Correlation IDs: nestjs-cls
+
+### New Package
+
+| Package | Version | Install To | Purpose |
+|---------|---------|------------|---------|
+| **nestjs-cls** | ^6.2.0 | apps/api | Request-scoped context via AsyncLocalStorage |
+
+### Why nestjs-cls, Not Manual AsyncLocalStorage
+
+- Integrates with NestJS DI -- inject `ClsService` anywhere, no manual store threading
+- `global: true` makes it available to all modules without per-module imports
+- Handles context setup/teardown automatically via middleware
+- 500K+ weekly npm downloads, actively maintained
+- Referenced in official NestJS docs (`docs.nestjs.com/recipes/async-local-storage`)
+
+### Integration with Existing Code
+
+**Step 1: Register ClsModule (must be FIRST import in app.module.ts):**
+
+```typescript
+// apps/api/src/app.module.ts
+@Module({
+  imports: [
+    ClsModule.forRoot({
+      global: true,
+      middleware: { mount: true },
+    }),
+    // ... other modules after CLS
+  ],
+})
+```
+
+**Step 2: Update CorrelationIdMiddleware to store in CLS:**
+
+The existing middleware at `apps/api/src/infrastructure/middleware/correlation-id.middleware.ts`
+already extracts/generates the correlation ID and sets the response header.
+Add CLS storage:
+
+```typescript
+@Injectable()
+export class CorrelationIdMiddleware implements NestMiddleware {
+  constructor(private readonly cls: ClsService) {}
+
+  use(req: Request, res: Response, next: NextFunction): void {
+    const correlationId = (req.headers['x-request-id'] as string) ?? randomUUID();
+    req.headers['x-request-id'] = correlationId;
+    res.setHeader('x-request-id', correlationId);
+    this.cls.set('correlationId', correlationId);
+    next();
   }
 }
 ```
 
-**Add `e2e/helpers/actions.ts`** for composite multi-step actions that span
-multiple pages (e.g., `completeLead1Section(page)`).
+**Step 3: Logger reads from CLS on every log call:**
 
-**Use `test.step()` for readability in long journeys.** This groups assertions in
-Playwright's HTML report without nesting describe blocks.
-
-**Use `expect.poll()` for async state transitions** (e.g., waiting for submit
-status to change from draft to submitted after clicking Submit). Avoid
-`waitForTimeout` entirely.
-
-**The `reducedMotion: 'reduce'` setting is already set** in `playwright.config.ts`
-`use` block — animations are suppressed globally for test stability. Do not
-remove this.
-
-**Do NOT add:**
-- `playwright-testing-library` — `getByRole` already covers accessibility-first
-  queries natively in Playwright 1.50+
-- `@playwright/experimental-ct-react` — component tests belong in Vitest, not
-  Playwright; Playwright is for full E2E only
-- Cucumber/Gherkin BDD layer — unnecessary complexity for this team size
-
-### No New Packages Required
-
-All Playwright capabilities needed for v4.0 are in `@playwright/test` 1.55.0
-and `@axe-core/playwright` 4.11.1 (already installed). The gap is patterns,
-not packages.
-
----
-
-## 3. Prisma Migration Hardening
-
-### What Is Already Installed
-
-Prisma 7.x is installed and operational. The `prisma migrate dev` workflow is
-in use. No new packages are needed.
-
-### What Is Missing
-
-**The reminder schema migration has not been applied.** The v4.0 goal includes
-a Prisma migration for `kind/fireAt/timezone/status/version` fields on the
-Reminder model. This is a schema authoring and migration execution task, not a
-library addition.
-
-**No `prisma migrate diff` usage in CI.** Production deployments should use
-`prisma migrate deploy` (not `dev`). Local development uses `migrate dev`. The
-difference matters for safety: `migrate deploy` applies pending migrations
-without generating new ones; it fails loudly if the schema drifts from migration
-history.
-
-### Prescriptive Recommendations
-
-**Migration flow for reminder schema:**
-1. Edit `prisma/schema.prisma` to add the new fields
-2. Run `pnpm exec prisma migrate dev --name reminder-schema-v2` locally
-3. Commit the generated migration SQL file
-4. Run `pnpm exec prisma generate` to regenerate client types
-5. Production: `pnpm exec prisma migrate deploy`
-
-**Add `prisma migrate diff` as a CI check** to detect schema drift:
-```bash
-pnpm exec prisma migrate diff \
-  --from-migrations ./prisma/migrations \
-  --to-schema-datamodel ./prisma/schema.prisma \
-  --shadow-database-url $SHADOW_DATABASE_URL \
-  --exit-code
+```typescript
+// In PinoAppLoggerAdapter, enrich every log entry with correlationId
+private getCorrelationId(): string | undefined {
+  try {
+    return this.cls?.get('correlationId');
+  } catch {
+    return undefined; // Outside request context (startup, cron jobs)
+  }
+}
 ```
-Exit code 2 means drift exists — fail the build.
 
-**Do NOT use `prisma db push` in production or CI.** It bypasses migration
-history and cannot be rolled back. Use only for quick local prototyping.
+**tRPC context integration:** The CLS store is available in the tRPC
+`createContext` factory since it runs within the Express request lifecycle.
+The correlation ID appears automatically in all tRPC handler logs without
+any changes to `trpc.context.ts`.
 
-### No New Packages Required
-
-All Prisma CLI commands needed (`migrate dev`, `migrate deploy`, `migrate diff`,
-`migrate resolve`, `generate`) are built into `@prisma/client` 7.x. Zero
-new dependencies.
+**Confidence:** HIGH
 
 ---
 
-## Alternatives Considered and Rejected
+## 4. Playwright Dual-Server Config for Real API Tests
 
-| Category | Rejected | Why |
-|----------|----------|-----|
-| Animation | `motion` (framer-motion) | 30KB+ bundle, CSS animations already present and sufficient |
-| Animation | `react-spring` | Same reason; overkill for internal tool |
-| Charts | `recharts` | Not needed for v4.0 scope; chart tokens exist for future use |
-| Charts | `chart.js` | Same reason |
-| Storybook | `@storybook/nextjs` | Overkill for 6-user internal app with no external design system consumers |
-| E2E framework | Cypress | Already on Playwright; switching costs >> benefits; Playwright has superior network interception |
-| E2E BDD | Cucumber/Gherkin | Added complexity with no benefit for a 1-2 dev team |
-| Component tests | `@playwright/experimental-ct-react` | Vitest + Testing Library already handles component testing |
-| Theme | Manual CSS variables | `next-themes` already installed; just needs wiring |
-| ORM migrations | `prisma db push` | Bypasses migration history; unsafe for production |
+### No New Packages Needed
+
+Playwright ^1.55.0 is already installed. The change is configuration, not packages.
+
+### Key Change: webServer as Array
+
+The current `apps/web/playwright.config.ts` starts only the Next.js dev server.
+For real API integration tests, it needs a dual-server array:
+
+```typescript
+webServer: [
+  // API server (must start first)
+  {
+    command: `pnpm --filter @customreport/api exec tsx src/main.ts`,
+    url: `http://127.0.0.1:${API_PORT}/health`,
+    reuseExistingServer: !process.env.CI,
+    timeout: 30_000,
+    env: {
+      DATABASE_URL: process.env.E2E_DATABASE_URL ?? 'postgresql://...',
+      AUTH_DEV_MODE: 'true',
+      PORT: String(API_PORT),
+      NODE_ENV: 'test',
+      LOG_LEVEL: 'warn',
+    },
+  },
+  // Web server (depends on API being up)
+  {
+    command: `pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
+    url: WEB_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+    env: {
+      NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
+      AUTH_DEV_MODE: 'true',
+      NODE_ENV: 'test',
+    },
+  },
+],
+```
+
+### Database Seeding: Expand auth.setup.ts, NOT globalSetup
+
+The existing `auth.setup.ts` project dependency pattern is already correct.
+Expand it rather than introducing `globalSetup`, because:
+
+- `globalSetup` runs outside the test runner -- no fixtures, no `page`/`request`
+  objects, no trace viewer integration, no visibility in HTML report
+- Database connections in `globalSetup` get terminated when the function ends
+- Project dependencies give full Playwright integration (traces, HTML report, fixtures)
+
+**Pattern:**
+
+```typescript
+// e2e/auth.setup.ts
+setup('seed database', async ({ request }) => {
+  // Option A: Call a seed endpoint
+  await request.post(`http://127.0.0.1:${API_PORT}/api/seed`);
+
+  // Option B: Run prisma seed via child_process
+  // execSync('pnpm --filter @customreport/api exec prisma db seed');
+});
+
+setup('authenticate as head', async ({ page }) => {
+  await page.goto('/auth/dev-login?role=head');
+  await page.context().storageState({ path: authFile('head') });
+});
+```
+
+### Existing Fixtures Stay Unchanged
+
+The role-scoped fixtures in `apps/web/e2e/fixtures.ts` (`leadPage`, `headPage`)
+are already wired to use `storageState` from `.auth/*.json` files. No changes needed.
+
+**Confidence:** HIGH
+
+---
+
+## 5. Session Middleware / Auth Guards
+
+### No New Packages Needed
+
+All auth packages are already installed:
+
+| Package | Version | Status |
+|---------|---------|--------|
+| `@nestjs/passport` | ^11.0.5 | Installed |
+| `passport-jwt` | ^4.0.1 | Installed |
+| `jsonwebtoken` | ^9.0.2 | Installed |
+| `cookie-parser` | ^1.4.7 | Installed |
+| `@node-saml/passport-saml` | ^5.1.0 | Installed |
+
+### What Already Exists
+
+The backend auth infrastructure is complete:
+- `trpc.context.ts` extracts JWT from `customreport_session` cookie, verifies via `authController.verifySessionToken()`, falls back to DEV_SESSION when `AUTH_DEV_MODE=true`
+- `trpc.middleware.ts` has `protectedProcedure` (requires session) and `headProcedure` (requires head role)
+- `auth.routes.ts` mounts SAML login/callback/logout + dev-login
+
+### What's Needed (Application-Level, Not Stack-Level)
+
+1. **Next.js `proxy.ts`** (replaces `middleware.ts` in Next.js 16) to check cookie presence and redirect to `/login`
+2. **Forward cookies from SSR requests** to API when prefetching
+3. **`AUTH_DEV_MODE=true`** in dev `.env` for local development without Keycloak
+
+**Confidence:** HIGH -- all code exists, just needs wiring
+
+---
+
+## What NOT to Add
+
+| Library | Why Skip |
+|---------|----------|
+| **nestjs-pino** | Requires restructuring DI around its `LoggerModule`. The custom `AppLogger` interface is already used throughout the API. Wrapping pino directly is simpler and preserves the existing interface contract. |
+| **winston** | 10x slower than pino in benchmarks. Larger bundle. pino is the Node.js standard for structured JSON logging. |
+| **cls-hooked** | Deprecated. Uses monkey-patched async hooks. `nestjs-cls` uses native `AsyncLocalStorage` (stable since Node 16). |
+| **@trpc/next** | Pages Router only. This project uses App Router exclusively. |
+| **pino-pretty in production** | Dev-only dependency. In production, structured JSON goes to stdout (Docker captures) and pino-roll handles files. |
+| **express-async-errors** | Not needed. NestJS + tRPC handle async error propagation natively. |
+| **@tanstack/react-query-devtools** | Optional DX tool. Useful but not v5.0 scope. Can add later. |
+
+---
+
+## Installation Commands
+
+```bash
+# From monorepo root
+
+# apps/web -- tRPC migration
+pnpm --filter @customreport/web add @trpc/tanstack-react-query@^11.16.0 client-only server-only
+pnpm --filter @customreport/web remove @trpc/react-query
+
+# apps/api -- logging + correlation IDs
+pnpm --filter @customreport/api add pino@^10.3.1 pino-roll@^4.0.0 nestjs-cls@^6.2.0
+pnpm --filter @customreport/api add -D pino-pretty@^13.0.0
+```
+
+---
+
+## Integration Points with Existing Code
+
+| Existing File | Change Required | Impact |
+|---------------|----------------|--------|
+| `apps/web/src/lib/trpc.ts` | Rewrite: `createTRPCReact` -> new queryOptions pattern | Breaking -- all 38 mock data replacements use new query pattern |
+| `apps/web/src/app/(app)/layout.tsx` | Add `<TRPCReactProvider>` wrapper | Small -- provider wraps children |
+| `apps/web/src/app/layout.tsx` | No change -- provider goes in (app) layout, not root | None |
+| `apps/api/src/lib/logger.ts` | Rewrite internals: sync fs -> pino transport. Keep AppLogger interface. | Internal only -- no consumer changes |
+| `apps/api/src/infrastructure/middleware/correlation-id.middleware.ts` | Add ClsService injection + `cls.set()` | Small |
+| `apps/api/src/app.module.ts` | Add `ClsModule.forRoot()` as FIRST import | Small |
+| `apps/api/src/main.ts` | No change -- logger creation call stays identical | None |
+| `apps/api/src/infrastructure/trpc/trpc.context.ts` | No change -- CLS is request-scoped, available automatically | None |
+| `apps/web/playwright.config.ts` | Expand `webServer` to array (add API server) | Moderate |
+| `apps/web/e2e/auth.setup.ts` | Add database seeding step before auth setup | Moderate |
+| `apps/web/e2e/fixtures.ts` | No change -- role fixtures already correct | None |
+
+---
+
+## Version Compatibility Matrix
+
+| Package | Version | Requires | Project Status |
+|---------|---------|----------|----------------|
+| pino | ^10.3.1 | Node.js >= 18 | Node 20+ -- OK |
+| pino-roll | ^4.0.0 | pino NDJSON transport | **Verify in dev** -- no explicit compat statement with pino 10 |
+| pino-pretty | ^13.0.0 | pino 9+ | OK |
+| @trpc/tanstack-react-query | ^11.16.0 | @tanstack/react-query ^5.x, @trpc/client ^11.x | Both present -- OK |
+| nestjs-cls | ^6.2.0 | @nestjs/common ^10 or ^11, Node.js >= 16 | NestJS 11 -- OK |
+| client-only | ^0.0.1 | React 18+ | React 19 -- OK |
+| server-only | ^0.0.1 | React 18+ | React 19 -- OK |
 
 ---
 
 ## Confidence Assessment
 
-| Area | Confidence | Basis |
-|------|------------|-------|
-| UI redesign packages | HIGH | Verified against installed package.json files |
-| ThemeProvider wiring gap | HIGH | Read layout.tsx and sonner.tsx directly |
-| Animation approach | HIGH | Verified globals.css and tw-animate-css usage |
-| Playwright patterns (POM, storageState) | HIGH | Verified existing fixtures.ts and config |
-| Journey test gaps | HIGH | Read all journey spec files directly |
-| Prisma migration commands | HIGH | Prisma 7 docs, built-in CLI |
-| No new packages for E2E/Prisma | HIGH | Confirmed against installed deps |
+| Area | Confidence | Reason |
+|------|------------|--------|
+| tRPC client migration | **HIGH** | Official docs, React Compiler incompatibility documented, codemod available |
+| pino logger approach | **HIGH** | Industry standard, author-maintained, existing interface preserved |
+| pino-roll + pino 10 compat | **MEDIUM** | Same author, same protocol, but no explicit 10.x compat statement found |
+| nestjs-cls integration | **HIGH** | Referenced in official NestJS docs, 500K+ weekly downloads |
+| Playwright dual-server | **HIGH** | Documented Playwright feature, project pattern already correct |
+| Auth guards | **HIGH** | All code already exists, configuration only |
 
 ---
 
 ## Sources
 
-- Installed `packages/ui/package.json` (next-themes 0.4.6, sonner 2.0.7, tw-animate-css 1.4.0)
-- Installed `apps/web/package.json` (@playwright/test 1.55.0, @axe-core/playwright 4.11.1)
-- `packages/ui/src/styles/globals.css` — OKLCH design token system
-- `apps/web/src/app/layout.tsx` — ThemeProvider wiring gap confirmed
-- `apps/web/playwright.config.ts` — storageState, webServer, reducedMotion
-- `apps/web/e2e/fixtures.ts` — role fixture pattern
-- `apps/web/e2e/journeys/*.spec.ts` — shallow test coverage confirmed
-- Playwright 1.50+ docs: native `getByRole`, `expect.poll`, `test.step`, `storageState`
-- Prisma 7 docs: `migrate dev` vs `migrate deploy` vs `migrate diff`
+- [tRPC TanStack React Query Setup](https://trpc.io/docs/client/tanstack-react-query/setup) -- official setup guide
+- [tRPC Server Components Guide](https://trpc.io/docs/client/tanstack-react-query/server-components) -- RSC prefetching pattern
+- [tRPC Migration from Classic Client](https://trpc.io/docs/client/tanstack-react-query/migrating) -- migration codemod
+- [Introducing the new TanStack React Query integration](https://trpc.io/blog/introducing-tanstack-react-query-client) -- React Compiler rationale
+- [pino-roll GitHub](https://github.com/mcollina/pino-roll) -- v4.0.0 API, options reference
+- [pino Transports Documentation](https://github.com/pinojs/pino/blob/main/docs/transports.md) -- multi-target setup
+- [nestjs-cls GitHub](https://github.com/Papooch/nestjs-cls) -- v6.2.0 setup
+- [nestjs-cls Quick Start](https://papooch.github.io/nestjs-cls/introduction/quick-start) -- ClsModule registration
+- [NestJS AsyncLocalStorage Recipe](https://docs.nestjs.com/recipes/async-local-storage) -- official recommendation
+- [Playwright Global Setup and Teardown](https://playwright.dev/docs/test-global-setup-teardown) -- project deps vs globalSetup
+- [NestJS Request Context: ALS Blueprint 2026](https://pas7.com.ua/blog/en/nestjs-request-context-als-2026) -- Node.js ALS security patch note
