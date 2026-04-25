@@ -156,9 +156,14 @@ export function createAppRouter(deps: RouterDeps) {
     pdfExport: router({
       request: headProcedure
         .input(z.object({ reportId: z.string().uuid() }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
           try {
-            return await deps.pdfExportService.requestPdfExport(input.reportId);
+            // Phase 23-01: thread session userId so the pdf_export_jobs row
+            // attributes the request to the head, not 'system'.
+            return await deps.pdfExportService.requestPdfExport(
+              input.reportId,
+              ctx.session.userId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }

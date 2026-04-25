@@ -60,7 +60,7 @@ function createRepository(
       jobs.set(job.jobId, structuredClone(job));
       return structuredClone(job);
     },
-    async markExportFailed(jobId: string, error: string) {
+    async markExportFailed(jobId: string, _error: string) {
       const job = jobs.get(jobId);
       if (job) {
         jobs.set(jobId, { ...job, status: 'failed' as const });
