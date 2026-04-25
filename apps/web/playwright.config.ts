@@ -5,6 +5,7 @@ const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 
 export default defineConfig({
   testDir: 'e2e',
+  testIgnore: ['integration/**'],
   outputDir: 'e2e/.results',
   timeout: 60_000,
   expect: { timeout: 10_000 },
