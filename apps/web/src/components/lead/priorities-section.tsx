@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-
 import type { PriorityEntry } from './mock-data';
 
 type PrioritiesSectionProps = {
   readonly priorities: PriorityEntry[];
   readonly readOnly?: boolean;
+  readonly onChange?: (priorities: PriorityEntry[]) => void;
 };
 
 const RANK_STYLES: Record<number, { bg: string; circleBg: string; circleText: string }> = {
@@ -15,12 +14,10 @@ const RANK_STYLES: Record<number, { bg: string; circleBg: string; circleText: st
   3: { bg: 'var(--color-background)', circleBg: 'var(--color-muted)', circleText: 'var(--color-muted-foreground)' },
 };
 
-export function PrioritiesSection({ priorities: initialPriorities, readOnly = false }: PrioritiesSectionProps) {
-  const [priorities, setPriorities] = useState(initialPriorities);
-
+export function PrioritiesSection({ priorities, readOnly = false, onChange }: PrioritiesSectionProps) {
   function handleTextChange(rank: number, newText: string) {
-    setPriorities((prev) =>
-      prev.map((p) => (p.rank === rank ? { ...p, text: newText } : p)),
+    onChange?.(
+      priorities.map((p) => (p.rank === rank ? { ...p, text: newText } : p)),
     );
   }
 

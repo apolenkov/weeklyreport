@@ -1,11 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { useTRPC } from '../../lib/trpc-context';
+import {
+  invalidateLeadForm,
+  invalidateLeadHistory,
+  invalidateDashboard,
+} from '../../lib/cache-keys';
 import { mapLeadFormData } from '../../lib/mappers';
+import { useLeadFormAutosave } from '../../hooks/use-lead-form-autosave';
 import { LeadFormSkeleton } from './lead-form-skeleton';
 import { SdlcPipeline } from './sdlc-pipeline';
 import { PeriodNavigator } from './period-navigator';
@@ -26,6 +32,11 @@ import type {
   ReportPeriod,
   VersionSnapshot,
 } from './mock-data';
+
+import type {
+  ReportSectionReadModel,
+  DraftSavePayload,
+} from '@customreport/shared';
 
 type LeadFormProps = {
   readonly period?: string;
@@ -174,8 +185,55 @@ function AccordionSection({
   );
 }
 
+/**
+ * Build a `draftSaveSchema`-compatible payload from the raw API section. The
+ * raw shape carries every field the schema requires (owner/impact on
+ * decisions, tag/workflowStatus on items, etc.) so this round-trips cleanly.
+ */
+function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayload {
+  return {
+    reportSectionId: section.reportSectionId,
+    status: 'draft',
+    projectStatuses: section.projects.map((p) => ({
+      projectId: p.projectId,
+      status: p.trafficLight ?? undefined,
+    })),
+    items: section.items.map((it) => ({
+      id: it.id,
+      projectId: it.projectId,
+      type: it.type,
+      text: it.text,
+      tag: it.tag,
+      workflowStatus: it.workflowStatus,
+      carriedOver: it.carriedOver ?? false,
+      completed: it.completed ?? null,
+    })),
+    risks: section.risks.map((r) => ({
+      id: r.id,
+      projectId: r.projectId,
+      risk: r.risk,
+      impact: r.impact,
+      mitigation: r.mitigation,
+    })),
+    decisions: section.decisions.map((d) => ({
+      id: d.id,
+      text: d.text,
+      owner: d.owner,
+      deadline: d.deadline ?? null,
+      impact: d.impact,
+      resolvedAt: d.resolvedAt ?? null,
+    })),
+    priorities: section.priorities.map((p) => ({
+      id: p.id,
+      rank: p.rank,
+      text: p.text,
+    })),
+  };
+}
+
 export function LeadForm({ period }: LeadFormProps) {
   const trpc = useTRPC();
+  const qc = useQueryClient();
 
   // Four queries compose the lead-form view. `byPeriod` and `versions` depend
   // on identifiers from `getActive`, so they're gated by `enabled`.
@@ -234,17 +292,63 @@ export function LeadForm({ period }: LeadFormProps) {
     }
   }, [historyQ.isError, historyQ.error]);
 
-  // Local UI state (mutation handlers stay local-only in this plan).
+  // ---- Local UI + draft state ----
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [autosaveStatus] = useState('Autosaved');
 
-  // Re-seed isSubmitted from the API once data resolves.
+  // Draft mirror of the raw API section. Saving + submitting use this; child
+  // edits merge field-level changes back by id while preserving every required
+  // schema field that the lossy Lead* mappers drop (owner/impact/etc).
+  const [draftSection, setDraftSection] =
+    useState<ReportSectionReadModel | null>(null);
+
+  // Re-seed local state whenever the server-side section changes (initial load
+  // or post-mutation invalidation).
   useEffect(() => {
-    if (byPeriodQ.data?.section.status === 'submitted') {
-      setIsSubmitted(true);
+    if (byPeriodQ.data?.section) {
+      setDraftSection(byPeriodQ.data.section);
+      setIsSubmitted(byPeriodQ.data.section.status === 'submitted');
     }
   }, [byPeriodQ.data]);
+
+  // ---- Mutations ----
+  const submitMut = useMutation(
+    trpc.reports.submit.mutationOptions({
+      onSuccess: () => {
+        invalidateLeadForm(qc, trpc);
+        invalidateLeadHistory(qc, trpc);
+        setIsSubmitted(true);
+        setShowSubmitConfirm(false);
+        toast.success('Report submitted');
+      },
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : 'Submit failed';
+        toast.error(msg);
+      },
+    }),
+  );
+
+  const revokeMut = useMutation(
+    trpc.leadForm.revoke.mutationOptions({
+      onSuccess: () => {
+        invalidateLeadForm(qc, trpc);
+        invalidateDashboard(qc, trpc);
+        invalidateLeadHistory(qc, trpc);
+        setIsSubmitted(false);
+        toast.success('Section unlocked');
+      },
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : 'Revoke failed';
+        toast.error(msg);
+      },
+    }),
+  );
+
+  // ---- Build draft payload ----
+  const draftPayload = useMemo(
+    () => (draftSection ? sectionToDraftPayload(draftSection) : null),
+    [draftSection],
+  );
 
   const isLoading =
     activeQ.isLoading ||
@@ -252,29 +356,40 @@ export function LeadForm({ period }: LeadFormProps) {
     versionsQ.isLoading ||
     historyQ.isLoading;
 
-  // No active report bound to session — render skeleton (best effort) until
-  // session populates a report. Active period auto-selection is a server-side
-  // concern owned by middleware.
+  // Compute readOnly early (before hook; the autosave hook needs it). When
+  // data isn't ready, treat as readOnly (autosave disabled).
+  const isReadOnlyEarly =
+    !!period ||
+    isSubmitted ||
+    (byPeriodQ.data ? byPeriodQ.data.readOnly : true);
+
+  // Autosave wiring — runs unconditionally to keep hook order stable.
+  const autosave = useLeadFormAutosave({
+    reportSectionId: activeSectionId || null,
+    payload: draftPayload,
+    enabled: !isReadOnlyEarly && !isSubmitted && draftSection !== null,
+  });
+
+  // Skeleton until all queries settle.
   if (
     isLoading ||
     !activeQ.data ||
     !byPeriodQ.data ||
     !versionsQ.data ||
-    !historyQ.data
+    !historyQ.data ||
+    !draftSection
   ) {
     return <LeadFormSkeleton />;
   }
 
+  // Map raw draft state -> Lead* presentation shapes for existing children.
   const data = mapLeadFormData({
     active: activeQ.data,
-    byPeriod: byPeriodQ.data,
+    byPeriod: { section: draftSection, readOnly: byPeriodQ.data.readOnly },
     versions: versionsQ.data,
     history: historyQ.data,
   });
 
-  // The mapper produces structurally compatible shapes but carries Lead*
-  // type names; cast to mock-data presentation types so existing children
-  // keep their imports unchanged.
   const products: Product[] = data.products as Product[];
   const currentWeekItems: KanbanItem[] = data.currentWeekItems as KanbanItem[];
   const nextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
@@ -287,21 +402,78 @@ export function LeadForm({ period }: LeadFormProps) {
 
   const isReadOnly = data.readOnly || !!period || isSubmitted;
 
-  function handleToggleAll() {
-    // Toggle all is managed through individual accordion state;
-    // for simplicity, this is a visual placeholder.
+  // ---- onChange merge handlers ----
+  // Decisions: merge text edits / deletions back into raw section by id,
+  // preserving owner/impact/deadline/resolvedAt fields the mapper drops.
+  function handleDecisionsChange(next: DecisionEntry[]) {
+    setDraftSection((prev) => {
+      if (!prev) return prev;
+      const nextIds = new Set(next.map((d) => d.id));
+      const surviving = prev.decisions.filter((d) =>
+        d.id ? nextIds.has(d.id) : true,
+      );
+      // Apply text updates by id.
+      const byId = new Map(next.map((d) => [d.id, d.text] as const));
+      const merged = surviving.map((d) =>
+        d.id && byId.has(d.id) ? { ...d, text: byId.get(d.id)! } : d,
+      );
+      return { ...prev, decisions: merged };
+    });
   }
 
+  function handlePrioritiesChange(next: PriorityEntry[]) {
+    setDraftSection((prev) => {
+      if (!prev) return prev;
+      // Merge by rank (priorities have stable rank as identity in the UI).
+      const byRank = new Map<number, string>(next.map((p) => [p.rank as number, p.text]));
+      const merged = prev.priorities.map((p) =>
+        byRank.has(p.rank) ? { ...p, text: byRank.get(p.rank)! } : p,
+      );
+      return { ...prev, priorities: merged };
+    });
+  }
+
+  // ---- Action handlers ----
   function handleSubmit() {
-    // TODO(Phase 22): wire reports.submit mutation + invalidateLeadForm(qc, trpc) onSuccess
     setShowSubmitConfirm(true);
   }
 
   function handleConfirmSubmit() {
-    // TODO(Phase 22): wire reports.submit mutation + invalidateLeadForm(qc, trpc) onSuccess
-    setIsSubmitted(true);
-    setShowSubmitConfirm(false);
+    if (!draftPayload) return;
+    // submitSectionSchema requires every projectStatus to have a non-null
+    // status. Coerce undefined -> green optimistically; the server will
+    // reject if any are still invalid and toast the error.
+    const projectStatuses = draftPayload.projectStatuses.map((p) => ({
+      projectId: p.projectId,
+      status: p.status ?? ('green' as const),
+    }));
+    submitMut.mutate({
+      ...draftPayload,
+      projectStatuses,
+      confirmed: true,
+    });
   }
+
+  function handleRevoke() {
+    if (!activeSectionId) return;
+    revokeMut.mutate({ reportSectionId: activeSectionId });
+  }
+
+  function handleToggleAll() {
+    // Visual placeholder; individual accordion state owns its own toggle.
+  }
+
+  // Autosave indicator label.
+  const autosaveLabel =
+    autosave.state === 'saving'
+      ? 'Saving...'
+      : autosave.state === 'pending'
+        ? 'Pending...'
+        : autosave.state === 'saved' && autosave.lastSavedAt
+          ? `Saved at ${autosave.lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+          : autosave.state === 'error'
+            ? 'Save failed'
+            : 'Autosaved';
 
   return (
     <>
@@ -318,12 +490,11 @@ export function LeadForm({ period }: LeadFormProps) {
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
-                {autosaveStatus}
+                {autosaveLabel}
               </span>
             )}
           </div>
           <div className="flex items-center gap-3">
-            {/* TODO(Phase 22): wire leadForm.fillFrom mutation in onFillFrom */}
             <FillFromButton
               periods={periods}
               disabled={isReadOnly}
@@ -337,11 +508,22 @@ export function LeadForm({ period }: LeadFormProps) {
               <CollapseIcon />
               Toggle All
             </button>
+            {isSubmitted && (
+              <button
+                type="button"
+                className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleRevoke}
+                disabled={revokeMut.isPending}
+                title="Revoke submission and unlock the section"
+              >
+                Revoke
+              </button>
+            )}
             <button
               type="button"
               className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               onClick={handleSubmit}
-              disabled={isReadOnly}
+              disabled={isReadOnly || submitMut.isPending}
             >
               Submit Report
             </button>
@@ -361,7 +543,6 @@ export function LeadForm({ period }: LeadFormProps) {
           </div>
 
           <div className="ml-auto">
-            {/* TODO(Phase 22): wire leadForm.restoreVersion mutation in onRestore */}
             <VersionHistoryNav versions={versions} />
           </div>
         </div>
@@ -430,7 +611,6 @@ export function LeadForm({ period }: LeadFormProps) {
         </AccordionSection>
 
         {/* Decisions */}
-        {/* TODO(Phase 22): wire reports.saveDraft when decisions change */}
         <AccordionSection
           icon={<ChatIcon />}
           title="Decisions"
@@ -438,18 +618,25 @@ export function LeadForm({ period }: LeadFormProps) {
           badge={`${decisions.length}`}
           badgeStyle={{ background: 'var(--color-success)', color: 'var(--color-starbucks-accent)' }}
         >
-          <DecisionsSection decisions={decisions} readOnly={isReadOnly} />
+          <DecisionsSection
+            decisions={decisions}
+            readOnly={isReadOnly}
+            onChange={handleDecisionsChange}
+          />
         </AccordionSection>
 
         {/* Top 3 Priorities */}
-        {/* TODO(Phase 22): wire reports.saveDraft when priorities change */}
         <AccordionSection
           icon={<StarIcon />}
           title="Top 3 Priorities"
           titleColor="var(--color-starbucks-gold)"
           badge={`${Math.min(priorities.length, 3)}/3`}
         >
-          <PrioritiesSection priorities={priorities} readOnly={isReadOnly} />
+          <PrioritiesSection
+            priorities={priorities}
+            readOnly={isReadOnly}
+            onChange={handlePrioritiesChange}
+          />
         </AccordionSection>
       </div>
 
@@ -497,8 +684,9 @@ export function LeadForm({ period }: LeadFormProps) {
               </button>
               <button
                 type="button"
-                className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+                className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleConfirmSubmit}
+                disabled={submitMut.isPending}
               >
                 Submit Report
               </button>

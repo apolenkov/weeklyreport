@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-
 import type { DecisionEntry } from './mock-data';
 
 type DecisionsSectionProps = {
   readonly decisions: DecisionEntry[];
   readonly readOnly?: boolean;
+  readonly onChange?: (decisions: DecisionEntry[]) => void;
 };
 
 function DeleteIcon() {
@@ -17,16 +16,14 @@ function DeleteIcon() {
   );
 }
 
-export function DecisionsSection({ decisions: initialDecisions, readOnly = false }: DecisionsSectionProps) {
-  const [decisions, setDecisions] = useState(initialDecisions);
-
+export function DecisionsSection({ decisions, readOnly = false, onChange }: DecisionsSectionProps) {
   function handleDelete(id: string) {
-    setDecisions((prev) => prev.filter((d) => d.id !== id));
+    onChange?.(decisions.filter((d) => d.id !== id));
   }
 
   function handleTextChange(id: string, newText: string) {
-    setDecisions((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, text: newText } : d)),
+    onChange?.(
+      decisions.map((d) => (d.id === id ? { ...d, text: newText } : d)),
     );
   }
 

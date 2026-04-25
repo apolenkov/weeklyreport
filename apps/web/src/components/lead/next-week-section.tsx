@@ -6,6 +6,12 @@ import type { KanbanItem } from './mock-data';
 type NextWeekSectionProps = {
   readonly items: KanbanItem[];
   readonly readOnly?: boolean;
+  /**
+   * Item add/edit/delete handlers are deferred to a future plan; this prop is
+   * declared so callers can wire it ahead of time without a child contract
+   * change later. No-op when undefined.
+   */
+  readonly onItemsChange?: (items: KanbanItem[]) => void;
 };
 
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
@@ -19,7 +25,7 @@ function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
   return map;
 }
 
-export function NextWeekSection({ items, readOnly = false }: NextWeekSectionProps) {
+export function NextWeekSection({ items, readOnly = false, onItemsChange: _onItemsChange }: NextWeekSectionProps) {
   const grouped = groupByProduct(items);
 
   return (
