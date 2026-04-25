@@ -239,10 +239,11 @@ test.describe('Lead Form CRUD Operations', () => {
     }
 
     // Status options should appear in a dropdown
-    await expect(leadPage.getByRole('button', { name: /On Track/ })).toBeVisible({ timeout: 5_000 });
-    await expect(leadPage.getByRole('button', { name: /At Risk/ })).toBeVisible();
-    await expect(leadPage.getByRole('button', { name: /Blocked/ })).toBeVisible();
-    await expect(leadPage.getByRole('button', { name: /Clear/ })).toBeVisible();
+    const dropdown = leadPage.locator('.absolute.z-50');
+    await expect(dropdown.getByRole('button', { name: /On Track/ })).toBeVisible({ timeout: 5_000 });
+    await expect(dropdown.getByRole('button', { name: /At Risk/ })).toBeVisible();
+    await expect(dropdown.getByRole('button', { name: /Blocked/ })).toBeVisible();
+    await expect(dropdown.getByRole('button', { name: /Clear/ })).toBeVisible();
   });
 
   test('SC-190: Selecting a new status changes the stage chip display', async ({ leadPage }) => {
@@ -254,7 +255,7 @@ test.describe('Lead Form CRUD Operations', () => {
     for (let i = 0; i < 10; i++) {
       await devChip.click();
       try {
-        await leadPage.getByRole('button', { name: /Blocked/ }).first().waitFor({ state: 'visible', timeout: 1_000 });
+        await leadPage.locator('.absolute.z-50').getByRole('button', { name: /Blocked/ }).waitFor({ state: 'visible', timeout: 1_000 });
         break;
       } catch {
         // Retry
@@ -262,7 +263,7 @@ test.describe('Lead Form CRUD Operations', () => {
     }
 
     // Select "Blocked" status
-    const blockedOption = leadPage.getByRole('button', { name: /Blocked/ }).last();
+    const blockedOption = leadPage.locator('.absolute.z-50').getByRole('button', { name: /Blocked/ });
     await blockedOption.click();
 
     // Chip should now show "blocked" status -- aria-label updates

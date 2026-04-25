@@ -11,8 +11,12 @@
  * Covers: SC-260..SC-269
  */
 
+import * as path from 'path';
+
 import { test, expect } from './fixtures';
 import { test as base } from '@playwright/test';
+
+const AUTH_DIR = path.join(__dirname, '.auth');
 
 // ---------------------------------------------------------------------------
 // SC-260: Network disconnect during autosave
@@ -340,7 +344,7 @@ test.describe('SC-268: Unicode characters render correctly', () => {
     await expect(leadPage.getByText(/OAuth2/).first()).toBeVisible();
 
     // The page should handle the mix of Latin and Cyrillic
-    await expect(leadPage.getByText('Polenkov A.')).toBeVisible();
+    await expect(leadPage.getByText('Polenkov A.').first()).toBeVisible();
     await expect(leadPage.getByText('CRM Platform').first()).toBeVisible();
   });
 
@@ -369,10 +373,10 @@ test.describe('SC-269: Concurrent tabs do not crash', () => {
   test('two tabs open on the same lead report both render correctly', async ({ browser }) => {
     // Create two independent browser contexts (simulating two tabs)
     const contextA = await browser.newContext({
-      storageState: 'apps/web/e2e/.auth/lead.json',
+      storageState: path.join(AUTH_DIR, 'lead.json'),
     });
     const contextB = await browser.newContext({
-      storageState: 'apps/web/e2e/.auth/lead.json',
+      storageState: path.join(AUTH_DIR, 'lead.json'),
     });
 
     const pageA = await contextA.newPage();

@@ -122,7 +122,8 @@ test.describe('SC-294: Viewer role redirect', () => {
 
     await viewerLink.click();
     await freshPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    expect(freshPage.url()).toContain('/reports/history');
+    // /reports/history redirects to /head/dashboard (viewer landing page)
+    expect(freshPage.url()).toContain('/head/dashboard');
   });
 });
 
