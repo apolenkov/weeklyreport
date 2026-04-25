@@ -1,14 +1,21 @@
-import {
-  MOCK_KPI,
-  MOCK_PORTFOLIO,
-  MOCK_PRODUCT_REPORTS,
-  type ProductReport,
-  type PortfolioProduct,
+'use client';
+
+import { use, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+import { useTRPC } from '../../../../../lib/trpc-context';
+import { mapWeeklyReport } from '../../../../../lib/mappers';
+import type {
+  PortfolioProduct,
+  ProductReport,
 } from '../../../../../components/dashboard/mock-data';
 
 /* ------------------------------------------------------------------ */
-/*  Print/PDF Template — Server Component (no 'use client')           */
-/*  Renders an A4-optimized weekly status report for PDF export.      */
+/*  Print/PDF Template — Client Component (Phase 21)                  */
+/*  Renders an A4-optimized weekly status report. Fetches via tRPC by */
+/*  reportId param. Phase 23 owns server-rendered PDF orchestration;  */
+/*  this page remains the visual template until then.                 */
 /* ------------------------------------------------------------------ */
 
 type Props = {
@@ -330,13 +337,59 @@ function LeadSection({
   );
 }
 
+function LoadingShell({ reportId }: { reportId: string }) {
+  return (
+    <main
+      style={{
+        backgroundColor: '#ffffff',
+        color: 'rgba(0,0,0,0.87)',
+        fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
+        fontSize: '12px',
+        maxWidth: '210mm',
+        margin: '0 auto',
+        padding: '24px',
+      }}
+      aria-busy="true"
+    >
+      <p style={{ color: 'rgba(0,0,0,0.58)' }}>
+        Loading report {reportId} ...
+      </p>
+    </main>
+  );
+}
+
 /* ---- Main Print Page ---- */
 
-export default async function PrintReportPage({ params }: Props) {
-  const { reportId } = await params;
+export default function PrintReportPage({ params }: Props) {
+  const { reportId } = use(params);
+  const trpc = useTRPC();
+  const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
 
+  useEffect(() => {
+    if (weeklyQ.isError) {
+      toast.error(
+        weeklyQ.error instanceof Error
+          ? `Failed to load report: ${weeklyQ.error.message}`
+          : 'Failed to load report',
+      );
+    }
+  }, [weeklyQ.isError, weeklyQ.error]);
+
+  if (weeklyQ.isLoading || !weeklyQ.data) {
+    return <LoadingShell reportId={reportId} />;
+  }
+
+  const view = mapWeeklyReport(weeklyQ.data);
+  const portfolio: PortfolioProduct[] = view.portfolio as PortfolioProduct[];
+  const products: ProductReport[] = view.products as ProductReport[];
+  const submitted = view.submissionCount;
+  const total = view.totalLeads;
+  // Counts derived from re-sliced products.
+  const blockedCount = products.filter((p) => p.status === 'blocked').length;
+  const atRiskCount = products.filter((p) => p.status === 'at-risk').length;
+  const decisionCount = products.reduce((sum, p) => sum + p.decisions.length, 0);
+  const submissionSummary = `${submitted}/${total} leads submitted`;
   const now = new Date().toISOString();
-  const submissionSummary = `${MOCK_KPI.submitted}/${MOCK_KPI.total} leads submitted`;
 
   return (
     <>
@@ -400,7 +453,7 @@ export default async function PrintReportPage({ params }: Props) {
               color: 'rgba(0,0,0,0.58)',
             }}
           >
-            Week 16 &middot; Apr 14–20, 2026 &middot; {submissionSummary}
+            {view.period.weekLabel} &middot; {view.period.dateRange} &middot; {submissionSummary}
           </p>
         </header>
 
@@ -433,7 +486,7 @@ export default async function PrintReportPage({ params }: Props) {
               }}
             >
               <div style={{ fontSize: '20px', fontWeight: 600, color: '#006241' }}>
-                {MOCK_KPI.submitted}/{MOCK_KPI.total}
+                {submitted}/{total}
               </div>
               <div style={{ color: 'rgba(0,0,0,0.58)' }}>Submitted</div>
             </div>
@@ -447,7 +500,7 @@ export default async function PrintReportPage({ params }: Props) {
               }}
             >
               <div style={{ fontSize: '20px', fontWeight: 600, color: '#c82014' }}>
-                {MOCK_KPI.blockedCount}
+                {blockedCount}
               </div>
               <div style={{ color: 'rgba(0,0,0,0.58)' }}>Blocked</div>
             </div>
@@ -461,7 +514,7 @@ export default async function PrintReportPage({ params }: Props) {
               }}
             >
               <div style={{ fontSize: '20px', fontWeight: 600, color: '#daa520' }}>
-                {MOCK_KPI.atRiskCount}
+                {atRiskCount}
               </div>
               <div style={{ color: 'rgba(0,0,0,0.58)' }}>At Risk</div>
             </div>
@@ -475,7 +528,7 @@ export default async function PrintReportPage({ params }: Props) {
               }}
             >
               <div style={{ fontSize: '20px', fontWeight: 600, color: '#3730a3' }}>
-                {MOCK_KPI.decisionCount}
+                {decisionCount}
               </div>
               <div style={{ color: 'rgba(0,0,0,0.58)' }}>Decisions</div>
             </div>
@@ -494,7 +547,7 @@ export default async function PrintReportPage({ params }: Props) {
           >
             Portfolio Overview
           </h2>
-          <PortfolioTable products={MOCK_PORTFOLIO} />
+          <PortfolioTable products={portfolio} />
         </section>
 
         {/* Per-Product Sections */}
@@ -510,7 +563,7 @@ export default async function PrintReportPage({ params }: Props) {
           >
             Product Reports
           </h2>
-          {MOCK_PRODUCT_REPORTS.map((report) => (
+          {products.map((report) => (
             <LeadSection key={report.id} report={report} />
           ))}
         </section>
