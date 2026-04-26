@@ -62,7 +62,7 @@ function createRepository(report: MockReport | null): PeriodRepository & {
       return structuredClone(current);
     },
 
-    async publishPeriod(id: string, userId: string) {
+    async publishPeriod(id: string, _userId: string) {
       if (current && id === current.id) {
         current = {
           ...current,
