@@ -72,8 +72,13 @@ function makeWeeklyReportData(periodStatus: 'open' | 'published' | 'reopened') {
 type Captured = {
   publishOptions?: { onSuccess?: () => void; onError?: (err: Error) => void };
   reopenOptions?: { onSuccess?: () => void; onError?: (err: Error) => void };
+  pdfExportRequestOptions?: {
+    onSuccess?: (job: { jobId: string }) => void;
+    onError?: (err: Error) => void;
+  };
   publishMutationFn: ReturnType<typeof vi.fn>;
   reopenMutationFn: ReturnType<typeof vi.fn>;
+  pdfExportRequestMutationFn: ReturnType<typeof vi.fn>;
 };
 
 function makeMockTRPC(
@@ -110,6 +115,30 @@ function makeMockTRPC(
             onError: opts?.onError,
           };
         },
+      },
+    },
+    // Phase 23-01: ExportPdfButton (rendered inside WeeklyReportPage) calls
+    // both `pdfExport.request.mutationOptions` and `pdfExport.status.queryOptions`
+    // unconditionally on every render. Mock the surface here so the parent
+    // page renders without throwing — these tests do not exercise PDF export
+    // behavior, they only need the mock to be structurally valid.
+    pdfExport: {
+      request: {
+        mutationOptions: (opts: Captured['pdfExportRequestOptions']) => {
+          captured.pdfExportRequestOptions = opts;
+          return {
+            mutationFn: captured.pdfExportRequestMutationFn,
+            onSuccess: opts?.onSuccess,
+            onError: opts?.onError,
+          };
+        },
+      },
+      status: {
+        queryOptions: () => ({
+          queryKey: ['pdfExport', 'status'],
+          queryFn: async () => null,
+          enabled: false,
+        }),
       },
     },
     review: { dashboard: { pathFilter: () => ({ queryKey: ['review', 'dashboard'] }) } },
@@ -156,6 +185,7 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     const captured: Captured = {
       publishMutationFn: vi.fn().mockResolvedValue(undefined),
       reopenMutationFn: vi.fn().mockResolvedValue(undefined),
+      pdfExportRequestMutationFn: vi.fn(),
     };
     renderPage(makeWeeklyReportData('open'), captured);
 
@@ -183,6 +213,7 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     const captured: Captured = {
       publishMutationFn: vi.fn().mockResolvedValue(undefined),
       reopenMutationFn: vi.fn().mockResolvedValue(undefined),
+      pdfExportRequestMutationFn: vi.fn(),
     };
     renderPage(makeWeeklyReportData('open'), captured);
 
@@ -204,6 +235,7 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     const captured: Captured = {
       publishMutationFn: vi.fn(),
       reopenMutationFn: vi.fn(),
+      pdfExportRequestMutationFn: vi.fn(),
     };
     renderPage(makeWeeklyReportData('open'), captured);
 
@@ -221,6 +253,7 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     const captured: Captured = {
       publishMutationFn: vi.fn(),
       reopenMutationFn: vi.fn().mockResolvedValue(undefined),
+      pdfExportRequestMutationFn: vi.fn(),
     };
     renderPage(makeWeeklyReportData('published'), captured);
 
@@ -239,6 +272,7 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     const captured: Captured = {
       publishMutationFn: vi.fn(),
       reopenMutationFn: vi.fn(),
+      pdfExportRequestMutationFn: vi.fn(),
     };
     renderPage(makeWeeklyReportData('published'), captured);
 
