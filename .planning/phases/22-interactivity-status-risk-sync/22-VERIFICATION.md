@@ -1,10 +1,12 @@
 ---
 phase: 22-interactivity-status-risk-sync
 verified: 2026-04-25T23:35:00Z
-status: gaps_found
-score: 4/5 success criteria verified
+re_verified: 2026-04-26T01:50:00Z (after gap-closure commit 69f6527)
+status: passed
+score: 5/5 success criteria verified
+gap_closure_commit: 69f6527
 re_verification:
-  initial: true
+  initial: false
 gaps:
   - truth: "Setting a stage to At Risk or Blocked auto-creates a risk row; filling a risk offers to update the stage status (with user confirmation); SyncSource flag prevents loops"
     status: failed
