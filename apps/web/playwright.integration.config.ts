@@ -42,9 +42,9 @@ export default defineConfig({
   webServer: [
     {
       command: 'pnpm --filter @customreport/api dev',
-      url: `${API_URL}/health`,
+      url: `${API_URL}/health/live`,
       reuseExistingServer: !process.env.CI,
-      timeout: 180_000,
+      timeout: 360_000,
       env: {
         ...process.env,
         PORT: String(API_PORT),
@@ -61,7 +61,7 @@ export default defineConfig({
       command: `pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
       url: WEB_URL,
       reuseExistingServer: !process.env.CI,
-      timeout: 180_000,
+      timeout: 360_000,
       env: {
         ...process.env,
         NEXT_PUBLIC_API_URL: API_URL,

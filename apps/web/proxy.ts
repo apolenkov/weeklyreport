@@ -23,7 +23,22 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const COOKIE_NAME = 'customreport_session';
 
+const PROTECTED_PATH_PREFIXES = ['/lead', '/head', '/reports', '/admin'];
+
+function isProtectedPath(pathname: string): boolean {
+  return PROTECTED_PATH_PREFIXES.some((prefix) =>
+    pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 export default function proxy(request: NextRequest): NextResponse {
+  // Path-based guard: Next.js 16's matcher with negative-lookahead+alternation
+  // does not reliably exclude paths, so we filter here in the body. Only
+  // run the auth check on protected routes.
+  if (!isProtectedPath(request.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
+
   // AUTH_STUB bypass — dev/test mode. Read at request time so test runs that
   // mutate the env take effect without a rebuild.
   if (process.env.NEXT_PUBLIC_AUTH_STUB === 'true') {
@@ -45,13 +60,20 @@ export default function proxy(request: NextRequest): NextResponse {
 }
 
 /**
- * Matcher: run on every route EXCEPT the exemptions above.
+ * Matcher: explicit allowlist of protected route prefixes.
  *
- * The negative lookahead `(?!_next|api|trpc|auth|favicon\.ico|$)` excludes:
- *   - any path beginning with one of those prefixes, AND
- *   - the bare '/' route (matched by the `$` alternative — empty after the
- *     leading slash).
+ * Switched from negative-lookahead exclusion to positive allowlist after
+ * v5.0 integration tests revealed the lookahead matcher fired on every path
+ * (including `/`, `/auth/*`, `/_next/*`, `/favicon.ico`) in Next.js 16.
+ * Negative-lookahead with `|` alternation does not appear to work in
+ * Next.js 16's matcher; the allowlist is unambiguous and matches the plain
+ * reading of PROTECTED_PATH_PREFIXES in the proxy body above.
  */
 export const config = {
-  matcher: ['/((?!_next|api|trpc|auth|favicon\\.ico|$).*)'],
+  matcher: [
+    '/lead/:path*',
+    '/head/:path*',
+    '/reports/:path*',
+    '/admin/:path*',
+  ],
 };
