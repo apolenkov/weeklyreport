@@ -18,15 +18,11 @@ export default async function globalSetup(): Promise<void> {
   // apps/web/e2e/integration/global-setup.ts -> repo root is 4 dirs up.
   const repoRoot = path.resolve(__dirname, '../../../..');
 
-  console.log('[e2e] Resetting integration database...');
-  execSync('pnpm exec prisma migrate reset --force --skip-seed', {
-    cwd: repoRoot,
-    env: { ...process.env, DATABASE_URL: dbUrl },
-    stdio: 'inherit',
-  });
-
-  console.log('[e2e] Seeding integration database...');
-  execSync('pnpm exec tsx prisma/seed.ts', {
+  // Prisma 7 dropped `--skip-seed` and runs the seed registered in
+  // prisma.config.ts (`migrations.seed`) automatically after `migrate reset`.
+  // The single command below resets schema, applies migrations, AND seeds.
+  console.log('[e2e] Resetting + seeding integration database...');
+  execSync('pnpm exec prisma migrate reset --force', {
     cwd: repoRoot,
     env: { ...process.env, DATABASE_URL: dbUrl },
     stdio: 'inherit',
