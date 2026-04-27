@@ -37,7 +37,7 @@ git push origin v5.0   # local annotated tag, not yet pushed
 
 Code-complete but not runtime-verified end-to-end. Address in v6.0 or before tagging final release:
 
-### 1. Phase 26 integration suite — never executed   [PARTIAL 2026-04-26 — see .planning/quick/260426-vxp-v5-0-tech-debt-integration-suite-first-r/260426-vxp-SUMMARY.md; env provisioned, suite blocked on Docker Hub redis pull (infra)]
+### 1. Phase 26 integration suite — first-run completed   [FIRST-RUN-DONE 2026-04-26 — 8/21 pass, 5 fail (assertion-level timeouts on tRPC POST), 8 skip; 5 failures opened as v6.0 backlog. See .planning/quick/260426-vxp-v5-0-tech-debt-integration-suite-first-r/260426-vxp-SUMMARY.md; commit cc1a0ec includes 5 infra-fixes (proxy.ts matcher, global-setup.ts Prisma 7 reset, playwright config /health/live, .env created, chromium installed)]
 
 ```bash
 createdb customreport_e2e

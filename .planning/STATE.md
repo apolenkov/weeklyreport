@@ -37,7 +37,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 Phase: 26
 Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-04-26 - Completed quick task 260426-vxp: v5.0 tech debt (PARTIAL — Vitest mock CLOSED, integration suite blocked on docker registry)
+Last activity: 2026-04-26 - Completed quick task 260426-vxp: v5.0 tech debt (MAJOR-PROGRESS — Vitest mock CLOSED, integration suite first-run 8/21 pass with 5 fail → v6.0, Phase 24 verification gap fixed)
 
 Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
 
@@ -47,7 +47,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260426-vxp | v5.0 tech debt: integration suite first-run + weekly-report mock fix (PARTIAL — HANDOFF #4 CLOSED, #1 blocked on Docker Hub redis pull) | 2026-04-26 | d394832 | [260426-vxp-v5-0-tech-debt-integration-suite-first-r](./quick/260426-vxp-v5-0-tech-debt-integration-suite-first-r/) |
+| 260426-vxp | v5.0 tech debt: integration suite first-run + weekly-report mock fix (MAJOR-PROGRESS — HANDOFF #4 CLOSED, #1 first-run completed 8/21 pass + 5 fail to v6.0, Phase 24 matcher gap fixed) | 2026-04-26 | d394832, cc1a0ec | [260426-vxp-v5-0-tech-debt-integration-suite-first-r](./quick/260426-vxp-v5-0-tech-debt-integration-suite-first-r/) |
 
 ---
 
