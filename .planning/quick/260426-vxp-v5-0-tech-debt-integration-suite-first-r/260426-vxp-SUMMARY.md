@@ -1,15 +1,22 @@
 ---
 quick_id: 260426-vxp
 date: 2026-04-26
-status: partial
+status: major-progress
 files_modified:
   - apps/web/src/components/weekly-report/weekly-report-page.test.tsx
+  - apps/web/proxy.ts
+  - apps/web/e2e/integration/global-setup.ts
+  - apps/web/playwright.integration.config.ts
+  - apps/web/next-env.d.ts
   - .env.test  # uncommitted (per plan critical fact #5)
+  - .env  # created at repo root, gitignored (cross-machine setup gap)
 commits:
   - d394832: test(quick-260426-vxp) fix weekly-report-page tRPC mock for pdfExport surface
+  - cc1a0ec: fix(quick-260426-vxp) unblock Phase 26 integration suite first-run (5 infra blockers)
 provides:
   - HANDOFF.md item #4 closed (5 failing Vitest tests now green)
-  - HANDOFF.md item #1 partial (env provisioned, integration suite blocked on Docker Hub redis pull)
+  - HANDOFF.md item #1 first-run completed — 8/21 pass, 5 fail (assertion-level), 8 skip
+  - Phase 24 verification gap closed (proxy.ts matcher was firing on every path)
 ---
 
 # Quick Task 260426-vxp Summary
@@ -119,14 +126,79 @@ No new failures vs. the baseline. The api package required `pnpm exec prisma gen
 3. **Manual UI smoke (items #2 and #3)** remain appropriate for a release-day checklist; no executor work needed.
 4. **Onboarding hint** discovered during this task: the typecheck pipeline silently fails if `prisma generate` hasn't run on a fresh checkout. Consider adding a `postinstall` hook in `prisma/package.json` to auto-generate, or a pre-typecheck check that surfaces a friendly "run `prisma generate` first" message. Filed as a finding, not in scope here.
 
+---
+
+## Update 2026-04-26 (post-Docker-Desktop restart) — Suite first-run COMPLETED
+
+After the original PARTIAL verdict above (Docker Hub redis pull blocked),
+the orchestrator restarted Docker Desktop and discovered five additional
+infrastructure-level blockers. All were resolved in a single follow-up
+commit (`cc1a0ec`), and the integration suite executed end-to-end for the
+first time ever.
+
+### Infra blockers discovered & fixed
+
+| # | Blocker | Root cause | Fix |
+|---|---------|-----------|-----|
+| A | Redis manifest pull stuck | Docker Desktop hub-proxy degraded state | `osascript -e 'quit app "Docker Desktop"' && open -a Docker` — restarted hub-proxy, redis pull then completed in seconds |
+| B | API webServer exit 9 | `node --env-file=../../.env` failed because `.env` does not exist on a fresh checkout (it's gitignored) | Created `.env` at repo root with the canonical local-dev values from HANDOFF.md (gitignored — commits NOT made) |
+| C | Playwright webServer 180s timeout | `playwright.integration.config.ts` health URL was `/health`, returning 404; correct path is `/health/live` | Edited config: `${API_URL}/health` → `${API_URL}/health/live`. Also raised webServer timeout 180s → 360s |
+| D | All paths returning 307 redirect → "Header overflow" in Playwright | `apps/web/proxy.ts` matcher with negative-lookahead+\|-alternation matches EVERY path in Next.js 16 (including `/`, `/auth/*`, `/_next/*`, `/favicon.ico`). This is a real Phase 24 verification gap — the auth boundary was never enforced in any environment that didn't set `NEXT_PUBLIC_AUTH_STUB=true`. | Replaced negative-lookahead matcher with explicit allowlist (`/lead/:path*` etc.) AND added a `isProtectedPath()` guard inside the function body. Either alone is sufficient; both together is defense-in-depth. |
+| E | `prisma migrate reset --skip-seed` rejected | Prisma 7 dropped the `--skip-seed` flag and now seeds automatically per `prisma.config.ts` (`migrations.seed`) | Replaced two-step reset+seed in `global-setup.ts` with a single `prisma migrate reset --force` |
+| F | Playwright Chromium not installed | Fresh checkout — browsers cache empty | `pnpm exec playwright install chromium` (92MB, ~30s) |
+| G | Prisma 7 AI safeguard blocked migrate reset | New Prisma 7 protection requires explicit user consent for AI-invoked destructive ops | User explicitly consented ("давай"); orchestrator passed `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'` env var on the run |
+
+### Final first-run results
+
+| Metric | Value |
+|--------|-------|
+| Total tests | **21** (matches HANDOFF #1 expected count) |
+| **Passed** | **8** |
+| **Failed** | **5** |
+| Skipped | 8 (downstream of failed tests in `test.describe.serial` chains) |
+| Wall-clock | 53.3s (after webServer cold start) |
+
+### Failing tests (all `assertion-mismatch` — out of scope per plan, → v6.0 follow-up)
+
+All 5 failures share the same symptom: `TimeoutError: page.waitForResponse: Timeout 15000ms exceeded while waiting for event "response"`. The tRPC POST that the test was expecting either didn't fire or took >15s. This points to either (a) a UI interaction not triggering the expected mutation, or (b) an autosave/mutation race where the response landed on a different network path than the regex matched. Per plan scope discipline ("first-run + capture results, NOT make all 21 green"), these are **NOT fixed in this quick task** — they are explicit v6.0 backlog items.
+
+| # | Spec | Test |
+|---|------|------|
+| 1 | `admin-crud.integration.spec.ts:94` | admin product list reflects DB state for a known seed product |
+| 2 | `cross-role-lifecycle.integration.spec.ts:24` | lead submits → head publishes → lead sees locked |
+| 3 | `lead-journey.integration.spec.ts:92` | lead submit locks the form — section.status becomes submitted in DB |
+| 4 | `lead-journey.integration.spec.ts:143` | lead can fill from previous period — items appear for empty section |
+| 5 | `status-risk-sync.integration.spec.ts:23` | setting stage to at_risk auto-creates a Risk row in DB |
+
+### Phase 24 verification gap (advisory finding)
+
+The proxy.ts matcher fix in blocker (D) closes a real verification gap. Phase 24's stated success criterion was "auth-guard enforced on protected routes," and verification confirmed that with `AUTH_STUB=false` + no cookie, requests redirected. But the matcher meant **every** request redirected — including `/`, `/_next/*`, and `/auth/*`, which would have caused redirect loops the moment a real user landed on the app without `AUTH_STUB`. The integration tests are the first environment to exercise that codepath (no `AUTH_STUB`), and they immediately surfaced the bug. Logged as a v5.0 retro finding; the matcher fix itself is included in this commit and does not need a separate phase.
+
+### Updated milestone status
+
+After this run, the v5.0 milestone moves from `tech_debt` to **automated-portion runtime-verified with known follow-ups**:
+- ✅ HANDOFF #4 closed (Vitest mock fix)
+- ✅ HANDOFF #1 first-run completed; 8/21 green, 5 assertion-level failures classified for v6.0
+- ✅ Phase 24 matcher gap closed
+- ⏭ HANDOFF #2 (Phase 22 manual UI smoke) — unchanged, requires browser
+- ⏭ HANDOFF #3 (Phase 23 PDF download manual smoke) — unchanged, requires browser
+- ⏭ HANDOFF #5 (Phase 24 cookie injection) — deferred to v6.0+ per user
+
+The 5 failing integration tests should be opened as a v6.0 backlog cluster ("Stabilize Phase 26 integration suite — 5 assertion timeouts on tRPC POSTs"). They share a single symptom and are likely a single root cause.
+
 ## Self-Check
 
 **Files exist:**
-- `/Users/ap/my/customreport/.planning/quick/260426-vxp-v5-0-tech-debt-integration-suite-first-r/260426-vxp-SUMMARY.md` — FOUND
-- `/Users/ap/my/customreport/apps/web/src/components/weekly-report/weekly-report-page.test.tsx` — FOUND (291 lines, +34 from baseline)
-- `/Users/ap/my/customreport/.env.test` — FOUND (line 11 has E2E_DATABASE_URL, uncommitted)
+- `260426-vxp-SUMMARY.md` — FOUND
+- `apps/web/src/components/weekly-report/weekly-report-page.test.tsx` — FOUND
+- `apps/web/proxy.ts` — FOUND with allowlist matcher + path guard
+- `apps/web/e2e/integration/global-setup.ts` — FOUND with Prisma 7 reset
+- `apps/web/playwright.integration.config.ts` — FOUND with `/health/live` + 360s timeout
+- `.env` — FOUND at repo root (gitignored)
+- `.env.test` — FOUND (E2E_DATABASE_URL appended, uncommitted)
 
 **Commits exist:**
-- `d394832` — FOUND (`git log -1 --format=%h%s` confirmed)
+- `d394832` — Vitest mock fix
+- `cc1a0ec` — 5 infra blocker fixes (proxy/global-setup/playwright-config/next-env)
 
 **Self-Check: PASSED**
