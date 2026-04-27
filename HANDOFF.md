@@ -37,7 +37,7 @@ git push origin v5.0   # local annotated tag, not yet pushed
 
 Code-complete but not runtime-verified end-to-end. Address in v6.0 or before tagging final release:
 
-### 1. Phase 26 integration suite — never executed
+### 1. Phase 26 integration suite — never executed   [PARTIAL 2026-04-26 — see .planning/quick/260426-vxp-v5-0-tech-debt-integration-suite-first-r/260426-vxp-SUMMARY.md; env provisioned, suite blocked on Docker Hub redis pull (infra)]
 
 ```bash
 createdb customreport_e2e
@@ -61,7 +61,7 @@ Manual smoke test through UI at http://localhost:3005:
 
 Manual: head/dashboard → publish report → click Export PDF → verify download triggers, file opens correctly.
 
-### 4. weekly-report-page.test.tsx (5 failing tests)
+### 4. weekly-report-page.test.tsx (5 failing tests)   [CLOSED 2026-04-26 — see .planning/quick/260426-vxp-v5-0-tech-debt-integration-suite-first-r/260426-vxp-SUMMARY.md; commit d394832]
 
 Pre-existing failures (incomplete tRPC mock for `pdfExport.request.mutationOptions`). Fix mock to match actual API surface from Phase 23.
 
