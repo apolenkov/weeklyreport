@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Roles, Quality, AI & Analytics
 status: planning
-last_updated: "2026-04-28T16:05:50.853Z"
+last_updated: "2026-04-28T17:00:00.000Z"
 last_activity: 2026-04-28
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -16,8 +16,8 @@ progress:
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** Milestone complete
-**Last Updated:** 2026-04-25
+**Status:** Milestone planning (v6.0)
+**Last Updated:** 2026-04-28
 
 ---
 
@@ -27,16 +27,16 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core Value:** Leads fill their sections independently via structured forms; system auto-assembles a unified report -- no editing conflicts, with history and analytics.
 
-**Current Focus:** Phase 26 — e2e-integration-tests
+**Current Focus:** v6.0 — Phase 27 (Quality Stabilisation & Role Middleware Factory) — pending plan creation
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 27 — Quality Stabilisation & Role Middleware Factory (pending plan)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-28 — Milestone v6.0 started
+Status: Roadmap drafted; awaiting `/gsd-plan-phase 27`
+Last activity: 2026-04-28 — Milestone v6.0 roadmap created (5 phases, 37 REQ-IDs mapped)
 
 ## Quick Tasks Completed
 
@@ -62,15 +62,14 @@ Last activity: 2026-04-28 — Milestone v6.0 started
 | v2.0 | 3 | 15 | Shipped |
 | v3.0 | 3 | 6 | Shipped |
 | v4.0 | 4 | 21 | Shipped |
-| v5.0 | 7 | TBD | In progress |
+| v5.0 | 7 | 15 | Shipped |
+| v6.0 | 5 | TBD | Planning |
 
 **Plan Executions (v5.0):**
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 20-seed-type-foundation P02 | 2min | 2 tasks | 7 files |
-
----
 | Phase 21 P04 | 50m | 3 tasks | 11 files |
 | Phase 22 P03 | 24min | 3 tasks | 8 files |
 | Phase 22-interactivity-status-risk-sync P22-01 | 75min | 3 tasks | 12 files |
@@ -79,18 +78,25 @@ Last activity: 2026-04-28 — Milestone v6.0 started
 | Phase 24 P01 | 10m | 4 tasks | 12 files |
 | Phase 26 P01 | 6m 35s | 3 tasks | 15 files |
 
+---
+
 ## Accumulated Context
 
 ### Key Decisions
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
-| Admin-only mode for v5.0 | Full access for regression testing; role separation in v6.0 | Active |
+| Admin-only mode for v5.0 | Full access for regression testing; role separation in v6.0 | Closing in v6.0 (Phase 28-29) |
 | @trpc/tanstack-react-query (not classic) | React Compiler is enabled; classic proxy hooks break | Active |
 | Enhance custom logger, not replace with pino | Existing AppLoggerImpl already handles JSON/rotation; add nestjs-cls | Active |
 | Mapper layer for type translation | Mock types diverge semantically from Zod/Prisma types -- not find-and-replace | Active |
-| Self-contained mapper modules | Type aliases declared inline in mapper files (not re-imported from mock-data.ts or @customreport/shared) so the mapper layer is the single source of truth for the bridge contract | Active |
-| Asymmetric mapper signatures (Exclude<ItemStatus,'planned'>) | Computed presentation states ('planned', 'pending', 'empty') become compile-time errors when used in the wrong direction | Active |
+| Self-contained mapper modules | Type aliases declared inline in mapper files | Active |
+| Asymmetric mapper signatures (Exclude<ItemStatus,'planned'>) | Computed presentation states become compile-time errors | Active |
+| AUTH-01 split across Phase 28 + Phase 29 | PDF cookie path requires `AUTH_DEV_MODE_ALLOW_TEST` staging (Phase 28); full Keycloak SAML flip lands in Phase 29 to avoid silent 401 storms (CC-1) | Active |
+| `requireRole` factory over `trpc-shield` | ~30 LOC custom middleware; default-deny coverage test gates CI | Active (Phase 27) |
+| `recharts` + shadcn-ui Chart for v6.0 analytics | Native Tailwind v4 CSS-variable theming; Tremor / Plotly / D3 rejected | Active (Phase 30) |
+| `react-email` for email templates | `<Tailwind>` wrapper compiles utilities to inline styles; MJML rejected | Active (Phase 28) |
+| Anthropic SDK direct (no LangChain / Vercel AI SDK) | Haiku 4.5 + Sonnet 4.6; Opus 4.7 explicitly NOT used (5× cost, marginal lift) | Active (Phase 31) |
 
 ### Critical Pitfalls
 
@@ -98,13 +104,25 @@ Last activity: 2026-04-28 — Milestone v6.0 started
 2. **React Compiler breaks @trpc/react-query** -- must use @trpc/tanstack-react-query with queryOptions pattern
 3. **Status-Risk sync infinite loops** -- SyncSource ref flag ('user' | 'auto-sync') prevents cascading
 4. **Type divergence is semantic** -- on-track vs green, computed states (pending/planned) need mapper logic
+5. **CC-1 (v6.0)** — PDF cookie injection MUST land same plan as `AUTH_DEV_MODE_ALLOW_TEST` staging (Phase 28)
+6. **CC-6 (v6.0)** — Two `proxy.ts` files; deleting wrong one kills auth (Phase 27 plan must be explicit)
+7. **A-1 (v6.0)** — Default-deny coverage test required; cron / BullMQ / tests bypass HTTP middleware
+8. **C-1 (v6.0)** — Anthropic per-render cost runaway; read-through cache on `contentHash` mandatory
+9. **C-2 (v6.0)** — LLM hallucinated counts; pre-compute numbers in prompt with "DO NOT change these numbers"
+10. **D-2 (v6.0)** — Timezone drift in trend aggregation; server-formatted ISO strings only
+
+### Active Blockers
+
+- **AI-SPEC.md outstanding** — required before Phase 31 planning. Owner: `/gsd-ai-integration-phase 31`.
+- **Real-device iOS Safari pass for MOB-06** — Playwright covers most but PDF embed needs human-on-device confirmation (Phase 30).
+- **Golden-set rubric (C-5)** — head/Barkhanov domain-expert sign-off required before AI quality CI gate locks in (Phase 31).
 
 ---
 
 ## Session Continuity
 
-Last session: 2026-04-25T22:58:00.220Z
-Stopped at: Completed 26-01-PLAN.md
+Last session: 2026-04-28T17:00:00.000Z
+Stopped at: v6.0 roadmap drafted (Phases 27-31)
 Resume file: None
 
 ---
@@ -114,4 +132,5 @@ Resume file: None
 *v2.0 shipped: 2026-04-11*
 *v3.0 shipped: 2026-04-21*
 *v4.0 shipped: 2026-04-25*
-*v5.0 started: 2026-04-25*
+*v5.0 shipped: 2026-04-25*
+*v6.0 planning started: 2026-04-28*

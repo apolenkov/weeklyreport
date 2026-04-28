@@ -14,7 +14,7 @@
 - [ ] **AUTH-02**: JWT carries `role` claim (`lead` | `head` | `admin` | `viewer`) extracted from Keycloak SAML assertion; SAML attribute mapper verified to send `role`
 - [ ] **AUTH-03**: `requireRole(allowed)` tRPC middleware factory in `packages/shared/src/trpc/middleware/role.ts`; emits `leadProcedure` / `headProcedure` / `adminProcedure` / `viewerProcedure`; default-deny — coverage test fails CI if any procedure lacks role declaration
 - [ ] **AUTH-04**: Service-layer role filtering — `archive.list` / `archive.detail` / `weeklyReport.get` viewer-scoped to `status: 'published'`; `review.dashboard` becomes `headProcedure`
-- [ ] **AUTH-05**: PDF export cookie injection — `requestPdfExport(reportId, requestedBy?, authToken)` signs 5-min scoped JWT at tRPC entry; `pdf-export.processor.ts:69-72` calls `page.context().addCookies(...)` before `page.goto`. **Must ship in same plan as AUTH-01 to avoid silent 401 retry storm.**
+- [ ] **AUTH-05**: PDF export cookie injection — `requestPdfExport(reportId, requestedBy?, authToken)` signs 5-min scoped JWT at tRPC entry; `pdf-export.processor.ts:69-72` calls `page.context().addCookies(...)` before `page.goto`. **Must ship in same plan as AUTH-01 (PDF-only enable, Phase 28) to avoid silent 401 retry storm.**
 - [ ] **AUTH-06**: Frontend role-aware navigation — `app-shell.tsx` hides `/admin`, `/head/*` for non-head; `/lead/*` for viewers; uses existing `useSession()` hook
 - [ ] **AUTH-07**: SSR layout-level role gates — `apps/web/src/app/(app)/{admin,head,lead,reports}/layout.tsx` reads session via `cookies()` + tRPC `auth.me`, renders `403` page if role missing (proxy.ts stays cookie-presence only — no JWT verification in Edge runtime)
 - [ ] **AUTH-08**: Audit log of role-effecting events (login success/fail, logout, role-denied request) — emitted via `AppLoggerImpl` with structured fields `{event, userId, role, attemptedRole?, ip}`
@@ -115,14 +115,19 @@
 
 ## Traceability
 
-Phases → REQ-IDs map will be filled in by the roadmapper agent (Step 10 of `/gsd-new-milestone`).
+Phases → REQ-IDs map (locked by roadmapper 2026-04-28).
 
 | Phase | Wave | REQs |
 |---|---|---|
-| 27 | 1 | (TBD by roadmapper — expected: B + A1 → QA-01..04 + AUTH-03) |
-| 28 | 2 | (expected: A2 + A4 + E1+E3 + G → AUTH-04, AUTH-05, NOTIF-01, NOTIF-03, NOTIF-04, REL-01..05) |
-| 29 | 3 | (expected: A3 + A5 + A6 + E2 + F + D → AUTH-01, AUTH-02, AUTH-06..08, NOTIF-02, NOTIF-05..06, MOB-01..07, ANAL-01..04) |
-| 30+ | 4 | (expected: C — gated by AI-SPEC.md → AI-01..03) |
+| 27 | 1 | QA-01, QA-02, QA-03, QA-04, AUTH-03 |
+| 28 | 2 | AUTH-04, AUTH-05, AUTH-01 *(PDF-only enable via `AUTH_DEV_MODE_ALLOW_TEST`)*, NOTIF-01, NOTIF-03, NOTIF-04, REL-01, REL-02, REL-03, REL-04, REL-05 |
+| 29 | 3 | AUTH-01 *(full Keycloak SAML in production)*, AUTH-02, AUTH-06, AUTH-07, AUTH-08, NOTIF-02, NOTIF-05, NOTIF-06 |
+| 30 | 3 | MOB-01, MOB-02, MOB-03, MOB-04, MOB-05, MOB-06, MOB-07, ANAL-01, ANAL-02, ANAL-03, ANAL-04 |
+| 31 | 4 | AI-01, AI-02, AI-03 *(gated by AI-SPEC.md)* |
+
+**Note on AUTH-01 split:** AUTH-01 spans two phases by design. Phase 28 enables `AUTH_DEV_MODE_ALLOW_TEST=true` so the PDF cookie path (AUTH-05) and integration suite can run against a mock IdP container without flipping production. Phase 29 performs the actual Keycloak SAML cut-over and removes `AUTH_DEV_MODE` from non-test code paths. Both halves are required to consider AUTH-01 satisfied.
+
+**Coverage:** 37/37 v1 REQ-IDs mapped. Each REQ-ID appears in exactly one phase (AUTH-01 split is one requirement spanning two phases — counted once).
 
 ---
 
