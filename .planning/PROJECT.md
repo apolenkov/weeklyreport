@@ -33,7 +33,23 @@
 
 **Audit:** `.planning/v5.0-MILESTONE-AUDIT.md` (status: tech_debt — structurally complete, runtime verification deferred per user)
 
-## Current Milestone: TBD (next via /gsd:new-milestone)
+## Current Milestone: v6.0 Roles, Quality, AI & Analytics
+
+**Goal:** Закрыть auth-долг v5.0, стабилизировать integration-тесты, добавить AI-инсайты + аналитику тренда + email-напоминания + mobile polish, формализовать release-day checklist.
+
+**Target features:**
+- **A — Auth & roles:** real Keycloak SAML + role separation (lead/head/admin/viewer) + cookie injection в pdf-export
+- **B — Quality polish:** 5 integration test fails (один root cause likely) + `prisma generate` postinstall + удаление dead `apps/web/src/proxy.ts`
+- **C — AI features:** auto-summarization отчётов / sentiment по risks / smart "on track" суждение по traffic lights (требует AI-SPEC)
+- **D — Trend analytics:** history графики traffic lights, velocity metrics, period-over-period
+- **E — Email reminders:** BullMQ job — weekly deadline + escalation
+- **F — Mobile polish:** 7 страниц проверить на mobile breakpoints, fix layouts
+- **G — Release checklist:** формализовать HANDOFF #2/#3 как commit-able CHECKLIST.md
+
+**Key context:**
+- Phase numbering продолжается с **Phase 27** (без `--reset-phase-numbers`)
+- AI-фазы (тема C) подлежат `/gsd-ai-integration-phase` для AI-SPEC.md перед planning
+- Research нужен только для C и D (новые feature areas); A/B/E/F/G — skip research
 
 ## Requirements
 
