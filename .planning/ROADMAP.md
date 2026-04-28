@@ -244,7 +244,12 @@ Audit status: tech_debt — structurally complete, runtime smoke verification de
   3. `apps/web/src/proxy.ts` is deleted; `apps/web/proxy.ts` is the only proxy file and carries the comment `// Next.js 16 proxy.ts must live here, NOT under src/`.
   4. `period.contract.test.ts:65` `userId` is renamed `_userId` (TS6133 closed); `.planning/phases/22-*/22-VERIFICATION.md` frontmatter reads `status: passed`.
   5. `requireRole(allowed)` factory exists at `packages/shared/src/trpc/middleware/role.ts` and emits `leadProcedure` / `headProcedure` / `adminProcedure` / `viewerProcedure`; a coverage test fails CI if any tRPC procedure lacks an explicit role declaration (default-deny).
-**Plans**: TBD
+**Plans**: 5 plans
+- [ ] 27-01-PLAN.md — QA-04 doc-sync (`_userId` rename + Phase 22 VERIFICATION status flip)
+- [ ] 27-02-PLAN.md — QA-03 delete dead `apps/web/src/proxy.ts` + add CC-6 guard comment to active proxy
+- [ ] 27-03-PLAN.md — QA-02 `prisma generate` postinstall hook in `apps/api/package.json` + turbo build predecessor
+- [ ] 27-04-PLAN.md — AUTH-03 `requireRole` factory + 4 named procedures + default-deny coverage test
+- [ ] 27-05-PLAN.md — QA-01 root-cause + fix of 5 Playwright integration timeouts (3 consecutive green runs)
 **Plan note**: QA-03 must include the explicit `apps/web/src/proxy.ts` deletion path AND the comment in `apps/web/proxy.ts` in the same plan (CC-6 hinge — deleting the wrong file kills auth).
 
 ### Phase 28: Role Filters, PDF Cookie Seam, Deadline Reminders & Release Checklist
