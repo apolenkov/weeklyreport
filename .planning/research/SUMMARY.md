@@ -1,196 +1,205 @@
-# Project Research Summary
+# Project Research Summary — CustomReport v6.0
 
-**Project:** CustomReport v5.0 Production Integration
-**Domain:** Mock-to-real API migration in Next.js 16 + NestJS 11 + tRPC 11 monorepo
-**Researched:** 2026-04-25
-**Confidence:** HIGH
+**Project:** CustomReport
+**Domain:** Internal weekly status-reporting SaaS (Development department, ~6 leads + head + viewers)
+**Researched:** 2026-04-28
+**Milestone scope:** v6.0 — Roles, Quality, AI & Analytics (additive to shipped v5.0 codebase)
+**Confidence:** HIGH overall (strict additive scope; existing stack untouched; AI/charts the only MEDIUM areas)
+
+> **Scope guard.** This synthesis covers only the seven v6.0 feature areas (A–G). The v1.0–v5.0 codebase, validated requirements, and stack (Next.js 16 / NestJS 11 / tRPC 11 / Prisma 7 / Postgres 15 / Redis 7 / BullMQ 5 / Playwright 1.50 / shadcn-ui / Tailwind v4 / Zod 4 / `@node-saml/passport-saml` 4 / Keycloak 26 / nodemailer) are NOT re-evaluated. They are the baseline.
+
+---
 
 ## Executive Summary
 
-CustomReport v5.0 is a mock-to-real migration: the entire UI exists as a prototype with 36 tested tRPC endpoints, 339 E2E tests, and 7 pages -- but the frontend renders hardcoded mock data and every button manipulates local state only. The migration connects the existing frontend to the existing backend. The tRPC plumbing (client, server, Next.js rewrite, superjson transformer) is 100% ready and needs only a TRPCProvider wrapper in the layout. The real challenge is the type divergence between mock-data presentation types and Zod/Prisma data types: these are fundamentally different semantic models (e.g., 'on-track' vs 'green', 'planned' has no DB equivalent, 'pending' is computed state). This requires a dedicated mapper/adapter layer -- NOT find-and-replace.
+v5.0 shipped a structurally complete CustomReport (50 commits, 48/48 requirements, 21-test integration suite first-running on 2026-04-26) but in **admin-only mode**: every authenticated user is treated as `head`, real RBAC is stubbed, and the `Phase 24` cookie-injection seam in `pdf-export.processor.ts` is inert pending real auth. v6.0 closes that auth debt, stabilises the integration suite as a true CI gate, and layers four product increments (AI insights, trend analytics, email reminders, mobile polish) plus a release-day checklist.
 
-The recommended approach follows a strict dependency chain: Seed + Types first (parallel), then tRPC provider wiring, then page-by-page migration with mappers, then mutations/interactivity, with auth/logging as independent parallel tracks and E2E integration tests last. Only 7 container files need mock-to-real conversion (not all 38 import sites) because the codebase already has clean container/presentation separation. The seed must be designed "test-backward" to produce data matching exact E2E assertions. DEV_SESSION hardcodes specific UUIDs that the seed must match exactly, or every query returns empty data.
+The four research files agree unanimously: **only three v6.0 feature areas need new npm packages** (C: `@anthropic-ai/sdk`; D: `recharts` + shadcn-ui chart wrappers; E: `react-email` + `@react-email/components`). A, B, F, G are config/refactor/cleanup and reuse what's already there — custom tRPC RBAC middleware over existing `protectedProcedure`/`headProcedure`, BullMQ queues we already operate, Playwright projects we already run, Tailwind utilities we already use. **Net: 4 npm packages, zero stack pivots.**
 
-Key risks: (1) Type divergence breaks compilation if handled via find-and-replace instead of mappers; (2) DEV_SESSION UUID mismatch silently returns empty arrays; (3) React Compiler IS enabled (reactCompiler: true in next.config.ts), which means @trpc/react-query (classic) will break at runtime -- migration to @trpc/tanstack-react-query is mandatory, not deferrable; (4) Status-to-Risk bidirectional sync creates infinite loops without a source-flag guard. Mitigations for all of these are well-understood and documented in the research files.
+The dominant risk surface is the **auth transition itself**: removing `AUTH_DEV_MODE` while keeping the 21-spec integration suite green requires staging (a narrower `AUTH_DEV_MODE_ALLOW_TEST` switch + mock IdP) rather than a single flag flip, and the same plan that flips real Keycloak SAML on must close the cookie-injection seam in the BullMQ PDF worker — otherwise PDF jobs silently 401 and retry forever. Three other P0s round out the heat map: Anthropic-cost runaway (charge per-content-change, not per-render), AI hallucinated counts (pre-compute numbers in the prompt, never let the LLM invent statistics), and timezone drift in trend aggregation (server-formatted ISO date strings, never `new Date()` on the client). The build order — **B + A1 (parallel) → A2/A4/E1/G (parallel) → A3/A5/A6/E2/F/D (parallel) → C (gated by AI-SPEC.md)** — is the same in all four research files; we adopt it as the roadmap baseline.
+
+---
 
 ## Key Findings
 
-### Recommended Stack Additions
+### Recommended Stack — Additions Only
 
-No new framework decisions -- v5.0 builds on the existing stack. Only targeted additions:
+Existing stack carries forward unchanged. v6.0 adds four packages:
 
-**New packages (apps/web):**
-- `@trpc/tanstack-react-query` ^11.16.0: React Compiler-safe tRPC client -- MANDATORY because reactCompiler: true is enabled and classic @trpc/react-query proxy hooks break under React Compiler
-- `client-only` + `server-only`: Required by tRPC RSC setup for boundary markers
+**Core additions:**
+- **`@anthropic-ai/sdk` ^0.90.0** (apps/api) — direct Claude access; ships `betaZodTool` so Zod schemas in `packages/shared` are the single source of truth for tool input. Models: **Haiku 4.5** for sentiment classification + summarisation; **Sonnet 4.6** for multi-signal "on-track" judgement. Opus 4.7 explicitly NOT used (5× cost, marginal lift on these tasks).
+- **`recharts` ^3.3.0 + shadcn-ui Chart wrappers** (apps/web) — composable React + SVG, native Tailwind v4 CSS-variable theming (matches Starbucks cream/teal/gold palette automatically). Wrappers installed via `pnpm dlx shadcn@latest add chart`. All chart components live in `apps/web/src/components/charts/` as `'use client'` boundaries; pages stay RSC.
+- **`react-email` ^3 + `@react-email/components`** (apps/api) — `.tsx` email templates with the `<Tailwind>` wrapper (utility classes compile to inline styles at render time). Existing nodemailer + BullMQ pipeline carries delivery; templates live in `apps/api/src/modules/email/templates/`.
 
-**New packages (apps/api):**
-- `nestjs-cls` ^6.2.0: Request-scoped correlation ID propagation via AsyncLocalStorage -- integrates with NestJS DI, referenced in official NestJS docs, 500K+ weekly downloads
+**Explicitly rejected (do NOT add):** LangChain.js, Vercel AI SDK, separate Python AI service, Tremor, Plotly/D3, raw Tailwind SVG charts, `trpc-shield`, Storybook, MJML, `cron`/`node-cron`, `zod-to-json-schema`. Reasons documented in STACK.md "What NOT to Add".
 
-**Package to remove:**
-- `@trpc/react-query`: Breaks under React Compiler (hooks-as-props pattern violates rules of hooks)
+**No-package features:**
+- A (RBAC): custom `requireRole(['head'])` tRPC middleware factory in `packages/shared/src/trpc/`, ~30 LOC, replaces the inline `isHead` check at `trpc.middleware.ts:71-81`.
+- B (quality): config/cleanup only.
+- F (mobile): new Playwright projects (`mobile-ios`/`mobile-android`) using existing `@playwright/test` `devices` exports.
+- G (checklist): Markdown convention.
 
-**Logger decision (RESOLVED):** The existing custom AppLoggerImpl is NOT pino (STACK.md's recommendation to add pino is overruled). The custom logger already handles structured JSON, daily rotation, pruning, and child loggers. Enhance it with nestjs-cls for correlation ID propagation via AsyncLocalStorage. Do NOT replace with pino or winston -- that is over-engineering for 6 users and risks breaking the existing tested interface.
+**Cost-tracking requirement:** new `AiInsight` Prisma model is mandatory — without it `message.usage.{input,output,cache_creation,cache_read}_tokens` are lost. Architecture proposes `ReportSummary` with `contentHash` cache key — these reconcile cleanly: `ReportSummary` is the read-through cache (one row per report content version), `AiInsight` is the per-call audit log. Keep both.
 
-### Expected Features
+### Expected Features (per theme)
 
-**Must have (table stakes) -- without these, v5.0 is still a prototype:**
-- **TS-1: Type alignment** -- Mapper layer translating API types to component prop types (6 semantic mismatches identified)
-- **TS-2: Database seed** -- Mockup-aligned seed with exact names, UUIDs, and data counts matching current UI
-- **TS-3: tRPC client wiring** -- Replace 38 mock imports across 7 containers with useQuery/useMutation calls
-- **TS-4: Button interactivity** -- Wire 72 onClick handlers to real tRPC mutations
-- **TS-5: Auth session guard** -- proxy.ts cookie check (session-existence only, no role enforcement in v5.0)
+**A — Auth & roles (foundational for C/E):**
+- AUTH-01..03: real Keycloak SAML, four-role JWT (`lead`/`head`/`admin`/`viewer`), role assertion on every tRPC procedure (default-deny).
+- AUTH-04: role-aware UI hiding (cosmetic only).
+- AUTH-05: cookie injection in BullMQ pdf-export — same plan as `AUTH_DEV_MODE` removal (CC-1 hinge).
+- AUTH-06..08: 401/403 routing, silent JWT refresh, audit log of role-effecting events.
+- Anti: self-service role request, custom user CRUD beyond samlId-cache, MFA in our app, password reset (delegated to Keycloak).
 
-**Should have (differentiators):**
-- **DF-1: Stage-to-Risk auto-sync** -- User-requested. Auto-create risk when stage set to At Risk/Blocked. Safe/additive.
-- **DF-3: Logging enhancement** -- Add nestjs-cls correlation IDs + request/response logging to existing custom logger
-- **DF-4: Integration tests** -- 20-30 Playwright tests against real API (separate directory, not replacing mock tests)
+**B — Quality polish:**
+- QA-01: single root cause behind 5 integration-suite Playwright timeouts (likely autosave debounce racing).
+- QA-02: `prisma generate` postinstall (NOT root — see B-2 pitfall).
+- QA-03: delete `apps/web/src/proxy.ts` (dead duplicate; live = `apps/web/proxy.ts`).
+- QA-04: rename `_userId` in `period.contract.test.ts:65`; flip Phase 22 VERIFICATION.md status.
 
-**Defer to v6.0:**
-- DF-2 (Risk-to-Stage suggestion) -- Requires user confirmation UX, lower priority
-- tRPC client RSC prefetching optimization (already forced to migrate client, but RSC prefetch is optional)
-- Role-based route guards (PROJECT.md: "admin with full access for regression")
-- Component refactor to accept Zod types directly (mapper layer is the v5.0 bridge)
+**C — AI features (gated by AI-SPEC.md):**
+- AI-01: 2-3 sentence executive summary card on assembled report (dismissible, never auto-fills narrative).
+- AI-02: sentiment badge per Risk row.
+- AI-03: smart "on-track" advisory icon overlay (lead's colour stays authoritative).
+- Differentiators: AI-04 period-over-period diff narrative, AI-05 risk theme clustering, AI-06 head's narrative auto-draft.
+- Anti: AI replaces narrative; auto-fills lead's textarea; changes traffic-light; sentiment auto-escalates.
+
+**D — Trend analytics:**
+- ANAL-01..04: per-project sparkline of last N periods, stacked bar of green/yellow/red counts, period-over-period delta table, carry-over rate per lead.
+- Operates on immutable published data; viewer access acceptable.
+- Anti: real-time dashboards, item-level drilldown, cross-departmental comparison.
+
+**E — Email reminders (extend, don't duplicate):**
+- NOTIF-01..06: T-24h pre-deadline reminder, T+2h escalation digest to head, plaintext+HTML parity, per-user opt-out (head escalation NOT opt-outable), idempotent jobIds, DLQ.
+- Most infra exists from v1.0–v2.0.
+- Anti: nag mode, head deadline reminders, director escalation, Telegram/Slack.
+
+**F — Mobile polish:**
+- MOB-01..07: no horizontal scroll at 375px; ≥44px tap targets; `head/dashboard` portfolio grid → card list; admin tabs → select; PDF embed → "Open PDF" button on mobile; top shell → hamburger.
+- Anti: native iOS/Android, mobile-first redesign, offline mode.
+
+**G — Release checklist:**
+- REL-01..05: `CHECKLIST.md` template + per-release fills under `.planning/milestones/v{N}-CHECKLIST.md`; each item maps 1:1 to `REGRESSION-TEST-SCENARIOS.md` IDs; signoff line.
 
 ### Architecture Approach
 
-The v4.0 codebase has clean container/presentation separation: 7 container components import mock constants and pass data as props to 25+ pure presentation children. Migration changes only the data source in containers; children stay untouched. The tRPC provider mounts as a 'use client' component in the (app)/layout.tsx (not root layout) to limit blast radius -- the login page does not need tRPC. QueryClient MUST be created inside the provider via useState, not as a module-level variable, because module-level state leaks across SSR requests in Next.js App Router.
+**Integration-by-extension.** Every v6.0 surface lands inside an existing seam:
 
-**Major components of the migration:**
+1. **tRPC middleware factory** (`packages/shared/src/trpc/middleware/role.ts`) — `requireRole(['head'])` pattern. Generates `leadProcedure`/`headProcedure`/`adminProcedure`/`viewerProcedure`. Default-deny: any procedure without role declaration returns FORBIDDEN.
+2. **Per-query role filtering at service layer** — `archive.list`/`archive.detail`/`weeklyReport.get` viewer-scoped; `review.dashboard` becomes `headProcedure`.
+3. **PDF cookie injection** — `pdf-export.service.ts:46` accepts 5-min scoped JWT; processor at `pdf-export.processor.ts:69-72` calls `page.context().addCookies(...)`. Cookie domain from `PDF_BASE_URL`.
+4. **AI module** (`apps/api/src/modules/ai/`) — `ai.service.ts`, `ai.router.ts`, `prompts/*.md` (rubric content as imported strings so prompt diffs show in git), `processors/ai-summary.processor.ts` (BullMQ queue, raw `Worker` pattern per `@nestjs/bullmq 11` DI bug).
+5. **Analytics module** (`apps/api/src/modules/analytics/`) — three procedures aggregate via server-side `GROUP BY`. NO new model; add composite indexes on `(reportId, projectId)` and `(periodStart)`. Redis cache 1h TTL invalidated on `period.publish`/`period.reopen`.
+6. **Email scheduler** — extend `reminders.service.ts` with `kind='escalation'` + three react-email templates. Render to both HTML + plaintext.
+7. **Frontend chart layer** (`apps/web/src/components/charts/`) — three components wrap shadcn-ui Chart over recharts; pages stay RSC and lazy-import.
+8. **Mobile coverage** — single new Playwright config with `mobile-ios` + `mobile-android` projects.
 
-1. **Mapper layer** (apps/web/src/lib/mappers/) -- Pure functions translating API response shapes to existing component prop shapes. 8 mapper files covering traffic-light status, lead status, item status, dashboard aggregation, weekly report, lead form, and admin panel.
-2. **TRPCProvider** (apps/web/src/components/providers/trpc-provider.tsx) -- 'use client' wrapper with QueryClientProvider + tRPC provider. Mounts in (app)/layout.tsx.
-3. **Seed rewrite** (prisma/seed.ts + prisma/seed-constants.ts) -- Test-backward seed with hardcoded DEV_SESSION UUIDs, canonical names from lead/dashboard mocks, data counts matching E2E assertions.
+**Data-flow critical path:** Login (Keycloak SAML) → JWT with `role` claim → tRPC context populates `ctx.user` → `requireRole()` middleware enforces → service layer filters → Prisma → Zod-typed response → tRPC client → `useSession()` hides/shows UI. **Every link is touched by Theme A.**
 
-### Critical Pitfalls
+### Critical Pitfalls (top P0s)
 
-1. **Type divergence is semantic, not cosmetic** -- Mock types and Zod types represent different data models ('on-track' vs 'green', computed states like 'pending'/'planned' with no DB enum). Build a mapper layer with unit tests. Detection: as any or @ts-ignore near tRPC query results.
+1. **CC-1** — Phase 24 cookie-injection seam is the hinge for A, C, E. Same plan that removes `AUTH_DEV_MODE` MUST close the seam.
+2. **CC-2** — DEV_SESSION fallback removal must be staged (introduce `AUTH_DEV_MODE_ALLOW_TEST` + mock IdP container, then delete).
+3. **CC-6** — Two `proxy.ts` files; deleting wrong one kills auth. Plan B explicit path + comment "do NOT add a copy under src/".
+4. **A-1** — Role check missing because middleware "already filtered". Cron, BullMQ, tests bypass HTTP. Fix: `roleProcedure(...allowed)` factory enforces at every procedure; coverage test fails CI if role not declared.
+5. **C-1** — Anthropic API per-render = $50–100/team/month. Read-through cache keyed on `contentHash = sha256(JSON.stringify(reportContent))`; only `ai.summarize.mutate` (head-only, BullMQ-queued) recomputes.
+6. **C-2** — LLM hallucinates counts. Pre-compute counts in system prompt with "DO NOT change these numbers"; structured tool output for sentiment/judgement.
+7. **C-3** — PII in prompts. `redactForLogs()`, `loggingMiddleware({ exclude: ['ai.*'] })`, Anthropic data-retention setting OFF, lint rule bans `logger.*` of `prompt`/`messages`/`response.content` in `apps/api/src/modules/ai/`.
+8. **D-1** — Aggregation hits full join client-side. Server `GROUP BY` + indexes; Redis cache; NO materialised view in MVP.
+9. **D-2** — UTC vs local timezone drift → off-by-one weeks + hydration mismatch. ISO `YYYY-MM-DD` strings only; server pre-formats labels; snapshot test under `TZ=Europe/Moscow` matches `TZ=UTC`.
+10. **E-1** — Idempotency key collision after retry → duplicate emails. Read existing `dedupeKey` shape FIRST; extend; integration test simulates SMTP transient → exactly 1 email.
 
-2. **DEV_SESSION UUID mismatch returns empty data** -- trpc.context.ts hardcodes userId: 'a0000000-...-99' and activeReportId: 'a0000000-...-01'. Seed MUST create users/reports with these exact IDs. Also: activeReportSectionId is null -- context factory should dynamically resolve it from DB.
+**CC-3 (P1)** — Type-divergence trap re-opens with C/D. ESLint `no-restricted-imports` blocks raw Prisma in `apps/web/src/lib/analytics/**` and `apps/api/src/modules/ai/**`; plans extend `packages/shared/src/mappers/` FIRST.
 
-3. **React Compiler breaks classic tRPC hooks** -- reactCompiler: true is enabled in next.config.ts. The @trpc/react-query proxy hooks violate rules of hooks. Migration to @trpc/tanstack-react-query queryOptions pattern is mandatory.
-
-4. **339 E2E tests break three ways simultaneously** -- Data mismatch (seed vs mock names), format mismatch (Date objects vs display strings), loading state mismatch (async queries vs synchronous mock). Prevention: test-backward seed design, one-page-at-a-time wiring, run tests after each page.
-
-5. **Status-to-Risk sync creates infinite loops** -- Stage change triggers risk creation, risk creation triggers stage change. Use a SyncSource ref flag ('user' | 'auto-sync'), NOT debounce. Auto-sync only fires on user-initiated actions.
-
-**Dismissed:** PITFALLS.md Pitfall 7 claims no /trpc rewrite exists in next.config.ts. This is factually wrong -- verified: rewrites with /trpc/:path* destination already configured. Ignore this pitfall.
+---
 
 ## Implications for Roadmap
 
-### Phase 1: Seed + Type Foundation
-**Rationale:** Everything depends on matching data and correct types. These two are independent of each other and can run in parallel.
-**Delivers:** (a) Test-backward seed in prisma/seed.ts with DEV_SESSION UUIDs, canonical names, mockup-aligned data counts; (b) Mapper layer in apps/web/src/lib/mappers/ with unit tests for all 6 semantic mismatches; (c) seed-constants.ts as single source of truth for names/IDs.
-**Addresses:** TS-1, TS-2
-**Avoids:** Pitfalls 1 (type divergence), 3 (UUID mismatch), 6 (name inconsistency across mocks)
+All four research files independently converged on the same build order. Adopt it.
 
-### Phase 2: tRPC Provider + Client Migration
-**Rationale:** Unblocks all page wiring. Must happen before any useQuery call. Includes mandatory migration from @trpc/react-query to @trpc/tanstack-react-query because React Compiler is enabled.
-**Delivers:** (a) TRPCProvider in (app)/layout.tsx; (b) New tRPC client using createTRPCOptionsProxy with queryOptions pattern; (c) Error boundaries around major page sections; (d) Smoke test proving superjson Date roundtrip works.
-**Addresses:** TS-3 (prerequisite)
-**Avoids:** Pitfalls 2 (white-screen on provider add), 8 (superjson Date serialization)
-**Research flag:** Verify exact @trpc/tanstack-react-query API surface -- STACK.md notes "verify exact import names against package exports during implementation."
+### Wave 1 — Foundations (parallelizable)
+**Phase 27 — B + A1**
+- Rationale: B unblocks integration suite as CI gate; A1 self-contained refactor.
+- Delivers: integration suite green ≥3 runs; postinstall hook; dead `proxy.ts` deleted; `_userId` rename; Phase 22 VERIFICATION re-status; `roleProcedure` factory.
+- Avoids: CC-6, B-2, B-3, A-1.
+- Research flag: skip (standard patterns).
 
-### Phase 3: Page-by-Page tRPC Wiring
-**Rationale:** Incremental migration limits blast radius. One page at a time, run E2E after each.
-**Delivers:** All 7 container components using real tRPC queries instead of mock data. Loading skeletons for async states.
-**Order within phase (simplest to most complex):**
-1. Lead History (single endpoint, flat data)
-2. Admin Panel (single snapshot endpoint, 6 tabs)
-3. Weekly Report + Archive pages (single endpoint, shape mapping)
-4. Dashboard (3 endpoints, computed KPI)
-5. Lead Form (4+ endpoints, complex state)
-**Addresses:** TS-3
-**Avoids:** Pitfall 4 (E2E three-way breakage -- caught incrementally), Pitfall 11 (loading states)
+### Wave 2 — Auth depth + adjacent infra (parallel after Wave 1)
+**Phase 28 — A2 + A4 + E1+E3 + G**
+- Rationale: A2 consumes A1; A4 closes Phase 24 seam (CC-1); E1+E3 reads existing reminder code first (E-1 mitigation); G anytime-clean.
+- Delivers: archive/weeklyReport viewer-scoped; PDF worker auth-cookie; 3 email templates; CHECKLIST.md.
+- Avoids: A-3, CC-4, CC-3, E-1.
+- Research flag: 5-min `jwt.sign expiresIn` check.
 
-### Phase 4: Button Interactivity + Status-Risk Sync
-**Rationale:** Mutations depend on queries being stable. Status-Risk sync is user-requested and builds on mutation infrastructure.
-**Delivers:** (a) 72 onClick handlers wired to real mutations; (b) Stage-to-Risk auto-create (safe/additive direction); (c) Optimistic updates for perceived instant feedback.
-**Addresses:** TS-4, DF-1
-**Avoids:** Pitfall 5 (infinite loop -- source flag pattern)
-**Note on DF-2:** Risk-to-Stage suggestion (reverse direction) requires user confirmation and should defer to v6.0. Stage-to-Risk is safe because adding a risk row is additive. Risk-to-Stage changes dashboard state and needs consent.
+### Wave 3 — Auth tail + product surfaces (parallel after Wave 2)
+**Phase 29 — A3 + A5 + A6 + E2 + F + D**
+- Rationale: A3+A5+A6 close auth loop (A6 LAST); E2 layers escalation; F independent; D operates on immutable published data.
+- Delivers: layout-level role gates (recommended); navigation hiding; real Keycloak SAML; staged DEV_SESSION removal via `AUTH_DEV_MODE_ALLOW_TEST`; T+2h escalation; 7 pages mobile-clean at 375px; analytics module + 3 chart components on `/reports/trends`.
+- Avoids: CC-2, A-2, D-1, D-2, D-3, D-4, F-1, F-2, E-2, E-3.
+- Research flag: shadcn-Chart smoke task (CC-5) in Wave 2; otherwise standard.
 
-### Phase 5: Auth Session Guard (parallel with Phase 3-4)
-**Rationale:** Independent of mock-to-real migration. Can start as soon as provider exists.
-**Delivers:** (a) proxy.ts cookie-existence check redirecting unauthenticated users; (b) Session context in (app)/layout.tsx for NavBar user display; (c) AUTH_DEV_MODE respected on both frontend and backend.
-**Addresses:** TS-5
-**Avoids:** Pitfall 9 (split-brain between frontend guard and backend DEV_MODE)
-
-### Phase 6: Logging Enhancement (parallel with Phase 3-4)
-**Rationale:** Fully independent. No UI impact. Can run in parallel with any other phase.
-**Delivers:** (a) nestjs-cls integration for request-scoped correlation IDs; (b) CorrelationIdMiddleware stores ID via ClsService; (c) tRPC request/response logging middleware (procedure, userId, durationMs); (d) Error serialization improvement.
-**Addresses:** DF-3
-**Avoids:** Pitfall 10 (logger is NOT pino -- enhance, do not replace)
-
-### Phase 7: E2E Integration Tests
-**Rationale:** Must come last -- requires all wiring stable, seed correct, auth working.
-**Delivers:** (a) New e2e/integration/ directory (separate from existing mock tests); (b) Playwright dual-server config (API + Web); (c) Auth setup via dev-login endpoint; (d) 20-30 core integration tests proving full stack; (e) Existing 339 mock-based tests preserved as regression safety net.
-**Addresses:** DF-4
-**Avoids:** Pitfall 4 Phase C (assertion updates for legitimate format changes), Pitfall 13 (storage state update)
+### Wave 4 — AI (gated by AI-SPEC.md)
+**Phase 30+ — C, preceded by `/gsd-ai-integration-phase`**
+- Rationale: depends on Wave 3 finalised role scoping AND AI-SPEC.md (model selection, prompt design, cost/latency, PII boundary, golden-set rubric, on-prem-vs-hosted).
+- Delivers: `ai-summary` queue; `AiInsight` audit + `ReportSummary` cache tables; `ai.summary.get`/`ai.sentiment.list`/`ai.judgement.get`; summary card; risk badges; smart on-track advisory; cost-tracking; prompt-caching with ≥1024-token rubric.
+- Avoids: C-1..C-6.
+- Research flag: AI-SPEC required before phase planning.
 
 ### Phase Ordering Rationale
 
-The ordering is load-bearing:
-- **Seed + Types first** because every subsequent phase depends on data existing in PostgreSQL and mappers transforming it correctly. Doing these in parallel saves time (they are independent).
-- **Provider + client migration second** because no useQuery call works without it, and the React Compiler forces the classic-to-new migration to happen at this stage, not later.
-- **Page wiring third** because queries must work before mutations make sense.
-- **Mutations fourth** because button interactivity requires stable read paths.
-- **Auth and logging are parallel** because they have zero dependency on the mock-to-real migration.
-- **E2E last** because integration tests need all other layers working.
+- **Dependency:** A1 (procedures) → A2 (consumers); A4 hinged with `AUTH_DEV_MODE` removal in A6; B precedes A4 (test suite green); A6 last in Wave 3; C gated by AI-SPEC.
+- **Grouping by architecture seam:** Wave 2 — API service + BullMQ + email queue. Wave 3 — frontend + analytics + auth tail.
+- **Pitfall avoidance:** CC-1/CC-2/CC-6 force B + A1 first. C-1/C-2 force AI cache + golden-set before user-facing surface.
 
 ### Research Flags
 
-**Needs deeper research during planning:**
-- **Phase 2 (tRPC client migration):** Verify exact @trpc/tanstack-react-query exports and queryOptions API against installed version. STACK.md notes to check import names at implementation time.
-- **Phase 4 (Status-Risk sync):** Custom UX with no off-the-shelf pattern. Edge cases (multiple risks per product+stage, locked stages, revert to On Track) need design review during planning.
+**Phases needing deeper research during planning:**
+- **Phase 30+ (C):** AI-SPEC.md required. Decisions: cost-vs-confidentiality, model assignment, prompt rubric ≥1024 tokens, golden-set fixtures (8–12 reports), eval-step CI threshold.
 
-**Standard patterns (skip research-phase):**
-- **Phase 1 (Seed + Mappers):** Well-understood Prisma seed + pure function mappers. No research needed.
-- **Phase 3 (Page wiring):** tRPC useQuery/useMutation is thoroughly documented. Pattern is mechanical.
-- **Phase 5 (Auth guard):** Next.js 16 proxy.ts pattern is documented. Existing code covers 90% of the work.
-- **Phase 6 (Logging):** nestjs-cls setup is documented in official NestJS recipes.
-- **Phase 7 (E2E):** Playwright dual-server config is documented feature. auth.setup.ts pattern already exists.
+**Standard patterns (skip phase research):** Phase 27 (B + A1), Phase 28 (A2 + A4 + E1+E3 + G), Phase 29 (A3 + A5 + A6 + E2 + F + D).
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | All packages verified against installed versions. React Compiler status confirmed by inspecting next.config.ts. Only gap: pino-roll 4.0 + pino 10 exact compat (irrelevant since we keep custom logger). |
-| Features | **HIGH** | Full codebase inspection: 38 mock imports counted, 72 interactive elements inventoried, dependency graph derived from import analysis. |
-| Architecture | **HIGH** | Container/presentation split verified file-by-file. tRPC plumbing (client, server, rewrite) all confirmed in source. Data flow traced end-to-end. |
-| Pitfalls | **HIGH** | 13 of 14 pitfalls verified against actual codebase. Pitfall 7 (no /trpc rewrite) dismissed as factually incorrect. |
+| Stack | **HIGH** | Context7-verified; existing untouched. MEDIUM: Sonnet 4.6 sufficiency for on-track judgement (golden-set required). |
+| Features | **HIGH** A/B/E/F/G; **MEDIUM** C/D | A/B/E/F/G well-known patterns with exact pointers. C depends on AI-SPEC. D sparkline-vs-bar density a UX call. |
+| Architecture | **HIGH** | Verified at exact line numbers. Raw-`Worker` requirement grep-confirmed. |
+| Pitfalls | **HIGH** CC-1/CC-2/CC-6/A-1..4/B-1..4; **MEDIUM** C/D/E/F | Cross-cutting + A/B from audit + grep. C/D/E/F best-practice. |
 
-**Overall confidence:** HIGH
+**Overall confidence:** **HIGH.** Strict additive scope. Two MEDIUM areas deferred to plan-time validation, not roadmap-blocking.
 
 ### Gaps to Address
 
-- **Seed assertion coverage:** E2E assertion extraction was sampled, not exhaustive. During Phase 1, a full grep of all E2E expect() calls asserting data-dependent strings is needed to ensure the seed produces matching values.
-- **@trpc/tanstack-react-query exact API surface:** Import names and factory function signatures should be verified against the installed package version before writing the provider. STACK.md flagged this.
-- **activeReportSectionId resolution:** DEV_SESSION sets this to null. The context factory or seed must resolve it. Two options exist (dynamic DB lookup vs hardcoded in seed) -- decision deferred to Phase 1 implementation.
-- **Admin mock name reconciliation:** Admin mock uses different names than lead/dashboard mocks ("CRM Portal" vs "CRM Platform"). Canonical names must be chosen (recommend lead/dashboard names) and admin E2E tests updated.
+- **AI-SPEC.md outstanding (Theme C blocker).** Cannot enter planning without it. Owner: `/gsd-ai-integration-phase`.
+- **Existing reminder code unread (E-1 plan-time gap).** Read `apps/api/src/modules/reminder/*` FIRST in E1+E3 plan.
+- **Golden-set rubric needs domain expert sign-off (C-5).** Head/Barkhanov review before lock-in.
+- **Mobile audit baseline screenshots need real-device pass (F-1, MOB-06).** Real iOS Safari PDF embed.
+- **AUTH_DEV_MODE removal sequencing.** A6 commit not before Phase 26 specs run green against mock IdP.
+
+---
 
 ## Sources
 
-### Primary (HIGH confidence -- direct codebase inspection)
-- apps/web/next.config.ts -- Confirmed: reactCompiler: true, /trpc/:path* rewrite exists
-- apps/web/src/lib/trpc.ts -- tRPC client configured with superjson, unused
-- apps/api/src/infrastructure/trpc/trpc.context.ts -- DEV_SESSION UUIDs hardcoded
-- apps/api/src/lib/logger.ts -- Custom AppLoggerImpl, NOT pino
-- apps/web/src/components/*/mock-data.ts -- 3 files, 15+ types, divergent from Zod schemas
-- packages/shared/src/schemas/report.ts -- Canonical Zod schemas
-- prisma/schema.prisma -- 19 models, traffic light + workflow status enums
+### Primary (HIGH confidence)
+- `.planning/research/STACK.md` (Context7-verified)
+- `.planning/research/FEATURES.md`
+- `.planning/research/ARCHITECTURE.md` (verified at exact line numbers)
+- `.planning/research/PITFALLS.md` (direct quotes from `v5.0-MILESTONE-AUDIT.md`, grep-confirmed)
+- `.planning/PROJECT.md`
 
-### Secondary (HIGH confidence -- official documentation)
-- [tRPC TanStack React Query Setup](https://trpc.io/docs/client/tanstack-react-query/setup)
-- [tRPC React Compiler Migration Blog](https://trpc.io/blog/introducing-tanstack-react-query-client)
-- [nestjs-cls Official Docs](https://papooch.github.io/nestjs-cls/introduction/quick-start)
-- [NestJS AsyncLocalStorage Recipe](https://docs.nestjs.com/recipes/async-local-storage)
-- [Playwright Multi-Server Config](https://playwright.dev/docs/test-global-setup-teardown)
-- [Next.js 16 proxy.ts Convention](https://nextjs.org/docs/app/api-reference/file-conventions/proxy)
+### Secondary
+- Anthropic release notes (Haiku 4.5 / Sonnet 4.6 / Opus 4.7) + prompt-caching docs
+- shadcn-ui charts page
+- BullMQ + nodemailer best-practice docs
 
-### Tertiary (MEDIUM confidence -- needs validation during implementation)
-- pino-roll 4.0 + pino 10 compatibility (same author, same protocol, no explicit statement) -- irrelevant for v5.0 since we keep custom logger
-- @trpc/tanstack-react-query exact export names -- verify against installed package
+### Tertiary (plan-time validation needed)
+- AI quality on real lead data (Sonnet 4.6 sufficiency)
+- iOS Safari PDF embed
+- Existing reminder dedupe key shape
 
 ---
-*Research completed: 2026-04-25*
+*Research synthesized: 2026-04-28*
 *Ready for roadmap: yes*
+*Build order locked: B + A1 → A2 + A4 + E1+E3 + G → A3 + A5 + A6 + E2 + F + D → C (gated by AI-SPEC.md)*

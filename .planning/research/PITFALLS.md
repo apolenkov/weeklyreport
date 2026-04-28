@@ -1,482 +1,483 @@
-# Domain Pitfalls -- v5.0 Production Integration
+# v6.0 Pitfalls — Roles, Quality, AI & Analytics
 
-**Domain:** Mock-to-real API migration in existing Next.js 16 + NestJS 11 + tRPC 11 monorepo
-**Researched:** 2026-04-25
-**Confidence:** HIGH (all findings verified against actual codebase files)
+**Domain:** Adding 7 feature areas (A-G) to existing CustomReport (Next.js 16 + NestJS 11 + Prisma 7 + tRPC 11 + BullMQ 5).
+**Researched:** 2026-04-26
+**Scope:** Mistakes specific to THIS codebase. Generic advice excluded. Each pitfall ships with a detection signal, a prevention step (which phase task addresses it), and a guard (post-condition that proves prevention worked).
+**Severity legend:** P0 = milestone-blocking / data-loss / security. P1 = ships broken UX or fails CI. P2 = papercut, drift, future-pain.
 
----
-
-## Critical Pitfalls
-
-Mistakes that cause white-screens, broken test suites, or require architectural rework.
+> **Reading order:** Section 0 (cross-cutting) first — those traps cut across A-G. Then per-feature sections.
 
 ---
 
-### Pitfall 1: Type System Divergence Is Semantic, Not Cosmetic
+## 0. Cross-Cutting Pitfalls
 
-**What goes wrong:** The mock types and Zod API types represent fundamentally different data models. A search-and-replace will not work -- a mapping/adapter layer is required.
+These are not unique to one feature area. Anyone touching v6.0 must keep them in mind.
 
-**Specific mismatches found in this codebase:**
+### CC-1 — Phase 24 cookie-injection seam is the hinge for A, C, E (P0)
 
-| Mock Type (UI) | Zod/Prisma Type (API) | Problem |
-|---|---|---|
-| `StageStatus: 'on-track' \| 'at-risk' \| 'blocked' \| 'empty'` | `TrafficLightStatus: 'green' \| 'yellow' \| 'red'` | Entirely different semantic models. "empty" has no API equivalent. "on-track" is not "green" -- the UI concept includes stage ownership context. |
-| `ItemStatus: 'in-progress' \| 'completed' \| 'blocked' \| 'planned'` | `ItemWorkflowStatus: 'done' \| 'in_progress' \| 'blocked'` | 4 values vs 3. `'planned'` does not exist in DB. `'completed'` vs `'done'` naming. Hyphen vs underscore (`in-progress` vs `in_progress`). |
-| `Product.stages: StageAssignment[]` with `ownership: 'mine' \| 'locked' \| 'unassigned'` | `stageAssignmentSchema` is a flat admin entity (`userId, stageId, projectId`) | Ownership is computed from current user's session vs stage assignment records -- not stored as an enum value. |
-| Dates: `"2 min ago"`, `"Apr 13, 17:42"`, `"2026-04-18"` (display strings) | `z.coerce.date()` returns `Date` objects via superjson | Every component touching dates needs formatting logic added. |
-| `MockReminder: { name, description, active: boolean }` | `adminReminderRuleSchema: { kind: 'deadline' \| 'follow_up', status: 'active' \| 'paused', fireAt: Date, ... }` | Completely different shape. Mock is a display label; API is a rule engine config with 7 fields. |
-| `MockPeriod: { weekLabel, startDate: string, status: 'open' \| 'published' \| 'reopened' }` | `periodReadModelSchema: { periodStart: Date, periodEnd: Date, deadline: Date, status: ReportStatus, periodStatus: PeriodStatus }` | Period has TWO status fields in API (`status` for report, `periodStatus` for period lifecycle). Dates are `Date` objects, not strings. `weekLabel` is computed server-side and nullable. |
+**What goes wrong:** Three v6.0 features need an authenticated browser/HTTP context to do their work — A removes `AUTH_DEV_MODE`, C calls Anthropic with per-user audit metadata, E renders email previews. Today the only seam acknowledging this is `apps/api/src/infrastructure/bullmq/pdf-export.processor.ts:69-72` (`TODO(Phase 24): inject session cookie via PdfExportService.buildAuthCookies + page.context().addCookies()`). If A is shipped without filling that seam, the PDF worker silently 401s the moment `AUTH_DEV_MODE=false`, and the job retries forever in BullMQ. v5.0 audit explicitly tagged this: "becomes mandatory only if AUTH_DEV_MODE is removed from worker context" (`v5.0-MILESTONE-AUDIT.md:120`).
 
-**Why it happens:** The UI was designed from mockups (product-centric view with stage ownership and traffic metaphors), while the API was designed from domain models (report-section-centric with traffic light enums). These are intentionally different abstractions.
+**Detection signal:** Worker logs show `pdf-export job failed` with HTTP 401 / "Redirecting to /login" body. BullMQ Bull Board shows attempts climbing 1→3→5 with backoff. Job durations < 200 ms (worker never reaches `page.pdf()`).
 
-**Consequences:** If you try to directly replace mock imports with tRPC query results, TypeScript will reject nearly every component. If you `as any` your way through, runtime crashes will follow because components access properties that do not exist on API types.
+**Prevention:** Phase A (Auth) plan must include a sub-task "Wire `PdfExportService.buildAuthCookies(token) + page.context().addCookies(...)` in `pdf-export.processor.ts:68`" with the same plan that flips `AUTH_DEV_MODE` off. Do not split.
 
-**Prevention -- build a mapping layer:**
-
-```typescript
-// apps/web/src/lib/api-mappers.ts
-
-// Map API traffic light to UI stage status
-export function trafficToStageStatus(
-  trafficLight: 'green' | 'yellow' | 'red' | null
-): StageStatus {
-  switch (trafficLight) {
-    case 'green': return 'on-track';
-    case 'yellow': return 'at-risk';
-    case 'red': return 'blocked';
-    case null: return 'empty';
-  }
-}
-
-// Map API workflow status to UI item status
-export function workflowToItemStatus(
-  ws: 'done' | 'in_progress' | 'blocked'
-): 'completed' | 'in-progress' | 'blocked' {
-  switch (ws) {
-    case 'done': return 'completed';
-    case 'in_progress': return 'in-progress';
-    case 'blocked': return 'blocked';
-  }
-}
-// Note: 'planned' items are Next Week items with no workflowStatus yet --
-// derive from item.type === 'next' rather than a DB enum value.
-```
-
-**Detection:** If you see `as any` or `@ts-ignore` near tRPC query results, the mapping layer is missing.
+**Guard:** Integration test in `apps/web/playwright.integration.config.ts` that asserts: with `AUTH_DEV_MODE=false`, head clicks Export PDF → `apps/api/storage/pdfs/{jobId}.pdf` exists within 30 s and is non-empty. Existing `pdf-export` integration spec already exists; un-skip and add the auth-required assertion.
 
 ---
 
-### Pitfall 2: No TRPCProvider Exists -- Big-Bang Rendering Risk
+### CC-2 — DEV_SESSION fallback removal must be staged, not switch-flipped (P0)
 
-**What goes wrong:** The root layout (`apps/web/src/app/layout.tsx`) contains no `QueryClientProvider` and no `trpc.Provider`. Adding these is a prerequisite for ANY tRPC wiring, but it changes the rendering context for every page simultaneously.
+**What goes wrong:** `apps/api/src/infrastructure/trpc/trpc.context.ts` reads hardcoded UUIDs that must match `prisma/seed-constants.ts`. Existing pitfall #1 in `STATE.md`. v6.0 plan A says "real Keycloak SAML + role separation" — if someone deletes the DEV_SESSION branch in trpc.context.ts in the same commit that adds the SAML guard, every E2E spec that boots its own DB (Phase 26 `customreport_e2e`) breaks at first tRPC call, including the 21 integration tests we just got first-running on 2026-04-26. The pre-existing seed flow assumes DEV_SESSION; flipping it means rewriting the global-setup harness too.
 
-**Current state:** Root layout is bare:
-```tsx
-<html><body>{children}</body></html>
-```
+**Detection signal:** Phase 26 integration suite suddenly drops from 8/21 pass to 0/21 with "Cannot read properties of null (reading 'userId')" or "UNAUTHORIZED" in the very first lead-journey test. `apps/web/.env.test` no longer enough.
 
-The `(app)/layout.tsx` adds only `<NavBar />`. No providers anywhere in the tree.
+**Prevention:** A-phase plan must add a `AUTH_DEV_MODE_ALLOW_TEST=true` switch — different env var, narrower scope, only honored when `NODE_ENV==='test'` AND request originates from Playwright's user-agent. Then, in a separate plan, migrate Phase 26 specs to do a real SAML stub login (mock IdP container in docker-compose.test.yml). Do not delete DEV_SESSION until the test harness no longer depends on it.
 
-**Why it happens:** The tRPC client was created (`apps/web/src/lib/trpc.ts` -- exists with superjson, httpBatchLink, credentials: include) but never wrapped into the component tree. This was intentionally deferred to v5.0. Dependencies are already installed (`@tanstack/react-query` ^5.97.0, `@trpc/react-query` ^11.16.0).
-
-**Consequences:** The moment you add `<TRPCProvider>` + `<QueryClientProvider>`, every `'use client'` component now lives inside a React Query context. If ANY child component has an unconditional `useQuery` that calls a nonexistent endpoint or fails auth, the entire app white-screens with an unhandled promise rejection. No page loads until all initial queries succeed or are error-handled.
-
-**Prevention:**
-1. Add React Error Boundaries BEFORE wiring the provider. Each major page section should be wrapped in a `QueryErrorBoundary` so one failing query does not cascade.
-2. Wire TRPCProvider in a dedicated `'use client'` component that wraps the `(app)/layout.tsx`, NOT the root layout -- this way the login page (`/auth/error`) remains unaffected.
-3. Use `<Suspense>` boundaries around each tRPC-dependent section so loading states are contained.
-4. Test the provider with a single harmless query (e.g., `reports.getActive`) on one page before wiring all pages.
-
-**Detection:** White screen on any page after adding provider = missing error boundary or failing auth context.
+**Guard:** Add a test that runs `NODE_ENV=production AUTH_DEV_MODE=true pnpm --filter api start` and asserts startup fails with "AUTH_DEV_MODE refused outside test/dev" (configuration-time fence, not runtime check). Also, the original `customreport_e2e` integration suite must remain green through the A-phase transition — that's the canary.
 
 ---
 
-### Pitfall 3: DEV_SESSION UUID Mismatch Will Return Empty Data
+### CC-3 — Type divergence is now compounding (P1)
 
-**What goes wrong:** The tRPC context factory (`trpc.context.ts`) hardcodes a dev session with specific UUIDs:
-```typescript
-const DEV_SESSION: UserSession = {
-  userId: 'a0000000-0000-4000-8000-000000000099',
-  activeReportId: 'a0000000-0000-4000-8000-000000000001',
-  activeReportSectionId: null,
-};
-```
+**What goes wrong:** Pitfall #4 from `STATE.md`: "Type divergence is semantic — on-track vs green, computed states (pending/planned) need mapper logic." v5.0 added a mapper layer with 27 unit tests. v6.0 features C (AI summary input) and D (analytics aggregations) want to consume *historical* data — but the mapper layer was designed for a single report's read/write path, not for cross-period aggregation. If the AI prompt or the chart aggregator imports raw Prisma types directly, the canonical-vs-presentation divergence reappears: `green` vs `on-track`, `null` (no data) vs `'empty'` (computed), etc.
 
-Two separate failures hide here:
-1. If the seed script generates different UUIDs (which it will by default using `randomUUID()`), every tRPC query that filters by `ctx.session.userId` or `ctx.session.activeReportId` returns null or empty arrays.
-2. `activeReportSectionId` is hardcoded to `null`. The `reports.getActive` endpoint checks this field and returns `null` when it is not set. Even with correct user and report UUIDs, the lead form's "get my active section" call returns nothing. The seed or the context factory must look up the section ID from the DB by `userId + reportId`.
+**Detection signal:** New code in `apps/web/src/lib/analytics/*` or `apps/api/src/modules/ai/*` imports from `@prisma/client` or `@customreport/shared` directly without going through a mapper. ESLint can be taught to ban this — see Guard.
 
-The app looks "connected" but shows no data.
+**Prevention:** Phase D and Phase C plans must each include "extend `packages/shared/src/mappers/` with `toAnalyticsRow()` / `toAiSummaryInput()` mappers" as the *first* sub-task, before any feature code. Do not let chart code or prompt-builder code touch raw Prisma types.
 
-**Why it happens:** The seed is built in isolation from the auth context. Nobody checks that the two UUID sets match because in production they come from the same database -- but in dev mode, the session is faked.
-
-**Consequences:** You wire up tRPC, see empty pages, and spend hours debugging the API layer when the real problem is a UUID mismatch in the seed.
-
-**Prevention:**
-1. The seed script MUST create a user with `id = 'a0000000-0000-4000-8000-000000000099'` (the head user) and a report with `id = 'a0000000-0000-4000-8000-000000000001'`.
-2. The context factory should dynamically resolve `activeReportSectionId` from the database when it is null:
-```typescript
-if (!session.activeReportSectionId && session.activeReportId && session.userId) {
-  const section = await prisma.reportSection.findFirst({
-    where: { reportId: session.activeReportId, authorId: session.userId },
-    select: { id: true },
-  });
-  if (section) session.activeReportSectionId = section.id;
-}
-```
-3. OR make DEV_SESSION configurable via env vars so the seed can set them.
-4. Add a startup health check: on app boot in dev mode, verify `DEV_SESSION.userId` exists in the database. Log a loud warning if it does not.
-5. Document the required UUIDs in a `prisma/seed-constants.ts` file so seed and context stay in sync.
-
-**Detection:** All pages render but show "No data" or empty states after seed + tRPC wiring.
+**Guard:** ESLint rule `no-restricted-imports` for `apps/web/src/lib/analytics/**` and `apps/api/src/modules/ai/**` blocking direct imports of `@prisma/client` types — must funnel through `packages/shared/src/mappers/`. Lint must fail in CI if violated.
 
 ---
 
-### Pitfall 4: 339 E2E Tests Break Three Different Ways Simultaneously
+### CC-4 — BullMQ queue naming conflicts (P1)
 
-**What goes wrong:** Current Playwright tests assert on specific strings from mock data:
-```typescript
-// lead-journey.spec.ts line 45
-await expect(leadPage.getByText('CRM Platform').first()).toBeVisible();
-// line 73
-await expect(periodSelect).toHaveValue('2026-W16');
-```
+**What goes wrong:** Today there is one BullMQ queue named `pdf-export` (see `pdf-export.processor.ts:29`). v6.0 adds two more queues: `email-reminder` (E) and `ai-summary` (C). If anyone reuses the `Worker` connection config inline-copied in each processor without extracting it (`{ host: process.env['REDIS_HOST'] ?? 'localhost', port: ..., maxRetriesPerRequest: null }`), three places drift apart. Worse — if a developer names the new queue `pdf-export-email` or `pdf-export-ai` (auto-completion suggesting), BullMQ silently picks up jobs from the wrong queue because BullMQ matches by exact name and the worker is generic.
 
-When switching from mock to real API, tests break in three separate failure modes simultaneously, making individual failures impossible to diagnose.
+**Detection signal:** AI summary job IDs appear in `pdf-export` Bull Board panel. Or: PDF export count drops because email worker steals jobs (would only happen on naming collision).
 
-**Three failure modes:**
-1. **Data mismatch:** Seed produces different names/values than mocks. Admin mock says "CRM Portal", lead mock says "CRM Platform" -- which does the seed use?
-2. **Format mismatch:** API returns `Date` objects that must be formatted. If formatting produces "Apr 14, 2026" instead of "Apr 14-20", string assertions break.
-3. **Loading state mismatch:** Mock data is synchronous and immediate. Real API calls go through React Query -- components render a loading/skeleton state first. Tests that do not wait for data loading will assert against empty elements.
+**Prevention:** Plan E and C each must add their queue name to a central `packages/shared/src/queue-names.ts` enum *first task*. All processors must import from there. Connection config extracted to `apps/api/src/infrastructure/bullmq/redis-connection.ts` and reused.
 
-**Why it happens:** Tests were written against deterministic mock data. Real API adds network latency, database state, and async rendering into the assertion chain.
-
-**Consequences:** 100+ test failures on the first run. Without a clear migration strategy, debugging each failure individually takes 5-10 minutes each.
-
-**Prevention -- phased migration (this ordering is load-bearing):**
-
-**Phase A: Seed matches mock data exactly**
-- Product names MUST match the canonical set from lead/dashboard mocks: "CRM Platform", "Data Analytics Suite", "Mobile Applications", "Cloud Infrastructure", "AI/ML Platform", "Integration Gateway", "Payment Gateway", "Auth Service", "Notification Hub", "Admin Portal", "Logging Platform", "CDN Service".
-- User names MUST match: "Platanov A.", "Maria K.", "Igor V.", "Dmitry S.", "Olga N.", "Sergey T."
-- Period dates MUST include Week 16 (Apr 14-20) as the current period.
-
-**Phase B: Wire tRPC, verify same rendering**
-- Replace mock imports with tRPC queries one page at a time.
-- Run that page's E2E test file after each replacement.
-- If a test breaks, the issue is in the wiring or mapping layer, not the data.
-
-**Phase C: Update assertions for legitimate format changes**
-- Only NOW update test assertions for real format differences (date formatting, etc.).
-- Each change is isolated and traceable.
-
-**Detection:** If more than 10 tests fail when switching one page from mock to real, the seed data does not match the mock data. Stop and fix the seed first.
+**Guard:** Static check — `grep -r "new Worker<" apps/api/src` returns ≤ 3 hits, all importing from `redis-connection.ts` and `queue-names.ts`. Add a `Bash` check in CI.
 
 ---
 
-### Pitfall 5: Status-to-Risk Bidirectional Sync Creates Infinite Loops
+### CC-5 — React Compiler + new chart libs / streaming hooks (P1)
 
-**What goes wrong:** The requirement says: "When stage status changes to At Risk/Blocked, auto-add a risk row. When a risk is added, auto-update stage status." This is a textbook infinite loop trigger: change A triggers B, B triggers A, A triggers B...
+**What goes wrong:** Pitfall #2 from `STATE.md`: React Compiler breaks `@trpc/react-query` (we use `@trpc/tanstack-react-query` instead). v6.0 features D (charts) and C (streaming AI responses) will reach for libraries that may have similar incompatibilities — e.g. recharts uses `useMemo` patterns the compiler can break, or @anthropic-ai/sdk's `messages.stream()` returns an AsyncIterable that doesn't fit React Compiler's "stable on memoization-equal inputs" assumption.
 
-**Why it happens:** Both directions use the same `onChange`/`useMutation` handlers. Without a guard, the auto-sync triggers itself recursively.
+**Detection signal:** `pnpm --filter @customreport/web build` warns about "babel-plugin-react-compiler bailing out of compilation for [component]". Or: charts re-render every keystroke; streamed tokens flicker.
 
-**Consequences:** Browser tab freezes (React re-renders infinitely), or the mutation fires in a tight loop until rate-limited or the request queue overflows.
+**Prevention:** Each candidate library must be explicitly tested against React Compiler before being adopted. Plan D phase task: "Build smoke chart with [picked lib] inside the app and run `pnpm --filter web build` — confirm no `[bailout]` in output for chart components". Plan C: same for streaming.
 
-**Prevention -- use a sync source flag (not debounce):**
-
-```typescript
-// apps/web/src/hooks/use-status-risk-sync.ts
-
-type SyncSource = 'user' | 'auto-sync';
-
-function useStatusRiskSync() {
-  const syncSourceRef = useRef<SyncSource>('user');
-
-  const handleStageStatusChange = useCallback((
-    productId: string, stageName: string,
-    newStatus: StageStatus, source: SyncSource = 'user'
-  ) => {
-    updateStageStatus(productId, stageName, newStatus);
-
-    // Only auto-create risk if this was a USER action, not an auto-sync
-    if (source === 'user' && (newStatus === 'at-risk' || newStatus === 'blocked')) {
-      syncSourceRef.current = 'auto-sync';
-      addRiskRow(productId, stageName, newStatus === 'blocked' ? 'blocked' : 'at-risk');
-      syncSourceRef.current = 'user';
-    }
-  }, []);
-
-  const handleRiskAdded = useCallback((
-    productId: string, stageName: string,
-    severity: 'at-risk' | 'blocked', source: SyncSource = 'user'
-  ) => {
-    addRisk(productId, stageName, severity);
-
-    // Only auto-update status if this was a USER action
-    if (source === 'user') {
-      syncSourceRef.current = 'auto-sync';
-      handleStageStatusChange(productId, stageName,
-        severity === 'blocked' ? 'blocked' : 'at-risk', 'auto-sync');
-      syncSourceRef.current = 'user';
-    }
-  }, []);
-
-  return { handleStageStatusChange, handleRiskAdded };
-}
-```
-
-**Why not debounce:** Debounce is time-based -- it delays but does not prevent the loop. With async mutations, timing is unpredictable. A 200ms debounce might work locally but fail under network latency. The source flag is deterministic.
-
-**Why not one-direction-only:** The requirement explicitly says bidirectional. Restricting to one direction violates the spec.
-
-**Detection:** Browser DevTools shows rapidly increasing React renders on the lead form page, or the Network tab shows repeated mutation calls to the same endpoint in quick succession.
+**Guard:** CI step that runs Next.js build and greps for `react-compiler` bailout warnings, failing if any new file is in the bailout list. Establish baseline first (any current bailouts get an allow-list).
 
 ---
 
-### Pitfall 6: Admin Mock Data Uses Different Names Than Lead/Dashboard Mock Data
+### CC-6 — Middleware collision: `proxy.ts` confusion (P0 specifically for B)
 
-**What goes wrong:** The three mock-data files use inconsistent product and user names:
+**What goes wrong:** v5.0 has TWO `proxy.ts` files — `apps/web/proxy.ts` (live, Next.js 16 reads this) and `apps/web/src/proxy.ts` (dead, listed in v6.0 task B for deletion). Phase 24 audit gap: "proxy.ts matcher with negative-lookahead+|-alternation matches every path in Next.js 16" was already closed via allowlist in `cc1a0ec`. If task B deletes the wrong file, auth completely breaks. If both files are kept after refactor, future-Claude will edit the dead one and wonder why nothing happens.
 
-| Entity | Lead Mock | Dashboard Mock | Admin Mock |
-|---|---|---|---|
-| CRM product | "CRM Platform" | "CRM Platform" | "CRM Portal" |
-| Analytics | "Data Analytics Suite" | "Data Analytics Suite" | "Analytics Dashboard" |
-| Mobile | "Mobile Applications" | "Mobile Applications" | "Mobile App" |
-| Lead 1 | "Platanov A." | "Platanov A." | "Alexey Petrov" |
-| Lead 2 | "Maria K." | "Maria K." | "Maria Ivanova" |
-| Stage name | "Dev" | "Dev" | "Development" |
+**Detection signal:** `apps/web/proxy.ts` deleted by mistake → Next.js dev server prints "no proxy detected, using built-in" and 401 redirects stop firing. Or: edits to `apps/web/src/proxy.ts` have zero observable effect.
 
-**Why it happens:** Mock files were written independently for different UI sections, not as a shared data contract.
+**Prevention:** Plan B sub-task to delete dead `proxy.ts` must specify the exact path `apps/web/src/proxy.ts` (not `apps/web/proxy.ts`!) and run `pnpm --filter @customreport/web build && pnpm --filter @customreport/web test:e2e:integration -g auth-guards` immediately after as the deletion's guard. Add a comment to the live `apps/web/proxy.ts` saying "this is the active one — do NOT add a copy under src/".
 
-**Consequences:** The seed script must commit to ONE canonical set of names. Whichever you pick, some existing E2E assertions will break. If you do not notice the divergence, admin panel tests break while lead tests pass (or vice versa).
-
-**Prevention:**
-1. Create a single `prisma/seed-constants.ts` file that defines ALL canonical names, used by both the seed script and referenced by E2E test expectations.
-2. Use lead/dashboard mock names as canonical (they have more test coverage) -- update admin panel tests to expect these names.
-3. Stage names: use full name ("Development") in DB `Stage` table, abbreviate to "Dev" in the UI mapping layer.
-
-**Detection:** Admin panel E2E tests break while lead/dashboard tests pass, or vice versa.
+**Guard:** Post-deletion: `find apps/web -name "proxy.ts"` returns exactly one path, `apps/web/proxy.ts`. Add to Plan B verification.
 
 ---
 
-## Moderate Pitfalls
+## 1. Theme A — Real Keycloak SAML + Roles + Cookie Injection
 
-### Pitfall 7: Next.js 16 API Proxying Requires Configuration -- tRPC Requests Will 404
+### A-1 — Role check missing at tRPC layer because middleware "already filtered" (P0)
 
-**What goes wrong:** The tRPC client is configured to call `/trpc` on the same origin (`url: '/trpc'` in `apps/web/src/lib/trpc.ts`). The Next.js dev server runs on port 3000, the NestJS API on port 3001. Without proxy configuration, all `/trpc` requests hit Next.js's own server, return 404, and every query fails silently.
+**What goes wrong:** v5.0 has `protectedProcedure` and `headProcedure` in `apps/api/src/infrastructure/trpc/`. v6.0 adds `lead`, `head`, `admin`, `viewer`. Easy mistake: the new SAML middleware decodes role into JWT, sets it on `req.user.role`, and the tRPC procedure trusts it without re-checking. But one cron, one BullMQ context, one tRPC call from a test harness can bypass middleware entirely (see CC-2). Defense-in-depth requires every protected procedure to assert role at the tRPC layer.
 
-**Current state:** No `proxy.ts` file exists. No API rewrites in `next.config.ts`.
+**Detection signal:** A `viewer` user can call `weeklyReport.publish.mutate()` and it succeeds. Test: write a test that boots a session with role=viewer and expects UNAUTHORIZED on a head-only mutation.
 
-**Prevention:** Add rewrites to `next.config.ts`:
-```typescript
-// next.config.ts
-export default {
-  async rewrites() {
-    return [
-      { source: '/trpc/:path*', destination: 'http://localhost:3001/trpc/:path*' },
-    ];
-  },
-};
-```
+**Prevention:** A-plan must define `roleProcedure(...allowedRoles: Role[])` factory in `apps/api/src/infrastructure/trpc/role-procedure.ts`, and every existing `headProcedure` callsite is migrated to `roleProcedure('head', 'admin')`. Compile-time enforcement: existing `headProcedure` is *removed* from exports so old code can't call it.
 
-This approach is more reliable than `proxy.ts` for API forwarding and works in both dev and production (with proper URL configuration).
-
-**Detection:** Network tab shows 404 on all `/trpc/*` requests. Console shows `TRPCClientError: Not Found`.
+**Guard:** Vitest contract suite — for every mutation in the router, exactly one allowed-role assertion test (e.g. `weeklyReport.publish` allows head/admin, denies lead/viewer with UNAUTHORIZED). Add a router-coverage test that lists all procedures and fails if any lacks role assertions.
 
 ---
 
-### Pitfall 8: superjson Date Serialization Breaks Without Transformer on BOTH Sides
+### A-2 — Role missing from JWT payload → silent over-grant or over-block (P0)
 
-**What goes wrong:** tRPC with superjson serializes `Date` objects to `{ __type: "Date", value: "..." }`. If the transformer is missing on either the client or server, dates arrive as plain strings and `Date` methods fail at runtime.
+**What goes wrong:** Keycloak SAML attribute mappings are configured in Keycloak admin UI. If the role attribute name is `roles` but the @node-saml profile reads `role`, `req.user.role` is `undefined`. Then either: (a) `roleProcedure` throws and *every* user is blocked (over-block), or (b) someone defensively coded `if (!user.role || allowedRoles.includes(user.role))` and now `undefined` users are allowed (over-grant — silent privilege escalation).
 
-**Current state:** Server has superjson transformer (`trpc.middleware.ts` line 7: `initTRPC...create({ transformer: superjson })`). Client has it too (`trpc.ts` line 13: `transformer: superjson` in httpBatchLink). Both are correctly configured. But since no TRPCProvider exists yet, when adding it, the transformer must be passed correctly.
+**Detection signal:** Production log line `loggingMiddleware` shows `userId: 'xyz', role: undefined`. Or: a freshly-onboarded user can suddenly access admin tabs.
 
-**Known history:** This exact bug already caused 17 TypeScript errors in this project (documented in `feedback_trpc_superjson.md`).
+**Prevention:** A-plan adds Zod schema `SamlProfileSchema` in `packages/shared/src/auth/saml.ts` with `role: z.enum(['lead', 'head', 'admin', 'viewer'])` (NOT optional, NOT default). The SAML strategy parses the profile through this schema and *rejects login* if role is missing or unrecognized. No fallback to a "default role".
 
-**Prevention:** After wiring the TRPCProvider, write a smoke test:
-```typescript
-test('superjson roundtrips Date objects', async () => {
-  const result = await trpc.reports.myHistory.query();
-  expect(result[0]?.periodStart).toBeInstanceOf(Date);
-});
-```
-
-**Detection:** `TypeError: periodStart.toLocaleDateString is not a function` -- date was deserialized as string, not Date.
+**Guard:** Integration test in Phase A: stub IdP returns SAML response without role attribute → login endpoint returns 500 with `SAML profile missing required role attribute`. Add a metric/alarm on this error.
 
 ---
 
-### Pitfall 9: Auth Guards + DEV_MODE Split-Brain State
+### A-3 — Cookie injection in PDF worker uses wrong domain/secure flags (P1)
 
-**What goes wrong:** Adding session middleware/guards to `(app)/` routes will redirect unauthenticated users to `/auth/login`. But in development with `AUTH_DEV_MODE=true`, the tRPC context provides a fake session on the backend while the frontend has no session cookie. Split-brain: API calls succeed, but frontend route guards redirect to login.
+**What goes wrong:** Once CC-1 is wired, `page.context().addCookies([{name: 'session', value: token, domain: 'localhost', ...}])` works in dev but breaks in prod where the cookie domain is `reports.example.com` and `secure: true` is required. The PDF worker fetches from `PDF_BASE_URL`, which is `localhost:3000` in dev but `https://reports.example.com:3000` in prod. Mismatched cookie domain → cookie not sent → tRPC 401.
 
-**Current state:** `(app)/layout.tsx` has a TODO comment about session extraction ("Phase 10+"). No auth guard exists on frontend routes.
+**Detection signal:** PDF worker fetches `/reports/{id}/print` and the page renders the *login* page (or empty data because tRPC returned `null` from `auth.me`). The PDF generates but contains no report content.
 
-**Prevention:**
-1. Frontend auth guard must also respect `AUTH_DEV_MODE`:
-```typescript
-// In (app)/layout.tsx server component
-export default async function AppGroupLayout({ children }) {
-  if (process.env.AUTH_DEV_MODE !== 'true') {
-    const session = await getServerSession();
-    if (!session) redirect('/auth/login');
-  }
-  return <><NavBar />{children}</>;
-}
-```
-2. In E2E tests, either set `AUTH_DEV_MODE=true` or use the auth.setup.ts fixture (which already creates storage state files for lead/head roles).
+**Prevention:** A-plan adds `PdfExportService.buildAuthCookies(token, baseUrl)` that derives cookie domain/secure from `baseUrl` URL parsing. Unit-test with both dev and prod URL shapes.
 
-**Detection:** Redirect loop between `/auth/login` and `/(app)/` pages in dev mode.
+**Guard:** Integration test that asserts the rendered PDF contains the report period text (e.g. `Period 2026-W17`) — not just that a non-empty file was written. v5.0 currently only verifies file existence, that's insufficient.
 
 ---
 
-### Pitfall 10: Custom Logger Is NOT Pino -- Milestone Description Is Incorrect
+### A-4 — DEV_SESSION fallback in trpc.context.ts is the wrong "off" switch (P0)
 
-**What goes wrong:** The milestone context states "pino already exists, adding file rotation + correlation IDs." Reality from the actual codebase:
+**What goes wrong:** Naïve fix: delete the DEV_SESSION branch in `trpc.context.ts`. But `auth.me` is `publicProcedure` by design (see audit findings, D-24-01-A) — it deliberately returns `null` instead of throwing on unauthenticated requests so SessionProvider's first paint doesn't redirect-loop. If the DEV_SESSION fallback is in the wrong branch and is replaced by "throw UNAUTHORIZED" instead of "return null", the entire login page itself starts redirect-looping.
 
-`apps/api/src/lib/logger.ts` is a **custom hand-rolled JSON logger** with these capabilities:
+**Detection signal:** First-paint console error: "Maximum update depth exceeded" or repeated 401 in network tab on login page. Login page never renders.
 
-| Feature | Status |
-|---|---|
-| JSON structured output to stdout/stderr | Has |
-| Daily file rotation with configurable retention (14 days) | Has |
-| Child loggers with base context | Has |
-| Log level filtering (debug/info/warn/error) | Has |
-| Correlation IDs / request tracing | Missing |
-| Async-safe writes | Missing (uses `appendFileSync`) |
+**Prevention:** A-plan must explicitly call out `auth.me` semantics: returns `null` for unauthenticated, throws UNAUTHORIZED only for malformed sessions. The replacement of DEV_SESSION must preserve this. Code review checkpoint: "auth.me still uses `publicProcedure` and still returns null on no session."
 
-**Decision needed:** Either (a) add correlation IDs to the existing custom logger, or (b) replace with pino + pino-http for production-grade async logging with built-in correlation ID support.
-
-**Prevention if keeping custom logger:**
-```typescript
-// Add correlationId to TrpcContext creation
-import { randomUUID } from 'node:crypto';
-
-return async ({ req }) => {
-  const correlationId =
-    req.headers['x-correlation-id'] as string ?? randomUUID();
-  // ...
-  return { session, correlationId };
-};
-```
-
-**Prevention if replacing with pino:**
-- Replace `appendFileSync` with `pino.destination({ sync: false })`.
-- Use `pino-http` for automatic request logging with correlation IDs.
-- Keep the `AppLogger` interface so all 8 service files that import logger do not need signature changes.
-- Use `pino.transport` for file rotation instead of the hand-rolled `pruneOldFiles`.
-
-**Detection:** Reviewing production logs and finding no way to correlate a frontend error to the backend request that caused it.
+**Guard:** Existing test file `apps/api/src/modules/auth/me.contract.test.ts` (or add it) — case "no cookie → returns null, NOT throws". Must remain green throughout phase A.
 
 ---
 
-### Pitfall 11: Loading States Do Not Exist in Current Components
+## 2. Theme B — Quality Polish (5 test fails, postinstall, dead proxy.ts)
 
-**What goes wrong:** All current components render synchronously from mock constants. When switched to tRPC queries, there is a loading period where data is `undefined`. Components will crash with `Cannot read property 'name' of undefined` because they assume data is always present.
+### B-1 — Five test failures fixed individually instead of finding shared root cause (P1)
 
-**Example of the pattern that breaks:**
-```typescript
-// Current: data is always defined (from mock-data.ts)
-const products = MOCK_PRODUCTS; // always a populated array
+**What goes wrong:** v5.0 audit and `260426-vxp-SUMMARY.md` say: "5 fail (assertion-level timeouts on tRPC POST)" in Phase 26 first-run. Failure mode is consistent: assertion timeouts on POST. That's likely a shared pattern — autosave race, response interceptor matching wrong URL, or proxy.ts matcher gap. If someone fixes test #1 by upping the timeout, then test #2 by adding `await page.waitForLoadState('networkidle')`, then test #3 by mocking the response — they ship 5 different bandages over one root cause that resurfaces in every new spec.
 
-// After tRPC wiring:
-const { data: products, isLoading } = trpc.leadForm.byPeriod.useQuery({
-  reportId: activeReportId
-});
-// products is undefined during loading!
-// products.map(...) throws TypeError
-```
+**Detection signal:** First fix touches the test file, not a shared component or proxy.ts. Second fix touches a different test file but applies a similar workaround.
 
-This affects ALL 38 mock-data import sites across 25+ component files.
+**Prevention:** B-plan task #1 is "Diagnose root cause of all 5 failures *before* writing any fix." Spend a plan budget on triage. Hypothesis: all 5 are autosave debounce (3 s) racing the test's submit-then-assert-saved loop. If hypothesis confirmed, single fix is a `waitForAutosave()` test-helper or extending the autosave indicator's "Saved" lifecycle.
 
-**Prevention:**
-1. Add loading skeletons to each major section BEFORE wiring tRPC -- not as an afterthought.
-2. Use either `useSuspenseQuery` (pushes loading state up to nearest `<Suspense>` boundary) or explicit `if (isLoading)` guards at each query site.
-3. For server components: use RSC data fetching with `initialData` to avoid client-side loading entirely for the first render.
-4. Type-safety approach: use a pattern that makes `undefined` data a compile error:
-```typescript
-const { data } = trpc.leadForm.byPeriod.useSuspenseQuery({ reportId });
-// data is guaranteed non-null after Suspense resolves
-```
-
-**Detection:** White flash or "Cannot read property" errors immediately after adding `useQuery` to any component.
+**Guard:** After B is done, fixes touch ≤ 2 source files (one shared helper, one test config) — NOT 5 separate test files. If the diff has 5 separate test-file edits, the root cause was missed.
 
 ---
 
-## Minor Pitfalls
+### B-2 — `prisma generate` postinstall hook breaks CI (P1)
 
-### Pitfall 12: tRPC Batching Can Mask Individual Query Failures
+**What goes wrong:** v6.0 task B includes adding `prisma generate` postinstall. Postinstall runs in every `pnpm install` — including `pnpm install --frozen-lockfile` in CI before any env vars or `.env` exists. `prisma generate` itself works without DATABASE_URL (it only reads schema.prisma), but if the schema drifts and CI installs deps before the migration step, the generated client is stale. Also: postinstall runs in `node_modules/<dep>/postinstall`, which can fail noisily if a transitive dep also has postinstall and doesn't tolerate the project's prisma version.
 
-**What goes wrong:** The tRPC client uses `httpBatchLink`, which batches multiple queries into a single HTTP request. If one query in the batch fails auth (401), the entire batch fails -- including queries that would have succeeded independently. On pages with 3-4 queries (dashboard, lead form), a single failing query takes down all data on the page.
+**Detection signal:** CI fails with "Cannot find module '@prisma/client'" on a fresh runner. Or: postinstall logs warnings about peer-dep mismatches because pnpm's `onlyBuiltDependencies` allowlist is too narrow.
 
-**Prevention:** Add a `splitLink` to separate critical queries, or handle 401 globally with a redirect to login rather than per-query error handling.
+**Prevention:** B-plan must add `prisma` to `pnpm.onlyBuiltDependencies` (already used for other tools per CLAUDE.md). Idempotent script: `pnpm exec prisma generate --skip-generate-if-no-schema-change` (or check `node_modules/.prisma/client/index.d.ts` mtime). Postinstall is in `apps/api/package.json`, NOT root, so it doesn't run for `apps/web`-only installs.
 
----
-
-### Pitfall 13: Playwright Storage State Files Need Updating for Real Auth
-
-**What goes wrong:** E2E fixtures expect `.auth/lead.json` and `.auth/head.json` storage state files. When switching to real API, these must contain valid session cookies from actual auth flow (or a seed-based bypass). If `auth.setup.ts` is not updated for the new auth context, every test fails before any assertion runs.
-
-**Prevention:** Update `auth.setup.ts` to either (a) perform real SAML login and save cookies, or (b) call a dev-only `/api/dev/login` endpoint that issues a `customreport_session` cookie (matching the cookie name in `trpc.context.ts`) for a seed user.
+**Guard:** `pnpm install --frozen-lockfile` on a fresh clone (no `.env`, no DB up) succeeds and produces working `@prisma/client` types. Add to CI as a separate "fresh-install" job.
 
 ---
 
-### Pitfall 14: React Query Cache Serves Stale Data During Incremental Migration
+### B-3 — Deleting `apps/web/src/proxy.ts` deletes the wrong proxy.ts (P0)
 
-**What goes wrong:** During incremental migration (some pages on mock data, some on real API), React Query caches real API responses. If a user navigates from a real-API page to a mock-data page and back, cached data from different shapes can cause runtime errors.
+See **CC-6** above — same trap. Repeated here because it's specifically B's scope.
 
-**Prevention:** Either migrate all pages in a single PR (cleaner), or use separate query keys that clearly distinguish mock vs real data paths. The single-PR approach is strongly recommended for this project given the small number of pages (7).
+**Prevention specific to B:** Plan task says: "Delete `apps/web/src/proxy.ts` (the dead duplicate). Confirm `apps/web/proxy.ts` (the live one) still exists. Run `grep -r 'src/proxy' apps/web/` first to verify no imports."
+
+**Guard:** Post-delete `find apps/web -name 'proxy.ts'` returns exactly `apps/web/proxy.ts`. CI integration suite still passes the `auth-guards` spec.
 
 ---
 
-## Phase-Specific Warnings
+### B-4 — `weekly-report-page.test.tsx` fix masks a real Phase 23 PDF mock surface change (P2)
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|---|---|---|
-| Seed Data | UUID mismatch with DEV_SESSION (P3), name inconsistency across mocks (P6) | Seed must use hardcoded DEV_SESSION UUIDs, canonical names from a single constants file |
-| TRPCProvider Setup | White-screen on all pages (P2), 404 on /trpc (P7) | Error boundaries first, provider in (app) layout only, add next.config.ts rewrites |
-| Mapping Layer | Type errors from semantic mismatch (P1), undefined data crashes (P11) | Build api-mappers.ts + loading skeletons before any query wiring |
-| Per-Page Wiring | 339 tests break three different ways (P4), superjson Date issues (P8) | Phased: seed matches mocks, wire one page at a time, run tests after each |
-| Status-Risk Sync | Infinite render loop (P5) | Source flag pattern (`'user' \| 'auto-sync'`), not debounce |
-| Auth Guards | DEV_MODE split-brain (P9), Playwright auth setup stale (P13) | Frontend guard respects AUTH_DEV_MODE, update auth.setup.ts |
-| Production Logging | Logger is NOT pino (P10), missing correlation IDs | Decide: enhance custom logger or replace with pino |
-| E2E Migration | Batch test failures from query failures (P12), stale cache (P14) | Migrate all pages in single PR, add splitLink for critical queries |
+**What goes wrong:** HANDOFF.md and audit say 5 vitest failures in `weekly-report-page.test.tsx` are due to incomplete `pdfExport.request.mutationOptions` mock. Easy mistake: copy-paste the mutationOptions shape from another test, satisfy TypeScript, see green. But the actual API shape may have evolved post-Phase 23 in ways the test doesn't notice (e.g. job polling now expects `{ jobId, status, artifactUrl }` not `{ id, state, url }`).
 
-## Recommended Phase Ordering Based on Pitfalls
+**Detection signal:** The mock factory diverges from the real router's input/output Zod schema (which is the ground truth in `packages/shared`). If `appRouter.pdfExport.request._def.inputs[0]` differs from the mock's `mutationFn` signature, the mock is wrong.
 
-1. **Seed Data** (unblocks everything) -- addresses Pitfalls 3, 6
-2. **TRPCProvider + API Proxy Setup** (unblocks all wiring) -- addresses Pitfalls 2, 7, 8
-3. **Mapping Layer + Loading States** (unblocks per-page wiring) -- addresses Pitfalls 1, 11
-4. **Per-Page tRPC Wiring** (one page at a time, run tests after each) -- addresses Pitfall 4
-5. **Status-Risk Sync** (isolated UI feature, no test dependencies) -- addresses Pitfall 5
-6. **Auth Guards** (after wiring is stable) -- addresses Pitfalls 9, 13
-7. **Production Logging** (independent, can run in parallel with 4-6) -- addresses Pitfall 10
-8. **E2E Test Cleanup** (final pass for legitimate format changes) -- addresses Pitfall 4 Phase C
+**Prevention:** B-plan adds a helper `createTrpcMock(router)` that derives the mock from the real router types, not a hand-written factory. Or: import a typed mock from msw-trpc / similar that hits the actual router type definitions.
 
-## Time Estimates -- What Takes Longer Than Expected
+**Guard:** Mock factory uses `inferProcedureInput` / `inferProcedureOutput` from `@trpc/server`. A typecheck-only test asserts mock type is assignable to real procedure type. If router shape changes in C/D/E/F, vitest fails at typecheck not at runtime.
 
-| Task | Naive estimate | Realistic estimate | Why longer |
-|---|---|---|---|
-| Build mapping layer (P1) | "Just rename some types" -- 2h | 8-12h | 6 different semantic mismatches, each needs careful bidirectional mapping + date formatting |
-| Seed matching mock data (P3, P6) | "Quick prisma seed" -- 1h | 4-6h | UUID coordination with DEV_SESSION, name reconciliation across 3 mock files, relationship wiring (stages, assignments, reports, sections) |
-| Add TRPCProvider (P2) | "Wrap layout in provider" -- 30min | 2-4h | Error boundaries, Suspense boundaries, verify no white-screens across all 7 pages |
-| E2E migration (P4) | "Update imports" -- 4h | 16-24h | Each of 25+ components needs loading states, type mapping, and test verification. Three failure modes require sequential debugging. |
-| Status-Risk sync (P5) | "Two event handlers" -- 1h | 4-6h | Bidirectional sync with source flags, testing all combinations (status->risk, risk->status, delete risk->status reset), edge cases (multiple risks per product) |
+---
 
-## Sources
+## 3. Theme C — AI Features (Auto-Summary, Sentiment, Smart On-Track)
 
-All findings verified against actual codebase files:
-- `apps/web/src/components/lead/mock-data.ts` -- mock types and data (248 lines)
-- `apps/web/src/components/dashboard/mock-data.ts` -- dashboard mock types (494 lines)
-- `apps/web/src/components/admin/mock-data.ts` -- admin mock types with divergent names (310 lines)
-- `packages/shared/src/schemas/report.ts` -- Zod schemas, canonical API types (493 lines)
-- `prisma/schema.prisma` -- Prisma enums: `TrafficLightStatus(green,yellow,red)`, `ItemWorkflowStatus(done,in_progress,blocked)`, `PeriodStatus(open,published,reopened)`
-- `apps/api/src/infrastructure/trpc/trpc.context.ts` -- DEV_SESSION hardcoded UUIDs, `activeReportSectionId: null`
-- `apps/api/src/infrastructure/trpc/trpc.middleware.ts` -- superjson transformer, auth guards
-- `apps/api/src/infrastructure/trpc/trpc.router.ts` -- 36 endpoints in 9 namespaces, `reports.getActive` checks `activeReportSectionId`
-- `apps/api/src/lib/logger.ts` -- custom logger, NOT pino (157 lines, appendFileSync)
-- `apps/web/src/lib/trpc.ts` -- tRPC client exists with superjson but is unused
-- `apps/web/package.json` -- `@tanstack/react-query` ^5.97.0 and `@trpc/react-query` ^11.16.0 already installed
-- `apps/web/src/app/layout.tsx` -- root layout, no providers (31 lines)
-- `apps/web/src/app/(app)/layout.tsx` -- app group layout, no auth guard (26 lines)
-- `apps/web/e2e/fixtures.ts` -- Playwright fixtures with storage state
-- `apps/web/e2e/lead-journey.spec.ts` -- E2E tests asserting mock data strings
-- Grep: 38 `from.*mock-data` import sites across 25+ component files
+### C-1 — Anthropic API called per-render, not per-content-change (P0 cost)
+
+**What goes wrong:** Naïve mental model: "show summary in dashboard cell". Implementation puts a `useQuery({ queryFn: () => trpc.ai.summarize.query({ reportId }) })` inside the dashboard cell. Every page load = one Claude call. 6 leads × 50 dashboard loads/day × 4 weeks = 1200 calls/month for one team. At Sonnet pricing on a 5KB report, that's $50-100/month per team. Real cost is amplified because tRPC retries on error.
+
+**Detection signal:** Anthropic console shows requests/day count climbing linearly with team activity, not with new-report submissions. Bull Board shows `ai-summary` job count > daily-submission count.
+
+**Prevention:** C-plan creates `ai_summary` table with `(reportId, contentHash, summary, sentiment, generatedAt)` keyed on `contentHash = sha256(JSON.stringify(reportContent))`. Summary is generated *only* when `contentHash` changes, not when read. tRPC `ai.summarize.query` is `cacheable: true` and returns cached row; only `ai.summarize.mutate` (head-only, BullMQ-queued) recomputes.
+
+**Guard:** Integration test: load a report's dashboard 10 times → Anthropic mock is called exactly 1 time (or 0 if cached). Assert `ai_summary.generatedAt` does not advance on read.
+
+---
+
+### C-2 — LLM hallucinates traffic light counts (P0 trust)
+
+**What goes wrong:** Naïve prompt: "Summarize this status report:" + JSON dump. Claude writes "5 projects are on track, 2 at risk" when the actual numbers are 7 and 1. Once the head reads "5 on track" in the AI summary, the trust is broken for the entire feature.
+
+**Detection signal:** LLM output contains digits that don't match `count(projectStatuses where status='green')`. Manual smoke would catch but can be tested too.
+
+**Prevention:** C-plan structures the prompt to pass *pre-computed numbers* in the system prompt: "There are 7 on-track, 1 at-risk, 0 blocked projects. Write a 2-paragraph narrative explaining the trends — DO NOT change these numbers." Use Anthropic's structured output or a Zod-parsed response shape: `{ narrative: string, riskTone: 'positive'|'neutral'|'negative' }` — narrative is free-text, but tone and numbers are not LLM-decided.
+
+**Guard:** Vitest contract — fixture report with 7G/1Y/0R, run summarizer, assert output narrative contains "7" if it contains any green-count digit, OR contains no digits referring to status counts (regex). Run on 5 golden fixtures (see C-5).
+
+---
+
+### C-3 — PII / confidential text in prompts logged or sent to wrong LLM (P0 security)
+
+**What goes wrong:** Risks/decisions text from `Risk[].risk`, `Decision[].text` may contain client names, deal sizes, pre-disclosure financials. Today logs are JSON-rotated to `apps/api/storage/logs/` per Phase 25. If the AI module logs prompt+response (typical debug habit), confidential text lands in plaintext on disk forever. Compounding: if the org runs LiteLLM proxy or similar, prompts can be routed to a non-Anthropic LLM with different privacy guarantees.
+
+**Detection signal:** `grep -r 'risk' apps/api/storage/logs/ | head -5` reveals risk text. Or: Anthropic dashboard shows requests but Anthropic's "data deletion" toggle isn't on, and an org-policy review flags it.
+
+**Prevention:** C-plan adds a `redactForLogs(prompt: string): string` that masks any field originating from `Risk.risk`, `Decision.text`, `Risk.mitigation`, `Decision.impact`. AppLoggerImpl's tRPC middleware (Phase 25) gets an opt-out: `loggingMiddleware({ exclude: ['ai.summarize'] })`. Anthropic API key in `process.env['ANTHROPIC_API_KEY']` only — no client-side calls. Confirm Anthropic data retention setting is "do not train on data" in console.
+
+**Guard:** Test: trigger an AI summary, then `grep -c 'CONFIDENTIAL' apps/api/storage/logs/*.log` returns 0 (use a known sentinel string in the test fixture risk text). Lint rule: `no-console-log` extended to ban `console.log` or `logger.*` of variables named `prompt`, `messages`, `response.content` in `apps/api/src/modules/ai/`.
+
+---
+
+### C-4 — Synchronous tRPC summarize call blocks UI (P1 UX)
+
+**What goes wrong:** User clicks "Generate AI Summary", tRPC mutation hits Anthropic, takes 3-15 seconds, UI is frozen, user clicks again, retry, two parallel jobs. Existing pdf-export pattern (Phase 23) already showed this — request → poll → display. New devs may forget and inline the call.
+
+**Detection signal:** Lighthouse / dev-tools: long-task warnings on AI mutation. User-perceived: button shows spinner > 3 seconds.
+
+**Prevention:** C-plan mandates BullMQ queue `ai-summary` mirroring `pdf-export` shape: `request → returns jobId immediately → poll status → render when ready`. Reuse `ExportPdfButton` polling pattern. *Streaming* (Anthropic supports SSE) is a *progressive enhancement* on top — initial release ships polling.
+
+**Guard:** Network tab shows request → 200 in <500 ms with `{jobId}` body, then 2-second polling until completion. No request takes >1 s in the synchronous path.
+
+---
+
+### C-5 — No regression eval suite — quality drifts silently (P1)
+
+**What goes wrong:** Anthropic releases a new model, we bump the version, summaries get worse on edge cases (very short reports, all-red status, Russian text). No way to detect drift other than a head complaining months later.
+
+**Detection signal:** No CI step that exercises the LLM. Model upgrade PR lands without any quality check.
+
+**Prevention:** C-plan ships a `golden-set/` directory with 8-12 fixture reports covering: all-green, all-red, mixed, 1 lead missing, Russian text, short text (<100 words), long text (>5000 words), risks-only, decisions-only. `pnpm --filter api test:ai-eval` runs the summarizer over each, scores against rubric (factual accuracy via the C-2 number check, length, language matching input language, no PII leak).
+
+**Guard:** CI step `test:ai-eval` runs on every PR touching `apps/api/src/modules/ai/`. Skipped on other PRs (cost). Score below threshold = PR blocked.
+
+---
+
+### C-6 — Anthropic rate-limit storms after a deploy (P1)
+
+**What goes wrong:** First deploy after AI feature ships, the BullMQ queue is empty. Then 6 leads hit submit on Friday afternoon, plus head opens dashboard for all 5 weekly reports = 11 Anthropic calls in 30 seconds. If org is on free/scale tier, 429 storms. BullMQ retries multiplies the storm.
+
+**Detection signal:** BullMQ Bull Board shows `ai-summary` queue: 30 attempts, 25 failed, 5 succeeded. Anthropic error log: "Rate limit exceeded".
+
+**Prevention:** C-plan configures BullMQ queue with `limiter: { max: 5, duration: 60000 }` (5 per minute). Anthropic SDK with exponential backoff (built-in via `@anthropic-ai/sdk` retry config). Job priority: head's "regenerate all" is lower priority than lead's submit-trigger.
+
+**Guard:** Load test: queue 50 jobs in 1 second, observe Bull Board — no failures, just delayed completions over 10 minutes. Add a scripted check.
+
+---
+
+## 4. Theme D — Trend Analytics
+
+### D-1 — Aggregation queries hit Report→Section→ProjectStatus full join (P0 perf)
+
+**What goes wrong:** "Show traffic light history for project X over last 12 weeks" → naïve SQL fetches all reports, all sections, all project statuses, joins client-side. With 50 weeks × 6 leads × 12 projects = 3600 rows, response is ~500ms. At 2 years history, 31200 rows, 2-5 seconds. Dashboard becomes unusable. Pitfall #4 in v5.0 STATE.md ("type divergence is semantic") gets worse here because client-side joining with mappers compounds the cost.
+
+**Detection signal:** `pnpm --filter api test:perf:analytics` (or manual benchmark) shows `>500ms` for the analytics query. PostgreSQL `pg_stat_statements` shows the analytics query in top 5 by total time.
+
+**Prevention:** D-plan adds composite indexes on `(reportId, projectId)` for ProjectStatus, and a server-side aggregate procedure: `analytics.projectHistory.query({ projectId, from, to })` that does the rollup in SQL using `GROUP BY period_id`. Mapper layer (CC-3) handles the row-to-presentation translation. *No materialized view in MVP* — premature; just ensure indexes + server-side aggregation.
+
+**Guard:** Vitest perf test: 2 years of seeded data (use a fixture loader), `analytics.projectHistory.query` returns in <200ms p95. Run in CI on an isolated postgres instance.
+
+---
+
+### D-2 — Date timezone drift (server UTC, client local) → off-by-one weeks (P0 correctness)
+
+**What goes wrong:** Period.start is stored as `DateTime` in Prisma. Server is UTC. Client renders with `new Date(period.start).toLocaleDateString()` → in Moscow (UTC+3) the period starting "2026-04-20T00:00:00Z" shows as "2026-04-20" but a period starting "2026-04-20T22:00:00Z" shows as "2026-04-21". Charts label x-axis with these client-side dates → adjacent weeks merge or split incorrectly. Hydration also mismatches (server renders one date, client another).
+
+**Detection signal:** `console.error: Hydration failed because server-rendered HTML didn't match client.` Or: chart x-axis shows two ticks for the same period (one server-rendered, one client-rendered).
+
+**Prevention:** D-plan: all dates in tRPC responses are ISO date-only strings (`YYYY-MM-DD`), not Date objects. Mapper (CC-3) does this conversion. Charts label x-axis with these strings, no `new Date()` on client. Server computes "week label" (e.g. `2026-W17`) and sends that as a pre-formatted string. Force `Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' })` everywhere periods are rendered.
+
+**Guard:** Snapshot test for the analytics chart with `TZ=Europe/Moscow vitest run` — output identical to `TZ=UTC vitest run`. Hydration warning grep against Next.js dev server logs in integration test.
+
+---
+
+### D-3 — Chart library uses canvas/SSR breaks Next.js 16 build (P1)
+
+**What goes wrong:** Recharts works server-side except for some hooks. Chart.js uses canvas → must be `'use client'` only, fails SSR if imported in a server component. Visx is SVG-native but heavy. With Next.js 16's React Compiler + Turbopack, some chart libs have known issues (e.g. d3 with Compiler).
+
+**Detection signal:** `pnpm --filter web build` fails with "ReferenceError: window is not defined" or "document is not defined". Or: page renders blank chart on first paint, then chart appears after hydration.
+
+**Prevention:** D-plan picks chart lib *first* (recharts is current 2026 default for shadcn ecosystems — verify via shadcn-charts which uses recharts). Pin import: `import { LineChart } from 'recharts'` inside a `'use client'` component, NEVER from a server component. Provide a server-safe skeleton.
+
+**Guard:** Build smoke test: `pnpm --filter web build` succeeds. Production build serves chart page → first paint is skeleton, hydration → chart appears, no console error. Add to integration spec.
+
+---
+
+### D-4 — Missing-data semantics: zeros vs gaps mislead viewer (P1 correctness)
+
+**What goes wrong:** Lead Sergei skipped weeks 12 and 14 (sick). Naïve query LEFT JOINs and fills missing with 0. Chart shows traffic-light-count "0" for those weeks → looks like all projects went *neutral*, which is meaningless. Viewer infers "everything cleared up those weeks!" — wrong.
+
+**Detection signal:** Chart renders a flat-line of zeros for periods where ProjectStatus rows don't exist. Period dropdown shows the period but ProjectStatus.count(*) is 0.
+
+**Prevention:** D-plan: aggregator returns `{ period, value: number | null }`. Chart lib's `connectNulls={false}` and renders gaps. Add a "missing data" legend entry. Distinguish "0 risks reported" (zero data) from "lead didn't submit" (no data) at the SQL level — `LEFT JOIN report_section ON ... WHERE status='submitted'` so the absence is detectable.
+
+**Guard:** Snapshot test: fixture has period with no submission → chart shows gap, not zero. Tooltip on a missing period reads "No submission" not "0".
+
+---
+
+## 5. Theme E — Email Reminders
+
+### E-1 — Idempotency key collision after BullMQ retry (P0)
+
+**What goes wrong:** v1.0 / v2.0 already shipped email reminders (per PROJECT.md "✓ Head: carry-over, email reminders — v1.0-v2.0"). v6.0 task E says "extend, not duplicate". If new code adds a second `email-reminder` queue or a duplicate cron, two reminders ship for the same deadline. Worse — if BullMQ retry on transient SMTP error doesn't dedup, lead receives 3 emails for one missed deadline.
+
+**Detection signal:** Same lead receives N>1 reminder emails for one period. Bull Board shows multiple jobs with `jobId=reminder:{periodId}:{userId}` (or whatever the existing key shape is).
+
+**Prevention:** E-plan first task: read existing reminder code (`apps/api/src/modules/reminder/*` or `apps/api/src/infrastructure/bullmq/*`), document the existing idempotency key shape, extend it. New job names `email-reminder-deadline` and `email-reminder-escalation` with `jobId: \`${kind}:${periodId}:${userId}\`` to use BullMQ's built-in dedup (`removeOnComplete`/`removeOnFail` + named jobId).
+
+**Guard:** Integration test: trigger reminder for a period, simulate SMTP transient failure (wrong port, retry), assert exactly 1 email captured by mock SMTP. Test idempotency by triggering the cron twice in 1 second — still 1 email.
+
+---
+
+### E-2 — Off-hours sending (3am Moscow time annoys users) (P1)
+
+**What goes wrong:** Cron is set to `0 9 * * *` (9am server time). Server is UTC. 9am UTC = 12pm Moscow but most reminders are tied to deadlines, not absolute times. If a deadline cron fires at 9am UTC = 6am Yekaterinburg, leads in eastern offices wake up to email already in their inbox before they've started work — annoyance grows.
+
+**Detection signal:** User feedback / one-off complaint. No automated detection unless we add a `sentAt` log + correlate against User.timezone.
+
+**Prevention:** E-plan adds `User.timezone` (default `'Europe/Moscow'` since corp is Moscow-based) and the reminder cron computes per-user "next 9am-12pm in that user's TZ" send slot. BullMQ supports `delay` and `runAt` for scheduled jobs. Fallback: skip reminder if deadline already passed in user's TZ (escalation only).
+
+**Guard:** Unit test on the slot-computation function: input `now=2026-04-26T20:00Z, userTz='Asia/Yekaterinburg', deadline=2026-04-26T23:59:59+05'` → output: send at next 9am Yekaterinburg = `2026-04-27T04:00Z`. Verify with multiple TZ fixtures.
+
+---
+
+### E-3 — SMTP rate limit / corporate quota (P1)
+
+**What goes wrong:** Corporate SMTP server has a per-minute quota (often 30/min). When deadline reminders + escalations + daily digests stack, a single cron tick fires 50 emails → SMTP refuses #31+ → BullMQ retries → cascade.
+
+**Detection signal:** SMTP error code 421 / 451 / 4.7.0 in worker logs. Bull Board failed-job count rising during cron tick windows.
+
+**Prevention:** E-plan configures BullMQ limiter on `email-reminder` queue: `limiter: { max: 20, duration: 60000 }`. Rate is *below* SMTP quota by 30%. SMTP transport reuses connection (nodemailer pool) instead of opening per-message. Monitor SMTP timing.
+
+**Guard:** Load test: queue 100 reminders → all delivered without 4xx errors, total time ≥ 5 minutes due to throttle. Mock SMTP that rejects > 25/min — verify our limiter never hits this.
+
+---
+
+## 6. Theme F — Mobile Polish
+
+### F-1 — Existing 7 pages assume desktop layout (sticky sidebars, fixed-width tables) (P1)
+
+**What goes wrong:** v4.0 shipped "7 frontend pages with Starbucks design system". v5.0 shipped admin tabs and weekly-report flows. None had mobile-first audits. Sticky sidebars likely overlap content < 768px. Fixed-width tables overflow horizontally with no scroll affordance.
+
+**Detection signal:** DevTools mobile emulation (iPhone 12 / 390 px wide): horizontal scrollbar appears, sticky elements clip, click targets blocked.
+
+**Prevention:** F-plan starts with "Mobile audit pass" — Playwright responsive screenshots at 390 px, 768 px, 1024 px for each of 7+ key pages. Catalog every issue before fixing. Then systematic fixes — `<table>` → `<div role="table">` with `overflow-x-auto` wrapper; sticky elements `sticky md:sticky` (only on desktop+).
+
+**Guard:** Playwright visual-regression suite: 7 pages × 3 viewports = 21 screenshots committed as baseline. PRs that change layout must update baselines explicitly. Add to integration config (separate `playwright.mobile.config.ts`).
+
+---
+
+### F-2 — Touch targets under 44 px violate accessibility (P1)
+
+**What goes wrong:** shadcn/ui default `Button` has min-height 36 px (`h-9`). On mobile, Apple's HIG and Material both want 44 px tap targets. Status chip clicks (the at-risk → empty risk row from SYNC-01) are even smaller — likely 28-32 px.
+
+**Detection signal:** Lighthouse mobile audit fails "Tap targets are not sized appropriately." Automated axe-core check.
+
+**Prevention:** F-plan adds a `min-h-11 md:min-h-9` (44 px mobile, 36 px desktop) modifier to button variants in `packages/ui`. Status chips get explicit padding.
+
+**Guard:** axe-core a11y check in Playwright integration suite — fails on any tap target < 44px in mobile viewport.
+
+---
+
+### F-3 — PDF preview useless on mobile viewport (P2 UX)
+
+**What goes wrong:** PDF is 8.5×11" rendered at 96 dpi = 816×1056 px source. On a 390 px wide screen, the PDF iframe shrinks text to ~2 px — unreadable. Users zoom and pan, can't read. Or worse, iframe doesn't render at all on iOS Safari with `<embed>` tags.
+
+**Detection signal:** Real device test or DevTools — PDF iframe shows but text is unreadable. User feedback "I can't read the PDF on phone."
+
+**Prevention:** F-plan: detect mobile viewport (`window.matchMedia('(max-width: 768px)')`); show "Download PDF (3.2 MB)" button instead of inline iframe. Inline iframe only on `md+`. Acceptable degradation for v6.0.
+
+**Guard:** Playwright mobile spec: navigate to `/reports/{id}/pdf`, assert no `<iframe>` rendered, assert "Download PDF" button visible. Desktop spec: opposite.
+
+---
+
+## 7. Theme G — Release Checklist
+
+### G-1 — Stale checklist drift (committed once, never updated) (P1)
+
+**What goes wrong:** A committed `RELEASE-CHECKLIST.md` becomes a museum piece. New phases add deliverables that aren't in the checklist; old checklist items remain after the underlying step is automated. Within 2 milestones, the checklist no longer reflects reality and is mechanically rubber-stamped.
+
+**Detection signal:** Git blame on the checklist shows last meaningful update >2 milestones ago. PR adds new code but doesn't touch the checklist.
+
+**Prevention:** G-plan does NOT commit a static checklist. Instead, generate it at milestone-end from VERIFICATION.md frontmatter (each phase's `gaps:` and `human_verify:` items become checklist items automatically). Build a `pnpm gsd:checklist` script that scans `.planning/phases/*/VERIFICATION.md` and emits `RELEASE-CHECKLIST.md` from current state.
+
+**Guard:** Pre-tag CI step: regenerate checklist, `git diff --exit-code RELEASE-CHECKLIST.md` — if drift, milestone-complete is blocked. Forces author to address gaps before tagging.
+
+---
+
+### G-2 — Checklist becomes rubber-stamp ritual (P1)
+
+**What goes wrong:** Checklist has 30 items, all checked manually before tag. Once anyone checks 28/30 and the user wants to ship, the remaining 2 get checked without verification. v5.0 itself tagged with 4 unverified items per audit — exact symptom.
+
+**Detection signal:** v5.0 audit showed status: `tech_debt — runtime verification deferred per user`. That's the canonical example.
+
+**Prevention:** G-plan ties at least 3 checklist items to *machine* gates (CI checks, test commands), not human checkboxes. E.g. "Phase 26 integration suite green" must be `pnpm test:e2e:integration` exit 0, not a checkbox. "Audit gaps closed" must be `gsd:audit` showing 0 gaps_found, not a checkbox.
+
+**Guard:** Tag-creation script `gsd:complete-milestone` refuses to tag if any machine-gated item is unconfirmed. Human-checked items are clearly marked `[manual]` to disambiguate from `[CI-gated]`.
+
+---
+
+## 8. Severity & Phase-Plan Map
+
+| ID | Severity | Theme | Plan task that addresses it |
+|----|----------|-------|------------------------------|
+| CC-1 | P0 | A (also C, E) | A-plan: cookie injection sub-task in same plan as AUTH_DEV_MODE removal |
+| CC-2 | P0 | A | A-plan: AUTH_DEV_MODE_ALLOW_TEST switch + staged migration |
+| CC-3 | P1 | C, D | C and D plans: extend mappers as first sub-task |
+| CC-4 | P1 | C, E | E-plan and C-plan: add queue name + connection extract first |
+| CC-5 | P1 | C, D | C-plan and D-plan: react-compiler smoke before adopting |
+| CC-6 | P0 | B | B-plan: explicit path for proxy.ts deletion |
+| A-1 | P0 | A | A-plan: `roleProcedure` factory replaces `headProcedure` |
+| A-2 | P0 | A | A-plan: `SamlProfileSchema` requires role |
+| A-3 | P1 | A | A-plan: `buildAuthCookies(token, baseUrl)` |
+| A-4 | P0 | A | A-plan: preserve auth.me publicProcedure semantics |
+| B-1 | P1 | B | B-plan: triage before fix |
+| B-2 | P1 | B | B-plan: postinstall in apps/api only, not root |
+| B-3 | P0 | B | B-plan: explicit `apps/web/src/proxy.ts` path |
+| B-4 | P2 | B | B-plan: derive mock from router types |
+| C-1 | P0 | C | C-plan: `ai_summary` cache table on contentHash |
+| C-2 | P0 | C | C-plan: pre-compute numbers in prompt |
+| C-3 | P0 | C | C-plan: redactForLogs + Anthropic data setting |
+| C-4 | P1 | C | C-plan: BullMQ `ai-summary` queue with polling |
+| C-5 | P1 | C | C-plan: `golden-set/` + `test:ai-eval` |
+| C-6 | P1 | C | C-plan: BullMQ limiter + Anthropic backoff |
+| D-1 | P0 | D | D-plan: server-side aggregate + indexes |
+| D-2 | P0 | D | D-plan: ISO date strings via mapper |
+| D-3 | P1 | D | D-plan: chart lib smoke against React Compiler |
+| D-4 | P1 | D | D-plan: null vs zero in aggregator |
+| E-1 | P0 | E | E-plan: read existing reminder code first; extend dedup key |
+| E-2 | P1 | E | E-plan: User.timezone + per-TZ slot |
+| E-3 | P1 | E | E-plan: BullMQ limiter < SMTP quota |
+| F-1 | P1 | F | F-plan: audit-first systematic fix |
+| F-2 | P1 | F | F-plan: `min-h-11 md:min-h-9` + axe |
+| F-3 | P2 | F | F-plan: download-only on mobile |
+| G-1 | P1 | G | G-plan: generated checklist |
+| G-2 | P1 | G | G-plan: machine-gated items |
+
+**P0 count:** 11 (5 cross-cutting, 4 A-specific, 1 B, 3 C, 2 D, 1 E)
+**P1 count:** 17
+**P2 count:** 2
+
+---
+
+## 9. Sources
+
+- `.planning/PROJECT.md` (v5.0 shipped state, v6.0 scope)
+- `.planning/STATE.md` (Critical Pitfalls 1-4)
+- `.planning/v5.0-MILESTONE-AUDIT.md` (tech_debt list, deferred items)
+- `HANDOFF.md` (v5.0 tech debt with file paths)
+- `apps/api/src/infrastructure/bullmq/pdf-export.processor.ts:69-72` (TODO Phase 24 cookie seam)
+- `apps/web/proxy.ts` (live) + `apps/web/src/proxy.ts` (dead duplicate confirmed via filesystem)
+- `apps/web/src/app/(app)/layout.tsx` (auth.me semantics doc-comment)
+- `CLAUDE.md` (security defaults, performance targets, breaking changes Next.js 15→16, Prisma 6→7)
+- `260426-vxp-SUMMARY.md` reference in HANDOFF / STATE — 5 integration test failures with shared symptom
+
+**Confidence levels:**
+
+| Area | Level | Reason |
+|------|-------|--------|
+| CC-1, CC-2, CC-6, A-1..4 | HIGH | Direct quotes from audit + grep-confirmed file states |
+| B-1..4 | HIGH | Audit lists exact failure modes; codebase grep confirms file paths |
+| C-1..6 | MEDIUM | Anthropic API behaviour from training data + 2026 best practices; BullMQ pattern verified against existing pdf-export processor |
+| D-1..4 | MEDIUM | PostgreSQL/Prisma performance characteristics standard; chart lib SSR is well-known Next.js issue |
+| E-1..3 | MEDIUM | "Email reminders shipped v1.0-v2.0" per PROJECT.md — exact existing dedup key shape needs to be read in plan-time, not research-time |
+| F-1..3 | MEDIUM-HIGH | a11y/touch-target standards are stable; mobile audit pattern is mainstream |
+| G-1..2 | HIGH | v5.0 itself shipped with `tech_debt` status — direct evidence of G-2 happening |
+
+**Gaps to address in plan-time, not research-time:**
+
+- E-1 needs reading existing reminder code (couldn't do exhaustively here without exceeding research scope)
+- C-5 golden set needs domain expert (the head/Barkhanov) to validate the rubric
+- F-1 mobile audit baseline screenshots need a real device pass after first cut

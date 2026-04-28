@@ -1,480 +1,371 @@
-# Technology Stack Additions for v5.0
+# Stack Research — CustomReport v6.0 Additions
 
-**Project:** CustomReport
-**Milestone:** v5.0 Production Integration
-**Researched:** 2026-04-25
-**Overall confidence:** HIGH
+**Domain:** Internal weekly status-report SaaS — adding AI insights, trend analytics, mobile polish, real SAML, and email reminders to an existing v5.0 codebase.
+**Researched:** 2026-04-26
+**Confidence:** HIGH (Context7-verified for all new deps; existing stack untouched)
 
----
+> **Scope guard.** This research is **strictly additive**. The v5.0 stack (Next.js 16, NestJS 11, tRPC 11, Prisma 7, PostgreSQL 15, Redis 7, BullMQ 5, Vitest 4, Playwright 1.50, shadcn/ui, Tailwind v4, Zod 4, `@node-saml/passport-saml` 4.x, Keycloak 26, nodemailer) is **not re-evaluated**. Documented in [`CLAUDE.md`](/home/user/my/customreport/CLAUDE.md). This file lists **only what v6.0 features A–G need on top of that**.
 
-## Scope
+## Executive Summary
 
-This document covers ONLY the new libraries, patterns, and integration concerns
-for v5.0. It does NOT re-research the base stack (NestJS 11, Prisma 7, Zod 4,
-tRPC 11, BullMQ, Next.js 16, shadcn/ui, Tailwind v4, Vitest 4, Playwright 1.55).
+Of seven feature areas, **only three require new npm packages**:
 
-**v5.0 adds five capability areas:**
+| Feature area | New deps? | What |
+|---|---|---|
+| **A — Auth & roles** | No | Custom tRPC middleware on top of existing JWT/SAML; NestJS guards stay at HTTP boundary |
+| **B — Quality polish** | No | Config + cleanup only |
+| **C — AI features** | **Yes** | `@anthropic-ai/sdk` (1 dep, used in `apps/api/src/modules/ai/`) |
+| **D — Trend analytics** | **Yes** | `recharts` + shadcn/ui chart components (1 runtime dep + CLI install, used in `apps/web/src/components/charts/`) |
+| **E — Email reminders** | **Yes (templates only)** | `react-email` + `@react-email/components` (templates rendered to HTML for existing nodemailer pipeline) |
+| **F — Mobile polish** | No | New Playwright project (mobile viewports) using existing `@playwright/test` |
+| **G — Release checklist** | No | Markdown convention only |
 
-1. tRPC client wiring (migrate to React Compiler-safe package)
-2. Production logging with pino + file rotation + correlation IDs
-3. Correlation ID propagation via AsyncLocalStorage
-4. Playwright dual-server config for real API integration tests
-5. Session middleware / auth guards (no new packages -- wiring only)
+**Net additions: 4 npm packages** (`@anthropic-ai/sdk`, `recharts`, `react-email`, `@react-email/components`). All TypeScript-native, all Tailwind/Zod-native, all keep the monorepo single-language. No Python AI service. No LangChain. No Vercel AI SDK abstraction. No charting heavy-weight (Plotly/D3). No Storybook.
 
----
+## Recommended Stack — New Additions
 
-## 1. tRPC Client Migration: @trpc/tanstack-react-query
+### AI (feature area C)
 
-### New Packages
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| **`@anthropic-ai/sdk`** | `^0.90.0` (latest as of 2026-04-23, verified npm) | Direct Claude API access from NestJS | Official SDK, ships `betaZodTool` + `toolRunner` helpers that consume Zod schemas from `packages/shared` — no JSON Schema duplication. Native streaming, built-in `cache_control` + `tool_choice` + token usage in `message.usage`. |
 
-| Package | Version | Install To | Purpose |
-|---------|---------|------------|---------|
-| **@trpc/tanstack-react-query** | ^11.16.0 | apps/web | New TanStack-native tRPC integration |
-| **client-only** | ^0.0.1 | apps/web | Required by tRPC RSC setup (client boundary marker) |
-| **server-only** | ^0.0.1 | apps/web | Required by tRPC RSC setup (server boundary marker) |
+**Models — assignment by task:**
 
-### Package to Remove
+| Task | Model | API name | Rationale |
+|---|---|---|---|
+| Auto-summarization of weekly report (per section + assembled) | **Haiku 4.5** | `claude-haiku-4-5` | Narrow transformation (text → bullet summary), latency-sensitive (BullMQ job, but user waits to read). Cheapest tier sufficient. |
+| Sentiment classification on Risks (concerning / neutral / low_risk) | **Haiku 4.5** | `claude-haiku-4-5` | Classification with constrained output (Zod enum via `betaZodTool`), no multi-step reasoning needed. |
+| Smart "on track" judgement on traffic lights (project status across multiple signals: status + items + risks + carried-over) | **Sonnet 4.6** | `claude-sonnet-4-6` | Multi-signal reasoning, reconciles green/yellow/red with risk text and item completion — Haiku underperforms on contradiction detection. |
+| **NOT used for v6.0:** Opus 4.7 | — | `claude-opus-4-7` | Available (released 2026-04-16) but overkill for these tasks. Sonnet 4.6 sufficient at ~1/5 cost. Document as future option for hypothetical "rewrite my whole report" feature. |
 
-| Package | Why Remove |
-|---------|------------|
-| **@trpc/react-query** | Breaks under React Compiler. Creates proxy hooks that violate rules of hooks. |
-
-### Why This Is a Migration, Not Just Wiring
-
-The project already has `babel-plugin-react-compiler` and `eslint-plugin-react-compiler`
-installed. The classic `@trpc/react-query` package creates proxy-based hooks
-(`trpc.report.list.useQuery()`) that:
-
-- Break under React Compiler (hooks-as-props pattern)
-- Violate rules of hooks (dynamic hook creation)
-- Are explicitly deprecated in favor of `@trpc/tanstack-react-query`
-
-The new package uses a `queryOptions()` factory pattern that is React Compiler-safe
-and TanStack Query-native. Both packages can coexist during migration, but the
-classic one must be fully removed before enabling React Compiler optimizations.
-
-### Migration Pattern
+**Structured output pattern — forced tool use with Zod:**
 
 ```typescript
-// OLD (classic @trpc/react-query) -- current apps/web/src/lib/trpc.ts
-import { createTRPCReact } from '@trpc/react-query';
-export const trpc = createTRPCReact<AppRouter>();
-// Usage: trpc.report.list.useQuery()
+// apps/api/src/modules/ai/tools/sentiment.tool.ts
+import { betaZodTool } from '@anthropic-ai/sdk/helpers/beta/zod';
+import { z } from 'zod';
 
-// NEW (@trpc/tanstack-react-query)
-// NOTE: verify exact import names against @trpc/tanstack-react-query package exports during implementation
-import { createTRPCClient } from '@trpc/client';
-import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
-export const trpc = createTRPCOptionsProxy<AppRouter>({ client, queryClient });
-// Usage: useQuery(trpc.report.list.queryOptions())
+export const sentimentTool = betaZodTool({
+  name: 'classify_sentiment',
+  description: 'Classify the sentiment of a risk statement.',
+  inputSchema: z.object({
+    sentiment: z.enum(['concerning', 'neutral', 'low_risk']),
+    rationale: z.string().max(200),
+    confidence: z.number().min(0).max(1),
+  }),
+  run: async (input) => JSON.stringify(input), // pass-through; we read input directly
+});
+
+// Force the model to call the tool — guarantees structured output
+const response = await client.messages.create({
+  model: 'claude-haiku-4-5',
+  max_tokens: 256,
+  tool_choice: { type: 'tool', name: 'classify_sentiment' },
+  tools: [sentimentTool],
+  messages: [/* ... */],
+});
 ```
 
-### TRPCProvider for Next.js 16 App Router
+> **Why forced tool use over plain JSON-mode prompting:** Anthropic's canonical pattern, fails closed (model cannot return free text), Zod schema is the single source of truth, errors are caught at the SDK boundary not after parsing.
 
-Create a `'use client'` provider component that wraps `QueryClientProvider`.
+**Prompt caching — cost optimization for repeated rubrics:**
 
-**Files to create:**
-- `apps/web/src/trpc/query-client.ts` -- QueryClient factory with SSR-safe defaults
-- `apps/web/src/trpc/client.tsx` -- `'use client'` TRPCReactProvider component
-- `apps/web/src/trpc/server.ts` -- `'server-only'` prefetch utilities (optional, for RSC optimization later)
-
-**Key QueryClient settings:**
-- `staleTime: 30 * 1000` -- prevents immediate refetch after SSR hydration
-- `shouldDehydrateQuery` -- dehydrate pending queries for streaming
-- `credentials: 'include'` on httpBatchLink (already in existing code)
-- `superjson` transformer (already in existing code)
-
-**Mount location:** `apps/web/src/app/(app)/layout.tsx` (the authenticated layout),
-not the root layout. The login page does not need tRPC.
-
-### Packages That Stay Unchanged
-
-| Package | Version | Reason |
-|---------|---------|--------|
-| `@trpc/client` | ^11.16.0 | Shared by both old and new integrations |
-| `@trpc/server` | ^11.16.0 | Backend, no change |
-| `@tanstack/react-query` | ^5.97.0 | Compatible, no version bump needed |
-| `superjson` | ^2.2.6 | Still used as transformer on both client and server |
-
-**Confidence:** HIGH -- official tRPC docs recommend this migration, React Compiler incompatibility is documented.
-
----
-
-## 2. Production Logging: pino + pino-roll
-
-### New Packages
-
-| Package | Version | Install To | Purpose |
-|---------|---------|------------|---------|
-| **pino** | ^10.3.1 | apps/api | Structured JSON logger with worker-thread transports |
-| **pino-roll** | ^4.0.0 | apps/api | File rotation transport (daily + size-based + retention) |
-| **pino-pretty** | ^13.0.0 | apps/api (devDep) | Human-readable dev output |
-
-### Why Replace the Custom AppLogger Internals
-
-The existing `AppLoggerImpl` at `apps/api/src/lib/logger.ts` has four
-production blockers:
-
-1. **Synchronous file writes** -- `appendFileSync()` blocks the event loop on every log call
-2. **O(n) directory scan on every write** -- `pruneOldFiles()` calls `readdirSync()` + sort on every single log line
-3. **No compression** -- old log files sit uncompressed on disk
-4. **No size-based rotation** -- only date-based naming, no rotation on file size
-
-pino solves all of these:
-- Writes to a worker thread via `pino.transport()` -- zero main-thread blocking
-- pino-roll handles rotation in the worker thread (daily + size-based + retention limit)
-- Structured JSON output is already the format the custom logger produces
-
-### Integration Approach: Keep the AppLogger Interface
-
-The `AppLogger` interface is used throughout the API codebase. Replacing internals
-without changing the interface means zero changes in any consuming module.
+The system prompt that contains the report rubric (project list, traffic-light criteria, "what counts as on-track") is identical across all 6 leads each week. Mark it with `cache_control` to pay once and read 5× cheaper:
 
 ```typescript
-// apps/api/src/lib/logger.ts -- rewrite internals, keep interface
-import pino from 'pino';
-import { join } from 'node:path';
-
-export function createAppLogger(options: LoggerOptions = {}): AppLogger {
-  const targets: pino.TransportTargetOptions[] = [
-    // Always log to stdout (Docker captures this)
-    {
-      target: 'pino/file',
-      options: { destination: 1 },
-      level: options.minLevel ?? 'info',
-    },
-  ];
-
-  // File rotation when logDir is configured
-  if (options.logDir) {
-    targets.push({
-      target: 'pino-roll',
-      options: {
-        file: join(options.logDir, 'customreport'),
-        frequency: 'daily',
-        size: '50m',
-        limit: { count: 14 },
-        mkdir: true,
-        dateFormat: 'yyyy-MM-dd',
-      },
-      level: options.minLevel ?? 'info',
-    });
-  }
-
-  // Dev-only pretty printing
-  if (process.env.NODE_ENV === 'development') {
-    targets.push({
-      target: 'pino-pretty',
-      options: { colorize: true },
-      level: 'debug',
-    });
-  }
-
-  const pinoLogger = pino({
-    level: options.minLevel ?? 'info',
-    transport: { targets },
-  });
-
-  return new PinoAppLoggerAdapter(pinoLogger);
-}
-```
-
-### pino-roll Configuration Options
-
-| Option | Value | Purpose |
-|--------|-------|---------|
-| `file` | `join(logDir, 'customreport')` | Base filename. Rotation appends date + counter. |
-| `frequency` | `'daily'` | Rotate at midnight. Also supports `'hourly'`, `'weekly'`, or milliseconds. |
-| `size` | `'50m'` | Rotate when file exceeds 50MB. Accepts `k`, `m`, `g` suffixes. |
-| `limit.count` | `14` | Keep 14 rotated files + 1 active. Older files auto-deleted. |
-| `mkdir` | `true` | Create log directory if missing. |
-| `dateFormat` | `'yyyy-MM-dd'` | Filename pattern: `customreport.2026-04-25.1.log` |
-
-**Note:** pino-roll does NOT support gzip compression. If compression is needed
-later, add a cron job or use `pino-transport-rotating-file` (lower adoption).
-For v5.0, uncompressed daily rotation with 14-file retention is sufficient.
-
-### Compatibility Note
-
-pino-roll 4.0.0 (Oct 2025) + pino 10.3.1 (Feb 2026): Both use NDJSON transport
-protocol and are maintained by the same author (Matteo Collina). No explicit
-compatibility statement found in docs. **Verify in dev before deploying.**
-
-**Confidence:** HIGH (approach), MEDIUM (pino 10 + pino-roll 4 exact compat)
-
----
-
-## 3. Correlation IDs: nestjs-cls
-
-### New Package
-
-| Package | Version | Install To | Purpose |
-|---------|---------|------------|---------|
-| **nestjs-cls** | ^6.2.0 | apps/api | Request-scoped context via AsyncLocalStorage |
-
-### Why nestjs-cls, Not Manual AsyncLocalStorage
-
-- Integrates with NestJS DI -- inject `ClsService` anywhere, no manual store threading
-- `global: true` makes it available to all modules without per-module imports
-- Handles context setup/teardown automatically via middleware
-- 500K+ weekly npm downloads, actively maintained
-- Referenced in official NestJS docs (`docs.nestjs.com/recipes/async-local-storage`)
-
-### Integration with Existing Code
-
-**Step 1: Register ClsModule (must be FIRST import in app.module.ts):**
-
-```typescript
-// apps/api/src/app.module.ts
-@Module({
-  imports: [
-    ClsModule.forRoot({
-      global: true,
-      middleware: { mount: true },
-    }),
-    // ... other modules after CLS
+const response = await client.messages.create({
+  model: 'claude-sonnet-4-6',
+  system: [
+    { type: 'text', text: REPORT_RUBRIC, cache_control: { type: 'ephemeral' } },
   ],
-})
-```
-
-**Step 2: Update CorrelationIdMiddleware to store in CLS:**
-
-The existing middleware at `apps/api/src/infrastructure/middleware/correlation-id.middleware.ts`
-already extracts/generates the correlation ID and sets the response header.
-Add CLS storage:
-
-```typescript
-@Injectable()
-export class CorrelationIdMiddleware implements NestMiddleware {
-  constructor(private readonly cls: ClsService) {}
-
-  use(req: Request, res: Response, next: NextFunction): void {
-    const correlationId = (req.headers['x-request-id'] as string) ?? randomUUID();
-    req.headers['x-request-id'] = correlationId;
-    res.setHeader('x-request-id', correlationId);
-    this.cls.set('correlationId', correlationId);
-    next();
-  }
-}
-```
-
-**Step 3: Logger reads from CLS on every log call:**
-
-```typescript
-// In PinoAppLoggerAdapter, enrich every log entry with correlationId
-private getCorrelationId(): string | undefined {
-  try {
-    return this.cls?.get('correlationId');
-  } catch {
-    return undefined; // Outside request context (startup, cron jobs)
-  }
-}
-```
-
-**tRPC context integration:** The CLS store is available in the tRPC
-`createContext` factory since it runs within the Express request lifecycle.
-The correlation ID appears automatically in all tRPC handler logs without
-any changes to `trpc.context.ts`.
-
-**Confidence:** HIGH
-
----
-
-## 4. Playwright Dual-Server Config for Real API Tests
-
-### No New Packages Needed
-
-Playwright ^1.55.0 is already installed. The change is configuration, not packages.
-
-### Key Change: webServer as Array
-
-The current `apps/web/playwright.config.ts` starts only the Next.js dev server.
-For real API integration tests, it needs a dual-server array:
-
-```typescript
-webServer: [
-  // API server (must start first)
-  {
-    command: `pnpm --filter @customreport/api exec tsx src/main.ts`,
-    url: `http://127.0.0.1:${API_PORT}/health`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-    env: {
-      DATABASE_URL: process.env.E2E_DATABASE_URL ?? 'postgresql://...',
-      AUTH_DEV_MODE: 'true',
-      PORT: String(API_PORT),
-      NODE_ENV: 'test',
-      LOG_LEVEL: 'warn',
-    },
-  },
-  // Web server (depends on API being up)
-  {
-    command: `pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
-    url: WEB_URL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    env: {
-      NEXT_PUBLIC_API_URL: `http://127.0.0.1:${API_PORT}`,
-      AUTH_DEV_MODE: 'true',
-      NODE_ENV: 'test',
-    },
-  },
-],
-```
-
-### Database Seeding: Expand auth.setup.ts, NOT globalSetup
-
-The existing `auth.setup.ts` project dependency pattern is already correct.
-Expand it rather than introducing `globalSetup`, because:
-
-- `globalSetup` runs outside the test runner -- no fixtures, no `page`/`request`
-  objects, no trace viewer integration, no visibility in HTML report
-- Database connections in `globalSetup` get terminated when the function ends
-- Project dependencies give full Playwright integration (traces, HTML report, fixtures)
-
-**Pattern:**
-
-```typescript
-// e2e/auth.setup.ts
-setup('seed database', async ({ request }) => {
-  // Option A: Call a seed endpoint
-  await request.post(`http://127.0.0.1:${API_PORT}/api/seed`);
-
-  // Option B: Run prisma seed via child_process
-  // execSync('pnpm --filter @customreport/api exec prisma db seed');
-});
-
-setup('authenticate as head', async ({ page }) => {
-  await page.goto('/auth/dev-login?role=head');
-  await page.context().storageState({ path: authFile('head') });
+  // ...
 });
 ```
 
-### Existing Fixtures Stay Unchanged
+- **Default TTL: 5 minutes.** Sufficient if all 6 lead sections are summarized within the same job batch.
+- **1-hour TTL** (`cache_control: { type: 'ephemeral', ttl: '1h' }`) costs 2× write but is only worth it if jobs span >5 min.
+- **Hard constraint:** Cache breakpoint requires **≥1,024 tokens** in the cached segment, otherwise silently ignored. The rubric must be that big — flag this for AI-SPEC validation.
+- Pricing reference: 5m write = 1.25× input price, 1h write = 2× input price, cache read = 0.1× input price.
 
-The role-scoped fixtures in `apps/web/e2e/fixtures.ts` (`leadPage`, `headPage`)
-are already wired to use `storageState` from `.auth/*.json` files. No changes needed.
+**Cost & token tracking — required Prisma model:**
 
-**Confidence:** HIGH
+```prisma
+// add to apps/api/prisma/schema.prisma in v6.0
+model AiInsight {
+  id                    String   @id @default(cuid())
+  reportId              String
+  type                  String   // 'summary' | 'sentiment' | 'on_track_judgement'
+  model                 String   // 'claude-haiku-4-5' | 'claude-sonnet-4-6'
+  inputTokens           Int
+  outputTokens          Int
+  cacheCreationTokens   Int      @default(0)
+  cacheReadTokens       Int      @default(0)
+  costUsd               Decimal  @db.Decimal(10, 6)
+  latencyMs             Int
+  createdAt             DateTime @default(now())
+  // ... payload fields by type (jsonb)
+  @@index([reportId])
+  @@index([createdAt])
+}
+```
 
----
+Read `message.usage.input_tokens / output_tokens / cache_creation_input_tokens / cache_read_input_tokens` after every call and persist. **Without this model, cost auditability is lost** — flag as roadmap requirement, not optional.
 
-## 5. Session Middleware / Auth Guards
+**Integration points (named, for the roadmapper):**
+- New module: `apps/api/src/modules/ai/`
+  - `ai.service.ts` — single `AnthropicClient` instance, `summarize() / classifySentiment() / judgeStatus()` methods
+  - `ai.router.ts` — tRPC procedures `ai.summary.get`, `ai.sentiment.list`, `ai.judgement.get`; **all invoked from existing tRPC layer**, never directly from frontend
+  - `prompts/` — markdown files with rubric content, imported as strings (so prompt diffs show in git)
+  - `processors/ai-summary.processor.ts` — BullMQ processor for slow async summarization (5–30 s); sentiment + judgement run sync within tRPC request budget (<2 s for Haiku)
+  - `tools/{sentiment,judgement}.tool.ts` — Zod-typed `betaZodTool` definitions
+- New env: `ANTHROPIC_API_KEY` (required), `ANTHROPIC_MODEL_FAST` (default `claude-haiku-4-5`), `ANTHROPIC_MODEL_REASONING` (default `claude-sonnet-4-6`) — make swappable for cost experiments without code change
+- Existing tRPC `protectedProcedure` is reused; AI procedures gated behind `head` role (lead-facing AI summaries are an open product question for AI-SPEC)
 
-### No New Packages Needed
+### Charts (feature area D)
 
-All auth packages are already installed:
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| **`recharts`** | `^3.3.0` (verified Context7) | React + D3 charting library | Composable React components, native SVG (no canvas), built-in responsive container, `isAnimationActive={false}` for SSR. **Used as the engine; we don't write Recharts directly.** |
+| **`react-is`** | aligned with React 19 | Recharts peer dep | Required by `recharts` |
+| **shadcn/ui Chart** | latest (CLI: `pnpm --filter web dlx shadcn@latest add chart`) | shadcn wrapper components over Recharts | **This is the actual surface we use.** Reads chart colors from Tailwind v4 CSS variables (`--chart-1`...`--chart-5`), so traffic-light history graphs automatically match the existing Starbucks design system. Zero theme wiring. Composable: drop into `<ChartContainer>` and Recharts pieces become theme-aware. |
 
-| Package | Version | Status |
-|---------|---------|--------|
-| `@nestjs/passport` | ^11.0.5 | Installed |
-| `passport-jwt` | ^4.0.1 | Installed |
-| `jsonwebtoken` | ^9.0.2 | Installed |
-| `cookie-parser` | ^1.4.7 | Installed |
-| `@node-saml/passport-saml` | ^5.1.0 | Installed |
+**Why shadcn/ui Chart, not raw Recharts:**
 
-### What Already Exists
+1. **Tailwind v4 theme integration** — colors come from CSS variables we already define for the cream/teal/gold palette. Switching dark mode "just works."
+2. **Same composition pattern** as the existing 30+ shadcn components in the codebase. No new mental model.
+3. **No abstraction lock-in** — when Recharts ships v4, we follow Recharts' upgrade path directly. shadcn copy-paste means we own the wrapper code.
+4. **AI-friendly** (the project's stated reason for shadcn elsewhere) — Claude Code can generate chart shapes by example.
 
-The backend auth infrastructure is complete:
-- `trpc.context.ts` extracts JWT from `customreport_session` cookie, verifies via `authController.verifySessionToken()`, falls back to DEV_SESSION when `AUTH_DEV_MODE=true`
-- `trpc.middleware.ts` has `protectedProcedure` (requires session) and `headProcedure` (requires head role)
-- `auth.routes.ts` mounts SAML login/callback/logout + dev-login
+**Charts needed for D:**
+- Traffic-light history per project: **stacked bar chart** (week on X, count of green/yellow/red on Y) → `BarChart` + `Bar` (stackId)
+- Velocity per lead: **line chart** (week on X, items-completed on Y, one line per lead) → `LineChart` + multiple `Line`
+- Period-over-period comparison: **dual-axis or paired bar** (current week vs prior week) → `ComposedChart`
 
-### What's Needed (Application-Level, Not Stack-Level)
+All three shapes are first-class shadcn/ui chart variants — no exotic chart customization needed.
 
-1. **Next.js `proxy.ts`** (replaces `middleware.ts` in Next.js 16) to check cookie presence and redirect to `/login`
-2. **Forward cookies from SSR requests** to API when prefetching
-3. **`AUTH_DEV_MODE=true`** in dev `.env` for local development without Keycloak
+**SSR caveat (must flag for roadmapper):**
+- `<ResponsiveContainer>` measures DOM, requires `'use client'` boundary
+- Convention: `apps/web/src/components/charts/*.tsx` are all client components; pages stay RSC and lazy-import the chart wrappers
+- Disable animations on initial render (`isAnimationActive={false}`) to avoid hydration jitter under React 19 + Turbopack
 
-**Confidence:** HIGH -- all code exists, just needs wiring
+**Integration points:**
+- New folder: `apps/web/src/components/charts/`
+  - `traffic-light-history.chart.tsx`, `lead-velocity.chart.tsx`, `period-comparison.chart.tsx`
+- New tRPC procedures: `analytics.trafficLightHistory`, `analytics.leadVelocity`, `analytics.periodComparison` (all aggregate queries on existing Report/ProjectStatus/Item models)
+- New page: `apps/web/src/app/(head)/analytics/page.tsx` — head/admin only
 
----
+**Fallback:** if a future chart shape is not in shadcn's catalog (unlikely for these three), drop one level down and use Recharts directly. Both libs are already in `package.json` after the v6.0 install.
+
+### Email Templates (feature area E)
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| **`react-email`** | `^3.x` (latest stable, Context7-verified) | CLI + dev preview server for `.tsx` email templates | Live preview at `localhost` during dev, no manual HTML reload loop |
+| **`@react-email/components`** | `^0.x` (latest stable) | Pre-built email-safe React components (Html, Body, Section, Tailwind, Button, …) | Handles the Outlook/Gmail/Apple Mail rendering quirks we don't want to handcraft. Inline styles auto-generated from Tailwind classes via `<Tailwind>` wrapper — same utility classes as the rest of the app. |
+
+**Why react-email and not MJML or raw HTML:**
+- **React/TypeScript native.** Type-checked props, importable from `packages/shared`, lives in the monorepo with everything else.
+- **Tailwind classes work in emails.** `<Tailwind>` component compiles classes to inline styles at render time — no separate CSS pipeline, brand colors stay consistent with the web UI.
+- **MJML rejected:** XML DSL, separate build step, no React, weaker type safety.
+- **Raw HTML strings rejected:** maintenance nightmare, cannot review safely, no compiler help.
+
+**Existing infra is enough — confirmed:**
+- BullMQ already wired (`apps/api/src/modules/queues/`, used by pdf-export in v5.0)
+- nodemailer already wired (used in v2.0 reminders)
+- v6.0 only adds: (a) react-email templates, (b) a new BullMQ queue/processor for weekly-deadline + escalation, (c) a render-and-send helper
+
+**Pattern (matches existing pdf-export structure):**
+
+```typescript
+// apps/api/src/modules/email/email.service.ts
+import { render } from '@react-email/components';
+import { ReminderEmail } from './templates/reminder.email';
+
+const html = await render(<ReminderEmail leadName={…} deadline={…} />);
+const text = await render(<ReminderEmail leadName={…} deadline={…} />, { plainText: true });
+await this.transporter.sendMail({ from, to, subject, html, text });
+```
+
+> Always send both `html` and `text` (corporate spam filters score multipart higher; `react-email` renders both from the same component).
+
+**Integration points:**
+- New folder: `apps/api/src/modules/email/templates/*.email.tsx` — one component per email type (`reminder.email.tsx`, `escalation.email.tsx`, future: `report-published.email.tsx`)
+- New BullMQ queue: `email-reminders` with cron-like delayed jobs (BullMQ supports this natively via `repeat` options)
+- Reuse existing `MAIL_FROM`, `SMTP_*` env vars
+- Dev preview: add `pnpm --filter api email:dev` script that runs `react-email dev` against `templates/` — opens local UI for visual review
+
+### RBAC (feature area A)
+
+**No new dependencies.** RBAC layered as tRPC middleware on top of the existing JWT-authenticated tRPC `protectedProcedure`.
+
+| Component | Where | What |
+|---|---|---|
+| HTTP boundary | NestJS guards (existing) | `JwtAuthGuard` validates the SAML-issued JWT, populates `req.user = { id, role, … }` |
+| tRPC context | `createContext()` (existing) | Reads `req.user`, exposes as `ctx.user` |
+| **NEW: Role middleware** | `packages/shared/src/trpc/middleware/role.ts` | Factory `requireRole(['head', 'admin'])` returns a middleware that throws `TRPCError({ code: 'FORBIDDEN' })` if `ctx.user.role` is missing or not in the allowed set |
+| **NEW: Procedure helpers** | `packages/shared/src/trpc/builders.ts` | `headProcedure = protectedProcedure.use(requireRole(['head', 'admin']))`, `adminProcedure`, `leadProcedure`, `viewerProcedure` (read-only) |
+
+**Why no `trpc-shield` and no other RBAC library:**
+- Only 4 roles, simple role-list check — DSL adds complexity, not safety
+- One file of middleware (~30 LOC) vs. another dep with weaker maintenance signal
+- Type inference stays clean — `headProcedure.query(…)` is fully typed end-to-end
+
+**Why custom middleware and not hand-coded `if (ctx.user.role !== 'head')` in every procedure:**
+- Centralized: one file decides what FORBIDDEN looks like
+- Composable with input validation (`requireRole().input(…).query(…)`)
+- Auditable: every restricted procedure has a visible role declaration in its definition
+
+**Cookie injection in BullMQ pdf-export (carried v5.0 debt):** the existing `TODO(Phase 24)` seam in `pdf-export.processor.ts` is closed by passing the JWT (not the cookie) to Playwright as a header — `page.setExtraHTTPHeaders({ Authorization: 'Bearer …' })`. **No new package.** This is a plan/integration concern, not a stack concern.
+
+### Mobile Polish (feature area F)
+
+**No new dependencies.** Use Playwright (already installed at 1.50+) with a new project for mobile viewports.
+
+```typescript
+// apps/web/playwright.config.ts (extend existing)
+import { devices } from '@playwright/test';
+
+export default defineConfig({
+  projects: [
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+    // NEW for v6.0:
+    { name: 'mobile-ios', use: { ...devices['iPhone 14'] } },
+    { name: 'mobile-android', use: { ...devices['Pixel 7'] } },
+  ],
+});
+```
+
+**Why no Storybook:**
+- 7 existing pages, finite scope — running an entire dev environment alongside Next.js to view them at different breakpoints is overkill
+- Playwright viewport tests double as regression guards: snapshot mobile screens, fail CI on layout regression
+- Tailwind v4 responsive utilities (`sm:`, `md:`, `lg:`) plus `<ResponsiveContainer>` for charts cover the visual work
+
+**Integration points:**
+- New test file: `apps/web/tests/mobile/breakpoints.spec.ts` — visits each of the 7 pages at iPhone 14 + Pixel 7, asserts no horizontal scroll (`page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)`), captures screenshots
+- Run in CI as `pnpm playwright test --project=mobile-ios --project=mobile-android`
+
+### Release Checklist (feature area G)
+
+**No new dependencies.** Pure markdown convention.
+
+- File: `CHECKLIST.md` at repo root
+- Optional: pre-commit hook (existing Husky) blocks commits to `main` that touch `CHECKLIST.md` placeholders → forces conscious update on each release
+
+### Quality Polish (feature area B)
+
+**No new dependencies.** Pure config + cleanup:
+- `prisma generate` in root `package.json` `postinstall` script (so fresh `pnpm install` produces a working `@prisma/client`)
+- Delete `apps/web/src/proxy.ts` (dead — Next.js 16 reads `proxy.ts` from app root, not nested under `src`)
+- Fix the 5 integration test failures (single tRPC POST timeout root cause, per the milestone brief)
+- Fix `period.contract.test.ts:65` `_userId` rename
+
+## Installation
+
+```bash
+# AI features (apps/api)
+pnpm --filter api add @anthropic-ai/sdk
+
+# Charts (apps/web)
+pnpm --filter web add recharts react-is
+pnpm --filter web dlx shadcn@latest add chart   # generates wrapper components
+
+# Email templates (apps/api)
+pnpm --filter api add react-email @react-email/components
+pnpm --filter api add -D react-email   # for `email:dev` preview server
+
+# Optional dev script — add to apps/api/package.json:
+#   "email:dev": "email dev --dir src/modules/email/templates"
+
+# No installs needed for: A (RBAC), B (quality), F (mobile), G (checklist)
+```
+
+## Alternatives Considered
+
+| Recommended | Alternative | When Alternative Would Be Better |
+|---|---|---|
+| `@anthropic-ai/sdk` direct | **LangChain.js** | If you need to swap providers frequently or build agent chains. We don't — committed to Anthropic, narrow tasks. |
+| `@anthropic-ai/sdk` direct | **Vercel AI SDK (`ai` + `@ai-sdk/anthropic`)** | If you need streaming UI primitives bundled or planning multi-provider abstraction. We don't — backend tRPC consumes results, no streaming UI required for these features. |
+| Sonnet 4.6 for judgement | **Opus 4.7** | If quality plateau on Sonnet becomes a blocker. Default no — 5× cost, marginal gain on classification-style tasks. |
+| Haiku 4.5 for sentiment | **Sonnet 4.6** | If false-positive rate on "concerning" classification exceeds product tolerance. Defer until measured. |
+| shadcn/ui Chart over Recharts | **Tremor** | Tremor is Vercel-acquired, also wraps Recharts — adds a redundant abstraction over what shadcn already provides. Skip. |
+| shadcn/ui Chart over Recharts | **Apache ECharts / Plotly** | Only if 3D / map / Sankey visualizations needed. Not for traffic-light history. |
+| react-email | **MJML** | If team is already invested in MJML elsewhere. Not the case here. |
+| react-email | **Hand-rolled HTML strings** | Never. Email-client compatibility surface is too large. |
+| Custom tRPC RBAC middleware | **`trpc-shield`** | If RBAC rules become a complex graph (e.g., per-resource permissions, ABAC). 4 flat roles do not justify it. |
+| Playwright mobile project | **Storybook + viewport addon** | If component-library work begins (cross-team UI library, design-system docs). Not the case for v6.0. |
+| Playwright mobile project | **Chromatic / Percy** | When multiple PRs/week need design review. Currently solo dev — overkill. |
 
 ## What NOT to Add
 
-| Library | Why Skip |
-|---------|----------|
-| **nestjs-pino** | Requires restructuring DI around its `LoggerModule`. The custom `AppLogger` interface is already used throughout the API. Wrapping pino directly is simpler and preserves the existing interface contract. |
-| **winston** | 10x slower than pino in benchmarks. Larger bundle. pino is the Node.js standard for structured JSON logging. |
-| **cls-hooked** | Deprecated. Uses monkey-patched async hooks. `nestjs-cls` uses native `AsyncLocalStorage` (stable since Node 16). |
-| **@trpc/next** | Pages Router only. This project uses App Router exclusively. |
-| **pino-pretty in production** | Dev-only dependency. In production, structured JSON goes to stdout (Docker captures) and pino-roll handles files. |
-| **express-async-errors** | Not needed. NestJS + tRPC handle async error propagation natively. |
-| **@tanstack/react-query-devtools** | Optional DX tool. Useful but not v5.0 scope. Can add later. |
+The user might be tempted to reach for these. Don't.
 
----
+| Avoid | Why | Use Instead |
+|---|---|---|
+| **LangChain / LangChain.js** | Hides Anthropic SDK behind unnecessary abstraction; agent/chain primitives unused for narrow text-transformation tasks; outsized maintenance / breaking-change cadence | `@anthropic-ai/sdk` direct |
+| **Vercel AI SDK (`ai` package)** | Multi-provider abstraction; pointless when committed to one provider; UI streaming primitives unused for our backend tRPC tasks | `@anthropic-ai/sdk` direct |
+| **A separate Python AI service** (FastAPI + `anthropic` Python SDK) | Doubles deployment surface, requires inter-service auth, breaks shared-types story, slower CI; offers nothing TypeScript SDK lacks | Same monorepo, NestJS module `apps/api/src/modules/ai/` |
+| **Tremor** | Wraps Recharts (same engine as shadcn/ui Chart); adds an extra abstraction layer with weaker theming integration; redundant | shadcn/ui Chart |
+| **Plotly / vis.js / D3 directly** | Heavyweight (Plotly bundle ~3 MB), imperative APIs awkward in React 19 + Turbopack; overkill for traffic-light history + line + bar | Recharts via shadcn/ui Chart |
+| **Tailwind-only SVG charts** | Would require hand-coding axes, tooltips, scales, hit-targets — all of which Recharts solves. False economy. | Recharts via shadcn/ui Chart |
+| **`trpc-shield`** | Custom middleware does the job in ~30 LOC; trpc-shield's DSL is for graph-of-rules complexity we don't have | Custom `requireRole()` middleware in `packages/shared` |
+| **Storybook** | Build/maintenance overhead disproportionate to "polish 7 existing pages"; no shared component library to document | Playwright mobile project |
+| **MJML** | Not React-native, separate build step, weaker type safety | `react-email` |
+| **`pdfkit` / `jsPDF` / `puppeteer`** | PDF stays on Playwright (v5.0 decision). Don't reopen. | Existing Playwright PDF processor |
+| **`cron` / `node-cron` for reminders** | BullMQ has native `repeat` (cron-syntax) job options; adding cron creates two scheduling systems | BullMQ `repeat: { pattern: '0 9 * * 5' }` |
+| **`zod-to-json-schema`** | `betaZodTool` from the SDK does this internally for Anthropic tool definitions; manual conversion only needed if integrating non-Anthropic JSON-Schema-consuming services | Anthropic SDK helper |
 
-## Installation Commands
+## Stack Patterns by Variant
 
-```bash
-# From monorepo root
+**If AI cost ever exceeds budget:**
+- First lever: extend cache TTL to `1h` for the rubric system prompt (2× write cost, 0.1× read — net win if jobs span >5 min)
+- Second lever: downgrade Sonnet 4.6 → Haiku 4.5 for judgement task; retire the upgrade if judgement quality drops below product threshold
+- Third lever: batch summarization via Anthropic Batch API (50% discount, async result polling) — but this is a v7+ optimization, not v6
 
-# apps/web -- tRPC migration
-pnpm --filter @customreport/web add @trpc/tanstack-react-query@^11.16.0 client-only server-only
-pnpm --filter @customreport/web remove @trpc/react-query
+**If chart performance becomes a problem (>1k data points per series):**
+- First lever: pre-aggregate on the server (PostgreSQL `date_trunc('week', …) GROUP BY`) — never ship 1000 raw points to the browser
+- Second lever: Recharts `<Brush>` zoom + windowed rendering
+- Third lever (unlikely needed): swap to ECharts via the same shadcn-style copy-paste wrapper
 
-# apps/api -- logging + correlation IDs
-pnpm --filter @customreport/api add pino@^10.3.1 pino-roll@^4.0.0 nestjs-cls@^6.2.0
-pnpm --filter @customreport/api add -D pino-pretty@^13.0.0
-```
+**If email templates need previewing in production-like SMTP for QA:**
+- Add MailHog or Mailpit to local Docker Compose (zero-cost, dev-only) — dev script already exists; no Compose changes for v6 unless the team asks
 
----
+## Version Compatibility
 
-## Integration Points with Existing Code
-
-| Existing File | Change Required | Impact |
-|---------------|----------------|--------|
-| `apps/web/src/lib/trpc.ts` | Rewrite: `createTRPCReact` -> new queryOptions pattern | Breaking -- all 38 mock data replacements use new query pattern |
-| `apps/web/src/app/(app)/layout.tsx` | Add `<TRPCReactProvider>` wrapper | Small -- provider wraps children |
-| `apps/web/src/app/layout.tsx` | No change -- provider goes in (app) layout, not root | None |
-| `apps/api/src/lib/logger.ts` | Rewrite internals: sync fs -> pino transport. Keep AppLogger interface. | Internal only -- no consumer changes |
-| `apps/api/src/infrastructure/middleware/correlation-id.middleware.ts` | Add ClsService injection + `cls.set()` | Small |
-| `apps/api/src/app.module.ts` | Add `ClsModule.forRoot()` as FIRST import | Small |
-| `apps/api/src/main.ts` | No change -- logger creation call stays identical | None |
-| `apps/api/src/infrastructure/trpc/trpc.context.ts` | No change -- CLS is request-scoped, available automatically | None |
-| `apps/web/playwright.config.ts` | Expand `webServer` to array (add API server) | Moderate |
-| `apps/web/e2e/auth.setup.ts` | Add database seeding step before auth setup | Moderate |
-| `apps/web/e2e/fixtures.ts` | No change -- role fixtures already correct | None |
-
----
-
-## Version Compatibility Matrix
-
-| Package | Version | Requires | Project Status |
-|---------|---------|----------|----------------|
-| pino | ^10.3.1 | Node.js >= 18 | Node 20+ -- OK |
-| pino-roll | ^4.0.0 | pino NDJSON transport | **Verify in dev** -- no explicit compat statement with pino 10 |
-| pino-pretty | ^13.0.0 | pino 9+ | OK |
-| @trpc/tanstack-react-query | ^11.16.0 | @tanstack/react-query ^5.x, @trpc/client ^11.x | Both present -- OK |
-| nestjs-cls | ^6.2.0 | @nestjs/common ^10 or ^11, Node.js >= 16 | NestJS 11 -- OK |
-| client-only | ^0.0.1 | React 18+ | React 19 -- OK |
-| server-only | ^0.0.1 | React 18+ | React 19 -- OK |
-
----
+| Package A | Compatible With | Notes |
+|---|---|---|
+| `@anthropic-ai/sdk@^0.90` | Node 20+, NestJS 11 | SDK is `0.x` — minor versions can break. Pin exact version once chosen and bump deliberately. |
+| `recharts@^3.3` | React 19, Next.js 16 | v3.x dropped older React; React 19 supported. Peer dep `react-is` must match React 19. |
+| `react-email@^3` | React 19 | `<Tailwind>` compatible with Tailwind v4 utility classes (compiles to inline styles at render time, not at build). |
+| `@react-email/components` | React 19 | Same. Use named import for `render`. |
+| `betaZodTool` | Zod 4.x (already installed) | Beta API — surfaces under `@anthropic-ai/sdk/helpers/beta/zod`. Watch for stabilization in `1.0`. |
 
 ## Confidence Assessment
 
-| Area | Confidence | Reason |
-|------|------------|--------|
-| tRPC client migration | **HIGH** | Official docs, React Compiler incompatibility documented, codemod available |
-| pino logger approach | **HIGH** | Industry standard, author-maintained, existing interface preserved |
-| pino-roll + pino 10 compat | **MEDIUM** | Same author, same protocol, but no explicit 10.x compat statement found |
-| nestjs-cls integration | **HIGH** | Referenced in official NestJS docs, 500K+ weekly downloads |
-| Playwright dual-server | **HIGH** | Documented Playwright feature, project pattern already correct |
-| Auth guards | **HIGH** | All code already exists, configuration only |
-
----
+| Area | Level | Reason |
+|---|---|---|
+| `@anthropic-ai/sdk` choice + model assignment | **HIGH** | Anthropic-published SDK, current version verified npm; model lineup verified Anthropic release notes (Apr 2026); cost/quality tradeoff well-documented. |
+| Prompt-caching pattern (1024-token min) | **HIGH** | Anthropic docs explicit; multiple secondary sources confirm. |
+| `recharts` + shadcn/ui Chart | **HIGH** | Both are first-class in shadcn ecosystem (already used elsewhere in the app); Context7 confirms v3.3.0 current. |
+| `react-email` + nodemailer integration | **HIGH** | Official Resend (react-email) docs cover nodemailer transport; pattern is one render call. |
+| RBAC custom middleware (no new dep) | **HIGH** | tRPC middleware composition is documented core API; pattern in countless production apps. |
+| Playwright mobile project | **HIGH** | `devices` exports come from `@playwright/test`; pattern is standard. |
+| **Risk areas:** | | |
+| Sonnet 4.6 sufficiency for "on track" judgement | **MEDIUM** | Empirical — depends on prompt quality and edge cases in real lead data. AI-SPEC phase should benchmark against 10–20 real reports before locking in. |
+| Cache breakpoint hit rate (need ≥1024 tokens in rubric) | **MEDIUM** | Constraint is real; mitigation is to write a sufficiently rich rubric (achievable). Worth explicit verification post-implementation. |
 
 ## Sources
 
-- [tRPC TanStack React Query Setup](https://trpc.io/docs/client/tanstack-react-query/setup) -- official setup guide
-- [tRPC Server Components Guide](https://trpc.io/docs/client/tanstack-react-query/server-components) -- RSC prefetching pattern
-- [tRPC Migration from Classic Client](https://trpc.io/docs/client/tanstack-react-query/migrating) -- migration codemod
-- [Introducing the new TanStack React Query integration](https://trpc.io/blog/introducing-tanstack-react-query-client) -- React Compiler rationale
-- [pino-roll GitHub](https://github.com/mcollina/pino-roll) -- v4.0.0 API, options reference
-- [pino Transports Documentation](https://github.com/pinojs/pino/blob/main/docs/transports.md) -- multi-target setup
-- [nestjs-cls GitHub](https://github.com/Papooch/nestjs-cls) -- v6.2.0 setup
-- [nestjs-cls Quick Start](https://papooch.github.io/nestjs-cls/introduction/quick-start) -- ClsModule registration
-- [NestJS AsyncLocalStorage Recipe](https://docs.nestjs.com/recipes/async-local-storage) -- official recommendation
-- [Playwright Global Setup and Teardown](https://playwright.dev/docs/test-global-setup-teardown) -- project deps vs globalSetup
-- [NestJS Request Context: ALS Blueprint 2026](https://pas7.com.ua/blog/en/nestjs-request-context-als-2026) -- Node.js ALS security patch note
+- Context7 `/anthropics/anthropic-sdk-typescript` — messages API, `betaZodTool`, `toolRunner`, `count_tokens`, prompt caching shape
+- Context7 `/recharts/recharts` v3.3.0 — `LineChart`, `BarChart`, `ResponsiveContainer`, animation/SSR
+- Context7 `/resend/react-email` — nodemailer integration, Tailwind component, `render` API
+- npm `@anthropic-ai/sdk` v0.90.0 (verified WebSearch, 2026-04-23) — current stable
+- Anthropic release notes — model lineup: Haiku 4.5 (2025-10-15), Sonnet 4.6 (2026-02-17), Opus 4.7 (2026-04-16)
+- Anthropic prompt caching docs — `cache_control: { type: 'ephemeral', ttl: '1h' | default 5m }`, 1024-token minimum, 1.25× / 2× write multipliers, 0.1× read
+- shadcn/ui charts page — Recharts wrapper, Tailwind v4 CSS variable theming
+- Playwright docs — `devices` export, project configuration
+
+---
+*Stack research for: CustomReport v6.0 — Roles, Quality, AI & Analytics*
+*Researched: 2026-04-26*
+*Existing v5.0 stack untouched; this file documents only additions.*
