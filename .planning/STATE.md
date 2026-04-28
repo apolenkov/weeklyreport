@@ -1,16 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: Production Integration
-status: completed
-stopped_at: Completed 26-01-PLAN.md
-last_updated: "2026-04-26T20:15:00.000Z"
-last_activity: 2026-04-26
+milestone: v6.0
+milestone_name: Roles, Quality, AI & Analytics
+status: planning
+last_updated: "2026-04-28T16:05:50.853Z"
+last_activity: 2026-04-28
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 15
-  completed_plans: 15
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -34,14 +33,10 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Current Position
 
-Phase: 26
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-26 - Completed quick task 260426-vxp: v5.0 tech debt (MAJOR-PROGRESS — Vitest mock CLOSED, integration suite first-run 8/21 pass with 5 fail → v6.0, Phase 24 verification gap fixed)
-
-Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
-
----
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-28 — Milestone v6.0 started
 
 ## Quick Tasks Completed
 
