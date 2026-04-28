@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37
 
 ---
 
@@ -14,6 +14,7 @@
 - [x] **v3.0 Progress** - Phases 13-15 (shipped 2026-04-21)
 - [x] **v4.0 Backend Completeness & UI Redesign** - Phases 16-19 (shipped 2026-04-25)
 - [x] **v5.0 Production Integration** - Phases 20-26 (shipped 2026-04-25) — [details](milestones/v5.0-ROADMAP.md)
+- [ ] **v6.0 Roles, Quality, AI & Analytics** - Phases 27-31 (planning 2026-04-28)
 
 ## Phases
 
@@ -224,9 +225,90 @@ Audit status: tech_debt — structurally complete, runtime smoke verification de
 
 ---
 
+<details open>
+<summary>v6.0 Roles, Quality, AI & Analytics (Phases 27-31) - PLANNING 2026-04-28</summary>
+
+- [ ] **Phase 27: Quality Stabilisation & Role Middleware Factory** - Integration suite green as CI gate; `requireRole` factory shipped with default-deny coverage test (Wave 1: B + A1)
+- [ ] **Phase 28: Role Filters, PDF Cookie Seam, Deadline Reminders & Release Checklist** - Service-layer role filtering; PDF worker cookie injection; T-24h reminders + react-email templates; CHECKLIST.md template (Wave 2: A2 + A4 + E1+E3 + G)
+- [ ] **Phase 29: Real Keycloak SAML, Role-Aware UI & Escalation** - Keycloak SAML in production; layout-level role gates; T+2h escalation digest with audit log (Wave 3a: A3 + A5 + A6 + E2)
+- [ ] **Phase 30: Mobile Polish & Trend Analytics** - 7 pages clean at 375px; analytics tRPC procedures + `/reports/trends` charts (Wave 3b: F + D)
+- [ ] **Phase 31: AI Insights** - Executive summary card + risk sentiment badges + on-track advisory (Wave 4: C — gated by AI-SPEC.md)
+
+### Phase 27: Quality Stabilisation & Role Middleware Factory
+**Goal**: Integration suite runs green as a true CI gate, and a default-deny `requireRole` factory is shipped so every subsequent phase can declare role-scoped procedures.
+**Depends on**: Phase 26 (v5.0 closed)
+**Requirements**: QA-01, QA-02, QA-03, QA-04, AUTH-03
+**Success Criteria** (what must be TRUE):
+  1. Playwright integration suite (`admin-crud`, `cross-role-lifecycle`, `lead-journey`, `status-risk-sync`) passes 3 consecutive runs against the dual-server config — single root cause for the 5 timeouts is identified, fixed, and documented (no per-test bandages).
+  2. Fresh `pnpm install` on a clean checkout produces working `@prisma/client` types via `apps/api/package.json` postinstall (NOT root); `turbo.json` lists `prisma generate` as a `build` predecessor so CI runs that skip postinstall still produce types.
+  3. `apps/web/src/proxy.ts` is deleted; `apps/web/proxy.ts` is the only proxy file and carries the comment `// Next.js 16 proxy.ts must live here, NOT under src/`.
+  4. `period.contract.test.ts:65` `userId` is renamed `_userId` (TS6133 closed); `.planning/phases/22-*/22-VERIFICATION.md` frontmatter reads `status: passed`.
+  5. `requireRole(allowed)` factory exists at `packages/shared/src/trpc/middleware/role.ts` and emits `leadProcedure` / `headProcedure` / `adminProcedure` / `viewerProcedure`; a coverage test fails CI if any tRPC procedure lacks an explicit role declaration (default-deny).
+**Plans**: TBD
+**Plan note**: QA-03 must include the explicit `apps/web/src/proxy.ts` deletion path AND the comment in `apps/web/proxy.ts` in the same plan (CC-6 hinge — deleting the wrong file kills auth).
+
+### Phase 28: Role Filters, PDF Cookie Seam, Deadline Reminders & Release Checklist
+**Goal**: Role-scoped procedures land at the service layer, the PDF worker authenticates via short-lived cookie, leads receive T-24h reminders through react-email templates, and the release-day checklist is a commit-able artefact.
+**Depends on**: Phase 27
+**Requirements**: AUTH-04, AUTH-05, AUTH-01 (PDF-only enable; full Keycloak in Phase 29), NOTIF-01, NOTIF-03, NOTIF-04, REL-01, REL-02, REL-03, REL-04, REL-05
+**Success Criteria** (what must be TRUE):
+  1. `archive.list`, `archive.detail`, `weeklyReport.get` are viewer-scoped to `status: 'published'` at the Prisma `where` clause; `review.dashboard` becomes a `headProcedure`; service-level unit tests prove a `viewer` token cannot read `draft` reports.
+  2. `requestPdfExport(reportId, requestedBy?, authToken)` signs a 5-minute scoped JWT at tRPC entry; `pdf-export.processor.ts:69-72` calls `page.context().addCookies(...)` before `page.goto`; PDF jobs succeed end-to-end against a running API that has `AUTH_DEV_MODE=false` and `AUTH_DEV_MODE_ALLOW_TEST=true`.
+  3. `AUTH_DEV_MODE_ALLOW_TEST=true` mode exists and is the staging switch the integration suite uses; `AUTH_DEV_MODE=true` (legacy admin-only) still works behind a feature flag pending Phase 29 cut-over.
+  4. Each lead with a `draft` `ReportSection` receives one T-24h `kind='deadline'` reminder per cycle via the existing BullMQ pipeline; idempotent on `${rule.id}:deadline:${cycleDate}:${recipientEmail}` dedupe key; HTML + plaintext multipart rendered from `apps/api/src/modules/email/templates/deadline.template.ts` (react-email `<Tailwind>`).
+  5. `apps/api/src/modules/reminders/reminders.scheduler.ts` runs hourly via `@Cron`, reads `WHERE status='active' AND fireAt <= now()`, and dispatches via existing `requestReminderExecution` reusing the existing dedupeKey shape.
+  6. `/CHECKLIST.md` template exists at repo root with sections (Functional Smoke, Auth, PDF, Email, Mobile, AI Insights, Analytics) + signoff line; each item maps 1:1 to a row in `.planning/REGRESSION-TEST-SCENARIOS.md` by ID; at least one item is gated by CI (e.g. `pnpm test:ai-eval`); `tools/handoff-sync.ts` regenerates HANDOFF.md `## Pending Manual Smoke` from unticked items.
+**Plans**: TBD
+**Plan note**: AUTH-01 (`AUTH_DEV_MODE_ALLOW_TEST=true` staging) and AUTH-05 (PDF cookie injection) MUST ship in the same plan — closing the cookie seam without staging the dev-mode switch causes silent 401 retry storms (CC-1 hinge). The full Keycloak SAML flip lives in Phase 29.
+
+### Phase 29: Real Keycloak SAML, Role-Aware UI & Escalation
+**Goal**: Production runs against the real Keycloak IdP with a four-role JWT, the UI hides what each role cannot reach, and missed deadlines page the head exactly once per cycle.
+**Depends on**: Phase 28
+**Requirements**: AUTH-01 (full Keycloak SAML in production), AUTH-02, AUTH-06, AUTH-07, AUTH-08, NOTIF-02, NOTIF-05, NOTIF-06
+**Success Criteria** (what must be TRUE):
+  1. Real Keycloak SAML SSO is the only authentication path in production; `AUTH_DEV_MODE` is removed from non-test code paths; the integration suite continues to pass against a mock IdP container declared in `docker-compose.test.yml`.
+  2. JWT carries a `role` claim drawn from a Keycloak SAML attribute mapper (`lead` | `head` | `admin` | `viewer`); the SAML attribute mapper is verified to send `role`; `ctx.user.role` is populated for every tRPC procedure.
+  3. `app-shell.tsx` hides `/admin` and `/head/*` for non-head users and `/lead/*` for viewers via `useSession()`; SSR layout files at `apps/web/src/app/(app)/{admin,head,lead,reports}/layout.tsx` read the session via `cookies()` + `auth.me` and render a `403` page if the role is missing (proxy.ts stays cookie-presence only).
+  4. `AppLoggerImpl` emits structured audit events `{event, userId, role, attemptedRole?, ip}` for login success/fail, logout, and role-denied requests; an integration test asserts a viewer hitting `/admin` produces a `role-denied` audit line.
+  5. Heads receive one T+2h `kind='escalation'` digest per cycle aggregating ALL leads still in `draft` 2h after deadline; idempotent on `${rule.id}:escalation:${cycleDate}:${recipientEmail}`; the digest is NOT opt-outable; lead `kind='deadline'` reminders ARE opt-outable per `User.notificationOptOut` flag.
+  6. The `email-reminder` BullMQ queue enforces `{ max: 5, duration: 60_000 }` rate-limiting below corporate SMTP quota; failed deliveries land in DLQ with an admin-visible badge in the UI.
+**Plans**: TBD
+**Plan note**: AUTH-06 commits last in this phase — the navigation hide is cosmetic and must not ship before the layout-level gate (AUTH-07) and the SAML cut-over (AUTH-01) are both green, otherwise users see disabled links to pages they are still authorised to reach.
+
+### Phase 30: Mobile Polish & Trend Analytics
+**Goal**: All seven product pages are usable on a 375px viewport, and the head + viewers can see how traffic lights, velocity, and risk delta have moved across the last 12 periods.
+**Depends on**: Phase 29
+**Requirements**: MOB-01, MOB-02, MOB-03, MOB-04, MOB-05, MOB-06, MOB-07, ANAL-01, ANAL-02, ANAL-03, ANAL-04
+**Success Criteria** (what must be TRUE):
+  1. Playwright `mobile-ios` + `mobile-android` projects (using `devices['iPhone 14']` / `devices['Pixel 7']`) run against `/lead/report`, `/lead/history`, `/head/dashboard`, `/head/report`, `/reports/history`, `/reports/[reportId]`, `/admin/*` and assert no horizontal scroll at 375px width on each page.
+  2. `packages/ui/src/components/ui/button.tsx` exposes a `size='touch'` variant (`h-11 min-w-11`) replacing `h-9` on mobile breakpoints so every tap target is ≥44px (iOS HIG); `head/dashboard` portfolio table converts to a card list at `md` and below; `admin/*` tabs convert to a native `<select>` at narrow widths; `lead/report` risk editor opens as full-screen `Dialog` on mobile; PDF preview is replaced by an "Open PDF" button on mobile; the top app shell renders a hamburger menu while keeping the brand mark visible.
+  3. `analytics.trafficLightHistory({projectId?, leadId?, periodFrom, periodTo})` returns server-aggregated `[{periodStart: ISOString, status, projectId}]` via `GROUP BY` over `Report × ReportSection × ProjectStatus`, cached in Redis with 1h TTL, invalidated on `period.publish` and `period.reopen`.
+  4. `analytics.leadVelocity` and `analytics.periodComparison` tRPC procedures return correctly-typed payloads sourced via Prisma `GROUP BY` and pass an integration test under both `TZ=Europe/Moscow` and `TZ=UTC` (server pre-formats ISO `YYYY-MM-DD` labels — no client-side `new Date()`).
+  5. `/reports/trends` is a viewer-accessible RSC page that lazy-imports three client-boundary components from `apps/web/src/components/charts/` (`traffic-light-history.chart.tsx` sparkline of last 12 periods, `lead-velocity.chart.tsx` stacked bar, `period-comparison.chart.tsx` delta table) built on shadcn-ui Chart over `recharts`; null and zero are visually distinct (gaps vs zero-bars).
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 31: AI Insights
+**Goal**: Heads get a 2–3 sentence executive summary on each assembled report, every risk row carries a sentiment badge, and lead traffic-light cells show a smart on-track advisory icon — without any AI ever overwriting human content or changing a chosen colour.
+**Depends on**: Phase 30 (and AI-SPEC.md)
+**Requirements**: AI-01, AI-02, AI-03
+**Success Criteria** (what must be TRUE):
+  1. The assembled report renders a 2–3 sentence executive summary card ABOVE the head's narrative textarea (never overwriting it); the card is dismissible per session and exposes a head-only "Regenerate" button; computed by Haiku 4.5 via `betaZodTool` and cached read-through on `contentHash = sha256(JSON.stringify(reportContent))` so re-renders cost zero Anthropic tokens.
+  2. Each Risk row carries a `low` / `medium` / `high` sentiment badge produced by Haiku 4.5 with a structured Zod tool output (no free-text); cached per Risk content hash; an `AiInsight` Prisma row records every call with `usage.{input,output,cache_creation,cache_read}_tokens` for cost-tracking.
+  3. Lead traffic-light cells overlay a ✓ / ⚠ / ✗ on-track advisory icon ALONGSIDE (never replacing) the lead's chosen colour; computed by Sonnet 4.6 with pre-computed counts injected into the system prompt under `DO NOT change these numbers`; an eval-step CI threshold gates the prompt rubric (≥1024 tokens) against an 8–12 report golden-set signed off by the head.
+  4. ESLint `no-restricted-imports` blocks raw Prisma usage in `apps/api/src/modules/ai/**`; logging middleware excludes `ai.*` procedures; a lint rule bans `logger.*` of `prompt` / `messages` / `response.content` inside the AI module; Anthropic data-retention is verified OFF.
+**Plans**: TBD
+**Plan note**: **Plan blocked until /gsd-ai-integration-phase 31 produces AI-SPEC.md.** Decisions required: cost-vs-confidentiality (hosted vs on-prem), model assignment confirmation (Haiku 4.5 / Sonnet 4.6 — Opus 4.7 explicitly NOT used), prompt rubric ≥1024 tokens, golden-set fixtures (8–12 reports), eval-step CI threshold.
+**AI hint**: yes
+
+</details>
+
+---
+
 *Roadmap created: 2026-04-06*
 *v1.0 shipped: 2026-04-10*
 *v2.0 shipped: 2026-04-11*
 *v3.0 shipped: 2026-04-21*
 *v4.0 shipped: 2026-04-25*
 *v5.0 shipped: 2026-04-25*
+*v6.0 planning started: 2026-04-28*
