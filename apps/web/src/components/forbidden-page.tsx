@@ -1,0 +1,47 @@
+import Link from 'next/link';
+
+import { Button } from '@customreport/ui/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@customreport/ui/components/ui/card';
+
+import type { Role } from '@customreport/shared';
+
+/**
+ * AUTH-07 (Phase 29-03): shared 403 page composed into each (app)/route-group
+ * layout when the SSR role check fails.
+ *
+ * T4 mitigation: only `requiredRoles` is rendered into the DOM. The user's
+ * actual role is intentionally NOT displayed, so a hostile viewer cannot
+ * enumerate role state by hitting protected routes.
+ */
+export type ForbiddenPageProps = {
+  readonly requiredRoles: ReadonlyArray<Role>;
+};
+
+export function ForbiddenPage({ requiredRoles }: ForbiddenPageProps) {
+  const rolesLabel = requiredRoles.join(' or ');
+  return (
+    <main
+      role="main"
+      className="flex min-h-screen items-center justify-center bg-background px-6"
+    >
+      <Card className="max-w-md">
+        <CardHeader>
+          <CardTitle>Access denied</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            This page requires the {rolesLabel} role.
+          </p>
+          <Button asChild>
+            <Link href="/">Return to home</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    </main>
+  );
+}
