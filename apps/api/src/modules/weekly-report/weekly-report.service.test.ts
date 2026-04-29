@@ -170,3 +170,62 @@ describe('WeeklyReportService — unit tests', () => {
     expect(result.totalLeads).toBe(6);
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  AUTH-04 viewer scoping (Phase 28-01)                                */
+/* ------------------------------------------------------------------ */
+
+describe('WeeklyReportService — AUTH-04 viewer scoping', () => {
+  it('viewer cannot read a draft (open) period', async () => {
+    const draft = makeWeeklyReport({ periodStatus: 'open' });
+    const reports = new Map([[reportId, draft]]);
+    const service = new WeeklyReportService(createSpyRepository(reports));
+
+    await expect(service.getWeeklyReport(reportId, 'viewer')).rejects.toBeInstanceOf(
+      WeeklyReportDomainError,
+    );
+  });
+
+  it('viewer can read a published period', async () => {
+    const published = makeWeeklyReport({ periodStatus: 'published' });
+    const reports = new Map([[reportId, published]]);
+    const service = new WeeklyReportService(createSpyRepository(reports));
+
+    const result = await service.getWeeklyReport(reportId, 'viewer');
+
+    expect(result.periodStatus).toBe('published');
+    expect(result.reportId).toBe(reportId);
+  });
+
+  it('head role reads draft (open) period without filter', async () => {
+    const draft = makeWeeklyReport({ periodStatus: 'open' });
+    const reports = new Map([[reportId, draft]]);
+    const service = new WeeklyReportService(createSpyRepository(reports));
+
+    const result = await service.getWeeklyReport(reportId, 'head');
+
+    expect(result.periodStatus).toBe('open');
+  });
+
+  it('lead and admin roles also read drafts (no scoping)', async () => {
+    const draft = makeWeeklyReport({ periodStatus: 'open' });
+    const reports = new Map([[reportId, draft]]);
+    const service = new WeeklyReportService(createSpyRepository(reports));
+
+    await expect(service.getWeeklyReport(reportId, 'lead')).resolves.toMatchObject({
+      periodStatus: 'open',
+    });
+    await expect(service.getWeeklyReport(reportId, 'admin')).resolves.toMatchObject({
+      periodStatus: 'open',
+    });
+  });
+
+  it('undefined role keeps legacy contract (no scoping; preserves pre-AUTH-04 callers)', async () => {
+    const draft = makeWeeklyReport({ periodStatus: 'open' });
+    const reports = new Map([[reportId, draft]]);
+    const service = new WeeklyReportService(createSpyRepository(reports));
+
+    const result = await service.getWeeklyReport(reportId, undefined);
+    expect(result.periodStatus).toBe('open');
+  });
+});

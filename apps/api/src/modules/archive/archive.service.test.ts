@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   ArchiveReportDetail,
@@ -97,5 +97,91 @@ describe('archiveRouter', () => {
     ).resolves.toMatchObject({
       summary: { reportId },
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AUTH-04 (Phase 28-01): viewer-scoped read filter at the service layer.
+// Defense-in-depth: even if a future router mis-wires the procedure, the
+// service propagates a `status: 'published'` filter to the repository for
+// viewer sessions. Heads / leads / admins continue to receive an empty
+// filter (the repo's hardcoded floor still keeps them on published rows).
+// ---------------------------------------------------------------------------
+
+describe('AUTH-04 viewer scoping', () => {
+  function createSpyRepository(): {
+    repo: ArchiveRepository;
+    listSpy: ReturnType<typeof vi.fn>;
+    getSpy: ReturnType<typeof vi.fn>;
+  } {
+    const listSpy = vi.fn(async () => [structuredClone(latestDetail.summary)]);
+    const getSpy = vi.fn(async () => structuredClone(latestDetail));
+    const repo: ArchiveRepository = {
+      listArchiveReports: listSpy,
+      getArchiveReport: getSpy,
+    };
+    return { repo, listSpy, getSpy };
+  }
+
+  it('viewer role injects status:published into listArchiveReports filter', async () => {
+    const { repo, listSpy } = createSpyRepository();
+    const service = new ArchiveService(repo);
+
+    await service.listArchiveReports(undefined, 'viewer');
+
+    expect(listSpy).toHaveBeenCalledOnce();
+    expect(listSpy).toHaveBeenCalledWith({ status: 'published' });
+  });
+
+  it('viewer role injects status:published into getArchiveReport filter', async () => {
+    const { repo, getSpy } = createSpyRepository();
+    const service = new ArchiveService(repo);
+
+    await service.getArchiveReport(reportId, 'viewer');
+
+    expect(getSpy).toHaveBeenCalledOnce();
+    expect(getSpy).toHaveBeenCalledWith(reportId, { status: 'published' });
+  });
+
+  it('viewer requesting a non-published row through repository null receives ArchiveDomainError', async () => {
+    const repo: ArchiveRepository = {
+      listArchiveReports: vi.fn(async () => []),
+      getArchiveReport: vi.fn(async () => null),
+    };
+    const service = new ArchiveService(repo);
+
+    await expect(
+      service.getArchiveReport('99999999-9999-4999-8999-999999999999', 'viewer'),
+    ).rejects.toBeInstanceOf(ArchiveDomainError);
+  });
+
+  it('head role passes an empty filter (no status narrowing) to listArchiveReports', async () => {
+    const { repo, listSpy } = createSpyRepository();
+    const service = new ArchiveService(repo);
+
+    await service.listArchiveReports(undefined, 'head');
+
+    expect(listSpy).toHaveBeenCalledOnce();
+    expect(listSpy).toHaveBeenCalledWith({});
+  });
+
+  it('lead and admin roles also receive an empty filter (head-equivalent for archive read)', async () => {
+    const { repo, listSpy } = createSpyRepository();
+    const service = new ArchiveService(repo);
+
+    await service.listArchiveReports(undefined, 'lead');
+    expect(listSpy).toHaveBeenLastCalledWith({});
+
+    await service.listArchiveReports(undefined, 'admin');
+    expect(listSpy).toHaveBeenLastCalledWith({});
+  });
+
+  it('undefined role passes empty filter (legacy contract — repo floor still applies)', async () => {
+    const { repo, listSpy } = createSpyRepository();
+    const service = new ArchiveService(repo);
+
+    await service.listArchiveReports(undefined, undefined);
+
+    expect(listSpy).toHaveBeenCalledWith({});
   });
 });

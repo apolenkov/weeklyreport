@@ -6,6 +6,7 @@ import {
   headProcedure,
   leadProcedure,
   viewerProcedure,
+  anyRoleProcedure,
 } from '../trpc.middleware.js';
 import { createAppRouter } from '../trpc.router.js';
 
@@ -49,6 +50,9 @@ const LEAD_CHAIN = (leadProcedure.query(() => undefined) as unknown as {
 const VIEWER_CHAIN = (viewerProcedure.query(() => undefined) as unknown as {
   _def: { middlewares: unknown[] };
 })._def.middlewares.slice(0, -1);
+const ANY_ROLE_CHAIN = (anyRoleProcedure.query(() => undefined) as unknown as {
+  _def: { middlewares: unknown[] };
+})._def.middlewares.slice(0, -1);
 
 const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
   { name: 'publicProcedure', chain: PUBLIC_CHAIN },
@@ -56,6 +60,7 @@ const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
   { name: 'headProcedure', chain: HEAD_CHAIN },
   { name: 'leadProcedure', chain: LEAD_CHAIN },
   { name: 'viewerProcedure', chain: VIEWER_CHAIN },
+  { name: 'anyRoleProcedure', chain: ANY_ROLE_CHAIN },
 ];
 
 /**
