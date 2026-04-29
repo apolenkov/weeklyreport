@@ -8,10 +8,10 @@ last_updated: "2026-04-29T10:14:50.469Z"
 last_activity: 2026-04-29 -- Phase 27 execution started
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_plans: 5
+  percent: 20
 ---
 
 # Project State: CustomReport
@@ -34,10 +34,10 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Current Position
 
-Phase: 27 (Quality Stabilisation & Role Middleware Factory) — PARTIAL (4/5 complete, 27-05 BLOCKED)
-Plan: 4 of 5 complete (27-01 QA-04 ✓, 27-02 QA-03 ✓, 27-03 QA-02 ✓, 27-04 AUTH-03 ✓, 27-05 QA-01 ⛔)
-Status: Phase 27 paused on D-QA-01 STOP rule — awaiting 27-05a..e gap-closure plans
-Last activity: 2026-04-29 -- Phase 27 plans 27-01..27-04 shipped; 27-05 BLOCKED (5 independent bugs, not 1 root cause)
+Phase: 27 (Quality Stabilisation & Role Middleware Factory) — COMPLETE ✓ (5/5)
+Plan: 5 of 5 complete (27-01 QA-04 ✓, 27-02 QA-03 ✓, 27-03 QA-02 ✓, 27-04 AUTH-03 ✓, 27-05 QA-01 ✓ via 27-05a..e gap-closure)
+Status: Phase 27 closed; integration suite is now a deterministic 21/21 CI gate
+Last activity: 2026-04-29 -- Phase 27 fully shipped; 8 fix commits pushed; Phase 28 unblocked
 
 ## Quick Tasks Completed
 
@@ -114,11 +114,15 @@ Last activity: 2026-04-29 -- Phase 27 plans 27-01..27-04 shipped; 27-05 BLOCKED 
 
 ### Active Blockers
 
-- **Phase 27 / QA-01 (CRITICAL — blocks Phase 28)** — Plan 27-05 stopped per D-QA-01 STOP rule. Trace evidence shows the 5 integration test failures are 5 INDEPENDENT bugs (not 1 root cause): missing `/admin/products` route + seed; missing reportSection for Olga; submit handler not persisting `status='submitted'`; selector ambiguity in lead-journey:143; selector ambiguity in status-risk-sync:23. Splits into 27-05a..e — see `27-05-SUMMARY.md`. Resume: `/gsd-plan-phase 27 --gaps` then `/gsd-execute-phase 27 --gaps-only`.
 - **AI-SPEC.md outstanding** — required before Phase 31 planning. Owner: `/gsd-ai-integration-phase 31`.
 - **Real-device iOS Safari pass for MOB-06** — Playwright covers most but PDF embed needs human-on-device confirmation (Phase 30).
 - **Golden-set rubric (C-5)** — head/Belyaev domain-expert sign-off required before AI quality CI gate locks in (Phase 31).
-- **Push pending** — 6+ commits ahead of origin/main; SSL handshake to ghe.example.org fails (corp proxy issue). User must verify VPN / git proxy config to push.
+
+### Phase 27 closing notes (for Phase 28 awareness)
+
+- **QA-03 invariant inverted** — 27-05b reversed the false QA-03 premise. The proxy.ts file MUST live at `apps/web/src/proxy.ts` (Next 16 src-layout requirement, empirically proven). `apps/web/proxy.ts` was the dead twin; src/ version is canonical. The CC-6 guard comment now lives in `apps/web/src/proxy.ts`.
+- **Prisma 7 + prisma.config.ts does NOT auto-seed after `migrate reset`** — e2e global-setup chains explicit `prisma db seed`. Document for future test infra work.
+- **Pre-existing typecheck errors in `apps/web/src/components/.../app-shell.tsx` and `session-provider.tsx`** — flagged during 27-05; unrelated to Phase 27 scope. Address in Phase 28+ when touching those files.
 
 ---
 
