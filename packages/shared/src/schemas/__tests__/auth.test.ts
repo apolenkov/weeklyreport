@@ -35,7 +35,7 @@ describe('roleSchema', () => {
     expect(roleSchema.safeParse('viewer').success).toBe(true);
   });
 
-  it('rejects invalid role "admin"', () => {
+  it('rejects "admin" — DB Role enum stays narrow (sessionRoleSchema covers admin)', () => {
     expect(roleSchema.safeParse('admin').success).toBe(false);
   });
 
@@ -178,8 +178,8 @@ describe('userSessionSchema — nullable JWT fields (BUG-009)', () => {
 // ---------------------------------------------------------------------------
 
 describe('userSessionSchema — role validation', () => {
-  it('accepts each valid role in context of full session', () => {
-    for (const role of ['lead', 'head', 'viewer'] as const) {
+  it('accepts each valid session role in context of full session', () => {
+    for (const role of ['lead', 'head', 'admin', 'viewer'] as const) {
       const session = { ...validSession(), role };
       const result = userSessionSchema.safeParse(session);
       expect(result.success).toBe(true);

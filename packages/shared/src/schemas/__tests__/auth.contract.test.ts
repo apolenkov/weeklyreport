@@ -20,7 +20,7 @@ describe('roleSchema', () => {
     expect(roleSchema.safeParse('viewer').success).toBe(true);
   });
 
-  it('rejects "admin" (not a valid role)', () => {
+  it('rejects "admin" — DB Role enum stays narrow (sessionRoleSchema covers admin)', () => {
     expect(roleSchema.safeParse('admin').success).toBe(false);
   });
 
@@ -160,7 +160,7 @@ describe('userSessionSchema', () => {
   // --- role validation ---
 
   it('rejects invalid role in session', () => {
-    const session = { ...validSession(), role: 'admin' };
+    const session = { ...validSession(), role: 'superadmin' };
     const result = userSessionSchema.safeParse(session);
     expect(result.success).toBe(false);
   });

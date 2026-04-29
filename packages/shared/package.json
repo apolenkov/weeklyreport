@@ -4,13 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./trpc": "./src/trpc/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit -p tsconfig.json && eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run src/trpc/router.test.ts"
+    "test": "vitest run"
   },
   "dependencies": {
     "@trpc/server": "^11.0.0",
