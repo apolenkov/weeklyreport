@@ -108,7 +108,7 @@ test.describe('Admin CRUD (integration)', () => {
     // snapshotting HTML — Playwright will retry the locator until it
     // resolves or hits the default expect timeout.
     await expect(
-      headPage.getByText(/CRM Platform|Data Analytics Suite/),
+      headPage.getByText(/CRM Platform|Data Analytics Suite/).first(),
     ).toBeVisible();
 
     const html = await headPage.content();
