@@ -2,21 +2,22 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Roles, Quality, AI & Analytics
-status: planning
-last_updated: "2026-04-28T17:00:00.000Z"
-last_activity: 2026-04-28
+status: executing
+stopped_at: v6.0 roadmap drafted (Phases 27-31)
+last_updated: "2026-04-29T10:14:50.469Z"
+last_activity: 2026-04-29 -- Phase 27 execution started
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 5
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** Milestone planning (v6.0)
+**Status:** Executing Phase 27
 **Last Updated:** 2026-04-28
 
 ---
@@ -27,16 +28,16 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core Value:** Leads fill their sections independently via structured forms; system auto-assembles a unified report -- no editing conflicts, with history and analytics.
 
-**Current Focus:** v6.0 — Phase 27 (Quality Stabilisation & Role Middleware Factory) — pending plan creation
+**Current Focus:** Phase 27 — Quality Stabilisation & Role Middleware Factory
 
 ---
 
 ## Current Position
 
-Phase: Phase 27 — Quality Stabilisation & Role Middleware Factory (pending plan)
-Plan: —
-Status: Roadmap drafted; awaiting `/gsd-plan-phase 27`
-Last activity: 2026-04-28 — Milestone v6.0 roadmap created (5 phases, 37 REQ-IDs mapped)
+Phase: 27 (Quality Stabilisation & Role Middleware Factory) — PARTIAL (4/5 complete, 27-05 BLOCKED)
+Plan: 4 of 5 complete (27-01 QA-04 ✓, 27-02 QA-03 ✓, 27-03 QA-02 ✓, 27-04 AUTH-03 ✓, 27-05 QA-01 ⛔)
+Status: Phase 27 paused on D-QA-01 STOP rule — awaiting 27-05a..e gap-closure plans
+Last activity: 2026-04-29 -- Phase 27 plans 27-01..27-04 shipped; 27-05 BLOCKED (5 independent bugs, not 1 root cause)
 
 ## Quick Tasks Completed
 
@@ -113,9 +114,11 @@ Last activity: 2026-04-28 — Milestone v6.0 roadmap created (5 phases, 37 REQ-I
 
 ### Active Blockers
 
+- **Phase 27 / QA-01 (CRITICAL — blocks Phase 28)** — Plan 27-05 stopped per D-QA-01 STOP rule. Trace evidence shows the 5 integration test failures are 5 INDEPENDENT bugs (not 1 root cause): missing `/admin/products` route + seed; missing reportSection for Olga; submit handler not persisting `status='submitted'`; selector ambiguity in lead-journey:143; selector ambiguity in status-risk-sync:23. Splits into 27-05a..e — see `27-05-SUMMARY.md`. Resume: `/gsd-plan-phase 27 --gaps` then `/gsd-execute-phase 27 --gaps-only`.
 - **AI-SPEC.md outstanding** — required before Phase 31 planning. Owner: `/gsd-ai-integration-phase 31`.
 - **Real-device iOS Safari pass for MOB-06** — Playwright covers most but PDF embed needs human-on-device confirmation (Phase 30).
 - **Golden-set rubric (C-5)** — head/Belyaev domain-expert sign-off required before AI quality CI gate locks in (Phase 31).
+- **Push pending** — 6+ commits ahead of origin/main; SSL handshake to ghe.example.org fails (corp proxy issue). User must verify VPN / git proxy config to push.
 
 ---
 
