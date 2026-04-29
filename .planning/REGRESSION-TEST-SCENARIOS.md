@@ -2069,3 +2069,177 @@ These are actual defects found during analysis, not just test scenarios:
 | **Part 4**: Gap review findings | 8 categories | ~80 |
 | **Discovered bugs** | BUG-001..BUG-025 | 25 |
 | **FINAL TOTAL** | **48 categories** | **~1788** |
+
+---
+
+## v6.0 Release Smoke (Phase 28 / REL-03)
+
+1:1 mapping with `/CHECKLIST.md` items. Every CHECKLIST.md ID below has one row here so an auditor can trace any release-day check back to a documented scenario.
+
+### FUNC-LEAD-001 — Lead can save a draft section
+- **Surface:** /lead/report
+- **Setup:** lead session (AUTH_DEV_MODE_ALLOW_TEST=true or real Keycloak login)
+- **Steps:** open page, fill at least one field, wait for autosave, refresh — value persists
+- **Pass criteria:** ReportSection.status === 'draft', updated content visible after refresh
+- **CI command:** n/a (manual)
+- **Phase:** 28
+
+### FUNC-LEAD-002 — Lead can submit a section after autosave settles
+- **Surface:** /lead/report
+- **Setup:** lead session with non-empty draft
+- **Steps:** click "Submit", confirm dialog, observe lock + Submitted badge
+- **Pass criteria:** ReportSection.status === 'submitted'; form is locked
+- **CI command:** n/a (manual)
+- **Phase:** 28
+
+### FUNC-HEAD-001 — Head sees the assembled report and publishes it
+- **Surface:** /head/dashboard, /head/report
+- **Setup:** head session; >=1 submitted ReportSection
+- **Steps:** open dashboard, navigate to assembled report, click Publish
+- **Pass criteria:** Report.status === 'published', visible to viewers in /reports/history
+- **CI command:** n/a (manual)
+- **Phase:** 28
+
+### FUNC-INTG-001 — Integration suite green
+- **Surface:** apps/web Playwright integration suite
+- **Setup:** docker postgres + redis up; `customreport_e2e` DB seeded
+- **Steps:** `pnpm test:e2e:integration`
+- **Pass criteria:** 21/21 specs green (Phase 27 baseline)
+- **CI command:** `pnpm --filter @customreport/web test:e2e:integration`
+- **Phase:** 28 (CI gate)
+
+### AUTH-LOGIN-001 — Login as lead via Keycloak
+- **Surface:** /login → /lead/report
+- **Setup:** mock IdP container in docker-compose.test.yml (Phase 29) OR AUTH_DEV_MODE_ALLOW_TEST=true (Phase 28-02)
+- **Steps:** navigate to /login; submit lead credentials; assert /lead/report renders
+- **Pass criteria:** session cookie set; tRPC auth.me returns role=lead
+- **CI command:** n/a (manual until Phase 29)
+- **Phase:** 28 (with mock fallback) → 29 (full Keycloak)
+
+### AUTH-LOGIN-002 — Login as head; head-only routes accessible
+- **Surface:** /login → /head/dashboard
+- **Setup:** head SAML profile / DEV_SESSION
+- **Steps:** authenticate as head, open /head/dashboard, /head/report, /admin
+- **Pass criteria:** all three pages render without 403
+- **CI command:** n/a (manual)
+- **Phase:** 28
+
+### AUTH-VIEWER-001 — Viewer cannot access /admin or /head/*
+- **Surface:** /admin, /head/dashboard
+- **Setup:** viewer session
+- **Steps:** request restricted paths
+- **Pass criteria:** SSR layout / proxy.ts redirects to /reports/history (or returns 403)
+- **CI command:** n/a (manual)
+- **Phase:** 28 (server check) → 29 (frontend RoleGate)
+
+### AUTH-FILTERS-001 — Service-layer role filter unit tests
+- **Surface:** archive.* + weeklyReport.get + review.dashboard
+- **Setup:** vitest harness; PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=давай
+- **Steps:** run service-level unit tests
+- **Pass criteria:** "AUTH-04 viewer scoping" describe blocks green; viewer cannot read draft rows
+- **CI command:** `pnpm --filter @customreport/api test apps/api/src/modules/archive apps/api/src/modules/weekly-report`
+- **Phase:** 28 (CI gate)
+
+### AUTH-DEFAULT-DENY-001 — Default-deny role coverage gate
+- **Surface:** trpc.router leaf procedures
+- **Setup:** vitest harness
+- **Steps:** run role-coverage.test.ts
+- **Pass criteria:** every procedure prefix matches one of {publicProcedure, protectedProcedure, headProcedure, leadProcedure, viewerProcedure, anyRoleProcedure}
+- **CI command:** `pnpm --filter @customreport/api test apps/api/src/infrastructure/trpc/__tests__/role-coverage.test.ts`
+- **Phase:** 28 (CI gate; from Phase 27 / Plan 04)
+
+### PDF-EXPORT-001 — Head exports a published report; PDF downloads non-empty
+- **Surface:** /head/report Export PDF button
+- **Setup:** head session; published report; AUTH_DEV_MODE_ALLOW_TEST=true; PDF_EXPORT_JWT_SECRET set
+- **Steps:** click Export PDF, observe job queued, wait for completion, download file
+- **Pass criteria:** /pdfs/<jobId>.pdf > 1KB; opens cleanly in a PDF viewer
+- **CI command:** n/a (manual until Phase 29 e2e harness)
+- **Phase:** 28
+
+### PDF-COOKIE-001 — PDF cookie seam test
+- **Surface:** PdfExportService.signPdfExportToken + processor cookie injection
+- **Setup:** PDF_EXPORT_JWT_SECRET set; vitest harness
+- **Steps:** unit-level guard verifies authToken is JWT-shaped and carries reportId claim
+- **Pass criteria:** "AUTH-05 PDF export JWT signing" describe block green
+- **CI command:** `pnpm --filter @customreport/api test apps/api/src/modules/pdf-export/pdf-export.service.test.ts`
+- **Phase:** 28 (CI gate)
+
+### PDF-CONTENT-001 — Generated PDF contains the report period text and lead names
+- **Surface:** /pdfs/<jobId>.pdf
+- **Setup:** as PDF-EXPORT-001
+- **Steps:** open PDF, search for the period dates and at least 2 lead names
+- **Pass criteria:** all expected text present; layout not broken
+- **CI command:** n/a (manual)
+- **Phase:** 28
+
+### EMAIL-DEADLINE-001 — T-24h deadline reminder lands in test inbox; HTML and plaintext both present
+- **Surface:** SMTP/test inbox
+- **Setup:** test SMTP server (or jsonTransport in dev); ReminderRule kind=deadline with fireAt in the past; >=1 lead with draft section
+- **Steps:** trigger RemindersScheduler.runOnce(now); inspect outgoing email
+- **Pass criteria:** multipart email with both HTML and text bodies; subject contains report period and "24h"
+- **CI command:** n/a (manual integration smoke)
+- **Phase:** 28
+
+### EMAIL-IDEMPOTENT-001 — Reminder idempotency test
+- **Surface:** RemindersScheduler.runOnce
+- **Setup:** vitest harness; in-memory repo
+- **Steps:** fire scheduler twice within one UTC day with the same recipient; observe queue.add call count
+- **Pass criteria:** queue.add called exactly once across both ticks
+- **CI command:** `pnpm --filter @customreport/api test apps/api/src/modules/reminders/reminders.scheduler.test.ts`
+- **Phase:** 28 (CI gate)
+
+### EMAIL-DELIVERY-001 — Corporate SMTP accepts and delivers (no spam-folder routing)
+- **Surface:** corporate SMTP server
+- **Setup:** SMTP_HOST set to staging SMTP; SMTP_FROM aligned with corporate sender policy
+- **Steps:** send a deadline reminder to a real corporate inbox; verify inbox placement (not spam)
+- **Pass criteria:** message in primary inbox; SPF/DKIM pass
+- **CI command:** n/a (manual)
+- **Phase:** 28
+
+### MOB-VIEWPORT-001 — All 7 pages have no horizontal scroll at 375px (Phase 30)
+- **Surface:** every routed page
+- **Setup:** Chrome DevTools mobile emulation 375x812
+- **Steps:** scroll each page; assert no horizontal overflow
+- **Pass criteria:** scrollWidth === clientWidth on body; no clipped controls
+- **CI command:** n/a (Phase 30 will add a Playwright viewport spec)
+- **Phase:** 30 (deferred)
+
+### MOB-TAP-001 — Tap targets >=44px on iOS (Phase 30)
+- **Surface:** every interactive element
+- **Setup:** iOS device or Safari DevTools
+- **Steps:** measure interactive element bounding boxes
+- **Pass criteria:** min(width, height) >= 44px for all primary tap targets
+- **CI command:** n/a (Phase 30)
+- **Phase:** 30 (deferred)
+
+### AI-EVAL-001 — AI eval suite green (Phase 31)
+- **Surface:** AI insight generators
+- **Setup:** Anthropic API key; eval dataset checked in
+- **Steps:** `pnpm test:ai-eval`
+- **Pass criteria:** all eval thresholds met
+- **CI command:** `pnpm test:ai-eval` (script not yet implemented — Phase 31)
+- **Phase:** 31 (deferred; CI-gate placeholder)
+
+### AI-COST-001 — Anthropic dashboard daily spend <= budget cap (Phase 31)
+- **Surface:** Anthropic console
+- **Setup:** dashboard access
+- **Steps:** check daily spend on staging key
+- **Pass criteria:** spend <= configured cap
+- **CI command:** n/a (manual)
+- **Phase:** 31 (deferred)
+
+### ANAL-CHARTS-001 — /reports/trends renders without console errors (Phase 30)
+- **Surface:** /reports/trends
+- **Setup:** head/viewer session; >=4 published reports
+- **Steps:** open page, watch console
+- **Pass criteria:** no console errors; charts render
+- **CI command:** n/a (Phase 30)
+- **Phase:** 30 (deferred)
+
+### ANAL-PERF-001 — Analytics query p95 <200ms (Phase 30)
+- **Surface:** analytics tRPC procedures
+- **Setup:** load-test harness
+- **Steps:** run k6 / autocannon against the trends endpoint
+- **Pass criteria:** p95 latency < 200ms
+- **CI command:** n/a (Phase 30)
+- **Phase:** 30 (deferred)
