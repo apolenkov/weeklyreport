@@ -2,6 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { initTRPC } from '@trpc/server';
 import superjson from 'superjson';
 
+import { requireRole } from '@customreport/shared/trpc';
+
 import type { TrpcContext } from './trpc.context.js';
 
 const t = initTRPC.context<TrpcContext>().create({ transformer: superjson });
@@ -68,19 +70,21 @@ const isAuthed = t.middleware(({ ctx, next }) => {
 
 export const protectedProcedure = t.procedure.use(loggingMiddleware).use(isAuthed);
 
-const isHead = t.middleware(({ ctx, next }) => {
-  if (!ctx.session) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
-  }
+// AUTH-03 (Phase 27): role-bound procedures derived from the shared
+// requireRole factory. The factory lives in @customreport/shared/trpc and is
+// parameterised over the api's local `t` instance, so the middleware closes
+// over the api's TrpcContext type while the contract stays in the shared
+// package. adminProcedure === headProcedure for v6.0 per D-AUTH-03 — admin
+// is a reserved alias until SAML attribute mapping (Phase 29 / AUTH-02)
+// distinguishes it. Existing callers of headProcedure see no breaking diff.
+const headRole = requireRole(t, 'head');
+const leadRole = requireRole(t, 'lead');
+const viewerRole = requireRole(t, 'viewer');
 
-  if (ctx.session.role !== 'head') {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Head role required' });
-  }
-
-  return next({ ctx: { session: ctx.session } });
-});
-
-export const headProcedure = t.procedure.use(loggingMiddleware).use(isHead);
+export const headProcedure = t.procedure.use(loggingMiddleware).use(headRole.middleware);
+export const leadProcedure = t.procedure.use(loggingMiddleware).use(leadRole.middleware);
+export const viewerProcedure = t.procedure.use(loggingMiddleware).use(viewerRole.middleware);
+export const adminProcedure = headProcedure;
 
 export const router = t.router;
 export const mergeRouters = t.mergeRouters;
