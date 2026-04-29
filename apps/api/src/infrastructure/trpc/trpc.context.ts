@@ -5,6 +5,7 @@ import type { UserSession } from '@customreport/shared';
 import { createAuthController } from '../../modules/auth/auth.controller.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AppLogger } from '../../lib/logger.js';
+import { createAuditLogger, type AuditLogger } from '../../lib/audit-logger.js';
 
 const DEV_SESSION: UserSession = {
   userId: 'a0000000-0000-4000-8000-000000000099',
@@ -18,20 +19,41 @@ const DEV_SESSION: UserSession = {
 export type TrpcContext = {
   session: UserSession | null;
   logger: AppLogger;
+  /**
+   * AUTH-08 (Phase 29-01): structured audit channel for security-relevant
+   * events (login success/fail, logout, role-denied). Built once per
+   * factory; the same instance is shared across all requests because the
+   * underlying AppLogger is request-agnostic (correlation IDs flow via
+   * nestjs-cls).
+   */
+  auditLogger: AuditLogger;
+  /**
+   * Client-perceived IP read from `req.ip` (Express trust-proxy aware).
+   * Threat-model T3: never read from raw X-Forwarded-For; this field is
+   * the canonical seam audit emits read from.
+   */
+  ip: string;
 };
 
 export function createContextFactory(_app: INestApplication, logger: AppLogger) {
   const authController = createAuthController(process.env);
   // Resolve PrismaService once (not per request) from the NestJS DI container.
   const prisma = _app.get(PrismaService);
+  const auditLogger = createAuditLogger(logger);
 
   return async ({ req }: CreateExpressContextOptions): Promise<TrpcContext> => {
+    const ip = req.ip ?? 'unknown';
     const token = req.cookies?.['customreport_session'] as string | undefined;
 
     if (token) {
       try {
         const session = authController.verifySessionToken(token);
-        return { session: await resolveSectionId(session, prisma), logger };
+        return {
+          session: await resolveSectionId(session, prisma),
+          logger,
+          auditLogger,
+          ip,
+        };
       } catch {
         // Token invalid/expired -- fall through
       }
@@ -46,10 +68,15 @@ export function createContextFactory(_app: INestApplication, logger: AppLogger) 
     const devModeEnabled = process.env['AUTH_DEV_MODE'] === 'true';
     const allowTest = process.env['AUTH_DEV_MODE_ALLOW_TEST'] === 'true';
     if (devModeEnabled || allowTest) {
-      return { session: await resolveSectionId({ ...DEV_SESSION }, prisma), logger };
+      return {
+        session: await resolveSectionId({ ...DEV_SESSION }, prisma),
+        logger,
+        auditLogger,
+        ip,
+      };
     }
 
-    return { session: null, logger };
+    return { session: null, logger, auditLogger, ip };
   };
 }
 

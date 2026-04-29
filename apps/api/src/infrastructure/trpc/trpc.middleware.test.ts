@@ -8,6 +8,10 @@ import {
   headProcedure,
 } from './trpc.middleware.js';
 import { createNullLogger, type AppLogger } from '../../lib/logger.js';
+import { createNullAuditLogger } from '../../lib/audit-logger.js';
+
+const nullAuditLogger = createNullAuditLogger();
+const TEST_IP = 'test-ip';
 
 // ---------------------------------------------------------------------------
 // Test router
@@ -25,7 +29,12 @@ const testRouter = router({
 
 const nullLogger = createNullLogger();
 
-const nullCaller = testRouter.createCaller({ session: null, logger: nullLogger });
+const nullCaller = testRouter.createCaller({
+  session: null,
+  logger: nullLogger,
+  auditLogger: nullAuditLogger,
+  ip: TEST_IP,
+});
 
 const leadCaller = testRouter.createCaller({
   session: {
@@ -37,6 +46,8 @@ const leadCaller = testRouter.createCaller({
     activeReportSectionId: 's1',
   },
   logger: nullLogger,
+  auditLogger: nullAuditLogger,
+  ip: TEST_IP,
 });
 
 const headCaller = testRouter.createCaller({
@@ -49,6 +60,8 @@ const headCaller = testRouter.createCaller({
     activeReportSectionId: null,
   },
   logger: nullLogger,
+  auditLogger: nullAuditLogger,
+  ip: TEST_IP,
 });
 
 function makeFakeLogger(): AppLogger & {
@@ -144,6 +157,8 @@ describe('tRPC auth middleware', () => {
         activeReportSectionId: null,
       },
       logger: nullLogger,
+      auditLogger: nullAuditLogger,
+      ip: TEST_IP,
     });
 
     await expect(viewerCaller.headRoute()).rejects.toMatchObject(
@@ -174,7 +189,12 @@ describe('tRPC auth middleware', () => {
 describe('tRPC logging middleware', () => {
   it('logs entry and exit on a successful query', async () => {
     const logger = makeFakeLogger();
-    const caller = testRouter.createCaller({ session: null, logger });
+    const caller = testRouter.createCaller({
+      session: null,
+      logger,
+      auditLogger: nullAuditLogger,
+      ip: TEST_IP,
+    });
 
     const result = await caller.publicRoute();
     expect(result).toBe('public-ok');
@@ -210,7 +230,12 @@ describe('tRPC logging middleware', () => {
     // null session triggers UNAUTHORIZED inside isAuthed, which runs after
     // loggingMiddleware — so we expect the entry log on info() and the exit
     // log on error().
-    const caller = testRouter.createCaller({ session: null, logger });
+    const caller = testRouter.createCaller({
+      session: null,
+      logger,
+      auditLogger: nullAuditLogger,
+      ip: TEST_IP,
+    });
 
     await expect(caller.protectedRoute()).rejects.toBeInstanceOf(TRPCError);
 
@@ -245,6 +270,8 @@ describe('tRPC logging middleware', () => {
         activeReportSectionId: 's1',
       },
       logger,
+      auditLogger: nullAuditLogger,
+      ip: TEST_IP,
     });
 
     await caller.protectedRoute();
@@ -256,7 +283,12 @@ describe('tRPC logging middleware', () => {
 
   it('records userId:null for an anonymous public procedure', async () => {
     const logger = makeFakeLogger();
-    const caller = testRouter.createCaller({ session: null, logger });
+    const caller = testRouter.createCaller({
+      session: null,
+      logger,
+      auditLogger: nullAuditLogger,
+      ip: TEST_IP,
+    });
 
     await caller.publicRoute();
 
