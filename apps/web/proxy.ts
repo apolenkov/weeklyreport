@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+// Next.js 16 proxy.ts must live here, NOT under src/.
+// Phase 27 (QA-03) deleted the dead duplicate at apps/web/src/proxy.ts —
+// do NOT re-create it. Next 16 only honours the root-level proxy.ts;
+// a file under src/ would silently bypass auth without a build error.
+
 /**
  * Next.js 16 proxy.ts — replaces middleware.ts as of Next 16.
  *
