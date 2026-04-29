@@ -25,6 +25,26 @@ export interface RemindersRepository {
   listExecutions(ruleId: string): Promise<AdminReminderExecution[]>;
 }
 
+/**
+ * NOTIF-01/03 (Phase 28-03): the richer payload threaded by the scheduler
+ * through `requestReminderExecution`. The dedupeKey for kind='deadline' uses
+ * `${rule.id}:${kind}:${cycleDate}:${recipientEmail}` so two scheduler ticks
+ * within one UTC day collapse to a single execution.
+ *
+ * Phase 29 will extend the kind union to 'follow-up' | 'escalation'. The
+ * v2.0 follow-up dedupe key shape (`${rule.id}:${fireAt.toISOString()}:${recipientEmail}`)
+ * is preserved for legacy callers that omit `payload` — see the overload
+ * below.
+ */
+export interface ReminderExecutionPayload {
+  kind: 'deadline';
+  cycleDate: string; // ISO YYYY-MM-DD UTC of the fireAt deadline
+  leadName: string;
+  reportPeriod: string;
+  deadlineIso: string;
+  sectionUrl: string;
+}
+
 export class RemindersService {
   private readonly logger: AppLogger;
   private readonly emailQueue: Queue | null;
@@ -38,9 +58,18 @@ export class RemindersService {
     this.emailQueue = emailQueue ?? null;
   }
 
+  /**
+   * NOTIF-01 / NOTIF-04 (Phase 28-03): requestReminderExecution accepts an
+   * optional richer payload. When omitted, falls back to the legacy v2.0
+   * dedupe-key shape — preserves backward compatibility for the existing
+   * follow-up code path. When provided (the new scheduler path),
+   * dedupe-key uses `${rule.id}:${kind}:${cycleDate}:${recipientEmail}` so
+   * hourly @Cron ticks within one UTC cycle produce exactly one email.
+   */
   async requestReminderExecution(
     ruleId: string,
     recipientEmail: string,
+    payload?: ReminderExecutionPayload,
   ): Promise<AdminReminderExecution> {
     const rule = await this.repository.getRule(ruleId);
 
@@ -52,7 +81,10 @@ export class RemindersService {
       throw new ReminderDomainError('Reminder execution requires an active rule.');
     }
 
-    const dedupeKey = `${rule.id}:${rule.fireAt.toISOString()}:${recipientEmail}`;
+    const dedupeKey = payload
+      ? `${rule.id}:${payload.kind}:${payload.cycleDate}:${recipientEmail}`
+      : `${rule.id}:${rule.fireAt.toISOString()}:${recipientEmail}`;
+
     const existingExecution = await this.repository.findExecutionByDedupeKey(dedupeKey);
 
     if (existingExecution) {
@@ -76,11 +108,26 @@ export class RemindersService {
     );
 
     if (this.emailQueue) {
-      await this.emailQueue.add(
-        'send',
-        { executionId: execution.id, recipientEmail, reportPeriod: rule.reportId },
-        { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
-      );
+      const queuePayload = payload
+        ? {
+            executionId: execution.id,
+            recipientEmail,
+            kind: payload.kind,
+            leadName: payload.leadName,
+            reportPeriod: payload.reportPeriod,
+            deadlineIso: payload.deadlineIso,
+            sectionUrl: payload.sectionUrl,
+          }
+        : {
+            executionId: execution.id,
+            recipientEmail,
+            reportPeriod: rule.reportId ?? '',
+          };
+
+      await this.emailQueue.add('send', queuePayload, {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+      });
       this.logger.info('enqueued email reminder job', { executionId: execution.id });
     }
 

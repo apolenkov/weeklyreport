@@ -186,6 +186,84 @@ describe('RemindersService', () => {
     });
   });
 
+  // -----------------------------------------------------------------------
+  // NOTIF-01/04 (Phase 28-03): kind='deadline' payload ⇒ extended dedupe-key.
+  // -----------------------------------------------------------------------
+
+  describe('NOTIF-01 deadline payload — extended dedupe-key shape', () => {
+    const deadlinePayload = {
+      kind: 'deadline' as const,
+      cycleDate: '2026-04-19',
+      leadName: 'Lead Alpha',
+      reportPeriod: '2026-04-13 → 2026-04-19',
+      deadlineIso: '2026-04-19T15:00:00.000Z',
+      sectionUrl: 'http://localhost:3000/lead/report?reportId=abc',
+    };
+
+    it('builds dedupeKey of shape ${ruleId}:deadline:${cycleDate}:${email} when payload is provided', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const exec = await service.requestReminderExecution(
+        activeRule.id,
+        'lead@test.local',
+        deadlinePayload,
+      );
+
+      expect(exec.dedupeKey).toBe(
+        `${activeRule.id}:deadline:2026-04-19:lead@test.local`,
+      );
+    });
+
+    it('two calls with same (ruleId, kind, cycleDate, email) collapse to one execution', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const first = await service.requestReminderExecution(
+        activeRule.id,
+        'lead@test.local',
+        deadlinePayload,
+      );
+      const second = await service.requestReminderExecution(
+        activeRule.id,
+        'lead@test.local',
+        deadlinePayload,
+      );
+
+      expect(second.id).toBe(first.id);
+      expect(second.dedupeKey).toBe(first.dedupeKey);
+    });
+
+    it('different cycleDate ⇒ different dedupeKey ⇒ different execution', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const cycleN = await service.requestReminderExecution(
+        activeRule.id,
+        'lead@test.local',
+        { ...deadlinePayload, cycleDate: '2026-04-19' },
+      );
+      const cycleNplus1 = await service.requestReminderExecution(
+        activeRule.id,
+        'lead@test.local',
+        { ...deadlinePayload, cycleDate: '2026-04-26' },
+      );
+
+      expect(cycleNplus1.id).not.toBe(cycleN.id);
+      expect(cycleNplus1.dedupeKey).not.toBe(cycleN.dedupeKey);
+    });
+
+    it('legacy (no payload) and deadline (with payload) are independent dedupe namespaces', async () => {
+      const service = new RemindersService(createRepository(activeRule));
+      const legacy = await service.requestReminderExecution(
+        activeRule.id,
+        'lead@test.local',
+      );
+      const deadline = await service.requestReminderExecution(
+        activeRule.id,
+        'lead@test.local',
+        deadlinePayload,
+      );
+
+      expect(deadline.id).not.toBe(legacy.id);
+      expect(deadline.dedupeKey).not.toBe(legacy.dedupeKey);
+    });
+  });
+
 describe('remindersRouter', () => {
   it('returns rule execution history', async () => {
     const service = new RemindersService(createRepository(activeRule));
