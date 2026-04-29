@@ -20,9 +20,85 @@ const dbExecStatusToDomain: Record<string, AdminReminderExecution['status']> = {
   failed: 'failed',
 };
 
+/**
+ * NOTIF-04 (Phase 28-03): row shape for the hourly @Cron tick.
+ *
+ * Each due rule resolves to one or more recipients — leads whose section is
+ * still in 'draft' status for the rule's reportId. The scheduler iterates
+ * recipients and calls `requestReminderExecution` with the kind='deadline'
+ * payload. Idempotent dedupe by `${rule.id}:deadline:${cycleDate}:${email}`
+ * collapses two ticks within a single UTC day into exactly one email.
+ */
+export interface DueDeadlineRule {
+  id: string;
+  reportId: string;
+  fireAt: Date;
+  reportPeriodLabel: string;
+  recipients: Array<{ userId: string; email: string; name: string }>;
+}
+
 @Injectable()
 export class RemindersPrismaRepository implements RemindersRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * NOTIF-04: returns active deadline rules whose fireAt is in the past,
+   * pre-resolved with the recipient leads (those whose ReportSection for
+   * the rule's reportId is still 'draft' status). Rules without a reportId
+   * are skipped — they have no concrete deadline to remind about.
+   */
+  async findDueDeadlineRules(now: Date): Promise<DueDeadlineRule[]> {
+    const rules = await this.prisma.reminderRule.findMany({
+      where: {
+        status: 'active',
+        kind: 'deadline',
+        fireAt: { lte: now },
+        reportId: { not: null },
+      },
+      include: {
+        report: {
+          select: {
+            id: true,
+            periodStart: true,
+            periodEnd: true,
+            sections: {
+              where: { status: 'draft' },
+              select: {
+                authorId: true,
+                author: {
+                  select: { id: true, email: true, name: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const due: DueDeadlineRule[] = [];
+    for (const rule of rules) {
+      if (!rule.report) continue;
+      const recipients = rule.report.sections
+        .filter((s) => s.author !== null)
+        .map((s) => ({
+          userId: s.author!.id,
+          email: s.author!.email,
+          name: s.author!.name,
+        }));
+      if (recipients.length === 0) continue;
+      due.push({
+        id: rule.id,
+        reportId: rule.report.id,
+        fireAt: rule.fireAt,
+        reportPeriodLabel: formatPeriodLabel(
+          rule.report.periodStart,
+          rule.report.periodEnd,
+        ),
+        recipients,
+      });
+    }
+    return due;
+  }
 
   async getRule(ruleId: string): Promise<AdminReminderRule | null> {
     const rule = await this.prisma.reminderRule.findUnique({
@@ -93,6 +169,11 @@ export class RemindersPrismaRepository implements RemindersRepository {
 
     return executions.map(toExecutionDomain);
   }
+}
+
+function formatPeriodLabel(start: Date, end: Date): string {
+  // Compact UTC-formatted label, e.g. "2026-04-13 → 2026-04-19"
+  return `${start.toISOString().slice(0, 10)} → ${end.toISOString().slice(0, 10)}`;
 }
 
 function toRuleDomain(rule: {

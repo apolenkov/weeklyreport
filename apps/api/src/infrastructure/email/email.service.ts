@@ -55,4 +55,38 @@ export class EmailService {
       );
     }
   }
+
+  /**
+   * NOTIF-03 (Phase 28-03): multipart HTML + plaintext send. nodemailer accepts
+   * both `html` and `text` simultaneously — corporate spam filters score
+   * multipart higher, and clients that don't render HTML still receive the
+   * plaintext body. Use this overload for deadline reminders (NOTIF-01) and
+   * any future template-rendered email.
+   */
+  async sendMailMultipart(
+    to: string,
+    subject: string,
+    html: string,
+    text: string,
+  ): Promise<void> {
+    await this.transporter.sendMail({
+      from: this.fromAddress,
+      to,
+      subject,
+      html,
+      text,
+    });
+
+    if (this.isDev) {
+      process.stdout.write(
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          message: 'email sent (dev/jsonTransport, multipart)',
+          envelope: { from: this.fromAddress, to },
+          subject,
+        }) + '\n',
+      );
+    }
+  }
 }

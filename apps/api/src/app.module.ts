@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ClsModule } from 'nestjs-cls';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { BullMQModule } from './infrastructure/bullmq/bullmq.module';
@@ -28,6 +29,10 @@ import { EmailService } from './infrastructure/email/email.service';
       global: true,
       middleware: { mount: true, generateId: false },
     }),
+    // NOTIF-04 (Phase 28-03): hourly @Cron tick for deadline reminder dispatch.
+    // ScheduleModule.forRoot() must be present for `@Cron(...)` decorators on
+    // any provider in the module graph (e.g. RemindersScheduler) to fire.
+    ScheduleModule.forRoot(),
     PrismaModule,
     BullMQModule,
     HealthModule,
