@@ -19,3 +19,6 @@ pnpm-lock.yaml
 .ideagraphify-out/
 .claude/worktrees/
 .claude/settings.local.json
+graphify-out/
+.idea/
+.results
