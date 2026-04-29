@@ -101,7 +101,16 @@ test.describe('Admin CRUD (integration)', () => {
     });
     expect(platanovProductCount).toBe(2); // CRM Platform, Data Analytics Suite
 
-    // Page should mention at least one of the seeded names.
+    // Page should mention at least one of the seeded names. The
+    // /admin/products route redirects to /admin?tab=products, which mounts
+    // AdminPanel and fires the admin.snapshot tRPC query async. Wait for
+    // the seeded product name to appear in the rendered DOM before
+    // snapshotting HTML — Playwright will retry the locator until it
+    // resolves or hits the default expect timeout.
+    await expect(
+      headPage.getByText(/CRM Platform|Data Analytics Suite/),
+    ).toBeVisible();
+
     const html = await headPage.content();
     expect(
       /CRM Platform|Data Analytics Suite/.test(html),
