@@ -148,7 +148,14 @@ test.describe('Lead journey (integration)', () => {
     await loginAs(context, { role: 'lead', email: SEED_EMAILS.sergey });
     await page.goto('/lead/report');
 
-    const fillFromBtn = page.getByRole('button', { name: /fill from/i });
+    // Use exact text match to avoid ambiguity with the sibling dropdown
+    // trigger button whose aria-label is "Choose past report to fill from".
+    // Both buttons live inside <FillFromButton/>; the primary action button
+    // is the one labelled "Fill from Previous".
+    const fillFromBtn = page.getByRole('button', {
+      name: 'Fill from Previous',
+      exact: true,
+    });
     if (!(await fillFromBtn.count())) {
       // eslint-disable-next-line playwright/no-skipped-test
       test.skip(
@@ -157,6 +164,16 @@ test.describe('Lead journey (integration)', () => {
       );
     }
     await fillFromBtn.click();
+
+    // FillFromButton opens a confirmation dialog ("Replace & Fill") rather
+    // than firing the mutation directly. The mutation only runs after the
+    // user confirms — so the test must dismiss the dialog before
+    // waitForResponse can ever match.
+    const confirmFillBtn = page.getByRole('button', {
+      name: 'Replace & Fill',
+      exact: true,
+    });
+    await confirmFillBtn.click();
 
     // Wait for the mutation that copies items.
     await page.waitForResponse(
