@@ -15,6 +15,7 @@ import { createAppRouter } from './infrastructure/trpc/trpc.router';
 import { createContextFactory } from './infrastructure/trpc/trpc.context';
 import { validateEnv } from './infrastructure/config/env.schema';
 import { createAppLogger } from './lib/logger';
+import { createAuditLogger } from './lib/audit-logger';
 import { mountAuthRoutes } from './modules/auth/auth.routes';
 import { createAuthController } from './modules/auth/auth.controller';
 import { createSamlStrategy, createSamlStrategyOptions } from './modules/auth/saml.strategy';
@@ -109,7 +110,17 @@ async function bootstrap() {
   const samlOptions = createSamlStrategyOptions(process.env);
   const samlStrategy = createSamlStrategy(samlOptions);
   const authCtrl = createAuthController(process.env);
-  mountAuthRoutes(expressApp, samlStrategy, authCtrl, prismaService, process.env);
+  // AUTH-08 (Phase 29-01): structured audit channel for login-success/fail
+  // and logout. Wired here so the same AppLogger drives every audit event.
+  const auditLogger = createAuditLogger(logger);
+  mountAuthRoutes(
+    expressApp,
+    samlStrategy,
+    authCtrl,
+    prismaService,
+    process.env,
+    auditLogger,
+  );
 
   mountBullBoard(app);
 

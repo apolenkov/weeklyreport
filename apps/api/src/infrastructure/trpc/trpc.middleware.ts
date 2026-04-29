@@ -2,7 +2,8 @@ import { TRPCError } from '@trpc/server';
 import { initTRPC } from '@trpc/server';
 import superjson from 'superjson';
 
-import { requireRole } from '@customreport/shared/trpc';
+import { assertRole } from '@customreport/shared/trpc';
+import type { Role, UserSession } from '@customreport/shared';
 
 import type { TrpcContext } from './trpc.context.js';
 
@@ -70,27 +71,54 @@ const isAuthed = t.middleware(({ ctx, next }) => {
 
 export const protectedProcedure = t.procedure.use(loggingMiddleware).use(isAuthed);
 
-// AUTH-03 (Phase 27): role-bound procedures derived from the shared
-// requireRole factory. The factory lives in @customreport/shared/trpc and is
-// parameterised over the api's local `t` instance, so the middleware closes
-// over the api's TrpcContext type while the contract stays in the shared
-// package. adminProcedure === headProcedure for v6.0 per D-AUTH-03 — admin
-// is a reserved alias until SAML attribute mapping (Phase 29 / AUTH-02)
+// AUTH-03 (Phase 27) + AUTH-08 (Phase 29-01): role-bound procedures whose
+// deny branch emits a structured `role-denied` audit event before throwing
+// FORBIDDEN. The role check itself is delegated to the pure `assertRole`
+// helper from @customreport/shared/trpc — the contract is identical, but
+// the middleware lives locally so it can read `ctx.auditLogger` / `ctx.ip`
+// from the api's TrpcContext. Per A-1 (defense-in-depth): the emit lives
+// inside the factory so every consumer site inherits the audit signal
+// automatically, including future SAML-driven deny conditions in Phase
+// 29-04.
+//
+// adminProcedure === headProcedure for v6.0 per D-AUTH-03 — admin is a
+// reserved alias until SAML attribute mapping (Phase 29 / AUTH-02)
 // distinguishes it. Existing callers of headProcedure see no breaking diff.
-const headRole = requireRole(t, 'head');
-const leadRole = requireRole(t, 'lead');
-const viewerRole = requireRole(t, 'viewer');
+function buildRoleMiddleware(allowed: Role | Role[]) {
+  return t.middleware<{ session: UserSession }>(async ({ ctx, next }) => {
+    try {
+      const session = assertRole(ctx.session, allowed);
+      return next({ ctx: { session } });
+    } catch (err) {
+      if (err instanceof TRPCError && err.code === 'FORBIDDEN') {
+        // T2 mitigation: even when role/userId are missing, emit so the
+        // audit trail captures the attempt rather than swallowing it.
+        ctx.auditLogger.roleDenied({
+          userId: ctx.session?.userId ?? 'anonymous',
+          role: ctx.session?.role ?? 'unknown',
+          attemptedRole: allowed,
+          ip: ctx.ip,
+        });
+      }
+      throw err;
+    }
+  });
+}
+
+const headRoleMiddleware = buildRoleMiddleware('head');
+const leadRoleMiddleware = buildRoleMiddleware('lead');
+const viewerRoleMiddleware = buildRoleMiddleware('viewer');
 // AUTH-04 (Phase 28-01): a "any authenticated role" procedure for read paths
 // where the service layer is the actual gate (Prisma `where` filtered by
 // session.role). Necessary for archive.* and weeklyReport.get because heads,
 // leads, admins, and viewers all read the same surface but with different
 // row visibility. Service-level unit tests verify the role-aware filter.
-const anyRole = requireRole(t, ['lead', 'head', 'admin', 'viewer']);
+const anyRoleMiddleware = buildRoleMiddleware(['lead', 'head', 'admin', 'viewer']);
 
-export const headProcedure = t.procedure.use(loggingMiddleware).use(headRole.middleware);
-export const leadProcedure = t.procedure.use(loggingMiddleware).use(leadRole.middleware);
-export const viewerProcedure = t.procedure.use(loggingMiddleware).use(viewerRole.middleware);
-export const anyRoleProcedure = t.procedure.use(loggingMiddleware).use(anyRole.middleware);
+export const headProcedure = t.procedure.use(loggingMiddleware).use(headRoleMiddleware);
+export const leadProcedure = t.procedure.use(loggingMiddleware).use(leadRoleMiddleware);
+export const viewerProcedure = t.procedure.use(loggingMiddleware).use(viewerRoleMiddleware);
+export const anyRoleProcedure = t.procedure.use(loggingMiddleware).use(anyRoleMiddleware);
 export const adminProcedure = headProcedure;
 
 export const router = t.router;

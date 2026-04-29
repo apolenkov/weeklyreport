@@ -7,6 +7,10 @@ import type { PrismaClient } from '@prisma/client';
 import type { UserSession } from '@customreport/shared';
 
 import type { createAuthController } from './auth.controller.js';
+import {
+  createNullAuditLogger,
+  type AuditLogger,
+} from '../../lib/audit-logger.js';
 
 type SamlProfile = {
   samlId: string;
@@ -172,6 +176,7 @@ export function mountAuthRoutes(
   authController: ReturnType<typeof createAuthController>,
   prisma: PrismaClient,
   env: NodeJS.ProcessEnv,
+  auditLogger: AuditLogger = createNullAuditLogger(),
 ): void {
   const frontendUrl = env.FRONTEND_URL ?? 'http://localhost:3000';
 
@@ -196,6 +201,15 @@ export function mountAuthRoutes(
         const profile = req.user as SamlProfile | undefined;
 
         if (!profile) {
+          // AUTH-08: SAML callback hit without a passport-attached profile —
+          // treat as login-fail (T2 mitigation: emit even when role/userId
+          // are unknown so the audit trail captures the attempt).
+          auditLogger.loginFail({
+            userId: 'anonymous',
+            role: 'unknown',
+            ip: req.ip ?? 'unknown',
+            reason: 'invalid_assertion',
+          });
           res.redirect(`${frontendUrl}/auth/error?reason=invalid_assertion`);
           return;
         }
@@ -203,16 +217,42 @@ export function mountAuthRoutes(
         const session = await buildUserSession(prisma, profile);
         const { setCookieHeader } = authController.issueSessionCookie(session);
 
+        // AUTH-08: structured login-success audit event.
+        auditLogger.loginSuccess({
+          userId: session.userId,
+          role: session.role,
+          ip: req.ip ?? 'unknown',
+        });
+
         res.setHeader('Set-Cookie', setCookieHeader);
         res.redirect(frontendUrl);
       } catch (error) {
+        // AUTH-08: any post-passport failure (DB write, JWT signing, etc.)
+        // is still a failed login from the user's perspective.
+        auditLogger.loginFail({
+          userId: 'anonymous',
+          role: 'unknown',
+          ip: req.ip ?? 'unknown',
+          reason: error instanceof Error ? error.message : 'callback-error',
+        });
         next(error);
       }
     },
   );
 
   // --- POST /auth/logout ---
-  expressApp.post('/auth/logout', (_request: Request, res: Response) => {
+  expressApp.post('/auth/logout', (request: Request, res: Response) => {
+    // AUTH-08: emit logout audit event using whatever session shape was
+    // attached upstream (passport-strategy or proxy middleware). When no
+    // session is present, fall back to anonymous/unknown — same defensive
+    // shape as login-fail to keep the audit trail consistent.
+    const reqUser = (request as Request & { user?: UserSession }).user;
+    auditLogger.logout({
+      userId: reqUser?.userId ?? 'anonymous',
+      role: reqUser?.role ?? 'unknown',
+      ip: request.ip ?? 'unknown',
+    });
+
     const cookieName = env.AUTH_JWT_COOKIE_NAME ?? 'customreport_session';
     res.setHeader(
       'Set-Cookie',
