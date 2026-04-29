@@ -3,11 +3,19 @@
   "tasks": {
     "build": {
       "dependsOn": [
-        "^build"
+        "^build",
+        "db:generate"
       ],
       "outputs": [
         ".next/**",
         "dist/**"
+      ]
+    },
+    "db:generate": {
+      "cache": false,
+      "outputs": [
+        "../../node_modules/.prisma/**",
+        "../../node_modules/@prisma/client/**"
       ]
     },
     "dev": {
@@ -21,7 +29,8 @@
     },
     "typecheck": {
       "dependsOn": [
-        "^typecheck"
+        "^typecheck",
+        "db:generate"
       ]
     },
     "test": {
