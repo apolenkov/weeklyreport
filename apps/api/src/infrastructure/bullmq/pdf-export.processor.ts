@@ -10,6 +10,11 @@ import { PdfExportService } from '../../modules/pdf-export/pdf-export.service';
 type PdfExportJobData = {
   reportId: string;
   jobId: string;
+  // AUTH-05 (Phase 28-02): short-lived (5min) JWT injected into the
+  // Playwright browser context as the AUTH_JWT_COOKIE_NAME cookie before
+  // page.goto. Required so the print page's tRPC fetch carries an
+  // authenticated session — closes the cookie seam left open in Phase 24.
+  authToken: string;
 };
 
 /**
@@ -48,6 +53,8 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
           jobId: job?.data.jobId,
           reportId: job?.data.reportId,
           attempt: job?.attemptsMade,
+          // AUTH-05: never log the actual token; only its presence.
+          authToken: job?.data.authToken ? '<redacted>' : 'MISSING',
           error: error.message,
         }) + '\n',
       );
@@ -59,17 +66,20 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
   }
 
   private async processJob(job: Job<PdfExportJobData>): Promise<void> {
-    const { reportId, jobId } = job.data;
+    const { reportId, jobId, authToken } = job.data;
     const baseUrl = process.env['PDF_BASE_URL'] ?? 'http://localhost:3000';
     const reportUrl = `${baseUrl}/reports/${reportId}/print`;
 
     const browser = await chromium.launch({ headless: true });
     try {
-      const page = await browser.newPage();
-      // TODO(Phase 24): inject session cookie via PdfExportService.buildAuthCookies +
-      // page.context().addCookies() once auth guards land on tRPC. v5.0 relies on
-      // AUTH_DEV_MODE=true on the API for unauthenticated tRPC fetches from
-      // Playwright; the print page calls trpc.weeklyReport.get client-side.
+      // AUTH-05 (Phase 28-02): the auth cookie MUST be set before page.goto so
+      // the print page's tRPC fetch carries customreport_session out of the
+      // gate. Build via PdfExportService.buildAuthCookies which derives
+      // domain/secure from PDF_BASE_URL — the contract Phase 27 left for us.
+      const context = await browser.newContext();
+      const cookies = this.pdfExportService.buildAuthCookies(authToken);
+      await context.addCookies(cookies);
+      const page = await context.newPage();
       await page.goto(reportUrl, { waitUntil: 'networkidle' });
       const pdfBuffer = await page.pdf({
         format: 'A4',

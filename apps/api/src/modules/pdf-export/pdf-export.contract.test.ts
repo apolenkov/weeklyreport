@@ -132,21 +132,38 @@ describe('PdfExportService — contract tests', () => {
 
     // 5. requestPdfExport — enqueues BullMQ job when queue is provided
     it('enqueues a BullMQ job when a queue is provided', async () => {
-      const mockQueue = createMockQueue();
-      const service = new PdfExportService(
-        createRepository(publishedReport),
-        undefined,
-        mockQueue as unknown as import('bullmq').Queue,
-      );
+      // AUTH-05 (Phase 28-02): the queue payload now carries an authToken
+      // signed with PDF_EXPORT_JWT_SECRET. Stub the secret for deterministic
+      // signing.
+      const originalSecret = process.env['PDF_EXPORT_JWT_SECRET'];
+      process.env['PDF_EXPORT_JWT_SECRET'] = 'a'.repeat(32);
+      try {
+        const mockQueue = createMockQueue();
+        const service = new PdfExportService(
+          createRepository(publishedReport),
+          undefined,
+          mockQueue as unknown as import('bullmq').Queue,
+        );
 
-      const job = await service.requestPdfExport(reportId);
+        const job = await service.requestPdfExport(reportId);
 
-      expect(mockQueue.add).toHaveBeenCalledTimes(1);
-      expect(mockQueue.add).toHaveBeenCalledWith(
-        'generate',
-        { reportId, jobId: job.jobId },
-        { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
-      );
+        expect(mockQueue.add).toHaveBeenCalledTimes(1);
+        expect(mockQueue.add).toHaveBeenCalledWith(
+          'generate',
+          expect.objectContaining({
+            reportId,
+            jobId: job.jobId,
+            authToken: expect.stringMatching(/^eyJ/),
+          }),
+          { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+        );
+      } finally {
+        if (originalSecret === undefined) {
+          delete process.env['PDF_EXPORT_JWT_SECRET'];
+        } else {
+          process.env['PDF_EXPORT_JWT_SECRET'] = originalSecret;
+        }
+      }
     });
 
     // 6. requestPdfExport — works without queue (null queue)

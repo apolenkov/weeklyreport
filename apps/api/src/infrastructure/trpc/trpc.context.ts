@@ -37,8 +37,15 @@ export function createContextFactory(_app: INestApplication, logger: AppLogger) 
       }
     }
 
-    // In dev mode without a valid cookie, use fallback session
-    if (process.env['AUTH_DEV_MODE'] === 'true') {
+    // AUTH-01 / Phase 28-02 (CC-1, CC-2):
+    //  - AUTH_DEV_MODE=true: legacy dev-loop convenience (preserved verbatim).
+    //  - AUTH_DEV_MODE_ALLOW_TEST=true: staged path enabling the integration
+    //    suite + PDF worker to operate against a "real" tRPC context without
+    //    flipping production. Phase 29 will retire DEV_SESSION entirely once
+    //    the mock IdP container is wired.
+    const devModeEnabled = process.env['AUTH_DEV_MODE'] === 'true';
+    const allowTest = process.env['AUTH_DEV_MODE_ALLOW_TEST'] === 'true';
+    if (devModeEnabled || allowTest) {
       return { session: await resolveSectionId({ ...DEV_SESSION }, prisma), logger };
     }
 

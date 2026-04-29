@@ -15,10 +15,14 @@ type AppShellProps = {
 };
 
 function getRoleLabel(role: Role): string {
+  // Phase 27 widened `Role` to include 'admin' (sessionRoleSchema). For v6.0,
+  // adminProcedure === headProcedure (D-AUTH-03), so admin sessions render
+  // identically to head until Phase 29 splits them at the SAML attribute layer.
   const labels: Record<Role, string> = {
     lead: 'Lead role',
     head: 'Head role',
     viewer: 'Viewer role',
+    admin: 'Admin role',
   };
 
   return labels[role];

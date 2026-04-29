@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import jwt from 'jsonwebtoken';
 
 import type { AssembledReport, PdfExportJob } from '@customreport/shared';
 
@@ -125,6 +126,97 @@ describe('PdfExportService', () => {
     await expect(
       service.requestPdfExport(reportId, '00000000-0000-4000-8000-00000000abcd'),
     ).rejects.toBeInstanceOf(PdfExportDomainError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AUTH-05 (Phase 28-02): the 5-min PDF export JWT cookie seam.
+// ---------------------------------------------------------------------------
+
+describe('AUTH-05 PDF export JWT signing', () => {
+  const PDF_SECRET = 'integration-test-secret-32-chars-or-more';
+
+  beforeEach(() => {
+    vi.stubEnv('PDF_EXPORT_JWT_SECRET', PDF_SECRET);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('signPdfExportToken throws PdfExportDomainError when secret is missing', () => {
+    vi.stubEnv('PDF_EXPORT_JWT_SECRET', '');
+    const service = new PdfExportService(createRepository(publishedReport));
+
+    expect(() => service.signPdfExportToken(reportId)).toThrow(PdfExportDomainError);
+  });
+
+  it('signPdfExportToken throws PdfExportDomainError when secret is too short (<16 chars)', () => {
+    vi.stubEnv('PDF_EXPORT_JWT_SECRET', 'short');
+    const service = new PdfExportService(createRepository(publishedReport));
+
+    expect(() => service.signPdfExportToken(reportId)).toThrow(PdfExportDomainError);
+  });
+
+  it('signPdfExportToken produces a JWT carrying claim {reportId} and exp ≤ 5min', () => {
+    const service = new PdfExportService(createRepository(publishedReport));
+    const before = Math.floor(Date.now() / 1000);
+    const token = service.signPdfExportToken(reportId);
+    const after = Math.floor(Date.now() / 1000);
+
+    expect(token).toMatch(/^eyJ/); // JWT header prefix
+    const decoded = jwt.verify(token, PDF_SECRET) as {
+      reportId: string;
+      iat: number;
+      exp: number;
+    };
+    expect(decoded.reportId).toBe(reportId);
+    expect(decoded.exp - decoded.iat).toBe(5 * 60);
+    expect(decoded.exp).toBeGreaterThanOrEqual(before + 5 * 60);
+    expect(decoded.exp).toBeLessThanOrEqual(after + 5 * 60 + 1);
+  });
+
+  it('requestPdfExport enqueues a JWT-shaped authToken bound to the reportId', async () => {
+    type EnqueuedJob = { name: string; data: { reportId: string; jobId: string; authToken: string } };
+    const enqueued: EnqueuedJob[] = [];
+    const fakeQueue = {
+      add: async (name: string, data: EnqueuedJob['data']) => {
+        enqueued.push({ name, data });
+        return { id: 'fake' };
+      },
+    } as never;
+
+    const service = new PdfExportService(createRepository(publishedReport), undefined, fakeQueue);
+    await service.requestPdfExport(reportId);
+
+    expect(enqueued).toHaveLength(1);
+    expect(enqueued[0]!.name).toBe('generate');
+    expect(enqueued[0]!.data.reportId).toBe(reportId);
+    expect(enqueued[0]!.data.authToken).toMatch(/^eyJ/);
+
+    const decoded = jwt.verify(enqueued[0]!.data.authToken, PDF_SECRET) as {
+      reportId: string;
+    };
+    expect(decoded.reportId).toBe(reportId);
+  });
+
+  it('requestPdfExport allows pre-signed authToken pass-through (does not re-sign)', async () => {
+    type EnqueuedJob = { name: string; data: { reportId: string; jobId: string; authToken: string } };
+    const enqueued: EnqueuedJob[] = [];
+    const fakeQueue = {
+      add: async (name: string, data: EnqueuedJob['data']) => {
+        enqueued.push({ name, data });
+        return { id: 'fake' };
+      },
+    } as never;
+
+    const presigned = jwt.sign({ reportId, custom: 'override' }, PDF_SECRET, {
+      expiresIn: '1m',
+    });
+    const service = new PdfExportService(createRepository(publishedReport), undefined, fakeQueue);
+    await service.requestPdfExport(reportId, undefined, presigned);
+
+    expect(enqueued[0]!.data.authToken).toBe(presigned);
   });
 });
 
