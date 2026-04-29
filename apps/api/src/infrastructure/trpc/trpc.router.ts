@@ -13,7 +13,13 @@ import {
   appSettingsUpdateSchema,
 } from '@customreport/shared';
 
-import { router, publicProcedure, protectedProcedure, headProcedure } from './trpc.middleware.js';
+import {
+  router,
+  publicProcedure,
+  protectedProcedure,
+  headProcedure,
+  anyRoleProcedure,
+} from './trpc.middleware.js';
 import { mapDomainError } from './trpc.error-mapper.js';
 
 import type { PrismaClient } from '@prisma/client';
@@ -120,7 +126,11 @@ export function createAppRouter(deps: RouterDeps) {
 
     // === Review namespace ===
     review: router({
-      dashboard: protectedProcedure.query(async ({ ctx }) => {
+      // AUTH-04 (Phase 28-01): review.dashboard hardened from protectedProcedure
+      // → headProcedure. Defense-in-depth: only heads (and admins, aliased)
+      // see the submission dashboard. assembledReport / publish were already
+      // headProcedure.
+      dashboard: headProcedure.query(async ({ ctx }) => {
         try {
           const activeReportId = ctx.session.activeReportId;
 
@@ -325,22 +335,27 @@ export function createAppRouter(deps: RouterDeps) {
     }),
 
     // === Archive namespace ===
+    // AUTH-04 (Phase 28-01): archive.list / archive.detail use anyRoleProcedure
+    // because heads, leads, admins, and viewers all consume this surface but
+    // with different row visibility. The Prisma `where` filter at the service
+    // layer (driven by ctx.session.role) is the actual gate — viewers can
+    // only ever see published reports.
     archive: router({
-      list: protectedProcedure
+      list: anyRoleProcedure
         .input(paginationInputSchema.optional())
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
-            return await deps.archiveService.listArchiveReports(input);
+            return await deps.archiveService.listArchiveReports(input, ctx.session.role);
           } catch (error) {
             throw mapDomainError(error);
           }
         }),
 
-      detail: protectedProcedure
+      detail: anyRoleProcedure
         .input(z.object({ reportId: z.string().uuid() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
-            return await deps.archiveService.getArchiveReport(input.reportId);
+            return await deps.archiveService.getArchiveReport(input.reportId, ctx.session.role);
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -416,12 +431,18 @@ export function createAppRouter(deps: RouterDeps) {
     }),
 
     // === Weekly Report namespace (v4.0) ===
+    // AUTH-04 (Phase 28-01): weeklyReport.get uses anyRoleProcedure because
+    // viewers, leads, heads, and admins all consume this surface. The
+    // service layer scopes the read to published periods for viewers.
     weeklyReport: router({
-      get: protectedProcedure
+      get: anyRoleProcedure
         .input(z.object({ reportId: z.string().uuid().optional() }).optional())
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
-            return await deps.weeklyReportService.getWeeklyReport(input?.reportId);
+            return await deps.weeklyReportService.getWeeklyReport(
+              input?.reportId,
+              ctx.session.role,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }

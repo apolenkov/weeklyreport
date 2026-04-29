@@ -9,7 +9,7 @@ import {
   type PortfolioOverview,
 } from '@customreport/shared';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { ArchiveRepository } from './archive.service.js';
+import type { ArchiveReadFilter, ArchiveRepository } from './archive.service.js';
 import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
@@ -20,13 +20,25 @@ const reportFullInclude = {
   publishedBy: true,
 } as const;
 
+/**
+ * AUTH-04 (Phase 28-01): defense-in-depth status floor.
+ *
+ * The archive surface has always been "published reports only" — the
+ * hardcoded floor below is the single source of truth for that contract.
+ * The service-layer filter passed in via `ArchiveReadFilter` is allowed to
+ * NARROW further (e.g. an explicit `status: 'published'` from a viewer role
+ * is identical to the floor and a no-op) but cannot widen — the repo will
+ * never return non-published rows even if a caller mis-built the filter.
+ */
+const PUBLISHED_FLOOR = { status: 'published' as const };
+
 @Injectable()
 export class ArchivePrismaRepository implements ArchiveRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listArchiveReports(): Promise<ArchiveReportSummary[]> {
+  async listArchiveReports(filter?: ArchiveReadFilter): Promise<ArchiveReportSummary[]> {
     const reports = await this.prisma.report.findMany({
-      where: { status: 'published' },
+      where: { ...PUBLISHED_FLOOR, ...(filter ?? {}) },
       include: {
         publishedBy: true,
         sections: {
@@ -41,9 +53,15 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     return reports.map((report) => toArchiveSummary(report));
   }
 
-  async getArchiveReport(reportId: string): Promise<ArchiveReportDetail | null> {
-    const report = await this.prisma.report.findUnique({
-      where: { id: reportId, status: 'published' },
+  async getArchiveReport(
+    reportId: string,
+    filter?: ArchiveReadFilter,
+  ): Promise<ArchiveReportDetail | null> {
+    // findFirst (not findUnique) because we compose `status` into the where
+    // for defense-in-depth — Prisma's WhereUniqueInput rejects non-unique
+    // fields. The id-equality on the unique PK still produces ≤1 row.
+    const report = await this.prisma.report.findFirst({
+      where: { id: reportId, ...PUBLISHED_FLOOR, ...(filter ?? {}) },
       include: reportFullInclude,
     });
 

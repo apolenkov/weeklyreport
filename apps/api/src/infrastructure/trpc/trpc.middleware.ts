@@ -80,10 +80,17 @@ export const protectedProcedure = t.procedure.use(loggingMiddleware).use(isAuthe
 const headRole = requireRole(t, 'head');
 const leadRole = requireRole(t, 'lead');
 const viewerRole = requireRole(t, 'viewer');
+// AUTH-04 (Phase 28-01): a "any authenticated role" procedure for read paths
+// where the service layer is the actual gate (Prisma `where` filtered by
+// session.role). Necessary for archive.* and weeklyReport.get because heads,
+// leads, admins, and viewers all read the same surface but with different
+// row visibility. Service-level unit tests verify the role-aware filter.
+const anyRole = requireRole(t, ['lead', 'head', 'admin', 'viewer']);
 
 export const headProcedure = t.procedure.use(loggingMiddleware).use(headRole.middleware);
 export const leadProcedure = t.procedure.use(loggingMiddleware).use(leadRole.middleware);
 export const viewerProcedure = t.procedure.use(loggingMiddleware).use(viewerRole.middleware);
+export const anyRoleProcedure = t.procedure.use(loggingMiddleware).use(anyRole.middleware);
 export const adminProcedure = headProcedure;
 
 export const router = t.router;

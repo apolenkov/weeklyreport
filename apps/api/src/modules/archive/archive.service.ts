@@ -5,6 +5,7 @@ import {
   type ArchiveReportSummary,
   type PaginationInput,
   type PaginatedResult,
+  type Role,
 } from '@customreport/shared';
 
 export class ArchiveDomainError extends Error {
@@ -14,9 +15,40 @@ export class ArchiveDomainError extends Error {
   }
 }
 
+/**
+ * AUTH-04 (Phase 28-01): the role-aware filter expressed as a plain object
+ * the repository merges into its Prisma `where`. This shape stays Prisma-free
+ * at the service layer so the domain code does not import `@prisma/client`.
+ *
+ * Mirrors the ReportStatus enum (Prisma) — narrow to the two members the
+ * archive surface ever cares about: 'published' (default for viewer scope)
+ * and 'draft' (in-progress).
+ */
+export interface ArchiveReadFilter {
+  status?: 'draft' | 'published';
+}
+
 export interface ArchiveRepository {
-  listArchiveReports(): Promise<ArchiveReportSummary[]>;
-  getArchiveReport(reportId: string): Promise<ArchiveReportDetail | null>;
+  listArchiveReports(filter?: ArchiveReadFilter): Promise<ArchiveReportSummary[]>;
+  getArchiveReport(
+    reportId: string,
+    filter?: ArchiveReadFilter,
+  ): Promise<ArchiveReportDetail | null>;
+}
+
+/**
+ * AUTH-04 (Phase 28-01): translate the session role into the read filter.
+ * Viewers MUST see only published reports — defense-in-depth on top of the
+ * repository's existing hard floor (`status: 'published'`). For non-viewer
+ * roles (head/lead/admin) and for `undefined` (legacy callers / no-role
+ * scripts) the filter is empty — the repository's hardcoded floor still
+ * keeps everyone on published rows, so widening here is safe.
+ */
+export function buildArchiveReadFilter(role: Role | undefined): ArchiveReadFilter {
+  if (role === 'viewer') {
+    return { status: 'published' };
+  }
+  return {};
 }
 
 export class ArchiveService {
@@ -24,9 +56,11 @@ export class ArchiveService {
 
   async listArchiveReports(
     pagination?: PaginationInput,
+    role?: Role,
   ): Promise<PaginatedResult<ArchiveReportSummary>> {
+    const filter = buildArchiveReadFilter(role);
     const reports = archiveReportSummarySchema.array().parse(
-      await this.repository.listArchiveReports(),
+      await this.repository.listArchiveReports(filter),
     );
 
     const sorted = [...reports].sort(
@@ -49,8 +83,9 @@ export class ArchiveService {
     return { items: page, nextCursor };
   }
 
-  async getArchiveReport(reportId: string): Promise<ArchiveReportDetail> {
-    const detail = await this.repository.getArchiveReport(reportId);
+  async getArchiveReport(reportId: string, role?: Role): Promise<ArchiveReportDetail> {
+    const filter = buildArchiveReadFilter(role);
+    const detail = await this.repository.getArchiveReport(reportId, filter);
 
     if (!detail) {
       throw new ArchiveDomainError(`Archive report ${reportId} was not found.`);
