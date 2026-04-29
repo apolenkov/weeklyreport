@@ -18,11 +18,13 @@ import { useTRPC } from './trpc-context';
  * That keeps the loading boundary on this provider, not on routing.
  */
 
+// Phase 27 widened the session-level role enum (sessionRoleSchema) to include
+// 'admin' for SAML claim mapping. adminProcedure === headProcedure for v6.0.
 export type SessionUser = {
   id: string;
   name: string;
   email: string;
-  role: 'lead' | 'head' | 'viewer';
+  role: 'lead' | 'head' | 'viewer' | 'admin';
 };
 
 export type SessionState = {

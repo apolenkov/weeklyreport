@@ -25,6 +25,16 @@ vi.mock('bullmq', () => ({
 vi.mock('../../modules/pdf-export/pdf-export.service.js', () => ({
   PdfExportService: class {
     markExportCompleted = vi.fn();
+    buildAuthCookies = vi.fn().mockReturnValue([
+      {
+        name: 'customreport_session',
+        value: 'fake-jwt',
+        domain: 'localhost',
+        path: '/',
+        httpOnly: true,
+        secure: false,
+      },
+    ]);
   },
 }));
 
@@ -58,10 +68,21 @@ import { PdfExportProcessor } from './pdf-export.processor.js';
 function createMockPdfExportService() {
   return {
     markExportCompleted: vi.fn().mockResolvedValue(undefined),
+    // AUTH-05 (Phase 28-02): processor calls buildAuthCookies before page.goto.
+    buildAuthCookies: vi.fn().mockReturnValue([
+      {
+        name: 'customreport_session',
+        value: 'fake-jwt',
+        domain: 'localhost',
+        path: '/',
+        httpOnly: true,
+        secure: false,
+      },
+    ]),
   };
 }
 
-type PdfExportJobData = { reportId: string; jobId: string };
+type PdfExportJobData = { reportId: string; jobId: string; authToken: string };
 
 function createMockJob(data: PdfExportJobData): Job<PdfExportJobData> {
   return { data } as Job<PdfExportJobData>;
@@ -73,8 +94,15 @@ function setupMocks() {
     pdf: vi.fn().mockResolvedValue(Buffer.from('pdf-bytes')),
   };
 
-  const mockBrowser = {
+  // AUTH-05 (Phase 28-02): processor now creates a context first then a page so
+  // it can addCookies before navigation. Mocks must mirror that shape.
+  const mockContext = {
+    addCookies: vi.fn().mockResolvedValue(undefined),
     newPage: vi.fn().mockResolvedValue(mockPage),
+  };
+
+  const mockBrowser = {
+    newContext: vi.fn().mockResolvedValue(mockContext),
     close: vi.fn().mockResolvedValue(undefined),
   };
 
@@ -85,7 +113,7 @@ function setupMocks() {
     digest: vi.fn().mockReturnValue('abc123hash'),
   } as never);
 
-  return { mockPage, mockBrowser };
+  return { mockPage, mockBrowser, mockContext };
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +129,7 @@ describe('PdfExportProcessor.processJob', () => {
     setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
-    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1' });
+    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
 
     await (processor as any).processJob(job);
 
@@ -112,7 +140,7 @@ describe('PdfExportProcessor.processJob', () => {
     const { mockPage } = setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
-    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1' });
+    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
 
     await (processor as any).processJob(job);
 
@@ -126,7 +154,7 @@ describe('PdfExportProcessor.processJob', () => {
     const { mockPage } = setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
-    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1' });
+    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
 
     await (processor as any).processJob(job);
 
@@ -140,7 +168,7 @@ describe('PdfExportProcessor.processJob', () => {
     setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
-    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1' });
+    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
 
     await (processor as any).processJob(job);
 
@@ -155,7 +183,7 @@ describe('PdfExportProcessor.processJob', () => {
     const { mockPage, mockBrowser } = setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
-    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1' });
+    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
 
     mockPage.goto.mockRejectedValue(new Error('navigation failed'));
 

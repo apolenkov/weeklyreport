@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import {
   pdfExportJobSchema,
   type AssembledReport,
@@ -30,6 +31,23 @@ export interface PdfExportRepository {
   markExportFailed(jobId: string, error: string): Promise<void>;
 }
 
+/**
+ * AUTH-05 (Phase 28-02): claim shape carried in the 5-min PDF export JWT.
+ *
+ * The reportId claim binds the cookie to a single resource so a leaked
+ * cookie cannot be reused to render arbitrary reports. Phase 29 (AUTH-02)
+ * will introduce a server-side verifier that asserts this claim against
+ * the request URL; for Phase 28 we ship the issuer half only — the
+ * verifier remains the existing trpc.context.ts cookie path (AUTH_DEV_MODE
+ * or AUTH_DEV_MODE_ALLOW_TEST falls through to DEV_SESSION when the JWT
+ * fails verification, which is the staged-migration intent).
+ */
+export interface PdfExportTokenClaims {
+  reportId: string;
+}
+
+const PDF_EXPORT_JWT_TTL = '5m';
+
 export class PdfExportService {
   private readonly logger: AppLogger;
   private readonly pdfQueue: Queue | null;
@@ -43,7 +61,29 @@ export class PdfExportService {
     this.pdfQueue = pdfQueue ?? null;
   }
 
-  async requestPdfExport(reportId: string, requestedBy?: string): Promise<PdfExportJob> {
+  /**
+   * AUTH-05: sign a 5-min scoped JWT with `{reportId}` claim.
+   *
+   * Throws `PdfExportDomainError` (mapped by tRPC error mapper to 500) if the
+   * signing secret is missing or shorter than 16 chars — fail loud at request
+   * time instead of silently producing a token nobody can verify.
+   */
+  signPdfExportToken(reportId: string): string {
+    const secret = process.env['PDF_EXPORT_JWT_SECRET'];
+    if (!secret || secret.length < 16) {
+      throw new PdfExportDomainError(
+        'PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).',
+      );
+    }
+    const claims: PdfExportTokenClaims = { reportId };
+    return jwt.sign(claims, secret, { expiresIn: PDF_EXPORT_JWT_TTL });
+  }
+
+  async requestPdfExport(
+    reportId: string,
+    requestedBy?: string,
+    authToken?: string,
+  ): Promise<PdfExportJob> {
     const report = await this.repository.getPublishedReport(reportId);
 
     if (!report || report.status !== 'published') {
@@ -66,9 +106,14 @@ export class PdfExportService {
     );
 
     if (this.pdfQueue) {
+      // AUTH-05: derive the auth cookie if the caller didn't pre-sign one. Most
+      // callers don't — this keeps the contract a single tRPC mutation away
+      // from "head clicks Export PDF". Signed lazily so test scenarios without
+      // a queue (and thus without a real worker) don't require the secret.
+      const cookieToken = authToken ?? this.signPdfExportToken(reportId);
       await this.pdfQueue.add(
         'generate',
-        { reportId, jobId: job.jobId },
+        { reportId, jobId: job.jobId, authToken: cookieToken },
         {
           attempts: 3,
           backoff: { type: 'exponential', delay: 5000 },
