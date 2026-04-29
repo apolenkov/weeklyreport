@@ -34,8 +34,18 @@ test.describe('Status<->Risk sync (integration)', () => {
       },
     });
 
-    // Find the first traffic-light/stage-status control and switch it to "at risk".
-    const atRiskBtn = leadPage.getByRole('button', { name: /at.?risk/i }).first();
+    // Find a traffic-light/stage-status control and switch it to "at risk".
+    // The previous selector `getByRole('button', { name: /at.?risk/i })` also
+    // matched the Product Status accordion-header button, whose subtitle text
+    // contains "Blocked and at-risk stages link to the context …" — clicking
+    // that just toggled the accordion. Use exact-text match against the
+    // dropdown option label "! At Risk" (defined in StageChip STATUS_OPTIONS).
+    // When no chip dropdown is open, this matches 0 elements and the test
+    // skip-path triggers cleanly. The aspirational UI flow (open chip →
+    // pick option) is left for the Phase 22 sync wiring to land.
+    const atRiskBtn = leadPage
+      .getByRole('button', { name: '! At Risk', exact: true })
+      .first();
     if (!(await atRiskBtn.count())) {
       // eslint-disable-next-line playwright/no-skipped-test
       test.skip(
