@@ -65,9 +65,13 @@ export default defineConfig({
       env: {
         ...process.env,
         NEXT_PUBLIC_API_URL: API_URL,
-        // INTENTIONALLY NOT SET: NEXT_PUBLIC_AUTH_STUB.
-        // Integration tests rely on real JWT cookies via /auth/dev-login.
-        // Setting AUTH_STUB would defeat auth-guard tests.
+        // FORCE-OVERRIDE NEXT_PUBLIC_AUTH_STUB — `.env` at repo root sets it
+        // to 'true' for local dev convenience, and Next.js's turbopack.root
+        // points at the monorepo root so that file is loaded automatically.
+        // The integration suite must exercise the real proxy.ts auth guard
+        // via /auth/dev-login JWT cookies; AUTH_STUB=true would short-circuit
+        // the redirect logic and break auth-guards.integration.spec.ts.
+        NEXT_PUBLIC_AUTH_STUB: 'false',
         NODE_ENV: 'test',
       },
     },
