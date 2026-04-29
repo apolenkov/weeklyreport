@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import proxy, { config } from './proxy';
+import proxy, { config } from './src/proxy';
 
 // ---------------------------------------------------------------------------
 // Helpers — build a request-shaped stub that satisfies the subset of
