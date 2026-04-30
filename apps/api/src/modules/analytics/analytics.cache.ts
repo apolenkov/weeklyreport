@@ -5,7 +5,10 @@ import Redis from 'ioredis';
 import type { AnalyticsCachePort } from './analytics.service.js';
 
 const TTL_SECONDS = 3600;
-const PREFIX = 'analytics:';
+// Phase 32-C / M-04: app-namespaced under `customreport:` so analytics keys
+// do not collide with other applications sharing the Redis instance. Must
+// stay in lockstep with the sub-prefixes in analytics.service.ts.
+const PREFIX = 'customreport:analytics:';
 
 /**
  * AnalyticsCache — read-through Redis cache for the analytics namespace.
@@ -13,10 +16,10 @@ const PREFIX = 'analytics:';
  * Cache misses must NOT break the read path (defense-in-depth): a Redis
  * outage degrades to direct repository calls. Writes are best-effort.
  *
- * Invalidation uses SCAN + DEL over the `analytics:*` prefix (NOT KEYS,
- * which is O(N) blocking). Called from PeriodService.publishPeriod /
- * reopenPeriod via a constructor-injected port so the period service
- * stays Redis-free for unit tests.
+ * Invalidation uses SCAN + DEL over the `customreport:analytics:*` prefix
+ * (NOT KEYS, which is O(N) blocking). Called from PeriodService.publishPeriod
+ * / reopenPeriod via a constructor-injected port so the period service stays
+ * Redis-free for unit tests.
  */
 @Injectable()
 export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {
