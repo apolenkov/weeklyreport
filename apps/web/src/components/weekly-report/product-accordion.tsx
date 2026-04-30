@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import type { ProductReport } from '../dashboard/mock-data';
 import { RiskSentimentBadge } from '../ai/risk-sentiment-badge';
+import { OnTrackIcon } from '../ai/on-track-icon';
 
 type ProductAccordionProps = {
   readonly report: ProductReport;
@@ -84,6 +85,12 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
           >
             {report.statusLabel}
           </span>
+          {/* Phase 31 (AI-03): on-track advisory icon next to the status
+              badge. Renders ALONGSIDE — never replaces — the human-authored
+              colour. Hidden when AI is unavailable or sectionId is missing. */}
+          {report.sectionId ? (
+            <OnTrackIcon sectionId={report.sectionId} projectId={report.id} />
+          ) : null}
           <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">
             {report.leads}
           </span>

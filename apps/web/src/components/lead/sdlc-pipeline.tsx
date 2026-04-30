@@ -1,5 +1,6 @@
 'use client';
 
+import { OnTrackIcon } from '../ai/on-track-icon';
 import { StageChip } from './stage-chip';
 import type { Product, StageStatus } from './mock-data';
 
@@ -11,6 +12,13 @@ type SdlcPipelineProps = {
     stageName: string,
     newStatus: StageStatus,
   ) => void;
+  /**
+   * Active `ReportSection.id` UUID — required to wire the Phase 31 AI-03
+   * on-track advisory icon next to each product status badge. When absent,
+   * the icon is silently skipped (e.g. data not yet settled, or running in
+   * Storybook with mock data).
+   */
+  readonly sectionId?: string;
 };
 
 function ProductStatusBadge({ status }: { readonly status: StageStatus }) {
@@ -38,7 +46,7 @@ function getProductBorderColor(status: StageStatus): string {
   return 'var(--color-muted)';
 }
 
-export function SdlcPipeline({ products, readOnly = false, onStatusChange }: SdlcPipelineProps) {
+export function SdlcPipeline({ products, readOnly = false, onStatusChange, sectionId }: SdlcPipelineProps) {
   function handleStatusChange(productId: string, stageName: string, newStatus: StageStatus) {
     if (readOnly) return;
     onStatusChange?.(productId, stageName, newStatus);
@@ -67,7 +75,15 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange }: Sdl
                 </span>
               )}
             </div>
-            <ProductStatusBadge status={product.overallStatus} />
+            <div className="flex items-center">
+              <ProductStatusBadge status={product.overallStatus} />
+              {/* Phase 31 (AI-03): on-track advisory icon next to the
+                  human-authored status. Renders ALONGSIDE — never replaces.
+                  Skipped when sectionId is unavailable (mock data, pre-load). */}
+              {sectionId ? (
+                <OnTrackIcon sectionId={sectionId} projectId={product.id} />
+              ) : null}
+            </div>
           </div>
 
           {/* Stages row */}
