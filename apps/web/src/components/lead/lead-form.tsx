@@ -14,6 +14,7 @@ import { mapLeadFormData } from '../../lib/mappers';
 import { useLeadFormAutosave, stableStringify } from '../../hooks/use-lead-form-autosave';
 import { LeadFormSkeleton } from './lead-form-skeleton';
 import { LeadFormSyncBridge } from './lead-form-sync-bridge';
+import { SdlcTooltipProvider } from '../ui/sdlc-tooltip';
 import { PeriodNavigator } from './period-navigator';
 import { FillFromButton } from './fill-from-button';
 import { VersionHistoryNav } from './version-history-nav';
@@ -578,7 +579,7 @@ export function LeadForm({ period }: LeadFormProps) {
             : 'Autosaved';
 
   return (
-    <>
+    <SdlcTooltipProvider>
       <div className="space-y-6">
         {/* Page header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
@@ -803,6 +804,6 @@ export function LeadForm({ period }: LeadFormProps) {
           </div>
         </div>
       )}
-    </>
+    </SdlcTooltipProvider>
   );
 }
