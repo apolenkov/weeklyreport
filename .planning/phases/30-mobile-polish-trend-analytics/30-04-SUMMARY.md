@@ -55,3 +55,27 @@ Per the 30-04 plan: any pages that overflow at 390px on this commit are the SIGN
 
 - /auth/login does not exist as a route — root `/` is the login page in this app. Spec uses `/` instead.
 - /403 is rendered inline by `ForbiddenPage` (no route at /403); spec uses authenticated route gates instead which prove the same scrollWidth contract.
+
+## Runtime validation (post-shipping, v6.0 follow-up)
+
+Date: 2026-04-30. Ran the spec end-to-end against the local stack:
+
+```
+cd apps/web && set -a && source ../../.env.test && set +a \
+  && PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
+     pnpm playwright test --config=playwright.integration.config.ts \
+       --project=mobile-android \
+       e2e/integration/mobile-no-horizontal-scroll.integration.spec.ts
+```
+
+- **mobile-android (Pixel 7, Chromium):** 7/7 passed in ~10s.
+- **mobile-ios (iPhone 14, WebKit):** could not run locally — the WebKit
+  browser is not installed in the host's Playwright cache
+  (`Executable doesn't exist at .../webkit-2272/pw_run.sh`). This is an
+  environmental gap (run `pnpm exec playwright install webkit`), not a
+  spec bug. Chromium contract proves the same `scrollWidth <= innerWidth`
+  invariant; WebKit-only viewport regressions remain a CI gap until the
+  GitHub Actions runner installs all three engines.
+
+Conclusion: 30-04 spec is functionally green on Chromium; iOS/WebKit
+coverage is gated on a one-time `playwright install webkit` step.
