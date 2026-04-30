@@ -2,14 +2,13 @@ import { z } from 'zod';
 
 /**
  * Role of a User row in the database (Prisma `Role` enum).
- * DB-bound writes (admin user CRUD) MUST validate against this narrow set.
+ * DB-bound writes (admin user CRUD) MUST validate against this set.
  *
- * Phase 27 / AUTH-03 keeps this enum narrow so it stays in sync with the
- * Prisma `Role` enum. The wider session-level enum (`sessionRoleSchema`)
- * adds 'admin' for SAML claim mapping in Phase 29 / AUTH-02 — admin sessions
- * may exist without a corresponding 'admin' DB row for v6.0.
+ * Phase 32-C / H-01: widened to include 'admin' so the SAML callback can
+ * persist admin-roled Keycloak users without crashing on Prisma's enum
+ * validation. Stays in lockstep with `enum Role` in `prisma/schema.prisma`.
  */
-export const roleSchema = z.enum(['lead', 'head', 'viewer']);
+export const roleSchema = z.enum(['lead', 'head', 'admin', 'viewer']);
 
 /**
  * Role attached to an authenticated session (JWT / SAML claim).

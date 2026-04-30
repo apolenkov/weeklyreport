@@ -35,8 +35,8 @@ describe('roleSchema', () => {
     expect(roleSchema.safeParse('viewer').success).toBe(true);
   });
 
-  it('rejects "admin" — DB Role enum stays narrow (sessionRoleSchema covers admin)', () => {
-    expect(roleSchema.safeParse('admin').success).toBe(false);
+  it('accepts "admin" — Phase 32-C / H-01 widened DB Role enum to include admin', () => {
+    expect(roleSchema.safeParse('admin').success).toBe(true);
   });
 
   it('rejects empty string', () => {

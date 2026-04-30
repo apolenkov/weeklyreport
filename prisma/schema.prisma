@@ -9,6 +9,7 @@ datasource db {
 enum Role {
   lead
   head
+  admin
   viewer
 }
 
@@ -344,6 +345,11 @@ model AiInsight {
   id                  String        @id @default(uuid())
   kind                AiInsightKind
   contentHash         String
+  // Phase 32-A1 (C-01): scope budget guard by reportId. Nullable so the
+  // initial migration is non-destructive (existing rows pre-32 have no
+  // reportId; budget guard treats them as out-of-scope). New writes set
+  // this on every facade upsert path (summary/sentiment/on-track).
+  reportId            String?
   result              Json
   modelId             String
   inputTokens         Int           @default(0)
@@ -354,4 +360,5 @@ model AiInsight {
 
   @@unique([kind, contentHash])
   @@index([kind, createdAt])
+  @@index([reportId, createdAt])
 }

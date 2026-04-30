@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from 'express';
 import express from 'express';
 import passport from 'passport';
 import type { Strategy as SamlStrategy } from '@node-saml/passport-saml';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient, Role } from '@prisma/client';
 
 import type { UserSession } from '@customreport/shared';
 
@@ -12,11 +12,11 @@ import {
   type AuditLogger,
 } from '../../lib/audit-logger.js';
 
-type SamlProfile = {
+export type SamlProfile = {
   samlId: string;
   email: string;
   displayName: string;
-  role: string;
+  role: Role;
 };
 
 /**
@@ -114,7 +114,7 @@ async function ensureWeeklyReport(
   return { reportId, sectionId: section.id };
 }
 
-async function buildUserSession(
+export async function buildUserSession(
   prisma: PrismaClient,
   profile: SamlProfile,
 ): Promise<UserSession> {
@@ -133,7 +133,7 @@ async function buildUserSession(
           samlId: profile.samlId,
           email: profile.email,
           name: profile.displayName,
-          role: profile.role as 'lead' | 'head' | 'viewer',
+          role: profile.role,
         },
       });
 
@@ -266,8 +266,8 @@ export function mountAuthRoutes(
     expressApp.get('/auth/dev-login', async (req: Request, res: Response, next: NextFunction) => {
       try {
         const role = (req.query.role as string) ?? 'head';
-        const validRoles = ['lead', 'head', 'viewer'];
-        if (!validRoles.includes(role)) {
+        const validRoles: Role[] = ['lead', 'head', 'admin', 'viewer'];
+        if (!validRoles.includes(role as Role)) {
           res.status(400).json({ error: `Invalid role: ${role}. Must be one of: ${validRoles.join(', ')}` });
           return;
         }
@@ -275,16 +275,19 @@ export function mountAuthRoutes(
         const emailByRole: Record<string, string> = {
           head: 'head@customreport.local',
           lead: 'lead1@customreport.local',
+          admin: 'admin@customreport.local',
           viewer: 'viewer@customreport.local',
         };
         const nameByRole: Record<string, string> = {
           head: 'Department Head',
           lead: 'Lead 1',
+          admin: 'Administrator',
           viewer: 'Report Viewer',
         };
         const samlIdByRole: Record<string, string> = {
           head: 'head-1',
           lead: 'lead-1',
+          admin: 'admin-1',
           viewer: 'viewer-1',
         };
 
@@ -301,7 +304,7 @@ export function mountAuthRoutes(
           samlId,
           email,
           displayName,
-          role,
+          role: role as Role,
         });
 
         const { setCookieHeader } = authController.issueSessionCookie(session);
@@ -310,6 +313,7 @@ export function mountAuthRoutes(
         const redirectByRole: Record<string, string> = {
           head: '/admin',
           lead: '/lead/report',
+          admin: '/admin',
           viewer: '/reports/history',
         };
         const redirectPath = (req.query.redirect as string) ?? redirectByRole[role] ?? '/';

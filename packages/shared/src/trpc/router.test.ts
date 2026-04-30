@@ -30,7 +30,8 @@ const projectId = '44444444-4444-4444-8444-444444444444';
 describe('shared auth/report schemas', () => {
   it('accepts only supported roles', () => {
     expect(roleSchema.parse('lead')).toBe('lead');
-    expect(() => roleSchema.parse('admin')).toThrow();
+    expect(roleSchema.parse('admin')).toBe('admin');
+    expect(() => roleSchema.parse('superadmin')).toThrow();
   });
 
   it('allows draft payloads without mandatory traffic-light values', () => {
