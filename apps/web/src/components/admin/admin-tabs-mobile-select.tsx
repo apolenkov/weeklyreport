@@ -1,0 +1,47 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+
+/**
+ * MOB-04 (Phase 30-05): native <select> for admin-tab navigation at narrow
+ * widths. The desktop anchor-tab list (apps/web/src/app/(app)/admin/page.tsx)
+ * stays untouched; this component renders only at sm- viewports via the
+ * `sm:hidden` Tailwind class.
+ *
+ * Native select is the right primitive on touch: it triggers the OS picker
+ * (iOS wheel, Android bottom sheet), which is far more accessible than a
+ * 5-button row at 375px.
+ */
+
+type AdminTab = 'users' | 'products' | 'periods' | 'reminders' | 'settings';
+
+const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
+  { value: 'users', label: 'Users' },
+  { value: 'products', label: 'Products' },
+  { value: 'periods', label: 'Periods' },
+  { value: 'reminders', label: 'Reminders' },
+  { value: 'settings', label: 'Settings' },
+];
+
+type Props = {
+  readonly activeTab: AdminTab;
+};
+
+export function AdminTabsMobileSelect({ activeTab }: Props) {
+  const router = useRouter();
+
+  return (
+    <select
+      className="block h-11 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-foreground)] sm:hidden"
+      value={activeTab}
+      onChange={(e) => router.push(`/admin?tab=${e.target.value}`)}
+      aria-label="Admin tab"
+    >
+      {TABS.map((t) => (
+        <option key={t.value} value={t.value}>
+          {t.label}
+        </option>
+      ))}
+    </select>
+  );
+}
