@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import type { ProductReport } from '../dashboard/mock-data';
+import { RiskSentimentBadge } from '../ai/risk-sentiment-badge';
 
 type ProductAccordionProps = {
   readonly report: ProductReport;
@@ -201,6 +202,9 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
                           {risk.badge}
                         </span>
                         {risk.text}
+                        {/* Phase 31 (AI-02): per-Risk sentiment badge.
+                            Hidden when AI is unavailable; never blocks the row. */}
+                        <RiskSentimentBadge riskId={risk.id} />
                       </div>
                     );
                   })}

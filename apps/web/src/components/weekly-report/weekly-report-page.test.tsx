@@ -174,6 +174,13 @@ function makeMockTRPC(
           onSuccess: opts?.onSuccess,
         }),
       },
+      sentiment: {
+        queryOptions: () => ({
+          queryKey: ['ai', 'sentiment'],
+          queryFn: async () => null,
+          enabled: false,
+        }),
+      },
     },
   } as never;
 }
