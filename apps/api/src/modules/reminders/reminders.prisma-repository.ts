@@ -300,15 +300,27 @@ function toRuleDomain(rule: {
 }
 
 /**
- * Extracts recipientEmail from dedupeKey format: "ruleId:isoDate:email".
- * The dedupeKey includes recipientEmail for per-recipient uniqueness (BUG-023).
+ * Extracts recipientEmail from dedupeKey. Two key shapes are in flight in v6.0:
+ *
+ *   Legacy (BUG-023, v2.0):     `${ruleId}:<ISO with Z>:${email}`
+ *     example: `<uuid>:2026-04-12T10:00:00.000Z:user@example.com`
+ *
+ *   Phase 28+ (NOTIF-04/02):    `${ruleId}:${kind}:YYYY-MM-DD:${email}`
+ *     example: `<uuid>:deadline:2026-04-12:user@example.com`
+ *     example: `<uuid>:escalation:2026-04-12:head@example.com`
+ *
+ * Phase 32-C / H-02: the legacy regex `/Z:(.+)$/` returned '' for every Phase
+ * 28+ key (no `Z:`), silently breaking AdminReminderExecution.recipientEmail.
+ *
+ * Strategy: split on ':' and take the LAST segment that matches an email
+ * shape. Both shapes terminate with the email, so this is robust to either
+ * layout. Returns '' for unparseable inputs.
  */
-function extractRecipientEmail(dedupeKey: string): string {
-  // dedupeKey format: "ruleId:isoDate:recipientEmail"
-  // The email is everything after the ISO date suffix "Z:"
-  // Format: uuid:2026-04-12T10:00:00.000Z:user@example.com
-  const emailMatch = dedupeKey.match(/Z:(.+)$/);
-  return emailMatch?.[1] ?? '';
+const EMAIL_RE = /^[^@\s:]+@[^@\s:]+\.[^@\s:]+$/;
+export function extractRecipientEmail(dedupeKey: string): string {
+  const last = dedupeKey.split(':').pop();
+  if (last && EMAIL_RE.test(last)) return last;
+  return '';
 }
 
 function toExecutionDomain(execution: {
