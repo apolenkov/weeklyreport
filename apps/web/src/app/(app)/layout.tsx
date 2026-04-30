@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { DevRoleSwitcher } from '../../components/dev/role-switcher';
 import { NavBar } from '../../components/navigation/nav-bar';
 import { SessionProvider } from '../../lib/session-provider';
 
@@ -23,6 +24,7 @@ export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
     <SessionProvider>
       <NavBar />
       {children}
+      <DevRoleSwitcher />
     </SessionProvider>
   );
 }
