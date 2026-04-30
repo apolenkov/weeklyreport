@@ -5,7 +5,7 @@
 
 // ---- Type Definitions ----
 
-export type UserRole = 'lead' | 'head' | 'viewer';
+export type UserRole = 'lead' | 'head' | 'admin' | 'viewer';
 
 export type MockUser = {
   id: string;

@@ -285,6 +285,7 @@ function RoleBadge({ role }: { readonly role: UserRole }) {
   const styles: Record<UserRole, { bg: string; text: string }> = {
     lead: { bg: 'var(--color-success)', text: 'var(--color-primary)' },
     head: { bg: '#e8e0f0', text: '#6b21a8' },
+    admin: { bg: '#fef3c7', text: '#92400e' },
     viewer: { bg: 'var(--color-muted)', text: 'var(--color-muted-foreground)' },
   };
   const s = styles[role];
