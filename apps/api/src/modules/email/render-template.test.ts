@@ -44,3 +44,66 @@ describe('renderEmail — kind="deadline"', () => {
     expect(out.text.length).toBeGreaterThan(20);
   });
 });
+
+// NOTIF-02 (Phase 29-05): T+2h escalation digest renders all late leads
+// into ONE multipart email — never one email per lead.
+describe('renderEmail — kind="escalation"', () => {
+  const escalationProps = {
+    headName: 'Department Head',
+    cycleDate: '2026-04-19',
+    reportPeriod: '2026-04-13 → 2026-04-19',
+    lateLeads: [
+      {
+        leadName: 'Lead Alpha',
+        sectionTitle: 'Backend section',
+        deadlineIso: '2026-04-19T15:00:00.000Z',
+      },
+      {
+        leadName: 'Lead Beta',
+        sectionTitle: 'Frontend section',
+        deadlineIso: '2026-04-19T15:00:00.000Z',
+      },
+      {
+        leadName: 'Lead Gamma',
+        sectionTitle: 'Infra section',
+        deadlineIso: '2026-04-19T15:00:00.000Z',
+      },
+    ],
+  };
+
+  it('html aggregates ALL late leads into one body (digest, not per-lead)', async () => {
+    const out = await renderEmail({ kind: 'escalation', props: escalationProps });
+
+    expect(out.html).toContain('Lead Alpha');
+    expect(out.html).toContain('Lead Beta');
+    expect(out.html).toContain('Lead Gamma');
+    expect(out.html).toContain('Department Head');
+    expect(out.html).toContain('2026-04-19');
+  });
+
+  it('plaintext mirrors the html digest with all lead names', async () => {
+    const out = await renderEmail({ kind: 'escalation', props: escalationProps });
+
+    expect(out.text).toContain('Lead Alpha');
+    expect(out.text).toContain('Lead Beta');
+    expect(out.text).toContain('Lead Gamma');
+    expect(out.text).toContain('Department Head');
+  });
+
+  it('subject reports the late-lead count and cycle date', async () => {
+    const out = await renderEmail({ kind: 'escalation', props: escalationProps });
+
+    expect(out.subject).toContain('3 late report sections');
+    expect(out.subject).toContain('2026-04-19');
+  });
+
+  it('subject pluralisation: 1 lead drops the trailing "s"', async () => {
+    const out = await renderEmail({
+      kind: 'escalation',
+      props: { ...escalationProps, lateLeads: [escalationProps.lateLeads[0]!] },
+    });
+
+    expect(out.subject).toContain('1 late report section ');
+    expect(out.subject).not.toContain('1 late report sections');
+  });
+});

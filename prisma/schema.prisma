@@ -66,139 +66,143 @@ enum PeriodStatus {
 }
 
 model User {
-  id             String          @id @default(uuid())
-  email          String          @unique
-  name           String
-  role           Role
-  samlId         String          @unique
-  authoredReportSections ReportSection[] @relation("ReportSectionAuthor")
-  ledProjects    Project[]
-  publishedReports Report[]      @relation("PublishedBy")
-  stageAssignments StageAssignment[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id                     String            @id @default(uuid())
+  email                  String            @unique
+  name                   String
+  role                   Role
+  samlId                 String            @unique
+  // NOTIF-05 (Phase 29-05): per-user opt-out for kind='deadline' reminders.
+  // Honoured by RemindersService.requestReminderExecution before enqueueing.
+  // kind='escalation' bypasses this flag — heads must always be notified.
+  notificationOptOut     Boolean           @default(false)
+  authoredReportSections ReportSection[]   @relation("ReportSectionAuthor")
+  ledProjects            Project[]
+  publishedReports       Report[]          @relation("PublishedBy")
+  stageAssignments       StageAssignment[]
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 }
 
 model Project {
-  id             String          @id @default(uuid())
-  name           String
-  archived       Boolean         @default(false)
-  leadId         String
-  lead           User            @relation(fields: [leadId], references: [id], onDelete: Restrict)
-  projectStatuses ProjectStatus[]
-  items          Item[]
-  risks          Risk[]
+  id               String            @id @default(uuid())
+  name             String
+  archived         Boolean           @default(false)
+  leadId           String
+  lead             User              @relation(fields: [leadId], references: [id], onDelete: Restrict)
+  projectStatuses  ProjectStatus[]
+  items            Item[]
+  risks            Risk[]
   stageAssignments StageAssignment[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Report {
-  id             String          @id @default(uuid())
-  periodStart    DateTime
-  periodEnd      DateTime
-  deadline       DateTime
-  status         ReportStatus    @default(draft)
-  periodStatus   PeriodStatus    @default(open)
-  weekLabel      String?
-  publishedAt    DateTime?
-  publishedById  String?
-  reopenedAt     DateTime?
-  publishedBy    User?           @relation("PublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
-  sections       ReportSection[]
-  pdfExportJobs  PdfExportJob[]
-  reminderRules  ReminderRule[]
+  id               String               @id @default(uuid())
+  periodStart      DateTime
+  periodEnd        DateTime
+  deadline         DateTime
+  status           ReportStatus         @default(draft)
+  periodStatus     PeriodStatus         @default(open)
+  weekLabel        String?
+  publishedAt      DateTime?
+  publishedById    String?
+  reopenedAt       DateTime?
+  publishedBy      User?                @relation("PublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  sections         ReportSection[]
+  pdfExportJobs    PdfExportJob[]
+  reminderRules    ReminderRule[]
   carryOverSources CarryOverExecution[] @relation("CarryOverSource")
   carryOverTargets CarryOverExecution[] @relation("CarryOverTarget")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 }
 
 model ReportSection {
-  id             String               @id @default(uuid())
-  reportId       String
-  authorId       String
-  status         ReportSectionStatus  @default(draft)
-  submittedAt    DateTime?
-  revokedAt      DateTime?
-  revokedBy      String?
-  report         Report               @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  author         User                 @relation("ReportSectionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
-  projectStatuses ProjectStatus[]
-  items          Item[]
-  risks          Risk[]
-  decisions      Decision[]
-  priorities     Priority[]
+  id               String              @id @default(uuid())
+  reportId         String
+  authorId         String
+  status           ReportSectionStatus @default(draft)
+  submittedAt      DateTime?
+  revokedAt        DateTime?
+  revokedBy        String?
+  report           Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  author           User                @relation("ReportSectionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  projectStatuses  ProjectStatus[]
+  items            Item[]
+  risks            Risk[]
+  decisions        Decision[]
+  priorities       Priority[]
   versionSnapshots VersionSnapshot[]
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
   @@unique([reportId, authorId])
 }
 
 model ProjectStatus {
-  id             String             @id @default(uuid())
+  id              String             @id @default(uuid())
   reportSectionId String
   projectId       String
   status          TrafficLightStatus
-  reportSection   ReportSection     @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  project         Project           @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  reportSection   ReportSection      @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  project         Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   @@unique([reportSectionId, projectId])
 }
 
 model Item {
-  id             String             @id @default(uuid())
+  id              String             @id @default(uuid())
   reportSectionId String
   projectId       String
   type            ItemType
   text            String
   tag             String
   workflowStatus  ItemWorkflowStatus
-  carriedOver     Boolean           @default(false)
+  carriedOver     Boolean            @default(false)
   completed       Boolean?
-  reportSection   ReportSection     @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  project         Project           @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  reportSection   ReportSection      @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  project         Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 }
 
 model Risk {
-  id             String          @id @default(uuid())
+  id              String        @id @default(uuid())
   reportSectionId String
   projectId       String
   risk            String
   impact          String
   mitigation      String
-  reportSection   ReportSection  @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  project         Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model Decision {
-  id             String          @id @default(uuid())
+  id              String        @id @default(uuid())
   reportSectionId String
-  text           String
-  owner          String
-  deadline       DateTime?
-  impact         String
-  resolvedAt     DateTime?
-  reportSection  ReportSection   @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  text            String
+  owner           String
+  deadline        DateTime?
+  impact          String
+  resolvedAt      DateTime?
+  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model Priority {
-  id             String          @id @default(uuid())
+  id              String        @id @default(uuid())
   reportSectionId String
-  rank           Int
-  text           String
-  reportSection  ReportSection   @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  rank            Int
+  text            String
+  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@unique([reportSectionId, rank])
 }
@@ -218,6 +222,9 @@ model PdfExportJob {
 enum ReminderRuleKind {
   deadline
   follow_up
+  // NOTIF-02 (Phase 29-05): T+2h escalation digest sent to heads when leads
+  // miss the deadline. Bypasses User.notificationOptOut.
+  escalation
 }
 
 enum ReminderRuleStatus {
@@ -226,42 +233,42 @@ enum ReminderRuleStatus {
 }
 
 model ReminderRule {
-  id              String               @id @default(uuid())
-  kind            ReminderRuleKind
-  fireAt          DateTime
-  timezone        String               @default("Europe/Moscow")
-  status          ReminderRuleStatus   @default(active)
-  version         Int                  @default(1)
-  reportId        String?
-  report          Report?              @relation(fields: [reportId], references: [id], onDelete: SetNull)
-  executions      ReminderExecution[]
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  id         String              @id @default(uuid())
+  kind       ReminderRuleKind
+  fireAt     DateTime
+  timezone   String              @default("Europe/Moscow")
+  status     ReminderRuleStatus  @default(active)
+  version    Int                 @default(1)
+  reportId   String?
+  report     Report?             @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  executions ReminderExecution[]
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 }
 
 model ReminderExecution {
-  id          String                   @id @default(uuid())
-  ruleId      String
-  dedupeKey   String                   @unique
-  status      ReminderExecutionStatus  @default(pending)
-  sentAt      DateTime?
-  error       String?
-  rule        ReminderRule             @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  createdAt   DateTime                 @default(now())
-  updatedAt   DateTime                 @updatedAt
+  id        String                  @id @default(uuid())
+  ruleId    String
+  dedupeKey String                  @unique
+  status    ReminderExecutionStatus @default(pending)
+  sentAt    DateTime?
+  error     String?
+  rule      ReminderRule            @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
 }
 
 model CarryOverExecution {
-  id              String          @id @default(uuid())
-  sourceReportId  String
-  targetReportId  String
-  dedupeKey       String          @unique
-  status          CarryOverStatus @default(pending)
-  records         CarryOverRecord[]
-  sourceReport    Report          @relation("CarryOverSource", fields: [sourceReportId], references: [id], onDelete: Restrict)
-  targetReport    Report          @relation("CarryOverTarget", fields: [targetReportId], references: [id], onDelete: Restrict)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id             String            @id @default(uuid())
+  sourceReportId String
+  targetReportId String
+  dedupeKey      String            @unique
+  status         CarryOverStatus   @default(pending)
+  records        CarryOverRecord[]
+  sourceReport   Report            @relation("CarryOverSource", fields: [sourceReportId], references: [id], onDelete: Restrict)
+  targetReport   Report            @relation("CarryOverTarget", fields: [targetReportId], references: [id], onDelete: Restrict)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 }
 
 model CarryOverRecord {
@@ -292,11 +299,11 @@ model VersionSnapshot {
 
 // v4.0: SDLC stages (D-63)
 model Stage {
-  id              String            @id @default(uuid())
-  name            String            @unique
-  sortOrder       Int               @default(0)
+  id               String            @id @default(uuid())
+  name             String            @unique
+  sortOrder        Int               @default(0)
   stageAssignments StageAssignment[]
-  createdAt       DateTime          @default(now())
+  createdAt        DateTime          @default(now())
 }
 
 // v4.0: Stage ownership per user per product (D-63)

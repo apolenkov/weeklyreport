@@ -63,7 +63,7 @@ export type MockReminder = {
   name: string;
   description: string;
   active: boolean;
-  kind: 'deadline' | 'follow_up';
+  kind: 'deadline' | 'follow_up' | 'escalation';
   fireAt: Date;
   timezone: string;
   version: number;

@@ -193,7 +193,9 @@ export const reportPeriodSchema = z.object({
   status: reportStatusSchema,
 });
 
-export const adminReminderRuleKindSchema = z.enum(['deadline', 'follow_up']);
+// NOTIF-02 (Phase 29-05): 'escalation' added for T+2h heads-only digest.
+// Bypasses User.notificationOptOut — heads must always be notified.
+export const adminReminderRuleKindSchema = z.enum(['deadline', 'follow_up', 'escalation']);
 export const adminReminderRuleStatusSchema = z.enum(['active', 'paused']);
 
 export const adminReminderRuleSchema = z.object({
