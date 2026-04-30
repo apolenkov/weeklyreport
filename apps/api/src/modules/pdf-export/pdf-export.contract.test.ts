@@ -326,13 +326,13 @@ describe('PdfExportService — contract tests', () => {
         const cookies = service.buildAuthCookies('jwt-token-value');
 
         expect(cookies).toHaveLength(1);
+        // Phase 32-B2 (M-01): cookie scope is now url-based.
         expect(cookies[0]).toEqual({
           name: 'customreport_session',
           value: 'jwt-token-value',
-          domain: 'localhost',
-          path: '/',
+          url: 'http://localhost:3000',
           httpOnly: true,
-          secure: false,
+          sameSite: 'Lax',
         });
       } finally {
         if (originalCookieName !== undefined) {
@@ -364,8 +364,10 @@ describe('PdfExportService — contract tests', () => {
       }
     });
 
-    // 15. buildAuthCookies — sets secure=true for https URL
-    it('sets secure=true for https URL', () => {
+    // 15. buildAuthCookies — Phase 32-B2 (M-01): cookie is now scoped via
+    // Playwright's `url` field rather than `domain`+`secure` inference.
+    // Playwright auto-derives the secure flag from the URL's protocol.
+    it('passes the full PDF_BASE_URL through as the cookie url for https', () => {
       const originalBaseUrl = process.env.PDF_BASE_URL;
       process.env.PDF_BASE_URL = 'https://reports.example.com';
 
@@ -373,8 +375,7 @@ describe('PdfExportService — contract tests', () => {
         const service = new PdfExportService(createRepository(publishedReport));
         const cookies = service.buildAuthCookies('secure-token');
 
-        expect(cookies[0]!.secure).toBe(true);
-        expect(cookies[0]!.domain).toBe('reports.example.com');
+        expect(cookies[0]!.url).toBe('https://reports.example.com');
       } finally {
         if (originalBaseUrl === undefined) {
           delete process.env.PDF_BASE_URL;

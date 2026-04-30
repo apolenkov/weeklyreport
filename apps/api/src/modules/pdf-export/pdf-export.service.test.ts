@@ -302,7 +302,10 @@ describe('AUTH-05 PDF export JWT signing', () => {
       expect(cookies[0]?.httpOnly).toBe(true);
     });
 
-    it('extracts domain from PDF_BASE_URL', () => {
+    // Phase 32-B2 (M-01): the cookie is now scoped via Playwright's `url`
+    // field instead of `domain`+`secure` inference. The url-based form
+    // works regardless of hostname shape (localhost, IP, behind-proxy).
+    it('uses PDF_BASE_URL as the cookie url verbatim (https hostname)', () => {
       const originalEnv = process.env.PDF_BASE_URL;
       process.env.PDF_BASE_URL = 'https://reports.example.com';
 
@@ -310,8 +313,73 @@ describe('AUTH-05 PDF export JWT signing', () => {
         const service = new PdfExportService(createRepository(publishedReport));
         const cookies = service.buildAuthCookies('test-jwt-token');
 
-        expect(cookies[0]?.domain).toBe('reports.example.com');
-        expect(cookies[0]?.secure).toBe(true);
+        expect(cookies[0]?.url).toBe('https://reports.example.com');
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.PDF_BASE_URL;
+        } else {
+          process.env.PDF_BASE_URL = originalEnv;
+        }
+      }
+    });
+
+    it('produces a url-based cookie for localhost (no domain leak, no secure inference)', () => {
+      const originalEnv = process.env.PDF_BASE_URL;
+      process.env.PDF_BASE_URL = 'http://localhost:3000';
+
+      try {
+        const service = new PdfExportService(createRepository(publishedReport));
+        const cookies = service.buildAuthCookies('test-jwt-token');
+
+        expect(cookies[0]?.url).toBe('http://localhost:3000');
+        // The `domain` and `secure` fields must not appear — Playwright
+        // chooses between url-based and domain-based scoping by which
+        // fields are present in the entry.
+        expect(cookies[0]).not.toHaveProperty('domain');
+        expect(cookies[0]).not.toHaveProperty('secure');
+        expect(cookies[0]?.httpOnly).toBe(true);
+        expect(cookies[0]?.sameSite).toBe('Lax');
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.PDF_BASE_URL;
+        } else {
+          process.env.PDF_BASE_URL = originalEnv;
+        }
+      }
+    });
+
+    it('produces a url-based cookie for an IP-based PDF_BASE_URL (no domain rejection)', () => {
+      // Defense against M-01: Playwright's addCookies() rejects entries
+      // whose `domain` field would resolve to an IP — using `url` sidesteps
+      // that branch entirely.
+      const originalEnv = process.env.PDF_BASE_URL;
+      process.env.PDF_BASE_URL = 'http://10.0.0.5:3000';
+
+      try {
+        const service = new PdfExportService(createRepository(publishedReport));
+        const cookies = service.buildAuthCookies('test-jwt-token');
+
+        expect(cookies[0]?.url).toBe('http://10.0.0.5:3000');
+        expect(cookies[0]).not.toHaveProperty('domain');
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.PDF_BASE_URL;
+        } else {
+          process.env.PDF_BASE_URL = originalEnv;
+        }
+      }
+    });
+
+    it('produces a url-based cookie for a behind-proxy internal hostname', () => {
+      const originalEnv = process.env.PDF_BASE_URL;
+      process.env.PDF_BASE_URL = 'http://web-internal.cluster.local:3000';
+
+      try {
+        const service = new PdfExportService(createRepository(publishedReport));
+        const cookies = service.buildAuthCookies('test-jwt-token');
+
+        expect(cookies[0]?.url).toBe('http://web-internal.cluster.local:3000');
+        expect(cookies[0]).not.toHaveProperty('domain');
       } finally {
         if (originalEnv === undefined) {
           delete process.env.PDF_BASE_URL;

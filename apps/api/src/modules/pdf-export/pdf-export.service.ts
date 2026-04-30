@@ -200,26 +200,32 @@ export class PdfExportService {
   /**
    * Builds the Playwright browser cookie configuration for authenticated PDF rendering.
    * The auth cookie must be set before Playwright navigates to the print page.
+   *
+   * Phase 32-B2 (M-01): use Playwright's `url` field instead of inferring
+   * `domain` (+ `secure` from `protocol`) from `PDF_BASE_URL`. Domain
+   * inference is fragile when the URL is an IP (`http://10.0.0.5:3000`),
+   * `localhost`, or a behind-proxy hostname — Playwright either rejects
+   * the entry or silently scopes the cookie to a different origin than
+   * the page. Passing `url` is Playwright's official way to attach a
+   * cookie to a specific origin regardless of host shape, and it derives
+   * the secure flag from the URL's protocol automatically.
    */
   buildAuthCookies(authToken: string): Array<{
     name: string;
     value: string;
-    domain: string;
-    path: string;
+    url: string;
     httpOnly: boolean;
-    secure: boolean;
+    sameSite: 'Lax' | 'Strict' | 'None';
   }> {
     const cookieName = process.env.AUTH_JWT_COOKIE_NAME ?? 'customreport_session';
     const baseUrl = process.env.PDF_BASE_URL ?? 'http://localhost:3000';
-    const url = new URL(baseUrl);
 
     return [{
       name: cookieName,
       value: authToken,
-      domain: url.hostname,
-      path: '/',
+      url: baseUrl,
       httpOnly: true,
-      secure: url.protocol === 'https:',
+      sameSite: 'Lax',
     }];
   }
 }
