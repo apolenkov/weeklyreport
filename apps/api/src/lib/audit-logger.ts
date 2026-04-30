@@ -16,7 +16,10 @@ import type { AppLogger } from './logger.js';
  *    callsites; the implementation only spreads the typed input, never the
  *    raw request).
  *  - T2: silent role escalation is prevented by always emitting role-denied
- *    even when role/userId are unknown ('unknown' / 'anonymous' literals).
+ *    even when role/userId are missing — anonymous events use
+ *    `userId: 'anonymous'` and `role: null` (Phase 32-M8 / M-08, replacing
+ *    the previous 'unknown' literal which broke SIEM rules tuned to the
+ *    Role enum).
  *  - T3: ip is captured upstream from `req.ip` (Express trust-proxy aware),
  *    never from raw X-Forwarded-For; this module is a pure consumer.
  */
@@ -25,7 +28,7 @@ export type AuditEvent = 'login-success' | 'login-fail' | 'logout' | 'role-denie
 export type AuditEnvelope = {
   readonly event: AuditEvent;
   readonly userId: string;
-  readonly role: Role | 'unknown';
+  readonly role: Role | null;
   readonly attemptedRole?: ReadonlyArray<Role> | Role;
   readonly ip: string;
 };

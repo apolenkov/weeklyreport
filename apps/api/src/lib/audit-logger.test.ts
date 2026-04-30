@@ -78,9 +78,10 @@ describe('createAuditLogger', () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
+    // Phase 32-M8 (M-08): anonymous events emit role: null (was 'unknown').
     audit.loginFail({
       userId: 'anonymous',
-      role: 'unknown',
+      role: null,
       ip: '10.0.0.3',
       reason: 'token-verify-failed',
     });
@@ -91,10 +92,35 @@ describe('createAuditLogger', () => {
     expect(entry.context).toEqual({
       event: 'login-fail',
       userId: 'anonymous',
-      role: 'unknown',
+      role: null,
       ip: '10.0.0.3',
       reason: 'token-verify-failed',
     });
+  });
+
+  // Phase 32-M8 (M-08) — anonymous events emit role: null (was 'unknown').
+  // Lock the new contract for SIEM rules tuned to "no session" vs "real
+  // role" rather than a literal 'unknown' string.
+  it('anonymous logout emits role: null (not the legacy "unknown" literal)', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.logout({
+      userId: 'anonymous',
+      role: null,
+      ip: '10.0.0.5',
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.level).toBe('info');
+    expect(entries[0]!.context).toEqual({
+      event: 'logout',
+      userId: 'anonymous',
+      role: null,
+      ip: '10.0.0.5',
+    });
+    // Strict guard against regression — must not be the legacy literal.
+    expect(entries[0]!.context?.['role']).not.toBe('unknown');
   });
 
   it('logout emits {event, userId, role, ip} on info', () => {
@@ -150,7 +176,7 @@ describe('createNullAuditLogger', () => {
       audit.loginSuccess({ userId: 'u', role: 'lead', ip: 'x' }),
     ).not.toThrow();
     expect(() =>
-      audit.loginFail({ userId: 'u', role: 'unknown', ip: 'x', reason: 'r' }),
+      audit.loginFail({ userId: 'u', role: null, ip: 'x', reason: 'r' }),
     ).not.toThrow();
     expect(() => audit.logout({ userId: 'u', role: 'lead', ip: 'x' })).not.toThrow();
     expect(() =>

@@ -162,7 +162,7 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
         // audit trail captures the attempt rather than swallowing it.
         ctx.auditLogger.roleDenied({
           userId: ctx.session?.userId ?? 'anonymous',
-          role: ctx.session?.role ?? 'unknown',
+          role: ctx.session?.role ?? null,
           attemptedRole: allowed,
           ip: ctx.ip,
         });

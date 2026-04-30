@@ -228,7 +228,7 @@ export function mountAuthRoutes(
           // are unknown so the audit trail captures the attempt).
           auditLogger.loginFail({
             userId: 'anonymous',
-            role: 'unknown',
+            role: null,
             ip: req.ip ?? 'unknown',
             reason: 'invalid_assertion',
           });
@@ -253,7 +253,7 @@ export function mountAuthRoutes(
         // is still a failed login from the user's perspective.
         auditLogger.loginFail({
           userId: 'anonymous',
-          role: 'unknown',
+          role: null,
           ip: req.ip ?? 'unknown',
           reason: error instanceof Error ? error.message : 'callback-error',
         });
@@ -266,12 +266,15 @@ export function mountAuthRoutes(
   expressApp.post('/auth/logout', (request: Request, res: Response) => {
     // AUTH-08: emit logout audit event using whatever session shape was
     // attached upstream (passport-strategy or proxy middleware). When no
-    // session is present, fall back to anonymous/unknown — same defensive
-    // shape as login-fail to keep the audit trail consistent.
+    // session is present, fall back to userId='anonymous' / role=null —
+    // Phase 32-M8 (M-08) replaced the previous 'unknown' literal so SIEM
+    // rules tuned to the Role enum (or to null = "no session") see the
+    // anonymous logout case explicitly rather than as a fake "unknown
+    // role" entry.
     const reqUser = (request as Request & { user?: UserSession }).user;
     auditLogger.logout({
       userId: reqUser?.userId ?? 'anonymous',
-      role: reqUser?.role ?? 'unknown',
+      role: reqUser?.role ?? null,
       ip: request.ip ?? 'unknown',
     });
 
