@@ -172,7 +172,13 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
   });
 }
 
-const headRoleMiddleware = buildRoleMiddleware('head');
+// admin is a superset of head: per D-AUTH-03 (Phase 27 CONTEXT) "adminProcedure
+// === headProcedure for v6.0" — admin must pass the head gate. After H-01
+// (Phase 32-c1) widened the Role enum to include 'admin' as a real value,
+// the middleware needs the same widening so admin SAML logins can hit
+// admin.* / head.* procedures. Discovered in live test (admin user got 403
+// on admin.dlqCount, admin.snapshot, admin.getSettings).
+const headRoleMiddleware = buildRoleMiddleware(['head', 'admin']);
 const leadRoleMiddleware = buildRoleMiddleware('lead');
 const viewerRoleMiddleware = buildRoleMiddleware('viewer');
 // AUTH-04 (Phase 28-01): a "any authenticated role" procedure for read paths
