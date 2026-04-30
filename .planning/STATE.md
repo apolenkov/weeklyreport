@@ -121,13 +121,16 @@ Last activity: 2026-04-29 -- All v6.0 phases shipped autonomously; ~29 unpushed 
 
 ### Active Blockers
 
-- **Push pending** — ~29 commits ahead of origin/main (Phase 29 + 30 + 31). VPN/DNS dropped; `ghe.example.org` unreachable. User to verify VPN + run `https_proxy="" command git push origin main` when network is back.
-- **Mock IdP container deferred (29-04)** — `quay.io/keycloak/keycloak:26` Docker pull unavailable. AUTH_DEV_MODE_ALLOW_TEST staging path used as fallback. Wire mock IdP into `docker-compose.test.yml` as follow-up.
-- **Real-device iOS Safari pass for MOB-06** — Playwright mobile projects cover most but PDF embed needs human-on-device confirmation.
-- **Golden-set rubric head sign-off (C-5)** — AI-SPEC ships with draft fixtures; CI threshold loose until head approves. AI eval test (`pnpm test:ai-eval`) runs on-demand, not gating CI yet.
-- **30-04 mobile spec runtime validation** — playwright spec compiles + e2e tsconfig green; full mobile-ios/mobile-android run deferred per watchdog protection. Run once after push: `pnpm playwright test --config=playwright.integration.config.ts --project=mobile-ios mobile-no-horizontal-scroll`.
-- **31-04 OnTrackIcon UI mount deferred to v6.1** — `ai.onTrack` procedure + golden-set tests fully shipped; inline mount on traffic-light cells in `product-accordion.tsx` deferred (requires threading real reportSectionId/projectId UUIDs through weekly-report mapper currently using synthetic ids).
-- **ANTHROPIC_API_KEY env var** — required in production for AI features to actually call live API; tests use vi.mock and run without network. Add to `.env.example` and corp deployment config before going live.
+- **Push pending** — 55+ commits ahead of origin/main. VPN/DNS unstable; `ghe.example.org` resolves intermittently. User to verify VPN + run `https_proxy="" command git push origin main` when network is back.
+
+### v6.1 Backlog (deferred, NOT blocking v6.0 deploy)
+
+- **AI features feature-flagged off until ANTHROPIC_API_KEY provisioned** — Phase 31 ships AI summary card, sentiment badges, on-track icons. All 3 features gracefully degrade ("AI unavailable") when key missing. Decision: ship code, defer activation until ops + head approve API key + cost. Confirmed in live-test 2026-04-30.
+- **Mock IdP container REMOVED from local plan** — Decision 2026-04-30: `/auth/dev-login?role=X` already fully imitates SAML callback (issues identical JWT cookie + session). Mock Keycloak container would only cover SAML XML parsing which is `@node-saml/passport-saml` library code, not ours. Local + integration tests use AUTH_DEV_MODE_ALLOW_TEST. Production uses real corp Keycloak. No middle layer needed.
+- **OnTrackIcon UI mount on traffic-light cells** — Phase 32 (mockup parity M1) shipped the mount via `weekly-report.ts` mapper UUID threading; activates when `ANTHROPIC_API_KEY` is set.
+- **Real-device iOS Safari PDF embed (MOB-06)** — Playwright virtual `devices['iPhone 14']` covers; human-on-device confirmation outstanding.
+- **Golden-set rubric head sign-off (C-5)** — AI-SPEC ships with draft fixtures; CI threshold loose until head/Belyaev approves. `pnpm test:ai-eval` runs on-demand.
+- **Pre-existing test lint warnings** — non-null assertions in test files (api ~185 warnings, web ~87) — not v6.0 work; cleanup later.
 
 ### Phase 27/28/29/30 closing notes (cumulative)
 
