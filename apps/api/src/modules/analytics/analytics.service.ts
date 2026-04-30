@@ -33,9 +33,13 @@ export interface AnalyticsCachePort {
   getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T>;
 }
 
-const PREFIX_HISTORY = 'analytics:traffic-light:';
-const PREFIX_VELOCITY = 'analytics:lead-velocity:';
-const PREFIX_COMPARISON = 'analytics:period-comparison:';
+// Phase 32-C / M-04: namespace under `customreport:` so analytics keys do not
+// collide with other applications sharing the Redis instance. The cache's
+// SCAN-based invalidation (analytics.cache.ts) walks the same prefix, so all
+// three sub-prefixes must remain on the `customreport:analytics:` root.
+const PREFIX_HISTORY = 'customreport:analytics:traffic-light:';
+const PREFIX_VELOCITY = 'customreport:analytics:lead-velocity:';
+const PREFIX_COMPARISON = 'customreport:analytics:period-comparison:';
 
 /**
  * Stable JSON.stringify with sorted keys so equivalent inputs hit the same
