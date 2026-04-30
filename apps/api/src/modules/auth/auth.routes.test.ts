@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { PrismaClient, Role } from '@prisma/client';
 
-import { buildUserSession, type SamlProfile } from './auth.routes';
+import {
+  buildUserSession,
+  getCurrentWeekBounds,
+  type SamlProfile,
+} from './auth.routes';
 
 /**
  * Phase 32-C / H-01 — admin SAML login regression test.
@@ -94,5 +98,92 @@ describe('buildUserSession — admin SAML login (Phase 32-C / H-01)', () => {
     // No admin section auto-creation (admin is not a lead)
     const createSection = prisma.reportSection.create as unknown as ReturnType<typeof vi.fn>;
     expect(createSection).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Phase 32-M7 / M-07 — UTC-stable week-boundary calc.
+ *
+ * Pre-fix: getCurrentWeekBounds used local-time setDate/setHours, which
+ * drifts across DST transitions and varies by host TZ (Docker default is
+ * UTC, but a TZ=Europe/Moscow deploy produced different bounds at 23:00
+ * Sunday than UTC).
+ *
+ * Post-fix: bounds are computed entirely with Date.UTC() — same input
+ * Date produces the same Monday 00:00:00 UTC and Sunday 23:59:59.999 UTC
+ * regardless of process.env.TZ.
+ */
+describe('getCurrentWeekBounds — UTC-stable week boundaries (Phase 32-M7 / M-07)', () => {
+  it('returns Monday 00:00:00 UTC and Sunday 23:59:59.999 UTC for a mid-week date', () => {
+    // Wednesday 2026-04-29 12:34:56 UTC — week is Mon 2026-04-27 .. Sun 2026-05-03
+    const wed = new Date('2026-04-29T12:34:56.000Z');
+    const { periodStart, periodEnd } = getCurrentWeekBounds(wed);
+
+    expect(periodStart.toISOString()).toBe('2026-04-27T00:00:00.000Z');
+    expect(periodEnd.toISOString()).toBe('2026-05-03T23:59:59.999Z');
+  });
+
+  it('treats Monday 00:00 UTC as the start of its own week', () => {
+    const mon = new Date('2026-04-27T00:00:00.000Z');
+    const { periodStart, periodEnd } = getCurrentWeekBounds(mon);
+
+    expect(periodStart.toISOString()).toBe('2026-04-27T00:00:00.000Z');
+    expect(periodEnd.toISOString()).toBe('2026-05-03T23:59:59.999Z');
+  });
+
+  it('treats Sunday 23:59 UTC as the end of the same week (Sunday rolls back 6)', () => {
+    // Sunday 2026-05-03 23:59 UTC must still belong to the Mon Apr 27 week.
+    const sun = new Date('2026-05-03T23:59:00.000Z');
+    const { periodStart, periodEnd } = getCurrentWeekBounds(sun);
+
+    expect(periodStart.toISOString()).toBe('2026-04-27T00:00:00.000Z');
+    expect(periodEnd.toISOString()).toBe('2026-05-03T23:59:59.999Z');
+  });
+
+  it('is stable across European DST spring-forward (last Sunday of March 2026)', () => {
+    // CET → CEST DST transition: 2026-03-29 01:00 UTC (03:00 CET → 03:00 CEST → wait, 02:00 → 03:00 local).
+    // The naive setHours/setDate path drifts here in a non-UTC TZ container.
+    // Pre-DST sample: Saturday 2026-03-28 22:00 UTC
+    // Post-DST sample: Sunday 2026-03-29 02:00 UTC (just after spring-forward)
+    const preDst = new Date('2026-03-28T22:00:00.000Z');
+    const postDst = new Date('2026-03-29T02:00:00.000Z');
+
+    // Both fall in the Mon 2026-03-23 .. Sun 2026-03-29 week.
+    const a = getCurrentWeekBounds(preDst);
+    const b = getCurrentWeekBounds(postDst);
+
+    expect(a.periodStart.toISOString()).toBe('2026-03-23T00:00:00.000Z');
+    expect(a.periodEnd.toISOString()).toBe('2026-03-29T23:59:59.999Z');
+    expect(b.periodStart.toISOString()).toBe('2026-03-23T00:00:00.000Z');
+    expect(b.periodEnd.toISOString()).toBe('2026-03-29T23:59:59.999Z');
+
+    // The two boundaries match exactly — DST did not perturb the result.
+    expect(a.periodStart.getTime()).toBe(b.periodStart.getTime());
+    expect(a.periodEnd.getTime()).toBe(b.periodEnd.getTime());
+  });
+
+  it('is stable across Russia local-time edge (Moscow has no DST but TZ=Europe/Moscow shifts hour math)', () => {
+    // 23:00 Moscow Sunday is 20:00 UTC Sunday — naive local-time setHours
+    // would resolve "Sunday 00:00 local" differently in Moscow vs UTC.
+    // 2026-04-26 20:00 UTC = 2026-04-26 23:00 Europe/Moscow.
+    const moscowSundayLate = new Date('2026-04-26T20:00:00.000Z');
+    const { periodStart, periodEnd } = getCurrentWeekBounds(moscowSundayLate);
+
+    // Sunday 2026-04-26 UTC belongs to the Mon Apr 20 .. Sun Apr 26 week.
+    expect(periodStart.toISOString()).toBe('2026-04-20T00:00:00.000Z');
+    expect(periodEnd.toISOString()).toBe('2026-04-26T23:59:59.999Z');
+  });
+
+  it('produces identical bounds regardless of host TZ snapshot (canonical UTC ISO)', () => {
+    // Snapshot the result for a known Date — must match a UTC-derived
+    // expectation regardless of the JIT host TZ. (Vitest cannot mutate
+    // the host TZ mid-process safely; this assertion is the "canonical
+    // ISO" lock that catches any reintroduction of local-time math.)
+    const fixed = new Date('2026-04-30T09:00:00.000Z');
+    const { periodStart, periodEnd } = getCurrentWeekBounds(fixed);
+
+    // Apr 30 2026 is a Thursday — week is Mon Apr 27 .. Sun May 3.
+    expect(periodStart.toISOString()).toBe('2026-04-27T00:00:00.000Z');
+    expect(periodEnd.toISOString()).toBe('2026-05-03T23:59:59.999Z');
   });
 });

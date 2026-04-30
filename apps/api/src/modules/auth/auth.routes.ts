@@ -20,21 +20,43 @@ export type SamlProfile = {
 };
 
 /**
- * Get Monday 00:00 and Sunday 23:59:59 for the week containing `date`.
+ * Get Monday 00:00:00.000 UTC and Sunday 23:59:59.999 UTC for the week
+ * containing `date`. UTC-only arithmetic — independent of host TZ and DST,
+ * so the same call at 23:00 Moscow Sunday and 22:00 UTC Sunday produces
+ * identical bounds. Phase 32-M7 (M-07) — fixes naive `setDate`/`setHours`
+ * drift across DST transitions and TZ-mismatched containers.
  */
-function getCurrentWeekBounds(date: Date = new Date()): { periodStart: Date; periodEnd: Date } {
-  const d = new Date(date);
-  const day = d.getDay(); // 0=Sun, 1=Mon...
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() + diffToMonday);
-  monday.setHours(0, 0, 0, 0);
+export function getCurrentWeekBounds(
+  date: Date = new Date(),
+): { periodStart: Date; periodEnd: Date } {
+  const utcDay = date.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  // Monday is the start-of-week. Sunday (0) maps to "6 days back".
+  const diffToMonday = utcDay === 0 ? -6 : 1 - utcDay;
 
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
+  const periodStart = new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() + diffToMonday,
+      0,
+      0,
+      0,
+      0,
+    ),
+  );
+  const periodEnd = new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() + diffToMonday + 6,
+      23,
+      59,
+      59,
+      999,
+    ),
+  );
 
-  return { periodStart: monday, periodEnd: sunday };
+  return { periodStart, periodEnd };
 }
 
 /**
