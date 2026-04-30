@@ -34,7 +34,11 @@ import { PeriodService } from './modules/period/period.service';
 import { WeeklyReportService } from './modules/weekly-report/weekly-report.service';
 import { LeadFormService } from './modules/report-sections/lead-form.service';
 
+import { assertNoDevAuthInProduction } from './lib/dev-auth-fence';
+
 async function bootstrap() {
+  assertNoDevAuthInProduction(process.env);
+
   const env = validateEnv();
 
   // We resolve ClsService from the container, so the app must exist first.

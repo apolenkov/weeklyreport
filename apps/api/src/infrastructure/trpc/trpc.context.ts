@@ -59,14 +59,20 @@ export function createContextFactory(_app: INestApplication, logger: AppLogger) 
       }
     }
 
-    // AUTH-01 / Phase 28-02 (CC-1, CC-2):
-    //  - AUTH_DEV_MODE=true: legacy dev-loop convenience (preserved verbatim).
+    // AUTH-01 / Phase 29-04 (CC-1, CC-2):
+    //  - DEV_SESSION fallback ONLY fires when NODE_ENV !== 'production' AND a
+    //    dev-auth flag is set. A boot-time fence in `lib/dev-auth-fence.ts`
+    //    refuses to start the API at all if either flag is true under
+    //    NODE_ENV=production, so this branch is doubly defended.
+    //  - AUTH_DEV_MODE=true: legacy dev-loop convenience (preserved for the
+    //    docker-compose dev stack and local pnpm dev runs).
     //  - AUTH_DEV_MODE_ALLOW_TEST=true: staged path enabling the integration
     //    suite + PDF worker to operate against a "real" tRPC context without
-    //    flipping production. Phase 29 will retire DEV_SESSION entirely once
-    //    the mock IdP container is wired.
-    const devModeEnabled = process.env['AUTH_DEV_MODE'] === 'true';
-    const allowTest = process.env['AUTH_DEV_MODE_ALLOW_TEST'] === 'true';
+    //    flipping production. Retired entirely once the mock IdP container
+    //    follow-up lands (deferred from this plan due to no Docker network).
+    const isNonProd = process.env['NODE_ENV'] !== 'production';
+    const devModeEnabled = isNonProd && process.env['AUTH_DEV_MODE'] === 'true';
+    const allowTest = isNonProd && process.env['AUTH_DEV_MODE_ALLOW_TEST'] === 'true';
     if (devModeEnabled || allowTest) {
       return {
         session: await resolveSectionId({ ...DEV_SESSION }, prisma),

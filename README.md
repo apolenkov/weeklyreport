@@ -131,6 +131,31 @@ DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport" \
 | `PORT` | No | 3001 | API server port |
 | `NEXT_PUBLIC_API_URL` | Yes | — | API URL for tRPC client (used by Next.js rewrites) |
 
+## Local development with mock Keycloak
+
+Phase 29-04 finalised the AUTH-01 cut-over: production reads SAML attributes
+from a real Keycloak realm only. The boot fence in
+`apps/api/src/lib/dev-auth-fence.ts` refuses to start the API if either
+`AUTH_DEV_MODE` or `AUTH_DEV_MODE_ALLOW_TEST` is set under
+`NODE_ENV=production`.
+
+For local development and the Playwright integration suite, the dev path is
+still available:
+
+- `NODE_ENV=development AUTH_DEV_MODE=true` boots the legacy dev fallback
+  (`DEV_SESSION` head user) — no Keycloak required.
+- `NODE_ENV=test AUTH_DEV_MODE_ALLOW_TEST=true` is the narrower staged switch
+  used by `apps/web/playwright.integration.config.ts` so the integration suite
+  exercises real tRPC + Prisma without flipping production.
+
+A mock Keycloak 26 container in `docker-compose.test.yml` loading
+`infra/keycloak/realm-export.json` is the planned follow-up; the realm fixture
+(4 fixture users, `saml-role-mapper`) is already in place from Phase 29-02. It
+is deferred only because the Phase 29-04 worktree could not pull
+`quay.io/keycloak/keycloak:26` (no Docker network from the build host). Once
+the container is wired, Playwright's `e2e/integration/global-setup.ts` will
+perform a real SAML AuthnRequest instead of the dev-login shortcut.
+
 ## Scripts
 
 ```bash
