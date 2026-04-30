@@ -69,6 +69,8 @@ describe('AUTH-08 role-denied integration signal', () => {
       logger,
       auditLogger,
       ip: '10.0.0.42',
+      isPdfExport: false,
+      pdfReportId: null,
     });
 
     await expect(caller.headRoute()).rejects.toBeInstanceOf(TRPCError);
@@ -112,6 +114,8 @@ describe('AUTH-08 role-denied integration signal', () => {
       logger,
       auditLogger,
       ip: '10.0.0.7',
+      isPdfExport: false,
+      pdfReportId: null,
     });
 
     const result = await caller.publicRoute();
@@ -135,6 +139,8 @@ describe('AUTH-08 role-denied integration signal', () => {
       logger,
       auditLogger,
       ip: '10.0.0.99',
+      isPdfExport: false,
+      pdfReportId: null,
     });
 
     await expect(caller.headRoute()).rejects.toMatchObject({

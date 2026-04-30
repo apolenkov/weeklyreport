@@ -34,6 +34,8 @@ const nullCaller = testRouter.createCaller({
   logger: nullLogger,
   auditLogger: nullAuditLogger,
   ip: TEST_IP,
+  isPdfExport: false,
+  pdfReportId: null,
 });
 
 const leadCaller = testRouter.createCaller({
@@ -48,6 +50,8 @@ const leadCaller = testRouter.createCaller({
   logger: nullLogger,
   auditLogger: nullAuditLogger,
   ip: TEST_IP,
+  isPdfExport: false,
+  pdfReportId: null,
 });
 
 const headCaller = testRouter.createCaller({
@@ -62,6 +66,8 @@ const headCaller = testRouter.createCaller({
   logger: nullLogger,
   auditLogger: nullAuditLogger,
   ip: TEST_IP,
+  isPdfExport: false,
+  pdfReportId: null,
 });
 
 function makeFakeLogger(): AppLogger & {
@@ -159,6 +165,8 @@ describe('tRPC auth middleware', () => {
       logger: nullLogger,
       auditLogger: nullAuditLogger,
       ip: TEST_IP,
+      isPdfExport: false,
+      pdfReportId: null,
     });
 
     await expect(viewerCaller.headRoute()).rejects.toMatchObject(
@@ -194,6 +202,8 @@ describe('tRPC logging middleware', () => {
       logger,
       auditLogger: nullAuditLogger,
       ip: TEST_IP,
+      isPdfExport: false,
+      pdfReportId: null,
     });
 
     const result = await caller.publicRoute();
@@ -235,6 +245,8 @@ describe('tRPC logging middleware', () => {
       logger,
       auditLogger: nullAuditLogger,
       ip: TEST_IP,
+      isPdfExport: false,
+      pdfReportId: null,
     });
 
     await expect(caller.protectedRoute()).rejects.toBeInstanceOf(TRPCError);
@@ -272,6 +284,8 @@ describe('tRPC logging middleware', () => {
       logger,
       auditLogger: nullAuditLogger,
       ip: TEST_IP,
+      isPdfExport: false,
+      pdfReportId: null,
     });
 
     await caller.protectedRoute();
@@ -288,6 +302,8 @@ describe('tRPC logging middleware', () => {
       logger,
       auditLogger: nullAuditLogger,
       ip: TEST_IP,
+      isPdfExport: false,
+      pdfReportId: null,
     });
 
     await caller.publicRoute();

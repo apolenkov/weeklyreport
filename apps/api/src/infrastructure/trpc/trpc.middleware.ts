@@ -76,7 +76,67 @@ const isAuthed = t.middleware(({ ctx, next }) => {
   return next({ ctx: { session: ctx.session } });
 });
 
-export const protectedProcedure = t.procedure.use(loggingMiddleware).use(isAuthed);
+/**
+ * Phase 32-B1 (H-04): PDF-export-scoped session guard.
+ *
+ * When the inbound cookie verified as a PDF-export JWT (ctx.isPdfExport),
+ * the synthetic viewer session must be restricted to a tiny read-only
+ * allowlist scoped to the JWT's `reportId` claim. Any other procedure
+ * throws FORBIDDEN. The allowlisted procedure must also reference
+ * `ctx.pdfReportId` in its input — otherwise a leaked PDF cookie for
+ * report X could be used to read report Y.
+ *
+ * The allowlist intentionally hard-codes paths instead of a per-procedure
+ * opt-in: the v6.0 print page calls only `weeklyReport.get` and
+ * `archive.detail`. New PDF-print pages must add their procedure here.
+ *
+ * Applied via `protectedProcedure` so every authenticated path inherits
+ * the check; the middleware is a no-op for non-PDF sessions.
+ */
+const PDF_EXPORT_ALLOWED_PATHS: ReadonlySet<string> = new Set([
+  'weeklyReport.get',
+  'archive.detail',
+]);
+
+const pdfExportGuard = t.middleware(async ({ ctx, path, next, getRawInput }) => {
+  if (!ctx.isPdfExport) {
+    return next();
+  }
+
+  if (!PDF_EXPORT_ALLOWED_PATHS.has(path)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: `Procedure ${path} not permitted for PDF-export session`,
+    });
+  }
+
+  // Cross-check the input reportId against the JWT claim. A PDF cookie
+  // bound to report X must not be reusable to read report Y.
+  let raw: unknown;
+  try {
+    raw = await getRawInput();
+  } catch {
+    raw = undefined;
+  }
+  const inputReportId =
+    raw && typeof raw === 'object' && 'reportId' in raw
+      ? (raw as { reportId?: unknown }).reportId
+      : undefined;
+
+  if (typeof inputReportId !== 'string' || inputReportId !== ctx.pdfReportId) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'PDF-export session reportId does not match procedure input',
+    });
+  }
+
+  return next();
+});
+
+export const protectedProcedure = t.procedure
+  .use(loggingMiddleware)
+  .use(isAuthed)
+  .use(pdfExportGuard);
 
 // AUTH-03 (Phase 27) + AUTH-08 (Phase 29-01): role-bound procedures whose
 // deny branch emits a structured `role-denied` audit event before throwing
@@ -122,10 +182,22 @@ const viewerRoleMiddleware = buildRoleMiddleware('viewer');
 // row visibility. Service-level unit tests verify the role-aware filter.
 const anyRoleMiddleware = buildRoleMiddleware(['lead', 'head', 'admin', 'viewer']);
 
-export const headProcedure = t.procedure.use(loggingMiddleware).use(headRoleMiddleware);
-export const leadProcedure = t.procedure.use(loggingMiddleware).use(leadRoleMiddleware);
-export const viewerProcedure = t.procedure.use(loggingMiddleware).use(viewerRoleMiddleware);
-export const anyRoleProcedure = t.procedure.use(loggingMiddleware).use(anyRoleMiddleware);
+export const headProcedure = t.procedure
+  .use(loggingMiddleware)
+  .use(headRoleMiddleware)
+  .use(pdfExportGuard);
+export const leadProcedure = t.procedure
+  .use(loggingMiddleware)
+  .use(leadRoleMiddleware)
+  .use(pdfExportGuard);
+export const viewerProcedure = t.procedure
+  .use(loggingMiddleware)
+  .use(viewerRoleMiddleware)
+  .use(pdfExportGuard);
+export const anyRoleProcedure = t.procedure
+  .use(loggingMiddleware)
+  .use(anyRoleMiddleware)
+  .use(pdfExportGuard);
 export const adminProcedure = headProcedure;
 
 export const router = t.router;
