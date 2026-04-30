@@ -1,8 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 import type { Role } from '@customreport/shared';
+
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@customreport/ui/components/ui/sheet';
 
 import { isRouteVisible } from '../../lib/role-visibility';
 import { useSession } from '../../lib/session-provider';
@@ -148,7 +157,7 @@ export function NavBar() {
         <div className="h-[2px] bg-[var(--color-starbucks-accent)]" />
       </div>
 
-      {/* Mobile hamburger menu */}
+      {/* MOB-07 (Phase 30-05): Mobile hamburger menu via shadcn-ui Sheet */}
       <MobileNav links={visibleLinks} pathname={pathname} role={role} />
     </header>
   );
@@ -156,6 +165,12 @@ export function NavBar() {
 
 // ---- Mobile navigation ----
 
+/**
+ * MOB-07 (Phase 30-05): hamburger button + Sheet drawer at sm- viewports.
+ * Replaces the prior overflow-x-auto strip — the strip technically fit the
+ * viewport but truncated link labels and burned vertical space; a Sheet
+ * gives a vertical link list with full-width tap targets.
+ */
 function MobileNav({
   links,
   pathname,
@@ -165,33 +180,64 @@ function MobileNav({
   readonly pathname: string;
   readonly role: Role | null;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <nav
-      aria-label="Mobile navigation"
-      className="flex items-center gap-1 overflow-x-auto border-t border-[var(--color-border)] px-4 sm:hidden"
-    >
-      {links.map((link) => {
-        const active = isActiveLink(pathname, link.href);
-        return (
-          <a
-            key={link.href}
-            href={link.href}
-            className={`flex-shrink-0 px-3 py-2.5 text-xs font-medium transition-colors ${
-              active
-                ? 'border-b-2 border-[var(--color-starbucks-accent)] text-[var(--color-starbucks-accent)]'
-                : 'text-[var(--color-muted-foreground)]'
-            }`}
-            aria-current={active ? 'page' : undefined}
+    <div className="flex items-center justify-between border-t border-[var(--color-border)] px-4 py-2 sm:hidden">
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger
+          className="inline-flex h-11 min-w-11 items-center justify-center rounded-md text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
+          aria-label="Open navigation menu"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
           >
-            {link.label}
-          </a>
-        );
-      })}
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+          <span className="sr-only">Menu</span>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-72 p-0">
+          <SheetHeader className="border-b border-[var(--color-border)] p-4">
+            <SheetTitle>Menu</SheetTitle>
+          </SheetHeader>
+          <nav aria-label="Mobile navigation" className="flex flex-col p-2">
+            {links.map((link) => {
+              const active = isActiveLink(pathname, link.href);
+              return (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className={`flex h-11 items-center rounded-md px-3 text-sm font-medium transition-colors ${
+                    active
+                      ? 'bg-[var(--color-muted)] text-[var(--color-starbucks-accent)]'
+                      : 'text-[var(--color-foreground)] hover:bg-[var(--color-muted)]'
+                  }`}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  {link.label}
+                </a>
+              );
+            })}
+          </nav>
+        </SheetContent>
+      </Sheet>
       {role && (
-        <span className="ml-auto flex-shrink-0 text-[10px] text-[var(--color-muted-foreground)]">
+        <span className="text-[10px] text-[var(--color-muted-foreground)]">
           {getRoleLabel(role)}
         </span>
       )}
-    </nav>
+    </div>
   );
 }

@@ -58,7 +58,10 @@ export function RisksSection({
               border: `1px solid ${isBlocked ? 'rgba(200,32,20,0.15)' : 'rgba(212,160,23,0.15)'}`,
             }}
           >
-            <div className="mb-3 flex items-center gap-2">
+            {/* MOB-05 (Phase 30-05): wrap header content so the metadata row
+                stacks under the badge at narrow viewports, preventing the
+                "+ stage" suffix from overflowing the container at 375px. */}
+            <div className="mb-3 flex flex-wrap items-center gap-2">
               <span
                 className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
                 style={{
@@ -68,7 +71,7 @@ export function RisksSection({
               >
                 {isBlocked ? 'Blocked' : 'At Risk'}
               </span>
-              <span className="font-[family-name:var(--font-sans)] text-sm font-semibold">
+              <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
                 {risk.productName}
               </span>
               <span className="text-xs text-[var(--color-muted-foreground)]">
@@ -77,7 +80,7 @@ export function RisksSection({
               {!readOnly && (
                 <button
                   type="button"
-                  className="ml-auto flex min-h-[32px] min-w-[32px] items-center justify-center rounded-full border-0 bg-transparent p-1.5 text-[rgba(0,0,0,0.25)] transition-colors hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+                  className="ml-auto flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border-0 bg-transparent p-1.5 text-[rgba(0,0,0,0.25)] transition-colors hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
                   onClick={() => handleDelete(risk.id)}
                   aria-label={`Delete risk for ${risk.productName}`}
                 >

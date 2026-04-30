@@ -1,4 +1,5 @@
 import { AdminPanel } from '../../../components/admin/admin-panel';
+import { AdminTabsMobileSelect } from '../../../components/admin/admin-tabs-mobile-select';
 import { DlqBadge } from '../../../components/admin/dlq-badge';
 
 type Props = {
@@ -31,8 +32,11 @@ export default async function AdminPage({ searchParams }: Props) {
             <DlqBadge />
           </div>
 
-          {/* Tab navigation */}
-          <nav aria-label="Admin tabs">
+          {/* MOB-04 (Phase 30-05): native select on mobile, anchor tab list on sm+ */}
+          <AdminTabsMobileSelect activeTab={activeTab as 'users' | 'products' | 'periods' | 'reminders' | 'settings'} />
+
+          {/* Tab navigation (desktop) */}
+          <nav aria-label="Admin tabs" className="hidden sm:block">
             <div className="flex gap-1 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-1">
               {tabs.map((t) => (
                 <a
