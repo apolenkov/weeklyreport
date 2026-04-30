@@ -8,10 +8,10 @@ last_updated: "2026-04-29T10:14:50.469Z"
 last_activity: 2026-04-29 -- Phase 27 execution started
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
-  percent: 20
+  completed_phases: 4
+  total_plans: 19
+  completed_plans: 19
+  percent: 80
 ---
 
 # Project State: CustomReport
@@ -34,10 +34,17 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Current Position
 
-Phase: 27 (Quality Stabilisation & Role Middleware Factory) — COMPLETE ✓ (5/5)
-Plan: 5 of 5 complete (27-01 QA-04 ✓, 27-02 QA-03 ✓, 27-03 QA-02 ✓, 27-04 AUTH-03 ✓, 27-05 QA-01 ✓ via 27-05a..e gap-closure)
-Status: Phase 27 closed; integration suite is now a deterministic 21/21 CI gate
-Last activity: 2026-04-29 -- Phase 27 fully shipped; 8 fix commits pushed; Phase 28 unblocked
+Phase: 30 (Mobile Polish & Trend Analytics) — COMPLETE ✓ (5/5 plans)
+Plans complete: 19/19 across phases 27/28/29/30
+Status: v6.0 at 4/5 phases (80%); Phase 31 (AI Insights) blocked on AI-SPEC.md (run `/gsd-ai-integration-phase 31` first)
+Last activity: 2026-04-29 -- Phases 27/28/29/30 all shipped autonomously; 19 unpushed commits ahead of origin/main (VPN dropped)
+
+### v6.0 phase progress
+- Phase 27 ✓ (5/5) — pushed (Quality Stabilisation & Role Middleware Factory)
+- Phase 28 ✓ (4/4) — pushed (Role Filters, PDF Cookie Seam, Reminders, Release Checklist)
+- Phase 29 ✓ (6/6) — local only, 7 commits (Real Keycloak SAML, Role-Aware UI, Escalation)
+- Phase 30 ✓ (5/5) — local only, 11 commits + CONTEXT (Mobile Polish & Trend Analytics)
+- Phase 31 PENDING — needs AI-SPEC.md via `/gsd-ai-integration-phase 31`
 
 ## Quick Tasks Completed
 
@@ -114,15 +121,21 @@ Last activity: 2026-04-29 -- Phase 27 fully shipped; 8 fix commits pushed; Phase
 
 ### Active Blockers
 
-- **AI-SPEC.md outstanding** — required before Phase 31 planning. Owner: `/gsd-ai-integration-phase 31`.
-- **Real-device iOS Safari pass for MOB-06** — Playwright covers most but PDF embed needs human-on-device confirmation (Phase 30).
+- **Push pending** — 19 commits ahead of origin/main (Phase 29 + 30). VPN dropped mid-session; SSL handshake / DNS resolution to `ghe.example.org` fails. User to verify VPN + run `https_proxy="" command git push origin main`.
+- **Phase 31 AI-SPEC.md outstanding** — required before Phase 31 planning. Owner: `/gsd-ai-integration-phase 31` (will run framework selector → ai researcher → domain researcher → eval planner).
+- **Mock IdP container deferred (29-04)** — `quay.io/keycloak/keycloak:26` Docker pull was unavailable during Phase 29 execution; AUTH_DEV_MODE_ALLOW_TEST staging path used as fallback. Wire mock IdP container into `docker-compose.test.yml` as a follow-up sub-issue.
+- **Real-device iOS Safari pass for MOB-06** — Playwright mobile projects cover most but PDF embed needs human-on-device confirmation (was already known per Phase 30 plan).
 - **Golden-set rubric (C-5)** — head/Belyaev domain-expert sign-off required before AI quality CI gate locks in (Phase 31).
+- **30-04 mobile spec runtime validation** — playwright spec compiles + e2e tsconfig green, but full mobile-ios/mobile-android run was deferred per watchdog protection. Run once after push: `pnpm playwright test --config=playwright.integration.config.ts --project=mobile-ios mobile-no-horizontal-scroll`.
 
-### Phase 27 closing notes (for Phase 28 awareness)
+### Phase 27/28/29/30 closing notes (cumulative)
 
-- **QA-03 invariant inverted** — 27-05b reversed the false QA-03 premise. The proxy.ts file MUST live at `apps/web/src/proxy.ts` (Next 16 src-layout requirement, empirically proven). `apps/web/proxy.ts` was the dead twin; src/ version is canonical. The CC-6 guard comment now lives in `apps/web/src/proxy.ts`.
-- **Prisma 7 + prisma.config.ts does NOT auto-seed after `migrate reset`** — e2e global-setup chains explicit `prisma db seed`. Document for future test infra work.
-- **Pre-existing typecheck errors in `apps/web/src/components/.../app-shell.tsx` and `session-provider.tsx`** — flagged during 27-05; unrelated to Phase 27 scope. Address in Phase 28+ when touching those files.
+- **QA-03 invariant inverted (27-05b)** — proxy.ts MUST live at `apps/web/src/proxy.ts` (Next 16 src-layout, empirically proven via curl test).
+- **Prisma 7 + prisma.config.ts does NOT auto-seed after `migrate reset`** — e2e global-setup chains explicit `prisma db seed` (27-05a).
+- **CC-1 enforced (28-02)** — AUTH-05 PDF cookie + AUTH-01 staging in ONE commit; splitting causes 401 retry storms.
+- **CC-1 ordering enforced (29-06)** — AUTH-06 nav hides committed LAST after AUTH-07 layout gate + AUTH-01 SAML cut-over.
+- **shadcn Chart hand-rolled (30-03)** — 34-LOC wrapper around recharts (CLI install skipped per watchdog budget).
+- **MOB-05/06 simplified (30-05)** — risk editor stays inline (already 375px-clean); ExportPdfButton already opens via window.open (no iframe).
 
 ---
 
