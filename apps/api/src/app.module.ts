@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
-import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
+import type {
+  MiddlewareConsumer,
+  NestModule,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClsModule } from 'nestjs-cls';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
@@ -22,6 +26,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { PdfExportProcessor } from './infrastructure/bullmq/pdf-export.processor';
 import { EmailReminderProcessor } from './infrastructure/bullmq/email-reminder.processor';
 import { EmailService } from './infrastructure/email/email.service';
+import { assertNoDevAuthInProduction } from './lib/dev-auth-fence';
 
 @Module({
   imports: [
@@ -54,8 +59,20 @@ import { EmailService } from './infrastructure/email/email.service';
   ],
   providers: [PdfExportProcessor, EmailReminderProcessor, EmailService],
 })
-export class AppModule implements NestModule {
+export class AppModule implements NestModule, OnApplicationBootstrap {
   configure(consumer: MiddlewareConsumer): void {
     consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+
+  /**
+   * AUTH-01 (Phase 29-04 / Phase 32-C M-05): boot-time dev-auth fence.
+   *
+   * Lives on `OnApplicationBootstrap` instead of `bootstrap()` in main.ts so
+   * every consumer of `NestFactory.create(AppModule)` (e2e suites, CLI tools,
+   * Nest test harness) sees the same fail-closed behaviour. The fence is a
+   * no-op when NODE_ENV !== 'production', so test/dev paths are unaffected.
+   */
+  onApplicationBootstrap(): void {
+    assertNoDevAuthInProduction(process.env);
   }
 }

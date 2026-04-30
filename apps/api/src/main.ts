@@ -37,10 +37,11 @@ import { LeadFormService } from './modules/report-sections/lead-form.service';
 import { AnalyticsService } from './modules/analytics/analytics.service';
 import { AiService } from './modules/ai/ai.service';
 
-import { assertNoDevAuthInProduction } from './lib/dev-auth-fence';
-
 async function bootstrap() {
-  assertNoDevAuthInProduction(process.env);
+  // AUTH-01 / Phase 32-C M-05: dev-auth fence runs from
+  // AppModule.onApplicationBootstrap so every NestFactory.create caller
+  // (e2e harness, CLI, this server) is protected uniformly. See
+  // app.module.ts.
 
   const env = validateEnv();
 
