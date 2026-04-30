@@ -36,6 +36,10 @@ export async function withCache<R>(args: {
   facade: AiFacade;
   kind: AiInsightKind;
   contentHash: string;
+  // Phase 32-A1 (C-01): reportId is propagated to the upsert so the
+  // budget guard's per-report sum sees this row's tokens. Optional only
+  // for legacy callers; service layer always sets it.
+  reportId?: string | null;
   generate: CacheGenerate<R>;
 }): Promise<{ row: AiInsightRow<R>; cached: boolean }> {
   const existing = await args.facade.getAiInsight<R>(args.kind, args.contentHash);
@@ -46,6 +50,7 @@ export async function withCache<R>(args: {
   const row = await args.facade.upsertAiInsight<R>({
     kind: args.kind,
     contentHash: args.contentHash,
+    reportId: args.reportId ?? null,
     result: generated.result,
     modelId: generated.modelId,
     usage: generated.usage,

@@ -29,34 +29,36 @@ class InMemoryFacade implements AiFacade {
   public risks = new Map<string, RiskForSentiment>();
   public cells = new Map<string, CellForOnTrack>();
   public insights = new Map<string, AiInsightRow<unknown>>();
-  public recentTokenSum = 0;
+  // Phase 32-A1 (C-01): per-report token sums for the budget guard.
+  public recentTokenSumByReport = new Map<string, number>();
 
   private key(kind: AiInsightKind, hash: string) {
     return `${kind}:${hash}`;
   }
 
-   
+
   async getReportForSummary(reportId: string): Promise<ReportForSummary | null> {
     return this.reports.get(reportId) ?? null;
   }
-   
+
   async getRiskForSentiment(riskId: string): Promise<RiskForSentiment | null> {
     return this.risks.get(riskId) ?? null;
   }
-   
+
   async getCellForOnTrack(sectionId: string, projectId: string): Promise<CellForOnTrack | null> {
     return this.cells.get(`${sectionId}:${projectId}`) ?? null;
   }
-   
+
   async getAiInsight<R>(kind: AiInsightKind, hash: string): Promise<AiInsightRow<R> | null> {
     return (this.insights.get(this.key(kind, hash)) as AiInsightRow<R> | undefined) ?? null;
   }
-   
+
   async upsertAiInsight<R>(input: AiInsightUpsertInput<R>): Promise<AiInsightRow<R>> {
     const row: AiInsightRow<R> = {
       id: `${input.kind}-${input.contentHash}`,
       kind: input.kind,
       contentHash: input.contentHash,
+      reportId: input.reportId ?? null,
       result: input.result,
       modelId: input.modelId,
       inputTokens: input.usage.inputTokens,
@@ -68,13 +70,13 @@ class InMemoryFacade implements AiFacade {
     this.insights.set(this.key(input.kind, input.contentHash), row as AiInsightRow<unknown>);
     return row;
   }
-   
+
   async deleteAiInsight(kind: AiInsightKind, hash: string): Promise<void> {
     this.insights.delete(this.key(kind, hash));
   }
-   
-  async getRecentInsightTokenSum(): Promise<number> {
-    return this.recentTokenSum;
+
+  async getRecentInsightTokenSum(reportId: string): Promise<number> {
+    return this.recentTokenSumByReport.get(reportId) ?? 0;
   }
 }
 
@@ -222,7 +224,7 @@ describe('AiService.summary', () => {
   it('budget exceeded → returns budget_exceeded sentinel without calling SDK', async () => {
     const facade = new InMemoryFacade();
     facade.reports.set(REPORT_ID, sampleReport);
-    facade.recentTokenSum = 60_000; // exceeds 50K cap
+    facade.recentTokenSumByReport.set(REPORT_ID, 60_000); // exceeds 50K cap
     const service = new AiService(facade);
     const r = await service.summary(REPORT_ID);
     expect(r).toEqual({ available: false, reason: 'budget_exceeded' });
@@ -260,6 +262,7 @@ describe('AiService.sentiment', () => {
   const RISK_ID_B = '33333333-3333-4333-8333-333333333333';
   const SAMPLE_RISK = {
     riskId: RISK_ID_A,
+    reportId: REPORT_ID,
     risk: 'Single engineer holds critical knowledge',
     impact: 'Key absence stalls progress',
     mitigation: 'Pair-programming weekly',
@@ -341,6 +344,7 @@ describe('AiService.onTrack', () => {
 
   const SAMPLE_CELL = {
     sectionId: SECTION_ID,
+    reportId: REPORT_ID,
     projectId: PROJECT_ID,
     leadName: 'Alice',
     projectName: 'ProjectAlpha',
