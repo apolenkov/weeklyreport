@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import type { UserSession } from '@customreport/shared';
 
 import { createAuthController } from '../../modules/auth/auth.controller.js';
+import { verifyPdfExportToken } from '../../modules/pdf-export/pdf-export.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AppLogger } from '../../lib/logger.js';
 import { createAuditLogger, type AuditLogger } from '../../lib/audit-logger.js';
@@ -15,6 +16,31 @@ const DEV_SESSION: UserSession = {
   activeReportId: 'a0000000-0000-4000-8000-000000000001',
   activeReportSectionId: null,
 };
+
+/**
+ * Phase 32-B1 (H-04): synthetic session created when an inbound cookie is
+ * a valid PDF-export JWT (kind='pdf-export'). The session must satisfy
+ * `userSessionSchema` (uuid userId, email, etc.) so existing middlewares
+ * keep their shape contract. Read-only restrictions live on TrpcContext
+ * (`isPdfExport` + `pdfReportId`) and are enforced by `pdfExportGuardMiddleware`
+ * in trpc.middleware, NOT by mutating the role.
+ */
+const PDF_EXPORT_SYNTHETIC_USER_ID = 'a0000000-0000-4000-8000-0000000pdfwk';
+const PDF_EXPORT_SYNTHETIC_EMAIL = 'pdf-worker@internal.customreport.local';
+
+function buildPdfExportSession(reportId: string): UserSession {
+  return {
+    userId: PDF_EXPORT_SYNTHETIC_USER_ID,
+    email: PDF_EXPORT_SYNTHETIC_EMAIL,
+    name: 'PDF Worker',
+    // viewer is the narrowest role that can read a published report via the
+    // service-layer filters. The pdfExportGuard middleware further restricts
+    // procedure paths to `weeklyReport.get` and `archive.detail`.
+    role: 'viewer',
+    activeReportId: reportId,
+    activeReportSectionId: null,
+  };
+}
 
 export type TrpcContext = {
   session: UserSession | null;
@@ -33,6 +59,21 @@ export type TrpcContext = {
    * the canonical seam audit emits read from.
    */
   ip: string;
+  /**
+   * Phase 32-B1 (H-04): true when the inbound cookie verified as a
+   * PDF-export-scoped JWT (rather than a regular session JWT). When true,
+   * the synthetic session is restricted to a hard-coded allowlist of read
+   * procedures keyed on `pdfReportId`; all other procedures throw FORBIDDEN
+   * via the `pdfExportGuard` middleware applied to every protected procedure
+   * helper.
+   */
+  isPdfExport: boolean;
+  /**
+   * Phase 32-B1 (H-04): the reportId from the verified PDF JWT claim, used
+   * by pdfExportGuard to assert the procedure input's reportId matches.
+   * `null` whenever `isPdfExport === false`.
+   */
+  pdfReportId: string | null;
 };
 
 export function createContextFactory(_app: INestApplication, logger: AppLogger) {
@@ -53,9 +94,33 @@ export function createContextFactory(_app: INestApplication, logger: AppLogger) 
           logger,
           auditLogger,
           ip,
+          isPdfExport: false,
+          pdfReportId: null,
         };
       } catch {
-        // Token invalid/expired -- fall through
+        // Regular session token invalid/expired -- try the PDF-export
+        // verifier path before falling through to dev-mode / null.
+      }
+
+      // Phase 32-B1 (H-04): PDF worker authentication path. The Playwright
+      // browser injects a 5-min JWT signed by `signPdfExportToken` carrying
+      // `{ reportId, kind: 'pdf-export' }`. We verify against
+      // PDF_EXPORT_JWT_SECRET (different secret than session JWT). On
+      // success we synthesize a viewer-shaped session bound to the reportId
+      // claim; the `pdfExportGuard` middleware enforces the
+      // procedure-allowlist + reportId-match constraint.
+      try {
+        const pdfClaims = verifyPdfExportToken(token);
+        return {
+          session: buildPdfExportSession(pdfClaims.reportId),
+          logger,
+          auditLogger,
+          ip,
+          isPdfExport: true,
+          pdfReportId: pdfClaims.reportId,
+        };
+      } catch {
+        // Not a PDF token either -- fall through to dev-mode / null.
       }
     }
 
@@ -79,10 +144,19 @@ export function createContextFactory(_app: INestApplication, logger: AppLogger) 
         logger,
         auditLogger,
         ip,
+        isPdfExport: false,
+        pdfReportId: null,
       };
     }
 
-    return { session: null, logger, auditLogger, ip };
+    return {
+      session: null,
+      logger,
+      auditLogger,
+      ip,
+      isPdfExport: false,
+      pdfReportId: null,
+    };
   };
 }
 

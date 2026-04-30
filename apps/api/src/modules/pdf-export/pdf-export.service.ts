@@ -32,21 +32,55 @@ export interface PdfExportRepository {
 }
 
 /**
- * AUTH-05 (Phase 28-02): claim shape carried in the 5-min PDF export JWT.
+ * AUTH-05 (Phase 28-02 / Phase 32-B1 H-04): claim shape carried in the 5-min
+ * PDF export JWT.
  *
  * The reportId claim binds the cookie to a single resource so a leaked
- * cookie cannot be reused to render arbitrary reports. Phase 29 (AUTH-02)
- * will introduce a server-side verifier that asserts this claim against
- * the request URL; for Phase 28 we ship the issuer half only — the
- * verifier remains the existing trpc.context.ts cookie path (AUTH_DEV_MODE
- * or AUTH_DEV_MODE_ALLOW_TEST falls through to DEV_SESSION when the JWT
- * fails verification, which is the staged-migration intent).
+ * cookie cannot be reused to render arbitrary reports. The `kind` claim
+ * disambiguates this token from regular session JWTs (which use a
+ * different secret and a much wider claim shape) so the tRPC context
+ * verifier can route it to the correct check path.
+ *
+ * Phase 32-B1 (H-04) adds the server-side verifier (`verifyPdfExportToken`)
+ * and wires it into `trpc.context.ts`; the synthetic session it produces
+ * is restricted to a hard-coded allowlist of read procedures scoped to the
+ * JWT's reportId.
  */
 export interface PdfExportTokenClaims {
   reportId: string;
+  kind: 'pdf-export';
 }
 
 const PDF_EXPORT_JWT_TTL = '5m';
+const PDF_EXPORT_KIND = 'pdf-export' as const;
+
+/**
+ * AUTH-05 / Phase 32-B1 (H-04): verify a token signed by `signPdfExportToken`
+ * against `PDF_EXPORT_JWT_SECRET`. Returns the typed claim shape on success;
+ * throws if the token is invalid, expired, missing the kind claim, or signed
+ * with a different secret. This is the deferred verifier called from
+ * `trpc.context.ts` after `verifySessionToken` fails.
+ */
+export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
+  const secret = process.env['PDF_EXPORT_JWT_SECRET'];
+  if (!secret || secret.length < 16) {
+    throw new Error(
+      'PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).',
+    );
+  }
+  const decoded = jwt.verify(token, secret);
+  if (typeof decoded !== 'object' || decoded === null) {
+    throw new Error('Invalid PDF export token payload');
+  }
+  const claims = decoded as Record<string, unknown>;
+  if (claims['kind'] !== PDF_EXPORT_KIND) {
+    throw new Error('Token is not a PDF export token (kind mismatch)');
+  }
+  if (typeof claims['reportId'] !== 'string' || !claims['reportId']) {
+    throw new Error('PDF export token missing reportId claim');
+  }
+  return { reportId: claims['reportId'], kind: PDF_EXPORT_KIND };
+}
 
 export class PdfExportService {
   private readonly logger: AppLogger;
@@ -75,7 +109,7 @@ export class PdfExportService {
         'PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).',
       );
     }
-    const claims: PdfExportTokenClaims = { reportId };
+    const claims: PdfExportTokenClaims = { reportId, kind: PDF_EXPORT_KIND };
     return jwt.sign(claims, secret, { expiresIn: PDF_EXPORT_JWT_TTL });
   }
 
