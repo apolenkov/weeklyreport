@@ -8,10 +8,10 @@ last_updated: "2026-04-29T10:14:50.469Z"
 last_activity: 2026-04-29 -- Phase 27 execution started
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 19
-  completed_plans: 19
-  percent: 80
+  completed_phases: 5
+  total_plans: 22
+  completed_plans: 22
+  percent: 100
 ---
 
 # Project State: CustomReport
@@ -34,17 +34,17 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Current Position
 
-Phase: 30 (Mobile Polish & Trend Analytics) — COMPLETE ✓ (5/5 plans)
-Plans complete: 19/19 across phases 27/28/29/30
-Status: v6.0 at 4/5 phases (80%); Phase 31 (AI Insights) blocked on AI-SPEC.md (run `/gsd-ai-integration-phase 31` first)
-Last activity: 2026-04-29 -- Phases 27/28/29/30 all shipped autonomously; 19 unpushed commits ahead of origin/main (VPN dropped)
+Phase: 31 (AI Insights) — COMPLETE ✓ (3/3 plans + AI-SPEC.md)
+Plans complete: 22/22 across phases 27/28/29/30/31
+Status: v6.0 100% — all 5 phases shipped; ready for `/gsd-audit-milestone` and `/gsd-complete-milestone`
+Last activity: 2026-04-29 -- All v6.0 phases shipped autonomously; ~29 unpushed commits ahead of origin/main (VPN/DNS dropped)
 
 ### v6.0 phase progress
 - Phase 27 ✓ (5/5) — pushed (Quality Stabilisation & Role Middleware Factory)
 - Phase 28 ✓ (4/4) — pushed (Role Filters, PDF Cookie Seam, Reminders, Release Checklist)
-- Phase 29 ✓ (6/6) — local only, 7 commits (Real Keycloak SAML, Role-Aware UI, Escalation)
-- Phase 30 ✓ (5/5) — local only, 11 commits + CONTEXT (Mobile Polish & Trend Analytics)
-- Phase 31 PENDING — needs AI-SPEC.md via `/gsd-ai-integration-phase 31`
+- Phase 29 ✓ (6/6) — local 7 commits (Real Keycloak SAML, Role-Aware UI, Escalation)
+- Phase 30 ✓ (5/5) — local 12 commits (Mobile Polish & Trend Analytics)
+- Phase 31 ✓ (3/3 + AI-SPEC) — local 8 commits (AI Insights — Haiku-only per user pick)
 
 ## Quick Tasks Completed
 
@@ -121,12 +121,13 @@ Last activity: 2026-04-29 -- Phases 27/28/29/30 all shipped autonomously; 19 unp
 
 ### Active Blockers
 
-- **Push pending** — 19 commits ahead of origin/main (Phase 29 + 30). VPN dropped mid-session; SSL handshake / DNS resolution to `ghe.example.org` fails. User to verify VPN + run `https_proxy="" command git push origin main`.
-- **Phase 31 AI-SPEC.md outstanding** — required before Phase 31 planning. Owner: `/gsd-ai-integration-phase 31` (will run framework selector → ai researcher → domain researcher → eval planner).
-- **Mock IdP container deferred (29-04)** — `quay.io/keycloak/keycloak:26` Docker pull was unavailable during Phase 29 execution; AUTH_DEV_MODE_ALLOW_TEST staging path used as fallback. Wire mock IdP container into `docker-compose.test.yml` as a follow-up sub-issue.
-- **Real-device iOS Safari pass for MOB-06** — Playwright mobile projects cover most but PDF embed needs human-on-device confirmation (was already known per Phase 30 plan).
-- **Golden-set rubric (C-5)** — head/Belyaev domain-expert sign-off required before AI quality CI gate locks in (Phase 31).
-- **30-04 mobile spec runtime validation** — playwright spec compiles + e2e tsconfig green, but full mobile-ios/mobile-android run was deferred per watchdog protection. Run once after push: `pnpm playwright test --config=playwright.integration.config.ts --project=mobile-ios mobile-no-horizontal-scroll`.
+- **Push pending** — ~29 commits ahead of origin/main (Phase 29 + 30 + 31). VPN/DNS dropped; `ghe.example.org` unreachable. User to verify VPN + run `https_proxy="" command git push origin main` when network is back.
+- **Mock IdP container deferred (29-04)** — `quay.io/keycloak/keycloak:26` Docker pull unavailable. AUTH_DEV_MODE_ALLOW_TEST staging path used as fallback. Wire mock IdP into `docker-compose.test.yml` as follow-up.
+- **Real-device iOS Safari pass for MOB-06** — Playwright mobile projects cover most but PDF embed needs human-on-device confirmation.
+- **Golden-set rubric head sign-off (C-5)** — AI-SPEC ships with draft fixtures; CI threshold loose until head approves. AI eval test (`pnpm test:ai-eval`) runs on-demand, not gating CI yet.
+- **30-04 mobile spec runtime validation** — playwright spec compiles + e2e tsconfig green; full mobile-ios/mobile-android run deferred per watchdog protection. Run once after push: `pnpm playwright test --config=playwright.integration.config.ts --project=mobile-ios mobile-no-horizontal-scroll`.
+- **31-04 OnTrackIcon UI mount deferred to v6.1** — `ai.onTrack` procedure + golden-set tests fully shipped; inline mount on traffic-light cells in `product-accordion.tsx` deferred (requires threading real reportSectionId/projectId UUIDs through weekly-report mapper currently using synthetic ids).
+- **ANTHROPIC_API_KEY env var** — required in production for AI features to actually call live API; tests use vi.mock and run without network. Add to `.env.example` and corp deployment config before going live.
 
 ### Phase 27/28/29/30 closing notes (cumulative)
 
