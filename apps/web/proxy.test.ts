@@ -82,15 +82,60 @@ describe('apps/web/proxy.ts — auth guard', () => {
     expect(location).toMatch(/next=%2Flead%2Freport%3Fperiod%3D2026-W17/);
   });
 
-  it('passes through when session cookie is present', () => {
+  it('passes through when a JWT-shaped session cookie is present', () => {
+    // Three dot-separated base64-ish segments, total length > 20.
+    const validShapeJwt = 'aaaaaaaaaa.bbbbbbbbbb.cccccccccc';
     const req = makeRequest('/lead/report', '', {
-      customreport_session: 'jwt.token.here',
+      customreport_session: validShapeJwt,
     });
     const response = proxy(req);
 
     // NextResponse.next() returns 200 with no Location.
     expect(response.status).toBe(200);
     expect(response.headers.get('location')).toBeNull();
+  });
+
+  it('redirects when session cookie value is empty string', () => {
+    const req = makeRequest('/lead/report', '', {
+      customreport_session: '',
+    });
+    const response = proxy(req);
+
+    expect(response.status).toBe(307);
+    const location = response.headers.get('location') ?? '';
+    expect(location).toContain('/?next=');
+  });
+
+  it('redirects when session cookie value is non-JWT-shaped (no dots)', () => {
+    const req = makeRequest('/lead/report', '', {
+      customreport_session: 'invalid',
+    });
+    const response = proxy(req);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location') ?? '').toContain('/?next=');
+  });
+
+  it('redirects when session cookie has wrong segment count (2 dots → 2 parts of empties OK, but 4 segments not)', () => {
+    // Two-segment value (only one dot) — must be rejected.
+    const req = makeRequest('/lead/report', '', {
+      customreport_session: 'header.payloadbutnosignature',
+    });
+    const response = proxy(req);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location') ?? '').toContain('/?next=');
+  });
+
+  it('redirects when session cookie is JWT-shaped but too short (≤20 chars)', () => {
+    // 3 segments separated by dots, but length 14 (≤ 20).
+    const req = makeRequest('/lead/report', '', {
+      customreport_session: 'jwt.token.here',
+    });
+    const response = proxy(req);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location') ?? '').toContain('/?next=');
   });
 
   it('passes through when NEXT_PUBLIC_AUTH_STUB=true regardless of cookie', () => {

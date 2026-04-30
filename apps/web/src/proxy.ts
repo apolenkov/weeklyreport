@@ -56,7 +56,24 @@ export default function proxy(request: NextRequest): NextResponse {
     return NextResponse.next();
   }
 
-  if (request.cookies.has(COOKIE_NAME)) {
+  // Cookie-shape gate (defense-in-depth, NOT a signature check).
+  //
+  // We deliberately do NOT verify the JWT signature here — that remains
+  // the API's responsibility on every request. The proxy's job is to
+  // catch obviously malformed or empty cookies (e.g. stale value from a
+  // logout race, manual tampering, an empty string from a buggy
+  // Set-Cookie) before incurring an SSR roundtrip.
+  //
+  // A valid JWT has three base64-encoded segments separated by dots
+  // (header.payload.signature). 20 chars is a conservative lower bound
+  // (real tokens are several hundred chars); anything shorter is
+  // definitionally not a JWT.
+  const cookieValue = request.cookies.get(COOKIE_NAME)?.value;
+  const hasValidCookieShape =
+    !!cookieValue &&
+    cookieValue.length > 20 &&
+    cookieValue.split('.').length === 3;
+  if (hasValidCookieShape) {
     return NextResponse.next();
   }
 
