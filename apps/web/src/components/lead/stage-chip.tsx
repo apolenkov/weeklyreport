@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 
+import { useSdlcTooltip } from '../ui/sdlc-tooltip';
 import type { StageAssignment, StageStatus } from './mock-data';
 
 type StageChipProps = {
@@ -50,6 +51,8 @@ const STATUS_OPTIONS: { value: StageStatus; label: string }[] = [
 export function StageChip({ stage, onStatusChange, readOnly = false }: StageChipProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const tooltip = useSdlcTooltip();
   const config = STATUS_CONFIG[stage.status];
   const isEditable = stage.ownership === 'mine' && !readOnly;
   const isLocked = stage.ownership === 'locked';
@@ -104,9 +107,20 @@ export function StageChip({ stage, onStatusChange, readOnly = false }: StageChip
       ? 'Unassigned \u00b7 Contact admin'
       : stage.tooltip ?? `${stage.stageName} \u00b7 ${stage.status}`;
 
+  function handleEnter() {
+    const el = buttonRef.current;
+    if (!el) return;
+    tooltip.show(el.getBoundingClientRect(), title);
+  }
+
+  function handleLeave() {
+    tooltip.hide();
+  }
+
   return (
     <div className="flex flex-col items-center gap-1 min-w-[90px]" ref={dropdownRef}>
       <button
+        ref={buttonRef}
         type="button"
         className={chipClasses}
         style={{
@@ -114,9 +128,12 @@ export function StageChip({ stage, onStatusChange, readOnly = false }: StageChip
           color: config.text,
           border: borderStyle,
         }}
-        title={title}
         aria-label={`${stage.stageName}: ${stage.status}`}
         onClick={handleChipClick}
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+        onFocus={handleEnter}
+        onBlur={handleLeave}
         disabled={!isEditable}
         tabIndex={isEditable ? 0 : -1}
       >
