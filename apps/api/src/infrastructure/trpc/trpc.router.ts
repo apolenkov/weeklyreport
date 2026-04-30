@@ -41,6 +41,11 @@ import type { WeeklyReportService } from '../../modules/weekly-report/weekly-rep
 import type { LeadFormService } from '../../modules/report-sections/lead-form.service.js';
 import type { AnalyticsService } from '../../modules/analytics/analytics.service.js';
 import type { AiService } from '../../modules/ai/ai.service.js';
+import {
+  assertCanReadReport,
+  assertCanReadRisk,
+  assertCanReadSection,
+} from '../../modules/ai/ai-authz.js';
 
 type RouterDeps = {
   prisma: PrismaClient;
@@ -591,12 +596,20 @@ export function createAppRouter(deps: RouterDeps) {
     // ai.* procedures are excluded from loggingMiddleware (PITFALLS C-3 /
     // AI-SPEC §5.3). The service returns a discriminated-union sentinel
     // so the tRPC error mapper never sees raw SDK exceptions.
+    //
+    // Phase 32-A3 (M-02): each procedure asserts the caller can read the
+    // requested resource before invoking AiService. Visibility mirrors the
+    // archive PUBLISHED_FLOOR pattern: viewer → published-only;
+    // head/admin → all; lead → published OR sections they author.
+    // Throws FORBIDDEN before any Anthropic call (combines with C-01's
+    // budget guard so authentication-only abuse cannot drive spend).
     ai: router({
       // AI-01: executive summary card on assembled report.
       summary: protectedProcedure
         .input(z.object({ reportId: z.string().uuid() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
+            await assertCanReadReport(deps.prisma, ctx.session, input.reportId);
             return await deps.aiService.summary(input.reportId);
           } catch (error) {
             throw mapDomainError(error);
@@ -605,8 +618,9 @@ export function createAppRouter(deps: RouterDeps) {
       // AI-01: head-only Regenerate button.
       regenerateSummary: headProcedure
         .input(z.object({ reportId: z.string().uuid() }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
           try {
+            await assertCanReadReport(deps.prisma, ctx.session, input.reportId);
             return await deps.aiService.regenerateSummary(input.reportId);
           } catch (error) {
             throw mapDomainError(error);
@@ -615,8 +629,9 @@ export function createAppRouter(deps: RouterDeps) {
       // AI-02: per-Risk sentiment classification badge.
       sentiment: protectedProcedure
         .input(z.object({ riskId: z.string().uuid() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
+            await assertCanReadRisk(deps.prisma, ctx.session, input.riskId);
             return await deps.aiService.sentiment(input.riskId);
           } catch (error) {
             throw mapDomainError(error);
@@ -629,8 +644,9 @@ export function createAppRouter(deps: RouterDeps) {
           sectionId: z.string().uuid(),
           projectId: z.string().uuid(),
         }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
+            await assertCanReadSection(deps.prisma, ctx.session, input.sectionId);
             return await deps.aiService.onTrack(input.sectionId, input.projectId);
           } catch (error) {
             throw mapDomainError(error);
