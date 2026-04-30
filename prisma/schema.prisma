@@ -329,3 +329,29 @@ model AppSettings {
   defaultDeadlineDays Int      @default(5)
   updatedAt           DateTime @updatedAt
 }
+
+// Phase 31 (AI-01/02/03): cache + cost-tracking row for Anthropic Haiku
+// structured outputs. Read-through cache keyed by (kind, contentHash) per
+// AI-SPEC §4. Result is the schema-shaped Zod-parsed tool input. Usage
+// tokens recorded for cost monitoring (AI-SPEC §8).
+enum AiInsightKind {
+  summary
+  sentiment
+  on_track
+}
+
+model AiInsight {
+  id                  String        @id @default(uuid())
+  kind                AiInsightKind
+  contentHash         String
+  result              Json
+  modelId             String
+  inputTokens         Int           @default(0)
+  outputTokens        Int           @default(0)
+  cacheCreationTokens Int           @default(0)
+  cacheReadTokens     Int           @default(0)
+  createdAt           DateTime      @default(now())
+
+  @@unique([kind, contentHash])
+  @@index([kind, createdAt])
+}

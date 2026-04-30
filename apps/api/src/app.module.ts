@@ -18,6 +18,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { PeriodModule } from './modules/period/period.module';
 import { WeeklyReportModule } from './modules/weekly-report/weekly-report.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { AiModule } from './modules/ai/ai.module';
 import { PdfExportProcessor } from './infrastructure/bullmq/pdf-export.processor';
 import { EmailReminderProcessor } from './infrastructure/bullmq/email-reminder.processor';
 import { EmailService } from './infrastructure/email/email.service';
@@ -47,6 +48,7 @@ import { EmailService } from './infrastructure/email/email.service';
     CarryOverModule,
     AdminModule,
     AnalyticsModule,
+    AiModule,
     PeriodModule,
     WeeklyReportModule,
   ],
