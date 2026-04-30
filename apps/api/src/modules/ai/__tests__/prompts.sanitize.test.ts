@@ -176,4 +176,45 @@ describe('buildOnTrackUserPrompt — wrapping + sanitization', () => {
     expect(out).toContain('<user_content>(empty)</user_content>');
     expect(out).toContain('<user_content>(none)</user_content>');
   });
+
+  // Phase 32-M6 (M-06) — per-field 1000-char cap. The sanitizer covers
+  // injection but not cumulative size; this cap protects against a lead
+  // pasting a 50KB log into a single narrative field.
+  it('truncates each narrative field to ~1000 chars with a [truncated] marker', () => {
+    const huge: CellForOnTrack = {
+      ...baseCell,
+      currentWeekText: 'a'.repeat(5000),
+      nextWeekText: 'b'.repeat(5000),
+      riskHighlights: 'c'.repeat(5000),
+    };
+    const out = buildOnTrackUserPrompt(huge);
+
+    // Each cap produces 1000 chars + "… [truncated]" suffix (sanitizer
+    // does not touch plain alpha runs, so the suffix survives unchanged).
+    // Pick the longest run of each letter to skip incidental occurrences
+    // in the surrounding prompt template.
+    const longestRun = (s: string, ch: string): number => {
+      const matches = s.match(new RegExp(`${ch}+`, 'g')) ?? [];
+      return matches.reduce((max, m) => Math.max(max, m.length), 0);
+    };
+    expect(longestRun(out, 'a')).toBe(1000);
+    expect(longestRun(out, 'b')).toBe(1000);
+    expect(longestRun(out, 'c')).toBe(1000);
+
+    // Marker present exactly once per capped field.
+    const truncatedCount = (out.match(/… \[truncated\]/g) ?? []).length;
+    expect(truncatedCount).toBe(3);
+
+    // Combined narrative payload must be safely below ~3.5K chars (3 *
+    // (1000 + suffix)).
+    const totalNarrativeRun =
+      longestRun(out, 'a') + longestRun(out, 'b') + longestRun(out, 'c');
+    expect(totalNarrativeRun).toBeLessThanOrEqual(3 * 1000);
+  });
+
+  it('leaves narrative under 1000 chars untouched (no marker)', () => {
+    const out = buildOnTrackUserPrompt(baseCell);
+    expect(out).not.toContain('… [truncated]');
+    expect(out).toContain('Shipped login flow.');
+  });
 });
