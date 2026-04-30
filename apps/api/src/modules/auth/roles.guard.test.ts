@@ -24,7 +24,12 @@ describe('createRoleGuard', () => {
   });
 
   it('throws for invalid role string', () => {
-    expect(() => createRoleGuard('admin' as any)).toThrow();
+    expect(() => createRoleGuard('auditor' as any)).toThrow();
+  });
+
+  it('creates a guard for "admin" role (Phase 32-c1 widened enum)', () => {
+    const guard = createRoleGuard('admin');
+    expect(guard).toBeDefined();
   });
 
   it('throws for empty role string', () => {
