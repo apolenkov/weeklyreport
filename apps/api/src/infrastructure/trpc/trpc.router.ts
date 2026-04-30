@@ -40,6 +40,7 @@ import type { PeriodService } from '../../modules/period/period.service.js';
 import type { WeeklyReportService } from '../../modules/weekly-report/weekly-report.service.js';
 import type { LeadFormService } from '../../modules/report-sections/lead-form.service.js';
 import type { AnalyticsService } from '../../modules/analytics/analytics.service.js';
+import type { AiService } from '../../modules/ai/ai.service.js';
 
 type RouterDeps = {
   prisma: PrismaClient;
@@ -60,6 +61,12 @@ type RouterDeps = {
    * invalidation on PeriodService.publishPeriod / reopenPeriod.
    */
   analyticsService: AnalyticsService;
+  /**
+   * Phase 31 (AI-01/02/03): AI insights service — read-through cache via
+   * AiInsight Prisma rows; sync surface for tRPC. Returns sentinel union
+   * on outage / missing key / rate limit / budget exceeded.
+   */
+  aiService: AiService;
   /**
    * NOTIF-06 (Phase 29-05): read-only BullMQ Queue handle used by
    * `admin.dlqCount` to surface failed-job count. Optional so existing test
@@ -574,6 +581,33 @@ export function createAppRouter(deps: RouterDeps) {
         .query(async ({ input }) => {
           try {
             return await deps.analyticsService.periodComparison(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === AI Insights namespace (Phase 31 — AI-01/02/03) ===
+    // ai.* procedures are excluded from loggingMiddleware (PITFALLS C-3 /
+    // AI-SPEC §5.3). The service returns a discriminated-union sentinel
+    // so the tRPC error mapper never sees raw SDK exceptions.
+    ai: router({
+      // AI-01: executive summary card on assembled report.
+      summary: protectedProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.aiService.summary(input.reportId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+      // AI-01: head-only Regenerate button.
+      regenerateSummary: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.aiService.regenerateSummary(input.reportId);
           } catch (error) {
             throw mapDomainError(error);
           }

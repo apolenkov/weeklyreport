@@ -19,6 +19,13 @@ const t = initTRPC.context<TrpcContext>().create({ transformer: superjson });
  * attempts are still recorded (security forensics > anonymous-noise risk).
  */
 export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type }) => {
+  // Phase 31 (AI-SPEC §5.3 / PITFALLS C-3): AI prompts and responses must
+  // never reach the structured log stream. Token usage and timing are
+  // recorded in AiInsight rows instead.
+  if (path.startsWith('ai.')) {
+    return next();
+  }
+
   const start = performance.now();
   const userId = ctx.session?.userId ?? null;
 

@@ -35,6 +35,7 @@ import { PeriodService } from './modules/period/period.service';
 import { WeeklyReportService } from './modules/weekly-report/weekly-report.service';
 import { LeadFormService } from './modules/report-sections/lead-form.service';
 import { AnalyticsService } from './modules/analytics/analytics.service';
+import { AiService } from './modules/ai/ai.service';
 
 import { assertNoDevAuthInProduction } from './lib/dev-auth-fence';
 
@@ -91,6 +92,7 @@ async function bootstrap() {
     weeklyReportService: app.get(WeeklyReportService),
     leadFormService: app.get(LeadFormService),
     analyticsService: app.get(AnalyticsService),
+    aiService: app.get(AiService),
     emailReminderQueue,
   });
 

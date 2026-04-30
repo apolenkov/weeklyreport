@@ -23,6 +23,7 @@ import { ProductAccordion } from './product-accordion';
 import { PublishLockButton } from './publish-lock-button';
 import { ExportPdfButton } from './export-pdf-button';
 import { WeeklyReportSkeleton } from './weekly-report-skeleton';
+import { AiSummaryCard } from '../ai/ai-summary-card';
 
 type WeeklyReportPageProps = {
   /**
@@ -202,6 +203,11 @@ export function WeeklyReportPage({ period: _period, reportId }: WeeklyReportPage
           <span className="text-sm text-[var(--color-muted-foreground)]">Live portfolio review</span>
         </div>
       </div>
+
+      {/* Phase 31 (AI-01): executive summary card — appears above the
+          assembled report, never overwrites head-authored narrative.
+          Dismissible per session via local useState; head-only Regenerate. */}
+      <AiSummaryCard reportId={view.period.reportId} />
 
       {/* Portfolio Overview */}
       <PortfolioOverviewTable products={portfolio} />

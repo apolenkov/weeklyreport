@@ -33,7 +33,10 @@ export type SessionState = {
   isAuthenticated: boolean;
 };
 
-const SessionContext = createContext<SessionState | null>(null);
+// Exported so consumer components can opt-in to graceful degradation when
+// rendered without a SessionProvider (e.g. narrow unit-test harnesses).
+// The canonical hook `useSession()` still throws when context is absent.
+export const SessionContext = createContext<SessionState | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const trpc = useTRPC();
