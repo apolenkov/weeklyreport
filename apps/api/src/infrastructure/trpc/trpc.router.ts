@@ -12,6 +12,8 @@ import {
   adminReminderRuleSchema,
   appSettingsUpdateSchema,
   trafficLightHistoryInputSchema,
+  leadVelocityInputSchema,
+  periodComparisonInputSchema,
 } from '@customreport/shared';
 
 import {
@@ -554,6 +556,24 @@ export function createAppRouter(deps: RouterDeps) {
         .query(async ({ input }) => {
           try {
             return await deps.analyticsService.trafficLightHistory(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+      leadVelocity: anyRoleProcedure
+        .input(leadVelocityInputSchema)
+        .query(async ({ input }) => {
+          try {
+            return await deps.analyticsService.leadVelocity(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+      periodComparison: anyRoleProcedure
+        .input(periodComparisonInputSchema)
+        .query(async ({ input }) => {
+          try {
+            return await deps.analyticsService.periodComparison(input);
           } catch (error) {
             throw mapDomainError(error);
           }
