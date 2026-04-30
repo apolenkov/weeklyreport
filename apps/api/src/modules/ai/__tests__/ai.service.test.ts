@@ -247,3 +247,83 @@ describe('summary system prompt — char-count floor', async () => {
     expect(SUMMARY_SYSTEM_PROMPT.length).toBeGreaterThanOrEqual(3500);
   });
 });
+
+describe('sentiment system prompt — char-count floor', async () => {
+  it('SENTIMENT_SYSTEM_PROMPT is at least 3500 chars', async () => {
+    const { SENTIMENT_SYSTEM_PROMPT } = await import('../prompts/sentiment.js');
+    expect(SENTIMENT_SYSTEM_PROMPT.length).toBeGreaterThanOrEqual(3500);
+  });
+});
+
+describe('AiService.sentiment', () => {
+  const RISK_ID_A = '22222222-2222-4222-8222-222222222222';
+  const RISK_ID_B = '33333333-3333-4333-8333-333333333333';
+  const SAMPLE_RISK = {
+    riskId: RISK_ID_A,
+    risk: 'Single engineer holds critical knowledge',
+    impact: 'Key absence stalls progress',
+    mitigation: 'Pair-programming weekly',
+  } as const;
+
+  it('returns not_found when risk is missing', async () => {
+    const facade = new InMemoryFacade();
+    const service = new AiService(facade);
+    const r = await service.sentiment(RISK_ID_A);
+    expect(r).toEqual({ available: false, reason: 'not_found' });
+    expect(messagesCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('cache miss → SDK called → row upserted with kind=sentiment', async () => {
+    const facade = new InMemoryFacade();
+    facade.risks.set(RISK_ID_A, { ...SAMPLE_RISK });
+    messagesCreateMock.mockResolvedValueOnce({
+      content: [
+        { type: 'tool_use', input: { level: 'medium', rationale: 'Bus factor with mitigation in progress' } },
+      ],
+      usage: { input_tokens: 1500, output_tokens: 30 },
+    });
+    const service = new AiService(facade);
+    const r = await service.sentiment(RISK_ID_A);
+    expect(r.available).toBe(true);
+    if (r.available) expect(r.result.level).toBe('medium');
+    expect(facade.insights.size).toBe(1);
+    expect([...facade.insights.values()][0]?.kind).toBe('sentiment');
+  });
+
+  it('cache hit on second call with identical text → SDK NOT called', async () => {
+    const facade = new InMemoryFacade();
+    facade.risks.set(RISK_ID_A, { ...SAMPLE_RISK });
+    messagesCreateMock.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', input: { level: 'medium', rationale: 'cached' } }],
+      usage: { input_tokens: 1500, output_tokens: 30 },
+    });
+    const service = new AiService(facade);
+    await service.sentiment(RISK_ID_A);
+    await service.sentiment(RISK_ID_A);
+    expect(messagesCreateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('two different riskIds with identical text share one cached row', async () => {
+    const facade = new InMemoryFacade();
+    facade.risks.set(RISK_ID_A, { ...SAMPLE_RISK, riskId: RISK_ID_A });
+    facade.risks.set(RISK_ID_B, { ...SAMPLE_RISK, riskId: RISK_ID_B });
+    messagesCreateMock.mockResolvedValueOnce({
+      content: [{ type: 'tool_use', input: { level: 'low', rationale: 'shared' } }],
+      usage: { input_tokens: 1500, output_tokens: 30 },
+    });
+    const service = new AiService(facade);
+    await service.sentiment(RISK_ID_A);
+    await service.sentiment(RISK_ID_B);
+    expect(messagesCreateMock).toHaveBeenCalledTimes(1);
+    expect(facade.insights.size).toBe(1);
+  });
+
+  it('SDK throws → returns unavailable sentinel', async () => {
+    const facade = new InMemoryFacade();
+    facade.risks.set(RISK_ID_A, { ...SAMPLE_RISK });
+    messagesCreateMock.mockRejectedValueOnce(new Error('boom'));
+    const service = new AiService(facade);
+    const r = await service.sentiment(RISK_ID_A);
+    expect(r).toEqual({ available: false, reason: 'unavailable' });
+  });
+});

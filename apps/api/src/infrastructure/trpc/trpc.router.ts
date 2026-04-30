@@ -612,6 +612,16 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+      // AI-02: per-Risk sentiment classification badge.
+      sentiment: protectedProcedure
+        .input(z.object({ riskId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.aiService.sentiment(input.riskId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
   });
 }

@@ -24,6 +24,15 @@ import {
   summarySchema,
   type SummaryResult,
 } from './prompts/summary.js';
+import {
+  SENTIMENT_MODEL,
+  SENTIMENT_SYSTEM_PROMPT,
+  SENTIMENT_TOOL_DESCRIPTION,
+  SENTIMENT_TOOL_NAME,
+  buildSentimentUserPrompt,
+  sentimentSchema,
+  type SentimentResult,
+} from './prompts/sentiment.js';
 
 export type AiInsightAvailable<R> = {
   available: true;
@@ -120,6 +129,49 @@ export class AiService {
         return { available: false, reason: 'unavailable' };
       }
       // Unknown error — also unavailable (no raw bubble).
+      return { available: false, reason: 'unavailable' };
+    }
+  }
+
+  // AI-02: per-Risk sentiment classification. Cache key is the risk text
+  // tuple, NOT the riskId — same text reused across reports hits the same
+  // cached row.
+  async sentiment(riskId: string): Promise<AiInsightResult<SentimentResult>> {
+    const risk = await this.facade.getRiskForSentiment(riskId);
+    if (!risk) {
+      return { available: false, reason: 'not_found' };
+    }
+    const contentHash = computeContentHash({
+      risk: risk.risk,
+      impact: risk.impact,
+      mitigation: risk.mitigation,
+    });
+    try {
+      const { row, cached } = await withCache<SentimentResult>({
+        facade: this.facade,
+        kind: 'sentiment',
+        contentHash,
+        generate: async () => {
+          const userPrompt = buildSentimentUserPrompt(risk);
+          const r = await runStructured(
+            {
+              model: SENTIMENT_MODEL,
+              system: SENTIMENT_SYSTEM_PROMPT,
+              user: userPrompt,
+              toolName: SENTIMENT_TOOL_NAME,
+              toolDescription: SENTIMENT_TOOL_DESCRIPTION,
+              schema: sentimentSchema,
+            },
+            this.clientFactory,
+          );
+          return { result: r.result, usage: r.usage, modelId: SENTIMENT_MODEL };
+        },
+      });
+      return { available: true, result: row.result, cached };
+    } catch (err) {
+      if (err instanceof AiRateLimitError) {
+        return { available: false, reason: 'rate_limit' };
+      }
       return { available: false, reason: 'unavailable' };
     }
   }
