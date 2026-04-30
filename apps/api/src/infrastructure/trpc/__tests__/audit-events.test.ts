@@ -87,9 +87,10 @@ describe('AUTH-08 role-denied integration signal', () => {
       ip: '10.0.0.42',
     });
 
-    // attemptedRole carries the allowed Role | Role[] verbatim — for a
-    // head-only procedure that is the literal 'head'.
-    expect(audit.context?.['attemptedRole']).toBe('head');
+    // attemptedRole carries the allowed Role | Role[] verbatim — headProcedure
+    // accepts ['head', 'admin'] per D-AUTH-03 alias semantics (commit 413ef34
+    // after live-test discovered admin role got 403 on admin.* procedures).
+    expect(audit.context?.['attemptedRole']).toEqual(['head', 'admin']);
 
     // Negative — no spurious login-success was emitted by the role-deny path.
     const loginSuccesses = entries.filter(
