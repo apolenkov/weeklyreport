@@ -20,8 +20,18 @@ export interface PeriodRepository {
   reopenPeriod(reportId: string): Promise<void>;
 }
 
+/**
+ * Phase 30-01 (ANAL-01): the cache invalidation port. PeriodService stays
+ * Redis-free; the AnalyticsCache is wired through this lambda by
+ * period.module.ts. Default no-op keeps existing unit tests green.
+ */
+export type AnalyticsCacheInvalidator = () => Promise<void>;
+
 export class PeriodService {
-  constructor(private readonly repository: PeriodRepository) {}
+  constructor(
+    private readonly repository: PeriodRepository,
+    private readonly invalidateAnalyticsCache: AnalyticsCacheInvalidator = async () => undefined,
+  ) {}
 
   async publishPeriod(
     reportId: string,
@@ -38,6 +48,7 @@ export class PeriodService {
     }
 
     await this.repository.publishPeriod(reportId, session.userId);
+    await this.invalidateAnalyticsCache();
 
     return { success: true, reportId };
   }
@@ -58,6 +69,7 @@ export class PeriodService {
     }
 
     await this.repository.reopenPeriod(reportId);
+    await this.invalidateAnalyticsCache();
 
     return { success: true, reportId };
   }
