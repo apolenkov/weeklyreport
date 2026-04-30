@@ -1,0 +1,44 @@
+# docker-compose.test.yml — Mock Keycloak IdP for integration tests.
+#
+# This is a TEMPLATE / EXAMPLE only. The mock Keycloak container could not
+# be pulled during Phase 29-04 because the build host's registry access is
+# blocked (VPN/DNS reachability to quay.io). Copy this file to
+# `docker-compose.test.yml` once `quay.io/keycloak/keycloak:26` is pullable
+# from the host that runs the integration suite.
+#
+# Source of truth for the realm fixture: infra/keycloak/realm-export.json
+# (created in Phase 29-02 — saml-role-mapper + 4 fixture users).
+#
+# Bring-up command:
+#   docker compose -f docker-compose.test.yml up -d keycloak-mock
+#   curl -fsS http://localhost:8080/realms/customreport
+#
+# Phase 29-04 SUMMARY documents the deferred follow-up: once the container
+# is healthy locally, rewrite apps/web/playwright.integration/global-setup.ts
+# to perform a real SAML AuthnRequest instead of writing the DEV_SESSION
+# cookie directly.
+
+services:
+  keycloak-mock:
+    image: quay.io/keycloak/keycloak:26
+    command: ['start-dev', '--import-realm']
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: 'true'
+      KC_HOSTNAME: localhost
+      KC_HTTP_ENABLED: 'true'
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./infra/keycloak/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'curl -fsS http://localhost:8080/realms/customreport > /dev/null || exit 1',
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 30s
