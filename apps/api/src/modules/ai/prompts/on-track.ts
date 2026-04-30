@@ -83,15 +83,28 @@ Call the record_on_track_verdict tool now.`;
 // Phase 32-A2 (H-05): all lead-authored narrative fields flow through
 // sanitizeUserContent and are wrapped in <user_content> tags so the
 // model treats them as data, not instructions.
+//
+// Phase 32-M6 (M-06): in addition to the sanitizer's own 2000-char cap on
+// adversarial input, narrative fields are independently capped at 1000
+// chars per field so total user-prompt narrative cannot exceed ~3K. The
+// sanitizer covers injection but not cumulative size; this cap covers
+// cost / DoS for legitimate-but-huge pasted content.
+const PER_FIELD_CHAR_CAP = 1000;
+
+function capField(text: string): string {
+  if (text.length <= PER_FIELD_CHAR_CAP) return text;
+  return `${text.slice(0, PER_FIELD_CHAR_CAP)}… [truncated]`;
+}
+
 export function buildOnTrackUserPrompt(cell: CellForOnTrack): string {
   const currentWeek = cell.currentWeekText
-    ? sanitizeUserContent(cell.currentWeekText)
+    ? sanitizeUserContent(capField(cell.currentWeekText))
     : '(empty)';
   const nextWeek = cell.nextWeekText
-    ? sanitizeUserContent(cell.nextWeekText)
+    ? sanitizeUserContent(capField(cell.nextWeekText))
     : '(empty)';
   const riskHighlights = cell.riskHighlights
-    ? sanitizeUserContent(cell.riskHighlights)
+    ? sanitizeUserContent(capField(cell.riskHighlights))
     : '(none)';
 
   return `[CELL CONTEXT]
