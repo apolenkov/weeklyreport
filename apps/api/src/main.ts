@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { ClsService } from 'nestjs-cls';
 import * as trpcExpress from '@trpc/server/adapters/express';
+import { Queue } from 'bullmq';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
@@ -63,6 +64,17 @@ async function bootstrap() {
   app.use(cookieParser());
   app.enableCors({ origin: env.FRONTEND_URL, credentials: true });
 
+  // NOTIF-06 (Phase 29-05): read-only Queue handle for the admin DLQ count.
+  // Constructed once at boot; Express request lifecycle does not need its
+  // own connection. Closed on app shutdown via enableShutdownHooks above.
+  const emailReminderQueue = new Queue('email-reminder', {
+    connection: {
+      host: process.env['REDIS_HOST'] ?? 'localhost',
+      port: Number(process.env['REDIS_PORT'] ?? 6379),
+      maxRetriesPerRequest: null,
+    },
+  });
+
   // Resolve all services from NestJS DI container
   const appRouter = createAppRouter({
     prisma: app.get(PrismaService),
@@ -77,6 +89,7 @@ async function bootstrap() {
     periodService: app.get(PeriodService),
     weeklyReportService: app.get(WeeklyReportService),
     leadFormService: app.get(LeadFormService),
+    emailReminderQueue,
   });
 
   // Mount tRPC as Express middleware at /trpc

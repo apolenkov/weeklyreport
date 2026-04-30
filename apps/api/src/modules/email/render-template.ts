@@ -6,20 +6,25 @@ import {
   deadlineEmailPlaintext,
   type DeadlineEmailProps,
 } from './templates/deadline.template.js';
+import {
+  EscalationEmail,
+  escalationEmailPlaintext,
+  type EscalationEmailProps,
+} from './templates/escalation.template.js';
 
 /**
- * NOTIF-01 (Phase 28-03): central renderer for the email template catalog.
+ * NOTIF-01 (Phase 28-03), NOTIF-02 (Phase 29-05): central renderer for the
+ * email template catalog.
  *
  * Returns `{subject, html, text}`. The processor passes all three to
  * nodemailer so the email is multipart (HTML + plaintext) — corporate
  * spam filters score multipart higher than HTML-only.
- *
- * Phase 29 will add 'follow-up' and 'escalation' kinds. The discriminated
- * union shape below makes that additive without breaking call sites.
  */
-export type EmailKind = 'deadline';
+export type EmailKind = 'deadline' | 'escalation';
 
-export type EmailRenderInput = { kind: 'deadline'; props: DeadlineEmailProps };
+export type EmailRenderInput =
+  | { kind: 'deadline'; props: DeadlineEmailProps }
+  | { kind: 'escalation'; props: EscalationEmailProps };
 
 export interface RenderedEmail {
   subject: string;
@@ -33,6 +38,13 @@ export async function renderEmail(input: EmailRenderInput): Promise<RenderedEmai
       const html = await render(React.createElement(DeadlineEmail, input.props));
       const text = deadlineEmailPlaintext(input.props);
       const subject = `Reminder: ${input.props.reportPeriod} report section due in 24h`;
+      return { subject, html, text };
+    }
+    case 'escalation': {
+      const html = await render(React.createElement(EscalationEmail, input.props));
+      const text = escalationEmailPlaintext(input.props);
+      const lateCount = input.props.lateLeads.length;
+      const subject = `Action required: ${lateCount} late report section${lateCount === 1 ? '' : 's'} (${input.props.cycleDate})`;
       return { subject, html, text };
     }
   }

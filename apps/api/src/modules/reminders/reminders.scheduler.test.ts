@@ -7,7 +7,10 @@ import {
   RemindersService,
   type RemindersRepository,
 } from './reminders.service';
-import type { DueDeadlineRule } from './reminders.prisma-repository';
+import type {
+  DueDeadlineRule,
+  DueEscalationRule,
+} from './reminders.prisma-repository';
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                           */
@@ -27,14 +30,22 @@ const activeRule: AdminReminderRule = {
 };
 
 function dueRuleFromRecipients(
-  recipients: Array<{ userId: string; email: string; name: string }>,
+  recipients: Array<{
+    userId: string;
+    email: string;
+    name: string;
+    notificationOptOut?: boolean;
+  }>,
 ): DueDeadlineRule {
   return {
     id: activeRule.id,
     reportId,
     fireAt: activeRule.fireAt,
     reportPeriodLabel: '2026-04-13 → 2026-04-19',
-    recipients,
+    recipients: recipients.map((r) => ({
+      ...r,
+      notificationOptOut: r.notificationOptOut ?? false,
+    })),
   };
 }
 
@@ -94,6 +105,7 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
     ];
     const fakeRepository = {
       findDueDeadlineRules: vi.fn(async () => [dueRuleFromRecipients(recipients)]),
+      findDueEscalationRules: vi.fn(async () => []),
     };
     const service = new RemindersService(
       createServiceRepo(),
@@ -117,6 +129,7 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
   it('no lead with draft section → zero emails', async () => {
     const fakeRepository = {
       findDueDeadlineRules: vi.fn(async () => []),
+      findDueEscalationRules: vi.fn(async () => []),
     };
     const service = new RemindersService(
       createServiceRepo(),
@@ -137,6 +150,7 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
     ];
     const fakeRepository = {
       findDueDeadlineRules: vi.fn(async () => [dueRuleFromRecipients(recipients)]),
+      findDueEscalationRules: vi.fn(async () => []),
     };
     const service = new RemindersService(
       createServiceRepo(),
@@ -159,6 +173,7 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
     ];
     const fakeRepository = {
       findDueDeadlineRules: vi.fn(async () => [dueRuleFromRecipients(recipients)]),
+      findDueEscalationRules: vi.fn(async () => []),
     };
     const service = new RemindersService(
       createServiceRepo(),
@@ -189,7 +204,7 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
       reportId,
       fireAt: new Date('2026-04-26T15:00:00.000Z'),
       reportPeriodLabel: '2026-04-20 → 2026-04-26',
-      recipients,
+      recipients: recipients.map((r) => ({ ...r, notificationOptOut: false })),
     };
 
     let returnNplus1 = false;
@@ -197,6 +212,7 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
       findDueDeadlineRules: vi.fn(async () =>
         returnNplus1 ? [ruleNplus1] : [ruleN],
       ),
+      findDueEscalationRules: vi.fn(async () => []),
     };
 
     const serviceRepo = createServiceRepo();
@@ -222,5 +238,228 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
     returnNplus1 = true;
     await scheduler.runOnce(new Date('2026-04-26T16:00:00.000Z'));
     expect(queueAdds).toHaveLength(2);
+  });
+});
+
+// -----------------------------------------------------------------------
+// NOTIF-02 (Phase 29-05): T+2h escalation digest dispatch.
+// One digest email per (rule, head) per cycle; idempotent across re-ticks.
+// -----------------------------------------------------------------------
+
+describe('RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)', () => {
+  const escalationRuleId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  const escalationActiveRule: AdminReminderRule = {
+    id: escalationRuleId,
+    reportId,
+    kind: 'escalation',
+    fireAt: new Date('2026-04-19T17:00:00.000Z'), // T+2h after deadline
+    timezone: 'UTC',
+    status: 'active',
+    version: 1,
+  };
+
+  function makeEscalationRule(
+    leads: Array<{ leadName: string; sectionTitle: string; deadlineIso: string }>,
+  ): DueEscalationRule {
+    return {
+      id: escalationRuleId,
+      reportId,
+      fireAt: escalationActiveRule.fireAt,
+      reportPeriodLabel: '2026-04-13 → 2026-04-19',
+      head: { userId: 'h1', email: 'head@test.local', name: 'Department Head' },
+      lateLeads: leads,
+    };
+  }
+
+  function makeEscalationServiceRepo(): RemindersRepository {
+    const executions = new Map<string, AdminReminderExecution>();
+    return {
+      async getRule(rid) {
+        return rid === escalationRuleId ? structuredClone(escalationActiveRule) : null;
+      },
+      async findExecutionByDedupeKey(dedupeKey) {
+        for (const exec of executions.values()) {
+          if (exec.dedupeKey === dedupeKey) return structuredClone(exec);
+        }
+        return null;
+      },
+      async saveExecution(execution) {
+        executions.set(execution.id, structuredClone(execution));
+        return structuredClone(execution);
+      },
+      async getExecution(id) {
+        return executions.get(id) ?? null;
+      },
+      async listExecutions(rid) {
+        return [...executions.values()].filter((e) => e.ruleId === rid);
+      },
+    };
+  }
+
+  let queueAdds: Array<{ name: string; data: Record<string, unknown> }>;
+  let fakeQueue: { add: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    queueAdds = [];
+    fakeQueue = {
+      add: vi.fn(async (name: string, data: Record<string, unknown>) => {
+        queueAdds.push({ name, data });
+        return { id: 'fake' };
+      }),
+    };
+  });
+
+  it('head with N late leads gets exactly ONE digest email per cycle (twice-fired tick is idempotent)', async () => {
+    const lateLeads = [
+      { leadName: 'Alpha', sectionTitle: 'Backend', deadlineIso: '2026-04-19T15:00:00.000Z' },
+      { leadName: 'Beta', sectionTitle: 'Frontend', deadlineIso: '2026-04-19T15:00:00.000Z' },
+      { leadName: 'Gamma', sectionTitle: 'Infra', deadlineIso: '2026-04-19T15:00:00.000Z' },
+    ];
+    const fakeRepository = {
+      findDueDeadlineRules: vi.fn(async () => []),
+      findDueEscalationRules: vi.fn(async () => [makeEscalationRule(lateLeads)]),
+    };
+
+    const service = new RemindersService(
+      makeEscalationServiceRepo(),
+      undefined,
+      fakeQueue as never,
+    );
+    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+
+    // Tick #1 — same UTC day as escalation fireAt.
+    await scheduler.runOnce(new Date('2026-04-19T17:30:00.000Z'));
+    expect(queueAdds).toHaveLength(1);
+    expect(queueAdds[0]?.data['kind']).toBe('escalation');
+    expect(queueAdds[0]?.data['recipientEmail']).toBe('head@test.local');
+    const lateLeadsInJob = queueAdds[0]?.data['lateLeads'] as Array<{ leadName: string }>;
+    expect(lateLeadsInJob).toHaveLength(3);
+    expect(lateLeadsInJob.map((l) => l.leadName)).toEqual(['Alpha', 'Beta', 'Gamma']);
+
+    // Tick #2 — same UTC day. Idempotent — service deduplicates on
+    // `${rule.id}:escalation:${cycleDate}:${head.email}`.
+    await scheduler.runOnce(new Date('2026-04-19T18:30:00.000Z'));
+    expect(queueAdds).toHaveLength(1);
+  });
+
+  it('escalation digest carries headName, cycleDate, reportPeriod', async () => {
+    const lateLeads = [
+      { leadName: 'Alpha', sectionTitle: 'Backend', deadlineIso: '2026-04-19T15:00:00.000Z' },
+    ];
+    const fakeRepository = {
+      findDueDeadlineRules: vi.fn(async () => []),
+      findDueEscalationRules: vi.fn(async () => [makeEscalationRule(lateLeads)]),
+    };
+    const service = new RemindersService(
+      makeEscalationServiceRepo(),
+      undefined,
+      fakeQueue as never,
+    );
+    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+
+    await scheduler.runOnce(new Date('2026-04-19T17:30:00.000Z'));
+
+    const data = queueAdds[0]?.data ?? {};
+    expect(data['headName']).toBe('Department Head');
+    expect(data['cycleDate']).toBe('2026-04-19');
+    expect(data['reportPeriod']).toBe('2026-04-13 → 2026-04-19');
+  });
+});
+
+// -----------------------------------------------------------------------
+// NOTIF-05 (Phase 29-05): per-user opt-out for kind='deadline' only.
+// kind='escalation' bypasses the flag entirely.
+// -----------------------------------------------------------------------
+
+describe('RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)', () => {
+  let queueAdds: Array<{ name: string; data: Record<string, unknown> }>;
+  let fakeQueue: { add: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    queueAdds = [];
+    fakeQueue = {
+      add: vi.fn(async (name: string, data: Record<string, unknown>) => {
+        queueAdds.push({ name, data });
+        return { id: 'fake' };
+      }),
+    };
+  });
+
+  it('lead with notificationOptOut=true SKIPS deadline reminder', async () => {
+    const recipients = [
+      { userId: 'u1', email: 'a@test.local', name: 'Alpha', notificationOptOut: false },
+      { userId: 'u2', email: 'b@test.local', name: 'Beta', notificationOptOut: true },
+    ];
+    const due: DueDeadlineRule = {
+      id: ruleId,
+      reportId,
+      fireAt: activeRule.fireAt,
+      reportPeriodLabel: '2026-04-13 → 2026-04-19',
+      recipients,
+    };
+    const fakeRepository = {
+      findDueDeadlineRules: vi.fn(async () => [due]),
+      findDueEscalationRules: vi.fn(async () => []),
+    };
+    const service = new RemindersService(createServiceRepo(), undefined, fakeQueue as never);
+    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+
+    await scheduler.runOnce(new Date('2026-04-19T16:00:00.000Z'));
+
+    expect(queueAdds).toHaveLength(1);
+    expect(queueAdds[0]?.data['recipientEmail']).toBe('a@test.local');
+  });
+
+  it('escalation digest IGNORES head.notificationOptOut (heads always notified)', async () => {
+    // The DueEscalationRule type does not even carry an opt-out flag for the
+    // head — by design, NOTIF-05 contract is "escalation bypasses opt-out".
+    // This test verifies the dispatch path emits regardless.
+    const due: DueEscalationRule = {
+      id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      reportId,
+      fireAt: new Date('2026-04-19T17:00:00.000Z'),
+      reportPeriodLabel: '2026-04-13 → 2026-04-19',
+      head: { userId: 'h1', email: 'head@test.local', name: 'Department Head' },
+      lateLeads: [
+        { leadName: 'Alpha', sectionTitle: 'Backend', deadlineIso: '2026-04-19T15:00:00.000Z' },
+      ],
+    };
+    const fakeRepository = {
+      findDueDeadlineRules: vi.fn(async () => []),
+      findDueEscalationRules: vi.fn(async () => [due]),
+    };
+    const escalationActiveRule: AdminReminderRule = {
+      id: due.id,
+      reportId,
+      kind: 'escalation',
+      fireAt: due.fireAt,
+      timezone: 'UTC',
+      status: 'active',
+      version: 1,
+    };
+    const escalationServiceRepo: RemindersRepository = {
+      async getRule(rid) {
+        return rid === due.id ? structuredClone(escalationActiveRule) : null;
+      },
+      async findExecutionByDedupeKey() {
+        return null;
+      },
+      async saveExecution(execution) {
+        return structuredClone(execution);
+      },
+      async getExecution() {
+        return null;
+      },
+      async listExecutions() {
+        return [];
+      },
+    };
+    const service = new RemindersService(escalationServiceRepo, undefined, fakeQueue as never);
+    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+
+    await scheduler.runOnce(new Date('2026-04-19T17:30:00.000Z'));
+
+    expect(queueAdds).toHaveLength(1);
+    expect(queueAdds[0]?.data['kind']).toBe('escalation');
   });
 });

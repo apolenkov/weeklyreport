@@ -21,20 +21,46 @@ const dbExecStatusToDomain: Record<string, AdminReminderExecution['status']> = {
 };
 
 /**
- * NOTIF-04 (Phase 28-03): row shape for the hourly @Cron tick.
+ * NOTIF-04 (Phase 28-03), NOTIF-05 (Phase 29-05): row shape for the hourly
+ * @Cron tick.
  *
  * Each due rule resolves to one or more recipients — leads whose section is
  * still in 'draft' status for the rule's reportId. The scheduler iterates
  * recipients and calls `requestReminderExecution` with the kind='deadline'
  * payload. Idempotent dedupe by `${rule.id}:deadline:${cycleDate}:${email}`
  * collapses two ticks within a single UTC day into exactly one email.
+ *
+ * `notificationOptOut` flows through from `User.notificationOptOut` so the
+ * scheduler can skip leads who have opted out — escalation digests do NOT
+ * read this flag.
  */
 export interface DueDeadlineRule {
   id: string;
   reportId: string;
   fireAt: Date;
   reportPeriodLabel: string;
-  recipients: Array<{ userId: string; email: string; name: string }>;
+  recipients: Array<{
+    userId: string;
+    email: string;
+    name: string;
+    notificationOptOut: boolean;
+  }>;
+}
+
+/**
+ * NOTIF-02 (Phase 29-05): row shape for the T+2h escalation tick.
+ *
+ * One due escalation rule maps to ONE digest email per (rule, head). The
+ * digest body aggregates ALL late leads for the rule's reportId — the head
+ * never receives one email per lead.
+ */
+export interface DueEscalationRule {
+  id: string;
+  reportId: string;
+  fireAt: Date;
+  reportPeriodLabel: string;
+  head: { userId: string; email: string; name: string };
+  lateLeads: Array<{ leadName: string; sectionTitle: string; deadlineIso: string }>;
 }
 
 @Injectable()
@@ -66,7 +92,12 @@ export class RemindersPrismaRepository implements RemindersRepository {
               select: {
                 authorId: true,
                 author: {
-                  select: { id: true, email: true, name: true },
+                  select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    notificationOptOut: true,
+                  },
                 },
               },
             },
@@ -84,6 +115,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
           userId: s.author!.id,
           email: s.author!.email,
           name: s.author!.name,
+          notificationOptOut: s.author!.notificationOptOut,
         }));
       if (recipients.length === 0) continue;
       due.push({
@@ -95,6 +127,75 @@ export class RemindersPrismaRepository implements RemindersRepository {
           rule.report.periodEnd,
         ),
         recipients,
+      });
+    }
+    return due;
+  }
+
+  /**
+   * NOTIF-02 (Phase 29-05): returns active escalation rules whose fireAt is
+   * in the past, pre-resolved with the recipient head + the aggregated late
+   * leads (those whose ReportSection for the rule's reportId is still in
+   * 'draft' at T+2h). One row per (rule, head); the digest body is built by
+   * the scheduler from the `lateLeads` array.
+   *
+   * The head is resolved as the most recent publisher of the report; if no
+   * publisher exists yet, the rule is skipped (no escalation target).
+   */
+  async findDueEscalationRules(now: Date): Promise<DueEscalationRule[]> {
+    const rules = await this.prisma.reminderRule.findMany({
+      where: {
+        status: 'active',
+        kind: 'escalation',
+        fireAt: { lte: now },
+        reportId: { not: null },
+      },
+      include: {
+        report: {
+          select: {
+            id: true,
+            periodStart: true,
+            periodEnd: true,
+            deadline: true,
+            publishedBy: {
+              select: { id: true, email: true, name: true },
+            },
+            sections: {
+              where: { status: 'draft' },
+              select: {
+                author: {
+                  select: { id: true, email: true, name: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const due: DueEscalationRule[] = [];
+    for (const rule of rules) {
+      if (!rule.report) continue;
+      const head = rule.report.publishedBy;
+      if (!head) continue;
+      const lateLeads = rule.report.sections
+        .filter((s) => s.author !== null)
+        .map((s) => ({
+          leadName: s.author!.name,
+          sectionTitle: `Report ${rule.report!.id} section`,
+          deadlineIso: rule.report!.deadline.toISOString(),
+        }));
+      if (lateLeads.length === 0) continue;
+      due.push({
+        id: rule.id,
+        reportId: rule.report.id,
+        fireAt: rule.fireAt,
+        reportPeriodLabel: formatPeriodLabel(
+          rule.report.periodStart,
+          rule.report.periodEnd,
+        ),
+        head: { userId: head.id, email: head.email, name: head.name },
+        lateLeads,
       });
     }
     return due;

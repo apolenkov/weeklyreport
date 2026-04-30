@@ -31,6 +31,19 @@ type EmailReminderJobData =
       reportPeriod: string;
       deadlineIso: string;
       sectionUrl: string;
+    }
+  | {
+      executionId: string;
+      recipientEmail: string;
+      kind: 'escalation';
+      headName: string;
+      cycleDate: string;
+      reportPeriod: string;
+      lateLeads: ReadonlyArray<{
+        leadName: string;
+        sectionTitle: string;
+        deadlineIso: string;
+      }>;
     };
 
 /**
@@ -60,6 +73,14 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
           port: Number(process.env['REDIS_PORT'] ?? 6379),
           maxRetriesPerRequest: null,
         },
+        // NOTIF-06 (Phase 29-05): BullMQ rate-limit at the worker level.
+        // Caps SMTP throughput at 5 emails per rolling 60s window so a burst
+        // of late-cycle reminders does not throttle the corporate mail relay.
+        // BullMQ semantics: failed jobs after `attempts` retries land in the
+        // queue's failed-jobs set automatically — this is the DLQ readable
+        // via `queue.getFailedCount()` from the admin DLQ tRPC procedure.
+        concurrency: 5,
+        limiter: { max: 5, duration: 60_000 },
       },
     );
 
@@ -95,6 +116,24 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
           reportPeriod: data.reportPeriod,
           deadlineIso: data.deadlineIso,
           sectionUrl: data.sectionUrl,
+        },
+      });
+      await this.emailService.sendMailMultipart(
+        data.recipientEmail,
+        rendered.subject,
+        rendered.html,
+        rendered.text,
+      );
+    } else if ('kind' in data && data.kind === 'escalation') {
+      // NOTIF-02 (Phase 29-05): T+2h escalation digest — one email per
+      // (rule, head) per cycle, body aggregates ALL late leads.
+      const rendered = await renderEmail({
+        kind: 'escalation',
+        props: {
+          headName: data.headName,
+          cycleDate: data.cycleDate,
+          reportPeriod: data.reportPeriod,
+          lateLeads: data.lateLeads,
         },
       });
       await this.emailService.sendMailMultipart(

@@ -26,24 +26,40 @@ export interface RemindersRepository {
 }
 
 /**
- * NOTIF-01/03 (Phase 28-03): the richer payload threaded by the scheduler
- * through `requestReminderExecution`. The dedupeKey for kind='deadline' uses
- * `${rule.id}:${kind}:${cycleDate}:${recipientEmail}` so two scheduler ticks
- * within one UTC day collapse to a single execution.
+ * NOTIF-01/03 (Phase 28-03), NOTIF-02 (Phase 29-05): the richer payload
+ * threaded by the scheduler through `requestReminderExecution`. The
+ * dedupeKey uses `${rule.id}:${kind}:${cycleDate}:${recipientEmail}` so two
+ * scheduler ticks within one UTC day collapse to a single execution for
+ * both kinds.
  *
- * Phase 29 will extend the kind union to 'follow-up' | 'escalation'. The
- * v2.0 follow-up dedupe key shape (`${rule.id}:${fireAt.toISOString()}:${recipientEmail}`)
- * is preserved for legacy callers that omit `payload` — see the overload
- * below.
+ * The v2.0 follow-up dedupe key shape
+ * (`${rule.id}:${fireAt.toISOString()}:${recipientEmail}`) is preserved for
+ * legacy callers that omit `payload`.
  */
-export interface ReminderExecutionPayload {
+export type DeadlineReminderPayload = {
   kind: 'deadline';
   cycleDate: string; // ISO YYYY-MM-DD UTC of the fireAt deadline
   leadName: string;
   reportPeriod: string;
   deadlineIso: string;
   sectionUrl: string;
-}
+};
+
+export type EscalationReminderPayload = {
+  kind: 'escalation';
+  cycleDate: string; // ISO YYYY-MM-DD UTC of the escalation fireAt
+  headName: string;
+  reportPeriod: string;
+  lateLeads: ReadonlyArray<{
+    leadName: string;
+    sectionTitle: string;
+    deadlineIso: string;
+  }>;
+};
+
+export type ReminderExecutionPayload =
+  | DeadlineReminderPayload
+  | EscalationReminderPayload;
 
 export class RemindersService {
   private readonly logger: AppLogger;
@@ -81,6 +97,9 @@ export class RemindersService {
       throw new ReminderDomainError('Reminder execution requires an active rule.');
     }
 
+    // NOTIF-02 (Phase 29-05): both 'deadline' and 'escalation' use the same
+    // dedupeKey shape so two scheduler ticks within one UTC day collapse to
+    // a single execution.
     const dedupeKey = payload
       ? `${rule.id}:${payload.kind}:${payload.cycleDate}:${recipientEmail}`
       : `${rule.id}:${rule.fireAt.toISOString()}:${recipientEmail}`;
@@ -108,21 +127,34 @@ export class RemindersService {
     );
 
     if (this.emailQueue) {
-      const queuePayload = payload
-        ? {
-            executionId: execution.id,
-            recipientEmail,
-            kind: payload.kind,
-            leadName: payload.leadName,
-            reportPeriod: payload.reportPeriod,
-            deadlineIso: payload.deadlineIso,
-            sectionUrl: payload.sectionUrl,
-          }
-        : {
-            executionId: execution.id,
-            recipientEmail,
-            reportPeriod: rule.reportId ?? '',
-          };
+      let queuePayload: Record<string, unknown>;
+      if (payload?.kind === 'deadline') {
+        queuePayload = {
+          executionId: execution.id,
+          recipientEmail,
+          kind: 'deadline',
+          leadName: payload.leadName,
+          reportPeriod: payload.reportPeriod,
+          deadlineIso: payload.deadlineIso,
+          sectionUrl: payload.sectionUrl,
+        };
+      } else if (payload?.kind === 'escalation') {
+        queuePayload = {
+          executionId: execution.id,
+          recipientEmail,
+          kind: 'escalation',
+          headName: payload.headName,
+          cycleDate: payload.cycleDate,
+          reportPeriod: payload.reportPeriod,
+          lateLeads: payload.lateLeads,
+        };
+      } else {
+        queuePayload = {
+          executionId: execution.id,
+          recipientEmail,
+          reportPeriod: rule.reportId ?? '',
+        };
+      }
 
       await this.emailQueue.add('send', queuePayload, {
         attempts: 3,

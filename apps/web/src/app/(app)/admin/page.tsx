@@ -1,4 +1,5 @@
 import { AdminPanel } from '../../../components/admin/admin-panel';
+import { DlqBadge } from '../../../components/admin/dlq-badge';
 
 type Props = {
   searchParams: Promise<{ tab?: string }>;
@@ -22,9 +23,13 @@ export default async function AdminPage({ searchParams }: Props) {
     <main id="main-content" className="min-h-screen bg-[var(--color-background)]">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="space-y-6">
-          <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-starbucks-green)]">
-            Admin Panel
-          </h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-starbucks-green)]">
+              Admin Panel
+            </h1>
+            {/* NOTIF-06 (Phase 29-05): BullMQ DLQ failed-jobs badge. */}
+            <DlqBadge />
+          </div>
 
           {/* Tab navigation */}
           <nav aria-label="Admin tabs">

@@ -102,7 +102,7 @@ export type MockReminder = {
   // API round-trip fields preserved from `adminReminderRuleSchema`. Surfaced
   // on the mock so the Reminders tab can rebuild a valid `saveReminderRule`
   // input (e.g. when toggling status without re-entering kind/fireAt).
-  kind: 'deadline' | 'follow_up';
+  kind: 'deadline' | 'follow_up' | 'escalation';
   fireAt: Date;
   timezone: string;
   version: number;
@@ -177,14 +177,28 @@ function mapPeriod(api: ReportPeriod): MockPeriod {
 }
 
 function reminderName(kind: AdminReminderRule['kind']): string {
-  return kind === 'deadline' ? 'Deadline reminder' : 'Follow-up reminder';
+  switch (kind) {
+    case 'deadline':
+      return 'Deadline reminder';
+    case 'escalation':
+      return 'Escalation digest';
+    case 'follow_up':
+    default:
+      return 'Follow-up reminder';
+  }
 }
 
 function reminderDescription(rule: AdminReminderRule): string {
   const at = rule.fireAt.toISOString().replace('T', ' ').slice(0, 16);
-  return rule.kind === 'deadline'
-    ? `Send a reminder when the deadline is reached (fires at ${at} UTC).`
-    : `Send a follow-up reminder to leads who have not submitted (fires at ${at} UTC).`;
+  switch (rule.kind) {
+    case 'deadline':
+      return `Send a reminder when the deadline is reached (fires at ${at} UTC).`;
+    case 'escalation':
+      return `Send a T+2h escalation digest to the head with all late leads (fires at ${at} UTC).`;
+    case 'follow_up':
+    default:
+      return `Send a follow-up reminder to leads who have not submitted (fires at ${at} UTC).`;
+  }
 }
 
 function mapReminder(api: AdminReminderRule): MockReminder {
@@ -336,7 +350,7 @@ export function toReportPeriodInput(
 }
 
 export type AdminReminderRuleFormInput = {
-  kind: 'deadline' | 'follow_up';
+  kind: 'deadline' | 'follow_up' | 'escalation';
   fireAt: Date | string;
   timezone?: string;
   status?: 'active' | 'paused';
@@ -353,7 +367,7 @@ export function toAdminReminderRuleInput(
 ): {
   id: string;
   reportId: string | null;
-  kind: 'deadline' | 'follow_up';
+  kind: 'deadline' | 'follow_up' | 'escalation';
   fireAt: Date;
   timezone: string;
   status: 'active' | 'paused';

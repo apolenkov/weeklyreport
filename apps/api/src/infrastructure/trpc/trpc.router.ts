@@ -23,6 +23,7 @@ import {
 import { mapDomainError } from './trpc.error-mapper.js';
 
 import type { PrismaClient } from '@prisma/client';
+import type { Queue } from 'bullmq';
 
 import type { ReportSectionsService } from '../../modules/report-sections/report-sections.service.js';
 import type { ReviewService } from '../../modules/review/review.service.js';
@@ -49,6 +50,12 @@ type RouterDeps = {
   periodService: PeriodService;
   weeklyReportService: WeeklyReportService;
   leadFormService: LeadFormService;
+  /**
+   * NOTIF-06 (Phase 29-05): read-only BullMQ Queue handle used by
+   * `admin.dlqCount` to surface failed-job count. Optional so existing test
+   * fixtures can call createAppRouter(stubDeps) without instantiating Redis.
+   */
+  emailReminderQueue?: Queue;
 };
 
 export function createAppRouter(deps: RouterDeps) {
@@ -332,6 +339,22 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+
+      // NOTIF-06 (Phase 29-05): BullMQ DLQ count — failed-jobs set of the
+      // email-reminder queue. headProcedure (admin/head only — D-AUTH-03).
+      // Returns { count: 0 } when the Queue handle is absent (e.g. unit test
+      // wiring) so the procedure is always callable.
+      dlqCount: headProcedure.query(async () => {
+        try {
+          if (!deps.emailReminderQueue) {
+            return { count: 0 };
+          }
+          const count = await deps.emailReminderQueue.getFailedCount();
+          return { count };
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
     }),
 
     // === Archive namespace ===
