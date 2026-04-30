@@ -46,4 +46,45 @@ export default defineConfig([
       'react-compiler/react-compiler': 'error',
     },
   },
+  // Phase 31 (AI-SPEC §5.2 / PITFALLS C-3): module-isolation rules for
+  // the AI module. Raw @prisma/client imports are restricted to the
+  // facade boundary (ai-facade.ts and ai-cache.ts only); every other
+  // ai/** file must access DB through the facade.
+  // Test files and fixtures are also exempt because they construct
+  // facade fakes that need the AiInsightKind enum type.
+  {
+    files: ['apps/api/src/modules/ai/**/*.ts'],
+    ignores: [
+      'apps/api/src/modules/ai/ai-facade.ts',
+      'apps/api/src/modules/ai/ai-cache.ts',
+      'apps/api/src/modules/ai/__tests__/**',
+      'apps/api/src/modules/ai/__fixtures__/**',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@prisma/client',
+              message:
+                'AI module: import Prisma only via ai-facade.ts (CC-3 / module isolation per AI-SPEC §5.2).',
+            },
+          ],
+        },
+      ],
+      // Ban logging of named identifiers `prompt`, `messages`, `response`
+      // when passed to a `logger.*` call. Narrow AST selector to
+      // ai/** files only — unrelated modules retain freedom.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "CallExpression[callee.object.name='logger'] Identifier[name=/^(prompt|messages|response)$/]",
+          message:
+            'AI module: never log prompts/messages/response content (PITFALLS C-3).',
+        },
+      ],
+    },
+  },
 ]);

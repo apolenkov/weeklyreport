@@ -1,0 +1,26 @@
+{
+  "id": "fx-008",
+  "description": "Decisions-heavy, risks-empty — multiple decisions awaiting head input",
+  "report": {
+    "reportId": "10000000-0000-4000-8000-000000000008",
+    "periodLabel": "2026-W17",
+    "sectionCount": 3,
+    "greenCount": 4,
+    "yellowCount": 2,
+    "redCount": 0,
+    "sections": [
+      {"authorName": "Lead-A", "trafficLights": [{"projectName": "Acme", "status": "green"}, {"projectName": "Globex", "status": "yellow"}], "riskCount": 0, "decisionCount": 3, "itemCount": 5},
+      {"authorName": "Lead-B", "trafficLights": [{"projectName": "Initech", "status": "green"}, {"projectName": "Hooli", "status": "yellow"}], "riskCount": 0, "decisionCount": 4, "itemCount": 4},
+      {"authorName": "Lead-C", "trafficLights": [{"projectName": "Pied", "status": "green"}, {"projectName": "Vandelay", "status": "green"}], "riskCount": 0, "decisionCount": 2, "itemCount": 3}
+    ]
+  },
+  "risks": [
+    {"id": "r-008-1", "risk": "No active risks identified this week", "impact": "None observed", "mitigation": "Continued monitoring", "expectedLevel": "low"}
+  ],
+  "cells": [
+    {"sectionId": "s-008-a", "projectId": "p-acme", "leadName": "Lead-A", "projectName": "Acme", "leadColour": "green", "currentItemCount": 5, "completedCount": 4, "blockedCount": 0, "riskCount": 0, "decisionCount": 3, "currentWeekText": "Three architectural decisions awaiting head input.", "nextWeekText": "Implementation blocked on decisions.", "riskHighlights": "(none)", "expectedVerdict": "attention"}
+  ],
+  "expected": {
+    "summary": {"tone": "neutral", "narrativeContains": []}
+  }
+}

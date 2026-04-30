@@ -1,0 +1,27 @@
+{
+  "id": "fx-003",
+  "description": "Mostly red — escalation likely, multiple blockers",
+  "report": {
+    "reportId": "10000000-0000-4000-8000-000000000003",
+    "periodLabel": "2026-W17",
+    "sectionCount": 3,
+    "greenCount": 1,
+    "yellowCount": 1,
+    "redCount": 4,
+    "sections": [
+      {"authorName": "Lead-A", "trafficLights": [{"projectName": "Acme", "status": "red"}, {"projectName": "Globex", "status": "red"}], "riskCount": 4, "decisionCount": 2, "itemCount": 7},
+      {"authorName": "Lead-B", "trafficLights": [{"projectName": "Initech", "status": "red"}, {"projectName": "Hooli", "status": "yellow"}], "riskCount": 3, "decisionCount": 1, "itemCount": 5},
+      {"authorName": "Lead-C", "trafficLights": [{"projectName": "Pied", "status": "red"}, {"projectName": "Vandelay", "status": "green"}], "riskCount": 2, "decisionCount": 1, "itemCount": 4}
+    ]
+  },
+  "risks": [
+    {"id": "r-003-1", "risk": "Production database migration may corrupt rows", "impact": "Customer-visible data loss", "mitigation": "no rollback plan yet", "expectedLevel": "high"},
+    {"id": "r-003-2", "risk": "Compliance audit failure likely", "impact": "Cannot ship to regulated regions", "mitigation": "consultant booked next month", "expectedLevel": "high"}
+  ],
+  "cells": [
+    {"sectionId": "s-003-a", "projectId": "p-acme", "leadName": "Lead-A", "projectName": "Acme", "leadColour": "red", "currentItemCount": 7, "completedCount": 1, "blockedCount": 4, "riskCount": 4, "decisionCount": 2, "currentWeekText": "Migration unsafe; rolled back attempts.", "nextWeekText": "Need head decision on rollback path.", "riskHighlights": "- Data loss possible (impact: high)", "expectedVerdict": "off-track"}
+  ],
+  "expected": {
+    "summary": {"tone": "negative", "narrativeContains": []}
+  }
+}
