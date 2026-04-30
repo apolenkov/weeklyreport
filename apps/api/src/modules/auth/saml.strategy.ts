@@ -28,7 +28,11 @@ function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
 }
 
 export function createSamlStrategyOptions(env: NodeJS.ProcessEnv): SamlStrategyOptions {
-  const devMode = env.AUTH_DEV_MODE === 'true';
+  // AUTH-01 (Phase 29-04): narrow `devMode` to non-production. Production
+  // ignores `AUTH_DEV_MODE` entirely; the boot-time fence in
+  // `lib/dev-auth-fence.ts` refuses to start at all if either dev-auth flag
+  // is set under `NODE_ENV=production`.
+  const devMode = env.NODE_ENV !== 'production' && env.AUTH_DEV_MODE === 'true';
 
   if (devMode) {
     return {
