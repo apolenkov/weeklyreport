@@ -51,15 +51,18 @@ class StubFacade implements AiFacade {
   }
    
   async getRiskForSentiment(riskId: string): Promise<RiskForSentiment | null> {
-    return this.fixture.risks.find((r) => r.riskId === riskId) ?? null;
+    const risk = this.fixture.risks.find((r) => r.riskId === riskId);
+    if (!risk) return null;
+    // Phase 32-A1 (C-01): inject reportId so the budget guard has scope.
+    return { ...risk, reportId: this.fixture.report.reportId };
   }
-   
+
   async getCellForOnTrack(sectionId: string, projectId: string): Promise<CellForOnTrack | null> {
-    return (
-      this.fixture.cells.find(
-        (c) => c.sectionId === sectionId && c.projectId === projectId,
-      ) ?? null
+    const cell = this.fixture.cells.find(
+      (c) => c.sectionId === sectionId && c.projectId === projectId,
     );
+    if (!cell) return null;
+    return { ...cell, reportId: this.fixture.report.reportId };
   }
    
   async getAiInsight<R>(kind: AiInsightKind, hash: string): Promise<AiInsightRow<R> | null> {
@@ -71,6 +74,7 @@ class StubFacade implements AiFacade {
       id: `${input.kind}-${input.contentHash}`,
       kind: input.kind,
       contentHash: input.contentHash,
+      reportId: input.reportId ?? null,
       result: input.result,
       modelId: input.modelId,
       inputTokens: input.usage.inputTokens,

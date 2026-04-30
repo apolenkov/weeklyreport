@@ -56,7 +56,10 @@ export type AiInsightUnavailable = {
 
 export type AiInsightResult<R> = AiInsightAvailable<R> | AiInsightUnavailable;
 
-const PER_REPORT_BUDGET_TOKENS = 50_000;
+// Phase 32-A1 (C-01): per-report budget cap. ~$0.05 at Haiku 4.5 pricing
+// (input $0.80/MT + output $4/MT, mixed; 50K tokens covers typical use).
+// Enforced before EVERY Anthropic call across summary/sentiment/on-track.
+export const PER_REPORT_BUDGET_TOKENS = 50_000;
 
 @Injectable()
 export class AiService {
@@ -69,6 +72,18 @@ export class AiService {
      */
     private readonly clientFactory?: AnthropicClientFactory,
   ) {}
+
+  /**
+   * Phase 32-A1 (C-01): per-report budget guard helper. Sums recent token
+   * usage across all 3 kinds for a single report and returns true when the
+   * cumulative inputs+outputs exceed the cap. Called by all 3 features
+   * (summary, sentiment, on-track) before any Anthropic SDK call.
+   */
+  private async isOverBudget(reportId: string): Promise<boolean> {
+    if (!reportId) return true; // unscoped calls are denied per C-01 fix
+    const cumulative = await this.facade.getRecentInsightTokenSum(reportId);
+    return cumulative > PER_REPORT_BUDGET_TOKENS;
+  }
 
   async summary(reportId: string): Promise<AiInsightResult<SummaryResult>> {
     return this.runSummary(reportId, false);
@@ -100,10 +115,10 @@ export class AiService {
       await this.facade.deleteAiInsight('summary', contentHash);
     }
 
-    // Budget guard (AI-SPEC §7): bail before SDK call if cumulative tokens
-    // for THIS report's recent insights exceed the per-report cap.
-    const cumulative = await this.facade.getRecentInsightTokenSum([contentHash]);
-    if (cumulative > PER_REPORT_BUDGET_TOKENS) {
+    // Phase 32-A1 (C-01): budget guard scoped per-report. Sums input+output
+    // tokens across ALL kinds (summary/sentiment/on_track) for this report
+    // in the last hour. Bail before SDK call if cap exceeded.
+    if (await this.isOverBudget(report.reportId)) {
       return { available: false, reason: 'budget_exceeded' };
     }
 
@@ -112,6 +127,7 @@ export class AiService {
         facade: this.facade,
         kind: 'summary',
         contentHash,
+        reportId: report.reportId,
         generate: async () => {
           const userPrompt = buildSummaryUserPrompt(report, condensedContent);
           const r: RunStructuredResult<SummaryResult> = await runStructured(
@@ -155,11 +171,20 @@ export class AiService {
       impact: risk.impact,
       mitigation: risk.mitigation,
     });
+
+    // Phase 32-A1 (C-01): budget guard. Derive reportId from the risk's
+    // section. The cache row WILL still be shared across reports for the
+    // same risk-text tuple, but the budget guard fires per-report-scope.
+    if (await this.isOverBudget(risk.reportId)) {
+      return { available: false, reason: 'budget_exceeded' };
+    }
+
     try {
       const { row, cached } = await withCache<SentimentResult>({
         facade: this.facade,
         kind: 'sentiment',
         contentHash,
+        reportId: risk.reportId,
         generate: async () => {
           const userPrompt = buildSentimentUserPrompt(risk);
           const r = await runStructured(
@@ -211,11 +236,19 @@ export class AiService {
       riskHighlights: cell.riskHighlights,
     };
     const contentHash = computeContentHash(cacheInput);
+
+    // Phase 32-A1 (C-01): budget guard scoped per-report. The reportId is
+    // looked up via the cell's section.
+    if (await this.isOverBudget(cell.reportId)) {
+      return { available: false, reason: 'budget_exceeded' };
+    }
+
     try {
       const { row, cached } = await withCache<OnTrackResult>({
         facade: this.facade,
         kind: 'on_track',
         contentHash,
+        reportId: cell.reportId,
         generate: async () => {
           const userPrompt = buildOnTrackUserPrompt(cell);
           const r = await runStructured(
