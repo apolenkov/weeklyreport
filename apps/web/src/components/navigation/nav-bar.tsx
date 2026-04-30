@@ -2,48 +2,35 @@
 
 import { usePathname } from 'next/navigation';
 
+import type { Role } from '@customreport/shared';
+
+import { isRouteVisible } from '../../lib/role-visibility';
+import { useSession } from '../../lib/session-provider';
+
 type NavLink = {
   href: string;
   label: string;
 };
 
-type InferredRole = 'lead' | 'head' | 'admin';
-
-const LEAD_LINKS: NavLink[] = [
+/**
+ * AUTH-06 (Phase 29-06): single canonical link table. Filtered through
+ * `isRouteVisible(href, role)` before render, so links the role cannot
+ * reach are FILTERED OUT (not CSS-hidden) — a viewer reading the rendered
+ * HTML sees no enumeration of /admin or /head routes.
+ *
+ * Order: lead surfaces first, then head, then reports, then admin —
+ * matches the visual hierarchy of the app shell.
+ */
+const NAV_LINKS: ReadonlyArray<NavLink> = [
   { href: '/lead/report', label: 'My Report' },
   { href: '/lead/history', label: 'History' },
-];
-
-const HEAD_LINKS: NavLink[] = [
   { href: '/head/dashboard', label: 'Dashboard' },
   { href: '/head/report', label: 'Weekly Report' },
-];
-
-const ADMIN_LINKS: NavLink[] = [
-  { href: '/head/dashboard', label: 'Dashboard' },
-  { href: '/head/report', label: 'Weekly Report' },
+  { href: '/reports/history', label: 'Published reports' },
   { href: '/admin', label: 'Admin' },
 ];
 
-function inferRole(pathname: string): InferredRole {
-  if (pathname.startsWith('/admin')) return 'admin';
-  if (pathname.startsWith('/head')) return 'head';
-  return 'lead';
-}
-
-function getLinksForRole(role: InferredRole): NavLink[] {
-  switch (role) {
-    case 'admin':
-      return ADMIN_LINKS;
-    case 'head':
-      return HEAD_LINKS;
-    case 'lead':
-    default:
-      return LEAD_LINKS;
-  }
-}
-
-function getRoleLabel(role: InferredRole): string {
+function getRoleLabel(role: Role): string {
   switch (role) {
     case 'admin':
       return 'Admin';
@@ -51,6 +38,8 @@ function getRoleLabel(role: InferredRole): string {
       return 'Head';
     case 'lead':
       return 'Lead';
+    case 'viewer':
+      return 'Viewer';
   }
 }
 
@@ -61,24 +50,48 @@ function isActiveLink(pathname: string, href: string): boolean {
   return pathname.startsWith(href);
 }
 
+function getLogoHref(role: Role): string {
+  switch (role) {
+    case 'admin':
+    case 'head':
+      return '/head/dashboard';
+    case 'viewer':
+      return '/reports/history';
+    case 'lead':
+    default:
+      return '/lead/report';
+  }
+}
+
 /**
  * Top navigation bar with:
  * - Logo (left)
- * - Role-aware links (center)
+ * - Role-aware links (center) — filtered via `isRouteVisible`
  * - User info (right)
- * - Teal bottom border constrained to max-w-6xl (D-70)
+ *
+ * AUTH-06 (Phase 29-06): the link list is hidden BEFORE render — viewers
+ * cannot enumerate /admin or /head links from the rendered HTML. The SSR
+ * layout gate (Phase 29-03) is the actual security boundary; this is a UX
+ * hide only.
  */
 export function NavBar() {
   const pathname = usePathname();
-  const role = inferRole(pathname);
-  const links = getLinksForRole(role);
+  const { user } = useSession();
+
+  // While the session is still loading, render no role-gated links — keeps
+  // the seam React-Compiler-safe (no useEffect, no flash) per CC-5 PITFALLS.
+  const role: Role | null = user?.role ?? null;
+  const visibleLinks: ReadonlyArray<NavLink> =
+    role === null
+      ? []
+      : NAV_LINKS.filter((link) => isRouteVisible(link.href, role));
 
   return (
-    <header className="w-full bg-[var(--color-card)]">
+    <header className="w-full bg-[var(--color-card)]" data-testid="nav-bar">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <a
-          href={role === 'lead' ? '/lead/report' : '/head/dashboard'}
+          href={role ? getLogoHref(role) : '/'}
           className="flex items-center gap-2.5 py-4"
           aria-label="CustomReport home"
         >
@@ -90,9 +103,9 @@ export function NavBar() {
           </span>
         </a>
 
-        {/* Navigation links */}
+        {/* Navigation links — filtered via isRouteVisible(role) */}
         <nav aria-label="Main navigation" className="hidden sm:flex sm:items-center sm:gap-1">
-          {links.map((link) => {
+          {visibleLinks.map((link) => {
             const active = isActiveLink(pathname, link.href);
             return (
               <a
@@ -116,14 +129,16 @@ export function NavBar() {
 
         {/* User info */}
         <div className="flex items-center gap-3">
-          <span className="hidden text-xs text-[var(--color-muted-foreground)] sm:inline">
-            {getRoleLabel(role)}
-          </span>
+          {role && (
+            <span className="hidden text-xs text-[var(--color-muted-foreground)] sm:inline">
+              {getRoleLabel(role)}
+            </span>
+          )}
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-starbucks-green)] text-xs font-semibold text-white"
-            aria-label={`Signed in as ${getRoleLabel(role)}`}
+            aria-label={role ? `Signed in as ${getRoleLabel(role)}` : 'Signed in'}
           >
-            {getRoleLabel(role).charAt(0)}
+            {role ? getRoleLabel(role).charAt(0) : '?'}
           </div>
         </div>
       </div>
@@ -134,7 +149,7 @@ export function NavBar() {
       </div>
 
       {/* Mobile hamburger menu */}
-      <MobileNav links={links} pathname={pathname} role={role} />
+      <MobileNav links={visibleLinks} pathname={pathname} role={role} />
     </header>
   );
 }
@@ -146,9 +161,9 @@ function MobileNav({
   pathname,
   role,
 }: {
-  readonly links: NavLink[];
+  readonly links: ReadonlyArray<NavLink>;
   readonly pathname: string;
-  readonly role: InferredRole;
+  readonly role: Role | null;
 }) {
   return (
     <nav
@@ -172,9 +187,11 @@ function MobileNav({
           </a>
         );
       })}
-      <span className="ml-auto flex-shrink-0 text-[10px] text-[var(--color-muted-foreground)]">
-        {getRoleLabel(role)}
-      </span>
+      {role && (
+        <span className="ml-auto flex-shrink-0 text-[10px] text-[var(--color-muted-foreground)]">
+          {getRoleLabel(role)}
+        </span>
+      )}
     </nav>
   );
 }
