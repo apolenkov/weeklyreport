@@ -105,19 +105,40 @@ describe('apps/web/proxy.ts — auth guard', () => {
 });
 
 describe('apps/web/proxy.ts — config matcher', () => {
-  it('exports a config object with a matcher array', () => {
+  it('exports a config object with a matcher array of four entries', () => {
     expect(config).toBeDefined();
     expect(Array.isArray(config.matcher)).toBe(true);
-    expect((config.matcher as string[]).length).toBeGreaterThan(0);
+    expect((config.matcher as string[]).length).toBe(4);
   });
 
-  it('matcher is a string excluding _next, api, trpc, auth, favicon, and root', () => {
-    const matcher = (config.matcher as string[])[0];
-    // The matcher uses negative lookahead — sanity check it mentions the right exclusions.
-    expect(matcher).toContain('_next');
-    expect(matcher).toContain('api');
-    expect(matcher).toContain('trpc');
-    expect(matcher).toContain('auth');
-    expect(matcher).toContain('favicon');
+  it('matcher is a positive allowlist of /lead, /head, /reports, /admin prefixes', () => {
+    const matcher = config.matcher as string[];
+    // Each entry is one of the four protected prefixes with a :path*
+    // suffix. Order is not significant; assert membership.
+    expect(matcher).toEqual(
+      expect.arrayContaining([
+        '/lead/:path*',
+        '/head/:path*',
+        '/reports/:path*',
+        '/admin/:path*',
+      ]),
+    );
+    // Every entry begins with one of the protected prefixes.
+    for (const entry of matcher) {
+      expect(entry).toMatch(/^\/(lead|head|reports|admin)\//);
+    }
+  });
+
+  it('matcher does not include excluded routes (_next, api, trpc, auth, favicon)', () => {
+    const matcher = config.matcher as string[];
+    // The allowlist must not mention any route that is intentionally
+    // unprotected by the proxy (those handle their own auth or are static).
+    for (const entry of matcher) {
+      expect(entry).not.toMatch(/_next/);
+      expect(entry).not.toMatch(/(^|\/)api(\/|$)/);
+      expect(entry).not.toMatch(/trpc/);
+      expect(entry).not.toMatch(/(^|\/)auth(\/|$)/);
+      expect(entry).not.toMatch(/favicon/);
+    }
   });
 });
