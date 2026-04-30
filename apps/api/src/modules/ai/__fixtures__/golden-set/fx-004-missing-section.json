@@ -1,0 +1,26 @@
+{
+  "id": "fx-004",
+  "description": "One lead skipped (sick) — 3 sections submitted, 1 missing",
+  "report": {
+    "reportId": "10000000-0000-4000-8000-000000000004",
+    "periodLabel": "2026-W17",
+    "sectionCount": 3,
+    "greenCount": 4,
+    "yellowCount": 1,
+    "redCount": 0,
+    "sections": [
+      {"authorName": "Lead-A", "trafficLights": [{"projectName": "Acme", "status": "green"}, {"projectName": "Globex", "status": "green"}], "riskCount": 0, "decisionCount": 0, "itemCount": 4},
+      {"authorName": "Lead-B", "trafficLights": [{"projectName": "Initech", "status": "yellow"}, {"projectName": "Hooli", "status": "green"}], "riskCount": 1, "decisionCount": 0, "itemCount": 3},
+      {"authorName": "Lead-C", "trafficLights": [{"projectName": "Pied", "status": "green"}], "riskCount": 0, "decisionCount": 0, "itemCount": 2}
+    ]
+  },
+  "risks": [
+    {"id": "r-004-1", "risk": "Test environment flaky after recent deploy", "impact": "Test cycle longer", "mitigation": "Investigation underway", "expectedLevel": "low"}
+  ],
+  "cells": [
+    {"sectionId": "s-004-a", "projectId": "p-acme", "leadName": "Lead-A", "projectName": "Acme", "leadColour": "green", "currentItemCount": 4, "completedCount": 3, "blockedCount": 0, "riskCount": 0, "decisionCount": 0, "currentWeekText": "All planned items shipped.", "nextWeekText": "Code review backlog.", "riskHighlights": "(none)", "expectedVerdict": "on-track"}
+  ],
+  "expected": {
+    "summary": {"tone": "neutral", "narrativeContains": []}
+  }
+}

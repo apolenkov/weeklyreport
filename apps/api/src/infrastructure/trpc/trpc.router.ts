@@ -622,6 +622,20 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+      // AI-03: per-cell on-track advisory verdict (✓ ⚠ ✗).
+      // Advisory only — never replaces lead's chosen traffic-light colour.
+      onTrack: protectedProcedure
+        .input(z.object({
+          sectionId: z.string().uuid(),
+          projectId: z.string().uuid(),
+        }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.aiService.onTrack(input.sectionId, input.projectId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
   });
 }

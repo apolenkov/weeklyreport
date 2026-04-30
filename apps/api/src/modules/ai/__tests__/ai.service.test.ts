@@ -35,23 +35,23 @@ class InMemoryFacade implements AiFacade {
     return `${kind}:${hash}`;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
+   
   async getReportForSummary(reportId: string): Promise<ReportForSummary | null> {
     return this.reports.get(reportId) ?? null;
   }
-  // eslint-disable-next-line @typescript-eslint/require-await
+   
   async getRiskForSentiment(riskId: string): Promise<RiskForSentiment | null> {
     return this.risks.get(riskId) ?? null;
   }
-  // eslint-disable-next-line @typescript-eslint/require-await
+   
   async getCellForOnTrack(sectionId: string, projectId: string): Promise<CellForOnTrack | null> {
     return this.cells.get(`${sectionId}:${projectId}`) ?? null;
   }
-  // eslint-disable-next-line @typescript-eslint/require-await
+   
   async getAiInsight<R>(kind: AiInsightKind, hash: string): Promise<AiInsightRow<R> | null> {
     return (this.insights.get(this.key(kind, hash)) as AiInsightRow<R> | undefined) ?? null;
   }
-  // eslint-disable-next-line @typescript-eslint/require-await
+   
   async upsertAiInsight<R>(input: AiInsightUpsertInput<R>): Promise<AiInsightRow<R>> {
     const row: AiInsightRow<R> = {
       id: `${input.kind}-${input.contentHash}`,
@@ -68,11 +68,11 @@ class InMemoryFacade implements AiFacade {
     this.insights.set(this.key(input.kind, input.contentHash), row as AiInsightRow<unknown>);
     return row;
   }
-  // eslint-disable-next-line @typescript-eslint/require-await
+   
   async deleteAiInsight(kind: AiInsightKind, hash: string): Promise<void> {
     this.insights.delete(this.key(kind, hash));
   }
-  // eslint-disable-next-line @typescript-eslint/require-await
+   
   async getRecentInsightTokenSum(): Promise<number> {
     return this.recentTokenSum;
   }
@@ -324,6 +324,122 @@ describe('AiService.sentiment', () => {
     messagesCreateMock.mockRejectedValueOnce(new Error('boom'));
     const service = new AiService(facade);
     const r = await service.sentiment(RISK_ID_A);
+    expect(r).toEqual({ available: false, reason: 'unavailable' });
+  });
+});
+
+describe('on-track system prompt — char-count floor', async () => {
+  it('ON_TRACK_SYSTEM_PROMPT is at least 3500 chars', async () => {
+    const { ON_TRACK_SYSTEM_PROMPT } = await import('../prompts/on-track.js');
+    expect(ON_TRACK_SYSTEM_PROMPT.length).toBeGreaterThanOrEqual(3500);
+  });
+});
+
+describe('AiService.onTrack', () => {
+  const SECTION_ID = '44444444-4444-4444-8444-444444444444';
+  const PROJECT_ID = '55555555-5555-4555-8555-555555555555';
+
+  const SAMPLE_CELL = {
+    sectionId: SECTION_ID,
+    projectId: PROJECT_ID,
+    leadName: 'Alice',
+    projectName: 'ProjectAlpha',
+    leadColour: 'green' as const,
+    currentItemCount: 4,
+    completedCount: 2,
+    blockedCount: 0,
+    riskCount: 1,
+    decisionCount: 0,
+    currentWeekText: 'Shipped login flow.',
+    nextWeekText: 'Begin RBAC.',
+    riskHighlights: '- Vendor delay (impact: medium)',
+  };
+
+  it('returns not_found when cell is missing', async () => {
+    const facade = new InMemoryFacade();
+    const service = new AiService(facade);
+    const r = await service.onTrack(SECTION_ID, PROJECT_ID);
+    expect(r).toEqual({ available: false, reason: 'not_found' });
+    expect(messagesCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('cache miss → SDK called → row upserted with kind=on_track', async () => {
+    const facade = new InMemoryFacade();
+    facade.cells.set(`${SECTION_ID}:${PROJECT_ID}`, { ...SAMPLE_CELL });
+    messagesCreateMock.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'tool_use',
+          input: {
+            verdict: 'on-track',
+            confidence: 'high',
+            rationale: 'Steady velocity with one bounded risk',
+          },
+        },
+      ],
+      usage: { input_tokens: 1200, output_tokens: 60 },
+    });
+    const service = new AiService(facade);
+    const r = await service.onTrack(SECTION_ID, PROJECT_ID);
+    expect(r.available).toBe(true);
+    if (r.available) expect(r.result.verdict).toBe('on-track');
+    expect([...facade.insights.values()][0]?.kind).toBe('on_track');
+  });
+
+  it('user prompt contains pre-computed counts and DO NOT directive', async () => {
+    const facade = new InMemoryFacade();
+    facade.cells.set(`${SECTION_ID}:${PROJECT_ID}`, { ...SAMPLE_CELL });
+    messagesCreateMock.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'tool_use',
+          input: {
+            verdict: 'on-track',
+            confidence: 'high',
+            rationale: 'fine',
+          },
+        },
+      ],
+      usage: { input_tokens: 1200, output_tokens: 60 },
+    });
+    const service = new AiService(facade);
+    await service.onTrack(SECTION_ID, PROJECT_ID);
+
+    const arg = messagesCreateMock.mock.calls[0]?.[0] as Record<string, unknown>;
+    const messages = arg['messages'] as Array<{ role: string; content: string }>;
+    const userPrompt = messages[0]?.content ?? '';
+    expect(userPrompt).toContain('DO NOT change these numbers');
+    expect(userPrompt).toContain('currentItemCount: 4');
+    expect(userPrompt).toContain('completedCount: 2');
+    expect(userPrompt).toContain('blockedCount: 0');
+    expect(userPrompt).toContain('riskCount: 1');
+    expect(userPrompt).toContain('decisionCount: 0');
+  });
+
+  it('cache hit on second call with identical snapshot → SDK NOT called', async () => {
+    const facade = new InMemoryFacade();
+    facade.cells.set(`${SECTION_ID}:${PROJECT_ID}`, { ...SAMPLE_CELL });
+    messagesCreateMock.mockResolvedValueOnce({
+      content: [
+        {
+          type: 'tool_use',
+          input: { verdict: 'on-track', confidence: 'medium', rationale: 'cached' },
+        },
+      ],
+      usage: { input_tokens: 1200, output_tokens: 60 },
+    });
+    const service = new AiService(facade);
+    await service.onTrack(SECTION_ID, PROJECT_ID);
+    await service.onTrack(SECTION_ID, PROJECT_ID);
+    expect(messagesCreateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('SDK throws → returns unavailable sentinel', async () => {
+    const facade = new InMemoryFacade();
+    facade.cells.set(`${SECTION_ID}:${PROJECT_ID}`, { ...SAMPLE_CELL });
+    messagesCreateMock.mockRejectedValueOnce(new Error('boom'));
+    const service = new AiService(facade);
+    const r = await service.onTrack(SECTION_ID, PROJECT_ID);
     expect(r).toEqual({ available: false, reason: 'unavailable' });
   });
 });

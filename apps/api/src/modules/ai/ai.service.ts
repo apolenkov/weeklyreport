@@ -33,6 +33,15 @@ import {
   sentimentSchema,
   type SentimentResult,
 } from './prompts/sentiment.js';
+import {
+  ON_TRACK_MODEL,
+  ON_TRACK_SYSTEM_PROMPT,
+  ON_TRACK_TOOL_DESCRIPTION,
+  ON_TRACK_TOOL_NAME,
+  buildOnTrackUserPrompt,
+  onTrackSchema,
+  type OnTrackResult,
+} from './prompts/on-track.js';
 
 export type AiInsightAvailable<R> = {
   available: true;
@@ -165,6 +174,62 @@ export class AiService {
             this.clientFactory,
           );
           return { result: r.result, usage: r.usage, modelId: SENTIMENT_MODEL };
+        },
+      });
+      return { available: true, result: row.result, cached };
+    } catch (err) {
+      if (err instanceof AiRateLimitError) {
+        return { available: false, reason: 'rate_limit' };
+      }
+      return { available: false, reason: 'unavailable' };
+    }
+  }
+
+  // AI-03: per-cell on-track advisory verdict. Pre-computed counts are
+  // injected into the user prompt with a "DO NOT change these numbers"
+  // directive (PITFALLS C-2). The verdict is advisory — never replaces
+  // the lead's chosen traffic-light colour.
+  async onTrack(
+    sectionId: string,
+    projectId: string,
+  ): Promise<AiInsightResult<OnTrackResult>> {
+    const cell = await this.facade.getCellForOnTrack(sectionId, projectId);
+    if (!cell) {
+      return { available: false, reason: 'not_found' };
+    }
+    const cacheInput = {
+      sectionId: cell.sectionId,
+      projectId: cell.projectId,
+      leadColour: cell.leadColour,
+      currentItemCount: cell.currentItemCount,
+      completedCount: cell.completedCount,
+      blockedCount: cell.blockedCount,
+      riskCount: cell.riskCount,
+      decisionCount: cell.decisionCount,
+      currentWeekText: cell.currentWeekText,
+      nextWeekText: cell.nextWeekText,
+      riskHighlights: cell.riskHighlights,
+    };
+    const contentHash = computeContentHash(cacheInput);
+    try {
+      const { row, cached } = await withCache<OnTrackResult>({
+        facade: this.facade,
+        kind: 'on_track',
+        contentHash,
+        generate: async () => {
+          const userPrompt = buildOnTrackUserPrompt(cell);
+          const r = await runStructured(
+            {
+              model: ON_TRACK_MODEL,
+              system: ON_TRACK_SYSTEM_PROMPT,
+              user: userPrompt,
+              toolName: ON_TRACK_TOOL_NAME,
+              toolDescription: ON_TRACK_TOOL_DESCRIPTION,
+              schema: onTrackSchema,
+            },
+            this.clientFactory,
+          );
+          return { result: r.result, usage: r.usage, modelId: ON_TRACK_MODEL };
         },
       });
       return { available: true, result: row.result, cached };
