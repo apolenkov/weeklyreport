@@ -161,3 +161,58 @@ deferred per CONTEXT.md). The deferred v6.1 follow-up plan should:
    in `product-accordion.tsx`.
 3. After head review of golden-set, tighten eval thresholds in
    `golden-set.eval.test.ts`.
+
+## v6.1 follow-up plan — OnTrackIcon UI mount (concrete steps)
+
+**Blocker:** the dashboard view layer is fed by mock data in
+`apps/web/src/components/dashboard/mock-data.ts` whose `Lead.id` and
+`TrafficLight` shapes use synthetic strings (`'platanov'`, `'maria'`,
+hand-keyed product slugs). The `ai.onTrack` tRPC procedure expects two
+real UUIDs: `reportSectionId` (from `Prisma.ReportSection`) and
+`projectId` (from `Prisma.Project`). Until the mock layer is replaced
+with a real tRPC-fed mapper, `<OnTrackIcon>` cannot be mounted.
+
+**Files involved:**
+
+| File | What changes |
+|---|---|
+| `apps/web/src/components/dashboard/mock-data.ts` | Either delete and replace with a tRPC-fed loader, or widen `Lead.id`/`TrafficLight` types to accept real UUIDs alongside the existing string slugs (compat shim only). |
+| `apps/web/src/components/dashboard/lead-report-card.tsx` | Source of `trafficLights[]` data; needs to receive `reportSectionId` (Lead -> ReportSection) and `projectId` per cell. |
+| `apps/web/src/components/weekly-report/product-accordion.tsx` | Mount point — render `<OnTrackIcon sectionId={tl.reportSectionId} projectId={tl.projectId} />` next to each cell's traffic-light dot. |
+| `apps/web/src/components/weekly-report/weekly-report-page.tsx` | Top of the data flow; calls `trpc.report.getCurrent.useQuery()` (or equivalent — confirm name during plan-phase) and shapes the response into the `ProductReport[]` the accordion consumes. The mapper here is where the UUID threading must start. |
+| `apps/api/src/modules/report/...` (router) | Confirm the existing `report.*` tRPC procedure already exposes `reportSectionId` and `projectId` per cell; if not, widen the response DTO. |
+
+**Type widening sketch:**
+
+```ts
+// mock-data.ts (or replacement)
+export type TrafficLight = {
+  // existing fields…
+  reportSectionId: string; // UUID — required for ai.onTrack
+  projectId: string;       // UUID — required for ai.onTrack
+};
+
+export type Lead = {
+  id: string;              // becomes UUID, drop synthetic 'platanov'
+  // …
+};
+```
+
+**Step-by-step:**
+
+1. Audit the existing `report.*` tRPC procedure response (head-dashboard
+   loader) and confirm it already returns `reportSectionId` + `projectId`
+   per cell. If not, widen the DTO before touching the web mapper.
+2. Replace `mock-data.ts` consumers with a real tRPC query in
+   `weekly-report-page.tsx` (or the dashboard's parent server component).
+3. Widen `TrafficLight` and `Lead` types as above; the synthetic mock can
+   stay as a Storybook/test fixture that supplies dummy UUIDs.
+4. In `product-accordion.tsx`, render `<OnTrackIcon sectionId={tl.reportSectionId} projectId={tl.projectId} />`
+   in each cell next to the existing traffic-light dot.
+5. Run the existing AI integration test (`ai.onTrack`) with seeded UUIDs
+   from `prisma/seed.ts` and confirm the icon round-trips through the
+   tRPC procedure end-to-end.
+
+**Estimated scope:** 1 plan, ~5 atomic commits, no new dependencies.
+Lands in v6.1 once the head review of golden-set thresholds (item 3
+above) is complete.
