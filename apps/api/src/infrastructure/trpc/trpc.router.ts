@@ -11,6 +11,7 @@ import {
   reportPeriodSchema,
   adminReminderRuleSchema,
   appSettingsUpdateSchema,
+  trafficLightHistoryInputSchema,
 } from '@customreport/shared';
 
 import {
@@ -36,6 +37,7 @@ import type { ArchiveService } from '../../modules/archive/archive.service.js';
 import type { PeriodService } from '../../modules/period/period.service.js';
 import type { WeeklyReportService } from '../../modules/weekly-report/weekly-report.service.js';
 import type { LeadFormService } from '../../modules/report-sections/lead-form.service.js';
+import type { AnalyticsService } from '../../modules/analytics/analytics.service.js';
 
 type RouterDeps = {
   prisma: PrismaClient;
@@ -50,6 +52,12 @@ type RouterDeps = {
   periodService: PeriodService;
   weeklyReportService: WeeklyReportService;
   leadFormService: LeadFormService;
+  /**
+   * Phase 30-01 (ANAL-01): analytics surface — traffic light history,
+   * lead velocity, period comparison. Cached via Redis with prefix-wide
+   * invalidation on PeriodService.publishPeriod / reopenPeriod.
+   */
+  analyticsService: AnalyticsService;
   /**
    * NOTIF-06 (Phase 29-05): read-only BullMQ Queue handle used by
    * `admin.dlqCount` to surface failed-job count. Optional so existing test
@@ -529,6 +537,23 @@ export function createAppRouter(deps: RouterDeps) {
         .mutation(async ({ input, ctx }) => {
           try {
             return await deps.leadFormService.requestReopen(input.reportSectionId, ctx.session.userId, input.reason);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === Analytics namespace (Phase 30-01..02) ===
+    // ANAL-01..03 use anyRoleProcedure because heads, leads, admins, and
+    // viewers all consume trend data. The repository layer enforces the
+    // published-only floor (PUBLISHED_FLOOR mirrors archive.prisma-repository
+    // pattern), so viewer sessions only ever see published-period rows.
+    analytics: router({
+      trafficLightHistory: anyRoleProcedure
+        .input(trafficLightHistoryInputSchema)
+        .query(async ({ input }) => {
+          try {
+            return await deps.analyticsService.trafficLightHistory(input);
           } catch (error) {
             throw mapDomainError(error);
           }

@@ -141,6 +141,30 @@ describe('PeriodService — publishPeriod (unit)', () => {
     expect(repo.publishPeriod).toHaveBeenCalledTimes(2);
   });
 
+  it('invalidates analytics cache on successful publish (ANAL-01)', async () => {
+    const reports = new Map([
+      [reportId, { id: reportId, status: 'draft', periodStatus: 'open', publishedAt: null }],
+    ]);
+    const invalidate = vi.fn(async () => undefined);
+    const service = new PeriodService(createSpyRepository(reports), invalidate);
+
+    await service.publishPeriod(reportId, headSession);
+
+    expect(invalidate).toHaveBeenCalledOnce();
+  });
+
+  it('does NOT invalidate analytics cache when publish fails', async () => {
+    const reports = new Map([
+      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date() }],
+    ]);
+    const invalidate = vi.fn(async () => undefined);
+    const service = new PeriodService(createSpyRepository(reports), invalidate);
+
+    await expect(service.publishPeriod(reportId, headSession)).rejects.toThrow();
+
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
   it('different reports are independent', async () => {
     const reports = new Map([
       [reportId, { id: reportId, status: 'draft', periodStatus: 'open', publishedAt: null }],
@@ -188,6 +212,18 @@ describe('PeriodService — reopenPeriod (unit)', () => {
 
     await expect(service.reopenPeriod(reportId)).rejects.toThrow();
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
+  });
+
+  it('invalidates analytics cache on successful reopen (ANAL-01)', async () => {
+    const reports = new Map([
+      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date() }],
+    ]);
+    const invalidate = vi.fn(async () => undefined);
+    const service = new PeriodService(createSpyRepository(reports), invalidate);
+
+    await service.reopenPeriod(reportId);
+
+    expect(invalidate).toHaveBeenCalledOnce();
   });
 
   it('double reopen of a reopened period fails', async () => {
