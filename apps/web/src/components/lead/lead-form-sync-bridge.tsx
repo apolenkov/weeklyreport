@@ -41,6 +41,13 @@ type BridgeContextValue = {
   products: Product[];
   risks: RiskEntry[];
   readOnly: boolean;
+  /**
+   * Active `ReportSection.id` UUID. Optional because the form may render
+   * before the first byPeriod query settles. When defined, child components
+   * may use it to wire features that need the section UUID (Phase 31 AI-03
+   * `<OnTrackIcon>`).
+   */
+  sectionId?: string;
   handleStageStatusChange: (
     productId: string,
     stageName: string,
@@ -68,6 +75,12 @@ export type LeadFormSyncBridgeProviderProps = {
   readonly onProductsChange: (next: Product[]) => void;
   readonly onRisksChange: (next: RiskEntry[]) => void;
   readonly readOnly?: boolean;
+  /**
+   * Active `ReportSection.id` UUID. Threaded into the bridge so children
+   * (notably `Pipeline` -> `SdlcPipeline`) can mount section-scoped AI
+   * advisory features without prop-drilling.
+   */
+  readonly sectionId?: string;
   readonly children: ReactNode;
 };
 
@@ -77,6 +90,7 @@ function Provider({
   onProductsChange,
   onRisksChange,
   readOnly = false,
+  sectionId,
   children,
 }: LeadFormSyncBridgeProviderProps) {
   const [pendingSuggestion, setPendingSuggestion] = useState<SuggestionParams | null>(
@@ -137,6 +151,7 @@ function Provider({
       products,
       risks,
       readOnly,
+      ...(sectionId !== undefined ? { sectionId } : {}),
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -145,6 +160,7 @@ function Provider({
       products,
       risks,
       readOnly,
+      sectionId,
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -183,6 +199,7 @@ function Pipeline() {
       products={ctx.products}
       readOnly={ctx.readOnly}
       onStatusChange={ctx.handleStageStatusChange}
+      {...(ctx.sectionId !== undefined ? { sectionId: ctx.sectionId } : {})}
     />
   );
 }

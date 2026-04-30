@@ -679,6 +679,7 @@ export function LeadForm({ period }: LeadFormProps) {
           onProductsChange={handleProductsChange}
           onRisksChange={handleRisksChange}
           readOnly={isReadOnly}
+          {...(activeSectionId ? { sectionId: activeSectionId } : {})}
         >
           {/* Product Status (SDLC Pipeline) */}
           <AccordionSection

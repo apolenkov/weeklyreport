@@ -192,6 +192,17 @@ function buildHarness(opts: {
         pathFilter: () => ({ queryKey: ['leadForm.restoreVersion'] }),
       },
     },
+    ai: {
+      // Phase 31 (AI-03): OnTrackIcon is mounted in SdlcPipeline; provide a
+      // stub so the lead-form test mock satisfies its useQuery call.
+      onTrack: {
+        queryOptions: () => ({
+          queryKey: ['ai.onTrack'],
+          queryFn: async () => ({ available: false } as const),
+        }),
+        pathFilter: () => ({ queryKey: ['ai.onTrack'] }),
+      },
+    },
     review: { dashboard: { pathFilter: () => ({ queryKey: ['review.dashboard'] }) } },
     archive: { list: { pathFilter: () => ({ queryKey: ['archive.list'] }) } },
     weeklyReport: { get: { pathFilter: () => ({ queryKey: ['weeklyReport.get'] }) } },

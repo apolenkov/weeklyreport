@@ -88,6 +88,13 @@ export type WeeklyProductReport = {
   status: WeeklyProductStatus;
   statusLabel: string;
   leads: string;
+  /**
+   * Real `ReportSection.id` UUID for AI advisory wiring (Phase 31 / AI-03).
+   * Sourced from the first `leadSection` whose `projects[]` contains this
+   * `productId`. May be `undefined` for products with no submitting lead in
+   * the current period; consumers must guard before mounting `<OnTrackIcon>`.
+   */
+  sectionId?: string;
   needsAttention?: string;
   needsAttentionSeverity?: 'blocked' | 'at-risk';
   currentWeek: WeeklyReportItem[];
@@ -307,6 +314,25 @@ function groupDecisionsAndPrioritiesByProject(
 }
 
 /**
+ * Build a `productId -> reportSectionId` map. Picks the first lead section
+ * whose `projects[]` contains the given productId; used to thread the
+ * UUID required by the `ai.onTrack` tRPC procedure (Phase 31 / AI-03).
+ */
+function buildProductToSectionMap(
+  sections: readonly ReportSectionReadModel[],
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const section of sections) {
+    for (const project of section.projects) {
+      if (!map.has(project.projectId)) {
+        map.set(project.projectId, section.reportSectionId);
+      }
+    }
+  }
+  return map;
+}
+
+/**
  * Find the first escalation that targets a given product and surface its
  * description as the `needsAttention` banner.
  */
@@ -352,6 +378,7 @@ export function mapWeeklyReport(
   const risksByProject = groupRisksByProject(api.leadSections);
   const { decisions: decisionsByProject, priorities: prioritiesByProject } =
     groupDecisionsAndPrioritiesByProject(api.leadSections);
+  const sectionByProject = buildProductToSectionMap(api.leadSections);
 
   // Portfolio rows + per-product reports — driven by api.portfolioOverview
   // (already aggregated server-side).
@@ -385,6 +412,8 @@ export function mapWeeklyReport(
 
     const attention = findNeedsAttention(api, overview.productName);
 
+    const sectionId = sectionByProject.get(overview.productId);
+
     products.push({
       id: overview.productId,
       initials,
@@ -393,6 +422,7 @@ export function mapWeeklyReport(
       statusLabel:
         status === 'on-track' ? 'On Track' : status === 'at-risk' ? 'At Risk' : 'Blocked',
       leads: leadsLabel,
+      ...(sectionId !== undefined ? { sectionId } : {}),
       ...(attention.needsAttention !== undefined
         ? { needsAttention: attention.needsAttention }
         : {}),

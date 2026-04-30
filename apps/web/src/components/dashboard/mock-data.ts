@@ -107,6 +107,13 @@ export type ProductReport = {
   status: ProductStatus;
   statusLabel: string;
   leads: string;
+  /**
+   * Real `ReportSection.id` UUID for AI advisory wiring (Phase 31 / AI-03).
+   * Threaded through `mapWeeklyReport` from the first lead section that
+   * authored content for this product. Optional because not every product
+   * has a submitting lead in every period.
+   */
+  sectionId?: string;
   needsAttention?: string;
   needsAttentionSeverity?: 'blocked' | 'at-risk';
   currentWeek: ReportItem[];
