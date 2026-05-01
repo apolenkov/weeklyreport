@@ -23,7 +23,7 @@ type Identity = {
 // (Polenkov is the canonical seed-simple lead), or viewer.
 const IDENTITIES: readonly Identity[] = [
   { label: 'Head', role: 'head', email: 'head@customreport.local' },
-  { label: 'Lead (Polenkov)', role: 'lead', email: 'polenkov@customreport.local' },
+  { label: 'Lead', role: 'lead', email: 'polenkov@customreport.local' },
   { label: 'Viewer', role: 'viewer', email: 'viewer@customreport.local' },
   { label: 'Admin', role: 'admin', email: 'admin@customreport.local' },
 ];
