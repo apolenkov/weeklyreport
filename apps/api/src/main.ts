@@ -67,6 +67,33 @@ async function bootstrap() {
   app.use(cookieParser());
   app.enableCors({ origin: env.FRONTEND_URL, credentials: true });
 
+  // HTTP access log — covers everything outside the tRPC adapter:
+  // /auth/saml/login, /auth/dev-login, /auth/saml/callback, /auth/logout,
+  // /pdfs/*, /health/*, /metrics, /admin/queues. tRPC has its own
+  // procedure-level middleware (trpc.middleware.ts) so we skip /trpc/*
+  // here to avoid duplicate envelopes for the same request.
+  app.use((req: express.Request, res: express.Response, nextFn: express.NextFunction) => {
+    if (req.path.startsWith('/trpc')) return nextFn();
+    const start = performance.now();
+    res.on('finish', () => {
+      const duration = Math.round(performance.now() - start);
+      // 4xx/5xx → warn so they show up at info-level prod logs;
+      // 1xx/2xx/3xx → debug so a quiet endpoint doesn't drown logs.
+      const status = res.statusCode;
+      const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'debug';
+      logger[level]('http request', {
+        phase: 'http.request',
+        method: req.method,
+        path: req.path,
+        status,
+        duration,
+        ip: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    });
+    nextFn();
+  });
+
   // NOTIF-06 (Phase 29-05): read-only Queue handle for the admin DLQ count.
   // Constructed once at boot; Express request lifecycle does not need its
   // own connection. Closed on app shutdown via enableShutdownHooks above.

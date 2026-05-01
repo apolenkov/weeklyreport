@@ -72,6 +72,25 @@ export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type, ge
       duration,
       status: 'success',
     });
+    // Debug-level snapshot of the response payload. Truncated to avoid
+    // bloating logs when a procedure returns large arrays (e.g.
+    // archive.list, analytics.weekly). 4 KB is enough to see shape +
+    // first-page contents; tail callers can paginate to see more.
+    try {
+      const serialised = JSON.stringify(result.data);
+      const preview = serialised && serialised.length > 4096
+        ? `${serialised.slice(0, 4096)}…<truncated ${serialised.length - 4096}b>`
+        : serialised;
+      ctx.logger.debug('trpc request output', {
+        phase: 'trpc.request',
+        stage: 'output',
+        procedure: path,
+        type,
+        outputPreview: preview,
+      });
+    } catch {
+      // Non-serialisable result — skip the breadcrumb rather than throw.
+    }
   } else {
     // Drill into TRPCError.cause so the log stream surfaces the real failure
     // (Prisma error, ZodError, raw Error, etc.) instead of just the generic
