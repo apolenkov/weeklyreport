@@ -18,13 +18,14 @@ type Identity = {
   email: string;
 };
 
+// Per-role default identities. Admin is the post-SAML default (mock SAML
+// login lands as admin); the picker lets the presenter swap to head, lead
+// (Polenkov is the canonical seed-simple lead), or viewer.
 const IDENTITIES: readonly Identity[] = [
   { label: 'Head', role: 'head', email: 'head@customreport.local' },
-  { label: 'Polenkov (lead)', role: 'lead', email: 'polenkov@customreport.local' },
-  { label: 'Maria (lead)', role: 'lead', email: 'maria@customreport.local' },
-  { label: 'Igor (lead)', role: 'lead', email: 'igor@customreport.local' },
-  { label: 'Admin', role: 'admin', email: 'admin@customreport.local' },
+  { label: 'Lead (Polenkov)', role: 'lead', email: 'polenkov@customreport.local' },
   { label: 'Viewer', role: 'viewer', email: 'viewer@customreport.local' },
+  { label: 'Admin', role: 'admin', email: 'admin@customreport.local' },
 ];
 
 export function DevRoleSwitcher() {

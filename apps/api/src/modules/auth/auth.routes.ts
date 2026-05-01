@@ -206,11 +206,29 @@ export function mountAuthRoutes(
   passport.use('saml', samlStrategy as unknown as passport.Strategy);
 
   // --- GET /auth/saml/login ---
-  expressApp.get(
-    '/auth/saml/login',
-    passport.initialize(),
-    passport.authenticate('saml', { session: false }),
-  );
+  // In AUTH_DEV_MODE, short-circuit to /auth/dev-login as admin (no real
+  // Keycloak running locally). Production registers the passport SAML
+  // handler unchanged. Express picks the first registered route, so the
+  // dev branch must be mounted BEFORE the passport handler — never both.
+  if (env.AUTH_DEV_MODE === 'true') {
+    expressApp.get('/auth/saml/login', (req: Request, res: Response) => {
+      const params = new URLSearchParams({
+        role: 'admin',
+        email: 'admin@customreport.local',
+      });
+      const next = typeof req.query.next === 'string' ? req.query.next : null;
+      if (next && next.startsWith('/') && !next.includes('://')) {
+        params.set('redirect', next);
+      }
+      res.redirect(`/auth/dev-login?${params.toString()}`);
+    });
+  } else {
+    expressApp.get(
+      '/auth/saml/login',
+      passport.initialize(),
+      passport.authenticate('saml', { session: false }),
+    );
+  }
 
   // --- POST /auth/saml/callback ---
   expressApp.post(
