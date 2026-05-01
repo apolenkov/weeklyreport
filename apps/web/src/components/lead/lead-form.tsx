@@ -437,20 +437,31 @@ export function LeadForm({ period }: LeadFormProps) {
   const isReadOnly = data.readOnly || !!period || isSubmitted;
 
   // ---- onChange merge handlers ----
-  // Decisions: merge text edits / deletions back into raw section by id,
-  // preserving owner/impact/deadline/resolvedAt fields the mapper drops.
+  // Decisions: merge text edits / additions / deletions back into raw section
+  // by id, preserving owner/impact/deadline/resolvedAt fields the mapper drops
+  // for existing rows. Newly-added rows (ids unseen in `prev`) are appended
+  // with safe schema defaults (owner/impact default to '' — the safeText
+  // helper accepts empty strings).
   function handleDecisionsChange(next: DecisionEntry[]) {
     setDraftSection((prev) => {
       if (!prev) return prev;
-      const nextIds = new Set(next.map((d) => d.id));
-      const surviving = prev.decisions.filter((d) =>
-        d.id ? nextIds.has(d.id) : true,
+      const existingById = new Map(
+        prev.decisions.filter((d) => d.id).map((d) => [d.id!, d] as const),
       );
-      // Apply text updates by id.
-      const byId = new Map(next.map((d) => [d.id, d.text] as const));
-      const merged = surviving.map((d) =>
-        d.id && byId.has(d.id) ? { ...d, text: byId.get(d.id)! } : d,
-      );
+      const merged = next.map((d) => {
+        const existing = existingById.get(d.id);
+        if (existing) {
+          return { ...existing, text: d.text };
+        }
+        return {
+          id: d.id,
+          text: d.text,
+          owner: '',
+          deadline: null,
+          impact: '',
+          resolvedAt: null,
+        };
+      });
       return { ...prev, decisions: merged };
     });
   }
@@ -505,14 +516,68 @@ export function LeadForm({ period }: LeadFormProps) {
   function handlePrioritiesChange(next: PriorityEntry[]) {
     setDraftSection((prev) => {
       if (!prev) return prev;
-      // Merge by rank (priorities have stable rank as identity in the UI).
-      const byRank = new Map<number, string>(next.map((p) => [p.rank as number, p.text]));
-      const merged = prev.priorities.map((p) =>
-        byRank.has(p.rank) ? { ...p, text: byRank.get(p.rank)! } : p,
-      );
-      return { ...prev, priorities: merged };
+      // Upsert by rank: ranks 1/2/3 are the stable identity in the UI. For
+      // each rank in the next array, update the existing raw priority if
+      // present, otherwise insert a new one (preserving any other ranks the
+      // user hasn't touched). Newly-inserted rows omit `id` so the server
+      // assigns one on save.
+      const existingByRank = new Map(prev.priorities.map((p) => [p.rank, p] as const));
+      const merged = next.map((p) => {
+        const existing = existingByRank.get(p.rank);
+        if (existing) {
+          return { ...existing, text: p.text };
+        }
+        return { rank: p.rank, text: p.text };
+      });
+      // Preserve any ranks the UI does not own (defensive — current UI emits
+      // 1/2/3 only).
+      const presentRanks = new Set(merged.map((p) => p.rank));
+      const preserved = prev.priorities.filter((p) => !presentRanks.has(p.rank));
+      const all = [...preserved, ...merged].sort((a, b) => a.rank - b.rank);
+      return { ...prev, priorities: all };
     });
   }
+
+  // Items: the section emits a presentation `KanbanItem[]` for one type
+  // (current or next). Merge it back into raw `draftSection.items` while
+  // preserving cross-type entries. For existing ids we keep the raw item's
+  // tag/workflowStatus/carriedOver/completed; for new ids we fill schema
+  // defaults so the row round-trips through `draftSaveSchema`.
+  function makeItemsChangeHandler(itemType: 'current' | 'next') {
+    return (next: KanbanItem[]) => {
+      setDraftSection((prev) => {
+        if (!prev) return prev;
+        const existingById = new Map(
+          prev.items
+            .filter((it) => it.type === itemType && it.id)
+            .map((it) => [it.id!, it] as const),
+        );
+        const mergedTyped = next.map((kb) => {
+          const existing = existingById.get(kb.id);
+          if (existing) {
+            return { ...existing, text: kb.text };
+          }
+          return {
+            id: kb.id,
+            projectId: kb.productId,
+            type: itemType,
+            text: kb.text,
+            tag: '',
+            workflowStatus: 'in_progress' as const,
+            carriedOver: false,
+            completed: null,
+          };
+        });
+        // Keep all items of the OTHER type unchanged; replace this type with
+        // the merged set.
+        const others = prev.items.filter((it) => it.type !== itemType);
+        return { ...prev, items: [...others, ...mergedTyped] };
+      });
+    };
+  }
+
+  const handleCurrentWeekItemsChange = makeItemsChangeHandler('current');
+  const handleNextWeekItemsChange = makeItemsChangeHandler('next');
 
   // ---- Action handlers ----
   function handleSubmit() {
@@ -697,7 +762,12 @@ export function LeadForm({ period }: LeadFormProps) {
             title="Current Week"
             badge={`${currentWeekItems.length} items`}
           >
-            <CurrentWeekSection items={currentWeekItems} readOnly={isReadOnly} />
+            <CurrentWeekSection
+              items={currentWeekItems}
+              readOnly={isReadOnly}
+              onItemsChange={handleCurrentWeekItemsChange}
+              currentUserName={currentUser.name}
+            />
           </AccordionSection>
 
           {/* Next Week */}
@@ -706,7 +776,12 @@ export function LeadForm({ period }: LeadFormProps) {
             title="Next Week"
             badge={`${nextWeekItems.length} items`}
           >
-            <NextWeekSection items={nextWeekItems} readOnly={isReadOnly} />
+            <NextWeekSection
+              items={nextWeekItems}
+              readOnly={isReadOnly}
+              onItemsChange={handleNextWeekItemsChange}
+              currentUserName={currentUser.name}
+            />
           </AccordionSection>
 
           {/* Risks & Blockers */}

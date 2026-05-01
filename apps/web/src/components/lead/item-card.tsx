@@ -1,3 +1,7 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+
 import type { KanbanItem } from './mock-data';
 
 type ItemCardProps = {
@@ -5,6 +9,20 @@ type ItemCardProps = {
   readonly onEdit?: (id: string) => void;
   readonly onDelete?: (id: string) => void;
   readonly readOnly?: boolean;
+  /**
+   * When true, the card renders an inline textarea seeded with `item.text`
+   * instead of the static text. Blur, Enter, or Escape commit/cancel via
+   * `onTextSave`. Owned by the parent section so only one card is editable
+   * at a time.
+   */
+  readonly isEditing?: boolean;
+  /**
+   * Commit handler for inline edit. Called with `(id, nextText)` on Enter or
+   * blur. Called with the original text on Escape (caller treats this as a
+   * no-op-but-close signal). The parent section is responsible for clearing
+   * its `editingId` state.
+   */
+  readonly onTextSave?: (id: string, nextText: string) => void;
 };
 
 const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
@@ -31,10 +49,48 @@ function DeleteIcon() {
   );
 }
 
-export function ItemCard({ item, onEdit, onDelete, readOnly = false }: ItemCardProps) {
+export function ItemCard({
+  item,
+  onEdit,
+  onDelete,
+  readOnly = false,
+  isEditing = false,
+  onTextSave,
+}: ItemCardProps) {
   const badge = STATUS_BADGE[item.status] ?? STATUS_BADGE['in-progress']!;
   const isBlocked = item.status === 'blocked';
   const isPlanned = item.status === 'planned';
+
+  // Local draft for the inline textarea. Reset every time edit mode opens so
+  // the field tracks the latest committed text.
+  const [draft, setDraft] = useState(item.text);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      setDraft(item.text);
+      // Defer focus so the textarea exists in the DOM.
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.select();
+      });
+    }
+  }, [isEditing, item.text]);
+
+  function commit(next: string) {
+    onTextSave?.(item.id, next);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      commit(draft);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      // Cancel: re-emit original text, parent clears edit mode.
+      commit(item.text);
+    }
+  }
 
   return (
     <div
@@ -47,7 +103,7 @@ export function ItemCard({ item, onEdit, onDelete, readOnly = false }: ItemCardP
       }}
     >
       {/* Action buttons */}
-      {!readOnly && (
+      {!readOnly && !isEditing && (
         <div className="absolute right-2 top-2 flex gap-0.5 opacity-30 transition-opacity group-hover:opacity-100">
           <button
             type="button"
@@ -76,8 +132,21 @@ export function ItemCard({ item, onEdit, onDelete, readOnly = false }: ItemCardP
         {badge.label}
       </span>
 
-      {/* Item text */}
-      <div className="text-sm text-[var(--color-foreground)]">{item.text}</div>
+      {/* Item text — editable when in edit mode, static otherwise */}
+      {isEditing && !readOnly ? (
+        <textarea
+          ref={textareaRef}
+          className="w-full resize-y rounded-md border border-[var(--color-starbucks-accent)] bg-white px-2 py-1.5 text-sm text-[var(--color-foreground)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+          style={{ minHeight: '52px' }}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => commit(draft)}
+          onKeyDown={handleKeyDown}
+          aria-label="Edit item text"
+        />
+      ) : (
+        <div className="text-sm text-[var(--color-foreground)]">{item.text}</div>
+      )}
 
       {/* Author */}
       <div className="mt-auto pt-2 text-[11px] text-[var(--color-muted-foreground)]">
