@@ -34,5 +34,13 @@ export function mapDomainError(error: unknown): TRPCError {
     return new TRPCError({ code: 'BAD_REQUEST', message: error.message, cause: error });
   }
 
-  return new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unexpected error' });
+  // Unknown error path: preserve `cause` so the loggingMiddleware can log
+  // the underlying stack/constructor/message. Without this, every internal
+  // bug surfaces as a contextless "Unexpected error" line and the actual
+  // root cause is unrecoverable from the log stream.
+  return new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: 'Unexpected error',
+    cause: error instanceof Error ? error : undefined,
+  });
 }

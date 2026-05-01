@@ -18,7 +18,7 @@ const t = initTRPC.context<TrpcContext>().create({ transformer: superjson });
  * Applied BEFORE auth middleware on every procedure helper so that failed-auth
  * attempts are still recorded (security forensics > anonymous-noise risk).
  */
-export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type }) => {
+export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type, getRawInput }) => {
   // Phase 31 (AI-SPEC §5.3 / PITFALLS C-3): AI prompts and responses must
   // never reach the structured log stream. Token usage and timing are
   // recorded in AiInsight rows instead.
@@ -37,6 +37,28 @@ export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type }) 
     userId,
   });
 
+  // Debug-level dump of the raw input. Gated behind LOG_LEVEL=debug so the
+  // hot path stays cheap in info-level prod logs. Avoid logging when the
+  // input contains sensitive auth payloads (none today, but keep the
+  // breadcrumb here in case auth.* gains an input in future).
+  if (path !== 'auth.login' && path !== 'auth.refresh') {
+    try {
+      const rawInput = await getRawInput();
+      if (rawInput !== undefined) {
+        ctx.logger.debug('trpc request input', {
+          phase: 'trpc.request',
+          stage: 'input',
+          procedure: path,
+          type,
+          input: rawInput,
+        });
+      }
+    } catch {
+      // getRawInput() can throw on malformed bodies — the actual error will
+      // still surface from next() below, so just skip the debug breadcrumb.
+    }
+  }
+
   const result = await next();
   const duration = Math.round(performance.now() - start);
 
@@ -51,6 +73,27 @@ export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type }) 
       status: 'success',
     });
   } else {
+    // Drill into TRPCError.cause so the log stream surfaces the real failure
+    // (Prisma error, ZodError, raw Error, etc.) instead of just the generic
+    // 'Unexpected error' wrapper from trpc.error-mapper.ts. This is the
+    // single biggest payoff for backend debuggability — a TRPCError with
+    // code=INTERNAL_SERVER_ERROR is otherwise opaque.
+    const cause = result.error.cause;
+    const causeInfo =
+      cause instanceof Error
+        ? {
+            name: cause.constructor.name,
+            message: cause.message,
+            stack: cause.stack,
+            // Prisma errors: surface code + meta so query failures are
+            // identifiable without re-running with debug enabled.
+            ...('code' in cause ? { causeCode: (cause as { code?: unknown }).code } : {}),
+            ...('meta' in cause ? { causeMeta: (cause as { meta?: unknown }).meta } : {}),
+          }
+        : cause !== undefined
+          ? { rawCause: String(cause) }
+          : undefined;
+
     ctx.logger.error('trpc request end', {
       phase: 'trpc.request',
       stage: 'end',
@@ -59,7 +102,12 @@ export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type }) 
       userId,
       duration,
       status: 'error',
-      error: { code: result.error.code, message: result.error.message },
+      error: {
+        code: result.error.code,
+        message: result.error.message,
+        stack: result.error.stack,
+        ...(causeInfo ? { cause: causeInfo } : {}),
+      },
     });
   }
 

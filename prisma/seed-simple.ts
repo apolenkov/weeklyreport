@@ -179,7 +179,7 @@ async function main() {
     await prisma.item.createMany({
       data: [
         {
-          id: `a0000000-0000-4000-8000-00000000050${i + 1}a`,
+          id: `a0000000-0000-4000-8000-00000005${i + 1}001`,
           reportSectionId: sectionId,
           type: ItemType.current,
           projectId: lead.productId,
@@ -189,7 +189,7 @@ async function main() {
           carriedOver: false,
         },
         {
-          id: `a0000000-0000-4000-8000-00000000050${i + 1}b`,
+          id: `a0000000-0000-4000-8000-00000005${i + 1}002`,
           reportSectionId: sectionId,
           type: ItemType.next,
           projectId: lead.productId,
