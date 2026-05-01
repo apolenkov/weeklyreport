@@ -119,28 +119,55 @@ export default function LoginPage() {
 
           {/* SSO button — or direct entry when stub / dev-role-switcher */}
           {DEV_ROLE_SWITCHER ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 py-2">
+            <div className="space-y-4">
+              {/* Primary CTA — default identity (admin) */}
+              {(() => {
+                const def = devLoginIdentities.find((i) => i.role === 'admin') ?? devLoginIdentities[0];
+                return (
+                  <a
+                    href={devLoginHref(def.role, def.email)}
+                    className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-all hover:bg-[var(--color-primary)] hover:-translate-y-px"
+                    style={{ minHeight: '52px', boxShadow: '0 2px 12px rgba(0,98,65,0.2)' }}
+                    data-testid={`dev-login-default-${def.role}-${def.email}`}
+                  >
+                    <span aria-hidden>{def.icon}</span>
+                    Sign in as {def.label}
+                  </a>
+                );
+              })()}
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 py-1">
                 <div className="h-px flex-1 bg-[#ece8e2]" />
-                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                  DEV: select identity
+                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+                  or sign in as
                 </span>
                 <div className="h-px flex-1 bg-[#ece8e2]" />
               </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                {devLoginIdentities.map(({ label, role, email, icon }) => (
-                  <a
-                    key={email}
-                    href={devLoginHref(role, email)}
-                    className="flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-foreground)] transition-all hover:border-[rgba(0,0,0,0.24)] hover:bg-[#f8f6f2]"
-                    style={{ minHeight: '44px' }}
-                    data-testid={`dev-login-${role}-${email}`}
-                  >
-                    <span>{icon}</span>
-                    {label}
-                  </a>
-                ))}
+
+              {/* Fineprint — non-default identities as small inline links */}
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-[12px] leading-relaxed">
+                {devLoginIdentities
+                  .filter((i) => i.role !== 'admin')
+                  .map(({ label, role, email }, idx, arr) => (
+                    <span key={email} className="inline-flex items-center">
+                      <a
+                        href={devLoginHref(role, email)}
+                        className="text-[var(--color-muted-foreground)] underline-offset-4 transition-colors hover:text-[var(--color-foreground)] hover:underline"
+                        data-testid={`dev-login-${role}-${email}`}
+                      >
+                        {label}
+                      </a>
+                      {idx < arr.length - 1 && (
+                        <span aria-hidden className="ml-3 text-[var(--color-muted-foreground)]/40">·</span>
+                      )}
+                    </span>
+                  ))}
               </div>
+
+              <p className="text-center text-[11px] tracking-[0.04em] text-[var(--color-muted-foreground)]/70">
+                DEV mode · seeded identities · no Keycloak required
+              </p>
             </div>
           ) : AUTH_STUB ? (
             <div className="space-y-3">
