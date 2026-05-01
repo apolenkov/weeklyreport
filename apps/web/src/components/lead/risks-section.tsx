@@ -1,6 +1,6 @@
 'use client';
 
-import type { RiskEntry } from './mock-data';
+import type { Product, RiskEntry } from './mock-data';
 
 type RisksSectionProps = {
   readonly risks: RiskEntry[];
@@ -9,6 +9,14 @@ type RisksSectionProps = {
   readonly onChange?: (next: RiskEntry[]) => void;
   /** Fired when the text of a risk transitions empty -> non-empty (used by status<->risk sync). */
   readonly onRiskFilled?: (riskId: string) => void;
+  /**
+   * Products list — used to seed `productId`/`productName`/`stageName` for
+   * newly-added empty risk rows. The first product's first "mine" stage (or
+   * its first stage as fallback) is chosen so the schema's `projectId` UUID
+   * constraint is satisfied. Optional: if absent or empty, the +Add Risk
+   * button is hidden.
+   */
+  readonly products?: Product[];
 };
 
 function DeleteIcon() {
@@ -24,10 +32,33 @@ export function RisksSection({
   readOnly = false,
   onChange,
   onRiskFilled,
+  products,
 }: RisksSectionProps) {
   function handleDelete(id: string) {
     if (readOnly) return;
     onChange?.(risks.filter((r) => r.id !== id));
+  }
+
+  function handleAdd() {
+    if (readOnly) return;
+    const seedProduct = products?.[0];
+    if (!seedProduct) return;
+    // Prefer the lead's own stage when available so the suggestion to lift
+    // the stage status to "at-risk" lands on a stage they own.
+    const mineStage = seedProduct.stages.find((s) => s.ownership === 'mine');
+    const seedStage = mineStage ?? seedProduct.stages[0];
+    const stageName = seedStage?.stageName ?? '—';
+    onChange?.([
+      ...risks,
+      {
+        id: crypto.randomUUID(),
+        productId: seedProduct.id,
+        productName: seedProduct.name,
+        stageName,
+        severity: 'at-risk',
+        text: '',
+      },
+    ]);
   }
 
   function handleTextChange(id: string, newText: string) {
@@ -102,10 +133,11 @@ export function RisksSection({
         );
       })}
 
-      {!readOnly && (
+      {!readOnly && products && products.length > 0 && (
         <button
           type="button"
           className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+          onClick={handleAdd}
         >
           + Add Risk
         </button>

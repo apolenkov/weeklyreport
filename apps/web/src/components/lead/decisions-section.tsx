@@ -6,6 +6,12 @@ type DecisionsSectionProps = {
   readonly decisions: DecisionEntry[];
   readonly readOnly?: boolean;
   readonly onChange?: (decisions: DecisionEntry[]) => void;
+  /**
+   * Optional default product label for newly-added decisions. The decision
+   * schema is department-scoped (no projectId), so this only seeds the chip
+   * shown above the input. Falls back to "Department".
+   */
+  readonly defaultProductName?: string;
 };
 
 function DeleteIcon() {
@@ -16,15 +22,35 @@ function DeleteIcon() {
   );
 }
 
-export function DecisionsSection({ decisions, readOnly = false, onChange }: DecisionsSectionProps) {
+export function DecisionsSection({
+  decisions,
+  readOnly = false,
+  onChange,
+  defaultProductName,
+}: DecisionsSectionProps) {
   function handleDelete(id: string) {
+    if (readOnly) return;
     onChange?.(decisions.filter((d) => d.id !== id));
   }
 
   function handleTextChange(id: string, newText: string) {
+    if (readOnly) return;
     onChange?.(
       decisions.map((d) => (d.id === id ? { ...d, text: newText } : d)),
     );
+  }
+
+  function handleAdd() {
+    if (readOnly) return;
+    onChange?.([
+      ...decisions,
+      {
+        id: crypto.randomUUID(),
+        productId: '',
+        productName: defaultProductName ?? 'Department',
+        text: '',
+      },
+    ]);
   }
 
   return (
@@ -66,6 +92,7 @@ export function DecisionsSection({ decisions, readOnly = false, onChange }: Deci
         <button
           type="button"
           className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+          onClick={handleAdd}
         >
           + Add Decision
         </button>

@@ -133,9 +133,53 @@ function Provider({
   const handleRisksChange = useCallback(
     (next: RiskEntry[]) => {
       if (readOnly) return;
+      // Detect (productId, stageName) tuples that were present in `risks` but
+      // have zero remaining entries after this change. For each, reset the
+      // matching stage's status back to 'on-track' so the "× Blocked" / risk
+      // marker on the SDLC pipeline disappears symmetrically with the
+      // existing additive auto-sync (handleStageStatusChange + handleRiskFilled).
+      const nextCounts = new Map<string, number>();
+      for (const r of next) {
+        const key = `${r.productId}::${r.stageName}`;
+        nextCounts.set(key, (nextCounts.get(key) ?? 0) + 1);
+      }
+      const stagesToClear: { productId: string; stageName: string }[] = [];
+      const seen = new Set<string>();
+      for (const r of risks) {
+        const key = `${r.productId}::${r.stageName}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if ((nextCounts.get(key) ?? 0) === 0) {
+          stagesToClear.push({ productId: r.productId, stageName: r.stageName });
+        }
+      }
+
       onRisksChange(next);
+
+      if (stagesToClear.length > 0) {
+        // Reset the affected stages to 'on-track' via the same
+        // onProductsChange path the pipeline uses. Only clear stages that
+        // are currently flagged at-risk/blocked — leave on-track / empty
+        // alone so we don't overwrite an already-clean state.
+        const cleared = products.map((p) => {
+          const productClears = stagesToClear.filter((s) => s.productId === p.id);
+          if (productClears.length === 0) return p;
+          return {
+            ...p,
+            stages: p.stages.map((s) => {
+              const hit = productClears.find((c) => c.stageName === s.stageName);
+              if (!hit) return s;
+              if (s.status === 'at-risk' || s.status === 'blocked') {
+                return { ...s, status: 'on-track' as const };
+              }
+              return s;
+            }),
+          };
+        });
+        onProductsChange(cleared);
+      }
     },
-    [readOnly, onRisksChange],
+    [readOnly, onRisksChange, onProductsChange, products, risks],
   );
 
   const handleRiskFilled = useCallback(
@@ -212,6 +256,7 @@ function Risks() {
       readOnly={ctx.readOnly}
       onChange={ctx.handleRisksChange}
       onRiskFilled={ctx.handleRiskFilled}
+      products={ctx.products}
     />
   );
 }
