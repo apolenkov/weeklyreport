@@ -191,6 +191,13 @@ function AccordionSection({
  * decisions, tag/workflowStatus on items, etc.) so this round-trips cleanly.
  */
 function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayload {
+  // Drop rows whose required text fields are empty or whitespace-only. The
+  // server's safeText({min:1}) Zod refinement rejects them, which would
+  // otherwise produce "Save failed" toast every time the user clicks
+  // "+ Add Risk/Decision/Item" before typing. Empty rows live only in
+  // local UI state until the user fills them in; once any required field
+  // becomes non-empty the row joins the autosave payload.
+  const hasText = (s: string | null | undefined) => typeof s === 'string' && s.trim().length > 0;
   return {
     reportSectionId: section.reportSectionId,
     status: 'draft',
@@ -198,36 +205,44 @@ function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayloa
       projectId: p.projectId,
       status: p.trafficLight ?? undefined,
     })),
-    items: section.items.map((it) => ({
-      id: it.id,
-      projectId: it.projectId,
-      type: it.type,
-      text: it.text,
-      tag: it.tag,
-      workflowStatus: it.workflowStatus,
-      carriedOver: it.carriedOver ?? false,
-      completed: it.completed ?? null,
-    })),
-    risks: section.risks.map((r) => ({
-      id: r.id,
-      projectId: r.projectId,
-      risk: r.risk,
-      impact: r.impact,
-      mitigation: r.mitigation,
-    })),
-    decisions: section.decisions.map((d) => ({
-      id: d.id,
-      text: d.text,
-      owner: d.owner,
-      deadline: d.deadline ?? null,
-      impact: d.impact,
-      resolvedAt: d.resolvedAt ?? null,
-    })),
-    priorities: section.priorities.map((p) => ({
-      id: p.id,
-      rank: p.rank,
-      text: p.text,
-    })),
+    items: section.items
+      .filter((it) => hasText(it.text))
+      .map((it) => ({
+        id: it.id,
+        projectId: it.projectId,
+        type: it.type,
+        text: it.text,
+        tag: it.tag,
+        workflowStatus: it.workflowStatus,
+        carriedOver: it.carriedOver ?? false,
+        completed: it.completed ?? null,
+      })),
+    risks: section.risks
+      .filter((r) => hasText(r.risk) && hasText(r.mitigation))
+      .map((r) => ({
+        id: r.id,
+        projectId: r.projectId,
+        risk: r.risk,
+        impact: r.impact,
+        mitigation: r.mitigation,
+      })),
+    decisions: section.decisions
+      .filter((d) => hasText(d.text))
+      .map((d) => ({
+        id: d.id,
+        text: d.text,
+        owner: d.owner,
+        deadline: d.deadline ?? null,
+        impact: d.impact,
+        resolvedAt: d.resolvedAt ?? null,
+      })),
+    priorities: section.priorities
+      .filter((p) => hasText(p.text))
+      .map((p) => ({
+        id: p.id,
+        rank: p.rank,
+        text: p.text,
+      })),
   };
 }
 
