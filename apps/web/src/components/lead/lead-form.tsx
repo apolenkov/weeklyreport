@@ -227,7 +227,7 @@ function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayloa
         mitigation: r.mitigation,
       })),
     decisions: section.decisions
-      .filter((d) => hasText(d.text))
+      .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
       .map((d) => ({
         id: d.id,
         text: d.text,
@@ -471,9 +471,11 @@ export function LeadForm({ period }: LeadFormProps) {
         return {
           id: d.id,
           text: d.text,
-          owner: '',
+          // safeText({min:1}) on owner/impact — UI doesn't surface them yet
+          // so we seed placeholders that survive autosave validation.
+          owner: 'TBD',
           deadline: null,
-          impact: '',
+          impact: 'TBD',
           resolvedAt: null,
         };
       });
@@ -521,7 +523,10 @@ export function LeadForm({ period }: LeadFormProps) {
           projectId: r.productId,
           risk: r.text,
           impact: r.severity === 'blocked' ? 'high' : 'medium',
-          mitigation: '',
+          // Schema requires safeText({min:1}); UI does not yet surface a
+          // mitigation field, so seed with a placeholder so newly-added
+          // rows pass autosave once the user types into `risk`.
+          mitigation: 'TBD',
         };
       });
       return { ...prev, risks: merged };
@@ -577,7 +582,10 @@ export function LeadForm({ period }: LeadFormProps) {
             projectId: kb.productId,
             type: itemType,
             text: kb.text,
-            tag: '',
+            // Schema requires safeText({min:1}) on tag; UI has no tag picker
+            // yet, so we seed a default that satisfies validation. The empty
+            // tag would otherwise trip Zod the first time autosave fires.
+            tag: 'general',
             workflowStatus: 'in_progress' as const,
             carriedOver: false,
             completed: null,

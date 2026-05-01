@@ -326,10 +326,14 @@ export function mapLeadItems(
 }
 
 /**
- * Map a section's risks into RiskEntry presentation rows. Severity defaults to
- * 'at-risk' (the schema does not expose severity); risks tagged via the
- * impact/mitigation text continue to render. The `text` field concatenates
- * `risk` + " — Impact: " + impact + " — Mitigation: " + mitigation.
+ * Map a section's risks into RiskEntry presentation rows. The UI surfaces a
+ * single textarea for the user-controlled `risk` field; impact/mitigation are
+ * stored on the raw row but not shown (handler keeps non-empty defaults so
+ * the schema's safeText({min:1}) refinement on those fields stays satisfied).
+ *
+ * Earlier the mapper concatenated `${risk} — Impact: ${impact} — Mitigation: ${mitigation}`
+ * into `text`, but `handleRisksChange` writes `risk: r.text` straight back, so
+ * every render double-concatenated the existing fields and corrupted the row.
  */
 export function mapLeadRisks(
   section: ReportSectionReadModel,
@@ -337,14 +341,13 @@ export function mapLeadRisks(
   const projectIndex = buildProjectIndex(section);
   return section.risks.map((r, idx) => {
     const project = projectIndex.get(r.projectId);
-    const text = `${r.risk} — Impact: ${r.impact} — Mitigation: ${r.mitigation}`;
     return {
       id: r.id ?? `risk-${idx}`,
       productId: r.projectId,
       productName: project?.name ?? 'Unknown',
       stageName: '—',
       severity: 'at-risk' as const,
-      text,
+      text: r.risk,
     };
   });
 }
