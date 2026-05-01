@@ -20,6 +20,8 @@
 
 import 'dotenv/config';
 
+import { randomUUID } from 'node:crypto';
+
 import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import {
@@ -176,6 +178,8 @@ async function main() {
       },
     });
 
+    // 3 current-week items per lead — mix of workflow states so traffic-light
+    // sync, blocker badges, and "completed" toggles are all demoable.
     await prisma.item.createMany({
       data: [
         {
@@ -183,18 +187,52 @@ async function main() {
           reportSectionId: sectionId,
           type: ItemType.current,
           projectId: lead.productId,
-          text: `Demo current-week item for ${lead.label}`,
+          text: `Refactored auth flow for ${lead.label}'s product`,
           tag: 'feature',
-          workflowStatus: ItemWorkflowStatus.in_progress,
+          workflowStatus: lead.lightStatus === TrafficLightStatus.red
+            ? ItemWorkflowStatus.blocked
+            : ItemWorkflowStatus.in_progress,
           carriedOver: false,
         },
         {
           id: `a0000000-0000-4000-8000-00000005${i + 1}002`,
           reportSectionId: sectionId,
+          type: ItemType.current,
+          projectId: lead.productId,
+          text: `Shipped weekly metrics dashboard for ${lead.label}'s product`,
+          tag: 'feature',
+          workflowStatus: ItemWorkflowStatus.done,
+          carriedOver: false,
+          completed: true,
+        },
+        {
+          id: `a0000000-0000-4000-8000-00000005${i + 1}003`,
+          reportSectionId: sectionId,
+          type: ItemType.current,
+          projectId: lead.productId,
+          text: `Bug-fix sprint: 4 production tickets resolved`,
+          tag: 'bugfix',
+          workflowStatus: ItemWorkflowStatus.in_progress,
+          carriedOver: true,
+        },
+        // 2 next-week items per lead
+        {
+          id: `a0000000-0000-4000-8000-00000005${i + 1}004`,
+          reportSectionId: sectionId,
           type: ItemType.next,
           projectId: lead.productId,
-          text: `Demo next-week item for ${lead.label}`,
-          tag: 'feature',
+          text: `Plan: integration tests + E2E coverage for new auth flow`,
+          tag: 'infra',
+          workflowStatus: ItemWorkflowStatus.in_progress,
+          carriedOver: false,
+        },
+        {
+          id: `a0000000-0000-4000-8000-00000005${i + 1}005`,
+          reportSectionId: sectionId,
+          type: ItemType.next,
+          projectId: lead.productId,
+          text: `Plan: roadmap review with stakeholders`,
+          tag: 'ops',
           workflowStatus: ItemWorkflowStatus.in_progress,
           carriedOver: false,
         },
@@ -207,18 +245,141 @@ async function main() {
           id: `a0000000-0000-4000-8000-00000000090${i + 1}`,
           reportSectionId: sectionId,
           projectId: lead.productId,
-          risk: `Demo risk for ${lead.label}`,
-          impact: 'Mitigation in progress',
-          mitigation: 'Pairing with team',
+          risk: lead.lightStatus === TrafficLightStatus.red
+            ? `Critical: external API regression blocking ${lead.label}'s integration`
+            : `Capacity risk: 1 engineer out sick this week`,
+          impact: lead.lightStatus === TrafficLightStatus.red ? 'high' : 'medium',
+          mitigation: lead.lightStatus === TrafficLightStatus.red
+            ? 'Vendor escalation in progress; ETA 48h'
+            : 'Workload reshuffled across remaining team',
         },
       });
     }
 
+    // 2 decisions per lead — needed for deadline / owner / impact CRUD demo.
+    await prisma.decision.createMany({
+      data: [
+        {
+          id: `a0000000-0000-4000-8000-00000000070${i + 1}`,
+          reportSectionId: sectionId,
+          text: `Approve hiring of 2 SDETs for ${lead.label}'s team in Q3`,
+          owner: lead.label,
+          impact: 'high',
+        },
+        {
+          id: randomUUID(),
+          reportSectionId: sectionId,
+          text: `Decision: switch monitoring stack to Grafana + Loki`,
+          owner: 'Head',
+          impact: 'medium',
+          deadline: new Date('2026-05-15T00:00:00Z'),
+        },
+      ],
+    });
+
+    // 3 priorities per lead — fills all 3 fixed slots in the new UI.
+    await prisma.priority.createMany({
+      data: [
+        {
+          id: `a0000000-0000-4000-8000-00000000080${i + 1}`,
+          reportSectionId: sectionId,
+          text: `Unblock ${lead.label}'s critical-path delivery`,
+          rank: 1,
+        },
+        {
+          id: randomUUID(),
+          reportSectionId: sectionId,
+          text: `Hire SDET (interview pipeline ready)`,
+          rank: 2,
+        },
+        {
+          id: randomUUID(),
+          reportSectionId: sectionId,
+          text: `Reduce on-call paging volume by 30%`,
+          rank: 3,
+        },
+      ],
+    });
+  }
+
+  console.log('[seed-simple] Creating version snapshots (Polenkov section, 2 versions)...');
+  // VersionSnapshot rows feed the "previous version" picker — at least 2
+  // versions needed so the chevrons activate and Restore is testable.
+  const polenkovSectionId = `a0000000-0000-4000-8000-000000000401`;
+  await prisma.versionSnapshot.createMany({
+    data: [
+      {
+        id: randomUUID(),
+        reportSectionId: polenkovSectionId,
+        version: 1,
+        data: { note: 'initial draft', items: [], risks: [], decisions: [], priorities: [] },
+      },
+      {
+        id: randomUUID(),
+        reportSectionId: polenkovSectionId,
+        version: 2,
+        data: { note: 'after first save', items: [], risks: [], decisions: [], priorities: [] },
+      },
+    ],
+  });
+
+  console.log('[seed-simple] Creating published Week 15 sections (for Fill-from-Previous)...');
+  // Each lead's previous-week submission, status=submitted, with one item
+  // per type and one priority — enough to populate the "Fill from Previous"
+  // copy flow.
+  for (let i = 0; i < leads.length; i++) {
+    const lead = leads[i]!;
+    const prevSectionId = `a0000000-0000-4000-8000-00000000041${i + 1}`;
+    await prisma.reportSection.create({
+      data: {
+        id: prevSectionId,
+        reportId: REPORT_PUBLISHED,
+        authorId: lead.id,
+        status: ReportSectionStatus.submitted,
+        submittedAt: new Date('2026-04-10T14:00:00Z'),
+      },
+    });
+
+    await prisma.projectStatus.create({
+      data: {
+        id: randomUUID(),
+        reportSectionId: prevSectionId,
+        projectId: lead.productId,
+        status: TrafficLightStatus.green,
+      },
+    });
+
+    await prisma.item.createMany({
+      data: [
+        {
+          id: randomUUID(),
+          reportSectionId: prevSectionId,
+          type: ItemType.current,
+          projectId: lead.productId,
+          text: `Last week: closed sprint goals for ${lead.label}'s team`,
+          tag: 'feature',
+          workflowStatus: ItemWorkflowStatus.done,
+          carriedOver: false,
+          completed: true,
+        },
+        {
+          id: randomUUID(),
+          reportSectionId: prevSectionId,
+          type: ItemType.next,
+          projectId: lead.productId,
+          text: `Carry over: continue auth-flow refactor`,
+          tag: 'feature',
+          workflowStatus: ItemWorkflowStatus.in_progress,
+          carriedOver: false,
+        },
+      ],
+    });
+
     await prisma.priority.create({
       data: {
-        id: `a0000000-0000-4000-8000-00000000080${i + 1}`,
-        reportSectionId: sectionId,
-        text: `Top priority for ${lead.label} this week`,
+        id: randomUUID(),
+        reportSectionId: prevSectionId,
+        text: `Week 15 priority for ${lead.label}`,
         rank: 1,
       },
     });
@@ -257,7 +418,9 @@ async function main() {
     items: await prisma.item.count(),
     statuses: await prisma.projectStatus.count(),
     risks: await prisma.risk.count(),
+    decisions: await prisma.decision.count(),
     priorities: await prisma.priority.count(),
+    versionSnapshots: await prisma.versionSnapshot.count(),
     reminders: await prisma.reminderRule.count(),
   };
   console.log(`[seed-simple] Done: ${JSON.stringify(counts)}`);
