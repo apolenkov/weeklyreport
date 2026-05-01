@@ -3,12 +3,27 @@
 import { useSearchParams } from 'next/navigation';
 
 const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
+const DEV_ROLE_SWITCHER = process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === 'true';
 
 const stubRoles = [
   { label: 'Enter as Lead', redirect: '/lead/report', icon: '📝' },
   { label: 'Enter as Head', redirect: '/head/dashboard', icon: '👔' },
   { label: 'Enter as Admin', redirect: '/admin', icon: '⚙️' },
   { label: 'Enter as Viewer', redirect: '/reports/history', icon: '👁' },
+] as const;
+
+// Dev-mode picker: each option hits /auth/dev-login, which issues a real
+// JWT cookie via buildUserSession() — i.e. the post-SAML state is reached
+// without any Keycloak roundtrip. Mirrors the seed-simple identities so
+// the role-switcher widget on (app)/ pages stays consistent with the
+// landing page.
+const devLoginIdentities = [
+  { label: 'Head', role: 'head', email: 'head@customreport.local', icon: '👔' },
+  { label: 'Platanov (lead)', role: 'lead', email: 'platanov@customreport.local', icon: '📝' },
+  { label: 'Maria (lead)', role: 'lead', email: 'maria@customreport.local', icon: '📝' },
+  { label: 'Igor (lead)', role: 'lead', email: 'igor@customreport.local', icon: '📝' },
+  { label: 'Admin', role: 'admin', email: 'admin@customreport.local', icon: '⚙️' },
+  { label: 'Viewer', role: 'viewer', email: 'viewer@customreport.local', icon: '👁' },
 ] as const;
 
 const DEFAULT_REDIRECT = '/head/dashboard';
@@ -36,6 +51,11 @@ export default function LoginPage() {
     safeNext === DEFAULT_REDIRECT
       ? '/auth/saml/login'
       : `/auth/saml/login?next=${encodeURIComponent(safeNext)}`;
+  const devLoginHref = (role: string, email: string) => {
+    const params = new URLSearchParams({ role, email });
+    if (safeNext !== DEFAULT_REDIRECT) params.set('redirect', safeNext);
+    return `/auth/dev-login?${params.toString()}`;
+  };
 
   return (
     <main id="main-content" className="flex min-h-svh">
@@ -97,8 +117,32 @@ export default function LoginPage() {
             Weekly Status Reporting System
           </p>
 
-          {/* SSO button — or direct entry when stub */}
-          {AUTH_STUB ? (
+          {/* SSO button — or direct entry when stub / dev-role-switcher */}
+          {DEV_ROLE_SWITCHER ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 py-2">
+                <div className="h-px flex-1 bg-[#ece8e2]" />
+                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                  DEV: select identity
+                </span>
+                <div className="h-px flex-1 bg-[#ece8e2]" />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {devLoginIdentities.map(({ label, role, email, icon }) => (
+                  <a
+                    key={email}
+                    href={devLoginHref(role, email)}
+                    className="flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-foreground)] transition-all hover:border-[rgba(0,0,0,0.24)] hover:bg-[#f8f6f2]"
+                    style={{ minHeight: '44px' }}
+                    data-testid={`dev-login-${role}-${email}`}
+                  >
+                    <span>{icon}</span>
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : AUTH_STUB ? (
             <div className="space-y-3">
               <a
                 href={safeNext}
