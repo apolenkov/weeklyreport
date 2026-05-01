@@ -4,6 +4,8 @@ import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
+const SLOW_QUERY_MS = 100;
+
 @Injectable()
 export class PrismaService
   extends PrismaClient
@@ -17,11 +19,48 @@ export class PrismaService
     const pool = new pg.Pool({ connectionString });
     const adapter = new PrismaPg(pool);
 
-    super({ adapter });
+    // log:'query' emits a runtime event per SQL; gated to debug-level
+    // emission below so info-level prod stays quiet. warn/error come
+    // through unconditionally — they're rare and important.
+    super({
+      adapter,
+      log: [
+        { level: 'query', emit: 'event' },
+        { level: 'warn', emit: 'event' },
+        { level: 'error', emit: 'event' },
+      ],
+    });
     this.pool = pool;
   }
 
   async onModuleInit(): Promise<void> {
+    // Wire query/error/warn event listeners. The `as any` is unavoidable in
+    // Prisma 7's typing for $on with structured log levels — the Client type
+    // narrows differently depending on the constructor's `log` shape and
+    // TypeScript can't always reconcile the two.
+    const debugEnabled = (process.env.LOG_LEVEL ?? 'info') === 'debug';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const self = this as any;
+
+    self.$on?.('query', (e: { query: string; params: string; duration: number; target?: string }) => {
+      if (e.duration >= SLOW_QUERY_MS) {
+        // Slow query — always log at warn-level so it shows up even in
+        // production logs without flipping the global LOG_LEVEL.
+        this.logger.warn(`slow query (${e.duration}ms): ${e.query}`);
+      } else if (debugEnabled) {
+        // Verbose per-query trace — only when explicitly debugging.
+        this.logger.debug(`query (${e.duration}ms): ${e.query}`);
+      }
+    });
+
+    self.$on?.('warn', (e: { message: string }) => {
+      this.logger.warn(`prisma: ${e.message}`);
+    });
+
+    self.$on?.('error', (e: { message: string }) => {
+      this.logger.error(`prisma: ${e.message}`);
+    });
+
     await this.$connect();
     this.logger.log('Database connection established');
   }
