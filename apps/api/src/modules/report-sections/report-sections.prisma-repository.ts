@@ -158,13 +158,11 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
         await tx.decision.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.priority.deleteMany({ where: { reportSectionId: sectionId } });
 
-        const projectData = section.projects
-          .filter((p) => p.trafficLight !== null)
-          .map((p) => ({
-            reportSectionId: sectionId,
-            projectId: p.projectId,
-            status: p.trafficLight!,
-          }));
+        const projectData = section.projects.map((p) => ({
+          reportSectionId: sectionId,
+          projectId: p.projectId,
+          status: p.trafficLight,
+        }));
 
         if (projectData.length > 0) {
           await tx.projectStatus.createMany({ data: projectData });
