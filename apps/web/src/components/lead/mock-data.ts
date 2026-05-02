@@ -55,7 +55,8 @@ export type DecisionEntry = {
 };
 
 export type PriorityEntry = {
-  rank: 1 | 2 | 3;
+  /** 1-indexed rank. Schema allows any positive int up to 50 per draft. */
+  rank: number;
   text: string;
 };
 

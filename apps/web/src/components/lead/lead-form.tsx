@@ -178,7 +178,10 @@ function AccordionSection({
         style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="px-5 pb-5">{children}</div>
+          {/* pt-2 = breathing room between the section header (p-5) and the
+              first content row, otherwise the first card sits flush against
+              the chevron line and feels cramped. */}
+          <div className="px-5 pb-5 pt-2">{children}</div>
         </div>
       </div>
     </div>
@@ -834,12 +837,12 @@ export function LeadForm({ period }: LeadFormProps) {
           />
         </AccordionSection>
 
-        {/* Top 3 Priorities */}
+        {/* Priorities — variable-length list */}
         <AccordionSection
           icon={<StarIcon />}
-          title="Top 3 Priorities"
+          title="Priorities"
           titleColor="var(--color-starbucks-gold)"
-          badge={`${Math.min(priorities.length, 3)}/3`}
+          badge={`${priorities.length}`}
         >
           <PrioritiesSection
             priorities={priorities}
