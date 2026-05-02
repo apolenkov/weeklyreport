@@ -1,53 +1,57 @@
 {
-  "title": "API-first cleanup checkpoint",
-  "timestamp": "2026-04-24 17:01:38 MSK",
-  "repository": "/home/user/work/sdlc/customreport",
-  "branch": "main",
-  "user": "ap",
-  "host": "wrk.local",
-  "status": "dirty",
-  "currentFocus": "Phase 17 — API completion from approved mockups; active Next.js UI intentionally reduced to Hello World + API placeholder",
-  "runtime": {
-    "api": {
-      "live": "http://localhost:3002/health/live",
-      "ready": "http://localhost:3002/health/ready",
-      "metrics": "http://localhost:3002/metrics"
-    },
-    "web": {
-      "url": "http://localhost:3005",
-      "note": "3000 is occupied by another Docker stack; web is running as a one-off container on 3005"
-    }
-  },
-  "planningFiles": [
-    ".planning/ROADMAP.md",
-    ".planning/STATE.md",
-    ".planning/phases/17-ui-redesign/17-CONTEXT.md",
-    ".planning/phases/17-ui-redesign/17-01-PLAN.md"
+  "version": "1.0",
+  "timestamp": "2026-05-02T19:12:00Z",
+  "phase": "ux-overhaul",
+  "phase_name": "Post-v6.0 UX overhaul (ad-hoc, not bound to Phase XX)",
+  "phase_dir": ".planning",
+  "plan": "PLAN-ux-overhaul.md (repo root)",
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Round-trip CRUD fixes", "status": "done", "commit": "bc097ca"},
+    {"id": 2, "name": "Multi-product seed + portal stage popover + UX plan", "status": "done", "commit": "0cedcf1"},
+    {"id": 3, "name": "Phase 6: dev wipe/reseed buttons", "status": "done", "commit": "393c782"},
+    {"id": 4, "name": "Variable-length priorities + spacing polish", "status": "done", "commit": "5a386c9"},
+    {"id": 5, "name": "Phase 2: column per assigned product, empty-state preserved", "status": "done", "commit": "98e6f34"},
+    {"id": 6, "name": "Phase 4 (M1): Item edit dialog", "status": "done", "commit": "21b1829"},
+    {"id": 7, "name": "Priority delete preserve-bug fix", "status": "done", "commit": "1f6fb7d"},
+    {"id": 8, "name": "Phase 4 (R): Risk edit dialog", "status": "done", "commit": "d9cbad3"},
+    {"id": 9, "name": "Phase 4 (D): Decision edit dialog + empty-state hints", "status": "done", "commit": "17ba7c0"},
+    {"id": 10, "name": "Impact-vs-severity tooltips + owner-aware Edit/Delete", "status": "done", "commit": "6c07486"},
+    {"id": 11, "name": "Phase 5 (M2): Stage popover Save/Cancel form + Aleksandr rename", "status": "done", "commit": "86f1b72"},
+    {"id": 12, "name": "Wire linkedRiskCount + warning banner for unbacked stages", "status": "done", "commit": "d299783"},
+    {"id": 13, "name": "Clear-actually-clears + card alignment + dashed Next-Week", "status": "done", "commit": "925904f"}
   ],
-  "modifiedAreas": [
-    "Dockerfile.api",
-    "Dockerfile.web",
-    "docker-compose.dev.yml",
-    "apps/web/src/app/**",
-    "apps/web/src/components/navigation/app-shell.tsx",
-    "apps/web/src/components/common/api-readiness-placeholder.tsx",
-    "apps/web legacy UI components/tests/e2e removed"
+  "remaining_tasks": [
+    {"id": 14, "name": "Phase 1: comprehensive E2E spec under Playwright CLI (~100 scenarios)", "status": "not_started", "rationale": "regression-tests currently mock tRPC and miss UX bugs the user keeps reporting"},
+    {"id": 15, "name": "M20: Delete Confirmation dialog (currently delete fires instantly)", "status": "not_started"},
+    {"id": 16, "name": "M5/M6/M10: Reopen / Request-Reopen / Revoke modals", "status": "not_started"},
+    {"id": 17, "name": "M19: inline validation feedback in dialogs (per-field red border)", "status": "not_started"},
+    {"id": 18, "name": "M8: Fill From with search + radio-list", "status": "not_started"},
+    {"id": 19, "name": "M11: Version history with diff preview", "status": "not_started"},
+    {"id": 20, "name": "Manual Save Version button + auto-snapshot timer (DESIGN PENDING)", "status": "not_started"}
   ],
-  "tasks": [
-    {
-      "id": "T-12a688f2-638f-49d5-9e35-b39e8efbdd65",
-      "subject": "Commit API-first cleanup"
-    },
-    {
-      "id": "T-898221a3-8249-4035-8413-dd5bc7a874b4",
-      "subject": "Implement shared API contracts"
-    }
+  "blockers": [],
+  "human_actions_pending": [
+    {"action": "User to choose next phase priority (Phase 1 E2E vs M20 Delete-Confirm vs others)", "context": "Last user message left the floor open after stage-popover commit", "blocking": false}
   ],
-  "nextSteps": [
-    "Review and commit the current API-first cleanup",
-    "Normalize web startup/port strategy for local compose",
-    "Execute Phase 17 Step 1 shared schema expansion",
-    "Update tRPC and backend read models after schema expansion",
-    "Rebuild frontend only after API parity is complete"
-  ]
+  "decisions": [
+    {"decision": "Modal everywhere for Item/Risk/Decision", "rationale": "User feedback: inline-text-only is too restrictive; need full-schema editing", "phase": "ux-overhaul"},
+    {"decision": "PriorityEditDialog SKIPPED", "rationale": "Variable-length list with inline text felt sufficient since priority is text-only; revisit if pencil→modal consistency needed", "phase": "ux-overhaul"},
+    {"decision": "Severity (enum) and Impact (narrative) kept as separate fields, with tooltips", "rationale": "Option A from 3-way choice; user agreed", "phase": "ux-overhaul"},
+    {"decision": "Decision Owner read-only when not mine", "rationale": "If Owner=Head, lead raises but doesn't act on the decision", "phase": "ux-overhaul"},
+    {"decision": "dev.wipeAndReseed shells out to pnpm db:seed:simple", "rationale": "Cleaner than refactoring the seed module to be importable as a function", "phase": "ux-overhaul"},
+    {"decision": "trafficLight nullable end-to-end so all-empty stages return chip to grey", "rationale": "handleProductsChange used to default 'green'; that bounced Clear back to On Track", "phase": "ux-overhaul"},
+    {"decision": "Names latinised: Aleksandr P. / Maria K. / Igor V.", "rationale": "User asked for given-name + surname-initial format and consistency", "phase": "ux-overhaul"}
+  ],
+  "uncommitted_files": [
+    "dec-snap.yml",
+    "full-snap.yml",
+    "priorities-snap.yml",
+    "risks-snap.yml",
+    "step1-state.png"
+  ],
+  "next_action": "Live-verify 925904f three fixes (Clear-clears, card alignment, hover-only icons) with Playwright MCP browser_click — NOT dispatchEvent. Then ask user whether to start Phase 1 (E2E) or M20 (Delete Confirmation).",
+  "context_notes": "Session was reactive to user screenshots. Modal-everywhere refactor is mostly done; warning banner for unbacked stages closes the stage↔risk loop. Anti-pattern to avoid: programmatic dispatchEvent on Radix popovers — does not fire onSelect, leads to false 'verified' claims. Use browser_click via snapshot ref or fetch-style verification for tRPC."
 }
