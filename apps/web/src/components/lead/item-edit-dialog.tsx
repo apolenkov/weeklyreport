@@ -1,0 +1,235 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import type { KanbanItem, ItemStatus, Product } from './mock-data';
+
+type ItemEditDialogProps = {
+  /** Open/close state. Caller controls so it can wire submit/cancel. */
+  readonly open: boolean;
+  /**
+   * The item being edited. When `null` the dialog is in "create" mode and
+   * the caller will append the result to the items list. When non-null
+   * it's an "edit" mode and the caller upserts by id.
+   */
+  readonly item: KanbanItem | null;
+  /** Available products — required so the user can re-assign the item to another column. */
+  readonly products: readonly Product[];
+  /**
+   * Whether this is the Current Week or Next Week. Only affects which
+   * status chips are shown — Next Week doesn't show "Completed" or
+   * "Blocked" because those are workflow-state semantics for in-flight
+   * work, not yet-to-start work.
+   */
+  readonly week: 'current' | 'next';
+  /** Author label used as the default for newly-created items. */
+  readonly currentUserName?: string;
+  /**
+   * In create mode, preselect this product. Without it the dialog would
+   * default to `products[0]`, which is misleading when the user clicked
+   * `+ Add` in a specific column.
+   */
+  readonly defaultProductId?: string;
+  readonly onSave: (next: KanbanItem) => void;
+  readonly onCancel: () => void;
+};
+
+type Choice = { value: ItemStatus; label: string; bg: string; color: string; border: string };
+
+const CURRENT_WEEK_CHOICES: readonly Choice[] = [
+  { value: 'completed',   label: '✓ Completed',   bg: 'var(--color-primary)',     color: '#fff',                          border: 'var(--color-primary)' },
+  { value: 'in-progress', label: '! In Progress',      bg: 'var(--color-success)',     color: 'var(--color-primary)',          border: 'var(--color-starbucks-accent)' },
+  { value: 'blocked',     label: '✕ Blocked',     bg: '#fee2e2',                  color: 'var(--color-destructive)',      border: 'var(--color-destructive)' },
+];
+
+const NEXT_WEEK_CHOICES: readonly Choice[] = [
+  { value: 'planned',     label: '○ Planned',     bg: 'var(--color-muted)',       color: 'var(--color-muted-foreground)', border: 'rgba(0,0,0,0.15)' },
+  { value: 'in-progress', label: '! In Progress',      bg: 'var(--color-success)',     color: 'var(--color-primary)',          border: 'var(--color-starbucks-accent)' },
+];
+
+export function ItemEditDialog({
+  open,
+  item,
+  products,
+  week,
+  currentUserName,
+  defaultProductId,
+  onSave,
+  onCancel,
+}: ItemEditDialogProps) {
+  const isCreate = item === null;
+
+  // Local form state — initialize from the bound item (or defaults for create).
+  // Reset every time the dialog is reopened or the bound item changes so a
+  // second "Edit" click on a different row doesn't carry stale draft values.
+  const seedProduct = isCreate
+    ? (products.find((p) => p.id === defaultProductId) ?? products[0])
+    : null;
+  const initial: KanbanItem = item ?? {
+    id: '',
+    productId: seedProduct?.id ?? '',
+    productName: seedProduct?.name ?? '',
+    status: week === 'current' ? 'in-progress' : 'planned',
+    text: '',
+    author: currentUserName ?? 'You',
+  };
+  const [text, setText] = useState(initial.text);
+  const [status, setStatus] = useState<ItemStatus>(initial.status);
+  const [productId, setProductId] = useState(initial.productId);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setText(initial.text);
+      setStatus(initial.status);
+      setProductId(initial.productId);
+      setError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- key fields, not full object
+  }, [open, item?.id, defaultProductId]);
+
+  if (!open) return null;
+
+  const choices = week === 'current' ? CURRENT_WEEK_CHOICES : NEXT_WEEK_CHOICES;
+  const selectedProduct = products.find((p) => p.id === productId);
+  const headerProductName = selectedProduct?.name ?? initial.productName;
+  const headerVerb = isCreate ? 'Add Item' : 'Edit Item';
+
+  function handleSave() {
+    const trimmed = text.trim();
+    if (trimmed.length === 0) {
+      setError('Description is required');
+      return;
+    }
+    const product = products.find((p) => p.id === productId) ?? products[0];
+    if (!product) {
+      setError('No product available');
+      return;
+    }
+    const next: KanbanItem = {
+      id: item?.id ?? crypto.randomUUID(),
+      productId: product.id,
+      productName: product.name,
+      ...(item?.stageName ? { stageName: item.stageName } : {}),
+      text: trimmed,
+      status,
+      author: item?.author ?? currentUserName ?? 'You',
+    };
+    onSave(next);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSave();
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+      onClick={onCancel}
+      onKeyDown={handleKeyDown}
+      role="presentation"
+    >
+      <div
+        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${headerVerb} dialog`}
+      >
+        <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+          {headerVerb} {headerProductName ? <span className="text-[var(--color-muted-foreground)]">— {headerProductName}</span> : null}
+        </h2>
+
+        <div className="space-y-4">
+          {/* Description */}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="item-text">
+              Description *
+            </label>
+            <textarea
+              id="item-text"
+              autoFocus
+              className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              style={{ minHeight: '70px' }}
+              value={text}
+              onChange={(e) => { setText(e.target.value); setError(null); }}
+              placeholder={week === 'current' ? 'What was done or in progress…' : 'What is planned for next week…'}
+            />
+            {error && (
+              <p className="mt-1 text-xs text-[var(--color-destructive)]">{error}</p>
+            )}
+          </div>
+
+          {/* Status chips */}
+          <div>
+            <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">Status</span>
+            <div className="flex flex-wrap gap-2">
+              {choices.map((c) => {
+                const selected = status === c.value;
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => setStatus(c.value)}
+                    className="inline-flex min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-all"
+                    style={{
+                      background: selected ? c.bg : 'transparent',
+                      color: selected ? c.color : 'var(--color-foreground)',
+                      border: `1.5px solid ${selected ? c.border : 'rgba(0,0,0,0.15)'}`,
+                    }}
+                    aria-pressed={selected}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Product picker — only meaningful when there are >1 products */}
+          {products.length > 1 && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="item-product">
+                Product
+              </label>
+              <select
+                id="item-product"
+                className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+                value={productId}
+                onChange={(e) => setProductId(e.target.value)}
+              >
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-5 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn-press inline-flex min-h-[40px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="btn-press inline-flex min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)]"
+          >
+            Save Item
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

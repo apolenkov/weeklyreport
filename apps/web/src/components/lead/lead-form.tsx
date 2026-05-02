@@ -563,9 +563,32 @@ export function LeadForm({ period }: LeadFormProps) {
 
   // Items: the section emits a presentation `KanbanItem[]` for one type
   // (current or next). Merge it back into raw `draftSection.items` while
-  // preserving cross-type entries. For existing ids we keep the raw item's
-  // tag/workflowStatus/carriedOver/completed; for new ids we fill schema
-  // defaults so the row round-trips through `draftSaveSchema`.
+  // preserving cross-type entries.
+  //
+  // The presentation `status` ('completed' | 'in-progress' | 'blocked' |
+  // 'planned') is the inverse of `workflowToItemStatus` + a `completed` flag.
+  // We translate it back so the modal-edit dialog can change Status without
+  // a separate field surface for `workflowStatus` / `completed`.
+  function statusToRawFields(status: KanbanItem['status']): {
+    workflowStatus: 'done' | 'in_progress' | 'blocked';
+    completed: boolean | null;
+  } {
+    switch (status) {
+      case 'completed':
+        return { workflowStatus: 'done', completed: true };
+      case 'blocked':
+        return { workflowStatus: 'blocked', completed: false };
+      case 'planned':
+        // 'planned' is computed-only — there's no DB enum for it. Next-week
+        // items default to in_progress workflow status; the type='next' bit
+        // alone makes them render as planned in the UI.
+        return { workflowStatus: 'in_progress', completed: false };
+      case 'in-progress':
+      default:
+        return { workflowStatus: 'in_progress', completed: false };
+    }
+  }
+
   function makeItemsChangeHandler(itemType: 'current' | 'next') {
     return (next: KanbanItem[]) => {
       setDraftSection((prev) => {
@@ -576,22 +599,28 @@ export function LeadForm({ period }: LeadFormProps) {
             .map((it) => [it.id!, it] as const),
         );
         const mergedTyped = next.map((kb) => {
+          const raw = statusToRawFields(kb.status);
           const existing = existingById.get(kb.id);
           if (existing) {
-            return { ...existing, text: kb.text };
+            return {
+              ...existing,
+              text: kb.text,
+              projectId: kb.productId,
+              workflowStatus: raw.workflowStatus,
+              completed: raw.completed,
+            };
           }
           return {
             id: kb.id,
             projectId: kb.productId,
             type: itemType,
             text: kb.text,
-            // Schema requires safeText({min:1}) on tag; UI has no tag picker
-            // yet, so we seed a default that satisfies validation. The empty
-            // tag would otherwise trip Zod the first time autosave fires.
+            // Schema requires safeText({min:1}) on tag; UI doesn't expose a
+            // tag picker so we seed a default that survives validation.
             tag: 'general',
-            workflowStatus: 'in_progress' as const,
+            workflowStatus: raw.workflowStatus,
             carriedOver: false,
-            completed: null,
+            completed: raw.completed,
           };
         });
         // Keep all items of the OTHER type unchanged; replace this type with

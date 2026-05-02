@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { ItemCard } from './item-card';
+import { ItemEditDialog } from './item-edit-dialog';
 import type { KanbanItem, Product } from './mock-data';
 
 type CurrentWeekSectionProps = {
@@ -49,46 +50,43 @@ export function CurrentWeekSection({
   products,
 }: CurrentWeekSectionProps) {
   const grouped = groupByProduct(items);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // null = create mode (Add); KanbanItem = edit mode for that row.
+  const [dialogState, setDialogState] = useState<
+    { open: false } | { open: true; mode: 'create'; seedProductId: string } | { open: true; mode: 'edit'; item: KanbanItem }
+  >({ open: false });
   // Only fall back to the standalone empty-state when there are neither
   // items nor products to drive a column layout.
   const isEmpty = grouped.size === 0 && (!products || products.length === 0);
 
-  function handleAdd(seed: KanbanItem) {
+  function handleAdd(seedProductId: string) {
     if (readOnly) return;
-    const newItem: KanbanItem = {
-      id: crypto.randomUUID(),
-      productId: seed.productId,
-      productName: seed.productName,
-      ...(seed.stageName ? { stageName: seed.stageName } : {}),
-      text: '',
-      status: 'in-progress',
-      author: currentUserName ?? 'You',
-    };
-    onItemsChange?.([...items, newItem]);
-    setEditingId(newItem.id);
+    setDialogState({ open: true, mode: 'create', seedProductId });
   }
 
   function handleDelete(id: string) {
     if (readOnly) return;
     onItemsChange?.(items.filter((i) => i.id !== id));
-    if (editingId === id) setEditingId(null);
   }
 
   function handleEdit(id: string) {
     if (readOnly) return;
-    setEditingId(id);
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    setDialogState({ open: true, mode: 'edit', item });
   }
 
-  function handleTextSave(id: string, nextText: string) {
-    if (readOnly) {
-      setEditingId(null);
-      return;
+  function handleDialogSave(next: KanbanItem) {
+    if (readOnly) return;
+    if (dialogState.open && dialogState.mode === 'create') {
+      onItemsChange?.([...items, next]);
+    } else {
+      onItemsChange?.(items.map((i) => (i.id === next.id ? next : i)));
     }
-    onItemsChange?.(
-      items.map((i) => (i.id === id ? { ...i, text: nextText } : i)),
-    );
-    setEditingId(null);
+    setDialogState({ open: false });
+  }
+
+  function handleDialogCancel() {
+    setDialogState({ open: false });
   }
 
   // Empty-state: when no items exist there are no per-product groups to
@@ -111,17 +109,7 @@ export function CurrentWeekSection({
         <button
           type="button"
           className="btn-press inline-flex min-h-[40px] items-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-2 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => {
-            if (!product) return;
-            handleAdd({
-              id: 'seed',
-              productId: product.id,
-              productName: product.name,
-              status: 'in-progress',
-              text: '',
-              author: currentUserName ?? 'You',
-            });
-          }}
+          onClick={() => product && handleAdd(product.id)}
           disabled={!product}
           aria-label="Add first current-week item"
           title={product ? undefined : 'No products assigned — contact admin'}
@@ -157,22 +145,18 @@ export function CurrentWeekSection({
       <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, 1fr)` }}>
         {columns.map((col) => (
           <div key={col.key}>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+            {/* gap-2 (not justify-between) keeps the `+ Add` button glued
+                next to the product label so the header reads as a tight
+                unit even when the column is wide. */}
+            <div className="mb-3 flex items-center gap-2">
+              <div className="flex-1 truncate font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                 {col.productName}
               </div>
               {!readOnly && (
                 <button
                   type="button"
-                  className="btn-press inline-flex min-h-[34px] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-3 py-1 text-[12px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[rgba(0,117,74,0.28)] hover:bg-[var(--color-success)]"
-                  onClick={() => handleAdd({
-                    id: 'seed',
-                    productId: col.productId,
-                    productName: col.productName,
-                    status: 'in-progress',
-                    text: '',
-                    author: currentUserName ?? 'You',
-                  })}
+                  className="btn-press inline-flex min-h-[28px] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[rgba(0,117,74,0.28)] hover:bg-[var(--color-success)]"
+                  onClick={() => handleAdd(col.productId)}
                   aria-label={`Add item to ${col.productName}`}
                 >
                   + Add
@@ -190,10 +174,9 @@ export function CurrentWeekSection({
                     key={item.id}
                     item={item}
                     readOnly={readOnly}
-                    isEditing={editingId === item.id}
+                    isEditing={false}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
-                    onTextSave={handleTextSave}
                   />
                 ))}
               </div>
@@ -201,6 +184,18 @@ export function CurrentWeekSection({
           </div>
         ))}
       </div>
+
+      {/* Edit / Add modal — single instance shared across all columns. */}
+      <ItemEditDialog
+        open={dialogState.open}
+        item={dialogState.open && dialogState.mode === 'edit' ? dialogState.item : null}
+        products={products ?? []}
+        week="current"
+        currentUserName={currentUserName}
+        defaultProductId={dialogState.open && dialogState.mode === 'create' ? dialogState.seedProductId : undefined}
+        onSave={handleDialogSave}
+        onCancel={handleDialogCancel}
+      />
     </div>
   );
 }
