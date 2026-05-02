@@ -259,6 +259,11 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     const before = await leadPage.locator('[aria-label^="Priority "]').count();
     expect(before).toBeGreaterThanOrEqual(2);
     await leadPage.getByRole('button', { name: 'Delete priority 1' }).click();
+    // Seeded priorities carry text, so the M20 confirm dialog opens.
+    // Empty rows would skip this and delete immediately.
+    const confirm = leadPage.getByRole('dialog', { name: /Delete priority/ });
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(leadPage.locator('[aria-label^="Priority "]')).toHaveCount(before - 1);
     // Surviving rows renumber starting at 1.
     await expect(leadPage.locator('[aria-label="Priority 1"]')).toBeVisible();
@@ -273,6 +278,11 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     for (let i = 0; i < initial; i++) {
       // Each delete renumbers, so "Priority 1" survives as the rotating target.
       await leadPage.getByRole('button', { name: 'Delete priority 1' }).click();
+      // Seeded rows have text → confirm dialog appears each time.
+      const confirm = leadPage.getByRole('dialog', { name: /Delete priority/ });
+      await expect(confirm).toBeVisible();
+      await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
+      await expect(confirm).not.toBeVisible({ timeout: 3_000 });
     }
     await expect(leadPage.getByRole('button', { name: '+ Add Priority' })).toBeVisible();
   });

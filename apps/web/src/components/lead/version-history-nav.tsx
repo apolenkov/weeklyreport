@@ -46,6 +46,33 @@ function HistoryIcon() {
 // client-side. Tracked as a deferral in the plan SUMMARY.
 const VERSIONS_INITIAL_VISIBLE = 5;
 
+/**
+ * Compute the count delta of `v` relative to its parent (`prev`).
+ * Returns null when both are zero — nothing to show.
+ *
+ * Versions arrive newest-first, so `prev` is the next item in the
+ * array (i.e. the older sibling). For the very oldest version `prev`
+ * is undefined; we treat it as a clean baseline (no diff line).
+ */
+function diffSummary(
+  v: VersionSnapshot,
+  prev: VersionSnapshot | undefined,
+): { items: number; risks: number; decisions: number } | null {
+  if (!prev) return null;
+  const items = v.itemCount - prev.itemCount;
+  const risks = v.riskCount - prev.riskCount;
+  const decisions = v.decisionCount - prev.decisionCount;
+  if (items === 0 && risks === 0 && decisions === 0) return null;
+  return { items, risks, decisions };
+}
+
+function formatDiff(delta: number, label: string): string | null {
+  if (delta === 0) return null;
+  const sign = delta > 0 ? '+' : '−';
+  const verb = delta > 0 ? 'added' : 'removed';
+  return `${sign}${Math.abs(delta)} ${label} ${verb}`;
+}
+
 export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
@@ -135,40 +162,76 @@ export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProp
               {(showAllVersions
                 ? versions
                 : versions.slice(0, VERSIONS_INITIAL_VISIBLE)
-              ).map((v, idx) => (
-                <div
-                  key={v.version}
-                  className="flex items-center gap-3 rounded-lg p-3"
-                  style={{
-                    background: idx === currentIndex ? 'var(--color-success)' : 'var(--color-background)',
-                    border: idx === currentIndex ? '1.5px solid var(--color-starbucks-accent)' : '1.5px solid transparent',
-                  }}
-                >
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold">
-                      Version {v.version}
-                      {idx === 0 && (
-                        <span className="ml-2 text-[10px] font-medium text-[var(--color-starbucks-accent)]">
-                          Latest
-                        </span>
+              ).map((v, idx, arr) => {
+                // Diff against the preceding (older) sibling. Versions
+                // arrive newest-first so `arr[idx + 1]` is the parent.
+                const diff = diffSummary(v, arr[idx + 1]);
+                const diffParts = diff
+                  ? [
+                      formatDiff(diff.items, 'items'),
+                      formatDiff(diff.risks, 'risks'),
+                      formatDiff(diff.decisions, 'decisions'),
+                    ].filter((s): s is string => s !== null)
+                  : [];
+                return (
+                  <div
+                    key={v.version}
+                    className="flex items-center gap-3 rounded-lg p-3"
+                    style={{
+                      background: idx === currentIndex ? 'var(--color-success)' : 'var(--color-background)',
+                      border: idx === currentIndex ? '1.5px solid var(--color-starbucks-accent)' : '1.5px solid transparent',
+                    }}
+                  >
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold">
+                        Version {v.version}
+                        {idx === 0 && (
+                          <span className="ml-2 text-[10px] font-medium text-[var(--color-starbucks-accent)]">
+                            Latest
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 text-[12px] text-[var(--color-muted-foreground)]">
+                        {v.timestamp} &middot; {v.itemCount} items &middot; {v.riskCount} risks &middot; {v.decisionCount} decisions
+                      </div>
+                      {diffParts.length > 0 && (
+                        // Diff vs previous version — count-level only (no
+                        // content compare; needs a server-side history
+                        // store to do that). Renders coloured by direction:
+                        // adds in green, removes in red, mixed in muted.
+                        <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]">
+                          {diffParts.map((part) => {
+                            const isAdd = part.startsWith('+');
+                            return (
+                              <span
+                                key={part}
+                                className="font-medium"
+                                style={{
+                                  color: isAdd
+                                    ? 'var(--color-starbucks-accent)'
+                                    : 'var(--color-destructive)',
+                                }}
+                              >
+                                {part}
+                              </span>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
-                    <div className="mt-0.5 text-[12px] text-[var(--color-muted-foreground)]">
-                      {v.timestamp} &middot; {v.itemCount} items &middot; {v.riskCount} risks &middot; {v.decisionCount} decisions
-                    </div>
-                  </div>
 
-                  {idx !== 0 && (
-                    <button
-                      type="button"
-                      className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
-                      onClick={() => handleRestore(v.version)}
-                    >
-                      Restore
-                    </button>
-                  )}
-                </div>
-              ))}
+                    {idx !== 0 && (
+                      <button
+                        type="button"
+                        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
+                        onClick={() => handleRestore(v.version)}
+                      >
+                        Restore
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {versions.length > VERSIONS_INITIAL_VISIBLE && !showAllVersions && (
