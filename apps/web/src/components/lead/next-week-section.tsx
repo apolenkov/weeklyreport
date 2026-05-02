@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { ItemCard } from './item-card';
 import { ItemEditDialog } from './item-edit-dialog';
 import type { KanbanItem, Product } from './mock-data';
@@ -47,6 +48,7 @@ export function NextWeekSection({
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create'; seedProductId: string } | { open: true; mode: 'edit'; item: KanbanItem }
   >({ open: false });
+  const [pendingDelete, setPendingDelete] = useState<KanbanItem | null>(null);
   const isEmpty = grouped.size === 0 && (!products || products.length === 0);
 
   function handleAdd(seedProductId: string) {
@@ -56,7 +58,15 @@ export function NextWeekSection({
 
   function handleDelete(id: string) {
     if (readOnly) return;
-    onItemsChange?.(items.filter((i) => i.id !== id));
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    setPendingDelete(item);
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    onItemsChange?.(items.filter((i) => i.id !== pendingDelete.id));
+    setPendingDelete(null);
   }
 
   function handleEdit(id: string) {
@@ -183,6 +193,15 @@ export function NextWeekSection({
         defaultProductId={dialogState.open && dialogState.mode === 'create' ? dialogState.seedProductId : undefined}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
+      />
+
+      <ConfirmDeleteDialog
+        open={pendingDelete !== null}
+        title="Delete next-week item?"
+        preview={pendingDelete?.text ?? ''}
+        subtitle={pendingDelete ? `From ${pendingDelete.productName}` : undefined}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </div>
   );

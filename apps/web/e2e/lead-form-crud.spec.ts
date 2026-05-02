@@ -124,10 +124,17 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     await expect(leadPage.getByText('Refactored auth flow + added MFA')).toBeVisible();
   });
 
-  test('S2.3: Delete item removes it from the column', async ({ leadPage }) => {
+  test('S2.3: Delete item — confirms then removes from column', async ({ leadPage }) => {
     const targetText = 'Shipped cross-team metrics dashboard work';
     await expect(leadPage.getByText(targetText)).toBeVisible();
     await deleteItem(leadPage, targetText);
+    // M20 confirmation modal: row preview + destructive button. The
+    // confirm button is keyboard-focused on open so Enter would also
+    // work, but click is more explicit for the spec.
+    const confirm = leadPage.getByRole('dialog', { name: /Delete item/ });
+    await expect(confirm).toBeVisible();
+    await expect(confirm.getByText(targetText)).toBeVisible();
+    await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(leadPage.getByText(targetText)).not.toBeVisible({ timeout: 5_000 });
   });
 
@@ -191,10 +198,13 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     await expect(leadPage.getByText('Vendor escalation; ETA 48h')).toBeVisible();
   });
 
-  test('S4.3: Delete risk removes the row', async ({ leadPage }) => {
+  test('S4.3: Delete risk — confirmation modal then row removed', async ({ leadPage }) => {
     const before = await leadPage.getByRole('button', { name: /Delete risk for/ }).count();
     expect(before).toBeGreaterThanOrEqual(1);
     await leadPage.getByRole('button', { name: /Delete risk for/ }).first().click();
+    const confirm = leadPage.getByRole('dialog', { name: /Delete risk/ });
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(leadPage.getByRole('button', { name: /Delete risk for/ })).toHaveCount(before - 1);
   });
 

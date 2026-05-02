@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { ItemCard } from './item-card';
 import { ItemEditDialog } from './item-edit-dialog';
 import type { KanbanItem, Product } from './mock-data';
@@ -54,6 +55,10 @@ export function CurrentWeekSection({
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create'; seedProductId: string } | { open: true; mode: 'edit'; item: KanbanItem }
   >({ open: false });
+  // Pending-delete state for the M20 confirmation modal — prevents
+  // accidental data loss on a stray click. The actual filter+emit
+  // happens only after the user confirms.
+  const [pendingDelete, setPendingDelete] = useState<KanbanItem | null>(null);
   // Only fall back to the standalone empty-state when there are neither
   // items nor products to drive a column layout.
   const isEmpty = grouped.size === 0 && (!products || products.length === 0);
@@ -65,7 +70,15 @@ export function CurrentWeekSection({
 
   function handleDelete(id: string) {
     if (readOnly) return;
-    onItemsChange?.(items.filter((i) => i.id !== id));
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    setPendingDelete(item);
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    onItemsChange?.(items.filter((i) => i.id !== pendingDelete.id));
+    setPendingDelete(null);
   }
 
   function handleEdit(id: string) {
@@ -198,6 +211,15 @@ export function CurrentWeekSection({
         defaultProductId={dialogState.open && dialogState.mode === 'create' ? dialogState.seedProductId : undefined}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
+      />
+
+      <ConfirmDeleteDialog
+        open={pendingDelete !== null}
+        title="Delete item?"
+        preview={pendingDelete?.text ?? ''}
+        subtitle={pendingDelete ? `From ${pendingDelete.productName}` : undefined}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </div>
   );
