@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { DecisionEditDialog } from './decision-edit-dialog';
 import type { DecisionEntry } from './mock-data';
 
@@ -70,10 +71,19 @@ export function DecisionsSection({
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create' } | { open: true; mode: 'edit'; decision: DecisionEntry }
   >({ open: false });
+  const [pendingDelete, setPendingDelete] = useState<DecisionEntry | null>(null);
 
   function handleDelete(id: string) {
     if (readOnly) return;
-    onChange?.(decisions.filter((d) => d.id !== id));
+    const decision = decisions.find((d) => d.id === id);
+    if (!decision) return;
+    setPendingDelete(decision);
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    onChange?.(decisions.filter((d) => d.id !== pendingDelete.id));
+    setPendingDelete(null);
   }
 
   function handleAdd() {
@@ -195,6 +205,15 @@ export function DecisionsSection({
         defaultOwner={currentUserName}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
+      />
+
+      <ConfirmDeleteDialog
+        open={pendingDelete !== null}
+        title="Delete decision?"
+        preview={pendingDelete?.text || '(no description)'}
+        subtitle={pendingDelete ? `Owner: ${pendingDelete.owner}` : undefined}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </div>
   );

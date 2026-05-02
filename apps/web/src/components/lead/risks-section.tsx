@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { RiskEditDialog } from './risk-edit-dialog';
 import type { Product, RiskEntry } from './mock-data';
 
@@ -55,10 +56,19 @@ export function RisksSection({
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create'; seedProductId?: string } | { open: true; mode: 'edit'; risk: RiskEntry }
   >({ open: false });
+  const [pendingDelete, setPendingDelete] = useState<RiskEntry | null>(null);
 
   function handleDelete(id: string) {
     if (readOnly) return;
-    onChange?.(risks.filter((r) => r.id !== id));
+    const risk = risks.find((r) => r.id === id);
+    if (!risk) return;
+    setPendingDelete(risk);
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    onChange?.(risks.filter((r) => r.id !== pendingDelete.id));
+    setPendingDelete(null);
   }
 
   function handleAdd() {
@@ -246,6 +256,15 @@ export function RisksSection({
         initialMitigation={dialogState.open && dialogState.mode === 'edit' ? dialogState.risk.mitigation : ''}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
+      />
+
+      <ConfirmDeleteDialog
+        open={pendingDelete !== null}
+        title="Delete risk?"
+        preview={pendingDelete?.text || '(no description)'}
+        subtitle={pendingDelete ? `${pendingDelete.productName}${pendingDelete.stageName ? ` · ${pendingDelete.stageName} stage` : ''}` : undefined}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
       />
     </div>
   );

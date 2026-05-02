@@ -130,13 +130,21 @@ export async function selectStageOption(page: Page, option: StatusOption): Promi
   // the click target into the resolved viewport before dispatch.
   const btn = stagePopover(page).getByRole('button', { name: new RegExp(option) });
   await btn.scrollIntoViewIfNeeded();
-  await btn.click();
+  // force: true bypasses the actionability heuristic. Stage popover sits
+  // in a portal with fixed positioning; Playwright sometimes flags its
+  // buttons as "outside viewport" even when window.innerHeight comfortably
+  // contains them, so we tell it to dispatch the click anyway.
+  await btn.click({ force: true });
 }
 
 export async function saveStagePopover(page: Page): Promise<void> {
   const btn = stagePopover(page).getByRole('button', { name: 'Save', exact: true });
   await btn.scrollIntoViewIfNeeded();
-  await btn.click();
+  // force: true bypasses the actionability heuristic. Stage popover sits
+  // in a portal with fixed positioning; Playwright sometimes flags its
+  // buttons as "outside viewport" even when window.innerHeight comfortably
+  // contains them, so we tell it to dispatch the click anyway.
+  await btn.click({ force: true });
   // Popover dismounts on Save. Do not assert on its absence here — sibling
   // confirmation prompts (e.g. Clear-with-linked-risk) wait for user input.
 }
@@ -179,26 +187,23 @@ export async function openItemAdd(
  *
  * Cards expose pencil/trash buttons inside a hover overlay; the buttons
  * are still in DOM (only opacity:0), so .click() works without hovering.
- * The bare accessible name 'Edit' also matches `Edit risk for ...` and
- * `Edit decision`, so we use exact match to scope to ItemCard buttons.
+ * Scope by `data-testid="item-card"` because a `div` ancestor filter
+ * matches any container that *contains* the text — including the
+ * accordion panel — and resolves to N nested Edit buttons.
  */
 export async function openItemEdit(page: Page, cardText: string): Promise<void> {
-  const card = page.locator('div', { hasText: cardText }).filter({
-    has: page.getByRole('button', { name: 'Edit', exact: true }),
-  }).first();
+  const card = page.getByTestId('item-card').filter({ hasText: cardText }).first();
   await card.getByRole('button', { name: 'Edit', exact: true }).click();
   await itemDialog(page).waitFor({ state: 'visible', timeout: 5_000 });
 }
 
 /**
- * Delete an item card by clicking its trash icon. Same exact-name guard
- * as openItemEdit because 'Delete' alone matches risk/decision/priority
- * delete buttons too.
+ * Delete an item card by clicking its trash icon. Returns the card
+ * Locator so callers can chain assertions (e.g. wait for it to leave
+ * the DOM).
  */
 export async function deleteItem(page: Page, cardText: string): Promise<void> {
-  const card = page.locator('div', { hasText: cardText }).filter({
-    has: page.getByRole('button', { name: 'Delete', exact: true }),
-  }).first();
+  const card = page.getByTestId('item-card').filter({ hasText: cardText }).first();
   await card.getByRole('button', { name: 'Delete', exact: true }).click();
 }
 

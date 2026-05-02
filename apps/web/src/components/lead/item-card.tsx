@@ -94,6 +94,7 @@ export function ItemCard({
 
   return (
     <div
+      data-testid="item-card"
       className="group relative flex flex-col rounded-[10px] border bg-[var(--color-background)] p-2.5 transition-all hover:border-[rgba(0,0,0,0.25)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)]"
       style={{
         // min-height + flex column keeps every card the same baseline height
