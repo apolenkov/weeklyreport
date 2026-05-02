@@ -35,9 +35,10 @@ import {
   expectStageStatus,
   openItemAdd,
   openItemEdit,
+  deleteItem,
   fillItemDialog,
   saveDialog,
-  itemDialog,
+  waitForSave,
   DEFAULT_LEAD,
 } from './helpers/lead-form';
 
@@ -80,7 +81,9 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     await expectAssignedProducts(leadPage, 3);
     await clickStageChip(leadPage, 0, 'Dev', 'blocked');
     await selectStageOption(leadPage, 'Clear');
+    const save = waitForSave(leadPage);
     await saveStagePopover(leadPage);
+    await save;
     await expectAssignedProducts(leadPage, 3);
     await expectStageStatus(leadPage, 0, 'Dev', 'empty');
     // Round-trip: reload to assert persistence, not just optimistic update.
@@ -113,7 +116,9 @@ test.describe('Lead Form — modal-driven CRUD', () => {
   test('S2.2: Edit item via pencil — modal preloads existing values, Save persists', async ({ leadPage }) => {
     await openItemEdit(leadPage, "Refactored auth flow for Aleksandr P.");
     await fillItemDialog(leadPage, { text: 'Refactored auth flow + added MFA' });
+    const save = waitForSave(leadPage);
     await saveDialog(leadPage, /Item/);
+    await save;
     await expect(leadPage.getByText('Refactored auth flow + added MFA')).toBeVisible();
     await leadPage.reload();
     await expect(leadPage.getByText('Refactored auth flow + added MFA')).toBeVisible();
@@ -122,10 +127,7 @@ test.describe('Lead Form — modal-driven CRUD', () => {
   test('S2.3: Delete item removes it from the column', async ({ leadPage }) => {
     const targetText = 'Shipped cross-team metrics dashboard work';
     await expect(leadPage.getByText(targetText)).toBeVisible();
-    const card = leadPage.locator('div').filter({ hasText: targetText }).filter({
-      has: leadPage.getByRole('button', { name: 'Delete' }),
-    }).first();
-    await card.getByRole('button', { name: 'Delete' }).click();
+    await deleteItem(leadPage, targetText);
     await expect(leadPage.getByText(targetText)).not.toBeVisible({ timeout: 5_000 });
   });
 
@@ -141,13 +143,10 @@ test.describe('Lead Form — modal-driven CRUD', () => {
   });
 
   test('S3.2: Adding to Next Week from empty column lands a Planned card', async ({ leadPage }) => {
-    // Click "+ Add" on a Next-Week column. The seeded Cloud Infrastructure
-    // column has no next-week item, so its "+ Add" sits next to the
-    // empty-state placeholder.
-    const nextWeekHeader = leadPage.getByRole('button', { name: /^Next Week/ });
-    await nextWeekHeader.scrollIntoViewIfNeeded();
-    const addBtn = leadPage.getByRole('button', { name: 'Add item to Cloud Infrastructure' }).nth(1);
-    await addBtn.click();
+    // Cloud Infrastructure has no next-week seed item, so its "+ Add"
+    // sits next to the "No items yet" placeholder. openItemAdd with
+    // week='next' scopes to the Next Week section explicitly.
+    await openItemAdd(leadPage, 'Cloud Infrastructure', 'next');
     await fillItemDialog(leadPage, { text: 'Plan: BCP failover drill' });
     await saveDialog(leadPage, /Item/);
     await expect(leadPage.getByText('Plan: BCP failover drill')).toBeVisible();
@@ -163,7 +162,10 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     await expect(dialog.getByLabel(/^Risk/i)).toBeVisible();
     await expect(dialog.getByLabel(/Impact/i)).toBeVisible();
     await expect(dialog.getByLabel(/Mitigation/i)).toBeVisible();
-    await expect(dialog.getByRole('button', { name: /^Blocked$|^At Risk$/ }).first()).toBeVisible();
+    // Severity chips render with a leading symbol (`!`, `✕`); match by
+    // the text suffix rather than anchored regex.
+    await expect(dialog.getByRole('button', { name: /At Risk/ })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /Blocked/ })).toBeVisible();
     await expect(dialog.getByLabel(/Product/i)).toBeVisible();
   });
 
@@ -175,7 +177,15 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     const dialog = leadPage.getByRole('dialog', { name: /Risk/i });
     await dialog.getByLabel(/Impact/i).fill('Q3 launch slips by 2 weeks');
     await dialog.getByLabel(/Mitigation/i).fill('Vendor escalation; ETA 48h');
+    // Wait for the autosave-on-save round-trip before reloading; otherwise
+    // the reload races the in-flight saveDraft and reads the unmodified
+    // server state.
+    const savePromise = leadPage.waitForResponse(
+      (r) => r.url().includes('reports.saveDraft') && r.status() === 200,
+      { timeout: 10_000 },
+    );
     await saveDialog(leadPage, /Risk/);
+    await savePromise;
     await leadPage.reload();
     await expect(leadPage.getByText('Q3 launch slips by 2 weeks')).toBeVisible();
     await expect(leadPage.getByText('Vendor escalation; ETA 48h')).toBeVisible();
