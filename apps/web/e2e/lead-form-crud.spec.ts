@@ -118,14 +118,14 @@ test.describe('Lead Form — modal-driven CRUD', () => {
   test('S2.2: Edit item via pencil — modal preloads existing values, Save persists', async ({ leadPage }) => {
     await openItemEdit(leadPage, "Refactored auth flow for Aleksandr P.");
     await fillItemDialog(leadPage, { text: 'Refactored auth flow + added MFA' });
+    const save = waitForSave(leadPage);
     await saveDialog(leadPage, /Item/);
+    await save;
     await expect(leadPage.getByText('Refactored auth flow + added MFA')).toBeVisible();
-    // The dialog Save closes the modal and emits onItemsChange synchronously,
-    // but autosave is debounced ~600ms and the tRPC round-trip adds another
-    // 50–150ms. waitForLoadState('networkidle') and the explicit
-    // saveDraft response listener both raced this window, so just wait
-    // explicitly: 2s is wasteful but reliable across CI variance.
-    await leadPage.waitForTimeout(2000);
+    // The autosave debounce can fire a *second* saveDraft after the modal-
+    // close one we already awaited — wait for the network to settle so the
+    // reload reads server-acknowledged state, not in-flight optimistic.
+    await leadPage.waitForLoadState('networkidle', { timeout: 5_000 });
     await leadPage.reload();
     await expect(leadPage.getByText('Refactored auth flow + added MFA')).toBeVisible();
   });
