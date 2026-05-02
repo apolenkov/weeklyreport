@@ -868,6 +868,7 @@ export function LeadForm({ period }: LeadFormProps) {
             decisions={decisions}
             readOnly={isReadOnly}
             onChange={handleDecisionsChange}
+            currentUserName={currentUser.name}
           />
         </AccordionSection>
 

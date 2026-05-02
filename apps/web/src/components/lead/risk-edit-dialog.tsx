@@ -117,6 +117,9 @@ export function RiskEditDialog({
             <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="risk-text">
               Risk *
             </label>
+            <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+              One sentence: what specifically might go wrong (the situation, not its consequence).
+            </p>
             <textarea
               id="risk-text"
               autoFocus
@@ -124,7 +127,7 @@ export function RiskEditDialog({
               style={{ minHeight: '60px' }}
               value={text}
               onChange={(e) => { setText(e.target.value); setError(null); }}
-              placeholder="What is the risk?"
+              placeholder="e.g. Vendor API regression delays OAuth2 integration"
             />
           </div>
 
@@ -133,13 +136,18 @@ export function RiskEditDialog({
             <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="risk-impact">
               Impact *
             </label>
+            <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+              The consequence in real terms — what gets blocked, delayed, or costs more.
+              Different from <em>Severity</em>: severity is the categorical level
+              (At Risk / Blocked); impact is the narrative.
+            </p>
             <textarea
               id="risk-impact"
               className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
               style={{ minHeight: '50px' }}
               value={impact}
               onChange={(e) => { setImpact(e.target.value); setError(null); }}
-              placeholder="What does it block / delay / cost?"
+              placeholder="e.g. Delays Q3 launch by 2 weeks; 4 downstream teams idle"
             />
           </div>
 
@@ -148,19 +156,27 @@ export function RiskEditDialog({
             <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="risk-mitigation">
               Mitigation *
             </label>
+            <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+              What you (or someone) is doing to prevent or absorb the risk.
+            </p>
             <textarea
               id="risk-mitigation"
               className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
               style={{ minHeight: '50px' }}
               value={mitigation}
               onChange={(e) => { setMitigation(e.target.value); setError(null); }}
-              placeholder="How are you addressing it?"
+              placeholder="e.g. Vendor escalation in progress; ETA 48h"
             />
           </div>
 
           {/* Severity chips */}
           <div>
             <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">Severity</span>
+            <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+              How urgent: <strong>At Risk</strong> = needs attention soon;
+              <strong> Blocked</strong> = work has stopped. Drives the chip
+              colour and SDLC-pipeline sync.
+            </p>
             <div className="flex flex-wrap gap-2">
               {SEVERITY_CHOICES.map((c) => {
                 const selected = severity === c.value;

@@ -15,7 +15,23 @@ type DecisionsSectionProps = {
    * shown above the input. Falls back to "Department".
    */
   readonly defaultProductName?: string;
+  /**
+   * Display name of the currently signed-in user. Used to (1) seed the
+   * Owner field for newly-created decisions, and (2) hide Edit/Delete on
+   * decisions whose owner is someone else — the lead can raise a decision
+   * but if Owner=Head, the head is the one expected to act, so the row
+   * becomes read-only from the lead's perspective.
+   */
+  readonly currentUserName?: string;
 };
+
+function isMine(owner: string | undefined, me: string | undefined): boolean {
+  if (!me) return true; // No identity yet — be permissive.
+  if (!owner) return true; // Unowned rows behave like own.
+  // Case- and punctuation-loose match: "Polenkov A." should equal "Polenkov A".
+  const normalize = (s: string) => s.trim().toLowerCase().replace(/[.\s]+$/g, '');
+  return normalize(owner) === normalize(me);
+}
 
 function EditIcon() {
   return (
@@ -49,6 +65,7 @@ export function DecisionsSection({
   readOnly = false,
   onChange,
   defaultProductName,
+  currentUserName,
 }: DecisionsSectionProps) {
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create' } | { open: true; mode: 'edit'; decision: DecisionEntry }
@@ -93,7 +110,9 @@ export function DecisionsSection({
           {readOnly ? 'No decisions reported.' : 'No decisions yet. Use “+ Add Decision” to flag one for the head.'}
         </div>
       ) : (
-        decisions.map((decision) => (
+        decisions.map((decision) => {
+          const mine = isMine(decision.owner, currentUserName);
+          return (
           <div
             key={decision.id}
             className="rounded-lg p-4"
@@ -108,7 +127,17 @@ export function DecisionsSection({
                   Due {formatDeadline(decision.deadline)}
                 </span>
               )}
-              {!readOnly && (
+              {/* Owned-by-someone-else marker — surfaces "this isn't yours
+                  to act on" without needing to open the dialog. */}
+              {!mine && decision.owner && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#eef2ff] px-2.5 py-0.5 text-[11px] font-semibold text-[#4338ca]"
+                  title={`Owner: ${decision.owner} — read-only for you`}
+                >
+                  Owner: {decision.owner}
+                </span>
+              )}
+              {!readOnly && mine && (
                 <div className="ml-auto flex gap-1">
                   <button
                     type="button"
@@ -146,7 +175,8 @@ export function DecisionsSection({
               </div>
             </div>
           </div>
-        ))
+          );
+        })
       )}
 
       {!readOnly && (
@@ -162,6 +192,7 @@ export function DecisionsSection({
       <DecisionEditDialog
         open={dialogState.open}
         decision={dialogState.open && dialogState.mode === 'edit' ? dialogState.decision : null}
+        defaultOwner={currentUserName}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
       />
