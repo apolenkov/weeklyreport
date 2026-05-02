@@ -94,17 +94,29 @@ export function ItemCard({
 
   return (
     <div
-      className="group relative flex flex-col rounded-[10px] border bg-[var(--color-background)] p-2.5 transition-all hover:border-[rgba(0,0,0,0.2)] hover:shadow-[0_1px_4px_rgba(0,0,0,0.08)]"
+      className="group relative flex flex-col rounded-[10px] border bg-[var(--color-background)] p-2.5 transition-all hover:border-[rgba(0,0,0,0.25)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)]"
       style={{
-        borderColor: isBlocked ? 'rgba(200,32,20,0.2)' : isPlanned ? 'var(--color-muted)' : 'var(--color-muted)',
-        borderLeft: `3px solid ${isBlocked ? 'var(--color-destructive)' : 'var(--color-starbucks-accent)'}`,
-        borderStyle: isPlanned ? 'dashed' : 'solid',
+        // min-height + flex column keeps every card the same baseline height
+        // regardless of whether the description wraps to 1 or 3 lines, so
+        // rows across products feel aligned at a glance.
+        minHeight: 110,
+        // Mockup uses a fully-dashed border on Planned (Next Week) items
+        // and a solid + colour-coded left strip on Current Week. We build
+        // every side explicitly to avoid the shorthand-vs-longhand React
+        // warning that borderLeft+borderStyle was producing.
+        borderTop: `1px ${isPlanned ? 'dashed' : 'solid'} ${isBlocked ? 'rgba(200,32,20,0.2)' : 'var(--color-muted)'}`,
+        borderRight: `1px ${isPlanned ? 'dashed' : 'solid'} ${isBlocked ? 'rgba(200,32,20,0.2)' : 'var(--color-muted)'}`,
+        borderBottom: `1px ${isPlanned ? 'dashed' : 'solid'} ${isBlocked ? 'rgba(200,32,20,0.2)' : 'var(--color-muted)'}`,
+        borderLeft: isPlanned
+          ? `1px dashed ${'var(--color-muted)'}`
+          : `3px solid ${isBlocked ? 'var(--color-destructive)' : 'var(--color-starbucks-accent)'}`,
         background: isBlocked ? '#fee2e2' : 'var(--color-background)',
       }}
     >
-      {/* Action buttons */}
+      {/* Action buttons — hidden until hover to keep the card visually clean.
+          Earlier they were always visible at 30% which read as broken. */}
       {!readOnly && !isEditing && (
-        <div className="absolute right-2 top-2 flex gap-0.5 opacity-30 transition-opacity group-hover:opacity-100">
+        <div className="pointer-events-none absolute right-2 top-2 flex gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
           <button
             type="button"
             className="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"

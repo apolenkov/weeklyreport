@@ -164,7 +164,10 @@ export function CurrentWeekSection({
               )}
             </div>
             {col.items.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[#f8f6f2] p-3 text-center text-xs text-[var(--color-muted-foreground)]">
+              <div
+                className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[#f8f6f2] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
+                style={{ minHeight: 110 }}
+              >
                 No items yet
               </div>
             ) : (
