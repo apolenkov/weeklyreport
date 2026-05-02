@@ -157,7 +157,16 @@ export function ItemCard({
           aria-label="Edit item text"
         />
       ) : (
-        <div className="text-sm text-[var(--color-foreground)]">{item.text}</div>
+        // line-clamp-3 keeps every card baseline-aligned: long text overflows
+        // gracefully into ellipsis instead of pushing the row's height past
+        // siblings. Native title attribute gives the full text on hover
+        // without pulling in a Tooltip dependency.
+        <div
+          className="line-clamp-3 text-sm text-[var(--color-foreground)]"
+          title={item.text}
+        >
+          {item.text}
+        </div>
       )}
 
       {/* Author */}

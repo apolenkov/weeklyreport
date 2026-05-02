@@ -9,18 +9,24 @@ type VersionHistoryNavProps = {
   readonly onRestore?: (version: number) => void;
 };
 
-function ChevronLeftSmall() {
+// Curved "rewind" / "fast-forward" arrows — visually distinct from the
+// straight chevrons used by PeriodNavigator. The two control groups
+// (period vs version) sit on the same toolbar row, so swapping the icon
+// shape is the cheapest disambiguation that avoids a redesign.
+function RewindArrow() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" stroke="currentColor" fill="none" strokeWidth={2}>
-      <path d="M15 18l-6-6 6-6" />
+    <svg viewBox="0 0 24 24" className="h-3 w-3" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="1 4 1 10 7 10" />
+      <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
     </svg>
   );
 }
 
-function ChevronRightSmall() {
+function FastForwardArrow() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" stroke="currentColor" fill="none" strokeWidth={2}>
-      <path d="M9 18l6-6-6-6" />
+    <svg viewBox="0 0 24 24" className="h-3 w-3" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 4 23 10 17 10" />
+      <path d="M20.49 15a9 9 0 11-2.13-9.36L23 10" />
     </svg>
   );
 }
@@ -77,7 +83,7 @@ export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProp
           title={hasPrev ? `Previous version (v${versions[currentIndex + 1]?.version})` : 'No older version'}
           aria-label="Previous version"
         >
-          <ChevronLeftSmall />
+          <RewindArrow />
         </button>
 
         <button
@@ -98,7 +104,7 @@ export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProp
           title={isLatest ? 'Latest version' : 'Next version'}
           aria-label="Next version"
         >
-          <ChevronRightSmall />
+          <FastForwardArrow />
         </button>
       </div>
 
