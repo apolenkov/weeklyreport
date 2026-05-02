@@ -124,27 +124,19 @@ export function stagePopover(page: Page): Locator {
 }
 
 export async function selectStageOption(page: Page, option: StatusOption): Promise<void> {
-  // Stage popover renders via a fixed-position portal, which Playwright's
-  // visibility/viewport heuristic occasionally classifies as "outside the
-  // viewport" — especially after auto-scroll. scrollIntoViewIfNeeded forces
-  // the click target into the resolved viewport before dispatch.
+  // Stage popover lives in a fixed-position portal. Playwright's
+  // viewport heuristic still rejects clicks here even with force: true
+  // because the actionability check fires before the click dispatch.
+  // dispatchEvent skips actionability entirely — the button is a plain
+  // <button onClick=…>, not a Radix Slot, so a synthetic click triggers
+  // the React handler the same as a real one.
   const btn = stagePopover(page).getByRole('button', { name: new RegExp(option) });
-  await btn.scrollIntoViewIfNeeded();
-  // force: true bypasses the actionability heuristic. Stage popover sits
-  // in a portal with fixed positioning; Playwright sometimes flags its
-  // buttons as "outside viewport" even when window.innerHeight comfortably
-  // contains them, so we tell it to dispatch the click anyway.
-  await btn.click({ force: true });
+  await btn.dispatchEvent('click');
 }
 
 export async function saveStagePopover(page: Page): Promise<void> {
   const btn = stagePopover(page).getByRole('button', { name: 'Save', exact: true });
-  await btn.scrollIntoViewIfNeeded();
-  // force: true bypasses the actionability heuristic. Stage popover sits
-  // in a portal with fixed positioning; Playwright sometimes flags its
-  // buttons as "outside viewport" even when window.innerHeight comfortably
-  // contains them, so we tell it to dispatch the click anyway.
-  await btn.click({ force: true });
+  await btn.dispatchEvent('click');
   // Popover dismounts on Save. Do not assert on its absence here — sibling
   // confirmation prompts (e.g. Clear-with-linked-risk) wait for user input.
 }
@@ -185,26 +177,28 @@ export async function openItemAdd(
 /**
  * Open the Item edit dialog by clicking the pencil on an existing card.
  *
- * Cards expose pencil/trash buttons inside a hover overlay; the buttons
- * are still in DOM (only opacity:0), so .click() works without hovering.
- * Scope by `data-testid="item-card"` because a `div` ancestor filter
- * matches any container that *contains* the text — including the
- * accordion panel — and resolves to N nested Edit buttons.
+ * The action overlay sits inside a `pointer-events-none` wrapper that
+ * only flips to `pointer-events-auto` on `:hover`. Without a hover the
+ * card root captures every click and Playwright's hit-test refuses to
+ * dispatch on the button. We `hover()` the card first to activate the
+ * group-hover state, then dispatch the click.
  */
 export async function openItemEdit(page: Page, cardText: string): Promise<void> {
   const card = page.getByTestId('item-card').filter({ hasText: cardText }).first();
-  await card.getByRole('button', { name: 'Edit', exact: true }).click();
+  await card.hover();
+  await card.getByRole('button', { name: 'Edit', exact: true }).click({ force: true });
   await itemDialog(page).waitFor({ state: 'visible', timeout: 5_000 });
 }
 
 /**
- * Delete an item card by clicking its trash icon. Returns the card
- * Locator so callers can chain assertions (e.g. wait for it to leave
- * the DOM).
+ * Delete an item card by clicking its trash icon. Same hover-then-click
+ * dance as openItemEdit so the pointer-events:none overlay doesn't
+ * intercept the dispatch.
  */
 export async function deleteItem(page: Page, cardText: string): Promise<void> {
   const card = page.getByTestId('item-card').filter({ hasText: cardText }).first();
-  await card.getByRole('button', { name: 'Delete', exact: true }).click();
+  await card.hover();
+  await card.getByRole('button', { name: 'Delete', exact: true }).click({ force: true });
 }
 
 export function itemDialog(page: Page): Locator {
