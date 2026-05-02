@@ -512,24 +512,27 @@ export function LeadForm({ period }: LeadFormProps) {
   function handleRisksChange(next: RiskEntry[]) {
     setDraftSection((prev) => {
       if (!prev) return prev;
-      // Merge presentation risks back into raw section. RiskEntry has
-      // { id, productId, productName, stageName, severity, text }.
-      // Raw section.risks has { id, projectId, risk, impact, mitigation }.
+      // Merge presentation risks back into raw section. RiskEntry now
+      // carries impact + mitigation (filled by the modal-edit dialog), so
+      // we propagate all three text fields onto raw rows.
       const existingById = new Map(prev.risks.filter((r) => r.id).map((r) => [r.id!, r] as const));
       const merged = next.map((r) => {
         const existing = r.id ? existingById.get(r.id) : undefined;
         if (existing) {
-          return { ...existing, risk: r.text };
+          return {
+            ...existing,
+            projectId: r.productId,
+            risk: r.text,
+            impact: r.impact,
+            mitigation: r.mitigation,
+          };
         }
         return {
           id: r.id ?? `tmp-${crypto.randomUUID()}`,
           projectId: r.productId,
           risk: r.text,
-          impact: r.severity === 'blocked' ? 'high' : 'medium',
-          // Schema requires safeText({min:1}); UI does not yet surface a
-          // mitigation field, so seed with a placeholder so newly-added
-          // rows pass autosave once the user types into `risk`.
-          mitigation: 'TBD',
+          impact: r.impact,
+          mitigation: r.mitigation,
         };
       });
       return { ...prev, risks: merged };
