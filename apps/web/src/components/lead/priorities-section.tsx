@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+
+import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import type { PriorityEntry } from './mock-data';
 
 type PrioritiesSectionProps = {
@@ -38,6 +41,10 @@ const RANK_TEXT: Record<1 | 2 | 3 | 'rest', string> = {
  */
 export function PrioritiesSection({ priorities, readOnly = false, onChange }: PrioritiesSectionProps) {
   const sorted = [...priorities].sort((a, b) => a.rank - b.rank);
+  // Confirm delete only when a priority has user-entered text. Empty
+  // rows (just-added, blank) delete immediately — typical use is "added
+  // by mistake, undo".
+  const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
 
   function emit(next: PriorityEntry[]) {
     // Always renumber so ranks stay 1..N contiguous regardless of how the
@@ -55,7 +62,18 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
 
   function handleDelete(idx: number) {
     if (readOnly) return;
+    const target = sorted[idx];
+    if (target && target.text.trim().length > 0) {
+      setPendingDeleteIdx(idx);
+      return;
+    }
     emit(sorted.filter((_, i) => i !== idx));
+  }
+
+  function confirmDelete() {
+    if (pendingDeleteIdx === null) return;
+    emit(sorted.filter((_, i) => i !== pendingDeleteIdx));
+    setPendingDeleteIdx(null);
   }
 
   function handleAdd() {
@@ -130,6 +148,15 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
           + Add Priority
         </button>
       )}
+
+      <ConfirmDeleteDialog
+        open={pendingDeleteIdx !== null}
+        title="Delete priority?"
+        preview={pendingDeleteIdx !== null ? sorted[pendingDeleteIdx]?.text ?? '' : ''}
+        subtitle={pendingDeleteIdx !== null ? `Priority ${pendingDeleteIdx + 1}` : undefined}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteIdx(null)}
+      />
     </div>
   );
 }
