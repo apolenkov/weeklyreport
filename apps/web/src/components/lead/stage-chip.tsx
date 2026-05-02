@@ -10,6 +10,12 @@ type StageChipProps = {
   readonly stage: StageAssignment;
   readonly onStatusChange?: (stageName: string, newStatus: StageStatus) => void;
   readonly readOnly?: boolean;
+  /**
+   * Number of risks currently associated with this stage (within the stage's
+   * product). Surfaces as a confirmation prompt when the user picks "Clear"
+   * — clearing a stage implicitly orphans those risks, so we ask first.
+   */
+  readonly linkedRiskCount?: number;
 };
 
 const STATUS_CONFIG: Record<
@@ -17,7 +23,7 @@ const STATUS_CONFIG: Record<
   { icon: string; bg: string; text: string; border: string }
 > = {
   'on-track': {
-    icon: '\u2713',
+    icon: '✓',
     bg: 'var(--color-success)',
     text: 'var(--color-primary)',
     border: 'var(--color-starbucks-accent)',
@@ -29,13 +35,13 @@ const STATUS_CONFIG: Record<
     border: '#d4a017',
   },
   blocked: {
-    icon: '\u2715',
+    icon: '✕',
     bg: '#fee2e2',
     text: 'var(--color-destructive)',
     border: 'var(--color-destructive)',
   },
   empty: {
-    icon: '\u25CB',
+    icon: '○',
     bg: '#f8f6f2',
     text: 'var(--color-muted-foreground)',
     border: 'rgba(0,0,0,0.15)',
@@ -43,15 +49,20 @@ const STATUS_CONFIG: Record<
 };
 
 const STATUS_OPTIONS: { value: StageStatus; label: string }[] = [
-  { value: 'on-track', label: '\u2713 On Track' },
+  { value: 'on-track', label: '✓ On Track' },
   { value: 'at-risk', label: '! At Risk' },
-  { value: 'blocked', label: '\u2715 Blocked' },
-  { value: 'empty', label: '\u25CB Clear' },
+  { value: 'blocked', label: '✕ Blocked' },
+  { value: 'empty', label: '○ Clear' },
 ];
 
-export function StageChip({ stage, onStatusChange, readOnly = false }: StageChipProps) {
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+export function StageChip({ stage, onStatusChange, readOnly = false, linkedRiskCount = 0 }: StageChipProps) {
+  const [showPopover, setShowPopover] = useState(false);
+  // Pending status mirrors the radio-style chip selection inside the
+  // popover. Earlier the dropdown applied on click; the redesign defers
+  // until the user presses Save so a stray click doesn't clobber the
+  // SDLC pipeline.
+  const [pending, setPending] = useState<StageStatus>(stage.status);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
@@ -68,25 +79,22 @@ export function StageChip({ stage, onStatusChange, readOnly = false }: StageChip
       const chipContains = dropdownRef.current?.contains(target);
       const portalContains = portalRef.current?.contains(target);
       if (!chipContains && !portalContains) {
-        setShowDropdown(false);
+        setShowPopover(false);
       }
     }
-    if (showDropdown) {
+    if (showPopover) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showDropdown]);
+  }, [showPopover]);
 
-  // The chip lives inside an accordion with overflow:hidden, so an absolutely
-  // positioned dropdown gets clipped (only the first option shows). Render it
-  // through a portal to <body> and position it via the button's getBoundingClientRect
-  // so it floats above any clipping ancestor.
+  // Position popover via portal to escape accordion overflow:hidden.
   useEffect(() => {
-    if (!showDropdown) return;
+    if (!showPopover) return;
     const update = () => {
       const r = buttonRef.current?.getBoundingClientRect();
       if (!r) return;
-      setDropdownPos({ top: r.bottom + 4, left: r.left });
+      setPopoverPos({ top: r.bottom + 4, left: r.left });
     };
     update();
     window.addEventListener('scroll', update, true);
@@ -95,7 +103,7 @@ export function StageChip({ stage, onStatusChange, readOnly = false }: StageChip
       window.removeEventListener('scroll', update, true);
       window.removeEventListener('resize', update);
     };
-  }, [showDropdown]);
+  }, [showPopover]);
 
   const chipClasses = [
     'w-full p-2 rounded-lg text-center text-xs font-semibold transition-all duration-150',
@@ -119,19 +127,37 @@ export function StageChip({ stage, onStatusChange, readOnly = false }: StageChip
 
   function handleChipClick() {
     if (!isEditable) return;
-    setShowDropdown(!showDropdown);
+    setPending(stage.status); // Reset selection to current every time popover opens.
+    setShowPopover(!showPopover);
   }
 
-  function handleStatusSelect(newStatus: StageStatus) {
-    onStatusChange?.(stage.stageName, newStatus);
-    setShowDropdown(false);
+  function handleSave() {
+    if (!isEditable) return;
+    if (pending !== stage.status) {
+      // Confirm before clearing a stage that has linked risks — clearing
+      // doesn't delete the risks themselves, but removing the stage's
+      // status drops the chip-level signal that surfaces those risks
+      // visually, so warn the user before cutting that thread.
+      if (pending === 'empty' && linkedRiskCount > 0) {
+        const ok = window.confirm(
+          `Clear "${stage.stageName}"? It still has ${linkedRiskCount} linked risk${linkedRiskCount === 1 ? '' : 's'}.\n\nThe risks themselves stay; only the stage's status changes back to undefined.`,
+        );
+        if (!ok) return;
+      }
+      onStatusChange?.(stage.stageName, pending);
+    }
+    setShowPopover(false);
+  }
+
+  function handleCancel() {
+    setShowPopover(false);
   }
 
   const title = isLocked
-    ? `${stage.assignee ?? 'Unknown'} \u00b7 No edit permissions`
+    ? `${stage.assignee ?? 'Unknown'} · No edit permissions`
     : isUnassigned
-      ? 'Unassigned \u00b7 Contact admin'
-      : stage.tooltip ?? `${stage.stageName} \u00b7 ${stage.status}`;
+      ? 'Unassigned · Contact admin'
+      : stage.tooltip ?? `${stage.stageName} · ${stage.status}`;
 
   function handleEnter() {
     const el = buttonRef.current;
@@ -176,32 +202,63 @@ export function StageChip({ stage, onStatusChange, readOnly = false }: StageChip
           fontWeight: stage.ownership === 'mine' ? 600 : 400,
         }}
       >
-        {isUnassigned ? '\u2014 unassigned' : stage.assignee}
+        {isUnassigned ? '— unassigned' : stage.assignee}
       </span>
 
-      {/* Status dropdown — portaled to body so the surrounding accordion's
-          overflow:hidden does not clip it. */}
-      {showDropdown && dropdownPos && typeof document !== 'undefined' &&
+      {/* Status popover form (M2 redesign). Portaled to body to escape
+          accordion overflow:hidden. Selection is staged in `pending` and
+          applied only on Save. */}
+      {showPopover && popoverPos && typeof document !== 'undefined' &&
         createPortal(
           <div
             ref={portalRef}
-            className="fixed z-50 rounded-xl border border-[var(--color-border)] bg-white p-2 shadow-lg"
-            style={{ top: dropdownPos.top, left: dropdownPos.left, minWidth: '140px' }}
+            className="fixed z-50 w-[260px] rounded-xl border border-[var(--color-border)] bg-white p-3 shadow-lg"
+            style={{ top: popoverPos.top, left: popoverPos.left }}
+            role="dialog"
+            aria-label={`Set status for ${stage.stageName}`}
           >
-            {STATUS_OPTIONS.map((opt) => (
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+              {stage.stageName}
+            </div>
+            <div className="mb-3 grid grid-cols-2 gap-1.5">
+              {STATUS_OPTIONS.map((opt) => {
+                const cfg = STATUS_CONFIG[opt.value];
+                const selected = pending === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setPending(opt.value)}
+                    className="inline-flex min-h-[32px] items-center justify-center gap-1 rounded-[var(--radius-pill)] px-2 py-1 text-[12px] font-semibold transition-all"
+                    style={{
+                      background: selected ? cfg.bg : 'transparent',
+                      color: selected ? cfg.text : 'var(--color-foreground)',
+                      border: `1.5px solid ${selected ? cfg.border : 'rgba(0,0,0,0.15)'}`,
+                    }}
+                    aria-pressed={selected}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex justify-end gap-2">
               <button
-                key={opt.value}
                 type="button"
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors hover:bg-[#f8f6f2]"
-                style={{
-                  color: STATUS_CONFIG[opt.value].text,
-                  background: stage.status === opt.value ? STATUS_CONFIG[opt.value].bg : undefined,
-                }}
-                onClick={() => handleStatusSelect(opt.value)}
+                onClick={handleCancel}
+                className="btn-press inline-flex min-h-[32px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-transparent px-3 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
               >
-                {opt.label}
+                Cancel
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={pending === stage.status}
+                className="btn-press inline-flex min-h-[32px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-[12px] font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
           </div>,
           document.body,
         )
