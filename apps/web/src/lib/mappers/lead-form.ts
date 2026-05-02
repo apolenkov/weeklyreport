@@ -100,7 +100,12 @@ export type LeadRiskEntry = {
   productName: string;
   stageName: string;
   severity: 'at-risk' | 'blocked';
+  /** The user-controlled "what is the risk" text (= raw `risk` field). */
   text: string;
+  /** Schema-required impact narrative; surfaced in the edit dialog. */
+  impact: string;
+  /** Schema-required mitigation narrative; surfaced in the edit dialog. */
+  mitigation: string;
 };
 
 export type LeadDecisionEntry = {
@@ -350,6 +355,8 @@ export function mapLeadRisks(
       stageName: '—',
       severity: 'at-risk' as const,
       text: r.risk,
+      impact: r.impact,
+      mitigation: r.mitigation,
     };
   });
 }
