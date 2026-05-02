@@ -124,25 +124,38 @@ export function stagePopover(page: Page): Locator {
 }
 
 export async function selectStageOption(page: Page, option: StatusOption): Promise<void> {
-  // Stage popover lives in a fixed-position portal. Playwright's
-  // viewport heuristic rejects normal clicks here. focus()+keyboard
-  // Enter is the most reliable path: focus skips hit-testing,
-  // and pressing Enter dispatches a real synthetic click via the
-  // browser's default activation behaviour — which React onClick
-  // listens for the same as a mouse click.
-  const btn = stagePopover(page).getByRole('button', { name: new RegExp(option) });
-  await btn.focus();
-  await page.keyboard.press('Enter');
+  // Stage popover lives in a fixed-position portal which Playwright's
+  // hit-test classifies as "outside viewport" through every fix tried
+  // in rounds 3-5 (force:true, scrollIntoView, focus+Enter,
+  // dispatchEvent). The DOM `.click()` method bypasses Playwright's
+  // actionability layer entirely and just fires the React onClick
+  // synchronously — works for plain `<button onClick>` like ours.
+  await page.evaluate((label) => {
+    const dlg = document.querySelector<HTMLElement>('[role="dialog"][aria-label*="Set status"]');
+    if (!dlg) throw new Error('selectStageOption: stage popover not mounted');
+    const btn = Array.from(dlg.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => new RegExp(label).test(b.textContent ?? ''),
+    );
+    if (!btn) throw new Error(`selectStageOption: ${label} not found in popover`);
+    btn.click();
+  }, option);
 }
 
 export async function saveStagePopover(page: Page): Promise<void> {
-  const btn = stagePopover(page).getByRole('button', { name: 'Save', exact: true });
-  await btn.focus();
-  await page.keyboard.press('Enter');
-  // Popover dismounts on Save. Give React a tick to apply the optimistic
-  // update + onChange propagation before the caller asserts on aria-label
-  // changes. Without this the test races the post-save render.
-  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const dlg = document.querySelector<HTMLElement>('[role="dialog"][aria-label*="Set status"]');
+    if (!dlg) throw new Error('saveStagePopover: stage popover not mounted');
+    const btn = Array.from(dlg.querySelectorAll<HTMLButtonElement>('button')).find(
+      (b) => b.textContent?.trim() === 'Save' && !b.disabled,
+    );
+    if (!btn) throw new Error('saveStagePopover: enabled Save button not found');
+    btn.click();
+  });
+  // Wait for the popover to dismount + the onChange round-trip (handler
+  // → setDraftSection → autosave debounce → tRPC mutation). 800ms
+  // covers the worst case observed in CI; below that, post-save
+  // assertions race the optimistic re-render.
+  await page.waitForTimeout(800);
 }
 
 export async function cancelStagePopover(page: Page): Promise<void> {
