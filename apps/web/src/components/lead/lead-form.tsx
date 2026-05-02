@@ -495,19 +495,24 @@ export function LeadForm({ period }: LeadFormProps) {
     setDraftSection((prev) => {
       if (!prev) return prev;
       // Map presentation Product[] (with stage statuses) back onto raw projects.
-      // Mirror the *worst* status across stages onto the report-level traffic light.
-      const worstByProduct = new Map<string, 'green' | 'yellow' | 'red'>();
+      // Worst-of-stages → traffic-light. `null` carries the "all stages empty"
+      // case back to the schema as `undefined`, so picking Clear on the only
+      // owned stage actually returns the chip to grey instead of bouncing
+      // back to green via the (deleted) "default to green" branch.
+      const worstByProduct = new Map<string, 'green' | 'yellow' | 'red' | null>();
       for (const p of next) {
-        let worst: 'green' | 'yellow' | 'red' = 'green';
+        let worst: 'green' | 'yellow' | 'red' | null = null;
         for (const s of p.stages) {
-          if (s.status === 'blocked') worst = 'red';
-          else if (s.status === 'at-risk' && worst !== 'red') worst = 'yellow';
+          if (s.status === 'blocked') { worst = 'red'; break; }
+          if (s.status === 'at-risk') { if (worst !== 'red') worst = 'yellow'; }
+          else if (s.status === 'on-track') { if (worst !== 'red' && worst !== 'yellow') worst = 'green'; }
+          // 'empty' contributes nothing; loop continues.
         }
         worstByProduct.set(p.id, worst);
       }
       const merged = prev.projects.map((ps) =>
         worstByProduct.has(ps.projectId)
-          ? { ...ps, trafficLight: worstByProduct.get(ps.projectId)! }
+          ? { ...ps, trafficLight: worstByProduct.get(ps.projectId) }
           : ps,
       );
       return { ...prev, projects: merged };
