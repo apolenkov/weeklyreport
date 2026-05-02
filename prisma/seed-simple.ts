@@ -44,7 +44,7 @@ const prisma = new PrismaClient({ adapter });
 const HEAD_ID = 'a0000000-0000-4000-8000-000000000099';
 const VIEWER_ID = 'a0000000-0000-4000-8000-000000000098';
 const ADMIN_ID = 'a0000000-0000-4000-8000-000000000097';
-const LEAD_PLATANOV = 'a0000000-0000-4000-8000-000000000011';
+const LEAD_ALEX = 'a0000000-0000-4000-8000-000000000011';
 const LEAD_MARIA = 'a0000000-0000-4000-8000-000000000012';
 const LEAD_IGOR = 'a0000000-0000-4000-8000-000000000013';
 
@@ -85,7 +85,7 @@ async function main() {
       { id: HEAD_ID, email: 'head@customreport.local', name: 'Department Head', role: Role.head, samlId: 'head-1' },
       { id: VIEWER_ID, email: 'viewer@customreport.local', name: 'Report Viewer', role: Role.viewer, samlId: 'viewer-1' },
       { id: ADMIN_ID, email: 'admin@customreport.local', name: 'Administrator', role: Role.admin, samlId: 'admin-1' },
-      { id: LEAD_PLATANOV, email: 'platanov@customreport.local', name: 'Platanov A.', role: Role.lead, samlId: 'lead-platanov' },
+      { id: LEAD_ALEX, email: 'platanov@customreport.local', name: 'Aleksandr P.', role: Role.lead, samlId: 'lead-platanov' },
       { id: LEAD_MARIA, email: 'maria@customreport.local', name: 'Maria K.', role: Role.lead, samlId: 'lead-maria' },
       { id: LEAD_IGOR, email: 'igor@customreport.local', name: 'Igor V.', role: Role.lead, samlId: 'lead-igor' },
     ],
@@ -94,7 +94,7 @@ async function main() {
   console.log('[seed-simple] Creating products...');
   await prisma.project.createMany({
     data: [
-      { id: PROD_CRM, name: 'CRM Platform', leadId: LEAD_PLATANOV, archived: false },
+      { id: PROD_CRM, name: 'CRM Platform', leadId: LEAD_ALEX, archived: false },
       { id: PROD_MOBILE, name: 'Mobile Banking App', leadId: LEAD_MARIA, archived: false },
       { id: PROD_CLOUD, name: 'Cloud Infrastructure', leadId: LEAD_IGOR, archived: false },
     ],
@@ -116,7 +116,7 @@ async function main() {
   console.log('[seed-simple] Creating stage assignments (each lead owns "Development" of their product)...');
   await prisma.stageAssignment.createMany({
     data: [
-      { id: 'b0000000-0000-4000-8000-000000000001', projectId: PROD_CRM, stageId: STAGE_DEV, userId: LEAD_PLATANOV },
+      { id: 'b0000000-0000-4000-8000-000000000001', projectId: PROD_CRM, stageId: STAGE_DEV, userId: LEAD_ALEX },
       { id: 'b0000000-0000-4000-8000-000000000002', projectId: PROD_MOBILE, stageId: STAGE_DEV, userId: LEAD_MARIA },
       { id: 'b0000000-0000-4000-8000-000000000003', projectId: PROD_CLOUD, stageId: STAGE_DEV, userId: LEAD_IGOR },
     ],
@@ -149,12 +149,12 @@ async function main() {
   });
 
   console.log('[seed-simple] Creating sections + items + risks + priorities...');
-  // Active report — 3 sections, one per lead. Platanov in draft (showing alert), Maria submitted, Igor draft.
-  // `label` mirrors the user's `name` (e.g. "Platanov A."), so seeded
+  // Active report — 3 sections, one per lead. Aleksandr P. in draft (showing alert), Maria K. submitted, Igor V. draft.
+  // `label` mirrors the user's `name` (e.g. "Aleksandr P."), so seeded
   // decision-owner strings stay equal to `data.currentUser.name` once the
   // form loads — the Owner-mine/owner-other comparison hinges on this.
   const leads = [
-    { id: LEAD_PLATANOV, productId: PROD_CRM, status: ReportSectionStatus.draft, lightStatus: TrafficLightStatus.red, label: 'Platanov A.' },
+    { id: LEAD_ALEX, productId: PROD_CRM, status: ReportSectionStatus.draft, lightStatus: TrafficLightStatus.red, label: 'Aleksandr P.' },
     { id: LEAD_MARIA, productId: PROD_MOBILE, status: ReportSectionStatus.submitted, lightStatus: TrafficLightStatus.yellow, label: 'Maria K.' },
     { id: LEAD_IGOR, productId: PROD_CLOUD, status: ReportSectionStatus.draft, lightStatus: TrafficLightStatus.green, label: 'Igor V.' },
   ];
@@ -334,21 +334,21 @@ async function main() {
     });
   }
 
-  console.log('[seed-simple] Creating version snapshots (Platanov section, 2 versions)...');
+  console.log('[seed-simple] Creating version snapshots (Aleksandr P. section, 2 versions)...');
   // VersionSnapshot rows feed the "previous version" picker — at least 2
   // versions needed so the chevrons activate and Restore is testable.
-  const platanovSectionId = `a0000000-0000-4000-8000-000000000401`;
+  const alexSectionId = `a0000000-0000-4000-8000-000000000401`;
   await prisma.versionSnapshot.createMany({
     data: [
       {
         id: randomUUID(),
-        reportSectionId: platanovSectionId,
+        reportSectionId: alexSectionId,
         version: 1,
         data: { note: 'initial draft', items: [], risks: [], decisions: [], priorities: [] },
       },
       {
         id: randomUUID(),
-        reportSectionId: platanovSectionId,
+        reportSectionId: alexSectionId,
         version: 2,
         data: { note: 'after first save', items: [], risks: [], decisions: [], priorities: [] },
       },
