@@ -155,14 +155,23 @@ export function ItemEditDialog({
             <textarea
               id="item-text"
               autoFocus
-              className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              aria-invalid={error ? 'true' : 'false'}
+              aria-describedby={error ? 'item-text-error' : undefined}
+              // Border + focus-ring switch to destructive when validation
+              // failed so the error reads at-a-glance, not just from the
+              // sentence underneath.
+              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                error
+                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
+                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+              }`}
               style={{ minHeight: '70px' }}
               value={text}
               onChange={(e) => { setText(e.target.value); setError(null); }}
               placeholder={week === 'current' ? 'What was done or in progress…' : 'What is planned for next week…'}
             />
             {error && (
-              <p className="mt-1 text-xs text-[var(--color-destructive)]">{error}</p>
+              <p id="item-text-error" className="mt-1 text-xs text-[var(--color-destructive)]">{error}</p>
             )}
           </div>
 

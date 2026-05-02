@@ -30,7 +30,11 @@ export function DecisionEditDialog({
   const [owner, setOwner] = useState(decision?.owner ?? defaultOwner ?? '');
   const [impact, setImpact] = useState(decision?.impact ?? '');
   const [deadline, setDeadline] = useState(decision?.deadline ?? '');
-  const [error, setError] = useState<string | null>(null);
+  // Per-field error map — same pattern as risk-edit-dialog. The single
+  // bottom error string used to highlight only the first failure and
+  // pinned the message under the wrong field, so each border now turns
+  // destructive independently.
+  const [errors, setErrors] = useState<{ text?: string; owner?: string; impact?: string }>({});
 
   useEffect(() => {
     if (open) {
@@ -38,7 +42,7 @@ export function DecisionEditDialog({
       setOwner(decision?.owner ?? defaultOwner ?? '');
       setImpact(decision?.impact ?? '');
       setDeadline(decision?.deadline ?? '');
-      setError(null);
+      setErrors({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, decision?.id, defaultOwner]);
@@ -51,9 +55,14 @@ export function DecisionEditDialog({
     const t = text.trim();
     const o = owner.trim();
     const im = impact.trim();
-    if (t.length === 0) { setError('Decision text is required'); return; }
-    if (o.length === 0) { setError('Owner is required'); return; }
-    if (im.length === 0) { setError('Impact is required'); return; }
+    const next: typeof errors = {};
+    if (t.length === 0) next.text = 'Decision text is required';
+    if (o.length === 0) next.owner = 'Owner is required';
+    if (im.length === 0) next.impact = 'Impact is required';
+    if (Object.keys(next).length > 0) {
+      setErrors(next);
+      return;
+    }
     onSave({
       id: decision?.id ?? crypto.randomUUID(),
       productId: decision?.productId ?? '',
@@ -101,12 +110,21 @@ export function DecisionEditDialog({
             <textarea
               id="dec-text"
               autoFocus
-              className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              aria-invalid={errors.text ? 'true' : 'false'}
+              aria-describedby={errors.text ? 'dec-text-error' : undefined}
+              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                errors.text
+                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
+                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+              }`}
               style={{ minHeight: '60px' }}
               value={text}
-              onChange={(e) => { setText(e.target.value); setError(null); }}
+              onChange={(e) => { setText(e.target.value); setErrors((prev) => ({ ...prev, text: undefined })); }}
               placeholder="e.g. Approve hiring of 2 SDETs in Q3"
             />
+            {errors.text && (
+              <p id="dec-text-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.text}</p>
+            )}
           </div>
 
           {/* Owner + Deadline row */}
@@ -122,11 +140,20 @@ export function DecisionEditDialog({
               <input
                 id="dec-owner"
                 type="text"
-                className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+                aria-invalid={errors.owner ? 'true' : 'false'}
+                aria-describedby={errors.owner ? 'dec-owner-error' : undefined}
+                className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                  errors.owner
+                    ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
+                    : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+                }`}
                 value={owner}
-                onChange={(e) => { setOwner(e.target.value); setError(null); }}
+                onChange={(e) => { setOwner(e.target.value); setErrors((prev) => ({ ...prev, owner: undefined })); }}
                 placeholder="e.g. yourself or Head"
               />
+              {errors.owner && (
+                <p id="dec-owner-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.owner}</p>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-deadline">
@@ -149,17 +176,22 @@ export function DecisionEditDialog({
             </label>
             <textarea
               id="dec-impact"
-              className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              aria-invalid={errors.impact ? 'true' : 'false'}
+              aria-describedby={errors.impact ? 'dec-impact-error' : undefined}
+              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                errors.impact
+                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
+                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+              }`}
               style={{ minHeight: '50px' }}
               value={impact}
-              onChange={(e) => { setImpact(e.target.value); setError(null); }}
+              onChange={(e) => { setImpact(e.target.value); setErrors((prev) => ({ ...prev, impact: undefined })); }}
               placeholder="What changes when this is decided?"
             />
+            {errors.impact && (
+              <p id="dec-impact-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.impact}</p>
+            )}
           </div>
-
-          {error && (
-            <p className="text-xs text-[var(--color-destructive)]">{error}</p>
-          )}
         </div>
 
         <div className="mt-5 flex justify-end gap-3">

@@ -48,7 +48,11 @@ export function RiskEditDialog({
   const [productId, setProductId] = useState(risk?.productId ?? seedProduct?.id ?? '');
   const [impact, setImpact] = useState(initialImpact ?? '');
   const [mitigation, setMitigation] = useState(initialMitigation ?? '');
-  const [error, setError] = useState<string | null>(null);
+  // Per-field error map: each required field's empty validation reads
+  // its own message and toggles its border red. Replaces the old single
+  // `error` string that only highlighted the first failure and
+  // visually pinned the message under one (potentially wrong) field.
+  const [errors, setErrors] = useState<{ text?: string; impact?: string; mitigation?: string }>({});
 
   useEffect(() => {
     if (open) {
@@ -57,7 +61,7 @@ export function RiskEditDialog({
       setProductId(risk?.productId ?? seedProduct?.id ?? '');
       setImpact(initialImpact ?? '');
       setMitigation(initialMitigation ?? '');
-      setError(null);
+      setErrors({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- key fields, not full object
   }, [open, risk?.id, defaultProductId]);
@@ -71,11 +75,19 @@ export function RiskEditDialog({
     const t = text.trim();
     const im = impact.trim();
     const m = mitigation.trim();
-    if (t.length === 0) { setError('Risk description is required'); return; }
-    if (im.length === 0) { setError('Impact is required'); return; }
-    if (m.length === 0) { setError('Mitigation is required'); return; }
+    const next: typeof errors = {};
+    if (t.length === 0) next.text = 'Risk description is required';
+    if (im.length === 0) next.impact = 'Impact is required';
+    if (m.length === 0) next.mitigation = 'Mitigation is required';
+    if (Object.keys(next).length > 0) {
+      setErrors(next);
+      return;
+    }
     const product = products.find((p) => p.id === productId) ?? products[0];
-    if (!product) { setError('No product available'); return; }
+    if (!product) {
+      setErrors({ text: 'No product available' });
+      return;
+    }
     onSave({
       id: risk?.id ?? crypto.randomUUID(),
       productId: product.id,
@@ -123,12 +135,21 @@ export function RiskEditDialog({
             <textarea
               id="risk-text"
               autoFocus
-              className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              aria-invalid={errors.text ? 'true' : 'false'}
+              aria-describedby={errors.text ? 'risk-text-error' : undefined}
+              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                errors.text
+                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
+                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+              }`}
               style={{ minHeight: '60px' }}
               value={text}
-              onChange={(e) => { setText(e.target.value); setError(null); }}
+              onChange={(e) => { setText(e.target.value); setErrors((prev) => ({ ...prev, text: undefined })); }}
               placeholder="e.g. Vendor API regression delays OAuth2 integration"
             />
+            {errors.text && (
+              <p id="risk-text-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.text}</p>
+            )}
           </div>
 
           {/* Impact */}
@@ -143,12 +164,21 @@ export function RiskEditDialog({
             </p>
             <textarea
               id="risk-impact"
-              className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              aria-invalid={errors.impact ? 'true' : 'false'}
+              aria-describedby={errors.impact ? 'risk-impact-error' : undefined}
+              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                errors.impact
+                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
+                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+              }`}
               style={{ minHeight: '50px' }}
               value={impact}
-              onChange={(e) => { setImpact(e.target.value); setError(null); }}
+              onChange={(e) => { setImpact(e.target.value); setErrors((prev) => ({ ...prev, impact: undefined })); }}
               placeholder="e.g. Delays Q3 launch by 2 weeks; 4 downstream teams idle"
             />
+            {errors.impact && (
+              <p id="risk-impact-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.impact}</p>
+            )}
           </div>
 
           {/* Mitigation */}
@@ -161,12 +191,21 @@ export function RiskEditDialog({
             </p>
             <textarea
               id="risk-mitigation"
-              className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              aria-invalid={errors.mitigation ? 'true' : 'false'}
+              aria-describedby={errors.mitigation ? 'risk-mitigation-error' : undefined}
+              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                errors.mitigation
+                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
+                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+              }`}
               style={{ minHeight: '50px' }}
               value={mitigation}
-              onChange={(e) => { setMitigation(e.target.value); setError(null); }}
+              onChange={(e) => { setMitigation(e.target.value); setErrors((prev) => ({ ...prev, mitigation: undefined })); }}
               placeholder="e.g. Vendor escalation in progress; ETA 48h"
             />
+            {errors.mitigation && (
+              <p id="risk-mitigation-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.mitigation}</p>
+            )}
           </div>
 
           {/* Severity chips */}
@@ -219,9 +258,6 @@ export function RiskEditDialog({
             </div>
           )}
 
-          {error && (
-            <p className="text-xs text-[var(--color-destructive)]">{error}</p>
-          )}
         </div>
 
         <div className="mt-5 flex justify-end gap-3">
