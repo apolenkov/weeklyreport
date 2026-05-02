@@ -93,6 +93,56 @@ export function createAppRouter(deps: RouterDeps) {
       }),
     }),
 
+    // === Dev namespace (only mounted when AUTH_DEV_MODE=true) ===
+    // Surfaces wipe/reseed shortcuts for the in-page DevRoleSwitcher widget
+    // so a presenter can reset demo state between recordings without
+    // dropping into a terminal. Each mutation refuses to do anything when
+    // AUTH_DEV_MODE is unset, so accidental deploys of this file to a
+    // production runtime cannot wipe real data.
+    dev: router({
+      wipeAndReseed: protectedProcedure
+        .input(z.object({ variant: z.enum(['minimum', 'advanced']).default('minimum') }))
+        .mutation(async ({ input }) => {
+          if (process.env['AUTH_DEV_MODE'] !== 'true') {
+            throw new TRPCError({ code: 'FORBIDDEN', message: 'Dev mode is not enabled' });
+          }
+          // Run the seed script as a child process. We rely on the seed
+          // file to wipe + reseed in one atomic-feeling pass; doing it
+          // inside Prisma directly would duplicate hundreds of fixture
+          // rows we already maintain in seed-simple.ts.
+          const { execSync } = await import('node:child_process');
+          const script = input.variant === 'advanced' ? 'db:seed:advanced' : 'db:seed:simple';
+          // Resolve repo root from this file (apps/api/src/.../trpc.router.ts).
+          // The seed script needs to run with the monorepo root as cwd so
+          // pnpm picks up the correct workspace.
+          const path = await import('node:path');
+          const url = await import('node:url');
+          const __filename = url.fileURLToPath(import.meta.url);
+          const repoRoot = path.resolve(path.dirname(__filename), '../../../../..');
+          try {
+            const stdout = execSync(`pnpm -w ${script}`, {
+              cwd: repoRoot,
+              encoding: 'utf8',
+              env: {
+                ...process.env,
+                PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: 'давай',
+              },
+              timeout: 120_000,
+            });
+            return { ok: true, variant: input.variant, output: stdout.split('\n').slice(-15).join('\n') };
+          } catch (error) {
+            const stderr = error instanceof Error && 'stderr' in error
+              ? String((error as { stderr?: unknown }).stderr ?? '')
+              : '';
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: `Reseed failed: ${error instanceof Error ? error.message : String(error)}\n${stderr.slice(-500)}`,
+              cause: error instanceof Error ? error : undefined,
+            });
+          }
+        }),
+    }),
+
     // === Reports namespace ===
     reports: router({
       getActive: protectedProcedure.query(async ({ ctx }) => {

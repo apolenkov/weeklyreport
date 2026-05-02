@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 
 import { Button } from '@customreport/ui/components/ui/button';
 import {
@@ -11,6 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@customreport/ui/components/ui/dropdown-menu';
+
+import { useTRPC } from '../../lib/trpc-context';
 
 type Identity = {
   label: string;
@@ -30,6 +33,23 @@ const IDENTITIES: readonly Identity[] = [
 
 export function DevRoleSwitcher() {
   const [pending, setPending] = useState(false);
+  const trpc = useTRPC();
+
+  // Hooks must run unconditionally — guard the gate below.
+  const wipeAndReseedMut = useMutation(
+    trpc.dev.wipeAndReseed.mutationOptions({
+      onSuccess: () => {
+        // Hard-reload so every query refetches against the freshly-seeded
+        // database. Soft invalidate would race with the in-flight seed.
+        window.location.reload();
+      },
+      onError: (error) => {
+        setPending(false);
+        // eslint-disable-next-line no-alert -- dev-only widget
+        alert(`Reseed failed:\n${error.message}`);
+      },
+    }),
+  );
 
   if (process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER !== 'true') {
     return null;
@@ -48,6 +68,11 @@ export function DevRoleSwitcher() {
     } finally {
       window.location.href = '/';
     }
+  };
+
+  const reseed = (variant: 'minimum' | 'advanced') => {
+    setPending(true);
+    wipeAndReseedMut.mutate({ variant });
   };
 
   return (
@@ -76,6 +101,20 @@ export function DevRoleSwitcher() {
               {identity.label}
             </DropdownMenuItem>
           ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Data</DropdownMenuLabel>
+          <DropdownMenuItem
+            onSelect={() => reseed('minimum')}
+            data-testid="dev-role-switcher-reseed-min"
+          >
+            Wipe + Reseed (minimum)
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => reseed('advanced')}
+            data-testid="dev-role-switcher-reseed-full"
+          >
+            Wipe + Reseed (full)
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={logout} data-testid="dev-role-switcher-logout">
             Logout
