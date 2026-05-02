@@ -150,10 +150,13 @@ async function main() {
 
   console.log('[seed-simple] Creating sections + items + risks + priorities...');
   // Active report — 3 sections, one per lead. Platanov in draft (showing alert), Maria submitted, Igor draft.
+  // `label` mirrors the user's `name` (e.g. "Platanov A."), so seeded
+  // decision-owner strings stay equal to `data.currentUser.name` once the
+  // form loads — the Owner-mine/owner-other comparison hinges on this.
   const leads = [
-    { id: LEAD_PLATANOV, productId: PROD_CRM, status: ReportSectionStatus.draft, lightStatus: TrafficLightStatus.red, label: 'Platanov' },
-    { id: LEAD_MARIA, productId: PROD_MOBILE, status: ReportSectionStatus.submitted, lightStatus: TrafficLightStatus.yellow, label: 'Maria' },
-    { id: LEAD_IGOR, productId: PROD_CLOUD, status: ReportSectionStatus.draft, lightStatus: TrafficLightStatus.green, label: 'Igor' },
+    { id: LEAD_PLATANOV, productId: PROD_CRM, status: ReportSectionStatus.draft, lightStatus: TrafficLightStatus.red, label: 'Platanov A.' },
+    { id: LEAD_MARIA, productId: PROD_MOBILE, status: ReportSectionStatus.submitted, lightStatus: TrafficLightStatus.yellow, label: 'Maria K.' },
+    { id: LEAD_IGOR, productId: PROD_CLOUD, status: ReportSectionStatus.draft, lightStatus: TrafficLightStatus.green, label: 'Igor V.' },
   ];
 
   for (let i = 0; i < leads.length; i++) {
@@ -270,7 +273,13 @@ async function main() {
           risk: lead.lightStatus === TrafficLightStatus.red
             ? `Critical: external API regression blocking ${lead.label}'s integration`
             : `Capacity risk: 1 engineer out sick this week`,
-          impact: lead.lightStatus === TrafficLightStatus.red ? 'high' : 'medium',
+          // Impact is a narrative — what specifically gets affected if the
+          // risk materialises. Earlier the seed wrote "high"/"medium" which
+          // overlapped with the severity enum and made the two fields look
+          // redundant.
+          impact: lead.lightStatus === TrafficLightStatus.red
+            ? 'Delays Q3 launch by 2 weeks; 4 downstream teams idle'
+            : 'Sprint velocity drops ~20% — at-risk stories slip a week',
           mitigation: lead.lightStatus === TrafficLightStatus.red
             ? 'Vendor escalation in progress; ETA 48h'
             : 'Workload reshuffled across remaining team',
@@ -286,14 +295,15 @@ async function main() {
           reportSectionId: sectionId,
           text: `Approve hiring of 2 SDETs for ${lead.label}'s team in Q3`,
           owner: lead.label,
-          impact: 'high',
+          // Impact = narrative consequence of the decision (not severity).
+          impact: 'Unblocks regression coverage; cuts release-prep cycle by ~3 days',
         },
         {
           id: randomUUID(),
           reportSectionId: sectionId,
           text: `Decision: switch monitoring stack to Grafana + Loki`,
           owner: 'Head',
-          impact: 'medium',
+          impact: 'Replaces aging legacy monitor; enables alert-as-code workflow',
           deadline: new Date('2026-05-15T00:00:00Z'),
         },
       ],

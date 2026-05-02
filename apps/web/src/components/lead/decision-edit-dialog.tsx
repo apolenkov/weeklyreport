@@ -7,6 +7,12 @@ type DecisionEditDialogProps = {
   readonly open: boolean;
   /** null = create mode, DecisionEntry = edit mode. */
   readonly decision: DecisionEntry | null;
+  /**
+   * Default owner for newly-created decisions. Should be the current user's
+   * display name — leads usually own the decisions they raise. Setting this
+   * up-front keeps the chrome out of their way.
+   */
+  readonly defaultOwner?: string;
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
 };
@@ -14,13 +20,14 @@ type DecisionEditDialogProps = {
 export function DecisionEditDialog({
   open,
   decision,
+  defaultOwner,
   onSave,
   onCancel,
 }: DecisionEditDialogProps) {
   const isCreate = decision === null;
 
   const [text, setText] = useState(decision?.text ?? '');
-  const [owner, setOwner] = useState(decision?.owner ?? '');
+  const [owner, setOwner] = useState(decision?.owner ?? defaultOwner ?? '');
   const [impact, setImpact] = useState(decision?.impact ?? '');
   const [deadline, setDeadline] = useState(decision?.deadline ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -28,13 +35,13 @@ export function DecisionEditDialog({
   useEffect(() => {
     if (open) {
       setText(decision?.text ?? '');
-      setOwner(decision?.owner ?? '');
+      setOwner(decision?.owner ?? defaultOwner ?? '');
       setImpact(decision?.impact ?? '');
       setDeadline(decision?.deadline ?? '');
       setError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, decision?.id]);
+  }, [open, decision?.id, defaultOwner]);
 
   if (!open) return null;
 
@@ -87,6 +94,10 @@ export function DecisionEditDialog({
             <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-text">
               Decision *
             </label>
+            <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+              The choice you need leadership to make — phrase it as a yes/no
+              or short statement, not a discussion topic.
+            </p>
             <textarea
               id="dec-text"
               autoFocus
@@ -94,7 +105,7 @@ export function DecisionEditDialog({
               style={{ minHeight: '60px' }}
               value={text}
               onChange={(e) => { setText(e.target.value); setError(null); }}
-              placeholder="What needs to be decided?"
+              placeholder="e.g. Approve hiring of 2 SDETs in Q3"
             />
           </div>
 
@@ -104,13 +115,17 @@ export function DecisionEditDialog({
               <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-owner">
                 Owner *
               </label>
+              <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+                Who is accountable. Defaults to you. If the owner is someone else
+                (e.g. Head, PM), you raise the decision but they make the call.
+              </p>
               <input
                 id="dec-owner"
                 type="text"
                 className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
                 value={owner}
                 onChange={(e) => { setOwner(e.target.value); setError(null); }}
-                placeholder="Who is accountable?"
+                placeholder="e.g. yourself or Head"
               />
             </div>
             <div>
