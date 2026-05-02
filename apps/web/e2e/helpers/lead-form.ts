@@ -64,6 +64,27 @@ export async function reseedDatabase(page: Page, variant: 'minimum' | 'advanced'
   }
 }
 
+/**
+ * Wait for the next `reports.saveDraft` round-trip to complete with a 200.
+ *
+ * Use *before* a reload-assert: the form autosaves on a debounce, so the
+ * mutation we just triggered (closing a dialog, picking a stage status)
+ * may still be in-flight when the test calls `page.reload()`. Without
+ * this barrier the reload races the save and reads stale server state.
+ *
+ * Usage:
+ *   const save = waitForSave(page);
+ *   await saveDialog(page, /Risk/);
+ *   await save;
+ *   await page.reload();
+ */
+export function waitForSave(page: Page) {
+  return page.waitForResponse(
+    (r) => r.url().includes('reports.saveDraft') && r.status() === 200,
+    { timeout: 10_000 },
+  );
+}
+
 /** Navigate to /lead/report and wait for the form to hydrate. */
 export async function gotoLeadReport(page: Page) {
   await page.goto('/lead/report');
@@ -103,12 +124,19 @@ export function stagePopover(page: Page): Locator {
 }
 
 export async function selectStageOption(page: Page, option: StatusOption): Promise<void> {
-  const symbol = { 'On Track': '✓', 'At Risk': '!', Blocked: '✕', Clear: '○' }[option];
-  await stagePopover(page).getByRole('button', { name: `${symbol} ${option}` }).click();
+  // Stage popover renders via a fixed-position portal, which Playwright's
+  // visibility/viewport heuristic occasionally classifies as "outside the
+  // viewport" — especially after auto-scroll. scrollIntoViewIfNeeded forces
+  // the click target into the resolved viewport before dispatch.
+  const btn = stagePopover(page).getByRole('button', { name: new RegExp(option) });
+  await btn.scrollIntoViewIfNeeded();
+  await btn.click();
 }
 
 export async function saveStagePopover(page: Page): Promise<void> {
-  await stagePopover(page).getByRole('button', { name: 'Save', exact: true }).click();
+  const btn = stagePopover(page).getByRole('button', { name: 'Save', exact: true });
+  await btn.scrollIntoViewIfNeeded();
+  await btn.click();
   // Popover dismounts on Save. Do not assert on its absence here — sibling
   // confirmation prompts (e.g. Clear-with-linked-risk) wait for user input.
 }
@@ -121,21 +149,57 @@ export async function cancelStagePopover(page: Page): Promise<void> {
 // Item modal (Add / Edit)
 // ---------------------------------------------------------------------------
 
-/** Open the Item edit dialog by clicking "+ Add" inside a product column. */
-export async function openItemAdd(page: Page, productName: string): Promise<void> {
-  await page.getByRole('button', { name: `Add item to ${productName}` }).click();
+/**
+ * Open the Item edit dialog by clicking "+ Add" inside a product column.
+ *
+ * Both the Current Week and Next Week sections render a product column
+ * with the same `Add item to <product>` aria-label, so we have to scope
+ * by the parent accordion before letting Playwright resolve the click
+ * target. Without the scope, getByRole errors on a strict-mode violation.
+ */
+export async function openItemAdd(
+  page: Page,
+  productName: string,
+  week: 'current' | 'next' = 'current',
+): Promise<void> {
+  const sectionName = week === 'current' ? 'Current Week' : 'Next Week';
+  // The section "header" is the accordion <button>; the panel sits as the
+  // header's NEXT sibling. We can't pierce the role tree with `:has()`,
+  // so use a structural locator: "the panel whose preceding header reads
+  // <sectionName>".
+  await page
+    .locator(`[aria-expanded="true"]:has-text("${sectionName}") + div`)
+    .getByRole('button', { name: `Add item to ${productName}` })
+    .click();
   await itemDialog(page).waitFor({ state: 'visible', timeout: 5_000 });
 }
 
-/** Open the Item edit dialog by clicking the pencil on an existing card. */
+/**
+ * Open the Item edit dialog by clicking the pencil on an existing card.
+ *
+ * Cards expose pencil/trash buttons inside a hover overlay; the buttons
+ * are still in DOM (only opacity:0), so .click() works without hovering.
+ * The bare accessible name 'Edit' also matches `Edit risk for ...` and
+ * `Edit decision`, so we use exact match to scope to ItemCard buttons.
+ */
 export async function openItemEdit(page: Page, cardText: string): Promise<void> {
-  // Cards expose pencil/trash buttons inside a hover overlay; the buttons
-  // are still in DOM (only opacity:0), so .click() works without hovering.
   const card = page.locator('div', { hasText: cardText }).filter({
-    has: page.getByRole('button', { name: 'Edit' }),
+    has: page.getByRole('button', { name: 'Edit', exact: true }),
   }).first();
-  await card.getByRole('button', { name: 'Edit' }).click();
+  await card.getByRole('button', { name: 'Edit', exact: true }).click();
   await itemDialog(page).waitFor({ state: 'visible', timeout: 5_000 });
+}
+
+/**
+ * Delete an item card by clicking its trash icon. Same exact-name guard
+ * as openItemEdit because 'Delete' alone matches risk/decision/priority
+ * delete buttons too.
+ */
+export async function deleteItem(page: Page, cardText: string): Promise<void> {
+  const card = page.locator('div', { hasText: cardText }).filter({
+    has: page.getByRole('button', { name: 'Delete', exact: true }),
+  }).first();
+  await card.getByRole('button', { name: 'Delete', exact: true }).click();
 }
 
 export function itemDialog(page: Page): Locator {
