@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+
+import { DecisionEditDialog } from './decision-edit-dialog';
 import type { DecisionEntry } from './mock-data';
 
 type DecisionsSectionProps = {
@@ -14,6 +17,15 @@ type DecisionsSectionProps = {
   readonly defaultProductName?: string;
 };
 
+function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+      <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
 function DeleteIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -22,71 +34,120 @@ function DeleteIcon() {
   );
 }
 
+function formatDeadline(iso: string | null): string {
+  if (!iso) return '—';
+  // Render as locale-aware short date so the chip stays compact.
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch {
+    return iso;
+  }
+}
+
 export function DecisionsSection({
   decisions,
   readOnly = false,
   onChange,
   defaultProductName,
 }: DecisionsSectionProps) {
+  const [dialogState, setDialogState] = useState<
+    { open: false } | { open: true; mode: 'create' } | { open: true; mode: 'edit'; decision: DecisionEntry }
+  >({ open: false });
+
   function handleDelete(id: string) {
     if (readOnly) return;
     onChange?.(decisions.filter((d) => d.id !== id));
   }
 
-  function handleTextChange(id: string, newText: string) {
-    if (readOnly) return;
-    onChange?.(
-      decisions.map((d) => (d.id === id ? { ...d, text: newText } : d)),
-    );
-  }
-
   function handleAdd() {
     if (readOnly) return;
-    onChange?.([
-      ...decisions,
-      {
-        id: crypto.randomUUID(),
-        productId: '',
-        productName: defaultProductName ?? 'Department',
-        text: '',
-      },
-    ]);
+    setDialogState({ open: true, mode: 'create' });
+  }
+
+  function handleEdit(decision: DecisionEntry) {
+    if (readOnly) return;
+    setDialogState({ open: true, mode: 'edit', decision });
+  }
+
+  function handleDialogSave(saved: DecisionEntry) {
+    if (readOnly) return;
+    if (dialogState.open && dialogState.mode === 'create') {
+      onChange?.([...decisions, {
+        ...saved,
+        productName: saved.productName || defaultProductName || 'Department',
+      }]);
+    } else {
+      onChange?.(decisions.map((d) => (d.id === saved.id ? saved : d)));
+    }
+    setDialogState({ open: false });
+  }
+
+  function handleDialogCancel() {
+    setDialogState({ open: false });
   }
 
   return (
     <div className="space-y-3">
-      {decisions.map((decision) => (
-        <div
-          key={decision.id}
-          className="rounded-lg p-4"
-          style={{ background: 'var(--color-background)' }}
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
-              {decision.productName}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              className="flex-1 rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-              value={decision.text}
-              onChange={(e) => handleTextChange(decision.id, e.target.value)}
-              readOnly={readOnly}
-            />
-            {!readOnly && (
-              <button
-                type="button"
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border-0 bg-transparent p-2.5 text-[rgba(0,0,0,0.25)] transition-colors hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
-                onClick={() => handleDelete(decision.id)}
-                aria-label={`Delete decision for ${decision.productName}`}
-              >
-                <DeleteIcon />
-              </button>
-            )}
-          </div>
+      {decisions.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[#f8f6f2] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+          {readOnly ? 'No decisions reported.' : 'No decisions yet. Use “+ Add Decision” to flag one for the head.'}
         </div>
-      ))}
+      ) : (
+        decisions.map((decision) => (
+          <div
+            key={decision.id}
+            className="rounded-lg p-4"
+            style={{ background: 'var(--color-background)' }}
+          >
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
+                {decision.productName}
+              </span>
+              {decision.deadline && (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-semibold text-[#8a6d1b]">
+                  Due {formatDeadline(decision.deadline)}
+                </span>
+              )}
+              {!readOnly && (
+                <div className="ml-auto flex gap-1">
+                  <button
+                    type="button"
+                    className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"
+                    onClick={() => handleEdit(decision)}
+                    aria-label={`Edit decision`}
+                  >
+                    <EditIcon />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+                    onClick={() => handleDelete(decision.id)}
+                    aria-label={`Delete decision for ${decision.productName}`}
+                  >
+                    <DeleteIcon />
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2 text-sm text-[var(--color-foreground)]">
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">Decision</span>
+                <div className="mt-0.5 break-words">{decision.text || <em className="text-[var(--color-muted-foreground)]">— pending</em>}</div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">Owner</span>
+                  <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">{decision.owner || '—'}</div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">Impact</span>
+                  <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">{decision.impact || '—'}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
 
       {!readOnly && (
         <button
@@ -97,6 +158,13 @@ export function DecisionsSection({
           + Add Decision
         </button>
       )}
+
+      <DecisionEditDialog
+        open={dialogState.open}
+        decision={dialogState.open && dialogState.mode === 'edit' ? dialogState.decision : null}
+        onSave={handleDialogSave}
+        onCancel={handleDialogCancel}
+      />
     </div>
   );
 }

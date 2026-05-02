@@ -468,17 +468,22 @@ export function LeadForm({ period }: LeadFormProps) {
       );
       const merged = next.map((d) => {
         const existing = existingById.get(d.id);
+        const deadline = d.deadline ? new Date(d.deadline) : null;
         if (existing) {
-          return { ...existing, text: d.text };
+          return {
+            ...existing,
+            text: d.text,
+            owner: d.owner,
+            impact: d.impact,
+            deadline,
+          };
         }
         return {
           id: d.id,
           text: d.text,
-          // safeText({min:1}) on owner/impact — UI doesn't surface them yet
-          // so we seed placeholders that survive autosave validation.
-          owner: 'TBD',
-          deadline: null,
-          impact: 'TBD',
+          owner: d.owner,
+          impact: d.impact,
+          deadline,
           resolvedAt: null,
         };
       });

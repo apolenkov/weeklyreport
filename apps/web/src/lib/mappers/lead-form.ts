@@ -113,6 +113,12 @@ export type LeadDecisionEntry = {
   productId: string;
   productName: string;
   text: string;
+  /** Schema-required owner (responsible person). */
+  owner: string;
+  /** Schema-required impact narrative. */
+  impact: string;
+  /** Optional deadline (ISO yyyy-mm-dd string) — null when not set. */
+  deadline: string | null;
 };
 
 export type LeadPriorityEntry = {
@@ -369,6 +375,11 @@ export function mapLeadDecisions(
     productId: '',
     productName: 'Department',
     text: d.text,
+    owner: d.owner ?? '',
+    impact: d.impact ?? '',
+    deadline: d.deadline
+      ? new Date(d.deadline).toISOString().slice(0, 10)
+      : null,
   }));
 }
 
