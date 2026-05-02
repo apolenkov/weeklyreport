@@ -187,6 +187,12 @@ async function main() {
       });
     }
 
+    // Secondary product ids for this lead — every product except the one
+    // they primarily own. Items are sprinkled across primary + secondaries
+    // so that Current Week / Next Week always render >1 product column,
+    // which is what real cross-team work looks like.
+    const SECONDARY = ALL_PRODUCT_IDS.filter((p) => p !== lead.productId);
+
     // 3 current-week items per lead — mix of workflow states so traffic-light
     // sync, blocker badges, and "completed" toggles are all demoable.
     await prisma.item.createMany({
@@ -195,6 +201,9 @@ async function main() {
           id: `a0000000-0000-4000-8000-00000005${i + 1}001`,
           reportSectionId: sectionId,
           type: ItemType.current,
+          // Primary product: this is the "main" stream the lead is on the
+          // hook for. Status mirrors the section's traffic light so the
+          // SDLC pipeline + Kanban story line up.
           projectId: lead.productId,
           text: `Refactored auth flow for ${lead.label}'s product`,
           tag: 'feature',
@@ -207,8 +216,10 @@ async function main() {
           id: `a0000000-0000-4000-8000-00000005${i + 1}002`,
           reportSectionId: sectionId,
           type: ItemType.current,
-          projectId: lead.productId,
-          text: `Shipped weekly metrics dashboard for ${lead.label}'s product`,
+          // Cross-team work on the second product so the Current Week
+          // grouping shows >1 column.
+          projectId: SECONDARY[0]!,
+          text: `Shipped cross-team metrics dashboard work`,
           tag: 'feature',
           workflowStatus: ItemWorkflowStatus.done,
           carriedOver: false,
@@ -218,13 +229,15 @@ async function main() {
           id: `a0000000-0000-4000-8000-00000005${i + 1}003`,
           reportSectionId: sectionId,
           type: ItemType.current,
-          projectId: lead.productId,
-          text: `Bug-fix sprint: 4 production tickets resolved`,
+          // Third product so the empty-state path is exercised when the
+          // user deletes one of the other groups.
+          projectId: SECONDARY[1]!,
+          text: `Bug-fix sprint on adjacent product: 4 tickets resolved`,
           tag: 'bugfix',
           workflowStatus: ItemWorkflowStatus.in_progress,
           carriedOver: true,
         },
-        // 2 next-week items per lead
+        // 2 next-week items per lead — one on primary, one cross-team.
         {
           id: `a0000000-0000-4000-8000-00000005${i + 1}004`,
           reportSectionId: sectionId,
@@ -239,8 +252,8 @@ async function main() {
           id: `a0000000-0000-4000-8000-00000005${i + 1}005`,
           reportSectionId: sectionId,
           type: ItemType.next,
-          projectId: lead.productId,
-          text: `Plan: roadmap review with stakeholders`,
+          projectId: SECONDARY[0]!,
+          text: `Plan: cross-team roadmap review with stakeholders`,
           tag: 'ops',
           workflowStatus: ItemWorkflowStatus.in_progress,
           carriedOver: false,

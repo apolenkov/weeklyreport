@@ -793,6 +793,7 @@ export function LeadForm({ period }: LeadFormProps) {
               readOnly={isReadOnly}
               onItemsChange={handleCurrentWeekItemsChange}
               currentUserName={currentUser.name}
+              products={products}
             />
           </AccordionSection>
 
@@ -807,6 +808,7 @@ export function LeadForm({ period }: LeadFormProps) {
               readOnly={isReadOnly}
               onItemsChange={handleNextWeekItemsChange}
               currentUserName={currentUser.name}
+              products={products}
             />
           </AccordionSection>
 
