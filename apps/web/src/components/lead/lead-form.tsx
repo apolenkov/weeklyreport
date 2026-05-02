@@ -22,6 +22,7 @@ import { CurrentWeekSection } from './current-week-section';
 import { NextWeekSection } from './next-week-section';
 import { DecisionsSection } from './decisions-section';
 import { PrioritiesSection } from './priorities-section';
+import { RequestReopenDialog } from './request-reopen-dialog';
 
 import type {
   Product,
@@ -362,6 +363,26 @@ export function LeadForm({ period }: LeadFormProps) {
     }),
   );
 
+  // M6: Lead-side request to reopen a submitted section. Backend already
+  // exists (leadForm.requestReopen) — this just wires the UI. Local
+  // dialog state lives next to the mutation so failure messages can be
+  // surfaced inline rather than only in a toast.
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
+  const [reopenError, setReopenError] = useState<string | null>(null);
+  const requestReopenMut = useMutation(
+    trpc.leadForm.requestReopen.mutationOptions({
+      onSuccess: () => {
+        setShowReopenDialog(false);
+        setReopenError(null);
+        toast.success('Reopen request sent to Head');
+      },
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : 'Reopen request failed';
+        setReopenError(msg);
+      },
+    }),
+  );
+
   const fillFromMut = useMutation(
     trpc.leadForm.fillFrom.mutationOptions({
       onSuccess: () => {
@@ -668,6 +689,14 @@ export function LeadForm({ period }: LeadFormProps) {
     revokeMut.mutate({ reportSectionId: activeSectionId });
   }
 
+  function handleRequestReopen(reason: string | undefined) {
+    if (!activeSectionId) return;
+    requestReopenMut.mutate({
+      reportSectionId: activeSectionId,
+      ...(reason ? { reason } : {}),
+    });
+  }
+
   function handleFillFrom(sourceSectionId: string) {
     if (!activeSectionId) return;
     if (
@@ -740,7 +769,18 @@ export function LeadForm({ period }: LeadFormProps) {
               <CollapseIcon />
               Toggle All
             </button>
-            {isSubmitted && (
+            {isSubmitted && currentUser.role === 'lead' && (
+              <button
+                type="button"
+                className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => { setReopenError(null); setShowReopenDialog(true); }}
+                disabled={requestReopenMut.isPending}
+                title="Ask Head to unlock this section"
+              >
+                Request Reopen
+              </button>
+            )}
+            {isSubmitted && currentUser.role !== 'lead' && (
               <button
                 type="button"
                 className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
@@ -946,6 +986,14 @@ export function LeadForm({ period }: LeadFormProps) {
           </div>
         </div>
       )}
+
+      <RequestReopenDialog
+        open={showReopenDialog}
+        pending={requestReopenMut.isPending}
+        error={reopenError}
+        onConfirm={handleRequestReopen}
+        onCancel={() => { setShowReopenDialog(false); setReopenError(null); }}
+      />
     </SdlcTooltipProvider>
   );
 }
