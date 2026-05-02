@@ -2,7 +2,7 @@
 
 import { OnTrackIcon } from '../ai/on-track-icon';
 import { StageChip } from './stage-chip';
-import type { Product, StageStatus } from './mock-data';
+import type { Product, RiskEntry, StageStatus } from './mock-data';
 
 type SdlcPipelineProps = {
   readonly products: Product[];
@@ -19,6 +19,13 @@ type SdlcPipelineProps = {
    * Storybook with mock data).
    */
   readonly sectionId?: string;
+  /**
+   * Used to count risks linked to each (product, stage) pair so the chip's
+   * Clear-confirmation knows whether to prompt. The pipeline is the right
+   * level to compute this once — passing the count down into every chip
+   * keeps the chip itself dumb.
+   */
+  readonly risks?: readonly RiskEntry[];
 };
 
 function ProductStatusBadge({ status }: { readonly status: StageStatus }) {
@@ -46,10 +53,18 @@ function getProductBorderColor(status: StageStatus): string {
   return 'var(--color-muted)';
 }
 
-export function SdlcPipeline({ products, readOnly = false, onStatusChange, sectionId }: SdlcPipelineProps) {
+export function SdlcPipeline({ products, readOnly = false, onStatusChange, sectionId, risks }: SdlcPipelineProps) {
   function handleStatusChange(productId: string, stageName: string, newStatus: StageStatus) {
     if (readOnly) return;
     onStatusChange?.(productId, stageName, newStatus);
+  }
+
+  // Build a (productId::stageName) → count map once per render so each chip
+  // can decide whether to prompt-on-Clear without recomputing.
+  const riskCountByKey = new Map<string, number>();
+  for (const r of risks ?? []) {
+    const key = `${r.productId}::${r.stageName}`;
+    riskCountByKey.set(key, (riskCountByKey.get(key) ?? 0) + 1);
   }
 
   return (
@@ -109,6 +124,7 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
                   <StageChip
                     stage={stage}
                     readOnly={readOnly}
+                    linkedRiskCount={riskCountByKey.get(`${product.id}::${stage.stageName}`) ?? 0}
                     onStatusChange={(name, status) =>
                       handleStatusChange(product.id, name, status)
                     }

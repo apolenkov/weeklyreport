@@ -18,6 +18,13 @@ type RisksSectionProps = {
    * the +Add Risk button is rendered disabled with a tooltip.
    */
   readonly products?: readonly Product[];
+  /**
+   * Stages whose status is at-risk/blocked but have no risk row to back
+   * them up. Surfaced as a warning banner above the list so the lead is
+   * nudged to fill in details — silent SDLC-pipeline status without a
+   * narrative is half a signal.
+   */
+  readonly unbackedStages?: readonly { productId: string; productName: string; stageName: string; severity: 'at-risk' | 'blocked' }[];
 };
 
 function EditIcon() {
@@ -43,6 +50,7 @@ export function RisksSection({
   onChange,
   onRiskFilled,
   products,
+  unbackedStages = [],
 }: RisksSectionProps) {
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create'; seedProductId?: string } | { open: true; mode: 'edit'; risk: RiskEntry }
@@ -87,8 +95,59 @@ export function RisksSection({
 
   const hasProducts = products && products.length > 0;
 
+  function handleAddForStage(productId: string) {
+    if (readOnly) return;
+    setDialogState({ open: true, mode: 'create', seedProductId: productId });
+  }
+
   return (
     <div className="space-y-4">
+      {/* Warning: at-risk/blocked stages with no narrative — the SDLC chip
+          paints the column without context, leaving the head guessing.
+          Render before the list so the user sees it immediately. */}
+      {!readOnly && unbackedStages.length > 0 && (
+        <div
+          className="rounded-lg p-4"
+          style={{ background: '#fffbeb', border: '1px solid rgba(212,160,23,0.35)' }}
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <span className="inline-flex items-center justify-center text-base" style={{ color: '#d4a017' }}>
+              ⚠
+            </span>
+            <span className="text-sm font-semibold" style={{ color: '#8a6d1b' }}>
+              {unbackedStages.length === 1
+                ? '1 stage marked at-risk/blocked but no risk filled in'
+                : `${unbackedStages.length} stages marked at-risk/blocked but no risk filled in`}
+            </span>
+          </div>
+          <ul className="space-y-1 text-xs text-[#8a6d1b]">
+            {unbackedStages.map((s) => (
+              <li key={`${s.productId}::${s.stageName}`} className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
+                      style={{
+                        background: s.severity === 'blocked' ? '#fee2e2' : '#fef3c7',
+                        color: s.severity === 'blocked' ? 'var(--color-destructive)' : '#8a6d1b',
+                      }}
+                >
+                  {s.severity === 'blocked' ? '✕ Blocked' : '! At Risk'}
+                </span>
+                <span className="font-medium">{s.productName}</span>
+                <span>·</span>
+                <span>{s.stageName}</span>
+                <button
+                  type="button"
+                  onClick={() => handleAddForStage(s.productId)}
+                  className="ml-auto inline-flex min-h-[26px] items-center rounded-[var(--radius-pill)] border border-[rgba(212,160,23,0.4)] bg-white px-2 py-0.5 text-[11px] font-semibold text-[#8a6d1b] transition-colors hover:bg-[#fffbeb]"
+                  aria-label={`Add risk for ${s.productName} ${s.stageName}`}
+                >
+                  + Add Risk
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {risks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[#f8f6f2] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
           {readOnly ? 'No risks reported.' : 'No risks reported. Use “+ Add Risk” when you spot one.'}

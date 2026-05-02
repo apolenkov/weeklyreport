@@ -243,6 +243,7 @@ function Pipeline() {
       products={ctx.products}
       readOnly={ctx.readOnly}
       onStatusChange={ctx.handleStageStatusChange}
+      risks={ctx.risks}
       {...(ctx.sectionId !== undefined ? { sectionId: ctx.sectionId } : {})}
     />
   );
@@ -250,6 +251,27 @@ function Pipeline() {
 
 function Risks() {
   const ctx = useBridgeContext('LeadFormSyncBridge.Risks');
+  // Derive the warning list — stages whose status is at-risk/blocked but
+  // have zero risks filled. Computed here so the section stays presentation-
+  // only and we don't recompute it for every chip render.
+  const unbackedStages: { productId: string; productName: string; stageName: string; severity: 'at-risk' | 'blocked' }[] = [];
+  for (const product of ctx.products) {
+    for (const stage of product.stages) {
+      if (stage.ownership !== 'mine') continue;
+      if (stage.status !== 'at-risk' && stage.status !== 'blocked') continue;
+      const hasRisk = ctx.risks.some(
+        (r) => r.productId === product.id && r.stageName === stage.stageName && (r.text ?? '').trim().length > 0,
+      );
+      if (!hasRisk) {
+        unbackedStages.push({
+          productId: product.id,
+          productName: product.name,
+          stageName: stage.stageName,
+          severity: stage.status,
+        });
+      }
+    }
+  }
   return (
     <RisksSection
       risks={ctx.risks}
@@ -257,6 +279,7 @@ function Risks() {
       onChange={ctx.handleRisksChange}
       onRiskFilled={ctx.handleRiskFilled}
       products={ctx.products}
+      unbackedStages={unbackedStages}
     />
   );
 }
