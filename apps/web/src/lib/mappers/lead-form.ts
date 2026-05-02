@@ -111,7 +111,7 @@ export type LeadDecisionEntry = {
 };
 
 export type LeadPriorityEntry = {
-  rank: 1 | 2 | 3;
+  rank: number;
   text: string;
 };
 
@@ -210,10 +210,12 @@ function formatRelativeTimestamp(at: Date, now: Date): string {
   return `${month} ${day}`;
 }
 
-function clampRank(rank: number): 1 | 2 | 3 {
-  if (rank <= 1) return 1;
-  if (rank >= 3) return 3;
-  return 2;
+function clampRank(rank: number): number {
+  // Keep ranks ≥ 1 (schema requires positive int) but no upper clamp — the
+  // UI is now variable-length. Earlier this funnel mapped everything onto
+  // 1|2|3 to match the fixed-slot layout that has been removed.
+  if (rank < 1 || !Number.isInteger(rank)) return 1;
+  return rank;
 }
 
 function initialsFromName(name: string): string {
