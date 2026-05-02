@@ -63,6 +63,25 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
     emit([...sorted, { rank: sorted.length + 1, text: '' }]);
   }
 
+  if (sorted.length === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[#f8f6f2] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+          {readOnly ? 'No priorities reported.' : 'No priorities yet. Use “+ Add Priority” to list what matters most.'}
+        </div>
+        {!readOnly && (
+          <button
+            type="button"
+            className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+            onClick={handleAdd}
+          >
+            + Add Priority
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {sorted.map((entry, idx) => {

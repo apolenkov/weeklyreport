@@ -57,6 +57,12 @@ export type DecisionEntry = {
   productId: string;
   productName: string;
   text: string;
+  /** Schema-required owner (responsible person). Surfaced in the edit dialog. */
+  owner: string;
+  /** Schema-required impact narrative. Surfaced in the edit dialog. */
+  impact: string;
+  /** Optional deadline (ISO date string) — null when not set. */
+  deadline: string | null;
 };
 
 export type PriorityEntry = {
