@@ -539,11 +539,11 @@ export function LeadForm({ period }: LeadFormProps) {
   function handlePrioritiesChange(next: PriorityEntry[]) {
     setDraftSection((prev) => {
       if (!prev) return prev;
-      // Upsert by rank: ranks 1/2/3 are the stable identity in the UI. For
-      // each rank in the next array, update the existing raw priority if
-      // present, otherwise insert a new one (preserving any other ranks the
-      // user hasn't touched). Newly-inserted rows omit `id` so the server
-      // assigns one on save.
+      // The UI now owns the full priority list (variable length, ranks
+      // renumbered to 1..N on every change). The next array IS the new
+      // state — preserving "missing" ranks would resurrect deleted rows.
+      // Match by rank when an existing raw entry has the same rank so we
+      // keep its server-assigned id; otherwise insert a fresh row.
       const existingByRank = new Map(prev.priorities.map((p) => [p.rank, p] as const));
       const merged = next.map((p) => {
         const existing = existingByRank.get(p.rank);
@@ -552,12 +552,7 @@ export function LeadForm({ period }: LeadFormProps) {
         }
         return { rank: p.rank, text: p.text };
       });
-      // Preserve any ranks the UI does not own (defensive — current UI emits
-      // 1/2/3 only).
-      const presentRanks = new Set(merged.map((p) => p.rank));
-      const preserved = prev.priorities.filter((p) => !presentRanks.has(p.rank));
-      const all = [...preserved, ...merged].sort((a, b) => a.rank - b.rank);
-      return { ...prev, priorities: all };
+      return { ...prev, priorities: merged };
     });
   }
 
