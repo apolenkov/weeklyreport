@@ -7,7 +7,35 @@ import type { Role, UserSession } from '@customreport/shared';
 
 import type { TrpcContext } from './trpc.context.js';
 
-const t = initTRPC.context<TrpcContext>().create({ transformer: superjson });
+// Dev-only: surface TRPCError.cause (the real Prisma/Zod/Error) in the
+// response payload so a 500 in the browser carries the root cause instead of
+// the generic 'Unexpected error' wrapper. Server logs always contain the
+// cause via loggingMiddleware below; this exposes it to the client too, but
+// strictly when AUTH_DEV_MODE is on so production stays opaque.
+const isDevMode = process.env['AUTH_DEV_MODE'] === 'true';
+
+const t = initTRPC.context<TrpcContext>().create({
+  transformer: superjson,
+  errorFormatter({ shape, error }) {
+    if (!isDevMode) return shape;
+    const cause = error.cause;
+    if (!cause) return shape;
+    const causeInfo =
+      cause instanceof Error
+        ? {
+            name: cause.constructor.name,
+            message: cause.message,
+            stack: cause.stack,
+            ...('code' in cause ? { code: (cause as { code?: unknown }).code } : {}),
+            ...('meta' in cause ? { meta: (cause as { meta?: unknown }).meta } : {}),
+          }
+        : { raw: String(cause) };
+    return {
+      ...shape,
+      data: { ...shape.data, cause: causeInfo },
+    };
+  },
+});
 
 /**
  * Logging middleware — emits one entry log on procedure start and one exit log
