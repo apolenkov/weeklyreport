@@ -25,6 +25,19 @@ function ChevronRight() {
   );
 }
 
+// Calendar icon anchors the period control group so it doesn't read as a
+// duplicate of the version chevrons sitting a few centimetres to the right.
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
 export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -76,6 +89,14 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
 
   return (
     <div className="flex items-center gap-2">
+      <span
+        className="flex items-center gap-1 text-xs font-medium text-[var(--color-muted-foreground)]"
+        aria-hidden="true"
+      >
+        <CalendarIcon />
+        Week
+      </span>
+
       <button
         type="button"
         className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
