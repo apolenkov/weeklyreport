@@ -22,7 +22,9 @@
     "test:e2e:ui": "playwright test --config=apps/web/playwright.config.ts --ui",
     "db:seed:simple": "tsx prisma/seed-simple.ts",
     "db:seed:advanced": "tsx prisma/seed.ts",
-    "gsd:checklist:sync": "tsx tools/handoff-sync.ts"
+    "gsd:checklist:sync": "tsx tools/handoff-sync.ts",
+    "logs": "tail -f apps/api/.logs/app.log",
+    "logs:errors": "tail -f apps/api/.logs/app.log | grep -E '\"level\":\"(error|warn)\"'"
   },
   "devDependencies": {
     "@types/node": "^24.9.1",
