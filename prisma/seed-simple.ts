@@ -169,14 +169,23 @@ async function main() {
       },
     });
 
-    await prisma.projectStatus.create({
-      data: {
-        id: `a0000000-0000-4000-8000-00000000060${i + 1}`,
-        reportSectionId: sectionId,
-        projectId: lead.productId,
-        status: lead.lightStatus,
-      },
-    });
+    // Each lead's section gets 3 ProjectStatus rows — their primary product
+    // plus the other two — so the SDLC pipeline always shows multiple
+    // products and the modal "select product" picker has real choices to
+    // test. Other-team products land at green status by default.
+    const ALL_PRODUCT_IDS: readonly string[] = [PROD_CRM, PROD_MOBILE, PROD_CLOUD];
+    for (let pIdx = 0; pIdx < ALL_PRODUCT_IDS.length; pIdx++) {
+      const pid = ALL_PRODUCT_IDS[pIdx]!;
+      const isPrimary = pid === lead.productId;
+      await prisma.projectStatus.create({
+        data: {
+          id: `a0000000-0000-4000-8000-0000000006${i + 1}${pIdx + 1}`,
+          reportSectionId: sectionId,
+          projectId: pid,
+          status: isPrimary ? lead.lightStatus : TrafficLightStatus.green,
+        },
+      });
+    }
 
     // 3 current-week items per lead — mix of workflow states so traffic-light
     // sync, blocker badges, and "completed" toggles are all demoable.

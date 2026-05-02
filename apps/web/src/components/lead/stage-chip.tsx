@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 import { useSdlcTooltip } from '../ui/sdlc-tooltip';
 import type { StageAssignment, StageStatus } from './mock-data';
@@ -50,8 +51,10 @@ const STATUS_OPTIONS: { value: StageStatus; label: string }[] = [
 
 export function StageChip({ stage, onStatusChange, readOnly = false }: StageChipProps) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
   const tooltip = useSdlcTooltip();
   const config = STATUS_CONFIG[stage.status];
   const isEditable = stage.ownership === 'mine' && !readOnly;
@@ -61,7 +64,10 @@ export function StageChip({ stage, onStatusChange, readOnly = false }: StageChip
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const chipContains = dropdownRef.current?.contains(target);
+      const portalContains = portalRef.current?.contains(target);
+      if (!chipContains && !portalContains) {
         setShowDropdown(false);
       }
     }
@@ -69,6 +75,26 @@ export function StageChip({ stage, onStatusChange, readOnly = false }: StageChip
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDropdown]);
+
+  // The chip lives inside an accordion with overflow:hidden, so an absolutely
+  // positioned dropdown gets clipped (only the first option shows). Render it
+  // through a portal to <body> and position it via the button's getBoundingClientRect
+  // so it floats above any clipping ancestor.
+  useEffect(() => {
+    if (!showDropdown) return;
+    const update = () => {
+      const r = buttonRef.current?.getBoundingClientRect();
+      if (!r) return;
+      setDropdownPos({ top: r.bottom + 4, left: r.left });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
   }, [showDropdown]);
 
   const chipClasses = [
@@ -153,28 +179,33 @@ export function StageChip({ stage, onStatusChange, readOnly = false }: StageChip
         {isUnassigned ? '\u2014 unassigned' : stage.assignee}
       </span>
 
-      {/* Status dropdown */}
-      {showDropdown && (
-        <div
-          className="absolute top-full mt-1 z-50 rounded-xl border border-[var(--color-border)] bg-white p-2 shadow-lg"
-          style={{ minWidth: '140px' }}
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors hover:bg-[#f8f6f2]"
-              style={{
-                color: STATUS_CONFIG[opt.value].text,
-                background: stage.status === opt.value ? STATUS_CONFIG[opt.value].bg : undefined,
-              }}
-              onClick={() => handleStatusSelect(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Status dropdown — portaled to body so the surrounding accordion's
+          overflow:hidden does not clip it. */}
+      {showDropdown && dropdownPos && typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            ref={portalRef}
+            className="fixed z-50 rounded-xl border border-[var(--color-border)] bg-white p-2 shadow-lg"
+            style={{ top: dropdownPos.top, left: dropdownPos.left, minWidth: '140px' }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors hover:bg-[#f8f6f2]"
+                style={{
+                  color: STATUS_CONFIG[opt.value].text,
+                  background: stage.status === opt.value ? STATUS_CONFIG[opt.value].bg : undefined,
+                }}
+                onClick={() => handleStatusSelect(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )
+      }
     </div>
   );
 }
