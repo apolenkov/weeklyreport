@@ -99,7 +99,9 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     await selectStageOption(leadPage, 'At Risk');
     await saveStagePopover(leadPage);
     await expect(leadPage.getByText(/stage marked at-risk\/blocked but no risk filled in/i)).toBeVisible();
-    await expect(leadPage.getByRole('button', { name: /Add risk for Mobile Banking App Dev/ })).toBeVisible();
+    // Stage names render as the seed's full label ("Development", not the
+    // pipeline's abbreviated "Dev"), so match by aria-label prefix.
+    await expect(leadPage.locator('button[aria-label^="Add risk for Mobile Banking App"]')).toBeVisible();
   });
 
   // -------------------------------------------------------------------------
@@ -120,6 +122,10 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     await saveDialog(leadPage, /Item/);
     await save;
     await expect(leadPage.getByText('Refactored auth flow + added MFA')).toBeVisible();
+    // The autosave debounce can fire a *second* saveDraft after the modal-
+    // close one we already awaited — wait for the network to settle so the
+    // reload reads server-acknowledged state, not in-flight optimistic.
+    await leadPage.waitForLoadState('networkidle', { timeout: 5_000 });
     await leadPage.reload();
     await expect(leadPage.getByText('Refactored auth flow + added MFA')).toBeVisible();
   });
