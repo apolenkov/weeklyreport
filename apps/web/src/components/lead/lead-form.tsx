@@ -124,6 +124,15 @@ type AccordionSectionProps = {
   readonly badgeStyle?: React.CSSProperties;
   readonly subtitle?: string;
   readonly defaultOpen?: boolean;
+  /**
+   * Bumped by the parent's "Toggle All" button to force every section
+   * into the same state. Each bump increments the number; the section
+   * mirrors `groupExpanded` into its local state on every change. Local
+   * clicks afterwards still toggle individual sections — the group sync
+   * only fires when the parent actively changes the signal.
+   */
+  readonly groupSyncKey?: number;
+  readonly groupExpanded?: boolean;
   readonly children: React.ReactNode;
 };
 
@@ -135,9 +144,17 @@ function AccordionSection({
   badgeStyle,
   subtitle,
   defaultOpen = true,
+  groupSyncKey,
+  groupExpanded,
   children,
 }: AccordionSectionProps) {
   const [expanded, setExpanded] = useState(defaultOpen);
+
+  useEffect(() => {
+    // Only react to actual group-toggle actions, not initial mount.
+    if (groupSyncKey === undefined || groupExpanded === undefined) return;
+    setExpanded(groupExpanded);
+  }, [groupSyncKey, groupExpanded]);
 
   return (
     <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_0_0.5px_0_rgba(0,0,0,0.12),0_12px_26px_-18px_rgba(0,0,0,0.22),0_2px_4px_rgba(0,0,0,0.06)]">
@@ -420,6 +437,14 @@ export function LeadForm({ period }: LeadFormProps) {
     byPeriodQ.isLoading ||
     versionsQ.isLoading ||
     historyQ.isLoading;
+
+  // Toggle All state — must live above the early return below, otherwise
+  // the hook count drifts between renders and React throws "Rendered more
+  // hooks than during the previous render". Each Toggle All click bumps
+  // the sync key; AccordionSection mirrors the new groupExpanded into
+  // its local state. Individual sections may then drift again via clicks.
+  const [groupSyncKey, setGroupSyncKey] = useState(0);
+  const [groupExpanded, setGroupExpanded] = useState(true);
 
   // Compute readOnly early (before hook; the autosave hook needs it). When
   // data isn't ready, treat as readOnly (autosave disabled).
@@ -720,7 +745,8 @@ export function LeadForm({ period }: LeadFormProps) {
   }
 
   function handleToggleAll() {
-    // Visual placeholder; individual accordion state owns its own toggle.
+    setGroupExpanded((prev) => !prev);
+    setGroupSyncKey((k) => k + 1);
   }
 
   // Autosave indicator label.
@@ -858,7 +884,7 @@ export function LeadForm({ period }: LeadFormProps) {
           {...(activeSectionId ? { sectionId: activeSectionId } : {})}
         >
           {/* Product Status (SDLC Pipeline) */}
-          <AccordionSection
+          <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
             icon={<GridIcon />}
             title="Product Status"
             badge={`${products.length} assigned products`}
@@ -868,7 +894,7 @@ export function LeadForm({ period }: LeadFormProps) {
           </AccordionSection>
 
           {/* Current Week */}
-          <AccordionSection
+          <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
             icon={<CalendarIcon />}
             title="Current Week"
             badge={`${currentWeekItems.length} items`}
@@ -883,7 +909,7 @@ export function LeadForm({ period }: LeadFormProps) {
           </AccordionSection>
 
           {/* Next Week */}
-          <AccordionSection
+          <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
             icon={<NextWeekIcon />}
             title="Next Week"
             badge={`${nextWeekItems.length} items`}
@@ -898,7 +924,7 @@ export function LeadForm({ period }: LeadFormProps) {
           </AccordionSection>
 
           {/* Risks & Blockers */}
-          <AccordionSection
+          <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
             icon={<AlertIcon />}
             title="Risks & Blockers"
             titleColor="var(--color-destructive)"
@@ -910,7 +936,7 @@ export function LeadForm({ period }: LeadFormProps) {
         </LeadFormSyncBridge.Provider>
 
         {/* Decisions */}
-        <AccordionSection
+        <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
           icon={<ChatIcon />}
           title="Decisions"
           titleColor="var(--color-starbucks-accent)"
@@ -926,7 +952,7 @@ export function LeadForm({ period }: LeadFormProps) {
         </AccordionSection>
 
         {/* Priorities — variable-length list */}
-        <AccordionSection
+        <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
           icon={<StarIcon />}
           title="Priorities"
           titleColor="var(--color-starbucks-gold)"
