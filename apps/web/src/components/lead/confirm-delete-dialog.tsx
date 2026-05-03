@@ -27,6 +27,18 @@ type ConfirmDeleteDialogProps = {
    * 2 linked items"). Keep to ~one short sentence.
    */
   readonly consequence?: string;
+  /**
+   * Label for the destructive button. Defaults to "Delete". Set to
+   * "Archive", "Remove", "Discard" etc. when the verb fits the action
+   * better. The button keeps the destructive red styling regardless.
+   */
+  readonly confirmLabel?: string;
+  /**
+   * When true, replaces the "This action cannot be undone." footer
+   * with a softer "This can be reversed later." line. Use for archive
+   * / soft-delete flows where the row is recoverable.
+   */
+  readonly reversible?: boolean;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 };
@@ -49,6 +61,8 @@ export function ConfirmDeleteDialog({
   preview,
   subtitle,
   consequence,
+  confirmLabel = 'Delete',
+  reversible = false,
   onConfirm,
   onCancel,
 }: ConfirmDeleteDialogProps) {
@@ -123,7 +137,7 @@ export function ConfirmDeleteDialog({
         )}
 
         <p className="mt-4 text-[11px] text-[var(--color-muted-foreground)]">
-          This action cannot be undone.
+          {reversible ? 'This can be reversed later.' : 'This action cannot be undone.'}
         </p>
 
         <div className="mt-5 flex justify-end gap-2">
@@ -140,7 +154,7 @@ export function ConfirmDeleteDialog({
             className="btn-press inline-flex min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-destructive)] bg-[var(--color-destructive)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#a02020]"
             onClick={onConfirm}
           >
-            Delete
+            {confirmLabel}
           </button>
         </div>
       </div>

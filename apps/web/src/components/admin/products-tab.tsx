@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { invalidateAdmin } from '../../lib/cache-keys';
 import { toAdminProjectInput } from '../../lib/mappers';
 import { useTRPC } from '../../lib/trpc-context';
+import { ConfirmDeleteDialog } from '../lead/confirm-delete-dialog';
 
 import type { MockProduct, MockUser } from './mock-data';
 import { StageAssignmentEditor } from './stage-assignment-editor';
@@ -25,6 +26,7 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
   const [editingProduct, setEditingProduct] = useState<MockProduct | null>(null);
   const [formName, setFormName] = useState('');
   const [formLeadId, setFormLeadId] = useState('');
+  const [pendingArchive, setPendingArchive] = useState<MockProduct | null>(null);
 
   const leads = useMemo(() => users.filter((u) => u.role === 'lead'), [users]);
   const getUserById = (id: string): MockUser | undefined => users.find((u) => u.id === id);
@@ -85,6 +87,31 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
 
   function handleArchive(productId: string) {
     deleteProjectMut.mutate({ projectId: productId });
+  }
+
+  function handleRestore(product: MockProduct) {
+    const lead = getUserById(product.leadOwnerId);
+    saveProjectMut.mutate(
+      toAdminProjectInput(
+        {
+          name: product.name,
+          leadOwnerId: product.leadOwnerId,
+          leadName: lead?.name,
+          archived: false,
+        },
+        product.id,
+      ),
+    );
+  }
+
+  function requestArchive(product: MockProduct) {
+    setPendingArchive(product);
+  }
+
+  function confirmArchive() {
+    if (!pendingArchive) return;
+    handleArchive(pendingArchive.id);
+    setPendingArchive(null);
   }
 
   const activeProducts = products.filter((p) => p.status === 'active');
@@ -157,7 +184,7 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleArchive(product.id)}
+                      onClick={() => requestArchive(product)}
                       disabled={isArchiving}
                       className="btn-press rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50"
                       aria-label={`Archive ${product.name}`}
@@ -203,8 +230,8 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
                 <span className="text-sm text-[var(--color-muted-foreground)]">{product.name}</span>
                 <button
                   type="button"
-                  onClick={() => handleArchive(product.id)}
-                  disabled={isArchiving}
+                  onClick={() => handleRestore(product)}
+                  disabled={isSaving}
                   className="btn-press rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label={`Restore ${product.name}`}
                 >
@@ -280,6 +307,18 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
           </div>
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        open={pendingArchive !== null}
+        title="Archive product?"
+        preview={pendingArchive?.name ?? ''}
+        subtitle="Lead assignments and stage data are preserved."
+        consequence="The product will disappear from active forms and dashboards until restored."
+        confirmLabel="Archive"
+        reversible
+        onConfirm={confirmArchive}
+        onCancel={() => setPendingArchive(null)}
+      />
     </>
   );
 }

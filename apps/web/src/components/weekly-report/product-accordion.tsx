@@ -249,9 +249,9 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
                   Top Priorities
                 </div>
                 <ol className="space-y-1 text-sm">
-                  {report.priorities.map((p) => (
+                  {report.priorities.map((p, idx) => (
                     <li
-                      key={p.rank}
+                      key={`${p.rank}-${idx}`}
                       className="flex items-center gap-2 rounded p-2"
                       style={{
                         background: p.rank === 1 ? '#faf6ee' : 'var(--color-background)',
