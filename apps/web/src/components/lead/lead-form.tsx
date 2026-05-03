@@ -22,6 +22,7 @@ import { CurrentWeekSection } from './current-week-section';
 import { NextWeekSection } from './next-week-section';
 import { DecisionsSection } from './decisions-section';
 import { PrioritiesSection } from './priorities-section';
+import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { RequestReopenDialog } from './request-reopen-dialog';
 
 import type {
@@ -386,6 +387,7 @@ export function LeadForm({ period }: LeadFormProps) {
   // surfaced inline rather than only in a toast.
   const [showReopenDialog, setShowReopenDialog] = useState(false);
   const [reopenError, setReopenError] = useState<string | null>(null);
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
   const requestReopenMut = useMutation(
     trpc.leadForm.requestReopen.mutationOptions({
       onSuccess: () => {
@@ -710,6 +712,11 @@ export function LeadForm({ period }: LeadFormProps) {
   }
 
   function handleRevoke() {
+    setShowRevokeDialog(true);
+  }
+
+  function confirmRevoke() {
+    setShowRevokeDialog(false);
     if (!activeSectionId) return;
     revokeMut.mutate({ reportSectionId: activeSectionId });
   }
@@ -1027,6 +1034,18 @@ export function LeadForm({ period }: LeadFormProps) {
         error={reopenError}
         onConfirm={handleRequestReopen}
         onCancel={() => { setShowReopenDialog(false); setReopenError(null); }}
+      />
+
+      <ConfirmDeleteDialog
+        open={showRevokeDialog}
+        title="Revoke this submission?"
+        preview={currentUser.name ?? 'Lead submission'}
+        subtitle="Their form returns to Draft and they can edit again."
+        consequence="The lead will be notified that their submission was revoked."
+        confirmLabel="Revoke"
+        reversible
+        onConfirm={confirmRevoke}
+        onCancel={() => setShowRevokeDialog(false)}
       />
     </SdlcTooltipProvider>
   );
