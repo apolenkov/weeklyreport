@@ -769,7 +769,15 @@ export function LeadForm({ period }: LeadFormProps) {
               <CollapseIcon />
               Toggle All
             </button>
-            {isSubmitted && currentUser.role === 'lead' && (
+            {/*
+              currentUser.role is a display label (e.g. "Dev Lead",
+              "Head", "Admin"), not the system role enum — the read
+              model carries authorName + display role for the chrome
+              header. Match by suffix so any "X Lead" surfaces Request
+              Reopen. The polite path stays Lead-only; Head sees
+              Revoke. Backend gates both anyway, this is just UX.
+            */}
+            {isSubmitted && /lead$/i.test(currentUser.role ?? '') && (
               <button
                 type="button"
                 className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
@@ -780,7 +788,7 @@ export function LeadForm({ period }: LeadFormProps) {
                 Request Reopen
               </button>
             )}
-            {isSubmitted && currentUser.role !== 'lead' && (
+            {isSubmitted && !/lead$/i.test(currentUser.role ?? '') && (
               <button
                 type="button"
                 className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
