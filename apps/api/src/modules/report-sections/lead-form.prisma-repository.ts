@@ -165,14 +165,22 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       take: MAX_SNAPSHOTS,
     });
 
-    return rows.map((row) =>
-      versionSnapshotSchema.parse({
+    return rows.map((row) => {
+      const data = row.data as {
+        items?: unknown[];
+        risks?: unknown[];
+        decisions?: unknown[];
+      } | null;
+      return versionSnapshotSchema.parse({
         id: row.id,
         reportSectionId: row.reportSectionId,
         version: row.version,
         createdAt: row.createdAt,
-      }),
-    );
+        itemCount: data?.items?.length ?? 0,
+        riskCount: data?.risks?.length ?? 0,
+        decisionCount: data?.decisions?.length ?? 0,
+      });
+    });
   }
 
   async restoreVersion(sectionId: string, version: number): Promise<number> {

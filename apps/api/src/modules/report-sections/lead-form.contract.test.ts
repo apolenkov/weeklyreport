@@ -55,18 +55,27 @@ const sampleVersions: VersionSnapshot[] = [
     reportSectionId: SECTION_ID,
     version: 3,
     createdAt: new Date('2026-04-08T10:00:00Z'),
+    itemCount: 0,
+    riskCount: 0,
+    decisionCount: 0,
   },
   {
     id: 'aaaa2222-2222-4222-8222-222222222222',
     reportSectionId: SECTION_ID,
     version: 2,
     createdAt: new Date('2026-04-07T10:00:00Z'),
+    itemCount: 0,
+    riskCount: 0,
+    decisionCount: 0,
   },
   {
     id: 'aaaa3333-3333-4333-8333-333333333333',
     reportSectionId: SECTION_ID,
     version: 1,
     createdAt: new Date('2026-04-06T10:00:00Z'),
+    itemCount: 0,
+    riskCount: 0,
+    decisionCount: 0,
   },
 ];
 

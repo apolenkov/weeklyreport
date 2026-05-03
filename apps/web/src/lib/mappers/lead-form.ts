@@ -411,8 +411,9 @@ export function mapLeadPeriods(
 }
 
 /**
- * Map API VersionSnapshots into the dropdown shape. Item/risk/decision counts
- * default to 0 (not stored on the snapshot row at v5.0).
+ * Map API VersionSnapshots into the dropdown shape. Counts come from the
+ * server (computed from the snapshot's `data` JSON), so the version-history
+ * UI can render real delta summaries instead of zeros.
  */
 export function mapLeadVersions(
   versions: readonly ApiVersionSnapshot[],
@@ -421,9 +422,9 @@ export function mapLeadVersions(
   return versions.map((v) => ({
     version: v.version,
     timestamp: formatRelativeTimestamp(v.createdAt, now),
-    itemCount: 0,
-    riskCount: 0,
-    decisionCount: 0,
+    itemCount: v.itemCount,
+    riskCount: v.riskCount,
+    decisionCount: v.decisionCount,
   }));
 }
 
