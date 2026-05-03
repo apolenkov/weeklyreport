@@ -29,7 +29,10 @@
     {"id": 18, "name": "M20 Delete Confirmation dialog", "status": "done", "commit": "e888090"},
     {"id": 19, "name": "M19 per-field validation feedback", "status": "done", "commit": "0c8018f"},
     {"id": 20, "name": "M6 Lead-side Request-Reopen modal", "status": "done", "commit": "f2017ad"},
-    {"id": 21, "name": "M11 version history diff preview + priorities-confirm", "status": "done", "commit": "a406796"}
+    {"id": 21, "name": "M11 version history diff preview + priorities-confirm", "status": "done", "commit": "a406796"},
+    {"id": 22, "name": "M6 button gating fix — display-label match (was system-role match)", "status": "done", "commit": "b1ce61a"},
+    {"id": 23, "name": "Toggle All actually toggles all sections (was no-op placeholder)", "status": "done", "commit": "1c2d014"},
+    {"id": 24, "name": "Header sweep — verified Fill from Previous / Choose dropdown / period nav / version history / Add Item|Risk|Decision|Priority / Submit / Toggle All / Reopen / DEV-switch-role all work", "status": "done", "live_tested": true}
   ],
   "remaining_tasks": [
     {"id": 22, "name": "S1.4 / S2.2 E2E flakes (currently test.skip)", "status": "deferred", "rationale": "Need product-side change: dialog onSave should return mutation Promise so helper can await. Worked around with test.skip; suite is 20 passing / 2 skipped / 0 failing."},
@@ -55,6 +58,6 @@
     {"decision": "S1.4/S2.2 E2E tests skipped with explicit TODO", "rationale": "Six rounds (force, focus+Enter, dispatchEvent, native click) couldn't beat the fixed-position portal hit-test. Better to skip honestly than carry a brittle assertion that masks regressions. Resolution path: dialog onSave should return the mutation Promise.", "phase": "ux-overhaul"}
   ],
   "uncommitted_files": [],
-  "next_action": "Wake up and decide on (a) Save Version policy (3 options on table), (b) M5/M10 head-side modal styling priority, (c) mobile audit scope. E2E suite is at 20 passing / 2 skipped — re-enable by switching dialog onSave to a Promise-returning shape so the E2E helper can await the mutation directly.",
-  "context_notes": "11 commits this autonomous session (b549eca → a406796). All pushed to origin/main. Anti-patterns documented inline in test.skip comments. The product is in a usable, modal-driven state with M19/M20/M6/M11/Priorities-confirm closed. PLAN-ux-overhaul.md M-table is now ~80% covered."
+  "next_action": "Two more user-driven catches landed after the autonomous loop: M6 button gating (always Revoke instead of Request Reopen) and Toggle All as a noop placeholder. Both fixed and pushed. User explicitly asked to skip mobile work for now and stay focused on desktop. Open items: (a) Save Version policy decision, (b) systematic regression sweep on every page (head, admin, viewer, history, login flows) — autonomous loop only swept /lead/report.",
+  "context_notes": "13 commits this autonomous + sweep session (b549eca → 1c2d014). Two stealth bugs caught after autonomous-mode finished — Toggle All was a noop comment-only placeholder, M6 gating used wrong field name. Both highlighted that 'autonomous' shouldn't equal 'declared done without sweep'. Lesson: full-button sweep before declaring complete. Sweep is now in the per-commit live-test loop, not just at handoff."
 }
