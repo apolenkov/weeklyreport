@@ -103,7 +103,8 @@ export async function gotoLeadReport(page: Page) {
 /**
  * Click a stage chip on the SDLC pipeline. The chip is identified by its
  * rendered status (`Dev: on-track`, `Dev: empty`, etc.) and product index
- * within the Product Status section.
+ * within the Product Status section. Opens a click-to-apply menu that
+ * dismisses on the next selection.
  */
 export async function clickStageChip(
   page: Page,
@@ -113,40 +114,31 @@ export async function clickStageChip(
 ): Promise<void> {
   const chips = page.locator(`button[aria-label="${stage}: ${status}"]`);
   await chips.nth(productIndex).click();
-  await page.getByRole('dialog', { name: new RegExp(`Set status for ${stage}`) }).waitFor({
+  await page.getByRole('menu', { name: new RegExp(`Set status for ${stage}`) }).waitFor({
     state: 'visible',
     timeout: 5_000,
   });
 }
 
 export function stagePopover(page: Page): Locator {
-  return page.getByRole('dialog', { name: /Set status for/ });
+  return page.getByRole('menu', { name: /Set status for/ });
 }
 
+/**
+ * Pick a status from the stage popover. Each option applies on click —
+ * the popover dismisses itself, no separate Save step. Focus+Enter is
+ * still used because the menu lives in a fixed-position portal that
+ * Playwright's viewport heuristic occasionally rejects normal clicks
+ * against; focus() bypasses hit-testing and Enter on a focused
+ * menuitem dispatches an activation click that React's onClick sees.
+ */
 export async function selectStageOption(page: Page, option: StatusOption): Promise<void> {
-  // Stage popover lives in a fixed-position portal. Playwright's
-  // viewport heuristic rejects normal clicks here. focus()+keyboard
-  // Enter is the most reliable path: focus skips hit-testing,
-  // and pressing Enter dispatches a real synthetic click via the
-  // browser's default activation behaviour — which React onClick
-  // listens for the same as a mouse click.
-  const btn = stagePopover(page).getByRole('button', { name: new RegExp(option) });
-  await btn.focus();
+  const item = stagePopover(page).getByRole('menuitem', { name: new RegExp(option) });
+  await item.focus();
   await page.keyboard.press('Enter');
-}
-
-export async function saveStagePopover(page: Page): Promise<void> {
-  const btn = stagePopover(page).getByRole('button', { name: 'Save', exact: true });
-  await btn.focus();
-  await page.keyboard.press('Enter');
-  // Popover dismounts on Save. Give React a tick to apply the optimistic
-  // update + onChange propagation before the caller asserts on aria-label
-  // changes. Without this the test races the post-save render.
+  // The popover dismounts on selection; give React a tick to apply the
+  // optimistic update + onChange propagation before assertions run.
   await page.waitForTimeout(300);
-}
-
-export async function cancelStagePopover(page: Page): Promise<void> {
-  await stagePopover(page).getByRole('button', { name: 'Cancel', exact: true }).click();
 }
 
 // ---------------------------------------------------------------------------
