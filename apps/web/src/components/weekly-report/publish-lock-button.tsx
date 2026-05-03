@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { ConfirmDeleteDialog } from '../lead/confirm-delete-dialog';
+
 type PublishLockButtonProps = {
   readonly pendingCount: number;
   readonly totalLeads: number;
@@ -13,7 +15,9 @@ type PublishLockButtonProps = {
   readonly periodStatus: 'open' | 'published' | 'reopened';
   /** Invoked after the user confirms the publish dialog. */
   readonly onPublish: () => void;
-  /** Invoked when the user clicks Reopen Period. No confirmation gate. */
+  /** Invoked after the user confirms the reopen dialog. Reopen is destructive
+   * — it unlocks an already-published period — so it now goes through a
+   * confirm gate matching the rest of the app's destructive-action UX. */
   readonly onReopen: () => void;
   /** Disable the trigger while the parent's mutation is in-flight. */
   readonly isPending?: boolean;
@@ -28,29 +32,49 @@ export function PublishLockButton({
   isPending = false,
 }: PublishLockButtonProps) {
   const [showDialog, setShowDialog] = useState(false);
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
 
   function handleConfirm() {
     setShowDialog(false);
     onPublish();
   }
 
+  function handleConfirmReopen() {
+    setShowReopenDialog(false);
+    onReopen();
+  }
+
   if (periodStatus === 'published') {
     return (
-      <button
-        type="button"
-        className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
-        onClick={onReopen}
-        disabled={isPending}
-        aria-label="Reopen Period"
-      >
-        <svg viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={2}>
-          <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-          <path d="M21 3v5h-5" />
-          <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-          <path d="M3 21v-5h5" />
-        </svg>
-        Reopen Period
-      </button>
+      <>
+        <button
+          type="button"
+          className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => setShowReopenDialog(true)}
+          disabled={isPending}
+          aria-label="Reopen Period"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={2}>
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+            <path d="M3 21v-5h5" />
+          </svg>
+          Reopen Period
+        </button>
+
+        <ConfirmDeleteDialog
+          open={showReopenDialog}
+          title="Reopen this period?"
+          preview="The published report will be unlocked."
+          subtitle="Leads will be able to edit their sections again."
+          consequence="The current published version will be replaced when you publish again."
+          confirmLabel="Reopen"
+          reversible
+          onConfirm={handleConfirmReopen}
+          onCancel={() => setShowReopenDialog(false)}
+        />
+      </>
     );
   }
 
