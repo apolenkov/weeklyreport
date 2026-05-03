@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { invalidateAdmin } from '../../lib/cache-keys';
 import { toAdminReminderRuleInput } from '../../lib/mappers';
 import { useTRPC } from '../../lib/trpc-context';
+import { ConfirmDeleteDialog } from '../lead/confirm-delete-dialog';
 
 import type { MockReminder } from './mock-data';
 
@@ -19,6 +20,7 @@ export function RemindersTab({ reminders }: RemindersTabProps) {
   const qc = useQueryClient();
 
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<MockReminder | null>(null);
 
   const saveRuleMut = useMutation(
     trpc.admin.saveReminderRule.mutationOptions({
@@ -62,7 +64,13 @@ export function RemindersTab({ reminders }: RemindersTabProps) {
   }
 
   function handleDelete(reminder: MockReminder) {
-    deleteRuleMut.mutate({ ruleId: reminder.id });
+    setPendingDelete(reminder);
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    deleteRuleMut.mutate({ ruleId: pendingDelete.id });
+    setPendingDelete(null);
   }
 
   function handleSendNow(id: string) {
@@ -162,8 +170,25 @@ export function RemindersTab({ reminders }: RemindersTabProps) {
           </div>
         ))}
       </div>
+
+      <ConfirmDeleteDialog
+        open={pendingDelete !== null}
+        title="Delete reminder rule?"
+        preview={pendingDelete?.name ?? ''}
+        subtitle={pendingDelete ? formatReminderSchedule(pendingDelete.fireAt, pendingDelete.timezone) : undefined}
+        consequence="No further emails will be sent for this rule."
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
+}
+
+function formatReminderSchedule(fireAt: unknown, timezone: string): string {
+  const d = fireAt instanceof Date ? fireAt : new Date(String(fireAt));
+  if (Number.isNaN(d.getTime())) return timezone;
+  const time = d.toISOString().slice(11, 16);
+  return `${time} UTC · ${timezone}`;
 }
 
 // ---- Icons ----

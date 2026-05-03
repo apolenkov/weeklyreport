@@ -103,7 +103,7 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
     expect(screen.getByText(/2 of 6 leads/i)).toBeInTheDocument();
   });
 
-  it('clicking "Reopen Period" calls onReopen directly (no confirmation)', async () => {
+  it('clicking "Reopen Period" opens a confirmation dialog and only fires onReopen on confirm', async () => {
     const onReopen = vi.fn();
     render(
       <PublishLockButton
@@ -115,7 +115,27 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: /reopen period/i }));
+    // The first click only opens the modal — onReopen must not fire yet.
+    expect(onReopen).not.toHaveBeenCalled();
+    expect(screen.getByText(/reopen this period\?/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^reopen$/i }));
     expect(onReopen).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancelling the reopen dialog does not fire onReopen', async () => {
+    const onReopen = vi.fn();
+    render(
+      <PublishLockButton
+        pendingCount={0}
+        totalLeads={6}
+        periodStatus="published"
+        onPublish={vi.fn()}
+        onReopen={onReopen}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /reopen period/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    expect(onReopen).not.toHaveBeenCalled();
   });
 
   it('disables the trigger button while isPending=true', () => {
