@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-03T13:40:00Z",
+  "timestamp": "2026-05-03T20:55:00Z",
   "phase": "ux-overhaul",
   "phase_name": "Post-v6.0 UX overhaul (ad-hoc, not bound to Phase XX)",
   "phase_dir": ".planning",
@@ -39,13 +39,20 @@
     {"id": 28, "name": "Fix Restore product noop (server removeProject hard-codes archived=true; switched to saveProjectMut path)", "status": "done", "commit": "098b042"},
     {"id": 29, "name": "Extend ConfirmDeleteDialog with confirmLabel + reversible props for non-delete destructive ops", "status": "done", "commit": "098b042"},
     {"id": 30, "name": "Add confirm gate to Reminder Delete + clean fireAt formatting", "status": "done", "commit": "3870586"},
-    {"id": 31, "name": "Add confirm gate to Reopen Period (was 1-click unpublish of an already-published report)", "status": "done", "commit": "3870586"}
+    {"id": 31, "name": "Add confirm gate to Reopen Period (was 1-click unpublish of an already-published report)", "status": "done", "commit": "3870586"},
+    {"id": 32, "name": "Real itemCount/riskCount/decisionCount on version snapshots (was hardcoded 0 → M11 diff always blank)", "status": "done", "commit": "(post-3870586)"},
+    {"id": 33, "name": "Stage popover: replace Save/Cancel form with click-to-apply menu", "status": "done", "commit": "(post-3870586)"},
+    {"id": 34, "name": "M10 Head-side Revoke confirm gate", "status": "done", "commit": "(post-3870586)"},
+    {"id": 35, "name": "Un-skip S1.4 + S2.2 — suite is 22/22 passing, 0 skipped", "status": "done", "commit": "(post-3870586)"}
   ],
   "remaining_tasks": [
-    {"id": 22, "name": "S1.4 / S2.2 E2E flakes (currently test.skip)", "status": "deferred", "rationale": "Need product-side change: dialog onSave should return mutation Promise so helper can await. Worked around with test.skip; suite is 20 passing / 2 skipped / 0 failing."},
-    {"id": 23, "name": "M5 / M10 Head-side Reopen/Revoke modal styling", "status": "deferred", "rationale": "Functional but not styled per mockup. Lower priority — Head workflow is operational."},
     {"id": 24, "name": "Save Version button + auto-snapshot timer", "status": "open_question", "rationale": "Three policy options on the table; user has not decided. Default snapshot policy still 'before fillFrom + before restore'."},
-    {"id": 25, "name": "Mobile responsiveness audit on /lead/report", "status": "not_started", "rationale": "Phase 30 covered admin/head; lead-form modal-driven flow not yet pass-tested on iOS/Android viewports."}
+    {"id": 25, "name": "Mobile responsiveness audit on /lead/report", "status": "not_started", "rationale": "Phase 30 covered admin/head; lead-form modal-driven flow not yet pass-tested on iOS/Android viewports. Deferred per user direction."},
+    {"id": 36, "name": "Push 8 ahead-of-origin commits", "status": "deferred", "rationale": "VPN required + push-guard hook blocked the unattended push. Run https_proxy=\"\" command git push origin main when on corp network."},
+    {"id": 37, "name": "Lead Reports rows on /head/dashboard show lock icon for Head — by-design but UX-confusing", "status": "noted", "rationale": "Drill-down from row to lead's section would be more useful; current behavior treats Head as if they were viewing someone else's locked form."},
+    {"id": 38, "name": "linkedRiskCount confirm-on-Clear never trips because risk.stageName defaults to \"—\"", "status": "noted", "rationale": "Risk schema has no stageName — frontend mapper defaults to placeholder. Not actionable until schema gains stageName + UI exposes it. Tracked here so a future stageName feature picks up the loop-closing."},
+    {"id": 39, "name": "Add User dialog doesn't close on Escape", "status": "noted", "rationale": "Surfaced during admin sweep; minor. Would be fixed by switching to a Radix Dialog wrapper across admin tab dialogs."},
+    {"id": 40, "name": "Recharts ResponsiveContainer width=-1/height=-1 warnings on /reports/trends initial mount", "status": "noted", "rationale": "Cosmetic — charts render correctly at 1088×256 once measured. Could be silenced with minWidth={0}."}
   ],
   "blockers": [],
   "human_actions_pending": [
@@ -67,6 +74,6 @@
     {"decision": "Reopen Period flipped from no-confirm to confirm (was explicit no-confirm in publish-lock-button by design)", "rationale": "Reopening an already-published report silently invalidates the version directors and other departments have already seen. Publish & Lock has always required confirmation; Reopen needed the same gate for symmetry. Test that asserted 'no confirmation' was rewritten.", "phase": "ux-overhaul"}
   ],
   "uncommitted_files": [],
-  "next_action": "Cross-page regression sweep complete (commits 098b042 + 3870586). Five real bugs surfaced on pages outside /lead/report — three destructive ops without confirm (Archive, Delete reminder, Reopen Period), one noop (Restore product), one React warning (duplicate key on aggregated priorities). All fixed + live-verified + tests updated. Open items unchanged: (a) Save Version policy decision (user-gated), (b) backend snapshot count bug in seed (itemCount/riskCount/decisionCount=0). Mobile audit still deferred per user direction.",
-  "context_notes": "15 commits in the broader session. Two stealth bugs caught after autonomous-mode (M6 + Toggle All) led to a cross-page regression sweep — that sweep then surfaced 5 more bugs outside /lead/report, all on destructive ops or React warnings. Lesson reinforced: 'autonomous' ≠ 'swept'. Per-commit live-sweep is not optional, and it must reach EVERY page that has a button, not just the page being touched. Side-product: ConfirmDeleteDialog is now a generalised destructive-confirm primitive (delete/archive/reopen), reducing the bar for adding confirms to future destructive ops."
+  "next_action": "All technically-actionable items closed. Cross-page sweep + follow-up wave: 8 fixes pushed locally (098b042..0ba7cea + post-handoff: snapshot counts, stage popover simplification, Revoke confirm, un-skip S1.4/S2.2). E2E suite 22/22 passing. Only two non-technical items remain: Save Version policy (user decision required) + mobile audit (user-deferred). Push needs VPN.",
+  "context_notes": "Closing the post-v6.0 UX overhaul wave. Themes that emerged: (1) ConfirmDeleteDialog became the universal destructive-confirm primitive across delete/archive/revoke/reopen — symmetry across the app means users learn one pattern. (2) User pushed back on form-style popovers for trivial picks; stage-chip is now click-to-apply (Save button was friction). (3) E2E flakes that looked like 'need Promise-returning onSave' actually needed cheaper fixes: response-body filtering for waitForSave (S2.2) + serial describe mode for shared-DB races (S1.3). (4) Snapshot counts had been 0 because the mapper hardcoded zeros; the snapshot row's `data` JSON has full arrays, so server-side derivation costs nothing and unblocks M11 diff. Lesson: assumptions in the deferred list deserve a 5-minute reread before plumbing in heavyweight refactors."
 }
