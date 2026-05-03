@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useSdlcTooltip } from '../ui/sdlc-tooltip';
+import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import type { StageAssignment, StageStatus } from './mock-data';
 
 type StageChipProps = {
@@ -57,11 +58,10 @@ const STATUS_OPTIONS: { value: StageStatus; label: string }[] = [
 
 export function StageChip({ stage, onStatusChange, readOnly = false, linkedRiskCount = 0 }: StageChipProps) {
   const [showPopover, setShowPopover] = useState(false);
-  // Pending status mirrors the radio-style chip selection inside the
-  // popover. Earlier the dropdown applied on click; the redesign defers
-  // until the user presses Save so a stray click doesn't clobber the
-  // SDLC pipeline.
-  const [pending, setPending] = useState<StageStatus>(stage.status);
+  // Confirm modal for the only case that warrants a second click —
+  // clearing a stage that still has linked risks. The other three
+  // options apply immediately on click.
+  const [pendingClear, setPendingClear] = useState(false);
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -127,29 +127,29 @@ export function StageChip({ stage, onStatusChange, readOnly = false, linkedRiskC
 
   function handleChipClick() {
     if (!isEditable) return;
-    setPending(stage.status); // Reset selection to current every time popover opens.
     setShowPopover(!showPopover);
   }
 
-  function handleSave() {
+  function applyStatus(next: StageStatus) {
     if (!isEditable) return;
-    if (pending !== stage.status) {
-      // Confirm before clearing a stage that has linked risks — clearing
-      // doesn't delete the risks themselves, but removing the stage's
-      // status drops the chip-level signal that surfaces those risks
-      // visually, so warn the user before cutting that thread.
-      if (pending === 'empty' && linkedRiskCount > 0) {
-        const ok = window.confirm(
-          `Clear "${stage.stageName}"? It still has ${linkedRiskCount} linked risk${linkedRiskCount === 1 ? '' : 's'}.\n\nThe risks themselves stay; only the stage's status changes back to undefined.`,
-        );
-        if (!ok) return;
-      }
-      onStatusChange?.(stage.stageName, pending);
+    if (next === stage.status) {
+      setShowPopover(false);
+      return;
     }
+    // Clearing a stage that still has linked risks needs a confirm —
+    // the risks themselves persist but the chip-level signal is dropped.
+    // Every other transition applies on the first click.
+    if (next === 'empty' && linkedRiskCount > 0) {
+      setPendingClear(true);
+      return;
+    }
+    onStatusChange?.(stage.stageName, next);
     setShowPopover(false);
   }
 
-  function handleCancel() {
+  function confirmClear() {
+    onStatusChange?.(stage.stageName, 'empty');
+    setPendingClear(false);
     setShowPopover(false);
   }
 
@@ -205,64 +205,65 @@ export function StageChip({ stage, onStatusChange, readOnly = false, linkedRiskC
         {isUnassigned ? '— unassigned' : stage.assignee}
       </span>
 
-      {/* Status popover form (M2 redesign). Portaled to body to escape
-          accordion overflow:hidden. Selection is staged in `pending` and
-          applied only on Save. */}
+      {/* Status popover — click-to-apply menu. Each option is a single
+          tap; the popover closes immediately. Portaled to body to escape
+          accordion overflow:hidden. The Save/Cancel form was an earlier
+          iteration the user reverted: for a 4-option enum the form felt
+          heavier than the action it gated. The Clear-with-linked-risks
+          confirm is the one place where a second click is still
+          warranted, and that path uses ConfirmDeleteDialog below. */}
       {showPopover && popoverPos && typeof document !== 'undefined' &&
         createPortal(
           <div
             ref={portalRef}
-            className="fixed z-50 w-[260px] rounded-xl border border-[var(--color-border)] bg-white p-3 shadow-lg"
+            className="fixed z-50 w-[180px] rounded-xl border border-[var(--color-border)] bg-white p-1.5 shadow-lg"
             style={{ top: popoverPos.top, left: popoverPos.left }}
-            role="dialog"
+            role="menu"
             aria-label={`Set status for ${stage.stageName}`}
           >
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-              {stage.stageName}
-            </div>
-            <div className="mb-3 grid grid-cols-2 gap-1.5">
-              {STATUS_OPTIONS.map((opt) => {
-                const cfg = STATUS_CONFIG[opt.value];
-                const selected = pending === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setPending(opt.value)}
-                    className="inline-flex min-h-[32px] items-center justify-center gap-1 rounded-[var(--radius-pill)] px-2 py-1 text-[12px] font-semibold transition-all"
-                    style={{
-                      background: selected ? cfg.bg : 'transparent',
-                      color: selected ? cfg.text : 'var(--color-foreground)',
-                      border: `1.5px solid ${selected ? cfg.border : 'rgba(0,0,0,0.15)'}`,
-                    }}
-                    aria-pressed={selected}
+            {STATUS_OPTIONS.map((opt) => {
+              const cfg = STATUS_CONFIG[opt.value];
+              const isCurrent = stage.status === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => applyStatus(opt.value)}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium transition-colors hover:bg-[#f8f6f2]"
+                  style={{
+                    background: isCurrent ? cfg.bg : 'transparent',
+                    color: isCurrent ? cfg.text : 'var(--color-foreground)',
+                  }}
+                >
+                  <span
+                    className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
+                    style={{ background: cfg.bg, color: cfg.text, border: `1px solid ${cfg.border}` }}
                   >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="btn-press inline-flex min-h-[32px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-transparent px-3 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={pending === stage.status}
-                className="btn-press inline-flex min-h-[32px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-[12px] font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Save
-              </button>
-            </div>
+                    {cfg.icon}
+                  </span>
+                  <span className="flex-1">{opt.label.replace(/^[^\s]+\s/, '')}</span>
+                  {isCurrent && (
+                    <span className="text-[10px] uppercase tracking-wide text-[var(--color-muted-foreground)]">current</span>
+                  )}
+                </button>
+              );
+            })}
           </div>,
           document.body,
         )
       }
+
+      <ConfirmDeleteDialog
+        open={pendingClear}
+        title="Clear this stage?"
+        preview={stage.stageName}
+        subtitle={`${linkedRiskCount} linked risk${linkedRiskCount === 1 ? '' : 's'} will stay — only the chip's status is reset.`}
+        confirmLabel="Clear"
+        reversible
+        onConfirm={confirmClear}
+        onCancel={() => setPendingClear(false)}
+      />
     </div>
   );
 }
