@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-03T02:30:00Z",
+  "timestamp": "2026-05-03T13:40:00Z",
   "phase": "ux-overhaul",
   "phase_name": "Post-v6.0 UX overhaul (ad-hoc, not bound to Phase XX)",
   "phase_dir": ".planning",
@@ -32,7 +32,14 @@
     {"id": 21, "name": "M11 version history diff preview + priorities-confirm", "status": "done", "commit": "a406796"},
     {"id": 22, "name": "M6 button gating fix — display-label match (was system-role match)", "status": "done", "commit": "b1ce61a"},
     {"id": 23, "name": "Toggle All actually toggles all sections (was no-op placeholder)", "status": "done", "commit": "1c2d014"},
-    {"id": 24, "name": "Header sweep — verified Fill from Previous / Choose dropdown / period nav / version history / Add Item|Risk|Decision|Priority / Submit / Toggle All / Reopen / DEV-switch-role all work", "status": "done", "live_tested": true}
+    {"id": 24, "name": "Header sweep — verified Fill from Previous / Choose dropdown / period nav / version history / Add Item|Risk|Decision|Priority / Submit / Toggle All / Reopen / DEV-switch-role all work", "status": "done", "live_tested": true},
+    {"id": 25, "name": "Cross-page regression sweep — /head/dashboard + /head/report + /admin (users/products/periods/reminders/settings) + /reports (history/trends/viewer/print) + /lead/history", "status": "done", "commit": "098b042..3870586", "live_tested": true},
+    {"id": 26, "name": "Fix React duplicate-key warnings on /head/report (priorities aggregated from N leads collide on rank)", "status": "done", "commit": "098b042"},
+    {"id": 27, "name": "Add confirm gate to Archive product (was destructive without confirm)", "status": "done", "commit": "098b042"},
+    {"id": 28, "name": "Fix Restore product noop (server removeProject hard-codes archived=true; switched to saveProjectMut path)", "status": "done", "commit": "098b042"},
+    {"id": 29, "name": "Extend ConfirmDeleteDialog with confirmLabel + reversible props for non-delete destructive ops", "status": "done", "commit": "098b042"},
+    {"id": 30, "name": "Add confirm gate to Reminder Delete + clean fireAt formatting", "status": "done", "commit": "3870586"},
+    {"id": 31, "name": "Add confirm gate to Reopen Period (was 1-click unpublish of an already-published report)", "status": "done", "commit": "3870586"}
   ],
   "remaining_tasks": [
     {"id": 22, "name": "S1.4 / S2.2 E2E flakes (currently test.skip)", "status": "deferred", "rationale": "Need product-side change: dialog onSave should return mutation Promise so helper can await. Worked around with test.skip; suite is 20 passing / 2 skipped / 0 failing."},
@@ -55,9 +62,11 @@
     {"decision": "Per-field validation map in dialogs (replaces single error string)", "rationale": "Multi-field dialogs (Risk has 3 required fields, Decision has 3) only flagged the first failure; aria-invalid + destructive border per field reads at a glance", "phase": "ux-overhaul"},
     {"decision": "Priorities-confirm only when row text is non-empty", "rationale": "Empty rows are obvious mistakes — confirm friction wastes time. Only entered text is worth a confirm.", "phase": "ux-overhaul"},
     {"decision": "M11 version diff is count-level only", "rationale": "Snapshot table doesn't carry per-row content. Server-side history with content-diff tracked as a future deferral.", "phase": "ux-overhaul"},
-    {"decision": "S1.4/S2.2 E2E tests skipped with explicit TODO", "rationale": "Six rounds (force, focus+Enter, dispatchEvent, native click) couldn't beat the fixed-position portal hit-test. Better to skip honestly than carry a brittle assertion that masks regressions. Resolution path: dialog onSave should return the mutation Promise.", "phase": "ux-overhaul"}
+    {"decision": "S1.4/S2.2 E2E tests skipped with explicit TODO", "rationale": "Six rounds (force, focus+Enter, dispatchEvent, native click) couldn't beat the fixed-position portal hit-test. Better to skip honestly than carry a brittle assertion that masks regressions. Resolution path: dialog onSave should return the mutation Promise.", "phase": "ux-overhaul"},
+    {"decision": "Every destructive action now goes through ConfirmDeleteDialog (Delete + Archive + Reopen Period)", "rationale": "Cross-page sweep found 3 destructive ops firing on a single click: Archive product, Delete reminder rule, Reopen Period. The shared dialog now supports reversible-mode + custom confirmLabel so it serves archive/reopen flows alongside hard-delete. Symmetry across the app means users learn one confirmation pattern.", "phase": "ux-overhaul"},
+    {"decision": "Reopen Period flipped from no-confirm to confirm (was explicit no-confirm in publish-lock-button by design)", "rationale": "Reopening an already-published report silently invalidates the version directors and other departments have already seen. Publish & Lock has always required confirmation; Reopen needed the same gate for symmetry. Test that asserted 'no confirmation' was rewritten.", "phase": "ux-overhaul"}
   ],
   "uncommitted_files": [],
-  "next_action": "Two more user-driven catches landed after the autonomous loop: M6 button gating (always Revoke instead of Request Reopen) and Toggle All as a noop placeholder. Both fixed and pushed. User explicitly asked to skip mobile work for now and stay focused on desktop. Open items: (a) Save Version policy decision, (b) systematic regression sweep on every page (head, admin, viewer, history, login flows) — autonomous loop only swept /lead/report.",
-  "context_notes": "13 commits this autonomous + sweep session (b549eca → 1c2d014). Two stealth bugs caught after autonomous-mode finished — Toggle All was a noop comment-only placeholder, M6 gating used wrong field name. Both highlighted that 'autonomous' shouldn't equal 'declared done without sweep'. Lesson: full-button sweep before declaring complete. Sweep is now in the per-commit live-test loop, not just at handoff."
+  "next_action": "Cross-page regression sweep complete (commits 098b042 + 3870586). Five real bugs surfaced on pages outside /lead/report — three destructive ops without confirm (Archive, Delete reminder, Reopen Period), one noop (Restore product), one React warning (duplicate key on aggregated priorities). All fixed + live-verified + tests updated. Open items unchanged: (a) Save Version policy decision (user-gated), (b) backend snapshot count bug in seed (itemCount/riskCount/decisionCount=0). Mobile audit still deferred per user direction.",
+  "context_notes": "15 commits in the broader session. Two stealth bugs caught after autonomous-mode (M6 + Toggle All) led to a cross-page regression sweep — that sweep then surfaced 5 more bugs outside /lead/report, all on destructive ops or React warnings. Lesson reinforced: 'autonomous' ≠ 'swept'. Per-commit live-sweep is not optional, and it must reach EVERY page that has a button, not just the page being touched. Side-product: ConfirmDeleteDialog is now a generalised destructive-confirm primitive (delete/archive/reopen), reducing the bar for adding confirms to future destructive ops."
 }
