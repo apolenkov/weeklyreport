@@ -1,24 +1,24 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: Roles, Quality, AI & Analytics
-status: executing
-stopped_at: v6.0 roadmap drafted (Phases 27-31)
-last_updated: "2026-04-29T10:14:50.469Z"
-last_activity: 2026-04-29 -- Phase 27 execution started
+milestone: v7.0
+milestone_name: Stabilisation & Hardening
+status: planning
+stopped_at: v7.0 Wave 1 roadmap drafted (Phases 32-33)
+last_updated: "2026-05-04T11:30:00.000Z"
+last_activity: 2026-05-04 -- v7.0 Wave 1 planning kickoff after Block 1 (mobile audit) + Block 2 (Save Version) executed
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 22
-  completed_plans: 22
-  percent: 100
+  total_phases: 2
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** Executing Phase 27
-**Last Updated:** 2026-04-28
+**Status:** v7.0 planning (Wave 1 scoped)
+**Last Updated:** 2026-05-04
 
 ---
 
@@ -28,16 +28,17 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core Value:** Leads fill their sections independently via structured forms; system auto-assembles a unified report -- no editing conflicts, with history and analytics.
 
-**Current Focus:** Phase 27 — Quality Stabilisation & Role Middleware Factory
+**Current Focus:** v7.0 Wave 1 — Phase 32 (UX Polish) + Phase 33 (API Hardening). See `.planning/milestones/v7.0-ROADMAP.md`.
 
 ---
 
 ## Current Position
 
-Phase: 31 (AI Insights) — COMPLETE ✓ (3/3 plans + AI-SPEC.md)
-Plans complete: 22/22 across phases 27/28/29/30/31
-Status: v6.0 100% — all 5 phases shipped; ready for `/gsd-audit-milestone` and `/gsd-complete-milestone`
-Last activity: 2026-04-29 -- All v6.0 phases shipped autonomously; ~29 unpushed commits ahead of origin/main (VPN/DNS dropped)
+Milestone: v7.0 (planning)
+Phase: 32 (UX Polish) — NOT STARTED
+Plans: 0/~9 (Wave 1 estimate)
+Status: v6.0 SHIPPED (37/37 reqs, 22 plans, 5 phases) + post-v6.0 UX-overhaul wave + post-wave roadmap (Block 1 mobile audit, Block 2 Save Version) closed 2026-05-04. v7.0 Wave 1 roadmap drafted, ready for `/gsd:plan-phase 32`.
+Last activity: 2026-05-04 -- v7.0 milestone files created at `.planning/milestones/v7.0-{ROADMAP,REQUIREMENTS}.md`; ROADMAP.md updated; STATE flipped to v7.0 planning.
 
 ### v6.0 phase progress
 - Phase 27 ✓ (5/5) — pushed (Quality Stabilisation & Role Middleware Factory)
