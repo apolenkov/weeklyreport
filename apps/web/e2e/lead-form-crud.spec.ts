@@ -261,7 +261,7 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     const dialog = leadPage.getByRole('dialog', { name: /Add Priority dialog/i });
     await expect(dialog).toBeVisible();
     await dialog.getByLabel(/Description/i).fill('Ship the OAuth migration');
-    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Save Priority', exact: true }).click();
     await expect(leadPage.getByTestId('priority-row')).toHaveCount(before + 1);
     // The new row reads its rank from the count it joined as.
     await expect(leadPage.getByRole('button', { name: `Edit priority ${before + 1}` }).first()).toBeVisible();
