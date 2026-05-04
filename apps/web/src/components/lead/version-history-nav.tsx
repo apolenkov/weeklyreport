@@ -9,31 +9,31 @@ type VersionHistoryNavProps = {
   readonly onRestore?: (version: number) => void;
 };
 
-// Curved "rewind" / "fast-forward" arrows — visually distinct from the
-// straight chevrons used by PeriodNavigator. The two control groups
-// (period vs version) sit on the same toolbar row, so swapping the icon
-// shape is the cheapest disambiguation that avoids a redesign.
-function RewindArrow() {
+// Chevron icons — same family used by PeriodNavigator. The two control
+// groups (period vs version) sit on the same toolbar row, so the same
+// chevron + the same button shell makes them feel like one consistent
+// nav system. Disambiguation comes from the labels next to each group
+// (Calendar+Week for period, version pill for version), not from
+// invented icon shapes that confused more than they helped.
+function ChevronLeft() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="1 4 1 10 7 10" />
-      <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 18l-6-6 6-6" />
     </svg>
   );
 }
 
-function FastForwardArrow() {
+function ChevronRight() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="23 4 23 10 17 10" />
-      <path d="M20.49 15a9 9 0 11-2.13-9.36L23 10" />
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18l6-6-6-6" />
     </svg>
   );
 }
 
 function HistoryIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" stroke="currentColor" fill="none" strokeWidth={2}>
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 4v6h6" />
       <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
     </svg>
@@ -104,20 +104,20 @@ export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProp
 
         <button
           type="button"
-          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
           onClick={handlePrev}
           disabled={!hasPrev}
           title={hasPrev ? `Previous version (v${versions[currentIndex + 1]?.version})` : 'No older version'}
           aria-label="Previous version"
         >
-          <RewindArrow />
+          <ChevronLeft />
         </button>
 
         <button
           type="button"
-          className="inline-flex min-h-[36px] items-center gap-1 rounded-md border border-[var(--color-muted)] bg-transparent px-2.5 text-[11px] text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-[var(--color-muted)] bg-[var(--color-background)] px-2.5 font-[family-name:var(--font-sans)] text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
           onClick={() => setShowModal(true)}
-          title="View version history -- compare and roll back"
+          title="View version history — compare and roll back"
         >
           <HistoryIcon />
           v{currentVersion?.version}
@@ -125,13 +125,13 @@ export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProp
 
         <button
           type="button"
-          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
           onClick={handleNext}
           disabled={!hasNext}
           title={isLatest ? 'Latest version' : 'Next version'}
           aria-label="Next version"
         >
-          <FastForwardArrow />
+          <ChevronRight />
         </button>
       </div>
 
