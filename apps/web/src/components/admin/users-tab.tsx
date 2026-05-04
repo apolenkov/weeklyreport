@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -31,6 +31,20 @@ export function UsersTab({ users }: UsersTabProps) {
   const [showDialog, setShowDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
   const [form, setForm] = useState<UserFormData>(EMPTY_FORM);
+
+  // Escape closes the Add/Edit dialog. The dialog is rendered inline (not
+  // through a Radix wrapper) so we wire the listener manually.
+  useEffect(() => {
+    if (!showDialog) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowDialog(false);
+      }
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [showDialog]);
 
   const saveUserMut = useMutation(
     trpc.admin.saveUser.mutationOptions({
@@ -154,12 +168,17 @@ export function UsersTab({ users }: UsersTabProps) {
 
       {/* Add/Edit Dialog */}
       {showDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
+          onClick={() => setShowDialog(false)}
+          role="presentation"
+        >
           <div
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
             aria-modal="true"
             aria-label={editingUser ? 'Edit user' : 'Add user'}
+            onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
               {editingUser ? 'Edit User' : 'Add User'}

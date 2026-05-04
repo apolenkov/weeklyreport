@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -27,6 +27,20 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
   const [formName, setFormName] = useState('');
   const [formLeadId, setFormLeadId] = useState('');
   const [pendingArchive, setPendingArchive] = useState<MockProduct | null>(null);
+
+  // Escape closes the Add/Edit dialog (mirrors users-tab — the inline
+  // dialog has no Radix wrapper so we attach the listener manually).
+  useEffect(() => {
+    if (!showDialog) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowDialog(false);
+      }
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [showDialog]);
 
   const leads = useMemo(() => users.filter((u) => u.role === 'lead'), [users]);
   const getUserById = (id: string): MockUser | undefined => users.find((u) => u.id === id);
@@ -245,12 +259,17 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
 
       {/* Add/Edit Dialog */}
       {showDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
+          onClick={() => setShowDialog(false)}
+          role="presentation"
+        >
           <div
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
             aria-modal="true"
             aria-label={editingProduct ? 'Edit product' : 'Add product'}
+            onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
               {editingProduct ? 'Edit Product' : 'Add Product'}

@@ -45,29 +45,37 @@ const TRAFFIC_TEXT: Record<string, string> = {
   blocked: 'var(--color-destructive)',
 };
 
-function LockIcon() {
+function ChevronRight() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-3.5 w-3.5 flex-shrink-0 opacity-50"
-      stroke="var(--color-muted-foreground)"
+      className="h-3.5 w-3.5 flex-shrink-0 text-[var(--color-muted-foreground)]"
+      stroke="currentColor"
       fill="none"
       strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0110 0v4" />
+      <path d="M9 18l6-6-6-6" />
     </svg>
   );
 }
 
+/**
+ * Row inside the Lead Reports grid on /head/dashboard. Earlier this card
+ * showed a lock icon and was non-clickable for "other" leads — that read
+ * as "you can't access this", which is wrong for Head/Admin viewing the
+ * dashboard (drill-down is exactly what they need). The card now always
+ * renders as a link: own row goes to /lead/report (the lead's editor),
+ * other rows go to /head/report (the assembled view that surfaces every
+ * lead's contribution by product).
+ */
 export function LeadReportCard({ lead }: LeadReportCardProps) {
   const config = STATUS_CONFIG[lead.status] ?? STATUS_CONFIG.pending!;
   const isCurrentUser = lead.isCurrentUser;
   const isPending = lead.status === 'pending';
 
-  const containerClasses = isCurrentUser
-    ? 'flex items-center gap-3 rounded-lg p-3 cursor-pointer transition-[border-color] duration-150'
-    : 'flex items-center gap-3 rounded-lg p-3';
+  const href = isCurrentUser ? '/lead/report' : '/head/report';
 
   const containerStyle: React.CSSProperties = isCurrentUser
     ? {
@@ -78,17 +86,23 @@ export function LeadReportCard({ lead }: LeadReportCardProps) {
       }
     : {
         background: lead.status === 'draft' ? '#fffbeb' : 'var(--color-background)',
-        opacity: isPending ? 0.5 : 0.7,
-        cursor: 'not-allowed',
-        border: '1px solid transparent',
+        opacity: isPending ? 0.6 : 1,
+        border: '1px solid var(--color-border)',
+        textDecoration: 'none',
+        color: 'inherit',
       };
 
-  const content = (
-    <>
+  return (
+    <a
+      href={href}
+      className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-[#f8f6f2]"
+      style={containerStyle}
+      aria-label={isCurrentUser ? `Open my report — ${lead.name}` : `Open ${lead.name}'s contribution in the weekly report`}
+    >
       {/* Avatar */}
       <div
         className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-        style={{ background: isCurrentUser ? config.avatarBg : config.avatarBg, color: config.avatarText }}
+        style={{ background: config.avatarBg, color: config.avatarText }}
       >
         {lead.initials}
       </div>
@@ -127,31 +141,7 @@ export function LeadReportCard({ lead }: LeadReportCardProps) {
         {config.label}
       </span>
 
-      {/* Lock icon for non-current user */}
-      {!isCurrentUser && <LockIcon />}
-    </>
-  );
-
-  if (isCurrentUser) {
-    return (
-      <a
-        href="/lead/report"
-        className={containerClasses}
-        style={containerStyle}
-      >
-        {content}
-      </a>
-    );
-  }
-
-  return (
-    <div
-      className={containerClasses}
-      role="listitem"
-      aria-disabled="true"
-      style={containerStyle}
-    >
-      {content}
-    </div>
+      <ChevronRight />
+    </a>
   );
 }
