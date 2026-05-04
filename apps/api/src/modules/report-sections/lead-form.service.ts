@@ -98,6 +98,39 @@ export class LeadFormService {
     return { success: true, restoredVersion };
   }
 
+  /**
+   * Create an explicit version snapshot of the current section state.
+   *
+   * Used by:
+   * - The "Save Version" button on the lead form (manual checkpoint).
+   * - The autosave hook every N=10 successful saves (silent safety net).
+   *
+   * Validates ownership and skips when the section is submitted (locked
+   * sections shouldn't accumulate snapshots — there's nothing changing).
+   * Snapshot retention (50 max per section) is enforced by the repository.
+   */
+  async createSnapshot(
+    sectionId: string,
+    userId: string,
+  ): Promise<{ success: true }> {
+    const section = await this.repository.getSectionById(sectionId);
+
+    if (!section) {
+      throw new Error(`Section ${sectionId} not found.`);
+    }
+
+    if (section.authorId !== userId) {
+      throw new Error('Can only snapshot your own section.');
+    }
+
+    if (section.status === 'submitted') {
+      throw new Error('Cannot snapshot a submitted section.');
+    }
+
+    await this.repository.createVersionSnapshot(sectionId);
+    return { success: true };
+  }
+
   /** API-04: Request the head to reopen a submitted section. */
   async requestReopen(
     sectionId: string,

@@ -586,6 +586,16 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      createSnapshot: protectedProcedure
+        .input(z.object({ reportSectionId: z.string().uuid() }))
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.createSnapshot(input.reportSectionId, ctx.session.userId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
       revoke: headProcedure
         .input(z.object({ reportSectionId: z.string().uuid() }))
         .mutation(async ({ input, ctx }) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -428,6 +428,39 @@ export function LeadForm({ period }: LeadFormProps) {
     }),
   );
 
+  // createSnapshot is reused for both manual ("Save Version" button) and
+  // auto (every 10 autosaves) paths. The toast is keyed on a ref so the
+  // auto-path can fire silently while the manual path confirms.
+  const isManualSaveRef = useRef(false);
+  const createSnapshotMut = useMutation(
+    trpc.leadForm.createSnapshot.mutationOptions({
+      onSuccess: () => {
+        invalidateLeadForm(qc, trpc);
+        if (isManualSaveRef.current) {
+          toast.success('Version saved');
+          isManualSaveRef.current = false;
+        }
+      },
+      onError: (err: unknown) => {
+        // Auto-path failures stay silent — they're a safety net, not a
+        // user request. Manual failures surface so the user knows the
+        // checkpoint didn't land.
+        if (isManualSaveRef.current) {
+          const msg = err instanceof Error ? err.message : 'Save Version failed';
+          toast.error(msg);
+          isManualSaveRef.current = false;
+        }
+      },
+    }),
+  );
+
+  // Counter for "every Nth autosave snapshots a version" — purely
+  // client-side. Resets on manual snapshots and on page reload (the
+  // user paid for the manual checkpoint, no need to immediately
+  // double-snapshot 10 saves later).
+  const autosaveCountRef = useRef(0);
+  const AUTO_SNAPSHOT_EVERY = 10;
+
   // ---- Build draft payload ----
   const draftPayload = useMemo(
     () => (draftSection ? sectionToDraftPayload(draftSection) : null),
@@ -463,11 +496,22 @@ export function LeadForm({ period }: LeadFormProps) {
   }, [byPeriodQ.data]);
 
   // Autosave wiring — runs unconditionally to keep hook order stable.
+  // The onSaveSuccess hook drives the silent auto-snapshot path: every
+  // AUTO_SNAPSHOT_EVERY successful saves we checkpoint a version. This
+  // is a safety net for long editing sessions (10 saves ≈ 30s+ of active
+  // work at a 3s debounce floor); the user can still hit "Save Version"
+  // any time for an explicit checkpoint.
   const autosave = useLeadFormAutosave({
     reportSectionId: activeSectionId || null,
     payload: draftPayload,
     enabled: !isReadOnlyEarly && !isSubmitted && draftSection !== null,
     initialSavedKey,
+    onSaveSuccess: () => {
+      autosaveCountRef.current += 1;
+      if (autosaveCountRef.current % AUTO_SNAPSHOT_EVERY === 0 && activeSectionId) {
+        createSnapshotMut.mutate({ reportSectionId: activeSectionId });
+      }
+    },
   });
 
   // Skeleton until all queries settle.
@@ -751,6 +795,15 @@ export function LeadForm({ period }: LeadFormProps) {
     restoreMut.mutate({ reportSectionId: activeSectionId, version });
   }
 
+  function handleSaveVersion() {
+    if (!activeSectionId) return;
+    isManualSaveRef.current = true;
+    // Reset the auto-snapshot counter — the user just paid for an explicit
+    // checkpoint, no need to spawn a silent one 10 saves later.
+    autosaveCountRef.current = 0;
+    createSnapshotMut.mutate({ reportSectionId: activeSectionId });
+  }
+
   function handleToggleAll() {
     setGroupExpanded((prev) => !prev);
     setGroupSyncKey((k) => k + 1);
@@ -856,7 +909,12 @@ export function LeadForm({ period }: LeadFormProps) {
           </div>
 
           <div className="ml-auto">
-            <VersionHistoryNav versions={versions} onRestore={handleRestoreVersion} />
+            <VersionHistoryNav
+              versions={versions}
+              onRestore={handleRestoreVersion}
+              onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
+              canSaveVersion={!createSnapshotMut.isPending}
+            />
           </div>
         </div>
 

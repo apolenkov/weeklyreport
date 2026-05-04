@@ -31,6 +31,13 @@ export type UseLeadFormAutosaveArgs = {
    * payload (legacy behavior).
    */
   readonly initialSavedKey?: string | null;
+  /**
+   * Fires after every successful saveDraft. Used by the auto-snapshot path
+   * in lead-form.tsx to checkpoint a version every Nth save without
+   * spawning yet another effect chain. The hook is otherwise unaware of
+   * snapshots — it just emits the signal.
+   */
+  readonly onSaveSuccess?: () => void;
 };
 
 const DEFAULT_DEBOUNCE_MS = 3000;
@@ -80,6 +87,11 @@ export function useLeadFormAutosave(
 
   const lastSavedRef = useRef<string>('');
   const inFlightRef = useRef<string>('');
+  // Hold the latest onSaveSuccess in a ref so changing the callback identity
+  // never re-runs the debounce effect. The mutation closure reads through
+  // the ref at fire time.
+  const onSaveSuccessRef = useRef<(() => void) | undefined>(args.onSaveSuccess);
+  onSaveSuccessRef.current = args.onSaveSuccess;
 
   // Prime lastSavedRef from caller-supplied baseline whenever it changes.
   // Lets the LeadForm tell us "this freshly-loaded server payload is already
@@ -98,6 +110,7 @@ export function useLeadFormAutosave(
         setState('saved');
         setLastSavedAt(new Date());
         invalidateLeadForm(qc, trpc);
+        onSaveSuccessRef.current?.();
       },
       onError: (err: unknown) => {
         setState('error');
