@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-03T20:55:00Z",
+  "timestamp": "2026-05-04T10:55:00Z",
   "phase": "ux-overhaul",
   "phase_name": "Post-v6.0 UX overhaul (ad-hoc, not bound to Phase XX)",
   "phase_dir": ".planning",
@@ -43,16 +43,24 @@
     {"id": 32, "name": "Real itemCount/riskCount/decisionCount on version snapshots (was hardcoded 0 → M11 diff always blank)", "status": "done", "commit": "(post-3870586)"},
     {"id": 33, "name": "Stage popover: replace Save/Cancel form with click-to-apply menu", "status": "done", "commit": "(post-3870586)"},
     {"id": 34, "name": "M10 Head-side Revoke confirm gate", "status": "done", "commit": "(post-3870586)"},
-    {"id": 35, "name": "Un-skip S1.4 + S2.2 — suite is 22/22 passing, 0 skipped", "status": "done", "commit": "(post-3870586)"}
+    {"id": 35, "name": "Un-skip S1.4 + S2.2 — suite is 22/22 passing, 0 skipped", "status": "done", "commit": "(post-3870586)"},
+    {"id": 36, "name": "Risks banner: simplify per-row CTAs → single + Add Risk entry", "status": "done", "commit": "68b7164"},
+    {"id": 37, "name": "Phantom — pending risk on stage-status change removed (auto-add removed from useStatusRiskSync)", "status": "done", "commit": "f6968b5"},
+    {"id": 38, "name": "Warning banner relocated from Risks section to Product Status (above SDLC chips)", "status": "done", "commit": "f6968b5"},
+    {"id": 39, "name": "Priority modal — consistent with Item/Risk/Decision (PriorityEditDialog + section refactor)", "status": "done", "commit": "f6968b5"},
+    {"id": 40, "name": "Period + version nav buttons unified (same chevron icons + same shell shape)", "status": "done", "commit": "510f5e0"},
+    {"id": 41, "name": "Cross-page button consistency audit + admin row-action unification", "status": "done", "commit": "5f30b17"},
+    {"id": 42, "name": "Fix lead-form.test.tsx mock for requestReopen + rewrite stale tests for modal flow", "status": "done", "commit": "(this wave)"},
+    {"id": 43, "name": "Add User / Add Product dialogs close on Escape and overlay click", "status": "done", "commit": "(this wave)"},
+    {"id": 44, "name": "Lead Reports rows on /head/dashboard now drill into /head/report (chevron, no more lock)", "status": "done", "commit": "(this wave)"}
   ],
   "remaining_tasks": [
     {"id": 24, "name": "Save Version button + auto-snapshot timer", "status": "open_question", "rationale": "Three policy options on the table; user has not decided. Default snapshot policy still 'before fillFrom + before restore'."},
     {"id": 25, "name": "Mobile responsiveness audit on /lead/report", "status": "not_started", "rationale": "Phase 30 covered admin/head; lead-form modal-driven flow not yet pass-tested on iOS/Android viewports. Deferred per user direction."},
-    {"id": 36, "name": "Push 8 ahead-of-origin commits", "status": "deferred", "rationale": "VPN required + push-guard hook blocked the unattended push. Run https_proxy=\"\" command git push origin main when on corp network."},
-    {"id": 37, "name": "Lead Reports rows on /head/dashboard show lock icon for Head — by-design but UX-confusing", "status": "noted", "rationale": "Drill-down from row to lead's section would be more useful; current behavior treats Head as if they were viewing someone else's locked form."},
-    {"id": 38, "name": "linkedRiskCount confirm-on-Clear never trips because risk.stageName defaults to \"—\"", "status": "noted", "rationale": "Risk schema has no stageName — frontend mapper defaults to placeholder. Not actionable until schema gains stageName + UI exposes it. Tracked here so a future stageName feature picks up the loop-closing."},
-    {"id": 39, "name": "Add User dialog doesn't close on Escape", "status": "noted", "rationale": "Surfaced during admin sweep; minor. Would be fixed by switching to a Radix Dialog wrapper across admin tab dialogs."},
-    {"id": 40, "name": "Recharts ResponsiveContainer width=-1/height=-1 warnings on /reports/trends initial mount", "status": "noted", "rationale": "Cosmetic — charts render correctly at 1088×256 once measured. Could be silenced with minWidth={0}."}
+    {"id": 45, "name": "Push 14+ ahead-of-origin commits", "status": "deferred", "rationale": "VPN required + push-guard hook blocked unattended push. Run https_proxy=\"\" command git push origin main when on corp network."},
+    {"id": 46, "name": "linkedRiskCount confirm-on-Clear never trips because risk.stageName defaults to \"—\"", "status": "noted", "rationale": "Risk schema has no stageName — frontend mapper defaults to placeholder. Not actionable until schema gains stageName + UI exposes it."},
+    {"id": 47, "name": "Recharts ResponsiveContainer width=-1/height=-1 warnings on /reports/trends initial mount", "status": "noted", "rationale": "Cosmetic — charts render correctly at 1088×256 once measured. Could be silenced with minWidth={0}."},
+    {"id": 48, "name": "Mapper hard-codes currentUser.role to 'Dev Lead' — Revoke vs Request-Reopen gating relies on read-model role that doesn't exist yet", "status": "noted", "rationale": "Until ReportSectionReadModel carries display role, every Lead-form render shows the Lead-side button. Head/Admin viewing /lead/report?period=X get Lead UX. Affects test coverage but not real flow because Head/Admin don't normally visit /lead/report."}
   ],
   "blockers": [],
   "human_actions_pending": [
@@ -74,6 +82,6 @@
     {"decision": "Reopen Period flipped from no-confirm to confirm (was explicit no-confirm in publish-lock-button by design)", "rationale": "Reopening an already-published report silently invalidates the version directors and other departments have already seen. Publish & Lock has always required confirmation; Reopen needed the same gate for symmetry. Test that asserted 'no confirmation' was rewritten.", "phase": "ux-overhaul"}
   ],
   "uncommitted_files": [],
-  "next_action": "All technically-actionable items closed. Cross-page sweep + follow-up wave: 8 fixes pushed locally (098b042..0ba7cea + post-handoff: snapshot counts, stage popover simplification, Revoke confirm, un-skip S1.4/S2.2). E2E suite 22/22 passing. Only two non-technical items remain: Save Version policy (user decision required) + mobile audit (user-deferred). Push needs VPN.",
-  "context_notes": "Closing the post-v6.0 UX overhaul wave. Themes that emerged: (1) ConfirmDeleteDialog became the universal destructive-confirm primitive across delete/archive/revoke/reopen — symmetry across the app means users learn one pattern. (2) User pushed back on form-style popovers for trivial picks; stage-chip is now click-to-apply (Save button was friction). (3) E2E flakes that looked like 'need Promise-returning onSave' actually needed cheaper fixes: response-body filtering for waitForSave (S2.2) + serial describe mode for shared-DB races (S1.3). (4) Snapshot counts had been 0 because the mapper hardcoded zeros; the snapshot row's `data` JSON has full arrays, so server-side derivation costs nothing and unblocks M11 diff. Lesson: assumptions in the deferred list deserve a 5-minute reread before plumbing in heavyweight refactors."
+  "next_action": "All technically-actionable items closed. 14+ commits ahead of origin spanning the post-v6.0 UX wave. E2E suite 22/22 passing, 14 unit tests passing across lead-form + sync hook. Only non-technical remainders: Save Version policy (user decision required) + mobile audit (user-deferred) + push (VPN required).",
+  "context_notes": "Closing the post-v6.0 UX overhaul wave. Themes: (1) ConfirmDeleteDialog became the universal destructive-confirm primitive — delete/archive/revoke/reopen all flow through one component. (2) Modal-driven CRUD across Item/Risk/Decision/Priority — Priority was the last inline-input holdout, now consistent. (3) User-driven simplification of overengineered UI: stage popover dropped Save/Cancel form, Risks banner dropped per-row CTAs, warning moved up from Risks to Product Status next to the cause. (4) Cross-page button audit caught 4 different Edit/Delete styles in admin and unified to one (h=34, pill, white bg, border). (5) Period + version nav unified to same chevron icons + shell. (6) Pre-existing test gap (10 failing) closed by adding requestReopen mock + rewriting stale tests for the new modal flow. Lesson reinforced: deferred items in HANDOFF often have cheaper fixes than the original theory suggests — re-examine before plumbing heavyweight refactors."
 }
