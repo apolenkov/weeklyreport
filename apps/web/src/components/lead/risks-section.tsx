@@ -105,56 +105,53 @@ export function RisksSection({
 
   const hasProducts = products && products.length > 0;
 
-  function handleAddForStage(productId: string) {
-    if (readOnly) return;
-    setDialogState({ open: true, mode: 'create', seedProductId: productId });
-  }
-
   return (
     <div className="space-y-4">
-      {/* Warning: at-risk/blocked stages with no narrative — the SDLC chip
-          paints the column without context, leaving the head guessing.
-          Render before the list so the user sees it immediately. */}
+      {/* Informational warning — at-risk/blocked stages with no narrative.
+          Calm advisory only: lists the affected products so the user knows
+          what to fill in, then routes them to the standard "+ Add Risk"
+          button at the bottom. Earlier iterations carried per-row CTAs
+          here, but that competed with the section-level button and
+          confused the entry point. One button to add a risk, one banner
+          to point out which products still need one. */}
       {!readOnly && unbackedStages.length > 0 && (
         <div
-          className="rounded-lg p-4"
+          className="rounded-lg p-3"
           style={{ background: '#fffbeb', border: '1px solid rgba(212,160,23,0.35)' }}
+          role="note"
         >
-          <div className="mb-2 flex items-center gap-2">
-            <span className="inline-flex items-center justify-center text-base" style={{ color: '#d4a017' }}>
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 inline-flex items-center justify-center text-base" style={{ color: '#d4a017' }} aria-hidden="true">
               ⚠
             </span>
-            <span className="text-sm font-semibold" style={{ color: '#8a6d1b' }}>
-              {unbackedStages.length === 1
-                ? '1 stage marked at-risk/blocked but no risk filled in'
-                : `${unbackedStages.length} stages marked at-risk/blocked but no risk filled in`}
-            </span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: '#8a6d1b' }}>
+                {unbackedStages.length === 1
+                  ? '1 stage marked at-risk/blocked has no risk written.'
+                  : `${unbackedStages.length} stages marked at-risk/blocked have no risk written.`}
+              </p>
+              <p className="mt-0.5 text-[12px]" style={{ color: '#8a6d1b' }}>
+                Use <strong>+ Add Risk</strong> below to describe what's blocking — picking the matching product in the dialog.
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                {unbackedStages.map((s) => (
+                  <li
+                    key={`${s.productId}::${s.stageName}`}
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5"
+                    style={{
+                      background: s.severity === 'blocked' ? '#fee2e2' : '#fef3c7',
+                      color: s.severity === 'blocked' ? 'var(--color-destructive)' : '#8a6d1b',
+                    }}
+                  >
+                    <span className="font-semibold">{s.severity === 'blocked' ? '✕' : '!'}</span>
+                    <span>{s.productName}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{s.stageName}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <ul className="space-y-1 text-xs text-[#8a6d1b]">
-            {unbackedStages.map((s) => (
-              <li key={`${s.productId}::${s.stageName}`} className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
-                      style={{
-                        background: s.severity === 'blocked' ? '#fee2e2' : '#fef3c7',
-                        color: s.severity === 'blocked' ? 'var(--color-destructive)' : '#8a6d1b',
-                      }}
-                >
-                  {s.severity === 'blocked' ? '✕ Blocked' : '! At Risk'}
-                </span>
-                <span className="font-medium">{s.productName}</span>
-                <span>·</span>
-                <span>{s.stageName}</span>
-                <button
-                  type="button"
-                  onClick={() => handleAddForStage(s.productId)}
-                  className="ml-auto inline-flex min-h-[26px] items-center rounded-[var(--radius-pill)] border border-[rgba(212,160,23,0.4)] bg-white px-2 py-0.5 text-[11px] font-semibold text-[#8a6d1b] transition-colors hover:bg-[#fffbeb]"
-                  aria-label={`Add risk for ${s.productName} ${s.stageName}`}
-                >
-                  + Add Risk
-                </button>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 

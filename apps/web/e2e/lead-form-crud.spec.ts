@@ -108,7 +108,7 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     // test that previously made this case unreliable.
     await clickStageChip(leadPage, 0, 'Dev', 'blocked');
     await selectStageOption(leadPage, 'At Risk');
-    await expect(leadPage.getByText(/stages? marked at-risk\/blocked but no risk filled in/i)).toBeVisible();
+    await expect(leadPage.getByText(/stages? marked at-risk\/blocked ha[sv]e? no risk written/i)).toBeVisible();
     await expectStageStatus(leadPage, 0, 'Dev', 'at-risk');
   });
 
@@ -307,6 +307,6 @@ test.describe('Lead Form — modal-driven CRUD', () => {
     // Now CRM has a risk row but no at-risk/blocked stage backing it —
     // banner should NOT appear (warning is "stage without risk", not vice
     // versa).
-    await expect(leadPage.getByText(/stages? marked at-risk\/blocked but no risk filled in/i)).not.toBeVisible();
+    await expect(leadPage.getByText(/stages? marked at-risk\/blocked ha[sv]e? no risk written/i)).not.toBeVisible();
   });
 });
