@@ -30,6 +30,8 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Current Focus:** v7.0 Wave 1 — Phase 32 (UX Polish) + Phase 33 (API Hardening). See `.planning/milestones/v7.0-ROADMAP.md`.
 
+**Resume context:** Full session handoff at `.planning/HANDOFF-2026-05-04.md`. Per-project Claude memory mirrored to `.planning/memory/` (see `MEMORY.md` index + `RESTORE.md` for the one-liner that copies into `~/.claude/projects/...` on a fresh machine).
+
 ---
 
 ## Current Position
