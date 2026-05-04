@@ -354,3 +354,55 @@ describe('LeadFormService — requestReopen', () => {
     ).rejects.toThrow('Can only request reopen for your own section.');
   });
 });
+
+// ---------------------------------------------------------------------------
+// createSnapshot (Save Version)
+// ---------------------------------------------------------------------------
+
+describe('LeadFormService — createSnapshot', () => {
+  it('snapshots a draft section owned by the caller', async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
+
+    expect(result).toEqual({ success: true });
+    expect(repo.createVersionSnapshot).toHaveBeenCalledWith(SECTION_ID);
+  });
+
+  it('rejects when caller is not the author', async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.createSnapshot(SECTION_ID, OTHER_USER_ID),
+    ).rejects.toThrow('Can only snapshot your own section.');
+    expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('rejects when section is submitted (locked)', async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(submittedSection)),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.createSnapshot(SECTION_ID, AUTHOR_ID),
+    ).rejects.toThrow('Cannot snapshot a submitted section.');
+    expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('rejects when section does not exist', async () => {
+    const repo = createMockRepository();
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.createSnapshot(SECTION_ID, AUTHOR_ID),
+    ).rejects.toThrow(`Section ${SECTION_ID} not found.`);
+    expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
+  });
+});

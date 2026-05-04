@@ -7,6 +7,15 @@ import type { VersionSnapshot } from './mock-data';
 type VersionHistoryNavProps = {
   readonly versions: VersionSnapshot[];
   readonly onRestore?: (version: number) => void;
+  /**
+   * When provided, renders a "Save Version" button next to the v# pill.
+   * Clicking creates an explicit checkpoint via leadForm.createSnapshot
+   * (parent-owned mutation, surfaced as a toast). Hidden in read-only /
+   * submitted contexts where snapshots are meaningless.
+   */
+  readonly onSaveVersion?: () => void;
+  /** Set false to gray out the Save Version button (e.g. mid-mutation). */
+  readonly canSaveVersion?: boolean;
 };
 
 // Chevron icons — same family used by PeriodNavigator. The two control
@@ -36,6 +45,19 @@ function HistoryIcon() {
     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 4v6h6" />
       <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
+    </svg>
+  );
+}
+
+function SaveIcon() {
+  // Floppy-disk save icon — leans into the "checkpoint" mental model that
+  // sits well next to the v# pill. Same stroke-width as the rest of the
+  // toolbar icons so the row feels uniform.
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+      <polyline points="17 21 17 13 7 13 7 21" />
+      <polyline points="7 3 7 8 15 8" />
     </svg>
   );
 }
@@ -73,7 +95,12 @@ function formatDiff(delta: number, label: string): string | null {
   return `${sign}${Math.abs(delta)} ${label} ${verb}`;
 }
 
-export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProps) {
+export function VersionHistoryNav({
+  versions,
+  onRestore,
+  onSaveVersion,
+  canSaveVersion = true,
+}: VersionHistoryNavProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [showAllVersions, setShowAllVersions] = useState(false);
@@ -133,6 +160,23 @@ export function VersionHistoryNav({ versions, onRestore }: VersionHistoryNavProp
         >
           <ChevronRight />
         </button>
+
+        {/* Save Version — manual checkpoint. Hidden in read-only / submitted
+            contexts where snapshots can't change anything. Auto-snapshots
+            (every 10 successful autosaves) come from the autosave hook;
+            this button is purely user-initiated. */}
+        {onSaveVersion && (
+          <button
+            type="button"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+            onClick={onSaveVersion}
+            disabled={!canSaveVersion}
+            title="Save Version — checkpoint the current draft"
+            aria-label="Save Version"
+          >
+            <SaveIcon />
+          </button>
+        )}
       </div>
 
       {/* Version History Modal */}

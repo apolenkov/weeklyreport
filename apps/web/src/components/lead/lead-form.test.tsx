@@ -208,6 +208,22 @@ function buildHarness(opts: {
         },
         pathFilter: () => ({ queryKey: ['leadForm.requestReopen'] }),
       },
+      // Save Version (Block 2): manual snapshot button + every-N-autosave
+      // hybrid policy. The component reads this mutation factory
+      // unconditionally, so the mock has to expose it even when no test
+      // exercises the path.
+      createSnapshot: {
+        mutationOptions: (passed: { onSuccess?: () => void; onError?: (e: unknown) => void } = {}) => {
+          return {
+            ...passed,
+            mutationFn: async (vars: unknown) => {
+              calls.push({ type: 'createSnapshot', vars });
+              return { ok: true };
+            },
+          };
+        },
+        pathFilter: () => ({ queryKey: ['leadForm.createSnapshot'] }),
+      },
     },
     ai: {
       // Phase 31 (AI-03): OnTrackIcon is mounted in SdlcPipeline; provide a
@@ -477,5 +493,33 @@ describe('LeadForm mutation wiring', () => {
     expect(calls.filter((c) => c.type === 'restoreVersion')).toHaveLength(0);
 
     confirmSpy.mockRestore();
+  });
+
+  it('Save Version button: clicking fires leadForm.createSnapshot with the active sectionId', async () => {
+    const { Wrapper, calls } = buildHarness({
+      versions: [
+        { id: 'v1', reportSectionId: SECTION_ID, version: 1, createdAt: new Date('2026-04-19T10:00:00Z') },
+      ],
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await act(async () => {
+      await flushAll();
+    });
+
+    const saveBtn = screen.getByRole('button', { name: /^Save Version$/ });
+    act(() => {
+      saveBtn.click();
+    });
+    await act(async () => {
+      await flushAll();
+    });
+
+    const snapshotCalls = calls.filter((c) => c.type === 'createSnapshot');
+    expect(snapshotCalls).toHaveLength(1);
+    expect(snapshotCalls[0]?.vars).toMatchObject({ reportSectionId: SECTION_ID });
   });
 });
