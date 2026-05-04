@@ -8,7 +8,7 @@ git so context survives across machines.
 
 ```bash
 mkdir -p ~/.claude/projects/-Users-ap-my-customreport
-cp -r .claude/memory ~/.claude/projects/-Users-ap-my-customreport/
+cp -r .planning/memory ~/.claude/projects/-Users-ap-my-customreport/
 ```
 
 After this, Claude Code's auto-injected `MEMORY.md` will load the index
@@ -21,8 +21,8 @@ edits to `~/.claude/projects/-Users-ap-my-customreport/memory/`, mirror
 them back to this directory and commit so the next machine gets them:
 
 ```bash
-cp -r ~/.claude/projects/-Users-ap-my-customreport/memory/. .claude/memory/
-git add .claude/memory && git commit -m "chore(memory): sync session handoffs"
+cp -r ~/.claude/projects/-Users-ap-my-customreport/memory/. .planning/memory/
+git add .planning/memory && git commit -m "chore(memory): sync session handoffs"
 ```
 
 ## Why not symlink?
