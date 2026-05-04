@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
+import { PriorityEditDialog } from './priority-edit-dialog';
 import type { PriorityEntry } from './mock-data';
 
 type PrioritiesSectionProps = {
@@ -11,9 +12,34 @@ type PrioritiesSectionProps = {
   readonly onChange?: (priorities: PriorityEntry[]) => void;
 };
 
+function EditIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+      <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
 function DeleteIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
     </svg>
   );
@@ -34,17 +60,22 @@ const RANK_TEXT: Record<1 | 2 | 3 | 'rest', string> = {
 };
 
 /**
- * Variable-length priority list. Earlier the section enforced exactly 3 fixed
- * slots, but the user wants to add as many priorities as needed (the schema
- * allows up to 50 per `draftSaveSchema`). Ranks renumber sequentially on add /
- * delete so adjacent slots are always 1..N.
+ * Variable-length priority list. Add / Edit go through PriorityEditDialog
+ * so the interaction shape matches Item, Risk, and Decision (open modal
+ * → fill → save). Earlier this section used inline-editable inputs, which
+ * was the cheapest UX given Priority has only one field — but the
+ * inconsistency with the other CRUD surfaces was confusing the user.
+ * Ranks renumber sequentially on add / delete so adjacent slots are
+ * always 1..N (the schema allows up to 50 per `draftSaveSchema`).
  */
 export function PrioritiesSection({ priorities, readOnly = false, onChange }: PrioritiesSectionProps) {
   const sorted = [...priorities].sort((a, b) => a.rank - b.rank);
-  // Confirm delete only when a priority has user-entered text. Empty
-  // rows (just-added, blank) delete immediately — typical use is "added
-  // by mistake, undo".
   const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
+  const [dialogState, setDialogState] = useState<
+    | { open: false }
+    | { open: true; mode: 'create' }
+    | { open: true; mode: 'edit'; priority: PriorityEntry; idx: number }
+  >({ open: false });
 
   function emit(next: PriorityEntry[]) {
     // Always renumber so ranks stay 1..N contiguous regardless of how the
@@ -54,20 +85,35 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
     onChange?.(renumbered);
   }
 
-  function handleTextChange(idx: number, newText: string) {
+  function handleAdd() {
     if (readOnly) return;
-    const next = sorted.map((p, i) => (i === idx ? { ...p, text: newText } : p));
-    emit(next);
+    setDialogState({ open: true, mode: 'create' });
+  }
+
+  function handleEdit(idx: number) {
+    if (readOnly) return;
+    const target = sorted[idx];
+    if (!target) return;
+    setDialogState({ open: true, mode: 'edit', priority: target, idx });
+  }
+
+  function handleDialogSave(saved: PriorityEntry) {
+    if (!dialogState.open) return;
+    if (dialogState.mode === 'create') {
+      emit([...sorted, saved]);
+    } else {
+      emit(sorted.map((p, i) => (i === dialogState.idx ? saved : p)));
+    }
+    setDialogState({ open: false });
+  }
+
+  function handleDialogCancel() {
+    setDialogState({ open: false });
   }
 
   function handleDelete(idx: number) {
     if (readOnly) return;
-    const target = sorted[idx];
-    if (target && target.text.trim().length > 0) {
-      setPendingDeleteIdx(idx);
-      return;
-    }
-    emit(sorted.filter((_, i) => i !== idx));
+    setPendingDeleteIdx(idx);
   }
 
   function confirmDelete() {
@@ -76,10 +122,15 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
     setPendingDeleteIdx(null);
   }
 
-  function handleAdd() {
-    if (readOnly) return;
-    emit([...sorted, { rank: sorted.length + 1, text: '' }]);
-  }
+  const addButton = !readOnly && (
+    <button
+      type="button"
+      className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+      onClick={handleAdd}
+    >
+      + Add Priority
+    </button>
+  );
 
   if (sorted.length === 0) {
     return (
@@ -87,15 +138,14 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[#f8f6f2] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
           {readOnly ? 'No priorities reported.' : 'No priorities yet. Use “+ Add Priority” to list what matters most.'}
         </div>
-        {!readOnly && (
-          <button
-            type="button"
-            className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
-            onClick={handleAdd}
-          >
-            + Add Priority
-          </button>
-        )}
+        {addButton}
+        <PriorityEditDialog
+          open={dialogState.open && dialogState.mode === 'create'}
+          priority={null}
+          nextRank={1}
+          onSave={handleDialogSave}
+          onCancel={handleDialogCancel}
+        />
       </div>
     );
   }
@@ -107,6 +157,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
         return (
           <div
             key={`${entry.rank}-${idx}`}
+            data-testid="priority-row"
             className="flex items-center gap-3 rounded-lg p-4"
             style={{ background: '#faf6ee' }}
           >
@@ -116,43 +167,57 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
             >
               {entry.rank}
             </span>
-            <input
-              type="text"
-              className="flex-1 rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-              value={entry.text}
-              placeholder={`Priority ${entry.rank}...`}
-              onChange={(e) => handleTextChange(idx, e.target.value)}
-              readOnly={readOnly}
-              aria-label={`Priority ${entry.rank}`}
-            />
+            <button
+              type="button"
+              className="flex-1 cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[#f8f6f2] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
+              onClick={() => handleEdit(idx)}
+              disabled={readOnly}
+              aria-label={`Edit priority ${entry.rank}`}
+            >
+              {entry.text.trim().length > 0 ? (
+                <span className="break-words text-[var(--color-foreground)]">{entry.text}</span>
+              ) : (
+                <span className="text-[var(--color-muted-foreground)]">— pending</span>
+              )}
+            </button>
             {!readOnly && (
-              <button
-                type="button"
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border-0 bg-transparent p-2.5 text-[rgba(0,0,0,0.25)] transition-colors hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
-                onClick={() => handleDelete(idx)}
-                aria-label={`Delete priority ${entry.rank}`}
-              >
-                <DeleteIcon />
-              </button>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"
+                  onClick={() => handleEdit(idx)}
+                  aria-label={`Edit priority ${entry.rank}`}
+                >
+                  <EditIcon />
+                </button>
+                <button
+                  type="button"
+                  className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+                  onClick={() => handleDelete(idx)}
+                  aria-label={`Delete priority ${entry.rank}`}
+                >
+                  <DeleteIcon />
+                </button>
+              </div>
             )}
           </div>
         );
       })}
 
-      {!readOnly && (
-        <button
-          type="button"
-          className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
-          onClick={handleAdd}
-        >
-          + Add Priority
-        </button>
-      )}
+      {addButton}
+
+      <PriorityEditDialog
+        open={dialogState.open}
+        priority={dialogState.open && dialogState.mode === 'edit' ? dialogState.priority : null}
+        nextRank={dialogState.open && dialogState.mode === 'create' ? sorted.length + 1 : (dialogState.open && dialogState.mode === 'edit' ? dialogState.priority.rank : 1)}
+        onSave={handleDialogSave}
+        onCancel={handleDialogCancel}
+      />
 
       <ConfirmDeleteDialog
         open={pendingDeleteIdx !== null}
         title="Delete priority?"
-        preview={pendingDeleteIdx !== null ? sorted[pendingDeleteIdx]?.text ?? '' : ''}
+        preview={pendingDeleteIdx !== null ? sorted[pendingDeleteIdx]?.text || '(empty)' : ''}
         subtitle={pendingDeleteIdx !== null ? `Priority ${pendingDeleteIdx + 1}` : undefined}
         onConfirm={confirmDelete}
         onCancel={() => setPendingDeleteIdx(null)}

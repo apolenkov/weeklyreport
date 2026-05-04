@@ -26,6 +26,15 @@ type SdlcPipelineProps = {
    * keeps the chip itself dumb.
    */
   readonly risks?: readonly RiskEntry[];
+  /**
+   * Stages the lead has marked at-risk/blocked but hasn't described in
+   * the Risks list. Renders a calm advisory banner ABOVE the product
+   * cards so the cause (chip colour) and the call-to-action live in
+   * the same surface. Earlier this banner sat at the top of the Risks
+   * section, but the link "you painted this red — describe it" reads
+   * better when it's right next to the chips themselves.
+   */
+  readonly unbackedStages?: readonly { productId: string; productName: string; stageName: string; severity: 'at-risk' | 'blocked' }[];
 };
 
 function ProductStatusBadge({ status }: { readonly status: StageStatus }) {
@@ -53,7 +62,7 @@ function getProductBorderColor(status: StageStatus): string {
   return 'var(--color-muted)';
 }
 
-export function SdlcPipeline({ products, readOnly = false, onStatusChange, sectionId, risks }: SdlcPipelineProps) {
+export function SdlcPipeline({ products, readOnly = false, onStatusChange, sectionId, risks, unbackedStages = [] }: SdlcPipelineProps) {
   function handleStatusChange(productId: string, stageName: string, newStatus: StageStatus) {
     if (readOnly) return;
     onStatusChange?.(productId, stageName, newStatus);
@@ -69,6 +78,46 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
 
   return (
     <div className="space-y-4">
+      {!readOnly && unbackedStages.length > 0 && (
+        <div
+          className="rounded-lg p-3"
+          style={{ background: '#fffbeb', border: '1px solid rgba(212,160,23,0.35)' }}
+          role="note"
+        >
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 inline-flex items-center justify-center text-base" style={{ color: '#d4a017' }} aria-hidden="true">
+              ⚠
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: '#8a6d1b' }}>
+                {unbackedStages.length === 1
+                  ? '1 stage marked at-risk/blocked has no risk written.'
+                  : `${unbackedStages.length} stages marked at-risk/blocked have no risk written.`}
+              </p>
+              <p className="mt-0.5 text-[12px]" style={{ color: '#8a6d1b' }}>
+                Open Risks &amp; Blockers below and use <strong>+ Add Risk</strong> to describe what's blocking.
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                {unbackedStages.map((s) => (
+                  <li
+                    key={`${s.productId}::${s.stageName}`}
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5"
+                    style={{
+                      background: s.severity === 'blocked' ? '#fee2e2' : '#fef3c7',
+                      color: s.severity === 'blocked' ? 'var(--color-destructive)' : '#8a6d1b',
+                    }}
+                  >
+                    <span className="font-semibold">{s.severity === 'blocked' ? '✕' : '!'}</span>
+                    <span>{s.productName}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{s.stageName}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
       {products.map((product) => (
         <div
           key={product.id}

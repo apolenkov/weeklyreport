@@ -236,25 +236,16 @@ function Provider({
   );
 }
 
-function Pipeline() {
-  const ctx = useBridgeContext('LeadFormSyncBridge.Pipeline');
-  return (
-    <SdlcPipeline
-      products={ctx.products}
-      readOnly={ctx.readOnly}
-      onStatusChange={ctx.handleStageStatusChange}
-      risks={ctx.risks}
-      {...(ctx.sectionId !== undefined ? { sectionId: ctx.sectionId } : {})}
-    />
-  );
-}
-
-function Risks() {
-  const ctx = useBridgeContext('LeadFormSyncBridge.Risks');
-  // Derive the warning list — stages whose status is at-risk/blocked but
-  // have zero risks filled. Computed here so the section stays presentation-
-  // only and we don't recompute it for every chip render.
-  const unbackedStages: { productId: string; productName: string; stageName: string; severity: 'at-risk' | 'blocked' }[] = [];
+/**
+ * Compute the set of stages the lead has marked at-risk/blocked but has
+ * not described in the Risks list. The warning banner derived from this
+ * set was originally shown above the Risks list, but since it points
+ * back at the SDLC chips (where the colour was set) the banner now
+ * lives in the Product Status section — same surface, immediate cause
+ * → effect link.
+ */
+function computeUnbackedStages(ctx: ReturnType<typeof useBridgeContext>) {
+  const out: { productId: string; productName: string; stageName: string; severity: 'at-risk' | 'blocked' }[] = [];
   for (const product of ctx.products) {
     for (const stage of product.stages) {
       if (stage.ownership !== 'mine') continue;
@@ -263,7 +254,7 @@ function Risks() {
         (r) => r.productId === product.id && r.stageName === stage.stageName && (r.text ?? '').trim().length > 0,
       );
       if (!hasRisk) {
-        unbackedStages.push({
+        out.push({
           productId: product.id,
           productName: product.name,
           stageName: stage.stageName,
@@ -272,6 +263,26 @@ function Risks() {
       }
     }
   }
+  return out;
+}
+
+function Pipeline() {
+  const ctx = useBridgeContext('LeadFormSyncBridge.Pipeline');
+  const unbackedStages = computeUnbackedStages(ctx);
+  return (
+    <SdlcPipeline
+      products={ctx.products}
+      readOnly={ctx.readOnly}
+      onStatusChange={ctx.handleStageStatusChange}
+      risks={ctx.risks}
+      unbackedStages={unbackedStages}
+      {...(ctx.sectionId !== undefined ? { sectionId: ctx.sectionId } : {})}
+    />
+  );
+}
+
+function Risks() {
+  const ctx = useBridgeContext('LeadFormSyncBridge.Risks');
   return (
     <RisksSection
       risks={ctx.risks}
@@ -279,7 +290,6 @@ function Risks() {
       onChange={ctx.handleRisksChange}
       onRiskFilled={ctx.handleRiskFilled}
       products={ctx.products}
-      unbackedStages={unbackedStages}
     />
   );
 }
