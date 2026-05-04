@@ -161,7 +161,7 @@ export function RemindersTab({ reminders }: RemindersTabProps) {
                 type="button"
                 onClick={() => handleDelete(reminder)}
                 disabled={isMutating}
-                className="btn-press rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-medium text-[var(--color-destructive)] transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={`Delete ${reminder.name}`}
               >
                 Delete
