@@ -255,25 +255,31 @@ test.describe('Lead Form — modal-driven CRUD', () => {
   // S6: Priorities — variable length
   // -------------------------------------------------------------------------
 
-  test('S6.1: + Add Priority appends a row, ranks stay 1..N', async ({ leadPage }) => {
-    const before = await leadPage.locator('[aria-label^="Priority "]').count();
+  test('S6.1: + Add Priority opens modal, Save appends a row, ranks stay 1..N', async ({ leadPage }) => {
+    const before = await leadPage.getByTestId('priority-row').count();
     await leadPage.getByRole('button', { name: '+ Add Priority' }).click();
-    await expect(leadPage.locator('[aria-label^="Priority "]')).toHaveCount(before + 1);
-    await expect(leadPage.locator(`[aria-label="Priority ${before + 1}"]`)).toBeVisible();
+    const dialog = leadPage.getByRole('dialog', { name: /Add Priority dialog/i });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel(/Description/i).fill('Ship the OAuth migration');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(leadPage.getByTestId('priority-row')).toHaveCount(before + 1);
+    // The new row reads its rank from the count it joined as.
+    await expect(leadPage.getByRole('button', { name: `Edit priority ${before + 1}` }).first()).toBeVisible();
   });
 
   test('S6.2: Delete priority preserves the rest and renumbers', async ({ leadPage }) => {
-    const before = await leadPage.locator('[aria-label^="Priority "]').count();
+    const before = await leadPage.getByTestId('priority-row').count();
     expect(before).toBeGreaterThanOrEqual(2);
     await leadPage.getByRole('button', { name: 'Delete priority 1' }).click();
-    // Seeded priorities carry text, so the M20 confirm dialog opens.
-    // Empty rows would skip this and delete immediately.
+    // Confirm dialog opens for every delete (no more empty-row shortcut
+    // — modal-driven add doesn't produce empty rows in the first place).
     const confirm = leadPage.getByRole('dialog', { name: /Delete priority/ });
     await expect(confirm).toBeVisible();
     await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
-    await expect(leadPage.locator('[aria-label^="Priority "]')).toHaveCount(before - 1);
-    // Surviving rows renumber starting at 1.
-    await expect(leadPage.locator('[aria-label="Priority 1"]')).toBeVisible();
+    await expect(leadPage.getByTestId('priority-row')).toHaveCount(before - 1);
+    // Surviving rows renumber starting at 1 — at least one Edit-priority-1
+    // button must survive (the one that took the empty slot).
+    await expect(leadPage.getByRole('button', { name: 'Edit priority 1' }).first()).toBeVisible();
   });
 
   // -------------------------------------------------------------------------
@@ -281,11 +287,10 @@ test.describe('Lead Form — modal-driven CRUD', () => {
   // -------------------------------------------------------------------------
 
   test('S7.1: Deleting all priorities surfaces an empty-state placeholder', async ({ leadPage }) => {
-    const initial = await leadPage.locator('[aria-label^="Priority "]').count();
+    const initial = await leadPage.getByTestId('priority-row').count();
     for (let i = 0; i < initial; i++) {
       // Each delete renumbers, so "Priority 1" survives as the rotating target.
       await leadPage.getByRole('button', { name: 'Delete priority 1' }).click();
-      // Seeded rows have text → confirm dialog appears each time.
       const confirm = leadPage.getByRole('dialog', { name: /Delete priority/ });
       await expect(confirm).toBeVisible();
       await confirm.getByRole('button', { name: 'Delete', exact: true }).click();

@@ -19,13 +19,6 @@ type RisksSectionProps = {
    * the +Add Risk button is rendered disabled with a tooltip.
    */
   readonly products?: readonly Product[];
-  /**
-   * Stages whose status is at-risk/blocked but have no risk row to back
-   * them up. Surfaced as a warning banner above the list so the lead is
-   * nudged to fill in details — silent SDLC-pipeline status without a
-   * narrative is half a signal.
-   */
-  readonly unbackedStages?: readonly { productId: string; productName: string; stageName: string; severity: 'at-risk' | 'blocked' }[];
 };
 
 function EditIcon() {
@@ -51,7 +44,6 @@ export function RisksSection({
   onChange,
   onRiskFilled,
   products,
-  unbackedStages = [],
 }: RisksSectionProps) {
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create'; seedProductId?: string } | { open: true; mode: 'edit'; risk: RiskEntry }
@@ -107,53 +99,11 @@ export function RisksSection({
 
   return (
     <div className="space-y-4">
-      {/* Informational warning — at-risk/blocked stages with no narrative.
-          Calm advisory only: lists the affected products so the user knows
-          what to fill in, then routes them to the standard "+ Add Risk"
-          button at the bottom. Earlier iterations carried per-row CTAs
-          here, but that competed with the section-level button and
-          confused the entry point. One button to add a risk, one banner
-          to point out which products still need one. */}
-      {!readOnly && unbackedStages.length > 0 && (
-        <div
-          className="rounded-lg p-3"
-          style={{ background: '#fffbeb', border: '1px solid rgba(212,160,23,0.35)' }}
-          role="note"
-        >
-          <div className="flex items-start gap-2">
-            <span className="mt-0.5 inline-flex items-center justify-center text-base" style={{ color: '#d4a017' }} aria-hidden="true">
-              ⚠
-            </span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold" style={{ color: '#8a6d1b' }}>
-                {unbackedStages.length === 1
-                  ? '1 stage marked at-risk/blocked has no risk written.'
-                  : `${unbackedStages.length} stages marked at-risk/blocked have no risk written.`}
-              </p>
-              <p className="mt-0.5 text-[12px]" style={{ color: '#8a6d1b' }}>
-                Use <strong>+ Add Risk</strong> below to describe what's blocking — picking the matching product in the dialog.
-              </p>
-              <ul className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-                {unbackedStages.map((s) => (
-                  <li
-                    key={`${s.productId}::${s.stageName}`}
-                    className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5"
-                    style={{
-                      background: s.severity === 'blocked' ? '#fee2e2' : '#fef3c7',
-                      color: s.severity === 'blocked' ? 'var(--color-destructive)' : '#8a6d1b',
-                    }}
-                  >
-                    <span className="font-semibold">{s.severity === 'blocked' ? '✕' : '!'}</span>
-                    <span>{s.productName}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{s.stageName}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* The unbacked-stage warning banner used to live here. It moved
+          to the Product Status section (above the SDLC chips) since
+          that's where the cause originates — colouring a chip red and
+          getting the "describe it" nudge in the same surface reads
+          better than asking the lead to scroll down. */}
 
       {risks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[#f8f6f2] p-6 text-center text-sm text-[var(--color-muted-foreground)]">

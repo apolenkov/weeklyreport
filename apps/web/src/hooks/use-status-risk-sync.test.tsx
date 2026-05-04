@@ -96,7 +96,12 @@ function setup(initialProducts: Product[], initialRisks: RiskEntry[]) {
 }
 
 describe('useStatusRiskSync', () => {
-  it('Test 1 (SYNC-01): user sets stage to at-risk -> updates products AND appends a new risk row', () => {
+  it('Test 1 (SYNC-01 simplified): user sets stage to at-risk -> updates products only, NO auto-added risk row', () => {
+    // Earlier the hook auto-appended an empty risk row whenever a stage
+    // flipped to at-risk/blocked. The phantom "— pending" row that
+    // surfaced in the Risks list was confusing, and the unbacked-stage
+    // warning banner already carries the "describe this" signal without
+    // mutating the data model. Stage -> Risk auto-add was removed.
     const product = buildProduct();
     const { state, hookResult } = setup([product], []);
 
@@ -110,21 +115,11 @@ describe('useStatusRiskSync', () => {
     const dev = updatedProducts[0]!.stages.find((s) => s.stageName === 'Dev');
     expect(dev?.status).toBe<StageStatus>('at-risk');
 
-    // risks: appended exactly one new row scoped to product+stage
-    expect(state.risksCalls).toHaveLength(1);
-    const updatedRisks = state.risksCalls[0]!;
-    expect(updatedRisks).toHaveLength(1);
-    expect(updatedRisks[0]).toMatchObject({
-      productId: 'crm',
-      productName: 'CRM Platform',
-      stageName: 'Dev',
-      severity: 'at-risk',
-      text: '',
-    });
-    expect(updatedRisks[0]!.id).toBeTruthy();
+    // risks: NOT touched — the warning banner is the sole signal now.
+    expect(state.risksCalls).toHaveLength(0);
   });
 
-  it('Test 2 (SYNC-01 idempotency): existing risk for product+stage prevents duplicate row', () => {
+  it('Test 2 (SYNC-01 idempotency): existing risk + status flip still leaves risks untouched', () => {
     const product = buildProduct();
     const existingRisk: RiskEntry = {
       id: 'r-existing',
@@ -142,7 +137,7 @@ describe('useStatusRiskSync', () => {
 
     // products fired once (status update)
     expect(state.productsCalls).toHaveLength(1);
-    // risks did NOT fire (no duplicate row added)
+    // risks did NOT fire (hook never mutates risks on stage change anymore)
     expect(state.risksCalls).toHaveLength(0);
   });
 
@@ -216,27 +211,30 @@ describe('useStatusRiskSync', () => {
     expect(state.risksCalls).toHaveLength(0);
   });
 
-  it('Test 6 (no infinite loop): user sets stage to at-risk THEN auto-sync handleRiskFilled does not trigger confirmation', () => {
+  it('Test 6 (loop guard): auto-sync handleRiskFilled never triggers confirmation', () => {
+    // Previously this asserted the no-loop invariant after the hook auto-
+    // created a risk. With auto-add removed, the only thing left to
+    // verify is that handleRiskFilled with source='auto-sync' is a no-op
+    // — which Test 3 already covers. This test now exercises the same
+    // guard with a pre-existing risk to keep the source-based short-
+    // circuit behaviour pinned.
     const product = buildProduct();
-    const { state, hookResult } = setup([product], []);
+    const risk: RiskEntry = {
+      id: 'r-pre',
+      productId: 'crm',
+      productName: 'CRM Platform',
+      stageName: 'Dev',
+      severity: 'at-risk',
+      text: '',
+    };
+    const { state, hookResult } = setup([product], [risk]);
 
-    // Step 1: user sets stage to at-risk -> creates risk
     act(() => {
-      hookResult.result.current.handleStageStatusChange('crm', 'Dev', 'at-risk', 'user');
-    });
-    expect(state.risksCalls).toHaveLength(1);
-    const newRiskId = state.risksCalls[0]![0]!.id;
-
-    // Step 2: re-render with the new state so the hook's closures see the auto-created risk
-    hookResult.rerender({ products: state.products, risks: state.risks });
-
-    // Step 3: auto-sync fires handleRiskFilled for that risk -> must be no-op
-    act(() => {
-      hookResult.result.current.handleRiskFilled(newRiskId, 'auto-sync');
+      hookResult.result.current.handleRiskFilled('r-pre', 'auto-sync');
     });
 
-    // confirmation must have been called exactly 0 times across the whole sequence
     expect(state.confirmationCalls).toHaveLength(0);
+    expect(state.productsCalls).toHaveLength(0);
   });
 
   it('Test 7 (revert to on-track): hook updates stage but does NOT delete the bound risk', () => {

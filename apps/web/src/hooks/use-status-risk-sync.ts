@@ -54,16 +54,24 @@ export type UseStatusRiskSyncResult = {
 };
 
 /**
- * Bidirectional Status<->Risk coordination with SyncSource ref to prevent loops.
+ * One-way Risk -> Stage coordination with SyncSource ref to prevent loops.
  *
- * - Stage -> Risk (additive): when a USER sets a stage to at-risk/blocked AND no
- *   risk exists for that product+stage, append an empty risk row scoped to it.
- * - Risk -> Stage (with confirmation): when a USER fills a risk whose bound stage
- *   is on-track/empty, request a confirmation from the consumer. The hook does
- *   NOT directly mutate stages; the consumer calls applyStatusSuggestion on accept.
+ * Earlier this hook ALSO auto-appended an empty risk row when the user
+ * flipped a stage to at-risk/blocked. The intent was a hint ("you marked
+ * this red, now describe it") but the actual UX was a phantom row labelled
+ * "— pending" at the top of the Risks list — looked like data corruption
+ * the moment a chip changed colour. The unbacked-stage warning banner
+ * (`unbackedStages` in lead-form-sync-bridge) carries the same signal
+ * without polluting the data model, so the auto-add was removed.
  *
- * The syncSourceRef toggles to 'auto-sync' across the synchronous frame of an
- * auto-triggered mutation so that the inverse handler short-circuits.
+ * Risk -> Stage (with confirmation) remains: when a USER fills a risk
+ * whose bound stage is on-track/empty, the hook asks the consumer to
+ * confirm bumping the chip. The hook does NOT directly mutate stages;
+ * the consumer calls applyStatusSuggestion on accept.
+ *
+ * The syncSourceRef toggles to 'auto-sync' across the synchronous frame
+ * of an auto-triggered mutation so that the inverse handler short-
+ * circuits (Pitfall 5).
  */
 export function useStatusRiskSync(
   args: UseStatusRiskSyncArgs,
@@ -72,7 +80,6 @@ export function useStatusRiskSync(
     products,
     risks,
     onProductsChange,
-    onRisksChange,
     requestStatusUpdateConfirmation,
   } = args;
 
@@ -83,9 +90,11 @@ export function useStatusRiskSync(
       productId: string,
       stageName: string,
       newStatus: StageStatus,
-      source: SyncSource = 'user',
+      _source: SyncSource = 'user',
     ) => {
-      // Always update the stage status (functional updater for stale-closure safety).
+      // Update the stage status. No automatic side-effects on Risks —
+      // the warning banner above the list is now the sole "you marked
+      // this red, describe it" affordance.
       onProductsChange((prev) =>
         prev.map((p) => {
           if (p.id !== productId) return p;
@@ -97,36 +106,8 @@ export function useStatusRiskSync(
           };
         }),
       );
-
-      // Auto-create risk row only on USER-driven transitions to at-risk/blocked.
-      if (source === 'user' && (newStatus === 'at-risk' || newStatus === 'blocked')) {
-        const product = products.find((p) => p.id === productId);
-        const productName = product?.name ?? 'Unknown';
-        const exists = risks.some(
-          (r) => r.productId === productId && r.stageName === stageName,
-        );
-
-        if (!exists) {
-          syncSourceRef.current = 'auto-sync';
-          onRisksChange((prev) => [
-            ...prev,
-            {
-              id:
-                typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                  ? crypto.randomUUID()
-                  : `risk-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              productId,
-              productName,
-              stageName,
-              severity: newStatus === 'blocked' ? 'blocked' : 'at-risk',
-              text: '',
-            },
-          ]);
-          syncSourceRef.current = 'user';
-        }
-      }
     },
-    [products, risks, onProductsChange, onRisksChange],
+    [onProductsChange],
   );
 
   const handleRiskFilled = useCallback(
