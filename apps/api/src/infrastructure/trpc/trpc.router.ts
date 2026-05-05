@@ -484,6 +484,53 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+
+      // Manual "Send Reminder" trigger from the head dashboard alert bar.
+      // Resolves the active reminder rule + draft-section authors server-side
+      // (the client never sees lead emails) and dispatches one execution per
+      // pending lead via the existing dedupe-keyed pipeline.
+      dispatchPending: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .output(
+          z.object({
+            dispatched: z.number().int().nonnegative(),
+            skipped: z.number().int().nonnegative(),
+            reason: z.string().optional(),
+          }),
+        )
+        .mutation(async ({ input }) => {
+          try {
+            const rule = await deps.prisma.reminderRule.findFirst({
+              where: { reportId: input.reportId, status: 'active' },
+              orderBy: { fireAt: 'asc' },
+            });
+            if (!rule) {
+              return { dispatched: 0, skipped: 0, reason: 'no-active-rule' };
+            }
+            const draftSections = await deps.prisma.reportSection.findMany({
+              where: { reportId: input.reportId, status: 'draft' },
+              include: {
+                author: { select: { email: true, notificationOptOut: true } },
+              },
+            });
+            let dispatched = 0;
+            let skipped = 0;
+            for (const sec of draftSections) {
+              if (sec.author.notificationOptOut) {
+                skipped++;
+                continue;
+              }
+              await deps.remindersService.requestReminderExecution(
+                rule.id,
+                sec.author.email,
+              );
+              dispatched++;
+            }
+            return { dispatched, skipped };
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
 
     // === CarryOver namespace ===

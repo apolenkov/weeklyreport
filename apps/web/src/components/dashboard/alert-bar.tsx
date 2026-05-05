@@ -1,7 +1,13 @@
 'use client';
 
+import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+import { useTRPC } from '../../lib/trpc-context';
+
 type AlertBarProps = {
   readonly pendingLeads: string[];
+  readonly reportId: string;
 };
 
 function AlertIcon() {
@@ -23,7 +29,28 @@ function AlertIcon() {
   );
 }
 
-export function AlertBar({ pendingLeads }: AlertBarProps) {
+export function AlertBar({ pendingLeads, reportId }: AlertBarProps) {
+  const trpc = useTRPC();
+  const dispatchMut = useMutation(
+    trpc.reminders.dispatchPending.mutationOptions({
+      onSuccess: ({ dispatched, skipped, reason }) => {
+        if (reason === 'no-active-rule') {
+          toast.error('No active reminder rule for this period — configure one in Admin → Reminders.');
+          return;
+        }
+        if (dispatched === 0 && skipped === 0) {
+          toast.info('No pending leads to remind.');
+          return;
+        }
+        const skipNote = skipped > 0 ? ` (${skipped} opted out)` : '';
+        toast.success(`Reminder sent to ${dispatched} lead${dispatched === 1 ? '' : 's'}${skipNote}.`);
+      },
+      onError: (err) => {
+        toast.error(err instanceof Error ? err.message : 'Failed to send reminder');
+      },
+    }),
+  );
+
   if (pendingLeads.length === 0) return null;
 
   const pendingNames = pendingLeads.map((name, i) => {
@@ -48,9 +75,11 @@ export function AlertBar({ pendingLeads }: AlertBarProps) {
       </span>
       <button
         type="button"
-        className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+        onClick={() => dispatchMut.mutate({ reportId })}
+        disabled={dispatchMut.isPending}
+        className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Send Reminder
+        {dispatchMut.isPending ? 'Sending…' : 'Send Reminder'}
       </button>
     </div>
   );
