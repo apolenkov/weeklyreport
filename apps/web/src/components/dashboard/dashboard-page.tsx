@@ -122,7 +122,7 @@ export function DashboardPage() {
       <KpiCards data={kpi} />
 
       {/* Alert bar for pending leads */}
-      <AlertBar pendingLeads={pendingLeads} />
+      <AlertBar pendingLeads={pendingLeads} reportId={weeklyQ.data.reportId} />
 
       {/* Blocked & At Risk */}
       <BlockedAtRiskTable items={blockedAtRisk} />
