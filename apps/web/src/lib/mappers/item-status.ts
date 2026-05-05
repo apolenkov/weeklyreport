@@ -50,19 +50,23 @@ export function itemStatusToWorkflow(
 /**
  * Derives the display ItemStatus from an item's stored fields.
  *
- * Rules:
- * - explicit workflowStatus wins (always honored, regardless of type)
- * - if no workflowStatus and type === 'next' -> 'planned' (computed)
- * - if no workflowStatus and type === 'current' -> 'in-progress' (default)
+ * Rules (per mockup v14 — "next week" cards are visually planned regardless
+ * of any backend workflow tag):
+ * - type === 'next'    -> 'planned' (always, dashed border in UI)
+ * - explicit workflowStatus on a current-week item wins
+ * - default for current-week with no workflowStatus -> 'in-progress'
+ *
+ * Phase 33-04: previously `workflowStatus` overrode `type`, so any next-week
+ * item that had ever been touched (and thus carried `in_progress`) lost its
+ * dashed border. Next-week IS planning state by definition; surface that.
  */
 export function deriveItemStatus(item: {
   workflowStatus: ItemWorkflowStatus | null;
   type: ItemType;
 }): ItemStatus {
+  if (item.type === 'next') return 'planned';
   if (item.workflowStatus) {
     return workflowToItemStatus(item.workflowStatus);
   }
-  // No explicit workflow status: next-week items are 'planned',
-  // current items default to 'in-progress'.
-  return item.type === 'next' ? 'planned' : 'in-progress';
+  return 'in-progress';
 }

@@ -41,11 +41,10 @@ describe('deriveItemStatus', () => {
     ).toBe('completed');
   });
 
-  it("returns 'in-progress' for next item with workflowStatus 'in_progress'", () => {
-    expect(
-      deriveItemStatus({ workflowStatus: 'in_progress', type: 'next' }),
-    ).toBe('in-progress');
-  });
+  // Phase 33-04 contract change: type='next' is ALWAYS 'planned' (mockup v14
+  // — next-week cards are visually planning state regardless of any
+  // workflowStatus the row happens to carry). This fixes the dashed-border
+  // regression where seeded next-week items lost their planning visual.
 
   it("computes 'planned' for a next-week item with no workflowStatus", () => {
     expect(
@@ -53,21 +52,27 @@ describe('deriveItemStatus', () => {
     ).toBe('planned');
   });
 
-  it("returns 'blocked' for next-week item with explicit 'blocked' workflowStatus (overrides type)", () => {
+  it("forces 'planned' for next-week item with workflowStatus 'in_progress' (type wins)", () => {
+    expect(
+      deriveItemStatus({ workflowStatus: 'in_progress', type: 'next' }),
+    ).toBe('planned');
+  });
+
+  it("forces 'planned' for next-week item with workflowStatus 'blocked' (type wins)", () => {
     expect(
       deriveItemStatus({ workflowStatus: 'blocked', type: 'next' }),
-    ).toBe('blocked');
+    ).toBe('planned');
+  });
+
+  it("forces 'planned' for next-week item with workflowStatus 'done' (type wins)", () => {
+    expect(
+      deriveItemStatus({ workflowStatus: 'done', type: 'next' }),
+    ).toBe('planned');
   });
 
   it("returns 'in-progress' for current-week item with no workflowStatus", () => {
     expect(
       deriveItemStatus({ workflowStatus: null, type: 'current' }),
     ).toBe('in-progress');
-  });
-
-  it("returns 'completed' for next-week item with workflowStatus 'done'", () => {
-    expect(
-      deriveItemStatus({ workflowStatus: 'done', type: 'next' }),
-    ).toBe('completed');
   });
 });
