@@ -26,20 +26,20 @@ type StageAssignmentEditorProps = {
 /**
  * Stage Assignment Editor.
  *
- * Loads `admin.listStageAssignments` for the given project and lets a head
- * reassign each stage to a lead or remove the assignment.
+ * Renders the FULL 7-stage SDLC catalogue for a project: each stage shows
+ * either the current assignee or "Unassigned" with a dropdown to fill it in.
+ * This way head sees the complete coverage picture instead of only the rows
+ * that already exist (which hides gaps).
  *
- * Backend gap (deferred): there is currently no `admin.listStages` endpoint
- * exposing the stage catalogue (id + name). Without it, the UI can only
- * REASSIGN stages that are already present on the project, not create new
- * stage rows from scratch. Reassignment is implemented by deleting the prior
- * assignment, then saving a new one with the same stageId. Creating fresh
- * stages will require a stages-list endpoint and is tracked for a future plan.
+ * Two queries: `listStages` (catalogue) + `listStageAssignments` (per-project
+ * rows). We index assignments by stageId and walk the stage catalogue in
+ * sortOrder so UI order is deterministic.
  */
 export function StageAssignmentEditor({ projectId, projectName, leads }: StageAssignmentEditorProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
+  const stagesQuery = useQuery(trpc.admin.listStages.queryOptions());
   const assignmentsQuery = useQuery(
     trpc.admin.listStageAssignments.queryOptions({ projectId }),
   );
@@ -72,73 +72,85 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
     }),
   );
 
+  const stages = stagesQuery.data ?? [];
   const assignments = assignmentsQuery.data ?? [];
 
-  if (assignmentsQuery.isLoading) {
+  // Map stageId → assignment for O(1) lookup as we walk the stage catalogue.
+  const assignmentByStage = new Map(
+    assignments.map((a) => [a.stageId, a]),
+  );
+
+  if (stagesQuery.isLoading || assignmentsQuery.isLoading) {
     return (
       <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
-        Loading stage assignments for {projectName}…
+        Loading stages for {projectName}…
       </p>
     );
   }
 
-  if (assignmentsQuery.isError) {
+  if (stagesQuery.isError || assignmentsQuery.isError) {
     return (
       <p className="mt-3 text-xs text-[var(--color-destructive)]">
-        Failed to load stage assignments.
+        Failed to load stage data.
       </p>
     );
   }
 
-  if (assignments.length === 0) {
+  if (stages.length === 0) {
     return (
       <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
-        No stage assignments yet for this project. Stage seeding is required before assignments can be edited.
+        No stages defined yet. Seed the SDLC stages catalogue first.
       </p>
     );
   }
 
   return (
-    <div className="mt-3 grid grid-cols-7 gap-2">
-      {assignments.map((assignment) => {
-        const stageName = assignment.stageName as StageName;
+    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+      {stages.map((stage) => {
+        const stageName = stage.name as StageName;
         const stageColor = STAGE_COLORS[stageName] ?? 'var(--color-muted-foreground)';
-        const currentAssignee = assignment.userId;
+        const assignment = assignmentByStage.get(stage.id);
+        const currentAssignee = assignment?.userId ?? '';
+        const selectId = `${projectId}-${stage.id}`;
 
         function handleChange(nextUserId: string) {
           if (!nextUserId) {
-            // Remove assignment entirely.
-            deleteMut.mutate({ id: assignment.id });
+            // Remove assignment entirely (only meaningful if one exists).
+            if (assignment) deleteMut.mutate({ id: assignment.id });
             return;
           }
           if (nextUserId === currentAssignee) return;
-          // Replace assignee: delete the old row, then save a new one for the
-          // same stageId. The repository upsert keys off (projectId, stageId).
+          // upsert keyed off (userId, stageId, projectId) — assigning a
+          // previously-unassigned stage just creates the row.
           saveMut.mutate({
             userId: nextUserId,
-            stageId: assignment.stageId,
+            stageId: stage.id,
             projectId,
           });
         }
 
         return (
-          <div key={assignment.id} className="space-y-1">
+          <div key={stage.id} className="space-y-1">
             <label
-              htmlFor={`${projectId}-${assignment.stageId}`}
+              htmlFor={selectId}
               className="block text-center text-[11px] font-semibold uppercase tracking-wider"
               style={{ color: stageColor }}
             >
               {stageName}
             </label>
             <select
-              id={`${projectId}-${assignment.stageId}`}
+              id={selectId}
               value={currentAssignee}
               onChange={(e) => handleChange(e.target.value)}
               disabled={saveMut.isPending || deleteMut.isPending}
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-1.5 py-1.5 text-xs text-[var(--color-foreground)] transition-colors focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50"
+              className={`w-full rounded-[var(--radius-sm)] border bg-white px-1.5 py-1.5 text-xs transition-colors focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50 ${
+                currentAssignee
+                  ? 'border-[var(--color-border)] text-[var(--color-foreground)]'
+                  : 'border-dashed border-[var(--color-muted-foreground)] text-[var(--color-muted-foreground)]'
+              }`}
               aria-label={`Assign ${stageName} stage for ${projectName}`}
             >
-              <option value="">Unassigned</option>
+              <option value="">— не назначено —</option>
               {leads.map((lead) => (
                 <option key={lead.id} value={lead.id}>
                   {lead.name.split(' ')[0]}
