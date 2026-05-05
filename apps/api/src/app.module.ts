@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import type {
-  MiddlewareConsumer,
-  NestModule,
   OnApplicationBootstrap,
 } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -30,13 +28,12 @@ import { assertNoDevAuthInProduction } from './lib/dev-auth-fence';
 
 @Module({
   imports: [
-    // ClsModule with mount=false: auto-mount only wraps controller routes
-    // registered via Nest's MiddlewareConsumer, which means the raw Express
-    // tRPC handler at /trpc (mounted via expressApp.use in main.ts) runs
-    // OUTSIDE the AsyncLocalStorage scope -> cls.isActive() returns false
-    // inside every tRPC procedure -> 100% of logs read correlationId='no-context'.
-    // Manual mount via `app.use(new ClsMiddleware(...).use)` in main.ts puts
-    // the scope ahead of every Express handler so all paths see it.
+    // ClsModule with mount=false because the raw Express handlers (/trpc,
+    // /pdfs static, SAML auth routes) are not registered via Nest's router,
+    // so consumer.apply(...).forRoutes('*') never wraps them. Both
+    // ClsMiddleware AND CorrelationIdMiddleware are mounted via app.use()
+    // in main.ts so all paths — controller, raw Express, tRPC — share the
+    // same AsyncLocalStorage scope.
     ClsModule.forRoot({
       global: true,
       middleware: { mount: false, generateId: false },
@@ -62,13 +59,14 @@ import { assertNoDevAuthInProduction } from './lib/dev-auth-fence';
     PeriodModule,
     WeeklyReportModule,
   ],
-  providers: [PdfExportProcessor, EmailReminderProcessor, EmailService],
+  providers: [
+    PdfExportProcessor,
+    EmailReminderProcessor,
+    EmailService,
+    CorrelationIdMiddleware,
+  ],
 })
-export class AppModule implements NestModule, OnApplicationBootstrap {
-  configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
-  }
-
+export class AppModule implements OnApplicationBootstrap {
   /**
    * AUTH-01 (Phase 29-04 / Phase 32-C M-05): boot-time dev-auth fence.
    *

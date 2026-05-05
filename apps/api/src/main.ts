@@ -5,6 +5,8 @@ import { resolve } from 'node:path';
 
 import { NestFactory } from '@nestjs/core';
 import { ClsMiddleware, ClsService } from 'nestjs-cls';
+
+import { CorrelationIdMiddleware } from './infrastructure/middleware/correlation-id.middleware';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import { Queue } from 'bullmq';
 import cookieParser from 'cookie-parser';
@@ -73,10 +75,15 @@ async function bootstrap() {
 
   // Open the AsyncLocalStorage scope for every Express handler — including
   // the raw `expressApp.use('/trpc', ...)` registered later in this file
-  // and the SAML/dev-login routes mounted by mountAuthRoutes(). Without this,
-  // CorrelationIdMiddleware (registered via NestModule.configure) writes to
-  // an inactive store and the logger silently falls back to 'no-context'.
+  // and the SAML/dev-login routes mounted by mountAuthRoutes(). Then write
+  // the request id into the active store so the logger reads a real UUID
+  // via cls.get('correlationId') on every emit. Both middlewares MUST run
+  // here (not via NestModule.configure) — Nest's MiddlewareConsumer only
+  // wraps controller routes, so raw Express handlers would otherwise see
+  // no scope and fall back to 'no-context'.
   app.use(new ClsMiddleware({ generateId: false, saveReq: false }).use);
+  const correlationIdMiddleware = app.get(CorrelationIdMiddleware);
+  app.use(correlationIdMiddleware.use.bind(correlationIdMiddleware));
 
   app.enableCors({ origin: env.FRONTEND_URL, credentials: true });
 
