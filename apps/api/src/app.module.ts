@@ -30,11 +30,16 @@ import { assertNoDevAuthInProduction } from './lib/dev-auth-fence';
 
 @Module({
   imports: [
-    // ClsModule must be first so its AsyncLocalStorage middleware mounts
-    // before CorrelationIdMiddleware writes into the active store.
+    // ClsModule with mount=false: auto-mount only wraps controller routes
+    // registered via Nest's MiddlewareConsumer, which means the raw Express
+    // tRPC handler at /trpc (mounted via expressApp.use in main.ts) runs
+    // OUTSIDE the AsyncLocalStorage scope -> cls.isActive() returns false
+    // inside every tRPC procedure -> 100% of logs read correlationId='no-context'.
+    // Manual mount via `app.use(new ClsMiddleware(...).use)` in main.ts puts
+    // the scope ahead of every Express handler so all paths see it.
     ClsModule.forRoot({
       global: true,
-      middleware: { mount: true, generateId: false },
+      middleware: { mount: false, generateId: false },
     }),
     // NOTIF-04 (Phase 28-03): hourly @Cron tick for deadline reminder dispatch.
     // ScheduleModule.forRoot() must be present for `@Cron(...)` decorators on
