@@ -160,7 +160,7 @@ describe('mapLeadItems', () => {
 });
 
 describe('mapLeadRisks / mapLeadDecisions / mapLeadPriorities', () => {
-  it('builds risk text from risk + impact + mitigation and resolves productName', () => {
+  it('exposes risk + impact + mitigation as separate fields and resolves productName', () => {
     const section = baseSection({
       projects: [
         { projectId: PROJECT_A, projectName: 'CRM', trafficLight: 'yellow' },
@@ -179,9 +179,11 @@ describe('mapLeadRisks / mapLeadDecisions / mapLeadPriorities', () => {
     const [mapped] = mapLeadRisks(section);
     expect(mapped?.productName).toBe('CRM');
     expect(mapped?.severity).toBe('at-risk');
-    expect(mapped?.text).toContain('OAuth delay');
-    expect(mapped?.text).toContain('Impact: SSO slips');
-    expect(mapped?.text).toContain('Mitigation: Escalate vendor');
+    // Phase 22+: text holds raw `risk` only; impact/mitigation surface as
+    // separate fields in the edit dialog (avoids double-concat on save).
+    expect(mapped?.text).toBe('OAuth delay');
+    expect(mapped?.impact).toBe('SSO slips');
+    expect(mapped?.mitigation).toBe('Escalate vendor');
   });
 
   it('passes decisions through with department-scope productName', () => {
@@ -201,18 +203,22 @@ describe('mapLeadRisks / mapLeadDecisions / mapLeadPriorities', () => {
     expect(mapped?.productName).toBe('Department');
   });
 
-  it('clamps priority rank into 1|2|3 and preserves text', () => {
+  it('preserves arbitrary positive ranks (variable-length list) and floors invalid ranks to 1', () => {
     const section = baseSection({
       priorities: [
         { id: 'p1', rank: 1, text: 'P1' },
         { id: 'p2', rank: 5, text: 'P5' },
+        { id: 'p3', rank: 0, text: 'invalid-zero' },
       ],
     });
 
     const mapped = mapLeadPriorities(section);
     expect(mapped[0]!.rank).toBe(1);
-    expect(mapped[1]!.rank).toBe(3);
+    // Earlier variant clamped to 1|2|3 for a fixed-slot UI; the variable-length
+    // priorities list now keeps the user's rank as-is when ≥ 1.
+    expect(mapped[1]!.rank).toBe(5);
     expect(mapped[1]!.text).toBe('P5');
+    expect(mapped[2]!.rank).toBe(1);
   });
 });
 
@@ -252,7 +258,7 @@ describe('mapLeadPeriods', () => {
 });
 
 describe('mapLeadVersions', () => {
-  it('formats createdAt into a relative timestamp and stubs counts', () => {
+  it('formats createdAt into a relative timestamp and surfaces snapshot counts', () => {
     const now = new Date('2026-04-20T12:00:00Z');
     const versions: VersionSnapshot[] = [
       {
@@ -260,12 +266,17 @@ describe('mapLeadVersions', () => {
         reportSectionId: SECTION_ID,
         version: 3,
         createdAt: new Date('2026-04-20T11:58:00Z'),
+        itemCount: 4,
+        riskCount: 2,
+        decisionCount: 1,
       },
     ];
     const mapped = mapLeadVersions(versions, now);
     expect(mapped[0]!.version).toBe(3);
     expect(mapped[0]!.timestamp).toBe('2 min ago');
-    expect(mapped[0]!.itemCount).toBe(0);
+    expect(mapped[0]!.itemCount).toBe(4);
+    expect(mapped[0]!.riskCount).toBe(2);
+    expect(mapped[0]!.decisionCount).toBe(1);
   });
 });
 

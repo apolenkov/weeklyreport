@@ -148,9 +148,9 @@ export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type, ge
         ? {
             name: cause.constructor.name,
             message: cause.message,
-            stack: cause.stack,
-            // Prisma errors: surface code + meta so query failures are
-            // identifiable without re-running with debug enabled.
+            // Stack frames leak file paths + library internals to the log
+            // aggregator — surface code/meta only. Prisma's `code` + `meta`
+            // are already enough to identify the failed query.
             ...('code' in cause ? { causeCode: (cause as { code?: unknown }).code } : {}),
             ...('meta' in cause ? { causeMeta: (cause as { meta?: unknown }).meta } : {}),
           }
@@ -169,7 +169,6 @@ export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type, ge
       error: {
         code: result.error.code,
         message: result.error.message,
-        stack: result.error.stack,
         ...(causeInfo ? { cause: causeInfo } : {}),
       },
     });

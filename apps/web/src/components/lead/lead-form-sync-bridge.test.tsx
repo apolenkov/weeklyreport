@@ -74,17 +74,20 @@ describe('LeadFormSyncBridge', () => {
       stageName: 'Dev',
       severity: 'at-risk',
       text: 'pre-existing',
+      impact: '',
+      mitigation: '',
     };
 
     render(<Harness initialProducts={[product]} initialRisks={[risk]} />);
 
-    // Pipeline rendered with product name (appears in both pipeline header and risk header)
+    // Pipeline rendered with product name (appears in both pipeline header and risk card)
     expect(screen.getAllByText('CRM Platform').length).toBeGreaterThanOrEqual(1);
-    // Risk textarea rendered with existing text
-    expect(screen.getByDisplayValue('pre-existing')).toBeInTheDocument();
+    // Risk preview card surfaces the risk text (no inline textarea anymore — Phase 22+ moved
+    // editing into RiskEditDialog; the main UI shows a read-only preview).
+    expect(screen.getByText('pre-existing')).toBeInTheDocument();
   });
 
-  it('Test 2: clicking stage chip from on-track to at-risk fires onProductsChange AND onRisksChange (auto-add)', async () => {
+  it('Test 2: clicking stage chip from on-track to at-risk fires onProductsChange (status sync via popover)', async () => {
     const user = userEvent.setup();
     const product = buildProduct();
     const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
@@ -99,32 +102,21 @@ describe('LeadFormSyncBridge', () => {
       />,
     );
 
-    // Open the stage dropdown for Dev (the lead-owned stage)
+    // Open the stage popover for Dev (lead-owned, currently on-track)
     const devChip = screen.getByRole('button', { name: 'Dev: on-track' });
     await user.click(devChip);
 
-    // Pick "At Risk"
-    const atRiskOption = await screen.findByRole('button', { name: /At Risk/i });
+    // Pick "At Risk" from the popover (rendered as role="menuitem", not button)
+    const atRiskOption = await screen.findByRole('menuitem', { name: /At Risk/i });
     await user.click(atRiskOption);
 
     expect(onProductsChangeSpy).toHaveBeenCalled();
     const lastProductsCall = onProductsChangeSpy.mock.calls.at(-1)![0]!;
     const dev = lastProductsCall[0]!.stages.find((s) => s.stageName === 'Dev');
     expect(dev?.status).toBe('at-risk');
-
-    // Auto-created an empty risk row
-    expect(onRisksChangeSpy).toHaveBeenCalled();
-    const lastRisksCall = onRisksChangeSpy.mock.calls.at(-1)![0]!;
-    expect(lastRisksCall).toHaveLength(1);
-    expect(lastRisksCall[0]).toMatchObject({
-      productId: 'crm',
-      stageName: 'Dev',
-      severity: 'at-risk',
-      text: '',
-    });
   });
 
-  it('Test 3: filling text on a risk for an on-track stage opens a confirmation dialog; Confirm updates the stage', async () => {
+  it('Test 3: clicking Edit on a risk opens the RiskEditDialog (edit surface for impact/mitigation)', async () => {
     const user = userEvent.setup();
     const product = buildProduct();
     const risk: RiskEntry = {
@@ -133,44 +125,24 @@ describe('LeadFormSyncBridge', () => {
       productName: 'CRM Platform',
       stageName: 'Dev',
       severity: 'at-risk',
-      text: '',
+      text: 'OAuth delay',
+      impact: '',
+      mitigation: '',
     };
-    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
 
-    render(
-      <Harness
-        initialProducts={[product]}
-        initialRisks={[risk]}
-        onProductsChangeSpy={onProductsChangeSpy}
-      />,
-    );
+    render(<Harness initialProducts={[product]} initialRisks={[risk]} />);
 
-    // Type into the risk textarea (transitions empty -> non-empty).
-    // Use a single char so userEvent does not continue typing after the
-    // confirmation dialog steals focus (the dialog's Skip button focuses
-    // automatically on mount, which would otherwise consume subsequent keys).
-    const textareas = screen.getAllByRole('textbox');
-    const riskTextarea = textareas[0]!;
-    await user.type(riskTextarea, 'X');
+    // Click the Edit (pencil) button on the risk card → opens RiskEditDialog
+    const editBtn = screen.getByRole('button', { name: /Edit risk for CRM Platform/i });
+    await user.click(editBtn);
 
-    // Confirmation dialog appears
-    const dialog = await screen.findByRole('alertdialog');
-    expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveAccessibleName(/Update stage status/i);
-
-    // Click "Update Stage"
-    const confirmBtn = screen.getByRole('button', { name: 'Update Stage' });
-    await user.click(confirmBtn);
-
-    // Dialog closed and stage updated to at-risk
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-    expect(onProductsChangeSpy).toHaveBeenCalled();
-    const lastCall = onProductsChangeSpy.mock.calls.at(-1)![0]!;
-    const dev = lastCall[0]!.stages.find((s) => s.stageName === 'Dev');
-    expect(dev?.status).toBe('at-risk');
+    // Dialog renders with the existing risk text in a textbox (Phase 22+ moved
+    // editing here so impact/mitigation can be validated together).
+    const textbox = await screen.findByDisplayValue('OAuth delay');
+    expect(textbox).toBeInTheDocument();
   });
 
-  it('Test 4: when readOnly=true, stage chips are disabled and risks textarea is read-only', () => {
+  it('Test 4: when readOnly=true, stage chips are disabled and risks render as preview cards without edit/add controls', () => {
     const product = buildProduct();
     const risk: RiskEntry = {
       id: 'r1',
@@ -179,18 +151,24 @@ describe('LeadFormSyncBridge', () => {
       stageName: 'Dev',
       severity: 'at-risk',
       text: 'existing',
+      impact: '',
+      mitigation: '',
     };
 
     render(
       <Harness initialProducts={[product]} initialRisks={[risk]} readOnly />,
     );
 
-    // Stage chip is disabled (button cannot be activated)
+    // Stage chip is disabled (popover cannot open).
     const devChip = screen.getByRole('button', { name: 'Dev: on-track' });
     expect(devChip).toBeDisabled();
 
-    // Risk textarea is read-only
-    const textarea = screen.getByDisplayValue('existing');
-    expect(textarea).toHaveAttribute('readonly');
+    // Risk text rendered as plain preview, not a form control.
+    expect(screen.getByText('existing')).toBeInTheDocument();
+
+    // Edit / Delete / + Add Risk controls are hidden in read-only mode.
+    expect(screen.queryByRole('button', { name: /Edit risk/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Delete risk/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /\+ Add Risk/i })).not.toBeInTheDocument();
   });
 });

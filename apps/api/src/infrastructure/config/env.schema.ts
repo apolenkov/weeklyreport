@@ -34,9 +34,13 @@ export const envSchema = z
     // PDF generation
     PDF_BASE_URL: z.string().url().default('http://localhost:3000'),
     // Phase 23-01: directory where the BullMQ worker writes generated PDFs and
-    // where /pdfs static mount serves them. Default works on a dev workstation;
-    // production overrides via .env (e.g. /var/lib/customreport/pdfs).
-    PDF_OUTPUT_DIR: z.string().default('./apps/api/storage/pdfs'),
+    // where /pdfs static mount serves them. Resolved relative to the API's cwd
+    // (apps/api/) at runtime — `./storage/pdfs` lands at `apps/api/storage/pdfs`
+    // regardless of how the dev script is launched. The earlier
+    // `./apps/api/storage/pdfs` default doubled the path when cwd was already
+    // apps/api/, producing a stray `apps/api/apps/api/storage/pdfs`.
+    // Production overrides via .env (e.g. /var/lib/customreport/pdfs).
+    PDF_OUTPUT_DIR: z.string().default('./storage/pdfs'),
     // CC-1 (Phase 28-02): short-lived JWT signed at /trpc entry and injected
     // as cookie into the headless browser so PDF rendering can authenticate
     // against /weekly-report/* routes. Min 16 chars enforced in the service.
