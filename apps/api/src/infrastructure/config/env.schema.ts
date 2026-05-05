@@ -37,6 +37,13 @@ export const envSchema = z
     // where /pdfs static mount serves them. Default works on a dev workstation;
     // production overrides via .env (e.g. /var/lib/customreport/pdfs).
     PDF_OUTPUT_DIR: z.string().default('./apps/api/storage/pdfs'),
+    // CC-1 (Phase 28-02): short-lived JWT signed at /trpc entry and injected
+    // as cookie into the headless browser so PDF rendering can authenticate
+    // against /weekly-report/* routes. Min 16 chars enforced in the service.
+    PDF_EXPORT_JWT_SECRET: z
+      .string()
+      .min(16)
+      .default('dev-only-replace-in-production-min-32-chars'),
   })
   .superRefine((data, ctx) => {
     if (!data.AUTH_DEV_MODE && !data.AUTH_JWT_SECRET) {
