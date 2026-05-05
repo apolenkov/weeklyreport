@@ -68,10 +68,15 @@ services:
       PORT: 3002
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      NODE_ENV: production
+      # 36-03: this is the DEV compose (mailhog catch-all, exposed ports,
+      # dev secrets, AUTH_DEV_MODE on). Production uses docker-compose.prod.yml.
+      # The boot fence in env.schema.ts now refuses to start when both
+      # NODE_ENV=production AND AUTH_DEV_MODE=true; keeping NODE_ENV=development
+      # here matches the actual purpose of this compose.
+      NODE_ENV: development
       FRONTEND_URL: http://localhost:3000
       AUTH_DEV_MODE: "true"
-      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-production-min-32-chars!!}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-development-min-32-chars!!}
       PDF_BASE_URL: http://web:3000
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
