@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: 0/31 (planning, kickoff 2026-05-05)
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: 18/30 (60% — kickoff 2026-05-05)
 
 ---
 
@@ -380,7 +380,7 @@ Full details: [v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md) and [v8.0-REQUIREMEN
 
 **Plans**: 4
 - [x] 36-01-PLAN.md — Rate limiter /auth + /trpc (SEC-01)
-- [ ] 36-02-PLAN.md — Audit-trail extension to all mutations (SEC-02)
+- [x] 36-02-PLAN.md — Audit-trail extension to all mutations (SEC-02)
 - [x] 36-03-PLAN.md — Production fences in env.schema (SEC-03)
 - [x] 36-04-PLAN.md — Multi-origin CORS whitelist + helmet audit (SEC-04)
 
@@ -396,9 +396,9 @@ Full details: [v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md) and [v8.0-REQUIREMEN
 
 **Plans**: 4
 - [ ] 37-01-PLAN.md — OTel HTTP + Prisma instrumentation (OBS-01)
-- [ ] 37-02-PLAN.md — DLQ alert rule + Prometheus counter (OBS-02)
-- [ ] 37-03-PLAN.md — Prometheus scrape config + Grafana skeleton (OBS-03)
-- [ ] 37-04-PLAN.md — Log-sink documentation (OBS-04)
+- [x] 37-02-PLAN.md — DLQ alert rule + Prometheus counter (OBS-02)
+- [x] 37-03-PLAN.md — Prometheus scrape config + Grafana skeleton (OBS-03)
+- [x] 37-04-PLAN.md — Log-sink documentation (OBS-04)
 
 ### Phase 38: Infrastructure & Deploy
 **Goal**: Prod migration init-container, reverse-proxy with auto-TLS, SAML hardening (docs + mock test), RUNBOOK + incident playbook.
@@ -412,7 +412,7 @@ Full details: [v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md) and [v8.0-REQUIREMEN
 
 **Plans**: 4
 - [x] 38-01-PLAN.md — Prod migration init-container (INF-01)
-- [ ] 38-02-PLAN.md — Caddy reverse-proxy + auto-TLS (INF-02)
+- [x] 38-02-PLAN.md — Caddy reverse-proxy + auto-TLS (INF-02)
 - [ ] 38-03-PLAN.md — SAML hardening docs + samlify-mock test (INF-03)
 - [x] 38-04-PLAN.md — RUNBOOK + INCIDENT-PLAYBOOK (INF-04)
 
@@ -427,8 +427,8 @@ Full details: [v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md) and [v8.0-REQUIREMEN
   4. `tests/load/k6-baseline.js` simulates 50 concurrent leads × 5 weeks; p95 < 300ms reads, p95 < 800ms submit; results in `.planning/LOAD-TEST-2026-05.md`.
 
 **Plans**: 4
-- [ ] 39-01-PLAN.md — PgBouncer service in prod compose (PERF-01)
-- [ ] 39-02-PLAN.md — Turbopack experiment (PERF-02)
+- [x] 39-01-PLAN.md — PgBouncer service in prod compose (PERF-01)
+- [x] 39-02-PLAN.md — Turbopack experiment (PERF-02)
 - [ ] 39-03-PLAN.md — pg_stat_statements + index audit (PERF-03)
 - [ ] 39-04-PLAN.md — k6 load test baseline (PERF-04)
 
