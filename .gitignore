@@ -25,3 +25,5 @@ graphify-out/
 apps/api/.logs/
 .logs/
 .next-e2e/
+apps/api/storage/
+

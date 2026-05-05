@@ -4,14 +4,14 @@ import { render, screen } from '@testing-library/react';
 import { ForbiddenPage } from './forbidden-page';
 
 describe('ForbiddenPage (AUTH-07)', () => {
-  it('renders the Access denied heading', () => {
+  it('renders the page-unavailable heading', () => {
     render(<ForbiddenPage requiredRoles={['head']} />);
-    expect(screen.getByText('Access denied')).toBeInTheDocument();
+    expect(screen.getByText(/page unavailable/i)).toBeInTheDocument();
   });
 
   it('renders the required roles label for a single role', () => {
     render(<ForbiddenPage requiredRoles={['head']} />);
-    expect(screen.getByText(/this page requires the head role/i)).toBeInTheDocument();
+    expect(screen.getByText(/reserved for the head role/i)).toBeInTheDocument();
   });
 
   it('joins multiple required roles with " or "', () => {
@@ -19,10 +19,10 @@ describe('ForbiddenPage (AUTH-07)', () => {
     expect(screen.getByText(/head or admin/)).toBeInTheDocument();
   });
 
-  it('renders a return-to-home link pointing at /', () => {
+  it('renders a go-to-dashboard link', () => {
     render(<ForbiddenPage requiredRoles={['head']} />);
-    const link = screen.getByRole('link', { name: /return to home/i });
-    expect(link).toHaveAttribute('href', '/');
+    const link = screen.getByRole('link', { name: /go to dashboard/i });
+    expect(link).toHaveAttribute('href', '/head/dashboard');
   });
 
   it('does NOT leak the user actual role into the DOM (T4)', () => {

@@ -31,14 +31,16 @@ export function ForbiddenPage({ requiredRoles }: ForbiddenPageProps) {
     >
       <Card className="max-w-md">
         <CardHeader>
-          <CardTitle>Access denied</CardTitle>
+          <CardTitle>Page unavailable for your role</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            This page requires the {rolesLabel} role.
+            This page is reserved for the {rolesLabel} role. Switch role from
+            the floating role-switcher (bottom-right) to continue, or head back
+            to the dashboard.
           </p>
           <Button asChild>
-            <Link href="/">Return to home</Link>
+            <Link href="/head/dashboard">Go to dashboard</Link>
           </Button>
         </CardContent>
       </Card>

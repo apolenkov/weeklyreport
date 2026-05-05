@@ -144,8 +144,11 @@ describe('PdfExportProcessor.processJob', () => {
 
     await (processor as any).processJob(job);
 
+    // Phase 33-03: print route lives at /print/[id] (top-level, outside the
+    // (app) route group) so the print viewport doesn't inherit NavBar/DEV
+    // switcher chrome — see commit d45e5b2.
     expect(mockPage.goto).toHaveBeenCalledWith(
-      'http://localhost:3000/reports/report-1/print',
+      'http://localhost:3000/print/report-1',
       { waitUntil: 'networkidle' },
     );
   });

@@ -276,7 +276,7 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     expect(toastError).toHaveBeenCalled();
   });
 
-  it('clicking Reopen Period fires period.reopen with reportId when periodStatus is published', async () => {
+  it('clicking Reopen Period (via confirm dialog) fires period.reopen with reportId when periodStatus is published', async () => {
     const captured: Captured = {
       publishMutationFn: vi.fn(),
       reopenMutationFn: vi.fn().mockResolvedValue(undefined),
@@ -284,8 +284,13 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     };
     renderPage(makeWeeklyReportData('published'), captured);
 
+    // Reopen is now destructive → goes through ConfirmDeleteDialog.
     const reopenBtn = await screen.findByRole('button', { name: /reopen period/i });
     await userEvent.click(reopenBtn);
+
+    // Confirm dialog renders with a "Reopen" button (label set via confirmLabel="Reopen").
+    const confirmBtn = await screen.findByRole('button', { name: /^reopen$/i });
+    await userEvent.click(confirmBtn);
 
     await waitFor(() => {
       expect(captured.reopenMutationFn).toHaveBeenCalledTimes(1);

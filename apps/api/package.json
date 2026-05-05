@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit -p tsconfig.json && eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run --exclude '**/*.integration.test.ts' --exclude '**/*.eval.test.ts'",
+    "test": "vitest run --exclude '**/*.integration.test.ts' --exclude '**/*.eval.test.ts' --exclude '**/dist/**'",
     "test:ai-eval": "vitest run --reporter=verbose src/modules/ai/__tests__/golden-set.eval.test.ts",
     "test:integration": "vitest run --reporter=verbose --fileParallelism=false src/modules/report-sections/report-sections.integration.test.ts src/modules/review/review.integration.test.ts src/modules/publication/publication.integration.test.ts src/modules/admin/admin.integration.test.ts src/modules/archive/archive.integration.test.ts src/modules/carry-over/carry-over.integration.test.ts src/modules/pdf-export/pdf-export.integration.test.ts src/modules/reminders/reminders.integration.test.ts",
     "db:generate": "prisma generate --schema=../../prisma/schema.prisma",

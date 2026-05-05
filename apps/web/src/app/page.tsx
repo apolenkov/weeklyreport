@@ -1,17 +1,18 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
 
-const stubRoles = [
-  { label: 'Enter as Lead', redirect: '/lead/report', icon: '📝' },
-  { label: 'Enter as Head', redirect: '/head/dashboard', icon: '👔' },
-  { label: 'Enter as Admin', redirect: '/admin', icon: '⚙️' },
-  { label: 'Enter as Viewer', redirect: '/reports/history', icon: '👁' },
-] as const;
-
+// Phase 33-04: dev-mode landing simplified to a single "Enter" affordance.
+// The previous role grid (4 buttons) was redundant — the global DEV role
+// switcher (right-side floating button, mounted in `(app)/layout.tsx`) lets
+// the user swap identity at any time. Default entry is admin because admin
+// inherits access to /head/* and /lead/* via SSR layout gates, so the user
+// can navigate the whole app without re-authenticating.
 const DEFAULT_REDIRECT = '/head/dashboard';
+const DEV_DEFAULT_LOGIN = `/auth/dev-login?role=admin&email=admin@customreport.local&redirect=${encodeURIComponent(DEFAULT_REDIRECT)}`;
 
 /**
  * Reject open-redirect attempts. The `next` query param must be a same-origin
@@ -36,6 +37,21 @@ export default function LoginPage() {
     safeNext === DEFAULT_REDIRECT
       ? '/auth/saml/login'
       : `/auth/saml/login?next=${encodeURIComponent(safeNext)}`;
+
+  // In dev/stub mode, auto-redirect to dev-login as admin so the user lands
+  // straight on /head/dashboard. The global role switcher handles role swaps
+  // afterwards. ?stay=1 lets the maintainer hit the landing page intentionally
+  // (e.g., to verify the page itself didn't regress) without auto-redirecting.
+  const stayOnLanding = searchParams?.get('stay') === '1';
+  useEffect(() => {
+    if (AUTH_STUB && !stayOnLanding) {
+      const target =
+        safeNext === DEFAULT_REDIRECT
+          ? DEV_DEFAULT_LOGIN
+          : `/auth/dev-login?role=admin&email=admin@customreport.local&redirect=${encodeURIComponent(safeNext)}`;
+      window.location.replace(target);
+    }
+  }, [safeNext, stayOnLanding]);
 
   return (
     <main id="main-content" className="flex min-h-svh">
@@ -97,70 +113,26 @@ export default function LoginPage() {
             Weekly Status Reporting System
           </p>
 
-          {/* SSO button — or direct entry when stub */}
-          {AUTH_STUB ? (
-            <div className="space-y-3">
-              <a
-                href={safeNext}
-                className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-all hover:bg-[var(--color-primary)] hover:-translate-y-px"
-                style={{
-                  minHeight: '52px',
-                  boxShadow: '0 2px 12px rgba(0,98,65,0.2)',
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                  <polyline points="10 17 15 12 10 7" />
-                  <line x1="15" y1="12" x2="3" y2="12" />
-                </svg>
-                Enter Application
-              </a>
-
-              <div className="flex items-center gap-3 py-2">
-                <div className="h-px flex-1 bg-[#ece8e2]" />
-                <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                  or select role
-                </span>
-                <div className="h-px flex-1 bg-[#ece8e2]" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                {stubRoles.map(({ label, redirect, icon }) => {
-                  // When ?next= is explicitly provided, all role buttons honor it.
-                  // Otherwise each button uses its role's natural landing page.
-                  const href = safeNext === DEFAULT_REDIRECT ? redirect : safeNext;
-                  return (
-                    <a
-                      key={label}
-                      href={href}
-                      className="flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-2.5 text-[13px] font-medium text-[var(--color-foreground)] transition-all hover:border-[rgba(0,0,0,0.24)] hover:bg-[#f8f6f2]"
-                      style={{ minHeight: '44px' }}
-                    >
-                      <span>{icon}</span>
-                      {label}
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <a
-              href={ssoHref}
-              className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-all hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"
-              style={{
-                minHeight: '52px',
-                boxShadow: '0 2px 12px rgba(0,98,65,0.2)',
-              }}
-              aria-label="Sign in with corporate SSO"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                <polyline points="10 17 15 12 10 7" />
-                <line x1="15" y1="12" x2="3" y2="12" />
-              </svg>
-              Sign in with SSO
-            </a>
-          )}
+          {/* Single entry button. In dev/stub mode the useEffect above auto-
+              redirects on mount, so this button is rarely seen — it shows
+              when (a) production SSO is in play, or (b) ?stay=1 was passed
+              for dev-mode debugging of the landing page itself. */}
+          <a
+            href={AUTH_STUB ? DEV_DEFAULT_LOGIN : ssoHref}
+            className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-all hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"
+            style={{
+              minHeight: '52px',
+              boxShadow: '0 2px 12px rgba(0,98,65,0.2)',
+            }}
+            aria-label={AUTH_STUB ? 'Enter application' : 'Sign in with corporate SSO'}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            {AUTH_STUB ? 'Enter Application' : 'Sign in with SSO'}
+          </a>
 
           <p className="mt-6 text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
             Keycloak · SAML 2.0 · Corporate SSO

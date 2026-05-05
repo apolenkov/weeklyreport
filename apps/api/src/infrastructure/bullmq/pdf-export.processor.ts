@@ -88,8 +88,10 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
 
       // Phase 23-01: resolve to an absolute path so the API's express.static
       // mount on /pdfs (apps/api/src/main.ts) and this worker write to the
-      // same directory regardless of the process cwd.
-      const outputDir = resolve(process.env['PDF_OUTPUT_DIR'] ?? './apps/api/storage/pdfs');
+      // same directory regardless of the process cwd. Default is relative to
+      // the API package cwd (apps/api/) — see env.schema.ts for the same
+      // anti-double-path rationale.
+      const outputDir = resolve(process.env['PDF_OUTPUT_DIR'] ?? './storage/pdfs');
       mkdirSync(outputDir, { recursive: true });
 
       const filePath = join(outputDir, `${jobId}.pdf`);
