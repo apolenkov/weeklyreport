@@ -14,6 +14,28 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     globals: false,
     exclude: ['e2e/**', 'node_modules/**'],
+    // 34-02: coverage floors. Web has more UI code than tests can drive
+    // without a full E2E layer, so the bar is lower than api. Threshold
+    // raised over time as Phase 35 plans add component-level tests.
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'html'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/__tests__/**',
+        'src/**/types.ts',
+        'src/app/**/layout.tsx',
+        'src/app/**/page.tsx', // RSC pages exercised via E2E, not unit
+      ],
+      thresholds: {
+        statements: 70,
+        branches: 60,
+        functions: 70,
+        lines: 70,
+      },
+    },
   },
   resolve: {
     alias: {
