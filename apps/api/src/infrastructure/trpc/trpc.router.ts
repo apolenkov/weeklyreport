@@ -427,6 +427,24 @@ export function createAppRouter(deps: RouterDeps) {
         }
       }),
 
+      // Per-project assignment count for the products-tab "X/7 stages"
+      // header. Light query (single GROUP BY) so we can render the count
+      // without loading every assignment row.
+      listStageAssignmentCounts: headProcedure.query(async () => {
+        try {
+          const rows = await deps.prisma.stageAssignment.groupBy({
+            by: ['projectId'],
+            _count: { _all: true },
+          });
+          return rows.map((r) => ({
+            projectId: r.projectId,
+            count: r._count._all,
+          }));
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
       // NOTIF-06 (Phase 29-05): BullMQ DLQ count — failed-jobs set of the
       // email-reminder queue. headProcedure (admin/head only — D-AUTH-03).
       // Returns { count: 0 } when the Queue handle is absent (e.g. unit test
