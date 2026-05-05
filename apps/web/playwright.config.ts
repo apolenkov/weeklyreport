@@ -19,7 +19,12 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? 'github' : 'html',
+  // 34-07: dual reporter in CI — `github` for inline annotations on PRs, +
+  // `json` written to `e2e/.results/results.json` so the flaky-rate metric
+  // step can compute passed-on-retry / total. Local dev keeps the html UI.
+  reporter: process.env.CI
+    ? [['github'], ['json', { outputFile: 'e2e/.results/results.json' }]]
+    : 'html',
   use: {
     baseURL: WEB_URL,
     trace: 'on-first-retry',

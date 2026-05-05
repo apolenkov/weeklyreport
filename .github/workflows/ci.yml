@@ -187,6 +187,22 @@ jobs:
           path: test-results/
           retention-days: 14
 
+      # 34-07: per-spec flaky-rate metric (passed-on-retry / total).
+      # Doesn't fail the build — just surfaces the trend.
+      - name: Compute flaky-rate metric
+        if: ${{ !cancelled() }}
+        run: node scripts/flaky-rate.mjs
+
+      - name: Upload flaky-rate metric
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-rate
+          path: |
+            apps/web/e2e/.results/flaky-rate.md
+            apps/web/e2e/.results/flaky-rate.json
+          retention-days: 30
+
   # ------------------------------------------------------------------
   # Job 2b: Prisma migrate-reset gate (34-04)
   # ------------------------------------------------------------------
