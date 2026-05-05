@@ -7,6 +7,11 @@ export const envSchema = z
     PORT: z.coerce.number().int().positive().default(3001),
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+    // 36-04: optional CSV of additional allowed origins for CORS. Lets
+    // prod accept e.g. customreport.example.com + admin.customreport.
+    // example.com from the same API instance. Wildcards (*) are rejected
+    // in superRefine when NODE_ENV=production.
+    FRONTEND_URLS: z.string().optional(),
     AUTH_DEV_MODE: z.string().default('false').transform((v) => v === 'true'),
     LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
     LOG_DIR: z.string().optional(),
@@ -56,6 +61,37 @@ export const envSchema = z
         message: 'AUTH_JWT_SECRET is required when AUTH_DEV_MODE is not true (min 32 chars)',
         path: ['AUTH_JWT_SECRET'],
       });
+    }
+
+    // 36-03: production fences. Boot must fail if any of these aren't met.
+    if (data.NODE_ENV === 'production') {
+      if (data.AUTH_DEV_MODE) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'AUTH_DEV_MODE=true is forbidden when NODE_ENV=production',
+          path: ['AUTH_DEV_MODE'],
+        });
+      }
+      if (data.PDF_EXPORT_JWT_SECRET === 'dev-only-replace-in-production-min-32-chars') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'PDF_EXPORT_JWT_SECRET must be overridden in production (default dev value detected)',
+          path: ['PDF_EXPORT_JWT_SECRET'],
+        });
+      }
+      // FRONTEND_URLS (if set) must not include a wildcard. Wildcards are
+      // a security smell in production CORS — caller could spoof origin
+      // and bypass cookie SameSite= protections.
+      if (data.FRONTEND_URLS) {
+        const origins = data.FRONTEND_URLS.split(',').map((s) => s.trim()).filter(Boolean);
+        if (origins.includes('*')) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'FRONTEND_URLS must not include "*" in production',
+            path: ['FRONTEND_URLS'],
+          });
+        }
+      }
     }
   });
 
