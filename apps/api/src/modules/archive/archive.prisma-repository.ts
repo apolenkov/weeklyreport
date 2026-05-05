@@ -77,7 +77,9 @@ export class ArchivePrismaRepository implements ArchiveRepository {
 }
 
 function computePortfolioOverview(
-  sections: Array<{ projectStatuses: Array<{ status: string }> }>,
+  // Prisma returns `status: TrafficLightStatus | null`; null statuses
+  // contribute nothing to the totals.
+  sections: Array<{ projectStatuses: Array<{ status: string | null }> }>,
 ): PortfolioOverview {
   const totals = { green: 0, yellow: 0, red: 0 };
 
@@ -103,7 +105,7 @@ function toArchiveSummary(report: {
   periodEnd: Date;
   publishedAt: Date | null;
   publishedBy: { name: string } | null;
-  sections: Array<{ projectStatuses: Array<{ status: string }> }>;
+  sections: Array<{ projectStatuses: Array<{ status: string | null }> }>;
 }): ArchiveReportSummary {
   const portfolio = computePortfolioOverview(report.sections);
 

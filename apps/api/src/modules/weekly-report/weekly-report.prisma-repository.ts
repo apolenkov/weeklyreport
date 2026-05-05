@@ -91,7 +91,9 @@ function buildPortfolioOverview(
     stageAssignments: Array<{ id: string }>;
   }>,
   sections: Array<{
-    projectStatuses: Array<{ projectId: string; status: string }>;
+    // Prisma returns `status: TrafficLightStatus | null`; null statuses
+    // skip the totals.
+    projectStatuses: Array<{ projectId: string; status: string | null }>;
     authorId: string;
     author: { name: string };
   }>,
@@ -102,7 +104,10 @@ function buildPortfolioOverview(
 
     for (const section of sections) {
       for (const ps of section.projectStatuses) {
-        if (ps.projectId === project.id) {
+        // null status = lead hasn't filled the traffic light for this
+        // project yet; skip it so the worst-of computation isn't muddied
+        // by missing data.
+        if (ps.projectId === project.id && ps.status !== null) {
           statuses.push(ps.status);
           leadNameSet.add(section.author.name);
         }
@@ -153,9 +158,10 @@ function buildEscalations(
   sections: Array<{
     authorId: string;
     author: { name: string };
+    // Prisma yields `status: TrafficLightStatus | null`; null skips the row.
     projectStatuses: Array<{
       projectId: string;
-      status: string;
+      status: string | null;
       project: { id: string; name: string };
     }>;
     items: Array<{

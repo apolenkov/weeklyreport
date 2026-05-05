@@ -45,6 +45,12 @@ function makeVersions(count: number): VersionSnapshot[] {
     reportSectionId: sectionId,
     version: i + 1,
     createdAt: new Date(`2026-04-${String(10 + i).padStart(2, '0')}T12:00:00.000Z`),
+    // VersionSnapshot schema gained itemCount/riskCount/decisionCount when the
+    // server started computing per-snapshot diffs (Phase 22+). Fixtures use
+    // zero so these tests stay focused on ordering and persistence semantics.
+    itemCount: 0,
+    riskCount: 0,
+    decisionCount: 0,
   }));
 }
 
