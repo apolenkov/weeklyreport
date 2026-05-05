@@ -29,41 +29,60 @@ customreport/
 
 ## Quick Start
 
-```bash
-# Prerequisites: Node.js 20+, pnpm 10+, Docker
+Prerequisites: **Node.js 20+**, **pnpm 10+**, **Docker Desktop**.
 
+```bash
 # 1. Install dependencies
 pnpm install
 
-# 2. Start infrastructure
-docker compose up postgres redis -d
+# 2. Copy env template (root .env is the single source of truth — both apps read it)
+cp .env.example .env
+cp apps/web/.env.example apps/web/.env.local
 
-# 3. Run migrations and seed
-DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport" \
-  npx prisma migrate deploy --schema prisma/schema.prisma
-DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport" \
-  node --experimental-strip-types prisma/seed.ts
+# 3. Start infrastructure (postgres + redis + mailhog)
+docker compose up -d postgres redis mailhog
 
-# 4. Start development servers
-# Terminal 1 — API (port 3001)
-DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport" \
-AUTH_DEV_MODE=true AUTH_JWT_SECRET="local-dev-secret-minimum-32-characters-long!!" \
-REDIS_HOST=localhost REDIS_PORT=6379 FRONTEND_URL=http://localhost:3000 PORT=3001 \
-pnpm -F @customreport/api dev
+# 4. Run migrations and seed (uses .env automatically)
+pnpm exec prisma migrate deploy
+pnpm exec prisma db seed
 
-# Terminal 2 — Web (port 3000)
-NEXT_PUBLIC_API_URL=http://localhost:3001 pnpm -F @customreport/web dev
-
-# 5. Open http://localhost:3000
+# 5. Start both dev servers (turbo --parallel)
+pnpm dev
 ```
 
-In dev mode (`AUTH_DEV_MODE=true`) no login is needed — you are automatically authenticated as **head** user. To switch roles, navigate to:
+Open http://localhost:3000.
 
-| Role | URL | What you see |
-|------|-----|-------------|
-| Lead | `/auth/dev-login?role=lead` | My Report form (fill and submit) |
-| Head | `/auth/dev-login?role=head` | Dashboard, Assembled Report, Admin Panel |
-| Viewer | `/auth/dev-login?role=viewer` | Report History (read-only) |
+The web app runs in webpack mode by default — Next 16.2.3's Turbopack hits a runaway rebuild loop on this monorepo, so `apps/web/package.json`'s `dev` script pins `next dev --webpack` until the upstream regression is fixed.
+
+### Sign in (dev mode)
+
+`AUTH_DEV_MODE=true` enables `/auth/dev-login` — visit a URL below to set the JWT cookie and be redirected to the role's home page:
+
+| Role | URL |
+|------|-----|
+| Head | `/auth/dev-login?role=head` |
+| Lead — **Olga** (Week 16 draft) | `/auth/dev-login?role=lead&email=olga@customreport.local` |
+| Lead — Platanov (Week 16 submitted) | `/auth/dev-login?role=lead&email=platanov@customreport.local` |
+| Lead — Sergey (Week 16 draft) | `/auth/dev-login?role=lead&email=sergey@customreport.local` |
+| Admin | `/auth/dev-login?role=admin` |
+| Viewer | `/auth/dev-login?role=viewer` |
+
+Without `&email=...` the `lead` role lands on a synthetic `lead1@customreport.local` user that has no projects or sections — pass an email of a seeded lead (Dmitry, Igor, Maria, **Olga**, Platanov, Sergey) to actually see data.
+
+### Dev-only tools
+
+- **Role switcher** — `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` in `apps/web/.env.local` reveals a yellow "DEV: switch role" button at bottom-right of every authenticated page. Drops a dropdown to swap identity, wipe & reseed, or log out without retyping URLs.
+- **MailHog** — outbound email goes to a local catch-all SMTP. UI at http://localhost:8025 shows every reminder/escalation rendered as HTML.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Web binds to :3001, not :3000 | Something else holds :3000. Free it (`lsof -nP -iTCP:3000 -sTCP:LISTEN`) and confirm `.env` has `FRONTEND_URL=http://localhost:3000`. |
+| `next-server` eats >500% CPU and `.next/dev/trace` keeps growing | Next 16.2.3 Turbopack regression. Already mitigated via `--webpack` flag in `apps/web/package.json`; if it returns, kill `next dev`, `rm -rf apps/web/.next`, and restart. |
+| `PDF_EXPORT_JWT_SECRET is missing or too short` on PDF export | The Zod schema in `apps/api/src/infrastructure/config/env.schema.ts` carries a dev default — confirm the new `apps/api/src/main.ts` line `process.env['PDF_EXPORT_JWT_SECRET'] ??= env.PDF_EXPORT_JWT_SECRET;` is present. Otherwise add to `.env`. |
+| `prisma migrate reset` blocked by AI-safety guard | Re-run with `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=да` (Prisma 7 ai-fence). |
+| `Cannot find module '@nestjs/schedule'` | Lockfile drift after partial install — run `pnpm install` from the repo root. |
 
 ## Pages
 
@@ -119,17 +138,22 @@ DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport" \
 
 ## Environment Variables
 
+Single source of truth: root `.env` (loaded by api via `--env-file=../../.env`) and `apps/web/.env.local` (read by Next.js for `NEXT_PUBLIC_*`). See `.env.example` and `apps/web/.env.example` for the full list.
+
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string |
 | `REDIS_HOST` | Yes | localhost | Redis host |
 | `REDIS_PORT` | Yes | 6379 | Redis port |
-| `AUTH_DEV_MODE` | No | false | Enable dev-login endpoint |
-| `AUTH_JWT_SECRET` | Yes | — | JWT signing secret (min 32 chars) |
-| `AUTH_JWT_COOKIE_NAME` | No | customreport_session | Cookie name |
-| `FRONTEND_URL` | Yes | — | Web app URL (for CORS and redirects) |
-| `PORT` | No | 3001 | API server port |
-| `NEXT_PUBLIC_API_URL` | Yes | — | API URL for tRPC client (used by Next.js rewrites) |
+| `AUTH_DEV_MODE` | No | false | Enable `/auth/dev-login` endpoint |
+| `AUTH_JWT_SECRET` | Yes (prod) | — | Session JWT signing secret (min 32 chars) |
+| `PDF_EXPORT_JWT_SECRET` | No | dev default | Short-lived JWT signed at PDF export entry, injected as cookie into the headless browser. Min 16 chars. |
+| `FRONTEND_URL` | Yes | http://localhost:3000 | Web app URL (CORS allowlist + post-auth redirects) |
+| `PORT` | No | 3002 | API server port |
+| `LOG_LEVEL` | No | info | `debug`/`info`/`warn`/`error` (debug enables tRPC envelope shape breadcrumbs) |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_FROM` | No | — | When set, real SMTP send. With MailHog: `localhost:1025`. |
+| `NEXT_PUBLIC_API_URL` | Yes (web) | http://localhost:3002 | tRPC client base URL |
+| `NEXT_PUBLIC_DEV_ROLE_SWITCHER` | No | false | Show the bottom-right DEV identity dropdown |
 
 ## Local development with mock Keycloak
 
