@@ -12,6 +12,7 @@ import { ProductsTab } from './products-tab';
 import { PeriodsTab } from './periods-tab';
 import { RemindersTab } from './reminders-tab';
 import { SettingsTab } from './settings-tab';
+import { ReopenTab } from './reopen-tab';
 import { AdminTabSkeleton } from './admin-skeleton';
 
 type AdminPanelProps = {
@@ -57,6 +58,12 @@ export function AdminPanel({ activeTab }: AdminPanelProps) {
       return <AdminTabSkeleton variant="form" />;
     }
     return <SettingsTab settings={settings} />;
+  }
+
+  // Reopen tab is self-contained — it owns its own queries, doesn't need
+  // the snapshot/settings context that the other tabs share.
+  if (activeTab === 'reopen') {
+    return <ReopenTab />;
   }
 
   if (!data) {

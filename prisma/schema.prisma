@@ -66,22 +66,33 @@ enum PeriodStatus {
   reopened
 }
 
+// Reopen-request lifecycle. Lead asks Head to unlock a submitted section;
+// Head approves (section → draft) or rejects (status stays submitted, note
+// optional).
+enum ReopenRequestStatus {
+  pending
+  approved
+  rejected
+}
+
 model User {
-  id                     String            @id @default(uuid())
-  email                  String            @unique
-  name                   String
-  role                   Role
-  samlId                 String            @unique
+  id                       String            @id @default(uuid())
+  email                    String            @unique
+  name                     String
+  role                     Role
+  samlId                   String            @unique
   // NOTIF-05 (Phase 29-05): per-user opt-out for kind='deadline' reminders.
   // Honoured by RemindersService.requestReminderExecution before enqueueing.
   // kind='escalation' bypasses this flag — heads must always be notified.
-  notificationOptOut     Boolean           @default(false)
-  authoredReportSections ReportSection[]   @relation("ReportSectionAuthor")
-  ledProjects            Project[]
-  publishedReports       Report[]          @relation("PublishedBy")
-  stageAssignments       StageAssignment[]
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
+  notificationOptOut       Boolean           @default(false)
+  authoredReportSections   ReportSection[]   @relation("ReportSectionAuthor")
+  ledProjects              Project[]
+  publishedReports         Report[]          @relation("PublishedBy")
+  stageAssignments         StageAssignment[]
+  reopenRequestsRequested  ReopenRequest[]   @relation("ReopenRequester")
+  reopenRequestsReviewed   ReopenRequest[]   @relation("ReopenReviewer")
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
 }
 
 model Project {
@@ -135,6 +146,7 @@ model ReportSection {
   decisions        Decision[]
   priorities       Priority[]
   versionSnapshots VersionSnapshot[]
+  reopenRequests   ReopenRequest[]
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
@@ -320,6 +332,28 @@ model StageAssignment {
 
   @@unique([userId, stageId, projectId])
   @@index([projectId])
+}
+
+// Reopen request — Lead asks Head to unlock a submitted section. Created
+// from the form's "Request Reopen" button; surfaced in Admin Panel "Reopen
+// Requests" tab so Head can approve (section → draft) or reject (note).
+model ReopenRequest {
+  id              String              @id @default(uuid())
+  reportSectionId String
+  requestedById   String
+  reason          String?
+  status          ReopenRequestStatus @default(pending)
+  reviewedById    String?
+  reviewedAt      DateTime?
+  reviewNote      String?
+  reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  requestedBy     User                @relation("ReopenRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  reviewedBy      User?               @relation("ReopenReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([status, createdAt])
+  @@index([reportSectionId])
 }
 
 // v4.0: Application settings singleton (D-68)

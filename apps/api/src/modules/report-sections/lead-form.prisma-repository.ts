@@ -289,11 +289,17 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     userId: string,
     reason?: string,
   ): Promise<void> {
-    // Log the reopen request — no dedicated table yet.
-    // In production this would create a notification record for the head.
-    console.log(
-      `[ReopenRequest] section=${sectionId} user=${userId} reason=${reason ?? 'none'}`,
-    );
+    // Persist the request as a ReopenRequest row so Head can review it from
+    // the Admin Panel "Reopen Requests" tab. Status starts at `pending`; the
+    // head's response (approve/reject) updates the row + may flip the
+    // section back to draft when approved.
+    await this.prisma.reopenRequest.create({
+      data: {
+        reportSectionId: sectionId,
+        requestedById: userId,
+        reason: reason && reason.trim().length > 0 ? reason.trim() : null,
+      },
+    });
   }
 
   async createVersionSnapshot(sectionId: string): Promise<void> {
