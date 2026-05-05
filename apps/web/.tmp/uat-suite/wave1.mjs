@@ -178,10 +178,18 @@ await runTest('LEAD-W1-15', async () => {
   const id = 'LEAD-W1-15';
   const page = await ctx.newPage();
   await loginAs(page, ACCOUNTS.olga.role, ACCOUNTS.olga.email);
-  await page.waitForLoadState('networkidle', { timeout: 15000 });
+  await page.waitForSelector('h1:has-text("My Report")', { timeout: 15000 });
+  // Priorities accordion starts collapsed; expand it so the + Add Priority
+  // button renders before we look for it.
+  const priorityHeader = page.locator('button[aria-expanded][aria-controls]', { hasText: /Priorities/i }).first();
+  if ((await priorityHeader.count()) > 0) {
+    await priorityHeader.click({ force: true }).catch(() => {});
+    await page.waitForTimeout(400);
+  }
   const addPriority = page.getByRole('button', { name: /\+ Add Priority/i }).first();
-  if ((await addPriority.count()) === 0) { fail(id, 'No + Add Priority button'); throw 0; }
-  await addPriority.click();
+  await addPriority.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+  if ((await addPriority.count()) === 0) { fail(id, 'No + Add Priority button after expanding section'); throw 0; }
+  await addPriority.click({ force: true });
   await page.waitForTimeout(500);
   await shot(page, id);
   const dialog = page.getByRole('dialog');
@@ -314,8 +322,8 @@ await runTest('REV-W1-01', async () => {
 
 await runTest('REV-W1-06', async () => {
   const id = 'REV-W1-06';
-  const reportId = pgQuery(`SELECT id FROM "Report" WHERE status='published' ORDER BY "periodStart" DESC AND status='published' LIMIT 1`);
-  if (!reportId || reportId.startsWith('ERROR')) { fail(id, 'No published Week 15'); throw 0; }
+  const reportId = pgQuery(`SELECT id FROM "Report" WHERE status='published' ORDER BY "periodStart" DESC LIMIT 1`);
+  if (!reportId || reportId.startsWith('ERROR')) { fail(id, 'No published report found'); throw 0; }
   const beforeJobs = pgInt(`SELECT COUNT(*) FROM "PdfExportJob" WHERE "reportId"='${reportId}'`);
   const page = await ctx.newPage();
   await loginAs(page, ACCOUNTS.head.role);

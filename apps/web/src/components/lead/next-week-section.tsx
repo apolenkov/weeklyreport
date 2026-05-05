@@ -141,7 +141,7 @@ export function NextWeekSection({
 
   return (
     <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, 1fr)` }}>
+      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(0, 1fr))` }}>
         {columns.map((col) => (
           <div key={col.key}>
             <div className="mb-3 flex items-center gap-2">

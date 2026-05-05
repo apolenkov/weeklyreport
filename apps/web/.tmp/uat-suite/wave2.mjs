@@ -55,7 +55,7 @@ await runTest('E-04', async () => {
   if (ruleCount === 0) {
     note('E-04: no active rules already → use this state');
   } else {
-    pgQuery(`UPDATE "ReminderRule" SET status='inactive'::"ReminderRuleStatus" WHERE status='active'`);
+    pgQuery(`UPDATE "ReminderRule" SET status='paused'::"ReminderRuleStatus" WHERE status='active'`);
   }
   await fetch(`${MAILHOG}/api/v1/messages`, { method: 'DELETE' }).catch(() => {});
   const page = await ctx.newPage();
