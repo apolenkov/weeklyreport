@@ -311,23 +311,26 @@ async function main() {
   // realistic items that read like a working tech-team's weekly status. Sergey
   // is intentionally empty so the dashboard's "pending" KPI has a non-zero
   // bucket (Sergey's section shows 'pending' instead of 'draft').
+  // Item texts in Russian. Product context comes from the item's projectId
+  // relation — we don't repeat the product name in the text itself (UI shows
+  // it in the section header).
   const itemTextsByLead: Record<string, { current: string[]; next: string[] }> = {
     [LEAD_PLATANOV_ID]: {
       current: [
-        'Закрыли модуль авторизации в CRM Platform — JWT + refresh-token',
+        'Закрыли модуль авторизации — JWT + refresh-token',
         'Подключили OAuth2 партнёрского API, ждём подтверждения от партнёра',
         'Оптимизировали поиск клиентов: p99 query 850ms → 180ms',
         'Webhook retry с экспоненциальным backoff, dead-letter в Redis',
       ],
       next: [
-        'Интеграция SSO с Partner Portal (на стороне Олги)',
-        'Раскатка A/B-тестинг фреймворка на Data Analytics Suite',
+        'Интеграция SSO с порталом клиента (на стороне Ольги)',
+        'Раскатка A/B-тестинг фреймворка',
       ],
     },
     [LEAD_MARIA_ID]: {
       current: [
-        'QA транзакционного флоу Mobile Banking — закрыли 12 из 15 кейсов',
-        'Регресс-сьют чекаута E-Commerce, добавили smoke-тесты для прод',
+        'QA транзакционного флоу — закрыли 12 из 15 кейсов',
+        'Регресс-сьют чекаута, добавили smoke-тесты для прода',
         'Contract-тесты с провайдером платежей, нашли 2 расхождения по схеме',
       ],
       next: [
@@ -338,7 +341,7 @@ async function main() {
     [LEAD_IGOR_ID]: {
       current: [
         'Тюнинг pool_size в PgBouncer: 40 → 80, p99 latency упало на 22%',
-        'GPU autoscaling для AI/ML Pipeline на базе HPA + custom metrics',
+        'GPU autoscaling на базе HPA + custom metrics',
         'Обновили DR-runbook: добавили checklist для multi-region failover',
       ],
       next: [
@@ -349,7 +352,7 @@ async function main() {
       current: [
         'Миграция CI/CD на GitHub Actions: 8 из 12 пайплайнов уже там',
         'Интеграция security scanner в pre-merge — блокирует Critical/High',
-        'Тюнинг WAF-правил для Security Gateway, ложных срабатываний -40%',
+        'Тюнинг WAF-правил, ложных срабатываний −40%',
         'Baseline-скан уязвимостей контейнеров, отчёт собран по 17 образам',
       ],
       next: [
@@ -359,13 +362,13 @@ async function main() {
     },
     [LEAD_OLGA_ID]: {
       current: [
-        'Закрыли интеграцию 3DS v2 на Payment Processing — пилот на 5% трафика',
-        'Перевели Partner Portal на короткие сессии (refresh-токен 24 ч)',
+        'Закрыли интеграцию 3DS v2 — пилот на 5% трафика',
+        'Перевели на короткие сессии (refresh-токен 24 ч)',
         'Починили двойное списание при timeout — добавили idempotency-key через Redis',
       ],
       next: [
-        'Подключить СБП-эквайринг к Payment Processing (sandbox-ключи ожидаются 8 мая)',
-        'Biometric-вход в мобильный Partner Portal — закрыть acceptance с UX',
+        'Подключить СБП-эквайринг (sandbox-ключи ожидаются 8 мая)',
+        'Biometric-вход — закрыть acceptance с UX',
       ],
     },
     [LEAD_SERGEY_ID]: {
@@ -500,6 +503,8 @@ async function main() {
     // Priorities (3 per submitted lead section; Olga gets 2; Sergey 0).
     // Russian content matching the items above so the demo report reads as a
     // single coherent week, not unrelated bullet lists.
+    // Priorities — what the lead wants from the head this week. Product
+    // context implicit (head sees the lead's section as a whole).
     const priorityTexts = (() => {
       if (cfg.leadId === LEAD_SERGEY_ID) return [];
       if (cfg.leadId === LEAD_OLGA_ID) {
@@ -510,29 +515,29 @@ async function main() {
       }
       if (cfg.leadId === LEAD_PLATANOV_ID) {
         return [
-          'Закрыть OAuth2 интеграцию с CRM Platform (партнёр снял rate-limit)',
-          'Передать SSO flow на сторону Partner Portal к четвергу',
-          'Выкатить MVP дашборда Data Analytics Suite на staging',
+          'Закрыть OAuth2 интеграцию (партнёр снял rate-limit)',
+          'Передать SSO flow смежной команде к четвергу',
+          'Выкатить MVP дашборда на staging',
         ];
       }
       if (cfg.leadId === LEAD_MARIA_ID) {
         return [
-          'Подписать регресс-сьют Mobile Banking (15/15 кейсов зелёных)',
-          'Стабилизировать чекаут E-Commerce — закрыть последние 3 P2-бага',
+          'Подписать регресс-сьют (15/15 кейсов зелёных)',
+          'Стабилизировать чекаут — закрыть последние 3 P2-бага',
           'Завести контракт-тесты с провайдером платежей в CI',
         ];
       }
       if (cfg.leadId === LEAD_IGOR_ID) {
         return [
           'Закатить новый pool_size PgBouncer на прод после dry-run',
-          'Подтвердить GPU autoscaling AI/ML Pipeline на нагрузочном тесте',
+          'Подтвердить GPU autoscaling на нагрузочном тесте',
           'Опубликовать обновлённый DR-runbook для дежурных',
         ];
       }
       // Dmitry
       return [
         'Финализировать миграцию CI/CD на GitHub Actions (4 пайплайна осталось)',
-        'Раскатать тюнинг WAF Security Gateway после shadow-mode валидации',
+        'Раскатать тюнинг WAF после shadow-mode валидации',
         'Автоматизировать ротацию секретов через Vault transit',
       ];
     })();
@@ -574,7 +579,7 @@ async function main() {
       reportSectionId: platanovSec,
       projectId: 'a0000000-0000-4000-8000-000000000201', // CRM Platform
       risk: 'Партнёрский OAuth2 API режет нас по rate-limit на пиковом трафике',
-      impact: 'Сдвигает milestone SSO portal на 1 неделю, блокирует Partner Portal',
+      impact: 'Сдвигает milestone SSO на 1 неделю, блокирует смежную команду',
       mitigation: 'Эскалирована заявка на расширение квоты, параллельно готовим batch-fallback',
     },
     {
@@ -582,7 +587,7 @@ async function main() {
       reportSectionId: platanovSec,
       projectId: 'a0000000-0000-4000-8000-000000000202', // Data Analytics Suite
       risk: 'Memory leak в ETL — OOM на больших экстрактах (>2M строк)',
-      impact: 'Блокирует релиз Analytics до получения патча от вендора',
+      impact: 'Блокирует релиз до получения патча от вендора',
       mitigation: 'Патч ETA 8 мая, временно перешли на chunked extraction по 500K',
     },
     {
