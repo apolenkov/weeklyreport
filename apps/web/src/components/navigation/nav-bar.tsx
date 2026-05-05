@@ -25,8 +25,8 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   { href: '/lead/report', label: 'My Report' },
   { href: '/lead/history', label: 'History' },
   { href: '/head/dashboard', label: 'Dashboard' },
-  { href: '/head/report', label: 'Weekly Report' },
-  { href: '/reports/history', label: 'Published reports' },
+  { href: '/head/report', label: 'Weekly' },
+  { href: '/reports/history', label: 'Archive' },
   { href: '/admin', label: 'Admin' },
 ];
 
@@ -207,13 +207,17 @@ export function NavBar() {
           })}
         </nav>
 
-        {/* User identity. Period badge removed from the global chrome — it
-            was contextual noise and belongs on the report pages, not in the
-            nav. Name+role visible from lg+ (1024px); below that the avatar
-            carries the identity signal via aria-label. */}
+        {/* User identity. Right-rail layout strategy:
+            - sm-xl (640-1279px): just the avatar circle (with aria-label for
+              screen readers carrying name + role)
+            - xl+ (1280px+): avatar + "Name · Role" text
+            Was previously lg+ (1024px) but at 1024 with 6 nav-link pills + a
+            longer RU role label ("Глава департамента") the row overflowed
+            ~110px. Bumping the threshold up keeps the chrome tidy while
+            preserving the identity signal at every width via the avatar. */}
         <div className="flex items-center gap-2.5">
           {user && (
-            <div className="hidden items-center gap-2 lg:flex">
+            <div className="hidden items-center gap-2 xl:flex">
               <div
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)]"
                 aria-hidden="true"
@@ -230,8 +234,9 @@ export function NavBar() {
           )}
           {user && (
             <div
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] lg:hidden"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] xl:hidden"
               aria-label={`${user.name} (${roleLabel})`}
+              title={`${user.name} · ${roleLabel}`}
             >
               {initials}
             </div>

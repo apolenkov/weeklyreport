@@ -74,11 +74,11 @@ describe('NavBar — AUTH-06 role-aware visibility (Phase 29-06)', () => {
     expect(screen.queryByRole('link', { name: /^History$/i })).toBeNull();
   });
 
-  it('viewer DOES see /reports/* links (Published reports)', () => {
+  it('viewer DOES see /reports/* links (Archive)', () => {
     setRole('viewer');
     render(<NavBar />);
     // Multiple /reports links may render (desktop + mobile nav) — getAllByRole.
-    const reportsLinks = screen.getAllByRole('link', { name: /Published reports/i });
+    const reportsLinks = screen.getAllByRole('link', { name: /Archive/i });
     expect(reportsLinks.length).toBeGreaterThan(0);
   });
 
@@ -87,7 +87,7 @@ describe('NavBar — AUTH-06 role-aware visibility (Phase 29-06)', () => {
     render(<NavBar />);
     expect(screen.queryByRole('link', { name: /Dashboard/i })).toBeNull();
     expect(screen.getAllByRole('link', { name: /My Report/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link', { name: /Published reports/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /Archive/i }).length).toBeGreaterThan(0);
   });
 
   it('lead does NOT see /admin link', () => {
@@ -106,7 +106,7 @@ describe('NavBar — AUTH-06 role-aware visibility (Phase 29-06)', () => {
     setRole('head');
     render(<NavBar />);
     expect(screen.getAllByRole('link', { name: /Dashboard/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link', { name: /Weekly Report/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /Weekly/i }).length).toBeGreaterThan(0);
   });
 
   it('admin sees /admin link', () => {
