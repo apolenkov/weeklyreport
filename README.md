@@ -27,6 +27,12 @@ customreport/
 | Testing | Vitest 4, Playwright 1.59, @axe-core/playwright |
 | Monorepo | Turborepo 2, pnpm 10 |
 
+## Operating in production
+
+- **[RUNBOOK.md](RUNBOOK.md)** — symptom → cause → fix for the top 10 failure modes
+- **[INCIDENT-PLAYBOOK.md](INCIDENT-PLAYBOOK.md)** — rollback procedure, on-call rotation template, postmortem format
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — local setup, commit conventions, husky hooks, push-guard helper
+
 ## Quick Start
 
 Prerequisites: **Node.js 20+**, **pnpm 10+**, **Docker Desktop**.
