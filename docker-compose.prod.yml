@@ -34,6 +34,48 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # 39-01: PgBouncer in transaction mode fronts Postgres. The api uses this
+  # for runtime tRPC/queue traffic; the migrate init-container bypasses it
+  # via DIRECT_URL (DDL needs session-mode). Pool sized for ~20 concurrent
+  # backend connections supporting ~100 client connections from the API.
+  pgbouncer:
+    image: edoburu/pgbouncer:1.22.1-p2
+    environment:
+      DB_USER: customreport
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: customreport
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-100}
+      DEFAULT_POOL_SIZE: ${PGBOUNCER_POOL_SIZE:-20}
+      RESERVE_POOL_SIZE: ${PGBOUNCER_RESERVE_POOL_SIZE:-5}
+      AUTH_TYPE: scram-sha-256
+      # Prisma (and most ORMs) disable prepared statements when
+      # ?pgbouncer=true is set in the URL; keep this aligned.
+      SERVER_RESET_QUERY: DISCARD ALL
+      LOG_CONNECTIONS: 0
+      LOG_DISCONNECTIONS: 0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U customreport -d customreport"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
@@ -63,7 +105,11 @@ services:
     # entrypoint serves docker-compose AND a future K8s init-container.
     command: ["sh", "apps/api/scripts/migrate.sh"]
     environment:
+      # 39-01: migrate connects DIRECTLY to postgres (bypassing pgbouncer)
+      # because DDL needs session-mode. Both DATABASE_URL and DIRECT_URL
+      # are set so Prisma 7 honors `directUrl` from schema.prisma.
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
+      DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,7 +125,18 @@ services:
       context: .
       dockerfile: Dockerfile.api
     environment:
-      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
+      # 39-01: api connects through pgbouncer (transaction-mode) instead of
+      # postgres directly. The PrismaPg pg-pool adapter (prisma.service.ts)
+      # opens its own per-process pool against pgbouncer; pgbouncer multiplies
+      # those connections into a smaller pool against postgres. The query-string
+      # flags below are no-ops at the Prisma 7 client layer but are kept as
+      # explicit documentation of intent — they also prevent any future tool
+      # that DOES honour them from over-pooling.
+      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@pgbouncer:5432/customreport?pgbouncer=true&connection_limit=1
+      # DIRECT_URL is reserved as an escape hatch for tooling that needs to
+      # bypass pgbouncer (introspection, manual DDL, etc.). Not used at the
+      # Prisma client layer in v7.
+      DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
       REDIS_HOST: redis
       REDIS_PORT: 6379
       NODE_ENV: production
@@ -109,6 +166,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      pgbouncer:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
