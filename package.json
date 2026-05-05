@@ -25,6 +25,9 @@
     "gsd:checklist:sync": "tsx tools/handoff-sync.ts",
     "logs": "tail -f apps/api/.logs/app.log",
     "logs:errors": "tail -f apps/api/.logs/app.log | grep -E '\"level\":\"(error|warn)\"'",
+    "uat:audit": "node apps/web/uat-suite/mutation-audit.mjs",
+    "uat:audit:update": "node apps/web/uat-suite/mutation-audit.mjs --update-allowlist",
+    "uat:inventory": "node apps/web/uat-suite/inventory.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

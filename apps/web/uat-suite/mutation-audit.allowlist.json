@@ -1,0 +1,3 @@
+{
+  "carryOver.execute": "Cron-triggered: copies forward unfinished items week-over-week. No UI consumer; user sees the result as carry-over rows in next week's items."
+}
