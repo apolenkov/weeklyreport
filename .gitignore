@@ -26,4 +26,12 @@ apps/api/.logs/
 .logs/
 .next-e2e/
 apps/api/storage/
+# UAT artifacts: keep the canonical suite scripts in apps/web/.tmp/uat-suite/
+# committed (they document the regression flow) but ignore the binary
+# screenshots, the report markdown, and any ad-hoc probe scripts.
+apps/web/.tmp/uat-screenshots/
+apps/web/.tmp/uat-report.md
+apps/web/.tmp/uat-suite/probe-*.mjs
+# Root-level scratch dir only. Scoped to avoid ignoring nested apps/*/.tmp/uat-suite/.
+/.tmp/
 
