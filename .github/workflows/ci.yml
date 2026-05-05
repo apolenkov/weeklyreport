@@ -53,8 +53,18 @@ jobs:
       - name: Typecheck
         run: pnpm turbo typecheck
 
-      - name: Unit Tests
-        run: pnpm turbo test
+      - name: Unit Tests with coverage
+        run: pnpm turbo test -- --coverage
+
+      - name: Upload coverage reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            apps/web/coverage/
+            apps/api/coverage/
+          retention-days: 14
 
   # ------------------------------------------------------------------
   # Job 2: E2E Tests with Playwright
