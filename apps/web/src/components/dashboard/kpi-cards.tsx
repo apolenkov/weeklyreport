@@ -17,7 +17,7 @@ export function KpiCards({ data }: KpiCardsProps) {
         style={{ borderLeft: '3px solid var(--color-starbucks-accent)' }}
         aria-label={`Submissions: ${data.submitted} of ${data.total}, ${data.pendingCount} pending`}
       >
-        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
+        <p className="mb-2 text-sm font-medium text-[var(--color-muted-foreground)]">
           Submissions
         </p>
         <div className="flex items-center gap-4">
@@ -55,7 +55,7 @@ export function KpiCards({ data }: KpiCardsProps) {
         style={{ borderLeft: '3px solid var(--color-warning)' }}
         aria-label={`Deadline: ${data.deadlineLabel}, ${data.deadlineTime}`}
       >
-        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
+        <p className="mb-2 text-sm font-medium text-[var(--color-muted-foreground)]">
           Deadline
         </p>
         <div className="font-[family-name:var(--font-sans)] text-[32px] font-bold leading-none text-[var(--color-starbucks-gold)]">
@@ -72,7 +72,7 @@ export function KpiCards({ data }: KpiCardsProps) {
         style={{ borderLeft: '3px solid var(--color-destructive)' }}
         aria-label={`Risks: ${data.blockedCount} blocked, ${data.atRiskCount} at risk, ${data.decisionCount} decisions`}
       >
-        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
+        <p className="mb-2 text-sm font-medium text-[var(--color-muted-foreground)]">
           Risks & Blockers
         </p>
         <div className="flex gap-4">

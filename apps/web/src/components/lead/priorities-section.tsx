@@ -159,7 +159,10 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
             key={`${entry.rank}-${idx}`}
             data-testid="priority-row"
             className="flex items-center gap-3 rounded-lg p-4"
-            style={{ background: '#faf6ee' }}
+            // PRI-1 (Phase 33-04): mockup distinguishes the row tint between
+            // top-2 (gold-light `#faf6ee`) and rank 3+ (canvas `#f4f1eb`).
+            // Earlier every row used the same gold-light wash, blurring rank.
+            style={{ background: entry.rank <= 2 ? '#faf6ee' : '#f4f1eb' }}
           >
             <span
               className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[family-name:var(--font-sans)] text-sm font-bold tabular-nums"

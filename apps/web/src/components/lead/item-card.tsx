@@ -108,8 +108,11 @@ export function ItemCard({
         borderTop: `1px ${isPlanned ? 'dashed' : 'solid'} ${isBlocked ? 'rgba(200,32,20,0.2)' : 'var(--color-muted)'}`,
         borderRight: `1px ${isPlanned ? 'dashed' : 'solid'} ${isBlocked ? 'rgba(200,32,20,0.2)' : 'var(--color-muted)'}`,
         borderBottom: `1px ${isPlanned ? 'dashed' : 'solid'} ${isBlocked ? 'rgba(200,32,20,0.2)' : 'var(--color-muted)'}`,
+        // KB-1 (Phase 33-04): planned cards keep a 3px dashed tealA left strip
+        // so column alignment with current-week cards reads identically. The
+        // earlier 1px gray dashed left turned planned columns visually narrower.
         borderLeft: isPlanned
-          ? `1px dashed ${'var(--color-muted)'}`
+          ? `3px dashed var(--color-starbucks-accent)`
           : `3px solid ${isBlocked ? 'var(--color-destructive)' : 'var(--color-starbucks-accent)'}`,
         background: isBlocked ? '#fee2e2' : 'var(--color-background)',
       }}

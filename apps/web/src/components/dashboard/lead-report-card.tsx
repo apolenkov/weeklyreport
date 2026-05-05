@@ -1,6 +1,7 @@
 'use client';
 
 import type { LeadInfo } from './mock-data';
+import { useSession } from '../../lib/session-provider';
 
 type LeadReportCardProps = {
   readonly lead: LeadInfo;
@@ -33,9 +34,13 @@ const STATUS_CONFIG: Record<
   },
 };
 
+// DASH-3 (Phase 33-04): at-risk now uses saturated `#d4a017` (mockup `.td-y`)
+// so the white text reads. The previous pastel `#fef3c7` made the dot literally
+// invisible on the dashboard. Blocked stays `#fee2e2` because its text-color
+// is `var(--color-destructive)` (red) on light pink — readable as-is.
 const TRAFFIC_BG: Record<string, string> = {
   'on-track': 'var(--color-success)',
-  'at-risk': '#fef3c7',
+  'at-risk': '#d4a017',
   blocked: '#fee2e2',
 };
 
@@ -61,6 +66,29 @@ function ChevronRight() {
   );
 }
 
+// DASH-5 (Phase 33-04): lead-role viewers see a lock on non-own rows because
+// the destination /head/report is gated for leads (they can read but not write
+// other sections). Head/admin still get the chevron — drill-down is exactly
+// what they need. The icon is purely an affordance hint; the SSR layout gate
+// is the real boundary.
+function LockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5 flex-shrink-0 text-[var(--color-muted-foreground)]"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ opacity: 0.5 }}
+    >
+      <rect x="4" y="11" width="16" height="9" rx="1.5" />
+      <path d="M8 11V8a4 4 0 1 1 8 0v3" />
+    </svg>
+  );
+}
+
 /**
  * Row inside the Lead Reports grid on /head/dashboard. Earlier this card
  * showed a lock icon and was non-clickable for "other" leads — that read
@@ -71,9 +99,12 @@ function ChevronRight() {
  * lead's contribution by product).
  */
 export function LeadReportCard({ lead }: LeadReportCardProps) {
+  const { user } = useSession();
   const config = STATUS_CONFIG[lead.status] ?? STATUS_CONFIG.pending!;
   const isCurrentUser = lead.isCurrentUser;
   const isPending = lead.status === 'pending';
+  // Lead-role viewer = lock on other rows; head/admin = chevron (drill-down).
+  const showLockForViewer = user?.role === 'lead' && !isCurrentUser;
 
   const href = isCurrentUser ? '/lead/report' : '/head/report';
 
@@ -141,7 +172,7 @@ export function LeadReportCard({ lead }: LeadReportCardProps) {
         {config.label}
       </span>
 
-      <ChevronRight />
+      {showLockForViewer ? <LockIcon /> : <ChevronRight />}
     </a>
   );
 }

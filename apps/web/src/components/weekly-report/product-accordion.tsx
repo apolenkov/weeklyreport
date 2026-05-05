@@ -107,7 +107,7 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
             {/* Needs Attention */}
             {report.needsAttention && (
               <div>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-destructive)]">
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-destructive)]">
                   Needs Attention
                 </div>
                 <div
@@ -126,7 +126,7 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
             {/* Current Week */}
             {report.currentWeek.length > 0 && (
               <div>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)]">
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                   Current Week &middot; {report.currentWeek.length} items
                 </div>
                 <div className="space-y-1">
@@ -158,7 +158,7 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
             {/* Next Week */}
             {report.nextWeek.length > 0 && (
               <div>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-foreground)]">
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                   Next Week &middot; {report.nextWeek.length} item{report.nextWeek.length !== 1 ? 's' : ''}
                 </div>
                 <div className="space-y-1">
@@ -184,7 +184,7 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
             {/* Risks & Blockers */}
             {report.risks.length > 0 && (
               <div>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-destructive)]">
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-destructive)]">
                   Risks & Blockers &middot; {report.risks.length}
                 </div>
                 <div className="space-y-1.5">
@@ -222,7 +222,7 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
             {/* Decisions */}
             {report.decisions.length > 0 && (
               <div>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-starbucks-accent)]">
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-starbucks-accent)]">
                   Decisions &middot; {report.decisions.length}
                 </div>
                 <div className="space-y-1.5">
@@ -245,7 +245,7 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
             {/* Priorities */}
             {report.priorities.length > 0 && (
               <div>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-starbucks-gold)]">
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-starbucks-gold)]">
                   Top Priorities
                 </div>
                 <ol className="space-y-1 text-sm">
