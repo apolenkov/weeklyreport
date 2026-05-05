@@ -312,6 +312,130 @@ Audit status: tech_debt — structurally complete, runtime smoke verification de
 
 ---
 
+<details open>
+<summary>v8.0 Production Readiness (Phases 34-39) - PLANNING 2026-05-05</summary>
+
+- [ ] **Phase 34: Quality Foundation** - husky+lint-staged pre-commit gate, vitest coverage thresholds, DOM-walker+mutation-audit CI gate, Prisma migrate-reset CI gate, ESLint sweep, TS error rollup, push-guard helper. Slurps v7.0 33-* (API hardening).
+- [ ] **Phase 35: UX Polish** - 0/7 stages counter + 3 LOW mockup deltas, HIST-2 Quick Filters, ReportSectionReadModel role end-to-end, Recharts+Risk.stageName migration, 44px touch-target, BullMQ DLQ admin UI, addressable URLs. Slurps v7.0 32-* + 33-03.
+- [ ] **Phase 36: Security & Audit** - Rate limiter (auth 5/min, tRPC 200/min), audit-trail extension to all mutations, secrets validation hardening, CORS prod multi-origin whitelist + CSP tightening.
+- [ ] **Phase 37: Observability** - OTel HTTP+Prisma tracing, DLQ alert rule + Prometheus counters, Prometheus scrape config + Grafana dashboard skeleton, log-sink documentation.
+- [ ] **Phase 38: Infrastructure & Deploy** - Prod migration init-container, caddy reverse-proxy with auto-TLS, SAML hardening (docs + samlify-mock test), RUNBOOK + INCIDENT-PLAYBOOK.
+- [ ] **Phase 39: Performance** - PgBouncer prod, Turbopack experiment, pg_stat_statements + index audit + CREATE INDEX migration, k6 load test (50 concurrent, p95<300ms).
+
+Full details: [v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md) and [v8.0-REQUIREMENTS.md](milestones/v8.0-REQUIREMENTS.md).
+
+### Phase 34: Quality Foundation
+**Goal**: Local pre-commit hooks live, coverage thresholds enforced, 0 ESLint warnings + 0 TS errors, Prisma migrate-reset CI gate green, DOM-walker / mutation-audit gates wired, push-guard helper landed.
+**Depends on**: v6.0 complete + post-v6.0 UX wave merged
+**Requirements**: Q-01, Q-02, Q-03, Q-04, Q-05, Q-06, Q-07
+**Success Criteria** (what must be TRUE):
+  1. `git commit` runs prettier+eslint on staged files via husky+lint-staged; commit-msg enforces Conventional Commits; pre-push runs `pnpm test` (skip in CI=true).
+  2. CI step `pnpm turbo test -- --coverage` fails under threshold; web ≥70% statements / 60% branches; api ≥80% / 70%; coverage artifact uploaded.
+  3. `pnpm uat:audit` runs in CI and fails on unexpected mutation black holes; allowlist with justification carve-outs lives at `apps/web/uat-suite/mutation-audit.allowlist.json`.
+  4. CI job spins ephemeral Postgres, runs `prisma migrate reset --force --skip-seed` + `prisma generate`; catches schema drift `migrate deploy` doesn't.
+  5. `pnpm typecheck` exits 0 in both apps; one regression test per fixed file.
+  6. `pnpm lint` zero warnings both apps; test-file `no-non-null-assertion` replaced with `expectDefined()` helper.
+  7. `scripts/push-guard.sh` detects no-DNS state and prints workaround; CI emits per-spec flaky-rate metric to artifact.
+
+**Plans**: 7
+- [x] 34-01-PLAN.md — husky + lint-staged + commitlint hooks (Q-01)
+- [x] 34-02-PLAN.md — vitest coverage thresholds web+api + CI artifact (Q-02)
+- [x] 34-03-PLAN.md — DOM-walker + mutation-audit CI gate (Q-03)
+- [x] 34-04-PLAN.md — Prisma migrate-reset CI gate (Q-04)
+- [ ] 34-05-PLAN.md — TypeScript residual error rollup (Q-05)
+- [ ] 34-06-PLAN.md — ESLint warning sweep ~272→0 (Q-06)
+- [x] 34-07-PLAN.md — push-guard helper + flaky-rate CI metric (Q-07)
+
+### Phase 35: UX Polish
+**Goal**: Visible regressions closed (0/7 stages, 3 LOW mockup deltas), HIST-2 Quick Filters live, head/admin viewing of /lead/report uses correct gating, charts stop warning, Risk.stageName end-to-end, 44px touch-target floor, BullMQ DLQ admin UI, addressable URLs.
+**Depends on**: nothing (parallel with 34)
+**Requirements**: UX-08, UX-09, UX-10, UX-12, UX-13, UX-14, UX-15
+**Success Criteria** (what must be TRUE):
+  1. Products tab "X/7 stages" header reads from live DB via `admin.listStageAssignmentCounts`; no longer shows 0/7 for assigned products.
+  2. lead-history-sidebar has third card with All/Submitted/Drafts pill row; filter state lifted to `lead/history` page.
+  3. `ReportSectionReadModel` carries author display role end-to-end; head/admin viewing /lead/report sees Revoke (not Request Reopen).
+  4. Recharts ResponsiveContainer warnings silenced via `minWidth={0}`; Risk schema gains `stageName` field with backfill migration.
+  5. 44px touch-target floor across lead-form action surfaces via single-source CSS variable.
+  6. New /admin?tab=jobs route surfaces failed BullMQ jobs with retry mutation + tRPC list query.
+  7. /lead/report/[reportId] + /head/report/[reportId] addressable URLs; legacy 307-redirect to current period; period nav uses router.push.
+
+**Plans**: 7
+- [x] 35-01-PLAN.md — 0/7 stages counter fix (UX-13 partial; 3 LOW mockup deltas deferred)
+- [ ] 35-02-PLAN.md — HIST-2 Quick Filters (UX-14)
+- [ ] 35-03-PLAN.md — ReportSectionReadModel role end-to-end (UX-08)
+- [ ] 35-04-PLAN.md — Recharts ResponsiveContainer + Risk.stageName migration (UX-09+10)
+- [ ] 35-05-PLAN.md — Touch-target 44px single-source CSS variable (UX-12)
+- [ ] 35-06-PLAN.md — BullMQ DLQ admin UI (UX/API-02)
+- [ ] 35-07-PLAN.md — Addressable URLs for report views (UX-15)
+
+### Phase 36: Security & Audit
+**Goal**: Rate limiting (auth + tRPC), audit-trail extended to all mutations, secrets fail-fast, CORS prod multi-origin whitelist + CSP tightening.
+**Depends on**: nothing (parallel with 34, 35, 38)
+**Requirements**: SEC-01, SEC-02, SEC-03, SEC-04
+**Success Criteria** (what must be TRUE):
+  1. express-rate-limit on /auth (5/min/IP) and /trpc (200/min/IP); NODE_ENV=test → 1000/min for E2E.
+  2. tRPC middleware records {actor, action, target, before/after, timestamp} for all 26 mutations to existing audit-logger surface.
+  3. env.schema fails boot when NODE_ENV=production && AUTH_DEV_MODE=true; PDF_EXPORT_JWT_SECRET dev fallback in prod aborts; FRONTEND_URLS containing `*` aborts.
+  4. CORS prod whitelist via FRONTEND_URLS CSV env; multi-origin reflected only when matched, never wildcard.
+
+**Plans**: 4
+- [x] 36-01-PLAN.md — Rate limiter /auth + /trpc (SEC-01)
+- [ ] 36-02-PLAN.md — Audit-trail extension to all mutations (SEC-02)
+- [x] 36-03-PLAN.md — Production fences in env.schema (SEC-03)
+- [x] 36-04-PLAN.md — Multi-origin CORS whitelist + helmet audit (SEC-04)
+
+### Phase 37: Observability Completion
+**Goal**: OTel HTTP tracing live, DLQ alert rule + Prometheus counter, Prometheus scrape + Grafana dashboard skeleton, log-sink documentation.
+**Depends on**: Phase 36-01 (rate limiter middleware order in main.ts)
+**Requirements**: OBS-01, OBS-02, OBS-03, OBS-04
+**Success Criteria** (what must be TRUE):
+  1. OTel HTTP middleware + Prisma instrumentation; OTLP/HTTP exporter; env-configurable endpoint; default sampling 0.1.
+  2. BullMQ failed-job count > N triggers structured ERROR log + custom Prometheus counter `cr_dlq_failed_total{queue=...}`.
+  3. `deploy/prometheus.yml` + Grafana dashboard JSON skeleton (HTTP rate, p95 latency, DLQ failed total, login attempts).
+  4. `deploy/log-sink/` has vector + promtail config templates; RUNBOOK section explains pointing at real Loki/Splunk/Datadog.
+
+**Plans**: 4
+- [ ] 37-01-PLAN.md — OTel HTTP + Prisma instrumentation (OBS-01)
+- [ ] 37-02-PLAN.md — DLQ alert rule + Prometheus counter (OBS-02)
+- [ ] 37-03-PLAN.md — Prometheus scrape config + Grafana skeleton (OBS-03)
+- [ ] 37-04-PLAN.md — Log-sink documentation (OBS-04)
+
+### Phase 38: Infrastructure & Deploy
+**Goal**: Prod migration init-container, reverse-proxy with auto-TLS, SAML hardening (docs + mock test), RUNBOOK + incident playbook.
+**Depends on**: nothing
+**Requirements**: INF-01, INF-02, INF-03, INF-04
+**Success Criteria** (what must be TRUE):
+  1. docker-compose.prod.yml has migrate init-container running apps/api/scripts/migrate.sh; api `depends_on: { migrate: { condition: service_completed_successfully } }`.
+  2. Caddy reverse-proxy with automatic Let's Encrypt TLS + healthcheck integration; staging fallback to local CA.
+  3. `apps/api/src/modules/auth/saml.integration.test.ts` uses samlify mock IdP; asserts cert-pinning + signed-assertion validation + replay rejection. `docs/keycloak-setup.md` covers SP metadata + IdP cert exchange.
+  4. RUNBOOK.md has 10 failure modes (DB/Redis/SMTP down, migration fail, DLQ growth, SAML 500, PDF stuck, disk full, 5xx spike, TLS expired) with detect/triage/resolve/escalate. INCIDENT-PLAYBOOK.md has SEV matrix + standard rollback + on-call template + postmortem template.
+
+**Plans**: 4
+- [x] 38-01-PLAN.md — Prod migration init-container (INF-01)
+- [ ] 38-02-PLAN.md — Caddy reverse-proxy + auto-TLS (INF-02)
+- [ ] 38-03-PLAN.md — SAML hardening docs + samlify-mock test (INF-03)
+- [x] 38-04-PLAN.md — RUNBOOK + INCIDENT-PLAYBOOK (INF-04)
+
+### Phase 39: Performance
+**Goal**: PgBouncer prod, Turbopack experiment validated, pg_stat_statements + index audit, k6 baseline (50 concurrent leads, p95 < 300ms).
+**Depends on**: Phase 38-01 (PgBouncer/index plans need prod stack); 38-02 for k6
+**Requirements**: PERF-01, PERF-02, PERF-03, PERF-04
+**Success Criteria** (what must be TRUE):
+  1. PgBouncer service in prod compose (transaction mode, pool=20); Prisma DATABASE_URL `pgbouncer=true&connection_limit=1`; DIRECT_URL bypasses pool for migrate.
+  2. `apps/web/package.json` dev script drops `--webpack`; HMR delta documented; rollback if regression.
+  3. `pg_stat_statements` extension enabled in dev compose; CREATE INDEX migration covers top 10 slow queries; `.planning/PERF-AUDIT-2026-05.md` documents methodology + results.
+  4. `tests/load/k6-baseline.js` simulates 50 concurrent leads × 5 weeks; p95 < 300ms reads, p95 < 800ms submit; results in `.planning/LOAD-TEST-2026-05.md`.
+
+**Plans**: 4
+- [ ] 39-01-PLAN.md — PgBouncer service in prod compose (PERF-01)
+- [ ] 39-02-PLAN.md — Turbopack experiment (PERF-02)
+- [ ] 39-03-PLAN.md — pg_stat_statements + index audit (PERF-03)
+- [ ] 39-04-PLAN.md — k6 load test baseline (PERF-04)
+
+</details>
+
+---
+
 *Roadmap created: 2026-04-06*
 *v1.0 shipped: 2026-04-10*
 *v2.0 shipped: 2026-04-11*
@@ -319,3 +443,4 @@ Audit status: tech_debt — structurally complete, runtime smoke verification de
 *v4.0 shipped: 2026-04-25*
 *v5.0 shipped: 2026-04-25*
 *v6.0 planning started: 2026-04-28*
+*v8.0 planning started: 2026-05-05*
