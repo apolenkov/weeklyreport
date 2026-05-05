@@ -11,7 +11,7 @@ import { createAuditLogger, type AuditLogger } from '../../lib/audit-logger.js';
 const DEV_SESSION: UserSession = {
   userId: 'a0000000-0000-4000-8000-000000000099',
   email: 'head@customreport.local',
-  name: 'Department Head',
+  name: 'Антон К.',
   role: 'head',
   activeReportId: 'a0000000-0000-4000-8000-000000000001',
   activeReportSectionId: null,

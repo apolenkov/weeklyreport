@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
 
 import type { Role } from '@customreport/shared';
 
@@ -16,7 +15,6 @@ import {
 
 import { isRouteVisible } from '../../lib/role-visibility';
 import { useSession } from '../../lib/session-provider';
-import { useTRPC } from '../../lib/trpc-context';
 
 type NavLink = {
   href: string;
@@ -33,15 +31,18 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
 ];
 
 function getRoleLabel(role: Role): string {
+  // Admin is treated as Head in UX (same display label, both have full
+  // department-management access). Schema/auth keep them as separate
+  // enum values for backwards compat with tests + auth, but the user
+  // never sees "Admin" as a distinct label.
   switch (role) {
     case 'admin':
-      return 'Admin';
     case 'head':
-      return 'Department Head';
+      return 'Глава департамента';
     case 'lead':
-      return 'Lead';
+      return 'Тимлид';
     case 'viewer':
-      return 'Viewer';
+      return 'Наблюдатель';
   }
 }
 
@@ -147,39 +148,9 @@ function NavIcon({ href }: { readonly href: string }) {
   }
 }
 
-const MONTHS_SHORT = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-] as const;
-
-function formatPeriodRange(start: Date, end: Date): string {
-  const sM = MONTHS_SHORT[start.getUTCMonth()];
-  const sD = start.getUTCDate();
-  const eM = MONTHS_SHORT[end.getUTCMonth()];
-  const eD = end.getUTCDate();
-  return start.getUTCMonth() === end.getUTCMonth()
-    ? `${sM} ${sD}–${eD}`
-    : `${sM} ${sD}–${eM} ${eD}`;
-}
-
-/**
- * NavBar — Phase 33-04 mockup parity rewrite.
- *
- * Changes from prior NavBar (per `.planning/MOCKUP-AUDIT-2026-05-05.md`):
- * - N-1: logo monogram "C" → "CR" on tealA bg (mockup `.tn .lo i`).
- * - N-2: active link uses pill bg (tealL = `--color-success`) + tealA text +
- *        rounded-pill instead of bottom underline span.
- * - N-3: each link has a 14×14 currentColor SVG icon to its left.
- * - N-4: period badge `Apr 14–20 · Week NN` rendered before user info,
- *        sourced from `weeklyReport.get` (cached).
- * - N-5: avatar shows 2-letter initials from `user.name` and a "Name · Role"
- *        text label (visible at md+ widths) instead of a 1-letter chip.
- * - N-6: bottom accent bumped from 2px → 3px with rounded-t corners (tealA).
- */
 export function NavBar() {
   const pathname = usePathname();
   const { user } = useSession();
-  const trpc = useTRPC();
 
   const role: Role | null = user?.role ?? null;
   const visibleLinks: ReadonlyArray<NavLink> =
@@ -187,23 +158,11 @@ export function NavBar() {
       ? []
       : NAV_LINKS.filter((link) => isRouteVisible(link.href, role));
 
-  // N-4: surface the active reporting period in the right-rail. weeklyReport.get
-  // is cached + reused across pages, so this is effectively zero-cost on rerender.
-  // Skip for unauthenticated users (the call would 401).
-  const periodQuery = useQuery({
-    ...trpc.weeklyReport.get.queryOptions({}),
-    enabled: !!user,
-  });
-  const periodBadge = periodQuery.data
-    ? (() => {
-        const start = new Date(periodQuery.data.periodStart);
-        const end = new Date(periodQuery.data.periodEnd);
-        return `${formatPeriodRange(start, end)} · ${periodQuery.data.weekLabel}`;
-      })()
-    : null;
-
   const initials = user ? initialsFromName(user.name) : '?';
   const roleLabel = role ? getRoleLabel(role) : '';
+  // Defensive: if a name happens to match the role label verbatim
+  // (legacy seed quirk), show only the name to avoid "X · X".
+  const nameRoleSame = user ? user.name === roleLabel : false;
 
   return (
     <header className="w-full bg-[var(--color-card)]" data-testid="nav-bar">
@@ -248,27 +207,13 @@ export function NavBar() {
           })}
         </nav>
 
-        {/* User info — N-4 period badge, N-5 initials + name+role.
-            Name+role is lg+ only; md collapses to avatar+role; sm hides the
-            text entirely (just the chip), so the nav links never wrap. */}
+        {/* User identity. Period badge removed from the global chrome — it
+            was contextual noise and belongs on the report pages, not in the
+            nav. Name+role visible from lg+ (1024px); below that the avatar
+            carries the identity signal via aria-label. */}
         <div className="flex items-center gap-2.5">
-          {/* Period badge — only renders at xl+ (1280px) so the nav doesn't
-              overflow at 1024px (laptop boundary). Below xl the avatar carries
-              the identity signal alone. */}
-          {periodBadge && (
-            <span
-              className="hidden whitespace-nowrap items-center rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-2.5 py-1 font-[family-name:var(--font-mono)] text-[11px] font-semibold tabular-nums text-[var(--color-starbucks-accent)] xl:inline-flex"
-              aria-label={`Active period: ${periodBadge}`}
-            >
-              {periodBadge}
-            </span>
-          )}
-          {/* Name + role text — xl+ only. At 1024–1279px the nav still has 6
-              links + 8 SVG icons, so we can't afford the ~150px the name+role
-              chip eats. The avatar (with aria-label) keeps the identity
-              signal at narrower widths. */}
           {user && (
-            <div className="hidden items-center gap-2 xl:flex">
+            <div className="hidden items-center gap-2 lg:flex">
               <div
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)]"
                 aria-hidden="true"
@@ -277,16 +222,16 @@ export function NavBar() {
               </div>
               <span className="whitespace-nowrap text-[13px] text-[var(--color-foreground)]">
                 <span className="font-semibold">{user.name}</span>
-                <span className="text-[var(--color-muted-foreground)]"> · {roleLabel}</span>
+                {!nameRoleSame && (
+                  <span className="text-[var(--color-muted-foreground)]"> · {roleLabel}</span>
+                )}
               </span>
             </div>
           )}
-          {/* Compact avatar for sm-xl viewport — aria-label carries the
-              full "Signed in as Name (Role)" string for screen readers. */}
           {user && (
             <div
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] xl:hidden"
-              aria-label={`Signed in as ${user.name} (${roleLabel})`}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] lg:hidden"
+              aria-label={`${user.name} (${roleLabel})`}
             >
               {initials}
             </div>

@@ -41,14 +41,14 @@ export const SEED_USERS: readonly SeedUser[] = [
   {
     id: HEAD_USER_ID,
     email: 'head@customreport.local',
-    name: 'Department Head',
+    name: 'Антон К.',
     role: 'head',
     samlId: 'head-1',
   },
   {
     id: VIEWER_USER_ID,
     email: 'viewer@customreport.local',
-    name: 'Report Viewer',
+    name: 'Дарья В.',
     role: 'viewer',
     samlId: 'viewer-1',
   },

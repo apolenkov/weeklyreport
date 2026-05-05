@@ -82,9 +82,9 @@ async function main() {
   console.log('[seed-simple] Creating users...');
   await prisma.user.createMany({
     data: [
-      { id: HEAD_ID, email: 'head@customreport.local', name: 'Department Head', role: Role.head, samlId: 'head-1' },
-      { id: VIEWER_ID, email: 'viewer@customreport.local', name: 'Report Viewer', role: Role.viewer, samlId: 'viewer-1' },
-      { id: ADMIN_ID, email: 'admin@customreport.local', name: 'Administrator', role: Role.admin, samlId: 'admin-1' },
+      { id: HEAD_ID, email: 'head@customreport.local', name: 'Антон К.', role: Role.head, samlId: 'head-1' },
+      { id: VIEWER_ID, email: 'viewer@customreport.local', name: 'Дарья В.', role: Role.viewer, samlId: 'viewer-1' },
+      { id: ADMIN_ID, email: 'admin@customreport.local', name: 'Антон К.', role: Role.admin, samlId: 'admin-1' },
       { id: LEAD_ALEX, email: 'polenkov@customreport.local', name: 'Aleksandr P.', role: Role.lead, samlId: 'lead-polenkov' },
       { id: LEAD_MARIA, email: 'maria@customreport.local', name: 'Maria K.', role: Role.lead, samlId: 'lead-maria' },
       { id: LEAD_IGOR, email: 'igor@customreport.local', name: 'Igor V.', role: Role.lead, samlId: 'lead-igor' },

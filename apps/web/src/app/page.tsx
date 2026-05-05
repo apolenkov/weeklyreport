@@ -8,11 +8,11 @@ const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
 // Phase 33-04: dev-mode landing simplified to a single "Enter" affordance.
 // The previous role grid (4 buttons) was redundant — the global DEV role
 // switcher (right-side floating button, mounted in `(app)/layout.tsx`) lets
-// the user swap identity at any time. Default entry is admin because admin
-// inherits access to /head/* and /lead/* via SSR layout gates, so the user
-// can navigate the whole app without re-authenticating.
+// the user swap identity at any time. Default entry is head — head ≡ admin
+// in this app (route-visibility lets head into /admin), so head sees the
+// whole department-management surface plus the lead/viewer flows below.
 const DEFAULT_REDIRECT = '/head/dashboard';
-const DEV_DEFAULT_LOGIN = `/auth/dev-login?role=admin&email=admin@customreport.local&redirect=${encodeURIComponent(DEFAULT_REDIRECT)}`;
+const DEV_DEFAULT_LOGIN = `/auth/dev-login?role=head&email=head@customreport.local&redirect=${encodeURIComponent(DEFAULT_REDIRECT)}`;
 
 /**
  * Reject open-redirect attempts. The `next` query param must be a same-origin
@@ -48,7 +48,7 @@ export default function LoginPage() {
       const target =
         safeNext === DEFAULT_REDIRECT
           ? DEV_DEFAULT_LOGIN
-          : `/auth/dev-login?role=admin&email=admin@customreport.local&redirect=${encodeURIComponent(safeNext)}`;
+          : `/auth/dev-login?role=head&email=head@customreport.local&redirect=${encodeURIComponent(safeNext)}`;
       window.location.replace(target);
     }
   }, [safeNext, stayOnLanding]);
