@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { invalidateAdmin } from '../../lib/cache-keys';
@@ -44,6 +44,19 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
 
   const leads = useMemo(() => users.filter((u) => u.role === 'lead'), [users]);
   const getUserById = (id: string): MockUser | undefined => users.find((u) => u.id === id);
+
+  // 35-01: per-project assignment counts from the live DB. The mock-data
+  // mapper hands every product a stages array of 7 nulls (assignment data
+  // ships separately via listStageAssignments), so reading `product.stages`
+  // for a count would always show 0/7. Light groupBy query instead.
+  const stageCountsQuery = useQuery(
+    trpc.admin.listStageAssignmentCounts.queryOptions(),
+  );
+  const stageCountByProject = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of stageCountsQuery.data ?? []) m.set(r.projectId, r.count);
+    return m;
+  }, [stageCountsQuery.data]);
 
   const saveProjectMut = useMutation(
     trpc.admin.saveProject.mutationOptions({
@@ -156,7 +169,7 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
         <div className="space-y-3">
           {activeProducts.map((product) => {
             const owner = getUserById(product.leadOwnerId);
-            const assignedCount = product.stages.filter((s) => s.assigneeId).length;
+            const assignedCount = stageCountByProject.get(product.id) ?? 0;
             const isExpanded = expandedId === product.id;
 
             return (
