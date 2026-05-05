@@ -4,7 +4,7 @@ import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { NestFactory } from '@nestjs/core';
-import { ClsService } from 'nestjs-cls';
+import { ClsMiddleware, ClsService } from 'nestjs-cls';
 import * as trpcExpress from '@trpc/server/adapters/express';
 import { Queue } from 'bullmq';
 import cookieParser from 'cookie-parser';
@@ -70,6 +70,14 @@ async function bootstrap() {
   app.enableShutdownHooks();
   app.use(helmet());
   app.use(cookieParser());
+
+  // Open the AsyncLocalStorage scope for every Express handler — including
+  // the raw `expressApp.use('/trpc', ...)` registered later in this file
+  // and the SAML/dev-login routes mounted by mountAuthRoutes(). Without this,
+  // CorrelationIdMiddleware (registered via NestModule.configure) writes to
+  // an inactive store and the logger silently falls back to 'no-context'.
+  app.use(new ClsMiddleware({ generateId: false, saveReq: false }).use);
+
   app.enableCors({ origin: env.FRONTEND_URL, credentials: true });
 
   // HTTP access log — covers everything outside the tRPC adapter:
