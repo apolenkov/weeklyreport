@@ -394,20 +394,26 @@ export function mapLeadPriorities(
 
 /**
  * Map `reports.myHistory` to the Period dropdown shape the LeadForm expects.
+ * Sorts by `periodStart` descending so the dropdown reads newest→oldest
+ * regardless of `section.createdAt` ordering (seed inserts can shuffle
+ * createdAt; period date is the user-visible truth).
+ *
  * The active reportId (if any) flags `isCurrent: true`; counts default to 0.
  */
 export function mapLeadPeriods(
   history: readonly MyHistoryEntry[],
   activeReportId: string | null,
 ): LeadReportPeriod[] {
-  return history.map((e) => ({
-    id: e.reportId,
-    sourceSectionId: e.sectionId,
-    weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
-    dateRange: formatDateRange(e.periodStart, e.periodEnd),
-    isCurrent: activeReportId !== null && e.reportId === activeReportId,
-    isSubmitted: e.sectionStatus === 'submitted',
-  }));
+  return [...history]
+    .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())
+    .map((e) => ({
+      id: e.reportId,
+      sourceSectionId: e.sectionId,
+      weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
+      dateRange: formatDateRange(e.periodStart, e.periodEnd),
+      isCurrent: activeReportId !== null && e.reportId === activeReportId,
+      isSubmitted: e.sectionStatus === 'submitted',
+    }));
 }
 
 /**
