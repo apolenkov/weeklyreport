@@ -127,19 +127,53 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
             border: `1px solid ${getProductBorderColor(product.overallStatus)}`,
           }}
         >
-          {/* Product header */}
-          <div className="mb-3 flex items-center justify-between">
+          {/* Product header — SDLC-1 (Phase 33-04): replace plain riskSummary
+              text with an inline-flex pill featuring a *pulsing* red dot
+              (`@keyframes risk-pulse` defined in globals.css). Mockup s2
+              uses this to draw the eye to active blockers without users
+              having to read the label. SDLC-2: per-stage error chips listed
+              alongside the product status give the head a one-glance read of
+              which stages are problematic without expanding. */}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
                 {product.name}
               </span>
               {product.riskSummary && (
-                <span className="text-[11px] font-semibold text-[var(--color-destructive)]">
+                <span
+                  className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[rgba(200,32,20,0.08)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"
+                  title={product.riskSummary}
+                >
+                  <span
+                    className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--color-destructive)]"
+                    style={{ animation: 'risk-pulse 1.6s ease-in-out infinite' }}
+                    aria-hidden="true"
+                  />
                   {product.riskSummary}
                 </span>
               )}
             </div>
-            <div className="flex items-center">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* SDLC-2: each at-risk / blocked stage on this product gets a
+                  small badge so the row reads "✕ Dev · ✕ Testing · ! At Risk"
+                  even when the SDLC chip row is collapsed. */}
+              {product.stages
+                .filter((s) => s.status === 'at-risk' || s.status === 'blocked')
+                .map((s) => (
+                  <span
+                    key={`stage-badge-${s.stageName}`}
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-1.5 py-0.5 text-[10px] font-semibold"
+                    style={
+                      s.status === 'blocked'
+                        ? { background: 'rgba(200,32,20,0.12)', color: 'var(--color-destructive)' }
+                        : { background: 'rgba(212,160,23,0.15)', color: '#8a6d1b' }
+                    }
+                    title={`${s.stageName} · ${s.status}`}
+                  >
+                    <span aria-hidden="true">{s.status === 'blocked' ? '✕' : '!'}</span>
+                    {s.stageName}
+                  </span>
+                ))}
               <ProductStatusBadge status={product.overallStatus} />
               {/* Phase 31 (AI-03): on-track advisory icon next to the
                   human-authored status. Renders ALONGSIDE — never replaces.
