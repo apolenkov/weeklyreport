@@ -45,6 +45,11 @@ async function bootstrap() {
 
   const env = validateEnv();
 
+  // Sync Zod-applied defaults back into process.env so legacy callers that
+  // still read process.env directly (e.g. pdf-export.service.signPdfExportToken)
+  // see the validated/defaulted value instead of undefined.
+  process.env['PDF_EXPORT_JWT_SECRET'] ??= env.PDF_EXPORT_JWT_SECRET;
+
   // We resolve ClsService from the container, so the app must exist first.
   // Pre-Nest output goes to console (no logger available yet).
   // eslint-disable-next-line no-console
