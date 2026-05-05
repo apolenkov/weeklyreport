@@ -188,6 +188,65 @@ jobs:
           retention-days: 14
 
   # ------------------------------------------------------------------
+  # Job 2b: Prisma migrate-reset gate (34-04)
+  # ------------------------------------------------------------------
+  # Catches schema-vs-migration drift that `migrate deploy` doesn't see:
+  # `migrate reset --force --skip-seed` rebuilds from scratch and fails
+  # if any migration's SQL is invalid against the current schema.prisma.
+  # Documented Prisma 7 quirk: prisma.config.ts does NOT auto-seed despite
+  # docs implying it does — `--skip-seed` makes that explicit.
+  migrate-reset:
+    name: Prisma migrate-reset gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: quality
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: customreport
+          POSTGRES_PASSWORD: localdev
+          POSTGRES_DB: customreport_reset_check
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U customreport"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_reset_check
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: prisma migrate reset (fresh DB, no seed)
+        run: pnpm exec prisma migrate reset --force --skip-seed
+
+      - name: prisma generate (post-reset)
+        run: pnpm exec prisma generate
+
+  # ------------------------------------------------------------------
   # Job 3: Docker Build Verification
   # ------------------------------------------------------------------
   docker-build:
