@@ -45,3 +45,22 @@
   .w-\(--sidebar-width\) { width: var(--sidebar-width); }
   .w-\(--sidebar-width-icon\) { width: var(--sidebar-width-icon); }
 }
+
+/* SDLC-1 (Phase 33-04): pulsing red dot anchored to risk-summary chips so the
+   eye is drawn to active blockers without the user having to read the label.
+   Used inline via `style={{ animation: 'risk-pulse 1.6s ease-in-out infinite' }}`
+   in sdlc-pipeline.tsx. Lives outside @layer utilities because @keyframes can
+   only sit at top level. */
+@keyframes risk-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(1.4); }
+}
+
+/* SDLC additional: SDLC chip pulse used by stage-chip.tsx (`isEmpty` editable
+   chips). Was previously declared inline as `animate-[sdlc-pulse_3s_infinite]`
+   which Tailwind v4 emits as `animation: sdlc-pulse 3s infinite` — but the
+   actual @keyframes definition was missing, so empty chips never pulsed. */
+@keyframes sdlc-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,117,74,0.0); }
+  50%      { box-shadow: 0 0 0 4px rgba(0,117,74,0.18); }
+}

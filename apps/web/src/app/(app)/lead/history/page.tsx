@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { LeadHistoryList } from '../../../../components/lead/lead-history-list';
+import { LeadHistorySidebar } from '../../../../components/lead/lead-history-sidebar';
 import { LeadHistorySkeleton } from '../../../../components/lead/lead-history-skeleton';
 import { mapHistoryEntries } from '../../../../lib/mappers';
 import { useTRPC } from '../../../../lib/trpc-context';
@@ -56,21 +57,29 @@ export default function LeadHistoryPage() {
           {isLoading ? (
             <LeadHistorySkeleton />
           ) : (
-            <>
-              <LeadHistoryList entries={visibleEntries} />
-              {hasMore && (
-                <div className="flex items-center justify-center">
-                  <button
-                    type="button"
-                    className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
-                    onClick={() => setShowAll(true)}
-                    aria-label={`Show all ${entries.length} past submissions`}
-                  >
-                    Show all ({entries.length})
-                  </button>
-                </div>
-              )}
-            </>
+            // HIST-2 (Phase 33-04): two-column shell — list on the left, the
+            // Reporting Overview / Recent Pattern sidebar on the right. lg+
+            // breakpoint mirrors the rest of the app's wide-screen grids; on
+            // narrower viewports the sidebar drops below the list so nothing
+            // is clipped.
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="space-y-6">
+                <LeadHistoryList entries={visibleEntries} />
+                {hasMore && (
+                  <div className="flex items-center justify-center">
+                    <button
+                      type="button"
+                      className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
+                      onClick={() => setShowAll(true)}
+                      aria-label={`Show all ${entries.length} past submissions`}
+                    >
+                      Show all ({entries.length})
+                    </button>
+                  </div>
+                )}
+              </div>
+              <LeadHistorySidebar entries={entries} />
+            </div>
           )}
         </div>
       </div>

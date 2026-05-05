@@ -830,9 +830,13 @@ export function LeadForm({ period }: LeadFormProps) {
             <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
               My Report
             </h1>
+            {/* LF-3 (Phase 33-04): submitted state now uses the .b-ok variant
+                (light teal bg + dark teal text) — matches mockup s2 rather
+                than the heavier white-on-dark-teal `.b-done` look that read
+                as a destructive "locked" signal. */}
             {isSubmitted ? (
-              <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-2.5 py-1 text-xs font-semibold text-white">
-                Submitted
+              <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">
+                ✓ Submitted
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">

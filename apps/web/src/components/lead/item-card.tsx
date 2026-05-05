@@ -117,10 +117,12 @@ export function ItemCard({
         background: isBlocked ? '#fee2e2' : 'var(--color-background)',
       }}
     >
-      {/* Action buttons — hidden until hover to keep the card visually clean.
-          Earlier they were always visible at 30% which read as broken. */}
+      {/* Action buttons — KB-3 (Phase 33-04): mockup s2 baselines them at 30%
+          opacity so touch users can spot the affordances without hovering.
+          On desktop hover bumps to 100%. The earlier "hidden until hover"
+          state hid the affordance entirely on touch devices. */}
       {!readOnly && !isEditing && (
-        <div className="pointer-events-none absolute right-2 top-2 flex gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+        <div className="absolute right-2 top-2 flex gap-0.5 opacity-30 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
           <button
             type="button"
             className="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"
