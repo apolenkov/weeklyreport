@@ -252,16 +252,23 @@ export function NavBar() {
             Name+role is lg+ only; md collapses to avatar+role; sm hides the
             text entirely (just the chip), so the nav links never wrap. */}
         <div className="flex items-center gap-2.5">
+          {/* Period badge — only renders at xl+ (1280px) so the nav doesn't
+              overflow at 1024px (laptop boundary). Below xl the avatar carries
+              the identity signal alone. */}
           {periodBadge && (
             <span
-              className="hidden whitespace-nowrap items-center rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-2.5 py-1 font-[family-name:var(--font-mono)] text-[11px] font-semibold tabular-nums text-[var(--color-starbucks-accent)] lg:inline-flex"
+              className="hidden whitespace-nowrap items-center rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-2.5 py-1 font-[family-name:var(--font-mono)] text-[11px] font-semibold tabular-nums text-[var(--color-starbucks-accent)] xl:inline-flex"
               aria-label={`Active period: ${periodBadge}`}
             >
               {periodBadge}
             </span>
           )}
+          {/* Name + role text — xl+ only. At 1024–1279px the nav still has 6
+              links + 8 SVG icons, so we can't afford the ~150px the name+role
+              chip eats. The avatar (with aria-label) keeps the identity
+              signal at narrower widths. */}
           {user && (
-            <div className="hidden items-center gap-2 lg:flex">
+            <div className="hidden items-center gap-2 xl:flex">
               <div
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)]"
                 aria-hidden="true"
@@ -274,10 +281,11 @@ export function NavBar() {
               </span>
             </div>
           )}
-          {/* Compact avatar for sm-lg viewport */}
+          {/* Compact avatar for sm-xl viewport — aria-label carries the
+              full "Signed in as Name (Role)" string for screen readers. */}
           {user && (
             <div
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] lg:hidden"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] xl:hidden"
               aria-label={`Signed in as ${user.name} (${roleLabel})`}
             >
               {initials}
