@@ -412,6 +412,21 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      // Full SDLC stage catalogue. Used by the Stage Assignment editor so it
+      // can render *every* stage (including unassigned ones), not just the
+      // stages that already have an assignment row for the project.
+      listStages: headProcedure.query(async () => {
+        try {
+          const rows = await deps.prisma.stage.findMany({
+            orderBy: { sortOrder: 'asc' },
+            select: { id: true, name: true, sortOrder: true },
+          });
+          return rows;
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
       // NOTIF-06 (Phase 29-05): BullMQ DLQ count — failed-jobs set of the
       // email-reminder queue. headProcedure (admin/head only — D-AUTH-03).
       // Returns { count: 0 } when the Queue handle is absent (e.g. unit test
