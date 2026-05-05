@@ -177,6 +177,69 @@ export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type, ge
   return result;
 });
 
+/**
+ * 36-02 mutation-audit middleware.
+ *
+ * Captures every authenticated tRPC mutation through the existing
+ * AuditLogger (so audit signal flows through the same AppLogger envelope as
+ * login-success / login-fail / role-denied). The middleware is a no-op for
+ * queries and for `auth.*` (covered by login events) and `ai.*` (privacy:
+ * AI prompts/responses must never reach the audit stream — see Phase 31
+ * AI-SPEC §5.3 / PITFALLS C-3).
+ *
+ * `target` extraction is best-effort: we read whichever common id key is
+ * present in the input (sectionId / reportId / periodId / projectId /
+ * leadId / id), without inspecting deeper structures. Mutations like
+ * `period.publish` that take no id leave `target` undefined.
+ *
+ * Outcome is success | fail; on failure, `reason` carries the error
+ * message. No before/after diff is captured — Prisma-side introspection is
+ * deferred to a future phase if SIEM/forensics needs it.
+ */
+const TARGET_ID_KEYS = ['sectionId', 'reportId', 'periodId', 'projectId', 'leadId', 'id'] as const;
+
+export const mutationAuditMiddleware = t.middleware(
+  async ({ ctx, next, path, type, getRawInput }) => {
+    if (type !== 'mutation') return next();
+    if (path.startsWith('auth.') || path.startsWith('ai.')) return next();
+
+    const start = performance.now();
+    const result = await next();
+    const duration = Math.round(performance.now() - start);
+
+    let target: string | undefined;
+    try {
+      const raw = await getRawInput();
+      if (raw && typeof raw === 'object') {
+        const r = raw as Record<string, unknown>;
+        for (const key of TARGET_ID_KEYS) {
+          const v = r[key];
+          if (typeof v === 'string') {
+            target = v;
+            break;
+          }
+        }
+      }
+    } catch {
+      // getRawInput() can throw on already-consumed bodies; skip target
+      // extraction rather than crash the audit emit.
+    }
+
+    ctx.auditLogger.mutation({
+      userId: ctx.session?.userId ?? 'anonymous',
+      role: ctx.session?.role ?? null,
+      ip: ctx.ip,
+      procedure: path,
+      target,
+      status: result.ok ? 'success' : 'fail',
+      duration,
+      ...(result.ok ? {} : { reason: result.error.message }),
+    });
+
+    return result;
+  },
+);
+
 export const publicProcedure = t.procedure.use(loggingMiddleware);
 
 const isAuthed = t.middleware(({ ctx, next }) => {
@@ -247,7 +310,8 @@ const pdfExportGuard = t.middleware(async ({ ctx, path, next, getRawInput }) => 
 export const protectedProcedure = t.procedure
   .use(loggingMiddleware)
   .use(isAuthed)
-  .use(pdfExportGuard);
+  .use(pdfExportGuard)
+  .use(mutationAuditMiddleware);
 
 // AUTH-03 (Phase 27) + AUTH-08 (Phase 29-01): role-bound procedures whose
 // deny branch emits a structured `role-denied` audit event before throwing
@@ -302,19 +366,23 @@ const anyRoleMiddleware = buildRoleMiddleware(['lead', 'head', 'admin', 'viewer'
 export const headProcedure = t.procedure
   .use(loggingMiddleware)
   .use(headRoleMiddleware)
-  .use(pdfExportGuard);
+  .use(pdfExportGuard)
+  .use(mutationAuditMiddleware);
 export const leadProcedure = t.procedure
   .use(loggingMiddleware)
   .use(leadRoleMiddleware)
-  .use(pdfExportGuard);
+  .use(pdfExportGuard)
+  .use(mutationAuditMiddleware);
 export const viewerProcedure = t.procedure
   .use(loggingMiddleware)
   .use(viewerRoleMiddleware)
-  .use(pdfExportGuard);
+  .use(pdfExportGuard)
+  .use(mutationAuditMiddleware);
 export const anyRoleProcedure = t.procedure
   .use(loggingMiddleware)
   .use(anyRoleMiddleware)
-  .use(pdfExportGuard);
+  .use(pdfExportGuard)
+  .use(mutationAuditMiddleware);
 export const adminProcedure = headProcedure;
 
 export const router = t.router;
