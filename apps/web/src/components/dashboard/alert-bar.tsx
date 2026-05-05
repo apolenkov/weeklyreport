@@ -33,17 +33,28 @@ export function AlertBar({ pendingLeads, reportId }: AlertBarProps) {
   const trpc = useTRPC();
   const dispatchMut = useMutation(
     trpc.reminders.dispatchPending.mutationOptions({
-      onSuccess: ({ dispatched, skipped, reason }) => {
+      onSuccess: ({ dispatched, alreadySent, skipped, reason }) => {
         if (reason === 'no-active-rule') {
           toast.error('No active reminder rule for this period — configure one in Admin → Reminders.');
           return;
         }
-        if (dispatched === 0 && skipped === 0) {
+        if (dispatched === 0 && alreadySent === 0 && skipped === 0) {
           toast.info('No pending leads to remind.');
           return;
         }
-        const skipNote = skipped > 0 ? ` (${skipped} opted out)` : '';
-        toast.success(`Reminder sent to ${dispatched} lead${dispatched === 1 ? '' : 's'}${skipNote}.`);
+        if (dispatched === 0 && alreadySent > 0) {
+          toast.info(
+            `All ${alreadySent} pending lead${alreadySent === 1 ? '' : 's'} already received this cycle's reminder.`,
+          );
+          return;
+        }
+        const extras: string[] = [];
+        if (alreadySent > 0) extras.push(`${alreadySent} already sent this cycle`);
+        if (skipped > 0) extras.push(`${skipped} opted out`);
+        const tail = extras.length ? ` (${extras.join(', ')})` : '';
+        toast.success(
+          `Reminder sent to ${dispatched} lead${dispatched === 1 ? '' : 's'}${tail}.`,
+        );
       },
       onError: (err) => {
         toast.error(err instanceof Error ? err.message : 'Failed to send reminder');
