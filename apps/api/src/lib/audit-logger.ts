@@ -23,7 +23,12 @@ import type { AppLogger } from './logger.js';
  *  - T3: ip is captured upstream from `req.ip` (Express trust-proxy aware),
  *    never from raw X-Forwarded-For; this module is a pure consumer.
  */
-export type AuditEvent = 'login-success' | 'login-fail' | 'logout' | 'role-denied';
+export type AuditEvent =
+  | 'login-success'
+  | 'login-fail'
+  | 'logout'
+  | 'role-denied'
+  | 'mutation';
 
 export type AuditEnvelope = {
   readonly event: AuditEvent;
@@ -40,11 +45,36 @@ type LoginFailInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
 type LogoutInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'>;
 type RoleDeniedInput = Omit<AuditEnvelope, 'event'>;
 
+/**
+ * 36-02 mutation audit envelope.
+ *
+ * Captured for every authenticated tRPC mutation (excluding `auth.*` —
+ * already covered by loginSuccess/loginFail — and `ai.*` — privacy: AI
+ * prompts/responses must never reach the audit stream, see Phase 31
+ * AI-SPEC §5.3 / PITFALLS C-3).
+ *
+ * `target` is a best-effort extraction from the procedure input (id,
+ * reportId, sectionId, periodId, projectId, leadId — the common shapes
+ * across the 26 mutations). Absent on signature-less mutations like
+ * `period.publish` where the period is implied by session.
+ *
+ * `status` distinguishes success from any thrown TRPCError (validation,
+ * authz, internal). For failures, `reason` carries the error message.
+ */
+type MutationInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly procedure: string;
+  readonly target?: string;
+  readonly status: 'success' | 'fail';
+  readonly duration: number;
+  readonly reason?: string;
+};
+
 export interface AuditLogger {
   loginSuccess(input: LoginSuccessInput): void;
   loginFail(input: LoginFailInput): void;
   logout(input: LogoutInput): void;
   roleDenied(input: RoleDeniedInput): void;
+  mutation(input: MutationInput): void;
 }
 
 const AUDIT_MESSAGE = 'audit';
@@ -92,6 +122,22 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         ip: input.ip,
       });
     },
+    mutation(input) {
+      // Successes flow at info; failures flow at warn so the default logger
+      // surface escalates appropriately without extra config.
+      const level = input.status === 'success' ? 'info' : 'warn';
+      logger[level](AUDIT_MESSAGE, {
+        event: 'mutation',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        procedure: input.procedure,
+        target: input.target,
+        status: input.status,
+        duration: input.duration,
+        ...(input.reason ? { reason: input.reason } : {}),
+      });
+    },
   };
 }
 
@@ -108,6 +154,9 @@ export function createNullAuditLogger(): AuditLogger {
       /* noop */
     },
     roleDenied() {
+      /* noop */
+    },
+    mutation() {
       /* noop */
     },
   };
