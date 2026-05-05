@@ -66,6 +66,21 @@ jobs:
             apps/api/coverage/
           retention-days: 14
 
+      # 34-03: mutation-audit gate. Catches new tRPC mutations that ship
+      # without a consumer query (the reopen-request black-hole pattern).
+      # Allowlist at apps/web/uat-suite/mutation-audit.allowlist.json carves
+      # out intentional cron-only handlers.
+      - name: Mutation Consumer Audit
+        run: pnpm uat:audit
+
+      - name: Upload mutation audit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-audit
+          path: apps/web/uat-suite/mutation-audit.md
+          retention-days: 14
+
   # ------------------------------------------------------------------
   # Job 2: E2E Tests with Playwright
   # ------------------------------------------------------------------
