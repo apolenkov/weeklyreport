@@ -591,20 +591,26 @@ export function LeadForm({ period }: LeadFormProps) {
       // case back to the schema as `undefined`, so picking Clear on the only
       // owned stage actually returns the chip to grey instead of bouncing
       // back to green via the (deleted) "default to green" branch.
+      // Use a numeric severity so TS' control-flow analysis doesn't end up
+      // narrowing `worst` away from the 'red' branch and emitting "no overlap"
+      // diagnostics on the literal-union comparisons. 0=none, 1=on-track,
+      // 2=at-risk, 3=blocked. Map back to the schema enum after the scan.
       const worstByProduct = new Map<string, 'green' | 'yellow' | 'red' | null>();
       for (const p of next) {
-        let worst: 'green' | 'yellow' | 'red' | null = null;
+        let severity = 0;
         for (const s of p.stages) {
-          if (s.status === 'blocked') { worst = 'red'; break; }
-          if (s.status === 'at-risk') { if (worst !== 'red') worst = 'yellow'; }
-          else if (s.status === 'on-track') { if (worst !== 'red' && worst !== 'yellow') worst = 'green'; }
+          if (s.status === 'blocked') { severity = 3; break; }
+          if (s.status === 'at-risk') severity = Math.max(severity, 2);
+          else if (s.status === 'on-track') severity = Math.max(severity, 1);
           // 'empty' contributes nothing; loop continues.
         }
+        const worst: 'green' | 'yellow' | 'red' | null =
+          severity === 3 ? 'red' : severity === 2 ? 'yellow' : severity === 1 ? 'green' : null;
         worstByProduct.set(p.id, worst);
       }
       const merged = prev.projects.map((ps) =>
         worstByProduct.has(ps.projectId)
-          ? { ...ps, trafficLight: worstByProduct.get(ps.projectId) }
+          ? { ...ps, trafficLight: worstByProduct.get(ps.projectId) ?? null }
           : ps,
       );
       return { ...prev, projects: merged };

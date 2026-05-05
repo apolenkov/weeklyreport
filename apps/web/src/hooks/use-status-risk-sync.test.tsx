@@ -128,6 +128,8 @@ describe('useStatusRiskSync', () => {
       stageName: 'Dev',
       severity: 'at-risk',
       text: 'pre-existing',
+      impact: '',
+      mitigation: '',
     };
     const { state, hookResult } = setup([product], [existingRisk]);
 
@@ -149,6 +151,8 @@ describe('useStatusRiskSync', () => {
       productName: 'CRM Platform',
       stageName: 'Dev',
       severity: 'at-risk',
+      impact: '',
+      mitigation: '',
       text: '',
     };
     const { state, hookResult } = setup([product], [risk]);
@@ -176,6 +180,8 @@ describe('useStatusRiskSync', () => {
       productName: 'CRM Platform',
       stageName: 'Dev',
       severity: 'at-risk',
+      impact: '',
+      mitigation: '',
       text: 'something bad',
     };
     const { state, hookResult } = setup([product], [risk]);
@@ -225,6 +231,8 @@ describe('useStatusRiskSync', () => {
       productName: 'CRM Platform',
       stageName: 'Dev',
       severity: 'at-risk',
+      impact: '',
+      mitigation: '',
       text: '',
     };
     const { state, hookResult } = setup([product], [risk]);
@@ -250,6 +258,8 @@ describe('useStatusRiskSync', () => {
       productName: 'CRM Platform',
       stageName: 'Dev',
       severity: 'at-risk',
+      impact: '',
+      mitigation: '',
       text: 'existing context',
     };
     const { state, hookResult } = setup([product], [risk]);

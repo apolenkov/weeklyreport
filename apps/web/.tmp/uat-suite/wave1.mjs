@@ -4,6 +4,7 @@ import {
   BASE, MAILHOG, ACCOUNTS,
   pass, fail, warn, note,
   loginAs, shot, pgQuery, pgInt, runTest, attachConsoleErrors,
+  waitForAppReady, expandAllAccordions,
 } from './helpers.mjs';
 
 note('Wave 1 start — P0 critical paths');
@@ -37,13 +38,13 @@ await runTest('LEAD-W1-02', async () => {
   const id = 'LEAD-W1-02';
   const page = await ctx.newPage();
   await loginAs(page, ACCOUNTS.olga.role, ACCOUNTS.olga.email);
-  await page.waitForLoadState('networkidle', { timeout: 15000 });
+  await waitForAppReady(page, 'lead-form');
   const toggleAll = page.getByRole('button', { name: /Toggle All/i });
+  await toggleAll.first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
   if ((await toggleAll.count()) === 0) { fail(id, 'No Toggle All button'); throw 0; }
-  // Capture before state
   const beforeExpanded = await page.locator('[aria-expanded="true"]').count();
-  await toggleAll.first().click();
-  await page.waitForTimeout(400);
+  await toggleAll.first().click({ force: true });
+  await page.waitForTimeout(500);
   const afterExpanded = await page.locator('[aria-expanded="true"]').count();
   await shot(page, id);
   if (beforeExpanded !== afterExpanded) pass(id, `Toggle All flipped expansion (${beforeExpanded}→${afterExpanded})`);
@@ -69,16 +70,15 @@ await runTest('LEAD-W1-04', async () => {
   const id = 'LEAD-W1-04';
   const page = await ctx.newPage();
   await loginAs(page, ACCOUNTS.olga.role, ACCOUNTS.olga.email);
-  await page.waitForLoadState('networkidle', { timeout: 15000 });
+  await waitForAppReady(page, 'lead-form');
   const prev = page.getByRole('button', { name: /Previous period/i });
-  const next = page.getByRole('button', { name: /Next period/i });
   const select = page.locator('select[aria-label*="reporting period"]').first();
-  const before = await select.inputValue();
-  // click Prev should change the period
-  if (!(await prev.first().isDisabled())) {
-    await prev.first().click();
+  await select.waitFor({ state: 'attached', timeout: 8000 }).catch(() => {});
+  const before = await select.inputValue().catch(() => '');
+  if (!(await prev.first().isDisabled().catch(() => true))) {
+    await prev.first().click({ force: true });
     await page.waitForTimeout(800);
-    const after = await select.inputValue();
+    const after = await select.inputValue().catch(() => '');
     await shot(page, id);
     if (before !== after) pass(id, `Period nav: ${before.slice(0, 8)} → ${after.slice(0, 8)}`);
     else fail(id, 'Period select value unchanged after Prev click');
@@ -127,14 +127,23 @@ await runTest('LEAD-W1-07', async () => {
   const id = 'LEAD-W1-07';
   const page = await ctx.newPage();
   await loginAs(page, ACCOUNTS.olga.role, ACCOUNTS.olga.email);
-  await page.waitForLoadState('networkidle', { timeout: 15000 });
-  const stage = page.getByRole('button', { name: /Dev: at-risk/i }).first();
-  if ((await stage.count()) === 0) { fail(id, 'No Dev: at-risk chip'); throw 0; }
-  await stage.click();
-  await page.waitForTimeout(700);
+  await waitForAppReady(page, 'lead-form');
+  await expandAllAccordions(page);
+  // Data-agnostic: any editable stage chip (ownership=mine, not [disabled]).
+  // Olga's specific stage status varies week-to-week so don't pin to one.
+  const stage = page.locator(
+    'button[aria-label*=":"][aria-label*="track"]:not([disabled]), ' +
+    'button[aria-label*=":"][aria-label*="risk"]:not([disabled]), ' +
+    'button[aria-label*=":"][aria-label*="blocked"]:not([disabled]), ' +
+    'button[aria-label*=":"][aria-label*="empty"]:not([disabled])',
+  ).first();
+  if ((await stage.count()) === 0) { fail(id, 'No editable stage chip on Olga form'); throw 0; }
+  await stage.scrollIntoViewIfNeeded();
+  await stage.click({ force: true });
+  await page.waitForSelector('[role="menu"]', { timeout: 3000 }).catch(() => {});
+  await page.waitForTimeout(500);
   await shot(page, id);
-  // Look for popover content (4 menuitems or known labels)
-  const txt = await page.textContent('body');
+  const txt = await page.evaluate(() => document.body.innerText);
   const opened = txt.includes('At Risk') || txt.includes('Blocked') || txt.includes('On Track') || txt.includes('Clear');
   if (opened) pass(id, 'Stage popover opened');
   else fail(id, 'No popover detected');
@@ -145,10 +154,12 @@ await runTest('LEAD-W1-09', async () => {
   const id = 'LEAD-W1-09';
   const page = await ctx.newPage();
   await loginAs(page, ACCOUNTS.olga.role, ACCOUNTS.olga.email);
-  await page.waitForLoadState('networkidle', { timeout: 15000 });
+  await waitForAppReady(page, 'lead-form');
+  await expandAllAccordions(page);
   const addItem = page.getByRole('button', { name: /Add item to/i });
-  if ((await addItem.count()) === 0) { fail(id, 'No "Add item to ..." buttons'); throw 0; }
-  await addItem.first().click();
+  await addItem.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+  if ((await addItem.count()) === 0) { fail(id, 'No "Add item to ..." buttons after expand'); throw 0; }
+  await addItem.first().click({ force: true });
   await page.waitForTimeout(500);
   await shot(page, id);
   const dialog = page.getByRole('dialog');
@@ -159,13 +170,14 @@ await runTest('LEAD-W1-09', async () => {
 
 await runTest('LEAD-W1-13', async () => {
   const id = 'LEAD-W1-13';
-  const beforeCnt = pgInt(`SELECT COUNT(*) FROM "Risk" r JOIN "ReportSection" rs ON rs.id=r."reportSectionId" JOIN "User" u ON u.id=rs."authorId" WHERE u.email='olga@customreport.local'`);
   const page = await ctx.newPage();
   await loginAs(page, ACCOUNTS.olga.role, ACCOUNTS.olga.email);
-  await page.waitForLoadState('networkidle', { timeout: 15000 });
+  await waitForAppReady(page, 'lead-form');
+  await expandAllAccordions(page);
   const addRisk = page.getByRole('button', { name: /\+ Add Risk/i }).first();
+  await addRisk.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
   if ((await addRisk.count()) === 0) { fail(id, 'No + Add Risk button'); throw 0; }
-  await addRisk.click();
+  await addRisk.click({ force: true });
   await page.waitForTimeout(500);
   await shot(page, id);
   const dialog = page.getByRole('dialog');
@@ -178,14 +190,8 @@ await runTest('LEAD-W1-15', async () => {
   const id = 'LEAD-W1-15';
   const page = await ctx.newPage();
   await loginAs(page, ACCOUNTS.olga.role, ACCOUNTS.olga.email);
-  await page.waitForSelector('h1:has-text("My Report")', { timeout: 15000 });
-  // Priorities accordion starts collapsed; expand it so the + Add Priority
-  // button renders before we look for it.
-  const priorityHeader = page.locator('button[aria-expanded][aria-controls]', { hasText: /Priorities/i }).first();
-  if ((await priorityHeader.count()) > 0) {
-    await priorityHeader.click({ force: true }).catch(() => {});
-    await page.waitForTimeout(400);
-  }
+  await waitForAppReady(page, 'lead-form');
+  await expandAllAccordions(page);
   const addPriority = page.getByRole('button', { name: /\+ Add Priority/i }).first();
   await addPriority.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
   if ((await addPriority.count()) === 0) { fail(id, 'No + Add Priority button after expanding section'); throw 0; }
@@ -288,19 +294,32 @@ await runTest('DASH-W1-02', async () => {
 
 await runTest('DASH-W1-05', async () => {
   const id = 'DASH-W1-05';
+  // Cycle-dedupe means a second click within the same fireAt window returns
+  // alreadySent=N with no new email. Reset BOTH MailHog and the in-DB
+  // ReminderExecution table so the test is deterministic regardless of
+  // order with E-04 in wave2.
   await fetch(`${MAILHOG}/api/v1/messages`, { method: 'DELETE' }).catch(() => {});
+  pgQuery(`DELETE FROM "ReminderExecution"`);
+  // Also restore any rules wave2/E-04 may have paused.
+  pgQuery(`UPDATE "ReminderRule" SET status='active'::"ReminderRuleStatus" WHERE status='paused'`);
   const page = await ctx.newPage();
   await loginAs(page, ACCOUNTS.head.role);
   await page.goto(`${BASE}/head/dashboard`);
-  await page.waitForLoadState('networkidle', { timeout: 15000 });
+  await waitForAppReady(page, 'dashboard');
   const sendBtn = page.getByRole('button', { name: /Send Reminder/i });
   if ((await sendBtn.count()) === 0) { warn(id, 'No Send Reminder button — perhaps no pending leads'); throw 0; }
-  await sendBtn.first().click();
-  await page.waitForTimeout(4000);
+  await sendBtn.first().click({ force: true });
+  // Wait up to 8s for at least one email to land in MailHog (BullMQ + nodemailer
+  // round-trip).
+  let inbox = { total: 0 };
+  for (let i = 0; i < 16; i++) {
+    inbox = await fetch(`${MAILHOG}/api/v2/messages`).then((r) => r.json()).catch(() => ({ total: 0 }));
+    if (inbox.total > 0) break;
+    await page.waitForTimeout(500);
+  }
   await shot(page, id);
-  const inbox = await fetch(`${MAILHOG}/api/v2/messages`).then((r) => r.json()).catch(() => ({ total: 0 }));
   if (inbox.total > 0) pass(id, `Reminder dispatched (${inbox.total} email)`);
-  else fail(id, 'MailHog inbox empty after click');
+  else fail(id, 'MailHog inbox empty after click + 8s wait');
   await page.close();
 });
 
