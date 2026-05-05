@@ -14,6 +14,27 @@ import type { TrpcContext } from './trpc.context.js';
 // strictly when AUTH_DEV_MODE is on so production stays opaque.
 const isDevMode = process.env['AUTH_DEV_MODE'] === 'true';
 
+/**
+ * Describe a tRPC response shape for debug logs without exposing values.
+ * Returns a compact descriptor (top-level keys for objects, length+inner
+ * keys for arrays, primitive type otherwise). Earlier `outputPreview`
+ * dumped the full JSON — that leaked email/role/userId on every auth.me /
+ * admin.* call.
+ */
+function describeShape(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) {
+    if (value.length === 0) return 'array[0]';
+    const inner = describeShape(value[0]);
+    return `array[${value.length}]<${inner}>`;
+  }
+  if (typeof value === 'object') {
+    const keys = Object.keys(value as Record<string, unknown>).sort();
+    return `object{${keys.join(',')}}`;
+  }
+  return typeof value;
+}
+
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
@@ -100,24 +121,20 @@ export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type, ge
       duration,
       status: 'success',
     });
-    // Debug-level snapshot of the response payload. Truncated to avoid
-    // bloating logs when a procedure returns large arrays (e.g.
-    // archive.list, analytics.weekly). 4 KB is enough to see shape +
-    // first-page contents; tail callers can paginate to see more.
+    // Debug-level shape breadcrumb. Logs only the response *shape* (top-level
+    // keys + array length), never values — earlier `outputPreview` dumped the
+    // full serialised response which leaked email/role/userId into the log
+    // stream on every auth.me / admin.* / weeklyReport.get call.
     try {
-      const serialised = JSON.stringify(result.data);
-      const preview = serialised && serialised.length > 4096
-        ? `${serialised.slice(0, 4096)}…<truncated ${serialised.length - 4096}b>`
-        : serialised;
       ctx.logger.debug('trpc request output', {
         phase: 'trpc.request',
         stage: 'output',
         procedure: path,
         type,
-        outputPreview: preview,
+        outputShape: describeShape(result.data),
       });
     } catch {
-      // Non-serialisable result — skip the breadcrumb rather than throw.
+      // Non-introspectable result — skip the breadcrumb rather than throw.
     }
   } else {
     // Drill into TRPCError.cause so the log stream surfaces the real failure
