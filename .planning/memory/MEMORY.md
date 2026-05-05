@@ -1,5 +1,6 @@
 # CustomReport Memory Index
 
+- [Afternoon handoff 2026-05-06](handoff_2026_05_06_afternoon.md) — v8.0 18/30 (60%). 4 new plans: 38-02 Caddy + 39-01 PgBouncer + 37-02 DLQ counters + 36-02 mutation audit. Phase 36 fully closed (eligible for v8.0-phase-36 tag). 606/606 api tests, all green.
 - [Morning handoff 2026-05-06](handoff_2026_05_06_morning.md) — v8.0 GSD scaffold landed + 14/30 plans (47%). 3 new plans this morning: 39-02 Turbopack, 37-03 Prom/Grafana stack, 37-04 log-sink templates. /gsd-autonomous needs gsd-sdk CLI (absent here) — used legacy gsd-tools.cjs to verify scaffold parses correctly.
 - [Overnight handoff 2026-05-05 → 06](handoff_2026_05_05_overnight.md) — v8.0 11/30 plans shipped autonomously (Phase 34 mostly + Phase 36 mostly + Phase 38-01,04). 11 commits to main, all green. ESLint sweep + UI plans deferred for visual review.
 - [Session handoff 2026-05-05 late evening](handoff_2026_05_05_late_evening.md) — nav UX fix, ReopenRequest model+UI, admin=head merge, RU seed; 3 commits, all green
