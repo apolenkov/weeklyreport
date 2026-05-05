@@ -86,7 +86,23 @@ async function bootstrap() {
   const correlationIdMiddleware = app.get(CorrelationIdMiddleware);
   app.use(correlationIdMiddleware.use.bind(correlationIdMiddleware));
 
-  app.enableCors({ origin: env.FRONTEND_URL, credentials: true });
+  // 36-04: multi-origin whitelist. FRONTEND_URLS (CSV) optionally extends
+  // FRONTEND_URL (single). Production env validates no '*' is in the list.
+  // CORS reflects the request's origin only when it matches one of the
+  // whitelisted entries — wildcard is never allowed.
+  const allowedOrigins = (() => {
+    const single = env.FRONTEND_URL;
+    const csv = env.FRONTEND_URLS
+      ? env.FRONTEND_URLS.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+    return Array.from(new Set([single, ...csv]));
+  })();
+  logger.info('cors origins configured', {
+    phase: 'cors',
+    count: allowedOrigins.length,
+    origins: allowedOrigins,
+  });
+  app.enableCors({ origin: allowedOrigins, credentials: true });
 
   // HTTP access log — covers everything outside the tRPC adapter:
   // /auth/saml/login, /auth/dev-login, /auth/saml/callback, /auth/logout,
