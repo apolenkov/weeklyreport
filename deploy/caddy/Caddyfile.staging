@@ -1,0 +1,65 @@
+################################################################################
+# CustomReport — staging / local-CA reverse-proxy
+#
+# Use this Caddyfile when:
+#   - the deploy domain isn't publicly resolvable (Let's Encrypt would fail)
+#   - you've hit Let's Encrypt rate limits in staging
+#   - you need to test inside an air-gapped network
+#
+# Mount this file in place of deploy/caddy/Caddyfile:
+#   docker compose -f docker-compose.prod.yml run --rm \
+#     -v $(pwd)/deploy/caddy/Caddyfile.staging:/etc/caddy/Caddyfile:ro \
+#     caddy ...
+#
+# Or override CADDY_FILE in your .env to point at this path.
+################################################################################
+
+{
+	# Caddy's internal CA: self-signed root cert installed automatically in
+	# caddy_data volume. Trust it on the client by importing the root from
+	#   docker compose -f docker-compose.prod.yml exec caddy \
+	#     cat /data/caddy/pki/authorities/local/root.crt
+}
+
+{$CADDY_SITE_ADDRESS} {
+	tls internal
+
+	encode zstd gzip
+
+	@api {
+		path /trpc /trpc/* /auth /auth/* /health /health/* /metrics /admin/queues /admin/queues/*
+	}
+	handle @api {
+		reverse_proxy api:3001 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			transport http {
+				read_timeout 5m
+				write_timeout 5m
+			}
+		}
+	}
+
+	handle {
+		reverse_proxy web:3000 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

@@ -1,0 +1,74 @@
+################################################################################
+# CustomReport — production reverse-proxy
+#
+# Auto-HTTPS via Let's Encrypt when DOMAIN resolves publicly. For staging or
+# air-gapped envs, see deploy/caddy/Caddyfile.staging which forces caddy's
+# internal CA (self-signed cert chain).
+#
+# Routes:
+#   /trpc/*, /auth/*, /health/*, /metrics, /admin/queues* -> api:3001
+#   /                                                     -> web:3000
+#
+# WebSocket upgrade for tRPC subscriptions: caddy v2 forwards Upgrade headers
+# automatically when the client requests it; no extra directive needed.
+################################################################################
+
+{
+	# Let's Encrypt account email (set via env in docker-compose.prod.yml).
+	email {$CADDY_ACME_EMAIL}
+
+	# Defaults that the org may want to override:
+	# servers {
+	#   protocols h1 h2 h3
+	# }
+}
+
+{$CADDY_SITE_ADDRESS} {
+	encode zstd gzip
+
+	# API surface — order matters: caddy matches the first @block that wins.
+	@api {
+		path /trpc /trpc/* /auth /auth/* /health /health/* /metrics /admin/queues /admin/queues/*
+	}
+	handle @api {
+		reverse_proxy api:3001 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			# Long timeout for SSE / future tRPC subscriptions; tune if needed.
+			transport http {
+				read_timeout 5m
+				write_timeout 5m
+			}
+		}
+	}
+
+	# Default: Next.js frontend.
+	handle {
+		reverse_proxy web:3000 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# Security headers. Helmet on the api duplicates some of these on the
+	# /api responses; adding them at the edge covers the web side too.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		# Lock down where browsers may load resources from (relax if /reports
+		# embeds external imagery — currently same-origin only).
+		Content-Security-Policy-Report-Only "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'"
+		-Server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
