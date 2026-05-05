@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: 0/11 (Wave 1 planning)
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: 0/31 (planning, kickoff 2026-05-05)
 
 ---
 
@@ -15,7 +15,8 @@
 - [x] **v4.0 Backend Completeness & UI Redesign** - Phases 16-19 (shipped 2026-04-25)
 - [x] **v5.0 Production Integration** - Phases 20-26 (shipped 2026-04-25) — [details](milestones/v5.0-ROADMAP.md)
 - [x] **v6.0 Roles, Quality, AI & Analytics** - Phases 27-31 (shipped 2026-04-29) + post-v6.0 UX-overhaul wave 2026-04-30..2026-05-04
-- [ ] **v7.0 Stabilisation & Hardening** - Phases 32-33 (Wave 1 planning 2026-05-04) — [details](milestones/v7.0-ROADMAP.md)
+- [ ] ~~**v7.0 Stabilisation & Hardening**~~ — ABSORBED into v8.0 (Phases 32-33 became sub-plans of 34-35); see [v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md) for historical context
+- [ ] **v8.0 Production Readiness** - Phases 34-39 (planning 2026-05-05, 29 plans, 31 reqs) — [details](milestones/v8.0-ROADMAP.md)
 
 ## Phases
 
