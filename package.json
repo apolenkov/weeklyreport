@@ -24,9 +24,12 @@
     "db:seed:advanced": "tsx prisma/seed.ts",
     "gsd:checklist:sync": "tsx tools/handoff-sync.ts",
     "logs": "tail -f apps/api/.logs/app.log",
-    "logs:errors": "tail -f apps/api/.logs/app.log | grep -E '\"level\":\"(error|warn)\"'"
+    "logs:errors": "tail -f apps/api/.logs/app.log | grep -E '\"level\":\"(error|warn)\"'",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
     "@types/node": "^24.9.1",
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.14",
@@ -36,6 +39,8 @@
     "eslint": "^10.2.0",
     "eslint-plugin-react-compiler": "19.1.0-rc.2",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prisma": "^7.0.0",
     "turbo": "^2.5.6",
     "typescript": "^5.8.3",
@@ -54,5 +59,9 @@
       "msw",
       "sharp"
     ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mjs,js,jsx}": "eslint --fix --max-warnings=0",
+    "*.{json,md,yml,yaml}": "prettier --write"
   }
 }
