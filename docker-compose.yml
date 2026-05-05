@@ -15,6 +15,20 @@ services:
     ports:
       - "5432:5432"
 
+  mailhog:
+    # Local SMTP catch-all for dev: SMTP on :1025, Web UI on :8025.
+    # Use platform=linux/amd64 — no native arm64 image, Rosetta emulation works.
+    image: mailhog/mailhog:latest
+    platform: linux/amd64
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8025"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
