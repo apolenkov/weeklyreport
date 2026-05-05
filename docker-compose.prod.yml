@@ -59,7 +59,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    command: ["npx", "prisma", "migrate", "deploy"]
+    # 38-01: routed through apps/api/scripts/migrate.sh so the same
+    # entrypoint serves docker-compose AND a future K8s init-container.
+    command: ["sh", "apps/api/scripts/migrate.sh"]
     environment:
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
     depends_on:
@@ -81,29 +83,50 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       NODE_ENV: production
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL must be set}
+      # 36-04: optional CSV of additional CORS origins.
+      FRONTEND_URLS: ${FRONTEND_URLS:-}
       AUTH_DEV_MODE: "false"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET must be set (min 32 chars)}
-      PDF_BASE_URL: http://web:3000
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
+      # 36-03: PDF_EXPORT_JWT_SECRET fence — schema rejects the dev fallback
+      # in production, so this MUST be set.
+      PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:?PDF_EXPORT_JWT_SECRET must be set (min 16 chars, NOT the dev fallback)}
+      PDF_BASE_URL: ${PDF_BASE_URL:-http://web:3000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_DIR: /app/logs
+      # 38-01 SMTP — real provider required in prod.
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST must be set in production}
+      SMTP_PORT: ${SMTP_PORT:?SMTP_PORT must be set in production}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:?SMTP_FROM must be set in production}
+      # SAML / Keycloak — env.schema.ts requires these whenever AUTH_DEV_MODE=false.
+      KEYCLOAK_SAML_CALLBACK_URL: ${KEYCLOAK_SAML_CALLBACK_URL:?KEYCLOAK_SAML_CALLBACK_URL must be set}
+      KEYCLOAK_SAML_ENTRY_POINT: ${KEYCLOAK_SAML_ENTRY_POINT:?KEYCLOAK_SAML_ENTRY_POINT must be set}
+      KEYCLOAK_SAML_ISSUER: ${KEYCLOAK_SAML_ISSUER:?KEYCLOAK_SAML_ISSUER must be set}
+      KEYCLOAK_SAML_CERT: ${KEYCLOAK_SAML_CERT:?KEYCLOAK_SAML_CERT must be set}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
       migrate:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3001/health/live || exit 1"]
+      # 38-01: ready (DB+Redis+BullMQ+memory) instead of live (memory only)
+      # so the api container marks healthy only when actually serving.
+      # start_period bumped 30→60s so first migration + tRPC bootstrap
+      # doesn't flap the loop.
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3001/health/ready || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 60s
     restart: unless-stopped
     ports:
       - "${API_PORT:-3001}:3001"
     volumes:
       - pdfdata:/app/data/pdfs
+      - apilogs:/app/logs
     deploy:
       resources:
         limits:
@@ -146,3 +169,4 @@ volumes:
   pgdata:
   redisdata:
   pdfdata:
+  apilogs:
