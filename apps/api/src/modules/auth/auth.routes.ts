@@ -321,11 +321,14 @@ export function mountAuthRoutes(
           admin: 'admin@customreport.local',
           viewer: 'viewer@customreport.local',
         };
+        // Fallback names — only used when there is no DB record for the
+        // email (fresh dev DB before seed has run). When a row exists, we
+        // always use the seeded name so the session reflects the database.
         const nameByRole: Record<string, string> = {
-          head: 'Department Head',
+          head: 'Антон К.',
           lead: 'Lead 1',
-          admin: 'Administrator',
-          viewer: 'Report Viewer',
+          admin: 'Антон К.',
+          viewer: 'Дарья В.',
         };
         const samlIdByRole: Record<string, string> = {
           head: 'head-1',
@@ -335,13 +338,19 @@ export function mountAuthRoutes(
         };
 
         const email = (req.query.email as string) ?? emailByRole[role]!;
-
-        // Derive samlId and displayName from email when custom email is provided
         const isCustomEmail = req.query.email && req.query.email !== emailByRole[role];
-        const samlId = isCustomEmail ? `dev-${email}` : (samlIdByRole[role] ?? `dev-${role}`);
-        const displayName = isCustomEmail
-          ? (await prisma.user.findFirst({ where: { email }, select: { name: true } }))?.name ?? email
-          : (nameByRole[role] ?? role);
+
+        // Always look up the live DB row first so re-seeds (or schema name
+        // updates) propagate to the session cookie without a code change.
+        const dbUser = await prisma.user.findFirst({
+          where: { email },
+          select: { name: true, samlId: true },
+        });
+
+        const samlId =
+          dbUser?.samlId ??
+          (isCustomEmail ? `dev-${email}` : (samlIdByRole[role] ?? `dev-${role}`));
+        const displayName = dbUser?.name ?? (nameByRole[role] ?? role);
 
         const session = await buildUserSession(prisma, {
           samlId,
