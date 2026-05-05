@@ -307,59 +307,66 @@ async function main() {
     TrafficLightStatus.green,
   ];
 
-  // Pre-canned realistic items per lead/product. Sergey has none.
+  // Russian-language demo content for the active period. Each lead gets
+  // realistic items that read like a working tech-team's weekly status. Sergey
+  // is intentionally empty so the dashboard's "pending" KPI has a non-zero
+  // bucket (Sergey's section shows 'pending' instead of 'draft').
   const itemTextsByLead: Record<string, { current: string[]; next: string[] }> = {
     [LEAD_PLATANOV_ID]: {
       current: [
-        'Implement user authentication module',
-        'Add OAuth2 integration for partner API',
-        'Optimize customer search query performance',
-        'Webhook retry logic with exponential backoff',
+        'Закрыли модуль авторизации в CRM Platform — JWT + refresh-token',
+        'Подключили OAuth2 партнёрского API, ждём подтверждения от партнёра',
+        'Оптимизировали поиск клиентов: p99 query 850ms → 180ms',
+        'Webhook retry с экспоненциальным backoff, dead-letter в Redis',
       ],
       next: [
-        'Partner portal SSO integration',
-        'A/B testing framework rollout',
+        'Интеграция SSO с Partner Portal (на стороне Олги)',
+        'Раскатка A/B-тестинг фреймворка на Data Analytics Suite',
       ],
     },
     [LEAD_MARIA_ID]: {
       current: [
-        'Mobile banking transaction flow QA',
-        'Checkout regression suite for E-Commerce',
-        'API contract tests for payment provider',
+        'QA транзакционного флоу Mobile Banking — закрыли 12 из 15 кейсов',
+        'Регресс-сьют чекаута E-Commerce, добавили smoke-тесты для прод',
+        'Contract-тесты с провайдером платежей, нашли 2 расхождения по схеме',
       ],
       next: [
-        'Promo-code validation scenarios',
-        'Cart persistence cross-device tests',
+        'Сценарии валидации промокодов (включая edge-cases с истечением)',
+        'Тесты сохранности корзины при смене устройства',
       ],
     },
     [LEAD_IGOR_ID]: {
       current: [
-        'PgBouncer connection pool tuning',
-        'GPU autoscaling for AI/ML pipeline',
-        'Disaster recovery runbook update',
+        'Тюнинг pool_size в PgBouncer: 40 → 80, p99 latency упало на 22%',
+        'GPU autoscaling для AI/ML Pipeline на базе HPA + custom metrics',
+        'Обновили DR-runbook: добавили checklist для multi-region failover',
       ],
       next: [
-        'Multi-region failover dry run',
+        'Dry-run multi-region failover (запланирован на четверг 15:00)',
       ],
     },
     [LEAD_DMITRY_ID]: {
       current: [
-        'CI/CD pipeline migration to GitHub Actions',
-        'Security scanner integration in pre-merge',
-        'WAF rule tuning for Security Gateway',
-        'Container vulnerability baseline scan',
+        'Миграция CI/CD на GitHub Actions: 8 из 12 пайплайнов уже там',
+        'Интеграция security scanner в pre-merge — блокирует Critical/High',
+        'Тюнинг WAF-правил для Security Gateway, ложных срабатываний -40%',
+        'Baseline-скан уязвимостей контейнеров, отчёт собран по 17 образам',
       ],
       next: [
-        'Secret rotation automation',
-        'Build cache layer optimization',
+        'Автоматизация ротации секретов (Vault transit-engine)',
+        'Оптимизация build-cache в Docker BuildKit',
       ],
     },
     [LEAD_OLGA_ID]: {
       current: [
-        'Payment processing 3DS v2 integration',
-        'Partner portal session management',
+        'Закрыли интеграцию 3DS v2 на Payment Processing — пилот на 5% трафика',
+        'Перевели Partner Portal на короткие сессии (refresh-токен 24 ч)',
+        'Починили двойное списание при timeout — добавили idempotency-key через Redis',
       ],
-      next: [],
+      next: [
+        'Подключить СБП-эквайринг к Payment Processing (sandbox-ключи ожидаются 8 мая)',
+        'Biometric-вход в мобильный Partner Portal — закрыть acceptance с UX',
+      ],
     },
     [LEAD_SERGEY_ID]: {
       current: [],
@@ -490,41 +497,43 @@ async function main() {
       totalItems++;
     }
 
-    // Priorities (3 per submitted lead section; Olga gets 2; Sergey 0)
+    // Priorities (3 per submitted lead section; Olga gets 2; Sergey 0).
+    // Russian content matching the items above so the demo report reads as a
+    // single coherent week, not unrelated bullet lists.
     const priorityTexts = (() => {
       if (cfg.leadId === LEAD_SERGEY_ID) return [];
       if (cfg.leadId === LEAD_OLGA_ID) {
         return [
-          'Stabilize 3DS v2 payment flow',
-          'Roll out partner portal session refresh',
+          'Стабилизация 3DS v2 на проде (закрыть L2-инциденты)',
+          'Раскатка СБП-эквайринга на 100% трафика после получения ключей',
         ];
       }
       if (cfg.leadId === LEAD_PLATANOV_ID) {
         return [
-          'Complete OAuth2 integration for CRM Platform',
-          'Prepare SSO flow for Partner Portal handoff',
-          'Ship Data Analytics dashboard MVP',
+          'Закрыть OAuth2 интеграцию с CRM Platform (партнёр снял rate-limit)',
+          'Передать SSO flow на сторону Partner Portal к четвергу',
+          'Выкатить MVP дашборда Data Analytics Suite на staging',
         ];
       }
       if (cfg.leadId === LEAD_MARIA_ID) {
         return [
-          'Sign off Mobile Banking regression suite',
-          'Stabilize E-Commerce checkout flow',
-          'Onboard payment provider contract tests',
+          'Подписать регресс-сьют Mobile Banking (15/15 кейсов зелёных)',
+          'Стабилизировать чекаут E-Commerce — закрыть последние 3 P2-бага',
+          'Завести контракт-тесты с провайдером платежей в CI',
         ];
       }
       if (cfg.leadId === LEAD_IGOR_ID) {
         return [
-          'Land PgBouncer connection pool changes',
-          'Validate AI/ML pipeline GPU autoscaling',
-          'Publish updated DR runbook',
+          'Закатить новый pool_size PgBouncer на прод после dry-run',
+          'Подтвердить GPU autoscaling AI/ML Pipeline на нагрузочном тесте',
+          'Опубликовать обновлённый DR-runbook для дежурных',
         ];
       }
       // Dmitry
       return [
-        'Cut over CI/CD to GitHub Actions',
-        'Roll out WAF tuning for Security Gateway',
-        'Automate secret rotation across services',
+        'Финализировать миграцию CI/CD на GitHub Actions (4 пайплайна осталось)',
+        'Раскатать тюнинг WAF Security Gateway после shadow-mode валидации',
+        'Автоматизировать ротацию секретов через Vault transit',
       ];
     })();
 
@@ -556,38 +565,41 @@ async function main() {
   const igorSec = sectionId('1', 3);
   const dmitrySec = sectionId('1', 4);
 
+  // Russian-language risks mirroring the items above. Each risk ties to a
+  // specific project so the form's per-product chip + risk-card pair stays
+  // coherent (no orphan risks for products the lead doesn't own).
   const risks = [
     {
       id: riskId(1),
       reportSectionId: platanovSec,
       projectId: 'a0000000-0000-4000-8000-000000000201', // CRM Platform
-      risk: 'OAuth2 partner API rate limits delaying SSO portal handoff.',
-      impact: 'SSO portal milestone may slip 1 week.',
-      mitigation: 'Negotiating extended quota; preparing fallback batch flow.',
+      risk: 'Партнёрский OAuth2 API режет нас по rate-limit на пиковом трафике',
+      impact: 'Сдвигает milestone SSO portal на 1 неделю, блокирует Partner Portal',
+      mitigation: 'Эскалирована заявка на расширение квоты, параллельно готовим batch-fallback',
     },
     {
       id: riskId(2),
       reportSectionId: platanovSec,
       projectId: 'a0000000-0000-4000-8000-000000000202', // Data Analytics Suite
-      risk: 'ETL memory leak causes OOM on large extracts.',
-      impact: 'Analytics release blocked until vendor patch lands.',
-      mitigation: 'Vendor patch ETA Apr 25; chunked extraction interim mitigation.',
+      risk: 'Memory leak в ETL — OOM на больших экстрактах (>2M строк)',
+      impact: 'Блокирует релиз Analytics до получения патча от вендора',
+      mitigation: 'Патч ETA 8 мая, временно перешли на chunked extraction по 500K',
     },
     {
       id: riskId(3),
       reportSectionId: igorSec,
       projectId: 'a0000000-0000-4000-8000-000000000205', // Cloud Infrastructure
-      risk: 'PgBouncer migration requires ~30 min downtime window.',
-      impact: 'Coordinated maintenance impacts dependent services.',
-      mitigation: 'Scheduling off-hours window; rollback plan validated.',
+      risk: 'Миграция PgBouncer требует ~30 мин downtime в проде',
+      impact: 'Окно обслуживания затрагивает зависимые сервисы (auth, payments)',
+      mitigation: 'Окно запланировано в субботу 02:00 МСК, rollback-план провалидирован',
     },
     {
       id: riskId(4),
       reportSectionId: dmitrySec,
       projectId: 'a0000000-0000-4000-8000-000000000208', // Security Gateway
-      risk: 'WAF tuning may produce false positives during peak load.',
-      impact: 'Customer-facing requests could be blocked.',
-      mitigation: 'Staged rollout with shadow mode and instant rollback toggle.',
+      risk: 'Тюнинг WAF может выдавать false positives на пиковой нагрузке',
+      impact: 'Часть клиентских запросов может блокироваться без причины',
+      mitigation: 'Раскатка через shadow-mode + кнопка мгновенного rollback',
     },
   ];
 
@@ -609,30 +621,31 @@ async function main() {
   void mariaSec;
 
   // ----- Decisions (2-3 across active sections) -----
+  // Russian-language decisions for the head to action.
   const decisions = [
     {
       id: decisionId(1),
       reportSectionId: platanovSec,
-      text: 'Approve extended OAuth2 quota request with partner.',
-      owner: 'Department Head',
+      text: 'Согласовать расширение OAuth2 квоты у партнёра (нужен sign-off head)',
+      owner: 'Глава департамента',
       deadline: activeOffset(8, 15),
-      impact: 'Unblocks SSO portal delivery.',
+      impact: 'Разблокирует выкатку SSO portal на 100% трафика',
     },
     {
       id: decisionId(2),
       reportSectionId: igorSec,
-      text: 'Approve maintenance window for PgBouncer migration.',
-      owner: 'Department Head',
+      text: 'Утвердить maintenance-window для миграции PgBouncer (Сб 02:00 МСК)',
+      owner: 'Глава департамента',
       deadline: activeOffset(9, 18),
-      impact: 'Required to clear connection pool tech debt.',
+      impact: 'Закрывает tech-debt по пулу соединений, разгружает p99',
     },
     {
       id: decisionId(3),
       reportSectionId: dmitrySec,
-      text: 'Greenlight phased WAF rollout in shadow mode.',
-      owner: 'Department Head',
+      text: 'Дать зелёный свет фазовой раскатке WAF в shadow-mode',
+      owner: 'Глава департамента',
       deadline: activeOffset(10, 12),
-      impact: 'Reduces incident risk during launch.',
+      impact: 'Снижает риск инцидентов на проде, безопасный rollback',
     },
   ];
 

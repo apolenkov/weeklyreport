@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --env-file=../../.env --import @swc-node/register/esm-register --watch src/main.ts",
+    "dev": "mkdir -p .logs && node --env-file=../../.env --import @swc-node/register/esm-register --watch src/main.ts 2>&1 | tee -a .logs/api.log",
     "build": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit -p tsconfig.json && eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
