@@ -155,14 +155,14 @@ export function CurrentWeekSection({
 
   return (
     <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, 1fr)` }}>
+      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(0, 1fr))` }}>
         {columns.map((col) => (
-          <div key={col.key}>
+          <div key={col.key} className="min-w-0">
             {/* gap-2 (not justify-between) keeps the `+ Add` button glued
                 next to the product label so the header reads as a tight
                 unit even when the column is wide. */}
-            <div className="mb-3 flex items-center gap-2">
-              <div className="flex-1 truncate font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+            <div className="mb-3 flex min-w-0 items-center gap-2">
+              <div className="min-w-0 flex-1 truncate font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                 {col.productName}
               </div>
               {!readOnly && (

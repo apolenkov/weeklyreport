@@ -126,8 +126,8 @@ export function VersionHistoryNav({
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-[var(--color-muted-foreground)]">Editing version</span>
+      <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+        <span className="truncate text-xs text-[var(--color-muted-foreground)]">Editing version</span>
 
         <button
           type="button"

@@ -88,7 +88,7 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2">
       <span
         className="flex items-center gap-1 text-xs font-medium text-[var(--color-muted-foreground)]"
         aria-hidden="true"
@@ -110,7 +110,7 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
 
       <select
         aria-label="Select reporting period"
-        className="cursor-pointer appearance-none rounded-lg border border-[var(--color-muted)] bg-[var(--color-background)] px-2.5 py-1.5 pr-7 font-[family-name:var(--font-sans)] text-[13px] font-medium focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+        className="min-w-0 flex-1 cursor-pointer appearance-none truncate rounded-lg border border-[var(--color-muted)] bg-[var(--color-background)] px-2.5 py-1.5 pr-7 font-[family-name:var(--font-sans)] text-[13px] font-medium focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
         value={selectedPeriod?.id ?? ''}
         onChange={handleSelect}
         style={{
