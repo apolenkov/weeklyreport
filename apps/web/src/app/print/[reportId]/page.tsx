@@ -4,12 +4,12 @@ import { use, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { useTRPC } from '../../../../../lib/trpc-context';
-import { mapWeeklyReport } from '../../../../../lib/mappers';
+import { useTRPC } from '../../../lib/trpc-context';
+import { mapWeeklyReport } from '../../../lib/mappers';
 import type {
   PortfolioProduct,
   ProductReport,
-} from '../../../../../components/dashboard/mock-data';
+} from '../../../components/dashboard/mock-data';
 
 /* ------------------------------------------------------------------ */
 /*  Print/PDF Template — Client Component (Phase 21)                  */
