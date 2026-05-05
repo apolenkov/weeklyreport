@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+# 34-01: pre-commit hook — runs prettier + eslint on staged files via lint-staged.
+# Bypass with `git commit --no-verify` if you really need to (you don't —
+# fix the lint warning instead).
+
+pnpm exec lint-staged
