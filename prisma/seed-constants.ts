@@ -164,24 +164,75 @@ export type SeedReport = {
   publishedAt?: string;
 };
 
+// ----- Date helpers for date-relative seed -----
+// Hardcoded 2026-04-13 (Week 16) drifted into the past; the API auto-creates
+// the actual current-week section empty, so demos and Wave 1 tests landed on
+// a blank form. Compute Week N (current) and Week N-1 (published) from the
+// run time so the seed always populates the page the lead actually opens.
+
+function isoWeekNumber(d: Date): number {
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dayNum = (t.getUTCDay() + 6) % 7;
+  t.setUTCDate(t.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+  const firstThursdayDayNum = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstThursdayDayNum + 3);
+  return 1 + Math.round((t.getTime() - firstThursday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+}
+
+function mondayOfWeek(d: Date): Date {
+  const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dayNum = (monday.getUTCDay() + 6) % 7;
+  monday.setUTCDate(monday.getUTCDate() - dayNum);
+  monday.setUTCHours(0, 0, 0, 0);
+  return monday;
+}
+
+function plusDays(d: Date, days: number): Date {
+  const r = new Date(d);
+  r.setUTCDate(r.getUTCDate() + days);
+  return r;
+}
+
+function endOfDay(d: Date): Date {
+  const r = new Date(d);
+  r.setUTCHours(23, 59, 59, 0);
+  return r;
+}
+
+const NOW = new Date();
+const ACTIVE_MONDAY = mondayOfWeek(NOW);
+const PREV_MONDAY = plusDays(ACTIVE_MONDAY, -7);
+
 export const SEED_REPORTS = {
   active: {
     id: ACTIVE_REPORT_ID,
-    periodStart: '2026-04-13T00:00:00.000Z',
-    periodEnd: '2026-04-19T23:59:59.000Z',
-    deadline: '2026-04-17T15:00:00.000Z',
-    weekLabel: 'Week 16',
+    periodStart: ACTIVE_MONDAY.toISOString(),
+    periodEnd: endOfDay(plusDays(ACTIVE_MONDAY, 6)).toISOString(),
+    // Deadline = Friday 15:00 UTC of the active week.
+    deadline: new Date(Date.UTC(
+      plusDays(ACTIVE_MONDAY, 4).getUTCFullYear(),
+      plusDays(ACTIVE_MONDAY, 4).getUTCMonth(),
+      plusDays(ACTIVE_MONDAY, 4).getUTCDate(),
+      15, 0, 0,
+    )).toISOString(),
+    weekLabel: `Week ${isoWeekNumber(ACTIVE_MONDAY)}`,
     periodStatus: 'open' as const,
     status: 'draft' as const,
   },
   published: {
     id: PUBLISHED_REPORT_ID,
-    periodStart: '2026-04-06T00:00:00.000Z',
-    periodEnd: '2026-04-12T23:59:59.000Z',
-    deadline: '2026-04-10T15:00:00.000Z',
-    weekLabel: 'Week 15',
+    periodStart: PREV_MONDAY.toISOString(),
+    periodEnd: endOfDay(plusDays(PREV_MONDAY, 6)).toISOString(),
+    deadline: new Date(Date.UTC(
+      plusDays(PREV_MONDAY, 4).getUTCFullYear(),
+      plusDays(PREV_MONDAY, 4).getUTCMonth(),
+      plusDays(PREV_MONDAY, 4).getUTCDate(),
+      15, 0, 0,
+    )).toISOString(),
+    weekLabel: `Week ${isoWeekNumber(PREV_MONDAY)}`,
     periodStatus: 'published' as const,
     status: 'published' as const,
-    publishedAt: '2026-04-12T16:00:00.000Z',
+    publishedAt: endOfDay(plusDays(PREV_MONDAY, 6)).toISOString(),
   },
 } as const;

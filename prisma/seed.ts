@@ -36,6 +36,25 @@ function toRole(role: 'head' | 'viewer' | 'lead'): Role {
   return Role[role];
 }
 
+// Anchor for date-relative sample timestamps. Active period start (Monday of
+// current ISO week) computed once in seed-constants; we mirror that derivation
+// here so submittedAt / decision.deadline / risk.openedAt land inside the
+// active period the user actually sees in the form.
+const ACTIVE_PERIOD_START = new Date(SEED_REPORTS.active.periodStart);
+function activeOffset(days: number, hours = 10, minutes = 0): Date {
+  const d = new Date(ACTIVE_PERIOD_START);
+  d.setUTCDate(d.getUTCDate() + days);
+  d.setUTCHours(hours, minutes, 0, 0);
+  return d;
+}
+const PUBLISHED_PERIOD_START = new Date(SEED_REPORTS.published.periodStart);
+function publishedOffset(days: number, hours = 10, minutes = 0): Date {
+  const d = new Date(PUBLISHED_PERIOD_START);
+  d.setUTCDate(d.getUTCDate() + days);
+  d.setUTCHours(hours, minutes, 0, 0);
+  return d;
+}
+
 // Deterministic UUIDs for child rows so re-running stays idempotent.
 // Last UUID segment is exactly 12 hex chars: 8-4-4-4-12 = 36 char UUID.
 //
@@ -235,7 +254,7 @@ async function main() {
       leadIndex: 1,
       name: 'Platanov A.',
       status: ReportSectionStatus.submitted,
-      submittedAt: new Date('2026-04-14T10:00:00.000Z'),
+      submittedAt: activeOffset(1, 10),
       products: productsByLead(LEAD_PLATANOV_ID),
     },
     {
@@ -243,7 +262,7 @@ async function main() {
       leadIndex: 2,
       name: 'Maria K.',
       status: ReportSectionStatus.submitted,
-      submittedAt: new Date('2026-04-14T14:00:00.000Z'),
+      submittedAt: activeOffset(1, 14),
       products: productsByLead(LEAD_MARIA_ID),
     },
     {
@@ -251,7 +270,7 @@ async function main() {
       leadIndex: 3,
       name: 'Igor V.',
       status: ReportSectionStatus.submitted,
-      submittedAt: new Date('2026-04-15T09:30:00.000Z'),
+      submittedAt: activeOffset(2, 9, 30),
       products: productsByLead(LEAD_IGOR_ID),
     },
     {
@@ -259,7 +278,7 @@ async function main() {
       leadIndex: 4,
       name: 'Dmitry S.',
       status: ReportSectionStatus.submitted,
-      submittedAt: new Date('2026-04-16T11:15:00.000Z'),
+      submittedAt: activeOffset(3, 11, 15),
       products: productsByLead(LEAD_DMITRY_ID),
     },
     {
@@ -596,7 +615,7 @@ async function main() {
       reportSectionId: platanovSec,
       text: 'Approve extended OAuth2 quota request with partner.',
       owner: 'Department Head',
-      deadline: new Date('2026-04-21T15:00:00.000Z'),
+      deadline: activeOffset(8, 15),
       impact: 'Unblocks SSO portal delivery.',
     },
     {
@@ -604,7 +623,7 @@ async function main() {
       reportSectionId: igorSec,
       text: 'Approve maintenance window for PgBouncer migration.',
       owner: 'Department Head',
-      deadline: new Date('2026-04-22T18:00:00.000Z'),
+      deadline: activeOffset(9, 18),
       impact: 'Required to clear connection pool tech debt.',
     },
     {
@@ -612,7 +631,7 @@ async function main() {
       reportSectionId: dmitrySec,
       text: 'Greenlight phased WAF rollout in shadow mode.',
       owner: 'Department Head',
-      deadline: new Date('2026-04-23T12:00:00.000Z'),
+      deadline: activeOffset(10, 12),
       impact: 'Reduces incident risk during launch.',
     },
   ];
@@ -635,7 +654,9 @@ async function main() {
   for (let i = 0; i < activeLeadConfigs.length; i++) {
     const cfg = activeLeadConfigs[i]!;
     const secId = sectionId('2', cfg.leadIndex);
-    const submitDate = new Date(`2026-04-1${i % 2 === 0 ? '0' : '0'}T${10 + i}:00:00.000Z`);
+    // Submitted between Mon-Fri of the published period; deterministic per
+    // lead so reseeding stays idempotent.
+    const submitDate = publishedOffset(i % 5, 10 + i);
 
     await prisma.reportSection.upsert({
       where: {
