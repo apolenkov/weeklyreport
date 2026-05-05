@@ -24,6 +24,7 @@ import { createAuthController } from './modules/auth/auth.controller';
 import { createSamlStrategy, createSamlStrategyOptions } from './modules/auth/saml.strategy';
 import { PrismaService } from './infrastructure/prisma/prisma.service';
 import { mountBullBoard } from './infrastructure/bullmq/bull-board.module';
+import { createRateLimits } from './infrastructure/throttler/rate-limit.middleware';
 
 import { ReportSectionsService } from './modules/report-sections/report-sections.service';
 import { ReviewService } from './modules/review/review.service';
@@ -166,8 +167,16 @@ async function bootstrap() {
   );
   logger.info('mounted PDF static serving', { route: '/pdfs', pdfDir });
 
+  // 36-01: rate-limit /trpc with the permissive bucket. The /auth limiter
+  // is mounted further down with mountAuthRoutes (it needs to wrap the
+  // /auth/* routes the auth module registers).
+  const { authLimiter, trpcLimiter } = createRateLimits({
+    logger,
+    isTest: env.NODE_ENV === 'test',
+  });
   expressApp.use(
     '/trpc',
+    trpcLimiter,
     trpcExpress.createExpressMiddleware({
       router: appRouter,
       createContext: createContextFactory(app, logger),
@@ -182,6 +191,10 @@ async function bootstrap() {
   // AUTH-08 (Phase 29-01): structured audit channel for login-success/fail
   // and logout. Wired here so the same AppLogger drives every audit event.
   const auditLogger = createAuditLogger(logger);
+  // 36-01: gate all /auth/* routes behind the strict auth limiter.
+  // Express applies middlewares in order, so registering it BEFORE
+  // mountAuthRoutes covers every /auth/* route the module mounts.
+  expressApp.use('/auth', authLimiter);
   mountAuthRoutes(
     expressApp,
     samlStrategy,
