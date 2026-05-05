@@ -1,24 +1,27 @@
 import { AdminPanel } from '../../../components/admin/admin-panel';
 import { AdminTabsMobileSelect } from '../../../components/admin/admin-tabs-mobile-select';
 import { DlqBadge } from '../../../components/admin/dlq-badge';
+import { ReopenTabLabel } from '../../../components/admin/reopen-tab-label';
 
 type Props = {
   searchParams: Promise<{ tab?: string }>;
 };
 
-const tabs = ['users', 'products', 'periods', 'reminders', 'settings'] as const;
+const tabs = ['users', 'products', 'periods', 'reminders', 'reopen', 'settings'] as const;
+type TabId = (typeof tabs)[number];
 
-const TAB_ICONS: Record<string, string> = {
+const TAB_LABELS: Record<TabId, string> = {
   users: 'Users',
   products: 'Products',
   periods: 'Periods',
   reminders: 'Reminders',
+  reopen: 'Reopen',
   settings: 'Settings',
 };
 
 export default async function AdminPage({ searchParams }: Props) {
   const { tab = 'users' } = await searchParams;
-  const activeTab = tabs.includes(tab as (typeof tabs)[number]) ? tab : 'users';
+  const activeTab: TabId = tabs.includes(tab as TabId) ? (tab as TabId) : 'users';
 
   return (
     <main id="main-content" className="min-h-screen bg-[var(--color-background)]">
@@ -33,7 +36,7 @@ export default async function AdminPage({ searchParams }: Props) {
           </div>
 
           {/* MOB-04 (Phase 30-05): native select on mobile, anchor tab list on sm+ */}
-          <AdminTabsMobileSelect activeTab={activeTab as 'users' | 'products' | 'periods' | 'reminders' | 'settings'} />
+          <AdminTabsMobileSelect activeTab={activeTab} />
 
           {/* ADM-1 (Phase 33-04): pill row matching mockup s7. Active = filled
               tealA pill (`btn-pr`); inactive = transparent ghost. Outer
@@ -44,16 +47,16 @@ export default async function AdminPage({ searchParams }: Props) {
                 <a
                   key={t}
                   href={`/admin?tab=${t}`}
-                  className={`flex items-center rounded-[var(--radius-pill)] px-4 py-2 text-[13px] font-semibold capitalize transition-colors ${
+                  className={`flex items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-2 text-[13px] font-semibold capitalize transition-colors ${
                     activeTab === t
                       ? 'bg-[var(--color-starbucks-accent)] text-white shadow-[0_1px_3px_rgba(0,98,65,0.25)]'
                       : 'text-[var(--color-muted-foreground)] hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]'
                   }`}
                   style={{ minHeight: '44px' }}
                   aria-current={activeTab === t ? 'page' : undefined}
-                  aria-label={`${TAB_ICONS[t]} tab`}
+                  aria-label={`${TAB_LABELS[t]} tab`}
                 >
-                  {t}
+                  {t === 'reopen' ? <ReopenTabLabel active={activeTab === t} /> : t}
                 </a>
               ))}
             </div>

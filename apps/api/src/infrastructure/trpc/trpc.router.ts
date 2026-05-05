@@ -427,6 +427,124 @@ export function createAppRouter(deps: RouterDeps) {
           throw mapDomainError(error);
         }
       }),
+
+      // Reopen requests — Lead-initiated, Head-decided. The Lead's
+      // `leadForm.requestReopen` mutation persists a row with status=pending;
+      // the Admin Panel "Reopen Requests" tab consumes these procedures.
+      listReopenRequests: headProcedure
+        .input(
+          z.object({
+            status: z.enum(['pending', 'approved', 'rejected', 'all']).default('pending'),
+          }).optional(),
+        )
+        .query(async ({ input }) => {
+          try {
+            const status = input?.status ?? 'pending';
+            const where = status === 'all' ? {} : { status };
+            const rows = await deps.prisma.reopenRequest.findMany({
+              where,
+              orderBy: { createdAt: 'desc' },
+              take: 100,
+              include: {
+                requestedBy: { select: { id: true, name: true, email: true } },
+                reviewedBy: { select: { id: true, name: true, email: true } },
+                reportSection: {
+                  include: {
+                    report: {
+                      select: {
+                        id: true,
+                        weekLabel: true,
+                        periodStart: true,
+                        periodEnd: true,
+                      },
+                    },
+                  },
+                },
+              },
+            });
+            return rows.map((r) => ({
+              id: r.id,
+              reportSectionId: r.reportSectionId,
+              reason: r.reason,
+              status: r.status,
+              reviewNote: r.reviewNote,
+              reviewedAt: r.reviewedAt?.toISOString() ?? null,
+              createdAt: r.createdAt.toISOString(),
+              requestedBy: r.requestedBy,
+              reviewedBy: r.reviewedBy,
+              sectionStatus: r.reportSection.status,
+              report: {
+                id: r.reportSection.report.id,
+                weekLabel: r.reportSection.report.weekLabel,
+                periodStart: r.reportSection.report.periodStart.toISOString(),
+                periodEnd: r.reportSection.report.periodEnd.toISOString(),
+              },
+            }));
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      respondReopenRequest: headProcedure
+        .input(
+          z.object({
+            id: z.string().uuid(),
+            decision: z.enum(['approved', 'rejected']),
+            note: z.string().max(500).optional(),
+          }),
+        )
+        .mutation(async ({ input, ctx }) => {
+          try {
+            const req = await deps.prisma.reopenRequest.findUnique({
+              where: { id: input.id },
+              include: { reportSection: true },
+            });
+            if (!req) throw new Error('Reopen request not found.');
+            if (req.status !== 'pending') throw new Error('Already processed.');
+
+            return await deps.prisma.$transaction(async (tx) => {
+              await tx.reopenRequest.update({
+                where: { id: input.id },
+                data: {
+                  status: input.decision,
+                  reviewedById: ctx.session.userId,
+                  reviewedAt: new Date(),
+                  reviewNote: input.note?.trim() ? input.note.trim() : null,
+                },
+              });
+
+              // Approve = flip the section back to draft + clear submittedAt
+              // so the lead can edit again. The section's revokedAt/revokedBy
+              // mirror the existing /head/report revoke flow for audit.
+              if (input.decision === 'approved') {
+                await tx.reportSection.update({
+                  where: { id: req.reportSectionId },
+                  data: {
+                    status: 'draft',
+                    submittedAt: null,
+                    revokedAt: new Date(),
+                    revokedBy: ctx.session.userId,
+                  },
+                });
+              }
+
+              return { success: true as const, decision: input.decision };
+            });
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      pendingReopenCount: headProcedure.query(async () => {
+        try {
+          const count = await deps.prisma.reopenRequest.count({
+            where: { status: 'pending' },
+          });
+          return { count };
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
     }),
 
     // === Archive namespace ===

@@ -13,13 +13,14 @@ import { useRouter } from 'next/navigation';
  * 5-button row at 375px.
  */
 
-type AdminTab = 'users' | 'products' | 'periods' | 'reminders' | 'settings';
+type AdminTab = 'users' | 'products' | 'periods' | 'reminders' | 'reopen' | 'settings';
 
 const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
   { value: 'users', label: 'Users' },
   { value: 'products', label: 'Products' },
   { value: 'periods', label: 'Periods' },
   { value: 'reminders', label: 'Reminders' },
+  { value: 'reopen', label: 'Reopen' },
   { value: 'settings', label: 'Settings' },
 ];
 
