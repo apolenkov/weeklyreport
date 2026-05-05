@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 39,
+  "title": "CustomReport — Operational Dashboard (skeleton)",
+  "uid": "customreport-ops",
+  "tags": ["customreport", "v8.0"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP request rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(http_request_duration_seconds_count{job=\"customreport-api\"}[1m])) by (route, status_code)",
+          "legendFormat": "{{route}} ({{status_code}})"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP p95 latency",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=\"customreport-api\"}[5m])))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 3,
+      "title": "BullMQ DLQ failed total",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 6 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum by (queue) (cr_dlq_failed_total)",
+          "legendFormat": "{{queue}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Login attempts rate",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 8, "w": 8, "h": 6 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(cr_login_attempts_total[1m])) by (outcome)",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Rate-limit hits",
+      "type": "timeseries",
+      "gridPos": { "x": 16, "y": 8, "w": 8, "h": 6 },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(cr_rate_limit_hits_total[1m])) by (bucket)",
+          "legendFormat": "{{bucket}}"
+        }
+      ]
+    }
+  ]
+}

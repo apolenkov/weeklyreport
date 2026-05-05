@@ -1,0 +1,45 @@
+# Phase 37-03: optional observability stack alongside docker-compose.prod.yml.
+#
+# Brings up Prometheus + Grafana for local validation of the API's /metrics
+# surface + the seeded dashboard skeleton. Not part of the prod-default
+# compose — the org typically has a managed Prometheus/Grafana already.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
+#
+# Grafana login: admin / admin (forced password change on first login).
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./deploy/grafana/customreport-dashboard.json:/var/lib/grafana/dashboards/customreport.json:ro
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  promdata:
+  grafanadata:
