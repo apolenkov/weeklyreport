@@ -1,0 +1,63 @@
+# Phase 37-04: vector.dev config template for shipping CustomReport logs to
+# a remote sink. Drop into a sidecar container alongside the api service;
+# adjust the [sinks.*] block for your destination (Loki / Datadog / Elastic).
+#
+# Usage:
+#   docker run -v ./vector.toml:/etc/vector/vector.toml:ro \
+#              -v apilogs:/app/logs:ro \
+#              timberio/vector:0.36.0-alpine
+#
+# Source: tails the rotated JSON log file written by AppLogger
+# (apps/api/src/lib/logger.ts) at LOG_DIR/app.log.
+
+[sources.customreport_api]
+type = "file"
+include = ["/app/logs/app.log"]
+read_from = "beginning"
+ignore_older_secs = 86400
+
+[transforms.parse_json]
+type = "remap"
+inputs = ["customreport_api"]
+source = '''
+  parsed, err = parse_json(.message)
+  if err == null {
+    . = merge(., parsed)
+  } else {
+    .parse_error = to_string!(err)
+  }
+  .service = "customreport-api"
+'''
+
+# === Choose ONE sink per environment ===
+
+# Option A: Loki (recommended for self-hosted observability)
+# Uncomment + adjust endpoint to point at your Loki instance.
+# [sinks.loki]
+# type = "loki"
+# inputs = ["parse_json"]
+# endpoint = "${LOKI_ENDPOINT}"
+# encoding.codec = "json"
+# labels.service = "customreport-api"
+# labels.level = "{{ level }}"
+# labels.correlation_id = "{{ correlationId }}"
+
+# Option B: Datadog logs
+# [sinks.datadog]
+# type = "datadog_logs"
+# inputs = ["parse_json"]
+# default_api_key = "${DATADOG_API_KEY}"
+# encoding.codec = "json"
+
+# Option C: Elasticsearch (or Opensearch / AWS ES)
+# [sinks.elasticsearch]
+# type = "elasticsearch"
+# inputs = ["parse_json"]
+# endpoints = ["${ES_ENDPOINT}"]
+# bulk.index = "customreport-{{ %Y-%m-%d }}"
+
+# Default: console output (pass-through for testing without a real sink).
+[sinks.console]
+type = "console"
+inputs = ["parse_json"]
+encoding.codec = "json"
