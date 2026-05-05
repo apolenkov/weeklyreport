@@ -233,14 +233,14 @@ export const MOCK_NEXT_WEEK_ITEMS: KanbanItem[] = [
 ];
 
 export const MOCK_RISKS: RiskEntry[] = [
-  { id: 'r1', productId: 'crm', productName: 'CRM Platform', stageName: 'Dev', severity: 'at-risk', text: 'Задержка интеграции OAuth2 из-за лимитов API партнёра. Ожидаем ответ от техподдержки партнёра. Влияние: сдвиг OAuth2 задерживает SSO портала на след. неделе.' },
-  { id: 'r2', productId: 'cloud', productName: 'Cloud Infrastructure', stageName: 'Dev', severity: 'at-risk', text: 'Миграция PgBouncer на новый пул соединений требует downtime 30 мин. Координация с DBA назначена на среду. Если не успеем -- перенос на след. неделю.' },
-  { id: 'r3', productId: 'analytics', productName: 'Data Analytics Suite', stageName: 'Testing', severity: 'blocked', text: 'Регрессионное тестирование ETL заблокировано -- Dev stage (Kozlov D.) ещё не исправил утечку памяти. Тестирование не может начаться до фикса. ETA фикса: 25 апреля.' },
+  { id: 'r1', productId: 'crm', productName: 'CRM Platform', stageName: 'Dev', severity: 'at-risk', text: 'Задержка интеграции OAuth2 из-за лимитов API партнёра.', impact: 'Сдвиг SSO портала на следующую неделю.', mitigation: 'Ожидаем ответ техподдержки партнёра, готовим batch-fallback.' },
+  { id: 'r2', productId: 'cloud', productName: 'Cloud Infrastructure', stageName: 'Dev', severity: 'at-risk', text: 'Миграция PgBouncer требует downtime 30 мин.', impact: 'Окно обслуживания затрагивает зависимые сервисы.', mitigation: 'Координация с DBA на среду, rollback-план готов.' },
+  { id: 'r3', productId: 'analytics', productName: 'Data Analytics Suite', stageName: 'Testing', severity: 'blocked', text: 'Регрессионное тестирование ETL заблокировано — утечка памяти у Dev stage.', impact: 'Блокирует релиз Analytics до фикса.', mitigation: 'Эскалирована заявка на фикс, ETA 25 апреля.' },
 ];
 
 export const MOCK_DECISIONS: DecisionEntry[] = [
-  { id: 'd1', productId: 'cloud', productName: 'Cloud Infrastructure', text: 'Требуется одобрение дополнительного Redis-кластера для кеширования' },
-  { id: 'd2', productId: 'aiml', productName: 'AI/ML Platform', text: 'Выбор между AWS SageMaker и self-hosted для model serving' },
+  { id: 'd1', productId: 'cloud', productName: 'Cloud Infrastructure', text: 'Требуется одобрение дополнительного Redis-кластера для кеширования', owner: 'Глава департамента', impact: 'Снижает p99 на 30%, требует CapEx-одобрения.', deadline: null },
+  { id: 'd2', productId: 'aiml', productName: 'AI/ML Platform', text: 'Выбор между AWS SageMaker и self-hosted для model serving', owner: 'Глава департамента', impact: 'Влияет на TCO и time-to-market.', deadline: null },
 ];
 
 export const MOCK_PRIORITIES: PriorityEntry[] = [

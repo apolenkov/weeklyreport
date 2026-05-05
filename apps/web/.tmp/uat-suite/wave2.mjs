@@ -234,14 +234,13 @@ await runTest('E-19', async () => {
   const id = 'E-19';
   const page = await ctx.newPage();
   await loginAs(page, ACCOUNTS.olga.role, ACCOUNTS.olga.email);
-  await waitForAppReady(page);
-  const initialExpanded = await page.locator('[aria-expanded="true"]').count();
-  const allExpandable = await page.locator('button[aria-expanded]').count();
+  await waitForAppReady(page, 'lead-form');
   const toggleAll = page.getByRole('button', { name: /Toggle All/i }).first();
+  await toggleAll.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
   if ((await toggleAll.count()) === 0) { fail(id, 'No Toggle All button on /lead/report'); throw 0; }
   await toggleAll.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {});
-  // Force click bypasses Playwright's actionability check, which can race the
-  // form's autosave debouncer that re-renders sections on every state nudge.
+  const initialExpanded = await page.locator('[aria-expanded="true"]').count();
+  const allExpandable = await page.locator('button[aria-expanded]').count();
   await toggleAll.click({ force: true, timeout: 5000 });
   await page.waitForTimeout(500);
   const after1 = await page.locator('[aria-expanded="true"]').count();
