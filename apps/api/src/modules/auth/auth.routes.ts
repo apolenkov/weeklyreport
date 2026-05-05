@@ -11,6 +11,7 @@ import {
   createNullAuditLogger,
   type AuditLogger,
 } from '../../lib/audit-logger.js';
+import { loginAttemptsTotal } from '../../infrastructure/metrics/metrics.registry.js';
 
 export type SamlProfile = {
   samlId: string;
@@ -250,6 +251,7 @@ export function mountAuthRoutes(
             ip: req.ip ?? 'unknown',
             reason: 'invalid_assertion',
           });
+          loginAttemptsTotal.inc({ method: 'saml', outcome: 'fail' });
           res.redirect(`${frontendUrl}/auth/error?reason=invalid_assertion`);
           return;
         }
@@ -263,6 +265,7 @@ export function mountAuthRoutes(
           role: session.role,
           ip: req.ip ?? 'unknown',
         });
+        loginAttemptsTotal.inc({ method: 'saml', outcome: 'success' });
 
         res.setHeader('Set-Cookie', setCookieHeader);
         res.redirect(frontendUrl);
@@ -275,6 +278,7 @@ export function mountAuthRoutes(
           ip: req.ip ?? 'unknown',
           reason: error instanceof Error ? error.message : 'callback-error',
         });
+        loginAttemptsTotal.inc({ method: 'saml', outcome: 'fail' });
         next(error);
       }
     },
@@ -311,6 +315,7 @@ export function mountAuthRoutes(
         const role = (req.query.role as string) ?? 'head';
         const validRoles: Role[] = ['lead', 'head', 'admin', 'viewer'];
         if (!validRoles.includes(role as Role)) {
+          loginAttemptsTotal.inc({ method: 'dev-login', outcome: 'fail' });
           res.status(400).json({ error: `Invalid role: ${role}. Must be one of: ${validRoles.join(', ')}` });
           return;
         }
@@ -361,6 +366,7 @@ export function mountAuthRoutes(
 
         const { setCookieHeader } = authController.issueSessionCookie(session);
         res.setHeader('Set-Cookie', setCookieHeader);
+        loginAttemptsTotal.inc({ method: 'dev-login', outcome: 'success' });
 
         const redirectByRole: Record<string, string> = {
           head: '/admin',
@@ -371,6 +377,7 @@ export function mountAuthRoutes(
         const redirectPath = (req.query.redirect as string) ?? redirectByRole[role] ?? '/';
         res.redirect(`${frontendUrl}${redirectPath}`);
       } catch (error) {
+        loginAttemptsTotal.inc({ method: 'dev-login', outcome: 'fail' });
         next(error);
       }
     });

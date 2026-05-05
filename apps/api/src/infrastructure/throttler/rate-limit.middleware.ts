@@ -2,6 +2,7 @@ import rateLimit, { type Options } from 'express-rate-limit';
 import type { RequestHandler } from 'express';
 
 import type { AppLogger } from '../../lib/logger';
+import { rateLimitHitsTotal } from '../metrics/metrics.registry.js';
 
 /**
  * 36-01 rate-limit middleware factory.
@@ -32,12 +33,16 @@ export function createRateLimits(options: {
     // Express's `app.set('trust proxy', 1)` upstream makes this safe.
     keyGenerator: (req) => req.ip ?? req.socket.remoteAddress ?? 'unknown',
     handler: (req, res, _next, opts) => {
+      const bucket = opts.statusCode === 429 ? String(opts.message) : 'unknown';
       logger.warn('rate limit hit', {
         phase: 'rate-limit',
         path: req.path,
         ip: req.ip,
-        bucket: opts.statusCode === 429 ? opts.message : 'unknown',
+        bucket,
       });
+      // 37-02: surface to /metrics so the Grafana panel "Rate-limit hits by
+      // bucket" has data.
+      rateLimitHitsTotal.inc({ bucket });
       res.status(opts.statusCode).json({
         error: 'rate_limit_exceeded',
         message: 'Too many requests. Please retry shortly.',
