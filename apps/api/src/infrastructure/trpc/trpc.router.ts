@@ -494,6 +494,7 @@ export function createAppRouter(deps: RouterDeps) {
         .output(
           z.object({
             dispatched: z.number().int().nonnegative(),
+            alreadySent: z.number().int().nonnegative(),
             skipped: z.number().int().nonnegative(),
             reason: z.string().optional(),
           }),
@@ -505,7 +506,7 @@ export function createAppRouter(deps: RouterDeps) {
               orderBy: { fireAt: 'asc' },
             });
             if (!rule) {
-              return { dispatched: 0, skipped: 0, reason: 'no-active-rule' };
+              return { dispatched: 0, alreadySent: 0, skipped: 0, reason: 'no-active-rule' };
             }
             const draftSections = await deps.prisma.reportSection.findMany({
               where: { reportId: input.reportId, status: 'draft' },
@@ -513,20 +514,33 @@ export function createAppRouter(deps: RouterDeps) {
                 author: { select: { email: true, notificationOptOut: true } },
               },
             });
+            // Compute the dedupeKey shape requestReminderExecution would derive
+            // for the legacy (no-payload) path — `${rule.id}:${fireAt}:${email}`
+            // — and look up existing executions BEFORE calling the service so
+            // we can tell new dispatches apart from dedupe hits. Without this,
+            // every click reported "Reminder sent" even when the cron-driven
+            // scheduler had already sent the same recipient inside the cycle.
+            const fireAtIso = rule.fireAt.toISOString();
             let dispatched = 0;
+            let alreadySent = 0;
             let skipped = 0;
             for (const sec of draftSections) {
               if (sec.author.notificationOptOut) {
                 skipped++;
                 continue;
               }
+              const dedupeKey = `${rule.id}:${fireAtIso}:${sec.author.email}`;
+              const existing = await deps.prisma.reminderExecution.findUnique({
+                where: { dedupeKey },
+              });
               await deps.remindersService.requestReminderExecution(
                 rule.id,
                 sec.author.email,
               );
-              dispatched++;
+              if (existing) alreadySent++;
+              else dispatched++;
             }
-            return { dispatched, skipped };
+            return { dispatched, alreadySent, skipped };
           } catch (error) {
             throw mapDomainError(error);
           }
