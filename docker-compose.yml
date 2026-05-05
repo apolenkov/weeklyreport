@@ -15,14 +15,19 @@ services:
     ports:
       - "5432:5432"
 
+  # Phase 33-04: migrated mailhog (amd64-only via Rosetta) → mailpit. Mailpit
+  # is a multi-arch fork by axllent — same SMTP :1025 + Web UI :8025 contract,
+  # native arm64 image, actively maintained, modern UI. Keep service name
+  # `mailhog` so existing SMTP_HOST=mailhog env wiring still works without
+  # touching every consumer.
   mailhog:
-    # Local SMTP catch-all for dev: SMTP on :1025, Web UI on :8025.
-    # Use platform=linux/amd64 — no native arm64 image, Rosetta emulation works.
-    image: mailhog/mailhog:latest
-    platform: linux/amd64
+    image: axllent/mailpit:latest
     ports:
       - "1025:1025"
       - "8025:8025"
+    environment:
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+      MP_MAX_MESSAGES: "5000"
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8025"]
       interval: 10s

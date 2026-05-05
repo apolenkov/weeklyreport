@@ -1,9 +1,11 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef, type TouchEvent as ReactTouchEvent } from 'react';
 
 import type { ReportPeriod } from './mock-data';
+
+const SWIPE_THRESHOLD_PX = 50;
 
 type PeriodNavigatorProps = {
   readonly periods: ReportPeriod[];
@@ -87,8 +89,33 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
     navigateTo(e.target.value);
   }
 
+  // Phase 33-04: swipe gesture mirrors HeadPeriodNavigator. Left = next week,
+  // right = previous week.
+  const touchStartXRef = useRef<number | null>(null);
+  function handleTouchStart(e: ReactTouchEvent<HTMLDivElement>) {
+    const t = e.touches[0];
+    touchStartXRef.current = t ? t.clientX : null;
+  }
+  function handleTouchEnd(e: ReactTouchEvent<HTMLDivElement>) {
+    const start = touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (start === null) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const deltaX = t.clientX - start;
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX) return;
+    if (deltaX < 0) handleNext();
+    else handlePrev();
+  }
+
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div
+      className="flex min-w-0 items-center gap-2"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      role="group"
+      aria-label="Period navigation (swipe left/right or use arrows)"
+    >
       <span
         className="flex items-center gap-1 text-xs font-medium text-[var(--color-muted-foreground)]"
         aria-hidden="true"

@@ -1,9 +1,14 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef, type TouchEvent as ReactTouchEvent } from 'react';
 
 import type { ReportPeriod } from '../dashboard/mock-data';
+
+// Threshold for treating a horizontal touch drag as a swipe. 50px matches the
+// iOS "swipe to navigate" feel — enough to ignore accidental finger drift on
+// the dropdown but small enough to feel responsive.
+const SWIPE_THRESHOLD_PX = 50;
 
 type PeriodNavigatorProps = {
   readonly periods: ReportPeriod[];
@@ -75,8 +80,35 @@ export function HeadPeriodNavigator({ periods, basePath = '/head/report' }: Peri
     navigateTo(e.target.value);
   }
 
+  // Phase 33-04: swipe gesture on the navigator strip. Swipe-left = next week,
+  // swipe-right = previous week. Mobile users (and trackpad users on macOS)
+  // expected this to "just work" in the published report viewer / weekly
+  // report; the chevrons are now backed by the same gesture.
+  const touchStartXRef = useRef<number | null>(null);
+  function handleTouchStart(e: ReactTouchEvent<HTMLDivElement>) {
+    const t = e.touches[0];
+    touchStartXRef.current = t ? t.clientX : null;
+  }
+  function handleTouchEnd(e: ReactTouchEvent<HTMLDivElement>) {
+    const start = touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (start === null) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const deltaX = t.clientX - start;
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX) return;
+    if (deltaX < 0) handleNext();
+    else handlePrev();
+  }
+
   return (
-    <div className="flex items-center gap-2">
+    <div
+      className="flex items-center gap-2"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      role="group"
+      aria-label="Period navigation (swipe left/right or use arrows)"
+    >
       <button
         type="button"
         className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
