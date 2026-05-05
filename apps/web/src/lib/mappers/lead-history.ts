@@ -35,6 +35,10 @@ export type HistoryEntry = {
   itemCount: number;
   riskCount: number;
   decisionCount: number;
+  // HIST-4 (Phase 33-04): mockup s9 prefixes the metric line with the lead's
+  // assigned-product count for that period. Optional because the API endpoint
+  // doesn't always populate it (history aggregator vs the carry-over view).
+  productCount?: number;
 };
 
 // ---------------------------------------------------------------------------

@@ -35,17 +35,19 @@ export default async function AdminPage({ searchParams }: Props) {
           {/* MOB-04 (Phase 30-05): native select on mobile, anchor tab list on sm+ */}
           <AdminTabsMobileSelect activeTab={activeTab as 'users' | 'products' | 'periods' | 'reminders' | 'settings'} />
 
-          {/* Tab navigation (desktop) */}
+          {/* ADM-1 (Phase 33-04): pill row matching mockup s7. Active = filled
+              tealA pill (`btn-pr`); inactive = transparent ghost. Outer
+              container uses bg-white + shadow per mockup spec. */}
           <nav aria-label="Admin tabs" className="hidden sm:block">
-            <div className="flex gap-1 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-1">
+            <div className="flex gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
               {tabs.map((t) => (
                 <a
                   key={t}
                   href={`/admin?tab=${t}`}
-                  className={`flex items-center rounded-[var(--radius-sm)] px-4 py-2 text-sm font-medium capitalize transition-colors ${
+                  className={`flex items-center rounded-[var(--radius-pill)] px-4 py-2 text-[13px] font-semibold capitalize transition-colors ${
                     activeTab === t
-                      ? 'bg-[var(--color-starbucks-green)] text-white'
-                      : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]'
+                      ? 'bg-[var(--color-starbucks-accent)] text-white shadow-[0_1px_3px_rgba(0,98,65,0.25)]'
+                      : 'text-[var(--color-muted-foreground)] hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]'
                   }`}
                   style={{ minHeight: '44px' }}
                   aria-current={activeTab === t ? 'page' : undefined}

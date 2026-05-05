@@ -12,6 +12,29 @@ vi.mock('../../lib/session-provider', () => ({
   useSession: () => useSessionMock(),
 }));
 
+// Phase 33-04: NavBar now reads the active period via tRPC for the right-rail
+// badge. Tests don't exercise that surface — stub the proxy to a minimal
+// object that satisfies `trpc.weeklyReport.get.queryOptions(...)` calls.
+vi.mock('../../lib/trpc-context', () => ({
+  useTRPC: () => ({
+    weeklyReport: {
+      get: {
+        queryOptions: () => ({
+          queryKey: ['weeklyReport', 'get'],
+          queryFn: async () => null,
+          enabled: false,
+        }),
+      },
+    },
+  }),
+}));
+
+// useQuery without a real QueryClientProvider would crash; stub it for these
+// role-visibility tests since we don't care about the period badge here.
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: undefined, isLoading: false }),
+}));
+
 import { NavBar } from './nav-bar';
 
 function setRole(role: Role | null): void {

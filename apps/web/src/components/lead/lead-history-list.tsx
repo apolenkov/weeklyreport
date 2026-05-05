@@ -38,14 +38,6 @@ function StatusBadge({ status }: { readonly status: 'submitted' | 'draft' }) {
   );
 }
 
-function ClockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 flex-shrink-0" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
-
 export function LeadHistoryList({ entries }: LeadHistoryListProps) {
   if (entries.length === 0) {
     return (
@@ -64,7 +56,10 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
           key={entry.id}
           href={`/lead/report?period=${entry.periodId}`}
           className="group block overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_0_0.5px_0_rgba(0,0,0,0.12),0_12px_26px_-18px_rgba(0,0,0,0.22),0_2px_4px_rgba(0,0,0,0.06)]"
-          style={{ textDecoration: 'none', color: 'inherit' }}
+          // HIST-1 (Phase 33-04): 3px tealA left strip per mockup s9 — gives
+          // submitted reports the same visual anchor as kanban current-week
+          // cards, so the history page reads as a continuation of the form.
+          style={{ textDecoration: 'none', color: 'inherit', borderLeft: '3px solid var(--color-starbucks-accent)' }}
         >
           {/* Header */}
           <div className="mb-3 flex items-center justify-between">
@@ -86,20 +81,27 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
             <TrafficDot color="var(--color-destructive)" count={entry.trafficLights.red} />
           </div>
 
-          {/* Metrics */}
+          {/* Metrics — HIST-4: prefix with assigned-products count when present */}
           <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--color-muted-foreground)]">
+            {typeof entry.productCount === 'number' && (
+              <>
+                <span>{entry.productCount} assigned products</span>
+                <span>&middot;</span>
+              </>
+            )}
             <span>{entry.itemCount} items</span>
             <span>&middot;</span>
-            <span>{entry.riskCount} risks</span>
+            <span>
+              {entry.riskCount} risk{entry.riskCount === 1 ? '' : 's'}
+            </span>
             <span>&middot;</span>
             <span>{entry.decisionCount} decisions</span>
           </div>
 
-          {/* Submitted timestamp */}
+          {/* HIST-5: drop ClockIcon — mockup uses plain text. */}
           {entry.submittedAt && (
-            <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[var(--color-muted-foreground)]">
-              <ClockIcon />
-              <span>Submitted {entry.submittedAt}</span>
+            <div className="mt-3 text-[13px] text-[var(--color-muted-foreground)]">
+              Submitted {entry.submittedAt}
             </div>
           )}
         </Link>
