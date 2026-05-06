@@ -117,7 +117,7 @@ export function UsersTab({ users }: UsersTabProps) {
 
         {/* Users table */}
         <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm" data-testid="users-table">
             <thead>
               <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
                 <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Name</th>
@@ -172,6 +172,7 @@ export function UsersTab({ users }: UsersTabProps) {
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
           onClick={() => setShowDialog(false)}
           role="presentation"
+          data-testid="crud-sheet"
         >
           <div
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"

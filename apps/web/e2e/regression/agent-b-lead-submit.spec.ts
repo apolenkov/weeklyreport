@@ -26,26 +26,29 @@ test.describe('LEAD-090..095: Lead Report Submit Flow', () => {
 
   test('LEAD-090: "Submit Section" button visible when draft', async ({ page }) => {
     // Look for submit button in draft form
-    const submitButton = await page.locator('button:has-text("Submit"), button:has-text("Отправить")').first();
+    const submitButton = page.getByRole('button', { name: /submit|отправить/i });
     const isVisible = await submitButton.isVisible().catch(() => false);
 
     // Either submit button or section should be draft
-    const draftSection = await page.locator('[data-testid="section-status"]').textContent().catch(() => '');
-    expect(isVisible || draftSection.includes('Draft')).toBe(true);
+    const draftSection = page.getByText(/draft|черновик/i);
+    const isDraft = await draftSection.isVisible().catch(() => false);
+    expect(isVisible || isDraft).toBe(true);
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-090.png` });
   });
 
   test('LEAD-091: "Submit Section" button hidden when submitted', async ({ page }) => {
     // For a submitted section, button should be hidden and replaced with badge
-    const submitButton = await page.locator('button:has-text("Submit"), button:has-text("Отправить")').isVisible().catch(() => false);
+    const submitButton = page.getByRole('button', { name: /submit|отправить/i });
+    const isVisible = await submitButton.isVisible().catch(() => false);
 
     // Check if section-submitted badge exists
-    const submittedBadge = await page.locator('text=/Section submitted|Раздел отправлен/i').isVisible().catch(() => false);
+    const submittedBadge = page.getByText(/submitted|отправлен/i);
+    const badgeVisible = await submittedBadge.isVisible().catch(() => false);
 
     // If submitted, badge should be visible and button hidden
-    if (submittedBadge) {
-      expect(submitButton).toBe(false);
+    if (badgeVisible) {
+      expect(isVisible).toBe(false);
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-091.png` });
@@ -53,14 +56,14 @@ test.describe('LEAD-090..095: Lead Report Submit Flow', () => {
 
   test('LEAD-092: Click "Submit" opens ConfirmDialog', async ({ page }) => {
     // Find and click submit button
-    const submitButton = await page.locator('button:has-text("Submit"), button:has-text("Отправить")').first();
+    const submitButton = page.getByRole('button', { name: /submit|отправить/i });
     const isVisible = await submitButton.isVisible().catch(() => false);
 
     if (isVisible) {
       await submitButton.click();
 
       // Wait for dialog to appear
-      const dialog = await page.locator('[role="dialog"]').first();
+      const dialog = page.getByRole('dialog');
       const dialogVisible = await dialog.isVisible();
       expect(dialogVisible).toBe(true);
     }
@@ -70,20 +73,20 @@ test.describe('LEAD-090..095: Lead Report Submit Flow', () => {
 
   test('LEAD-093: Confirm dialog: "Submit Section" title', async ({ page }) => {
     // Click submit button
-    const submitButton = await page.locator('button:has-text("Submit"), button:has-text("Отправить")').first();
+    const submitButton = page.getByRole('button', { name: /submit|отправить/i });
     const isVisible = await submitButton.isVisible().catch(() => false);
 
     if (isVisible) {
       await submitButton.click();
 
       // Wait for dialog
-      const dialog = await page.locator('[role="dialog"]');
+      const dialog = page.getByRole('dialog');
       await dialog.waitFor({ state: 'visible', timeout: 2000 });
 
       // Check for title
-      const dialogTitle = await dialog.locator('h1, h2').first().textContent();
-      expect(dialogTitle).toBeTruthy();
-      expect(dialogTitle?.toLowerCase().includes('submit')).toBe(true);
+      const dialogTitle = dialog.getByRole('heading', { name: /submit|отправить/i });
+      const titleVisible = await dialogTitle.isVisible().catch(() => false);
+      expect(titleVisible).toBe(true);
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-093.png` });
@@ -91,25 +94,26 @@ test.describe('LEAD-090..095: Lead Report Submit Flow', () => {
 
   test('LEAD-094: Cancel in dialog: form stays editable', async ({ page }) => {
     // Click submit button
-    const submitButton = await page.locator('button:has-text("Submit"), button:has-text("Отправить")').first();
+    const submitButton = page.getByRole('button', { name: /submit|отправить/i });
     const isVisible = await submitButton.isVisible().catch(() => false);
 
     if (isVisible) {
       await submitButton.click();
 
       // Wait for dialog and click cancel
-      const dialog = await page.locator('[role="dialog"]');
+      const dialog = page.getByRole('dialog');
       await dialog.waitFor({ state: 'visible', timeout: 2000 });
 
       // Click cancel button
-      const cancelButton = await dialog.locator('button:has-text("Cancel"), button:has-text("Отмена")').first();
+      const cancelButton = dialog.getByRole('button', { name: /cancel|отмен/i });
       await cancelButton.click();
 
       // Dialog should close
       await dialog.waitFor({ state: 'hidden', timeout: 2000 });
 
       // Form should still be editable
-      const firstInput = await page.locator('[data-testid="lead-report-form"] input[type="text"]').first();
+      const form = page.locator('[data-testid="lead-report-form"]');
+      const firstInput = form.locator('input[type="text"]').first();
       const isEnabled = await firstInput.isEnabled().catch(() => false);
       expect(isEnabled).toBe(true);
     }
@@ -119,7 +123,7 @@ test.describe('LEAD-090..095: Lead Report Submit Flow', () => {
 
   test('LEAD-095: Confirm in dialog: submit mutation called', async ({ page }) => {
     // Click submit button
-    const submitButton = await page.locator('button:has-text("Submit"), button:has-text("Отправить")').first();
+    const submitButton = page.getByRole('button', { name: /submit|отправить/i });
     const isVisible = await submitButton.isVisible().catch(() => false);
 
     if (isVisible) {
@@ -133,19 +137,20 @@ test.describe('LEAD-090..095: Lead Report Submit Flow', () => {
       await submitButton.click();
 
       // Wait for dialog and click confirm
-      const dialog = await page.locator('[role="dialog"]');
+      const dialog = page.getByRole('dialog');
       await dialog.waitFor({ state: 'visible', timeout: 2000 });
 
       // Click confirm button
-      const confirmButton = await dialog.locator('button:has-text("Confirm"), button:has-text("Подтвердить")').last();
+      const confirmButton = dialog.getByRole('button', { name: /confirm|submit|подтвердить/i }).last();
       await confirmButton.click();
 
       // Wait a bit for mutation
       await page.waitForTimeout(1000);
 
       // Either mutation was called or we see success toast
-      const successToast = await page.locator('text=/submitted|отправ/i').isVisible().catch(() => false);
-      expect(submitMutationCalled || successToast).toBe(true);
+      const successToast = page.getByText(/submitted|отправлен/i);
+      const toastVisible = await successToast.isVisible().catch(() => false);
+      expect(submitMutationCalled || toastVisible).toBe(true);
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-095.png` });

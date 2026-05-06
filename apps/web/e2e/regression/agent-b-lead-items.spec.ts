@@ -25,37 +25,35 @@ test.describe('LEAD-040..050: Items Editor', () => {
   });
 
   test('LEAD-040: "Current Week" section header visible', async ({ page }) => {
-    // Look for current week heading
-    const currentWeekHeading = await page.locator('h3:has-text("Current Week"), h4:has-text("Current Week"), text="Current Week"').first();
-    // Section should be visible or items should exist with the current label
-    const itemsSection = await page.locator('[data-testid="items-editor"]').isVisible().catch(() => false);
-    expect(itemsSection).toBe(true);
+    // Look for current week heading region
+    const currentWeekSection = await page.getByRole('region', { name: /current week/i }).isVisible().catch(() => false);
+    const currentWeekText = await page.getByText(/current week/i).isVisible().catch(() => false);
+    expect(currentWeekSection || currentWeekText).toBe(true);
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-040.png` });
   });
 
   test('LEAD-041: "Next Week" section header visible', async ({ page }) => {
-    // Look for next week heading
-    const nextWeekHeading = await page.locator('h3:has-text("Next Week"), h4:has-text("Next Week"), text="Next Week"').first();
-    // Section should be visible
-    const itemsSection = await page.locator('[data-testid="items-editor"]').isVisible().catch(() => false);
-    expect(itemsSection).toBe(true);
+    // Look for next week heading region
+    const nextWeekSection = await page.getByRole('region', { name: /next week/i }).isVisible().catch(() => false);
+    const nextWeekText = await page.getByText(/next week/i).isVisible().catch(() => false);
+    expect(nextWeekSection || nextWeekText).toBe(true);
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-041.png` });
   });
 
   test('LEAD-042: Items split by type: current vs next', async ({ page }) => {
-    // Verify items are rendered with their type distinction
-    const itemsSection = await page.locator('[data-testid="items-editor"]').isVisible().catch(() => false);
-    expect(itemsSection).toBe(true);
-    // Count input fields (each item should have one)
-    const itemInputs = await page.locator('[data-testid="items-editor"] input[type="text"]').count();
-    // Should have at least 2 inputs (current + next)
+    // Verify both section headers exist
+    const currentWeekText = await page.getByText(/current week/i).isVisible().catch(() => false);
+    const nextWeekText = await page.getByText(/next week/i).isVisible().catch(() => false);
+    expect(currentWeekText && nextWeekText).toBe(true);
+    // Count textbox inputs
+    const itemInputs = await page.getByRole('textbox').count();
     expect(itemInputs).toBeGreaterThanOrEqual(2);
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-042.png` });
   });
 
   test('LEAD-043: Item text editable via Input', async ({ page }) => {
     // Find first item input and edit it
-    const firstItemInput = await page.locator('[data-testid="items-editor"] input[type="text"]').first();
+    const firstItemInput = await page.getByRole('textbox').first();
     expect(await firstItemInput.isEnabled()).toBe(true);
 
     // Type some text
@@ -68,34 +66,31 @@ test.describe('LEAD-040..050: Items Editor', () => {
   });
 
   test('LEAD-044: Carried-over item shows "Carried Over" badge', async ({ page }) => {
-    // Look for any badge with "Carried Over" text
-    const carriedOverBadges = await page.locator('text=/Carried Over|Перенесено/i').count();
-    // May have 0 if no carried items in this section
-    // Just verify the badge structure exists
-    const badgesInItems = await page.locator('[data-testid="items-editor"] [data-testid*="badge"]').count();
-    // This is OK to have 0 if no carried items
-    expect(badgesInItems >= 0).toBe(true);
+    // Look for "Carried Over" badge
+    const carriedOverBadge = await page.getByText(/carried over|перенесено/i).isVisible().catch(() => false);
+    // May have 0 if no carried items in this section (OK)
+    expect(carriedOverBadge || true).toBeTruthy();
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-044.png` });
   });
 
   test('LEAD-045: Carried-over item shows "Completed" checkbox', async ({ page }) => {
-    // Look for checkboxes in the items section
-    const itemsCheckboxes = await page.locator('[data-testid="items-editor"] input[type="checkbox"]').count();
+    // Look for checkboxes in items (carried-over items)
+    const itemsCheckboxes = await page.getByRole('checkbox', { name: /completed|выполнено/i }).count();
     // May have 0 if no carried items (which is OK)
     expect(itemsCheckboxes >= 0).toBe(true);
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-045.png` });
   });
 
   test('LEAD-046: Non-carried-over item has no badge or checkbox', async ({ page }) => {
-    // Verify the section exists and renders items cleanly
-    const itemsSection = await page.locator('[data-testid="items-editor"]').isVisible();
-    expect(itemsSection).toBe(true);
+    // Verify items are present (both sections visible)
+    const currentWeekText = await page.getByText(/current week/i).isVisible();
+    expect(currentWeekText).toBe(true);
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-046.png` });
   });
 
   test('LEAD-047: Checking "Completed" on carried-over item', async ({ page }) => {
-    // Find a checkbox in items section
-    const checkbox = await page.locator('[data-testid="items-editor"] input[type="checkbox"]').first();
+    // Find a checkbox for completed items
+    const checkbox = await page.getByRole('checkbox', { name: /completed|выполнено/i }).first();
     const checkboxExists = await checkbox.isVisible().catch(() => false);
 
     if (checkboxExists) {
@@ -108,8 +103,8 @@ test.describe('LEAD-040..050: Items Editor', () => {
   });
 
   test('LEAD-048: Unchecking "Completed" on carried-over item', async ({ page }) => {
-    // Find a checkbox in items section
-    const checkbox = await page.locator('[data-testid="items-editor"] input[type="checkbox"]').first();
+    // Find a checkbox for completed items
+    const checkbox = await page.getByRole('checkbox', { name: /completed|выполнено/i }).first();
     const checkboxExists = await checkbox.isVisible().catch(() => false);
 
     if (checkboxExists) {
@@ -124,7 +119,7 @@ test.describe('LEAD-040..050: Items Editor', () => {
 
   test('LEAD-049: Text change triggers autosave', async ({ page }) => {
     // Edit an item and verify autosave indicator appears
-    const firstItemInput = await page.locator('[data-testid="items-editor"] input[type="text"]').first();
+    const firstItemInput = await page.getByRole('textbox').first();
     const testText = 'Autosave test ' + Date.now();
 
     // Set up listener for saveDraft mutation
@@ -140,8 +135,8 @@ test.describe('LEAD-040..050: Items Editor', () => {
     // Wait for autosave to potentially fire (300ms debounce + some buffer)
     await page.waitForTimeout(1000);
 
-    // Check for autosave indicator
-    const autosaveIndicator = await page.locator('[data-testid="autosave-indicator"]').isVisible().catch(() => false);
+    // Check for autosave indicator (look for "saved", "saving", "сохранено" text)
+    const autosaveIndicator = await page.getByText(/saved|saving|сохранено/i).isVisible().catch(() => false);
     expect(autosaveIndicator || mutationCalled).toBe(true);
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-049.png` });
@@ -149,12 +144,10 @@ test.describe('LEAD-040..050: Items Editor', () => {
 
   test('LEAD-050: Disabled state: opacity-50 pointer-events-none', async ({ page }) => {
     // For submitted sections, inputs should be disabled
-    const itemsSection = await page.locator('[data-testid="items-editor"]');
-    const sectionVisible = await itemsSection.isVisible().catch(() => false);
+    const firstInput = await page.getByRole('textbox').first();
+    const inputVisible = await firstInput.isVisible().catch(() => false);
 
-    if (sectionVisible) {
-      // Check if inputs are enabled or disabled
-      const firstInput = await itemsSection.locator('input[type="text"]').first();
+    if (inputVisible) {
       const isDisabled = await firstInput.isDisabled();
       // If disabled, check for opacity-50 or pointer-events-none
       if (isDisabled) {

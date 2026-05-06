@@ -176,8 +176,8 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
           </button>
         </div>
 
-        {/* Products list */}
-        <div className="space-y-3">
+        {/* Products list (table-like structure) */}
+        <div className="space-y-3" data-testid="products-table">
           {activeProducts.map((product) => {
             const owner = getUserById(product.leadOwnerId);
             const assignedCount = stageCountByProject.get(product.id) ?? 0;

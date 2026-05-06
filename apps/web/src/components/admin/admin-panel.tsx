@@ -54,40 +54,44 @@ export function AdminPanel({ activeTab }: AdminPanelProps) {
   const data = snapshotQuery.data ? mapAdminSnapshot(snapshotQuery.data) : undefined;
   const settings = settingsQuery.data ? mapAdminSettings(settingsQuery.data) : undefined;
 
-  if (activeTab === 'settings') {
-    if (!settings) {
-      return <AdminTabSkeleton variant="form" />;
-    }
-    return <SettingsTab settings={settings} />;
-  }
+  return (
+    <div data-testid="admin-panel">
+      {activeTab === 'settings' && (
+        <>
+          {!settings ? (
+            <AdminTabSkeleton variant="form" />
+          ) : (
+            <SettingsTab settings={settings} />
+          )}
+        </>
+      )}
 
-  // Reopen tab is self-contained — it owns its own queries, doesn't need
-  // the snapshot/settings context that the other tabs share.
-  if (activeTab === 'reopen') {
-    return <ReopenTab />;
-  }
+      {/* Reopen tab is self-contained — it owns its own queries, doesn't need
+          the snapshot/settings context that the other tabs share. */}
+      {activeTab === 'reopen' && <ReopenTab />}
 
-  // Phase 35-06: Jobs tab is also self-contained — it consumes the
-  // BullMQ-backed `admin.jobs.listFailed` query directly and doesn't
-  // need the admin snapshot.
-  if (activeTab === 'jobs') {
-    return <JobsTab />;
-  }
+      {/* Phase 35-06: Jobs tab is also self-contained — it consumes the
+          BullMQ-backed `admin.jobs.listFailed` query directly and doesn't
+          need the admin snapshot. */}
+      {activeTab === 'jobs' && <JobsTab />}
 
-  if (!data) {
-    return <AdminTabSkeleton variant="table" />;
-  }
+      {!data && activeTab !== 'settings' && activeTab !== 'reopen' && activeTab !== 'jobs' && (
+        <AdminTabSkeleton variant="table" />
+      )}
 
-  switch (activeTab) {
-    case 'users':
-      return <UsersTab users={data.users} />;
-    case 'products':
-      return <ProductsTab products={data.products} users={data.users} />;
-    case 'periods':
-      return <PeriodsTab periods={data.periods} />;
-    case 'reminders':
-      return <RemindersTab reminders={data.reminders} />;
-    default:
-      return <UsersTab users={data.users} />;
-  }
+      {data && activeTab !== 'settings' && activeTab !== 'reopen' && activeTab !== 'jobs' && (
+        <>
+          {activeTab === 'users' && <UsersTab users={data.users} />}
+          {activeTab === 'products' && (
+            <ProductsTab products={data.products} users={data.users} />
+          )}
+          {activeTab === 'periods' && <PeriodsTab periods={data.periods} />}
+          {activeTab === 'reminders' && <RemindersTab reminders={data.reminders} />}
+          {!['users', 'products', 'periods', 'reminders'].includes(activeTab) && (
+            <UsersTab users={data.users} />
+          )}
+        </>
+      )}
+    </div>
+  );
 }

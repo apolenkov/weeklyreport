@@ -28,10 +28,10 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-010: Users table displays all seeded users', async ({ page }) => {
     // Look for users tab and ensure it's visible
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
       // Try clicking the users tab button
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     // Wait for users table
@@ -46,9 +46,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-011: Name column sortable', async ({ page }) => {
     // Navigate to users tab
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
@@ -69,9 +69,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-012: Email displayed', async ({ page }) => {
     // Navigate to users tab
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
@@ -89,9 +89,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-013: Role badge: "default" for head, "secondary" for lead/viewer', async ({ page }) => {
     // Navigate to users tab
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
@@ -105,9 +105,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-014: "Remove" button hidden for head users', async ({ page }) => {
     // Navigate to users tab
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
@@ -122,9 +122,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-015: "Remove" button visible for lead/viewer users', async ({ page }) => {
     // Navigate to users tab
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
@@ -139,9 +139,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-016: Click "Add User" opens CrudSheet', async ({ page }) => {
     // Navigate to users tab
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
@@ -160,9 +160,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-017: Add User form: Name, Email, Role fields', async ({ page }) => {
     // Navigate to users tab and open add sheet
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
@@ -174,9 +174,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
     await sheet.waitFor({ state: 'visible', timeout: 2000 });
 
     // Check for form fields
-    const nameInput = await sheet.locator('input[placeholder*="Name"], input[placeholder*="Имя"]').isVisible().catch(() => false);
-    const emailInput = await sheet.locator('input[type="email"], input[placeholder*="email"]').isVisible().catch(() => false);
-    const roleSelect = await sheet.locator('select, [data-testid="role-select"]').isVisible().catch(() => false);
+    const nameInput = await sheet.getByPlaceholder(/Name|Имя/i).isVisible().catch(() => false);
+    const emailInput = await sheet.locator('input[type="email"]').isVisible().catch(() => false);
+    const roleSelect = await sheet.getByRole('combobox').isVisible().catch(() => false);
 
     expect(nameInput || emailInput || roleSelect).toBe(true);
 
@@ -185,9 +185,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-018: Role select defaults to "lead"', async ({ page }) => {
     // Open add user sheet
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
@@ -199,7 +199,7 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
     await sheet.waitFor({ state: 'visible', timeout: 2000 });
 
     // Check role select default value
-    const roleSelect = await sheet.locator('select, [data-testid="role-select"]').first();
+    const roleSelect = await sheet.getByRole('combobox').first();
     const roleValue = await roleSelect.inputValue();
     expect(roleValue).toBe('lead');
 
@@ -208,9 +208,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-019: Submit Add User: saveUser mutation', async ({ page }) => {
     // Open add user sheet
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
@@ -229,8 +229,8 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
     });
 
     // Fill form and submit
-    const nameInput = await sheet.locator('input[placeholder*="Name"], input[placeholder*="Имя"], input').first();
-    const emailInput = await sheet.locator('input[type="email"], input[placeholder*="email"]').first();
+    const nameInput = await sheet.getByPlaceholder(/Name|Имя/i).first();
+    const emailInput = await sheet.locator('input[type="email"]').first();
 
     await nameInput.fill('Test User ' + Date.now());
     await emailInput.fill(`testuser${Date.now()}@test.local`);
@@ -249,9 +249,9 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
 
   test('ADM-020: Success toast: "User added" + description', async ({ page }) => {
     // Open add user sheet and submit
-    const usersTab = await page.locator('[data-testid="users-tab"]').isVisible().catch(() => false);
+    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
     if (!usersTab) {
-      await page.locator('button:has-text("Users"), button:has-text("Пользователи")').first().click();
+      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
     }
 
     await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
@@ -263,8 +263,8 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
     await sheet.waitFor({ state: 'visible', timeout: 2000 });
 
     // Fill and submit
-    const nameInput = await sheet.locator('input[placeholder*="Name"], input[placeholder*="Имя"], input').first();
-    const emailInput = await sheet.locator('input[type="email"], input[placeholder*="email"]').first();
+    const nameInput = await sheet.getByPlaceholder(/Name|Имя/i).first();
+    const emailInput = await sheet.locator('input[type="email"]').first();
 
     const testName = 'Toast Test ' + Date.now();
     await nameInput.fill(testName);

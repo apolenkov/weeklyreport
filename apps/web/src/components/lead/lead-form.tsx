@@ -931,7 +931,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
 
   return (
     <SdlcTooltipProvider>
-      <div className="space-y-6">
+      <form className="space-y-6" data-testid="lead-report-form">
         {/* Page header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -1155,7 +1155,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
             availableStages={availableStages}
           />
         </AccordionSection>
-      </div>
+      </form>
 
       {/* Submit Confirmation Dialog */}
       {showSubmitConfirm && (
