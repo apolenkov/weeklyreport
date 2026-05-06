@@ -19,7 +19,7 @@ import {
   SEED_STAGES,
   SEED_REPORTS,
   HEAD_USER_ID,
-  LEAD_POLENKOV_ID,
+  LEAD_1_ID,
   LEAD_MARIA_ID,
   LEAD_IGOR_ID,
   LEAD_DMITRY_ID,
@@ -230,7 +230,7 @@ async function main() {
 
   // ----- Active report (Week 16) sections -----
   // Section status plan (matches MOCK_KPI: submitted: 4, total: 6, pendingCount: 2):
-  //   Polenkov A. -> submitted (Apr 14 10:00)
+  //   Тимлид 1 -> submitted (Apr 14 10:00)
   //   Maria K.    -> submitted (Apr 14 14:00)
   //   Igor V.     -> submitted (Apr 15 09:30)
   //   Dmitry S.   -> submitted (Apr 16 11:15)
@@ -250,12 +250,12 @@ async function main() {
 
   const activeLeadConfigs: LeadConfig[] = [
     {
-      leadId: LEAD_POLENKOV_ID,
+      leadId: LEAD_1_ID,
       leadIndex: 1,
-      name: 'Поленков А.',
+      name: 'Тимлид 1',
       status: ReportSectionStatus.submitted,
       submittedAt: activeOffset(1, 10),
-      products: productsByLead(LEAD_POLENKOV_ID),
+      products: productsByLead(LEAD_1_ID),
     },
     {
       leadId: LEAD_MARIA_ID,
@@ -315,7 +315,7 @@ async function main() {
   // relation — we don't repeat the product name in the text itself (UI shows
   // it in the section header).
   const itemTextsByLead: Record<string, { current: string[]; next: string[] }> = {
-    [LEAD_POLENKOV_ID]: {
+    [LEAD_1_ID]: {
       current: [
         'Закрыли модуль авторизации — JWT + refresh-token',
         'Подключили OAuth2 партнёрского API, ждём подтверждения от партнёра',
@@ -513,7 +513,7 @@ async function main() {
           'Раскатка СБП-эквайринга на 100% трафика после получения ключей',
         ];
       }
-      if (cfg.leadId === LEAD_POLENKOV_ID) {
+      if (cfg.leadId === LEAD_1_ID) {
         return [
           'Закрыть OAuth2 интеграцию (партнёр снял rate-limit)',
           'Передать SSO flow смежной команде к четвергу',
@@ -565,7 +565,7 @@ async function main() {
   }
 
   // ----- Risks (3-4 across active sections) -----
-  const polenkovSec = sectionId('1', 1);
+  const primaryLeadSec = sectionId('1', 1);
   const mariaSec = sectionId('1', 2);
   const igorSec = sectionId('1', 3);
   const dmitrySec = sectionId('1', 4);
@@ -576,7 +576,7 @@ async function main() {
   const risks = [
     {
       id: riskId(1),
-      reportSectionId: polenkovSec,
+      reportSectionId: primaryLeadSec,
       projectId: 'a0000000-0000-4000-8000-000000000201', // CRM Platform
       risk: 'Партнёрский OAuth2 API режет нас по rate-limit на пиковом трафике',
       impact: 'Сдвигает milestone SSO на 1 неделю, блокирует смежную команду',
@@ -584,7 +584,7 @@ async function main() {
     },
     {
       id: riskId(2),
-      reportSectionId: polenkovSec,
+      reportSectionId: primaryLeadSec,
       projectId: 'a0000000-0000-4000-8000-000000000202', // Data Analytics Suite
       risk: 'Memory leak в ETL — OOM на больших экстрактах (>2M строк)',
       impact: 'Блокирует релиз до получения патча от вендора',
@@ -630,7 +630,7 @@ async function main() {
   const decisions = [
     {
       id: decisionId(1),
-      reportSectionId: polenkovSec,
+      reportSectionId: primaryLeadSec,
       text: 'Согласовать расширение OAuth2 квоты у партнёра (нужен sign-off head)',
       owner: 'Глава департамента',
       deadline: activeOffset(8, 15),

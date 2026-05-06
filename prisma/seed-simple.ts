@@ -54,7 +54,7 @@ const prisma = new PrismaClient({ adapter });
 const HEAD_ID = 'a0000000-0000-4000-8000-000000000099';
 const VIEWER_ID = 'a0000000-0000-4000-8000-000000000098';
 const ADMIN_ID = 'a0000000-0000-4000-8000-000000000097';
-const LEAD_ALEX = 'a0000000-0000-4000-8000-000000000011';
+const LEAD_1 = 'a0000000-0000-4000-8000-000000000011';
 const LEAD_MARIA = 'a0000000-0000-4000-8000-000000000012';
 const LEAD_IGOR = 'a0000000-0000-4000-8000-000000000013';
 const LEAD_DMITRY = 'a0000000-0000-4000-8000-000000000014';
@@ -174,7 +174,7 @@ async function main() {
       { id: HEAD_ID, email: 'head@customreport.local', name: 'Антон К.', role: Role.head, samlId: 'head-1' },
       { id: VIEWER_ID, email: 'viewer@customreport.local', name: 'Дарья В.', role: Role.viewer, samlId: 'viewer-1' },
       { id: ADMIN_ID, email: 'admin@customreport.local', name: 'Антон К.', role: Role.admin, samlId: 'admin-1' },
-      { id: LEAD_ALEX, email: 'polenkov@customreport.local', name: 'Поленков А.', role: Role.lead, samlId: 'lead-polenkov' },
+      { id: LEAD_1, email: 'lead1@customreport.local', name: 'Тимлид 1', role: Role.lead, samlId: 'lead-1' },
       { id: LEAD_MARIA, email: 'maria@customreport.local', name: 'Мария К.', role: Role.lead, samlId: 'lead-maria' },
       { id: LEAD_IGOR, email: 'igor@customreport.local', name: 'Игорь В.', role: Role.lead, samlId: 'lead-igor' },
       { id: LEAD_DMITRY, email: 'dmitry@customreport.local', name: 'Дмитрий С.', role: Role.lead, samlId: 'lead-dmitry' },
@@ -186,7 +186,7 @@ async function main() {
   console.log('[seed-simple] Creating products (RU names)...');
   await prisma.project.createMany({
     data: [
-      { id: PROD_CRM, name: 'Маркетинговый портал', leadId: LEAD_ALEX, archived: false },
+      { id: PROD_CRM, name: 'Маркетинговый портал', leadId: LEAD_1, archived: false },
       { id: PROD_MOBILE, name: 'Платформа интеграций', leadId: LEAD_MARIA, archived: false },
       { id: PROD_CLOUD, name: 'Внутренний BI', leadId: LEAD_IGOR, archived: false },
       { id: PROD_DEVOPS, name: 'DevOps-инструменты', leadId: LEAD_DMITRY, archived: false },
@@ -208,13 +208,13 @@ async function main() {
     ],
   });
 
-  // 35-04 (BUG-143 reproducer): Поленков А. owns ALL 7 stages of his
+  // 35-04 (BUG-143 reproducer): the primary seeded lead owns ALL 7 stages of their
   // primary project (Маркетинговый портал) so the bug case "lead
   // assigned everywhere shows up correctly on /lead/report" can be
   // exercised end-to-end. Other leads stay on the single-Development
   // assignment from before — the dashboard variety they provide is
   // still useful and the all-7 case only needs one fixture.
-  console.log('[seed-simple] Creating stage assignments (Поленков А. owns 7/7 on CRM, others own Development of their product)...');
+  console.log('[seed-simple] Creating stage assignments (primary lead owns 7/7 on CRM, others own Development of their product)...');
   const allStageIds = [
     STAGE_PLAN,
     STAGE_ANALYSIS,
@@ -230,7 +230,7 @@ async function main() {
         id: `b0000000-0000-4000-8000-0000000010${(idx + 1).toString().padStart(2, '0')}`,
         projectId: PROD_CRM,
         stageId,
-        userId: LEAD_ALEX,
+        userId: LEAD_1,
       })),
       { id: 'b0000000-0000-4000-8000-000000000002', projectId: PROD_MOBILE, stageId: STAGE_DEV, userId: LEAD_MARIA },
       { id: 'b0000000-0000-4000-8000-000000000003', projectId: PROD_CLOUD, stageId: STAGE_DEV, userId: LEAD_IGOR },
@@ -279,7 +279,7 @@ async function main() {
     label: string;
   };
   const leads: LeadCfg[] = [
-    { id: LEAD_ALEX, productId: PROD_CRM, status: ReportSectionStatus.draft, lightStatus: TrafficLightStatus.red, label: 'Поленков А.' },
+    { id: LEAD_1, productId: PROD_CRM, status: ReportSectionStatus.draft, lightStatus: TrafficLightStatus.red, label: 'Тимлид 1' },
     { id: LEAD_MARIA, productId: PROD_MOBILE, status: ReportSectionStatus.submitted, lightStatus: TrafficLightStatus.yellow, label: 'Мария К.' },
     { id: LEAD_IGOR, productId: PROD_CLOUD, status: ReportSectionStatus.draft, lightStatus: TrafficLightStatus.green, label: 'Игорь В.' },
     { id: LEAD_DMITRY, productId: PROD_DEVOPS, status: ReportSectionStatus.submitted, lightStatus: TrafficLightStatus.green, label: 'Дмитрий С.' },
@@ -306,7 +306,7 @@ async function main() {
   };
 
   const contentByLead: Record<string, LeadContent> = {
-    [LEAD_ALEX]: {
+    [LEAD_1]: {
       currentItems: [
         { text: 'Завершил рефакторинг модуля авторизации в Маркетинговом портале', tag: 'feature', status: ItemWorkflowStatus.blocked },
         { text: 'Зафиксил 4 бага по интеграции SDK с CRM', tag: 'bugfix', status: ItemWorkflowStatus.done, completed: true },
@@ -324,7 +324,7 @@ async function main() {
       decisions: [
         {
           text: 'Решение: переезд на новый IdP до конца месяца',
-          owner: 'Поленков А.',
+          owner: 'Тимлид 1',
           impact: 'Закрывает риск устаревшего OAuth-провайдера',
         },
         {
@@ -529,12 +529,12 @@ async function main() {
     // 35-04: pick a default stage to seed on every Item / Risk / Decision /
     // Priority row so the post-seed UI doesn't show every entry as the '—'
     // legacy placeholder. "Development" matches the seeded Stage.name and
-    // the lead's StageAssignment for non-Полeнков leads. For Поленков А.
+    // the lead's StageAssignment for secondary leads. For the primary seeded lead
     // we vary stages across his 7-stage CRM ownership so the demo
     // exercises the per-stage scoping.
     const SEED_STAGE_ROTATION = ['Development', 'Testing', 'Design', 'DevOps', 'Planning'];
     const stageFor = (idx: number) =>
-      lead.id === LEAD_ALEX
+      lead.id === LEAD_1
         ? (SEED_STAGE_ROTATION[idx % SEED_STAGE_ROTATION.length] ?? 'Development')
         : 'Development';
 
@@ -607,19 +607,19 @@ async function main() {
     });
   }
 
-  console.log('[seed-simple] Creating version snapshots (Поленков А. section, 2 versions)...');
-  const alexSectionId = `a0000000-0000-4000-8000-000000000401`;
+  console.log('[seed-simple] Creating version snapshots (primary lead section, 2 versions)...');
+  const lead1SectionId = `a0000000-0000-4000-8000-000000000401`;
   await prisma.versionSnapshot.createMany({
     data: [
       {
         id: randomUUID(),
-        reportSectionId: alexSectionId,
+        reportSectionId: lead1SectionId,
         version: 1,
         data: { note: 'начальный черновик', items: [], risks: [], decisions: [], priorities: [] },
       },
       {
         id: randomUUID(),
-        reportSectionId: alexSectionId,
+        reportSectionId: lead1SectionId,
         version: 2,
         data: { note: 'после первого сохранения', items: [], risks: [], decisions: [], priorities: [] },
       },

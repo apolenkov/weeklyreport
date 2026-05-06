@@ -226,15 +226,15 @@ test.describe('Dashboard Advanced', () => {
   // -----------------------------------------------------------------------
 
   test('SC-179: Submitted lead cards show traffic light dots matching product count', async ({ headPage }) => {
-    // Polenkov A. has 6 traffic lights (6 products), Maria K. has 4, Igor V. has 3, Dmitry S. has 5
+    // Тимлид 1 has 6 traffic lights (6 products), Maria K. has 4, Igor V. has 3, Dmitry S. has 5
     // Traffic lights are 18x18 rounded-full elements inside lead cards
 
-    // Polenkov A. card is a link (current user)
-    const polenkovCard = headPage.locator('a').filter({ hasText: 'Polenkov A.' });
-    await expect(polenkovCard).toBeVisible();
-    const polenkovDots = polenkovCard.locator('.rounded-full').filter({ has: headPage.locator(':scope:not(:empty)') });
+    // Тимлид 1 card is a link (current user)
+    const lead1Card = headPage.locator('a').filter({ hasText: 'Тимлид 1' });
+    await expect(lead1Card).toBeVisible();
+    const lead1Dots = lead1Card.locator('.rounded-full').filter({ has: headPage.locator(':scope:not(:empty)') });
     // Should have avatar (1) + 6 traffic dots
-    expect(await polenkovDots.count()).toBeGreaterThanOrEqual(6);
+    expect(await lead1Dots.count()).toBeGreaterThanOrEqual(6);
   });
 
   test('SC-179: Pending lead cards show no traffic lights', async ({ headPage }) => {
@@ -261,10 +261,10 @@ test.describe('Dashboard Advanced', () => {
   // -----------------------------------------------------------------------
 
   test('SC-63: Current user lead card is a clickable link to /lead/report', async ({ headPage }) => {
-    // Polenkov A. is the current user; their card is an <a> linking to /lead/report
-    const polenkovLink = headPage.locator('a').filter({ hasText: 'Polenkov A.' });
-    await expect(polenkovLink).toBeVisible();
-    await expect(polenkovLink).toHaveAttribute('href', '/lead/report');
+    // Тимлид 1 is the current user; their card is an <a> linking to /lead/report
+    const lead1Link = headPage.locator('a').filter({ hasText: 'Тимлид 1' });
+    await expect(lead1Link).toBeVisible();
+    await expect(lead1Link).toHaveAttribute('href', '/lead/report');
   });
 
   test('SC-63: Non-current-user submitted cards are disabled (not clickable)', async ({ headPage }) => {

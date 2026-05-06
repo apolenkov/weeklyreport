@@ -124,7 +124,7 @@ test.describe('Lead Form — modal-driven CRUD', () => {
   });
 
   test('S2.2: Edit item via pencil — modal preloads existing values, Save persists', async ({ leadPage }) => {
-    await openItemEdit(leadPage, "Refactored auth flow for Aleksandr P.");
+    await openItemEdit(leadPage, "Refactored auth flow for Lead 1");
     await fillItemDialog(leadPage, { text: 'Refactored auth flow + added MFA' });
     // Wait for the saveDraft round-trip whose request body actually carries
     // the new text. This skips any in-flight save from the dialog open
@@ -236,7 +236,7 @@ test.describe('Lead Form — modal-driven CRUD', () => {
   // -------------------------------------------------------------------------
 
   test('S5.1: My decisions show pencil + trash; "Head" decisions show "Owner: Head" badge only', async ({ leadPage }) => {
-    // Aleksandr-owned: actionable.
+    // lead 1-owned: actionable.
     await expect(leadPage.getByRole('button', { name: /Edit decision/ }).first()).toBeVisible();
     // Head-owned: read-only marker present, no Edit/Delete on that row.
     await expect(leadPage.getByText('Owner: Head')).toBeVisible();

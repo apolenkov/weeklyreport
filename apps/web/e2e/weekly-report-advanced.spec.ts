@@ -234,9 +234,9 @@ test.describe('Weekly Report Advanced', () => {
   });
 
   test('SC-202: Product accordion shows lead names in header badge', async ({ headPage }) => {
-    // CRM Platform header shows "Polenkov A. . Maria K."
+    // CRM Platform header shows "Тимлид 1 . Maria K."
     const crmHeader = headPage.locator('#report-product-crm button[aria-expanded]');
-    await expect(crmHeader.getByText('Polenkov A.')).toBeVisible();
+    await expect(crmHeader.getByText('Тимлид 1')).toBeVisible();
     await expect(crmHeader.getByText('Maria K.')).toBeVisible();
   });
 

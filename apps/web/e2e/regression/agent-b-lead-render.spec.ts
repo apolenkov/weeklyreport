@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const DEV_LOGIN_URL = 'http://localhost:3000/auth/dev-login';
+const DEV_LOGIN_URL = 'http://localhost:3002/auth/dev-login';
 const FRONTEND_URL = 'http://localhost:3000';
 const LEAD_REPORT_URL = 'http://localhost:3000/lead/report';
 const SCREENSHOT_DIR = '.planning/regression/screenshots/agent-b-lead-render';
@@ -17,7 +17,7 @@ const SCREENSHOT_DIR = '.planning/regression/screenshots/agent-b-lead-render';
 test.describe('LEAD-001..005: Lead Report Page States', () => {
   test.beforeEach(async ({ page }) => {
     // Login as lead
-    await page.goto(`${DEV_LOGIN_URL}?role=lead`);
+    await page.goto(`${DEV_LOGIN_URL}?role=lead&email=lead1@customreport.local`);
     await page.waitForURL(/^http:\/\/localhost:3000\//, { timeout: 10000 });
   });
 

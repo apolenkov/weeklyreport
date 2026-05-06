@@ -67,8 +67,8 @@ describe('trafficToProductStatus', () => {
 describe('statusLabelFor', () => {
   const fn = __testing.statusLabelFor;
   it("joins lead names with ', ' and prefixes the status", () => {
-    expect(fn('at-risk', ['Polenkov A.', 'Maria K.'])).toBe(
-      'At Risk \u00b7 Polenkov A., Maria K.',
+    expect(fn('at-risk', ['Тимлид 1', 'Maria K.'])).toBe(
+      'At Risk \u00b7 Тимлид 1, Maria K.',
     );
   });
   it('falls back to "unassigned" when no leads', () => {
@@ -113,7 +113,7 @@ describe('mapWeeklyReport', () => {
           productName: 'CRM Platform',
           worstStatus: 'yellow',
           stageCount: 7,
-          leadNames: ['Polenkov A.', 'Maria K.'],
+          leadNames: ['Тимлид 1', 'Maria K.'],
         },
         {
           productId: PROJECT_B,
@@ -128,7 +128,7 @@ describe('mapWeeklyReport', () => {
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
-          authorName: 'Polenkov A.',
+          authorName: 'Тимлид 1',
           status: 'submitted',
           submittedAt: new Date('2026-04-19T18:00:00Z'),
           projects: [
@@ -199,7 +199,7 @@ describe('mapWeeklyReport', () => {
     expect(result.portfolio).toHaveLength(2);
     const crm = result.portfolio.find((p) => p.id === PROJECT_A);
     expect(crm?.status).toBe('at-risk');
-    expect(crm?.leads).toBe('Polenkov A. \u00b7 Maria K.');
+    expect(crm?.leads).toBe('Тимлид 1 \u00b7 Maria K.');
     expect(crm?.currentWeekCount).toBe(1);
     expect(crm?.nextWeekCount).toBe(1);
     expect(crm?.riskCount).toBe(1);
@@ -250,7 +250,7 @@ describe('mapWeeklyReport', () => {
           productName: 'CRM',
           worstStatus: 'red',
           stageCount: 7,
-          leadNames: ['Polenkov A.'],
+          leadNames: ['Тимлид 1'],
         },
       ],
       leadSections: [
@@ -258,7 +258,7 @@ describe('mapWeeklyReport', () => {
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
-          authorName: 'Polenkov A.',
+          authorName: 'Тимлид 1',
           status: 'draft',
           submittedAt: null,
           projects: [
@@ -303,7 +303,7 @@ describe('mapWeeklyReport', () => {
           productName: 'CRM',
           worstStatus: 'yellow',
           stageCount: 7,
-          leadNames: ['Polenkov A.'],
+          leadNames: ['Тимлид 1'],
         },
       ],
       escalations: [
@@ -311,7 +311,7 @@ describe('mapWeeklyReport', () => {
           type: 'at_risk',
           productName: 'CRM',
           stageName: 'Dev',
-          leadName: 'Polenkov A.',
+          leadName: 'Тимлид 1',
           description: 'OAuth slow due to vendor.',
         },
       ],
@@ -331,7 +331,7 @@ describe('mapWeeklyReport', () => {
           productName: 'CRM',
           worstStatus: 'green',
           stageCount: 7,
-          leadNames: ['Polenkov A.'],
+          leadNames: ['Тимлид 1'],
         },
       ],
       leadSections: [
@@ -339,7 +339,7 @@ describe('mapWeeklyReport', () => {
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
-          authorName: 'Polenkov A.',
+          authorName: 'Тимлид 1',
           status: 'submitted',
           submittedAt: new Date('2026-04-19T18:00:00Z'),
           projects: [

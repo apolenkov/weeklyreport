@@ -31,7 +31,7 @@ import { test, expect, type Page } from '@playwright/test';
 const SHOT_DIR = '.planning/regression/screenshots/agent-b';
 
 const LEAD = {
-  email: 'polenkov@customreport.local',
+  email: 'lead1@customreport.local',
   role: 'lead' as const,
 };
 const HEAD = {
@@ -169,7 +169,7 @@ test.describe('Section 3 — LEAD REPORT FORM', () => {
       // Filter empty placeholder options
       const stages = options.filter((o) => o.trim().length > 0);
       // Bug-fix verification: count > 0 AND not synthesized "Dev"-only.
-      // For lead 'polenkov' on a project assigned multiple stages, list > 1.
+      // For the primary seeded lead on a project assigned multiple stages, list > 1.
       expect(stages.length, 'stage selector should be populated').toBeGreaterThan(0);
       // Annotate count for the report.
       test.info().annotations.push({ type: 'stage-count', description: `dialog stage options: ${stages.length}` });
@@ -379,7 +379,7 @@ test.describe('Section 8 — ADMIN PANEL', () => {
     await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => null);
     // Check for ANY of: email text, role badge text, seeded RU name, or row count.
     const emails = await page.getByText(/@customreport\.local/).count();
-    const ruNames = await page.getByText(/Поленков|Мария|Игорь|Дмитрий|Ольга|Сергей|Антон|Дарья/).count();
+    const ruNames = await page.getByText(/Тимлид 1|Мария|Игорь|Дмитрий|Ольга|Сергей|Антон|Дарья/).count();
     const enNames = await page.getByText(/Alexey|Maria|Igor|Dmitry|Olga|Sergey/).count();
     const roleBadges = await page.getByText(/^(lead|head|viewer|admin)$/).count();
     const rows = await page.locator('table tbody tr').count();

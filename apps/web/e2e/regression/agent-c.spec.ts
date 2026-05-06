@@ -37,7 +37,7 @@ const PDF_DIR = path.resolve(__dirname, '../../../api/storage/pdfs');
 type Role = 'lead' | 'head' | 'admin' | 'viewer';
 const EMAILS: Record<Role, string> = {
   head: 'head@customreport.local',
-  lead: 'polenkov@customreport.local',
+  lead: 'lead1@customreport.local',
   admin: 'admin@customreport.local',
   viewer: 'viewer@customreport.local',
 };

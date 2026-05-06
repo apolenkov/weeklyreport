@@ -344,7 +344,7 @@ test.describe('SC-268: Unicode characters render correctly', () => {
     await expect(leadPage.getByText(/OAuth2/).first()).toBeVisible();
 
     // The page should handle the mix of Latin and Cyrillic
-    await expect(leadPage.getByText('Polenkov A.').first()).toBeVisible();
+    await expect(leadPage.getByText('Тимлид 1').first()).toBeVisible();
     await expect(leadPage.getByText('CRM Platform').first()).toBeVisible();
   });
 

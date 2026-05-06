@@ -147,9 +147,9 @@ export const MOCK_KPI: KpiData = {
 
 export const MOCK_LEADS: LeadInfo[] = [
   {
-    id: 'polenkov',
+    id: 'lead1',
     initials: 'AP',
-    name: 'Polenkov A.',
+    name: 'Тимлид 1',
     role: 'Dev Lead',
     status: 'submitted',
     trafficLights: [
@@ -250,7 +250,7 @@ export const MOCK_BLOCKED_AT_RISK: BlockedAtRiskItem[] = [
     severity: 'blocked',
     product: 'Data Analytics',
     stage: 'Testing',
-    assignee: 'Polenkov A.',
+    assignee: 'Тимлид 1',
     description: '\u0422\u0435\u0441\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435 \u0437\u0430\u0431\u043b\u043e\u043a\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u2014 \u043e\u0436\u0438\u0434\u0430\u0435\u043c \u0444\u0438\u043a\u0441 Dev',
   },
   {
@@ -258,7 +258,7 @@ export const MOCK_BLOCKED_AT_RISK: BlockedAtRiskItem[] = [
     severity: 'at-risk',
     product: 'CRM Platform',
     stage: 'Dev',
-    assignee: 'Polenkov A.',
+    assignee: 'Тимлид 1',
     description: '\u0417\u0430\u0434\u0435\u0440\u0436\u043a\u0430 OAuth2 \u0438\u0437-\u0437\u0430 \u043b\u0438\u043c\u0438\u0442\u043e\u0432 API \u043f\u0430\u0440\u0442\u043d\u0451\u0440\u0430',
   },
   {
@@ -266,7 +266,7 @@ export const MOCK_BLOCKED_AT_RISK: BlockedAtRiskItem[] = [
     severity: 'at-risk',
     product: 'Cloud Infrastructure',
     stage: 'Dev',
-    assignee: 'Polenkov A.',
+    assignee: 'Тимлид 1',
     description: 'PgBouncer \u043c\u0438\u0433\u0440\u0430\u0446\u0438\u044f \u2014 downtime 30 \u043c\u0438\u043d',
   },
   {
@@ -336,12 +336,12 @@ export const MOCK_REPORT_PERIODS: ReportPeriod[] = [
 ];
 
 export const MOCK_PORTFOLIO: PortfolioProduct[] = [
-  { id: 'crm', initials: 'CR', name: 'CRM Platform', status: 'at-risk', statusLabel: 'At Risk \u00b7 OAuth2 dependency delay', leads: 'Polenkov A. \u00b7 Maria K.', currentWeekCount: 5, nextWeekCount: 3, riskCount: 1 },
-  { id: 'analytics', initials: 'DA', name: 'Data Analytics Suite', status: 'blocked', statusLabel: 'Blocked \u00b7 ETL memory issue', leads: 'Maria K. \u00b7 Polenkov A.', currentWeekCount: 4, nextWeekCount: 2, riskCount: 2 },
-  { id: 'mobile', initials: 'MA', name: 'Mobile Applications', status: 'at-risk', statusLabel: 'At Risk \u00b7 Navigation redesign', leads: 'Igor V. \u00b7 Polenkov A.', currentWeekCount: 4, nextWeekCount: 1, riskCount: 1 },
-  { id: 'cloud', initials: 'CI', name: 'Cloud Infrastructure', status: 'at-risk', statusLabel: 'At Risk \u00b7 PgBouncer migration window', leads: 'Polenkov A. \u00b7 Sidorov P.', currentWeekCount: 3, nextWeekCount: 2, riskCount: 1 },
-  { id: 'aiml', initials: 'AI', name: 'AI/ML Platform', status: 'on-track', statusLabel: 'On Track \u00b7 Smirnov, Polenkov', leads: 'Smirnov K. \u00b7 Polenkov A.', currentWeekCount: 3, nextWeekCount: 2, riskCount: 0 },
-  { id: 'gateway', initials: 'IG', name: 'Integration Gateway', status: 'on-track', statusLabel: 'On Track \u00b7 Polenkov', leads: 'Polenkov A.', currentWeekCount: 2, nextWeekCount: 1, riskCount: 0 },
+  { id: 'crm', initials: 'CR', name: 'CRM Platform', status: 'at-risk', statusLabel: 'At Risk \u00b7 OAuth2 dependency delay', leads: 'Тимлид 1 \u00b7 Maria K.', currentWeekCount: 5, nextWeekCount: 3, riskCount: 1 },
+  { id: 'analytics', initials: 'DA', name: 'Data Analytics Suite', status: 'blocked', statusLabel: 'Blocked \u00b7 ETL memory issue', leads: 'Maria K. \u00b7 Тимлид 1', currentWeekCount: 4, nextWeekCount: 2, riskCount: 2 },
+  { id: 'mobile', initials: 'MA', name: 'Mobile Applications', status: 'at-risk', statusLabel: 'At Risk \u00b7 Navigation redesign', leads: 'Igor V. \u00b7 Тимлид 1', currentWeekCount: 4, nextWeekCount: 1, riskCount: 1 },
+  { id: 'cloud', initials: 'CI', name: 'Cloud Infrastructure', status: 'at-risk', statusLabel: 'At Risk \u00b7 PgBouncer migration window', leads: 'Тимлид 1 \u00b7 Sidorov P.', currentWeekCount: 3, nextWeekCount: 2, riskCount: 1 },
+  { id: 'aiml', initials: 'AI', name: 'AI/ML Platform', status: 'on-track', statusLabel: 'On Track \u00b7 Smirnov, lead 1', leads: 'Smirnov K. \u00b7 Тимлид 1', currentWeekCount: 3, nextWeekCount: 2, riskCount: 0 },
+  { id: 'gateway', initials: 'IG', name: 'Integration Gateway', status: 'on-track', statusLabel: 'On Track \u00b7 lead 1', leads: 'Тимлид 1', currentWeekCount: 2, nextWeekCount: 1, riskCount: 0 },
   { id: 'payment', initials: 'PG', name: 'Payment Gateway', status: 'on-track', statusLabel: 'On Track \u00b7 Dmitry S.', leads: 'Dmitry S.', currentWeekCount: 2, nextWeekCount: 1, riskCount: 0 },
   { id: 'auth', initials: 'AS', name: 'Auth Service', status: 'on-track', statusLabel: 'On Track \u00b7 Olga N.', leads: 'Olga N.', currentWeekCount: 2, nextWeekCount: 1, riskCount: 0 },
   { id: 'notif', initials: 'NH', name: 'Notification Hub', status: 'on-track', statusLabel: 'On Track \u00b7 Sergey T.', leads: 'Sergey T.', currentWeekCount: 2, nextWeekCount: 1, riskCount: 0 },
@@ -357,7 +357,7 @@ export const MOCK_PRODUCT_REPORTS: ProductReport[] = [
     name: 'CRM Platform',
     status: 'at-risk',
     statusLabel: 'At Risk',
-    leads: 'Polenkov A. \u00b7 Maria K.',
+    leads: 'Тимлид 1 \u00b7 Maria K.',
     needsAttention: 'OAuth2 integration is slowed by partner API limits, which pushes the SSO portal work into next week.',
     needsAttentionSeverity: 'at-risk',
     currentWeek: [
@@ -387,7 +387,7 @@ export const MOCK_PRODUCT_REPORTS: ProductReport[] = [
     name: 'Data Analytics Suite',
     status: 'blocked',
     statusLabel: 'Blocked',
-    leads: 'Maria K. \u00b7 Polenkov A.',
+    leads: 'Maria K. \u00b7 Тимлид 1',
     needsAttention: 'ETL memory leak is the blocking issue for the analytics stream and needs the vendor patch before the release path can move.',
     needsAttentionSeverity: 'blocked',
     currentWeek: [
@@ -413,7 +413,7 @@ export const MOCK_PRODUCT_REPORTS: ProductReport[] = [
     name: 'Mobile Applications',
     status: 'at-risk',
     statusLabel: 'At Risk',
-    leads: 'Igor V. \u00b7 Polenkov A.',
+    leads: 'Igor V. \u00b7 Тимлид 1',
     needsAttention: 'Navigation redesign is waiting on final design-system tokens, so the mobile sprint still has schedule risk.',
     needsAttentionSeverity: 'at-risk',
     currentWeek: [
@@ -437,7 +437,7 @@ export const MOCK_PRODUCT_REPORTS: ProductReport[] = [
     name: 'Cloud Infrastructure',
     status: 'at-risk',
     statusLabel: 'At Risk',
-    leads: 'Polenkov A. \u00b7 Sidorov P.',
+    leads: 'Тимлид 1 \u00b7 Sidorov P.',
     needsAttention: 'PgBouncer migration still needs a coordinated maintenance window, so the infrastructure track remains at risk.',
     needsAttentionSeverity: 'at-risk',
     currentWeek: [
@@ -463,7 +463,7 @@ export const MOCK_PRODUCT_REPORTS: ProductReport[] = [
     name: 'AI/ML Platform',
     status: 'on-track',
     statusLabel: 'On Track',
-    leads: 'Smirnov K. \u00b7 Polenkov A.',
+    leads: 'Smirnov K. \u00b7 Тимлид 1',
     currentWeek: [
       { id: 'ai-cw1', stageLead: 'Testing \u00b7 AP', text: '\u041f\u0430\u0439\u043f\u043b\u0430\u0439\u043d \u043e\u0431\u0443\u0447\u0435\u043d\u0438\u044f \u043c\u043e\u0434\u0435\u043b\u0435\u0439 v2', status: 'in-progress' },
       { id: 'ai-cw2', stageLead: 'Dev \u00b7 SK', text: '\u041f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u043a\u0430 \u043e\u043a\u0440\u0443\u0436\u0435\u043d\u0438\u044f \u0434\u043b\u044f model serving', status: 'completed' },
@@ -485,7 +485,7 @@ export const MOCK_PRODUCT_REPORTS: ProductReport[] = [
     name: 'Integration Gateway',
     status: 'on-track',
     statusLabel: 'On Track',
-    leads: 'Polenkov A.',
+    leads: 'Тимлид 1',
     currentWeek: [
       { id: 'ig-cw1', stageLead: 'Dev \u00b7 AP', text: '\u041f\u0440\u043e\u0442\u043e\u0442\u0438\u043f \u043c\u043e\u0441\u0442\u0430 REST \u2192 gRPC', status: 'in-progress' },
       { id: 'ig-cw2', stageLead: 'Analysis \u00b7 AP', text: '\u0411\u0430\u0437\u043e\u0432\u043e\u0435 \u043e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u0432\u043d\u0435\u0448\u043d\u0438\u0445 \u0438\u043d\u0442\u0435\u0433\u0440\u0430\u0446\u0438\u0439', status: 'completed' },

@@ -31,7 +31,7 @@ function baseSection(
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
-    authorName: 'Polenkov A.',
+    authorName: 'Тимлид 1',
     status: 'draft',
     submittedAt: null,
     projects: [],
@@ -74,7 +74,7 @@ describe('mapLeadProducts', () => {
     // via the alias in buildStageGrid.
     const devStage = expectDefined(products[0]).stages.find((s) => s.stageName === 'Dev');
     expect(devStage?.ownership).toBe('mine');
-    expect(devStage?.assignee).toBe('Polenkov A.');
+    expect(devStage?.assignee).toBe('Тимлид 1');
     expect(devStage?.status).toBe('on-track');
     // Stages outside ownedStages render as unassigned with no assignee.
     const planningStage = expectDefined(products[0]).stages.find((s) => s.stageName === 'Planning');
@@ -165,7 +165,7 @@ describe('mapLeadItems', () => {
     expect(mapped?.status).toBe('in-progress');
     expect(mapped?.text).toBe('Wire OAuth2 callback');
     expect(mapped?.productName).toBe('CRM');
-    expect(mapped?.author).toBe('Polenkov A.');
+    expect(mapped?.author).toBe('Тимлид 1');
   });
 
   it("filters items by 'next' type and resolves project name", () => {
@@ -361,7 +361,7 @@ describe('mapLeadFormData', () => {
     expect(result.periods).toEqual([]);
     expect(result.versions).toEqual([]);
     expect(result.readOnly).toBe(false);
-    expect(result.currentUser.name).toBe('Polenkov A.');
+    expect(result.currentUser.name).toBe('Тимлид 1');
     expect(result.currentUser.initials).toBe('PA');
   });
 

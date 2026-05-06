@@ -68,7 +68,7 @@ export async function loginAs(
 }
 
 type Fixtures = {
-  /** Logged in as Polenkov (a submitted lead with full data). */
+  /** Logged in as lead 1 (a submitted lead with full data). */
   leadPage: Page;
   /** Logged in as the seeded department head. */
   headPage: Page;
@@ -84,7 +84,7 @@ export const test = base.extend<Fixtures>({
     const page = await context.newPage();
     await loginAs(context, {
       role: 'lead',
-      email: 'polenkov@customreport.local',
+      email: 'lead1@customreport.local',
     });
     await use(page);
     await context.close();

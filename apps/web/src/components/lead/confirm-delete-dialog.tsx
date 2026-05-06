@@ -18,7 +18,7 @@ type ConfirmDeleteDialogProps = {
   readonly preview: string;
   /**
    * Optional secondary line under the preview, e.g. "from CRM Platform"
-   * or "Owner: Aleksandr P." — shown muted below the bold preview.
+   * or "Owner: Lead 1" — shown muted below the bold preview.
    */
   readonly subtitle?: string;
   /**

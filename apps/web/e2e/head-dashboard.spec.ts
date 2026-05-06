@@ -89,7 +89,7 @@ test.describe('Head Dashboard', () => {
   });
 
   test('traffic light dots are visible on submitted lead cards', async ({ headPage }) => {
-    // Polenkov A. has 6 traffic light dots (small round divs with check/cross/bang icons)
+    // Тимлид 1 has 6 traffic light dots (small round divs with check/cross/bang icons)
     // The traffic lights are 18x18 rounded-full elements
     const trafficDots = headPage.locator('.rounded-full').filter({ hasText: /^[!]$/ });
     await expect(trafficDots.first()).toBeVisible();

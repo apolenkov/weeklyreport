@@ -54,15 +54,15 @@ export const SEED_USERS: readonly SeedUser[] = [
   },
   // Phase 35-08: lead names switched to RU Cyrillic so the dashboard +
   // forms match the rest of the demo content. Tests that pin against the
-  // legacy "Polenkov A." style strings have been updated alongside the
+  // legacy person-specific lead strings have been updated alongside the
   // seed (see /Users/ap/work/customreport/.planning/phases/35-ux-polish/
   // 35-08-SUMMARY.md for the full RU sweep).
   {
     id: 'a0000000-0000-4000-8000-000000000011',
-    email: 'polenkov@customreport.local',
-    name: 'Поленков А.',
+    email: 'lead1@customreport.local',
+    name: 'Тимлид 1',
     role: 'lead',
-    samlId: 'lead-polenkov',
+    samlId: 'lead-1',
   },
   {
     id: 'a0000000-0000-4000-8000-000000000012',
@@ -104,7 +104,7 @@ export const SEED_USERS: readonly SeedUser[] = [
 export const LEAD_IDS = SEED_USERS.filter((u) => u.role === 'lead').map((u) => u.id);
 
 // Convenience lead ID lookups (named for clarity in seed.ts)
-export const LEAD_POLENKOV_ID = 'a0000000-0000-4000-8000-000000000011';
+export const LEAD_1_ID = 'a0000000-0000-4000-8000-000000000011';
 export const LEAD_MARIA_ID = 'a0000000-0000-4000-8000-000000000012';
 export const LEAD_IGOR_ID = 'a0000000-0000-4000-8000-000000000013';
 export const LEAD_DMITRY_ID = 'a0000000-0000-4000-8000-000000000014';
@@ -126,8 +126,8 @@ export type SeedProduct = {
 // IDs and lead assignments are unchanged so existing tests + UUID-keyed
 // fixtures keep working.
 export const SEED_PRODUCTS: readonly SeedProduct[] = [
-  { id: 'a0000000-0000-4000-8000-000000000201', name: 'Маркетинговый портал', leadId: LEAD_POLENKOV_ID },
-  { id: 'a0000000-0000-4000-8000-000000000202', name: 'Аналитический хаб', leadId: LEAD_POLENKOV_ID },
+  { id: 'a0000000-0000-4000-8000-000000000201', name: 'Маркетинговый портал', leadId: LEAD_1_ID },
+  { id: 'a0000000-0000-4000-8000-000000000202', name: 'Аналитический хаб', leadId: LEAD_1_ID },
   { id: 'a0000000-0000-4000-8000-000000000203', name: 'Платформа интеграций', leadId: LEAD_MARIA_ID },
   { id: 'a0000000-0000-4000-8000-000000000204', name: 'Платформа e-commerce', leadId: LEAD_MARIA_ID },
   { id: 'a0000000-0000-4000-8000-000000000205', name: 'Внутренний BI', leadId: LEAD_IGOR_ID },

@@ -253,12 +253,12 @@ test.describe('SC-73: Stage assignees match SDLC pipeline and Admin', () => {
     await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
     await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
 
-    // Current user "Polenkov A." is assigned to several stages
+    // Current user "Тимлид 1" is assigned to several stages
     // Their name should appear as assignee label under their stage chips
-    const polenkovLabels = leadPage.getByText('Polenkov A.');
-    const count = await polenkovLabels.count();
+    const lead1Labels = leadPage.getByText('Тимлид 1');
+    const count = await lead1Labels.count();
 
-    // Polenkov is assigned to: CRM/Dev, Analytics/Testing, Mobile/DevOps,
+    // lead 1 is assigned to: CRM/Dev, Analytics/Testing, Mobile/DevOps,
     // Cloud/Dev, AI-ML/Testing, Gateway/Dev = 6 stages + header = at least 6
     expect(count).toBeGreaterThanOrEqual(6);
   });
@@ -309,8 +309,8 @@ test.describe('SC-73: Stage assignees match SDLC pipeline and Admin', () => {
     await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
     await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
 
-    // Header shows "Polenkov A." as the current user
-    await expect(leadPage.getByText('Polenkov A.').first()).toBeVisible();
+    // Header shows "Тимлид 1" as the current user
+    await expect(leadPage.getByText('Тимлид 1').first()).toBeVisible();
 
     // The same name should appear as assignee under "mine" stage chips
     // Check CRM Platform Dev stage (mine, at-risk)
@@ -318,7 +318,7 @@ test.describe('SC-73: Stage assignees match SDLC pipeline and Admin', () => {
     await expect(devAtRisk).toBeVisible();
 
     // The assignee label is a sibling of the button in the same flex container
-    // Verify Polenkov A. appears near this stage
+    // Verify Тимлид 1 appears near this stage
     const crmSection = leadPage.getByText('CRM Platform').first().locator('..');
     await expect(crmSection).toBeVisible();
   });

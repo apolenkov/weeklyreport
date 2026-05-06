@@ -13,7 +13,7 @@
 
 import { test, expect } from './fixtures';
 import { prisma, resetMutations } from './helpers/db';
-import { ACTIVE_REPORT_ID, LEAD_POLENKOV_ID } from './helpers/seed-ids';
+import { ACTIVE_REPORT_ID, LEAD_1_ID } from './helpers/seed-ids';
 
 test.describe('Status<->Risk sync (integration)', () => {
   test.afterEach(async () => {
@@ -29,7 +29,7 @@ test.describe('Status<->Risk sync (integration)', () => {
       where: {
         reportSection: {
           reportId: ACTIVE_REPORT_ID,
-          authorId: LEAD_POLENKOV_ID,
+          authorId: LEAD_1_ID,
         },
       },
     });
@@ -66,7 +66,7 @@ test.describe('Status<->Risk sync (integration)', () => {
       where: {
         reportSection: {
           reportId: ACTIVE_REPORT_ID,
-          authorId: LEAD_POLENKOV_ID,
+          authorId: LEAD_1_ID,
         },
       },
     });
@@ -78,13 +78,13 @@ test.describe('Status<->Risk sync (integration)', () => {
   }) => {
     await leadPage.goto('/lead/report');
 
-    // The seed already creates risks for Polenkov (riskId 1, 2). Editing one
+    // The seed already creates risks for lead 1 (riskId 1, 2). Editing one
     // should NOT create a second risk row from a sync feedback loop.
     const before = await prisma.risk.count({
       where: {
         reportSection: {
           reportId: ACTIVE_REPORT_ID,
-          authorId: LEAD_POLENKOV_ID,
+          authorId: LEAD_1_ID,
         },
       },
     });
@@ -109,7 +109,7 @@ test.describe('Status<->Risk sync (integration)', () => {
       where: {
         reportSection: {
           reportId: ACTIVE_REPORT_ID,
-          authorId: LEAD_POLENKOV_ID,
+          authorId: LEAD_1_ID,
         },
       },
     });

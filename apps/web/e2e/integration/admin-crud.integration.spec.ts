@@ -5,7 +5,7 @@
 
 import { test, expect } from './fixtures';
 import { prisma } from './helpers/db';
-import { LEAD_POLENKOV_ID } from './helpers/seed-ids';
+import { LEAD_1_ID } from './helpers/seed-ids';
 
 test.describe('Admin CRUD (integration)', () => {
   test('admin can create a new product and it appears in DB', async ({
@@ -96,10 +96,10 @@ test.describe('Admin CRUD (integration)', () => {
   }) => {
     await headPage.goto('/admin/products');
 
-    const polenkovProductCount = await prisma.project.count({
-      where: { leadId: LEAD_POLENKOV_ID },
+    const lead1ProductCount = await prisma.project.count({
+      where: { leadId: LEAD_1_ID },
     });
-    expect(polenkovProductCount).toBe(2); // CRM Platform, Data Analytics Suite
+    expect(lead1ProductCount).toBe(2); // CRM Platform, Data Analytics Suite
 
     // Page should mention at least one of the seeded names. The
     // /admin/products route redirects to /admin?tab=products, which mounts
