@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 
@@ -75,6 +75,17 @@ type DevPickerUser = {
 };
 
 export default function LoginPage() {
+  // Next 16 strict prerender: useSearchParams must run inside a Suspense
+  // boundary or the / page bails out of static export. Wrap the body so
+  // the client-only param read is suspended during prerender.
+  return (
+    <Suspense fallback={null}>
+      <LoginPageBody />
+    </Suspense>
+  );
+}
+
+function LoginPageBody() {
   const searchParams = useSearchParams();
   const trpc = useTRPC();
 
