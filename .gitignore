@@ -32,6 +32,8 @@ apps/api/storage/
 apps/web/.tmp/uat-screenshots/
 apps/web/.tmp/uat-report.md
 apps/web/.tmp/uat-suite/probe-*.mjs
+apps/web/.tmp/uat-suite/coverage-matrix.csv
+apps/web/.tmp/uat-suite/coverage-matrix.json
 # Root-level scratch dir only. Scoped to avoid ignoring nested apps/*/.tmp/uat-suite/.
 /.tmp/
 
