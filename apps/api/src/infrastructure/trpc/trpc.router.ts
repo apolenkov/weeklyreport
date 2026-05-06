@@ -14,6 +14,7 @@ import {
   trafficLightHistoryInputSchema,
   leadVelocityInputSchema,
   periodComparisonInputSchema,
+  searchQueryInputSchema,
 } from '@customreport/shared';
 
 import {
@@ -41,6 +42,10 @@ import type { WeeklyReportService } from '../../modules/weekly-report/weekly-rep
 import type { LeadFormService } from '../../modules/report-sections/lead-form.service.js';
 import type { AnalyticsService } from '../../modules/analytics/analytics.service.js';
 import type { AiService } from '../../modules/ai/ai.service.js';
+import {
+  SearchAuthorizationError,
+  type SearchService,
+} from '../../modules/search/search.service.js';
 import {
   assertCanReadReport,
   assertCanReadRisk,
@@ -72,6 +77,12 @@ type RouterDeps = {
    * on outage / missing key / rate limit / budget exceeded.
    */
   aiService: AiService;
+  /**
+   * Phase 39-05 (PERF-05): full-text search across Item / Risk / Decision
+   * / Project. tsvector + GIN, Russian text-search config. Role-gated
+   * scope via SearchAuthorizationError → FORBIDDEN.
+   */
+  searchService: SearchService;
   /**
    * NOTIF-06 (Phase 29-05): read-only BullMQ Queue handle used by
    * `admin.dlqCount` to surface failed-job count. Optional so existing test
@@ -859,6 +870,34 @@ export function createAppRouter(deps: RouterDeps) {
           try {
             return await deps.analyticsService.periodComparison(input);
           } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+    }),
+
+    // === Search namespace (Phase 39-05 — PERF-05) ===
+    // Full-text search across Item / Risk / Decision / Project. The service
+    // layer validates the input and gates `scope='all'` to head/admin via
+    // SearchAuthorizationError; the router maps that to FORBIDDEN.
+    //
+    // protectedProcedure (any authenticated user) is the right baseline:
+    // every authenticated session can search their own content
+    // (`scope='mine'`); the role check inside the service is the gate that
+    // matters. anyRoleProcedure would be equivalent here but the simpler
+    // protectedProcedure mirrors the rest of the search-style read paths.
+    search: router({
+      query: protectedProcedure
+        .input(searchQueryInputSchema)
+        .query(async ({ input, ctx }) => {
+          try {
+            return await deps.searchService.query(input, {
+              userId: ctx.session.userId,
+              role: ctx.session.role,
+            });
+          } catch (error) {
+            if (error instanceof SearchAuthorizationError) {
+              throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
+            }
             throw mapDomainError(error);
           }
         }),

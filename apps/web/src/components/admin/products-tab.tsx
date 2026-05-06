@@ -8,6 +8,7 @@ import { invalidateAdmin } from '../../lib/cache-keys';
 import { toAdminProjectInput } from '../../lib/mappers';
 import { useTRPC } from '../../lib/trpc-context';
 import { ConfirmDeleteDialog } from '../lead/confirm-delete-dialog';
+import { SearchInput } from '../search/search-input';
 
 import type { MockProduct, MockUser } from './mock-data';
 import { StageAssignmentEditor } from './stage-assignment-editor';
@@ -150,6 +151,16 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
   return (
     <>
       <div className="space-y-4">
+        {/* 39-05 (PERF-05): full-text search across all projects + items /
+            risks / decisions in the org (scope='all'). The tRPC procedure
+            rejects 'all' for lead sessions; this tab is admin/head-only via
+            the existing admin-panel route guard so the UI gate is implicit.
+            Result clicks deep-link to the matching surface (project filter
+            here, or the source report for content hits). */}
+        <SearchInput
+          scope="all"
+          placeholder="Поиск по всем продуктам и отчётам…"
+        />
         <div className="flex items-center justify-between">
           <p className="text-sm text-[var(--color-muted-foreground)]">
             {activeProducts.length} active products, {archivedProducts.length} archived

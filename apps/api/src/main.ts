@@ -46,6 +46,7 @@ import { WeeklyReportService } from './modules/weekly-report/weekly-report.servi
 import { LeadFormService } from './modules/report-sections/lead-form.service';
 import { AnalyticsService } from './modules/analytics/analytics.service';
 import { AiService } from './modules/ai/ai.service';
+import { SearchService } from './modules/search/search.service';
 
 async function bootstrap() {
   // AUTH-01 / Phase 32-C M-05: dev-auth fence runs from
@@ -174,6 +175,7 @@ async function bootstrap() {
     leadFormService: app.get(LeadFormService),
     analyticsService: app.get(AnalyticsService),
     aiService: app.get(AiService),
+    searchService: app.get(SearchService),
     emailReminderQueue,
   });
 

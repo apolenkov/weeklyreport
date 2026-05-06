@@ -149,7 +149,18 @@ because:
   60s" needs invalidation wired);
 - 39-03 scope is "indexes + audit"; caching is a v8.1 candidate.
 
-## 7. Full-text search — NOT NEEDED in v8.0
+## 7. Full-text search — SUPERSEDED by 39-05 (FTS landed in v8.0)
+
+> **Status update (2026-05-06):** the user reversed the deferral below
+> mid-milestone — search UI was requested for `/lead/history` and
+> `/admin?tab=products`. PERF-05 (Phase 39-05) shipped the FTS infrastructure
+> exactly as recommended in the historical note: generated `tsvector`
+> columns + GIN indexes via migration `20260506090026_fts_search_indexes`,
+> tRPC procedure `search.query` with `scope='mine'|'all'` role gating,
+> `<SearchInput>` component wired into both pages. `pg_trgm`-based
+> autocomplete remains deferred — out of scope for 39-05.
+
+The historical reasoning (preserved for context):
 
 The user asked about FTS as part of the maturity bar. Today the searchable
 free-text fields are short:
