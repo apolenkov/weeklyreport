@@ -16,9 +16,10 @@ import { StageAssignmentEditor } from './stage-assignment-editor';
 type ProductsTabProps = {
   readonly products: MockProduct[];
   readonly users: MockUser[];
+  readonly productFilter?: string | null;
 };
 
-export function ProductsTab({ products, users }: ProductsTabProps) {
+export function ProductsTab({ products, users, productFilter }: ProductsTabProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
@@ -42,6 +43,13 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [showDialog]);
+
+  useEffect(() => {
+    if (!productFilter) return;
+    if (products.some((product) => product.id === productFilter)) {
+      setExpandedId(productFilter);
+    }
+  }, [productFilter, products]);
 
   const leads = useMemo(() => users.filter((u) => u.role === 'lead'), [users]);
   const getUserById = (id: string): MockUser | undefined => users.find((u) => u.id === id);
@@ -142,8 +150,12 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
     setPendingArchive(null);
   }
 
-  const activeProducts = products.filter((p) => p.status === 'active');
-  const archivedProducts = products.filter((p) => p.status === 'archived');
+  const filteredProducts = productFilter
+    ? products.filter((product) => product.id === productFilter)
+    : products;
+  const filterMatched = !!productFilter && filteredProducts.length > 0;
+  const activeProducts = filteredProducts.filter((p) => p.status === 'active');
+  const archivedProducts = filteredProducts.filter((p) => p.status === 'archived');
 
   const isSaving = saveProjectMut.isPending;
   const isArchiving = deleteProjectMut.isPending;
@@ -161,6 +173,19 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
           scope="all"
           placeholder="Поиск по всем продуктам и отчётам…"
         />
+        {productFilter && (
+          <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2">
+            <span className="text-sm text-[var(--color-muted-foreground)]">
+              {filterMatched ? 'Показан продукт из поиска' : 'Продукт из поиска не найден'}
+            </span>
+            <a
+              href="/admin?tab=products"
+              className="text-sm font-semibold text-[var(--color-starbucks-accent)] hover:text-[var(--color-primary)]"
+            >
+              Сбросить
+            </a>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <p className="text-sm text-[var(--color-muted-foreground)]">
             {activeProducts.length} active products, {archivedProducts.length} archived
@@ -200,18 +225,14 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
                       <ChevronIcon expanded={isExpanded} />
                     </button>
                     <div>
-                      <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                        {product.name}
-                      </span>
+                      <span className="text-sm font-semibold text-[var(--color-foreground)]">{product.name}</span>
                       <span className="ml-2 text-xs text-[var(--color-muted-foreground)]">
                         Owner: {owner?.name ?? 'Unknown'}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-[var(--color-muted-foreground)]">
-                      {assignedCount}/7 stages
-                    </span>
+                    <span className="text-xs text-[var(--color-muted-foreground)]">{assignedCount}/7 stages</span>
                     <button
                       type="button"
                       onClick={() => openEdit(product)}
@@ -240,11 +261,7 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
                   <div className="min-h-0 overflow-hidden">
                     <div className="border-t border-[var(--color-border)] px-4 pb-4">
                       {isExpanded && (
-                        <StageAssignmentEditor
-                          projectId={product.id}
-                          projectName={product.name}
-                          leads={leads}
-                        />
+                        <StageAssignmentEditor projectId={product.id} projectName={product.name} leads={leads} />
                       )}
                     </div>
                   </div>
@@ -370,7 +387,15 @@ export function ProductsTab({ products, users }: ProductsTabProps) {
 
 function PlusIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
     </svg>

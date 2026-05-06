@@ -5,8 +5,8 @@
 //   - 80% reads:   weeklyReport.get + reports.myHistory + reports.getActive
 //                  (the three procedures that account for 6.6% of total
 //                   tRPC traffic on the lead path).
-//   - 20% writes:  reports.saveDraft (the only mutation a lead repeats
-//                  multiple times per session).
+//   - 20% writes:  reports.saveDraft with a draftSaveSchema-compatible
+//                  payload built from the current active section.
 //
 // Targets (calibrated from PERF-AUDIT-2026-05 latency table):
 //   - p95 read       <  300 ms
@@ -28,8 +28,8 @@
 //          -e VUS=50 -e DURATION=5m \
 //          tests/load/k6-baseline.js
 //
-// Output: writes summary to .planning/LOAD-TEST-RESULTS-<date>.json via
-// k6's --summary-export flag (see ../../.planning/LOAD-TEST-2026-05.md).
+// Output: writes summary to .planning/LOAD-TEST-LAST-RUN.json (see
+// ../../.planning/LOAD-TEST-2026-05.md).
 
 import http from 'k6/http';
 import { check, sleep, group } from 'k6';
@@ -42,6 +42,8 @@ const DURATION = __ENV.DURATION || '2m';
 const readLatency = new Trend('cr_read_latency_ms', true);
 const writeLatency = new Trend('cr_write_latency_ms', true);
 const trpcErrors = new Rate('cr_trpc_errors');
+
+let activeSection = null;
 
 export const options = {
   scenarios: {
@@ -76,18 +78,38 @@ function login(vu) {
   return res;
 }
 
+function encodeInput(input) {
+  return encodeURIComponent(JSON.stringify({ 0: input === undefined ? {} : { json: input } }));
+}
+
+function decodeTrpcData(res) {
+  try {
+    const body = JSON.parse(res.body || 'null');
+    const entry = Array.isArray(body) ? body[0] : body;
+    if (!entry || entry.error) return null;
+    const data = entry.result && entry.result.data;
+    if (data && typeof data === 'object' && Object.prototype.hasOwnProperty.call(data, 'json')) {
+      return data.json;
+    }
+    return data || null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function trpc(procedure, input, isWrite = false) {
-  // tRPC v11 batched query format: GET /trpc/<procedure>?input=...
-  // Single-procedure call avoids batching latency for cleaner per-proc trends.
+  // tRPC v11 httpBatchLink shape. We keep one procedure per request so k6
+  // trends still map cleanly to procedure tags.
   const isMutation = isWrite;
-  const url = `${API_URL}/trpc/${procedure}${isMutation ? '' : `?input=${encodeURIComponent(JSON.stringify(input || {}))}`}`;
+  const url = `${API_URL}/trpc/${procedure}?batch=1${isMutation ? '' : `&input=${encodeInput(input)}`}`;
   const params = {
     headers: { 'Content-Type': 'application/json' },
     tags: { name: `trpc.${procedure}` },
   };
-  const res = isMutation
-    ? http.post(url, JSON.stringify(input || {}), params)
-    : http.get(url, params);
+  const body = JSON.stringify({
+    0: input === undefined ? {} : { json: input },
+  });
+  const res = isMutation ? http.post(url, body, params) : http.get(url, params);
 
   const ok = check(res, {
     [`${procedure}: status 2xx`]: (r) => r.status >= 200 && r.status < 300,
@@ -101,6 +123,71 @@ function trpc(procedure, input, isWrite = false) {
   return res;
 }
 
+function draftFromSection(section, text) {
+  if (!section || !section.reportSectionId) return null;
+  const projects = section.projects || [];
+  const firstProject = projects[0];
+  const items = (section.items || []).map((item) => ({
+    id: item.id,
+    projectId: item.projectId,
+    type: item.type,
+    text: item.text,
+    tag: item.tag,
+    workflowStatus: item.workflowStatus,
+    carriedOver: item.carriedOver || false,
+    completed: item.completed === undefined ? null : item.completed,
+    stageName: item.stageName || null,
+  }));
+
+  if (items.length > 0) {
+    items[0].text = text;
+  } else if (firstProject) {
+    items.push({
+      projectId: firstProject.projectId,
+      type: 'current',
+      text,
+      tag: 'k6',
+      workflowStatus: 'in_progress',
+      carriedOver: false,
+      completed: null,
+      stageName: null,
+    });
+  }
+
+  return {
+    reportSectionId: section.reportSectionId,
+    status: 'draft',
+    projectStatuses: projects.map((project) => ({
+      projectId: project.projectId,
+      status: project.trafficLight || undefined,
+    })),
+    items,
+    risks: (section.risks || []).map((risk) => ({
+      id: risk.id,
+      projectId: risk.projectId,
+      risk: risk.risk,
+      impact: risk.impact,
+      mitigation: risk.mitigation,
+      stageName: risk.stageName || null,
+    })),
+    decisions: (section.decisions || []).map((decision) => ({
+      id: decision.id,
+      text: decision.text,
+      owner: decision.owner,
+      deadline: decision.deadline || null,
+      impact: decision.impact,
+      resolvedAt: decision.resolvedAt || null,
+      stageName: decision.stageName || null,
+    })),
+    priorities: (section.priorities || []).map((priority) => ({
+      id: priority.id,
+      rank: priority.rank,
+      text: priority.text,
+      stageName: priority.stageName || null,
+    })),
+  };
+}
+
 export default function () {
   // VU iteration 1 logs in once — cookie persists across iterations.
   if (__ITER === 0) {
@@ -110,39 +197,28 @@ export default function () {
 
   group('lead read path', () => {
     // 80% of work: weeklyReport.get (lead-form initial load) + sidebar history
-    trpc('reports.getActive', undefined);
+    const activeRes = trpc('reports.getActive', undefined);
+    const latestSection = decodeTrpcData(activeRes);
+    if (latestSection) activeSection = latestSection;
     sleep(Math.random() * 0.5 + 0.2);
 
-    trpc('reports.myHistory', { limit: 20 });
+    trpc('reports.myHistory', undefined);
     sleep(Math.random() * 0.5 + 0.2);
 
-    // weeklyReport.get needs a reportId; getActive returned one. In a real
-    // scenario we'd thread it through. For baseline, we just hit the lead's
-    // current report via the no-arg shortcut path (server falls back to
-    // current period for the authed lead).
-    trpc('weeklyReport.get', { reportId: null });
+    // Empty object exercises the current-period shortcut without sending
+    // reportId:null, which Zod correctly rejects.
+    trpc('weeklyReport.get', {});
     sleep(Math.random() * 0.8 + 0.3);
   });
 
   // 20% of iterations: saveDraft (the only repeated mutation in lead flow)
   if (Math.random() < 0.2) {
     group('lead write path', () => {
-      trpc(
-        'reports.saveDraft',
-        {
-          // Realistic shape: a single item edit. The actual schema is enforced
-          // server-side via Zod; mismatches here will surface as 400 in
-          // cr_trpc_errors and we'll know to tighten the script.
-          patches: [
-            {
-              type: 'item',
-              op: 'upsert',
-              data: { text: `k6 vu=${__VU} iter=${__ITER}`, status: 'green' },
-            },
-          ],
-        },
-        true,
-      );
+      const payload = draftFromSection(activeSection, `k6 vu=${__VU} iter=${__ITER}`);
+      if (!payload) return;
+      const saveRes = trpc('reports.saveDraft', payload, true);
+      const savedSection = decodeTrpcData(saveRes);
+      if (savedSection) activeSection = savedSection;
       sleep(0.3);
     });
   }

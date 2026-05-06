@@ -18,6 +18,7 @@ import { AdminTabSkeleton } from './admin-skeleton';
 
 type AdminPanelProps = {
   readonly activeTab: string;
+  readonly productFilter?: string | null;
 };
 
 /**
@@ -25,7 +26,7 @@ type AdminPanelProps = {
  * so the 5 child tabs can stay presentational. Mutations remain unwired —
  * Phase 22 will replace each tab's local-state mutations with real tRPC calls.
  */
-export function AdminPanel({ activeTab }: AdminPanelProps) {
+export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
   const trpc = useTRPC();
 
   const snapshotQuery = useQuery(trpc.admin.snapshot.queryOptions());
@@ -83,7 +84,11 @@ export function AdminPanel({ activeTab }: AdminPanelProps) {
         <>
           {activeTab === 'users' && <UsersTab users={data.users} />}
           {activeTab === 'products' && (
-            <ProductsTab products={data.products} users={data.users} />
+            <ProductsTab
+              products={data.products}
+              users={data.users}
+              productFilter={productFilter}
+            />
           )}
           {activeTab === 'periods' && <PeriodsTab periods={data.periods} />}
           {activeTab === 'reminders' && <RemindersTab reminders={data.reminders} />}

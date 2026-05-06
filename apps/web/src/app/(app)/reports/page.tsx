@@ -39,6 +39,11 @@ export default function ReportsPage() {
 
   const role = user?.role ?? null;
   const isLead = role === 'lead';
+  const searchScope = isLead
+    ? 'mine'
+    : role === 'head' || role === 'admin'
+      ? 'all'
+      : null;
 
   // Default tab logic mirrors the spec: lead → drafts; everyone else → published.
   const tabFromUrl = searchParams?.get('tab');
@@ -88,14 +93,16 @@ export default function ReportsPage() {
             />
           </div>
 
-          <div>
-            <SearchInput
-              scope={isLead ? 'mine' : 'all'}
-              placeholder={
-                isLead ? 'Поиск по моим отчётам…' : 'Поиск по опубликованным…'
-              }
-            />
-          </div>
+          {searchScope && (
+            <div>
+              <SearchInput
+                scope={searchScope}
+                placeholder={
+                  isLead ? 'Поиск по моим отчётам…' : 'Поиск по отчётам и продуктам…'
+                }
+              />
+            </div>
+          )}
 
           {tab === 'drafts' ? (
             isLead ? (
