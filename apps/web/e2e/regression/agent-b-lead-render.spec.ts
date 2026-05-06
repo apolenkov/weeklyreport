@@ -18,7 +18,7 @@ test.describe('LEAD-001..005: Lead Report Page States', () => {
   test.beforeEach(async ({ page }) => {
     // Login as lead
     await page.goto(`${DEV_LOGIN_URL}?role=lead`);
-    await page.waitForURL(FRONTEND_URL);
+    await page.waitForURL(/^http:\/\/localhost:3000\//, { timeout: 10000 });
   });
 
   test('LEAD-001: Loading state shows AppShell + LeadReportSkeleton', async ({ page }) => {

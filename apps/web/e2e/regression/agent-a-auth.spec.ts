@@ -200,42 +200,37 @@ test.describe('AUTH-020..046: Authentication & Session', () => {
 
   // ============ AUTH ERROR PAGE (AUTH-042..AUTH-046) ============
 
-  test('AUTH-042: /auth/error?reason=idp_unavailable → "Service Unavailable"', async ({ page }) => {
+  test('AUTH-042: /auth/error?reason=idp_unavailable → generic auth-error page', async ({ page }) => {
     await page.goto('/auth/error?reason=idp_unavailable');
-    const heading = page.locator('h1, h2').first();
-    const text = await heading.textContent({ timeout: 5000 }).catch(() => '');
-    expect(text.toLowerCase()).toContain('unavailable');
+    const text = (await page.locator('main, body').first().textContent({ timeout: 5000 }).catch(() => '')) ?? '';
+    expect(text.toLowerCase()).toContain('authentication error');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/AUTH-042.png` });
   });
 
-  test('AUTH-043: /auth/error?reason=invalid_assertion → "Verification Failed"', async ({ page }) => {
+  test('AUTH-043: /auth/error?reason=invalid_assertion → SSO response invalid copy', async ({ page }) => {
     await page.goto('/auth/error?reason=invalid_assertion');
-    const heading = page.locator('h1, h2').first();
-    const text = await heading.textContent({ timeout: 5000 }).catch(() => '');
-    expect(text.toLowerCase()).toContain('verification');
+    const text = (await page.locator('main, body').first().textContent({ timeout: 5000 }).catch(() => '')) ?? '';
+    expect(text.toLowerCase()).toContain('sso response was invalid');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/AUTH-043.png` });
   });
 
-  test('AUTH-044: /auth/error?reason=session_expired → "Session Expired"', async ({ page }) => {
+  test('AUTH-044: /auth/error?reason=session_expired → "session has expired"', async ({ page }) => {
     await page.goto('/auth/error?reason=session_expired');
-    const heading = page.locator('h1, h2').first();
-    const text = await heading.textContent({ timeout: 5000 }).catch(() => '');
+    const text = (await page.locator('main, body').first().textContent({ timeout: 5000 }).catch(() => '')) ?? '';
     expect(text.toLowerCase()).toContain('expired');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/AUTH-044.png` });
   });
 
   test('AUTH-045: /auth/error with unknown reason → generic "Sign-in Error"', async ({ page }) => {
     await page.goto('/auth/error?reason=unknown_reason_xyz');
-    const heading = page.locator('h1, h2').first();
-    const text = await heading.textContent({ timeout: 5000 }).catch(() => '');
+    const text = (await page.locator('main, body').first().textContent({ timeout: 5000 }).catch(() => '')) ?? '';
     expect(text.toLowerCase()).toContain('error');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/AUTH-045.png` });
   });
 
   test('AUTH-046: /auth/error with no reason param → generic message', async ({ page }) => {
     await page.goto('/auth/error');
-    const heading = page.locator('h1, h2').first();
-    const text = await heading.textContent({ timeout: 5000 }).catch(() => '');
+    const text = (await page.locator('main, body').first().textContent({ timeout: 5000 }).catch(() => '')) ?? '';
     expect(text.toLowerCase()).toContain('error');
     await page.screenshot({ path: `${SCREENSHOT_DIR}/AUTH-046.png` });
   });

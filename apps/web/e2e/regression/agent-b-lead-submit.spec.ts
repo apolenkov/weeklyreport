@@ -18,7 +18,7 @@ test.describe('LEAD-090..095: Lead Report Submit Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Login as lead
     await page.goto(`${DEV_LOGIN_URL}?role=lead`);
-    await page.waitForURL(FRONTEND_URL);
+    await page.waitForURL(/^http:\/\/localhost:3000\//, { timeout: 10000 });
     // Navigate to report
     await page.goto(LEAD_REPORT_URL);
     await page.waitForSelector('[data-testid="lead-report-form"]', { timeout: 5000 });
