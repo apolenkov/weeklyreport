@@ -397,6 +397,39 @@ export const appSettingsSchema = z.object({
 export const appSettingsUpdateSchema = appSettingsSchema.partial();
 
 // ---------------------------------------------------------------------------
+// Phase 35-06: BullMQ DLQ admin surface (admin.jobs.listFailed / retryFailed)
+// ---------------------------------------------------------------------------
+
+/**
+ * Read model for one entry in the BullMQ failed-set surfaced to admins.
+ *
+ * `id` is BullMQ's job id (an opaque numeric string), `name` is the
+ * processor name (e.g. 'send-reminder-email'), and `data` is the job's
+ * original payload. We keep `data` as `unknown` because the queue carries
+ * different shapes across processors and the admin UI only renders metadata.
+ */
+export const failedJobSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  failedReason: z.string(),
+  stacktrace: z.array(z.string()),
+  attemptsMade: z.number().int().min(0),
+  timestamp: z.number().int().min(0),
+  data: z.unknown(),
+});
+
+export const failedJobListSchema = z.object({
+  jobs: z.array(failedJobSchema),
+  nextCursor: z.number().int().min(0).nullable(),
+});
+
+export const queueNameSchema = z.enum(['email-reminder']);
+
+export type FailedJob = z.infer<typeof failedJobSchema>;
+export type FailedJobList = z.infer<typeof failedJobListSchema>;
+export type QueueName = z.infer<typeof queueNameSchema>;
+
+// ---------------------------------------------------------------------------
 // v4.0: Period read model (extended)
 // ---------------------------------------------------------------------------
 

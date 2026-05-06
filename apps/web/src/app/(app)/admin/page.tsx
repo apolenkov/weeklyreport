@@ -7,7 +7,10 @@ type Props = {
   searchParams: Promise<{ tab?: string }>;
 };
 
-const tabs = ['users', 'products', 'periods', 'reminders', 'reopen', 'settings'] as const;
+// Phase 35-06: 'jobs' tab — BullMQ DLQ admin UI. Order: after 'reopen',
+// before 'settings' so the failure-triage workflow lives next to other
+// reactive admin work (reopen requests / failed-job retries).
+const tabs = ['users', 'products', 'periods', 'reminders', 'reopen', 'jobs', 'settings'] as const;
 type TabId = (typeof tabs)[number];
 
 const TAB_LABELS: Record<TabId, string> = {
@@ -16,6 +19,7 @@ const TAB_LABELS: Record<TabId, string> = {
   periods: 'Periods',
   reminders: 'Reminders',
   reopen: 'Reopen',
+  jobs: 'Jobs',
   settings: 'Settings',
 };
 

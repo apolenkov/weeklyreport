@@ -48,6 +48,7 @@ import { AnalyticsService } from './modules/analytics/analytics.service';
 import { AiService } from './modules/ai/ai.service';
 import { SearchService } from './modules/search/search.service';
 import { ActivityService } from './modules/activity/activity.service';
+import { JobsService } from './modules/admin/jobs.service';
 
 async function bootstrap() {
   // AUTH-01 / Phase 32-C M-05: dev-auth fence runs from
@@ -197,6 +198,12 @@ async function bootstrap() {
     },
   });
 
+  // Phase 35-06: thin wrapper around the email-reminder Queue handle for the
+  // admin DLQ admin tab (`/admin?tab=jobs`). Stays out of the NestJS DI graph
+  // for the same reason emailReminderQueue does — see the @nestjs/bullmq DI
+  // bug note in bullmq.module.ts.
+  const jobsService = new JobsService(emailReminderQueue, logger);
+
   // Resolve all services from NestJS DI container
   const appRouter = createAppRouter({
     prisma: app.get(PrismaService),
@@ -216,6 +223,7 @@ async function bootstrap() {
     searchService: app.get(SearchService),
     activityService: app.get(ActivityService),
     emailReminderQueue,
+    jobsService,
   });
 
   // Mount tRPC as Express middleware at /trpc
