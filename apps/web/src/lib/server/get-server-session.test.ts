@@ -12,6 +12,7 @@ vi.mock('next/headers', () => ({
 }));
 
 import { decodeAuthMeResponse, getServerSession } from './get-server-session';
+import { expectDefined } from '../../test/expect-defined.js';
 
 const SESSION = {
   userId: 'a0000000-0000-4000-8000-000000000001',
@@ -81,7 +82,7 @@ describe('getServerSession', () => {
     const result = await getServerSession();
     expect(result).toEqual(SESSION);
 
-    const [url, init] = fetchMock.mock.calls[0]!;
+    const [url, init] = expectDefined(fetchMock.mock.calls[0]);
     expect(String(url)).toContain('/trpc/auth.me');
     expect((init as RequestInit).headers).toMatchObject({
       cookie: 'customreport_session=a-jwt-cookie-value',

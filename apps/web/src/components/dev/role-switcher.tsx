@@ -44,7 +44,7 @@ export function DevRoleSwitcher() {
       },
       onError: (error) => {
         setPending(false);
-        // eslint-disable-next-line no-alert -- dev-only widget
+        // dev-only widget: cheap alert is fine, we don't ship this in prod
         alert(`Reseed failed:\n${error.message}`);
       },
     }),

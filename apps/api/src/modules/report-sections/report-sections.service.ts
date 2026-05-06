@@ -90,11 +90,11 @@ export class ReportSectionsService {
 
     if (errors.length > 0) {
       const [firstError] = errors;
-
-      throw new ReportSectionDomainError(
-        firstError!.code,
-        firstError!.message,
-      );
+      // `errors.length > 0` guarantees firstError exists, but TS narrows the
+      // tuple access to `T | undefined` — explicit guard satisfies strict.
+      if (firstError) {
+        throw new ReportSectionDomainError(firstError.code, firstError.message);
+      }
     }
 
     return this.repository.saveSection(

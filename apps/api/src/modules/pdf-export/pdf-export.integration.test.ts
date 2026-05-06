@@ -9,6 +9,7 @@ import {
 } from '../../test-utils/prisma-test-helper';
 import { PdfExportPrismaRepository } from './pdf-export.prisma-repository';
 import { PdfExportService } from './pdf-export.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 describe('PdfExportPrismaRepository (integration)', () => {
   const prisma = createTestPrisma();
@@ -50,7 +51,7 @@ describe('PdfExportPrismaRepository (integration)', () => {
     // Verify in database
     const dbJob = await prisma.pdfExportJob.findUnique({ where: { id: TEST_IDS.pdfJob1 } });
     expect(dbJob).not.toBeNull();
-    expect(dbJob!.status).toBe('pending'); // domain "queued" maps to DB "pending"
+    expect(expectDefined(dbJob).status).toBe('pending'); // domain "queued" maps to DB "pending"
   });
 
   it('saveExportJob updates status and filePath', async () => {
@@ -83,8 +84,8 @@ describe('PdfExportPrismaRepository (integration)', () => {
 
     // Verify in database
     const dbJob = await prisma.pdfExportJob.findUnique({ where: { id: TEST_IDS.pdfJob2 } });
-    expect(dbJob!.status).toBe('completed');
-    expect(dbJob!.filePath).toBe('/exports/report-2026-04-07.pdf');
+    expect(expectDefined(dbJob).status).toBe('completed');
+    expect(expectDefined(dbJob).filePath).toBe('/exports/report-2026-04-07.pdf');
   });
 });
 
@@ -153,11 +154,11 @@ describe('AUTH-05 cookie seam (CC-1) — service against real Prisma repo', () =
     await service.requestPdfExport(testData.report.id, testData.head.id);
 
     expect(enqueued).toHaveLength(1);
-    expect(enqueued[0]!.data.reportId).toBe(testData.report.id);
-    expect(enqueued[0]!.data.authToken).toMatch(/^eyJ/);
+    expect(expectDefined(enqueued[0]).data.reportId).toBe(testData.report.id);
+    expect(expectDefined(enqueued[0]).data.authToken).toMatch(/^eyJ/);
 
     const decoded = jwt.verify(
-      enqueued[0]!.data.authToken,
+      expectDefined(enqueued[0]).data.authToken,
       'integration-test-secret-32-chars-or-more',
     ) as { reportId: string };
     expect(decoded.reportId).toBe(testData.report.id);

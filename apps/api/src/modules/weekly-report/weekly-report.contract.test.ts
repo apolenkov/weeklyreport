@@ -10,6 +10,7 @@ import {
   WeeklyReportDomainError,
   type WeeklyReportRepository,
 } from './weekly-report.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -117,9 +118,9 @@ describe('WeeklyReportService — contract tests', () => {
     expect(result.submissionCount).toBe(1);
     expect(result.totalLeads).toBe(3);
     expect(result.portfolioOverview).toHaveLength(1);
-    expect(result.portfolioOverview[0]!.productName).toBe('Project Alpha');
+    expect(expectDefined(result.portfolioOverview[0]).productName).toBe('Project Alpha');
     expect(result.leadSections).toHaveLength(1);
-    expect(result.leadSections[0]!.authorName).toBe('Lead A');
+    expect(expectDefined(result.leadSections[0]).authorName).toBe('Lead A');
     expect(result.escalations).toEqual([]);
 
     // Verify output conforms to the Zod schema
@@ -231,8 +232,8 @@ describe('WeeklyReportService — contract tests', () => {
     const result = await service.getWeeklyReport(reportId);
 
     expect(result.portfolioOverview).toHaveLength(2);
-    expect(result.portfolioOverview[0]!.worstStatus).toBe('red');
-    expect(result.portfolioOverview[1]!.worstStatus).toBe('yellow');
+    expect(expectDefined(result.portfolioOverview[0]).worstStatus).toBe('red');
+    expect(expectDefined(result.portfolioOverview[1]).worstStatus).toBe('yellow');
   });
 
   it('returns report with zero submissions', async () => {

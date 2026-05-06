@@ -11,6 +11,7 @@ import {
   RemindersService,
   type RemindersRepository,
 } from './reminders.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -294,8 +295,8 @@ describe('RemindersService — contract tests', () => {
 
       expect(sent.status).toBe('sent');
       expect(sent.sentAt).toBeInstanceOf(Date);
-      expect(sent.sentAt!.getTime()).toBeGreaterThanOrEqual(before.getTime());
-      expect(sent.sentAt!.getTime()).toBeLessThanOrEqual(after.getTime());
+      expect(expectDefined(sent.sentAt).getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(expectDefined(sent.sentAt).getTime()).toBeLessThanOrEqual(after.getTime());
     });
 
     // 11. throws when execution not found
@@ -346,7 +347,7 @@ describe('RemindersService — contract tests', () => {
       // listExecutions internally calls adminReminderExecutionSchema.array().parse(),
       // so no ZodError means validation passed. Verify the shape is correct.
       expect(result.items).toHaveLength(1);
-      const execution = result.items[0]!;
+      const execution = expectDefined(result.items[0]);
 
       // Verify Zod coercion produced correct types
       expect(execution.scheduledFor).toBeInstanceOf(Date);

@@ -7,6 +7,7 @@ import {
   TEST_IDS,
 } from '../../test-utils/prisma-test-helper';
 import { AdminPrismaRepository } from './admin.prisma-repository';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 describe('AdminPrismaRepository (integration)', () => {
   const prisma = createTestPrisma();
@@ -51,19 +52,19 @@ describe('AdminPrismaRepository (integration)', () => {
     // Verify user fields
     const leadUser = snapshot.users.find((u) => u.email === 'lead1@test.local');
     expect(leadUser).toBeDefined();
-    expect(leadUser!.name).toBe('Test Lead 1');
-    expect(leadUser!.role).toBe('lead');
+    expect(expectDefined(leadUser).name).toBe('Test Lead 1');
+    expect(expectDefined(leadUser).role).toBe('lead');
 
     // Verify project fields
     const proj = snapshot.projects.find((p) => p.name === 'Test Project 1');
     expect(proj).toBeDefined();
-    expect(proj!.leadId).toBe(testData.lead.id);
-    expect(proj!.leadName).toBe('Test Lead 1');
+    expect(expectDefined(proj).leadId).toBe(testData.lead.id);
+    expect(expectDefined(proj).leadName).toBe('Test Lead 1');
 
     // Verify period fields
     const period = snapshot.periods.find((p) => p.id === testData.report.id);
     expect(period).toBeDefined();
-    expect(period!.status).toBe('draft');
+    expect(expectDefined(period).status).toBe('draft');
   });
 
   it('saveSnapshot updates entities correctly', async () => {
@@ -96,11 +97,11 @@ describe('AdminPrismaRepository (integration)', () => {
 
     // Verify the lead name was updated
     const savedLead = saved.users.find((u) => u.id === testData.lead.id);
-    expect(savedLead!.name).toBe('Updated Lead Name');
+    expect(expectDefined(savedLead).name).toBe('Updated Lead Name');
 
     // Verify the new project was created
     const savedProject = saved.projects.find((p) => p.id === TEST_IDS.newProject);
     expect(savedProject).toBeDefined();
-    expect(savedProject!.name).toBe('New Admin Project');
+    expect(expectDefined(savedProject).name).toBe('New Admin Project');
   });
 });

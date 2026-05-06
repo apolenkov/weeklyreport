@@ -6,6 +6,7 @@ import {
   disconnectTestPrisma,
 } from '../../test-utils/prisma-test-helper';
 import { ReviewPrismaRepository } from './review.prisma-repository';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 describe('ReviewPrismaRepository (integration)', () => {
   const prisma = createTestPrisma();
@@ -30,10 +31,10 @@ describe('ReviewPrismaRepository (integration)', () => {
     const rows = await repo.getSubmissionDashboard(testData.report.id);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0]!.leadId).toBe(testData.lead.id);
-    expect(rows[0]!.leadName).toBe('Test Lead 1');
-    expect(rows[0]!.status).toBe('draft');
-    expect(rows[0]!.projectNames).toContain('Test Project 1');
+    expect(expectDefined(rows[0]).leadId).toBe(testData.lead.id);
+    expect(expectDefined(rows[0]).leadName).toBe('Test Lead 1');
+    expect(expectDefined(rows[0]).status).toBe('draft');
+    expect(expectDefined(rows[0]).projectNames).toContain('Test Project 1');
   });
 
   it('getSubmissionDashboard returns empty array for non-existent report', async () => {

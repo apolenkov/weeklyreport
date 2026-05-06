@@ -102,14 +102,13 @@ const TRAFFIC_ICON: Record<ProductStatus, string> = {
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/);
-  if (parts.length === 0 || !parts[0]) return '??';
+  const first = parts[0];
+  if (!first) return '??';
   if (parts.length === 1) {
-    const first = parts[0]!;
     return first.slice(0, 2).toUpperCase();
   }
-  const a = parts[0]!.charAt(0);
-  const b = parts[parts.length - 1]!.charAt(0);
-  return (a + b).toUpperCase();
+  const last = parts[parts.length - 1] ?? first;
+  return (first.charAt(0) + last.charAt(0)).toUpperCase();
 }
 
 function isoDateLabel(date: Date): string {

@@ -6,6 +6,7 @@ import {
   disconnectTestPrisma,
 } from '../../test-utils/prisma-test-helper';
 import { PublicationPrismaRepository } from './publication.prisma-repository';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 describe('PublicationPrismaRepository (integration)', () => {
   const prisma = createTestPrisma();
@@ -47,12 +48,12 @@ describe('PublicationPrismaRepository (integration)', () => {
     const result = await repo.getAssembledReport(testData.report.id);
 
     expect(result).not.toBeNull();
-    expect(result!.reportId).toBe(testData.report.id);
-    expect(result!.status).toBe('draft');
-    expect(result!.sections).toHaveLength(1);
-    expect(result!.sections[0]!.authorName).toBe('Test Lead 1');
-    expect(result!.sections[0]!.projects).toHaveLength(1);
-    expect(result!.sections[0]!.priorities).toHaveLength(1);
+    expect(expectDefined(result).reportId).toBe(testData.report.id);
+    expect(expectDefined(result).status).toBe('draft');
+    expect(expectDefined(result).sections).toHaveLength(1);
+    expect(expectDefined(expectDefined(result).sections[0]).authorName).toBe('Test Lead 1');
+    expect(expectDefined(expectDefined(result).sections[0]).projects).toHaveLength(1);
+    expect(expectDefined(expectDefined(result).sections[0]).priorities).toHaveLength(1);
   });
 
   it('saveAssembledReport updates report status to published', async () => {
@@ -61,7 +62,7 @@ describe('PublicationPrismaRepository (integration)', () => {
 
     const publishedAt = new Date('2026-04-12T10:00:00.000Z');
     const published = {
-      ...assembled!,
+      ...expectDefined(assembled),
       status: 'published' as const,
       publishedAt,
       publishedById: testData.head.id,
@@ -78,7 +79,7 @@ describe('PublicationPrismaRepository (integration)', () => {
     const reloaded = await prisma.report.findUnique({
       where: { id: testData.report.id },
     });
-    expect(reloaded!.status).toBe('published');
-    expect(reloaded!.publishedById).toBe(testData.head.id);
+    expect(expectDefined(reloaded).status).toBe('published');
+    expect(expectDefined(reloaded).publishedById).toBe(testData.head.id);
   });
 });

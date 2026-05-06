@@ -41,8 +41,7 @@ export function PriorityEditDialog({
     // has settled before we steal focus from the underlying overlay.
     const id = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, priority?.rank]);
+  }, [open, priority?.rank, priority?.text]);
 
   if (!open) return null;
 

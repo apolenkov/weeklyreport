@@ -12,6 +12,7 @@ import type { ReactNode } from 'react';
 
 import { LeadForm } from './lead-form';
 import { TRPCProxyContext } from '../../lib/trpc-context';
+import { expectDefined } from '../../test/expect-defined.js';
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -291,7 +292,7 @@ describe('LeadForm mutation wiring', () => {
     // Trigger onSuccess deterministically — the mutation wiring is the unit
     // under test (the orchestration of invalidation + toast + lock).
     act(() => {
-      cap.submitOpts!.onSuccess?.();
+      expectDefined(cap.submitOpts).onSuccess?.();
     });
     expect(toast.success).toHaveBeenCalledWith('Report submitted');
     // invalidateLeadForm + invalidateLeadHistory each call invalidateQueries.
@@ -311,7 +312,7 @@ describe('LeadForm mutation wiring', () => {
 
     expect(cap.submitOpts).toBeDefined();
     // Simulate error path.
-    cap.submitOpts!.onError?.(new Error('Submit blew up'));
+    expectDefined(cap.submitOpts).onError?.(new Error('Submit blew up'));
     expect(toast.error).toHaveBeenCalledWith('Submit blew up');
   });
 
@@ -342,7 +343,7 @@ describe('LeadForm mutation wiring', () => {
     }) as HTMLButtonElement | undefined;
     expect(editableChip).toBeDefined();
     act(() => {
-      editableChip!.click();
+      expectDefined(editableChip).click();
     });
     await act(async () => {
       await flushAll();
@@ -356,7 +357,7 @@ describe('LeadForm mutation wiring', () => {
     }) as HTMLElement | undefined;
     expect(menuitem).toBeDefined();
     act(() => {
-      menuitem!.click();
+      expectDefined(menuitem).click();
     });
 
     await act(async () => {
@@ -406,7 +407,7 @@ describe('LeadForm mutation wiring', () => {
 
     expect(cap.fillFromOpts).toBeDefined();
     act(() => {
-      cap.fillFromOpts!.onSuccess?.();
+      expectDefined(cap.fillFromOpts).onSuccess?.();
     });
     expect(toast.success).toHaveBeenCalledWith('Form filled from selected period');
     expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
@@ -424,7 +425,7 @@ describe('LeadForm mutation wiring', () => {
     });
 
     expect(cap.restoreOpts).toBeDefined();
-    cap.restoreOpts!.onError?.(new Error('Version not found'));
+    expectDefined(cap.restoreOpts).onError?.(new Error('Version not found'));
     expect(toast.error).toHaveBeenCalledWith('Version not found');
   });
 
@@ -459,7 +460,7 @@ describe('LeadForm mutation wiring', () => {
     }) as HTMLButtonElement | undefined;
     expect(editableChip).toBeDefined();
     act(() => {
-      editableChip!.click();
+      expectDefined(editableChip).click();
     });
     await act(async () => {
       await flushAll();
@@ -470,7 +471,7 @@ describe('LeadForm mutation wiring', () => {
     }) as HTMLElement | undefined;
     expect(menuitem).toBeDefined();
     act(() => {
-      menuitem!.click();
+      expectDefined(menuitem).click();
     });
     await act(async () => {
       await flushAll();

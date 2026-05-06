@@ -12,6 +12,7 @@ import {
   mapAdminSettings,
   __testing,
 } from './admin';
+import { expectDefined } from '../../test/expect-defined.js';
 
 const { mapReminder } = __testing;
 
@@ -160,8 +161,8 @@ describe('mapAdminSnapshot', () => {
 
   it('maps reminder status active->true, paused->false (PITFALLS Pitfall 1)', () => {
     const snapshot = makeSnapshot();
-    const active = mapReminder(snapshot.reminderRules[0]!);
-    const paused = mapReminder(snapshot.reminderRules[1]!);
+    const active = mapReminder(expectDefined(snapshot.reminderRules[0]));
+    const paused = mapReminder(expectDefined(snapshot.reminderRules[1]));
     expect(active.active).toBe(true);
     expect(paused.active).toBe(false);
   });

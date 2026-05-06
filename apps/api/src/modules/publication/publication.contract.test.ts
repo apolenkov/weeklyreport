@@ -12,6 +12,7 @@ import {
   PublicationService,
   type PublicationRepository,
 } from './publication.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -406,7 +407,7 @@ describe('PublicationService — contract tests', () => {
       const update = {
         reportSectionId: sectionAlpha.reportSectionId,
         status: 'draft' as const,
-        projectStatuses: [{ projectId: sectionAlpha.projects[0]!.projectId, status: 'green' as const }],
+        projectStatuses: [{ projectId: expectDefined(sectionAlpha.projects[0]).projectId, status: 'green' as const }],
         items: [],
         risks: [],
         decisions: [],
@@ -462,7 +463,7 @@ describe('PublicationService — contract tests', () => {
         status: 'draft',
         projectStatuses: [
           {
-            projectId: sectionAlpha.projects[0]!.projectId,
+            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
             status: 'red',
           },
         ],
@@ -500,7 +501,7 @@ describe('PublicationService — contract tests', () => {
         status: 'draft',
         projectStatuses: [
           {
-            projectId: sectionAlpha.projects[0]!.projectId,
+            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
             status: 'yellow',
           },
         ],
@@ -535,13 +536,13 @@ describe('PublicationService — contract tests', () => {
         status: 'draft',
         projectStatuses: [
           {
-            projectId: sectionAlpha.projects[0]!.projectId,
+            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
             status: 'red',
           },
         ],
         items: [
           {
-            projectId: sectionAlpha.projects[0]!.projectId,
+            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
             type: 'current',
             text: 'Updated item',
             tag: 'feature',
@@ -586,7 +587,7 @@ describe('PublicationService — contract tests', () => {
         status: 'draft',
         projectStatuses: [
           {
-            projectId: sectionAlpha.projects[0]!.projectId,
+            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
             status: 'red',
           },
         ],

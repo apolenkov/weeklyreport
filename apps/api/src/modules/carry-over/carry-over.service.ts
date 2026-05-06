@@ -184,6 +184,14 @@ export class CarryOverService {
       carriedItems: allCarriedItems.length,
       carriedDecisions: allCarriedDecisions.length,
     });
-    return this.repository.saveCarryOver(execution, records, nextTargetSections.length > 0 ? nextTargetSections[0]! : targetSections[0]!);
+    // `targetSections.length === 0` was rejected above, so targetSections[0]
+    // is always defined; nextTargetSections is mapped from targetSections so
+    // its first element is also defined when its length > 0.
+    const targetSection =
+      nextTargetSections[0] ?? targetSections[0];
+    if (!targetSection) {
+      throw new CarryOverDomainError('Carry-over requires both source and target sections.');
+    }
+    return this.repository.saveCarryOver(execution, records, targetSection);
   }
 }

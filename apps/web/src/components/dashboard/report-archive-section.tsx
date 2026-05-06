@@ -19,7 +19,9 @@ import { mapArchiveSummary } from '../../lib/mappers';
 import { useCursorPagination } from '../../lib/use-cursor-pagination';
 import type { ArchiveReportSummary } from '@customreport/shared';
 
-const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
+type StatusConfig = { bg: string; text: string; label: string };
+
+const STATUS_CONFIG = {
   active: {
     bg: 'var(--color-success)',
     text: 'var(--color-primary)',
@@ -35,7 +37,7 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
     text: '#8a6d1b',
     label: 'Draft',
   },
-};
+} as const satisfies Record<string, StatusConfig>;
 
 const PAGE_SIZE = 12;
 
@@ -75,7 +77,9 @@ export function ReportArchiveSection() {
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {reports.map((report) => {
-          const config = STATUS_CONFIG[report.status] ?? STATUS_CONFIG.draft!;
+          const config =
+            (STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
+            STATUS_CONFIG.draft;
           const isActive = report.status === 'active';
 
           return (

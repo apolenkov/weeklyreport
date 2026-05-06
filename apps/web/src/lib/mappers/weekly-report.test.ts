@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { WeeklyReportReadModel } from '@customreport/shared';
 
 import { mapWeeklyReport, formatWeekRange, __testing } from './weekly-report';
+import { expectDefined } from '../../test/expect-defined.js';
 
 const REPORT_ID = '11111111-1111-4111-8111-111111111111';
 const PROJECT_A = '22222222-2222-4222-8222-222222222222';
@@ -209,11 +210,11 @@ describe('mapWeeklyReport', () => {
 
     const crmReport = result.products.find((p) => p.id === PROJECT_A);
     expect(crmReport?.currentWeek).toHaveLength(1);
-    expect(crmReport?.currentWeek[0]!.text).toBe('OAuth integration');
-    expect(crmReport?.currentWeek[0]!.stageLead).toBe('Dev \u00b7 PA');
-    expect(crmReport?.nextWeek[0]!.stageLead).toBe('Planned');
+    expect(expectDefined(crmReport?.currentWeek[0]).text).toBe('OAuth integration');
+    expect(expectDefined(crmReport?.currentWeek[0]).stageLead).toBe('Dev \u00b7 PA');
+    expect(expectDefined(crmReport?.nextWeek[0]).stageLead).toBe('Planned');
     expect(crmReport?.risks).toHaveLength(1);
-    expect(crmReport?.risks[0]!.severity).toBe('at-risk');
+    expect(expectDefined(crmReport?.risks[0]).severity).toBe('at-risk');
     // Phase 31 (AI-03): sectionId threaded from the first lead section
     // whose projects[] contains the productId. Required for OnTrackIcon
     // mount in product-accordion.
@@ -291,7 +292,7 @@ describe('mapWeeklyReport', () => {
 
     const result = mapWeeklyReport(report);
     const crmReport = result.products.find((p) => p.id === PROJECT_A);
-    expect(crmReport?.risks[0]!.severity).toBe('blocked');
+    expect(expectDefined(crmReport?.risks[0]).severity).toBe('blocked');
   });
 
   it('attaches needsAttention from matching escalation', () => {
@@ -357,9 +358,9 @@ describe('mapWeeklyReport', () => {
     const result = mapWeeklyReport(report);
     const crmReport = result.products.find((p) => p.id === PROJECT_A);
     expect(crmReport?.decisions).toHaveLength(1);
-    expect(crmReport?.decisions[0]!.text).toBe('Approve Redis cluster');
+    expect(expectDefined(crmReport?.decisions[0]).text).toBe('Approve Redis cluster');
     expect(crmReport?.priorities).toHaveLength(1);
-    expect(crmReport?.priorities[0]!.text).toBe('Ship OAuth');
+    expect(expectDefined(crmReport?.priorities[0]).text).toBe('Ship OAuth');
   });
 
   it('preserves period info from the API', () => {

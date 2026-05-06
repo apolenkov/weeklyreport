@@ -109,11 +109,19 @@ function toArchiveSummary(report: {
 }): ArchiveReportSummary {
   const portfolio = computePortfolioOverview(report.sections);
 
+  // PUBLISHED_FLOOR guarantees `status: 'published'`, which in the schema
+  // implies `publishedAt` is set. Narrow defensively rather than assert.
+  if (report.publishedAt === null) {
+    throw new Error(
+      `Archive report ${report.id} has status='published' but publishedAt is null`,
+    );
+  }
+
   return archiveReportSummarySchema.parse({
     reportId: report.id,
     periodStart: report.periodStart,
     periodEnd: report.periodEnd,
-    publishedAt: report.publishedAt!,
+    publishedAt: report.publishedAt,
     publishedByName: report.publishedBy?.name ?? 'Unknown',
     portfolioStatus: portfolio.status,
   });

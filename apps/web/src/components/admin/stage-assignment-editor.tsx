@@ -45,7 +45,7 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
   );
 
   function invalidateAssignments() {
-    qc.invalidateQueries(trpc.admin.listStageAssignments.pathFilter());
+    void qc.invalidateQueries(trpc.admin.listStageAssignments.pathFilter());
   }
 
   const saveMut = useMutation(

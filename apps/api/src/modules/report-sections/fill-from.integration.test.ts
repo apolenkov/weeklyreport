@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ReportSectionReadModel } from '@customreport/shared';
 
 import { LeadFormService, type LeadFormRepository } from './lead-form.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -109,8 +110,8 @@ describe('LeadFormService — fillFrom (integration)', () => {
 
     expect(repo.createVersionSnapshot).toHaveBeenCalledWith(targetSectionId);
     // Snapshot should be created BEFORE fill
-    const snapshotOrder = repo.createVersionSnapshot.mock.invocationCallOrder[0]!;
-    const fillOrder = repo.fillFromSection.mock.invocationCallOrder[0]!;
+    const snapshotOrder = expectDefined(repo.createVersionSnapshot.mock.invocationCallOrder[0]);
+    const fillOrder = expectDefined(repo.fillFromSection.mock.invocationCallOrder[0]);
     expect(snapshotOrder).toBeLessThan(fillOrder);
   });
 

@@ -37,6 +37,7 @@ import { dirname, resolve } from 'node:path';
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import samlify from 'samlify';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 // `validator` shipped by samlify is required-but-not-bundled to avoid the
 // xmldom transitive surface. We swap in a permissive validator for tests
 // because the assertion XML we mint is well-formed by construction; the
@@ -184,7 +185,7 @@ describe('38-03 SAML hardening — samlify mock IdP integration', () => {
     // cause the canonicalised hash to disagree with the decrypted signature.
     const sigMatch = xml.match(/<ds:SignatureValue>([\s\S]+?)<\/ds:SignatureValue>/);
     expect(sigMatch).not.toBeNull();
-    const original = sigMatch![1]!;
+    const original = expectDefined(expectDefined(sigMatch)[1]);
     // Flip middle character. Avoid the trailing '=' padding.
     const mid = Math.floor(original.length / 2);
     const flipped =

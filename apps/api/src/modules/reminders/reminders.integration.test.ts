@@ -7,6 +7,7 @@ import {
   TEST_IDS,
 } from '../../test-utils/prisma-test-helper';
 import { RemindersPrismaRepository } from './reminders.prisma-repository';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 describe('RemindersPrismaRepository (integration)', () => {
   const prisma = createTestPrisma();
@@ -101,7 +102,7 @@ describe('RemindersPrismaRepository (integration)', () => {
 
     expect(executions).toHaveLength(2);
     // Most recent first (ordered by createdAt desc)
-    expect(executions[0]!.id).toBe(TEST_IDS.reminderExec2);
-    expect(executions[1]!.id).toBe(TEST_IDS.reminderExec1);
+    expect(expectDefined(executions[0]).id).toBe(TEST_IDS.reminderExec2);
+    expect(expectDefined(executions[1]).id).toBe(TEST_IDS.reminderExec1);
   });
 });

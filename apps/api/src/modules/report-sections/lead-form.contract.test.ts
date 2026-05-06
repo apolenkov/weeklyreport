@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ReportSectionReadModel, VersionSnapshot } from '@customreport/shared';
 
 import { LeadFormService, type LeadFormRepository } from './lead-form.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -46,7 +47,7 @@ const submittedSection: ReportSectionReadModel = {
   ...draftSection,
   status: 'submitted',
   submittedAt: new Date('2026-04-06T12:00:00Z'),
-  projects: [{ ...draftSection.projects[0]!, trafficLight: 'green' }],
+  projects: [{ ...expectDefined(draftSection.projects[0]), trafficLight: 'green' }],
 };
 
 const sampleVersions: VersionSnapshot[] = [
@@ -209,9 +210,9 @@ describe('LeadFormService — listVersions', () => {
     const versions = await service.listVersions(SECTION_ID);
 
     expect(versions).toHaveLength(3);
-    expect(versions[0]!.version).toBe(3);
-    expect(versions[1]!.version).toBe(2);
-    expect(versions[2]!.version).toBe(1);
+    expect(expectDefined(versions[0]).version).toBe(3);
+    expect(expectDefined(versions[1]).version).toBe(2);
+    expect(expectDefined(versions[2]).version).toBe(1);
     expect(repo.listVersions).toHaveBeenCalledWith(SECTION_ID);
   });
 

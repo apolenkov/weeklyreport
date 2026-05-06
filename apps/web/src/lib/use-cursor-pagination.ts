@@ -87,25 +87,25 @@ export function useCursorPagination<
   // Build the query options from the provided factory. We keep the cast
   // narrow so consumer factories typed against the tRPC proxy still satisfy
   // useInfiniteQuery's typings.
-  const queryOptions = useMemo(() => {
-    const built = (factory as CursorQueryOptionsFactory<TInput, TItem>)(
-      input as TInput,
-    );
-    return {
-      ...built,
-      enabled: options.enabled,
-    } as UseInfiniteQueryOptions<
-      CursorPage<TItem>,
-      unknown,
-      CursorPage<TItem>,
-      readonly unknown[],
-      string | null | undefined
-    >;
-    // factory is typically referentially stable per render only when the caller
-    // wraps it in useCallback. Including `input`/`options.enabled` in the deps
-    // keeps queryKey changes propagating correctly.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(input), options.enabled]);
+  //
+  // We don't memoize this on `input` reference — callers may rebuild the
+  // input object each render. The memoization that matters lives inside
+  // useInfiniteQuery, which keys by `queryKey` (set by the factory).
+  // Calling `factory(input)` each render is cheap and avoids fragile
+  // dep-list gymnastics that previously needed eslint-disable.
+  const built = (factory as CursorQueryOptionsFactory<TInput, TItem>)(
+    input as TInput,
+  );
+  const queryOptions = {
+    ...built,
+    enabled: options.enabled,
+  } as UseInfiniteQueryOptions<
+    CursorPage<TItem>,
+    unknown,
+    CursorPage<TItem>,
+    readonly unknown[],
+    string | null | undefined
+  >;
 
   const query = useInfiniteQuery(queryOptions);
 

@@ -65,15 +65,13 @@ export function HeadPeriodNavigator({ periods, basePath = '/head/report' }: Peri
   );
 
   function handlePrev() {
-    if (hasPrev) {
-      navigateTo(periods[currentIndex + 1]!.id);
-    }
+    const prev = periods[currentIndex + 1];
+    if (hasPrev && prev) navigateTo(prev.id);
   }
 
   function handleNext() {
-    if (hasNext) {
-      navigateTo(periods[currentIndex - 1]!.id);
-    }
+    const next = periods[currentIndex - 1];
+    if (hasNext && next) navigateTo(next.id);
   }
 
   function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {

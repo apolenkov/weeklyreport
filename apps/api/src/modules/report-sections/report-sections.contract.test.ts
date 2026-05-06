@@ -7,6 +7,7 @@ import {
   ReportSectionsService,
   type ReportSectionsRepository,
 } from './report-sections.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -117,7 +118,7 @@ describe('ReportSectionsService — getActiveSection', () => {
       ...baseSection,
       status: 'submitted',
       submittedAt: new Date('2026-04-06T12:00:00Z'),
-      projects: [{ ...baseSection.projects[0]!, trafficLight: 'green' }],
+      projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
     };
     const service = new ReportSectionsService(createRepository(submitted));
     const result = await service.getActiveSection(SECTION_ID);
@@ -223,7 +224,7 @@ describe('ReportSectionsService — saveDraft happy path', () => {
   it('clears traffic light when status is undefined (draft allows optional)', async () => {
     const withLight: ReportSectionReadModel = {
       ...baseSection,
-      projects: [{ ...baseSection.projects[0]!, trafficLight: 'green' }],
+      projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
     };
     const service = new ReportSectionsService(createRepository(withLight));
     const saved = await service.saveDraft(validDraft({
@@ -244,7 +245,7 @@ describe('ReportSectionsService — saveDraft error paths', () => {
       ...baseSection,
       status: 'submitted',
       submittedAt: new Date('2026-04-06T12:00:00Z'),
-      projects: [{ ...baseSection.projects[0]!, trafficLight: 'green' }],
+      projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
     };
     const service = new ReportSectionsService(createRepository(submitted));
 
@@ -284,7 +285,7 @@ describe('ReportSectionsService — saveDraft error paths', () => {
       ...baseSection,
       status: 'submitted',
       submittedAt: new Date('2026-04-06T12:00:00Z'),
-      projects: [{ ...baseSection.projects[0]!, trafficLight: 'green' }],
+      projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
     };
     const service = new ReportSectionsService(createRepository(submitted));
 
@@ -413,7 +414,7 @@ describe('ReportSectionsService — submitSection validation errors', () => {
       ...baseSection,
       status: 'submitted',
       submittedAt: new Date('2026-04-06T12:00:00Z'),
-      projects: [{ ...baseSection.projects[0]!, trafficLight: 'green' }],
+      projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
     };
     const service = new ReportSectionsService(createRepository(submitted));
 
@@ -517,7 +518,8 @@ describe('ReportSectionsService — submitSection validation errors', () => {
     await expect(
       service.submitSection({
         ...validSubmit(),
-        confirmed: false as any,
+        // Negative test: schema requires `confirmed: true` (z.literal(true)).
+        confirmed: false as unknown as true,
       }),
     ).rejects.toThrow(); // Zod: z.literal(true)
   });

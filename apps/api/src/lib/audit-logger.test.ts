@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { AppLogger } from './logger.js';
 import { createAuditLogger, createNullAuditLogger } from './audit-logger.js';
+import { expectDefined } from '../test-utils/expect-defined.js';
 
 type Captured = { level: 'info' | 'warn' | 'error' | 'debug'; message: string; context?: Record<string, unknown> };
 
@@ -35,7 +36,7 @@ describe('createAuditLogger', () => {
     });
 
     expect(entries).toHaveLength(1);
-    const entry = entries[0]!;
+    const entry = expectDefined(entries[0]);
     expect(entry.level).toBe('info');
     expect(entry.message).toBe('audit');
     expect(entry.context).toEqual({
@@ -62,7 +63,7 @@ describe('createAuditLogger', () => {
     });
 
     expect(entries).toHaveLength(1);
-    const entry = entries[0]!;
+    const entry = expectDefined(entries[0]);
     expect(entry.level).toBe('warn');
     expect(entry.message).toBe('audit');
     expect(entry.context).toEqual({
@@ -87,7 +88,7 @@ describe('createAuditLogger', () => {
     });
 
     expect(entries).toHaveLength(1);
-    const entry = entries[0]!;
+    const entry = expectDefined(entries[0]);
     expect(entry.level).toBe('warn');
     expect(entry.context).toEqual({
       event: 'login-fail',
@@ -112,15 +113,15 @@ describe('createAuditLogger', () => {
     });
 
     expect(entries).toHaveLength(1);
-    expect(entries[0]!.level).toBe('info');
-    expect(entries[0]!.context).toEqual({
+    expect(expectDefined(entries[0]).level).toBe('info');
+    expect(expectDefined(entries[0]).context).toEqual({
       event: 'logout',
       userId: 'anonymous',
       role: null,
       ip: '10.0.0.5',
     });
     // Strict guard against regression — must not be the legacy literal.
-    expect(entries[0]!.context?.['role']).not.toBe('unknown');
+    expect(expectDefined(entries[0]).context?.['role']).not.toBe('unknown');
   });
 
   it('logout emits {event, userId, role, ip} on info', () => {
@@ -134,8 +135,8 @@ describe('createAuditLogger', () => {
     });
 
     expect(entries).toHaveLength(1);
-    expect(entries[0]!.level).toBe('info');
-    expect(entries[0]!.context).toEqual({
+    expect(expectDefined(entries[0]).level).toBe('info');
+    expect(expectDefined(entries[0]).context).toEqual({
       event: 'logout',
       userId: 'u9',
       role: 'head',

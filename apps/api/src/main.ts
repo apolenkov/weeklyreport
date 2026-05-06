@@ -62,7 +62,6 @@ async function bootstrap() {
 
   // We resolve ClsService from the container, so the app must exist first.
   // Pre-Nest output goes to console (no logger available yet).
-  // eslint-disable-next-line no-console
   console.log('[bootstrap] starting customreport-api');
 
   const app = await NestFactory.create(AppModule);

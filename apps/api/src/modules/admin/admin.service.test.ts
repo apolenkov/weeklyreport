@@ -13,6 +13,7 @@ import {
   AdminService,
   type AdminRepository,
 } from './admin.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 const headSession: UserSession = {
   userId: '00000000-0000-4000-8000-000000000001',
@@ -351,7 +352,7 @@ describe('AdminService', () => {
       });
 
       expect(result.reminderRules).toHaveLength(1);
-      const rule = result.reminderRules[0]!;
+      const rule = expectDefined(result.reminderRules[0]);
       expect(rule.kind).toBe('deadline');
       expect(rule.fireAt).toBeInstanceOf(Date);
       expect(rule.status).toBe('active');
@@ -420,7 +421,7 @@ describe('AdminService', () => {
         periodStart: new Date('2026-04-13T00:00:00.000Z'),
         periodEnd: new Date('2026-04-19T23:59:59.000Z'),
         deadline: new Date('2026-04-17T15:00:00.000Z'),
-        status: 'published' as any,
+        status: 'published',
       });
 
       expect(result.periods).toHaveLength(1);
@@ -616,7 +617,7 @@ describe('AdminService — stage assignments', () => {
 
     const list = await service.listStageAssignments(PROJECT_ID);
     expect(list).toHaveLength(1);
-    expect(list[0]!.id).toBe(created.id);
+    expect(expectDefined(list[0]).id).toBe(created.id);
   });
 
   it('deletes a stage assignment', async () => {

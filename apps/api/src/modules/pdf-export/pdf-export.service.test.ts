@@ -9,6 +9,7 @@ import {
   PdfExportService,
   type PdfExportRepository,
 } from './pdf-export.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 const reportId = '22222222-2222-4222-8222-222222222222';
 
@@ -190,11 +191,11 @@ describe('AUTH-05 PDF export JWT signing', () => {
     await service.requestPdfExport(reportId);
 
     expect(enqueued).toHaveLength(1);
-    expect(enqueued[0]!.name).toBe('generate');
-    expect(enqueued[0]!.data.reportId).toBe(reportId);
-    expect(enqueued[0]!.data.authToken).toMatch(/^eyJ/);
+    expect(expectDefined(enqueued[0]).name).toBe('generate');
+    expect(expectDefined(enqueued[0]).data.reportId).toBe(reportId);
+    expect(expectDefined(enqueued[0]).data.authToken).toMatch(/^eyJ/);
 
-    const decoded = jwt.verify(enqueued[0]!.data.authToken, PDF_SECRET) as {
+    const decoded = jwt.verify(expectDefined(enqueued[0]).data.authToken, PDF_SECRET) as {
       reportId: string;
     };
     expect(decoded.reportId).toBe(reportId);
@@ -216,7 +217,7 @@ describe('AUTH-05 PDF export JWT signing', () => {
     const service = new PdfExportService(createRepository(publishedReport), undefined, fakeQueue);
     await service.requestPdfExport(reportId, undefined, presigned);
 
-    expect(enqueued[0]!.data.authToken).toBe(presigned);
+    expect(expectDefined(enqueued[0]).data.authToken).toBe(presigned);
   });
 });
 

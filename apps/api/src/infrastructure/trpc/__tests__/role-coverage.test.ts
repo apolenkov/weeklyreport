@@ -154,7 +154,7 @@ describe('AUTH-03 default-deny coverage gate', () => {
     );
 
     if (offending.length > 0) {
-      // eslint-disable-next-line no-console -- diagnostic surface for CI failures.
+      // Diagnostic surface for CI failures; the assertion below fails the test.
       console.error(
         '[AUTH-03] Procedures lacking recognised role declaration:\n' +
           offending.map((p) => `  - ${p}`).join('\n') +

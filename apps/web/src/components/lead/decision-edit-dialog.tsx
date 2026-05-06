@@ -44,8 +44,15 @@ export function DecisionEditDialog({
       setDeadline(decision?.deadline ?? '');
       setErrors({});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, decision?.id, defaultOwner]);
+  }, [
+    open,
+    decision?.id,
+    decision?.text,
+    decision?.owner,
+    decision?.impact,
+    decision?.deadline,
+    defaultOwner,
+  ]);
 
   if (!open) return null;
 
