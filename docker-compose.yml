@@ -1,12 +1,27 @@
 services:
   postgres:
     image: postgres:15-alpine
+    # 39-03: load pg_stat_statements so we can mine real slow-query stats
+    # from the running dev DB. The extension itself is created via the
+    # init script below on first boot. log_min_duration_statement=200 logs
+    # any SQL > 200ms to docker stderr — visible via `docker logs postgres`.
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.track=all"
+      - "-c"
+      - "pg_stat_statements.max=10000"
+      - "-c"
+      - "log_min_duration_statement=200"
     environment:
       POSTGRES_USER: customreport
       POSTGRES_PASSWORD: ${DB_PASSWORD:-localdev}
       POSTGRES_DB: customreport
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres/init-pg-stat-statements.sql:/docker-entrypoint-initdb.d/01-pg-stat-statements.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U customreport"]
       interval: 5s
@@ -36,7 +51,14 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
+    command:
+      [
+        "redis-server",
+        "--maxmemory-policy",
+        "noeviction",
+        "--appendonly",
+        "yes",
+      ]
     volumes:
       - redisdata:/data
     healthcheck:
@@ -87,7 +109,11 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3002/health/live || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:3002/health/live || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3

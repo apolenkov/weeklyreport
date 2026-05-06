@@ -107,6 +107,10 @@ model Project {
   stageAssignments StageAssignment[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+
+  // 39-03: admin Products tab filters by archived; lead-form looks up by lead.
+  @@index([leadId])
+  @@index([archived])
 }
 
 model Report {
@@ -128,6 +132,11 @@ model Report {
   carryOverTargets CarryOverExecution[] @relation("CarryOverTarget")
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
+
+  // 39-03: archive lists filter by status + sort by periodStart; period-active
+  // queries hit periodStart directly. Compound covers the common WHERE+ORDER.
+  @@index([periodStart(sort: Desc)])
+  @@index([status, periodStart(sort: Desc)])
 }
 
 model ReportSection {
@@ -151,6 +160,10 @@ model ReportSection {
   updatedAt        DateTime            @updatedAt
 
   @@unique([reportId, authorId])
+  // 39-03: lead "my history" hits ReportSection.findMany({where:{authorId}})
+  // — separate index because the @@unique above leads with reportId.
+  @@index([authorId])
+  @@index([status])
 }
 
 model ProjectStatus {
@@ -180,6 +193,11 @@ model Item {
   project         Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
+
+  // 39-03: hot-path FK indexes — Item.findMany({where:{reportSectionId}})
+  // is the dominant access pattern for lead-form rendering.
+  @@index([reportSectionId])
+  @@index([projectId])
 }
 
 model Risk {
@@ -193,6 +211,10 @@ model Risk {
   project         Project       @relation(fields: [projectId], references: [id], onDelete: Restrict)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  // 39-03: same hot-path as Item — risks load per section.
+  @@index([reportSectionId])
+  @@index([projectId])
 }
 
 model Decision {
@@ -206,6 +228,8 @@ model Decision {
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  @@index([reportSectionId])
 }
 
 model Priority {
@@ -230,6 +254,10 @@ model PdfExportJob {
   report      Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+
+  // 39-03: admin DLQ + per-report job history.
+  @@index([reportId])
+  @@index([status, createdAt(sort: Desc)])
 }
 
 enum ReminderRuleKind {
@@ -257,6 +285,11 @@ model ReminderRule {
   executions ReminderExecution[]
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
+
+  // 39-03: admin reminders panel sorts by createdAt DESC. Slow query log
+  // captured 125ms hits on this exact ORDER BY before the index.
+  @@index([createdAt(sort: Desc)])
+  @@index([status, fireAt])
 }
 
 model ReminderExecution {
@@ -269,6 +302,12 @@ model ReminderExecution {
   rule      ReminderRule            @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   createdAt DateTime                @default(now())
   updatedAt DateTime                @updatedAt
+
+  // 39-03: same slow-query trigger as ReminderRule (107ms hit). Plus
+  // ruleId FK index for "executions for rule" queries.
+  @@index([createdAt(sort: Desc)])
+  @@index([ruleId])
+  @@index([status])
 }
 
 model CarryOverExecution {
