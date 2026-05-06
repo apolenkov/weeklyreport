@@ -38,8 +38,15 @@ export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
   await prisma.risk.deleteMany();
   await prisma.item.deleteMany();
   await prisma.projectStatus.deleteMany();
+  await prisma.versionSnapshot.deleteMany();
+  await prisma.reopenRequest.deleteMany();
   await prisma.reportSection.deleteMany();
   await prisma.report.deleteMany();
+  // 35-04: stage assignments cascade-delete with project but the explicit
+  // pass keeps the order deterministic across test runs that touch
+  // assignments without owning their project lifecycle.
+  await prisma.stageAssignment.deleteMany();
+  await prisma.stage.deleteMany();
   await prisma.project.deleteMany();
   await prisma.user.deleteMany();
 }

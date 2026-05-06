@@ -69,8 +69,12 @@ const PROD_PAYMENTS = 'a0000000-0000-4000-8000-000000000209';
 const PROD_HR = 'a0000000-0000-4000-8000-00000000020b';
 
 const STAGE_PLAN = 'a0000000-0000-4000-8000-000000000701';
+const STAGE_ANALYSIS = 'a0000000-0000-4000-8000-000000000702';
+const STAGE_DESIGN = 'a0000000-0000-4000-8000-000000000703';
 const STAGE_DEV = 'a0000000-0000-4000-8000-000000000704';
 const STAGE_TEST = 'a0000000-0000-4000-8000-000000000705';
+const STAGE_DEVOPS = 'a0000000-0000-4000-8000-000000000706';
+const STAGE_SUPPORT = 'a0000000-0000-4000-8000-000000000707';
 
 const REPORT_ACTIVE = 'a0000000-0000-4000-8000-000000000001';
 const REPORT_PUBLISHED = 'a0000000-0000-4000-8000-000000000002';
@@ -195,19 +199,39 @@ async function main() {
   await prisma.stage.createMany({
     data: [
       { id: STAGE_PLAN, name: 'Planning', sortOrder: 0 },
-      { id: 'a0000000-0000-4000-8000-000000000702', name: 'Analysis', sortOrder: 1 },
-      { id: 'a0000000-0000-4000-8000-000000000703', name: 'Design', sortOrder: 2 },
+      { id: STAGE_ANALYSIS, name: 'Analysis', sortOrder: 1 },
+      { id: STAGE_DESIGN, name: 'Design', sortOrder: 2 },
       { id: STAGE_DEV, name: 'Development', sortOrder: 3 },
       { id: STAGE_TEST, name: 'Testing', sortOrder: 4 },
-      { id: 'a0000000-0000-4000-8000-000000000706', name: 'DevOps', sortOrder: 5 },
-      { id: 'a0000000-0000-4000-8000-000000000707', name: 'Support', sortOrder: 6 },
+      { id: STAGE_DEVOPS, name: 'DevOps', sortOrder: 5 },
+      { id: STAGE_SUPPORT, name: 'Support', sortOrder: 6 },
     ],
   });
 
-  console.log('[seed-simple] Creating stage assignments (each lead owns "Development" of their product)...');
+  // 35-04 (BUG-143 reproducer): Поленков А. owns ALL 7 stages of his
+  // primary project (Маркетинговый портал) so the bug case "lead
+  // assigned everywhere shows up correctly on /lead/report" can be
+  // exercised end-to-end. Other leads stay on the single-Development
+  // assignment from before — the dashboard variety they provide is
+  // still useful and the all-7 case only needs one fixture.
+  console.log('[seed-simple] Creating stage assignments (Поленков А. owns 7/7 on CRM, others own Development of their product)...');
+  const allStageIds = [
+    STAGE_PLAN,
+    STAGE_ANALYSIS,
+    STAGE_DESIGN,
+    STAGE_DEV,
+    STAGE_TEST,
+    STAGE_DEVOPS,
+    STAGE_SUPPORT,
+  ];
   await prisma.stageAssignment.createMany({
     data: [
-      { id: 'b0000000-0000-4000-8000-000000000001', projectId: PROD_CRM, stageId: STAGE_DEV, userId: LEAD_ALEX },
+      ...allStageIds.map((stageId, idx) => ({
+        id: `b0000000-0000-4000-8000-0000000010${(idx + 1).toString().padStart(2, '0')}`,
+        projectId: PROD_CRM,
+        stageId,
+        userId: LEAD_ALEX,
+      })),
       { id: 'b0000000-0000-4000-8000-000000000002', projectId: PROD_MOBILE, stageId: STAGE_DEV, userId: LEAD_MARIA },
       { id: 'b0000000-0000-4000-8000-000000000003', projectId: PROD_CLOUD, stageId: STAGE_DEV, userId: LEAD_IGOR },
       { id: 'b0000000-0000-4000-8000-000000000004', projectId: PROD_DEVOPS, stageId: STAGE_DEV, userId: LEAD_DMITRY },
@@ -502,6 +526,18 @@ async function main() {
       });
     }
 
+    // 35-04: pick a default stage to seed on every Item / Risk / Decision /
+    // Priority row so the post-seed UI doesn't show every entry as the '—'
+    // legacy placeholder. "Development" matches the seeded Stage.name and
+    // the lead's StageAssignment for non-Полeнков leads. For Поленков А.
+    // we vary stages across his 7-stage CRM ownership so the demo
+    // exercises the per-stage scoping.
+    const SEED_STAGE_ROTATION = ['Development', 'Testing', 'Design', 'DevOps', 'Planning'];
+    const stageFor = (idx: number) =>
+      lead.id === LEAD_ALEX
+        ? (SEED_STAGE_ROTATION[idx % SEED_STAGE_ROTATION.length] ?? 'Development')
+        : 'Development';
+
     const itemRows = [
       ...content.currentItems.map((it, idx) => ({
         id: `a0000000-0000-4000-8000-00000005${i + 1}00${idx + 1}`,
@@ -513,6 +549,7 @@ async function main() {
         workflowStatus: it.status,
         carriedOver: it.carriedOver ?? false,
         completed: it.completed ?? false,
+        stageName: stageFor(idx),
       })),
       ...content.nextItems.map((it, idx) => ({
         id: `a0000000-0000-4000-8000-00000005${i + 1}01${idx + 1}`,
@@ -524,6 +561,7 @@ async function main() {
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
         completed: false,
+        stageName: stageFor(idx + 100),
       })),
     ];
     await prisma.item.createMany({ data: itemRows });
@@ -537,6 +575,7 @@ async function main() {
           risk: content.risk.risk,
           impact: content.risk.impact,
           mitigation: content.risk.mitigation,
+          stageName: stageFor(0),
         },
       });
     }
@@ -551,6 +590,7 @@ async function main() {
         owner: d.owner,
         impact: d.impact,
         deadline: d.deadline ?? null,
+        stageName: stageFor(dIdx),
       })),
     });
 
@@ -562,6 +602,7 @@ async function main() {
         reportSectionId: sectionId,
         text,
         rank: idx + 1,
+        stageName: stageFor(idx),
       })),
     });
   }

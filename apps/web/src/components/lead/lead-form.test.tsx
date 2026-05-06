@@ -35,10 +35,24 @@ function makeSection(overrides: { status?: 'draft' | 'submitted' } = {}) {
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: 'Test Lead',
+    // 35-03: 'lead' is the gate for "Request Reopen" vs "Revoke"; default
+    // matches the harness's pre-35-03 behaviour of routing through the
+    // Lead branch.
+    authorRole: 'lead' as const,
     status: overrides.status ?? ('draft' as const),
     submittedAt: null,
     projects: [
-      { projectId: PROJECT_ID, projectName: 'Test Product', trafficLight: 'green' as const },
+      {
+        projectId: PROJECT_ID,
+        projectName: 'Test Product',
+        trafficLight: 'green' as const,
+        // 35-04: at least one owned stage so the SDLC pipeline renders
+        // an editable chip — the dirty-flag test clicks it to fire
+        // handleProductsChange.
+        ownedStages: [
+          { stageId: '88888888-8888-4888-8888-888888888888', stageName: 'Development', sortOrder: 3 },
+        ],
+      },
     ],
     items: [
       {

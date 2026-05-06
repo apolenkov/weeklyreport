@@ -28,6 +28,11 @@ type CurrentWeekSectionProps = {
    * Add button to once all items are deleted, leaving a dead section.
    */
   readonly products?: readonly Product[];
+  /**
+   * 35-04: stages-the-lead-owns selector forwarded to ItemEditDialog so
+   * the SDLC stage dropdown is scoped to the active project.
+   */
+  readonly stagesForProduct?: (productId: string) => readonly string[];
 };
 
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
@@ -49,6 +54,7 @@ export function CurrentWeekSection({
   onItemsChange,
   currentUserName,
   products,
+  stagesForProduct,
 }: CurrentWeekSectionProps) {
   const grouped = groupByProduct(items);
   // null = create mode (Add); KanbanItem = edit mode for that row.
@@ -215,6 +221,7 @@ export function CurrentWeekSection({
         week="current"
         currentUserName={currentUserName}
         defaultProductId={dialogState.open && dialogState.mode === 'create' ? dialogState.seedProductId : undefined}
+        stagesForProduct={stagesForProduct}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
       />

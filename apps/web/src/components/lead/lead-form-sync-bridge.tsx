@@ -48,6 +48,12 @@ type BridgeContextValue = {
    * `<OnTrackIcon>`).
    */
   sectionId?: string;
+  /**
+   * 35-04: stages-the-lead-owns selector forwarded into RisksSection ->
+   * RiskEditDialog so the SDLC stage dropdown is per-project. Optional
+   * because the harness used in tests doesn't always feed it.
+   */
+  stagesForProduct?: (productId: string) => readonly string[];
   handleStageStatusChange: (
     productId: string,
     stageName: string,
@@ -81,6 +87,11 @@ export type LeadFormSyncBridgeProviderProps = {
    * advisory features without prop-drilling.
    */
   readonly sectionId?: string;
+  /**
+   * 35-04: per-project stages-the-lead-owns lookup. Forwarded by the
+   * Risks consumer into RiskEditDialog. Optional — tests can omit it.
+   */
+  readonly stagesForProduct?: (productId: string) => readonly string[];
   readonly children: ReactNode;
 };
 
@@ -91,6 +102,7 @@ function Provider({
   onRisksChange,
   readOnly = false,
   sectionId,
+  stagesForProduct,
   children,
 }: LeadFormSyncBridgeProviderProps) {
   const [pendingSuggestion, setPendingSuggestion] = useState<SuggestionParams | null>(
@@ -196,6 +208,7 @@ function Provider({
       risks,
       readOnly,
       ...(sectionId !== undefined ? { sectionId } : {}),
+      ...(stagesForProduct !== undefined ? { stagesForProduct } : {}),
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -205,6 +218,7 @@ function Provider({
       risks,
       readOnly,
       sectionId,
+      stagesForProduct,
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -290,6 +304,7 @@ function Risks() {
       onChange={ctx.handleRisksChange}
       onRiskFilled={ctx.handleRiskFilled}
       products={ctx.products}
+      {...(ctx.stagesForProduct ? { stagesForProduct: ctx.stagesForProduct } : {})}
     />
   );
 }

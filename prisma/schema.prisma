@@ -194,6 +194,9 @@ model Item {
   workflowStatus  ItemWorkflowStatus
   carriedOver     Boolean            @default(false)
   completed       Boolean?
+  // 35-04: SDLC stage label captured per entry. Nullable for legacy rows
+  // seeded before this column existed; new writes are required client-side.
+  stageName       String?
   reportSection   ReportSection      @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   project         Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
   createdAt       DateTime           @default(now())
@@ -206,6 +209,7 @@ model Item {
   // is the dominant access pattern for lead-form rendering.
   @@index([reportSectionId])
   @@index([projectId])
+  @@index([stageName])
 }
 
 model Risk {
@@ -215,6 +219,8 @@ model Risk {
   risk            String
   impact          String
   mitigation      String
+  // 35-04: SDLC stage scoping per risk row.
+  stageName       String?
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   project         Project       @relation(fields: [projectId], references: [id], onDelete: Restrict)
   createdAt       DateTime      @default(now())
@@ -227,6 +233,7 @@ model Risk {
   // 39-03: same hot-path as Item — risks load per section.
   @@index([reportSectionId])
   @@index([projectId])
+  @@index([stageName])
 }
 
 model Decision {
@@ -237,6 +244,8 @@ model Decision {
   deadline        DateTime?
   impact          String
   resolvedAt      DateTime?
+  // 35-04: SDLC stage scoping per decision row.
+  stageName       String?
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -245,6 +254,7 @@ model Decision {
   searchTsv       Unsupported("tsvector")?
 
   @@index([reportSectionId])
+  @@index([stageName])
 }
 
 model Priority {
@@ -252,11 +262,14 @@ model Priority {
   reportSectionId String
   rank            Int
   text            String
+  // 35-04: SDLC stage scoping per priority row.
+  stageName       String?
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   @@unique([reportSectionId, rank])
+  @@index([stageName])
 }
 
 model PdfExportJob {

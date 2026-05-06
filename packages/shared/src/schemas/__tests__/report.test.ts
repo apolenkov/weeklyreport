@@ -760,6 +760,7 @@ describe('validateSubmitInput', () => {
     reportId: uuid(),
     authorId: uuid(),
     authorName: 'Test Lead',
+    authorRole: 'lead',
     status: 'draft',
     submittedAt: null,
     projects: [
@@ -767,6 +768,7 @@ describe('validateSubmitInput', () => {
         projectId: PROJECT_UUID,
         projectName: 'Project Alpha',
         trafficLight: null,
+        ownedStages: [],
       },
     ],
     items: [],

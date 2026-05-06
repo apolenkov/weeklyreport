@@ -13,6 +13,12 @@ type DecisionEditDialogProps = {
    * up-front keeps the chrome out of their way.
    */
   readonly defaultOwner?: string;
+  /**
+   * 35-04 (FEAT-144): SDLC stages available to the lead across all
+   * assigned projects. Decisions are department-scoped (no projectId), so
+   * the union across projects is the right denominator for the dropdown.
+   */
+  readonly availableStages?: readonly string[];
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
 };
@@ -21,6 +27,7 @@ export function DecisionEditDialog({
   open,
   decision,
   defaultOwner,
+  availableStages,
   onSave,
   onCancel,
 }: DecisionEditDialogProps) {
@@ -30,11 +37,14 @@ export function DecisionEditDialog({
   const [owner, setOwner] = useState(decision?.owner ?? defaultOwner ?? '');
   const [impact, setImpact] = useState(decision?.impact ?? '');
   const [deadline, setDeadline] = useState(decision?.deadline ?? '');
+  // 35-04: SDLC stage; '—' is the legacy placeholder, treated as unset.
+  const initialStage = decision?.stageName && decision.stageName !== '—' ? decision.stageName : '';
+  const [stageName, setStageName] = useState<string>(initialStage);
   // Per-field error map — same pattern as risk-edit-dialog. The single
   // bottom error string used to highlight only the first failure and
   // pinned the message under the wrong field, so each border now turns
   // destructive independently.
-  const [errors, setErrors] = useState<{ text?: string; owner?: string; impact?: string }>({});
+  const [errors, setErrors] = useState<{ text?: string; owner?: string; impact?: string; stage?: string }>({});
 
   useEffect(() => {
     if (open) {
@@ -42,6 +52,7 @@ export function DecisionEditDialog({
       setOwner(decision?.owner ?? defaultOwner ?? '');
       setImpact(decision?.impact ?? '');
       setDeadline(decision?.deadline ?? '');
+      setStageName(decision?.stageName && decision.stageName !== '—' ? decision.stageName : '');
       setErrors({});
     }
   }, [
@@ -51,6 +62,7 @@ export function DecisionEditDialog({
     decision?.owner,
     decision?.impact,
     decision?.deadline,
+    decision?.stageName,
     defaultOwner,
   ]);
 
@@ -66,6 +78,7 @@ export function DecisionEditDialog({
     if (t.length === 0) next.text = 'Decision text is required';
     if (o.length === 0) next.owner = 'Owner is required';
     if (im.length === 0) next.impact = 'Impact is required';
+    if (stageName.trim().length === 0) next.stage = 'SDLC stage is required';
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -78,6 +91,7 @@ export function DecisionEditDialog({
       owner: o,
       impact: im,
       deadline: deadline ? deadline : null,
+      stageName,
     });
   }
 
@@ -174,6 +188,35 @@ export function DecisionEditDialog({
                 onChange={(e) => setDeadline(e.target.value)}
               />
             </div>
+          </div>
+
+          {/* SDLC stage — 35-04 (FEAT-144). Decisions are department-scoped,
+              so options are the union of stages across all assigned
+              projects. */}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-stage">
+              Стадия SDLC *
+            </label>
+            <select
+              id="dec-stage"
+              aria-invalid={errors.stage ? 'true' : 'false'}
+              aria-describedby={errors.stage ? 'dec-stage-error' : undefined}
+              className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:outline-none ${
+                errors.stage
+                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
+                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+              }`}
+              value={stageName}
+              onChange={(e) => { setStageName(e.target.value); setErrors((prev) => ({ ...prev, stage: undefined })); }}
+            >
+              <option value="">— Выберите стадию —</option>
+              {(availableStages ?? []).map((stg) => (
+                <option key={stg} value={stg}>{stg}</option>
+              ))}
+            </select>
+            {errors.stage && (
+              <p id="dec-stage-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.stage}</p>
+            )}
           </div>
 
           {/* Impact */}

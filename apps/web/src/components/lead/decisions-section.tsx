@@ -24,6 +24,11 @@ type DecisionsSectionProps = {
    * becomes read-only from the lead's perspective.
    */
   readonly currentUserName?: string;
+  /**
+   * 35-04: SDLC stages available to the lead across all assigned projects.
+   * Decisions are department-scoped, so the union is the right denominator.
+   */
+  readonly availableStages?: readonly string[];
 };
 
 function isMine(owner: string | undefined, me: string | undefined): boolean {
@@ -67,6 +72,7 @@ export function DecisionsSection({
   onChange,
   defaultProductName,
   currentUserName,
+  availableStages,
 }: DecisionsSectionProps) {
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create' } | { open: true; mode: 'edit'; decision: DecisionEntry }
@@ -102,6 +108,7 @@ export function DecisionsSection({
       onChange?.([...decisions, {
         ...saved,
         productName: saved.productName || defaultProductName || 'Department',
+        stageName: saved.stageName ?? '—',
       }]);
     } else {
       onChange?.(decisions.map((d) => (d.id === saved.id ? saved : d)));
@@ -132,6 +139,12 @@ export function DecisionsSection({
               <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
                 {decision.productName}
               </span>
+              {/* 35-04: SDLC stage badge — surfaces scoping next to product. */}
+              {decision.stageName && decision.stageName !== '—' && (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
+                  {decision.stageName}
+                </span>
+              )}
               {decision.deadline && (
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-semibold text-[#8a6d1b]">
                   Due {formatDeadline(decision.deadline)}
@@ -203,6 +216,7 @@ export function DecisionsSection({
         open={dialogState.open}
         decision={dialogState.open && dialogState.mode === 'edit' ? dialogState.decision : null}
         defaultOwner={currentUserName}
+        availableStages={availableStages}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
       />

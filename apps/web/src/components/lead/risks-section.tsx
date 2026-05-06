@@ -19,6 +19,12 @@ type RisksSectionProps = {
    * the +Add Risk button is rendered disabled with a tooltip.
    */
   readonly products?: readonly Product[];
+  /**
+   * 35-04 (FEAT-144): callback returning the SDLC stages the lead owns on
+   * a given project. Forwarded to the dialog so the stage selector is
+   * scoped per-project.
+   */
+  readonly stagesForProduct?: (productId: string) => readonly string[];
 };
 
 function EditIcon() {
@@ -44,6 +50,7 @@ export function RisksSection({
   onChange,
   onRiskFilled,
   products,
+  stagesForProduct,
 }: RisksSectionProps) {
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create'; seedProductId?: string } | { open: true; mode: 'edit'; risk: RiskEntry }
@@ -201,6 +208,7 @@ export function RisksSection({
         defaultProductId={dialogState.open && dialogState.mode === 'create' ? dialogState.seedProductId : undefined}
         initialImpact={dialogState.open && dialogState.mode === 'edit' ? dialogState.risk.impact : ''}
         initialMitigation={dialogState.open && dialogState.mode === 'edit' ? dialogState.risk.mitigation : ''}
+        stagesForProduct={stagesForProduct}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
       />

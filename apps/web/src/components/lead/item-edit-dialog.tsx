@@ -29,6 +29,11 @@ type ItemEditDialogProps = {
    * `+ Add` in a specific column.
    */
   readonly defaultProductId?: string;
+  /**
+   * 35-04 (FEAT-144): callback returning the SDLC stages the current lead
+   * owns on the given project. Constrains the "Стадия SDLC" select.
+   */
+  readonly stagesForProduct?: (productId: string) => readonly string[];
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
 };
@@ -53,6 +58,7 @@ export function ItemEditDialog({
   week,
   currentUserName,
   defaultProductId,
+  stagesForProduct,
   onSave,
   onCancel,
 }: ItemEditDialogProps) {
@@ -75,18 +81,23 @@ export function ItemEditDialog({
   const [text, setText] = useState(initial.text);
   const [status, setStatus] = useState<ItemStatus>(initial.status);
   const [productId, setProductId] = useState(initial.productId);
-  const [error, setError] = useState<string | null>(null);
+  // 35-04: SDLC stage selection. Pre-seeds with the existing item.stageName
+  // when editing; empty otherwise (forces an explicit choice on save).
+  const [stageName, setStageName] = useState<string>(item?.stageName ?? '');
+  const [errors, setErrors] = useState<{ text?: string; stage?: string }>({});
 
   useEffect(() => {
     if (open) {
       setText(initial.text);
       setStatus(initial.status);
       setProductId(initial.productId);
-      setError(null);
+      setStageName(item?.stageName ?? '');
+      setErrors({});
     }
   }, [
     open,
     item?.id,
+    item?.stageName,
     initial.text,
     initial.status,
     initial.productId,
@@ -102,25 +113,28 @@ export function ItemEditDialog({
 
   function handleSave() {
     const trimmed = text.trim();
-    if (trimmed.length === 0) {
-      setError('Description is required');
+    const next: typeof errors = {};
+    if (trimmed.length === 0) next.text = 'Description is required';
+    if (stageName.trim().length === 0) next.stage = 'SDLC stage is required';
+    if (Object.keys(next).length > 0) {
+      setErrors(next);
       return;
     }
     const product = products.find((p) => p.id === productId) ?? products[0];
     if (!product) {
-      setError('No product available');
+      setErrors({ text: 'No product available' });
       return;
     }
-    const next: KanbanItem = {
+    const out: KanbanItem = {
       id: item?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      ...(item?.stageName ? { stageName: item.stageName } : {}),
+      stageName,
       text: trimmed,
       status,
       author: item?.author ?? currentUserName ?? 'You',
     };
-    onSave(next);
+    onSave(out);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -161,23 +175,51 @@ export function ItemEditDialog({
             <textarea
               id="item-text"
               autoFocus
-              aria-invalid={error ? 'true' : 'false'}
-              aria-describedby={error ? 'item-text-error' : undefined}
+              aria-invalid={errors.text ? 'true' : 'false'}
+              aria-describedby={errors.text ? 'item-text-error' : undefined}
               // Border + focus-ring switch to destructive when validation
               // failed so the error reads at-a-glance, not just from the
               // sentence underneath.
               className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-                error
+                errors.text
                   ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
                   : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
               }`}
               style={{ minHeight: '70px' }}
               value={text}
-              onChange={(e) => { setText(e.target.value); setError(null); }}
+              onChange={(e) => { setText(e.target.value); setErrors((prev) => ({ ...prev, text: undefined })); }}
               placeholder={week === 'current' ? 'What was done or in progress…' : 'What is planned for next week…'}
             />
-            {error && (
-              <p id="item-text-error" className="mt-1 text-xs text-[var(--color-destructive)]">{error}</p>
+            {errors.text && (
+              <p id="item-text-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.text}</p>
+            )}
+          </div>
+
+          {/* SDLC stage — 35-04 (FEAT-144). Required, options are limited
+              to stages the lead owns on the active project. */}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="item-stage">
+              Стадия SDLC *
+            </label>
+            <select
+              id="item-stage"
+              aria-invalid={errors.stage ? 'true' : 'false'}
+              aria-describedby={errors.stage ? 'item-stage-error' : undefined}
+              className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:outline-none ${
+                errors.stage
+                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
+                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+              }`}
+              value={stageName}
+              onChange={(e) => { setStageName(e.target.value); setErrors((prev) => ({ ...prev, stage: undefined })); }}
+            >
+              <option value="">— Выберите стадию —</option>
+              {(stagesForProduct?.(productId) ?? []).map((stg) => (
+                <option key={stg} value={stg}>{stg}</option>
+              ))}
+            </select>
+            {errors.stage && (
+              <p id="item-stage-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.stage}</p>
             )}
           </div>
 

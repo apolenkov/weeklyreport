@@ -24,6 +24,8 @@ type NextWeekSectionProps = {
   readonly currentUserName?: string;
   /** Used to seed empty-state `+ Add` button when no items exist. */
   readonly products?: readonly Product[];
+  /** 35-04: forwarded to ItemEditDialog for the SDLC stage selector. */
+  readonly stagesForProduct?: (productId: string) => readonly string[];
 };
 
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
@@ -43,6 +45,7 @@ export function NextWeekSection({
   onItemsChange,
   currentUserName,
   products,
+  stagesForProduct,
 }: NextWeekSectionProps) {
   const grouped = groupByProduct(items);
   const [dialogState, setDialogState] = useState<
@@ -200,6 +203,7 @@ export function NextWeekSection({
         week="next"
         currentUserName={currentUserName}
         defaultProductId={dialogState.open && dialogState.mode === 'create' ? dialogState.seedProductId : undefined}
+        stagesForProduct={stagesForProduct}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
       />
