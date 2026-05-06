@@ -105,7 +105,7 @@ export function PeriodsTab({ periods }: PeriodsTabProps) {
           <button
             type="button"
             onClick={openAdd}
-            className="btn-press inline-flex min-h-[44px] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
             aria-label="Create new period"
           >
             <PlusIcon />

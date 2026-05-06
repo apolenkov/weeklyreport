@@ -86,6 +86,13 @@
   --radius-lg: 1rem;
   --radius-xl: 1.25rem;
   --radius-pill: 3.125rem;
+
+  /* ---- Touch-target floor (UX-12 / 35-05) ----
+   * Apple HIG + Material recommend ≥44px tap surfaces. Drives
+   * lead-form action surfaces (Save/Cancel + Chevron prev/next +
+   * Item/Risk/Decision/Priority dialog Save/Cancel). Raise here to
+   * lift the whole product in one place. */
+  --touch-target-min: 44px;
 }
 
 /* ---- Skeleton animation (shimmer) ---- */
