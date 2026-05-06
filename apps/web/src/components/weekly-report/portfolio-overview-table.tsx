@@ -28,7 +28,7 @@ const STATUS_ICON: Record<string, string> = {
 
 const STATUS_ICON_TEXT: Record<string, string> = {
   'on-track': 'var(--color-primary)',
-  'at-risk': '#fff',
+  'at-risk': '#8a6d1b',
   blocked: 'var(--color-destructive)',
 };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -53,9 +53,14 @@ export function DashboardPage() {
     }
   }, [weeklyQ.isError, weeklyQ.error]);
 
+  const sectionsRef = useRef<HTMLDivElement | null>(null);
+
   function handleToggleAll() {
-    // Toggle all accordion sections on the page.
-    const buttons = document.querySelectorAll<HTMLButtonElement>('[aria-expanded]');
+    // Scope to dashboard sections — global selector matched the nav drawer
+    // trigger and any other page-level accordion controls.
+    const root = sectionsRef.current;
+    if (!root) return;
+    const buttons = root.querySelectorAll<HTMLButtonElement>('[aria-expanded]');
     const anyExpanded = Array.from(buttons).some(
       (btn) => btn.getAttribute('aria-expanded') === 'true',
     );
@@ -97,7 +102,7 @@ export function DashboardPage() {
   const { kpi, leads, blockedAtRisk, pendingLeads } = dashboard;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={sectionsRef}>
       {/* Page header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
