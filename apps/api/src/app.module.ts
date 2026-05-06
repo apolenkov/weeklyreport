@@ -22,6 +22,7 @@ import { WeeklyReportModule } from './modules/weekly-report/weekly-report.module
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AiModule } from './modules/ai/ai.module';
 import { SearchModule } from './modules/search/search.module';
+import { ActivityModule } from './modules/activity/activity.module';
 import { PdfExportProcessor } from './infrastructure/bullmq/pdf-export.processor';
 import { EmailReminderProcessor } from './infrastructure/bullmq/email-reminder.processor';
 import { EmailService } from './infrastructure/email/email.service';
@@ -58,6 +59,7 @@ import { assertNoDevAuthInProduction } from './lib/dev-auth-fence';
     AnalyticsModule,
     AiModule,
     SearchModule,
+    ActivityModule,
     PeriodModule,
     WeeklyReportModule,
   ],

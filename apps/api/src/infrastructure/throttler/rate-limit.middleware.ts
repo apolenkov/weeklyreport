@@ -1,4 +1,4 @@
-import rateLimit, { type Options } from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator, type Options } from 'express-rate-limit';
 import type { RequestHandler } from 'express';
 
 import type { AppLogger } from '../../lib/logger';
@@ -31,7 +31,16 @@ export function createRateLimits(options: {
     legacyHeaders: false,
     // Use the X-Forwarded-For header when behind a reverse proxy (caddy/nginx).
     // Express's `app.set('trust proxy', 1)` upstream makes this safe.
-    keyGenerator: (req) => req.ip ?? req.socket.remoteAddress ?? 'unknown',
+    //
+    // FIX-02 (Phase 35-08): wrap the IP through `ipKeyGenerator` from
+    // express-rate-limit so IPv6 addresses are normalised by /64 prefix.
+    // Without it, the library emits the ERR_ERL_KEY_GEN_IPV6 advisory
+    // every request because varying low bits of an IPv6 address would let
+    // a single client bypass the limit by churning suffixes.
+    keyGenerator: (req) => {
+      const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+      return ipKeyGenerator(ip);
+    },
     handler: (req, res, _next, opts) => {
       const bucket = opts.statusCode === 429 ? String(opts.message) : 'unknown';
       logger.warn('rate limit hit', {

@@ -252,7 +252,7 @@ async function main() {
     {
       leadId: LEAD_PLATANOV_ID,
       leadIndex: 1,
-      name: 'Platanov A.',
+      name: 'Платанов А.',
       status: ReportSectionStatus.submitted,
       submittedAt: activeOffset(1, 10),
       products: productsByLead(LEAD_PLATANOV_ID),
@@ -260,7 +260,7 @@ async function main() {
     {
       leadId: LEAD_MARIA_ID,
       leadIndex: 2,
-      name: 'Maria K.',
+      name: 'Мария К.',
       status: ReportSectionStatus.submitted,
       submittedAt: activeOffset(1, 14),
       products: productsByLead(LEAD_MARIA_ID),
@@ -268,7 +268,7 @@ async function main() {
     {
       leadId: LEAD_IGOR_ID,
       leadIndex: 3,
-      name: 'Igor V.',
+      name: 'Игорь В.',
       status: ReportSectionStatus.submitted,
       submittedAt: activeOffset(2, 9, 30),
       products: productsByLead(LEAD_IGOR_ID),
@@ -276,7 +276,7 @@ async function main() {
     {
       leadId: LEAD_DMITRY_ID,
       leadIndex: 4,
-      name: 'Dmitry S.',
+      name: 'Дмитрий С.',
       status: ReportSectionStatus.submitted,
       submittedAt: activeOffset(3, 11, 15),
       products: productsByLead(LEAD_DMITRY_ID),
@@ -284,7 +284,7 @@ async function main() {
     {
       leadId: LEAD_OLGA_ID,
       leadIndex: 5,
-      name: 'Olga N.',
+      name: 'Ольга Н.',
       status: ReportSectionStatus.draft,
       submittedAt: null,
       products: productsByLead(LEAD_OLGA_ID),
@@ -292,7 +292,7 @@ async function main() {
     {
       leadId: LEAD_SERGEY_ID,
       leadIndex: 6,
-      name: 'Sergey T.',
+      name: 'Сергей Т.',
       status: ReportSectionStatus.draft,
       submittedAt: null,
       products: productsByLead(LEAD_SERGEY_ID),
@@ -720,13 +720,14 @@ async function main() {
       totalProjectStatuses++;
 
       const id = itemId('2', cfg.leadIndex, pIdx + 1);
+      const prevWeekText = `Закрыли недельные цели по продукту «${product.name}»`;
       await prisma.item.upsert({
         where: { id },
         update: {
           reportSectionId: secId,
           projectId: product.id,
           type: ItemType.current,
-          text: `Closed week 15 work on ${product.name}`,
+          text: prevWeekText,
           tag: 'feature',
           workflowStatus: ItemWorkflowStatus.done,
         },
@@ -735,7 +736,7 @@ async function main() {
           reportSectionId: secId,
           projectId: product.id,
           type: ItemType.current,
-          text: `Closed week 15 work on ${product.name}`,
+          text: prevWeekText,
           tag: 'feature',
           workflowStatus: ItemWorkflowStatus.done,
         },
@@ -752,12 +753,12 @@ async function main() {
           rank: 1,
         },
       },
-      update: { id, text: `Wrap up week 15 deliverables for ${cfg.name}` },
+      update: { id, text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}` },
       create: {
         id,
         reportSectionId: secId,
         rank: 1,
-        text: `Wrap up week 15 deliverables for ${cfg.name}`,
+        text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}`,
       },
     });
     totalPriorities++;

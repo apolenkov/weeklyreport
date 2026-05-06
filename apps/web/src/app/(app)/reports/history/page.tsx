@@ -1,15 +1,10 @@
-import { ReportArchiveSection } from '../../../../components/dashboard/report-archive-section';
+import { redirect } from 'next/navigation';
 
-export default function ReportHistoryPage() {
-  return (
-    <main id="main-content" className="mx-auto w-full max-w-6xl px-6 py-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold text-[var(--color-primary)]">Published Reports</h1>
-        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          Archive of all published weekly reports. Click a report to view details.
-        </p>
-      </header>
-      <ReportArchiveSection />
-    </main>
-  );
+/**
+ * UX-17 (Phase 35-08): the legacy `/reports/history` archive page is now
+ * the "Опубликованные" tab on the merged `/reports` route. This handler
+ * 307-redirects to it.
+ */
+export default function ReportsHistoryRedirect() {
+  redirect('/reports?tab=published');
 }
