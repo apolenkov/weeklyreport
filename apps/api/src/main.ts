@@ -148,6 +148,43 @@ async function bootstrap() {
     nextFn();
   });
 
+  // Browser → server log forwarder. Captures console.error/warn,
+  // window.onerror, unhandledrejection from the web app and writes them to
+  // the same rotating api.log so all debug data lives in one file.
+  // Dev-only by default; turn on in prod with CLIENT_LOG_FORWARDING=true.
+  const clientLogsEnabled =
+    env.NODE_ENV === 'development' || process.env['CLIENT_LOG_FORWARDING'] === 'true';
+  app.use(
+    '/api/client-logs',
+    express.json({ limit: '128kb' }),
+    (req: express.Request, res: express.Response) => {
+      if (!clientLogsEnabled) {
+        res.sendStatus(204);
+        return;
+      }
+      const body = req.body as { entries?: unknown };
+      const entries = Array.isArray(body?.entries) ? body.entries : [];
+      for (const raw of entries.slice(0, 100)) {
+        if (!raw || typeof raw !== 'object') continue;
+        const e = raw as Record<string, unknown>;
+        const lvl = e['level'];
+        const level: 'debug' | 'info' | 'warn' | 'error' =
+          lvl === 'debug' || lvl === 'info' || lvl === 'warn' || lvl === 'error' ? lvl : 'info';
+        const msg = typeof e['message'] === 'string' ? (e['message'] as string).slice(0, 2000) : '<non-string>';
+        logger[level](`client: ${msg}`, {
+          phase: 'web.client',
+          source: typeof e['source'] === 'string' ? (e['source'] as string).slice(0, 64) : undefined,
+          url: typeof e['url'] === 'string' ? (e['url'] as string).slice(0, 500) : undefined,
+          stack: typeof e['stack'] === 'string' ? (e['stack'] as string).slice(0, 4000) : undefined,
+          ts: e['ts'],
+          ua: req.get('user-agent')?.slice(0, 200),
+          ip: req.ip,
+        });
+      }
+      res.sendStatus(204);
+    },
+  );
+
   // NOTIF-06 (Phase 29-05): read-only Queue handle for the admin DLQ count.
   // Constructed once at boot; Express request lifecycle does not need its
   // own connection. Closed on app shutdown via enableShutdownHooks above.

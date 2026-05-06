@@ -111,6 +111,20 @@ export function createAppRouter(deps: RouterDeps) {
     // AUTH_DEV_MODE is unset, so accidental deploys of this file to a
     // production runtime cannot wipe real data.
     dev: router({
+      // Lists every seeded user so a dev-mode login picker can show all of
+      // them (not just the 3 hardcoded role buckets). publicProcedure so
+      // the picker works before any session exists.
+      listUsers: publicProcedure.query(async () => {
+        if (process.env['AUTH_DEV_MODE'] !== 'true') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Dev mode is not enabled' });
+        }
+        const users = await deps.prisma.user.findMany({
+          select: { id: true, email: true, name: true, role: true },
+          orderBy: [{ role: 'asc' }, { name: 'asc' }],
+        });
+        return users;
+      }),
+
       wipeAndReseed: protectedProcedure
         .input(z.object({ variant: z.enum(['minimum', 'advanced']).default('minimum') }))
         .mutation(async ({ input }) => {
