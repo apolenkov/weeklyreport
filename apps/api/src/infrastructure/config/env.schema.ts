@@ -36,6 +36,15 @@ export const envSchema = z
     SMTP_PASS: z.string().optional(),
     SMTP_FROM: z.string().optional(),
 
+    // OpenTelemetry (37-01). All optional — SDK only starts when
+    // OTEL_EXPORTER_OTLP_ENDPOINT is set AND OTEL_SDK_DISABLED is not
+    // 'true'. See apps/api/src/infrastructure/otel/otel.bootstrap.ts.
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+    OTEL_SDK_DISABLED: z.string().default('false'),
+    OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1).default(0.1),
+    OTEL_SERVICE_NAME: z.string().optional(),
+    OTEL_SERVICE_VERSION: z.string().optional(),
+
     // PDF generation
     PDF_BASE_URL: z.string().url().default('http://localhost:3000'),
     // Phase 23-01: directory where the BullMQ worker writes generated PDFs and

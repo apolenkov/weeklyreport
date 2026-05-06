@@ -1,5 +1,12 @@
 import 'reflect-metadata';
 
+// 37-01: OTel bootstrap MUST run before any module that imports http /
+// express / prisma so the SDK can monkey-patch them. startOtel() is a
+// no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set and OTEL_SDK_DISABLED
+// is not 'true'.
+import { startOtel } from './infrastructure/otel/otel.bootstrap';
+const otelDecision = startOtel();
+
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -69,6 +76,16 @@ async function bootstrap() {
   });
 
   logger.info('bootstrap started');
+  // 37-01: log OTel decision for ops visibility (one line, structured).
+  if (otelDecision.started) {
+    logger.info('otel sdk started', {
+      phase: 'otel',
+      endpoint: otelDecision.endpoint,
+      samplingRatio: otelDecision.samplingRatio,
+    });
+  } else {
+    logger.info('otel sdk disabled', { phase: 'otel', reason: otelDecision.reason });
+  }
 
   app.enableShutdownHooks();
   app.use(helmet());
