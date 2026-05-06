@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -110,10 +110,15 @@ export function WeeklyReportPage({ period: _period, reportId }: WeeklyReportPage
     }
   }, [weeklyQ.isError, weeklyQ.error]);
 
+  const sectionsRef = useRef<HTMLDivElement | null>(null);
+
   function handleToggleAll() {
-    const buttons = document.querySelectorAll<HTMLButtonElement>(
-      '[aria-expanded]',
-    );
+    // Scope to report-sections only — global `[aria-expanded]` selector also
+    // matched the nav drawer trigger and any other accordion controls on the
+    // page, so clicking Toggle All also toggled the side menu.
+    const root = sectionsRef.current;
+    if (!root) return;
+    const buttons = root.querySelectorAll<HTMLButtonElement>('[aria-expanded]');
     const anyExpanded = Array.from(buttons).some(
       (btn) => btn.getAttribute('aria-expanded') === 'true',
     );
@@ -153,7 +158,7 @@ export function WeeklyReportPage({ period: _period, reportId }: WeeklyReportPage
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={sectionsRef}>
       {/* Page header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
