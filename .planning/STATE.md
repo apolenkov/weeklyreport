@@ -1,48 +1,62 @@
 ---
 gsd_state_version: 1.0
-milestone: v7.0
-milestone_name: Stabilisation & Hardening
-status: planning
-stopped_at: v7.0 Wave 1 roadmap drafted (Phases 32-33)
-last_updated: "2026-05-04T11:30:00.000Z"
-last_activity: 2026-05-04 -- v7.0 Wave 1 planning kickoff after Block 1 (mobile audit) + Block 2 (Save Version) executed
+milestone: v8.0
+milestone_name: Production Readiness
+status: shipped
+shipped_tag: v8.0.0
+shipped_at: "2026-05-06"
+last_updated: "2026-05-06T16:30:00.000Z"
+last_activity: 2026-05-06 -- v8.0.0 tagged + pushed; v8.1 (Visual Identity & AI Maturity) parked in .planning/backlog/
 progress:
-  total_phases: 2
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 32
+  completed_plans: 32
+  percent: 100
+backlog:
+  - v8.1 — Visual Identity & AI Maturity (3 phases · 12 plans · BRAND-* + AI-EVAL-* + MOB-*)
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** v7.0 planning (Wave 1 scoped)
-**Last Updated:** 2026-05-04
+**Status:** v8.0 SHIPPED · v8.1 in backlog
+**Last Updated:** 2026-05-06
 
 ---
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-25)
+See: .planning/PROJECT.md
 
 **Core Value:** Leads fill their sections independently via structured forms; system auto-assembles a unified report -- no editing conflicts, with history and analytics.
 
-**Current Focus:** v7.0 Wave 1 — Phase 32 (UX Polish) + Phase 33 (API Hardening). See `.planning/milestones/v7.0-ROADMAP.md`.
+**Current Focus:** none active — v8.0 production tag landed, v8.1 parked in `.planning/backlog/` until stakeholder PRD or fresh prod feedback unfreezes.
 
-**Resume context:** Full session handoff at `.planning/HANDOFF-2026-05-04.md`. Per-project Claude memory mirrored to `.planning/memory/` (see `MEMORY.md` index + `RESTORE.md` for the one-liner that copies into `~/.claude/projects/...` on a fresh machine).
+**Resume context:** Per-project Claude memory at `.planning/memory/`. v8.1 promote flow: `git mv .planning/backlog/v8.1-*.md .planning/milestones/` then `/gsd-new-milestone v8.1` then `/gsd-plan-phase 40`.
 
 ---
 
 ## Current Position
 
-Milestone: v7.0 (planning)
-Phase: 32 (UX Polish) — NOT STARTED
-Plans: 0/~9 (Wave 1 estimate)
-Status: v6.0 SHIPPED (37/37 reqs, 22 plans, 5 phases) + post-v6.0 UX-overhaul wave + post-wave roadmap (Block 1 mobile audit, Block 2 Save Version) closed 2026-05-04. v7.0 Wave 1 roadmap drafted, ready for `/gsd:plan-phase 32`.
-Last activity: 2026-05-04 -- v7.0 milestone files created at `.planning/milestones/v7.0-{ROADMAP,REQUIREMENTS}.md`; ROADMAP.md updated; STATE flipped to v7.0 planning.
+Milestone: v8.0 (SHIPPED, tag v8.0.0)
+Phases: 6/6 complete (34..39)
+Plans: 32/32 complete
+Status: production-ready milestone closed 2026-05-06; v8.1 drafted then parked.
+Last activity: 2026-05-06 -- v8.0.0 tagged; visual regression baseline + v8.1 scaffold + backlog park pushed.
+
+### v8.0 phase progress
+
+- Phase 34 ✓ Quality Foundation (7 plans) — husky + lint-staged, vitest coverage, DOM-walker CI, prisma reset gate, TS rollup, ESLint sweep 272→0, push-guard
+- Phase 35 ✓ UX Polish (8 plans) — 0/7 stages fix, /reports tabs merge, stage ownership e2e, Risk/Item/Decision/Priority stageName, 44px CSS token, DLQ admin tab, addressable URLs, RU seed + role-default redirect
+- Phase 36 ✓ Security & Audit (4 plans) — rate-limit, audit-trail middleware, secrets fail-fast, CORS prod whitelist + helmet
+- Phase 37 ✓ Observability (4 plans) — OTel HTTP + Prisma, DLQ alert counter, Prometheus + Grafana, log-sink docs
+- Phase 38 ✓ Infra & Deploy (4 plans) — prod migrate init, Caddy auto-TLS, SAML mock IdP, RUNBOOK + INCIDENT-PLAYBOOK
+- Phase 39 ✓ Performance (5 plans) — PgBouncer prod, Turbopack, pg_stat_statements + index audit, k6 baseline, FTS поиск (бонус)
+- Visual baseline (post-tag patch) — Playwright toHaveScreenshot 5 routes + CI gate
 
 ### v6.0 phase progress
+
 - Phase 27 ✓ (5/5) — pushed (Quality Stabilisation & Role Middleware Factory)
 - Phase 28 ✓ (4/4) — pushed (Role Filters, PDF Cookie Seam, Reminders, Release Checklist)
 - Phase 29 ✓ (6/6) — local 7 commits (Real Keycloak SAML, Role-Aware UI, Escalation)
@@ -51,8 +65,8 @@ Last activity: 2026-05-04 -- v7.0 milestone files created at `.planning/mileston
 
 ## Quick Tasks Completed
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
+| #          | Description                                                                                                                                                                              | Date       | Commit           | Directory                                                                                                           |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
 | 260426-vxp | v5.0 tech debt: integration suite first-run + weekly-report mock fix (MAJOR-PROGRESS — HANDOFF #4 CLOSED, #1 first-run completed 8/21 pass + 5 fail to v6.0, Phase 24 matcher gap fixed) | 2026-04-26 | d394832, cc1a0ec | [260426-vxp-v5-0-tech-debt-integration-suite-first-r](./quick/260426-vxp-v5-0-tech-debt-integration-suite-first-r/) |
 
 ---
@@ -67,27 +81,27 @@ Last activity: 2026-05-04 -- v7.0 milestone files created at `.planning/mileston
 
 **By Milestone:**
 
-| Milestone | Phases | Plans | Status |
-|-----------|--------|-------|--------|
-| v1.0 | 4 | 12 | Shipped |
-| v2.0 | 3 | 15 | Shipped |
-| v3.0 | 3 | 6 | Shipped |
-| v4.0 | 4 | 21 | Shipped |
-| v5.0 | 7 | 15 | Shipped |
-| v6.0 | 5 | TBD | Planning |
+| Milestone | Phases | Plans | Status   |
+| --------- | ------ | ----- | -------- |
+| v1.0      | 4      | 12    | Shipped  |
+| v2.0      | 3      | 15    | Shipped  |
+| v3.0      | 3      | 6     | Shipped  |
+| v4.0      | 4      | 21    | Shipped  |
+| v5.0      | 7      | 15    | Shipped  |
+| v6.0      | 5      | TBD   | Planning |
 
 **Plan Executions (v5.0):**
 
-| Plan | Duration | Tasks | Files |
-|------|----------|-------|-------|
-| Phase 20-seed-type-foundation P02 | 2min | 2 tasks | 7 files |
-| Phase 21 P04 | 50m | 3 tasks | 11 files |
-| Phase 22 P03 | 24min | 3 tasks | 8 files |
-| Phase 22-interactivity-status-risk-sync P22-01 | 75min | 3 tasks | 12 files |
-| Phase 23 P01 | 25min | 3 tasks | 10 files |
-| Phase 25 P01 | 50min | 3 tasks | 9 files |
-| Phase 24 P01 | 10m | 4 tasks | 12 files |
-| Phase 26 P01 | 6m 35s | 3 tasks | 15 files |
+| Plan                                           | Duration | Tasks   | Files    |
+| ---------------------------------------------- | -------- | ------- | -------- |
+| Phase 20-seed-type-foundation P02              | 2min     | 2 tasks | 7 files  |
+| Phase 21 P04                                   | 50m      | 3 tasks | 11 files |
+| Phase 22 P03                                   | 24min    | 3 tasks | 8 files  |
+| Phase 22-interactivity-status-risk-sync P22-01 | 75min    | 3 tasks | 12 files |
+| Phase 23 P01                                   | 25min    | 3 tasks | 10 files |
+| Phase 25 P01                                   | 50min    | 3 tasks | 9 files  |
+| Phase 24 P01                                   | 10m      | 4 tasks | 12 files |
+| Phase 26 P01                                   | 6m 35s   | 3 tasks | 15 files |
 
 ---
 
@@ -95,19 +109,19 @@ Last activity: 2026-05-04 -- v7.0 milestone files created at `.planning/mileston
 
 ### Key Decisions
 
-| Decision | Rationale | Status |
-|----------|-----------|--------|
-| Admin-only mode for v5.0 | Full access for regression testing; role separation in v6.0 | Closing in v6.0 (Phase 28-29) |
-| @trpc/tanstack-react-query (not classic) | React Compiler is enabled; classic proxy hooks break | Active |
-| Enhance custom logger, not replace with pino | Existing AppLoggerImpl already handles JSON/rotation; add nestjs-cls | Active |
-| Mapper layer for type translation | Mock types diverge semantically from Zod/Prisma types -- not find-and-replace | Active |
-| Self-contained mapper modules | Type aliases declared inline in mapper files | Active |
-| Asymmetric mapper signatures (Exclude<ItemStatus,'planned'>) | Computed presentation states become compile-time errors | Active |
-| AUTH-01 split across Phase 28 + Phase 29 | PDF cookie path requires `AUTH_DEV_MODE_ALLOW_TEST` staging (Phase 28); full Keycloak SAML flip lands in Phase 29 to avoid silent 401 storms (CC-1) | Active |
-| `requireRole` factory over `trpc-shield` | ~30 LOC custom middleware; default-deny coverage test gates CI | Active (Phase 27) |
-| `recharts` + shadcn-ui Chart for v6.0 analytics | Native Tailwind v4 CSS-variable theming; Tremor / Plotly / D3 rejected | Active (Phase 30) |
-| `react-email` for email templates | `<Tailwind>` wrapper compiles utilities to inline styles; MJML rejected | Active (Phase 28) |
-| Anthropic SDK direct (no LangChain / Vercel AI SDK) | Haiku 4.5 + Sonnet 4.6; Opus 4.7 explicitly NOT used (5× cost, marginal lift) | Active (Phase 31) |
+| Decision                                                     | Rationale                                                                                                                                           | Status                        |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| Admin-only mode for v5.0                                     | Full access for regression testing; role separation in v6.0                                                                                         | Closing in v6.0 (Phase 28-29) |
+| @trpc/tanstack-react-query (not classic)                     | React Compiler is enabled; classic proxy hooks break                                                                                                | Active                        |
+| Enhance custom logger, not replace with pino                 | Existing AppLoggerImpl already handles JSON/rotation; add nestjs-cls                                                                                | Active                        |
+| Mapper layer for type translation                            | Mock types diverge semantically from Zod/Prisma types -- not find-and-replace                                                                       | Active                        |
+| Self-contained mapper modules                                | Type aliases declared inline in mapper files                                                                                                        | Active                        |
+| Asymmetric mapper signatures (Exclude<ItemStatus,'planned'>) | Computed presentation states become compile-time errors                                                                                             | Active                        |
+| AUTH-01 split across Phase 28 + Phase 29                     | PDF cookie path requires `AUTH_DEV_MODE_ALLOW_TEST` staging (Phase 28); full Keycloak SAML flip lands in Phase 29 to avoid silent 401 storms (CC-1) | Active                        |
+| `requireRole` factory over `trpc-shield`                     | ~30 LOC custom middleware; default-deny coverage test gates CI                                                                                      | Active (Phase 27)             |
+| `recharts` + shadcn-ui Chart for v6.0 analytics              | Native Tailwind v4 CSS-variable theming; Tremor / Plotly / D3 rejected                                                                              | Active (Phase 30)             |
+| `react-email` for email templates                            | `<Tailwind>` wrapper compiles utilities to inline styles; MJML rejected                                                                             | Active (Phase 28)             |
+| Anthropic SDK direct (no LangChain / Vercel AI SDK)          | Haiku 4.5 + Sonnet 4.6; Opus 4.7 explicitly NOT used (5× cost, marginal lift)                                                                       | Active (Phase 31)             |
 
 ### Critical Pitfalls
 
@@ -154,10 +168,10 @@ Resume file: None
 
 ---
 
-*State initialized: 2026-04-06*
-*v1.0 shipped: 2026-04-10*
-*v2.0 shipped: 2026-04-11*
-*v3.0 shipped: 2026-04-21*
-*v4.0 shipped: 2026-04-25*
-*v5.0 shipped: 2026-04-25*
-*v6.0 planning started: 2026-04-28*
+_State initialized: 2026-04-06_
+_v1.0 shipped: 2026-04-10_
+_v2.0 shipped: 2026-04-11_
+_v3.0 shipped: 2026-04-21_
+_v4.0 shipped: 2026-04-25_
+_v5.0 shipped: 2026-04-25_
+_v6.0 planning started: 2026-04-28_
