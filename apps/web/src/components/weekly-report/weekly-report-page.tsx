@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+
+import { isoWeekNumber, formatDateRange } from '../../lib/mappers/lead-history';
 
 import { useTRPC } from '../../lib/trpc-context';
 import { mapWeeklyReport } from '../../lib/mappers';
@@ -39,6 +42,17 @@ type WeeklyReportPageProps = {
    * specific report; used by /reports/[reportId] route pages.
    */
   readonly reportId?: string;
+  /**
+   * 35-07: when true, the page auto-redirects (router.replace) to the
+   * canonical addressed URL `/head/report/<reportId>` once the active
+   * reportId is known. Off when the bare route is hit with `?period=`
+   * (legacy bookmarks) or when already on a `[reportId]` route.
+   *
+   * Optional `canonicalBasePath` (defaults to `/head/report`) lets callers
+   * point the redirect at a different addressed surface.
+   */
+  readonly redirectToCanonical?: boolean;
+  readonly canonicalBasePath?: string;
 };
 
 function CollapseIcon() {
@@ -55,9 +69,15 @@ function CollapseIcon() {
   );
 }
 
-export function WeeklyReportPage({ period: _period, reportId }: WeeklyReportPageProps) {
+export function WeeklyReportPage({
+  period,
+  reportId,
+  redirectToCanonical,
+  canonicalBasePath = '/head/report',
+}: WeeklyReportPageProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
+  const router = useRouter();
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
@@ -109,6 +129,45 @@ export function WeeklyReportPage({ period: _period, reportId }: WeeklyReportPage
       );
     }
   }, [weeklyQ.isError, weeklyQ.error]);
+
+  // 35-07: bare `/head/report` -> redirect to `/head/report/<reportId>`
+  // once the active reportId is known. Skipped when:
+  //   • a `?period=` query is present (legacy bookmarks)
+  //   • the page already renders under `[reportId]` (reportId prop set)
+  //   • there is no resolvable report (weeklyQ data not loaded)
+  const resolvedReportId = weeklyQ.data?.reportId ?? null;
+  useEffect(() => {
+    if (!redirectToCanonical) return;
+    if (period) return;
+    if (reportId) return;
+    if (!resolvedReportId) return;
+    router.replace(`${canonicalBasePath}/${resolvedReportId}`);
+  }, [
+    redirectToCanonical,
+    period,
+    reportId,
+    resolvedReportId,
+    router,
+    canonicalBasePath,
+  ]);
+
+  // 35-07: surface the period in the browser tab title.
+  const titleParts = useMemo(() => {
+    if (!weeklyQ.data) return null;
+    const start = weeklyQ.data.periodStart;
+    const end = weeklyQ.data.periodEnd;
+    if (!(start instanceof Date) || !(end instanceof Date)) return null;
+    return { week: isoWeekNumber(start), range: formatDateRange(start, end) };
+  }, [weeklyQ.data]);
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (!titleParts) return;
+    const previous = document.title;
+    document.title = `Неделя ${titleParts.week}, ${titleParts.range} — CustomReport`;
+    return () => {
+      document.title = previous;
+    };
+  }, [titleParts]);
 
   const sectionsRef = useRef<HTMLDivElement | null>(null);
 

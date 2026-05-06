@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { useTRPC } from '../../lib/trpc-context';
@@ -12,6 +13,7 @@ import {
 } from '../../lib/cache-keys';
 import { mapLeadFormData } from '../../lib/mappers';
 import { ownedStagesForProject } from '../../lib/mappers/lead-form';
+import { isoWeekNumber, formatDateRange } from '../../lib/mappers/lead-history';
 import { useLeadFormAutosave, stableStringify } from '../../hooks/use-lead-form-autosave';
 import { LeadFormSkeleton } from './lead-form-skeleton';
 import { LeadFormSyncBridge } from './lead-form-sync-bridge';
@@ -43,6 +45,25 @@ import type {
 
 type LeadFormProps = {
   readonly period?: string;
+  /**
+   * 35-07: explicit report identifier from the dynamic `[reportId]` route
+   * segment. When provided, the form scopes data load + actions to that
+   * specific report instead of the session's active period.
+   *
+   * When omitted (bare `/lead/report` path), the form still falls back to
+   * `reports.getActive` and — once resolved — performs a `router.replace`
+   * to the canonical addressed URL `/lead/report/<reportId>` so bookmarks
+   * and shared links work. The legacy `?period=` query continues to read
+   * the bare route in read-only mode without a redirect (back-compat).
+   */
+  readonly reportId?: string;
+  /**
+   * 35-07: when true, the form auto-redirects (router.replace) to the
+   * canonical addressed URL once the active reportId is known. Off when
+   * the bare route is hit with `?period=` (legacy bookmarks) or when
+   * already on a `[reportId]` route.
+   */
+  readonly redirectToCanonical?: boolean;
 };
 
 // SVG Icon components
@@ -273,25 +294,54 @@ function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayloa
   };
 }
 
-export function LeadForm({ period }: LeadFormProps) {
+export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical }: LeadFormProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
+  const router = useRouter();
 
   // Four queries compose the lead-form view. `byPeriod` and `versions` depend
-  // on identifiers from `getActive`, so they're gated by `enabled`.
+  // on identifiers from `getActive` (or — 35-07 — the pinned `reportId` from
+  // the dynamic route), so they're gated by `enabled`.
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const activeReportId = activeQ.data?.reportId ?? '';
   const activeSectionId = activeQ.data?.reportSectionId ?? '';
 
+  // 35-07: when the page renders under `/lead/report/[reportId]`, scope the
+  // data load to the path-segment id rather than the session's active period.
+  // This lets the lead view (and bookmark) any past week of their own history.
+  const targetReportId = pinnedReportId && pinnedReportId !== '' ? pinnedReportId : activeReportId;
+
   const byPeriodQ = useQuery({
-    ...trpc.leadForm.byPeriod.queryOptions({ reportId: activeReportId }),
-    enabled: activeReportId !== '',
+    ...trpc.leadForm.byPeriod.queryOptions({ reportId: targetReportId }),
+    enabled: targetReportId !== '',
   });
+
+  // The section id for actions (autosave / submit / revoke) comes from the
+  // loaded section when a reportId is pinned (the active session's section
+  // id may not match the pinned report). Fall back to activeSectionId for
+  // the bare-route case until byPeriod resolves.
+  const sectionIdForActions =
+    byPeriodQ.data?.section.reportSectionId ?? activeSectionId;
+
   const versionsQ = useQuery({
-    ...trpc.leadForm.versions.queryOptions({ reportSectionId: activeSectionId }),
-    enabled: activeSectionId !== '',
+    ...trpc.leadForm.versions.queryOptions({ reportSectionId: sectionIdForActions }),
+    enabled: sectionIdForActions !== '',
   });
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
+
+  // 35-07: bare route → replace URL with the canonical addressed form once
+  // the active reportId is known. Skipped when:
+  //   • a `?period=` query is present (legacy bookmarks; preserve old UX)
+  //   • the page already renders under `[reportId]` (pinnedReportId set)
+  //   • there is no active period (server returned null) — the form will
+  //     show the existing empty / skeleton state.
+  useEffect(() => {
+    if (!redirectToCanonical) return;
+    if (period) return;
+    if (pinnedReportId) return;
+    if (!activeReportId) return;
+    router.replace(`/lead/report/${activeReportId}`);
+  }, [redirectToCanonical, period, pinnedReportId, activeReportId, router]);
 
   // Toast on per-query errors.
   useEffect(() => {
@@ -507,17 +557,38 @@ export function LeadForm({ period }: LeadFormProps) {
   // work at a 3s debounce floor); the user can still hit "Save Version"
   // any time for an explicit checkpoint.
   const autosave = useLeadFormAutosave({
-    reportSectionId: activeSectionId || null,
+    reportSectionId: sectionIdForActions || null,
     payload: draftPayload,
     enabled: !isReadOnlyEarly && !isSubmitted && draftSection !== null,
     initialSavedKey,
     onSaveSuccess: () => {
       autosaveCountRef.current += 1;
-      if (autosaveCountRef.current % AUTO_SNAPSHOT_EVERY === 0 && activeSectionId) {
-        createSnapshotMut.mutate({ reportSectionId: activeSectionId });
+      if (autosaveCountRef.current % AUTO_SNAPSHOT_EVERY === 0 && sectionIdForActions) {
+        createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
       }
     },
   });
+
+  // 35-07: set document.title to surface the addressed week in the browser
+  // tab. Format: "Неделя 19, May 4–10 — CustomReport". Resolved from the
+  // history entry whose reportId matches the loaded section so the label
+  // matches the dropdown. Restores the title on unmount.
+  const titleHistoryEntry = useMemo(() => {
+    if (!byPeriodQ.data?.section?.reportId || !historyQ.data) return null;
+    return historyQ.data.find((h) => h.reportId === byPeriodQ.data.section.reportId) ?? null;
+  }, [byPeriodQ.data, historyQ.data]);
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (!titleHistoryEntry) return;
+    const start = titleHistoryEntry.periodStart;
+    const week = isoWeekNumber(start);
+    const range = formatDateRange(start, titleHistoryEntry.periodEnd);
+    const previous = document.title;
+    document.title = `Неделя ${week}, ${range} — CustomReport`;
+    return () => {
+      document.title = previous;
+    };
+  }, [titleHistoryEntry]);
 
   // Skeleton until all queries settle.
   if (
@@ -798,47 +869,47 @@ export function LeadForm({ period }: LeadFormProps) {
 
   function confirmRevoke() {
     setShowRevokeDialog(false);
-    if (!activeSectionId) return;
-    revokeMut.mutate({ reportSectionId: activeSectionId });
+    if (!sectionIdForActions) return;
+    revokeMut.mutate({ reportSectionId: sectionIdForActions });
   }
 
   function handleRequestReopen(reason: string | undefined) {
-    if (!activeSectionId) return;
+    if (!sectionIdForActions) return;
     requestReopenMut.mutate({
-      reportSectionId: activeSectionId,
+      reportSectionId: sectionIdForActions,
       ...(reason ? { reason } : {}),
     });
   }
 
   function handleFillFrom(sourceSectionId: string) {
-    if (!activeSectionId) return;
+    if (!sectionIdForActions) return;
     if (
       autosave.dirty &&
       !window.confirm('You have unsaved changes. Continue and overwrite?')
     ) {
       return;
     }
-    fillFromMut.mutate({ targetSectionId: activeSectionId, sourceSectionId });
+    fillFromMut.mutate({ targetSectionId: sectionIdForActions, sourceSectionId });
   }
 
   function handleRestoreVersion(version: number) {
-    if (!activeSectionId) return;
+    if (!sectionIdForActions) return;
     if (
       autosave.dirty &&
       !window.confirm('You have unsaved changes. Continue and overwrite?')
     ) {
       return;
     }
-    restoreMut.mutate({ reportSectionId: activeSectionId, version });
+    restoreMut.mutate({ reportSectionId: sectionIdForActions, version });
   }
 
   function handleSaveVersion() {
-    if (!activeSectionId) return;
+    if (!sectionIdForActions) return;
     isManualSaveRef.current = true;
     // Reset the auto-snapshot counter — the user just paid for an explicit
     // checkpoint, no need to spawn a silent one 10 saves later.
     autosaveCountRef.current = 0;
-    createSnapshotMut.mutate({ reportSectionId: activeSectionId });
+    createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
   }
 
   function handleToggleAll() {
@@ -973,14 +1044,22 @@ export function LeadForm({ period }: LeadFormProps) {
           </div>
         )}
 
-        {/* Read-only banner for past periods */}
-        {period && !isSubmitted && (
-          <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-muted)] p-4">
-            <span className="text-sm text-[var(--color-muted-foreground)]">
-              Viewing past period &middot; {period}. This form is read-only.
-            </span>
-          </div>
-        )}
+        {/* Read-only banner for past periods. Triggered by either the
+            legacy `?period=` query (back-compat) or — 35-07 — when the
+            page renders under a `[reportId]` segment that points at a
+            past report instead of the lead's active section. */}
+        {(period ||
+          (pinnedReportId &&
+            activeReportId &&
+            pinnedReportId !== activeReportId)) &&
+          !isSubmitted && (
+            <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-muted)] p-4">
+              <span className="text-sm text-[var(--color-muted-foreground)]">
+                Viewing past period
+                {period ? ` · ${period}` : ''}. This form is read-only.
+              </span>
+            </div>
+          )}
 
         <LeadFormSyncBridge.Provider
           products={products}
@@ -989,7 +1068,7 @@ export function LeadForm({ period }: LeadFormProps) {
           onRisksChange={handleRisksChange}
           readOnly={isReadOnly}
           stagesForProduct={stagesForProduct}
-          {...(activeSectionId ? { sectionId: activeSectionId } : {})}
+          {...(sectionIdForActions ? { sectionId: sectionIdForActions } : {})}
         >
           {/* Product Status (SDLC Pipeline) */}
           <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}

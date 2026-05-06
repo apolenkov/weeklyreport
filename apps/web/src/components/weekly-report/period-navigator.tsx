@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useRef, type TouchEvent as ReactTouchEvent } from 'react';
 
 import type { ReportPeriod } from '../dashboard/mock-data';
@@ -33,14 +33,24 @@ function ChevronRight() {
 
 export function HeadPeriodNavigator({ periods, basePath = '/head/report' }: PeriodNavigatorProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentPeriodParam = searchParams.get('period');
 
+  // 35-07: read the path-segment reportId so the dropdown reflects the
+  // addressed week even before the period dropdown carries query state.
+  const pathReportId = useMemo(() => {
+    if (!pathname) return null;
+    const match = pathname.match(/^\/head\/report\/([^/]+)$/);
+    return match ? match[1] : null;
+  }, [pathname]);
+
   const currentIndex = useMemo(() => {
-    if (!currentPeriodParam) return 0;
-    const idx = periods.findIndex((p) => p.id === currentPeriodParam);
+    const id = pathReportId ?? currentPeriodParam;
+    if (!id) return 0;
+    const idx = periods.findIndex((p) => p.id === id);
     return idx >= 0 ? idx : 0;
-  }, [currentPeriodParam, periods]);
+  }, [pathReportId, currentPeriodParam, periods]);
 
   const selectedPeriod = periods[currentIndex];
   const hasPrev = currentIndex < periods.length - 1;
@@ -48,20 +58,16 @@ export function HeadPeriodNavigator({ periods, basePath = '/head/report' }: Peri
 
   const navigateTo = useCallback(
     (periodId: string) => {
-      const period = periods.find((p) => p.id === periodId);
-      if (period?.isCurrent) {
-        // Current period -> live head report page (handles weeklyReport.get
-        // without a period filter; basePath is '/head/report' by default).
-        router.push(basePath);
-      } else {
-        // Past / archived period -> /reports/[reportId]. Per 21-04 SUMMARY
-        // (path "a"), the reportId-based query handles the data load. Period
-        // ids here are concrete report UUIDs surfaced by mapWeeklyReport
-        // (`view.period.id === api.reportId`).
-        router.push(`/reports/${periodId}`);
-      }
+      // 35-07: every period addressed via `/head/report/<reportId>`. Both
+      // current and past weeks now have shareable / bookmarkable URLs;
+      // `router.push` (not replace) so the browser back button walks the
+      // history of viewed weeks. The previous current/past split routed
+      // past periods through `/reports/[reportId]` — that surface still
+      // exists for the published-archive flow, but in-page navigation
+      // sticks with the head-report URL family.
+      router.push(`${basePath}/${periodId}`);
     },
-    [router, periods, basePath],
+    [router, basePath],
   );
 
   function handlePrev() {

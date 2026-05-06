@@ -54,13 +54,10 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 /**
  * Resolve the click-through URL for a search hit.
  *
- * Spec ambiguity (intentionally documented): the user asked for click →
- * navigate to source. Items/risks/decisions live inside a submitted
- * historical report; the existing route shape is `/lead/report` with a
- * `?period=<reportId>` query param (UX-15 plan to migrate to
- * `/lead/report/[reportId]` is still open). Until that migration lands we
- * navigate to `/lead/report?period=<reportId>#<sectionId>`. Project hits
- * deep-link to /admin?tab=products with a filter query param.
+ * Phase 35-07 (UX-15) closed the migration: items/risks/decisions now
+ * deep-link into the addressed lead form `/lead/report/<reportId>` with
+ * the section anchor. Project hits deep-link to /admin?tab=products with
+ * a filter query param.
  */
 function targetUrlFor(hit: SearchHit): string {
   if (hit.type === 'project') {
@@ -68,7 +65,7 @@ function targetUrlFor(hit: SearchHit): string {
   }
   if (hit.reportId) {
     const anchor = hit.reportSectionId ? `#section-${hit.reportSectionId}` : '';
-    return `/lead/report?period=${hit.reportId}${anchor}`;
+    return `/lead/report/${hit.reportId}${anchor}`;
   }
   return '#';
 }

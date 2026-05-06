@@ -6,6 +6,17 @@ type Props = {
   searchParams: Promise<{ period?: string }>;
 };
 
+/**
+ * Bare `/lead/report` route. Phase 35-07 introduces the addressed form
+ * `/lead/report/[reportId]` (UX-15). This page is preserved for back-compat:
+ * legacy bookmarks / email links still land here, and the form will redirect
+ * (client-side `router.replace`) to the canonical URL once the active
+ * reportId is known. The redirect is suppressed when `?period=...` is
+ * present so old read-only links keep working unchanged.
+ *
+ * If the user has no active report (server returns null), the form
+ * surfaces its existing empty / skeleton state — no hard redirect.
+ */
 export default async function LeadReportPage({ searchParams }: Props) {
   const { period } = await searchParams;
 
@@ -21,7 +32,7 @@ export default async function LeadReportPage({ searchParams }: Props) {
             </div>
           }
         >
-          <LeadForm period={period} />
+          <LeadForm period={period} redirectToCanonical />
         </Suspense>
       </div>
     </main>
