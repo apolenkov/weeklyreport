@@ -413,7 +413,7 @@ Full details: [v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md) and [v8.0-REQUIREMEN
 **Plans**: 4
 - [x] 38-01-PLAN.md — Prod migration init-container (INF-01)
 - [x] 38-02-PLAN.md — Caddy reverse-proxy + auto-TLS (INF-02)
-- [ ] 38-03-PLAN.md — SAML hardening docs + samlify-mock test (INF-03)
+- [x] 38-03-PLAN.md — SAML hardening docs + samlify-mock test (INF-03)
 - [x] 38-04-PLAN.md — RUNBOOK + INCIDENT-PLAYBOOK (INF-04)
 
 ### Phase 39: Performance
