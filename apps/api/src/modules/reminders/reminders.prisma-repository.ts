@@ -271,10 +271,18 @@ export class RemindersPrismaRepository implements RemindersRepository {
   }
 
   async listExecutions(ruleId: string): Promise<AdminReminderExecution[]> {
+    // FIX-03 (Phase 35-08): explicit LIMIT 100 on the admin "executions"
+    // listing. Without it Prisma issues `... ORDER BY createdAt DESC OFFSET $1`
+    // with no upper bound, which a) trips the slow-query log on growing
+    // tables and b) loads more rows into memory than the UI ever paginates
+    // through (admin reminder page caps at 20 per page; 100 covers ~5 pages
+    // of cursor-based scroll). The router still applies cursor pagination
+    // on top of this slice via RemindersService.listExecutions.
     const executions = await this.prisma.reminderExecution.findMany({
       where: { ruleId },
       include: { rule: true },
       orderBy: { createdAt: 'desc' },
+      take: 100,
     });
 
     return executions.map(toExecutionDomain);

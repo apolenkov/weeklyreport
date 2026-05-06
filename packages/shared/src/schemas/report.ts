@@ -126,6 +126,40 @@ export const submissionDashboardRowSchema = z.object({
   submittedAt: z.coerce.date().nullable(),
 });
 
+/**
+ * UX-18 (Phase 35-08): row shape for the head/admin "Активность за текущий
+ * период" panel. One row per lead's section in the open report period;
+ * `lastEditAt` is the most-recent updatedAt across the section's rows
+ * (items + risks + decisions + priorities). Polled every 15s on the
+ * dashboard.
+ */
+export const activityLiveRowSchema = z.object({
+  reportId: z.string().uuid(),
+  reportSectionId: z.string().uuid().nullable(),
+  leadId: z.string().uuid(),
+  leadName: z.string().min(1),
+  email: z.string().email(),
+  status: reportSectionStatusSchema,
+  itemCount: z.number().int().min(0),
+  riskCount: z.number().int().min(0),
+  decisionCount: z.number().int().min(0),
+  priorityCount: z.number().int().min(0),
+  lastEditAt: z.coerce.date().nullable(),
+  submittedAt: z.coerce.date().nullable(),
+});
+
+export type ActivityLiveRow = z.infer<typeof activityLiveRowSchema>;
+
+export const activityLiveResponseSchema = z.object({
+  reportId: z.string().uuid().nullable(),
+  periodStart: reportDate().nullable(),
+  periodEnd: reportDate().nullable(),
+  periodStatus: periodStatusSchema.nullable(),
+  rows: z.array(activityLiveRowSchema),
+});
+
+export type ActivityLiveResponse = z.infer<typeof activityLiveResponseSchema>;
+
 export const portfolioOverviewSchema = z.object({
   status: trafficLightStatusSchema,
   totals: z.object({

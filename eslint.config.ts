@@ -11,6 +11,13 @@ export default defineConfig([
     '**/coverage/**',
     '**/.turbo/**',
     '**/prisma/generated/**',
+    // Phase 35-08: prisma/seed*.ts run via `tsx` and aren't part of
+    // any tsconfig project graph, so eslint's `projectService`
+    // can't parse them. Excluded so lint-staged doesn't choke on
+    // every seed-touching commit; the scripts validate at run time.
+    'prisma/seed.ts',
+    'prisma/seed-simple.ts',
+    'prisma/seed-constants.ts',
     '**/e2e/**',
   ]),
   {

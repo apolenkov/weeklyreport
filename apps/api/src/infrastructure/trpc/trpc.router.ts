@@ -46,6 +46,7 @@ import {
   SearchAuthorizationError,
   type SearchService,
 } from '../../modules/search/search.service.js';
+import type { ActivityService } from '../../modules/activity/activity.service.js';
 import {
   assertCanReadReport,
   assertCanReadRisk,
@@ -83,6 +84,13 @@ type RouterDeps = {
    * scope via SearchAuthorizationError → FORBIDDEN.
    */
   searchService: SearchService;
+  /**
+   * UX-18 (Phase 35-08): live activity feed for the head/admin dashboard
+   * "Активность за текущий период" panel. One row per lead's section in
+   * the open period, with section-level counts + last-edit timestamp.
+   * Polled every 15s by the dashboard.
+   */
+  activityService: ActivityService;
   /**
    * NOTIF-06 (Phase 29-05): read-only BullMQ Queue handle used by
    * `admin.dlqCount` to surface failed-job count. Optional so existing test
@@ -915,6 +923,20 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+    }),
+
+    // === Activity namespace (UX-18, Phase 35-08) ===
+    // Live activity feed for the head/admin dashboard "Активность за
+    // текущий период" panel. headProcedure — only heads (and admins,
+    // aliased) consume the per-lead status snapshot.
+    activity: router({
+      live: headProcedure.query(async () => {
+        try {
+          return await deps.activityService.getLiveActivity();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
     }),
 
     // === AI Insights namespace (Phase 31 — AI-01/02/03) ===

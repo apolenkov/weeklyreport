@@ -52,45 +52,50 @@ export const SEED_USERS: readonly SeedUser[] = [
     role: 'viewer',
     samlId: 'viewer-1',
   },
+  // Phase 35-08: lead names switched to RU Cyrillic so the dashboard +
+  // forms match the rest of the demo content. Tests that pin against the
+  // legacy "Polenkov A." style strings have been updated alongside the
+  // seed (see /Users/ap/work/customreport/.planning/phases/35-ux-polish/
+  // 35-08-SUMMARY.md for the full RU sweep).
   {
     id: 'a0000000-0000-4000-8000-000000000011',
     email: 'polenkov@customreport.local',
-    name: 'Polenkov A.',
+    name: 'Поленков А.',
     role: 'lead',
     samlId: 'lead-polenkov',
   },
   {
     id: 'a0000000-0000-4000-8000-000000000012',
     email: 'maria@customreport.local',
-    name: 'Maria K.',
+    name: 'Мария К.',
     role: 'lead',
     samlId: 'lead-maria',
   },
   {
     id: 'a0000000-0000-4000-8000-000000000013',
     email: 'igor@customreport.local',
-    name: 'Igor V.',
+    name: 'Игорь В.',
     role: 'lead',
     samlId: 'lead-igor',
   },
   {
     id: 'a0000000-0000-4000-8000-000000000014',
     email: 'dmitry@customreport.local',
-    name: 'Dmitry S.',
+    name: 'Дмитрий С.',
     role: 'lead',
     samlId: 'lead-dmitry',
   },
   {
     id: 'a0000000-0000-4000-8000-000000000015',
     email: 'olga@customreport.local',
-    name: 'Olga N.',
+    name: 'Ольга Н.',
     role: 'lead',
     samlId: 'lead-olga',
   },
   {
     id: 'a0000000-0000-4000-8000-000000000016',
     email: 'sergey@customreport.local',
-    name: 'Sergey T.',
+    name: 'Сергей Т.',
     role: 'lead',
     samlId: 'lead-sergey',
   },
@@ -117,19 +122,22 @@ export type SeedProduct = {
  * canonical product set — admin/dashboard mocks diverge from this list
  * and will be reconciled in Phase 21).
  */
+// Phase 35-08: product names switched to RU Cyrillic for the demo. The
+// IDs and lead assignments are unchanged so existing tests + UUID-keyed
+// fixtures keep working.
 export const SEED_PRODUCTS: readonly SeedProduct[] = [
-  { id: 'a0000000-0000-4000-8000-000000000201', name: 'CRM Platform', leadId: LEAD_POLENKOV_ID },
-  { id: 'a0000000-0000-4000-8000-000000000202', name: 'Data Analytics Suite', leadId: LEAD_POLENKOV_ID },
-  { id: 'a0000000-0000-4000-8000-000000000203', name: 'Mobile Banking App', leadId: LEAD_MARIA_ID },
-  { id: 'a0000000-0000-4000-8000-000000000204', name: 'E-Commerce Platform', leadId: LEAD_MARIA_ID },
-  { id: 'a0000000-0000-4000-8000-000000000205', name: 'Cloud Infrastructure', leadId: LEAD_IGOR_ID },
-  { id: 'a0000000-0000-4000-8000-000000000206', name: 'AI/ML Pipeline', leadId: LEAD_IGOR_ID },
-  { id: 'a0000000-0000-4000-8000-000000000207', name: 'DevOps Toolkit', leadId: LEAD_DMITRY_ID },
-  { id: 'a0000000-0000-4000-8000-000000000208', name: 'Security Gateway', leadId: LEAD_DMITRY_ID },
-  { id: 'a0000000-0000-4000-8000-000000000209', name: 'Payment Processing', leadId: LEAD_OLGA_ID },
-  { id: 'a0000000-0000-4000-8000-00000000020a', name: 'Partner Portal', leadId: LEAD_OLGA_ID },
-  { id: 'a0000000-0000-4000-8000-00000000020b', name: 'HR Management System', leadId: LEAD_SERGEY_ID },
-  { id: 'a0000000-0000-4000-8000-00000000020c', name: 'Inventory Tracker', leadId: LEAD_SERGEY_ID },
+  { id: 'a0000000-0000-4000-8000-000000000201', name: 'Маркетинговый портал', leadId: LEAD_POLENKOV_ID },
+  { id: 'a0000000-0000-4000-8000-000000000202', name: 'Аналитический хаб', leadId: LEAD_POLENKOV_ID },
+  { id: 'a0000000-0000-4000-8000-000000000203', name: 'Платформа интеграций', leadId: LEAD_MARIA_ID },
+  { id: 'a0000000-0000-4000-8000-000000000204', name: 'Платформа e-commerce', leadId: LEAD_MARIA_ID },
+  { id: 'a0000000-0000-4000-8000-000000000205', name: 'Внутренний BI', leadId: LEAD_IGOR_ID },
+  { id: 'a0000000-0000-4000-8000-000000000206', name: 'AI/ML конвейер', leadId: LEAD_IGOR_ID },
+  { id: 'a0000000-0000-4000-8000-000000000207', name: 'DevOps-инструменты', leadId: LEAD_DMITRY_ID },
+  { id: 'a0000000-0000-4000-8000-000000000208', name: 'Шлюз безопасности', leadId: LEAD_DMITRY_ID },
+  { id: 'a0000000-0000-4000-8000-000000000209', name: 'Платёжный шлюз', leadId: LEAD_OLGA_ID },
+  { id: 'a0000000-0000-4000-8000-00000000020a', name: 'Партнёрский портал', leadId: LEAD_OLGA_ID },
+  { id: 'a0000000-0000-4000-8000-00000000020b', name: 'HR-система', leadId: LEAD_SERGEY_ID },
+  { id: 'a0000000-0000-4000-8000-00000000020c', name: 'Учёт ресурсов', leadId: LEAD_SERGEY_ID },
 ] as const;
 
 export type SeedStage = {

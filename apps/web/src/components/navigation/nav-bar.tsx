@@ -27,10 +27,14 @@ type NavLink = {
 
 const NAV_LINKS: ReadonlyArray<NavLink> = [
   { href: '/lead/report', label: 'Мой отчёт', roles: ['lead'] },
-  { href: '/lead/history', label: 'Моя история', roles: ['lead'] },
+  // UX-17 (Phase 35-08): "Моя история" + legacy "Архив" merged into a single
+  // /reports page with role-default tabs. The lead-specific link still
+  // exists in the nav but now drops into the "Мои черновики" tab; the
+  // role-shared "Архив" link uses the same URL with the published tab.
+  { href: '/reports?tab=drafts', label: 'Моя история', roles: ['lead'] },
   { href: '/head/dashboard', label: 'Дашборд', roles: ['head', 'admin'] },
   { href: '/head/report', label: 'Сводка', roles: ['head', 'admin'] },
-  { href: '/reports/history', label: 'Архив', roles: ['lead', 'head', 'admin', 'viewer'] },
+  { href: '/reports?tab=published', label: 'Архив', roles: ['lead', 'head', 'admin', 'viewer'] },
   { href: '/admin', label: 'Админка', roles: ['head', 'admin'] },
 ];
 
@@ -54,6 +58,10 @@ function isActiveLink(pathname: string, href: string): boolean {
   if (href === '/admin') return pathname.startsWith('/admin');
   if (href === '/head/report') return pathname === '/head/report';
   if (href === '/head/dashboard') return pathname === '/head/dashboard';
+  // UX-17: tab-bearing /reports links activate when the path is /reports
+  // (the tab query param is the only differentiator). Match both
+  // /reports/foo entries on prefix.
+  if (href.startsWith('/reports?')) return pathname === '/reports' || pathname.startsWith('/reports/');
   return pathname.startsWith(href);
 }
 
@@ -63,7 +71,9 @@ function getLogoHref(role: Role): string {
     case 'head':
       return '/head/dashboard';
     case 'viewer':
-      return '/reports/history';
+      // UX-17 (Phase 35-08): merged reports page; viewer default is the
+      // published archive tab.
+      return '/reports?tab=published';
     case 'lead':
     default:
       return '/lead/report';
@@ -104,7 +114,8 @@ function NavIcon({ href }: { readonly href: string }) {
         </svg>
       );
     case '/lead/history':
-      // clock — "History"
+    case '/reports?tab=drafts':
+      // clock — "Моя история"
       return (
         <svg {...common}>
           <circle cx="12" cy="12" r="10" />
@@ -133,7 +144,8 @@ function NavIcon({ href }: { readonly href: string }) {
         </svg>
       );
     case '/reports/history':
-      // folder/archive — "Published reports"
+    case '/reports?tab=published':
+      // folder/archive — "Архив"
       return (
         <svg {...common}>
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />

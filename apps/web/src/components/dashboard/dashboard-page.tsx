@@ -14,6 +14,7 @@ import { LeadReportsGrid } from './lead-reports-grid';
 import { ReportArchiveSection } from './report-archive-section';
 import { ToggleAllButton } from './toggle-all-button';
 import { DashboardSkeleton } from './dashboard-skeleton';
+import { ActivityLivePanel } from './activity-live-panel';
 
 export function DashboardPage() {
   const trpc = useTRPC();
@@ -117,6 +118,11 @@ export function DashboardPage() {
           </a>
         </div>
       </header>
+
+      {/* UX-18 (Phase 35-08): live activity feed at the top of the
+          dashboard so head/admin sees who's already filed and who hasn't
+          without drilling into every section. */}
+      <ActivityLivePanel />
 
       {/* KPI Cards */}
       <KpiCards data={kpi} />
