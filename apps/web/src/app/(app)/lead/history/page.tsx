@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { LeadHistoryList } from '../../../../components/lead/lead-history-list';
 import { LeadHistorySidebar } from '../../../../components/lead/lead-history-sidebar';
 import { LeadHistorySkeleton } from '../../../../components/lead/lead-history-skeleton';
+import { SearchInput } from '../../../../components/search/search-input';
 import { mapHistoryEntries } from '../../../../lib/mappers';
 import { useTRPC } from '../../../../lib/trpc-context';
 
@@ -78,7 +79,15 @@ export default function LeadHistoryPage() {
                   </div>
                 )}
               </div>
-              <LeadHistorySidebar entries={entries} />
+              {/* 39-05 (PERF-05): search lives at the top of the sidebar
+                  above the existing overview/pattern cards. scope='mine'
+                  filters to rows the lead authored; the dropdown deep-links
+                  to the source report. On mobile (< lg breakpoint) the
+                  sidebar wraps below the list and the search is full-width. */}
+              <div className="space-y-4">
+                <SearchInput scope="mine" placeholder="Поиск по моим отчётам…" />
+                <LeadHistorySidebar entries={entries} />
+              </div>
             </div>
           )}
         </div>

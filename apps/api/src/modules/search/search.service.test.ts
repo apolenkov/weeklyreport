@@ -1,0 +1,244 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import type { SearchHit } from '@customreport/shared';
+
+import {
+  SearchAuthorizationError,
+  SearchService,
+  type SearchRepository,
+} from './search.service.js';
+
+const userId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const otherUserId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const reportId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const sectionId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const projectId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+const itemId = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+const riskId = '11111111-1111-4111-8111-111111111111';
+const decisionId = '22222222-2222-4222-8222-222222222222';
+
+function makeHit(overrides: Partial<SearchHit> = {}): SearchHit {
+  return {
+    type: 'item',
+    id: itemId,
+    title: 'release blocker',
+    snippet: 'release <<blocker>>',
+    rank: 0.5,
+    projectId,
+    reportId,
+    reportSectionId: sectionId,
+    createdAt: '2026-05-06T08:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function createRepository(handler: (params: {
+  q: string;
+  scope: 'mine' | 'all';
+  userId: string;
+  limit: number;
+}) => SearchHit[]): SearchRepository {
+  return {
+    async search(params) {
+      return handler(params);
+    },
+  };
+}
+
+describe('SearchService', () => {
+  it('returns matching items for a 2-char query (the spec floor)', async () => {
+    const repo = createRepository(({ q }) => {
+      expect(q).toBe('PR');
+      return [makeHit({ title: 'PR review' })];
+    });
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: 'PR', scope: 'mine', limit: 20 },
+      { userId, role: 'lead' },
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.title).toBe('PR review');
+  });
+
+  it('rejects scope="all" for lead role with SearchAuthorizationError', async () => {
+    const spy = vi.fn(() => [] as SearchHit[]);
+    const service = new SearchService(createRepository(spy));
+
+    await expect(
+      service.query(
+        { q: 'release', scope: 'all', limit: 20 },
+        { userId, role: 'lead' },
+      ),
+    ).rejects.toBeInstanceOf(SearchAuthorizationError);
+
+    // Repository must NOT have been called — auth gate is upstream.
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('rejects scope="all" for viewer role', async () => {
+    const service = new SearchService(createRepository(() => []));
+
+    await expect(
+      service.query(
+        { q: 'release', scope: 'all', limit: 20 },
+        { userId, role: 'viewer' },
+      ),
+    ).rejects.toBeInstanceOf(SearchAuthorizationError);
+  });
+
+  it('allows scope="all" for head role', async () => {
+    const repo = createRepository(({ scope }) => {
+      expect(scope).toBe('all');
+      return [makeHit()];
+    });
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: 'release', scope: 'all', limit: 20 },
+      { userId, role: 'head' },
+    );
+
+    expect(result).toHaveLength(1);
+  });
+
+  it('allows scope="all" for admin role', async () => {
+    const repo = createRepository(({ scope }) => {
+      expect(scope).toBe('all');
+      return [makeHit()];
+    });
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: 'release', scope: 'all', limit: 20 },
+      { userId: otherUserId, role: 'admin' },
+    );
+
+    expect(result).toHaveLength(1);
+  });
+
+  it('forwards userId to the repository for scope="mine"', async () => {
+    const repo = createRepository((params) => {
+      expect(params.userId).toBe(userId);
+      expect(params.scope).toBe('mine');
+      return [];
+    });
+    const service = new SearchService(repo);
+
+    await service.query(
+      { q: 'release', scope: 'mine', limit: 20 },
+      { userId, role: 'lead' },
+    );
+  });
+
+  it('returns empty array when repository finds nothing', async () => {
+    const service = new SearchService(createRepository(() => []));
+
+    const result = await service.query(
+      { q: 'unmatched', scope: 'mine', limit: 20 },
+      { userId, role: 'lead' },
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('orders results by rank descending', async () => {
+    const repo = createRepository(() => [
+      makeHit({ id: itemId, rank: 0.1, title: 'low' }),
+      makeHit({
+        id: riskId,
+        type: 'risk',
+        rank: 0.9,
+        title: 'high',
+        createdAt: '2026-05-06T07:00:00.000Z',
+      }),
+      makeHit({
+        id: decisionId,
+        type: 'decision',
+        rank: 0.5,
+        title: 'mid',
+        createdAt: '2026-05-06T06:00:00.000Z',
+      }),
+    ]);
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: 'rel', scope: 'mine', limit: 20 },
+      { userId, role: 'lead' },
+    );
+
+    expect(result.map((r) => r.title)).toEqual(['high', 'mid', 'low']);
+  });
+
+  it('uses createdAt desc as a tie-breaker when rank is equal', async () => {
+    const repo = createRepository(() => [
+      makeHit({
+        id: itemId,
+        rank: 0.5,
+        title: 'older',
+        createdAt: '2026-05-04T00:00:00.000Z',
+      }),
+      makeHit({
+        id: riskId,
+        type: 'risk',
+        rank: 0.5,
+        title: 'newer',
+        createdAt: '2026-05-06T00:00:00.000Z',
+      }),
+    ]);
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: 'rel', scope: 'mine', limit: 20 },
+      { userId, role: 'lead' },
+    );
+
+    expect(result.map((r) => r.title)).toEqual(['newer', 'older']);
+  });
+
+  it('applies the requested limit even when the repo returns more rows', async () => {
+    const repo = createRepository(() =>
+      Array.from({ length: 30 }, (_, idx) =>
+        // Decreasing rank so the limit cuts the lowest-ranked rows.
+        makeHit({
+          id: `${itemId.slice(0, -2)}${idx.toString(16).padStart(2, '0')}`,
+          rank: 1 - idx / 100,
+          title: `hit-${idx}`,
+        }),
+      ),
+    );
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: 'foo', scope: 'mine', limit: 5 },
+      { userId, role: 'lead' },
+    );
+
+    expect(result).toHaveLength(5);
+    expect(result[0]?.title).toBe('hit-0');
+    expect(result[4]?.title).toBe('hit-4');
+  });
+
+  it('rejects q shorter than 2 characters via Zod', async () => {
+    const service = new SearchService(createRepository(() => []));
+
+    await expect(
+      service.query(
+        { q: 'a', scope: 'mine', limit: 20 },
+        { userId, role: 'lead' },
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('rejects q longer than 200 characters via Zod', async () => {
+    const service = new SearchService(createRepository(() => []));
+
+    await expect(
+      service.query(
+        { q: 'x'.repeat(201), scope: 'mine', limit: 20 },
+        { userId, role: 'lead' },
+      ),
+    ).rejects.toThrow();
+  });
+});

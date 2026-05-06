@@ -108,6 +108,11 @@ model Project {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
+  // 39-05 (PERF-05): generated tsvector for full-text search across `name`.
+  // Read-only from Prisma's perspective — populated by the GENERATED ALWAYS
+  // expression in the database. Indexed via GIN in the same migration.
+  searchTsv        Unsupported("tsvector")?
+
   // 39-03: admin Products tab filters by archived; lead-form looks up by lead.
   @@index([leadId])
   @@index([archived])
@@ -194,6 +199,9 @@ model Item {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
+  // 39-05 (PERF-05): generated tsvector for full-text search across `text`.
+  searchTsv       Unsupported("tsvector")?
+
   // 39-03: hot-path FK indexes — Item.findMany({where:{reportSectionId}})
   // is the dominant access pattern for lead-form rendering.
   @@index([reportSectionId])
@@ -212,6 +220,10 @@ model Risk {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  // 39-05 (PERF-05): generated tsvector concatenating risk + impact +
+  // mitigation so a single FTS hit surfaces the row.
+  searchTsv       Unsupported("tsvector")?
+
   // 39-03: same hot-path as Item — risks load per section.
   @@index([reportSectionId])
   @@index([projectId])
@@ -228,6 +240,9 @@ model Decision {
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  // 39-05 (PERF-05): generated tsvector for full-text search across `text`.
+  searchTsv       Unsupported("tsvector")?
 
   @@index([reportSectionId])
 }
