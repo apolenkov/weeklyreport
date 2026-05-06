@@ -57,6 +57,12 @@ function createMockJob(data: EmailReminderJobData): Job<EmailReminderJobData> {
   return { data } as Job<EmailReminderJobData>;
 }
 
+// Test seam — `processJob` is `private` on the class, but tests need to invoke
+// it directly. Cast through this interface to call without `as any`.
+type ProcessorTestSeam = {
+  processJob(job: Job<EmailReminderJobData>): Promise<void>;
+};
+
 const defaultJobData: EmailReminderJobData = {
   executionId: 'exec-1',
   recipientEmail: 'lead@test.com',
@@ -81,7 +87,7 @@ describe('EmailReminderProcessor.processJob', () => {
     );
     const job = createMockJob(defaultJobData);
 
-    await (processor as any).processJob(job);
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     expect(mockEmail.sendMail).toHaveBeenCalledWith(
       'lead@test.com',
@@ -99,7 +105,7 @@ describe('EmailReminderProcessor.processJob', () => {
     );
     const job = createMockJob(defaultJobData);
 
-    await (processor as any).processJob(job);
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     expect(mockReminders.markReminderSent).toHaveBeenCalledWith('exec-1');
   });
@@ -115,7 +121,7 @@ describe('EmailReminderProcessor.processJob', () => {
     );
     const job = createMockJob(defaultJobData);
 
-    await expect((processor as any).processJob(job)).rejects.toThrow(
+    await expect((processor as unknown as ProcessorTestSeam).processJob(job)).rejects.toThrow(
       'SMTP connection refused',
     );
 

@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: 22/30 (73% — kickoff 2026-05-05)
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: 24/30 (80% — kickoff 2026-05-05)
 
 ---
 
@@ -379,7 +379,7 @@ Full details: [v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md) and [v8.0-REQUIREMEN
 - [x] 34-03-PLAN.md — DOM-walker + mutation-audit CI gate (Q-03)
 - [x] 34-04-PLAN.md — Prisma migrate-reset CI gate (Q-04)
 - [x] 34-05-PLAN.md — TypeScript residual error rollup (Q-05)
-- [ ] 34-06-PLAN.md — ESLint warning sweep ~272→0 (Q-06)
+- [x] 34-06-PLAN.md — ESLint warning sweep ~329→0/0/0/0 (Q-06)
 - [x] 34-07-PLAN.md — push-guard helper + flaky-rate CI metric (Q-07)
 
 ### Phase 35: UX Polish

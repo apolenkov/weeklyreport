@@ -109,14 +109,19 @@ export class RemindersPrismaRepository implements RemindersRepository {
     const due: DueDeadlineRule[] = [];
     for (const rule of rules) {
       if (!rule.report) continue;
-      const recipients = rule.report.sections
-        .filter((s) => s.author !== null)
-        .map((s) => ({
-          userId: s.author!.id,
-          email: s.author!.email,
-          name: s.author!.name,
-          notificationOptOut: s.author!.notificationOptOut,
-        }));
+      const recipients = rule.report.sections.flatMap((s) => {
+        // Filter + map in one pass so TS narrows `s.author` to non-null
+        // inside the closure without a separate non-null assertion.
+        if (s.author === null) return [];
+        return [
+          {
+            userId: s.author.id,
+            email: s.author.email,
+            name: s.author.name,
+            notificationOptOut: s.author.notificationOptOut,
+          },
+        ];
+      });
       if (recipients.length === 0) continue;
       due.push({
         id: rule.id,
@@ -176,15 +181,19 @@ export class RemindersPrismaRepository implements RemindersRepository {
     const due: DueEscalationRule[] = [];
     for (const rule of rules) {
       if (!rule.report) continue;
-      const head = rule.report.publishedBy;
+      const report = rule.report;
+      const head = report.publishedBy;
       if (!head) continue;
-      const lateLeads = rule.report.sections
-        .filter((s) => s.author !== null)
-        .map((s) => ({
-          leadName: s.author!.name,
-          sectionTitle: `Report ${rule.report!.id} section`,
-          deadlineIso: rule.report!.deadline.toISOString(),
-        }));
+      const lateLeads = report.sections.flatMap((s) => {
+        if (s.author === null) return [];
+        return [
+          {
+            leadName: s.author.name,
+            sectionTitle: `Report ${report.id} section`,
+            deadlineIso: report.deadline.toISOString(),
+          },
+        ];
+      });
       if (lateLeads.length === 0) continue;
       due.push({
         id: rule.id,

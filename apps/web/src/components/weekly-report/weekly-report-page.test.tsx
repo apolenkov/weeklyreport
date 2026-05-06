@@ -51,6 +51,7 @@ import {
   invalidateLeadHistory,
 } from '../../lib/cache-keys';
 import { WeeklyReportPage } from './weekly-report-page';
+import { expectDefined } from '../../test/expect-defined.js';
 
 const REPORT_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -225,7 +226,7 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     // Confirm in the dialog.
     const dialog = await screen.findByRole('dialog', { name: /confirm publish/i });
     const buttons = dialog.querySelectorAll('button');
-    await userEvent.click(buttons[buttons.length - 1]!);
+    await userEvent.click(expectDefined(buttons[buttons.length - 1]));
 
     await waitFor(() => {
       expect(captured.publishMutationFn).toHaveBeenCalledTimes(1);
@@ -250,7 +251,7 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     // the test from internal react-query timing while still exercising the user code.
     expect(captured.publishOptions?.onSuccess).toBeTypeOf('function');
     act(() => {
-      captured.publishOptions!.onSuccess!();
+      expectDefined(expectDefined(captured.publishOptions).onSuccess)();
     });
 
     expect(invalidateDashboard).toHaveBeenCalled();
@@ -270,7 +271,7 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
 
     expect(captured.publishOptions?.onError).toBeTypeOf('function');
     act(() => {
-      captured.publishOptions!.onError!(new Error('Forbidden'));
+      expectDefined(expectDefined(captured.publishOptions).onError)(new Error('Forbidden'));
     });
 
     expect(toastError).toHaveBeenCalled();
@@ -312,7 +313,7 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
 
     expect(captured.reopenOptions?.onSuccess).toBeTypeOf('function');
     act(() => {
-      captured.reopenOptions!.onSuccess!();
+      expectDefined(expectDefined(captured.reopenOptions).onSuccess)();
     });
 
     expect(invalidateDashboard).toHaveBeenCalled();

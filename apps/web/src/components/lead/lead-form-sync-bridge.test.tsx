@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import { LeadFormSyncBridge } from './lead-form-sync-bridge';
 import type { Product, RiskEntry } from './mock-data';
+import { expectDefined } from '../../test/expect-defined.js';
 
 function buildProduct(overrides?: Partial<Product>): Product {
   return {
@@ -111,8 +112,8 @@ describe('LeadFormSyncBridge', () => {
     await user.click(atRiskOption);
 
     expect(onProductsChangeSpy).toHaveBeenCalled();
-    const lastProductsCall = onProductsChangeSpy.mock.calls.at(-1)![0]!;
-    const dev = lastProductsCall[0]!.stages.find((s) => s.stageName === 'Dev');
+    const lastProductsCall = expectDefined(expectDefined(onProductsChangeSpy.mock.calls.at(-1))[0]);
+    const dev = expectDefined(lastProductsCall[0]).stages.find((s) => s.stageName === 'Dev');
     expect(dev?.status).toBe('at-risk');
   });
 

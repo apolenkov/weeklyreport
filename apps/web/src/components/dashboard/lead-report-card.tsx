@@ -7,10 +7,18 @@ type LeadReportCardProps = {
   readonly lead: LeadInfo;
 };
 
-const STATUS_CONFIG: Record<
-  string,
-  { bg: string; text: string; label: string; avatarBg: string; avatarText: string }
-> = {
+type StatusConfig = {
+  bg: string;
+  text: string;
+  label: string;
+  avatarBg: string;
+  avatarText: string;
+};
+
+// Typed as `satisfies` so each known key is provably non-undefined; lookups
+// by `lead.status` (untyped string) still narrow to `StatusConfig | undefined`,
+// which is what the `?? STATUS_CONFIG.pending` fallback was always for.
+const STATUS_CONFIG = {
   submitted: {
     bg: 'var(--color-success)',
     text: 'var(--color-primary)',
@@ -32,7 +40,7 @@ const STATUS_CONFIG: Record<
     avatarBg: 'var(--color-border)',
     avatarText: 'var(--color-muted-foreground)',
   },
-};
+} as const satisfies Record<string, StatusConfig>;
 
 // DASH-3 (Phase 33-04): at-risk now uses saturated `#d4a017` (mockup `.td-y`)
 // so the white text reads. The previous pastel `#fef3c7` made the dot literally
@@ -100,7 +108,9 @@ function LockIcon() {
  */
 export function LeadReportCard({ lead }: LeadReportCardProps) {
   const { user } = useSession();
-  const config = STATUS_CONFIG[lead.status] ?? STATUS_CONFIG.pending!;
+  const config =
+    (STATUS_CONFIG as Record<string, StatusConfig>)[lead.status] ??
+    STATUS_CONFIG.pending;
   const isCurrentUser = lead.isCurrentUser;
   const isPending = lead.status === 'pending';
   // Lead-role viewer = lock on other rows; head/admin = chevron (drill-down).

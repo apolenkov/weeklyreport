@@ -16,6 +16,7 @@ import {
   ArchiveService,
   type ArchiveRepository,
 } from './archive.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 // ---------------------------------------------------------------------------
 // Fixture data
@@ -176,9 +177,9 @@ describe('ArchiveService — contract tests', () => {
       const reports = result.items;
 
       expect(reports).toHaveLength(3);
-      expect(reports[0]!.reportId).toBe(newest.reportId);
-      expect(reports[1]!.reportId).toBe(middle.reportId);
-      expect(reports[2]!.reportId).toBe(oldest.reportId);
+      expect(expectDefined(reports[0]).reportId).toBe(newest.reportId);
+      expect(expectDefined(reports[1]).reportId).toBe(middle.reportId);
+      expect(expectDefined(reports[2]).reportId).toBe(oldest.reportId);
     });
 
     it('validates output through Zod schema (rejects malformed data)', async () => {
@@ -223,8 +224,8 @@ describe('ArchiveService — contract tests', () => {
       const reports = result.items;
 
       expect(reports).toHaveLength(1);
-      expect(reports[0]!.reportId).toBe(single.reportId);
-      expect(reports[0]!.publishedByName).toBe('Department Head');
+      expect(expectDefined(reports[0]).reportId).toBe(single.reportId);
+      expect(expectDefined(reports[0]).publishedByName).toBe('Department Head');
     });
 
     it('handles many reports (5+)', async () => {
@@ -253,8 +254,8 @@ describe('ArchiveService — contract tests', () => {
       expect(reports).toHaveLength(7);
       // Verify descending sort
       for (let i = 0; i < reports.length - 1; i++) {
-        expect(reports[i]!.publishedAt.getTime()).toBeGreaterThanOrEqual(
-          reports[i + 1]!.publishedAt.getTime(),
+        expect(expectDefined(reports[i]).publishedAt.getTime()).toBeGreaterThanOrEqual(
+          expectDefined(reports[i + 1]).publishedAt.getTime(),
         );
       }
     });
@@ -376,17 +377,17 @@ describe('ArchiveService — contract tests', () => {
 
       expect(result.report.sections).toHaveLength(1);
 
-      const section = result.report.sections[0]!;
+      const section = expectDefined(result.report.sections[0]);
       expect(section.authorName).toBe('Lead Alpha');
       expect(section.status).toBe('submitted');
       expect(section.projects).toHaveLength(1);
-      expect(section.projects[0]!.projectName).toBe('Project Alpha');
+      expect(expectDefined(section.projects[0]).projectName).toBe('Project Alpha');
       expect(section.items).toHaveLength(1);
-      expect(section.items[0]!.text).toBe('Implement API gateway');
+      expect(expectDefined(section.items[0]).text).toBe('Implement API gateway');
       expect(section.risks).toHaveLength(1);
-      expect(section.risks[0]!.risk).toBe('Vendor delay risk');
+      expect(expectDefined(section.risks[0]).risk).toBe('Vendor delay risk');
       expect(section.decisions).toHaveLength(1);
-      expect(section.decisions[0]!.text).toBe('Upgrade to Node 22');
+      expect(expectDefined(section.decisions[0]).text).toBe('Upgrade to Node 22');
       expect(section.priorities).toHaveLength(3);
     });
   });

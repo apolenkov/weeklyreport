@@ -30,6 +30,7 @@ import {
   portfolioProductOverviewSchema,
   validateSubmitInput,
   type ReportSectionReadModel,
+  type SubmitSectionPayload,
 } from '../report';
 
 // ---------------------------------------------------------------------------
@@ -778,7 +779,7 @@ describe('validateSubmitInput', () => {
   it('returns SECTION_ALREADY_SUBMITTED for submitted section', () => {
     const section = makeSection({ status: 'submitted' });
     const input = validSubmit();
-    const errors = validateSubmitInput(section, input as any);
+    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
     expect(errors).toHaveLength(1);
     expect(errors[0].code).toBe('SECTION_ALREADY_SUBMITTED');
   });
@@ -790,7 +791,7 @@ describe('validateSubmitInput', () => {
       projectStatuses: [{ projectId: PROJECT_UUID }],
       items: [{ ...validItem(), projectId: PROJECT_UUID, type: 'current' as const }],
     };
-    const errors = validateSubmitInput(section, input as any);
+    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
     expect(errors.some((e) => e.code === 'MISSING_TRAFFIC_LIGHT')).toBe(true);
   });
 
@@ -801,7 +802,7 @@ describe('validateSubmitInput', () => {
       projectStatuses: [{ projectId: PROJECT_UUID, status: 'green' as const }],
       items: [],
     };
-    const errors = validateSubmitInput(section, input as any);
+    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
     expect(errors.some((e) => e.code === 'MISSING_CURRENT_ITEM')).toBe(true);
   });
 
@@ -816,7 +817,7 @@ describe('validateSubmitInput', () => {
         { rank: 2, text: 'OK' },
       ],
     };
-    const errors = validateSubmitInput(section, input as any);
+    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
     expect(errors.some((e) => e.code === 'MISSING_PRIORITIES')).toBe(true);
   });
 
@@ -828,7 +829,7 @@ describe('validateSubmitInput', () => {
       items: [{ ...validItem(), projectId: PROJECT_UUID, type: 'current' as const }],
       priorities: [],
     };
-    const errors = validateSubmitInput(section, input as any);
+    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
     expect(errors.some((e) => e.code === 'MISSING_PRIORITIES')).toBe(true);
   });
 
@@ -839,7 +840,7 @@ describe('validateSubmitInput', () => {
       projectStatuses: [{ projectId: PROJECT_UUID, status: 'green' as const }],
       items: [{ ...validItem(), projectId: PROJECT_UUID, type: 'current' as const }],
     };
-    const errors = validateSubmitInput(section, input as any);
+    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
     expect(errors).toHaveLength(0);
   });
 });

@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClsService } from 'nestjs-cls';
 
 import { createAppLogger, createNullLogger } from './logger.js';
+import { expectDefined } from '../test-utils/expect-defined.js';
 
 // Allow fire-and-forget file writes to drain. The sink chains writes onto a
 // promise, so a few microtask flushes are enough. We poll the in-flight queue
@@ -44,7 +45,7 @@ describe('createAppLogger', () => {
     logger.info('hello');
 
     expect(spy).toHaveBeenCalledOnce();
-    const parsed = JSON.parse(spy.mock.calls[0]![0] as string);
+    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
     expect(parsed).toMatchObject({
       level: 'info',
       message: 'hello',
@@ -61,7 +62,7 @@ describe('createAppLogger', () => {
     logger.error('fail');
 
     expect(spy).toHaveBeenCalledOnce();
-    const parsed = JSON.parse(spy.mock.calls[0]![0] as string);
+    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
     expect(parsed).toMatchObject({ level: 'error', message: 'fail' });
   });
 
@@ -83,7 +84,7 @@ describe('createAppLogger', () => {
 
     logger.info('with service');
 
-    const parsed = JSON.parse(spy.mock.calls[0]![0] as string);
+    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
     expect(parsed.service).toBe('test-svc');
   });
 
@@ -93,7 +94,7 @@ describe('createAppLogger', () => {
 
     logger.info('request', { method: 'GET', path: '/api' });
 
-    const parsed = JSON.parse(spy.mock.calls[0]![0] as string);
+    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
     expect(parsed.method).toBe('GET');
     expect(parsed.path).toBe('/api');
   });
@@ -113,7 +114,7 @@ describe('createAppLogger', () => {
     const lines = readFileSync(join(logDir, 'app.log'), 'utf-8').trim().split('\n');
     expect(lines).toHaveLength(2);
 
-    const first = JSON.parse(lines[0]!);
+    const first = JSON.parse(expectDefined(lines[0]));
     expect(first).toMatchObject({
       level: 'info',
       message: 'first',
@@ -145,7 +146,7 @@ describe('createAppLogger', () => {
     expect(files).toContain('app.log');
 
     // Archive is gzipped — verify it has gzip magic bytes (0x1f, 0x8b).
-    const archiveBytes = readFileSync(join(logDir, archives[0]!));
+    const archiveBytes = readFileSync(join(logDir, expectDefined(archives[0])));
     expect(archiveBytes[0]).toBe(0x1f);
     expect(archiveBytes[1]).toBe(0x8b);
 
@@ -191,7 +192,7 @@ describe('createAppLogger', () => {
     const logger = createAppLogger({ clsService: cls });
     logger.info('with-cls');
 
-    const parsed = JSON.parse(spy.mock.calls[0]![0] as string);
+    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
     expect(parsed.correlationId).toBe('fixed-uuid');
   });
 
@@ -205,7 +206,7 @@ describe('createAppLogger', () => {
     const logger = createAppLogger({ clsService: cls });
     logger.info('no-cls');
 
-    const parsed = JSON.parse(spy.mock.calls[0]![0] as string);
+    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
     expect(parsed.correlationId).toBe('no-context');
   });
 
@@ -215,7 +216,7 @@ describe('createAppLogger', () => {
 
     logger.info('plain');
 
-    const parsed = JSON.parse(spy.mock.calls[0]![0] as string);
+    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
     expect(parsed.correlationId).toBe('no-context');
   });
 
@@ -243,7 +244,7 @@ describe('child logger', () => {
 
     child.info('reminder sent');
 
-    const parsed = JSON.parse(spy.mock.calls[0]![0] as string);
+    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
     expect(parsed.service).toBe('api');
     expect(parsed.module).toBe('reminders');
     expect(parsed.message).toBe('reminder sent');
@@ -270,7 +271,7 @@ describe('child logger', () => {
     const child = parent.child({ module: 'svc' });
     child.info('inherited');
 
-    const parsed = JSON.parse(spy.mock.calls[0]![0] as string);
+    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
     expect(parsed.correlationId).toBe('child-uuid');
   });
 });

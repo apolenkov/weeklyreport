@@ -556,7 +556,7 @@ export function LeadForm({ period }: LeadFormProps) {
     setDraftSection((prev) => {
       if (!prev) return prev;
       const existingById = new Map(
-        prev.decisions.filter((d) => d.id).map((d) => [d.id!, d] as const),
+        prev.decisions.flatMap((d) => (d.id ? [[d.id, d] as const] : [])),
       );
       const merged = next.map((d) => {
         const existing = existingById.get(d.id);
@@ -623,7 +623,9 @@ export function LeadForm({ period }: LeadFormProps) {
       // Merge presentation risks back into raw section. RiskEntry now
       // carries impact + mitigation (filled by the modal-edit dialog), so
       // we propagate all three text fields onto raw rows.
-      const existingById = new Map(prev.risks.filter((r) => r.id).map((r) => [r.id!, r] as const));
+      const existingById = new Map(
+        prev.risks.flatMap((r) => (r.id ? [[r.id, r] as const] : [])),
+      );
       const merged = next.map((r) => {
         const existing = r.id ? existingById.get(r.id) : undefined;
         if (existing) {
@@ -700,9 +702,9 @@ export function LeadForm({ period }: LeadFormProps) {
       setDraftSection((prev) => {
         if (!prev) return prev;
         const existingById = new Map(
-          prev.items
-            .filter((it) => it.type === itemType && it.id)
-            .map((it) => [it.id!, it] as const),
+          prev.items.flatMap((it) =>
+            it.type === itemType && it.id ? [[it.id, it] as const] : [],
+          ),
         );
         const mergedTyped = next.map((kb) => {
           const raw = statusToRawFields(kb.status);

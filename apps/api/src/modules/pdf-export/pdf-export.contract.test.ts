@@ -7,6 +7,7 @@ import {
   PdfExportService,
   type PdfExportRepository,
 } from './pdf-export.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -283,8 +284,8 @@ describe('PdfExportService — contract tests', () => {
       const after = new Date();
 
       expect(completed.completedAt).toBeInstanceOf(Date);
-      expect(completed.completedAt!.getTime()).toBeGreaterThanOrEqual(before.getTime());
-      expect(completed.completedAt!.getTime()).toBeLessThanOrEqual(after.getTime());
+      expect(expectDefined(completed.completedAt).getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(expectDefined(completed.completedAt).getTime()).toBeLessThanOrEqual(after.getTime());
     });
   });
 
@@ -353,8 +354,8 @@ describe('PdfExportService — contract tests', () => {
         const service = new PdfExportService(createRepository(publishedReport));
         const cookies = service.buildAuthCookies('my-jwt');
 
-        expect(cookies[0]!.name).toBe('custom_auth_token');
-        expect(cookies[0]!.value).toBe('my-jwt');
+        expect(expectDefined(cookies[0]).name).toBe('custom_auth_token');
+        expect(expectDefined(cookies[0]).value).toBe('my-jwt');
       } finally {
         if (originalCookieName === undefined) {
           delete process.env.AUTH_JWT_COOKIE_NAME;
@@ -375,7 +376,7 @@ describe('PdfExportService — contract tests', () => {
         const service = new PdfExportService(createRepository(publishedReport));
         const cookies = service.buildAuthCookies('secure-token');
 
-        expect(cookies[0]!.url).toBe('https://reports.company.com');
+        expect(expectDefined(cookies[0]).url).toBe('https://reports.company.com');
       } finally {
         if (originalBaseUrl === undefined) {
           delete process.env.PDF_BASE_URL;

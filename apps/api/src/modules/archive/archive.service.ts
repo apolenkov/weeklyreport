@@ -76,9 +76,13 @@ export class ArchiveService {
       ? sorted.findIndex((r) => r.reportId === pagination.cursor) + 1
       : 0;
     const page = sorted.slice(startIndex, startIndex + limit);
-    const nextCursor = startIndex + limit < sorted.length
-      ? sorted[startIndex + limit - 1]!.reportId
-      : null;
+    // The if-condition guarantees `sorted[startIndex + limit - 1]` exists, but
+    // TS only sees `T | undefined` after subscript access — narrow explicitly.
+    const lastInPage = sorted[startIndex + limit - 1];
+    const nextCursor =
+      startIndex + limit < sorted.length && lastInPage
+        ? lastInPage.reportId
+        : null;
 
     return { items: page, nextCursor };
   }

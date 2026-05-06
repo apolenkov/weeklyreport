@@ -9,6 +9,7 @@ import {
   WeeklyReportService,
   type WeeklyReportRepository,
 } from './weekly-report.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -106,7 +107,7 @@ describe('WeeklyReportService — integration (data shape)', () => {
     expect(result.submissionCount).toBe(2);
     expect(result.totalLeads).toBe(6);
     expect(result.leadSections).toHaveLength(1);
-    expect(result.leadSections[0]!.status).toBe('submitted');
+    expect(expectDefined(result.leadSections[0]).status).toBe('submitted');
   });
 
   it('portfolio overview carries worst-case aggregation', async () => {
@@ -134,8 +135,8 @@ describe('WeeklyReportService — integration (data shape)', () => {
     const result = await service.getWeeklyReport(reportId);
 
     expect(result.portfolioOverview).toHaveLength(2);
-    expect(result.portfolioOverview[0]!.worstStatus).toBe('red');
-    expect(result.portfolioOverview[1]!.worstStatus).toBe('green');
+    expect(expectDefined(result.portfolioOverview[0]).worstStatus).toBe('red');
+    expect(expectDefined(result.portfolioOverview[1]).worstStatus).toBe('green');
   });
 
   it('escalations contain blocked items', async () => {
@@ -163,8 +164,8 @@ describe('WeeklyReportService — integration (data shape)', () => {
     const result = await service.getWeeklyReport(reportId);
 
     expect(result.escalations).toHaveLength(2);
-    expect(result.escalations[0]!.type).toBe('blocked');
-    expect(result.escalations[1]!.type).toBe('at_risk');
+    expect(expectDefined(result.escalations[0]).type).toBe('blocked');
+    expect(expectDefined(result.escalations[1]).type).toBe('at_risk');
   });
 
   it('empty report returns empty sections', async () => {
@@ -252,7 +253,7 @@ describe('WeeklyReportService — integration (data shape)', () => {
     const service = new WeeklyReportService(createSpyRepository(reports));
 
     const result = await service.getWeeklyReport(reportId);
-    const section = result.leadSections[0]!;
+    const section = expectDefined(result.leadSections[0]);
 
     expect(section.items).toHaveLength(1);
     expect(section.risks).toHaveLength(1);

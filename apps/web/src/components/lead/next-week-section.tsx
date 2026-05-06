@@ -132,12 +132,18 @@ export function NextWeekSection({
           productName: p.name,
           items: items.filter((it) => it.productId === p.id),
         }))
-      : [...grouped.entries()].map(([productName, gItems]) => ({
-          key: productName,
-          productId: gItems[0]!.productId,
-          productName: gItems[0]!.productName,
-          items: gItems,
-        }));
+      : [...grouped.entries()].flatMap(([productName, gItems]) => {
+          const first = gItems[0];
+          if (!first) return [];
+          return [
+            {
+              key: productName,
+              productId: first.productId,
+              productName: first.productName,
+              items: gItems,
+            },
+          ];
+        });
 
   return (
     <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>

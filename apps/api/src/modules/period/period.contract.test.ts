@@ -7,6 +7,7 @@ import {
   PeriodService,
   type PeriodRepository,
 } from './period.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -148,8 +149,8 @@ describe('PeriodService — contract tests', () => {
 
       const updated = repo.getReport();
       expect(updated).not.toBeNull();
-      expect(updated!.periodStatus).toBe('published');
-      expect(updated!.publishedAt).toBeInstanceOf(Date);
+      expect(expectDefined(updated).periodStatus).toBe('published');
+      expect(expectDefined(updated).publishedAt).toBeInstanceOf(Date);
     });
   });
 
@@ -218,7 +219,7 @@ describe('PeriodService — contract tests', () => {
 
       const updated = repo.getReport();
       expect(updated).not.toBeNull();
-      expect(updated!.periodStatus).toBe('reopened');
+      expect(expectDefined(updated).periodStatus).toBe('reopened');
     });
   });
 });

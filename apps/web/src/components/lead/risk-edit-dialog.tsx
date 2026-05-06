@@ -63,8 +63,17 @@ export function RiskEditDialog({
       setMitigation(initialMitigation ?? '');
       setErrors({});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- key fields, not full object
-  }, [open, risk?.id, defaultProductId]);
+  }, [
+    open,
+    risk?.id,
+    risk?.text,
+    risk?.severity,
+    risk?.productId,
+    seedProduct?.id,
+    initialImpact,
+    initialMitigation,
+    defaultProductId,
+  ]);
 
   if (!open) return null;
 

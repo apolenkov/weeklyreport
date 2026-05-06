@@ -6,6 +6,7 @@ import {
   ReportSectionsService,
   type ReportSectionsRepository,
 } from './report-sections.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 const baseSection: ReportSectionReadModel = {
   reportSectionId: '11111111-1111-4111-8111-111111111111',
@@ -87,7 +88,7 @@ describe('ReportSectionsService', () => {
       status: 'draft',
       projectStatuses: [
         {
-          projectId: baseSection.projects[0]!.projectId,
+          projectId: expectDefined(baseSection.projects[0]).projectId,
           status: 'yellow',
         },
       ],
@@ -140,7 +141,7 @@ describe('ReportSectionsService', () => {
           status: 'draft',
           projectStatuses: [
             {
-              projectId: baseSection.projects[0]!.projectId,
+              projectId: expectDefined(baseSection.projects[0]).projectId,
               status: 'yellow',
             },
           ],
@@ -165,7 +166,7 @@ describe('ReportSectionsService', () => {
         status: 'draft',
         projectStatuses: [
           {
-            projectId: baseSection.projects[0]!.projectId,
+            projectId: expectDefined(baseSection.projects[0]).projectId,
             status: 'green',
           },
         ],
@@ -195,7 +196,7 @@ describe('ReportSectionsService', () => {
         status: 'draft',
         projectStatuses: [
           {
-            projectId: baseSection.projects[0]!.projectId,
+            projectId: expectDefined(baseSection.projects[0]).projectId,
             status: 'yellow',
           },
         ],
@@ -214,7 +215,7 @@ describe('ReportSectionsService', () => {
           ...baseSection,
           status: 'submitted',
           submittedAt: new Date('2026-04-06T12:00:00.000Z'),
-          projects: [{ ...baseSection.projects[0]!, trafficLight: 'green' }],
+          projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
         }),
       );
 
@@ -224,7 +225,7 @@ describe('ReportSectionsService', () => {
           status: 'draft',
           projectStatuses: [
             {
-              projectId: baseSection.projects[0]!.projectId,
+              projectId: expectDefined(baseSection.projects[0]).projectId,
               status: 'yellow',
             },
           ],
@@ -246,7 +247,7 @@ describe('ReportSectionsService', () => {
         ...baseSection,
         status: 'submitted',
         submittedAt: new Date('2026-04-06T12:00:00.000Z'),
-        projects: [{ ...baseSection.projects[0]!, trafficLight: 'green' }],
+        projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
       }),
     );
 
@@ -257,7 +258,7 @@ describe('ReportSectionsService', () => {
         confirmed: true,
         projectStatuses: [
           {
-            projectId: baseSection.projects[0]!.projectId,
+            projectId: expectDefined(baseSection.projects[0]).projectId,
             status: 'green',
           },
         ],

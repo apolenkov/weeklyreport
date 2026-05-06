@@ -16,6 +16,7 @@ import {
   mapLeadPeriods,
   mapLeadVersions,
 } from './lead-form';
+import { expectDefined } from '../../test/expect-defined.js';
 
 const SECTION_ID = '11111111-1111-4111-8111-111111111111';
 const REPORT_ID = '22222222-2222-4222-8222-222222222222';
@@ -53,11 +54,11 @@ describe('mapLeadProducts', () => {
     const products = mapLeadProducts(section);
 
     expect(products).toHaveLength(1);
-    expect(products[0]!.id).toBe(PROJECT_A);
-    expect(products[0]!.name).toBe('CRM Platform');
-    expect(products[0]!.overallStatus).toBe('on-track');
-    expect(products[0]!.stages).toHaveLength(7);
-    const devStage = products[0]!.stages.find((s) => s.stageName === 'Dev');
+    expect(expectDefined(products[0]).id).toBe(PROJECT_A);
+    expect(expectDefined(products[0]).name).toBe('CRM Platform');
+    expect(expectDefined(products[0]).overallStatus).toBe('on-track');
+    expect(expectDefined(products[0]).stages).toHaveLength(7);
+    const devStage = expectDefined(products[0]).stages.find((s) => s.stageName === 'Dev');
     expect(devStage?.ownership).toBe('mine');
     expect(devStage?.assignee).toBe('Polenkov A.');
     expect(devStage?.status).toBe('on-track');
@@ -135,8 +136,8 @@ describe('mapLeadItems', () => {
 
     const next = mapLeadItems(section, 'next');
     expect(next).toHaveLength(1);
-    expect(next[0]!.text).toBe('next week');
-    expect(next[0]!.productName).toBe('Mobile');
+    expect(expectDefined(next[0]).text).toBe('next week');
+    expect(expectDefined(next[0]).productName).toBe('Mobile');
   });
 
   it('falls back to "Unknown" product name when projectId is unmapped', () => {
@@ -213,12 +214,12 @@ describe('mapLeadRisks / mapLeadDecisions / mapLeadPriorities', () => {
     });
 
     const mapped = mapLeadPriorities(section);
-    expect(mapped[0]!.rank).toBe(1);
+    expect(expectDefined(mapped[0]).rank).toBe(1);
     // Earlier variant clamped to 1|2|3 for a fixed-slot UI; the variable-length
     // priorities list now keeps the user's rank as-is when ≥ 1.
-    expect(mapped[1]!.rank).toBe(5);
-    expect(mapped[1]!.text).toBe('P5');
-    expect(mapped[2]!.rank).toBe(1);
+    expect(expectDefined(mapped[1]).rank).toBe(5);
+    expect(expectDefined(mapped[1]).text).toBe('P5');
+    expect(expectDefined(mapped[2]).rank).toBe(1);
   });
 });
 
@@ -249,11 +250,11 @@ describe('mapLeadPeriods', () => {
 
     const periods = mapLeadPeriods(history, REPORT_ID);
 
-    expect(periods[0]!.isCurrent).toBe(true);
-    expect(periods[0]!.isSubmitted).toBe(false);
-    expect(periods[1]!.isCurrent).toBe(false);
-    expect(periods[1]!.isSubmitted).toBe(true);
-    expect(periods[0]!.dateRange).toBe('Apr 14-20');
+    expect(expectDefined(periods[0]).isCurrent).toBe(true);
+    expect(expectDefined(periods[0]).isSubmitted).toBe(false);
+    expect(expectDefined(periods[1]).isCurrent).toBe(false);
+    expect(expectDefined(periods[1]).isSubmitted).toBe(true);
+    expect(expectDefined(periods[0]).dateRange).toBe('Apr 14-20');
   });
 });
 
@@ -272,11 +273,11 @@ describe('mapLeadVersions', () => {
       },
     ];
     const mapped = mapLeadVersions(versions, now);
-    expect(mapped[0]!.version).toBe(3);
-    expect(mapped[0]!.timestamp).toBe('2 min ago');
-    expect(mapped[0]!.itemCount).toBe(4);
-    expect(mapped[0]!.riskCount).toBe(2);
-    expect(mapped[0]!.decisionCount).toBe(1);
+    expect(expectDefined(mapped[0]).version).toBe(3);
+    expect(expectDefined(mapped[0]).timestamp).toBe('2 min ago');
+    expect(expectDefined(mapped[0]).itemCount).toBe(4);
+    expect(expectDefined(mapped[0]).riskCount).toBe(2);
+    expect(expectDefined(mapped[0]).decisionCount).toBe(1);
   });
 });
 

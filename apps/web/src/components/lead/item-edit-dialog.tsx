@@ -84,8 +84,14 @@ export function ItemEditDialog({
       setProductId(initial.productId);
       setError(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- key fields, not full object
-  }, [open, item?.id, defaultProductId]);
+  }, [
+    open,
+    item?.id,
+    initial.text,
+    initial.status,
+    initial.productId,
+    defaultProductId,
+  ]);
 
   if (!open) return null;
 

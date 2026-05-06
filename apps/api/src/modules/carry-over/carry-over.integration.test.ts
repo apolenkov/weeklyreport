@@ -7,6 +7,7 @@ import {
   TEST_IDS,
 } from '../../test-utils/prisma-test-helper';
 import { CarryOverPrismaRepository } from './carry-over.prisma-repository';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 describe('CarryOverPrismaRepository (integration)', () => {
   const prisma = createTestPrisma();
@@ -126,16 +127,16 @@ describe('CarryOverPrismaRepository (integration)', () => {
     // Verify execution was persisted
     const found = await repo.findExecutionByDedupeKey(dedupeKey);
     expect(found).not.toBeNull();
-    expect(found!.id).toBe(TEST_IDS.carryExec);
-    expect(found!.status).toBe('completed');
-    expect(found!.carriedItemCount).toBe(1);
+    expect(expectDefined(found).id).toBe(TEST_IDS.carryExec);
+    expect(expectDefined(found).status).toBe('completed');
+    expect(expectDefined(found).carriedItemCount).toBe(1);
 
     // Verify item was created in target section
     const targetItems = await prisma.item.findMany({
       where: { reportSectionId: targetSection.id },
     });
     expect(targetItems).toHaveLength(1);
-    expect(targetItems[0]!.carriedOver).toBe(true);
-    expect(targetItems[0]!.text).toBe('Carry this over');
+    expect(expectDefined(targetItems[0]).carriedOver).toBe(true);
+    expect(expectDefined(targetItems[0]).text).toBe('Carry this over');
   });
 });

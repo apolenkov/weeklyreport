@@ -342,7 +342,10 @@ export function mountAuthRoutes(
           viewer: 'viewer-1',
         };
 
-        const email = (req.query.email as string) ?? emailByRole[role]!;
+        // role was validated against `validRoles` above, so the lookup is
+        // always defined — narrow explicitly to satisfy strict TS.
+        const email =
+          (req.query.email as string) ?? emailByRole[role] ?? `${role}@customreport.local`;
         const isCustomEmail = req.query.email && req.query.email !== emailByRole[role];
 
         // Always look up the live DB row first so re-seeds (or schema name

@@ -11,7 +11,10 @@ type ProductAccordionProps = {
   readonly defaultOpen?: boolean;
 };
 
-const STATUS_CONFIG: Record<string, { bg: string; text: string; avatarBg: string; avatarText: string }> = {
+type StatusConfig = { bg: string; text: string; avatarBg: string; avatarText: string };
+type ItemStatusBadge = { bg: string; text: string; label: string };
+
+const STATUS_CONFIG = {
   'on-track': {
     bg: 'var(--color-success)',
     text: 'var(--color-primary)',
@@ -30,14 +33,14 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; avatarBg: string
     avatarBg: '#fee2e2',
     avatarText: 'var(--color-destructive)',
   },
-};
+} as const satisfies Record<string, StatusConfig>;
 
-const ITEM_STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+const ITEM_STATUS_BADGE = {
   'in-progress': { bg: 'var(--color-success)', text: 'var(--color-primary)', label: '' },
   completed: { bg: 'var(--color-primary)', text: '#fff', label: '' },
   blocked: { bg: '#fee2e2', text: 'var(--color-destructive)', label: '' },
   planned: { bg: 'var(--color-muted)', text: 'var(--color-muted-foreground)', label: 'Planned' },
-};
+} as const satisfies Record<string, ItemStatusBadge>;
 
 function ChevronDown({ expanded }: { readonly expanded: boolean }) {
   return (
@@ -56,7 +59,9 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
 
 export function ProductAccordion({ report, defaultOpen = false }: ProductAccordionProps) {
   const [expanded, setExpanded] = useState(defaultOpen);
-  const config = STATUS_CONFIG[report.status] ?? STATUS_CONFIG['on-track']!;
+  const config =
+    (STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
+    STATUS_CONFIG['on-track'];
 
   return (
     <div
@@ -131,7 +136,10 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
                 </div>
                 <div className="space-y-1">
                   {report.currentWeek.map((item) => {
-                    const badge = ITEM_STATUS_BADGE[item.status] ?? ITEM_STATUS_BADGE['in-progress']!;
+                    const badge =
+                      (ITEM_STATUS_BADGE as Record<string, ItemStatusBadge>)[
+                        item.status
+                      ] ?? ITEM_STATUS_BADGE['in-progress'];
                     const isBlocked = item.status === 'blocked';
                     return (
                       <div

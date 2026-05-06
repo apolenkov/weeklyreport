@@ -76,10 +76,10 @@ export function ReopenTab() {
         );
         setRespondingId(null);
         setNote('');
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           queryKey: trpc.admin.listReopenRequests.queryKey(),
         });
-        queryClient.invalidateQueries({
+        void queryClient.invalidateQueries({
           queryKey: trpc.admin.pendingReopenCount.queryKey(),
         });
       },

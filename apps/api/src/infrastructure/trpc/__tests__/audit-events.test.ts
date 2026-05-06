@@ -11,6 +11,7 @@ import {
   createAuditLogger,
   type AuditLogger,
 } from '../../../lib/audit-logger.js';
+import { expectDefined } from '../../../test-utils/expect-defined.js';
 
 // ---------------------------------------------------------------------------
 // AUTH-08 audit-events end-to-end signal test (Phase 29-01).
@@ -78,7 +79,7 @@ describe('AUTH-08 role-denied integration signal', () => {
     const auditEntries = entries.filter((e) => e.message === 'audit');
     expect(auditEntries).toHaveLength(1);
 
-    const audit = auditEntries[0]!;
+    const audit = expectDefined(auditEntries[0]);
     expect(audit.level).toBe('warn');
     expect(audit.context).toMatchObject({
       event: 'role-denied',

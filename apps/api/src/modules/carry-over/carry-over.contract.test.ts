@@ -12,6 +12,7 @@ import {
   type CarryOverRepository,
   type CarryOverResult,
 } from './carry-over.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 // ---------------------------------------------------------------------------
 // Fixture IDs
@@ -304,9 +305,9 @@ describe('CarryOverService — contract tests', () => {
     // sourceAlpha has 1 eligible next item (non-carried-over)
     const carriedItems = result.targetSection.items.filter((i) => i.carriedOver);
     expect(carriedItems).toHaveLength(1);
-    expect(carriedItems[0]!.text).toBe('Alpha next item — should carry');
-    expect(carriedItems[0]!.type).toBe('current');
-    expect(carriedItems[0]!.carriedOver).toBe(true);
+    expect(expectDefined(carriedItems[0]).text).toBe('Alpha next item — should carry');
+    expect(expectDefined(carriedItems[0]).type).toBe('current');
+    expect(expectDefined(carriedItems[0]).carriedOver).toBe(true);
   });
 
   it('does NOT carry `current` items', async () => {
@@ -357,8 +358,8 @@ describe('CarryOverService — contract tests', () => {
 
     const carriedDecisions = result.targetSection.decisions;
     expect(carriedDecisions).toHaveLength(1);
-    expect(carriedDecisions[0]!.text).toBe('Unresolved decision alpha');
-    expect(carriedDecisions[0]!.resolvedAt).toBeNull();
+    expect(expectDefined(carriedDecisions[0]).text).toBe('Unresolved decision alpha');
+    expect(expectDefined(carriedDecisions[0]).resolvedAt).toBeNull();
   });
 
   it('does NOT carry resolved decisions', async () => {

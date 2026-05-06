@@ -6,6 +6,7 @@ import {
   type SyncSource,
 } from './use-status-risk-sync';
 import type { Product, RiskEntry, StageStatus } from '../components/lead/mock-data';
+import { expectDefined } from '../test/expect-defined.js';
 
 function buildProduct(overrides?: Partial<Product>): Product {
   return {
@@ -111,8 +112,8 @@ describe('useStatusRiskSync', () => {
 
     // products updated to mark Dev as at-risk
     expect(state.productsCalls).toHaveLength(1);
-    const updatedProducts = state.productsCalls[0]!;
-    const dev = updatedProducts[0]!.stages.find((s) => s.stageName === 'Dev');
+    const updatedProducts = expectDefined(state.productsCalls[0]);
+    const dev = expectDefined(updatedProducts[0]).stages.find((s) => s.stageName === 'Dev');
     expect(dev?.status).toBe<StageStatus>('at-risk');
 
     // risks: NOT touched — the warning banner is the sole signal now.
@@ -211,7 +212,7 @@ describe('useStatusRiskSync', () => {
 
     // products updated
     expect(state.productsCalls).toHaveLength(1);
-    const dev = state.productsCalls[0]![0]!.stages.find((s) => s.stageName === 'Dev');
+    const dev = expectDefined(expectDefined(state.productsCalls[0])[0]).stages.find((s) => s.stageName === 'Dev');
     expect(dev?.status).toBe<StageStatus>('at-risk');
     // risks NOT fired because source was auto-sync (skips inverse trigger)
     expect(state.risksCalls).toHaveLength(0);
@@ -270,7 +271,7 @@ describe('useStatusRiskSync', () => {
 
     // products fired with the stage now on-track
     expect(state.productsCalls).toHaveLength(1);
-    const dev = state.productsCalls[0]![0]!.stages.find((s) => s.stageName === 'Dev');
+    const dev = expectDefined(expectDefined(state.productsCalls[0])[0]).stages.find((s) => s.stageName === 'Dev');
     expect(dev?.status).toBe<StageStatus>('on-track');
     // risks did NOT fire — risk preserved per AF-4 (no auto-delete)
     expect(state.risksCalls).toHaveLength(0);

@@ -6,6 +6,7 @@ import {
 } from '@customreport/shared';
 
 import { ReviewService, type ReviewRepository } from './review.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -124,7 +125,7 @@ describe('ReviewService — contract tests', () => {
     const result = await service.getSubmissionDashboard(reportId);
 
     expect(result).toHaveLength(1);
-    expect('extraField' in result[0]!).toBe(false);
+    expect('extraField' in expectDefined(result[0])).toBe(false);
 
     // Also verify the result parses cleanly through the schema
     const parsed = submissionDashboardRowSchema.array().parse(result);

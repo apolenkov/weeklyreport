@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { renderEmail } from './render-template';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 const baseProps = {
   leadName: 'Lead Alpha',
@@ -100,7 +101,7 @@ describe('renderEmail — kind="escalation"', () => {
   it('subject pluralisation: 1 lead drops the trailing "s"', async () => {
     const out = await renderEmail({
       kind: 'escalation',
-      props: { ...escalationProps, lateLeads: [escalationProps.lateLeads[0]!] },
+      props: { ...escalationProps, lateLeads: [expectDefined(escalationProps.lateLeads[0])] },
     });
 
     expect(out.subject).toContain('1 late report section ');

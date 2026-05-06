@@ -6,6 +6,7 @@ import {
   disconnectTestPrisma,
 } from '../../test-utils/prisma-test-helper';
 import { ArchivePrismaRepository } from './archive.prisma-repository';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 describe('ArchivePrismaRepository (integration)', () => {
   const prisma = createTestPrisma();
@@ -52,9 +53,9 @@ describe('ArchivePrismaRepository (integration)', () => {
 
     const list = await repo.listArchiveReports();
     expect(list).toHaveLength(1);
-    expect(list[0]!.reportId).toBe(testData.report.id);
-    expect(list[0]!.publishedByName).toBe('Test Head');
-    expect(list[0]!.portfolioStatus).toBe('green');
+    expect(expectDefined(list[0]).reportId).toBe(testData.report.id);
+    expect(expectDefined(list[0]).publishedByName).toBe('Test Head');
+    expect(expectDefined(list[0]).portfolioStatus).toBe('green');
   });
 
   it('getArchiveReport returns full detail for published report', async () => {
@@ -91,10 +92,10 @@ describe('ArchivePrismaRepository (integration)', () => {
     const detail = await repo.getArchiveReport(testData.report.id);
 
     expect(detail).not.toBeNull();
-    expect(detail!.summary.reportId).toBe(testData.report.id);
-    expect(detail!.summary.portfolioStatus).toBe('yellow');
-    expect(detail!.report.sections).toHaveLength(1);
-    expect(detail!.report.sections[0]!.items).toHaveLength(1);
-    expect(detail!.report.sections[0]!.items[0]!.text).toBe('Archive item');
+    expect(expectDefined(detail).summary.reportId).toBe(testData.report.id);
+    expect(expectDefined(detail).summary.portfolioStatus).toBe('yellow');
+    expect(expectDefined(detail).report.sections).toHaveLength(1);
+    expect(expectDefined(expectDefined(detail).report.sections[0]).items).toHaveLength(1);
+    expect(expectDefined(expectDefined(expectDefined(detail).report.sections[0]).items[0]).text).toBe('Archive item');
   });
 });

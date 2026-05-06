@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
 
 import { PublishLockButton } from './publish-lock-button';
+import { expectDefined } from '../../test/expect-defined.js';
 
 describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
   it('renders "Publish & Lock" when periodStatus is open', () => {
@@ -85,7 +86,7 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
     const dialog = screen.getByRole('dialog', { name: /confirm publish/i });
     const confirmBtn = dialog.querySelectorAll('button');
     // Last button in dialog footer is the confirm one (label varies on pendingCount)
-    await userEvent.click(confirmBtn[confirmBtn.length - 1]!);
+    await userEvent.click(expectDefined(confirmBtn[confirmBtn.length - 1]));
     expect(onPublish).toHaveBeenCalledTimes(1);
   });
 

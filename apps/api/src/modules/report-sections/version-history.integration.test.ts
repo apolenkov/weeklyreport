@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ReportSectionReadModel, VersionSnapshot } from '@customreport/shared';
 
 import { LeadFormService, type LeadFormRepository } from './lead-form.service';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -103,9 +104,9 @@ describe('LeadFormService — listVersions (integration)', () => {
     const result = await service.listVersions(sectionId);
 
     expect(result).toHaveLength(3);
-    expect(result[0]!.version).toBe(1);
-    expect(result[1]!.version).toBe(2);
-    expect(result[2]!.version).toBe(3);
+    expect(expectDefined(result[0]).version).toBe(1);
+    expect(expectDefined(result[1]).version).toBe(2);
+    expect(expectDefined(result[2]).version).toBe(3);
   });
 
   it('returns empty array when no versions exist', async () => {
@@ -144,8 +145,8 @@ describe('LeadFormService — restoreVersion (integration)', () => {
 
     expect(repo.createVersionSnapshot).toHaveBeenCalledWith(sectionId);
     // Snapshot should be created BEFORE restore
-    const snapshotOrder = repo.createVersionSnapshot.mock.invocationCallOrder[0]!;
-    const restoreOrder = repo.restoreVersion.mock.invocationCallOrder[0]!;
+    const snapshotOrder = expectDefined(repo.createVersionSnapshot.mock.invocationCallOrder[0]);
+    const restoreOrder = expectDefined(repo.restoreVersion.mock.invocationCallOrder[0]);
     expect(snapshotOrder).toBeLessThan(restoreOrder);
   });
 

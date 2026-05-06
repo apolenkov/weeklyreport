@@ -163,8 +163,9 @@ describe('createSamlStrategyOptions — production posture (38-03)', () => {
     'KEYCLOAK_SAML_ISSUER',
     'KEYCLOAK_SAML_CERT',
   ])('throws when %s is missing in production', (key) => {
-    const env = { ...prodEnv } as Record<string, unknown>;
-    delete env[key];
+    // Build env without the key via destructuring rest, avoiding the
+    // dynamic `delete` (no-dynamic-delete) operator.
+    const { [key]: _omitted, ...env } = prodEnv as Record<string, unknown>;
     expect(() => createSamlStrategyOptions(env as NodeJS.ProcessEnv)).toThrow(
       `Missing required environment variable: ${key}`,
     );

@@ -6,6 +6,7 @@ import {
   disconnectTestPrisma,
 } from '../../test-utils/prisma-test-helper';
 import { ReportSectionsPrismaRepository } from './report-sections.prisma-repository';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 describe('ReportSectionsPrismaRepository (integration)', () => {
   const prisma = createTestPrisma();
@@ -79,16 +80,16 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
     const result = await repo.getSectionById(testData.section.id);
 
     expect(result).not.toBeNull();
-    expect(result!.reportSectionId).toBe(testData.section.id);
-    expect(result!.authorName).toBe('Test Lead 1');
-    expect(result!.status).toBe('draft');
-    expect(result!.projects).toHaveLength(1);
-    expect(result!.projects[0]!.trafficLight).toBe('green');
-    expect(result!.items).toHaveLength(1);
-    expect(result!.items[0]!.text).toBe('Integration test item');
-    expect(result!.risks).toHaveLength(1);
-    expect(result!.decisions).toHaveLength(1);
-    expect(result!.priorities).toHaveLength(1);
+    expect(expectDefined(result).reportSectionId).toBe(testData.section.id);
+    expect(expectDefined(result).authorName).toBe('Test Lead 1');
+    expect(expectDefined(result).status).toBe('draft');
+    expect(expectDefined(result).projects).toHaveLength(1);
+    expect(expectDefined(expectDefined(result).projects[0]).trafficLight).toBe('green');
+    expect(expectDefined(result).items).toHaveLength(1);
+    expect(expectDefined(expectDefined(result).items[0]).text).toBe('Integration test item');
+    expect(expectDefined(result).risks).toHaveLength(1);
+    expect(expectDefined(result).decisions).toHaveLength(1);
+    expect(expectDefined(result).priorities).toHaveLength(1);
   });
 
   it('getSectionById returns null for non-existent ID', async () => {
@@ -112,7 +113,7 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
 
     // Modify the section with new items, risks, decisions, priorities
     const modified = {
-      ...original!,
+      ...expectDefined(original),
       status: 'draft' as const,
       projects: [
         {
@@ -158,13 +159,13 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
 
     expect(saved.reportSectionId).toBe(testData.section.id);
     expect(saved.projects).toHaveLength(1);
-    expect(saved.projects[0]!.trafficLight).toBe('yellow');
+    expect(expectDefined(saved.projects[0]).trafficLight).toBe('yellow');
     expect(saved.items).toHaveLength(1);
-    expect(saved.items[0]!.text).toBe('Saved item');
+    expect(expectDefined(saved.items[0]).text).toBe('Saved item');
     expect(saved.risks).toHaveLength(1);
-    expect(saved.risks[0]!.risk).toBe('Saved risk');
+    expect(expectDefined(saved.risks[0]).risk).toBe('Saved risk');
     expect(saved.decisions).toHaveLength(1);
-    expect(saved.decisions[0]!.text).toBe('Saved decision');
+    expect(expectDefined(saved.decisions[0]).text).toBe('Saved decision');
     expect(saved.priorities).toHaveLength(2);
   });
 });

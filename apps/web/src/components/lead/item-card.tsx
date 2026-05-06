@@ -25,12 +25,14 @@ type ItemCardProps = {
   readonly onTextSave?: (id: string, nextText: string) => void;
 };
 
-const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+type StatusBadge = { bg: string; text: string; label: string };
+
+const STATUS_BADGE = {
   'in-progress': { bg: 'var(--color-success)', text: 'var(--color-primary)', label: 'In Progress' },
   completed: { bg: 'var(--color-primary)', text: '#fff', label: 'Completed' },
   blocked: { bg: '#fee2e2', text: 'var(--color-destructive)', label: 'Blocked' },
   planned: { bg: 'var(--color-muted)', text: 'var(--color-muted-foreground)', label: 'Planned' },
-};
+} as const satisfies Record<string, StatusBadge>;
 
 function EditIcon() {
   return (
@@ -57,7 +59,9 @@ export function ItemCard({
   isEditing = false,
   onTextSave,
 }: ItemCardProps) {
-  const badge = STATUS_BADGE[item.status] ?? STATUS_BADGE['in-progress']!;
+  const badge =
+    (STATUS_BADGE as Record<string, StatusBadge>)[item.status] ??
+    STATUS_BADGE['in-progress'];
   const isBlocked = item.status === 'blocked';
   const isPlanned = item.status === 'planned';
 

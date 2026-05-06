@@ -28,6 +28,7 @@ export default defineConfig([
             '*.setup.ts',
             'apps/*/*.config.ts',
             'apps/*/*.setup.ts',
+            'apps/*/*.test.ts',
           ],
         },
       },
@@ -37,7 +38,13 @@ export default defineConfig([
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+        {
+          argsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
       ],
       '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-extraneous-class': 'off',
@@ -48,8 +55,10 @@ export default defineConfig([
   },
   // Phase 31 (AI-SPEC §5.2 / PITFALLS C-3): module-isolation rules for
   // the AI module. Raw @prisma/client imports are restricted to the
-  // facade boundary (ai-facade.ts and ai-cache.ts only); every other
-  // ai/** file must access DB through the facade.
+  // facade boundary (ai-facade.ts, ai-cache.ts, ai-authz.ts) only; every
+  // other ai/** file must access DB through the facade.
+  // ai-authz.ts is an authorization helper that needs Prisma directly
+  // to evaluate visibility joins (M-02 / Phase 32-A3).
   // Test files and fixtures are also exempt because they construct
   // facade fakes that need the AiInsightKind enum type.
   {
@@ -57,6 +66,7 @@ export default defineConfig([
     ignores: [
       'apps/api/src/modules/ai/ai-facade.ts',
       'apps/api/src/modules/ai/ai-cache.ts',
+      'apps/api/src/modules/ai/ai-authz.ts',
       'apps/api/src/modules/ai/__tests__/**',
       'apps/api/src/modules/ai/__fixtures__/**',
     ],

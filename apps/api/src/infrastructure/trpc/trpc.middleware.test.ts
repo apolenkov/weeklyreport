@@ -9,6 +9,7 @@ import {
 } from './trpc.middleware.js';
 import { createNullLogger, type AppLogger } from '../../lib/logger.js';
 import { createNullAuditLogger } from '../../lib/audit-logger.js';
+import { expectDefined } from '../../test-utils/expect-defined.js';
 
 const nullAuditLogger = createNullAuditLogger();
 const TEST_IP = 'test-ip';
@@ -211,7 +212,7 @@ describe('tRPC logging middleware', () => {
 
     expect(logger.info).toHaveBeenCalledTimes(2);
 
-    const [startMsg, startMeta] = logger.info.mock.calls[0]!;
+    const [startMsg, startMeta] = expectDefined(logger.info.mock.calls[0]);
     expect(startMsg).toBe('trpc request start');
     expect(startMeta).toMatchObject({
       phase: 'trpc.request',
@@ -221,7 +222,7 @@ describe('tRPC logging middleware', () => {
       userId: null,
     });
 
-    const [endMsg, endMeta] = logger.info.mock.calls[1]!;
+    const [endMsg, endMeta] = expectDefined(logger.info.mock.calls[1]);
     expect(endMsg).toBe('trpc request end');
     expect(endMeta).toMatchObject({
       phase: 'trpc.request',
@@ -252,10 +253,10 @@ describe('tRPC logging middleware', () => {
     await expect(caller.protectedRoute()).rejects.toBeInstanceOf(TRPCError);
 
     expect(logger.info).toHaveBeenCalledTimes(1);
-    expect(logger.info.mock.calls[0]![1]).toMatchObject({ stage: 'start', userId: null });
+    expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({ stage: 'start', userId: null });
 
     expect(logger.error).toHaveBeenCalledTimes(1);
-    const [endMsg, endMeta] = logger.error.mock.calls[0]!;
+    const [endMsg, endMeta] = expectDefined(logger.error.mock.calls[0]);
     expect(endMsg).toBe('trpc request end');
     expect(endMeta).toMatchObject({
       phase: 'trpc.request',
@@ -291,8 +292,8 @@ describe('tRPC logging middleware', () => {
     await caller.protectedRoute();
 
     expect(logger.info).toHaveBeenCalledTimes(2);
-    expect(logger.info.mock.calls[0]![1]).toMatchObject({ userId: 'authed-42', stage: 'start' });
-    expect(logger.info.mock.calls[1]![1]).toMatchObject({ userId: 'authed-42', stage: 'end' });
+    expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({ userId: 'authed-42', stage: 'start' });
+    expect(expectDefined(logger.info.mock.calls[1])[1]).toMatchObject({ userId: 'authed-42', stage: 'end' });
   });
 
   it('records userId:null for an anonymous public procedure', async () => {
@@ -308,7 +309,7 @@ describe('tRPC logging middleware', () => {
 
     await caller.publicRoute();
 
-    expect(logger.info.mock.calls[0]![1]).toMatchObject({ userId: null });
-    expect(logger.info.mock.calls[1]![1]).toMatchObject({ userId: null });
+    expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({ userId: null });
+    expect(expectDefined(logger.info.mock.calls[1])[1]).toMatchObject({ userId: null });
   });
 });

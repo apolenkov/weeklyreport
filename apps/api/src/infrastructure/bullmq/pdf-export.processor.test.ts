@@ -88,6 +88,12 @@ function createMockJob(data: PdfExportJobData): Job<PdfExportJobData> {
   return { data } as Job<PdfExportJobData>;
 }
 
+// Test seam — `processJob` is `private` on the class, but tests need to invoke
+// it directly. Cast through this interface to call without `as any`.
+type ProcessorTestSeam = {
+  processJob(job: Job<PdfExportJobData>): Promise<void>;
+};
+
 function setupMocks() {
   const mockPage = {
     goto: vi.fn().mockResolvedValue(undefined),
@@ -131,7 +137,7 @@ describe('PdfExportProcessor.processJob', () => {
     const processor = new PdfExportProcessor(mockService as never);
     const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
 
-    await (processor as any).processJob(job);
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     expect(chromium.launch).toHaveBeenCalledWith({ headless: true });
   });
@@ -142,7 +148,7 @@ describe('PdfExportProcessor.processJob', () => {
     const processor = new PdfExportProcessor(mockService as never);
     const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
 
-    await (processor as any).processJob(job);
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     // Phase 33-03: print route lives at /print/[id] (top-level, outside the
     // (app) route group) so the print viewport doesn't inherit NavBar/DEV
@@ -159,7 +165,7 @@ describe('PdfExportProcessor.processJob', () => {
     const processor = new PdfExportProcessor(mockService as never);
     const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
 
-    await (processor as any).processJob(job);
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     expect(mockPage.pdf).toHaveBeenCalledWith({
       format: 'A4',
@@ -173,7 +179,7 @@ describe('PdfExportProcessor.processJob', () => {
     const processor = new PdfExportProcessor(mockService as never);
     const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
 
-    await (processor as any).processJob(job);
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     expect(mockService.markExportCompleted).toHaveBeenCalledWith(
       'job-1',
@@ -190,7 +196,7 @@ describe('PdfExportProcessor.processJob', () => {
 
     mockPage.goto.mockRejectedValue(new Error('navigation failed'));
 
-    await expect((processor as any).processJob(job)).rejects.toThrow('navigation failed');
+    await expect((processor as unknown as ProcessorTestSeam).processJob(job)).rejects.toThrow('navigation failed');
 
     expect(mockBrowser.close).toHaveBeenCalledOnce();
   });

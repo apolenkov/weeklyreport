@@ -130,23 +130,32 @@ export function useLeadFormAutosave(
     payloadKey !== '' &&
     payloadKey !== lastSavedRef.current;
 
+  // Stash the latest payload + mutate fn in refs so the debounce effect can
+  // depend only on `payloadKey` (deep-content hash) without restarting on
+  // unrelated re-renders (which would reset the debounce timer).
+  const payloadRef = useRef(payload);
+  const mutateRef = useRef(saveDraftMut.mutate);
+  useEffect(() => {
+    payloadRef.current = payload;
+    mutateRef.current = saveDraftMut.mutate;
+  });
+
   // Debounced save trigger.
   useEffect(() => {
-    if (!enabled || !dirty || !reportSectionId || payload === null) {
+    if (!enabled || !dirty || !reportSectionId) {
       return;
     }
 
     setState('pending');
     const timer = setTimeout(() => {
+      const current = payloadRef.current;
+      if (current === null) return;
       setState('saving');
       inFlightRef.current = payloadKey;
-      saveDraftMut.mutate({ ...payload, reportSectionId });
+      mutateRef.current({ ...current, reportSectionId });
     }, debounceMs);
 
     return () => clearTimeout(timer);
-    // We intentionally key on `payloadKey` (not `payload` reference) so equal
-    // deep-content payloads don't restart the debounce.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payloadKey, enabled, dirty, reportSectionId, debounceMs]);
 
   // beforeunload guard while dirty (INT-07).

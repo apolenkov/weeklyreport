@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Role } from '@customreport/shared';
+
 import { createRoleGuard, type GuardContext } from './roles.guard';
 
 describe('createRoleGuard', () => {
@@ -24,7 +26,7 @@ describe('createRoleGuard', () => {
   });
 
   it('throws for invalid role string', () => {
-    expect(() => createRoleGuard('auditor' as any)).toThrow();
+    expect(() => createRoleGuard('auditor' as unknown as Role)).toThrow();
   });
 
   it('creates a guard for "admin" role (Phase 32-c1 widened enum)', () => {
@@ -33,7 +35,7 @@ describe('createRoleGuard', () => {
   });
 
   it('throws for empty role string', () => {
-    expect(() => createRoleGuard('' as any)).toThrow();
+    expect(() => createRoleGuard('' as unknown as Role)).toThrow();
   });
 
   // -----------------------------------------------------------------------
@@ -142,12 +144,14 @@ describe('createRoleGuard', () => {
     });
 
     it('denies when role is null', () => {
-      const ctx: GuardContext = { user: { role: null as any } };
+      const ctx: GuardContext = { user: { role: null as unknown as Role } };
       expect(headGuard.canActivate(ctx)).toBe(false);
     });
 
     it('denies when role is an arbitrary string', () => {
-      const ctx: GuardContext = { user: { role: 'superadmin' as any } };
+      const ctx: GuardContext = {
+        user: { role: 'superadmin' as unknown as Role },
+      };
       expect(headGuard.canActivate(ctx)).toBe(false);
     });
   });
