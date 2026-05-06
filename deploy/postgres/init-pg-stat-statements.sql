@@ -1,0 +1,23 @@
+-- 39-03 — pg_stat_statements bootstrap.
+--
+-- Runs once on first DB init (when pgdata volume is empty). The extension
+-- itself is loaded via shared_preload_libraries in docker-compose.yml.
+-- This file makes it queryable from SQL.
+--
+-- Usage after the dev stack has been hit by E2E / manual smoke for a few
+-- minutes:
+--
+--   docker compose exec postgres psql -U customreport -c "
+--     SELECT round(total_exec_time::numeric, 1) AS total_ms,
+--            calls,
+--            round(mean_exec_time::numeric, 2) AS mean_ms,
+--            round((100 * total_exec_time / sum(total_exec_time) over ())::numeric, 1) AS pct,
+--            substring(query, 1, 100) AS query
+--     FROM pg_stat_statements
+--     WHERE query NOT LIKE '%pg_stat_statements%'
+--     ORDER BY total_exec_time DESC
+--     LIMIT 20;
+--   "
+--
+-- Reset stats with: SELECT pg_stat_statements_reset();
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
