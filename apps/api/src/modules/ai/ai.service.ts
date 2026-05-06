@@ -61,6 +61,37 @@ export type AiInsightResult<R> = AiInsightAvailable<R> | AiInsightUnavailable;
 // Enforced before EVERY Anthropic call across summary/sentiment/on-track.
 export const PER_REPORT_BUDGET_TOKENS = 50_000;
 
+// Phase 39-06 (visual regression): when AI_VISUAL_STUB=true, every AI call
+// returns a frozen response so screenshot baselines stay byte-stable across
+// runs. Anthropic Haiku output varies on every invocation; stubbing here is
+// the cheapest spot — short-circuits before SDK construction *and* before
+// any cache read so the stubbed answer never poisons the AiInsight table
+// in production environments. Off by default; only the visual project sets
+// it via the Playwright webServer env block.
+const AI_VISUAL_STUB = (): boolean => process.env['AI_VISUAL_STUB'] === 'true';
+
+const STUB_SUMMARY: SummaryResult = {
+  narrative:
+    'Портфель в целом в зелёной зоне с управляемыми рисками. Команда закрыла плановый объём задач, два проекта требуют внимания на следующей неделе.',
+  tone: 'neutral',
+  highlights: [
+    '5 из 6 проектов на треке',
+    'Активная митигация двух рисков',
+    'Решение по бюджету ожидает руководителя',
+  ],
+};
+
+const STUB_SENTIMENT: SentimentResult = {
+  level: 'medium',
+  rationale: 'Stubbed sentiment for visual regression baseline.',
+};
+
+const STUB_ON_TRACK: OnTrackResult = {
+  verdict: 'on-track',
+  confidence: 'medium',
+  rationale: 'Stubbed on-track verdict for visual regression baseline.',
+};
+
 @Injectable()
 export class AiService {
   constructor(
@@ -97,6 +128,12 @@ export class AiService {
     reportId: string,
     bustCache: boolean,
   ): Promise<AiInsightResult<SummaryResult>> {
+    // Phase 39-06: visual regression stub. Bypass facade + Anthropic so
+    // baselines render the same string on every run. The bustCache flag is
+    // moot here — the stub is its own source of truth.
+    if (AI_VISUAL_STUB()) {
+      return { available: true, result: STUB_SUMMARY, cached: false };
+    }
     const report = await this.facade.getReportForSummary(reportId);
     if (!report) {
       return { available: false, reason: 'not_found' };
@@ -162,6 +199,10 @@ export class AiService {
   // tuple, NOT the riskId — same text reused across reports hits the same
   // cached row.
   async sentiment(riskId: string): Promise<AiInsightResult<SentimentResult>> {
+    // Phase 39-06: visual regression stub.
+    if (AI_VISUAL_STUB()) {
+      return { available: true, result: STUB_SENTIMENT, cached: false };
+    }
     const risk = await this.facade.getRiskForSentiment(riskId);
     if (!risk) {
       return { available: false, reason: 'not_found' };
@@ -218,6 +259,10 @@ export class AiService {
     sectionId: string,
     projectId: string,
   ): Promise<AiInsightResult<OnTrackResult>> {
+    // Phase 39-06: visual regression stub.
+    if (AI_VISUAL_STUB()) {
+      return { available: true, result: STUB_ON_TRACK, cached: false };
+    }
     const cell = await this.facade.getCellForOnTrack(sectionId, projectId);
     if (!cell) {
       return { available: false, reason: 'not_found' };
