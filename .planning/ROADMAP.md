@@ -378,7 +378,7 @@ Full details: [v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md) and [v8.0-REQUIREMEN
 - [x] 34-02-PLAN.md — vitest coverage thresholds web+api + CI artifact (Q-02)
 - [x] 34-03-PLAN.md — DOM-walker + mutation-audit CI gate (Q-03)
 - [x] 34-04-PLAN.md — Prisma migrate-reset CI gate (Q-04)
-- [ ] 34-05-PLAN.md — TypeScript residual error rollup (Q-05)
+- [x] 34-05-PLAN.md — TypeScript residual error rollup (Q-05)
 - [ ] 34-06-PLAN.md — ESLint warning sweep ~272→0 (Q-06)
 - [x] 34-07-PLAN.md — push-guard helper + flaky-rate CI metric (Q-07)
 
