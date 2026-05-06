@@ -119,11 +119,15 @@ export type LeadDecisionEntry = {
   impact: string;
   /** Optional deadline (ISO yyyy-mm-dd string) — null when not set. */
   deadline: string | null;
+  /** 35-04: SDLC stage label or '—' when legacy/unset. */
+  stageName: string;
 };
 
 export type LeadPriorityEntry = {
   rank: number;
   text: string;
+  /** 35-04: SDLC stage label or '—' when legacy/unset. */
+  stageName: string;
 };
 
 export type LeadReportPeriod = {
@@ -154,7 +158,18 @@ export type LeadVersionSnapshot = {
 export type LeadCurrentUser = {
   name: string;
   initials: string;
-  role: 'Dev Lead' | 'QA Lead' | 'Mobile Lead' | 'Platform Lead' | 'Auth Lead' | 'Infra Lead' | 'Lead';
+  /**
+   * Display label rendered next to the user's name in the form chrome.
+   * Pre-35-03 this was a hard-coded "Dev Lead"; the chrome text now
+   * derives from the section's `authorRole`.
+   */
+  role: string;
+  /**
+   * Authoritative role token (the Prisma `Role` enum) used for gating
+   * head/admin-only UI like "Revoke" vs "Request Reopen". Driven by the
+   * read model's `authorRole`.
+   */
+  authorRole: 'lead' | 'head' | 'admin' | 'viewer';
 };
 
 // ---- Helpers ----
@@ -256,17 +271,63 @@ function buildProjectIndex(
   return map;
 }
 
+/**
+ * Stages-the-current-user-owns selector. Returns the list of stage names the
+ * section author has a `StageAssignment` for on the given project. Used by
+ * the lead-form modals to limit the "SDLC stage" dropdown to stages the
+ * current lead actually owns. When `projectId` is undefined (decisions /
+ * priorities are department-scoped), returns the union across all projects.
+ */
+export function ownedStagesForProject(
+  section: ReportSectionReadModel,
+  projectId: string | undefined,
+): string[] {
+  const collected = new Set<string>();
+  if (projectId) {
+    const project = section.projects.find((p) => p.projectId === projectId);
+    if (project) {
+      for (const stage of project.ownedStages ?? []) collected.add(stage.stageName);
+    }
+    return [...collected];
+  }
+  for (const project of section.projects) {
+    for (const stage of project.ownedStages ?? []) collected.add(stage.stageName);
+  }
+  return [...collected];
+}
+
 // ---- Mappers ----
 
-function emptyStageGrid(
+/**
+ * Build the 7-stage grid for one project from the read model's `ownedStages`.
+ *
+ * The standard SDLC pipeline is rendered for every project so the user can
+ * always see the full lifecycle context. Stages whose name appears in
+ * `ownedStages` are flagged `mine` and inherit the project's overall traffic
+ * status; the rest stay `unassigned` with assignee=null and an empty status
+ * so the chip greys out. Replaces the pre-35-04 fake grid that hard-coded the
+ * lead onto "Dev" regardless of their actual StageAssignment rows.
+ *
+ * Stage-name matching is case-insensitive and tolerates "Dev" vs.
+ * "Development" (the seed file uses "Development", the presentation grid
+ * uses "Dev" because the chip surface is narrow). Without the alias the
+ * "all 7 stages owned" case still rendered most stages as `unassigned`.
+ */
+function buildStageGrid(
   ownerLabel: string,
-  ownerHasStake: boolean,
+  ownedStageNames: readonly string[],
   productStatus: StageStatus,
 ): LeadStageAssignment[] {
-  // Synthesize a 7-stage grid. The product's overall status is rendered on the
-  // owner's "Dev" stage when they hold a stake, otherwise empty.
+  const owned = new Set(ownedStageNames.map((s) => s.toLowerCase()));
   return STAGE_NAMES.map((stageName) => {
-    if (ownerHasStake && stageName === 'Dev') {
+    const lower = stageName.toLowerCase();
+    const isOwned =
+      owned.has(lower) ||
+      // Aliases between the canonical seeded stage name ("Development") and
+      // the compact pipeline label ("Dev").
+      (lower === 'dev' && owned.has('development')) ||
+      (lower === 'development' && owned.has('dev'));
+    if (isOwned) {
       return {
         stageName,
         status: productStatus,
@@ -286,21 +347,26 @@ function emptyStageGrid(
 /**
  * Map a section's projects -> presentation Product[].
  *
- * Each project's `trafficLight` becomes the product's overall status; an empty
- * 7-stage grid is synthesized with the lead marked as owner of the "Dev" stage
- * (the most common case for a Dev Lead). Real per-stage assignments come from
- * Phase 22.
+ * 35-04: each project's `ownedStages` (sourced from `StageAssignment` rows
+ * scoped to the section author) drive which of the 7 SDLC chips render as
+ * "mine" vs "unassigned". Stages outside `ownedStages` still render so the
+ * user sees the full pipeline context, but they're greyed and unowned.
+ *
+ * Pre-35-04 this mapper synthesized a fake grid that hard-coded the lead
+ * onto "Dev" — that's the bug where assigning a lead to all 7 stages on
+ * the Products admin tab didn't show up on /lead/report.
  */
 export function mapLeadProducts(
   section: ReportSectionReadModel,
 ): LeadProduct[] {
   return section.projects.map((p) => {
     const overallStatus = trafficToStageStatus(p.trafficLight);
+    const ownedStageNames = (p.ownedStages ?? []).map((s) => s.stageName);
     return {
       id: p.projectId,
       name: p.projectName,
       overallStatus,
-      stages: emptyStageGrid(section.authorName, true, overallStatus),
+      stages: buildStageGrid(section.authorName, ownedStageNames, overallStatus),
     };
   });
 }
@@ -328,8 +394,10 @@ export function mapLeadItems(
         id: item.id ?? `${itemType}-${item.projectId}-${item.text.slice(0, 8)}`,
         productId: item.projectId,
         productName: project?.name ?? 'Unknown',
-        // stageName is not on itemInputSchema; left undefined so the UI groups
-        // strictly by product.
+        // 35-04: real stage label from DB. Surfaces on the kanban card and
+        // groups items by product+stage. Falls back to undefined for
+        // legacy rows seeded before the column existed.
+        ...(item.stageName ? { stageName: item.stageName } : {}),
         status,
         text: item.text,
         author: section.authorName,
@@ -357,7 +425,8 @@ export function mapLeadRisks(
       id: r.id ?? `risk-${idx}`,
       productId: r.projectId,
       productName: project?.name ?? 'Unknown',
-      stageName: '—',
+      // 35-04: real stage label from DB; legacy rows fall back to '—'.
+      stageName: r.stageName ?? '—',
       severity: 'at-risk' as const,
       text: r.risk,
       impact: r.impact,
@@ -379,6 +448,7 @@ export function mapLeadDecisions(
     deadline: d.deadline
       ? new Date(d.deadline).toISOString().slice(0, 10)
       : null,
+    stageName: d.stageName ?? '—',
   }));
 }
 
@@ -388,6 +458,7 @@ export function mapLeadPriorities(
   return section.priorities.map((p) => ({
     rank: clampRank(p.rank),
     text: p.text,
+    stageName: p.stageName ?? '—',
   }));
 }
 
@@ -479,6 +550,18 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   // Lock the form when the period is locked OR the section is already submitted.
   const readOnly = args.byPeriod.readOnly || section.status === 'submitted';
 
+  // 35-03: surface the section author's role end-to-end. The display label
+  // ("Lead", "Head", "Admin") is derived from the role token; the raw
+  // token (`authorRole`) is exposed so role-based UI gating doesn't have
+  // to reverse-engineer the label string. Defaults to 'lead' when the
+  // read model omits it (legacy fixtures, harness-driven tests).
+  const authorRole: 'lead' | 'head' | 'admin' | 'viewer' = args.active.authorRole ?? 'lead';
+  const roleLabel =
+    authorRole === 'head' ? 'Head'
+      : authorRole === 'admin' ? 'Admin'
+        : authorRole === 'viewer' ? 'Viewer'
+          : 'Lead';
+
   return {
     products: mapLeadProducts(section),
     currentWeekItems: mapLeadItems(section, 'current'),
@@ -491,7 +574,8 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
     currentUser: {
       name: args.active.authorName,
       initials: initialsFromName(args.active.authorName),
-      role: 'Dev Lead',
+      role: roleLabel,
+      authorRole,
     },
     readOnly,
   };
@@ -499,7 +583,7 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
 
 // Internal exports for tests.
 export const __testing = {
-  emptyStageGrid,
+  buildStageGrid,
   initialsFromName,
   formatRelativeTimestamp,
   formatDateRange,

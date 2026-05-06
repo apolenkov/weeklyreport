@@ -44,10 +44,22 @@ function baseSection(
 }
 
 describe('mapLeadProducts', () => {
-  it('maps a green project to overallStatus on-track and synthesizes a 7-stage grid', () => {
+  it('marks a stage as `mine` when it appears in ownedStages and renders the rest as unassigned', () => {
+    // 35-04: the lead owns the Dev stage on this project (real
+    // StageAssignment data), so the chip surfaces as `mine` with the
+    // project's traffic-light status. Pre-35-04 this was synthesized
+    // unconditionally — the bug was that the synthesized "Dev" chip
+    // didn't reflect actual assignments.
     const section = baseSection({
       projects: [
-        { projectId: PROJECT_A, projectName: 'CRM Platform', trafficLight: 'green' },
+        {
+          projectId: PROJECT_A,
+          projectName: 'CRM Platform',
+          trafficLight: 'green',
+          ownedStages: [
+            { stageId: 'stage-dev', stageName: 'Development', sortOrder: 3 },
+          ],
+        },
       ],
     });
 
@@ -58,10 +70,16 @@ describe('mapLeadProducts', () => {
     expect(expectDefined(products[0]).name).toBe('CRM Platform');
     expect(expectDefined(products[0]).overallStatus).toBe('on-track');
     expect(expectDefined(products[0]).stages).toHaveLength(7);
+    // "Development" in the seed maps to the compact "Dev" pipeline label
+    // via the alias in buildStageGrid.
     const devStage = expectDefined(products[0]).stages.find((s) => s.stageName === 'Dev');
     expect(devStage?.ownership).toBe('mine');
     expect(devStage?.assignee).toBe('Platanov A.');
     expect(devStage?.status).toBe('on-track');
+    // Stages outside ownedStages render as unassigned with no assignee.
+    const planningStage = expectDefined(products[0]).stages.find((s) => s.stageName === 'Planning');
+    expect(planningStage?.ownership).toBe('unassigned');
+    expect(planningStage?.assignee).toBeNull();
   });
 
   it('maps a null trafficLight project to overallStatus empty', () => {
@@ -77,6 +95,50 @@ describe('mapLeadProducts', () => {
 
   it('returns empty array when the section has no projects', () => {
     expect(mapLeadProducts(baseSection())).toEqual([]);
+  });
+
+  it('renders all 7 stages as `mine` when the lead owns every stage on the project (BUG-143 reproducer)', () => {
+    // The user-reported bug: assigning the lead to all 7 SDLC stages on
+    // the Products admin tab should surface every stage as `mine` on
+    // /lead/report. Pre-35-04 the synthesized grid only ever marked
+    // "Dev" as mine, dropping the other six.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: 'CRM Platform',
+          trafficLight: 'green',
+          ownedStages: [
+            { stageId: 's1', stageName: 'Planning', sortOrder: 0 },
+            { stageId: 's2', stageName: 'Analysis', sortOrder: 1 },
+            { stageId: 's3', stageName: 'Design', sortOrder: 2 },
+            { stageId: 's4', stageName: 'Development', sortOrder: 3 },
+            { stageId: 's5', stageName: 'Testing', sortOrder: 4 },
+            { stageId: 's6', stageName: 'DevOps', sortOrder: 5 },
+            { stageId: 's7', stageName: 'Support', sortOrder: 6 },
+          ],
+        },
+      ],
+    });
+
+    const [product] = mapLeadProducts(section);
+    expect(product?.stages.every((s) => s.ownership === 'mine')).toBe(true);
+  });
+
+  it('without ownedStages, every stage is unassigned (the lead has no stake on this project)', () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: 'CRM Platform',
+          trafficLight: 'green',
+          ownedStages: [],
+        },
+      ],
+    });
+
+    const [product] = mapLeadProducts(section);
+    expect(product?.stages.every((s) => s.ownership === 'unassigned')).toBe(true);
   });
 });
 

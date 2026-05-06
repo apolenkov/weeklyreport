@@ -10,10 +10,25 @@ import type { ReportSectionsRepository } from './report-sections.service';
 /**
  * Shared Prisma include constant for the full ReportSection aggregate.
  * Loads all 6 nested relations: author, projectStatuses+project, items, risks, decisions, priorities.
+ *
+ * 35-03/04: also loads `author.role` (so the read model can carry
+ * `authorRole`) and the project's stage assignments scoped to the
+ * section author (so each project's `ownedStages[]` can be derived
+ * without a second round-trip).
  */
 export const reportSectionFullInclude = {
-  author: true,
-  projectStatuses: { include: { project: true } },
+  author: { select: { name: true, role: true, id: true } },
+  projectStatuses: {
+    include: {
+      project: {
+        include: {
+          stageAssignments: {
+            include: { stage: true },
+          },
+        },
+      },
+    },
+  },
   items: true,
   risks: true,
   decisions: true,
@@ -23,11 +38,20 @@ export const reportSectionFullInclude = {
 type PrismaReportSectionWithRelations = NonNullable<
   Awaited<ReturnType<PrismaService['reportSection']['findUnique']>>
 > & {
-  author: { name: string };
+  authorId: string;
+  author: { name: string; role: string; id: string };
   projectStatuses: Array<{
     projectId: string;
     status: string;
-    project: { id: string; name: string };
+    project: {
+      id: string;
+      name: string;
+      stageAssignments: Array<{
+        userId: string;
+        stageId: string;
+        stage: { id: string; name: string; sortOrder: number };
+      }>;
+    };
   }>;
   items: Array<{
     id: string;
@@ -38,6 +62,7 @@ type PrismaReportSectionWithRelations = NonNullable<
     workflowStatus: string;
     carriedOver: boolean;
     completed: boolean | null;
+    stageName: string | null;
   }>;
   risks: Array<{
     id: string;
@@ -45,6 +70,7 @@ type PrismaReportSectionWithRelations = NonNullable<
     risk: string;
     impact: string;
     mitigation: string;
+    stageName: string | null;
   }>;
   decisions: Array<{
     id: string;
@@ -53,11 +79,13 @@ type PrismaReportSectionWithRelations = NonNullable<
     deadline: Date | null;
     impact: string;
     resolvedAt: Date | null;
+    stageName: string | null;
   }>;
   priorities: Array<{
     id: string;
     rank: number;
     text: string;
+    stageName: string | null;
   }>;
 };
 
@@ -68,17 +96,34 @@ type PrismaReportSectionWithRelations = NonNullable<
 export function mapPrismaToReportSection(
   row: PrismaReportSectionWithRelations,
 ): ReportSectionReadModel {
+  const authorId = row.author.id;
   return reportSectionReadModelSchema.parse({
     reportSectionId: row.id,
     reportId: row.reportId,
     authorId: row.authorId,
     authorName: row.author.name,
+    // 35-03: surface the section author's system role end-to-end so the
+    // /lead/report chrome can switch between Request Reopen (lead) and
+    // Revoke (head/admin viewing this lead's section).
+    authorRole: row.author.role,
     status: row.status,
     submittedAt: row.submittedAt,
     projects: row.projectStatuses.map((ps) => ({
       projectId: ps.projectId,
       projectName: ps.project.name,
       trafficLight: ps.status,
+      // 35-04: list of stages this section's author owns on this project.
+      // Filter the eagerly-loaded assignments by author UUID so each
+      // project's `ownedStages[]` is exactly the set the lead-form needs
+      // to render real "mine" chips.
+      ownedStages: ps.project.stageAssignments
+        .filter((sa) => sa.userId === authorId)
+        .map((sa) => ({
+          stageId: sa.stageId,
+          stageName: sa.stage.name,
+          sortOrder: sa.stage.sortOrder,
+        }))
+        .sort((a, b) => a.sortOrder - b.sortOrder),
     })),
     items: row.items.map((i) => ({
       id: i.id,
@@ -89,6 +134,7 @@ export function mapPrismaToReportSection(
       workflowStatus: i.workflowStatus,
       carriedOver: i.carriedOver,
       completed: i.completed,
+      stageName: i.stageName,
     })),
     risks: row.risks.map((r) => ({
       id: r.id,
@@ -96,6 +142,7 @@ export function mapPrismaToReportSection(
       risk: r.risk,
       impact: r.impact,
       mitigation: r.mitigation,
+      stageName: r.stageName,
     })),
     decisions: row.decisions.map((d) => ({
       id: d.id,
@@ -104,11 +151,13 @@ export function mapPrismaToReportSection(
       deadline: d.deadline,
       impact: d.impact,
       resolvedAt: d.resolvedAt,
+      stageName: d.stageName,
     })),
     priorities: row.priorities.map((p) => ({
       id: p.id,
       rank: p.rank,
       text: p.text,
+      stageName: p.stageName,
     })),
   });
 }
@@ -180,6 +229,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               workflowStatus: i.workflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
+              stageName: i.stageName ?? null,
             })),
           });
         }
@@ -193,6 +243,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
+              stageName: r.stageName ?? null,
             })),
           });
         }
@@ -207,6 +258,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               deadline: d.deadline ?? null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
+              stageName: d.stageName ?? null,
             })),
           });
         }
@@ -218,6 +270,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               reportSectionId: sectionId,
               rank: p.rank,
               text: p.text,
+              stageName: p.stageName ?? null,
             })),
           });
         }

@@ -63,12 +63,16 @@ export type DecisionEntry = {
   impact: string;
   /** Optional deadline (ISO date string) — null when not set. */
   deadline: string | null;
+  /** 35-04: SDLC stage (e.g. "Dev", "Testing"). '—' when legacy/unset. */
+  stageName: string;
 };
 
 export type PriorityEntry = {
   /** 1-indexed rank. Schema allows any positive int up to 50 per draft. */
   rank: number;
   text: string;
+  /** 35-04: SDLC stage (e.g. "Dev", "Testing"). '—' when legacy/unset. */
+  stageName: string;
 };
 
 export type ReportPeriod = {
@@ -239,14 +243,14 @@ export const MOCK_RISKS: RiskEntry[] = [
 ];
 
 export const MOCK_DECISIONS: DecisionEntry[] = [
-  { id: 'd1', productId: 'cloud', productName: 'Cloud Infrastructure', text: 'Требуется одобрение дополнительного Redis-кластера для кеширования', owner: 'Глава департамента', impact: 'Снижает p99 на 30%, требует CapEx-одобрения.', deadline: null },
-  { id: 'd2', productId: 'aiml', productName: 'AI/ML Platform', text: 'Выбор между AWS SageMaker и self-hosted для model serving', owner: 'Глава департамента', impact: 'Влияет на TCO и time-to-market.', deadline: null },
+  { id: 'd1', productId: 'cloud', productName: 'Cloud Infrastructure', text: 'Требуется одобрение дополнительного Redis-кластера для кеширования', owner: 'Глава департамента', impact: 'Снижает p99 на 30%, требует CapEx-одобрения.', deadline: null, stageName: 'Dev' },
+  { id: 'd2', productId: 'aiml', productName: 'AI/ML Platform', text: 'Выбор между AWS SageMaker и self-hosted для model serving', owner: 'Глава департамента', impact: 'Влияет на TCO и time-to-market.', deadline: null, stageName: 'Design' },
 ];
 
 export const MOCK_PRIORITIES: PriorityEntry[] = [
-  { rank: 1, text: 'Запустить Dev для Gateway для CRM Platform (At Risk)' },
-  { rank: 2, text: 'Запустить Dev pipeline для Integration Gateway' },
-  { rank: 3, text: 'Подготовить Testing для AI/ML Platform' },
+  { rank: 1, text: 'Запустить Dev для Gateway для CRM Platform (At Risk)', stageName: 'Dev' },
+  { rank: 2, text: 'Запустить Dev pipeline для Integration Gateway', stageName: 'Dev' },
+  { rank: 3, text: 'Подготовить Testing для AI/ML Platform', stageName: 'Testing' },
 ];
 
 export const MOCK_PERIODS: ReportPeriod[] = [

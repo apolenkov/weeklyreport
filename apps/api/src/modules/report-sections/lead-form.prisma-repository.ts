@@ -106,6 +106,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               workflowStatus: i.workflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
+              stageName: i.stageName ?? null,
             })),
           });
           copiedItems += source.items.length;
@@ -120,6 +121,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
+              stageName: r.stageName ?? null,
             })),
           });
           copiedItems += source.risks.length;
@@ -135,6 +137,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               deadline: d.deadline ?? null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
+              stageName: d.stageName ?? null,
             })),
           });
           copiedItems += source.decisions.length;
@@ -147,6 +150,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               reportSectionId: targetSectionId,
               rank: p.rank,
               text: p.text,
+              stageName: p.stageName ?? null,
             })),
           });
           copiedItems += source.priorities.length;
@@ -201,12 +205,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         workflowStatus: string;
         carriedOver: boolean;
         completed: boolean | null;
+        stageName?: string | null;
       }>;
       risks: Array<{
         projectId: string;
         risk: string;
         impact: string;
         mitigation: string;
+        stageName?: string | null;
       }>;
       decisions: Array<{
         text: string;
@@ -214,10 +220,12 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         deadline: string | null;
         impact: string;
         resolvedAt: string | null;
+        stageName?: string | null;
       }>;
       priorities: Array<{
         rank: number;
         text: string;
+        stageName?: string | null;
       }>;
     };
 
@@ -239,6 +247,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               workflowStatus: i.workflowStatus as ItemWorkflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
+              stageName: i.stageName ?? null,
             })),
           });
         }
@@ -251,6 +260,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
+              stageName: r.stageName ?? null,
             })),
           });
         }
@@ -264,6 +274,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               deadline: d.deadline ? new Date(d.deadline) : null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ? new Date(d.resolvedAt) : null,
+              stageName: d.stageName ?? null,
             })),
           });
         }
@@ -274,6 +285,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               reportSectionId: sectionId,
               rank: p.rank,
               text: p.text,
+              stageName: p.stageName ?? null,
             })),
           });
         }
@@ -331,12 +343,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         workflowStatus: i.workflowStatus,
         carriedOver: i.carriedOver,
         completed: i.completed ?? null,
+        stageName: i.stageName ?? null,
       })),
       risks: section.risks.map((r) => ({
         projectId: r.projectId,
         risk: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
+        stageName: r.stageName ?? null,
       })),
       decisions: section.decisions.map((d) => ({
         text: d.text,
@@ -344,10 +358,12 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         deadline: d.deadline?.toISOString() ?? null,
         impact: d.impact,
         resolvedAt: d.resolvedAt?.toISOString() ?? null,
+        stageName: d.stageName ?? null,
       })),
       priorities: section.priorities.map((p) => ({
         rank: p.rank,
         text: p.text,
+        stageName: p.stageName ?? null,
       })),
     };
 

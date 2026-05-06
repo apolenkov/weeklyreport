@@ -11,6 +11,7 @@ import {
   invalidateDashboard,
 } from '../../lib/cache-keys';
 import { mapLeadFormData } from '../../lib/mappers';
+import { ownedStagesForProject } from '../../lib/mappers/lead-form';
 import { useLeadFormAutosave, stableStringify } from '../../hooks/use-lead-form-autosave';
 import { LeadFormSkeleton } from './lead-form-skeleton';
 import { LeadFormSyncBridge } from './lead-form-sync-bridge';
@@ -238,6 +239,7 @@ function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayloa
         workflowStatus: it.workflowStatus,
         carriedOver: it.carriedOver ?? false,
         completed: it.completed ?? null,
+        stageName: it.stageName ?? null,
       })),
     risks: section.risks
       .filter((r) => hasText(r.risk) && hasText(r.mitigation))
@@ -247,6 +249,7 @@ function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayloa
         risk: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
+        stageName: r.stageName ?? null,
       })),
     decisions: section.decisions
       .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
@@ -257,6 +260,7 @@ function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayloa
         deadline: d.deadline ?? null,
         impact: d.impact,
         resolvedAt: d.resolvedAt ?? null,
+        stageName: d.stageName ?? null,
       })),
     priorities: section.priorities
       .filter((p) => hasText(p.text))
@@ -264,6 +268,7 @@ function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayloa
         id: p.id,
         rank: p.rank,
         text: p.text,
+        stageName: p.stageName ?? null,
       })),
   };
 }
@@ -546,6 +551,13 @@ export function LeadForm({ period }: LeadFormProps) {
 
   const isReadOnly = data.readOnly || !!period || isSubmitted;
 
+  // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
+  // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
+  // Decisions / Priorities are department-scoped, so they get the union.
+  const stagesForProduct = (productId: string) =>
+    ownedStagesForProject(draftSection, productId);
+  const availableStages = ownedStagesForProject(draftSection, undefined);
+
   // ---- onChange merge handlers ----
   // Decisions: merge text edits / additions / deletions back into raw section
   // by id, preserving owner/impact/deadline/resolvedAt fields the mapper drops
@@ -561,6 +573,10 @@ export function LeadForm({ period }: LeadFormProps) {
       const merged = next.map((d) => {
         const existing = existingById.get(d.id);
         const deadline = d.deadline ? new Date(d.deadline) : null;
+        // 35-04: preserve the dialog-supplied stageName (or '—' fallback
+        // for legacy rows). Pass through to the raw section so saveDraft
+        // hits the new DB column.
+        const stageName = d.stageName && d.stageName !== '—' ? d.stageName : null;
         if (existing) {
           return {
             ...existing,
@@ -568,6 +584,7 @@ export function LeadForm({ period }: LeadFormProps) {
             owner: d.owner,
             impact: d.impact,
             deadline,
+            stageName,
           };
         }
         return {
@@ -577,6 +594,7 @@ export function LeadForm({ period }: LeadFormProps) {
           impact: d.impact,
           deadline,
           resolvedAt: null,
+          stageName,
         };
       });
       return { ...prev, decisions: merged };
@@ -628,6 +646,9 @@ export function LeadForm({ period }: LeadFormProps) {
       );
       const merged = next.map((r) => {
         const existing = r.id ? existingById.get(r.id) : undefined;
+        // 35-04: '—' is the legacy placeholder shown for rows that pre-
+        // dated the column; treat it as null when saving.
+        const stageName = r.stageName && r.stageName !== '—' ? r.stageName : null;
         if (existing) {
           return {
             ...existing,
@@ -635,6 +656,7 @@ export function LeadForm({ period }: LeadFormProps) {
             risk: r.text,
             impact: r.impact,
             mitigation: r.mitigation,
+            stageName,
           };
         }
         return {
@@ -643,6 +665,7 @@ export function LeadForm({ period }: LeadFormProps) {
           risk: r.text,
           impact: r.impact,
           mitigation: r.mitigation,
+          stageName,
         };
       });
       return { ...prev, risks: merged };
@@ -660,10 +683,11 @@ export function LeadForm({ period }: LeadFormProps) {
       const existingByRank = new Map(prev.priorities.map((p) => [p.rank, p] as const));
       const merged = next.map((p) => {
         const existing = existingByRank.get(p.rank);
+        const stageName = p.stageName && p.stageName !== '—' ? p.stageName : null;
         if (existing) {
-          return { ...existing, text: p.text };
+          return { ...existing, text: p.text, stageName };
         }
-        return { rank: p.rank, text: p.text };
+        return { rank: p.rank, text: p.text, stageName };
       });
       return { ...prev, priorities: merged };
     });
@@ -709,6 +733,9 @@ export function LeadForm({ period }: LeadFormProps) {
         const mergedTyped = next.map((kb) => {
           const raw = statusToRawFields(kb.status);
           const existing = existingById.get(kb.id);
+          // 35-04: kb.stageName is the dialog's selection. '—' is the
+          // legacy placeholder; treat as null on save.
+          const stageName = kb.stageName && kb.stageName !== '—' ? kb.stageName : null;
           if (existing) {
             return {
               ...existing,
@@ -716,6 +743,7 @@ export function LeadForm({ period }: LeadFormProps) {
               projectId: kb.productId,
               workflowStatus: raw.workflowStatus,
               completed: raw.completed,
+              stageName,
             };
           }
           return {
@@ -729,6 +757,7 @@ export function LeadForm({ period }: LeadFormProps) {
             workflowStatus: raw.workflowStatus,
             carriedOver: false,
             completed: raw.completed,
+            stageName,
           };
         });
         // Keep all items of the OTHER type unchanged; replace this type with
@@ -868,14 +897,15 @@ export function LeadForm({ period }: LeadFormProps) {
               Toggle All
             </button>
             {/*
-              currentUser.role is a display label (e.g. "Dev Lead",
-              "Head", "Admin"), not the system role enum — the read
-              model carries authorName + display role for the chrome
-              header. Match by suffix so any "X Lead" surfaces Request
-              Reopen. The polite path stays Lead-only; Head sees
-              Revoke. Backend gates both anyway, this is just UX.
+              35-03: gate on the structured authorRole (Prisma `Role`
+              enum) carried by the read model. Pre-35-03 we string-
+              matched against the display label ("Dev Lead" ... "Lead")
+              which fell over for head/admin sessions viewing a lead's
+              section via /lead/report?period=X. Now: lead → Request
+              Reopen (polite), head/admin → Revoke (destructive).
+              Backend gates both anyway; this is the UX path.
             */}
-            {isSubmitted && /lead$/i.test(currentUser.role ?? '') && (
+            {isSubmitted && currentUser.authorRole === 'lead' && (
               <button
                 type="button"
                 className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
@@ -886,7 +916,7 @@ export function LeadForm({ period }: LeadFormProps) {
                 Request Reopen
               </button>
             )}
-            {isSubmitted && !/lead$/i.test(currentUser.role ?? '') && (
+            {isSubmitted && currentUser.authorRole !== 'lead' && (
               <button
                 type="button"
                 className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
@@ -958,6 +988,7 @@ export function LeadForm({ period }: LeadFormProps) {
           onProductsChange={handleProductsChange}
           onRisksChange={handleRisksChange}
           readOnly={isReadOnly}
+          stagesForProduct={stagesForProduct}
           {...(activeSectionId ? { sectionId: activeSectionId } : {})}
         >
           {/* Product Status (SDLC Pipeline) */}
@@ -982,6 +1013,7 @@ export function LeadForm({ period }: LeadFormProps) {
               onItemsChange={handleCurrentWeekItemsChange}
               currentUserName={currentUser.name}
               products={products}
+              stagesForProduct={stagesForProduct}
             />
           </AccordionSection>
 
@@ -997,6 +1029,7 @@ export function LeadForm({ period }: LeadFormProps) {
               onItemsChange={handleNextWeekItemsChange}
               currentUserName={currentUser.name}
               products={products}
+              stagesForProduct={stagesForProduct}
             />
           </AccordionSection>
 
@@ -1025,6 +1058,7 @@ export function LeadForm({ period }: LeadFormProps) {
             readOnly={isReadOnly}
             onChange={handleDecisionsChange}
             currentUserName={currentUser.name}
+            availableStages={availableStages}
           />
         </AccordionSection>
 
@@ -1039,6 +1073,7 @@ export function LeadForm({ period }: LeadFormProps) {
             priorities={priorities}
             readOnly={isReadOnly}
             onChange={handlePrioritiesChange}
+            availableStages={availableStages}
           />
         </AccordionSection>
       </div>

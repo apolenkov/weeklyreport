@@ -10,6 +10,11 @@ type PrioritiesSectionProps = {
   readonly priorities: PriorityEntry[];
   readonly readOnly?: boolean;
   readonly onChange?: (priorities: PriorityEntry[]) => void;
+  /**
+   * 35-04: SDLC stages available to the lead across all assigned projects
+   * (union — priorities are department-scoped, no projectId).
+   */
+  readonly availableStages?: readonly string[];
 };
 
 function EditIcon() {
@@ -68,7 +73,7 @@ const RANK_TEXT: Record<1 | 2 | 3 | 'rest', string> = {
  * Ranks renumber sequentially on add / delete so adjacent slots are
  * always 1..N (the schema allows up to 50 per `draftSaveSchema`).
  */
-export function PrioritiesSection({ priorities, readOnly = false, onChange }: PrioritiesSectionProps) {
+export function PrioritiesSection({ priorities, readOnly = false, onChange, availableStages }: PrioritiesSectionProps) {
   const sorted = [...priorities].sort((a, b) => a.rank - b.rank);
   const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
   const [dialogState, setDialogState] = useState<
@@ -143,6 +148,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
           open={dialogState.open && dialogState.mode === 'create'}
           priority={null}
           nextRank={1}
+          availableStages={availableStages}
           onSave={handleDialogSave}
           onCancel={handleDialogCancel}
         />
@@ -177,11 +183,21 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
               disabled={readOnly}
               aria-label={`Edit priority ${entry.rank}`}
             >
-              {entry.text.trim().length > 0 ? (
-                <span className="break-words text-[var(--color-foreground)]">{entry.text}</span>
-              ) : (
-                <span className="text-[var(--color-muted-foreground)]">— pending</span>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* 35-04: stage chip — surfaces SDLC scoping next to the
+                    text. Hidden for legacy '—' rows so empty placeholders
+                    don't clutter. */}
+                {entry.stageName && entry.stageName !== '—' && (
+                  <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]">
+                    {entry.stageName}
+                  </span>
+                )}
+                {entry.text.trim().length > 0 ? (
+                  <span className="break-words text-[var(--color-foreground)]">{entry.text}</span>
+                ) : (
+                  <span className="text-[var(--color-muted-foreground)]">— pending</span>
+                )}
+              </div>
             </button>
             {!readOnly && (
               <div className="flex gap-1">
@@ -213,6 +229,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange }: Pr
         open={dialogState.open}
         priority={dialogState.open && dialogState.mode === 'edit' ? dialogState.priority : null}
         nextRank={dialogState.open && dialogState.mode === 'create' ? sorted.length + 1 : (dialogState.open && dialogState.mode === 'edit' ? dialogState.priority.rank : 1)}
+        availableStages={availableStages}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
       />

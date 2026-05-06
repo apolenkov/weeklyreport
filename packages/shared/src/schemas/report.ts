@@ -39,6 +39,12 @@ export const projectStatusInputSchema = z.object({
   status: trafficLightStatusSchema.optional(),
 });
 
+// 35-04: optional SDLC stage label carried per entry. The DB column stays
+// nullable so the column migration is non-destructive for legacy rows
+// seeded before this field existed; the lead-form modals enforce the
+// non-empty constraint client-side once a stage is selectable.
+const stageNameField = z.string().min(1).max(50).nullable().optional();
+
 export const itemInputSchema = z.object({
   id: z.string().uuid().optional(),
   projectId: z.string().uuid(),
@@ -48,6 +54,7 @@ export const itemInputSchema = z.object({
   workflowStatus: itemWorkflowStatusSchema,
   carriedOver: z.boolean().default(false),
   completed: z.boolean().nullable().optional(),
+  stageName: stageNameField,
 });
 
 export const riskInputSchema = z.object({
@@ -56,6 +63,7 @@ export const riskInputSchema = z.object({
   risk: safeText({ max: 500 }),
   impact: safeText({ max: 500 }),
   mitigation: safeText({ max: 500 }),
+  stageName: stageNameField,
 });
 
 export const decisionInputSchema = z.object({
@@ -65,12 +73,14 @@ export const decisionInputSchema = z.object({
   deadline: z.coerce.date().nullable().optional(),
   impact: safeText({ max: 500 }),
   resolvedAt: z.coerce.date().nullable().optional(),
+  stageName: stageNameField,
 });
 
 export const priorityInputSchema = z.object({
   id: z.string().uuid().optional(),
   rank: z.number().int().min(1),
   text: safeText({ max: 200 }),
+  stageName: stageNameField,
 });
 
 export const draftSaveSchema = z.object({
@@ -97,17 +107,43 @@ export const submitSectionSchema = draftSaveSchema.extend({
   ),
 });
 
+// 35-04: per-project list of stages owned by the section author on this
+// project. Sourced from `StageAssignment` rows scoped by (projectId,
+// userId=author). Empty array == author has no stake on this project,
+// in which case the lead-form renders the project's stages as
+// `unassigned` chips with assignee=null.
+export const ownedStageSchema = z.object({
+  stageId: z.string().uuid(),
+  stageName: z.string().min(1),
+  sortOrder: z.number().int().min(0),
+});
+
 export const projectReadModelSchema = z.object({
   projectId: z.string().uuid(),
   projectName: z.string().min(1),
   trafficLight: trafficLightStatusSchema.nullable(),
+  /**
+   * Stages this project's section author owns via `StageAssignment`. The
+   * lead-form renders the standard 7-stage grid and marks each stage as
+   * "mine" iff its name matches one of these. Optional so existing
+   * fixtures and contract-test factories that pre-date 35-04 still
+   * type-check; missing -> empty array means "no stake on this project"
+   * which the lead-form mapper handles symmetrically.
+   */
+  ownedStages: z.array(ownedStageSchema).optional(),
 });
 
+// 35-03: role label of the section author, surfaced end-to-end so the
+// /lead/report chrome can switch between "Request Reopen" (lead-on-own-
+// section) and "Revoke" (head/admin viewing someone else's section).
+// Optional so legacy fixtures continue to parse — consumers that gate
+// on the role default to `'lead'` when missing.
 export const reportSectionReadModelSchema = z.object({
   reportSectionId: z.string().uuid(),
   reportId: z.string().uuid(),
   authorId: z.string().uuid(),
   authorName: z.string().min(1),
+  authorRole: roleSchema.optional(),
   status: reportSectionStatusSchema,
   submittedAt: z.coerce.date().nullable(),
   projects: z.array(projectReadModelSchema),
@@ -428,6 +464,8 @@ export type DraftSaveInput = z.infer<typeof draftSaveSchema>;
 export type SubmitSectionPayload = z.input<typeof submitSectionSchema>;
 export type SubmitSectionInput = z.infer<typeof submitSectionSchema>;
 export type ReportSectionReadModel = z.infer<typeof reportSectionReadModelSchema>;
+export type ProjectReadModel = z.infer<typeof projectReadModelSchema>;
+export type OwnedStage = z.infer<typeof ownedStageSchema>;
 export type SubmissionDashboardRow = z.infer<typeof submissionDashboardRowSchema>;
 export type PortfolioOverview = z.infer<typeof portfolioOverviewSchema>;
 export type AssembledReport = z.infer<typeof assembledReportSchema>;
