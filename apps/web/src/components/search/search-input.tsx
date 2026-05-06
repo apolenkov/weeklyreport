@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 
@@ -71,10 +71,10 @@ function targetUrlFor(hit: SearchHit): string {
 }
 
 const TYPE_BADGE: Record<SearchHit['type'], { label: string; aria: string }> = {
-  item: { label: 'Item', aria: 'Item match' },
-  risk: { label: 'Risk', aria: 'Risk match' },
-  decision: { label: 'Decision', aria: 'Decision match' },
-  project: { label: 'Project', aria: 'Project match' },
+  item: { label: 'Задача', aria: 'Совпадение в задаче' },
+  risk: { label: 'Риск', aria: 'Совпадение в риске' },
+  decision: { label: 'Решение', aria: 'Совпадение в решении' },
+  project: { label: 'Продукт', aria: 'Совпадение в продукте' },
 };
 
 /**
@@ -104,6 +104,9 @@ function renderSnippet(snippet: string): React.ReactNode {
 export function SearchInput({ scope, placeholder, className }: SearchInputProps) {
   const router = useRouter();
   const trpc = useTRPC();
+  const reactId = useId().replace(/:/g, '');
+  const inputId = `${reactId}-search-input`;
+  const resultsId = `${reactId}-search-results`;
 
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -112,7 +115,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
 
   const enabled = debouncedQ.length >= MIN_LEN && debouncedQ.length <= MAX_LEN;
 
-  const { data, isFetching } = useQuery({
+  const { data, isError, isFetching } = useQuery({
     ...trpc.search.query.queryOptions({ q: debouncedQ, scope, limit: 20 }),
     enabled,
     staleTime: 30_000,
@@ -163,23 +166,27 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
   }
 
   const showResults = open && enabled;
-  const showEmpty = showResults && !isFetching && hits.length === 0;
+  const showError = showResults && isError;
+  const showEmpty = showResults && !isError && !isFetching && hits.length === 0;
+  const activeOptionId =
+    showResults && hits[activeIndex] ? `${resultsId}-option-${activeIndex}` : undefined;
 
   return (
     <div ref={containerRef} className={`relative ${className ?? ''}`}>
-      <label className="sr-only" htmlFor="cr-search-input">
-        Search reports
+      <label className="sr-only" htmlFor={inputId}>
+        Поиск отчётов
       </label>
       <input
-        id="cr-search-input"
+        id={inputId}
         type="search"
         role="combobox"
         aria-expanded={showResults}
-        aria-controls="cr-search-results"
+        aria-controls={resultsId}
+        aria-activedescendant={activeOptionId}
         aria-autocomplete="list"
         autoComplete="off"
         value={q}
-        placeholder={placeholder ?? 'Search…'}
+        placeholder={placeholder ?? 'Поиск…'}
         onFocus={() => setOpen(true)}
         onChange={(e) => {
           setQ(e.target.value);
@@ -191,7 +198,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
 
       {showResults && (
         <div
-          id="cr-search-results"
+          id={resultsId}
           role="listbox"
           className="absolute z-50 mt-1 max-h-[420px] w-full overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-white shadow-lg"
         >
@@ -202,6 +209,16 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
               className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
             >
               Поиск…
+            </div>
+          )}
+
+          {showError && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
+            >
+              Не удалось выполнить поиск
             </div>
           )}
 
@@ -223,6 +240,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
             return (
               <button
                 key={`${hit.type}-${hit.id}`}
+                id={`${resultsId}-option-${idx}`}
                 type="button"
                 role="option"
                 aria-selected={isActive}

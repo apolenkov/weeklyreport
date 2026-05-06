@@ -29,10 +29,11 @@ per-VU loop:
            (one-time, cookie persists across iterations via k6 jar)
   iter N:  read group (always):
              reports.getActive                  → tag: trpc.reports.getActive
-             reports.myHistory  { limit: 20 }   → tag: trpc.reports.myHistory
-             weeklyReport.get   { reportId:null}→ tag: trpc.weeklyReport.get
+             reports.myHistory                  → tag: trpc.reports.myHistory
+             weeklyReport.get   {}              → tag: trpc.weeklyReport.get
            write group (20% of iters):
-             reports.saveDraft  { patches: [...] } → tag: trpc.reports.saveDraft
+             reports.saveDraft  { draftSaveSchema payload from getActive }
+                                                 → tag: trpc.reports.saveDraft
   think-time: 0.3..1.5s between procs (uniform jitter)
 ```
 
@@ -123,8 +124,9 @@ even without the `--summary-export` flag.
 ```bash
 # Smoke run with low VUs first to confirm schema matches Zod
 VUS=2 DURATION=30s k6 run tests/load/k6-baseline.js
-# Expect: 0 cr_trpc_errors. If saveDraft 400s, the patches[] shape diverged
-# from the live schema — open apps/api/src/modules/reports/* and re-align.
+# Expect: 0 cr_trpc_errors. If saveDraft 400s, the draft payload builder
+# in tests/load/k6-baseline.js diverged from draftSaveSchema — re-align it
+# with packages/shared/src/schemas/report.ts.
 
 # Then full run
 VUS=50 DURATION=2m k6 run tests/load/k6-baseline.js
@@ -132,6 +134,5 @@ VUS=50 DURATION=2m k6 run tests/load/k6-baseline.js
 ```
 
 If schema drift breaks the saveDraft shape, the fix is one localised edit
-in the k6 script — the read paths (`getActive`, `myHistory`, `weeklyReport.get`)
-take only `{ reportId? }` / `{ limit? }` so they're stable across schema
-revisions.
+in the k6 script. The read paths (`getActive`, `myHistory`, `weeklyReport.get`)
+take no input or `{ reportId? }`, so they're stable across schema revisions.

@@ -4,7 +4,7 @@ import { DlqBadge } from '../../../components/admin/dlq-badge';
 import { ReopenTabLabel } from '../../../components/admin/reopen-tab-label';
 
 type Props = {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; filter?: string }>;
 };
 
 // Phase 35-06: 'jobs' tab — BullMQ DLQ admin UI. Order: after 'reopen',
@@ -24,7 +24,7 @@ const TAB_LABELS: Record<TabId, string> = {
 };
 
 export default async function AdminPage({ searchParams }: Props) {
-  const { tab = 'users' } = await searchParams;
+  const { tab = 'users', filter = null } = await searchParams;
   const activeTab: TabId = tabs.includes(tab as TabId) ? (tab as TabId) : 'users';
 
   return (
@@ -68,7 +68,7 @@ export default async function AdminPage({ searchParams }: Props) {
 
           {/* Tab content */}
           <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm">
-            <AdminPanel activeTab={activeTab} />
+            <AdminPanel activeTab={activeTab} productFilter={filter} />
           </div>
         </div>
       </div>

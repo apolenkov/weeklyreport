@@ -5,8 +5,8 @@ milestone_name: Production Readiness
 status: shipped
 shipped_tag: v8.0.0
 shipped_at: "2026-05-06"
-last_updated: "2026-05-06T16:30:00.000Z"
-last_activity: 2026-05-06 -- v8.0.0 tagged + pushed; v8.1 (Visual Identity & AI Maturity) parked in .planning/backlog/
+last_updated: "2026-05-06T20:43:52.000Z"
+last_activity: 2026-05-06 -- phase 39 review/learnings extracted; v8.0 remains shipped and v8.1 remains parked in .planning/backlog/
 progress:
   total_phases: 6
   completed_phases: 6
@@ -43,7 +43,7 @@ Milestone: v8.0 (SHIPPED, tag v8.0.0)
 Phases: 6/6 complete (34..39)
 Plans: 32/32 complete
 Status: production-ready milestone closed 2026-05-06; v8.1 drafted then parked.
-Last activity: 2026-05-06 -- v8.0.0 tagged; visual regression baseline + v8.1 scaffold + backlog park pushed.
+Last activity: 2026-05-06 -- phase 39 review/learnings extracted after v8.0 tag; visual regression baseline + v8.1 scaffold + backlog park remain pushed.
 
 ### v8.0 phase progress
 

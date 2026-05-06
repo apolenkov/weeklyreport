@@ -151,6 +151,26 @@ describe('SearchInput — 39-05 (PERF-05)', () => {
     expect(screen.getByText('Ничего не найдено')).toBeInTheDocument();
   });
 
+  it('renders an error state when search fails', () => {
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      isError: true,
+      isFetching: false,
+    });
+    render(<SearchInput scope="all" />);
+
+    const input = screen.getByRole('combobox');
+    act(() => {
+      fireEvent.change(input, { target: { value: 'platform' } });
+      fireEvent.focus(input);
+    });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(screen.getByText('Не удалось выполнить поиск')).toBeInTheDocument();
+  });
+
   it('navigates via router.push on Enter when a hit is highlighted', () => {
     useQueryMock.mockReturnValue({
       data: [
