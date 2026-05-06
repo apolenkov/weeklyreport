@@ -13,21 +13,25 @@ import {
   SheetTrigger,
 } from '@customreport/ui/components/ui/sheet';
 
-import { isRouteVisible } from '../../lib/role-visibility';
 import { useSession } from '../../lib/session-provider';
 
 type NavLink = {
   href: string;
   label: string;
+  // Roles that should SEE this link in nav. Tighter than route-access
+  // (head/admin can technically open /lead/report but should not see it
+  // in their nav — lead-prefix routes are personal lead data, head has
+  // their own dashboard for the same intent).
+  roles: ReadonlyArray<Role>;
 };
 
 const NAV_LINKS: ReadonlyArray<NavLink> = [
-  { href: '/lead/report', label: 'My Report' },
-  { href: '/lead/history', label: 'History' },
-  { href: '/head/dashboard', label: 'Dashboard' },
-  { href: '/head/report', label: 'Weekly' },
-  { href: '/reports/history', label: 'Archive' },
-  { href: '/admin', label: 'Admin' },
+  { href: '/lead/report', label: 'Мой отчёт', roles: ['lead'] },
+  { href: '/lead/history', label: 'Моя история', roles: ['lead'] },
+  { href: '/head/dashboard', label: 'Дашборд', roles: ['head', 'admin'] },
+  { href: '/head/report', label: 'Сводка', roles: ['head', 'admin'] },
+  { href: '/reports/history', label: 'Архив', roles: ['lead', 'head', 'admin', 'viewer'] },
+  { href: '/admin', label: 'Админка', roles: ['head', 'admin'] },
 ];
 
 function getRoleLabel(role: Role): string {
@@ -154,9 +158,7 @@ export function NavBar() {
 
   const role: Role | null = user?.role ?? null;
   const visibleLinks: ReadonlyArray<NavLink> =
-    role === null
-      ? []
-      : NAV_LINKS.filter((link) => isRouteVisible(link.href, role));
+    role === null ? [] : NAV_LINKS.filter((link) => link.roles.includes(role));
 
   const initials = user ? initialsFromName(user.name) : '?';
   const roleLabel = role ? getRoleLabel(role) : '';

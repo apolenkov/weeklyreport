@@ -57,70 +57,70 @@ describe('NavBar — AUTH-06 role-aware visibility (Phase 29-06)', () => {
   it('viewer does NOT see /admin link in the DOM', () => {
     setRole('viewer');
     render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /^Admin$/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Админка/ })).toBeNull();
   });
 
   it('viewer does NOT see /head/* links (Dashboard, Weekly Report)', () => {
     setRole('viewer');
     render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /Dashboard/i })).toBeNull();
-    expect(screen.queryByRole('link', { name: /Weekly Report/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Дашборд/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Сводка/i })).toBeNull();
   });
 
   it('viewer does NOT see /lead/* links (My Report, History)', () => {
     setRole('viewer');
     render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /My Report/i })).toBeNull();
-    expect(screen.queryByRole('link', { name: /^History$/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Мой отчёт/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Моя история/i })).toBeNull();
   });
 
   it('viewer DOES see /reports/* links (Archive)', () => {
     setRole('viewer');
     render(<NavBar />);
     // Multiple /reports links may render (desktop + mobile nav) — getAllByRole.
-    const reportsLinks = screen.getAllByRole('link', { name: /Archive/i });
+    const reportsLinks = screen.getAllByRole('link', { name: /Архив/i });
     expect(reportsLinks.length).toBeGreaterThan(0);
   });
 
   it('lead does NOT see /head/* links but DOES see /lead/* and /reports/*', () => {
     setRole('lead');
     render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /Dashboard/i })).toBeNull();
-    expect(screen.getAllByRole('link', { name: /My Report/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link', { name: /Archive/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: /Дашборд/i })).toBeNull();
+    expect(screen.getAllByRole('link', { name: /Мой отчёт/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /Архив/i }).length).toBeGreaterThan(0);
   });
 
   it('lead does NOT see /admin link', () => {
     setRole('lead');
     render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /^Admin$/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Админка/ })).toBeNull();
   });
 
   it('head sees /admin link in the DOM', () => {
     setRole('head');
     render(<NavBar />);
-    expect(screen.getAllByRole('link', { name: /^Admin$/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /Админка/ }).length).toBeGreaterThan(0);
   });
 
   it('head sees /head/* links (Dashboard, Weekly Report)', () => {
     setRole('head');
     render(<NavBar />);
-    expect(screen.getAllByRole('link', { name: /Dashboard/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link', { name: /Weekly/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /Дашборд/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /Сводка/i }).length).toBeGreaterThan(0);
   });
 
   it('admin sees /admin link', () => {
     setRole('admin');
     render(<NavBar />);
-    expect(screen.getAllByRole('link', { name: /^Admin$/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /Админка/ }).length).toBeGreaterThan(0);
   });
 
   it('null session (still loading) renders NO role-gated links', () => {
     setRole(null);
     render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /^Admin$/ })).toBeNull();
-    expect(screen.queryByRole('link', { name: /Dashboard/i })).toBeNull();
-    expect(screen.queryByRole('link', { name: /My Report/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Админка/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Дашборд/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Мой отчёт/i })).toBeNull();
   });
 
   it('hidden links are absent from the DOM (filtered before render — not CSS-hidden)', () => {
