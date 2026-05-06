@@ -122,8 +122,8 @@ test.describe('ADM-040..050: Admin Panel - Products Tab', () => {
     });
 
     // Fill form
-    const nameInput = await sheet.locator('input[placeholder*="Name"], input[placeholder*="Имя"], input').first();
-    const leadSelect = await sheet.locator('select, [data-testid="lead-select"]').first();
+    const nameInput = await sheet.getByPlaceholder(/Name|Имя/i).first();
+    const leadSelect = await sheet.getByRole('combobox').first();
 
     await nameInput.fill('Test Product ' + Date.now());
     // Try to select a lead if select exists
@@ -151,7 +151,7 @@ test.describe('ADM-040..050: Admin Panel - Products Tab', () => {
     await sheet.waitFor({ state: 'visible', timeout: 2000 });
 
     // Fill and submit
-    const nameInput = await sheet.locator('input[placeholder*="Name"], input[placeholder*="Имя"], input').first();
+    const nameInput = await sheet.getByPlaceholder(/Name|Имя/i).first();
     await nameInput.fill('Toast Test ' + Date.now());
 
     const submitButton = await sheet.locator('button:has-text("Save"), button:has-text("Сохранить")').last();

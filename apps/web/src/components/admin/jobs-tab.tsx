@@ -95,7 +95,7 @@ export function JobsTab() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="jobs-tab">
       <div>
         <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
           Очередь email-reminder
@@ -128,7 +128,7 @@ export function JobsTab() {
 
       {jobs.length > 0 && (
         <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm" data-testid="jobs-table">
             <thead>
               <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
                 <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">ID</th>

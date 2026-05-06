@@ -41,7 +41,7 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
       expect(jobRows >= 0).toBe(true);
     } else {
       // Empty state message OK
-      const emptyState = await page.locator('text=/no jobs|No jobs|нет задач/i').isVisible().catch(() => false);
+      const emptyState = await page.getByTestId('jobs-empty-state').isVisible().catch(() => false);
       expect(jobsTable || emptyState).toBe(true);
     }
 
@@ -52,8 +52,8 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
     const jobsTable = await page.locator('[data-testid="jobs-table"]').isVisible().catch(() => false);
 
     if (jobsTable) {
-      const idHeader = await page.locator('[data-testid="jobs-table"] th:has-text("ID"), [data-testid="jobs-table"] th:has-text("Id")').first();
-      expect(await idHeader.isVisible()).toBe(true);
+      const idHeader = page.locator('[data-testid="jobs-table"]').locator('th').filter({ hasText: /^ID$/i });
+      expect(await idHeader.first().isVisible().catch(() => false)).toBe(true);
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-132.png` });
@@ -63,8 +63,8 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
     const jobsTable = await page.locator('[data-testid="jobs-table"]').isVisible().catch(() => false);
 
     if (jobsTable) {
-      const typeHeader = await page.locator('[data-testid="jobs-table"] th:has-text("Type"), [data-testid="jobs-table"] th:has-text("Тип")').first();
-      expect(await typeHeader.isVisible().catch(() => false)).toBe(true);
+      const typeHeader = page.locator('[data-testid="jobs-table"]').locator('th').filter({ hasText: /Type|Тип/ });
+      expect(await typeHeader.first().isVisible().catch(() => false)).toBe(true);
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-133.png` });
@@ -74,8 +74,8 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
     const jobsTable = await page.locator('[data-testid="jobs-table"]').isVisible().catch(() => false);
 
     if (jobsTable) {
-      const statusHeader = await page.locator('[data-testid="jobs-table"] th:has-text("Status"), [data-testid="jobs-table"] th:has-text("Статус")').first();
-      expect(await statusHeader.isVisible().catch(() => false)).toBe(true);
+      const statusHeader = page.locator('[data-testid="jobs-table"]').locator('th').filter({ hasText: /Status|Статус/ });
+      expect(await statusHeader.first().isVisible().catch(() => false)).toBe(true);
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-134.png` });
@@ -97,11 +97,12 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
 
     if (jobsTable) {
       // Look for rows with failed status
-      const failedRows = await page.locator('[data-testid="jobs-table"]', { has: page.locator('text=/failed|Failed|Ошибка/i') }).count();
+      const failedRows = page.locator('[data-testid="jobs-table"] tbody tr').filter({ hasText: /failed|Failed|Ошибка/i });
+      const failedCount = await failedRows.count();
 
-      if (failedRows > 0) {
+      if (failedCount > 0) {
         // Find retry button in failed row
-        const retryButton = await page.locator('[data-testid="jobs-table"] button:has-text("Retry"), [data-testid="jobs-table"] button:has-text("Повтор")').first();
+        const retryButton = page.getByRole('button', { name: /Retry|Повтор/i }).first();
         expect(await retryButton.isVisible().catch(() => false)).toBe(true);
       }
     }
@@ -114,8 +115,9 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
 
     if (jobsTable) {
       // Look for rows with completed/succeeded status
-      const successRows = await page.locator('[data-testid="jobs-table"]', { has: page.locator('text=/completed|succeeded|Done|Готово/i') }).count();
-      expect(successRows >= 0).toBe(true);
+      const successRows = page.locator('[data-testid="jobs-table"] tbody tr').filter({ hasText: /completed|succeeded|Done|Готово/i });
+      const successCount = await successRows.count();
+      expect(successCount >= 0).toBe(true);
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-137.png` });
@@ -126,8 +128,9 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
 
     if (jobsTable) {
       // Look for rows with queued/pending status
-      const queuedRows = await page.locator('[data-testid="jobs-table"]', { has: page.locator('text=/queued|pending|processing|В очереди/i') }).count();
-      expect(queuedRows >= 0).toBe(true);
+      const queuedRows = page.locator('[data-testid="jobs-table"] tbody tr').filter({ hasText: /queued|pending|processing|В очереди/i });
+      const queuedCount = await queuedRows.count();
+      expect(queuedCount >= 0).toBe(true);
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-138.png` });
@@ -145,7 +148,7 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
       });
 
       // Find and click retry button if it exists
-      const retryButton = await page.locator('[data-testid="jobs-table"] button:has-text("Retry"), [data-testid="jobs-table"] button:has-text("Повтор")').first();
+      const retryButton = page.getByRole('button', { name: /Retry|Повтор/i }).first();
       const retryExists = await retryButton.isVisible().catch(() => false);
 
       if (retryExists) {

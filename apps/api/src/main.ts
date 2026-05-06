@@ -17,7 +17,7 @@ import { CorrelationIdMiddleware } from './infrastructure/middleware/correlation
 import * as trpcExpress from '@trpc/server/adapters/express';
 import { Queue } from 'bullmq';
 import cookieParser from 'cookie-parser';
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
@@ -275,7 +275,12 @@ async function bootstrap() {
   // 36-01: gate all /auth/* routes behind the strict auth limiter.
   // Express applies middlewares in order, so registering it BEFORE
   // mountAuthRoutes covers every /auth/* route the module mounts.
-  expressApp.use('/auth', authLimiter);
+  // Skip /auth/dev-login — gated by AUTH_DEV_MODE flag (dev-only),
+  // not a brute-force surface, and 5/min would block E2E suites.
+  expressApp.use('/auth', ((req, res, next) => {
+    if (req.path === '/dev-login') return next();
+    return authLimiter(req, res, next);
+  }) as RequestHandler);
   mountAuthRoutes(
     expressApp,
     samlStrategy,
