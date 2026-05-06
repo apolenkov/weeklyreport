@@ -20,7 +20,7 @@ test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
   test.beforeEach(async ({ page }) => {
     // Login as head
     await page.goto(`${DEV_LOGIN_URL}?role=head`);
-    await page.waitForURL(FRONTEND_URL);
+    await page.waitForURL(/^http:\/\/localhost:3000\//, { timeout: 10000 });
     // Navigate to admin
     await page.goto(ADMIN_URL);
     await page.waitForSelector('[data-testid="admin-panel"]', { timeout: 5000 });

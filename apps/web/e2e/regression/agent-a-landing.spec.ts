@@ -23,7 +23,7 @@ test.describe('LAND-001..006: Landing Page', () => {
     expect(card).toBeVisible({ timeout: 5000 });
 
     // Check for Sign In button
-    const signInButton = page.locator('button:has-text("Sign In"), a:has-text("Sign In")').first();
+    const signInButton = page.locator('button[aria-label*="application"], a[aria-label*="application"], button[aria-label*="SSO"], a[aria-label*="SSO"]').first();
     expect(signInButton).toBeVisible({ timeout: 5000 });
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LAND-001.png` });
@@ -32,7 +32,7 @@ test.describe('LAND-001..006: Landing Page', () => {
   test('LAND-002: "Sign In" button links to API_URL/auth/saml/login', async ({ page }) => {
     await page.goto('/');
 
-    const signInButton = page.locator('button:has-text("Sign In"), a:has-text("Sign In")').first();
+    const signInButton = page.locator('button[aria-label*="application"], a[aria-label*="application"], button[aria-label*="SSO"], a[aria-label*="SSO"]').first();
     const href = await signInButton.getAttribute('href');
 
     // Expect href to contain /auth/saml/login or /auth/dev-login
@@ -80,7 +80,7 @@ test.describe('LAND-001..006: Landing Page', () => {
   test('LAND-005: Button is full-width inside card (w-full)', async ({ page }) => {
     await page.goto('/');
 
-    const signInButton = page.locator('button:has-text("Sign In"), a:has-text("Sign In")').first();
+    const signInButton = page.locator('button[aria-label*="application"], a[aria-label*="application"], button[aria-label*="SSO"], a[aria-label*="SSO"]').first();
     const buttonBox = await signInButton.boundingBox();
     const cardBox = await page.locator('[role="main"], .card, [class*="card"]').first().boundingBox();
 
