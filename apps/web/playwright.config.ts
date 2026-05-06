@@ -41,7 +41,39 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
-      testIgnore: [/auth\.setup\.ts/, /integration[\\/]/],
+      testIgnore: [/auth\.setup\.ts/, /integration[\\/]/, /visual[\\/]/],
+    },
+
+    // Phase 39-06: visual regression baselines. Locked viewport + locale +
+    // colour scheme + low pixel-diff threshold so any genuine UI change
+    // surfaces immediately. Determinism is enforced inside each spec via
+    // page.clock.install (frozen time) and AI_VISUAL_STUB on the API.
+    //
+    // Snapshot dir is OS-pinned by Playwright (foo.spec.ts-snapshots/<name>-<project>-<platform>.png)
+    // so darwin baselines are stored separately from linux baselines. CI
+    // generates its own linux-pinned set on first run via --update-snapshots.
+    {
+      name: 'visual',
+      testDir: 'e2e/visual',
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        locale: 'ru-RU',
+        colorScheme: 'light',
+        timezoneId: 'UTC',
+      },
+      expect: {
+        toHaveScreenshot: {
+          // 0.1% pixel-ratio threshold + 100px slop covers font hinting and
+          // 1-pixel anti-aliasing without masking real regressions.
+          maxDiffPixelRatio: 0.001,
+          maxDiffPixels: 100,
+          threshold: 0.1,
+          animations: 'disabled',
+          caret: 'hide',
+        },
+      },
     },
   ],
 
@@ -63,6 +95,10 @@ export default defineConfig({
         NODE_ENV: 'test',
         FRONTEND_URL: WEB_URL,
         LOG_DIR: '.logs/e2e',
+        // Phase 39-06: stub Anthropic so the AI summary card renders a
+        // frozen narrative — without this the screenshot diff would catch
+        // every probabilistic re-roll from Haiku as a regression.
+        AI_VISUAL_STUB: 'true',
       },
     },
     {
@@ -75,6 +111,10 @@ export default defineConfig({
         NEXT_PUBLIC_API_URL: API_URL,
         AUTH_DEV_MODE: 'true',
         NODE_ENV: 'test',
+        // Phase 39-06: enables the dev-login picker on the landing page so
+        // the "logged-out landing" baseline captures the picker grid (the
+        // SSO-only fallback would be a near-empty card).
+        NEXT_PUBLIC_AUTH_STUB: 'true',
         // Distinct distDir lets the E2E web server coexist with the
         // user's `pnpm dev` Next instance — N16 fingerprints the dev
         // process by repo dir + .next, so isolating .next is enough.

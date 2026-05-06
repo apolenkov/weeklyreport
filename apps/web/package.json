@@ -11,7 +11,10 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:integration": "playwright test --config=playwright.integration.config.ts",
-    "test:e2e:integration:ui": "playwright test --config=playwright.integration.config.ts --ui"
+    "test:e2e:integration:ui": "playwright test --config=playwright.integration.config.ts --ui",
+    "visual:setup": "bash scripts/visual-setup.sh",
+    "visual:test": "playwright test --project=visual",
+    "visual:update": "playwright test --project=visual --update-snapshots"
   },
   "dependencies": {
     "@customreport/shared": "workspace:*",

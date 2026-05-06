@@ -263,6 +263,111 @@ jobs:
         run: pnpm exec prisma generate
 
   # ------------------------------------------------------------------
+  # Job 2c: Visual regression baselines (Phase 39-06)
+  # ------------------------------------------------------------------
+  # Runs Playwright's `--project=visual` against the same Postgres + Redis
+  # services as the main e2e job, but seeds with `seed-simple` for byte-
+  # stable fixtures and stubs Anthropic via AI_VISUAL_STUB=true. Compares
+  # rendered pages against committed baselines under
+  # apps/web/e2e/visual/*-snapshots/<name>-visual-linux.png.
+  #
+  # First run on a brand-new spec: PRs missing the linux baseline must
+  # locally regenerate via `visual:update`, OR a maintainer triggers a
+  # one-shot --update-snapshots commit. We don't auto-update in CI to keep
+  # the diff visible in PR review.
+  visual-baseline:
+    name: Visual Regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: e2e
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: customreport
+          POSTGRES_PASSWORD: localdev
+          POSTGRES_DB: customreport_visual
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U customreport"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql://customreport:localdev@localhost:5432/customreport_visual
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      NODE_ENV: test
+      AUTH_DEV_MODE: "true"
+      AUTH_JWT_SECRET: ci-test-secret-at-least-32-characters-long!!
+      FRONTEND_URL: http://localhost:3100
+      PDF_BASE_URL: http://localhost:3100
+      PORT: 3101
+      NEXT_PUBLIC_API_URL: http://localhost:3101
+      LOG_LEVEL: warn
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
+      - name: Run database migrations
+        run: pnpm exec prisma migrate deploy
+
+      - name: Seed database (deterministic fixture)
+        run: pnpm db:seed:simple
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build shared packages
+        run: pnpm turbo build --filter=@customreport/shared --filter=@customreport/ui
+
+      - name: Run visual regression tests
+        run: pnpm --filter @customreport/web exec playwright test --project=visual
+
+      - name: Upload visual diff artefacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: apps/web/e2e/.results/
+          retention-days: 14
+
+  # ------------------------------------------------------------------
   # Job 3: Docker Build Verification
   # ------------------------------------------------------------------
   docker-build:

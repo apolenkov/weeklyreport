@@ -8,6 +8,12 @@ export default defineConfig([
     '**/node_modules/**',
     '**/dist/**',
     '**/.next/**',
+    // Phase 39-06: Playwright visual project uses a distinct distDir
+    // (.next-e2e) so it can coexist with the user's `pnpm dev` instance.
+    // The folder is generated, not authored, and its TS type-validators
+    // aren't in any tsconfig project — must be ignored explicitly because
+    // the `**/.next/**` glob doesn't match the suffixed name.
+    '**/.next-e2e/**',
     '**/coverage/**',
     '**/.turbo/**',
     '**/prisma/generated/**',
