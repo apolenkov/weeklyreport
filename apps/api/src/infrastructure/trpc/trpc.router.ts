@@ -15,6 +15,7 @@ import {
   leadVelocityInputSchema,
   periodComparisonInputSchema,
   searchQueryInputSchema,
+  queueNameSchema,
 } from '@customreport/shared';
 
 import {
@@ -34,6 +35,7 @@ import type { ReviewService } from '../../modules/review/review.service.js';
 import type { PublicationService } from '../../modules/publication/publication.service.js';
 import type { PdfExportService } from '../../modules/pdf-export/pdf-export.service.js';
 import type { AdminService } from '../../modules/admin/admin.service.js';
+import type { JobsService } from '../../modules/admin/jobs.service.js';
 import type { RemindersService } from '../../modules/reminders/reminders.service.js';
 import type { CarryOverService } from '../../modules/carry-over/carry-over.service.js';
 import type { ArchiveService } from '../../modules/archive/archive.service.js';
@@ -97,6 +99,14 @@ type RouterDeps = {
    * fixtures can call createAppRouter(stubDeps) without instantiating Redis.
    */
   emailReminderQueue?: Queue;
+  /**
+   * Phase 35-06: BullMQ DLQ admin surface — `admin.jobs.listFailed` /
+   * `admin.jobs.retryFailed`. Optional so test fixtures and the role-coverage
+   * harness can build the router with `{}` deps; in that mode the service
+   * is constructed locally from an undefined Queue and every call returns
+   * an empty/no-op result.
+   */
+  jobsService?: JobsService;
 };
 
 export function createAppRouter(deps: RouterDeps) {
@@ -492,6 +502,52 @@ export function createAppRouter(deps: RouterDeps) {
         } catch (error) {
           throw mapDomainError(error);
         }
+      }),
+
+      // Phase 35-06: BullMQ DLQ admin surface. Lifts the Bull Board view
+      // (/admin/queues) into the in-app /admin?tab=jobs page so the head can
+      // triage failed jobs without leaving the SPA. headProcedure (admin/head
+      // only). Mutation audit (procedure='admin.jobs.retryFailed', target=jobId)
+      // is captured by mutationAuditMiddleware automatically.
+      jobs: router({
+        listFailed: headProcedure
+          .input(
+            z.object({
+              queue: queueNameSchema,
+              cursor: z.number().int().min(0).optional(),
+              limit: z.number().int().min(1).max(200).optional(),
+            }),
+          )
+          .query(async ({ input }) => {
+            try {
+              const service = deps.jobsService;
+              if (!service) {
+                return { jobs: [], nextCursor: null };
+              }
+              return await service.listFailed(input);
+            } catch (error) {
+              throw mapDomainError(error);
+            }
+          }),
+
+        retryFailed: headProcedure
+          .input(
+            z.object({
+              queue: queueNameSchema,
+              jobId: z.string().min(1),
+            }),
+          )
+          .mutation(async ({ input }) => {
+            try {
+              const service = deps.jobsService;
+              if (!service) {
+                return { retried: false, jobId: input.jobId };
+              }
+              return await service.retryFailed(input);
+            } catch (error) {
+              throw mapDomainError(error);
+            }
+          }),
       }),
 
       // Reopen requests — Lead-initiated, Head-decided. The Lead's

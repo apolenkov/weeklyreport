@@ -13,6 +13,7 @@ import { PeriodsTab } from './periods-tab';
 import { RemindersTab } from './reminders-tab';
 import { SettingsTab } from './settings-tab';
 import { ReopenTab } from './reopen-tab';
+import { JobsTab } from './jobs-tab';
 import { AdminTabSkeleton } from './admin-skeleton';
 
 type AdminPanelProps = {
@@ -64,6 +65,13 @@ export function AdminPanel({ activeTab }: AdminPanelProps) {
   // the snapshot/settings context that the other tabs share.
   if (activeTab === 'reopen') {
     return <ReopenTab />;
+  }
+
+  // Phase 35-06: Jobs tab is also self-contained — it consumes the
+  // BullMQ-backed `admin.jobs.listFailed` query directly and doesn't
+  // need the admin snapshot.
+  if (activeTab === 'jobs') {
+    return <JobsTab />;
   }
 
   if (!data) {

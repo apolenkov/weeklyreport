@@ -13,7 +13,14 @@ import { useRouter } from 'next/navigation';
  * 5-button row at 375px.
  */
 
-type AdminTab = 'users' | 'products' | 'periods' | 'reminders' | 'reopen' | 'settings';
+type AdminTab =
+  | 'users'
+  | 'products'
+  | 'periods'
+  | 'reminders'
+  | 'reopen'
+  | 'jobs'
+  | 'settings';
 
 const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
   { value: 'users', label: 'Users' },
@@ -21,6 +28,8 @@ const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
   { value: 'periods', label: 'Periods' },
   { value: 'reminders', label: 'Reminders' },
   { value: 'reopen', label: 'Reopen' },
+  // Phase 35-06: BullMQ DLQ admin UI — failed-job list + retry.
+  { value: 'jobs', label: 'Jobs' },
   { value: 'settings', label: 'Settings' },
 ];
 
