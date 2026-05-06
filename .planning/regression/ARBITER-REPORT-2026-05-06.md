@@ -24,23 +24,38 @@ M  DOM × scenarios cross-product  ✓ 114,666 pairings, 574 chunks
 
 ## Section coverage after Haiku reruns
 
+Distinction: "spec written" ≠ "spec executed". Haiku reruns delivered specs but
+their CLI playwright runs timed out (Monitor watchdog) — only Agent A' captured
+3/39 tests in `/tmp/agent-a-run.log` (1 fail ARC-001, 2 pass ARC-002/003) before
+task wall-clock ended. Agent B' got 0 captured (CLI harness hang on
+`networkidle`).
+
 ```
-Section                              Coverage      Spec coverage
-─────────────────────────────────────────────────────────────────
-1 Auth & session                     COMPLETE      24 tests (Haiku A')
-2 Landing page                        COMPLETE      6 tests  (Haiku A')
-3 Lead form (LEAD-001..120)          COMPLETE      28 tests (Haiku B' × 5 files)
-4 Head dashboard                      PARTIAL       Agent C: 18/19 pass — DASH-010
-                                                    confirmed FIXTURE bug (curl
-                                                    returns 7 lead rows)
-5 Assembled report review             PARTIAL       Agent C: 9/11 pass — REV-020-open
-                                                    + REV-055..058 cosmetic
-6 Archive & history                   COMPLETE      10 tests (Haiku A')
-7 Print page + PDF export             PARTIAL       Agent C: 11/14 pass — PDF-EXPORT
-                                                    confirmed FIXTURE bug (12+ PDFs
-                                                    on disk, worker running)
-8 Admin panel                         COMPLETE      39 tests (Haiku B' × 3 files)
+Section                              Spec     Executed   Notes
+─────────────────────────────────────────────────────────────────────────────
+1 Auth & session                     24       0          Haiku A' wrote, run TBD
+2 Landing page                        6       0          Haiku A' wrote, run TBD
+3 Lead form (LEAD-001..120)          28       0          Haiku B' wrote, run TBD
+4 Head dashboard                     19      18 pass     Agent C — DASH-010 fixture
+5 Assembled report review            11       9 pass     Agent C — REV cosmetic only
+6 Archive & history                  10       3 partial  Haiku A' partial run captured
+7 Print page + PDF export            14      11 pass     Agent C — PDF-EXPORT fixture
+8 Admin panel                        39       0          Haiku B' wrote, run TBD
+─────────────────────────────────────────────────────────────────────────────
+                                    151      41 executed (27%)  +  110 spec-only
 ```
+
+To execute remaining 110 specs locally:
+
+```bash
+pnpm dev &  # frontend :3000 + API :3002
+pnpm --filter @customreport/web exec playwright test \
+  -c e2e/regression/playwright.regression.config.ts \
+  --workers=2 --timeout=60000
+```
+
+Spec-only entries are not green/red — they are unverified. Treat as deferred
+verification, not as passing tests.
 
 ## False-positive triage from Wave 1
 
@@ -207,11 +222,15 @@ v8.0.0 production tag — STABLE, no P0 found
                        0 P1 real (DASH-010 + PDF-EXPORT confirmed fixture bugs)
                        4 P2 cosmetic / UX races (deferred — non-blocking)
 
-Coverage status:  Sections 1/2/3/6/8  →  100% spec coverage (Haiku reruns)
-                  Sections 4/5/7      →  PARTIAL (Agent C; failures = fixture)
+Coverage status:  41/151 tests executed (27%) — 4/5/7 via Agent C, 6 partial
+                                                 from Haiku A' /tmp log
+                  110/151 specs WRITTEN BUT UNVERIFIED — Haiku CLI watchdog
+                  fired before runs completed; rerun needed in headed mode
+                  or via CI runner with longer timeouts.
 
-Cross-reference matrix:  114,666 (node × scenario) pairings ready for
-                         automated chunk-by-chunk verification at any time.
+Cross-reference matrix:  114,666 (node × scenario) pairings — substrate
+                         for chunk-by-chunk Haiku verification when
+                         playwright CLI harness is stabilised.
 ```
 
 Stalled-watchdog cause: agents wrote large specs (200+ scenarios serialized in one `test.describe`), individual `test()` blocks took >30s, watchdog read no progress on output stream → killed at 600s. Mitigation on rerun: split each section into its own spec file + use `test.describe.parallel` so test runner doesn't block.
