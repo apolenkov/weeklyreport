@@ -116,6 +116,11 @@ export function LeadReportCard({ lead }: LeadReportCardProps) {
   // Lead-role viewer = lock on other rows; head/admin = chevron (drill-down).
   const showLockForViewer = user?.role === 'lead' && !isCurrentUser;
 
+  // 35-07 (UX-15): the dashboard's lead row doesn't carry a reportId
+  // (LeadInfo is per-active-period). The bare `/lead/report` and
+  // `/head/report` routes redirect (router.replace) to the canonical
+  // addressed URL `/lead/report/<reportId>` once the active reportId is
+  // known, so card clicks still land on a bookmarkable address.
   const href = isCurrentUser ? '/lead/report' : '/head/report';
 
   const containerStyle: React.CSSProperties = isCurrentUser

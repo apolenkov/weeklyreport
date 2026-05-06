@@ -118,7 +118,11 @@ function ActivityRow({
   readonly row: ActivityLiveRow;
   readonly reportId: string;
 }) {
-  const href = `/lead/report?period=${encodeURIComponent(reportId)}&authorId=${encodeURIComponent(row.leadId)}`;
+  // 35-07 (UX-15): switched to addressed URL `/lead/report/<reportId>`.
+  // The legacy `?period=` query is still accepted by the bare route for
+  // back-compat, but new links always use the addressed form so they're
+  // shareable / bookmarkable.
+  const href = `/lead/report/${encodeURIComponent(reportId)}?authorId=${encodeURIComponent(row.leadId)}`;
   const lastEdit = row.lastEditAt
     ? formatRelative(new Date(row.lastEditAt))
     : 'ещё не начал';

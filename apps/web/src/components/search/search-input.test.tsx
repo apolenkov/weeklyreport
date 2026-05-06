@@ -183,8 +183,9 @@ describe('SearchInput — 39-05 (PERF-05)', () => {
       fireEvent.keyDown(input, { key: 'Enter' });
     });
 
+    // 35-07 (UX-15): search hits land on the addressed URL.
     expect(pushMock).toHaveBeenCalledWith(
-      `/lead/report?period=${REPORT_ID}#section-${SECTION_ID}`,
+      `/lead/report/${REPORT_ID}#section-${SECTION_ID}`,
     );
   });
 

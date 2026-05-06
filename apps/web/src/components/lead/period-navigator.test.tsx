@@ -1,10 +1,11 @@
 /**
  * Tests for the lead-side <PeriodNavigator/>.
  *
- * Wires `useRouter` + `useSearchParams` from `next/navigation` to drive the
- * `?period=` query param. The current period is the default (no query); past
- * periods are surfaced via the URL (read-only banner is rendered by LeadForm,
- * the navigator only owns the URL state).
+ * Phase 35-07 (UX-15): nav now emits path-segment URLs
+ * (`/lead/report/<reportId>`) via `router.push` so each addressed period
+ * has a shareable URL and the browser back button walks the period
+ * history one week at a time. The legacy `?period=` query continues to
+ * read selection state when the page is rendered under the bare route.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -13,11 +14,12 @@ import * as React from 'react';
 const replace = vi.fn();
 const push = vi.fn();
 let mockSearchParams = new URLSearchParams();
+let mockPathname = '/lead/report';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace, push }),
   useSearchParams: () => mockSearchParams,
-  usePathname: () => '/lead/report',
+  usePathname: () => mockPathname,
 }));
 
 import { PeriodNavigator } from './period-navigator';
@@ -55,42 +57,38 @@ describe('PeriodNavigator (lead)', () => {
     replace.mockReset();
     push.mockReset();
     mockSearchParams = new URLSearchParams();
+    mockPathname = '/lead/report';
   });
 
-  it('selecting a non-current period calls router.replace with ?period=', () => {
+  it('selecting a non-current period pushes the addressed URL', () => {
     render(<PeriodNavigator periods={PERIODS} />);
     const select = screen.getByLabelText('Select reporting period') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: '2026-W16' } });
-    expect(replace).toHaveBeenCalledTimes(1);
-    const arg = replace.mock.calls[0]?.[0] as string;
-    expect(arg).toContain('/lead/report');
-    expect(arg).toContain('period=2026-W16');
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith('/lead/report/2026-W16');
+    expect(replace).not.toHaveBeenCalled();
   });
 
-  it('selecting the current period removes the ?period= search param', () => {
-    mockSearchParams = new URLSearchParams('period=2026-W16');
+  it('selecting the current period also pushes the addressed URL', () => {
+    mockPathname = '/lead/report/2026-W16';
     render(<PeriodNavigator periods={PERIODS} />);
     const select = screen.getByLabelText('Select reporting period') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: '2026-W17' } });
-    expect(replace).toHaveBeenCalledTimes(1);
-    const arg = replace.mock.calls[0]?.[0] as string;
-    // No `period=` key after the current period is selected.
-    expect(arg).not.toMatch(/[?&]period=/);
+    expect(push).toHaveBeenCalledWith('/lead/report/2026-W17');
   });
 
-  it('initial render reflects the URL period (no internal selected state)', () => {
-    mockSearchParams = new URLSearchParams('period=2026-W15');
+  it('initial render reflects the path-segment reportId', () => {
+    mockPathname = '/lead/report/2026-W15';
     render(<PeriodNavigator periods={PERIODS} />);
     const select = screen.getByLabelText('Select reporting period') as HTMLSelectElement;
     expect(select.value).toBe('2026-W15');
   });
 
-  it('uses pathname from usePathname (does not hardcode /lead/report)', () => {
+  it('falls back to ?period= search param when no path-segment id', () => {
+    mockPathname = '/lead/report';
+    mockSearchParams = new URLSearchParams('period=2026-W15');
     render(<PeriodNavigator periods={PERIODS} />);
     const select = screen.getByLabelText('Select reporting period') as HTMLSelectElement;
-    fireEvent.change(select, { target: { value: '2026-W15' } });
-    const arg = replace.mock.calls[0]?.[0] as string;
-    // Should start with the pathname mocked above.
-    expect(arg.startsWith('/lead/report')).toBe(true);
+    expect(select.value).toBe('2026-W15');
   });
 });

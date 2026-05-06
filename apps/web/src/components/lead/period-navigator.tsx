@@ -6,6 +6,10 @@ import { useCallback, useMemo, useRef, type TouchEvent as ReactTouchEvent } from
 import type { ReportPeriod } from './mock-data';
 
 const SWIPE_THRESHOLD_PX = 50;
+// 35-07: lead-form addressable URL base. Period nav now emits path-segment
+// URLs (`/lead/report/<reportId>`) so each week is bookmarkable. Legacy
+// `?period=` links still resolve via the bare route's redirect path.
+const LEAD_REPORT_BASE = '/lead/report';
 
 type PeriodNavigatorProps = {
   readonly periods: ReportPeriod[];
@@ -46,11 +50,21 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
   const searchParams = useSearchParams();
   const currentPeriodParam = searchParams.get('period');
 
+  // 35-07: prefer the path-segment reportId when the page is rendered under
+  // `/lead/report/[reportId]`. Legacy `?period=` query continues to work
+  // for older links (the bare-route redirect handles those URLs at load).
+  const pathReportId = useMemo(() => {
+    if (!pathname) return null;
+    const match = pathname.match(/^\/lead\/report\/([^/]+)$/);
+    return match ? match[1] : null;
+  }, [pathname]);
+
   const currentIndex = useMemo(() => {
-    if (!currentPeriodParam) return 0; // default to first (current) period
-    const idx = periods.findIndex((p) => p.id === currentPeriodParam);
+    const id = pathReportId ?? currentPeriodParam;
+    if (!id) return 0; // default to first (current) period
+    const idx = periods.findIndex((p) => p.id === id);
     return idx >= 0 ? idx : 0;
-  }, [currentPeriodParam, periods]);
+  }, [pathReportId, currentPeriodParam, periods]);
 
   const selectedPeriod = periods[currentIndex];
   const hasPrev = currentIndex < periods.length - 1;
@@ -58,19 +72,13 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
 
   const navigateTo = useCallback(
     (periodId: string) => {
-      const period = periods.find((p) => p.id === periodId);
-      const params = new URLSearchParams(searchParams.toString());
-      if (period?.isCurrent) {
-        params.delete('period');
-      } else {
-        params.set('period', periodId);
-      }
-      const qs = params.toString();
-      const target = qs ? `${pathname}?${qs}` : pathname;
-      // Use replace so back-button history doesn't accumulate period selections.
-      router.replace(target);
+      // 35-07: emit path-segment URLs so each addressed period has a
+      // shareable / bookmarkable URL. We use `router.push` (not replace)
+      // so the browser back button walks the period history one week at
+      // a time, matching the user's expectation of "back goes one period".
+      router.push(`${LEAD_REPORT_BASE}/${periodId}`);
     },
-    [router, pathname, searchParams, periods],
+    [router],
   );
 
   function handlePrev() {
