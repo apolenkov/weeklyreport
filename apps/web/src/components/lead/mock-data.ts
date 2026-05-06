@@ -115,7 +115,7 @@ export type HistoryEntry = {
 // ---- Mock Data ----
 
 export const CURRENT_USER = {
-  name: 'Platanov A.',
+  name: 'Тимлид 1',
   initials: 'AP',
   role: 'Dev Lead' as const,
 };
@@ -129,7 +129,7 @@ export const MOCK_PRODUCTS: Product[] = [
       { stageName: 'Planning', status: 'on-track', ownership: 'locked', assignee: 'PM' },
       { stageName: 'Analysis', status: 'on-track', ownership: 'locked', assignee: 'Ivanov A.' },
       { stageName: 'Design', status: 'on-track', ownership: 'locked', assignee: 'Petrova M.' },
-      { stageName: 'Dev', status: 'at-risk', ownership: 'mine', assignee: 'Platanov A.', tooltip: 'At Risk: Delay in OAuth2 due to partner API limits' },
+      { stageName: 'Dev', status: 'at-risk', ownership: 'mine', assignee: 'Тимлид 1', tooltip: 'At Risk: Delay in OAuth2 due to partner API limits' },
       { stageName: 'Testing', status: 'on-track', ownership: 'locked', assignee: 'Novikova E.' },
       { stageName: 'DevOps', status: 'on-track', ownership: 'locked', assignee: 'Sidorov P.' },
       { stageName: 'Support', status: 'on-track', ownership: 'locked', assignee: 'Support' },
@@ -146,7 +146,7 @@ export const MOCK_PRODUCTS: Product[] = [
       { stageName: 'Analysis', status: 'on-track', ownership: 'locked', assignee: 'Ivanov A.' },
       { stageName: 'Design', status: 'empty', ownership: 'unassigned', assignee: null },
       { stageName: 'Dev', status: 'blocked', ownership: 'locked', assignee: 'Kozlov D.' },
-      { stageName: 'Testing', status: 'blocked', ownership: 'mine', assignee: 'Platanov A.', tooltip: 'Blocked: ETL testing blocked — waiting for Dev fix' },
+      { stageName: 'Testing', status: 'blocked', ownership: 'mine', assignee: 'Тимлид 1', tooltip: 'Blocked: ETL testing blocked — waiting for Dev fix' },
       { stageName: 'DevOps', status: 'on-track', ownership: 'locked', assignee: 'Sidorov P.' },
       { stageName: 'Support', status: 'empty', ownership: 'unassigned', assignee: null },
     ],
@@ -163,7 +163,7 @@ export const MOCK_PRODUCTS: Product[] = [
       { stageName: 'Design', status: 'at-risk', ownership: 'locked', assignee: 'Petrova M.' },
       { stageName: 'Dev', status: 'at-risk', ownership: 'locked', assignee: 'Smirnov K.' },
       { stageName: 'Testing', status: 'empty', ownership: 'unassigned', assignee: null },
-      { stageName: 'DevOps', status: 'on-track', ownership: 'mine', assignee: 'Platanov A.', tooltip: 'Your stage - On Track' },
+      { stageName: 'DevOps', status: 'on-track', ownership: 'mine', assignee: 'Тимлид 1', tooltip: 'Your stage - On Track' },
       { stageName: 'Support', status: 'empty', ownership: 'unassigned', assignee: null },
     ],
   },
@@ -177,7 +177,7 @@ export const MOCK_PRODUCTS: Product[] = [
       { stageName: 'Planning', status: 'empty', ownership: 'unassigned', assignee: null },
       { stageName: 'Analysis', status: 'on-track', ownership: 'locked', assignee: 'Ivanov A.' },
       { stageName: 'Design', status: 'empty', ownership: 'unassigned', assignee: null },
-      { stageName: 'Dev', status: 'at-risk', ownership: 'mine', assignee: 'Platanov A.', tooltip: 'At Risk: PgBouncer migration requires 30 min downtime' },
+      { stageName: 'Dev', status: 'at-risk', ownership: 'mine', assignee: 'Тимлид 1', tooltip: 'At Risk: PgBouncer migration requires 30 min downtime' },
       { stageName: 'Testing', status: 'on-track', ownership: 'locked', assignee: 'Novikova E.' },
       { stageName: 'DevOps', status: 'on-track', ownership: 'locked', assignee: 'Sidorov P.' },
       { stageName: 'Support', status: 'empty', ownership: 'unassigned', assignee: null },
@@ -192,7 +192,7 @@ export const MOCK_PRODUCTS: Product[] = [
       { stageName: 'Analysis', status: 'on-track', ownership: 'locked', assignee: 'Ivanov A.' },
       { stageName: 'Design', status: 'on-track', ownership: 'locked', assignee: 'Petrova M.' },
       { stageName: 'Dev', status: 'on-track', ownership: 'locked', assignee: 'Smirnov K.' },
-      { stageName: 'Testing', status: 'empty', ownership: 'mine', assignee: 'Platanov A.' },
+      { stageName: 'Testing', status: 'empty', ownership: 'mine', assignee: 'Тимлид 1' },
       { stageName: 'DevOps', status: 'empty', ownership: 'unassigned', assignee: null },
       { stageName: 'Support', status: 'on-track', ownership: 'locked', assignee: 'Support' },
     ],
@@ -205,7 +205,7 @@ export const MOCK_PRODUCTS: Product[] = [
       { stageName: 'Planning', status: 'empty', ownership: 'unassigned', assignee: null },
       { stageName: 'Analysis', status: 'on-track', ownership: 'locked', assignee: 'Ivanov A.' },
       { stageName: 'Design', status: 'on-track', ownership: 'locked', assignee: 'Petrova M.' },
-      { stageName: 'Dev', status: 'empty', ownership: 'mine', assignee: 'Platanov A.' },
+      { stageName: 'Dev', status: 'empty', ownership: 'mine', assignee: 'Тимлид 1' },
       { stageName: 'Testing', status: 'empty', ownership: 'unassigned', assignee: null },
       { stageName: 'DevOps', status: 'empty', ownership: 'unassigned', assignee: null },
       { stageName: 'Support', status: 'empty', ownership: 'unassigned', assignee: null },
@@ -214,26 +214,26 @@ export const MOCK_PRODUCTS: Product[] = [
 ];
 
 export const MOCK_CURRENT_WEEK_ITEMS: KanbanItem[] = [
-  { id: 'cw1', productId: 'crm', productName: 'CRM Platform', status: 'in-progress', text: 'Интеграция OAuth2 для партнёрского API', author: 'Platanov A.' },
-  { id: 'cw2', productId: 'crm', productName: 'CRM Platform', status: 'completed', text: 'Настройка rate limiter для API', author: 'Platanov A.' },
-  { id: 'cw3', productId: 'crm', productName: 'CRM Platform', status: 'in-progress', text: 'Оптимизация поиска клиентов', author: 'Platanov A.' },
-  { id: 'cw4', productId: 'crm', productName: 'CRM Platform', status: 'completed', text: 'Логика повторных вызовов webhook', author: 'Platanov A.' },
-  { id: 'cw5', productId: 'analytics', productName: 'Data Analytics Suite', stageName: 'Testing', status: 'in-progress', text: 'Регрессионное тестирование ETL пайплайна', author: 'Platanov A.' },
-  { id: 'cw6', productId: 'analytics', productName: 'Data Analytics Suite', stageName: 'Testing', status: 'completed', text: 'Нагрузочное тестирование BI дашборда', author: 'Platanov A.' },
-  { id: 'cw7', productId: 'mobile', productName: 'Mobile Applications', stageName: 'DevOps', status: 'in-progress', text: 'Настройка CI/CD для iOS сборок', author: 'Platanov A.' },
-  { id: 'cw8', productId: 'cloud', productName: 'Cloud Infrastructure', status: 'completed', text: 'Мониторинг K8s + алерты Grafana', author: 'Platanov A.' },
-  { id: 'cw9', productId: 'cloud', productName: 'Cloud Infrastructure', status: 'in-progress', text: 'Настройка пула соединений PgBouncer', author: 'Platanov A.' },
-  { id: 'cw10', productId: 'aiml', productName: 'AI/ML Platform', status: 'in-progress', text: 'Пайплайн обучения моделей v2', author: 'Platanov A.' },
-  { id: 'cw11', productId: 'gateway', productName: 'Integration Gateway', status: 'in-progress', text: 'Прототип моста REST - gRPC', author: 'Platanov A.' },
+  { id: 'cw1', productId: 'crm', productName: 'CRM Platform', status: 'in-progress', text: 'Интеграция OAuth2 для партнёрского API', author: 'Тимлид 1' },
+  { id: 'cw2', productId: 'crm', productName: 'CRM Platform', status: 'completed', text: 'Настройка rate limiter для API', author: 'Тимлид 1' },
+  { id: 'cw3', productId: 'crm', productName: 'CRM Platform', status: 'in-progress', text: 'Оптимизация поиска клиентов', author: 'Тимлид 1' },
+  { id: 'cw4', productId: 'crm', productName: 'CRM Platform', status: 'completed', text: 'Логика повторных вызовов webhook', author: 'Тимлид 1' },
+  { id: 'cw5', productId: 'analytics', productName: 'Data Analytics Suite', stageName: 'Testing', status: 'in-progress', text: 'Регрессионное тестирование ETL пайплайна', author: 'Тимлид 1' },
+  { id: 'cw6', productId: 'analytics', productName: 'Data Analytics Suite', stageName: 'Testing', status: 'completed', text: 'Нагрузочное тестирование BI дашборда', author: 'Тимлид 1' },
+  { id: 'cw7', productId: 'mobile', productName: 'Mobile Applications', stageName: 'DevOps', status: 'in-progress', text: 'Настройка CI/CD для iOS сборок', author: 'Тимлид 1' },
+  { id: 'cw8', productId: 'cloud', productName: 'Cloud Infrastructure', status: 'completed', text: 'Мониторинг K8s + алерты Grafana', author: 'Тимлид 1' },
+  { id: 'cw9', productId: 'cloud', productName: 'Cloud Infrastructure', status: 'in-progress', text: 'Настройка пула соединений PgBouncer', author: 'Тимлид 1' },
+  { id: 'cw10', productId: 'aiml', productName: 'AI/ML Platform', status: 'in-progress', text: 'Пайплайн обучения моделей v2', author: 'Тимлид 1' },
+  { id: 'cw11', productId: 'gateway', productName: 'Integration Gateway', status: 'in-progress', text: 'Прототип моста REST - gRPC', author: 'Тимлид 1' },
 ];
 
 export const MOCK_NEXT_WEEK_ITEMS: KanbanItem[] = [
-  { id: 'nw1', productId: 'crm', productName: 'CRM Platform', status: 'planned', text: 'Настройка фреймворка A/B тестирования', author: 'Platanov A.' },
-  { id: 'nw2', productId: 'crm', productName: 'CRM Platform', status: 'planned', text: 'SSO интеграция партнёрского портала', author: 'Platanov A.' },
-  { id: 'nw3', productId: 'crm', productName: 'CRM Platform', status: 'planned', text: 'MVP конструктора email шаблонов', author: 'Platanov A.' },
-  { id: 'nw4', productId: 'cloud', productName: 'Cloud Infrastructure', status: 'planned', text: 'Миграция CI/CD на GitHub Actions', author: 'Platanov A.' },
-  { id: 'nw5', productId: 'aiml', productName: 'AI/ML Platform', status: 'planned', text: 'Настройка автоскейлинга GPU кластера', author: 'Platanov A.' },
-  { id: 'nw6', productId: 'gateway', productName: 'Integration Gateway', status: 'planned', text: 'Проектирование стратегии версионирования API', author: 'Platanov A.' },
+  { id: 'nw1', productId: 'crm', productName: 'CRM Platform', status: 'planned', text: 'Настройка фреймворка A/B тестирования', author: 'Тимлид 1' },
+  { id: 'nw2', productId: 'crm', productName: 'CRM Platform', status: 'planned', text: 'SSO интеграция партнёрского портала', author: 'Тимлид 1' },
+  { id: 'nw3', productId: 'crm', productName: 'CRM Platform', status: 'planned', text: 'MVP конструктора email шаблонов', author: 'Тимлид 1' },
+  { id: 'nw4', productId: 'cloud', productName: 'Cloud Infrastructure', status: 'planned', text: 'Миграция CI/CD на GitHub Actions', author: 'Тимлид 1' },
+  { id: 'nw5', productId: 'aiml', productName: 'AI/ML Platform', status: 'planned', text: 'Настройка автоскейлинга GPU кластера', author: 'Тимлид 1' },
+  { id: 'nw6', productId: 'gateway', productName: 'Integration Gateway', status: 'planned', text: 'Проектирование стратегии версионирования API', author: 'Тимлид 1' },
 ];
 
 export const MOCK_RISKS: RiskEntry[] = [

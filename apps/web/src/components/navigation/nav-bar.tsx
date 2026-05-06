@@ -80,8 +80,8 @@ function getLogoHref(role: Role): string {
   }
 }
 
-// Initials helper — "Platanov A." → "ПА" (first of first word + first of last
-// word), "Olga N." → "ОН", single-word fallback to first 2 chars.
+// Initials helper — first char of first word + first char of last word;
+// single-word names fall back to the first 2 chars.
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const first = parts[0];

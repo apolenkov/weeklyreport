@@ -31,10 +31,9 @@ const COOKIE_NAME = 'customreport_session';
 
 function resolveApiUrl(): string {
   // In production, NEXT_PUBLIC_API_URL points at the API hostname inside
-  // the docker network or behind the corporate proxy. In the dev loop,
-  // localhost:3001 matches the next.config.ts rewrites destination so the
-  // SSR fetch hits the same upstream the browser would after rewrite.
-  return process.env['API_URL'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
+  // the docker network or behind the corporate proxy. In the local regression
+  // stack, the Nest API listens on :3002.
+  return process.env['API_URL'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3002';
 }
 
 type TrpcBatchEntry = {

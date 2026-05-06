@@ -2,7 +2,7 @@
  * Phase 39-06 (visual baseline 2/5) — Lead weekly report form.
  *
  * Uses the leadPage fixture so the page is authenticated as a seeded lead
- * (platanov@customreport.local). Captures the form with sections, traffic
+ * (lead1@customreport.local). Captures the form with sections, traffic
  * lights, and items the lead has filled in.
  */
 import { test, expect } from '../fixtures';

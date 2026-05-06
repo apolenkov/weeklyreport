@@ -15,7 +15,7 @@ import { prisma, resetMutations } from './helpers/db';
 import {
   ACTIVE_REPORT_ID,
   PUBLISHED_REPORT_ID,
-  LEAD_PLATANOV_ID,
+  LEAD_1_ID,
   LEAD_OLGA_ID,
   LEAD_SERGEY_ID,
   SEED_EMAILS,
@@ -213,18 +213,18 @@ test.describe('Lead journey (integration)', () => {
   }) => {
     await leadPage.goto('/lead/report');
 
-    // The leadPage fixture is logged in as Platanov.
+    // The leadPage fixture is logged in as lead 1.
     // A direct call to a "get my section" procedure should return ONLY
-    // Platanov's section. Without knowing the exact procedure name, rely on
-    // a DB-level assertion from the seed (deterministic): Platanov has exactly
+    // lead 1's section. Without knowing the exact procedure name, rely on
+    // a DB-level assertion from the seed (deterministic): lead 1 has exactly
     // one active section.
-    const platanovSections = await prisma.reportSection.findMany({
+    const lead1Sections = await prisma.reportSection.findMany({
       where: {
         reportId: ACTIVE_REPORT_ID,
-        authorId: LEAD_PLATANOV_ID,
+        authorId: LEAD_1_ID,
       },
     });
-    expect(platanovSections).toHaveLength(1);
+    expect(lead1Sections).toHaveLength(1);
 
     // UI-side: page should NOT render other leads' display names anywhere.
     // (Heads see those names; leads should not.)

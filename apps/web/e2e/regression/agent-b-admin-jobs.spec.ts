@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { loginByCookie } from './helpers/dev-auth';
 
-const DEV_LOGIN_URL = 'http://localhost:3000/auth/dev-login';
 const FRONTEND_URL = 'http://localhost:3000';
 const ADMIN_URL = 'http://localhost:3000/admin?tab=jobs';
 const SCREENSHOT_DIR = '.planning/regression/screenshots/agent-b-admin-jobs';
@@ -16,10 +16,7 @@ const SCREENSHOT_DIR = '.planning/regression/screenshots/agent-b-admin-jobs';
 test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
   test.beforeEach(async ({ page }) => {
     // Login as head
-    await page.goto(`${DEV_LOGIN_URL}?role=head`);
-    await page.waitForURL(/^http:\/\/localhost:3000\//, { timeout: 10000 });
-    // Navigate to admin jobs tab
-    await page.goto(ADMIN_URL);
+    await loginByCookie(page, { role: 'head', redirect: '/admin?tab=jobs' });
     await page.waitForSelector('[data-testid="admin-panel"]', { timeout: 5000 });
   });
 
@@ -41,7 +38,10 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
       expect(jobRows >= 0).toBe(true);
     } else {
       // Empty state message OK
-      const emptyState = await page.getByTestId('jobs-empty-state').isVisible().catch(() => false);
+      const emptyState = await page
+        .getByText(/Нет проваленных задач|No failed jobs|queue is clean/i)
+        .isVisible()
+        .catch(() => false);
       expect(jobsTable || emptyState).toBe(true);
     }
 

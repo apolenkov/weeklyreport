@@ -22,8 +22,8 @@ export type ItemStatus = 'in-progress' | 'completed' | 'blocked' | 'planned';
 /** Default lead identity used by every spec unless overridden. */
 export const DEFAULT_LEAD = {
   role: 'lead' as const,
-  email: 'platanov@customreport.local',
-  displayName: 'Aleksandr P.',
+  email: 'lead1@customreport.local',
+  displayName: 'Lead 1',
 };
 
 /**

@@ -15,7 +15,7 @@ import * as path from 'path';
 const STORAGE_DIR = path.join(__dirname, '.auth');
 
 const ROLES: { role: 'lead' | 'head' | 'admin' | 'viewer'; email: string }[] = [
-  { role: 'lead', email: 'platanov@customreport.local' },
+  { role: 'lead', email: 'lead1@customreport.local' },
   { role: 'head', email: 'head@customreport.local' },
   { role: 'admin', email: 'admin@customreport.local' },
   { role: 'viewer', email: 'viewer@customreport.local' },

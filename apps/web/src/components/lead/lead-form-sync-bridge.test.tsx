@@ -14,8 +14,8 @@ function buildProduct(overrides?: Partial<Product>): Product {
     overallStatus: 'on-track',
     stages: [
       { stageName: 'Planning', status: 'on-track', ownership: 'locked', assignee: 'PM' },
-      { stageName: 'Dev', status: 'on-track', ownership: 'mine', assignee: 'Platanov A.' },
-      { stageName: 'Testing', status: 'on-track', ownership: 'mine', assignee: 'Platanov A.' },
+      { stageName: 'Dev', status: 'on-track', ownership: 'mine', assignee: 'Тимлид 1' },
+      { stageName: 'Testing', status: 'on-track', ownership: 'mine', assignee: 'Тимлид 1' },
     ],
     ...overrides,
   };

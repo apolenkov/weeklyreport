@@ -34,7 +34,7 @@ type DecisionsSectionProps = {
 function isMine(owner: string | undefined, me: string | undefined): boolean {
   if (!me) return true; // No identity yet — be permissive.
   if (!owner) return true; // Unowned rows behave like own.
-  // Case- and punctuation-loose match: "Platanov A." should equal "Platanov A".
+  // Case- and punctuation-loose match: tolerate trailing punctuation/spacing.
   const normalize = (s: string) => s.trim().toLowerCase().replace(/[.\s]+$/g, '');
   return normalize(owner) === normalize(me);
 }

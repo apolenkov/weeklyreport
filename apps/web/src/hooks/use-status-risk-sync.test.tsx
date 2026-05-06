@@ -15,8 +15,8 @@ function buildProduct(overrides?: Partial<Product>): Product {
     overallStatus: 'on-track',
     stages: [
       { stageName: 'Planning', status: 'on-track', ownership: 'locked', assignee: 'PM' },
-      { stageName: 'Dev', status: 'on-track', ownership: 'mine', assignee: 'Platanov A.' },
-      { stageName: 'Testing', status: 'on-track', ownership: 'mine', assignee: 'Platanov A.' },
+      { stageName: 'Dev', status: 'on-track', ownership: 'mine', assignee: 'Тимлид 1' },
+      { stageName: 'Testing', status: 'on-track', ownership: 'mine', assignee: 'Тимлид 1' },
     ],
     ...overrides,
   };
@@ -172,7 +172,7 @@ describe('useStatusRiskSync', () => {
     const product = buildProduct({
       stages: [
         { stageName: 'Planning', status: 'on-track', ownership: 'locked', assignee: 'PM' },
-        { stageName: 'Dev', status: 'on-track', ownership: 'mine', assignee: 'Platanov A.' },
+        { stageName: 'Dev', status: 'on-track', ownership: 'mine', assignee: 'Тимлид 1' },
       ],
     });
     const risk: RiskEntry = {
@@ -250,7 +250,7 @@ describe('useStatusRiskSync', () => {
     const product = buildProduct({
       stages: [
         { stageName: 'Planning', status: 'on-track', ownership: 'locked', assignee: 'PM' },
-        { stageName: 'Dev', status: 'at-risk', ownership: 'mine', assignee: 'Platanov A.' },
+        { stageName: 'Dev', status: 'at-risk', ownership: 'mine', assignee: 'Тимлид 1' },
       ],
     });
     const risk: RiskEntry = {

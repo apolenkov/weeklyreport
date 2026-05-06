@@ -97,7 +97,7 @@ test.describe('Cross-Role Lifecycle', () => {
     expect(count).toBeGreaterThanOrEqual(4);
 
     // Also verify lead names are visible for submitted leads
-    await expect(headPage.getByText('Platanov A.').first()).toBeVisible();
+    await expect(headPage.getByText('Тимлид 1').first()).toBeVisible();
     await expect(headPage.getByText('Maria K.').first()).toBeVisible();
     await expect(headPage.getByText('Igor V.').first()).toBeVisible();
     await expect(headPage.getByText('Dmitry S.').first()).toBeVisible();

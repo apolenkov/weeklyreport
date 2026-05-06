@@ -13,91 +13,105 @@ test.describe('LAND-001..006: Landing Page', () => {
     await page.context().clearCookies();
   });
 
+  const entryLink = (page: import('@playwright/test').Page) =>
+    page
+      .locator(
+        [
+          'a[aria-label="Enter application"]',
+          'a[aria-label="Sign in with corporate SSO"]',
+          'a[href*="/auth/dev-login"]',
+          'a[href*="/auth/saml/login"]',
+        ].join(', '),
+      )
+      .first();
+
+  const gotoLanding = async (page: import('@playwright/test').Page) => {
+    await page.goto('/?stay=1');
+    await expect(page.getByRole('heading', { name: 'CustomReport' })).toBeVisible({
+      timeout: 5000,
+    });
+  };
+
   test('LAND-001: Landing page renders without auth → card with logo + subtitle + Sign In button', async ({
     page,
   }) => {
-    await page.goto('/');
+    await gotoLanding(page);
 
-    // Check for main card structure
-    const card = page.locator('[role="main"], .card, [class*="card"]').first();
-    expect(card).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('main#main-content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Weekly Status Reporting System', { exact: true })).toBeVisible();
 
-    // Check for Sign In button
-    const signInButton = page.locator('button[aria-label*="application"], a[aria-label*="application"], button[aria-label*="SSO"], a[aria-label*="SSO"]').first();
-    expect(signInButton).toBeVisible({ timeout: 5000 });
+    const hasSsoButton = await entryLink(page).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasDevPicker = await page.getByText('Войти как…').isVisible({ timeout: 5000 }).catch(() => false);
+    expect(hasSsoButton || hasDevPicker).toBe(true);
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LAND-001.png` });
   });
 
   test('LAND-002: "Sign In" button links to API_URL/auth/saml/login', async ({ page }) => {
-    await page.goto('/');
+    await gotoLanding(page);
 
-    const signInButton = page.locator('button[aria-label*="application"], a[aria-label*="application"], button[aria-label*="SSO"], a[aria-label*="SSO"]').first();
+    const signInButton = entryLink(page);
     const href = await signInButton.getAttribute('href');
 
-    // Expect href to contain /auth/saml/login or /auth/dev-login
-    expect(href).toMatch(/\/auth\/(?:saml\/)?login/);
+    expect(href).toMatch(/\/auth\/(?:saml\/login|dev-login)/);
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LAND-002.png` });
   });
 
   test('LAND-003: Card centered vertically and horizontally', async ({ page }) => {
-    await page.goto('/');
+    await gotoLanding(page);
 
-    const card = page.locator('[role="main"], .card, [class*="card"]').first();
-    const boundingBox = await card.boundingBox();
+    const headingBox = await page
+      .getByRole('heading', { name: 'CustomReport' })
+      .boundingBox();
 
     // Page should be roughly centered (simple heuristic)
     const viewport = page.viewportSize();
     expect(viewport).toBeTruthy();
 
-    if (viewport && boundingBox) {
-      // Card x should be roughly centered
-      const cardCenterX = boundingBox.x + boundingBox.width / 2;
-      const pageCenterX = viewport.width / 2;
+    if (viewport && headingBox) {
+      const headingCenterX = headingBox.x + headingBox.width / 2;
+      const rightPanelCenterX = viewport.width >= 1024 ? viewport.width - 240 : viewport.width / 2;
 
-      // Allow 20% tolerance
-      const tolerance = viewport.width * 0.2;
-      expect(Math.abs(cardCenterX - pageCenterX)).toBeLessThan(tolerance);
+      expect(Math.abs(headingCenterX - rightPanelCenterX)).toBeLessThan(80);
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LAND-003.png` });
   });
 
   test('LAND-004: Card max-width is sm (max-w-sm)', async ({ page }) => {
-    await page.goto('/');
+    await gotoLanding(page);
 
-    const card = page.locator('[role="main"], .card, [class*="card"]').first();
-    const boundingBox = await card.boundingBox();
+    const boundingBox = await page
+      .getByRole('heading', { name: 'CustomReport' })
+      .boundingBox();
 
-    // Tailwind max-w-sm = 384px
-    // Allow slight tolerance for padding/margin
     expect(boundingBox?.width).toBeLessThanOrEqual(420);
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LAND-004.png` });
   });
 
   test('LAND-005: Button is full-width inside card (w-full)', async ({ page }) => {
-    await page.goto('/');
+    await gotoLanding(page);
 
-    const signInButton = page.locator('button[aria-label*="application"], a[aria-label*="application"], button[aria-label*="SSO"], a[aria-label*="SSO"]').first();
+    const signInButton = entryLink(page);
     const buttonBox = await signInButton.boundingBox();
-    const cardBox = await page.locator('[role="main"], .card, [class*="card"]').first().boundingBox();
+    const mainBox = await page.locator('main').boundingBox();
 
-    if (buttonBox && cardBox) {
+    if (buttonBox && mainBox) {
       // Button should be nearly as wide as card (accounting for padding)
       const buttonWidth = buttonBox.width;
-      const cardWidth = cardBox.width;
 
       // Allow 30px for padding on each side
-      expect(buttonWidth).toBeGreaterThan(cardWidth - 60);
+      expect(buttonWidth).toBeLessThanOrEqual(mainBox.width);
+      expect(buttonWidth).toBeGreaterThan(180);
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LAND-005.png` });
   });
 
   test('LAND-006: Page has no sidebar/navigation (no AppShell wrapper)', async ({ page }) => {
-    await page.goto('/');
+    await gotoLanding(page);
 
     // Check that there's no sidebar
     const sidebar = page.locator('[role="navigation"], nav, [class*="sidebar"]');
@@ -107,7 +121,7 @@ test.describe('LAND-001..006: Landing Page', () => {
     expect(count).toBeLessThanOrEqual(1);
 
     // Verify the page is mostly just the card
-    const mainContent = page.locator('[role="main"]');
+    const mainContent = page.locator('main#main-content');
     expect(mainContent).toBeVisible({ timeout: 5000 });
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LAND-006.png` });

@@ -27,7 +27,7 @@ import type { BrowserContext, Page } from '@playwright/test';
 const VIEWPORT_TOLERANCE_PX = 1; // sub-pixel rounding
 
 /**
- * Logs in as Olga — a draft-state lead with assigned products. Platanov
+ * Logs in as Olga — a draft-state lead with assigned products. lead 1
  * is "submitted" in the seed, which hides all "+ Add" buttons (the form
  * is locked once submitted), making him useless for this audit.
  */
