@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: 20/30 (67% — kickoff 2026-05-05)
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: 22/30 (73% — kickoff 2026-05-05)
 
 ---
 
@@ -481,7 +481,7 @@ Full details: [v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md) and [v8.0-REQUIREMEN
 - [x] 39-01-PLAN.md — PgBouncer service in prod compose (PERF-01)
 - [x] 39-02-PLAN.md — Turbopack experiment (PERF-02)
 - [x] 39-03-PLAN.md — pg_stat_statements + index audit (PERF-03)
-- [ ] 39-04-PLAN.md — k6 load test baseline (PERF-04)
+- [x] 39-04-PLAN.md — k6 load test baseline (PERF-04)
 
 </details>
 
