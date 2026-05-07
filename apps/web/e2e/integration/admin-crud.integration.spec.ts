@@ -5,7 +5,7 @@
 
 import { test, expect } from './fixtures';
 import { prisma } from './helpers/db';
-import { LEAD_1_ID } from './helpers/seed-ids';
+import { LEAD_1_ID, SEED_PRODUCTS } from './helpers/seed-ids';
 
 test.describe('Admin CRUD (integration)', () => {
   test('admin can create a new product and it appears in DB', async ({
@@ -56,7 +56,9 @@ test.describe('Admin CRUD (integration)', () => {
   }) => {
     await headPage.goto('/admin/settings');
 
-    const deptField = headPage.getByLabel(/department/i).first();
+    const deptField = headPage.getByRole('textbox', {
+      name: /^Department Name$/,
+    });
     if (!(await deptField.count())) {
       // eslint-disable-next-line playwright/no-skipped-test
       test.skip(
@@ -68,7 +70,7 @@ test.describe('Admin CRUD (integration)', () => {
     const newName = `Core Development ${Date.now()}`;
     await deptField.fill(newName);
 
-    const saveBtn = headPage.getByRole('button', { name: /save/i });
+    const saveBtn = headPage.getByRole('button', { name: /^Save Settings$/i });
     await saveBtn.last().click();
 
     await headPage.waitForResponse(
@@ -99,21 +101,26 @@ test.describe('Admin CRUD (integration)', () => {
     const lead1ProductCount = await prisma.project.count({
       where: { leadId: LEAD_1_ID },
     });
-    expect(lead1ProductCount).toBe(2); // CRM Platform, Data Analytics Suite
+    const lead1ProductNames = SEED_PRODUCTS
+      .filter((product) => product.leadId === LEAD_1_ID)
+      .map((product) => product.name);
+    expect(lead1ProductCount).toBe(lead1ProductNames.length);
+    const firstSeededProduct = lead1ProductNames.at(0);
+    if (!firstSeededProduct) {
+      throw new Error('No seed products found for LEAD_1_ID');
+    }
 
-    // Page should mention at least one of the seeded names. The
+    // Page should mention at least one seeded name. The
     // /admin/products route redirects to /admin?tab=products, which mounts
     // AdminPanel and fires the admin.snapshot tRPC query async. Wait for
     // the seeded product name to appear in the rendered DOM before
     // snapshotting HTML — Playwright will retry the locator until it
     // resolves or hits the default expect timeout.
     await expect(
-      headPage.getByText(/CRM Platform|Data Analytics Suite/).first(),
+      headPage.getByText(firstSeededProduct).first(),
     ).toBeVisible();
 
     const html = await headPage.content();
-    expect(
-      /CRM Platform|Data Analytics Suite/.test(html),
-    ).toBe(true);
+    expect(html).toContain(firstSeededProduct);
   });
 });

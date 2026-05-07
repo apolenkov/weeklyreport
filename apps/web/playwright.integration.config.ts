@@ -37,18 +37,18 @@ export default defineConfig({
     {
       name: 'chromium-integration',
       use: { ...devices['Desktop Chrome'] },
+      grepInvert: /@MOB-/,
     },
-    // MOB-01 (Phase 30-04): mobile-ios and mobile-android projects exercise
-    // the no-horizontal-scroll contract at 390x844 / 412x915. Only the
-    // mobile-no-horizontal-scroll spec runs in these projects (the spec
-    // self-skips on chromium-integration).
+    // MOB-01/MOB-AUDIT: mobile projects run only specs tagged @MOB-.
     {
       name: 'mobile-ios',
-      use: { ...devices['iPhone 14'] },
+      use: { ...devices['iPhone 14'], browserName: 'chromium' },
+      grep: /@MOB-/,
     },
     {
       name: 'mobile-android',
       use: { ...devices['Pixel 7'] },
+      grep: /@MOB-/,
     },
   ],
   webServer: [

@@ -3,6 +3,9 @@
 Production deployment guide for **CustomReport** -- a weekly status-report
 collection system built with Next.js 16, NestJS 11, PostgreSQL 15, and Redis 7.
 
+For local dev/test commands, wipe/reseed, full Docker verification, and the
+Kubernetes porting map, see [OPERATIONS.md](OPERATIONS.md).
+
 ---
 
 ## Table of Contents

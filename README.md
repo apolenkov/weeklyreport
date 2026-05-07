@@ -32,6 +32,7 @@ customreport/
 - **[RUNBOOK.md](RUNBOOK.md)** — symptom → cause → fix for the top 10 failure modes
 - **[INCIDENT-PLAYBOOK.md](INCIDENT-PLAYBOOK.md)** — rollback procedure, on-call rotation template, postmortem format
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — local setup, commit conventions, husky hooks, push-guard helper
+- **[docs/OPERATIONS.md](docs/OPERATIONS.md)** — dev/test/prod Docker commands, wipe/reseed, integration gates, Kubernetes porting map
 
 ## Quick Start
 
@@ -135,15 +136,28 @@ tRPC routers via `/trpc` (proxied through Next.js rewrites):
 ## Testing
 
 ```bash
-# Unit tests (no servers needed)
-pnpm -F @customreport/shared exec vitest run src/schemas/__tests__/   # 115 schema tests
-pnpm -F @customreport/api test                                        # 68 service tests
+# Product-ready quick gate
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
 
-# E2E tests (need Docker + servers on ports 3100/3101)
-cd apps/web
-DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport" \
-  pnpm exec playwright test                                           # 85 E2E tests
+# API integration against a dedicated DB
+DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e \
+  pnpm --filter @customreport/api test:integration
+
+# Web integration against a dedicated DB and non-conflicting ports
+E2E_DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e \
+E2E_API_PORT=3012 \
+E2E_WEB_PORT=3015 \
+  pnpm --filter @customreport/web test:e2e:integration
+
+# Full Docker verification
+pnpm docker:local:verify
 ```
+
+See [docs/OPERATIONS.md](docs/OPERATIONS.md) for the full dev/test/prod runbook,
+including wipe/reseed, regression, and Kubernetes migration mapping.
 
 ### Test Coverage
 
