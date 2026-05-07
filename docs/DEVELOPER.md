@@ -3,6 +3,8 @@
 CustomReport is a weekly status reporting system for a software department.
 Leads fill structured forms, the system compiles an assembled report, and the
 Head publishes it. This guide gets you from zero to a running local environment.
+For the full operator command matrix (dev/test/prod, Docker verification,
+wipe/reseed, and Kubernetes porting), see [OPERATIONS.md](OPERATIONS.md).
 
 ---
 

@@ -27,7 +27,6 @@ describe('PdfExportPrismaRepository (integration)', () => {
 
   afterAll(async () => {
     await cleanDatabase(prisma);
-    await disconnectTestPrisma();
   });
 
   it('createExportJob creates and returns job', async () => {
