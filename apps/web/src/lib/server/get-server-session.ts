@@ -64,7 +64,11 @@ function decodeAuthMeResponse(body: unknown): UserSession | null {
 export async function getServerSession(): Promise<UserSession | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) return null;
+  const shouldUseDevFallback =
+    process.env['NODE_ENV'] !== 'production' &&
+    (process.env['AUTH_DEV_MODE'] === 'true' ||
+      process.env['AUTH_DEV_MODE_ALLOW_TEST'] === 'true');
+  if (!token && !shouldUseDevFallback) return null;
 
   const apiUrl = resolveApiUrl();
   // tRPC v11 batched GET — `input` is a JSON map keyed by request index.
@@ -76,9 +80,7 @@ export async function getServerSession(): Promise<UserSession | null> {
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        cookie: `${COOKIE_NAME}=${token}`,
-      },
+      headers: token ? { cookie: `${COOKIE_NAME}=${token}` } : undefined,
       cache: 'no-store',
     });
     if (!response.ok) return null;
