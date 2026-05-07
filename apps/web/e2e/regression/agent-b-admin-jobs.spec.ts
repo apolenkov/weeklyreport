@@ -29,7 +29,9 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
   });
 
   test('ADM-131: Jobs table displays (empty state OK)', async ({ page }) => {
-    // Wait for jobs table
+    await expect(page.locator('[data-testid="jobs-tab"]')).toBeVisible();
+    await expect(page.getByText(/email-reminder/i)).toBeVisible();
+
     const jobsTable = await page.locator('[data-testid="jobs-table"]').isVisible().catch(() => false);
 
     if (jobsTable) {
@@ -37,12 +39,8 @@ test.describe('ADM-130..140: Admin Panel - Jobs Tab (from 35-06)', () => {
       const jobRows = await page.locator('[data-testid="jobs-table"] tbody tr').count();
       expect(jobRows >= 0).toBe(true);
     } else {
-      // Empty state message OK
-      const emptyState = await page
-        .getByText(/Нет проваленных задач|No failed jobs|queue is clean/i)
-        .isVisible()
-        .catch(() => false);
-      expect(jobsTable || emptyState).toBe(true);
+      // Empty queue cards do not render a table; the queue panel itself is the stable signal.
+      await expect(page.getByText(/email-reminder queue/i)).toBeVisible();
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-131.png` });

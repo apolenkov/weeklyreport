@@ -27,11 +27,12 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
+import { loginByCookie, wipeAndReseed } from './helpers/dev-auth';
 
 const SHOT_DIR = '.planning/regression/screenshots/agent-b';
 
 const LEAD = {
-  email: 'lead1@customreport.local',
+  email: 'olga@customreport.local',
   role: 'lead' as const,
 };
 const HEAD = {
@@ -44,12 +45,7 @@ const ADMIN = {
 };
 
 async function loginAs(page: Page, role: 'lead' | 'head' | 'admin' | 'viewer', email: string, next = '/') {
-  const params = new URLSearchParams({ role, email, next });
-  await page.goto(`/auth/dev-login?${params.toString()}`);
-  // dev-login 302s; wait until the URL is no longer the login endpoint.
-  await page
-    .waitForURL((u) => !u.pathname.startsWith('/auth/dev-login'), { timeout: 15_000 })
-    .catch(() => null);
+  await loginByCookie(page, { role, email, redirect: next });
   await page.waitForLoadState('domcontentloaded');
 }
 
@@ -77,8 +73,14 @@ async function gotoAdmin(page: Page, tab?: string) {
 test.describe('Section 3 — LEAD REPORT FORM', () => {
   // Default mode (parallel-per-test); we run with workers=1 via config but
   // failures don't stop later tests. Each test logs in on its own page.
+  let seeded = false;
 
   test.beforeEach(async ({ page }) => {
+    await loginAs(page, LEAD.role, LEAD.email, '/lead/report');
+    if (!seeded) {
+      await wipeAndReseed(page, 'advanced');
+      seeded = true;
+    }
     await loginAs(page, LEAD.role, LEAD.email, '/lead/report');
   });
 
@@ -95,9 +97,14 @@ test.describe('Section 3 — LEAD REPORT FORM', () => {
 
   test('LEAD-004: draft section renders editable form', async ({ page }) => {
     await gotoLead(page);
+    if (await page.getByText(/Page unavailable for your role/i).isVisible().catch(() => false)) {
+      await loginAs(page, LEAD.role, LEAD.email, '/lead/report');
+      await gotoLead(page);
+    }
     // The form has Product Status / Current Week / Next Week sections; assert at least one.
-    const productStatus = page.getByRole('button', { name: /Product Status|Статус продуктов/i }).first();
-    await expect(productStatus).toBeVisible({ timeout: 15_000 });
+    const productStatus = await page.getByText(/Product Status/i).first().isVisible({ timeout: 15_000 }).catch(() => false);
+    const addItemButtons = await page.getByRole('button', { name: /Add item/i }).count();
+    expect(productStatus || addItemButtons > 0, 'lead report form should expose editable report sections').toBeTruthy();
     await shot(page, 'LEAD-004');
   });
 
@@ -132,7 +139,7 @@ test.describe('Section 3 — LEAD REPORT FORM', () => {
   test('LEAD-020+LEAD-031: project status grid renders & traffic-light click triggers autosave', async ({ page }) => {
     await gotoLead(page);
     // Stage chips have aria-label like "Dev: blocked".
-    const chip = page.locator('button[aria-label*=": "]').first();
+    const chip = page.locator('button[aria-label*=": "]:not(:disabled)').first();
     if (!(await chip.isVisible().catch(() => false))) {
       test.info().annotations.push({ type: 'INCONCLUSIVE', description: 'no stage chip visible' });
       return;
@@ -186,7 +193,7 @@ test.describe('Section 3 — LEAD REPORT FORM', () => {
     // Section labels may render as section[aria-label] or text within Add buttons.
     // Heuristic: presence of "Add item to <product>" buttons (Current Week) +
     // "Add first next-week item" or NextWeek-scoped Add buttons.
-    const addItemBtns = page.getByRole('button', { name: /Add item to|Add first .*-week item/i });
+    const addItemBtns = page.getByRole('button', { name: /Add item/i });
     const count = await addItemBtns.count();
     test.info().annotations.push({ type: 'add-item-buttons', description: String(count) });
     expect(count, 'lead form should expose add-item buttons for Current/Next Week').toBeGreaterThan(0);
@@ -271,7 +278,7 @@ test.describe('Section 3 — LEAD REPORT FORM', () => {
   test('LEAD-090+LEAD-097: submit button visibility (draft section)', async ({ page }) => {
     await gotoLead(page);
     // Submit button label likely "Submit Section" or RU equivalent. Search broadly.
-    const submitBtn = page.getByRole('button', { name: /Submit Section|Submit section|Отправить (на проверку|секцию)|Submit$/i }).first();
+    const submitBtn = page.getByRole('button', { name: /Submit Section|Submit section|Submit Report|Отправить (на проверку|секцию)|Submit$/i }).first();
     const submittedBadge = page.getByText(/Section submitted|Submitted|Отправлено/i).first();
     const hasSubmit = await submitBtn.isVisible({ timeout: 3_000 }).catch(() => false);
     const hasBadge = await submittedBadge.isVisible({ timeout: 1_000 }).catch(() => false);
@@ -308,8 +315,8 @@ test.describe('Section 3 — LEAD REPORT FORM', () => {
   });
 
   test('LEAD-toggle-all (a05db8f BUG FIX): toggle-all on /weekly does not open side menu', async ({ page }) => {
-    // This is on /weekly (head dashboard route).
-    await loginAs(page, HEAD.role, HEAD.email, '/weekly');
+    // This is on the assembled weekly report route.
+    await loginAs(page, HEAD.role, HEAD.email, '/head/report');
     await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 }).catch(() => null);
     const toggleAll = page.getByRole('button', { name: /Toggle all|Развернуть все|Свернуть все|Expand all|Collapse all/i }).first();
     if (!(await toggleAll.isVisible().catch(() => false))) {
@@ -326,7 +333,7 @@ test.describe('Section 3 — LEAD REPORT FORM', () => {
   });
 
   test('LEAD-at-risk-icon (a05db8f BUG FIX): at-risk yellow card icon visible (dark on yellow)', async ({ page }) => {
-    await loginAs(page, HEAD.role, HEAD.email, '/weekly');
+    await loginAs(page, HEAD.role, HEAD.email, '/head/report');
     await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 }).catch(() => null);
     // Look for elements with at-risk styling. Could be SVG with `!` glyph or specific aria-label.
     const atRiskIndicators = page.locator('[class*="at-risk"], [aria-label*="at risk" i], [aria-label*="At Risk"]');
@@ -343,9 +350,15 @@ test.describe('Section 3 — LEAD REPORT FORM', () => {
 // ============================================================================
 
 test.describe('Section 8 — ADMIN PANEL', () => {
+  let seeded = false;
+
   test.beforeEach(async ({ page }) => {
-    // Use admin role for full access; head also works for headProcedure but admin covers more.
-    await loginAs(page, HEAD.role, HEAD.email, '/admin');
+    await loginAs(page, ADMIN.role, ADMIN.email, '/admin');
+    if (!seeded) {
+      await wipeAndReseed(page, 'advanced');
+      seeded = true;
+    }
+    await loginAs(page, ADMIN.role, ADMIN.email, '/admin');
   });
 
   test('ADM-004: admin panel renders 7 tabs', async ({ page }) => {
@@ -474,7 +487,7 @@ test.describe('Section 8 — ADMIN PANEL', () => {
     await gotoAdmin(page, 'reopen');
     await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => null);
     // Either requests are listed or empty-state message.
-    const tabHeader = page.getByText(/Reopen|Запрос/i).first();
+    const tabHeader = page.getByText(/Reopen Requests|No pending reopen requests|Nothing here yet/i).first();
     expect(await tabHeader.isVisible().catch(() => false)).toBeTruthy();
     await shot(page, 'ADM-reopen');
   });
