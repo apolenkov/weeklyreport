@@ -33,7 +33,7 @@ See: .planning/PROJECT.md
 
 **Current Focus:** none active — v8.0 production tag landed, v8.1 parked in `.planning/backlog/` until stakeholder PRD or fresh prod feedback unfreezes.
 
-**Resume context:** Per-project Claude memory at `.planning/memory/`. v8.1 promote flow: `git mv .planning/backlog/v8.1-*.md .planning/milestones/` then `/gsd-new-milestone v8.1` then `/gsd-plan-phase 40`.
+**Resume context:** Per-project Claude memory at `.planning/memory/`. v8.1 promote flow: `git mv .planning/backlog/v8.1-*.md .planning/milestones/` then `/gsd-new-milestone v8.1` and plan the first promoted v8.1 phase.
 
 ---
 
@@ -144,7 +144,7 @@ Last activity: 2026-05-06 -- phase 39 review/learnings extracted after v8.0 tag;
 
 - **AI features feature-flagged off until ANTHROPIC_API_KEY provisioned** — Phase 31 ships AI summary card, sentiment badges, on-track icons. All 3 features gracefully degrade ("AI unavailable") when key missing. Decision: ship code, defer activation until ops + head approve API key + cost. Confirmed in live-test 2026-04-30.
 - **Mock IdP container REMOVED from local plan** — Decision 2026-04-30: `/auth/dev-login?role=X` already fully imitates SAML callback (issues identical JWT cookie + session). Mock Keycloak container would only cover SAML XML parsing which is `@node-saml/passport-saml` library code, not ours. Local + integration tests use AUTH_DEV_MODE_ALLOW_TEST. Production uses real corp Keycloak. No middle layer needed.
-- **OnTrackIcon UI mount on traffic-light cells** — Phase 32 (mockup parity M1) shipped the mount via `weekly-report.ts` mapper UUID threading; activates when `ANTHROPIC_API_KEY` is set.
+- **OnTrackIcon UI mount on traffic-light cells** — pre-v8 mockup parity work shipped the mount via `weekly-report.ts` mapper UUID threading; activates when `ANTHROPIC_API_KEY` is set.
 - **Real-device iOS Safari PDF embed (MOB-06)** — Playwright virtual `devices['iPhone 14']` covers; human-on-device confirmation outstanding.
 - **Golden-set rubric head sign-off (C-5)** — AI-SPEC ships with draft fixtures; CI threshold loose until head/Barkhanov approves. `pnpm test:ai-eval` runs on-demand.
 - **Pre-existing test lint warnings** — non-null assertions in test files (api ~185 warnings, web ~87) — not v6.0 work; cleanup later.
