@@ -43,10 +43,10 @@ pnpm run dev
 
 After startup:
 
-| Service  | URL                    |
-|----------|------------------------|
-| Frontend | http://localhost:3000   |
-| API      | http://localhost:3001   |
+| Service  | URL                   |
+| -------- | --------------------- |
+| Frontend | http://localhost:3000 |
+| API      | http://localhost:3002 |
 
 The dev login page shows role-selector buttons (Lead, Head, Viewer) — no
 Keycloak setup required when `AUTH_DEV_MODE=true`.
@@ -85,18 +85,18 @@ customreport/
 
 ### Workspace packages
 
-| Package              | Path              | Purpose                                      |
-|----------------------|-------------------|----------------------------------------------|
-| `@customreport/web`  | `apps/web`        | Next.js frontend, pages, components, styles  |
-| `@customreport/api`  | `apps/api`        | NestJS API, tRPC routers, domain modules     |
-| `@customreport/shared` | `packages/shared` | Zod schemas, tRPC type exports, validators |
-| `@customreport/ui`   | `packages/ui`     | shadcn/ui components, Tailwind tokens        |
+| Package                | Path              | Purpose                                     |
+| ---------------------- | ----------------- | ------------------------------------------- |
+| `@customreport/web`    | `apps/web`        | Next.js frontend, pages, components, styles |
+| `@customreport/api`    | `apps/api`        | NestJS API, tRPC routers, domain modules    |
+| `@customreport/shared` | `packages/shared` | Zod schemas, tRPC type exports, validators  |
+| `@customreport/ui`     | `packages/ui`     | shadcn/ui components, Tailwind tokens       |
 
 Cross-package imports use workspace aliases:
 
 ```typescript
-import { reportSchema } from '@customreport/shared';
-import { Button } from '@customreport/ui';
+import { reportSchema } from "@customreport/shared";
+import { Button } from "@customreport/ui";
 ```
 
 ---
@@ -259,7 +259,7 @@ Add Zod schemas in `packages/shared/src/schemas/`:
 
 ```typescript
 // packages/shared/src/schemas/my-feature.ts
-import { z } from 'zod';
+import { z } from "zod";
 
 export const myFeatureInput = z.object({
   name: z.string().min(1),
@@ -288,7 +288,7 @@ from `src/infrastructure/trpc/`.
 ### Step 3: Register the router
 
 Add the new router to the app router in
-`apps/api/src/infrastructure/trpc/router.ts`.
+`apps/api/src/infrastructure/trpc/trpc.router.ts`.
 
 ### Step 4: Build UI components (apps/web)
 
@@ -342,9 +342,9 @@ This runs automatically — no manual setup after `pnpm install`.
 ### Port conflicts
 
 | Port | Service    | Fix                                         |
-|------|------------|---------------------------------------------|
+| ---- | ---------- | ------------------------------------------- |
 | 3000 | Next.js    | Kill existing process or set `PORT` in .env |
-| 3001 | NestJS API | Set `PORT` in .env                          |
+| 3002 | NestJS API | Set `PORT` in .env                          |
 | 5432 | PostgreSQL | Stop local PostgreSQL or change docker port |
 | 6379 | Redis      | Stop local Redis or change docker port      |
 

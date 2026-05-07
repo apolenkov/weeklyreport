@@ -2,7 +2,7 @@
 
 Complete reference for all API endpoints in the CustomReport application.
 
-**Base URL:** `http://localhost:3001` (development)
+**Base URL:** `http://localhost:3002` (local development)
 
 **Protocol:** tRPC over HTTP (batch link) + REST auth routes
 
@@ -41,33 +41,33 @@ All tRPC endpoints require a valid session. Sessions are established via SAML
 SSO or the dev-login bypass, and carried as an HTTP-only cookie containing a
 signed JWT.
 
-| Property | Description |
-|----------|-------------|
+| Property    | Description                                                      |
+| ----------- | ---------------------------------------------------------------- |
 | Cookie name | `customreport_session` (configurable via `AUTH_JWT_COOKIE_NAME`) |
-| Algorithm | HS256 |
-| Expiry | 1 hour |
-| Transport | HTTP-only, Secure (in production), SameSite=Lax, Path=/ |
-| Secret | `AUTH_JWT_SECRET` environment variable (required) |
+| Algorithm   | HS256                                                            |
+| Expiry      | 1 hour                                                           |
+| Transport   | HTTP-only, Secure (in production), SameSite=Lax, Path=/          |
+| Secret      | `AUTH_JWT_SECRET` environment variable (required)                |
 
 ### JWT Payload (UserSession)
 
 ```typescript
 {
-  userId: string;          // UUID
-  email: string;           // user email
-  name: string;            // display name
-  role: "lead" | "head" | "viewer";
-  activeReportId: string | null;          // current draft report UUID
-  activeReportSectionId: string | null;   // lead's section UUID (null for head/viewer)
+  userId: string; // UUID
+  email: string; // user email
+  name: string; // display name
+  role: "lead" | "head" | "admin" | "viewer";
+  activeReportId: string | null; // current draft report UUID
+  activeReportSectionId: string | null; // lead's section UUID (null for head/viewer)
 }
 ```
 
 ### Auth Levels
 
-| Level | Middleware | Who can access | On failure |
-|-------|-----------|----------------|------------|
-| `protectedProcedure` | `isAuthed` | Any authenticated user (lead, head, viewer) | `UNAUTHORIZED` |
-| `headProcedure` | `isHead` | Head role only | `UNAUTHORIZED` (no session) or `FORBIDDEN` (wrong role) |
+| Level                | Middleware | Who can access                                     | On failure                                              |
+| -------------------- | ---------- | -------------------------------------------------- | ------------------------------------------------------- |
+| `protectedProcedure` | `isAuthed` | Any authenticated user (lead, head, admin, viewer) | `UNAUTHORIZED`                                          |
+| `headProcedure`      | `isHead`   | Head/admin role only                               | `UNAUTHORIZED` (no session) or `FORBIDDEN` (wrong role) |
 
 ### Dev Mode Bypass
 
@@ -91,12 +91,12 @@ Lead-facing endpoints for managing report sections.
 
 #### reports.getActive
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | query |
-| **Input** | none |
-| **Output** | `ReportSectionReadModel \| null` |
+| Property   | Value                                         |
+| ---------- | --------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role) |
+| **Type**   | query                                         |
+| **Input**  | none                                          |
+| **Output** | `ReportSectionReadModel \| null`              |
 
 Returns the active (draft) report section for the authenticated user. Uses
 `ctx.session.activeReportSectionId` to look up the section. Returns `null` if
@@ -106,9 +106,9 @@ the user has no active section assigned.
 
 ```typescript
 {
-  reportSectionId: string;   // UUID
-  reportId: string;          // UUID
-  authorId: string;          // UUID
+  reportSectionId: string; // UUID
+  reportId: string; // UUID
+  authorId: string; // UUID
   authorName: string;
   status: "draft" | "submitted";
   submittedAt: Date | null;
@@ -128,12 +128,12 @@ the user has no active section assigned.
 
 #### reports.myHistory
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | query |
-| **Input** | none |
-| **Output** | `MyHistoryEntry[]` |
+| Property   | Value                                         |
+| ---------- | --------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role) |
+| **Type**   | query                                         |
+| **Input**  | none                                          |
+| **Output** | `MyHistoryEntry[]`                            |
 
 Returns all report sections authored by the current user, ordered by creation
 date descending. Includes the parent report's period and publication status.
@@ -142,8 +142,8 @@ date descending. Includes the parent report's period and publication status.
 
 ```typescript
 {
-  sectionId: string;         // UUID
-  reportId: string;          // UUID
+  sectionId: string; // UUID
+  reportId: string; // UUID
   periodStart: Date;
   periodEnd: Date;
   reportStatus: "draft" | "published";
@@ -157,12 +157,12 @@ date descending. Includes the parent report's period and publication status.
 
 #### reports.saveDraft
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | mutation |
-| **Input** | `DraftSavePayload` |
-| **Output** | Updated `ReportSectionReadModel` |
+| Property   | Value                                         |
+| ---------- | --------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role) |
+| **Type**   | mutation                                      |
+| **Input**  | `DraftSavePayload`                            |
+| **Output** | Updated `ReportSectionReadModel`              |
 
 Saves the current state of a report section as a draft. Does not validate
 completeness -- partial data is accepted.
@@ -171,41 +171,45 @@ completeness -- partial data is accepted.
 
 ```typescript
 {
-  reportSectionId: string;                 // UUID - required
-  status: "draft" | "submitted";           // defaults to "draft"
+  reportSectionId: string; // UUID - required
+  status: "draft" | "submitted"; // defaults to "draft"
   projectStatuses: Array<{
-    projectId: string;                     // UUID
-    status?: "green" | "yellow" | "red";   // optional for drafts
+    projectId: string; // UUID
+    status?: "green" | "yellow" | "red"; // optional for drafts
   }>;
-  items: Array<{                           // max 100
-    id?: string;                           // UUID - omit for new items
-    projectId: string;                     // UUID
+  items: Array<{
+    // max 100
+    id?: string; // UUID - omit for new items
+    projectId: string; // UUID
     type: "current" | "next";
-    text: string;                          // 1-500 chars, safe text
-    tag: string;                           // 1-50 chars
+    text: string; // 1-500 chars, safe text
+    tag: string; // 1-50 chars
     workflowStatus: "done" | "in_progress" | "blocked";
-    carriedOver: boolean;                  // default false
+    carriedOver: boolean; // default false
     completed?: boolean | null;
   }>;
-  risks: Array<{                           // max 100
+  risks: Array<{
+    // max 100
     id?: string;
     projectId: string;
-    risk: string;                          // 1-500 chars
-    impact: string;                        // 1-500 chars
-    mitigation: string;                    // 1-500 chars
+    risk: string; // 1-500 chars
+    impact: string; // 1-500 chars
+    mitigation: string; // 1-500 chars
   }>;
-  decisions: Array<{                       // max 100
+  decisions: Array<{
+    // max 100
     id?: string;
-    text: string;                          // 1-500 chars
-    owner: string;                         // 1-200 chars
+    text: string; // 1-500 chars
+    owner: string; // 1-200 chars
     deadline?: Date | null;
-    impact: string;                        // 1-500 chars
+    impact: string; // 1-500 chars
     resolvedAt?: Date | null;
   }>;
-  priorities: Array<{                      // max 50
+  priorities: Array<{
+    // max 50
     id?: string;
-    rank: number;                          // positive integer, min 1
-    text: string;                          // 1-200 chars
+    rank: number; // positive integer, min 1
+    text: string; // 1-200 chars
   }>;
 }
 ```
@@ -214,12 +218,12 @@ completeness -- partial data is accepted.
 
 #### reports.submit
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | mutation |
-| **Input** | `SubmitSectionPayload` |
-| **Output** | Updated `ReportSectionReadModel` |
+| Property   | Value                                         |
+| ---------- | --------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role) |
+| **Type**   | mutation                                      |
+| **Input**  | `SubmitSectionPayload`                        |
+| **Output** | Updated `ReportSectionReadModel`              |
 
 Submits a report section for review. Extends `draftSaveSchema` with stricter
 validation:
@@ -231,6 +235,7 @@ validation:
 - Priority ranks must be unique
 
 Server-side validation (via `validateSubmitInput`) additionally checks:
+
 - Section is not already submitted (`SECTION_ALREADY_SUBMITTED`)
 - All projects have traffic lights (`MISSING_TRAFFIC_LIGHT`)
 - Each project has at least one "current" item (`MISSING_CURRENT_ITEM`)
@@ -244,12 +249,12 @@ Head-facing endpoints for reviewing and publishing assembled reports.
 
 #### review.dashboard
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | query |
-| **Input** | none |
-| **Output** | `SubmissionDashboardRow[]` |
+| Property   | Value                                         |
+| ---------- | --------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role) |
+| **Type**   | query                                         |
+| **Input**  | none                                          |
+| **Output** | `SubmissionDashboardRow[]`                    |
 
 Returns the submission dashboard for the active report. Shows each lead's
 submission status. Returns an empty array if no active report exists in session.
@@ -271,12 +276,12 @@ submission status. Returns an empty array if no active report exists in session.
 
 #### review.assembledReport
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | query |
-| **Input** | none |
-| **Output** | `AssembledReport` |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | query                            |
+| **Input**  | none                             |
+| **Output** | `AssembledReport`                |
 
 Returns the fully assembled report for the active period, including all
 submitted sections, portfolio overview, and publication metadata. Throws
@@ -306,12 +311,12 @@ submitted sections, portfolio overview, and publication metadata. Throws
 
 #### review.publish
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | none |
-| **Output** | Published report confirmation |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | none                             |
+| **Output** | Published report confirmation    |
 
 Publishes the active report. Sets the report status to "published" and records
 the publisher identity and timestamp. Throws `BAD_REQUEST` if no active report
@@ -325,12 +330,12 @@ Endpoints for requesting and tracking PDF export jobs.
 
 #### pdfExport.request
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ reportId: string }` (UUID) |
-| **Output** | `PdfExportJob` |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `{ reportId: string }` (UUID)    |
+| **Output** | `PdfExportJob`                   |
 
 Queues a PDF export job for the specified report. The job is processed
 asynchronously via BullMQ.
@@ -339,8 +344,8 @@ asynchronously via BullMQ.
 
 ```typescript
 {
-  jobId: string;             // UUID
-  reportId: string;          // UUID
+  jobId: string; // UUID
+  reportId: string; // UUID
   status: "queued" | "processing" | "completed" | "failed";
   requestedAt: Date;
   completedAt: Date | null;
@@ -354,12 +359,12 @@ asynchronously via BullMQ.
 
 #### pdfExport.status
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | query |
-| **Input** | `{ jobId: string }` (UUID) |
-| **Output** | `PdfExportJob` |
+| Property   | Value                                         |
+| ---------- | --------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role) |
+| **Type**   | query                                         |
+| **Input**  | `{ jobId: string }` (UUID)                    |
+| **Output** | `PdfExportJob`                                |
 
 Returns the current status of a PDF export job. Poll this endpoint to track
 job progress.
@@ -373,12 +378,12 @@ stage assignments.
 
 #### admin.snapshot
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | query |
-| **Input** | none |
-| **Output** | `AdminSnapshot` |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | query                            |
+| **Input**  | none                             |
+| **Output** | `AdminSnapshot`                  |
 
 Returns the complete admin snapshot: all users, projects, periods, reminder
 rules, and reminder executions.
@@ -399,12 +404,12 @@ rules, and reminder executions.
 
 #### admin.getSettings
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | query |
-| **Input** | none |
-| **Output** | `AppSettings` |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | query                            |
+| **Input**  | none                             |
+| **Output** | `AppSettings`                    |
 
 Returns application-wide settings.
 
@@ -412,7 +417,7 @@ Returns application-wide settings.
 
 ```typescript
 {
-  departmentName: string;      // 1-200 chars
+  departmentName: string; // 1-200 chars
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number; // 1-30
 }
@@ -422,12 +427,12 @@ Returns application-wide settings.
 
 #### admin.updateSettings
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `Partial<AppSettings>` |
-| **Output** | Updated `AppSettings` |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `Partial<AppSettings>`           |
+| **Output** | Updated `AppSettings`            |
 
 Partially updates application settings. All fields are optional (partial
 update).
@@ -436,12 +441,12 @@ update).
 
 #### admin.saveUser
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `AdminUser` |
-| **Output** | Upserted user |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `AdminUser`                      |
+| **Output** | Upserted user                    |
 
 Creates or updates a user (upsert by `id`).
 
@@ -449,9 +454,9 @@ Creates or updates a user (upsert by `id`).
 
 ```typescript
 {
-  id: string;        // UUID
-  email: string;     // valid email
-  name: string;      // min 1 char
+  id: string; // UUID
+  email: string; // valid email
+  name: string; // min 1 char
   role: "lead" | "head" | "viewer";
 }
 ```
@@ -460,12 +465,12 @@ Creates or updates a user (upsert by `id`).
 
 #### admin.saveProject
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `AdminProject` |
-| **Output** | Upserted project |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `AdminProject`                   |
+| **Output** | Upserted project                 |
 
 Creates or updates a project (upsert by `id`).
 
@@ -473,11 +478,11 @@ Creates or updates a project (upsert by `id`).
 
 ```typescript
 {
-  id: string;        // UUID
-  name: string;      // min 1 char
+  id: string; // UUID
+  name: string; // min 1 char
   archived: boolean;
-  leadId: string;    // UUID - assigned lead
-  leadName: string;  // min 1 char
+  leadId: string; // UUID - assigned lead
+  leadName: string; // min 1 char
 }
 ```
 
@@ -485,12 +490,12 @@ Creates or updates a project (upsert by `id`).
 
 #### admin.savePeriod
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `ReportPeriod` |
-| **Output** | Upserted period |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `ReportPeriod`                   |
+| **Output** | Upserted period                  |
 
 Creates or updates a reporting period (upsert by `id`).
 
@@ -498,10 +503,10 @@ Creates or updates a reporting period (upsert by `id`).
 
 ```typescript
 {
-  id: string;          // UUID
-  periodStart: Date;   // must be after year 2000
-  periodEnd: Date;     // must be after year 2000
-  deadline: Date;      // must be after year 2000
+  id: string; // UUID
+  periodStart: Date; // must be after year 2000
+  periodEnd: Date; // must be after year 2000
+  deadline: Date; // must be after year 2000
   status: "draft" | "published";
 }
 ```
@@ -510,12 +515,12 @@ Creates or updates a reporting period (upsert by `id`).
 
 #### admin.saveReminderRule
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `AdminReminderRule` |
-| **Output** | Upserted reminder rule |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `AdminReminderRule`              |
+| **Output** | Upserted reminder rule           |
 
 Creates or updates a reminder rule (upsert by `id`).
 
@@ -523,13 +528,13 @@ Creates or updates a reminder rule (upsert by `id`).
 
 ```typescript
 {
-  id: string;                      // UUID
-  reportId: string | null;         // UUID or null
+  id: string; // UUID
+  reportId: string | null; // UUID or null
   kind: "deadline" | "follow_up";
   fireAt: Date;
-  timezone: string;                // min 1 char (e.g. "Europe/Moscow")
+  timezone: string; // min 1 char (e.g. "Europe/Moscow")
   status: "active" | "paused";
-  version: number;                 // positive integer, min 1
+  version: number; // positive integer, min 1
 }
 ```
 
@@ -537,12 +542,12 @@ Creates or updates a reminder rule (upsert by `id`).
 
 #### admin.deleteUser
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ userId: string }` (UUID) |
-| **Output** | Deletion confirmation |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `{ userId: string }` (UUID)      |
+| **Output** | Deletion confirmation            |
 
 Removes a user from the system.
 
@@ -550,12 +555,12 @@ Removes a user from the system.
 
 #### admin.deleteProject
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ projectId: string }` (UUID) |
-| **Output** | Deletion confirmation |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `{ projectId: string }` (UUID)   |
+| **Output** | Deletion confirmation            |
 
 Removes a project from the system.
 
@@ -563,12 +568,12 @@ Removes a project from the system.
 
 #### admin.deleteReminderRule
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ ruleId: string }` (UUID) |
-| **Output** | Deletion confirmation |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `{ ruleId: string }` (UUID)      |
+| **Output** | Deletion confirmation            |
 
 Removes a reminder rule.
 
@@ -576,12 +581,12 @@ Removes a reminder rule.
 
 #### admin.saveStageAssignment
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ userId: string, stageId: string, projectId: string }` (all UUIDs) |
-| **Output** | Saved assignment |
+| Property   | Value                                                                |
+| ---------- | -------------------------------------------------------------------- |
+| **Auth**   | `headProcedure` (head role only)                                     |
+| **Type**   | mutation                                                             |
+| **Input**  | `{ userId: string, stageId: string, projectId: string }` (all UUIDs) |
+| **Output** | Saved assignment                                                     |
 
 Assigns a user to a product stage for a specific project.
 
@@ -589,12 +594,12 @@ Assigns a user to a product stage for a specific project.
 
 #### admin.deleteStageAssignment
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ id: string }` (UUID) |
-| **Output** | Deletion confirmation |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `{ id: string }` (UUID)          |
+| **Output** | Deletion confirmation            |
 
 Removes a stage assignment.
 
@@ -602,12 +607,12 @@ Removes a stage assignment.
 
 #### admin.listStageAssignments
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | query |
-| **Input** | `{ projectId: string }` (UUID) |
-| **Output** | `StageAssignment[]` |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | query                            |
+| **Input**  | `{ projectId: string }` (UUID)   |
+| **Output** | `StageAssignment[]`              |
 
 Lists all stage assignments for a given project.
 
@@ -632,12 +637,12 @@ Endpoints for browsing published report history.
 
 #### archive.list
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | query |
-| **Input** | `PaginationInput?` (optional) |
-| **Output** | `PaginatedResult<ArchiveReportSummary>` |
+| Property   | Value                                         |
+| ---------- | --------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role) |
+| **Type**   | query                                         |
+| **Input**  | `PaginationInput?` (optional)                 |
+| **Output** | `PaginatedResult<ArchiveReportSummary>`       |
 
 Lists published reports with cursor-based pagination.
 
@@ -667,12 +672,12 @@ Lists published reports with cursor-based pagination.
 
 #### archive.detail
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | query |
-| **Input** | `{ reportId: string }` (UUID) |
-| **Output** | `ArchiveReportDetail` |
+| Property   | Value                                         |
+| ---------- | --------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role) |
+| **Type**   | query                                         |
+| **Input**  | `{ reportId: string }` (UUID)                 |
+| **Output** | `ArchiveReportDetail`                         |
 
 Returns full details of an archived (published) report, including the assembled
 report and its summary metadata.
@@ -694,16 +699,17 @@ Head-only endpoints for managing email reminders.
 
 #### reminders.execute
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ ruleId: string, recipientEmail: string }` |
-| **Output** | Execution result |
+| Property   | Value                                        |
+| ---------- | -------------------------------------------- |
+| **Auth**   | `headProcedure` (head role only)             |
+| **Type**   | mutation                                     |
+| **Input**  | `{ ruleId: string, recipientEmail: string }` |
+| **Output** | Execution result                             |
 
 Manually triggers a reminder execution for a specific rule and recipient.
 
 **Input validation:**
+
 - `ruleId`: UUID
 - `recipientEmail`: valid email address
 
@@ -711,12 +717,12 @@ Manually triggers a reminder execution for a specific rule and recipient.
 
 #### reminders.listExecutions
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | query |
-| **Input** | `{ ruleId: string, cursor?: string, limit?: number }` |
-| **Output** | `PaginatedResult<AdminReminderExecution>` |
+| Property   | Value                                                 |
+| ---------- | ----------------------------------------------------- |
+| **Auth**   | `headProcedure` (head role only)                      |
+| **Type**   | query                                                 |
+| **Input**  | `{ ruleId: string, cursor?: string, limit?: number }` |
+| **Output** | `PaginatedResult<AdminReminderExecution>`             |
 
 Lists execution history for a reminder rule with optional pagination.
 
@@ -744,12 +750,12 @@ Head-only endpoint for carrying over unfinished items between periods.
 
 #### carryOver.execute
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ sourceReportId: string, targetReportId: string }` (both UUIDs) |
-| **Output** | `CarryOverExecution` |
+| Property   | Value                                                             |
+| ---------- | ----------------------------------------------------------------- |
+| **Auth**   | `headProcedure` (head role only)                                  |
+| **Type**   | mutation                                                          |
+| **Input**  | `{ sourceReportId: string, targetReportId: string }` (both UUIDs) |
+| **Output** | `CarryOverExecution`                                              |
 
 Carries over incomplete items and unresolved decisions from a source report to
 a target report.
@@ -778,12 +784,12 @@ Head-only endpoints for managing period lifecycle (publish and reopen).
 
 #### period.publish
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ reportId: string }` (UUID) |
-| **Output** | Published period confirmation |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `{ reportId: string }` (UUID)    |
+| **Output** | Published period confirmation    |
 
 Publishes a period, locking all sections and setting the period status to
 "published". Records the publisher identity from the session.
@@ -792,12 +798,12 @@ Publishes a period, locking all sections and setting the period status to
 
 #### period.reopen
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ reportId: string }` (UUID) |
-| **Output** | Reopened period confirmation |
+| Property   | Value                            |
+| ---------- | -------------------------------- |
+| **Auth**   | `headProcedure` (head role only) |
+| **Type**   | mutation                         |
+| **Input**  | `{ reportId: string }` (UUID)    |
+| **Output** | Reopened period confirmation     |
 
 Reopens a published period, allowing leads to edit their sections again. Sets
 the period status to "reopened".
@@ -810,12 +816,12 @@ Endpoint for retrieving the full assembled weekly report view.
 
 #### weeklyReport.get
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | query |
-| **Input** | `{ reportId?: string }?` (optional object with optional UUID) |
-| **Output** | `WeeklyReportReadModel` |
+| Property   | Value                                                         |
+| ---------- | ------------------------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role)                 |
+| **Type**   | query                                                         |
+| **Input**  | `{ reportId?: string }?` (optional object with optional UUID) |
+| **Output** | `WeeklyReportReadModel`                                       |
 
 Returns the full weekly report view including portfolio overview, all lead
 sections, and escalations. If `reportId` is omitted, returns the current active
@@ -858,11 +864,11 @@ Lead-facing endpoints for form data, version history, and reopen requests.
 
 #### leadForm.byPeriod
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | query |
-| **Input** | `{ reportId: string }` (UUID) |
+| Property   | Value                                          |
+| ---------- | ---------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role)  |
+| **Type**   | query                                          |
+| **Input**  | `{ reportId: string }` (UUID)                  |
 | **Output** | Lead's section for the specified report period |
 
 Returns the lead's report section for a specific period. Uses
@@ -872,12 +878,12 @@ Returns the lead's report section for a specific period. Uses
 
 #### leadForm.fillFrom
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | mutation |
-| **Input** | `{ targetSectionId: string, sourceSectionId: string }` (both UUIDs) |
-| **Output** | Populated section |
+| Property   | Value                                                               |
+| ---------- | ------------------------------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role)                       |
+| **Type**   | mutation                                                            |
+| **Input**  | `{ targetSectionId: string, sourceSectionId: string }` (both UUIDs) |
+| **Output** | Populated section                                                   |
 
 Copies data from a previous section into the target section. Useful for
 pre-filling a new period's form from a previous week. Scoped to the
@@ -887,12 +893,12 @@ authenticated user via `ctx.session.userId`.
 
 #### leadForm.versions
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | query |
-| **Input** | `{ reportSectionId: string }` (UUID) |
-| **Output** | `VersionSnapshot[]` |
+| Property   | Value                                         |
+| ---------- | --------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role) |
+| **Type**   | query                                         |
+| **Input**  | `{ reportSectionId: string }` (UUID)          |
+| **Output** | `VersionSnapshot[]`                           |
 
 Lists all saved version snapshots for a report section.
 
@@ -902,7 +908,7 @@ Lists all saved version snapshots for a report section.
 {
   id: string;
   reportSectionId: string;
-  version: number;       // positive integer
+  version: number; // positive integer
   createdAt: Date;
 }
 ```
@@ -911,17 +917,18 @@ Lists all saved version snapshots for a report section.
 
 #### leadForm.restoreVersion
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | mutation |
-| **Input** | `{ reportSectionId: string, version: number }` |
-| **Output** | Restored section |
+| Property   | Value                                          |
+| ---------- | ---------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role)  |
+| **Type**   | mutation                                       |
+| **Input**  | `{ reportSectionId: string, version: number }` |
+| **Output** | Restored section                               |
 
 Restores a report section to a previous version snapshot. Scoped to the
 authenticated user.
 
 **Input validation:**
+
 - `reportSectionId`: UUID
 - `version`: positive integer
 
@@ -929,12 +936,12 @@ authenticated user.
 
 #### leadForm.revoke
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `headProcedure` (head role only) |
-| **Type** | mutation |
-| **Input** | `{ reportSectionId: string }` (UUID) |
-| **Output** | Revoked section |
+| Property   | Value                                |
+| ---------- | ------------------------------------ |
+| **Auth**   | `headProcedure` (head role only)     |
+| **Type**   | mutation                             |
+| **Input**  | `{ reportSectionId: string }` (UUID) |
+| **Output** | Revoked section                      |
 
 Revokes a submitted section, returning it to draft status. Only available to
 the head role. Uses `ctx.session.userId` to record who performed the revocation.
@@ -943,12 +950,12 @@ the head role. Uses `ctx.session.userId` to record who performed the revocation.
 
 #### leadForm.requestReopen
 
-| Property | Value |
-|----------|-------|
-| **Auth** | `protectedProcedure` (any authenticated role) |
-| **Type** | mutation |
-| **Input** | `{ reportSectionId: string, reason?: string }` |
-| **Output** | Reopen request result |
+| Property   | Value                                          |
+| ---------- | ---------------------------------------------- |
+| **Auth**   | `protectedProcedure` (any authenticated role)  |
+| **Type**   | mutation                                       |
+| **Input**  | `{ reportSectionId: string, reason?: string }` |
+| **Output** | Reopen request result                          |
 
 Allows a lead to request that their submitted section be reopened for editing.
 The optional `reason` field (max 500 chars) is recorded for the head's review.
@@ -962,10 +969,10 @@ These are standard Express routes outside the tRPC router, mounted at
 
 ### GET /auth/saml/login
 
-| Property | Value |
-|----------|-------|
-| **Auth** | Public (unauthenticated) |
-| **Method** | GET |
+| Property   | Value                    |
+| ---------- | ------------------------ |
+| **Auth**   | Public (unauthenticated) |
+| **Method** | GET                      |
 
 Initiates the SAML SSO flow. Redirects the browser to the Keycloak IdP for
 authentication. Passport.js handles the SAML AuthnRequest generation.
@@ -974,10 +981,10 @@ authentication. Passport.js handles the SAML AuthnRequest generation.
 
 ### POST /auth/saml/callback
 
-| Property | Value |
-|----------|-------|
-| **Auth** | Public (IdP callback) |
-| **Method** | POST |
+| Property         | Value                             |
+| ---------------- | --------------------------------- |
+| **Auth**         | Public (IdP callback)             |
+| **Method**       | POST                              |
 | **Content-Type** | application/x-www-form-urlencoded |
 
 Receives the SAML assertion from Keycloak after successful authentication.
@@ -989,10 +996,10 @@ On failure: redirects to `/auth/error?reason=invalid_assertion`.
 
 ```typescript
 {
-  samlId: string;       // from IdP nameID
+  samlId: string; // from IdP nameID
   email: string;
   displayName: string;
-  role: string;         // "lead" | "head" | "viewer"
+  role: string; // "lead" | "head" | "viewer"
 }
 ```
 
@@ -1004,10 +1011,10 @@ report and section are auto-created.
 
 ### POST /auth/logout
 
-| Property | Value |
-|----------|-------|
-| **Auth** | Public |
-| **Method** | POST |
+| Property   | Value  |
+| ---------- | ------ |
+| **Auth**   | Public |
+| **Method** | POST   |
 
 Clears the session cookie by setting `Max-Age=0` and redirects to `/`.
 
@@ -1015,10 +1022,10 @@ Clears the session cookie by setting `Max-Age=0` and redirects to `/`.
 
 ### GET /auth/dev-login
 
-| Property | Value |
-|----------|-------|
-| **Auth** | Public (dev mode only) |
-| **Method** | GET |
+| Property         | Value                          |
+| ---------------- | ------------------------------ |
+| **Auth**         | Public (dev mode only)         |
+| **Method**       | GET                            |
 | **Availability** | Only when `AUTH_DEV_MODE=true` |
 
 Quick-login endpoint for development. Creates a session cookie for the
@@ -1026,18 +1033,19 @@ specified role without SAML.
 
 **Query parameters:**
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `role` | `"lead" \| "head" \| "viewer"` | `"head"` | Role to authenticate as |
-| `email` | `string` | Role-specific default | Custom email (looks up/creates user) |
-| `redirect` | `string` | Role-specific page | Post-login redirect path |
+| Parameter  | Type                                      | Default               | Description                          |
+| ---------- | ----------------------------------------- | --------------------- | ------------------------------------ |
+| `role`     | `"lead" \| "head" \| "admin" \| "viewer"` | `"head"`              | Role to authenticate as              |
+| `email`    | `string`                                  | Role-specific default | Custom email (looks up/creates user) |
+| `redirect` | `string`                                  | Role-specific page    | Post-login redirect path             |
 
 **Default emails by role:**
 
-| Role | Email | Redirect |
-|------|-------|----------|
-| head | `head@customreport.local` | `/admin` |
-| lead | `lead1@customreport.local` | `/lead/report` |
+| Role   | Email                       | Redirect           |
+| ------ | --------------------------- | ------------------ |
+| head   | `head@customreport.local`   | `/admin`           |
+| lead   | `lead1@customreport.local`  | `/lead/report`     |
+| admin  | `admin@customreport.local`  | `/admin`           |
 | viewer | `viewer@customreport.local` | `/reports/history` |
 
 ---
@@ -1049,10 +1057,10 @@ controller routes, not tRPC procedures.
 
 ### GET /health/live
 
-| Property | Value |
-|----------|-------|
-| **Auth** | Public (unauthenticated) |
-| **Method** | GET |
+| Property    | Value                     |
+| ----------- | ------------------------- |
+| **Auth**    | Public (unauthenticated)  |
+| **Method**  | GET                       |
 | **Purpose** | Kubernetes liveness probe |
 
 Checks memory heap usage (threshold: 200 MB). Returns HTTP 200 with health
@@ -1073,13 +1081,14 @@ status JSON on success, HTTP 503 on failure.
 
 ### GET /health/ready
 
-| Property | Value |
-|----------|-------|
-| **Auth** | Public (unauthenticated) |
-| **Method** | GET |
+| Property    | Value                      |
+| ----------- | -------------------------- |
+| **Auth**    | Public (unauthenticated)   |
+| **Method**  | GET                        |
 | **Purpose** | Kubernetes readiness probe |
 
 Checks all dependencies:
+
 - **database** (Prisma/PostgreSQL connectivity)
 - **redis** (Redis connectivity)
 - **bullmq** (BullMQ queue health)
@@ -1091,10 +1100,10 @@ Returns HTTP 200 when all checks pass, HTTP 503 if any fail.
 
 ### GET /metrics
 
-| Property | Value |
-|----------|-------|
-| **Auth** | Public (unauthenticated) |
-| **Method** | GET |
+| Property         | Value                                                   |
+| ---------------- | ------------------------------------------------------- |
+| **Auth**         | Public (unauthenticated)                                |
+| **Method**       | GET                                                     |
 | **Content-Type** | `text/plain; version=0.0.4; charset=utf-8` (Prometheus) |
 
 Exposes Prometheus-compatible metrics using `prom-client`. Includes default
@@ -1109,26 +1118,26 @@ Node.js metrics (event loop lag, heap usage, GC stats, active handles, etc.).
 All tRPC endpoints use a centralized error mapper (`trpc.error-mapper.ts`)
 that translates domain-specific errors into standard tRPC error codes.
 
-| Domain Error | tRPC Code | HTTP Status | When |
-|-------------|-----------|-------------|------|
-| `TRPCError` (passthrough) | Original code | Varies | Error already mapped |
-| `ReportSectionDomainError` | `BAD_REQUEST` | 400 | Invalid draft/submit operations |
-| `ReviewAccessError` | `FORBIDDEN` | 403 | Unauthorized review access |
-| `AdminAccessError` | `FORBIDDEN` | 403 | Unauthorized admin operations |
-| `PublicationAccessError` | `CONFLICT` | 409 | Publication conflicts (e.g., already published) |
-| `PdfExportDomainError` | `NOT_FOUND` | 404 | PDF job or report not found |
-| `ArchiveDomainError` | `NOT_FOUND` | 404 | Archived report not found |
-| `ReminderDomainError` | `BAD_REQUEST` | 400 | Invalid reminder operation |
-| `CarryOverDomainError` | `BAD_REQUEST` | 400 | Invalid carry-over operation |
-| Unhandled errors | `INTERNAL_SERVER_ERROR` | 500 | Unexpected server errors |
+| Domain Error               | tRPC Code               | HTTP Status | When                                            |
+| -------------------------- | ----------------------- | ----------- | ----------------------------------------------- |
+| `TRPCError` (passthrough)  | Original code           | Varies      | Error already mapped                            |
+| `ReportSectionDomainError` | `BAD_REQUEST`           | 400         | Invalid draft/submit operations                 |
+| `ReviewAccessError`        | `FORBIDDEN`             | 403         | Unauthorized review access                      |
+| `AdminAccessError`         | `FORBIDDEN`             | 403         | Unauthorized admin operations                   |
+| `PublicationAccessError`   | `CONFLICT`              | 409         | Publication conflicts (e.g., already published) |
+| `PdfExportDomainError`     | `NOT_FOUND`             | 404         | PDF job or report not found                     |
+| `ArchiveDomainError`       | `NOT_FOUND`             | 404         | Archived report not found                       |
+| `ReminderDomainError`      | `BAD_REQUEST`           | 400         | Invalid reminder operation                      |
+| `CarryOverDomainError`     | `BAD_REQUEST`           | 400         | Invalid carry-over operation                    |
+| Unhandled errors           | `INTERNAL_SERVER_ERROR` | 500         | Unexpected server errors                        |
 
 ### Auth Errors
 
-| Scenario | tRPC Code | HTTP Status | Message |
-|----------|-----------|-------------|---------|
-| No session cookie | `UNAUTHORIZED` | 401 | "Not authenticated" |
-| Invalid/expired JWT | `UNAUTHORIZED` | 401 | "Not authenticated" |
-| Wrong role (not head) | `FORBIDDEN` | 403 | "Head role required" |
+| Scenario              | tRPC Code      | HTTP Status | Message              |
+| --------------------- | -------------- | ----------- | -------------------- |
+| No session cookie     | `UNAUTHORIZED` | 401         | "Not authenticated"  |
+| Invalid/expired JWT   | `UNAUTHORIZED` | 401         | "Not authenticated"  |
+| Wrong role (not head) | `FORBIDDEN`    | 403         | "Head role required" |
 
 ### Validation Errors
 
@@ -1159,6 +1168,7 @@ Input validation is performed by Zod schemas. Invalid inputs return:
 ### Safe Text Validation
 
 All user-facing text fields use the `safeText` helper which enforces:
+
 - No null bytes (`\u0000`) -- PostgreSQL incompatible
 - Must contain visible characters (rejects whitespace-only/zero-width strings)
 - Configurable min/max length
@@ -1172,24 +1182,24 @@ shared between frontend and backend via the `@customreport/shared` package.
 
 ### Enum Types
 
-| Schema | Values | Used in |
-|--------|--------|---------|
-| `trafficLightStatusSchema` | `"green"`, `"yellow"`, `"red"` | Project status indicators |
-| `itemTypeSchema` | `"current"`, `"next"` | Work items (this week / next week) |
-| `itemWorkflowStatusSchema` | `"done"`, `"in_progress"`, `"blocked"` | Item progress tracking |
-| `reportSectionStatusSchema` | `"draft"`, `"submitted"` | Section lifecycle |
-| `reportStatusSchema` | `"draft"`, `"published"` | Report lifecycle |
-| `periodStatusSchema` | `"open"`, `"published"`, `"reopened"` | Period lifecycle |
-| `roleSchema` | `"lead"`, `"head"`, `"viewer"` | User roles |
-| `pdfExportStatusSchema` | `"queued"`, `"processing"`, `"completed"`, `"failed"` | PDF job status |
-| `carryOverStatusSchema` | `"pending"`, `"completed"`, `"failed"` | Carry-over job status |
-| `adminReminderRuleKindSchema` | `"deadline"`, `"follow_up"` | Reminder types |
-| `adminReminderRuleStatusSchema` | `"active"`, `"paused"` | Reminder rule state |
-| `adminReminderExecutionStatusSchema` | `"queued"`, `"sent"`, `"failed"` | Reminder execution state |
+| Schema                               | Values                                                | Used in                            |
+| ------------------------------------ | ----------------------------------------------------- | ---------------------------------- |
+| `trafficLightStatusSchema`           | `"green"`, `"yellow"`, `"red"`                        | Project status indicators          |
+| `itemTypeSchema`                     | `"current"`, `"next"`                                 | Work items (this week / next week) |
+| `itemWorkflowStatusSchema`           | `"done"`, `"in_progress"`, `"blocked"`                | Item progress tracking             |
+| `reportSectionStatusSchema`          | `"draft"`, `"submitted"`                              | Section lifecycle                  |
+| `reportStatusSchema`                 | `"draft"`, `"published"`                              | Report lifecycle                   |
+| `periodStatusSchema`                 | `"open"`, `"published"`, `"reopened"`                 | Period lifecycle                   |
+| `roleSchema`                         | `"lead"`, `"head"`, `"viewer"`                        | User roles                         |
+| `pdfExportStatusSchema`              | `"queued"`, `"processing"`, `"completed"`, `"failed"` | PDF job status                     |
+| `carryOverStatusSchema`              | `"pending"`, `"completed"`, `"failed"`                | Carry-over job status              |
+| `adminReminderRuleKindSchema`        | `"deadline"`, `"follow_up"`                           | Reminder types                     |
+| `adminReminderRuleStatusSchema`      | `"active"`, `"paused"`                                | Reminder rule state                |
+| `adminReminderExecutionStatusSchema` | `"queued"`, `"sent"`, `"failed"`                      | Reminder execution state           |
 
 ### Key Schema Files
 
-| File | Contents |
-|------|----------|
-| `packages/shared/src/schemas/auth.ts` | `roleSchema`, `userSessionSchema` |
+| File                                    | Contents                                                                                   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `packages/shared/src/schemas/auth.ts`   | `roleSchema`, `userSessionSchema`                                                          |
 | `packages/shared/src/schemas/report.ts` | All report, admin, archive, PDF, reminder, carry-over, period, stage, and settings schemas |
