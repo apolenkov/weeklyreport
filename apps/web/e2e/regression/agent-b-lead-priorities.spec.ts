@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { loginByCookie, wipeAndReseed } from './helpers/dev-auth';
 
-const DEV_LOGIN_URL = 'http://localhost:3002/auth/dev-login';
 const FRONTEND_URL = 'http://localhost:3000';
 const LEAD_REPORT_URL = 'http://localhost:3000/lead/report';
 const SCREENSHOT_DIR = '.planning/regression/screenshots/agent-b-lead-priorities';
@@ -15,11 +15,23 @@ const SCREENSHOT_DIR = '.planning/regression/screenshots/agent-b-lead-priorities
  */
 
 test.describe('LEAD-080..085: Priorities Editor', () => {
+  let seeded = false;
+
   test.beforeEach(async ({ page }) => {
-    // Login as lead
-    await page.goto(`${DEV_LOGIN_URL}?role=lead&email=lead1@customreport.local`);
-    await page.waitForURL(/^http:\/\/localhost:3000\//, { timeout: 10000 });
-    // Navigate to report
+    await loginByCookie(page, {
+      role: 'lead',
+      email: 'olga@customreport.local',
+      redirect: '/lead/report',
+    });
+    if (!seeded) {
+      await wipeAndReseed(page, 'advanced');
+      seeded = true;
+    }
+    await loginByCookie(page, {
+      role: 'lead',
+      email: 'olga@customreport.local',
+      redirect: '/lead/report',
+    });
     await page.goto(LEAD_REPORT_URL);
     await page.waitForSelector('[data-testid="lead-report-form"]', { timeout: 10000 });
   });

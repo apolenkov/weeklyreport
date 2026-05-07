@@ -25,7 +25,7 @@ const USERS = {
   viewer: { role: 'viewer' as const, email: 'viewer@customreport.local' },
   lead: { role: 'lead' as const, email: 'lead1@customreport.local' },
   head: { role: 'head' as const, email: 'head@customreport.local' },
-  admin: { role: 'admin' as const, email: 'admin@customreport.local' },
+  admin: { role: 'admin' as const, email: 'product-ready-admin@customreport.local' },
 };
 
 type LogEntry = {

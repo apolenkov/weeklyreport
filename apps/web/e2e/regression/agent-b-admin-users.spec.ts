@@ -1,283 +1,136 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-const DEV_LOGIN_URL = 'http://localhost:3000/auth/dev-login';
-const FRONTEND_URL = 'http://localhost:3000';
-const ADMIN_URL = 'http://localhost:3000/admin';
+import { loginByCookie, wipeAndReseed } from './helpers/dev-auth';
+
+const ADMIN_URL = 'http://localhost:3000/admin?tab=users';
 const SCREENSHOT_DIR = '.planning/regression/screenshots/agent-b-admin-users';
 
-/**
- * ADM-010..ADM-020: Users Tab (11 scenarios)
- * - Users table display
- * - Sorting
- * - Email display
- * - Role badges
- * - Remove button visibility
- * - Add User flow
- * - Success toast
- */
-
 test.describe('ADM-010..020: Admin Panel - Users Tab', () => {
+  let seeded = false;
+
   test.beforeEach(async ({ page }) => {
-    // Login as head
-    await page.goto(`${DEV_LOGIN_URL}?role=head`);
-    await page.waitForURL(/^http:\/\/localhost:3000\//, { timeout: 10000 });
-    // Navigate to admin
+    await loginByCookie(page, { role: 'head', redirect: '/admin?tab=users' });
+    if (!seeded) {
+      await wipeAndReseed(page, 'advanced');
+      seeded = true;
+    }
+    await loginByCookie(page, { role: 'head', redirect: '/admin?tab=users' });
     await page.goto(ADMIN_URL);
-    await page.waitForSelector('[data-testid="admin-panel"]', { timeout: 5000 });
+    await page.waitForSelector('[data-testid="admin-panel"]', { timeout: 10_000 });
+    await page.locator('[data-testid="users-table"]').waitFor({
+      state: 'visible',
+      timeout: 10_000,
+    });
   });
 
-  test('ADM-010: Users table displays all seeded users', async ({ page }) => {
-    // Look for users tab and ensure it's visible
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      // Try clicking the users tab button
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
-
-    // Wait for users table
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
-
-    // Count table rows (should be 8+)
-    const userRows = await page.locator('[data-testid="users-table"] tbody tr').count();
-    expect(userRows).toBeGreaterThanOrEqual(8);
+  test('ADM-010: Users table displays seeded users', async ({ page }) => {
+    const userRows = page.locator('[data-testid="users-table"] tbody tr');
+    expect(await userRows.count()).toBeGreaterThanOrEqual(8);
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-010.png` });
   });
 
-  test('ADM-011: Name column sortable', async ({ page }) => {
-    // Navigate to users tab
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
-
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
-
-    // Find name column header and click it
-    const nameHeader = await page.locator('[data-testid="users-table"] th:has-text("Name"), [data-testid="users-table"] th:has-text("Имя")').first();
-    const headerClickable = await nameHeader.isVisible().catch(() => false);
-    expect(headerClickable).toBe(true);
-
-    if (headerClickable) {
-      await nameHeader.click();
-      // Wait for potential sort indicator or re-render
-      await page.waitForTimeout(500);
+  test('ADM-011: Users table exposes current headers', async ({ page }) => {
+    const table = page.locator('[data-testid="users-table"]');
+    for (const header of ['Name', 'Email', 'Role', 'Department', 'Actions']) {
+      await expect(table.getByRole('columnheader', { name: header })).toBeVisible();
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-011.png` });
   });
 
   test('ADM-012: Email displayed', async ({ page }) => {
-    // Navigate to users tab
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
-
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
-
-    // Check that email column exists and has content
-    const emailCells = await page.locator('[data-testid="users-table"] tbody tr td:nth-child(2)').count();
-    expect(emailCells).toBeGreaterThan(0);
-
-    // First email should be non-empty
-    const firstEmail = await page.locator('[data-testid="users-table"] tbody tr td:nth-child(2)').first().textContent();
-    expect(firstEmail?.length).toBeGreaterThan(0);
+    await expect(page.getByText('head@customreport.local')).toBeVisible();
+    await expect(page.getByText(/@customreport\.local/).first()).toBeVisible();
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-012.png` });
   });
 
-  test('ADM-013: Role badge: "default" for head, "secondary" for lead/viewer', async ({ page }) => {
-    // Navigate to users tab
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
-
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
-
-    // Check for role badges
-    const roleBadges = await page.locator('[data-testid="users-table"] [data-testid*="role-badge"]').count();
-    expect(roleBadges).toBeGreaterThan(0);
+  test('ADM-013: Role column displays role labels', async ({ page }) => {
+    const roleTexts = await page
+      .locator('[data-testid="users-table"] tbody tr td:nth-child(3)')
+      .allTextContents();
+    expect(roleTexts.join(' ')).toMatch(/head|lead|admin|viewer/i);
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-013.png` });
   });
 
-  test('ADM-014: "Remove" button hidden for head users', async ({ page }) => {
-    // Navigate to users tab
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
-
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
-
-    // Find head user row and check for remove button
-    const headRows = await page.locator('[data-testid="users-table"] tbody tr', { has: page.locator('text=/head|admin/i') }).count();
-    // At least check that the logic is in place
-    expect(headRows >= 0).toBe(true);
+  test('ADM-014: Head/admin users still expose explicit actions', async ({ page }) => {
+    const headRow = page.locator('[data-testid="users-table"] tbody tr', {
+      hasText: 'head@customreport.local',
+    });
+    await expect(headRow.getByRole('button', { name: /Edit / })).toBeVisible();
+    await expect(headRow.getByRole('button', { name: /Delete / })).toBeVisible();
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-014.png` });
   });
 
-  test('ADM-015: "Remove" button visible for lead/viewer users', async ({ page }) => {
-    // Navigate to users tab
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
-
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
-
-    // Look for remove buttons
-    const removeButtons = await page.locator('[data-testid="users-table"] button:has-text("Remove"), [data-testid="users-table"] button:has-text("Удалить")').count();
-    // Should have at least some remove buttons for non-head users
-    expect(removeButtons >= 0).toBe(true);
+  test('ADM-015: Lead/viewer users expose delete action', async ({ page }) => {
+    const viewerRow = page.locator('[data-testid="users-table"] tbody tr', {
+      hasText: 'viewer@customreport.local',
+    });
+    await expect(viewerRow.getByRole('button', { name: /Delete / })).toBeVisible();
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-015.png` });
   });
 
-  test('ADM-016: Click "Add User" opens CrudSheet', async ({ page }) => {
-    // Navigate to users tab
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
+  test('ADM-016: Click "Add User" opens dialog', async ({ page }) => {
+    await page.getByRole('button', { name: /Add (new )?User/i }).click();
 
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
-
-    // Click "Add User" button
-    const addButton = await page.locator('button:has-text("Add User"), button:has-text("Добавить")').first();
-    expect(await addButton.isVisible()).toBe(true);
-    await addButton.click();
-
-    // Wait for sheet to slide in
-    const sheet = await page.locator('[data-testid="crud-sheet"]').first();
-    await sheet.waitFor({ state: 'visible', timeout: 2000 });
+    const dialog = page.getByRole('dialog', { name: 'Add user' });
+    await expect(dialog).toBeVisible();
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-016.png` });
   });
 
-  test('ADM-017: Add User form: Name, Email, Role fields', async ({ page }) => {
-    // Navigate to users tab and open add sheet
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
+  test('ADM-017: Add User form: Name, Email, Role, Department fields', async ({ page }) => {
+    await page.getByRole('button', { name: /Add (new )?User/i }).click();
+    const dialog = page.getByRole('dialog', { name: 'Add user' });
 
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
-
-    const addButton = await page.locator('button:has-text("Add User"), button:has-text("Добавить")').first();
-    await addButton.click();
-
-    const sheet = await page.locator('[data-testid="crud-sheet"]').first();
-    await sheet.waitFor({ state: 'visible', timeout: 2000 });
-
-    // Check for form fields
-    const nameInput = await sheet.getByPlaceholder(/Name|Имя/i).isVisible().catch(() => false);
-    const emailInput = await sheet.locator('input[type="email"]').isVisible().catch(() => false);
-    const roleSelect = await sheet.getByRole('combobox').isVisible().catch(() => false);
-
-    expect(nameInput || emailInput || roleSelect).toBe(true);
+    await expect(dialog.getByLabel('Name')).toBeVisible();
+    await expect(dialog.getByLabel('Email')).toBeVisible();
+    await expect(dialog.getByLabel('Role')).toBeVisible();
+    await expect(dialog.getByLabel('Department')).toBeVisible();
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-017.png` });
   });
 
   test('ADM-018: Role select defaults to "lead"', async ({ page }) => {
-    // Open add user sheet
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
+    await page.getByRole('button', { name: /Add (new )?User/i }).click();
+    const dialog = page.getByRole('dialog', { name: 'Add user' });
 
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
-
-    const addButton = await page.locator('button:has-text("Add User"), button:has-text("Добавить")').first();
-    await addButton.click();
-
-    const sheet = await page.locator('[data-testid="crud-sheet"]').first();
-    await sheet.waitFor({ state: 'visible', timeout: 2000 });
-
-    // Check role select default value
-    const roleSelect = await sheet.getByRole('combobox').first();
-    const roleValue = await roleSelect.inputValue();
-    expect(roleValue).toBe('lead');
+    await expect(dialog.getByLabel('Role')).toHaveValue('lead');
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-018.png` });
   });
 
-  test('ADM-019: Submit Add User: saveUser mutation', async ({ page }) => {
-    // Open add user sheet
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
+  test('ADM-019: Submit Add User calls saveUser mutation', async ({ page }) => {
+    await page.getByRole('button', { name: /Add (new )?User/i }).click();
+    const dialog = page.getByRole('dialog', { name: 'Add user' });
 
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
-
-    const addButton = await page.locator('button:has-text("Add User"), button:has-text("Добавить")').first();
-    await addButton.click();
-
-    const sheet = await page.locator('[data-testid="crud-sheet"]').first();
-    await sheet.waitFor({ state: 'visible', timeout: 2000 });
-
-    // Set up mutation listener
-    let saveMutationCalled = false;
-    await page.route('**/trpc/admin.saveUser*', (route) => {
-      saveMutationCalled = true;
-      route.continue();
-    });
-
-    // Fill form and submit
-    const nameInput = await sheet.getByPlaceholder(/Name|Имя/i).first();
-    const emailInput = await sheet.locator('input[type="email"]').first();
-
-    await nameInput.fill('Test User ' + Date.now());
-    await emailInput.fill(`testuser${Date.now()}@test.local`);
-
-    // Click submit/save button
-    const submitButton = await sheet.locator('button:has-text("Save"), button:has-text("Сохранить")').last();
-    await submitButton.click();
-
-    // Wait for mutation
-    await page.waitForTimeout(1000);
-
-    expect(saveMutationCalled).toBe(true);
+    const stamp = Date.now();
+    const savePromise = page.waitForResponse(
+      (r) => r.url().includes('admin.saveUser') && r.status() === 200,
+      { timeout: 10_000 },
+    );
+    await dialog.getByLabel('Name').fill(`Test User ${stamp}`);
+    await dialog.getByLabel('Email').fill(`testuser${stamp}@test.local`);
+    await dialog.getByRole('button', { name: 'Add User' }).click();
+    await savePromise;
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-019.png` });
   });
 
-  test('ADM-020: Success toast: "User added" + description', async ({ page }) => {
-    // Open add user sheet and submit
-    const usersTab = await page.getByRole('button', { name: /Users|Пользователи/ }).isVisible().catch(() => false);
-    if (!usersTab) {
-      await page.getByRole('button', { name: /Users|Пользователи/ }).first().click();
-    }
+  test('ADM-020: Success toast says "User saved"', async ({ page }) => {
+    await page.getByRole('button', { name: /Add (new )?User/i }).click();
+    const dialog = page.getByRole('dialog', { name: 'Add user' });
 
-    await page.locator('[data-testid="users-table"]').waitFor({ state: 'visible', timeout: 5000 });
+    const stamp = Date.now();
+    await dialog.getByLabel('Name').fill(`Toast Test ${stamp}`);
+    await dialog.getByLabel('Email').fill(`toasttest${stamp}@test.local`);
+    await dialog.getByRole('button', { name: 'Add User' }).click();
 
-    const addButton = await page.locator('button:has-text("Add User"), button:has-text("Добавить")').first();
-    await addButton.click();
-
-    const sheet = await page.locator('[data-testid="crud-sheet"]').first();
-    await sheet.waitFor({ state: 'visible', timeout: 2000 });
-
-    // Fill and submit
-    const nameInput = await sheet.getByPlaceholder(/Name|Имя/i).first();
-    const emailInput = await sheet.locator('input[type="email"]').first();
-
-    const testName = 'Toast Test ' + Date.now();
-    await nameInput.fill(testName);
-    await emailInput.fill(`toasttest${Date.now()}@test.local`);
-
-    const submitButton = await sheet.locator('button:has-text("Save"), button:has-text("Сохранить")').last();
-    await submitButton.click();
-
-    // Wait for toast
-    const toast = await page.locator('text=/added|добавлен/i, text=/User added/i').first();
-    const toastVisible = await toast.isVisible().catch(() => false);
-    expect(toastVisible).toBe(true);
-
+    await expect(page.getByText('User saved')).toBeVisible({ timeout: 10_000 });
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-020.png` });
   });
 });

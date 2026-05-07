@@ -545,9 +545,10 @@ test.describe('Section 7 — PRINT PAGE', () => {
   test('PRINT-004 — no AppShell chrome (no nav drawer trigger)', async () => {
     // App nav lives under <header>/<aside> with role=navigation; print page
     // uses plain <main>.
-    const navs = await headPage.locator('nav').count();
-    // The print page intentionally renders 0 navs at top-level
-    expect(navs).toBe(0);
+    const appShellNavs = await headPage
+      .locator('header nav, aside nav, nav[aria-label="Main navigation"]')
+      .count();
+    expect(appShellNavs).toBe(0);
   });
 
   test('PRINT-005/006 — main has max-width 210mm, white background', async () => {

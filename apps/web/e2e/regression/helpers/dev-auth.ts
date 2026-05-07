@@ -39,14 +39,23 @@ export async function wipeAndReseed(
   variant: 'minimum' | 'advanced' = 'advanced',
 ) {
   const body = JSON.stringify({ '0': { json: { variant } } });
-  const response = await page.request.post('/trpc/dev.wipeAndReseed?batch=1', {
-    data: body,
-    headers: { 'content-type': 'application/json' },
-  });
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const response = await page.request.post('/trpc/dev.wipeAndReseed?batch=1', {
+      data: body,
+      headers: { 'content-type': 'application/json' },
+    });
 
-  if (!response.ok()) {
-    throw new Error(
-      `dev.wipeAndReseed failed: ${response.status()} ${await response.text()}`,
-    );
+    const responseBody = await response.text();
+    if (response.ok()) {
+      return;
+    }
+
+    if (response.status() === 429 && responseBody.includes('rate_limit_exceeded') && attempt === 1) {
+      const retryAfter = Number(/"retryAfter":(\d+)/.exec(responseBody)?.[1] ?? 60);
+      await page.waitForTimeout(Math.min(retryAfter, 65) * 1000);
+      continue;
+    }
+
+    throw new Error(`dev.wipeAndReseed failed: ${response.status()} ${responseBody}`);
   }
 }

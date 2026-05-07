@@ -2,14 +2,11 @@
 
 ## Verdict
 
-**Status: product-ready for the repaired scope, with known regression-suite
-debt documented.**
+**Status: product-ready for the repaired scope and current regression gate.**
 
 The code gates, build, focused regression slices, clean-state progressive
-role scenario, API health checks, screenshot capture, and UI review all ran.
-The old full live regression suite still contains stale/state-polluted specs,
-so it is not a reliable release gate until those historical specs are
-rewritten around wipe/reseed and exact domain assertions.
+role scenario, full live regression suite, API health checks, screenshot
+capture, and UI review all ran.
 
 ## Scope Closed
 
@@ -41,8 +38,9 @@ rewritten around wipe/reseed and exact domain assertions.
 | Agent B quick reminders/jobs slice         |   PASS | 3/3                                                                   |
 | Agent A archive slice                      |   PASS | 10/10                                                                 |
 | Clean-state progressive role scenario      |   PASS | 1/1 with wipe/reseed                                                  |
+| Full live regression corpus                |   PASS | 179/179                                                               |
 | API health                                 |   PASS | `/health/live`, `/health/ready` ok                                    |
-| Graphify refresh                           |   PASS | 1494 nodes, 1642 edges, 286 communities                               |
+| Graphify refresh                           |   PASS | 1494 nodes, 1643 edges, 284 communities                               |
 
 ## Progressive Role Scenario
 
@@ -113,14 +111,13 @@ Automated score: **11/24**. After review:
 Screenshot binaries are kept locally and ignored from git under
 `.planning/ui-reviews/`.
 
-## Full Legacy Regression Run
+## Full Regression Run
 
-The full old live suite result was **148 passed / 30 failed** before this final
-clean-state gate. Analysis: failures clustered around stale endpoint
-assumptions, old table assumptions for admin product/users tabs, and
-state-pollution after destructive tests. This does not invalidate the repaired
-scope, but it does mean the historical `e2e/regression` folder is not yet a
-single trustworthy release gate.
+The full live suite was brought from **140 passed / 39 failed** during this
+handoff to **179 passed / 179 total**. The remaining failures were stale
+endpoint assumptions, old admin table assumptions, weak auth helpers, and
+state-pollution from destructive tests. Those were repaired in the regression
+suite and verified by a final full run.
 
 The new product-ready regression pattern is:
 

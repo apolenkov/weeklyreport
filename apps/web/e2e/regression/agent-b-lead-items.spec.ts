@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginByCookie } from './helpers/dev-auth';
+import { loginByCookie, wipeAndReseed } from './helpers/dev-auth';
 
 const FRONTEND_URL = 'http://localhost:3000';
 const LEAD_REPORT_URL = 'http://localhost:3000/lead/report';
@@ -15,13 +15,24 @@ const SCREENSHOT_DIR = '.planning/regression/screenshots/agent-b-lead-items';
  */
 
 test.describe('LEAD-040..050: Items Editor', () => {
+  let seeded = false;
+
   test.beforeEach(async ({ page }) => {
     for (let attempt = 1; attempt <= 5; attempt++) {
       await loginByCookie(page, {
         role: 'lead',
-        email: 'lead1@customreport.local',
+        email: 'olga@customreport.local',
         redirect: '/lead/report',
       });
+      if (!seeded) {
+        await wipeAndReseed(page, 'advanced');
+        seeded = true;
+        await loginByCookie(page, {
+          role: 'lead',
+          email: 'olga@customreport.local',
+          redirect: '/lead/report',
+        });
+      }
       const ready = await page
         .waitForSelector('[data-testid="lead-report-form"]', { timeout: 10000 })
         .then(async () => {
@@ -53,7 +64,7 @@ test.describe('LEAD-040..050: Items Editor', () => {
     const nextWeekText = await page.getByText(/next week/i).isVisible().catch(() => false);
     expect(currentWeekText && nextWeekText).toBe(true);
     const itemCards = await page.locator('[data-testid="item-card"]').count();
-    const addButtons = await page.getByRole('button', { name: /\+ Add Item/i }).count();
+    const addButtons = await page.getByRole('button', { name: /Add item/i }).count();
     expect(itemCards + addButtons).toBeGreaterThanOrEqual(2);
     await page.screenshot({ path: `${SCREENSHOT_DIR}/LEAD-042.png` });
   });
@@ -64,7 +75,7 @@ test.describe('LEAD-040..050: Items Editor', () => {
       await firstItemCard.hover();
       await firstItemCard.getByRole('button', { name: 'Edit', exact: true }).click();
     } else {
-      await page.getByRole('button', { name: /\+ Add Item/i }).first().click();
+      await page.getByRole('button', { name: /Add item/i }).first().click();
     }
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
@@ -145,7 +156,7 @@ test.describe('LEAD-040..050: Items Editor', () => {
       await firstItemCard.hover();
       await firstItemCard.getByRole('button', { name: 'Edit', exact: true }).click();
     } else {
-      await page.getByRole('button', { name: /\+ Add Item/i }).first().click();
+      await page.getByRole('button', { name: /Add item/i }).first().click();
     }
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
