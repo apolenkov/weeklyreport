@@ -6,11 +6,338 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id                      String            @id @default(uuid())
+  email                   String            @unique
+  name                    String
+  role                    Role
+  samlId                  String            @unique
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  notificationOptOut      Boolean           @default(false)
+  ledProjects             Project[]
+  reopenRequestsRequested ReopenRequest[]   @relation("ReopenRequester")
+  reopenRequestsReviewed  ReopenRequest[]   @relation("ReopenReviewer")
+  publishedReports        Report[]          @relation("PublishedBy")
+  authoredReportSections  ReportSection[]   @relation("ReportSectionAuthor")
+  stageAssignments        StageAssignment[]
+}
+
+model Project {
+  id               String                   @id @default(uuid())
+  name             String
+  archived         Boolean                  @default(false)
+  leadId           String
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  searchTsv        Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(name, ''::text))"))
+  items            Item[]
+  lead             User                     @relation(fields: [leadId], references: [id])
+  projectStatuses  ProjectStatus[]
+  risks            Risk[]
+  stageAssignments StageAssignment[]
+
+  @@index([leadId])
+  @@index([archived])
+  @@index([searchTsv], type: Gin)
+}
+
+model Report {
+  id               String               @id @default(uuid())
+  periodStart      DateTime
+  periodEnd        DateTime
+  deadline         DateTime
+  status           ReportStatus         @default(draft)
+  publishedAt      DateTime?
+  publishedById    String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  periodStatus     PeriodStatus         @default(open)
+  reopenedAt       DateTime?
+  weekLabel        String?
+  carryOverSources CarryOverExecution[] @relation("CarryOverSource")
+  carryOverTargets CarryOverExecution[] @relation("CarryOverTarget")
+  pdfExportJobs    PdfExportJob[]
+  reminderRules    ReminderRule[]
+  publishedBy      User?                @relation("PublishedBy", fields: [publishedById], references: [id])
+  sections         ReportSection[]
+
+  @@index([periodStart(sort: Desc)])
+  @@index([status, periodStart(sort: Desc)])
+}
+
+model ReportSection {
+  id               String              @id @default(uuid())
+  reportId         String
+  authorId         String
+  status           ReportSectionStatus @default(draft)
+  submittedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  revokedAt        DateTime?
+  revokedBy        String?
+  decisions        Decision[]
+  items            Item[]
+  priorities       Priority[]
+  projectStatuses  ProjectStatus[]
+  reopenRequests   ReopenRequest[]
+  author           User                @relation("ReportSectionAuthor", fields: [authorId], references: [id])
+  report           Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  risks            Risk[]
+  versionSnapshots VersionSnapshot[]
+
+  @@unique([reportId, authorId])
+  @@index([authorId])
+  @@index([status])
+}
+
+model ProjectStatus {
+  id              String              @id @default(uuid())
+  reportSectionId String
+  projectId       String
+  status          TrafficLightStatus?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  project         Project             @relation(fields: [projectId], references: [id])
+  reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+
+  @@unique([reportSectionId, projectId])
+}
+
+model Item {
+  id              String                   @id @default(uuid())
+  reportSectionId String
+  projectId       String
+  type            ItemType
+  text            String
+  tag             String
+  workflowStatus  ItemWorkflowStatus
+  carriedOver     Boolean                  @default(false)
+  completed       Boolean?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
+  stageName       String?
+  project         Project                  @relation(fields: [projectId], references: [id])
+  reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+
+  @@index([reportSectionId])
+  @@index([projectId])
+  @@index([stageName])
+  @@index([searchTsv], type: Gin)
+}
+
+model Risk {
+  id              String                   @id @default(uuid())
+  reportSectionId String
+  projectId       String
+  risk            String
+  impact          String
+  mitigation      String
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, ((((COALESCE(risk, ''::text) || ' '::text) || COALESCE(impact, ''::text)) || ' '::text) || COALESCE(mitigation, ''::text)))"))
+  stageName       String?
+  project         Project                  @relation(fields: [projectId], references: [id])
+  reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+
+  @@index([reportSectionId])
+  @@index([projectId])
+  @@index([stageName])
+  @@index([searchTsv], type: Gin)
+}
+
+model Decision {
+  id              String                   @id @default(uuid())
+  reportSectionId String
+  text            String
+  owner           String
+  deadline        DateTime?
+  impact          String
+  resolvedAt      DateTime?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
+  stageName       String?
+  reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+
+  @@index([reportSectionId])
+  @@index([stageName])
+  @@index([searchTsv], type: Gin)
+}
+
+model Priority {
+  id              String        @id @default(uuid())
+  reportSectionId String
+  rank            Int
+  text            String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  stageName       String?
+  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+
+  @@unique([reportSectionId, rank])
+  @@index([stageName])
+}
+
+model PdfExportJob {
+  id          String          @id @default(uuid())
+  reportId    String
+  status      PdfExportStatus @default(pending)
+  filePath    String?
+  error       String?
+  requestedBy String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  report      Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model ReminderRule {
+  id         String              @id @default(uuid())
+  reportId   String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  kind       ReminderRuleKind
+  fireAt     DateTime
+  timezone   String              @default("Europe/Moscow")
+  status     ReminderRuleStatus  @default(active)
+  version    Int                 @default(1)
+  executions ReminderExecution[]
+  report     Report?             @relation(fields: [reportId], references: [id])
+
+  @@index([createdAt(sort: Desc)])
+  @@index([status, fireAt])
+}
+
+model ReminderExecution {
+  id        String                  @id @default(uuid())
+  ruleId    String
+  dedupeKey String                  @unique
+  status    ReminderExecutionStatus @default(pending)
+  sentAt    DateTime?
+  error     String?
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  rule      ReminderRule            @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([ruleId])
+  @@index([status])
+}
+
+model CarryOverExecution {
+  id             String            @id @default(uuid())
+  sourceReportId String
+  targetReportId String
+  dedupeKey      String            @unique
+  status         CarryOverStatus   @default(pending)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  sourceReport   Report            @relation("CarryOverSource", fields: [sourceReportId], references: [id])
+  targetReport   Report            @relation("CarryOverTarget", fields: [targetReportId], references: [id])
+  records        CarryOverRecord[]
+}
+
+model CarryOverRecord {
+  id               String             @id @default(uuid())
+  executionId      String
+  sourceItemId     String?
+  sourceDecisionId String?
+  targetItemId     String?
+  targetDecisionId String?
+  recordType       String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  execution        CarryOverExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+}
+
+model VersionSnapshot {
+  id              String        @id @default(uuid())
+  reportSectionId String
+  version         Int
+  data            Json
+  createdAt       DateTime      @default(now())
+  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+
+  @@unique([reportSectionId, version])
+  @@index([reportSectionId, version(sort: Desc)])
+}
+
+model Stage {
+  id               String            @id @default(uuid())
+  name             String            @unique
+  sortOrder        Int               @default(0)
+  createdAt        DateTime          @default(now())
+  stageAssignments StageAssignment[]
+}
+
+model StageAssignment {
+  id        String   @id @default(uuid())
+  userId    String
+  stageId   String
+  projectId String
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, stageId, projectId])
+  @@index([projectId])
+}
+
+model ReopenRequest {
+  id              String              @id @default(uuid())
+  reportSectionId String
+  requestedById   String
+  reason          String?
+  status          ReopenRequestStatus @default(pending)
+  reviewedById    String?
+  reviewedAt      DateTime?
+  reviewNote      String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  requestedBy     User                @relation("ReopenRequester", fields: [requestedById], references: [id])
+  reviewedBy      User?               @relation("ReopenReviewer", fields: [reviewedById], references: [id])
+
+  @@index([status, createdAt])
+  @@index([reportSectionId])
+}
+
+model AppSettings {
+  id                  String   @id @default("singleton")
+  departmentName      String   @default("Development")
+  autoCreatePeriods   Boolean  @default(false)
+  defaultDeadlineDays Int      @default(5)
+  updatedAt           DateTime @updatedAt
+}
+
+model AiInsight {
+  id                  String        @id @default(uuid())
+  kind                AiInsightKind
+  contentHash         String
+  result              Json
+  modelId             String
+  inputTokens         Int           @default(0)
+  outputTokens        Int           @default(0)
+  cacheCreationTokens Int           @default(0)
+  cacheReadTokens     Int           @default(0)
+  createdAt           DateTime      @default(now())
+  reportId            String?
+
+  @@unique([kind, contentHash])
+  @@index([kind, createdAt])
+  @@index([reportId, createdAt])
+}
+
 enum Role {
   lead
   head
-  admin
   viewer
+  admin
 }
 
 enum ReportStatus {
@@ -59,240 +386,21 @@ enum CarryOverStatus {
   failed
 }
 
-// v4.0: Period lifecycle (D-56)
 enum PeriodStatus {
   open
   published
   reopened
 }
 
-// Reopen-request lifecycle. Lead asks Head to unlock a submitted section;
-// Head approves (section → draft) or rejects (status stays submitted, note
-// optional).
 enum ReopenRequestStatus {
   pending
   approved
   rejected
 }
 
-model User {
-  id                      String            @id @default(uuid())
-  email                   String            @unique
-  name                    String
-  role                    Role
-  samlId                  String            @unique
-  // NOTIF-05 (Phase 29-05): per-user opt-out for kind='deadline' reminders.
-  // Honoured by RemindersService.requestReminderExecution before enqueueing.
-  // kind='escalation' bypasses this flag — heads must always be notified.
-  notificationOptOut      Boolean           @default(false)
-  authoredReportSections  ReportSection[]   @relation("ReportSectionAuthor")
-  ledProjects             Project[]
-  publishedReports        Report[]          @relation("PublishedBy")
-  stageAssignments        StageAssignment[]
-  reopenRequestsRequested ReopenRequest[]   @relation("ReopenRequester")
-  reopenRequestsReviewed  ReopenRequest[]   @relation("ReopenReviewer")
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
-}
-
-model Project {
-  id               String            @id @default(uuid())
-  name             String
-  archived         Boolean           @default(false)
-  leadId           String
-  lead             User              @relation(fields: [leadId], references: [id], onDelete: Restrict)
-  projectStatuses  ProjectStatus[]
-  items            Item[]
-  risks            Risk[]
-  stageAssignments StageAssignment[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-
-  // 39-05 (PERF-05): generated tsvector for full-text search across `name`.
-  // Read-only from Prisma's perspective — populated by the GENERATED ALWAYS
-  // expression in the database. Indexed via GIN in the same migration.
-  searchTsv        Unsupported("tsvector")?
-
-  // 39-03: admin Products tab filters by archived; lead-form looks up by lead.
-  @@index([leadId])
-  @@index([archived])
-}
-
-model Report {
-  id               String               @id @default(uuid())
-  periodStart      DateTime
-  periodEnd        DateTime
-  deadline         DateTime
-  status           ReportStatus         @default(draft)
-  periodStatus     PeriodStatus         @default(open)
-  weekLabel        String?
-  publishedAt      DateTime?
-  publishedById    String?
-  reopenedAt       DateTime?
-  publishedBy      User?                @relation("PublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
-  sections         ReportSection[]
-  pdfExportJobs    PdfExportJob[]
-  reminderRules    ReminderRule[]
-  carryOverSources CarryOverExecution[] @relation("CarryOverSource")
-  carryOverTargets CarryOverExecution[] @relation("CarryOverTarget")
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-
-  // 39-03: archive lists filter by status + sort by periodStart; period-active
-  // queries hit periodStart directly. Compound covers the common WHERE+ORDER.
-  @@index([periodStart(sort: Desc)])
-  @@index([status, periodStart(sort: Desc)])
-}
-
-model ReportSection {
-  id               String              @id @default(uuid())
-  reportId         String
-  authorId         String
-  status           ReportSectionStatus @default(draft)
-  submittedAt      DateTime?
-  revokedAt        DateTime?
-  revokedBy        String?
-  report           Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  author           User                @relation("ReportSectionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
-  projectStatuses  ProjectStatus[]
-  items            Item[]
-  risks            Risk[]
-  decisions        Decision[]
-  priorities       Priority[]
-  versionSnapshots VersionSnapshot[]
-  reopenRequests   ReopenRequest[]
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-
-  @@unique([reportId, authorId])
-  // 39-03: lead "my history" hits ReportSection.findMany({where:{authorId}})
-  // — separate index because the @@unique above leads with reportId.
-  @@index([authorId])
-  @@index([status])
-}
-
-model ProjectStatus {
-  id              String              @id @default(uuid())
-  reportSectionId String
-  projectId       String
-  status          TrafficLightStatus?
-  reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  project         Project             @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-
-  @@unique([reportSectionId, projectId])
-}
-
-model Item {
-  id              String             @id @default(uuid())
-  reportSectionId String
-  projectId       String
-  type            ItemType
-  text            String
-  tag             String
-  workflowStatus  ItemWorkflowStatus
-  carriedOver     Boolean            @default(false)
-  completed       Boolean?
-  // 35-04: SDLC stage label captured per entry. Nullable for legacy rows
-  // seeded before this column existed; new writes are required client-side.
-  stageName       String?
-  reportSection   ReportSection      @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  project         Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-
-  // 39-05 (PERF-05): generated tsvector for full-text search across `text`.
-  searchTsv       Unsupported("tsvector")?
-
-  // 39-03: hot-path FK indexes — Item.findMany({where:{reportSectionId}})
-  // is the dominant access pattern for lead-form rendering.
-  @@index([reportSectionId])
-  @@index([projectId])
-  @@index([stageName])
-}
-
-model Risk {
-  id              String        @id @default(uuid())
-  reportSectionId String
-  projectId       String
-  risk            String
-  impact          String
-  mitigation      String
-  // 35-04: SDLC stage scoping per risk row.
-  stageName       String?
-  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  project         Project       @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  // 39-05 (PERF-05): generated tsvector concatenating risk + impact +
-  // mitigation so a single FTS hit surfaces the row.
-  searchTsv       Unsupported("tsvector")?
-
-  // 39-03: same hot-path as Item — risks load per section.
-  @@index([reportSectionId])
-  @@index([projectId])
-  @@index([stageName])
-}
-
-model Decision {
-  id              String        @id @default(uuid())
-  reportSectionId String
-  text            String
-  owner           String
-  deadline        DateTime?
-  impact          String
-  resolvedAt      DateTime?
-  // 35-04: SDLC stage scoping per decision row.
-  stageName       String?
-  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  // 39-05 (PERF-05): generated tsvector for full-text search across `text`.
-  searchTsv       Unsupported("tsvector")?
-
-  @@index([reportSectionId])
-  @@index([stageName])
-}
-
-model Priority {
-  id              String        @id @default(uuid())
-  reportSectionId String
-  rank            Int
-  text            String
-  // 35-04: SDLC stage scoping per priority row.
-  stageName       String?
-  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  @@unique([reportSectionId, rank])
-  @@index([stageName])
-}
-
-model PdfExportJob {
-  id          String          @id @default(uuid())
-  reportId    String
-  status      PdfExportStatus @default(pending)
-  filePath    String?
-  error       String?
-  requestedBy String
-  report      Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  // 39-03: admin DLQ + per-report job history.
-  @@index([reportId])
-  @@index([status, createdAt(sort: Desc)])
-}
-
 enum ReminderRuleKind {
   deadline
   follow_up
-  // NOTIF-02 (Phase 29-05): T+2h escalation digest sent to heads when leads
-  // miss the deadline. Bypasses User.notificationOptOut.
   escalation
 }
 
@@ -301,165 +409,8 @@ enum ReminderRuleStatus {
   paused
 }
 
-model ReminderRule {
-  id         String              @id @default(uuid())
-  kind       ReminderRuleKind
-  fireAt     DateTime
-  timezone   String              @default("Europe/Moscow")
-  status     ReminderRuleStatus  @default(active)
-  version    Int                 @default(1)
-  reportId   String?
-  report     Report?             @relation(fields: [reportId], references: [id], onDelete: SetNull)
-  executions ReminderExecution[]
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
-
-  // 39-03: admin reminders panel sorts by createdAt DESC. Slow query log
-  // captured 125ms hits on this exact ORDER BY before the index.
-  @@index([createdAt(sort: Desc)])
-  @@index([status, fireAt])
-}
-
-model ReminderExecution {
-  id        String                  @id @default(uuid())
-  ruleId    String
-  dedupeKey String                  @unique
-  status    ReminderExecutionStatus @default(pending)
-  sentAt    DateTime?
-  error     String?
-  rule      ReminderRule            @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  createdAt DateTime                @default(now())
-  updatedAt DateTime                @updatedAt
-
-  // 39-03: same slow-query trigger as ReminderRule (107ms hit). Plus
-  // ruleId FK index for "executions for rule" queries.
-  @@index([createdAt(sort: Desc)])
-  @@index([ruleId])
-  @@index([status])
-}
-
-model CarryOverExecution {
-  id             String            @id @default(uuid())
-  sourceReportId String
-  targetReportId String
-  dedupeKey      String            @unique
-  status         CarryOverStatus   @default(pending)
-  records        CarryOverRecord[]
-  sourceReport   Report            @relation("CarryOverSource", fields: [sourceReportId], references: [id], onDelete: Restrict)
-  targetReport   Report            @relation("CarryOverTarget", fields: [targetReportId], references: [id], onDelete: Restrict)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-}
-
-model CarryOverRecord {
-  id               String             @id @default(uuid())
-  executionId      String
-  sourceItemId     String?
-  sourceDecisionId String?
-  targetItemId     String?
-  targetDecisionId String?
-  recordType       String
-  execution        CarryOverExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-}
-
-// v4.0: Version snapshots for autosave history (D-67)
-model VersionSnapshot {
-  id              String        @id @default(uuid())
-  reportSectionId String
-  version         Int
-  data            Json
-  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  createdAt       DateTime      @default(now())
-
-  @@unique([reportSectionId, version])
-  @@index([reportSectionId, version(sort: Desc)])
-}
-
-// v4.0: SDLC stages (D-63)
-model Stage {
-  id               String            @id @default(uuid())
-  name             String            @unique
-  sortOrder        Int               @default(0)
-  stageAssignments StageAssignment[]
-  createdAt        DateTime          @default(now())
-}
-
-// v4.0: Stage ownership per user per product (D-63)
-model StageAssignment {
-  id        String   @id @default(uuid())
-  userId    String
-  stageId   String
-  projectId String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([userId, stageId, projectId])
-  @@index([projectId])
-}
-
-// Reopen request — Lead asks Head to unlock a submitted section. Created
-// from the form's "Request Reopen" button; surfaced in Admin Panel "Reopen
-// Requests" tab so Head can approve (section → draft) or reject (note).
-model ReopenRequest {
-  id              String              @id @default(uuid())
-  reportSectionId String
-  requestedById   String
-  reason          String?
-  status          ReopenRequestStatus @default(pending)
-  reviewedById    String?
-  reviewedAt      DateTime?
-  reviewNote      String?
-  reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  requestedBy     User                @relation("ReopenRequester", fields: [requestedById], references: [id], onDelete: Restrict)
-  reviewedBy      User?               @relation("ReopenReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-
-  @@index([status, createdAt])
-  @@index([reportSectionId])
-}
-
-// v4.0: Application settings singleton (D-68)
-model AppSettings {
-  id                  String   @id @default("singleton")
-  departmentName      String   @default("Development")
-  autoCreatePeriods   Boolean  @default(false)
-  defaultDeadlineDays Int      @default(5)
-  updatedAt           DateTime @updatedAt
-}
-
-// Phase 31 (AI-01/02/03): cache + cost-tracking row for Anthropic Haiku
-// structured outputs. Read-through cache keyed by (kind, contentHash) per
-// AI-SPEC §4. Result is the schema-shaped Zod-parsed tool input. Usage
-// tokens recorded for cost monitoring (AI-SPEC §8).
 enum AiInsightKind {
   summary
   sentiment
   on_track
-}
-
-model AiInsight {
-  id                  String        @id @default(uuid())
-  kind                AiInsightKind
-  contentHash         String
-  // Phase 32-A1 (C-01): scope budget guard by reportId. Nullable so the
-  // initial migration is non-destructive (existing rows pre-32 have no
-  // reportId; budget guard treats them as out-of-scope). New writes set
-  // this on every facade upsert path (summary/sentiment/on-track).
-  reportId            String?
-  result              Json
-  modelId             String
-  inputTokens         Int           @default(0)
-  outputTokens        Int           @default(0)
-  cacheCreationTokens Int           @default(0)
-  cacheReadTokens     Int           @default(0)
-  createdAt           DateTime      @default(now())
-
-  @@unique([kind, contentHash])
-  @@index([kind, createdAt])
-  @@index([reportId, createdAt])
 }
