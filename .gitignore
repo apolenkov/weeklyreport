@@ -19,6 +19,8 @@ pnpm-lock.yaml
 .ideagraphify-out/
 .claude/worktrees/
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+.codex/
 graphify-out/
 .idea/
 .results
@@ -26,14 +28,21 @@ apps/api/.logs/
 .logs/
 .next-e2e/
 apps/api/storage/
+AGENTS.md
+.planning/regression/*-test-results/
+.planning/regression/agent-*.json
+apps/web/.planning/
 # UAT artifacts: keep the canonical suite scripts in apps/web/.tmp/uat-suite/
 # committed (they document the regression flow) but ignore the binary
 # screenshots, the report markdown, and any ad-hoc probe scripts.
+apps/web/.tmp/*.mjs
+apps/web/.tmp/*.pdf
 apps/web/.tmp/uat-screenshots/
 apps/web/.tmp/uat-report.md
 apps/web/.tmp/uat-suite/probe-*.mjs
+apps/web/.tmp/uat-suite/inventory.*
+apps/web/.tmp/uat-suite/mutation-audit.*
 apps/web/.tmp/uat-suite/coverage-matrix.csv
 apps/web/.tmp/uat-suite/coverage-matrix.json
 # Root-level scratch dir only. Scoped to avoid ignoring nested apps/*/.tmp/uat-suite/.
 /.tmp/
-
