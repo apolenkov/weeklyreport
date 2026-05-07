@@ -54,8 +54,49 @@ import { WeeklyReportPage } from './weekly-report-page';
 import { expectDefined } from '../../test/expect-defined.js';
 
 const REPORT_ID = '11111111-1111-4111-8111-111111111111';
+const AUTHOR_ID_A = '11111111-1111-4111-8111-aaaaaaaaaaaa';
+const PRODUCT_ID_A = '11111111-1111-4111-8111-cccccccccccc';
+const PRODUCT_ID_B = '11111111-1111-4111-8111-dddddddddddd';
 
-function makeWeeklyReportData(periodStatus: 'open' | 'published' | 'reopened') {
+function makeWeeklyReportData(
+  periodStatus: 'open' | 'published' | 'reopened',
+  overrides?: {
+    readonly portfolioOverview?: Array<{
+      readonly productId: string;
+      readonly productName: string;
+      readonly worstStatus: 'green' | 'yellow' | 'red' | 'empty';
+      readonly stageCount: number;
+      readonly leadNames: string[];
+    }>;
+    readonly leadSections?: Array<{
+      readonly reportSectionId: string;
+      readonly reportId: string;
+      readonly authorId: string;
+      readonly authorName: string;
+      readonly status: 'submitted' | 'draft' | 'locked';
+      readonly submittedAt: Date | null;
+      readonly projects: Array<{ projectId: string; projectName: string }>;
+      readonly items: Array<{
+        readonly id: string;
+        readonly projectId: string;
+        readonly type: 'current' | 'next';
+        readonly text: string;
+        readonly tag: string;
+        readonly workflowStatus:
+          | 'in_progress'
+          | 'done'
+          | 'blocked'
+          | 'canceled'
+          | 'not_started';
+        readonly carriedOver: boolean;
+        readonly completed: boolean;
+      }>;
+      readonly risks: never[];
+      readonly decisions: never[];
+      readonly priorities: never[];
+    }>;
+  },
+) {
   return {
     reportId: REPORT_ID,
     periodStart: new Date('2026-04-14T00:00:00Z'),
@@ -64,8 +105,8 @@ function makeWeeklyReportData(periodStatus: 'open' | 'published' | 'reopened') {
     weekLabel: 'Week 16',
     submissionCount: 4,
     totalLeads: 6,
-    portfolioOverview: [],
-    leadSections: [],
+    portfolioOverview: overrides?.portfolioOverview ?? [],
+    leadSections: overrides?.leadSections ?? [],
     escalations: [],
   } as const;
 }
@@ -161,6 +202,13 @@ function makeMockTRPC(
     // mutationOptions. These tests do not exercise AI behaviour — provide
     // a structurally valid mock so the card renders its loading/empty state.
     ai: {
+      onTrack: {
+        queryOptions: () => ({
+          queryKey: ['ai', 'onTrack'],
+          queryFn: async () => ({ available: false } as const),
+          enabled: false,
+        }),
+      },
       summary: {
         queryOptions: () => ({
           queryKey: ['ai', 'summary'],
@@ -189,6 +237,7 @@ function makeMockTRPC(
 function renderPage(
   data: ReturnType<typeof makeWeeklyReportData>,
   captured: Captured,
+  authorId?: string,
 ) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -201,12 +250,13 @@ function renderPage(
       </QueryClientProvider>
     );
   }
-  return render(<WeeklyReportPage />, { wrapper: Wrapper });
+  return render(<WeeklyReportPage authorId={authorId} />, { wrapper: Wrapper });
 }
 
 describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-05)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
   it('clicking Publish & Lock fires period.publish with reportId from view.period', async () => {
@@ -320,5 +370,108 @@ describe('WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     expect(invalidateLeadForm).toHaveBeenCalled();
     expect(invalidateLeadHistory).toHaveBeenCalled();
     expect(toastSuccess).toHaveBeenCalled();
+  });
+
+  it('highlights only one authored section when authorId maps to multiple products', async () => {
+    const captured: Captured = {
+      publishMutationFn: vi.fn(),
+      reopenMutationFn: vi.fn(),
+      pdfExportRequestMutationFn: vi.fn(),
+    };
+    const data = makeWeeklyReportData('published', {
+      portfolioOverview: [
+        {
+          productId: PRODUCT_ID_A,
+          productName: 'Product Alpha',
+          worstStatus: 'green',
+          stageCount: 2,
+          leadNames: ['Alice'],
+        },
+        {
+          productId: PRODUCT_ID_B,
+          productName: 'Product Beta',
+          worstStatus: 'yellow',
+          stageCount: 1,
+          leadNames: ['Alice'],
+        },
+      ],
+      leadSections: [
+        {
+          reportSectionId: '22222222-2222-4222-8222-aaaaaaaaaaa1',
+          reportId: REPORT_ID,
+          authorId: AUTHOR_ID_A,
+          authorName: 'Alice',
+          status: 'submitted',
+          submittedAt: new Date('2026-04-14T09:00:00Z'),
+          projects: [
+            {
+              projectId: PRODUCT_ID_A,
+              projectName: 'Product Alpha',
+            },
+          ],
+          items: [
+            {
+              id: '33333333-3333-4333-8333-aaaaaaaaaa01',
+              projectId: PRODUCT_ID_A,
+              type: 'current',
+              text: 'Done task A',
+              tag: 'Dev',
+              workflowStatus: 'done',
+              carriedOver: false,
+              completed: true,
+            },
+          ],
+          risks: [],
+          decisions: [],
+          priorities: [],
+        },
+        {
+          reportSectionId: '44444444-4444-4444-8444-bbbbbbbbbbb1',
+          reportId: REPORT_ID,
+          authorId: AUTHOR_ID_A,
+          authorName: 'Alice',
+          status: 'submitted',
+          submittedAt: new Date('2026-04-14T10:00:00Z'),
+          projects: [
+            {
+              projectId: PRODUCT_ID_B,
+              projectName: 'Product Beta',
+            },
+          ],
+          items: [
+            {
+              id: '55555555-5555-4555-8555-bbbbbbbbbbb1',
+              projectId: PRODUCT_ID_B,
+              type: 'current',
+              text: 'Done task B',
+              tag: 'Dev',
+              workflowStatus: 'in_progress',
+              carriedOver: false,
+              completed: false,
+            },
+          ],
+          risks: [],
+          decisions: [],
+          priorities: [],
+        },
+      ],
+    });
+
+    renderPage(data, captured, AUTHOR_ID_A);
+
+    await waitFor(() => {
+      const alphaSection = expectDefined(
+        document.getElementById(`report-product-${PRODUCT_ID_A}`),
+      );
+      const betaSection = expectDefined(document.getElementById(`report-product-${PRODUCT_ID_B}`));
+
+      const alphaAccordion = expectDefined(
+        alphaSection.querySelector('button[aria-expanded]'),
+      );
+      const betaAccordion = expectDefined(betaSection.querySelector('button[aria-expanded]'));
+
+      expect(alphaAccordion).toHaveAttribute('aria-expanded', 'true');
+      expect(betaAccordion).toHaveAttribute('aria-expanded', 'false');
+    });
   });
 });

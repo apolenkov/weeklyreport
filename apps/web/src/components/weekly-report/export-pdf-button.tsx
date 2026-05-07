@@ -84,9 +84,14 @@ export function ExportPdfButton({
   const title = !isExportable
     ? 'Publish the report first'
     : isGenerating
-      ? 'Generating PDF…'
+      ? 'Generating PDF...'
       : 'Download a PDF copy of this report';
-  const label = isGenerating ? 'Generating…' : 'Export PDF';
+  const label = isGenerating
+    ? 'Generating...'
+    : isExportable
+      ? 'Export PDF'
+      : 'Publish to export PDF';
+  const disabledReasonId = `${reportId}-export-pdf-disabled-reason`;
 
   function handleExport() {
     if (disabled) return;
@@ -94,15 +99,23 @@ export function ExportPdfButton({
   }
 
   return (
-    <button
-      type="button"
-      className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-      onClick={handleExport}
-      disabled={disabled}
-      title={title}
-      aria-busy={isGenerating}
-    >
-      {label}
-    </button>
+    <>
+      <button
+        type="button"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={handleExport}
+        disabled={disabled}
+        title={title}
+        aria-busy={isGenerating}
+        aria-describedby={!isExportable ? disabledReasonId : undefined}
+      >
+        {label}
+      </button>
+      {!isExportable ? (
+        <span id={disabledReasonId} className="sr-only">
+          Publish the report first to export PDF.
+        </span>
+      ) : null}
+    </>
   );
 }

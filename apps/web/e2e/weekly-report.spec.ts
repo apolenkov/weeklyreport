@@ -144,6 +144,10 @@ test.describe('Weekly Report', () => {
   // -----------------------------------------------------------------------
 
   test('"Export PDF" button is visible', async ({ headPage }) => {
-    await expect(headPage.getByRole('button', { name: 'Export PDF' })).toBeVisible();
+    await expect(
+      headPage.getByRole('button', {
+        name: /^(Export PDF|Publish to export PDF)$/,
+      }),
+    ).toBeVisible();
   });
 });

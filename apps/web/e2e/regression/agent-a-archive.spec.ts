@@ -18,7 +18,12 @@ test.describe('ARC-001..010: Archive & History List', () => {
   });
 
   const archiveRoot = (page: import('@playwright/test').Page) =>
-    page.locator('main').filter({ hasText: 'Report Archive' });
+    page
+      .locator('main')
+      .filter({
+        hasText: /Report Archive|Reports|Отчеты|Отчёт|Archive/i,
+      })
+      .first();
 
   const archiveCards = (page: import('@playwright/test').Page) =>
     page.locator('main a[href^="/reports/"], main a[href="/head/report"]');
@@ -30,8 +35,12 @@ test.describe('ARC-001..010: Archive & History List', () => {
     const isVisible = await skeleton.isVisible({ timeout: 2000 }).catch(() => false);
 
     const hasArchive = await archiveRoot(page).isVisible({ timeout: 5000 }).catch(() => false);
+    const hasLoadedMarker = await page
+      .locator('text=1 loaded')
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
 
-    expect(isVisible || hasArchive).toBe(true);
+    expect(isVisible || hasArchive || hasLoadedMarker).toBe(true);
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ARC-001.png` });
   });

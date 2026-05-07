@@ -253,7 +253,7 @@ async function bootstrap() {
   // /auth/* routes the auth module registers).
   const { authLimiter, trpcLimiter } = createRateLimits({
     logger,
-    isTest: env.NODE_ENV === 'test',
+    isTest: env.NODE_ENV === 'test' || env.AUTH_DEV_MODE,
   });
   expressApp.use(
     '/trpc',

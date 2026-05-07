@@ -5,8 +5,8 @@ milestone_name: Visual Identity & AI Maturity
 status: in_progress
 shipped_tag: v8.0.0
 shipped_at: "2026-05-06"
-last_updated: "2026-05-07T12:00:00.000Z"
-last_activity: 2026-05-07 -- v8.1 promoted from backlog and started (phases 40-42)
+last_updated: "2026-05-07T18:03:28.000+03:00"
+last_activity: 2026-05-07 -- product-ready regression, UI review, screenshots, logs, and gates passed for v8.1 polish wave
 progress:
   total_phases: 3
   completed_phases: 0
@@ -43,7 +43,7 @@ Milestone: v8.1 (IN PROGRESS, tag parent v8.0.0)
 Phases: 0/3 complete (40..42)
 Plans: 0/12 complete
 Status: active polish wave started, v8.0 is production baseline.
-Last activity: 2026-05-07 -- promote v8.1 roadmap/requirements and open polish planning.
+Last activity: 2026-05-07 -- product-ready regression, UI review, screenshots, logs, and gates passed for v8.1 polish wave.
 
 ### v8.0 phase progress
 
