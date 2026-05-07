@@ -60,7 +60,11 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U customreport -d customreport"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -p 5432 -U customreport -d customreport",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -78,7 +82,14 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
+    command:
+      [
+        "redis-server",
+        "--maxmemory-policy",
+        "noeviction",
+        "--appendonly",
+        "yes",
+      ]
     volumes:
       - redisdata:/data
     healthcheck:
@@ -101,9 +112,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    # 38-01: routed through apps/api/scripts/migrate.sh so the same
-    # entrypoint serves docker-compose AND a future K8s init-container.
-    command: ["sh", "apps/api/scripts/migrate.sh"]
+      target: migrator
+    command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     environment:
       # 39-01: migrate connects DIRECTLY to postgres (bypassing pgbouncer)
       # because DDL needs session-mode. Both DATABASE_URL and DIRECT_URL
@@ -149,6 +159,7 @@ services:
       # in production, so this MUST be set.
       PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:?PDF_EXPORT_JWT_SECRET must be set (min 16 chars, NOT the dev fallback)}
       PDF_BASE_URL: ${PDF_BASE_URL:-http://web:3000}
+      PDF_OUTPUT_DIR: /app/data/pdfs
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOG_DIR: /app/logs
       # 38-01 SMTP — real provider required in prod.
@@ -175,7 +186,11 @@ services:
       # so the api container marks healthy only when actually serving.
       # start_period bumped 30→60s so first migration + tRPC bootstrap
       # doesn't flap the loop.
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3001/health/ready || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:3001/health/ready || exit 1",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -201,7 +216,8 @@ services:
       context: .
       dockerfile: Dockerfile.web
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      API_URL: ${API_URL:-http://api:3001}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:3001}
     depends_on:
       api:
         condition: service_healthy

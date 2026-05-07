@@ -11,6 +11,8 @@ import {
   ItemType,
   ItemWorkflowStatus,
   PeriodStatus,
+  ReminderRuleKind,
+  ReminderRuleStatus,
 } from '@prisma/client';
 
 import {
@@ -511,6 +513,7 @@ async function main() {
         return [
           'Стабилизация 3DS v2 на проде (закрыть L2-инциденты)',
           'Раскатка СБП-эквайринга на 100% трафика после получения ключей',
+          'Согласовать финальный план PCI DSS аудита с безопасниками',
         ];
       }
       if (cfg.leadId === LEAD_1_ID) {
@@ -764,7 +767,48 @@ async function main() {
     totalPriorities++;
   }
 
-  // --- 7. AppSettings singleton ---
+  // --- 7. Reminder rules for the active report ---
+  const deadlineReminderAt = new Date(activeReport.deadline);
+  deadlineReminderAt.setUTCHours(deadlineReminderAt.getUTCHours() - 24);
+  const escalationReminderAt = new Date(activeReport.deadline);
+  escalationReminderAt.setUTCHours(escalationReminderAt.getUTCHours() + 2);
+  const reminderRules = [
+    {
+      id: 'a0000000-0000-4000-8000-00000000c001',
+      kind: ReminderRuleKind.deadline,
+      fireAt: deadlineReminderAt,
+      timezone: 'Europe/Moscow',
+      status: ReminderRuleStatus.active,
+      version: 1,
+      reportId: activeReport.id,
+    },
+    {
+      id: 'a0000000-0000-4000-8000-00000000c002',
+      kind: ReminderRuleKind.escalation,
+      fireAt: escalationReminderAt,
+      timezone: 'Europe/Moscow',
+      status: ReminderRuleStatus.active,
+      version: 1,
+      reportId: activeReport.id,
+    },
+  ];
+
+  for (const rule of reminderRules) {
+    await prisma.reminderRule.upsert({
+      where: { id: rule.id },
+      update: {
+        kind: rule.kind,
+        fireAt: rule.fireAt,
+        timezone: rule.timezone,
+        status: rule.status,
+        version: rule.version,
+        reportId: rule.reportId,
+      },
+      create: rule,
+    });
+  }
+
+  // --- 8. AppSettings singleton ---
   await prisma.appSettings.upsert({
     where: { id: 'singleton' },
     update: {
@@ -785,7 +829,8 @@ async function main() {
       `${SEED_STAGES.length} stages, ${stageAssignmentCount} assignments, ` +
       `2 reports, ${totalSections} sections, ${totalItems} items, ` +
       `${totalProjectStatuses} project statuses, ${risks.length} risks, ` +
-      `${decisions.length} decisions, ${totalPriorities} priorities`,
+      `${decisions.length} decisions, ${totalPriorities} priorities, ` +
+      `${reminderRules.length} reminder rules`,
   );
 }
 

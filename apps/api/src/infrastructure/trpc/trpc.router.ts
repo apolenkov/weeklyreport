@@ -149,12 +149,16 @@ export function createAppRouter(deps: RouterDeps) {
           if (process.env['AUTH_DEV_MODE'] !== 'true') {
             throw new TRPCError({ code: 'FORBIDDEN', message: 'Dev mode is not enabled' });
           }
-          // Run the seed script as a child process. We rely on the seed
-          // file to wipe + reseed in one atomic-feeling pass; doing it
-          // inside Prisma directly would duplicate hundreds of fixture
-          // rows we already maintain in seed-simple.ts.
+          // Run Prisma reset as a child process so "wipe & reseed" is a
+          // real clean-slate operation in Docker too. The Prisma config
+          // applies migrations; then we run the requested seed explicitly.
           const { execSync } = await import('node:child_process');
-          const script = input.variant === 'advanced' ? 'db:seed:advanced' : 'db:seed:simple';
+          const reset = 'pnpm exec prisma migrate reset --force';
+          const advancedSeed = 'pnpm exec prisma db seed';
+          const simpleSeed = 'pnpm --dir apps/api exec tsx ../../prisma/seed-simple.ts';
+          const script = input.variant === 'advanced'
+            ? `${reset} && ${advancedSeed}`
+            : `${reset} && ${simpleSeed}`;
           // Resolve repo root from this file (apps/api/src/.../trpc.router.ts).
           // The seed script needs to run with the monorepo root as cwd so
           // pnpm picks up the correct workspace.
@@ -163,7 +167,7 @@ export function createAppRouter(deps: RouterDeps) {
           const __filename = url.fileURLToPath(import.meta.url);
           const repoRoot = path.resolve(path.dirname(__filename), '../../../../..');
           try {
-            const stdout = execSync(`pnpm -w ${script}`, {
+            const stdout = execSync(script, {
               cwd: repoRoot,
               encoding: 'utf8',
               env: {

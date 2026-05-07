@@ -1,0 +1,15 @@
+## docker compose ps
+NAME                      IMAGE                    COMMAND                  SERVICE    CREATED          STATUS                            PORTS
+customreport-api-1        customreport-api         "docker-entrypoint.s…"   api        7 seconds ago    Up 5 seconds (health: starting)   0.0.0.0:3002->3002/tcp, [::]:3002->3002/tcp
+customreport-mailhog-1    axllent/mailpit:latest   "/mailpit"               mailhog    2 days ago       Up 2 days (healthy)               0.0.0.0:1025->1025/tcp, [::]:1025->1025/tcp, 0.0.0.0:8025->8025/tcp, [::]:8025->8025/tcp
+customreport-postgres-1   postgres:15-alpine       "docker-entrypoint.s…"   postgres   42 minutes ago   Up 42 minutes (healthy)           0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+customreport-redis-1      redis:7-alpine           "docker-entrypoint.s…"   redis      2 days ago       Up 2 days (healthy)               0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+customreport-web-1        customreport-web         "docker-entrypoint.s…"   web        13 minutes ago   Up 13 minutes (healthy)           0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+
+## health
+web=http://localhost:3000 -> 200
+api=http://localhost:3002/health/ready -> 200
+mailpit=http://localhost:8025 -> 200
+
+## auth.me
+[{"result":{"data":{"json":{"userId":"a0000000-0000-4000-8000-000000000099","email":"head@customreport.local","name":"Антон К.","role":"head","activeReportId":"a0000000-0000-4000-8000-000000000001","activeReportSectionId":null}}}}]

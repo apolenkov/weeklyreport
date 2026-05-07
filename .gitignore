@@ -31,7 +31,12 @@ apps/api/storage/
 AGENTS.md
 .planning/regression/*-test-results/
 .planning/regression/agent-*.json
+.planning/regression/evidence/docker-compose-local/*.json
+.planning/regression/evidence/docker-compose-local/*.html
+.planning/regression/evidence/docker-compose-local/cookies.txt
+.planning/regression/evidence/docker-compose-local/failure-diagnostics.log
 apps/web/.planning/
+apps/web/.tmp_check_*.mjs
 # UAT artifacts: keep the canonical suite scripts in apps/web/.tmp/uat-suite/
 # committed (they document the regression flow) but ignore the binary
 # screenshots, the report markdown, and any ad-hoc probe scripts.
