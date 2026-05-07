@@ -81,10 +81,7 @@ async function expectButtonHasMinTouchTarget(
 
 test.describe('Mobile — /lead/report modal flow @MOB-AUDIT', () => {
   test.beforeEach(async ({}, testInfo) => {
-    test.skip(
-      testInfo.project.name === 'chromium-integration',
-      'Mobile-only spec',
-    );
+    expect(testInfo.project.name).not.toBe('chromium-integration');
   });
 
   test('Item dialog fits the viewport and primary action is a 40px target', async ({
@@ -203,7 +200,7 @@ test.describe('Mobile — /lead/report modal flow @MOB-AUDIT', () => {
       }
     }
 
-    test.skip(!popoverOpened, 'Could not open any stage popover for this lead');
+    expect(popoverOpened, 'Could not open any stage popover for this lead').toBe(true);
     if (!popoverRect) throw new Error('unreachable');
 
     expect(

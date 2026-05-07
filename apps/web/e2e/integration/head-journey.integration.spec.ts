@@ -35,18 +35,12 @@ test.describe('Head journey (integration)', () => {
   test('head can publish active report and report.status flips to published', async ({
     headPage,
   }) => {
-    await headPage.goto('/dashboard');
+    await headPage.goto(`/head/report/${ACTIVE_REPORT_ID}`);
 
     const publishBtn = headPage.getByRole('button', {
       name: /publish.*lock/i,
     });
-    if (!(await publishBtn.count())) {
-      // eslint-disable-next-line playwright/no-skipped-test
-      test.skip(
-        true,
-        'Publish & Lock not on this route — TODO(plan-26): navigate via weekly report link',
-      );
-    }
+    await expect(publishBtn).toBeVisible({ timeout: 15_000 });
     await publishBtn.click();
 
     // Confirmation dialog.
@@ -67,10 +61,11 @@ test.describe('Head journey (integration)', () => {
       where: { id: ACTIVE_REPORT_ID },
     });
     expect(report?.status).toBe('published');
+    expect(report?.periodStatus).toBe('published');
     expect(report?.publishedAt).not.toBeNull();
   });
 
-  test('head can revoke a published report and report.status reverts', async ({
+  test('head can reopen a published report and periodStatus reverts', async ({
     headPage,
   }) => {
     // Pre-condition: publish via DB (faster + deterministic than re-running prior test).
@@ -78,24 +73,19 @@ test.describe('Head journey (integration)', () => {
       where: { id: ACTIVE_REPORT_ID },
       data: {
         status: 'published',
+        periodStatus: 'published',
         publishedAt: new Date(),
         publishedById: 'a0000000-0000-4000-8000-000000000099',
       },
     });
 
-    await headPage.goto('/dashboard');
+    await headPage.goto(`/head/report/${ACTIVE_REPORT_ID}`);
 
-    const revokeBtn = headPage.getByRole('button', {
-      name: /revoke|reopen/i,
+    const reopenBtn = headPage.getByRole('button', {
+      name: /reopen/i,
     });
-    if (!(await revokeBtn.count())) {
-      // eslint-disable-next-line playwright/no-skipped-test
-      test.skip(
-        true,
-        'Revoke control not yet wired into dashboard — TODO(plan-26)',
-      );
-    }
-    await revokeBtn.click();
+    await expect(reopenBtn).toBeVisible({ timeout: 15_000 });
+    await reopenBtn.click();
 
     const confirm = headPage.getByRole('button', {
       name: /^(revoke|reopen|confirm|yes)/i,
@@ -112,7 +102,13 @@ test.describe('Head journey (integration)', () => {
     const report = await prisma.report.findUnique({
       where: { id: ACTIVE_REPORT_ID },
     });
-    expect(report?.status).toBe('draft');
+    expect(report?.status).toBe('published');
+    expect(report?.periodStatus).toBe('reopened');
+
+    const submittedSections = await prisma.reportSection.count({
+      where: { reportId: ACTIVE_REPORT_ID, status: 'submitted' },
+    });
+    expect(submittedSections).toBe(0);
   });
 
   test('head sees portfolio overview with traffic lights from seeded ProjectStatus rows', async ({

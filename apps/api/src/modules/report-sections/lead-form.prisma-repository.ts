@@ -1,14 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import type { ReportSectionReadModel, VersionSnapshot } from '@customreport/shared';
-import { versionSnapshotSchema } from '@customreport/shared';
-import type { ItemType, ItemWorkflowStatus } from '@prisma/client';
+import { Injectable } from "@nestjs/common";
+import type {
+  ReportSectionReadModel,
+  VersionSnapshot,
+} from "@customreport/shared";
+import { versionSnapshotSchema } from "@customreport/shared";
+import type { ItemType, ItemWorkflowStatus } from "@prisma/client";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
-} from './report-sections.prisma-repository';
-import type { LeadFormRepository } from './lead-form.service';
+} from "./report-sections.prisma-repository";
+import type { LeadFormRepository } from "./lead-form.service";
 
 const MAX_SNAPSHOTS = 50;
 
@@ -16,7 +19,20 @@ const MAX_SNAPSHOTS = 50;
 export class LeadFormPrismaRepository implements LeadFormRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getSectionById(sectionId: string): Promise<ReportSectionReadModel | null> {
+  private async getDepartmentName(): Promise<string> {
+    const settings = await this.prisma.appSettings.upsert({
+      where: { id: "singleton" },
+      create: { id: "singleton" },
+      update: {},
+      select: { departmentName: true },
+    });
+
+    return settings.departmentName;
+  }
+
+  async getSectionById(
+    sectionId: string,
+  ): Promise<ReportSectionReadModel | null> {
     const row = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },
       include: reportSectionFullInclude,
@@ -26,9 +42,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       return null;
     }
 
-    return mapPrismaToReportSection(
+    const section = mapPrismaToReportSection(
       row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
     );
+    return { ...section, departmentName: await this.getDepartmentName() };
   }
 
   async getSectionForPeriod(
@@ -50,20 +67,25 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     const section = mapPrismaToReportSection(
       row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
     );
+    const departmentName = await this.getDepartmentName();
 
     // readOnly when the period is not open (published periods are locked;
     // note: 'reopened' is treated as non-open per spec — callers may refine)
-    const readOnly = (row as unknown as { report: { periodStatus: string } }).report
-      .periodStatus !== 'open';
+    const readOnly =
+      (row as unknown as { report: { periodStatus: string } }).report
+        .periodStatus !== "open";
 
-    return { section, readOnly };
+    return { section: { ...section, departmentName }, readOnly };
   }
 
-  async revokeSectionSubmission(sectionId: string, revokedBy: string): Promise<void> {
+  async revokeSectionSubmission(
+    sectionId: string,
+    revokedBy: string,
+  ): Promise<void> {
     await this.prisma.reportSection.update({
       where: { id: sectionId },
       data: {
-        status: 'draft',
+        status: "draft",
         revokedAt: new Date(),
         revokedBy,
         submittedAt: null,
@@ -89,10 +111,18 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     await this.prisma.$transaction(
       async (tx) => {
         // Delete current content from target
-        await tx.item.deleteMany({ where: { reportSectionId: targetSectionId } });
-        await tx.risk.deleteMany({ where: { reportSectionId: targetSectionId } });
-        await tx.decision.deleteMany({ where: { reportSectionId: targetSectionId } });
-        await tx.priority.deleteMany({ where: { reportSectionId: targetSectionId } });
+        await tx.item.deleteMany({
+          where: { reportSectionId: targetSectionId },
+        });
+        await tx.risk.deleteMany({
+          where: { reportSectionId: targetSectionId },
+        });
+        await tx.decision.deleteMany({
+          where: { reportSectionId: targetSectionId },
+        });
+        await tx.priority.deleteMany({
+          where: { reportSectionId: targetSectionId },
+        });
 
         // Copy items from source
         if (source.items.length > 0) {
@@ -165,7 +195,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
   async listVersions(sectionId: string): Promise<VersionSnapshot[]> {
     const rows = await this.prisma.versionSnapshot.findMany({
       where: { reportSectionId: sectionId },
-      orderBy: { version: 'desc' },
+      orderBy: { version: "desc" },
       take: MAX_SNAPSHOTS,
     });
 
@@ -189,7 +219,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
 
   async restoreVersion(sectionId: string, version: number): Promise<number> {
     const snapshot = await this.prisma.versionSnapshot.findUnique({
-      where: { reportSectionId_version: { reportSectionId: sectionId, version } },
+      where: {
+        reportSectionId_version: { reportSectionId: sectionId, version },
+      },
     });
 
     if (!snapshot) {
@@ -327,7 +359,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     // Determine next version number
     const maxSnapshot = await this.prisma.versionSnapshot.findFirst({
       where: { reportSectionId: sectionId },
-      orderBy: { version: 'desc' },
+      orderBy: { version: "desc" },
       select: { version: true },
     });
 
@@ -383,7 +415,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     if (totalCount > MAX_SNAPSHOTS) {
       const oldest = await this.prisma.versionSnapshot.findMany({
         where: { reportSectionId: sectionId },
-        orderBy: { version: 'asc' },
+        orderBy: { version: "asc" },
         take: totalCount - MAX_SNAPSHOTS,
         select: { id: true },
       });

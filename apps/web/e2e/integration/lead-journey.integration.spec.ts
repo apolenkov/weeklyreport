@@ -4,10 +4,8 @@
  * Drives login -> /lead/report -> fill -> autosave -> submit -> locked,
  * with DB-level assertions via the shared Prisma helper.
  *
- * Some test bodies use defensive selectors (getByRole + getByTestId fallback)
- * because the lead form's exact structure is still evolving. If a selector
- * is unverifiable from static code, the test is marked `test.skip` with a
- * TODO so the suite stays green and the gap is visible.
+ * These are mandatory product-ready scenarios. Missing controls should fail
+ * the suite instead of being skipped.
  */
 
 import { test, expect } from './fixtures';
@@ -31,60 +29,59 @@ test.describe('Lead journey (integration)', () => {
   test('lead can fill items and save draft — autosave persists across reload', async ({
     browser,
   }) => {
-    // Use a fresh context logged in as Sergey (empty active section per seed).
+    // Use a fresh context logged in as Olga: draft state with existing
+    // editable items, so this proves dialog save -> autosave -> reload.
     const context: BrowserContext = await browser.newContext();
     const page: Page = await context.newPage();
-    await loginAs(context, { role: 'lead', email: SEED_EMAILS.sergey });
+    await loginAs(context, { role: 'lead', email: SEED_EMAILS.olga });
 
     await page.goto('/lead/report');
 
-    // Wait for either the form skeleton or the empty-state input to appear.
-    // TODO(plan-26): tighten selector once lead-form data-testids stabilize.
-    const sectionBefore = await prisma.reportSection.findUnique({
-      where: {
-        reportId_authorId: {
-          reportId: ACTIVE_REPORT_ID,
-          authorId: LEAD_SERGEY_ID,
-        },
-      },
-      include: { items: true },
+    const updatedText = `Integration autosave ${Date.now()}`;
+
+    const editItem = page.getByRole('button', { name: /^Edit$/ }).first();
+    await expect(editItem).toBeVisible({ timeout: 15_000 });
+    await editItem.click();
+
+    const dialog = page.getByRole('dialog', { name: /^Edit Item dialog$/ });
+    await expect(dialog).toBeVisible();
+    await dialog
+      .getByRole('textbox', { name: /^Description \*$/ })
+      .fill(updatedText);
+
+    const stageSelect = dialog.locator('#item-stage');
+    const stageValue = await stageSelect.evaluate((select) => {
+      const options = Array.from((select as HTMLSelectElement).options);
+      return options.find((option) => option.value !== '')?.value ?? null;
     });
-    expect(sectionBefore?.items.length ?? 0).toBe(0);
+    expect(stageValue, 'expected at least one owned SDLC stage option').toBeTruthy();
+    await stageSelect.selectOption(stageValue ?? '');
 
-    // Type into the first current-week item input. Defensive: try role first.
-    const firstItemInput = page
-      .getByRole('textbox', { name: /current week|item/i })
-      .first();
-    if (!(await firstItemInput.count())) {
-      // eslint-disable-next-line playwright/no-skipped-test
-      test.skip(true, 'lead-form input selector not yet stable — TODO(plan-26)');
-    }
-    await firstItemInput.fill('Integration test item — autosave check');
+    await dialog.getByRole('button', { name: /^Save Item$/ }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText(updatedText, { exact: true })).toBeVisible();
 
-    // Wait for an autosave tRPC mutation to fire.
-    await page
-      .waitForResponse(
-        (r) =>
-          r.url().includes('/trpc/') && r.request().method() === 'POST',
+    await expect
+      .poll(
+        async () =>
+          prisma.item.count({
+            where: {
+              text: updatedText,
+              reportSection: {
+                reportId: ACTIVE_REPORT_ID,
+                authorId: LEAD_OLGA_ID,
+              },
+            },
+          }),
         { timeout: 15_000 },
       )
-      .catch(() => {
-        // Autosave may not exist yet; rely on Submit/Save button below.
-      });
+      .toBe(1);
 
     // Persist via reload.
     await page.reload();
-
-    const sectionAfter = await prisma.reportSection.findUnique({
-      where: {
-        reportId_authorId: {
-          reportId: ACTIVE_REPORT_ID,
-          authorId: LEAD_SERGEY_ID,
-        },
-      },
-      include: { items: true },
+    await expect(page.getByText(updatedText, { exact: true })).toBeVisible({
+      timeout: 15_000,
     });
-    expect(sectionAfter?.items.length ?? 0).toBeGreaterThan(0);
 
     await context.close();
   });
@@ -100,13 +97,7 @@ test.describe('Lead journey (integration)', () => {
     await page.goto('/lead/report');
 
     const submitButton = page.getByRole('button', { name: /submit/i });
-    if (!(await submitButton.count())) {
-      // eslint-disable-next-line playwright/no-skipped-test
-      test.skip(
-        true,
-        'submit button not yet wired — TODO(plan-26): verify after Phase 22 lock UI lands',
-      );
-    }
+    await expect(submitButton).toBeVisible({ timeout: 15_000 });
 
     await submitButton.click();
 
@@ -156,13 +147,7 @@ test.describe('Lead journey (integration)', () => {
       name: 'Fill from Previous',
       exact: true,
     });
-    if (!(await fillFromBtn.count())) {
-      // eslint-disable-next-line playwright/no-skipped-test
-      test.skip(
-        true,
-        'fill-from-previous control not yet present — TODO(plan-26): unblock after Phase 22 / 25 lands the control',
-      );
-    }
+    await expect(fillFromBtn).toBeVisible({ timeout: 15_000 });
     await fillFromBtn.click();
 
     // FillFromButton opens a confirmation dialog ("Replace & Fill") rather
@@ -229,8 +214,8 @@ test.describe('Lead journey (integration)', () => {
     // UI-side: page should NOT render other leads' display names anywhere.
     // (Heads see those names; leads should not.)
     const html = await leadPage.content();
-    expect(html).not.toContain('Maria K.');
-    expect(html).not.toContain('Igor V.');
-    expect(html).not.toContain('Dmitry S.');
+    expect(html).not.toContain('Мария К.');
+    expect(html).not.toContain('Игорь В.');
+    expect(html).not.toContain('Дмитрий С.');
   });
 });
