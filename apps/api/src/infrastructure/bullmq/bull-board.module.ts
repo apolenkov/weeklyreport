@@ -6,11 +6,7 @@ import { Queue } from 'bullmq';
 import type { INestApplication } from '@nestjs/common';
 
 import { createAuthController } from '../../modules/auth/auth.controller';
-
-const redisConnection = {
-  host: process.env['REDIS_HOST'] ?? 'localhost',
-  port: Number(process.env['REDIS_PORT'] ?? 6379),
-};
+import { getBullMQOptions } from './bullmq-options';
 
 /**
  * Mount Bull Board monitoring UI at /admin/queues.
@@ -20,8 +16,9 @@ const redisConnection = {
  * Protected by JWT auth — only head role can access.
  */
 export function mountBullBoard(_app: INestApplication): void {
-  const pdfQueue = new Queue('pdf-export', { connection: redisConnection });
-  const emailQueue = new Queue('email-reminder', { connection: redisConnection });
+  const bullOptions = getBullMQOptions();
+  const pdfQueue = new Queue('pdf-export', bullOptions);
+  const emailQueue = new Queue('email-reminder', bullOptions);
 
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');

@@ -6,6 +6,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { PdfExportService } from '../../modules/pdf-export/pdf-export.service';
+import { getBullMQOptions } from './bullmq-options';
 
 type PdfExportJobData = {
   reportId: string;
@@ -35,16 +36,29 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
       async (job: Job<PdfExportJobData>) => {
         await this.processJob(job);
       },
-      {
-        connection: {
-          host: process.env['REDIS_HOST'] ?? 'localhost',
-          port: Number(process.env['REDIS_PORT'] ?? 6379),
-          maxRetriesPerRequest: null,
-        },
-      },
+      getBullMQOptions(),
     );
 
     this.worker.on('failed', (job, error) => {
+      if (job?.data.jobId) {
+        void this.pdfExportService
+          .markExportFailed(job.data.jobId, error.message)
+          .catch((markError: unknown) => {
+            process.stderr.write(
+              JSON.stringify({
+                timestamp: new Date().toISOString(),
+                level: 'error',
+                message: 'pdf-export failed-state update failed',
+                jobId: job.data.jobId,
+                error:
+                  markError instanceof Error
+                    ? markError.message
+                    : String(markError),
+              }) + '\n',
+            );
+          });
+      }
+
       process.stderr.write(
         JSON.stringify({
           timestamp: new Date().toISOString(),

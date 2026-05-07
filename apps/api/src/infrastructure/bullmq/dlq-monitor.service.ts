@@ -3,6 +3,7 @@ import type { OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { QueueEvents, Queue } from 'bullmq';
 
 import { dlqFailedTotal } from '../metrics/metrics.registry.js';
+import { getBullMQOptions } from './bullmq-options';
 
 const QUEUE_NAMES = ['email-reminder', 'pdf-export'] as const;
 type QueueName = (typeof QUEUE_NAMES)[number];
@@ -35,15 +36,11 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   private pollTimer: NodeJS.Timeout | null = null;
 
   async onModuleInit(): Promise<void> {
-    const connection = {
-      host: process.env['REDIS_HOST'] ?? 'localhost',
-      port: Number(process.env['REDIS_PORT'] ?? 6379),
-      maxRetriesPerRequest: null,
-    };
+    const bullOptions = getBullMQOptions();
 
     for (const name of QUEUE_NAMES) {
-      const events = new QueueEvents(name, { connection });
-      const queue = new Queue(name, { connection });
+      const events = new QueueEvents(name, bullOptions);
+      const queue = new Queue(name, bullOptions);
 
       events.on('failed', async ({ jobId, failedReason, prev }) => {
         // BullMQ emits 'failed' for every retry too. Only count terminal

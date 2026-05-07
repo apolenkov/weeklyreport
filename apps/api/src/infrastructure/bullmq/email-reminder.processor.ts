@@ -4,6 +4,7 @@ import { Worker, type Job } from 'bullmq';
 import { RemindersService } from '../../modules/reminders/reminders.service';
 import { EmailService } from '../email/email.service';
 import { renderEmail } from '../../modules/email/render-template';
+import { getBullMQOptions } from './bullmq-options';
 
 /**
  * NOTIF-01 (Phase 28-03): job-data shape for the email-reminder queue.
@@ -68,11 +69,7 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
         await this.processJob(job);
       },
       {
-        connection: {
-          host: process.env['REDIS_HOST'] ?? 'localhost',
-          port: Number(process.env['REDIS_PORT'] ?? 6379),
-          maxRetriesPerRequest: null,
-        },
+        ...getBullMQOptions(),
         // NOTIF-06 (Phase 29-05): BullMQ rate-limit at the worker level.
         // Caps SMTP throughput at 5 emails per rolling 60s window so a burst
         // of late-cycle reminders does not throttle the corporate mail relay.
