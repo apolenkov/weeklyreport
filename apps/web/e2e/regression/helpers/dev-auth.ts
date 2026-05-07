@@ -15,9 +15,13 @@ export async function loginByCookie(
   if (identity.email) params.set('email', identity.email);
   params.set('redirect', identity.redirect ?? '/');
 
-  await page.goto(`${WEB_URL}/auth/dev-login?${params.toString()}`, {
-    waitUntil: 'domcontentloaded',
-  });
+  await page
+    .goto(`${WEB_URL}/auth/dev-login?${params.toString()}`, {
+      waitUntil: 'domcontentloaded',
+    })
+    .catch((error: unknown) => {
+      if (!String(error).includes('net::ERR_ABORTED')) throw error;
+    });
 
   const cookies = await page.context().cookies(WEB_URL);
   const hasSession = cookies.some(
