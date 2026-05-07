@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useContext } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { useTRPC } from '../../lib/trpc-context';
@@ -11,6 +11,7 @@ import {
   invalidateLeadHistory,
   invalidateDashboard,
 } from '../../lib/cache-keys';
+import { SessionContext } from '../../lib/session-provider';
 import { mapLeadFormData } from '../../lib/mappers';
 import { ownedStagesForProject } from '../../lib/mappers/lead-form';
 import { isoWeekNumber, formatDateRange } from '../../lib/mappers/lead-history';
@@ -298,6 +299,18 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
   const trpc = useTRPC();
   const qc = useQueryClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedAuthorId = searchParams.get('authorId') ?? undefined;
+  const requestedAuthorIdNormalized = requestedAuthorId?.trim() || undefined;
+  const sessionState = useContext(SessionContext);
+  const isPinnedAuthorOwnView =
+    Boolean(
+      pinnedReportId &&
+        requestedAuthorIdNormalized &&
+        sessionState?.user?.id &&
+        requestedAuthorIdNormalized === sessionState.user.id,
+    );
+  const isPinnedAuthorView = Boolean(pinnedReportId && requestedAuthorIdNormalized && !isPinnedAuthorOwnView);
 
   // Four queries compose the lead-form view. `byPeriod` and `versions` depend
   // on identifiers from `getActive` (or — 35-07 — the pinned `reportId` from
@@ -312,7 +325,10 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
   const targetReportId = pinnedReportId && pinnedReportId !== '' ? pinnedReportId : activeReportId;
 
   const byPeriodQ = useQuery({
-    ...trpc.leadForm.byPeriod.queryOptions({ reportId: targetReportId }),
+    ...trpc.leadForm.byPeriod.queryOptions({
+      reportId: targetReportId,
+      ...(requestedAuthorIdNormalized ? { authorId: requestedAuthorIdNormalized } : {}),
+    }),
     enabled: targetReportId !== '',
   });
 
@@ -340,8 +356,18 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     if (period) return;
     if (pinnedReportId) return;
     if (!activeReportId) return;
-    router.replace(`/lead/report/${activeReportId}`);
-  }, [redirectToCanonical, period, pinnedReportId, activeReportId, router]);
+    const authorQuery = requestedAuthorId
+      ? `?authorId=${encodeURIComponent(requestedAuthorId)}`
+      : '';
+    router.replace(`/lead/report/${activeReportId}${authorQuery}`);
+  }, [
+    redirectToCanonical,
+    period,
+    pinnedReportId,
+    activeReportId,
+    requestedAuthorId,
+    router,
+  ]);
 
   // Toast on per-query errors.
   useEffect(() => {
@@ -593,7 +619,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
   // Skeleton until all queries settle.
   if (
     isLoading ||
-    !activeQ.data ||
+    activeQ.data === undefined ||
     !byPeriodQ.data ||
     !versionsQ.data ||
     !historyQ.data ||
@@ -604,7 +630,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
 
   // Map raw draft state -> Lead* presentation shapes for existing children.
   const data = mapLeadFormData({
-    active: activeQ.data,
+    active: activeQ.data ?? draftSection,
     byPeriod: { section: draftSection, readOnly: byPeriodQ.data.readOnly },
     versions: versionsQ.data,
     history: historyQ.data,
@@ -620,7 +646,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
   const versions: VersionSnapshot[] = data.versions as VersionSnapshot[];
   const currentUser = data.currentUser;
 
-  const isReadOnly = data.readOnly || !!period || isSubmitted;
+  const isReadOnly = data.readOnly || !!period || isSubmitted || isPinnedAuthorView;
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
