@@ -22,6 +22,7 @@ future Kubernetes migration.
 | Web integration   | `pnpm --filter @customreport/web test:e2e:integration`                                                         | Real API + real DB + browser | Requires `E2E_DATABASE_URL`       |
 | Regression        | `pnpm --filter @customreport/web exec playwright test --config=e2e/regression/playwright.regression.config.ts` | Running app stack            | Role and workflow regression      |
 | Prod Compose      | `docker compose -f docker-compose.prod.yml up -d --build`                                                      | Production-like stack        | Requires real secrets             |
+| Runtime doctor    | `make doctor`                                                                                                  | Codex/GSD config             | Uses `GSD_RUNTIME=codex`          |
 
 ## 2. Local Dev
 
@@ -182,11 +183,11 @@ E2E_WEB_PORT=3015 \
 Expected current result:
 
 ```text
-36 passed
-9 skipped
+45 passed
 ```
 
-The skipped tests are explicit feature-gated cases, not runtime failures.
+This covers the desktop integration project plus the mobile iOS/Android
+`@MOB-` projects. There should be no skipped integration tests.
 
 ### 5.4 Full Regression Against Running Stack
 
@@ -283,6 +284,26 @@ Minimum Kubernetes sequence:
 ```
 
 ## 8. GSD Skills For This Project
+
+Use Codex runtime for Codex sessions:
+
+```text
+[codex-proxy] --> [GSD_RUNTIME=codex] --> [GSD model routing] --> [make doctor]
+```
+
+Rules:
+
+- Treat this project as `runtime: "codex"` in `.planning/config.json`.
+- Start Codex sessions through `codex-proxy` so `GSD_RUNTIME=codex` is present.
+- Apply the project GSD defaults with
+  `GSD_RUNTIME=codex bash scripts/bootstrap-gsd-defaults.sh`.
+- Do not edit `~/.codex/*` manually as the source of truth. Change managed
+  sources in `/home/user/work/core-principles/`, then reinstall.
+- Model routing:
+  - heavy -> `gpt-5.5`
+  - standard -> `gpt-5.3-codex`
+  - light -> `gpt-5.4-mini`
+- Verify the runtime with `make doctor`.
 
 Use these skills when running the project process:
 

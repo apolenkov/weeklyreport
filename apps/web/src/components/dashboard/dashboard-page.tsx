@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { useTRPC } from '../../lib/trpc-context';
-import { mapDashboardData } from '../../lib/mappers';
+import { useTRPC } from "../../lib/trpc-context";
+import { mapDashboardData } from "../../lib/mappers";
 
-import { KpiCards } from './kpi-cards';
-import { AlertBar } from './alert-bar';
-import { BlockedAtRiskTable } from './blocked-at-risk-table';
-import { LeadReportsGrid } from './lead-reports-grid';
-import { ReportArchiveSection } from './report-archive-section';
-import { ToggleAllButton } from './toggle-all-button';
-import { DashboardSkeleton } from './dashboard-skeleton';
-import { ActivityLivePanel } from './activity-live-panel';
+import { KpiCards } from "./kpi-cards";
+import { AlertBar } from "./alert-bar";
+import { BlockedAtRiskTable } from "./blocked-at-risk-table";
+import { LeadReportsGrid } from "./lead-reports-grid";
+import { ReportArchiveSection } from "./report-archive-section";
+import { ToggleAllButton } from "./toggle-all-button";
+import { DashboardSkeleton } from "./dashboard-skeleton";
+import { ActivityLivePanel } from "./activity-live-panel";
 
 export function DashboardPage() {
   const trpc = useTRPC();
@@ -28,7 +28,7 @@ export function DashboardPage() {
       toast.error(
         reviewQ.error instanceof Error
           ? `Failed to load dashboard: ${reviewQ.error.message}`
-          : 'Failed to load dashboard',
+          : "Failed to load dashboard",
       );
     }
   }, [reviewQ.isError, reviewQ.error]);
@@ -38,7 +38,7 @@ export function DashboardPage() {
       toast.error(
         archiveQ.error instanceof Error
           ? `Failed to load archive: ${archiveQ.error.message}`
-          : 'Failed to load archive',
+          : "Failed to load archive",
       );
     }
   }, [archiveQ.isError, archiveQ.error]);
@@ -48,7 +48,7 @@ export function DashboardPage() {
       toast.error(
         weeklyQ.error instanceof Error
           ? `Failed to load weekly report: ${weeklyQ.error.message}`
-          : 'Failed to load weekly report',
+          : "Failed to load weekly report",
       );
     }
   }, [weeklyQ.isError, weeklyQ.error]);
@@ -60,21 +60,22 @@ export function DashboardPage() {
     // trigger and any other page-level accordion controls.
     const root = sectionsRef.current;
     if (!root) return;
-    const buttons = root.querySelectorAll<HTMLButtonElement>('[aria-expanded]');
+    const buttons = root.querySelectorAll<HTMLButtonElement>("[aria-expanded]");
     const anyExpanded = Array.from(buttons).some(
-      (btn) => btn.getAttribute('aria-expanded') === 'true',
+      (btn) => btn.getAttribute("aria-expanded") === "true",
     );
     buttons.forEach((btn) => {
       if (
-        (anyExpanded && btn.getAttribute('aria-expanded') === 'true') ||
-        (!anyExpanded && btn.getAttribute('aria-expanded') === 'false')
+        (anyExpanded && btn.getAttribute("aria-expanded") === "true") ||
+        (!anyExpanded && btn.getAttribute("aria-expanded") === "false")
       ) {
         btn.click();
       }
     });
   }
 
-  const isLoading = reviewQ.isLoading || archiveQ.isLoading || weeklyQ.isLoading;
+  const isLoading =
+    reviewQ.isLoading || archiveQ.isLoading || weeklyQ.isLoading;
 
   if (isLoading || !reviewQ.data || !archiveQ.data || !weeklyQ.data) {
     return (
@@ -100,7 +101,7 @@ export function DashboardPage() {
     weeklyReport: weeklyQ.data,
   });
   const { kpi, leads, blockedAtRisk, pendingLeads } = dashboard;
-  const departmentLabel = `${weeklyQ.data.departmentName} Department`;
+  const departmentLabel = weeklyQ.data.departmentName;
 
   return (
     <div className="space-y-6" ref={sectionsRef}>
@@ -111,7 +112,8 @@ export function DashboardPage() {
             Dashboard
           </h1>
           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            {weeklyQ.data.weekLabel ?? 'Current period'} &middot; {departmentLabel}
+            {weeklyQ.data.weekLabel ?? "Current period"} &middot;{" "}
+            {departmentLabel}
           </p>
         </div>
         <div className="flex items-center gap-3">

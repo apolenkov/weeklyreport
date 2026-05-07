@@ -1,38 +1,44 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { roleSchema } from './auth';
+import { roleSchema } from "./auth";
 
 /** Rejects strings that contain only whitespace or zero-width characters */
 const noInvisibleOnly = (val: string) =>
-  val.replace(/[\s\u200B\u200C\u200D\uFEFF]/g, '').length > 0;
+  val.replace(/[\s\u200B\u200C\u200D\uFEFF]/g, "").length > 0;
 
 /** Rejects strings containing null bytes (PostgreSQL incompatible) */
-const noNullBytes = (val: string) => !val.includes('\u0000');
+const noNullBytes = (val: string) => !val.includes("\u0000");
 
 /**
  * Safe text schema: rejects null bytes and zero-width-space-only strings.
  * Use in place of z.string().min(N).max(M) for all user-facing text fields.
  */
 const safeText = (opts: { min?: number; max?: number } = {}) =>
-  z.string()
+  z
+    .string()
     .min(opts.min ?? 1)
     .max(opts.max ?? 500)
-    .refine(noNullBytes, { message: 'Text must not contain null bytes' })
-    .refine(noInvisibleOnly, { message: 'Text must contain visible characters' });
+    .refine(noNullBytes, { message: "Text must not contain null bytes" })
+    .refine(noInvisibleOnly, {
+      message: "Text must contain visible characters",
+    });
 
 /** Rejects dates before year 2000 (prevents pre-epoch/nonsensical report dates) */
 const reportDate = () =>
-  z.coerce.date().refine(
-    (d) => d.getFullYear() >= 2000,
-    { message: 'Date must be after year 2000' },
-  );
+  z.coerce.date().refine((d) => d.getFullYear() >= 2000, {
+    message: "Date must be after year 2000",
+  });
 
-export const trafficLightStatusSchema = z.enum(['green', 'yellow', 'red']);
-export const itemTypeSchema = z.enum(['current', 'next']);
-export const itemWorkflowStatusSchema = z.enum(['done', 'in_progress', 'blocked']);
-export const reportSectionStatusSchema = z.enum(['draft', 'submitted']);
-export const reportStatusSchema = z.enum(['draft', 'published']);
-export const periodStatusSchema = z.enum(['open', 'published', 'reopened']);
+export const trafficLightStatusSchema = z.enum(["green", "yellow", "red"]);
+export const itemTypeSchema = z.enum(["current", "next"]);
+export const itemWorkflowStatusSchema = z.enum([
+  "done",
+  "in_progress",
+  "blocked",
+]);
+export const reportSectionStatusSchema = z.enum(["draft", "submitted"]);
+export const reportStatusSchema = z.enum(["draft", "published"]);
+export const periodStatusSchema = z.enum(["open", "published", "reopened"]);
 
 export const projectStatusInputSchema = z.object({
   projectId: z.string().uuid(),
@@ -85,7 +91,7 @@ export const priorityInputSchema = z.object({
 
 export const draftSaveSchema = z.object({
   reportSectionId: z.string().uuid(),
-  status: reportSectionStatusSchema.default('draft'),
+  status: reportSectionStatusSchema.default("draft"),
   projectStatuses: z.array(projectStatusInputSchema),
   items: z.array(itemInputSchema).max(100),
   risks: z.array(riskInputSchema).max(100),
@@ -95,16 +101,23 @@ export const draftSaveSchema = z.object({
 
 export const submitSectionSchema = draftSaveSchema.extend({
   confirmed: z.literal(true),
-  projectStatuses: z.array(projectStatusInputSchema.extend({
-    status: trafficLightStatusSchema,
-  })).min(1),
-  priorities: z.array(priorityInputSchema).min(1).refine(
-    (priorities) => {
-      const ranks = priorities.map((p) => p.rank);
-      return new Set(ranks).size === ranks.length;
-    },
-    { message: 'Priority ranks must be unique' },
-  ),
+  projectStatuses: z
+    .array(
+      projectStatusInputSchema.extend({
+        status: trafficLightStatusSchema,
+      }),
+    )
+    .min(1),
+  priorities: z
+    .array(priorityInputSchema)
+    .min(1)
+    .refine(
+      (priorities) => {
+        const ranks = priorities.map((p) => p.rank);
+        return new Set(ranks).size === ranks.length;
+      },
+      { message: "Priority ranks must be unique" },
+    ),
 });
 
 // 35-04: per-project list of stages owned by the section author on this
@@ -144,6 +157,7 @@ export const reportSectionReadModelSchema = z.object({
   authorId: z.string().uuid(),
   authorName: z.string().min(1),
   authorRole: roleSchema.optional(),
+  departmentName: z.string().min(1).max(200).optional(),
   status: reportSectionStatusSchema,
   submittedAt: z.coerce.date().nullable(),
   projects: z.array(projectReadModelSchema),
@@ -219,10 +233,10 @@ export const assembledReportSchema = z.object({
 });
 
 export const pdfExportStatusSchema = z.enum([
-  'queued',
-  'processing',
-  'completed',
-  'failed',
+  "queued",
+  "processing",
+  "completed",
+  "failed",
 ]);
 
 export const pdfExportRequestSchema = z.object({
@@ -265,8 +279,12 @@ export const reportPeriodSchema = z.object({
 
 // NOTIF-02 (Phase 29-05): 'escalation' added for T+2h heads-only digest.
 // Bypasses User.notificationOptOut — heads must always be notified.
-export const adminReminderRuleKindSchema = z.enum(['deadline', 'follow_up', 'escalation']);
-export const adminReminderRuleStatusSchema = z.enum(['active', 'paused']);
+export const adminReminderRuleKindSchema = z.enum([
+  "deadline",
+  "follow_up",
+  "escalation",
+]);
+export const adminReminderRuleStatusSchema = z.enum(["active", "paused"]);
 
 export const adminReminderRuleSchema = z.object({
   id: z.string().uuid(),
@@ -279,9 +297,9 @@ export const adminReminderRuleSchema = z.object({
 });
 
 export const adminReminderExecutionStatusSchema = z.enum([
-  'queued',
-  'sent',
-  'failed',
+  "queued",
+  "sent",
+  "failed",
 ]);
 
 export const adminReminderExecutionSchema = z.object({
@@ -296,7 +314,7 @@ export const adminReminderExecutionSchema = z.object({
   errorMessage: z.string().nullable(),
 });
 
-export const carryOverStatusSchema = z.enum(['pending', 'completed', 'failed']);
+export const carryOverStatusSchema = z.enum(["pending", "completed", "failed"]);
 
 export const carryOverRecordSchema = z.object({
   id: z.string().uuid(),
@@ -423,7 +441,7 @@ export const failedJobListSchema = z.object({
   nextCursor: z.number().int().min(0).nullable(),
 });
 
-export const queueNameSchema = z.enum(['email-reminder']);
+export const queueNameSchema = z.enum(["email-reminder"]);
 
 export type FailedJob = z.infer<typeof failedJobSchema>;
 export type FailedJobList = z.infer<typeof failedJobListSchema>;
@@ -458,7 +476,7 @@ export const portfolioProductOverviewSchema = z.object({
 });
 
 export const escalationSchema = z.object({
-  type: z.enum(['blocked', 'at_risk', 'unresolved_risk']),
+  type: z.enum(["blocked", "at_risk", "unresolved_risk"]),
   productName: z.string().min(1),
   stageName: z.string().nullable(),
   leadName: z.string().min(1),
@@ -489,7 +507,9 @@ export type StageAssignment = z.infer<typeof stageAssignmentSchema>;
 export type VersionSnapshot = z.infer<typeof versionSnapshotSchema>;
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 export type PeriodReadModel = z.infer<typeof periodReadModelSchema>;
-export type PortfolioProductOverview = z.infer<typeof portfolioProductOverviewSchema>;
+export type PortfolioProductOverview = z.infer<
+  typeof portfolioProductOverviewSchema
+>;
 export type Escalation = z.infer<typeof escalationSchema>;
 export type WeeklyReportReadModel = z.infer<typeof weeklyReportReadModelSchema>;
 
@@ -497,10 +517,14 @@ export type DraftSavePayload = z.input<typeof draftSaveSchema>;
 export type DraftSaveInput = z.infer<typeof draftSaveSchema>;
 export type SubmitSectionPayload = z.input<typeof submitSectionSchema>;
 export type SubmitSectionInput = z.infer<typeof submitSectionSchema>;
-export type ReportSectionReadModel = z.infer<typeof reportSectionReadModelSchema>;
+export type ReportSectionReadModel = z.infer<
+  typeof reportSectionReadModelSchema
+>;
 export type ProjectReadModel = z.infer<typeof projectReadModelSchema>;
 export type OwnedStage = z.infer<typeof ownedStageSchema>;
-export type SubmissionDashboardRow = z.infer<typeof submissionDashboardRowSchema>;
+export type SubmissionDashboardRow = z.infer<
+  typeof submissionDashboardRowSchema
+>;
 export type PortfolioOverview = z.infer<typeof portfolioOverviewSchema>;
 export type AssembledReport = z.infer<typeof assembledReportSchema>;
 export type PdfExportRequest = z.infer<typeof pdfExportRequestSchema>;
@@ -509,7 +533,9 @@ export type AdminUser = z.infer<typeof adminUserSchema>;
 export type AdminProject = z.infer<typeof adminProjectSchema>;
 export type ReportPeriod = z.infer<typeof reportPeriodSchema>;
 export type AdminReminderRule = z.infer<typeof adminReminderRuleSchema>;
-export type AdminReminderExecution = z.infer<typeof adminReminderExecutionSchema>;
+export type AdminReminderExecution = z.infer<
+  typeof adminReminderExecutionSchema
+>;
 export type AdminSnapshot = z.infer<typeof adminSnapshotSchema>;
 export type CarryOverRecord = z.infer<typeof carryOverRecordSchema>;
 export type CarryOverExecution = z.infer<typeof carryOverExecutionSchema>;
@@ -546,10 +572,10 @@ export type PaginatedResult<T> = {
 };
 
 export type DraftSaveValidationErrorCode =
-  | 'SECTION_ALREADY_SUBMITTED'
-  | 'MISSING_TRAFFIC_LIGHT'
-  | 'MISSING_CURRENT_ITEM'
-  | 'MISSING_PRIORITIES';
+  | "SECTION_ALREADY_SUBMITTED"
+  | "MISSING_TRAFFIC_LIGHT"
+  | "MISSING_CURRENT_ITEM"
+  | "MISSING_PRIORITIES";
 
 export type DraftSaveValidationError = {
   code: DraftSaveValidationErrorCode;
@@ -560,11 +586,11 @@ export function validateSubmitInput(
   section: ReportSectionReadModel,
   input: SubmitSectionInput | SubmitSectionPayload,
 ): DraftSaveValidationError[] {
-  if (section.status === 'submitted') {
+  if (section.status === "submitted") {
     return [
       {
-        code: 'SECTION_ALREADY_SUBMITTED',
-        message: 'Section has already been submitted.',
+        code: "SECTION_ALREADY_SUBMITTED",
+        message: "Section has already been submitted.",
       },
     ];
   }
@@ -578,18 +604,18 @@ export function validateSubmitInput(
 
     if (!matchingStatus?.status) {
       errors.push({
-        code: 'MISSING_TRAFFIC_LIGHT',
+        code: "MISSING_TRAFFIC_LIGHT",
         message: `Project ${project.projectName} must have a traffic light status.`,
       });
     }
 
     const hasCurrentItem = input.items.some(
-      (item) => item.projectId === project.projectId && item.type === 'current',
+      (item) => item.projectId === project.projectId && item.type === "current",
     );
 
     if (!hasCurrentItem) {
       errors.push({
-        code: 'MISSING_CURRENT_ITEM',
+        code: "MISSING_CURRENT_ITEM",
         message: `Project ${project.projectName} needs at least one Current Week item.`,
       });
     }
@@ -597,13 +623,15 @@ export function validateSubmitInput(
 
   if (input.priorities.length === 0) {
     errors.push({
-      code: 'MISSING_PRIORITIES',
-      message: 'At least one priority must be added before submit.',
+      code: "MISSING_PRIORITIES",
+      message: "At least one priority must be added before submit.",
     });
-  } else if (input.priorities.some((priority) => priority.text.trim().length === 0)) {
+  } else if (
+    input.priorities.some((priority) => priority.text.trim().length === 0)
+  ) {
     errors.push({
-      code: 'MISSING_PRIORITIES',
-      message: 'All priorities must be filled before submit.',
+      code: "MISSING_PRIORITIES",
+      message: "All priorities must be filled before submit.",
     });
   }
 

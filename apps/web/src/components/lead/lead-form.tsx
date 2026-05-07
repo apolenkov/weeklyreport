@@ -1,33 +1,36 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo, useRef, useContext } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
+import { useState, useEffect, useMemo, useRef, useContext } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 import {
   invalidateLeadForm,
   invalidateLeadHistory,
   invalidateDashboard,
-} from '../../lib/cache-keys';
-import { SessionContext } from '../../lib/session-provider';
-import { mapLeadFormData } from '../../lib/mappers';
-import { ownedStagesForProject } from '../../lib/mappers/lead-form';
-import { isoWeekNumber, formatDateRange } from '../../lib/mappers/lead-history';
-import { useLeadFormAutosave, stableStringify } from '../../hooks/use-lead-form-autosave';
-import { LeadFormSkeleton } from './lead-form-skeleton';
-import { LeadFormSyncBridge } from './lead-form-sync-bridge';
-import { SdlcTooltipProvider } from '../ui/sdlc-tooltip';
-import { PeriodNavigator } from './period-navigator';
-import { FillFromButton } from './fill-from-button';
-import { VersionHistoryNav } from './version-history-nav';
-import { CurrentWeekSection } from './current-week-section';
-import { NextWeekSection } from './next-week-section';
-import { DecisionsSection } from './decisions-section';
-import { PrioritiesSection } from './priorities-section';
-import { ConfirmDeleteDialog } from './confirm-delete-dialog';
-import { RequestReopenDialog } from './request-reopen-dialog';
+} from "../../lib/cache-keys";
+import { SessionContext } from "../../lib/session-provider";
+import { mapLeadFormData } from "../../lib/mappers";
+import { ownedStagesForProject } from "../../lib/mappers/lead-form";
+import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
+import {
+  useLeadFormAutosave,
+  stableStringify,
+} from "../../hooks/use-lead-form-autosave";
+import { LeadFormSkeleton } from "./lead-form-skeleton";
+import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
+import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
+import { PeriodNavigator } from "./period-navigator";
+import { FillFromButton } from "./fill-from-button";
+import { VersionHistoryNav } from "./version-history-nav";
+import { CurrentWeekSection } from "./current-week-section";
+import { NextWeekSection } from "./next-week-section";
+import { DecisionsSection } from "./decisions-section";
+import { PrioritiesSection } from "./priorities-section";
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
+import { RequestReopenDialog } from "./request-reopen-dialog";
 
 import type {
   Product,
@@ -37,12 +40,12 @@ import type {
   PriorityEntry,
   ReportPeriod,
   VersionSnapshot,
-} from './mock-data';
+} from "./mock-data";
 
 import type {
   ReportSectionReadModel,
   DraftSavePayload,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 type LeadFormProps = {
   readonly period?: string;
@@ -70,40 +73,87 @@ type LeadFormProps = {
 // SVG Icon components
 function GridIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0" stroke="var(--color-primary)" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 3h7v7H3z" /><path d="M14 3h7v7h-7z" /><path d="M3 14h7v7H3z" /><path d="M14 14h7v7h-7z" />
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 flex-shrink-0"
+      stroke="var(--color-primary)"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 3h7v7H3z" />
+      <path d="M14 3h7v7h-7z" />
+      <path d="M3 14h7v7H3z" />
+      <path d="M14 14h7v7h-7z" />
     </svg>
   );
 }
 
 function CalendarIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0" stroke="var(--color-primary)" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 flex-shrink-0"
+      stroke="var(--color-primary)"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>
   );
 }
 
 function NextWeekIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0" stroke="var(--color-primary)" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /><path d="M12 16l3-3-3-3" />
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 flex-shrink-0"
+      stroke="var(--color-primary)"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+      <path d="M12 16l3-3-3-3" />
     </svg>
   );
 }
 
 function AlertIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0" stroke="var(--color-destructive)" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 flex-shrink-0"
+      stroke="var(--color-destructive)"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
     </svg>
   );
 }
 
 function ChatIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0" stroke="var(--color-starbucks-accent)" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 flex-shrink-0"
+      stroke="var(--color-starbucks-accent)"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
     </svg>
   );
@@ -111,7 +161,15 @@ function ChatIcon() {
 
 function StarIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0" stroke="var(--color-starbucks-gold)" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 flex-shrink-0"
+      stroke="var(--color-starbucks-gold)"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   );
@@ -119,7 +177,13 @@ function StarIcon() {
 
 function CollapseIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" stroke="currentColor" fill="none" strokeWidth={2}>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+    >
       <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
     </svg>
   );
@@ -133,7 +197,7 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
       stroke="currentColor"
       fill="none"
       strokeWidth={2}
-      style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+      style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
     >
       <path d="M6 9l6 6 6-6" />
     </svg>
@@ -163,7 +227,7 @@ type AccordionSectionProps = {
 function AccordionSection({
   icon,
   title,
-  titleColor = 'var(--color-primary)',
+  titleColor = "var(--color-primary)",
   badge,
   badgeStyle,
   subtitle,
@@ -217,7 +281,7 @@ function AccordionSection({
 
       <div
         className="grid transition-[grid-template-rows] duration-300"
-        style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
+        style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
       >
         <div className="min-h-0 overflow-hidden">
           {/* pt-2 = breathing room between the section header (p-5) and the
@@ -235,17 +299,20 @@ function AccordionSection({
  * raw shape carries every field the schema requires (owner/impact on
  * decisions, tag/workflowStatus on items, etc.) so this round-trips cleanly.
  */
-function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayload {
+function sectionToDraftPayload(
+  section: ReportSectionReadModel,
+): DraftSavePayload {
   // Drop rows whose required text fields are empty or whitespace-only. The
   // server's safeText({min:1}) Zod refinement rejects them, which would
   // otherwise produce "Save failed" toast every time the user clicks
   // "+ Add Risk/Decision/Item" before typing. Empty rows live only in
   // local UI state until the user fills them in; once any required field
   // becomes non-empty the row joins the autosave payload.
-  const hasText = (s: string | null | undefined) => typeof s === 'string' && s.trim().length > 0;
+  const hasText = (s: string | null | undefined) =>
+    typeof s === "string" && s.trim().length > 0;
   return {
     reportSectionId: section.reportSectionId,
-    status: 'draft',
+    status: "draft",
     projectStatuses: section.projects.map((p) => ({
       projectId: p.projectId,
       status: p.trafficLight ?? undefined,
@@ -295,41 +362,49 @@ function sectionToDraftPayload(section: ReportSectionReadModel): DraftSavePayloa
   };
 }
 
-export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical }: LeadFormProps) {
+export function LeadForm({
+  period,
+  reportId: pinnedReportId,
+  redirectToCanonical,
+}: LeadFormProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const requestedAuthorId = searchParams.get('authorId') ?? undefined;
+  const requestedAuthorId = searchParams.get("authorId") ?? undefined;
   const requestedAuthorIdNormalized = requestedAuthorId?.trim() || undefined;
   const sessionState = useContext(SessionContext);
-  const isPinnedAuthorOwnView =
-    Boolean(
-      pinnedReportId &&
-        requestedAuthorIdNormalized &&
-        sessionState?.user?.id &&
-        requestedAuthorIdNormalized === sessionState.user.id,
-    );
-  const isPinnedAuthorView = Boolean(pinnedReportId && requestedAuthorIdNormalized && !isPinnedAuthorOwnView);
+  const isPinnedAuthorOwnView = Boolean(
+    pinnedReportId &&
+    requestedAuthorIdNormalized &&
+    sessionState?.user?.id &&
+    requestedAuthorIdNormalized === sessionState.user.id,
+  );
+  const isPinnedAuthorView = Boolean(
+    pinnedReportId && requestedAuthorIdNormalized && !isPinnedAuthorOwnView,
+  );
 
   // Four queries compose the lead-form view. `byPeriod` and `versions` depend
   // on identifiers from `getActive` (or — 35-07 — the pinned `reportId` from
   // the dynamic route), so they're gated by `enabled`.
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
-  const activeReportId = activeQ.data?.reportId ?? '';
-  const activeSectionId = activeQ.data?.reportSectionId ?? '';
+  const activeReportId = activeQ.data?.reportId ?? "";
+  const activeSectionId = activeQ.data?.reportSectionId ?? "";
 
   // 35-07: when the page renders under `/lead/report/[reportId]`, scope the
   // data load to the path-segment id rather than the session's active period.
   // This lets the lead view (and bookmark) any past week of their own history.
-  const targetReportId = pinnedReportId && pinnedReportId !== '' ? pinnedReportId : activeReportId;
+  const targetReportId =
+    pinnedReportId && pinnedReportId !== "" ? pinnedReportId : activeReportId;
 
   const byPeriodQ = useQuery({
     ...trpc.leadForm.byPeriod.queryOptions({
       reportId: targetReportId,
-      ...(requestedAuthorIdNormalized ? { authorId: requestedAuthorIdNormalized } : {}),
+      ...(requestedAuthorIdNormalized
+        ? { authorId: requestedAuthorIdNormalized }
+        : {}),
     }),
-    enabled: targetReportId !== '',
+    enabled: targetReportId !== "",
   });
 
   // The section id for actions (autosave / submit / revoke) comes from the
@@ -340,8 +415,10 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     byPeriodQ.data?.section.reportSectionId ?? activeSectionId;
 
   const versionsQ = useQuery({
-    ...trpc.leadForm.versions.queryOptions({ reportSectionId: sectionIdForActions }),
-    enabled: sectionIdForActions !== '',
+    ...trpc.leadForm.versions.queryOptions({
+      reportSectionId: sectionIdForActions,
+    }),
+    enabled: sectionIdForActions !== "",
   });
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
 
@@ -358,7 +435,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     if (!activeReportId) return;
     const authorQuery = requestedAuthorId
       ? `?authorId=${encodeURIComponent(requestedAuthorId)}`
-      : '';
+      : "";
     router.replace(`/lead/report/${activeReportId}${authorQuery}`);
   }, [
     redirectToCanonical,
@@ -375,7 +452,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
       toast.error(
         activeQ.error instanceof Error
           ? `Failed to load active report: ${activeQ.error.message}`
-          : 'Failed to load active report',
+          : "Failed to load active report",
       );
     }
   }, [activeQ.isError, activeQ.error]);
@@ -385,7 +462,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
       toast.error(
         byPeriodQ.error instanceof Error
           ? `Failed to load form: ${byPeriodQ.error.message}`
-          : 'Failed to load form',
+          : "Failed to load form",
       );
     }
   }, [byPeriodQ.isError, byPeriodQ.error]);
@@ -395,7 +472,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
       toast.error(
         versionsQ.error instanceof Error
           ? `Failed to load versions: ${versionsQ.error.message}`
-          : 'Failed to load versions',
+          : "Failed to load versions",
       );
     }
   }, [versionsQ.isError, versionsQ.error]);
@@ -405,7 +482,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
       toast.error(
         historyQ.error instanceof Error
           ? `Failed to load history: ${historyQ.error.message}`
-          : 'Failed to load history',
+          : "Failed to load history",
       );
     }
   }, [historyQ.isError, historyQ.error]);
@@ -419,15 +496,24 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
   // schema field that the lossy Lead* mappers drop (owner/impact/etc).
   const [draftSection, setDraftSection] =
     useState<ReportSectionReadModel | null>(null);
+  const lastServerDraftKeyRef = useRef<string | null>(null);
 
   // Re-seed local state whenever the server-side section changes (initial load
-  // or post-mutation invalidation).
+  // or post-mutation invalidation). React Query can hand this component a new
+  // object reference for the same server payload while a local autosave is
+  // pending; compare the stable draft payload key so that refetch noise does
+  // not wipe unsaved dialog edits before the debounce fires.
   useEffect(() => {
-    if (byPeriodQ.data?.section) {
-      setDraftSection(byPeriodQ.data.section);
-      setIsSubmitted(byPeriodQ.data.section.status === 'submitted');
-    }
-  }, [byPeriodQ.data]);
+    const section = byPeriodQ.data?.section;
+    if (!section) return;
+
+    const serverDraftKey = stableStringify(sectionToDraftPayload(section));
+    setIsSubmitted(section.status === "submitted");
+
+    if (lastServerDraftKeyRef.current === serverDraftKey) return;
+    lastServerDraftKeyRef.current = serverDraftKey;
+    setDraftSection(section);
+  }, [byPeriodQ.data?.section]);
 
   // ---- Mutations ----
   const submitMut = useMutation(
@@ -437,10 +523,10 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
         invalidateLeadHistory(qc, trpc);
         setIsSubmitted(true);
         setShowSubmitConfirm(false);
-        toast.success('Report submitted');
+        toast.success("Report submitted");
       },
       onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : 'Submit failed';
+        const msg = err instanceof Error ? err.message : "Submit failed";
         toast.error(msg);
       },
     }),
@@ -453,10 +539,10 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
         invalidateDashboard(qc, trpc);
         invalidateLeadHistory(qc, trpc);
         setIsSubmitted(false);
-        toast.success('Section unlocked');
+        toast.success("Section unlocked");
       },
       onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : 'Revoke failed';
+        const msg = err instanceof Error ? err.message : "Revoke failed";
         toast.error(msg);
       },
     }),
@@ -474,10 +560,11 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
       onSuccess: () => {
         setShowReopenDialog(false);
         setReopenError(null);
-        toast.success('Reopen request sent to Head');
+        toast.success("Reopen request sent to Head");
       },
       onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : 'Reopen request failed';
+        const msg =
+          err instanceof Error ? err.message : "Reopen request failed";
         setReopenError(msg);
       },
     }),
@@ -487,10 +574,10 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     trpc.leadForm.fillFrom.mutationOptions({
       onSuccess: () => {
         invalidateLeadForm(qc, trpc);
-        toast.success('Form filled from selected period');
+        toast.success("Form filled from selected period");
       },
       onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : 'Fill from failed';
+        const msg = err instanceof Error ? err.message : "Fill from failed";
         toast.error(msg);
       },
     }),
@@ -500,10 +587,10 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     trpc.leadForm.restoreVersion.mutationOptions({
       onSuccess: () => {
         invalidateLeadForm(qc, trpc);
-        toast.success('Version restored');
+        toast.success("Version restored");
       },
       onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : 'Restore failed';
+        const msg = err instanceof Error ? err.message : "Restore failed";
         toast.error(msg);
       },
     }),
@@ -518,7 +605,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
       onSuccess: () => {
         invalidateLeadForm(qc, trpc);
         if (isManualSaveRef.current) {
-          toast.success('Version saved');
+          toast.success("Version saved");
           isManualSaveRef.current = false;
         }
       },
@@ -527,7 +614,8 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
         // user request. Manual failures surface so the user knows the
         // checkpoint didn't land.
         if (isManualSaveRef.current) {
-          const msg = err instanceof Error ? err.message : 'Save Version failed';
+          const msg =
+            err instanceof Error ? err.message : "Save Version failed";
           toast.error(msg);
           isManualSaveRef.current = false;
         }
@@ -553,6 +641,11 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     byPeriodQ.isLoading ||
     versionsQ.isLoading ||
     historyQ.isLoading;
+  const awaitingCanonicalRedirect =
+    !!redirectToCanonical &&
+    !period &&
+    !pinnedReportId &&
+    activeReportId !== "";
 
   // Toggle All state — must live above the early return below, otherwise
   // the hook count drifts between renders and React throws "Rendered more
@@ -589,7 +682,10 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     initialSavedKey,
     onSaveSuccess: () => {
       autosaveCountRef.current += 1;
-      if (autosaveCountRef.current % AUTO_SNAPSHOT_EVERY === 0 && sectionIdForActions) {
+      if (
+        autosaveCountRef.current % AUTO_SNAPSHOT_EVERY === 0 &&
+        sectionIdForActions
+      ) {
         createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
       }
     },
@@ -601,10 +697,14 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
   // matches the dropdown. Restores the title on unmount.
   const titleHistoryEntry = useMemo(() => {
     if (!byPeriodQ.data?.section?.reportId || !historyQ.data) return null;
-    return historyQ.data.find((h) => h.reportId === byPeriodQ.data.section.reportId) ?? null;
+    return (
+      historyQ.data.find(
+        (h) => h.reportId === byPeriodQ.data.section.reportId,
+      ) ?? null
+    );
   }, [byPeriodQ.data, historyQ.data]);
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") return;
     if (!titleHistoryEntry) return;
     const start = titleHistoryEntry.periodStart;
     const week = isoWeekNumber(start);
@@ -619,6 +719,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
   // Skeleton until all queries settle.
   if (
     isLoading ||
+    awaitingCanonicalRedirect ||
     activeQ.data === undefined ||
     !byPeriodQ.data ||
     !versionsQ.data ||
@@ -646,7 +747,8 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
   const versions: VersionSnapshot[] = data.versions as VersionSnapshot[];
   const currentUser = data.currentUser;
 
-  const isReadOnly = data.readOnly || !!period || isSubmitted || isPinnedAuthorView;
+  const isReadOnly =
+    data.readOnly || !!period || isSubmitted || isPinnedAuthorView;
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
@@ -673,7 +775,8 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
         // 35-04: preserve the dialog-supplied stageName (or '—' fallback
         // for legacy rows). Pass through to the raw section so saveDraft
         // hits the new DB column.
-        const stageName = d.stageName && d.stageName !== '—' ? d.stageName : null;
+        const stageName =
+          d.stageName && d.stageName !== "—" ? d.stageName : null;
         if (existing) {
           return {
             ...existing,
@@ -710,17 +813,29 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
       // narrowing `worst` away from the 'red' branch and emitting "no overlap"
       // diagnostics on the literal-union comparisons. 0=none, 1=on-track,
       // 2=at-risk, 3=blocked. Map back to the schema enum after the scan.
-      const worstByProduct = new Map<string, 'green' | 'yellow' | 'red' | null>();
+      const worstByProduct = new Map<
+        string,
+        "green" | "yellow" | "red" | null
+      >();
       for (const p of next) {
         let severity = 0;
         for (const s of p.stages) {
-          if (s.status === 'blocked') { severity = 3; break; }
-          if (s.status === 'at-risk') severity = Math.max(severity, 2);
-          else if (s.status === 'on-track') severity = Math.max(severity, 1);
+          if (s.status === "blocked") {
+            severity = 3;
+            break;
+          }
+          if (s.status === "at-risk") severity = Math.max(severity, 2);
+          else if (s.status === "on-track") severity = Math.max(severity, 1);
           // 'empty' contributes nothing; loop continues.
         }
-        const worst: 'green' | 'yellow' | 'red' | null =
-          severity === 3 ? 'red' : severity === 2 ? 'yellow' : severity === 1 ? 'green' : null;
+        const worst: "green" | "yellow" | "red" | null =
+          severity === 3
+            ? "red"
+            : severity === 2
+              ? "yellow"
+              : severity === 1
+                ? "green"
+                : null;
         worstByProduct.set(p.id, worst);
       }
       const merged = prev.projects.map((ps) =>
@@ -745,7 +860,8 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
         const existing = r.id ? existingById.get(r.id) : undefined;
         // 35-04: '—' is the legacy placeholder shown for rows that pre-
         // dated the column; treat it as null when saving.
-        const stageName = r.stageName && r.stageName !== '—' ? r.stageName : null;
+        const stageName =
+          r.stageName && r.stageName !== "—" ? r.stageName : null;
         if (existing) {
           return {
             ...existing,
@@ -777,10 +893,13 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
       // state — preserving "missing" ranks would resurrect deleted rows.
       // Match by rank when an existing raw entry has the same rank so we
       // keep its server-assigned id; otherwise insert a fresh row.
-      const existingByRank = new Map(prev.priorities.map((p) => [p.rank, p] as const));
+      const existingByRank = new Map(
+        prev.priorities.map((p) => [p.rank, p] as const),
+      );
       const merged = next.map((p) => {
         const existing = existingByRank.get(p.rank);
-        const stageName = p.stageName && p.stageName !== '—' ? p.stageName : null;
+        const stageName =
+          p.stageName && p.stageName !== "—" ? p.stageName : null;
         if (existing) {
           return { ...existing, text: p.text, stageName };
         }
@@ -798,27 +917,27 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
   // 'planned') is the inverse of `workflowToItemStatus` + a `completed` flag.
   // We translate it back so the modal-edit dialog can change Status without
   // a separate field surface for `workflowStatus` / `completed`.
-  function statusToRawFields(status: KanbanItem['status']): {
-    workflowStatus: 'done' | 'in_progress' | 'blocked';
+  function statusToRawFields(status: KanbanItem["status"]): {
+    workflowStatus: "done" | "in_progress" | "blocked";
     completed: boolean | null;
   } {
     switch (status) {
-      case 'completed':
-        return { workflowStatus: 'done', completed: true };
-      case 'blocked':
-        return { workflowStatus: 'blocked', completed: false };
-      case 'planned':
+      case "completed":
+        return { workflowStatus: "done", completed: true };
+      case "blocked":
+        return { workflowStatus: "blocked", completed: false };
+      case "planned":
         // 'planned' is computed-only — there's no DB enum for it. Next-week
         // items default to in_progress workflow status; the type='next' bit
         // alone makes them render as planned in the UI.
-        return { workflowStatus: 'in_progress', completed: false };
-      case 'in-progress':
+        return { workflowStatus: "in_progress", completed: false };
+      case "in-progress":
       default:
-        return { workflowStatus: 'in_progress', completed: false };
+        return { workflowStatus: "in_progress", completed: false };
     }
   }
 
-  function makeItemsChangeHandler(itemType: 'current' | 'next') {
+  function makeItemsChangeHandler(itemType: "current" | "next") {
     return (next: KanbanItem[]) => {
       setDraftSection((prev) => {
         if (!prev) return prev;
@@ -832,7 +951,8 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
           const existing = existingById.get(kb.id);
           // 35-04: kb.stageName is the dialog's selection. '—' is the
           // legacy placeholder; treat as null on save.
-          const stageName = kb.stageName && kb.stageName !== '—' ? kb.stageName : null;
+          const stageName =
+            kb.stageName && kb.stageName !== "—" ? kb.stageName : null;
           if (existing) {
             return {
               ...existing,
@@ -850,7 +970,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
             text: kb.text,
             // Schema requires safeText({min:1}) on tag; UI doesn't expose a
             // tag picker so we seed a default that survives validation.
-            tag: 'general',
+            tag: "general",
             workflowStatus: raw.workflowStatus,
             carriedOver: false,
             completed: raw.completed,
@@ -865,8 +985,8 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     };
   }
 
-  const handleCurrentWeekItemsChange = makeItemsChangeHandler('current');
-  const handleNextWeekItemsChange = makeItemsChangeHandler('next');
+  const handleCurrentWeekItemsChange = makeItemsChangeHandler("current");
+  const handleNextWeekItemsChange = makeItemsChangeHandler("next");
 
   // ---- Action handlers ----
   function handleSubmit() {
@@ -880,7 +1000,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     // reject if any are still invalid and toast the error.
     const projectStatuses = draftPayload.projectStatuses.map((p) => ({
       projectId: p.projectId,
-      status: p.status ?? ('green' as const),
+      status: p.status ?? ("green" as const),
     }));
     submitMut.mutate({
       ...draftPayload,
@@ -911,18 +1031,21 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     if (!sectionIdForActions) return;
     if (
       autosave.dirty &&
-      !window.confirm('You have unsaved changes. Continue and overwrite?')
+      !window.confirm("You have unsaved changes. Continue and overwrite?")
     ) {
       return;
     }
-    fillFromMut.mutate({ targetSectionId: sectionIdForActions, sourceSectionId });
+    fillFromMut.mutate({
+      targetSectionId: sectionIdForActions,
+      sourceSectionId,
+    });
   }
 
   function handleRestoreVersion(version: number) {
     if (!sectionIdForActions) return;
     if (
       autosave.dirty &&
-      !window.confirm('You have unsaved changes. Continue and overwrite?')
+      !window.confirm("You have unsaved changes. Continue and overwrite?")
     ) {
       return;
     }
@@ -945,15 +1068,15 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
 
   // Autosave indicator label.
   const autosaveLabel =
-    autosave.state === 'saving'
-      ? 'Saving...'
-      : autosave.state === 'pending'
-        ? 'Pending...'
-        : autosave.state === 'saved' && autosave.lastSavedAt
-          ? `Saved at ${autosave.lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-          : autosave.state === 'error'
-            ? 'Save failed'
-            : 'Autosaved';
+    autosave.state === "saving"
+      ? "Saving..."
+      : autosave.state === "pending"
+        ? "Pending..."
+        : autosave.state === "saved" && autosave.lastSavedAt
+          ? `Saved at ${autosave.lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+          : autosave.state === "error"
+            ? "Save failed"
+            : "Autosaved";
 
   return (
     <SdlcTooltipProvider>
@@ -1002,18 +1125,21 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
               Reopen (polite), head/admin → Revoke (destructive).
               Backend gates both anyway; this is the UX path.
             */}
-            {isSubmitted && currentUser.authorRole === 'lead' && (
+            {isSubmitted && currentUser.authorRole === "lead" && (
               <button
                 type="button"
                 className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={() => { setReopenError(null); setShowReopenDialog(true); }}
+                onClick={() => {
+                  setReopenError(null);
+                  setShowReopenDialog(true);
+                }}
                 disabled={requestReopenMut.isPending}
                 title="Ask Head to unlock this section"
               >
                 Request Reopen
               </button>
             )}
-            {isSubmitted && currentUser.authorRole !== 'lead' && (
+            {isSubmitted && currentUser.authorRole !== "lead" && (
               <button
                 type="button"
                 className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
@@ -1040,8 +1166,12 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
           <PeriodNavigator periods={periods} />
 
           <div className="flex min-w-[220px] flex-1 items-center justify-center gap-2">
-            <span className="text-sm text-[var(--color-muted-foreground)]">Development Department</span>
-            <span className="text-[var(--color-muted-foreground)]">&middot;</span>
+            <span className="text-sm text-[var(--color-muted-foreground)]">
+              {draftSection.departmentName ?? "Development"}
+            </span>
+            <span className="text-[var(--color-muted-foreground)]">
+              &middot;
+            </span>
             <span className="text-sm text-[var(--color-muted-foreground)]">
               {currentUser.name} &middot; {currentUser.role}
             </span>
@@ -1060,7 +1190,13 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
         {/* Submitted banner */}
         {isSubmitted && (
           <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)] bg-[var(--color-success)] p-4">
-            <svg viewBox="0 0 24 24" className="h-5 w-5 flex-shrink-0" stroke="var(--color-primary)" fill="none" strokeWidth={2}>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5 flex-shrink-0"
+              stroke="var(--color-primary)"
+              fill="none"
+              strokeWidth={2}
+            >
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0110 0v4" />
             </svg>
@@ -1082,7 +1218,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
             <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-muted)] p-4">
               <span className="text-sm text-[var(--color-muted-foreground)]">
                 Viewing past period
-                {period ? ` · ${period}` : ''}. This form is read-only.
+                {period ? ` · ${period}` : ""}. This form is read-only.
               </span>
             </div>
           )}
@@ -1097,7 +1233,9 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
           {...(sectionIdForActions ? { sectionId: sectionIdForActions } : {})}
         >
           {/* Product Status (SDLC Pipeline) */}
-          <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
+          <AccordionSection
+            groupSyncKey={groupSyncKey}
+            groupExpanded={groupExpanded}
             icon={<GridIcon />}
             title="Product Status"
             badge={`${products.length} assigned products`}
@@ -1107,7 +1245,9 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
           </AccordionSection>
 
           {/* Current Week */}
-          <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
+          <AccordionSection
+            groupSyncKey={groupSyncKey}
+            groupExpanded={groupExpanded}
             icon={<CalendarIcon />}
             title="Current Week"
             badge={`${currentWeekItems.length} items`}
@@ -1123,7 +1263,9 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
           </AccordionSection>
 
           {/* Next Week */}
-          <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
+          <AccordionSection
+            groupSyncKey={groupSyncKey}
+            groupExpanded={groupExpanded}
             icon={<NextWeekIcon />}
             title="Next Week"
             badge={`${nextWeekItems.length} items`}
@@ -1139,24 +1281,34 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
           </AccordionSection>
 
           {/* Risks & Blockers */}
-          <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
+          <AccordionSection
+            groupSyncKey={groupSyncKey}
+            groupExpanded={groupExpanded}
             icon={<AlertIcon />}
             title="Risks & Blockers"
             titleColor="var(--color-destructive)"
             badge={`${risks.length}`}
-            badgeStyle={{ background: '#fee2e2', color: 'var(--color-destructive)' }}
+            badgeStyle={{
+              background: "#fee2e2",
+              color: "var(--color-destructive)",
+            }}
           >
             <LeadFormSyncBridge.Risks />
           </AccordionSection>
         </LeadFormSyncBridge.Provider>
 
         {/* Decisions */}
-        <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
+        <AccordionSection
+          groupSyncKey={groupSyncKey}
+          groupExpanded={groupExpanded}
           icon={<ChatIcon />}
           title="Decisions"
           titleColor="var(--color-starbucks-accent)"
           badge={`${decisions.length}`}
-          badgeStyle={{ background: 'var(--color-success)', color: 'var(--color-starbucks-accent)' }}
+          badgeStyle={{
+            background: "var(--color-success)",
+            color: "var(--color-starbucks-accent)",
+          }}
         >
           <DecisionsSection
             decisions={decisions}
@@ -1168,7 +1320,9 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
         </AccordionSection>
 
         {/* Priorities — variable-length list */}
-        <AccordionSection groupSyncKey={groupSyncKey} groupExpanded={groupExpanded}
+        <AccordionSection
+          groupSyncKey={groupSyncKey}
+          groupExpanded={groupExpanded}
           icon={<StarIcon />}
           title="Priorities"
           titleColor="var(--color-starbucks-gold)"
@@ -1196,25 +1350,33 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
               Submit Report?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Your report will be locked and visible to the department head.
-              You will not be able to make changes after submission.
+              Your report will be locked and visible to the department head. You
+              will not be able to make changes after submission.
             </p>
             <div className="mt-3 space-y-1 text-sm">
               <div className="flex items-center gap-2">
                 <span className="font-medium">{currentWeekItems.length}</span>
-                <span className="text-[var(--color-muted-foreground)]">current week items</span>
+                <span className="text-[var(--color-muted-foreground)]">
+                  current week items
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">{nextWeekItems.length}</span>
-                <span className="text-[var(--color-muted-foreground)]">next week items</span>
+                <span className="text-[var(--color-muted-foreground)]">
+                  next week items
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">{risks.length}</span>
-                <span className="text-[var(--color-muted-foreground)]">risks</span>
+                <span className="text-[var(--color-muted-foreground)]">
+                  risks
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">{decisions.length}</span>
-                <span className="text-[var(--color-muted-foreground)]">decisions</span>
+                <span className="text-[var(--color-muted-foreground)]">
+                  decisions
+                </span>
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
@@ -1243,13 +1405,16 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
         pending={requestReopenMut.isPending}
         error={reopenError}
         onConfirm={handleRequestReopen}
-        onCancel={() => { setShowReopenDialog(false); setReopenError(null); }}
+        onCancel={() => {
+          setShowReopenDialog(false);
+          setReopenError(null);
+        }}
       />
 
       <ConfirmDeleteDialog
         open={showRevokeDialog}
         title="Revoke this submission?"
-        preview={currentUser.name ?? 'Lead submission'}
+        preview={currentUser.name ?? "Lead submission"}
         subtitle="Their form returns to Draft and they can edit again."
         consequence="The lead will be notified that their submission was revoked."
         confirmLabel="Revoke"

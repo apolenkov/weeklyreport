@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
 /**
  * Phase 35-06: BullMQ DLQ admin tab.
@@ -19,17 +19,17 @@ import { useTRPC } from '../../lib/trpc-context';
  * row falls off without a page refresh.
  */
 
-const QUEUE_NAME = 'email-reminder' as const;
+const QUEUE_NAME = "email-reminder" as const;
 
 function formatTimestamp(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return '—';
+  if (!Number.isFinite(ms) || ms <= 0) return "—";
   const d = new Date(ms);
-  return d.toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return d.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -57,9 +57,7 @@ export function JobsTab() {
         } else {
           // The job no longer exists (e.g. pruned by removeOnFail or already
           // retried elsewhere). Surface as a soft warning, not an error.
-          toast.info(
-            `Job ${result.jobId} no longer exists; list refreshed.`,
-          );
+          toast.info(`Job ${result.jobId} no longer exists; list refreshed.`);
         }
         void qc.invalidateQueries({
           queryKey: trpc.admin.jobs.listFailed.queryKey(),
@@ -101,8 +99,8 @@ export function JobsTab() {
           email-reminder queue
         </h2>
         <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-          Jobs that exhausted their retry limit. Click Retry to put a job
-          back into the queue.
+          Jobs that exhausted their retry limit. Click Retry to put a job back
+          into the queue.
         </p>
       </div>
 
@@ -111,9 +109,10 @@ export function JobsTab() {
       {listQuery.isError && (
         <div
           role="alert"
+          data-testid="jobs-error-state"
           className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
         >
-          Failed to load list: {String(listQuery.error?.message ?? 'unknown')}
+          Failed to load list: {String(listQuery.error?.message ?? "unknown")}
         </div>
       )}
 
@@ -131,11 +130,21 @@ export function JobsTab() {
           <table className="w-full text-left text-sm" data-testid="jobs-table">
             <thead>
               <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">ID</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Name</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Attempts</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Error</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Time</th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  ID
+                </th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  Name
+                </th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  Attempts
+                </th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  Error
+                </th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  Time
+                </th>
                 <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
                   Actions
                 </th>
@@ -145,7 +154,7 @@ export function JobsTab() {
               {jobs.map((job) => {
                 const isExpanded = expanded.has(job.id);
                 const isRetrying = retryingId === job.id && retryMut.isPending;
-                const reason = job.failedReason || '—';
+                const reason = job.failedReason || "—";
                 const truncated = truncate(reason, 80);
                 const canExpand = reason !== truncated;
                 return (
@@ -157,7 +166,9 @@ export function JobsTab() {
                     <td className="px-4 py-3 font-mono text-xs text-[var(--color-foreground)]">
                       {job.id}
                     </td>
-                    <td className="px-4 py-3 text-[var(--color-foreground)]">{job.name}</td>
+                    <td className="px-4 py-3 text-[var(--color-foreground)]">
+                      {job.name}
+                    </td>
                     <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
                       {job.attemptsMade}
                     </td>
@@ -165,8 +176,8 @@ export function JobsTab() {
                       <div
                         className={
                           isExpanded
-                            ? 'whitespace-pre-wrap break-words text-xs'
-                            : 'truncate text-xs'
+                            ? "whitespace-pre-wrap break-words text-xs"
+                            : "truncate text-xs"
                         }
                       >
                         {isExpanded ? reason : truncated}
@@ -183,7 +194,7 @@ export function JobsTab() {
                               : `Expand job ${job.id} error`
                           }
                         >
-                          {isExpanded ? 'Collapse' : 'Expand'}
+                          {isExpanded ? "Collapse" : "Expand"}
                         </button>
                       )}
                     </td>
@@ -198,7 +209,7 @@ export function JobsTab() {
                         className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
                         aria-label={`Retry job ${job.id}`}
                       >
-                        {isRetrying ? 'Retrying...' : 'Retry'}
+                        {isRetrying ? "Retrying..." : "Retry"}
                       </button>
                     </td>
                   </tr>
@@ -214,7 +225,12 @@ export function JobsTab() {
 
 function JobsSkeleton() {
   return (
-    <div className="rounded-[var(--radius)] border border-[var(--color-border)]">
+    <div
+      className="rounded-[var(--radius)] border border-[var(--color-border)]"
+      data-testid="jobs-loading-state"
+      aria-label="Loading failed jobs"
+      aria-live="polite"
+    >
       <div className="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3">
         {[0, 1, 2, 3, 4, 5].map((col) => (
           <div

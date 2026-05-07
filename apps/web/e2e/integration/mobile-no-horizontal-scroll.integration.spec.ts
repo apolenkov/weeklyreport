@@ -40,10 +40,7 @@ test.describe('Mobile — no horizontal scroll @MOB-01', () => {
   for (const entry of PAGES) {
     test(`${entry.path} fits the viewport`, async ({ page, context }, testInfo) => {
       // Skip on the desktop project — only mobile-ios / mobile-android run this.
-      test.skip(
-        testInfo.project.name === 'chromium-integration',
-        'Mobile-only spec',
-      );
+      expect(testInfo.project.name).not.toBe('chromium-integration');
 
       if (entry.auth !== 'public') {
         await loginAs(context, { role: entry.auth });
