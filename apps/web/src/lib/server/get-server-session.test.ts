@@ -63,13 +63,33 @@ describe('getServerSession', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it('returns null when the session cookie is absent', async () => {
+    vi.stubEnv('AUTH_DEV_MODE', 'false');
+    vi.stubEnv('AUTH_DEV_MODE_ALLOW_TEST', 'false');
     cookieStore.get.mockReturnValue(undefined);
     const result = await getServerSession();
     expect(result).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('uses the auth.me dev fallback when dev mode is enabled and no cookie exists', async () => {
+    vi.stubEnv('AUTH_DEV_MODE', 'true');
+    cookieStore.get.mockReturnValue(undefined);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [{ result: { data: { json: SESSION } } }],
+    });
+
+    const result = await getServerSession();
+    expect(result).toEqual(SESSION);
+
+    const [url, init] = expectDefined(fetchMock.mock.calls[0]);
+    expect(String(url)).toContain('/trpc/auth.me');
+    expect((init as RequestInit).headers).toBeUndefined();
+    expect((init as RequestInit).cache).toBe('no-store');
   });
 
   it('returns the decoded session when auth.me resolves', async () => {

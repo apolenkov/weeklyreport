@@ -62,6 +62,8 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 
 COOKIE_JAR="${TMP_DIR}/cookies.txt"
 HEAD_HTML="${TMP_DIR}/head-dashboard.html"
+DEV_FALLBACK_HEAD_HTML="${TMP_DIR}/dev-fallback-head-dashboard.html"
+DEV_FALLBACK_ADMIN_HTML="${TMP_DIR}/dev-fallback-admin.html"
 AUTH_JSON="${TMP_DIR}/auth-me.json"
 
 log 'verify dev login through web container rewrite'
@@ -71,6 +73,21 @@ curl -fsSL \
   -o "${HEAD_HTML}"
 
 grep -Eq 'Dashboard|Weekly Report|Lead Reports' "${HEAD_HTML}"
+
+log 'verify dev fallback SSR role gate without cookie'
+curl -fsS 'http://localhost:3000/head/dashboard' -o "${DEV_FALLBACK_HEAD_HTML}"
+grep -q 'Dashboard' "${DEV_FALLBACK_HEAD_HTML}"
+if grep -q 'Page unavailable for your role' "${DEV_FALLBACK_HEAD_HTML}"; then
+  log 'head dashboard rendered forbidden page under dev fallback'
+  exit 1
+fi
+
+curl -fsS 'http://localhost:3000/admin' -o "${DEV_FALLBACK_ADMIN_HTML}"
+grep -q 'Admin Panel' "${DEV_FALLBACK_ADMIN_HTML}"
+if grep -q 'Page unavailable for your role' "${DEV_FALLBACK_ADMIN_HTML}"; then
+  log 'admin page rendered forbidden page under dev fallback'
+  exit 1
+fi
 
 log 'verify authenticated tRPC through web container rewrite'
 curl -fsS \
@@ -89,6 +106,9 @@ grep -q '"role"' "${AUTH_JSON}"
   curl -s -o /dev/null -w '%{http_code}\n' 'http://localhost:3002/health/ready'
   printf 'mailpit=http://localhost:8025 -> '
   curl -s -o /dev/null -w '%{http_code}\n' 'http://localhost:8025/'
+  printf '\n## dev fallback SSR role gate\n'
+  printf 'head_dashboard=pass\n'
+  printf 'admin=pass\n'
   printf '\n## auth.me\n'
   cat "${AUTH_JSON}"
   printf '\n'
