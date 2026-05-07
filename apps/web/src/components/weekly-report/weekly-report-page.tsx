@@ -53,6 +53,7 @@ type WeeklyReportPageProps = {
    */
   readonly redirectToCanonical?: boolean;
   readonly canonicalBasePath?: string;
+  readonly authorId?: string;
 };
 
 function CollapseIcon() {
@@ -74,10 +75,12 @@ export function WeeklyReportPage({
   reportId,
   redirectToCanonical,
   canonicalBasePath = '/head/report',
+  authorId,
 }: WeeklyReportPageProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
   const router = useRouter();
+  const focusedAuthorId = authorId ?? null;
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
@@ -141,12 +144,16 @@ export function WeeklyReportPage({
     if (period) return;
     if (reportId) return;
     if (!resolvedReportId) return;
-    router.replace(`${canonicalBasePath}/${resolvedReportId}`);
+    const authorQuery = focusedAuthorId
+      ? `?authorId=${encodeURIComponent(focusedAuthorId)}`
+      : '';
+    router.replace(`${canonicalBasePath}/${resolvedReportId}${authorQuery}`);
   }, [
     redirectToCanonical,
     period,
     reportId,
     resolvedReportId,
+    focusedAuthorId,
     router,
     canonicalBasePath,
   ]);
@@ -163,7 +170,7 @@ export function WeeklyReportPage({
     if (typeof document === 'undefined') return;
     if (!titleParts) return;
     const previous = document.title;
-    document.title = `Неделя ${titleParts.week}, ${titleParts.range} — CustomReport`;
+    document.title = `Week ${titleParts.week}, ${titleParts.range} - CustomReport`;
     return () => {
       document.title = previous;
     };
@@ -205,6 +212,22 @@ export function WeeklyReportPage({
   // mock-data presentation types so children keep their imports unchanged.
   const portfolio: PortfolioProduct[] = view.portfolio as PortfolioProduct[];
   const products: ProductReport[] = view.products as ProductReport[];
+  const departmentLabel = weeklyQ.data.departmentName;
+  const hasReportContent = (report: ProductReport) =>
+    Boolean(report.needsAttention) ||
+    report.currentWeek.length > 0 ||
+    report.nextWeek.length > 0 ||
+    report.risks.length > 0 ||
+    report.decisions.length > 0 ||
+    report.priorities.length > 0;
+  const focusedProductIds = new Set(
+    focusedAuthorId
+      ? products
+          .filter((report) => report.authorIds?.includes(focusedAuthorId) && hasReportContent(report))
+          .map((report) => report.id)
+      : [],
+  );
+  const firstFocusedProductId = focusedProductIds.values().next().value as string | undefined;
   // HeadPeriodNavigator currently renders one period entry; future plans may
   // surface a list of recent periods. For now, surface the active period only.
   const periods: ReportPeriod[] = [
@@ -262,7 +285,7 @@ export function WeeklyReportPage({
         <HeadPeriodNavigator periods={periods} />
 
         <div className="flex min-w-[180px] flex-1 items-center justify-center gap-2">
-          <span className="text-sm text-[var(--color-muted-foreground)]">Development Department</span>
+          <span className="text-sm text-[var(--color-muted-foreground)]">{departmentLabel}</span>
           <span className="text-[var(--color-muted-foreground)]">&middot;</span>
           <span className="text-sm text-[var(--color-muted-foreground)]">Live portfolio review</span>
         </div>
@@ -282,7 +305,9 @@ export function WeeklyReportPage({
           <ProductAccordion
             key={report.id}
             report={report}
-            defaultOpen={false}
+            defaultOpen={focusedProductIds.has(report.id)}
+            highlighted={focusedProductIds.has(report.id)}
+            scrollIntoViewOnHighlight={firstFocusedProductId === report.id}
           />
         ))}
       </div>

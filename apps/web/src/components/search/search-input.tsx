@@ -71,10 +71,10 @@ function targetUrlFor(hit: SearchHit): string {
 }
 
 const TYPE_BADGE: Record<SearchHit['type'], { label: string; aria: string }> = {
-  item: { label: 'Задача', aria: 'Совпадение в задаче' },
-  risk: { label: 'Риск', aria: 'Совпадение в риске' },
-  decision: { label: 'Решение', aria: 'Совпадение в решении' },
-  project: { label: 'Продукт', aria: 'Совпадение в продукте' },
+  item: { label: 'Task', aria: 'Task match' },
+  risk: { label: 'Risk', aria: 'Risk match' },
+  decision: { label: 'Decision', aria: 'Decision match' },
+  project: { label: 'Product', aria: 'Product match' },
 };
 
 /**
@@ -174,7 +174,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
   return (
     <div ref={containerRef} className={`relative ${className ?? ''}`}>
       <label className="sr-only" htmlFor={inputId}>
-        Поиск отчётов
+        Search Reports
       </label>
       <input
         id={inputId}
@@ -186,7 +186,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
         aria-autocomplete="list"
         autoComplete="off"
         value={q}
-        placeholder={placeholder ?? 'Поиск…'}
+        placeholder={placeholder ?? 'Search...'}
         onFocus={() => setOpen(true)}
         onChange={(e) => {
           setQ(e.target.value);
@@ -208,7 +208,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
               aria-live="polite"
               className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
             >
-              Поиск…
+              Searching...
             </div>
           )}
 
@@ -218,7 +218,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
               aria-live="polite"
               className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
             >
-              Не удалось выполнить поиск
+              Search failed
             </div>
           )}
 
@@ -228,7 +228,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
               aria-live="polite"
               className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
             >
-              Ничего не найдено
+              No results found
             </div>
           )}
 

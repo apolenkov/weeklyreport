@@ -148,7 +148,7 @@ describe('SearchInput — 39-05 (PERF-05)', () => {
       vi.advanceTimersByTime(350);
     });
 
-    expect(screen.getByText('Ничего не найдено')).toBeInTheDocument();
+    expect(screen.getByText('No results found')).toBeInTheDocument();
   });
 
   it('renders an error state when search fails', () => {
@@ -168,7 +168,7 @@ describe('SearchInput — 39-05 (PERF-05)', () => {
       vi.advanceTimersByTime(350);
     });
 
-    expect(screen.getByText('Не удалось выполнить поиск')).toBeInTheDocument();
+    expect(screen.getByText('Search failed')).toBeInTheDocument();
   });
 
   it('navigates via router.push on Enter when a hit is highlighted', () => {

@@ -78,7 +78,7 @@ export function PortfolioOverviewTable({ products }: PortfolioOverviewTableProps
     <div className="mt-4 overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
       <button
         type="button"
-        className="flex w-full items-center justify-between p-4 transition-colors hover:bg-[#f8f6f2]"
+        className="flex w-full cursor-pointer items-center justify-between p-4 transition-colors hover:bg-[#f8f6f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
       >
@@ -109,8 +109,9 @@ export function PortfolioOverviewTable({ products }: PortfolioOverviewTableProps
               <button
                 key={product.id}
                 type="button"
-                className="flex items-center gap-2 rounded-lg p-2.5 text-left transition-[filter] hover:brightness-[0.98]"
+                className="group relative flex cursor-pointer items-center gap-2 rounded-lg p-2.5 text-left transition-[box-shadow,filter,transform] hover:-translate-y-0.5 hover:brightness-[0.98] hover:shadow-[0_8px_18px_-14px_rgba(0,0,0,0.35),0_0_0_2px_rgba(0,117,74,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 active:translate-y-0"
                 style={{ background: STATUS_BG[product.status] }}
+                title={`Open ${product.name} details`}
                 onClick={() => {
                   const el = document.getElementById(`report-product-${product.id}`);
                   if (el) {
@@ -140,6 +141,12 @@ export function PortfolioOverviewTable({ products }: PortfolioOverviewTableProps
                     {product.currentWeekCount} current &middot; {product.nextWeekCount} next &middot; {product.riskCount} risk{product.riskCount !== 1 ? 's' : ''}
                   </span>
                 </div>
+                <span
+                  className="ml-auto flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/55 text-[13px] font-semibold text-[var(--color-primary)] opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                  aria-hidden="true"
+                >
+                  ↓
+                </span>
               </button>
             ))}
           </div>

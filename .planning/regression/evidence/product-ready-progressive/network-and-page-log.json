@@ -1,0 +1,152 @@
+[
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/admin.dlqCount,admin.pendingReopenCount,admin.snapshot,admin.getSettings,dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%224%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%225%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/archive.list,dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22limit%22%3A12%2C%22direction%22%3A%22forward%22%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/archive.list,dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22limit%22%3A12%2C%22direction%22%3A%22forward%22%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "requestfailed",
+    "method": "GET",
+    "url": "http://localhost:3000/_next/static/chunks/_0b1y3tr._.js",
+    "message": "net::ERR_ABORTED"
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/reports.getActive,reports.myHistory?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/leadForm.byPeriod,leadForm.versions?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22reportId%22%3A%22a0000000-0000-4000-8000-000000000001%22%7D%7D%2C%221%22%3A%7B%22json%22%3A%7B%22reportSectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/ai.onTrack,ai.onTrack,ai.onTrack,ai.onTrack?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000201%22%7D%7D%2C%221%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000202%22%7D%7D%2C%222%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000203%22%7D%7D%2C%223%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000205%22%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "requestfailed",
+    "method": "GET",
+    "url": "http://localhost:3000/_next/static/chunks/_0o34zks._.js",
+    "message": "net::ERR_ABORTED"
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/review.dashboard,archive.list,weeklyReport.get,dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3A%7B%22limit%22%3A12%7D%7D%2C%222%22%3A%7B%22json%22%3A%7B%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%224%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/activity.live,archive.list?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3A%7B%22limit%22%3A12%2C%22direction%22%3A%22forward%22%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/weeklyReport.get?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22reportId%22%3A%22a0000000-0000-4000-8000-000000000001%22%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/ai.summary,ai.onTrack,ai.sentiment,ai.onTrack,ai.sentiment,ai.onTrack,ai.onTrack,ai.onTrack,ai.sentiment,ai.onTrack,ai.onTrack,ai.onTrack,ai.sentiment,ai.onTrack,ai.sentiment,ai.onTrack,ai.onTrack?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22reportId%22%3A%22a0000000-0000-4000-8000-000000000001%22%7D%7D%2C%221%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000201%22%7D%7D%2C%222%22%3A%7B%22json%22%3A%7B%22riskId%22%3A%22a0000000-0000-4000-8000-000000000901%22%7D%7D%2C%223%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000202%22%7D%7D%2C%224%22%3A%7B%22json%22%3A%7B%22riskId%22%3A%22a0000000-0000-4000-8000-000000000902%22%7D%7D%2C%225%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000203%22%7D%7D%2C%226%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004012%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000204%22%7D%7D%2C%227%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000205%22%7D%7D%2C%228%22%3A%7B%22json%22%3A%7B%22riskId%22%3A%22a0000000-0000-4000-8000-000000000903%22%7D%7D%2C%229%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004013%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000206%22%7D%7D%2C%2210%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004014%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000207%22%7D%7D%2C%2211%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004014%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000208%22%7D%7D%2C%2212%22%3A%7B%22json%22%3A%7B%22riskId%22%3A%22a0000000-0000-4000-8000-000000000904%22%7D%7D%2C%2213%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004015%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000209%22%7D%7D%2C%2214%22%3A%7B%22json%22%3A%7B%22riskId%22%3A%22a0000000-0000-4000-8000-000000000905%22%7D%7D%2C%2215%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004015%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-00000000020a%22%7D%7D%2C%2216%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004016%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-00000000020b%22%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/weeklyReport.get?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22reportId%22%3A%22a0000000-0000-4000-8000-000000000001%22%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/ai.summary,ai.onTrack,ai.sentiment,ai.onTrack,ai.sentiment,ai.onTrack,ai.onTrack,ai.onTrack,ai.sentiment,ai.onTrack,ai.onTrack,ai.onTrack,ai.sentiment,ai.onTrack,ai.sentiment,ai.onTrack,ai.onTrack?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22reportId%22%3A%22a0000000-0000-4000-8000-000000000001%22%7D%7D%2C%221%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000201%22%7D%7D%2C%222%22%3A%7B%22json%22%3A%7B%22riskId%22%3A%22a0000000-0000-4000-8000-000000000901%22%7D%7D%2C%223%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000202%22%7D%7D%2C%224%22%3A%7B%22json%22%3A%7B%22riskId%22%3A%22a0000000-0000-4000-8000-000000000902%22%7D%7D%2C%225%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000203%22%7D%7D%2C%226%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004012%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000204%22%7D%7D%2C%227%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000205%22%7D%7D%2C%228%22%3A%7B%22json%22%3A%7B%22riskId%22%3A%22a0000000-0000-4000-8000-000000000903%22%7D%7D%2C%229%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004013%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000206%22%7D%7D%2C%2210%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004014%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000207%22%7D%7D%2C%2211%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004014%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000208%22%7D%7D%2C%2212%22%3A%7B%22json%22%3A%7B%22riskId%22%3A%22a0000000-0000-4000-8000-000000000904%22%7D%7D%2C%2213%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004015%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-000000000209%22%7D%7D%2C%2214%22%3A%7B%22json%22%3A%7B%22riskId%22%3A%22a0000000-0000-4000-8000-000000000905%22%7D%7D%2C%2215%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004015%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-00000000020a%22%7D%7D%2C%2216%22%3A%7B%22json%22%3A%7B%22sectionId%22%3A%22a0000000-0000-4000-8000-000000004016%22%2C%22projectId%22%3A%22a0000000-0000-4000-8000-00000000020b%22%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "requestfailed",
+    "method": "GET",
+    "url": "http://localhost:3000/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_0yjw1oe._.js",
+    "message": "net::ERR_ABORTED"
+  },
+  {
+    "type": "requestfailed",
+    "method": "GET",
+    "url": "http://localhost:3000/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_114j_u3._.js",
+    "message": "net::ERR_ABORTED"
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/admin.dlqCount,admin.pendingReopenCount,admin.snapshot,admin.getSettings,dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%224%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%225%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/admin.dlqCount,admin.pendingReopenCount,admin.snapshot,admin.getSettings,dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%224%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%225%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/admin.listStageAssignmentCounts?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/admin.dlqCount,admin.pendingReopenCount,admin.snapshot,admin.getSettings,dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%224%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%225%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "response",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/admin.dlqCount,admin.pendingReopenCount,admin.jobs.listFailed,admin.snapshot,admin.getSettings,dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%222%22%3A%7B%22json%22%3A%7B%22queue%22%3A%22email-reminder%22%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%224%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%225%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%226%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  }
+]

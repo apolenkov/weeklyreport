@@ -71,7 +71,7 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / FEAT-144)', () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: 'Escalate' },
     });
-    fireEvent.change(screen.getByLabelText(/Стадия SDLC/i), {
+    fireEvent.change(screen.getByLabelText(/SDLC Stage/i), {
       target: { value: 'Dev' },
     });
 
@@ -99,7 +99,7 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / FEAT-144)', () => {
       />,
     );
 
-    const select = screen.getByLabelText(/Стадия SDLC/i) as HTMLSelectElement;
+    const select = screen.getByLabelText(/SDLC Stage/i) as HTMLSelectElement;
     const options = Array.from(select.querySelectorAll('option')).map((o) => o.value);
     // First entry is the empty placeholder.
     expect(options).toEqual(['', 'Testing', 'Support']);

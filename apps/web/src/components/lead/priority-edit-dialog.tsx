@@ -142,7 +142,7 @@ export function PriorityEditDialog({
             className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
             htmlFor="priority-stage"
           >
-            Стадия SDLC *
+            SDLC Stage *
           </label>
           <select
             id="priority-stage"
@@ -156,7 +156,7 @@ export function PriorityEditDialog({
             value={stageName}
             onChange={(e) => { setStageName(e.target.value); setErrors((prev) => ({ ...prev, stage: undefined })); }}
           >
-            <option value="">— Выберите стадию —</option>
+            <option value="">-- Select stage --</option>
             {(availableStages ?? []).map((stg) => (
               <option key={stg} value={stg}>{stg}</option>
             ))}

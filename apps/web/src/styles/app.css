@@ -5,6 +5,20 @@
 
 @import "@customreport/ui/styles/globals.css" layer(base);
 
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 /*
  * Force-generate utilities that Tailwind v4 scanner misses in packages/ui.
  * shadcn/ui components use these in cva() and cn() template literals.

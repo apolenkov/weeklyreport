@@ -150,7 +150,7 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
               }`}
               aria-label={`Assign ${stageName} stage for ${projectName}`}
             >
-              <option value="">— не назначено —</option>
+              <option value="">-- unassigned --</option>
               {leads.map((lead) => (
                 <option key={lead.id} value={lead.id}>
                   {lead.name.split(' ')[0]}

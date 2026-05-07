@@ -22,6 +22,7 @@ function baseReport(
     periodEnd: new Date('2026-04-20T00:00:00Z'),
     periodStatus: 'open',
     weekLabel: 'Week 16',
+    departmentName: 'Software Development',
     submissionCount: 0,
     totalLeads: 0,
     portfolioOverview: [],
@@ -211,7 +212,7 @@ describe('mapWeeklyReport', () => {
     const crmReport = result.products.find((p) => p.id === PROJECT_A);
     expect(crmReport?.currentWeek).toHaveLength(1);
     expect(expectDefined(crmReport?.currentWeek[0]).text).toBe('OAuth integration');
-    expect(expectDefined(crmReport?.currentWeek[0]).stageLead).toBe('Dev \u00b7 PA');
+    expect(expectDefined(crmReport?.currentWeek[0]).stageLead).toBe('Dev \u00b7 Т1');
     expect(expectDefined(crmReport?.nextWeek[0]).stageLead).toBe('Planned');
     expect(crmReport?.risks).toHaveLength(1);
     expect(expectDefined(crmReport?.risks[0]).severity).toBe('at-risk');

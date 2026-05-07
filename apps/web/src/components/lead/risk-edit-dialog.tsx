@@ -22,7 +22,7 @@ type RiskEditDialogProps = {
   readonly initialMitigation?: string;
   /**
    * 35-04 (FEAT-144): callback returning the SDLC stages the current lead
-   * owns on a given project (= options for the "Стадия SDLC" select).
+   * owns on a given project (= options for the "SDLC Stage" select).
    * Returning `[]` disables the Save button and surfaces an inline
    * "no stages assigned — contact admin" message.
    */
@@ -236,7 +236,7 @@ export function RiskEditDialog({
               to stages the lead owns on the active project. */}
           <div>
             <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="risk-stage">
-              Стадия SDLC *
+              SDLC Stage *
             </label>
             <select
               id="risk-stage"
@@ -250,7 +250,7 @@ export function RiskEditDialog({
               value={stageName}
               onChange={(e) => { setStageName(e.target.value); setErrors((prev) => ({ ...prev, stage: undefined })); }}
             >
-              <option value="">— Выберите стадию —</option>
+              <option value="">-- Select stage --</option>
               {(stagesForProduct?.(productId) ?? []).map((stg) => (
                 <option key={stg} value={stg}>{stg}</option>
               ))}

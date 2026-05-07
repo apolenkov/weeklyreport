@@ -1,7 +1,10 @@
+import { Suspense } from 'react';
+
 import { WeeklyReportPage } from '../../../../components/weekly-report/weekly-report-page';
+import { WeeklyReportSkeleton } from '../../../../components/weekly-report/weekly-report-skeleton';
 
 type Props = {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ authorId?: string; period?: string }>;
 };
 
 /**
@@ -13,12 +16,18 @@ type Props = {
  * present so old read-only links keep working unchanged.
  */
 export default async function HeadReportPage({ searchParams }: Props) {
-  const { period } = await searchParams;
+  const { authorId, period } = await searchParams;
 
   return (
     <main id="main-content" className="min-h-screen bg-[var(--color-background)]">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <WeeklyReportPage period={period} redirectToCanonical />
+        <Suspense fallback={<WeeklyReportSkeleton />}>
+          <WeeklyReportPage
+            period={period}
+            authorId={authorId}
+            redirectToCanonical
+          />
+        </Suspense>
       </div>
     </main>
   );

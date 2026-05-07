@@ -26,16 +26,16 @@ type NavLink = {
 };
 
 const NAV_LINKS: ReadonlyArray<NavLink> = [
-  { href: '/lead/report', label: 'Мой отчёт', roles: ['lead'] },
-  // UX-17 (Phase 35-08): "Моя история" + legacy "Архив" merged into a single
+  { href: '/lead/report', label: 'My Report', roles: ['lead'] },
+  // UX-17 (Phase 35-08): "My History" + legacy "Archive" merged into a single
   // /reports page with role-default tabs. The lead-specific link still
-  // exists in the nav but now drops into the "Мои черновики" tab; the
-  // role-shared "Архив" link uses the same URL with the published tab.
-  { href: '/reports?tab=drafts', label: 'Моя история', roles: ['lead'] },
-  { href: '/head/dashboard', label: 'Дашборд', roles: ['head', 'admin'] },
-  { href: '/head/report', label: 'Сводка', roles: ['head', 'admin'] },
-  { href: '/reports?tab=published', label: 'Архив', roles: ['lead', 'head', 'admin', 'viewer'] },
-  { href: '/admin', label: 'Админка', roles: ['head', 'admin'] },
+  // exists in the nav but now drops into the "My Drafts" tab; the
+  // role-shared "Archive" link uses the same URL with the published tab.
+  { href: '/reports?tab=drafts', label: 'My History', roles: ['lead'] },
+  { href: '/head/dashboard', label: 'Dashboard', roles: ['head', 'admin'] },
+  { href: '/head/report', label: 'Weekly Report', roles: ['head', 'admin'] },
+  { href: '/reports?tab=published', label: 'Archive', roles: ['lead', 'head', 'admin', 'viewer'] },
+  { href: '/admin', label: 'Admin', roles: ['head', 'admin'] },
 ];
 
 function getRoleLabel(role: Role): string {
@@ -46,11 +46,11 @@ function getRoleLabel(role: Role): string {
   switch (role) {
     case 'admin':
     case 'head':
-      return 'Глава департамента';
+      return 'Department Head';
     case 'lead':
-      return 'Тимлид';
+      return 'Lead';
     case 'viewer':
-      return 'Наблюдатель';
+      return 'Viewer';
   }
 }
 
@@ -115,7 +115,7 @@ function NavIcon({ href }: { readonly href: string }) {
       );
     case '/lead/history':
     case '/reports?tab=drafts':
-      // clock — "Моя история"
+      // clock — "My History"
       return (
         <svg {...common}>
           <circle cx="12" cy="12" r="10" />
@@ -145,7 +145,7 @@ function NavIcon({ href }: { readonly href: string }) {
       );
     case '/reports/history':
     case '/reports?tab=published':
-      // folder/archive — "Архив"
+      // folder/archive — "Archive"
       return (
         <svg {...common}>
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -226,7 +226,7 @@ export function NavBar() {
               screen readers carrying name + role)
             - xl+ (1280px+): avatar + "Name · Role" text
             Was previously lg+ (1024px) but at 1024 with 6 nav-link pills + a
-            longer RU role label ("Глава департамента") the row overflowed
+            longer role label ("Department Head") the row overflowed
             ~110px. Bumping the threshold up keeps the chrome tidy while
             preserving the identity signal at every width via the avatar. */}
         <div className="flex items-center gap-2.5">

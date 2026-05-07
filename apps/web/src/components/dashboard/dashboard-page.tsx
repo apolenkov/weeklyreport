@@ -100,6 +100,7 @@ export function DashboardPage() {
     weeklyReport: weeklyQ.data,
   });
   const { kpi, leads, blockedAtRisk, pendingLeads } = dashboard;
+  const departmentLabel = `${weeklyQ.data.departmentName} Department`;
 
   return (
     <div className="space-y-6" ref={sectionsRef}>
@@ -110,7 +111,7 @@ export function DashboardPage() {
             Dashboard
           </h1>
           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            {weeklyQ.data.weekLabel ?? 'Current period'} &middot; Development Department
+            {weeklyQ.data.weekLabel ?? 'Current period'} &middot; {departmentLabel}
           </p>
         </div>
         <div className="flex items-center gap-3">

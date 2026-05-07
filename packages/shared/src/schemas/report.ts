@@ -471,6 +471,7 @@ export const weeklyReportReadModelSchema = z.object({
   periodEnd: reportDate(),
   periodStatus: periodStatusSchema,
   weekLabel: z.string().nullable(),
+  departmentName: z.string().min(1).max(200),
   submissionCount: z.number().int().min(0),
   totalLeads: z.number().int().min(0),
   portfolioOverview: z.array(portfolioProductOverviewSchema),

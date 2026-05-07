@@ -19,8 +19,8 @@ type ExportPdfButtonProps = {
  * `completed` or `failed`. On completion, opens the static `/pdfs/{jobId}.pdf`
  * artefact in a new tab so the browser triggers the download.
  *
- * The button is disabled until the period is published (matches the API's
- * published-only constraint in `PdfExportService.requestPdfExport`).
+ * The button is disabled only for never-published open periods. Reopened
+ * periods are still backed by a published report row and can be exported.
  */
 export function ExportPdfButton({
   reportId,
@@ -78,10 +78,10 @@ export function ExportPdfButton({
     }
   }, [statusQ.data, jobId]);
 
-  const isPublished = periodStatus === 'published';
+  const isExportable = periodStatus === 'published' || periodStatus === 'reopened';
   const isGenerating = requestMut.isPending || jobId !== null;
-  const disabled = !isPublished || isGenerating;
-  const title = !isPublished
+  const disabled = !isExportable || isGenerating;
+  const title = !isExportable
     ? 'Publish the report first'
     : isGenerating
       ? 'Generating PDF…'

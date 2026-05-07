@@ -1,8 +1,9 @@
 'use client';
 
-import { use } from 'react';
+import { Suspense, use } from 'react';
 
 import { WeeklyReportPage } from '../../../../components/weekly-report/weekly-report-page';
+import { WeeklyReportSkeleton } from '../../../../components/weekly-report/weekly-report-skeleton';
 
 /* ------------------------------------------------------------------ */
 /*  Published Report Viewer — Client Component (Phase 21)             */
@@ -12,10 +13,12 @@ import { WeeklyReportPage } from '../../../../components/weekly-report/weekly-re
 
 type Props = {
   params: Promise<{ reportId: string }>;
+  searchParams: Promise<{ authorId?: string }>;
 };
 
-export default function PublishedReportPage({ params }: Props) {
+export default function PublishedReportPage({ params, searchParams }: Props) {
   const { reportId } = use(params);
+  const { authorId } = use(searchParams);
 
   return (
     <main id="main-content" className="min-h-screen bg-[var(--color-background)]">
@@ -67,7 +70,9 @@ export default function PublishedReportPage({ params }: Props) {
           </div>
         </div>
 
-        <WeeklyReportPage reportId={reportId} />
+        <Suspense fallback={<WeeklyReportSkeleton />}>
+          <WeeklyReportPage reportId={reportId} authorId={authorId} />
+        </Suspense>
       </div>
     </main>
   );

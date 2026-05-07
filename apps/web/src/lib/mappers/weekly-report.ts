@@ -83,6 +83,7 @@ export type WeeklyReportPriority = {
 
 export type WeeklyProductReport = {
   id: string;
+  authorIds: string[];
   initials: string;
   name: string;
   status: WeeklyProductStatus;
@@ -331,6 +332,22 @@ function buildProductToSectionMap(
   return map;
 }
 
+function buildProductToAuthorMap(
+  sections: readonly ReportSectionReadModel[],
+): Map<string, string[]> {
+  const map = new Map<string, Set<string>>();
+  for (const section of sections) {
+    for (const project of section.projects) {
+      const authors = map.get(project.projectId) ?? new Set<string>();
+      authors.add(section.authorId);
+      map.set(project.projectId, authors);
+    }
+  }
+  return new Map(
+    [...map.entries()].map(([productId, authors]) => [productId, [...authors]]),
+  );
+}
+
 /**
  * Find the first escalation that targets a given product and surface its
  * description as the `needsAttention` banner.
@@ -378,6 +395,7 @@ export function mapWeeklyReport(
   const { decisions: decisionsByProject, priorities: prioritiesByProject } =
     groupDecisionsAndPrioritiesByProject(api.leadSections);
   const sectionByProject = buildProductToSectionMap(api.leadSections);
+  const authorsByProject = buildProductToAuthorMap(api.leadSections);
 
   // Portfolio rows + per-product reports — driven by api.portfolioOverview
   // (already aggregated server-side).
@@ -415,6 +433,7 @@ export function mapWeeklyReport(
 
     products.push({
       id: overview.productId,
+      authorIds: authorsByProject.get(overview.productId) ?? [],
       initials,
       name: overview.productName,
       status,

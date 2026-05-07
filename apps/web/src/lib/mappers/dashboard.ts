@@ -270,6 +270,7 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
 
     return {
       id: row.leadId,
+      reportId: weeklyReport.reportId,
       initials: initialsFromName(row.leadName),
       name: row.leadName,
       role: row.role,

@@ -33,3 +33,20 @@ export async function loginByCookie(
     );
   }
 }
+
+export async function wipeAndReseed(
+  page: Page,
+  variant: 'minimum' | 'advanced' = 'advanced',
+) {
+  const body = JSON.stringify({ '0': { json: { variant } } });
+  const response = await page.request.post('/trpc/dev.wipeAndReseed?batch=1', {
+    data: body,
+    headers: { 'content-type': 'application/json' },
+  });
+
+  if (!response.ok()) {
+    throw new Error(
+      `dev.wipeAndReseed failed: ${response.status()} ${await response.text()}`,
+    );
+  }
+}

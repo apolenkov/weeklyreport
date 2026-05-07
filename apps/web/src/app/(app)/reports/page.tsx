@@ -17,13 +17,13 @@ import { useTRPC } from '../../../lib/trpc-context';
 /**
  * UX-17 (Phase 35-08): merged Reports page.
  *
- * Two tabs: "Мои черновики" (lead-only, the lead's authored sections —
- * includes drafts and submitted) and "Опубликованные" (the archive of
+ * Two tabs: "My Drafts" (lead-only, the lead's authored sections —
+ * includes drafts and submitted) and "Published" (the archive of
  * published periods, visible to every role).
  *
  * Tab default by role:
- *   - lead              → "Мои черновики"
- *   - head/admin/viewer → "Опубликованные"
+ *   - lead              → "My Drafts"
+ *   - head/admin/viewer → "Published"
  * Override via `?tab=drafts|published`.
  *
  * The legacy `/lead/history` and `/reports/history` routes 307-redirect
@@ -70,24 +70,24 @@ export default function ReportsPage() {
         <div className="space-y-6">
           <header>
             <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-              Отчёты
+              Reports
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
               {isLead
-                ? 'Ваши черновики и опубликованные отчёты департамента в одном месте.'
-                : 'Архив опубликованных еженедельных отчётов департамента.'}
+                ? 'Your drafts and published department reports in one place.'
+                : 'Published weekly department report archive.'}
             </p>
           </header>
 
           <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)]">
             <TabButton
-              label="Мои черновики"
+              label="My Drafts"
               active={tab === 'drafts'}
               disabled={!isLead}
               onClick={() => setTab('drafts')}
             />
             <TabButton
-              label="Опубликованные"
+              label="Published"
               active={tab === 'published'}
               onClick={() => setTab('published')}
             />
@@ -98,7 +98,7 @@ export default function ReportsPage() {
               <SearchInput
                 scope={searchScope}
                 placeholder={
-                  isLead ? 'Поиск по моим отчётам…' : 'Поиск по отчётам и продуктам…'
+                  isLead ? 'Search my reports...' : 'Search reports and products...'
                 }
               />
             </div>
@@ -151,11 +151,11 @@ function EmptyDraftsForNonLead() {
   return (
     <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center">
       <p className="text-sm font-semibold text-[var(--color-foreground)]">
-        Эта вкладка доступна только тимлидам.
+        This tab is available to leads only.
       </p>
       <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-        Здесь тимлиды видят свои черновики и отправленные отчёты. Перейдите на
-        вкладку «Опубликованные», чтобы посмотреть архив департамента.
+        Leads see their drafts and submitted reports here. Open Published to
+        view the department archive.
       </p>
     </div>
   );
@@ -170,7 +170,7 @@ function LeadDraftsPanel() {
 
   useEffect(() => {
     if (isError) {
-      toast.error(error?.message ?? 'Не удалось загрузить историю отчётов.');
+      toast.error(error?.message ?? 'Failed to load report history.');
     }
   }, [isError, error]);
 
@@ -194,15 +194,15 @@ function LeadDraftsPanel() {
               type="button"
               className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
               onClick={() => setShowAll(true)}
-              aria-label={`Показать все ${entries.length} отправлений`}
+              aria-label={`Show all ${entries.length} submissions`}
             >
-              Показать все ({entries.length})
+              Show all ({entries.length})
             </button>
           </div>
         )}
         {entries.length === 0 && (
           <p className="text-center text-sm text-[var(--color-muted-foreground)]">
-            У вас ещё нет отправленных отчётов.
+            You have no submitted reports yet.
           </p>
         )}
       </div>

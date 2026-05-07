@@ -63,6 +63,7 @@ function makeWeeklyReport(overrides: Partial<WeeklyReportReadModel> = {}): Weekl
     periodEnd: '2026-04-19T23:59:59.000Z',
     periodStatus: 'open',
     weekLabel: 'Week 16',
+    departmentName: 'Software Development',
     submissionCount: overrides.submissionCount ?? 4,
     totalLeads: overrides.totalLeads ?? 6,
     portfolioOverview: overrides.portfolioOverview ?? [

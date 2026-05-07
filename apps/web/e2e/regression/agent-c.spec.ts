@@ -149,12 +149,12 @@ test.describe('Section 4 — HEAD DASHBOARD', () => {
     await expect(headPage.locator('#activity-live-heading')).toBeVisible();
     // either rows are present or the empty-state copy is — either is OK
     const hasRows = await headPage
-      .getByRole('list', { name: 'Лиды и статус секций' })
+      .getByRole('list', { name: 'Lead section statuses' })
       .getByRole('listitem')
       .count();
     const panelText = await headPage.locator('main').textContent();
-    const hasEmpty = /ещ[её] не начали|опубликован|открытого периода/i.test(panelText ?? '') ? 1 : 0;
-    const hasActivityCopy = /задач\s+·\s+\d+\s+рисков\s+·\s+\d+\s+решений/i.test(panelText ?? '') ? 1 : 0;
+    const hasEmpty = /not started|have not started|period published|no open reporting period/i.test(panelText ?? '') ? 1 : 0;
+    const hasActivityCopy = /items\s+·\s+\d+\s+risks\s+·\s+\d+\s+decisions/i.test(panelText ?? '') ? 1 : 0;
     expect(hasRows + hasEmpty + hasActivityCopy).toBeGreaterThan(0);
   });
 
@@ -166,7 +166,7 @@ test.describe('Section 4 — HEAD DASHBOARD', () => {
   });
 
   test('DASH-014 — submitted lead status pill renders with success styling', async () => {
-    const submittedPill = headPage.getByText('Отправлено').first();
+    const submittedPill = headPage.getByText('Submitted').first();
     if (await submittedPill.isVisible().catch(() => false)) {
       // Should be the green-background pill
       const cls = await submittedPill.getAttribute('class');
@@ -175,7 +175,7 @@ test.describe('Section 4 — HEAD DASHBOARD', () => {
   });
 
   test('DASH-015 — draft lead status pill renders with amber styling', async () => {
-    const draftPill = headPage.getByText('Черновик').first();
+    const draftPill = headPage.getByText('Draft').first();
     if (await draftPill.isVisible().catch(() => false)) {
       const cls = await draftPill.getAttribute('class');
       expect(cls).toMatch(/fef3c7/);
@@ -189,12 +189,12 @@ test.describe('Section 4 — HEAD DASHBOARD', () => {
     expect(txt).toBeTruthy();
   });
 
-  test('DASH-018 — projects/items counts shown ("N задач · M рисков · ...")', async () => {
+  test('DASH-018 — projects/items counts shown ("N items · M risks · ...")', async () => {
     const liveBlocks = headPage.locator('section[aria-labelledby="activity-live-heading"] li');
     const count = await liveBlocks.count();
     if (count > 0) {
       const first = await liveBlocks.first().textContent();
-      expect(first).toMatch(/задач|рисков|решений|приоритетов/);
+      expect(first).toMatch(/items|risks|decisions|priorities/);
     }
   });
 
@@ -202,7 +202,7 @@ test.describe('Section 4 — HEAD DASHBOARD', () => {
     // Server controls ordering; verify rows render in stable order across reloads.
     const rows = () =>
       headPage
-        .getByRole('list', { name: 'Лиды и статус секций' })
+        .getByRole('list', { name: 'Lead section statuses' })
         .getByRole('listitem');
     const before = await rows().allTextContents();
     await headPage.reload();
@@ -236,8 +236,8 @@ test.describe('Section 4 — HEAD DASHBOARD', () => {
     await headPage.waitForTimeout(2_000);
     // we can't assert exact count under the live stack, but verify polling
     // produced at least one network call within 2s of the focus tick or copy
-    // reads "Обновляется каждые 15 секунд".
-    await expect(headPage.getByText('Обновляется каждые 15 секунд')).toBeVisible();
+    // reads "Refreshes every 15 seconds".
+    await expect(headPage.getByText('Refreshes every 15 seconds')).toBeVisible();
     expect(activityCalls).toBeGreaterThanOrEqual(0);
   });
 

@@ -116,12 +116,11 @@ export function LeadReportCard({ lead }: LeadReportCardProps) {
   // Lead-role viewer = lock on other rows; head/admin = chevron (drill-down).
   const showLockForViewer = user?.role === 'lead' && !isCurrentUser;
 
-  // 35-07 (UX-15): the dashboard's lead row doesn't carry a reportId
-  // (LeadInfo is per-active-period). The bare `/lead/report` and
-  // `/head/report` routes redirect (router.replace) to the canonical
-  // addressed URL `/lead/report/<reportId>` once the active reportId is
-  // known, so card clicks still land on a bookmarkable address.
-  const href = isCurrentUser ? '/lead/report' : '/head/report';
+  const reportPath = lead.reportId ? `/${encodeURIComponent(lead.reportId)}` : '';
+  const authorQuery = `?authorId=${encodeURIComponent(lead.id)}`;
+  const href = isCurrentUser
+    ? `/lead/report${reportPath}${authorQuery}`
+    : `/head/report${reportPath}${authorQuery}`;
 
   const containerStyle: React.CSSProperties = isCurrentUser
     ? {
@@ -141,7 +140,7 @@ export function LeadReportCard({ lead }: LeadReportCardProps) {
   return (
     <a
       href={href}
-      className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-[#f8f6f2]"
+      className="flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-[background-color,border-color,box-shadow] hover:border-[rgba(0,117,74,0.18)] hover:bg-[#f8f6f2] hover:shadow-[inset_3px_0_0_var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
       style={containerStyle}
       aria-label={isCurrentUser ? `Open my report — ${lead.name}` : `Open ${lead.name}'s contribution in the weekly report`}
     >

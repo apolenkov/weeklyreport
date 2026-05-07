@@ -18,10 +18,10 @@ import { useTRPC } from '../../lib/trpc-context';
 type Role = 'head' | 'lead' | 'admin' | 'viewer';
 
 const ROLE_LABEL: Record<Role, string> = {
-  head: 'Глава департамента',
-  admin: 'Админ',
-  lead: 'Тимлид',
-  viewer: 'Наблюдатель',
+  head: 'Department Head',
+  admin: 'Admin',
+  lead: 'Lead',
+  viewer: 'Viewer',
 };
 
 const ROLE_ORDER: Role[] = ['head', 'admin', 'lead', 'viewer'];
@@ -106,11 +106,11 @@ export function DevRoleSwitcher() {
           <DropdownMenuLabel>Login as…</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {usersQ.isLoading && (
-            <DropdownMenuItem disabled>Загрузка…</DropdownMenuItem>
+            <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
           )}
           {usersQ.error && (
             <DropdownMenuItem disabled className="text-red-600">
-              Ошибка загрузки
+              Load error
             </DropdownMenuItem>
           )}
           {ROLE_ORDER.flatMap((role) => {

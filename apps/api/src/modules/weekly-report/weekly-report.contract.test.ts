@@ -35,6 +35,7 @@ function makeWeeklyReport(
     periodEnd: new Date('2026-04-18'),
     periodStatus: 'open',
     weekLabel: 'W16-2026',
+    departmentName: 'Software Development',
     submissionCount: 1,
     totalLeads: 3,
     portfolioOverview: [

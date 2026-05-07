@@ -1,0 +1,323 @@
+[
+  {
+    "viewport": "desktop",
+    "route": "/",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Антон К. · Department Head Page unavailable for your role This page is reserved for the head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "desktop-home.png"
+  },
+  {
+    "viewport": "desktop",
+    "route": "/head/dashboard",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Антон К. · Department Head Page unavailable for your role This page is reserved for the head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "desktop-dashboard.png"
+  },
+  {
+    "viewport": "desktop",
+    "route": "/lead/report",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Антон К. · Department Head Page unavailable for your role This page is reserved for the lead or head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "desktop-lead-report.png"
+  },
+  {
+    "viewport": "desktop",
+    "route": "/reports",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Антон К. · Department Head Page unavailable for your role This page is reserved for the lead or head or admin or viewer role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "desktop-reports.png"
+  },
+  {
+    "viewport": "desktop",
+    "route": "/reports/history",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Антон К. · Department Head Page unavailable for your role This page is reserved for the lead or head or admin or viewer role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [
+      "pageerror: Failed to execute 'measure' on 'Performance': '​ReportsHistoryRedirect' cannot have a negative time stamp."
+    ],
+    "screenshot": "desktop-reports-history.png"
+  },
+  {
+    "viewport": "desktop",
+    "route": "/admin",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Антон К. · Department Head Page unavailable for your role This page is reserved for the admin or head role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "desktop-admin.png"
+  },
+  {
+    "viewport": "desktop",
+    "route": "/head/report",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Антон К. · Department Head Page unavailable for your role This page is reserved for the head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "desktop-head-report.png"
+  },
+  {
+    "viewport": "tablet",
+    "route": "/",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Page unavailable for your role This page is reserved for the head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "tablet-home.png"
+  },
+  {
+    "viewport": "tablet",
+    "route": "/head/dashboard",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Page unavailable for your role This page is reserved for the head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "tablet-dashboard.png"
+  },
+  {
+    "viewport": "tablet",
+    "route": "/lead/report",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Page unavailable for your role This page is reserved for the lead or head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "tablet-lead-report.png"
+  },
+  {
+    "viewport": "tablet",
+    "route": "/reports",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Page unavailable for your role This page is reserved for the lead or head or admin or viewer role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "tablet-reports.png"
+  },
+  {
+    "viewport": "tablet",
+    "route": "/reports/history",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Page unavailable for your role This page is reserved for the lead or head or admin or viewer role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [
+      "pageerror: Failed to execute 'measure' on 'Performance': '​ReportsHistoryRedirect' cannot have a negative time stamp."
+    ],
+    "screenshot": "tablet-reports-history.png"
+  },
+  {
+    "viewport": "tablet",
+    "route": "/admin",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Page unavailable for your role This page is reserved for the admin or head role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "tablet-admin.png"
+  },
+  {
+    "viewport": "tablet",
+    "route": "/head/report",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport Dashboard Weekly Report Archive Admin АК Page unavailable for your role This page is reserved for the head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "tablet-head-report.png"
+  },
+  {
+    "viewport": "mobile",
+    "route": "/",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport АК Menu Department Head Page unavailable for your role This page is reserved for the head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "mobile-home.png"
+  },
+  {
+    "viewport": "mobile",
+    "route": "/head/dashboard",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport АК Menu Department Head Page unavailable for your role This page is reserved for the head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "mobile-dashboard.png"
+  },
+  {
+    "viewport": "mobile",
+    "route": "/lead/report",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport АК Menu Department Head Page unavailable for your role This page is reserved for the lead or head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "mobile-lead-report.png"
+  },
+  {
+    "viewport": "mobile",
+    "route": "/reports",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport АК Menu Department Head Page unavailable for your role This page is reserved for the lead or head or admin or viewer role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "mobile-reports.png"
+  },
+  {
+    "viewport": "mobile",
+    "route": "/reports/history",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport АК Menu Department Head Page unavailable for your role This page is reserved for the lead or head or admin or viewer role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [
+      "pageerror: Failed to execute 'measure' on 'Performance': '​ReportsHistoryRedirect' cannot have a negative time stamp."
+    ],
+    "screenshot": "mobile-reports-history.png"
+  },
+  {
+    "viewport": "mobile",
+    "route": "/admin",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport АК Menu Department Head Page unavailable for your role This page is reserved for the admin or head role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "mobile-admin.png"
+  },
+  {
+    "viewport": "mobile",
+    "route": "/head/report",
+    "status": 200,
+    "metrics": {
+      "title": "",
+      "h1": "",
+      "clickables": 9,
+      "badCursor": ["Menu", "DEV: switch role"],
+      "clipped": ["Skip to content"],
+      "bodyText": "Skip to content CR CustomReport АК Menu Department Head Page unavailable for your role This page is reserved for the head or admin role. Switch role from the floating role-switcher (bottom-right) to continue, or head back to the dashboard. Go to dashboard DEV: switch role"
+    },
+    "messages": [],
+    "screenshot": "mobile-head-report.png"
+  }
+]
