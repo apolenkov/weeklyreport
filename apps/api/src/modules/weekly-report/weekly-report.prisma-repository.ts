@@ -57,6 +57,12 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     ).length;
 
     const totalLeads = leadUsers.length;
+    const settings = await this.prisma.appSettings.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton' },
+      update: {},
+      select: { departmentName: true },
+    });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const leadSections = (report.sections as any[]).map(mapPrismaToReportSection);
@@ -71,6 +77,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       periodEnd: report.periodEnd,
       periodStatus: report.periodStatus,
       weekLabel: report.weekLabel,
+      departmentName: settings.departmentName,
       submissionCount,
       totalLeads,
       portfolioOverview,

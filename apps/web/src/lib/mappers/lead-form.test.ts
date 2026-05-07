@@ -362,7 +362,7 @@ describe('mapLeadFormData', () => {
     expect(result.versions).toEqual([]);
     expect(result.readOnly).toBe(false);
     expect(result.currentUser.name).toBe('Тимлид 1');
-    expect(result.currentUser.initials).toBe('PA');
+    expect(result.currentUser.initials).toBe('Т1');
   });
 
   it('locks readOnly when section status is submitted', () => {

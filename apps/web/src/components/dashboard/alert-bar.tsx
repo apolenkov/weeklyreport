@@ -68,7 +68,7 @@ export function AlertBar({ pendingLeads, reportId }: AlertBarProps) {
     const isLast = i === pendingLeads.length - 1;
     const isDraft = i === 0;
     return (
-      <span key={name}>
+      <span key={`${name}-${i}`}>
         <strong>{name}</strong> ({isDraft ? 'Draft' : 'Not started'})
         {!isLast && ' and '}
       </span>

@@ -848,10 +848,18 @@ export function createAppRouter(deps: RouterDeps) {
     // === Lead Form namespace (v4.0) ===
     leadForm: router({
       byPeriod: protectedProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({
+          reportId: z.string().uuid(),
+          authorId: z.string().uuid().optional(),
+        }))
         .query(async ({ input, ctx }) => {
           try {
-            return await deps.leadFormService.getByPeriod(input.reportId, ctx.session.userId);
+            return await deps.leadFormService.getByPeriod(
+              input.reportId,
+              ctx.session.userId,
+              ctx.session.role,
+              input.authorId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }

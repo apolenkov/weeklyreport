@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { ProductReport } from '../dashboard/mock-data';
 import { RiskSentimentBadge } from '../ai/risk-sentiment-badge';
@@ -9,6 +9,8 @@ import { OnTrackIcon } from '../ai/on-track-icon';
 type ProductAccordionProps = {
   readonly report: ProductReport;
   readonly defaultOpen?: boolean;
+  readonly highlighted?: boolean;
+  readonly scrollIntoViewOnHighlight?: boolean;
 };
 
 type StatusConfig = { bg: string; text: string; avatarBg: string; avatarText: string };
@@ -57,21 +59,58 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
   );
 }
 
-export function ProductAccordion({ report, defaultOpen = false }: ProductAccordionProps) {
+export function ProductAccordion({
+  report,
+  defaultOpen = false,
+  highlighted = false,
+  scrollIntoViewOnHighlight = false,
+}: ProductAccordionProps) {
   const [expanded, setExpanded] = useState(defaultOpen);
+  const hasContent =
+    Boolean(report.needsAttention) ||
+    report.currentWeek.length > 0 ||
+    report.nextWeek.length > 0 ||
+    report.risks.length > 0 ||
+    report.decisions.length > 0 ||
+    report.priorities.length > 0;
   const config =
     (STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
     STATUS_CONFIG['on-track'];
 
+  useEffect(() => {
+    if (highlighted && hasContent) setExpanded(true);
+  }, [highlighted, hasContent]);
+
+  useEffect(() => {
+    if (!highlighted || !scrollIntoViewOnHighlight) return;
+    const handle = window.setTimeout(() => {
+      document
+        .getElementById(`report-product-${report.id}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(handle);
+  }, [highlighted, report.id, scrollIntoViewOnHighlight]);
+
   return (
     <div
       id={`report-product-${report.id}`}
-      className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]"
+      className="overflow-hidden rounded-[var(--radius)] border bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-[border-color,box-shadow]"
+      style={{
+        borderColor: highlighted && hasContent ? 'var(--color-starbucks-accent)' : 'rgba(0,0,0,0.10)',
+        boxShadow: highlighted && hasContent
+          ? '0 0 0 2px rgba(0,117,74,0.16), 0 8px 18px -14px rgba(0,0,0,0.18)'
+          : undefined,
+      }}
     >
       <button
         type="button"
-        className="flex w-full items-center justify-between p-4 transition-colors hover:bg-[#f8f6f2]"
+        className={`flex w-full items-center justify-between p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
+          hasContent
+            ? 'cursor-pointer hover:bg-[#f8f6f2]'
+            : 'cursor-default opacity-80'
+        }`}
         onClick={() => setExpanded(!expanded)}
+        disabled={!hasContent}
         aria-expanded={expanded}
       >
         <div className="flex items-center gap-3">
@@ -103,10 +142,17 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
         <ChevronDown expanded={expanded} />
       </button>
 
-      <div
-        className="grid transition-[grid-template-rows] duration-300"
-        style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
-      >
+      {!hasContent ? (
+        <div className="px-4 pb-4">
+          <div className="rounded bg-[var(--color-background)] p-3 text-sm text-[var(--color-muted-foreground)]">
+            No content submitted for this product.
+          </div>
+        </div>
+      ) : (
+        <div
+          className="grid transition-[grid-template-rows] duration-300"
+          style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
+        >
         <div className="min-h-0 overflow-hidden">
           <div className="space-y-3 px-4 pb-4">
             {/* Needs Attention */}
@@ -282,7 +328,8 @@ export function ProductAccordion({ report, defaultOpen = false }: ProductAccordi
             )}
           </div>
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

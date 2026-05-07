@@ -7,18 +7,18 @@ import type { ActivityLiveResponse, ActivityLiveRow } from '@customreport/shared
 import { useTRPC } from '../../lib/trpc-context';
 
 /**
- * UX-18 (Phase 35-08): "Активность за текущий период" panel.
+ * UX-18 (Phase 35-08): "Activity This Period" panel.
  *
  * Renders one row per lead's section in the open report period with a
- * status pill (Черновик / Отправлено), counts (items / risks /
+ * status pill (Draft / Submitted), counts (items / risks /
  * decisions / priorities), and a relative-time of last edit. Polls
  * activity.live every 15 seconds.
  *
- * Click on a row → /lead/report?period=<reportId>&authorId=<leadId>
+ * Click on a row → /lead/report/<reportId>?authorId=<leadId>
  * (existing head-can-view-lead-form pattern).
  *
- * If the period is closed/published the panel renders a "Период
- * опубликован" empty state instead of a row grid.
+ * If the period is closed/published the panel renders a published-period
+ * empty state instead of a row grid.
  */
 const POLL_INTERVAL_MS = 15_000;
 
@@ -40,10 +40,10 @@ export function ActivityLivePanel() {
           id="activity-live-heading"
           className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
         >
-          Активность за текущий период
+          Activity This Period
         </h2>
         <span className="text-xs text-[var(--color-muted-foreground)]">
-          Обновляется каждые 15 секунд
+          Refreshes every 15 seconds
         </span>
       </header>
       {renderBody(query.data, query.isLoading, query.isError, query.error)}
@@ -60,13 +60,13 @@ function renderBody(
   if (isLoading && !data) {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Загрузка активности…
+        Loading activity...
       </p>
     );
   }
 
   if (isError) {
-    const message = error instanceof Error ? error.message : 'Не удалось загрузить активность';
+    const message = error instanceof Error ? error.message : 'Failed to load activity';
     return (
       <p className="text-sm text-[var(--color-danger)]">
         {message}
@@ -77,7 +77,7 @@ function renderBody(
   if (!data || !data.reportId) {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Нет открытого периода для отчётности.
+        No open reporting period.
       </p>
     );
   }
@@ -85,7 +85,7 @@ function renderBody(
   if (data.periodStatus !== 'open') {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Период опубликован — активность не отслеживается.
+        Period published; activity is not tracked.
       </p>
     );
   }
@@ -97,13 +97,13 @@ function renderBody(
   if (data.rows.length === 0) {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Тимлиды ещё не начали заполнять отчёт.
+        Leads have not started their reports yet.
       </p>
     );
   }
 
   return (
-    <ul className="divide-y divide-[var(--color-border)]" aria-label="Лиды и статус секций">
+    <ul className="space-y-1" aria-label="Lead section statuses">
       {data.rows.map((row) => (
         <ActivityRow key={row.leadId} row={row} reportId={reportId} />
       ))}
@@ -125,13 +125,14 @@ function ActivityRow({
   const href = `/lead/report/${encodeURIComponent(reportId)}?authorId=${encodeURIComponent(row.leadId)}`;
   const lastEdit = row.lastEditAt
     ? formatRelative(new Date(row.lastEditAt))
-    : 'ещё не начал';
+    : 'not started';
 
   return (
     <li>
       <a
         href={href}
-        className="flex flex-wrap items-center gap-3 py-3 transition-colors hover:bg-[var(--color-success)]"
+        className="flex cursor-pointer flex-wrap items-center gap-3 rounded-[var(--radius)] border border-transparent px-2 py-3 transition-[background-color,border-color,box-shadow] hover:border-[rgba(0,117,74,0.14)] hover:bg-[var(--color-success)] hover:shadow-[inset_3px_0_0_var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
+        title={`Open ${row.leadName} report section`}
       >
         <div
           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-success)] text-[12px] font-semibold text-[var(--color-starbucks-accent)]"
@@ -147,7 +148,7 @@ function ActivityRow({
             <StatusPill status={row.status} />
           </div>
           <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            {row.itemCount} задач · {row.riskCount} рисков · {row.decisionCount} решений · {row.priorityCount} приоритетов
+            {row.itemCount} items · {row.riskCount} risks · {row.decisionCount} decisions · {row.priorityCount} priorities
           </div>
         </div>
         <div className="text-right text-xs text-[var(--color-muted-foreground)]">
@@ -162,13 +163,13 @@ function StatusPill({ status }: { readonly status: 'draft' | 'submitted' }) {
   if (status === 'submitted') {
     return (
       <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-starbucks-accent)]">
-        Отправлено
+        Submitted
       </span>
     );
   }
   return (
     <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold text-[#8a6d1b]">
-      Черновик
+      Draft
     </span>
   );
 }
@@ -182,19 +183,17 @@ function initials(name: string): string {
   return (first.charAt(0) + last.charAt(0)).toUpperCase();
 }
 
-// Lightweight relative-time formatter — no extra dep needed for "X минут
-// назад" / "только что". For sub-minute we say "только что", for hours+
-// we fall back to the locale time.
+// Lightweight relative-time formatter; no extra dependency needed.
 function formatRelative(date: Date): string {
   const diffMs = Date.now() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 30) return 'только что';
-  if (diffSec < 60) return `${diffSec} сек назад`;
+  if (diffSec < 30) return 'just now';
+  if (diffSec < 60) return `${diffSec}s ago`;
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} мин назад`;
+  if (diffMin < 60) return `${diffMin} min ago`;
   const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr} ч назад`;
+  if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay} дн назад`;
-  return date.toLocaleDateString('ru-RU');
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString('en-US');
 }

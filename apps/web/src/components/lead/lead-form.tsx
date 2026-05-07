@@ -596,7 +596,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
   });
 
   // 35-07: set document.title to surface the addressed week in the browser
-  // tab. Format: "Неделя 19, May 4–10 — CustomReport". Resolved from the
+  // tab. Format: "Week 19, May 4-10 - CustomReport". Resolved from the
   // history entry whose reportId matches the loaded section so the label
   // matches the dropdown. Restores the title on unmount.
   const titleHistoryEntry = useMemo(() => {
@@ -610,7 +610,7 @@ export function LeadForm({ period, reportId: pinnedReportId, redirectToCanonical
     const week = isoWeekNumber(start);
     const range = formatDateRange(start, titleHistoryEntry.periodEnd);
     const previous = document.title;
-    document.title = `Неделя ${week}, ${range} — CustomReport`;
+    document.title = `Week ${week}, ${range} - CustomReport`;
     return () => {
       document.title = previous;
     };

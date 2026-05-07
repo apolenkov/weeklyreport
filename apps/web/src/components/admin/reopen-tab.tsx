@@ -9,16 +9,16 @@ import { useTRPC } from '../../lib/trpc-context';
 type FilterStatus = 'pending' | 'approved' | 'rejected' | 'all';
 
 const FILTERS: ReadonlyArray<{ value: FilterStatus; label: string }> = [
-  { value: 'pending', label: 'В ожидании' },
-  { value: 'approved', label: 'Одобрено' },
-  { value: 'rejected', label: 'Отклонено' },
-  { value: 'all', label: 'Все' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'all', label: 'All' },
 ];
 
 const STATUS_LABEL: Record<'pending' | 'approved' | 'rejected', string> = {
-  pending: 'В ожидании',
-  approved: 'Одобрено',
-  rejected: 'Отклонено',
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
 };
 
 const STATUS_PALETTE: Record<'pending' | 'approved' | 'rejected', string> = {
@@ -71,8 +71,8 @@ export function ReopenTab() {
       onSuccess: ({ decision }) => {
         toast.success(
           decision === 'approved'
-            ? 'Запрос одобрен — секция переоткрыта.'
-            : 'Запрос отклонён.',
+            ? 'Request approved; section reopened.'
+            : 'Request rejected.',
         );
         setRespondingId(null);
         setNote('');
@@ -84,7 +84,7 @@ export function ReopenTab() {
         });
       },
       onError: (err) => {
-        toast.error(`Не удалось обработать: ${err.message}`);
+        toast.error(`Failed to process request: ${err.message}`);
       },
     }),
   );
@@ -96,10 +96,10 @@ export function ReopenTab() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-            Запросы на переоткрытие
+            Reopen Requests
           </h2>
           <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-            Лиды просят разрешить редактирование уже сданной секции.
+            Leads ask for permission to edit a submitted section.
           </p>
         </div>
         <div className="flex gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1">
@@ -123,21 +123,21 @@ export function ReopenTab() {
 
       {listQuery.isPending && (
         <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 text-sm text-[var(--color-muted-foreground)]">
-          Загрузка…
+          Loading...
         </div>
       )}
 
       {listQuery.isError && (
         <div className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800">
-          Не удалось загрузить запросы: {String(listQuery.error?.message ?? 'unknown')}
+          Failed to load requests: {String(listQuery.error?.message ?? 'unknown')}
         </div>
       )}
 
       {!listQuery.isPending && !listQuery.isError && requests.length === 0 && (
         <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
           {filter === 'pending'
-            ? 'Нет ожидающих запросов на переоткрытие.'
-            : 'Здесь пока пусто.'}
+            ? 'No pending reopen requests.'
+            : 'Nothing here yet.'}
         </div>
       )}
 
@@ -169,7 +169,7 @@ export function ReopenTab() {
                   </div>
                   <div className="text-xs text-[var(--color-muted-foreground)]">
                     {formatPeriod(r.report.periodStart, r.report.periodEnd, r.report.weekLabel)}
-                    {' · отправлено '}
+                    {' · submitted '}
                     {formatTimestamp(r.createdAt)}
                   </div>
                 </div>
@@ -183,7 +183,7 @@ export function ReopenTab() {
                       }}
                       className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[#f8f6f2]"
                     >
-                      Ответить
+                      Respond
                     </button>
                   </div>
                 )}
@@ -192,7 +192,7 @@ export function ReopenTab() {
               {r.reason && (
                 <div className="mt-3 rounded-[var(--radius)] bg-[#f8f6f2] p-3 text-sm text-[var(--color-foreground)]">
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                    Причина
+                    Reason
                   </div>
                   <div className="mt-1 whitespace-pre-wrap">{r.reason}</div>
                 </div>
@@ -201,7 +201,7 @@ export function ReopenTab() {
               {r.status !== 'pending' && r.reviewNote && (
                 <div className="mt-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 text-sm">
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                    Комментарий главы
+                    Head Comment
                   </div>
                   <div className="mt-1 whitespace-pre-wrap">{r.reviewNote}</div>
                   {r.reviewedBy && r.reviewedAt && (
@@ -218,14 +218,14 @@ export function ReopenTab() {
                     htmlFor={`note-${r.id}`}
                     className="block text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]"
                   >
-                    Комментарий (опционально, до 500 символов)
+                    Comment (optional, up to 500 characters)
                   </label>
                   <textarea
                     id={`note-${r.id}`}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     maxLength={500}
-                    placeholder="например: одобряю, перешли срок до пятницы 15:00"
+                    placeholder="Example: approved, please move the deadline to Friday 15:00"
                     className="w-full resize-y rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm focus:border-[var(--color-starbucks-accent)] focus:outline-none"
                     style={{ minHeight: '60px' }}
                   />
@@ -239,7 +239,7 @@ export function ReopenTab() {
                       disabled={respondMut.isPending}
                       className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[#f8f6f2] disabled:opacity-50"
                     >
-                      Отмена
+                      Cancel
                     </button>
                     <button
                       type="button"
@@ -253,7 +253,7 @@ export function ReopenTab() {
                       disabled={respondMut.isPending}
                       className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                     >
-                      Отклонить
+                      Reject
                     </button>
                     <button
                       type="button"
@@ -267,7 +267,7 @@ export function ReopenTab() {
                       disabled={respondMut.isPending}
                       className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-primary)] disabled:opacity-50"
                     >
-                      {respondMut.isPending ? 'Сохраняю…' : 'Одобрить'}
+                      {respondMut.isPending ? 'Saving...' : 'Approve'}
                     </button>
                   </div>
                 </div>

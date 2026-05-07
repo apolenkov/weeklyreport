@@ -112,7 +112,7 @@ describe('JobsTab — Phase 35-06 BullMQ DLQ admin UI', () => {
     renderTab([], captured);
 
     expect(
-      await screen.findByText(/Нет проваленных задач — очередь чиста\./),
+      await screen.findByText(/No failed jobs; queue is clean\./),
     ).toBeInTheDocument();
   });
 
@@ -131,7 +131,7 @@ describe('JobsTab — Phase 35-06 BullMQ DLQ admin UI', () => {
     expect(screen.getByText('job-2')).toBeInTheDocument();
 
     // Two retry buttons exist; click the one for job-1.
-    const retryJob1 = screen.getByRole('button', { name: /Повторить задачу job-1/i });
+    const retryJob1 = screen.getByRole('button', { name: /Retry job job-1/i });
     await userEvent.click(retryJob1);
 
     await waitFor(() => {
@@ -152,7 +152,7 @@ describe('JobsTab — Phase 35-06 BullMQ DLQ admin UI', () => {
     renderTab([makeJob('job-1')], captured);
 
     await screen.findByText('job-1');
-    await userEvent.click(screen.getByRole('button', { name: /Повторить задачу job-1/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Retry job job-1/i }));
 
     await waitFor(() => {
       expect(toastSuccess).toHaveBeenCalled();
@@ -168,7 +168,7 @@ describe('JobsTab — Phase 35-06 BullMQ DLQ admin UI', () => {
     renderTab([makeJob('job-9')], captured);
 
     await screen.findByText('job-9');
-    await userEvent.click(screen.getByRole('button', { name: /Повторить задачу job-9/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Retry job job-9/i }));
 
     await waitFor(() => {
       expect(toastInfo).toHaveBeenCalled();
@@ -178,6 +178,6 @@ describe('JobsTab — Phase 35-06 BullMQ DLQ admin UI', () => {
   it('renders the queue header so the head knows which queue is shown', async () => {
     const captured: Captured = { retryMutationFn: vi.fn() };
     renderTab([], captured);
-    expect(await screen.findByText(/Очередь email-reminder/)).toBeInTheDocument();
+    expect(await screen.findByText(/email-reminder queue/)).toBeInTheDocument();
   });
 });

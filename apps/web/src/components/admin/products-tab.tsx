@@ -171,18 +171,18 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
             here, or the source report for content hits). */}
         <SearchInput
           scope="all"
-          placeholder="Поиск по всем продуктам и отчётам…"
+          placeholder="Search all products and reports..."
         />
         {productFilter && (
           <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2">
             <span className="text-sm text-[var(--color-muted-foreground)]">
-              {filterMatched ? 'Показан продукт из поиска' : 'Продукт из поиска не найден'}
+              {filterMatched ? 'Showing product from search' : 'Product from search not found'}
             </span>
             <a
               href="/admin?tab=products"
               className="text-sm font-semibold text-[var(--color-starbucks-accent)] hover:text-[var(--color-primary)]"
             >
-              Сбросить
+              Reset
             </a>
           </div>
         )}

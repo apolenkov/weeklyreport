@@ -31,7 +31,7 @@ type ItemEditDialogProps = {
   readonly defaultProductId?: string;
   /**
    * 35-04 (FEAT-144): callback returning the SDLC stages the current lead
-   * owns on the given project. Constrains the "Стадия SDLC" select.
+   * owns on the given project. Constrains the "SDLC Stage" select.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
   readonly onSave: (next: KanbanItem) => void;
@@ -199,7 +199,7 @@ export function ItemEditDialog({
               to stages the lead owns on the active project. */}
           <div>
             <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="item-stage">
-              Стадия SDLC *
+              SDLC Stage *
             </label>
             <select
               id="item-stage"
@@ -213,7 +213,7 @@ export function ItemEditDialog({
               value={stageName}
               onChange={(e) => { setStageName(e.target.value); setErrors((prev) => ({ ...prev, stage: undefined })); }}
             >
-              <option value="">— Выберите стадию —</option>
+              <option value="">-- Select stage --</option>
               {(stagesForProduct?.(productId) ?? []).map((stg) => (
                 <option key={stg} value={stg}>{stg}</option>
               ))}

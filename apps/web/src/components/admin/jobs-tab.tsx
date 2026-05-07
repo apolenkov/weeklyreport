@@ -53,12 +53,12 @@ export function JobsTab() {
     trpc.admin.jobs.retryFailed.mutationOptions({
       onSuccess: (result) => {
         if (result.retried) {
-          toast.success(`Задача ${result.jobId} поставлена на повтор.`);
+          toast.success(`Job ${result.jobId} queued for retry.`);
         } else {
           // The job no longer exists (e.g. pruned by removeOnFail or already
           // retried elsewhere). Surface as a soft warning, not an error.
           toast.info(
-            `Задача ${result.jobId} больше не существует — список обновлён.`,
+            `Job ${result.jobId} no longer exists; list refreshed.`,
           );
         }
         void qc.invalidateQueries({
@@ -72,7 +72,7 @@ export function JobsTab() {
         setRetryingId(null);
       },
       onError: (err) => {
-        toast.error(`Не удалось повторить: ${err.message}`);
+        toast.error(`Retry failed: ${err.message}`);
         setRetryingId(null);
       },
     }),
@@ -98,11 +98,11 @@ export function JobsTab() {
     <div className="space-y-4" data-testid="jobs-tab">
       <div>
         <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          Очередь email-reminder
+          email-reminder queue
         </h2>
         <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-          Задачи, исчерпавшие лимит попыток. Нажмите «Повторить», чтобы
-          вернуть задачу в очередь.
+          Jobs that exhausted their retry limit. Click Retry to put a job
+          back into the queue.
         </p>
       </div>
 
@@ -113,7 +113,7 @@ export function JobsTab() {
           role="alert"
           className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
         >
-          Не удалось загрузить список: {String(listQuery.error?.message ?? 'unknown')}
+          Failed to load list: {String(listQuery.error?.message ?? 'unknown')}
         </div>
       )}
 
@@ -122,7 +122,7 @@ export function JobsTab() {
           data-testid="jobs-empty-state"
           className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
         >
-          Нет проваленных задач — очередь чиста.
+          No failed jobs; queue is clean.
         </div>
       )}
 
@@ -132,12 +132,12 @@ export function JobsTab() {
             <thead>
               <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
                 <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">ID</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Имя</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Попыток</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Ошибка</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Время</th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Name</th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Attempts</th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Error</th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Time</th>
                 <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
-                  Действия
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -179,11 +179,11 @@ export function JobsTab() {
                           aria-expanded={isExpanded}
                           aria-label={
                             isExpanded
-                              ? `Свернуть ошибку задачи ${job.id}`
-                              : `Раскрыть ошибку задачи ${job.id}`
+                              ? `Collapse job ${job.id} error`
+                              : `Expand job ${job.id} error`
                           }
                         >
-                          {isExpanded ? 'Свернуть' : 'Раскрыть'}
+                          {isExpanded ? 'Collapse' : 'Expand'}
                         </button>
                       )}
                     </td>
@@ -196,9 +196,9 @@ export function JobsTab() {
                         onClick={() => handleRetry(job.id)}
                         disabled={isRetrying || retryMut.isPending}
                         className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label={`Повторить задачу ${job.id}`}
+                        aria-label={`Retry job ${job.id}`}
                       >
-                        {isRetrying ? 'Повторяется…' : 'Повторить'}
+                        {isRetrying ? 'Retrying...' : 'Retry'}
                       </button>
                     </td>
                   </tr>

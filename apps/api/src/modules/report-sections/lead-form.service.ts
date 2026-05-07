@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel, VersionSnapshot } from '@customreport/shared';
+import type { ReportSectionReadModel, Role, VersionSnapshot } from '@customreport/shared';
 
 export interface LeadFormRepository {
   getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
@@ -159,13 +159,21 @@ export class LeadFormService {
   async getByPeriod(
     reportId: string,
     userId: string,
+    role?: Role,
+    requestedAuthorId?: string,
   ): Promise<{ section: ReportSectionReadModel; readOnly: boolean }> {
-    const result = await this.repository.getSectionForPeriod(reportId, userId);
+    const canViewOtherAuthor = role === 'head' || role === 'admin';
+    const sectionAuthorId =
+      requestedAuthorId && canViewOtherAuthor ? requestedAuthorId : userId;
+    const result = await this.repository.getSectionForPeriod(reportId, sectionAuthorId);
 
     if (!result) {
       throw new Error(`No section found for user in report ${reportId}.`);
     }
 
-    return result;
+    return {
+      ...result,
+      readOnly: result.readOnly || sectionAuthorId !== userId,
+    };
   }
 }

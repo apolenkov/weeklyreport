@@ -319,7 +319,7 @@ describe('LeadForm — Phase 35-07 addressable URLs', () => {
     });
 
     // History entry for PAST_REPORT_ID → Apr 7-13, ISO Week 15.
-    expect(document.title).toContain('Неделя 15');
+    expect(document.title).toContain('Week 15');
     expect(document.title).toContain('Apr 7-13');
     expect(document.title).toContain('CustomReport');
   });

@@ -59,10 +59,10 @@ function sanitizeNext(value: string | null, fallback: string): string {
 }
 
 const ROLE_LABEL: Record<Role, string> = {
-  head: 'Глава департамента',
-  admin: 'Админ',
-  lead: 'Тимлид',
-  viewer: 'Наблюдатель',
+  head: 'Department Head',
+  admin: 'Admin',
+  lead: 'Lead',
+  viewer: 'Viewer',
 };
 
 const ROLE_ORDER: ReadonlyArray<Role> = ['head', 'admin', 'lead', 'viewer'];
@@ -247,7 +247,7 @@ function DevLoginGrid({
   if (loading) {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Загрузка списка демо-пользователей…
+        Loading demo users...
       </p>
     );
   }
@@ -261,7 +261,7 @@ function DevLoginGrid({
   if (groups.length === 0) {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Нет seeded-пользователей. Запустите{' '}
+        No seeded users. Run{' '}
         <code className="rounded bg-gray-100 px-1.5 py-0.5">pnpm db:seed:simple</code>.
       </p>
     );
@@ -271,10 +271,10 @@ function DevLoginGrid({
     <div className="space-y-6 text-left">
       <div>
         <p className="mb-1 text-sm font-semibold text-[var(--color-foreground)]">
-          Войти как…
+          Login as...
         </p>
         <p className="text-xs text-[var(--color-muted-foreground)]">
-          Нажмите карточку — система перенаправит на стартовую страницу для роли.
+          Click a card to open the start page for that role.
         </p>
       </div>
       {groups.map((group) => (

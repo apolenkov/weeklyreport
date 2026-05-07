@@ -1161,6 +1161,7 @@ describe('weeklyReportReadModelSchema', () => {
     periodEnd: '2026-04-18',
     periodStatus: 'open' as const,
     weekLabel: 'W16-2026',
+    departmentName: 'Core Development',
     submissionCount: 3,
     totalLeads: 6,
     portfolioOverview: [],

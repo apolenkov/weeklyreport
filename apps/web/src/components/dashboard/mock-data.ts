@@ -16,6 +16,7 @@ export type TrafficLight = {
 
 export type LeadInfo = {
   id: string;
+  reportId?: string;
   initials: string;
   name: string;
   role: string;
@@ -102,6 +103,7 @@ export type ReportPriority = {
 
 export type ProductReport = {
   id: string;
+  authorIds?: string[];
   initials: string;
   name: string;
   status: ProductStatus;
