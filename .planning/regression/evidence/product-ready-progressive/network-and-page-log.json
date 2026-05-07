@@ -26,6 +26,24 @@
   {
     "type": "response",
     "method": "GET",
+    "url": "http://localhost:3000/trpc/reports.getActive,reports.myHistory?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
+    "status": 200
+  },
+  {
+    "type": "requestfailed",
+    "method": "GET",
+    "url": "http://localhost:3000/lead/report/a0000000-0000-4000-8000-000000000001?_rsc=1pysf",
+    "message": "net::ERR_ABORTED"
+  },
+  {
+    "type": "requestfailed",
+    "method": "GET",
+    "url": "http://localhost:3000/trpc/leadForm.byPeriod,leadForm.versions?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22reportId%22%3A%22a0000000-0000-4000-8000-000000000001%22%7D%7D%2C%221%22%3A%7B%22json%22%3A%7B%22reportSectionId%22%3A%22a0000000-0000-4000-8000-000000004011%22%7D%7D%7D",
+    "message": "net::ERR_ABORTED"
+  },
+  {
+    "type": "response",
+    "method": "GET",
     "url": "http://localhost:3000/trpc/dev.listUsers,auth.me?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%2C%22v%22%3A1%7D%7D%7D",
     "status": 200
   },
