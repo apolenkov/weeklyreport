@@ -73,7 +73,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    command: ["npx", "prisma", "migrate", "deploy"]
+      target: migrator
+    command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     environment:
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport
     depends_on:
@@ -100,7 +101,8 @@ services:
       AUTH_DEV_MODE: "true"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-development-min-32-chars!!}
       PDF_BASE_URL: http://web:3000
-      SMTP_HOST: ${SMTP_HOST:-}
+      PDF_OUTPUT_DIR: /app/data/pdfs
+      SMTP_HOST: mailhog
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
     depends_on:
@@ -128,12 +130,21 @@ services:
       context: .
       dockerfile: Dockerfile.web
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3002
+      API_URL: http://api:3002
+      NEXT_PUBLIC_API_URL: http://api:3002
+      NEXT_PUBLIC_AUTH_STUB: "true"
+      NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
     depends_on:
       api:
         condition: service_healthy
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 volumes:
   pgdata:

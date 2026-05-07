@@ -56,6 +56,17 @@ pnpm exec prisma db seed
 pnpm dev
 ```
 
+Full-container local verification (web + api + infrastructure in Docker):
+
+```bash
+pnpm docker:local:verify
+```
+
+This command runs `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`,
+wipes/reseeds the database inside the API container, then verifies web, API,
+Mailpit, dev-login, and authenticated tRPC through the containerized web app.
+Evidence is written to `.planning/regression/evidence/docker-compose-local/`.
+
 Open http://localhost:3000. The local API listens on
 http://localhost:3002; the web app proxies `/trpc`, `/auth`, and `/health`
 to that API through Next.js rewrites.
@@ -163,6 +174,8 @@ Single source of truth: root `.env` (loaded by api via `--env-file=../../.env`) 
 | `LOG_LEVEL`                             | No         | info                                                          | `debug`/`info`/`warn`/`error` (debug enables tRPC envelope shape breadcrumbs)                           |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_FROM` | No         | —                                                             | When set, real SMTP send. With MailHog: `localhost:1025`.                                               |
 | `NEXT_PUBLIC_API_URL`                   | Yes (web)  | http://localhost:3002                                         | tRPC client base URL                                                                                    |
+| `API_URL`                               | No         | —                                                             | Server-side API URL for Next.js SSR/session calls. In Docker use `http://api:3002` for dev.             |
+| `NEXT_PUBLIC_AUTH_STUB`                 | No         | false                                                         | Show the local dev-login picker on the landing page.                                                    |
 | `NEXT_PUBLIC_DEV_ROLE_SWITCHER`         | No         | false                                                         | Show the bottom-right DEV identity dropdown                                                             |
 
 ## Local development with mock Keycloak

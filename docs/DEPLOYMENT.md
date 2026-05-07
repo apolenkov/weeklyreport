@@ -19,15 +19,15 @@ collection system built with Next.js 16, NestJS 11, PostgreSQL 15, and Redis 7.
 
 ## 1. Prerequisites
 
-| Component        | Minimum Version | Notes                                              |
-| ---------------- | --------------- | -------------------------------------------------- |
-| Docker           | 27.x           | Docker Engine with Compose V2 plugin                |
-| Docker Compose   | 2.x            | Bundled with Docker Desktop or standalone plugin    |
-| Node.js          | 20.x LTS       | Only needed for local/non-Docker builds             |
-| pnpm             | 10.x           | Package manager (corepack-managed inside containers)|
-| PostgreSQL       | 15+             | Provided via `postgres:15-alpine` container         |
-| Redis            | 7+              | Provided via `redis:7-alpine` container             |
-| Keycloak         | 26.x            | SAML IdP -- optional if using `AUTH_DEV_MODE=true`  |
+| Component      | Minimum Version | Notes                                                |
+| -------------- | --------------- | ---------------------------------------------------- |
+| Docker         | 27.x            | Docker Engine with Compose V2 plugin                 |
+| Docker Compose | 2.x             | Bundled with Docker Desktop or standalone plugin     |
+| Node.js        | 20.x LTS        | Only needed for local/non-Docker builds              |
+| pnpm           | 10.x            | Package manager (corepack-managed inside containers) |
+| PostgreSQL     | 15+             | Provided via `postgres:15-alpine` container          |
+| Redis          | 7+              | Provided via `redis:7-alpine` container              |
+| Keycloak       | 26.x            | SAML IdP -- optional if using `AUTH_DEV_MODE=true`   |
 
 **Disk space:** The API image is ~1.4 GB due to the bundled Playwright/Chromium
 dependency required for server-side PDF generation. The web image is ~150 MB
@@ -44,22 +44,22 @@ the container starts.
 
 ### 2.1 Core
 
-| Variable        | Required | Default                  | Description                                                     |
-| --------------- | -------- | ------------------------ | --------------------------------------------------------------- |
-| `DATABASE_URL`  | Yes      | --                       | PostgreSQL connection string. Format: `postgresql://user:pass@host:5432/dbname` |
-| `DIRECT_URL`    | No       | --                       | Direct PostgreSQL URL (bypasses PgBouncer if configured). Used by Prisma for migrations. |
-| `PORT`          | No       | `3001`                   | API server listen port inside the container.                    |
-| `NODE_ENV`      | No       | `development`            | Set to `production` for production deployments.                 |
-| `FRONTEND_URL`  | No       | `http://localhost:3000`  | Allowed CORS origin. Must match the URL where the web app is served. |
-| `LOG_LEVEL`     | No       | `info`                   | Logging verbosity: `debug`, `info`, `warn`, `error`.            |
-| `LOG_DIR`       | No       | --                       | Directory for file-based log output. Omit to log to stdout only.|
+| Variable       | Required | Default                 | Description                                                                              |
+| -------------- | -------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `DATABASE_URL` | Yes      | --                      | PostgreSQL connection string. Format: `postgresql://user:pass@host:5432/dbname`          |
+| `DIRECT_URL`   | No       | --                      | Direct PostgreSQL URL (bypasses PgBouncer if configured). Used by Prisma for migrations. |
+| `PORT`         | No       | `3001`                  | API server listen port inside the container.                                             |
+| `NODE_ENV`     | No       | `development`           | Set to `production` for production deployments.                                          |
+| `FRONTEND_URL` | No       | `http://localhost:3000` | Allowed CORS origin. Must match the URL where the web app is served.                     |
+| `LOG_LEVEL`    | No       | `info`                  | Logging verbosity: `debug`, `info`, `warn`, `error`.                                     |
+| `LOG_DIR`      | No       | --                      | Directory for file-based log output. Omit to log to stdout only.                         |
 
 ### 2.2 Authentication
 
-| Variable          | Required           | Default   | Description                                                     |
-| ----------------- | ------------------ | --------- | --------------------------------------------------------------- |
-| `AUTH_DEV_MODE`   | No                 | `false`   | Set to `true` to bypass SAML and use a stub login. **Never enable in production.** |
-| `AUTH_JWT_SECRET`  | Conditional        | --        | JWT signing secret. Minimum 32 characters. **Required** when `AUTH_DEV_MODE` is not `true`. |
+| Variable          | Required    | Default | Description                                                                                 |
+| ----------------- | ----------- | ------- | ------------------------------------------------------------------------------------------- |
+| `AUTH_DEV_MODE`   | No          | `false` | Set to `true` to bypass SAML and use a stub login. **Never enable in production.**          |
+| `AUTH_JWT_SECRET` | Conditional | --      | JWT signing secret. Minimum 32 characters. **Required** when `AUTH_DEV_MODE` is not `true`. |
 
 ### 2.3 SAML / Keycloak
 
@@ -67,64 +67,68 @@ These variables are required at runtime when `AUTH_DEV_MODE=false`. They are
 validated by the SAML strategy module, not the Zod schema (to allow dev-mode
 startup without Keycloak).
 
-| Variable                      | Required             | Default | Description                                                     |
-| ----------------------------- | -------------------- | ------- | --------------------------------------------------------------- |
-| `KEYCLOAK_SAML_CALLBACK_URL`  | When SAML enabled    | --      | Callback URL registered in Keycloak (e.g. `https://api.example.com/auth/saml/callback`) |
-| `KEYCLOAK_SAML_ENTRY_POINT`   | When SAML enabled    | --      | Keycloak SAML SSO endpoint (e.g. `https://keycloak.example.com/realms/prod/protocol/saml`) |
-| `KEYCLOAK_SAML_ISSUER`        | When SAML enabled    | --      | Service provider entity ID registered in Keycloak (e.g. `customreport-prod`) |
-| `KEYCLOAK_SAML_CERT`          | When SAML enabled    | --      | Keycloak IdP X.509 signing certificate (PEM format, no headers) |
+| Variable                     | Required          | Default | Description                                                                                |
+| ---------------------------- | ----------------- | ------- | ------------------------------------------------------------------------------------------ |
+| `KEYCLOAK_SAML_CALLBACK_URL` | When SAML enabled | --      | Callback URL registered in Keycloak (e.g. `https://api.example.com/auth/saml/callback`)    |
+| `KEYCLOAK_SAML_ENTRY_POINT`  | When SAML enabled | --      | Keycloak SAML SSO endpoint (e.g. `https://keycloak.example.com/realms/prod/protocol/saml`) |
+| `KEYCLOAK_SAML_ISSUER`       | When SAML enabled | --      | Service provider entity ID registered in Keycloak (e.g. `customreport-prod`)               |
+| `KEYCLOAK_SAML_CERT`         | When SAML enabled | --      | Keycloak IdP X.509 signing certificate (PEM format, no headers)                            |
 
 ### 2.4 Redis
 
-| Variable     | Required | Default     | Description                       |
-| ------------ | -------- | ----------- | --------------------------------- |
+| Variable     | Required | Default     | Description                                                |
+| ------------ | -------- | ----------- | ---------------------------------------------------------- |
 | `REDIS_HOST` | No       | `localhost` | Redis hostname. Use `redis` inside Docker Compose network. |
-| `REDIS_PORT` | No       | `6379`      | Redis port.                       |
+| `REDIS_PORT` | No       | `6379`      | Redis port.                                                |
 
 ### 2.5 SMTP (Email Reminders)
 
 All SMTP variables are optional. Email features are disabled when `SMTP_HOST` is
 not set.
 
-| Variable    | Required | Default               | Description                           |
-| ----------- | -------- | --------------------- | ------------------------------------- |
-| `SMTP_HOST` | No       | --                    | SMTP server hostname.                 |
+| Variable    | Required | Default               | Description                                         |
+| ----------- | -------- | --------------------- | --------------------------------------------------- |
+| `SMTP_HOST` | No       | --                    | SMTP server hostname.                               |
 | `SMTP_PORT` | No       | `587`                 | SMTP port (587 for STARTTLS, 465 for implicit TLS). |
-| `SMTP_USER` | No       | --                    | SMTP authentication username.         |
-| `SMTP_PASS` | No       | --                    | SMTP authentication password.         |
-| `SMTP_FROM` | No       | `noreply@example.com` | Sender address for outgoing emails.   |
+| `SMTP_USER` | No       | --                    | SMTP authentication username.                       |
+| `SMTP_PASS` | No       | --                    | SMTP authentication password.                       |
+| `SMTP_FROM` | No       | `noreply@example.com` | Sender address for outgoing emails.                 |
 
 ### 2.6 PDF Generation
 
-| Variable       | Required | Default                 | Description                                              |
-| -------------- | -------- | ----------------------- | -------------------------------------------------------- |
-| `PDF_BASE_URL` | No       | `http://localhost:3000` | Base URL the API uses to render report pages as PDF. In Docker Compose this should be `http://web:3000` (internal network). |
+| Variable         | Required | Default                 | Description                                                                                                                 |
+| ---------------- | -------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `PDF_BASE_URL`   | No       | `http://localhost:3000` | Base URL the API uses to render report pages as PDF. In Docker Compose this should be `http://web:3000` (internal network). |
+| `PDF_OUTPUT_DIR` | No       | `./storage/pdfs`        | Directory where generated PDF files are written. In Docker/Kubernetes mount this at `/app/data/pdfs`.                       |
 
 ### 2.7 Frontend (Web App)
 
 These variables are set on the `web` service, not the API.
 
-| Variable               | Required | Default                 | Description                                       |
-| ---------------------- | -------- | ----------------------- | ------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`  | No       | `http://localhost:3001` | Public URL of the API for browser-side tRPC calls.|
-| `NEXT_PUBLIC_AUTH_STUB`| No       | --                      | Set to `true` to show the dev login stub in the UI.|
+| Variable                        | Required | Default                 | Description                                                                                                                                           |
+| ------------------------------- | -------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `API_URL`                       | No       | --                      | Server-side API URL for Next.js SSR/session calls. In Docker/Kubernetes use the internal service URL (`http://api:3001` or `http://api:3002` in dev). |
+| `NEXT_PUBLIC_API_URL`           | No       | `http://localhost:3001` | Public URL of the API for browser-side tRPC calls.                                                                                                    |
+| `NEXT_PUBLIC_AUTH_STUB`         | No       | --                      | Set to `true` to show the dev login stub in the UI.                                                                                                   |
+| `NEXT_PUBLIC_DEV_ROLE_SWITCHER` | No       | `false`                 | Set to `true` in local/dev Compose only to expose the floating role switcher and reseed actions.                                                      |
 
 ### 2.8 Docker Compose Variables
 
 These variables are used by the Compose files themselves (not passed to
 application code).
 
-| Variable            | Required | Default                | Description                          |
-| ------------------- | -------- | ---------------------- | ------------------------------------ |
-| `DB_PASSWORD`       | Yes (prod) | `localdev` (dev)    | PostgreSQL password. The production Compose file fails if not set. |
-| `AUTH_JWT_SECRET`    | Yes (prod) | --                  | Also injected into the `api` service (see 2.2). |
-| `FRONTEND_URL`      | No       | `http://localhost:3000`| Passed to the `api` service for CORS.|
-| `NEXT_PUBLIC_API_URL`| No      | `http://localhost:3001`| Passed to the `web` service.         |
-| `API_PORT`          | No       | `3001`                 | Host port mapped to the API container.|
-| `WEB_PORT`          | No       | `3000`                 | Host port mapped to the web container.|
-| `SMTP_HOST`         | No       | --                     | Forwarded to API service.            |
-| `SMTP_PORT`         | No       | `587`                  | Forwarded to API service.            |
-| `SMTP_FROM`         | No       | `noreply@example.com`  | Forwarded to API service.            |
+| Variable              | Required   | Default                 | Description                                                                                                |
+| --------------------- | ---------- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `DB_PASSWORD`         | Yes (prod) | `localdev` (dev)        | PostgreSQL password. The production Compose file fails if not set.                                         |
+| `AUTH_JWT_SECRET`     | Yes (prod) | --                      | Also injected into the `api` service (see 2.2).                                                            |
+| `FRONTEND_URL`        | No         | `http://localhost:3000` | Passed to the `api` service for CORS.                                                                      |
+| `NEXT_PUBLIC_API_URL` | No         | `http://localhost:3001` | Passed to the `web` service.                                                                               |
+| `API_PORT`            | No         | `3001`                  | Host port mapped to the API container.                                                                     |
+| `WEB_PORT`            | No         | `3000`                  | Host port mapped to the web container.                                                                     |
+| `SMTP_HOST`           | No         | --                      | Forwarded to API service.                                                                                  |
+| `SMTP_PORT`           | No         | `587`                   | Forwarded to API service.                                                                                  |
+| `SMTP_FROM`           | No         | `noreply@example.com`   | Forwarded to API service.                                                                                  |
+| `CADDY_SITE_ADDRESS`  | Yes (prod) | --                      | Public site address for the bundled Caddy reverse proxy, e.g. `reports.example.com` or `http://localhost`. |
 
 ---
 
@@ -169,8 +173,19 @@ cd customreport
 cat > .env << 'EOF'
 DB_PASSWORD=<strong-random-password>
 AUTH_JWT_SECRET=<min-32-character-random-secret>
+PDF_EXPORT_JWT_SECRET=<min-16-character-random-secret>
 FRONTEND_URL=https://reports.example.com
-NEXT_PUBLIC_API_URL=https://api.reports.example.com
+API_URL=http://api:3001
+NEXT_PUBLIC_API_URL=http://api:3001
+PDF_BASE_URL=http://web:3000
+SMTP_HOST=<smtp-host>
+SMTP_PORT=587
+SMTP_FROM=noreply@example.com
+KEYCLOAK_SAML_CALLBACK_URL=https://reports.example.com/auth/saml/callback
+KEYCLOAK_SAML_ENTRY_POINT=https://keycloak.example.com/realms/prod/protocol/saml
+KEYCLOAK_SAML_ISSUER=customreport-prod
+KEYCLOAK_SAML_CERT=<base64-or-single-line-cert>
+CADDY_SITE_ADDRESS=reports.example.com
 EOF
 
 # 3. Build and start all services
@@ -183,12 +198,14 @@ docker compose -f docker-compose.prod.yml ps
 ### 3.3 Service Details
 
 **postgres** -- PostgreSQL 15 Alpine with persistent volume.
+
 - Data stored in the `pgdata` named volume.
 - Memory limit: 512 MB.
 - Health check: `pg_isready` every 10s.
 - No host port exposed in production (internal network only).
 
 **redis** -- Redis 7 Alpine with AOF persistence.
+
 - Data stored in the `redisdata` named volume.
 - `maxmemory-policy: noeviction` -- BullMQ requires this to prevent job data loss.
 - Memory limit: 256 MB.
@@ -196,40 +213,43 @@ docker compose -f docker-compose.prod.yml ps
 - No host port exposed in production (internal network only).
 
 **migrate** -- One-shot container that runs `prisma migrate deploy`.
+
 - Runs after postgres is healthy, before the API starts.
 - Exits after migration completes (`restart: no`).
 - Uses the same API Docker image.
 
 **api** -- NestJS 11 backend with Playwright for PDF generation.
+
 - Memory limit: 2 GB (Chromium requires ~1 GB for PDF rendering).
 - Health check: `wget` against `/health/live` every 15s.
 - PDF files stored in the `pdfdata` named volume at `/app/data/pdfs`.
 - Start period: 30s (allows Prisma client and Playwright to initialize).
 
 **web** -- Next.js 16 standalone server.
+
 - Memory limit: 512 MB.
 - Health check: `wget` against `/` every 15s.
 - Start period: 20s.
 
 ### 3.4 Volumes
 
-| Volume      | Mounted In | Path                         | Purpose                    |
-| ----------- | ---------- | ---------------------------- | -------------------------- |
-| `pgdata`    | postgres   | `/var/lib/postgresql/data`   | Database files             |
-| `redisdata` | redis      | `/data`                      | Redis AOF + RDB snapshots  |
-| `pdfdata`   | api        | `/app/data/pdfs`             | Generated PDF export files |
+| Volume      | Mounted In | Path                       | Purpose                    |
+| ----------- | ---------- | -------------------------- | -------------------------- |
+| `pgdata`    | postgres   | `/var/lib/postgresql/data` | Database files             |
+| `redisdata` | redis      | `/data`                    | Redis AOF + RDB snapshots  |
+| `pdfdata`   | api        | `/app/data/pdfs`           | Generated PDF export files |
 
 ### 3.5 Logging
 
 All services use the `json-file` Docker logging driver with rotation:
 
-| Service    | Max Size | Max Files |
-| ---------- | -------- | --------- |
-| postgres   | 10 MB    | 3         |
-| redis      | 10 MB    | 3         |
-| migrate    | 5 MB     | 1         |
-| api        | 20 MB    | 5         |
-| web        | 20 MB    | 5         |
+| Service  | Max Size | Max Files |
+| -------- | -------- | --------- |
+| postgres | 10 MB    | 3         |
+| redis    | 10 MB    | 3         |
+| migrate  | 5 MB     | 1         |
+| api      | 20 MB    | 5         |
+| web      | 20 MB    | 5         |
 
 View logs:
 
@@ -254,6 +274,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 
 The dev override:
+
 - Builds from the `installer` stage (includes dev dependencies).
 - Mounts source directories for hot-reload (`apps/api/src`, `apps/web/src`, etc.).
 - Runs `node --watch` for the API and `pnpm dev` for the web app.
@@ -369,9 +390,9 @@ The database contains the following core tables:
 | -------------------- | -------------------------------------------- |
 | `User`               | Team members (leads, head, viewers)          |
 | `Project`            | Products/projects managed by leads           |
-| `Report`             | Weekly report periods with lifecycle status   |
+| `Report`             | Weekly report periods with lifecycle status  |
 | `ReportSection`      | Per-lead section within a report             |
-| `ProjectStatus`      | Traffic-light status per project per section  |
+| `ProjectStatus`      | Traffic-light status per project per section |
 | `Item`               | Current/next week work items                 |
 | `Risk`               | Project risks with impact and mitigation     |
 | `Decision`           | Decisions requiring management attention     |
@@ -382,7 +403,7 @@ The database contains the following core tables:
 | `CarryOverExecution` | Cross-period item carry-over tracking        |
 | `CarryOverRecord`    | Individual carried-over item/decision        |
 | `VersionSnapshot`    | Autosave history for section edits           |
-| `Stage`              | SDLC stages (e.g., Development, QA, Deploy) |
+| `Stage`              | SDLC stages (e.g., Development, QA, Deploy)  |
 | `StageAssignment`    | Stage ownership per user per project         |
 | `AppSettings`        | Application configuration singleton          |
 
@@ -394,10 +415,10 @@ The database contains the following core tables:
 
 The API exposes health check endpoints via `@nestjs/terminus`:
 
-| Endpoint         | Purpose              | Checks                                    | Use For               |
-| ---------------- | -------------------- | ----------------------------------------- | --------------------- |
-| `GET /health/live`  | Liveness probe    | Memory heap < 200 MB                      | Container restart     |
-| `GET /health/ready` | Readiness probe   | Database + Redis + BullMQ queues + Memory | Load balancer routing |
+| Endpoint            | Purpose         | Checks                                    | Use For               |
+| ------------------- | --------------- | ----------------------------------------- | --------------------- |
+| `GET /health/live`  | Liveness probe  | Memory heap < 200 MB                      | Container restart     |
+| `GET /health/ready` | Readiness probe | Database + Redis + BullMQ queues + Memory | Load balancer routing |
 
 ### 5.2 Response Format
 
@@ -428,12 +449,12 @@ the `error` object.
 
 Health checks are configured in the Compose files:
 
-| Service  | Endpoint / Command       | Interval | Timeout | Retries | Start Period |
-| -------- | ------------------------ | -------- | ------- | ------- | ------------ |
-| postgres | `pg_isready -U customreport` | 10s  | 5s      | 5       | --           |
-| redis    | `redis-cli ping`         | 10s      | 5s      | 5       | --           |
-| api      | `GET /health/live`       | 15s      | 5s      | 3       | 30s          |
-| web      | `GET /`                  | 15s      | 5s      | 3       | 20s          |
+| Service  | Endpoint / Command           | Interval | Timeout | Retries | Start Period |
+| -------- | ---------------------------- | -------- | ------- | ------- | ------------ |
+| postgres | `pg_isready -U customreport` | 10s      | 5s      | 5       | --           |
+| redis    | `redis-cli ping`             | 10s      | 5s      | 5       | --           |
+| api      | `GET /health/live`           | 15s      | 5s      | 3       | 30s          |
+| web      | `GET /`                      | 15s      | 5s      | 3       | 20s          |
 
 ### 5.4 Kubernetes Probes (Future)
 
@@ -459,10 +480,10 @@ readinessProbe:
 
 The API uses two BullMQ queues backed by Redis:
 
-| Queue             | Purpose                              |
-| ----------------- | ------------------------------------ |
-| `pdf-export`      | Async PDF generation via Playwright  |
-| `email-reminder`  | Scheduled email delivery             |
+| Queue            | Purpose                             |
+| ---------------- | ----------------------------------- |
+| `pdf-export`     | Async PDF generation via Playwright |
+| `email-reminder` | Scheduled email delivery            |
 
 Queue health is included in the `/health/ready` response. Monitor queue depth
 to detect processing delays.
@@ -635,6 +656,7 @@ docker compose -f docker-compose.prod.yml logs api
 ```
 
 Common causes:
+
 - Missing `AUTH_JWT_SECRET` when `AUTH_DEV_MODE` is not `true`.
 - `DATABASE_URL` not in `postgresql://` format.
 - `REDIS_HOST` unreachable (check container networking).
@@ -693,4 +715,4 @@ Migrations run automatically via the `migrate` service before the API starts.
 
 ---
 
-*Last updated: 2026-04-24*
+_Last updated: 2026-04-24_

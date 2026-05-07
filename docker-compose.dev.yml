@@ -30,10 +30,12 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       PORT: 3002
-      FRONTEND_URL: http://localhost:3001
+      FRONTEND_URL: http://localhost:3000
       AUTH_DEV_MODE: "true"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-production-min-32-chars!!}
-      PDF_BASE_URL: http://localhost:3000
+      PDF_BASE_URL: http://web:3000
+      PDF_OUTPUT_DIR: /app/data/pdfs
+      SMTP_HOST: mailhog
       LOG_LEVEL: debug
     depends_on:
       postgres:
@@ -57,8 +59,11 @@ services:
       - ./tsconfig.base.json:/app/tsconfig.base.json:ro
     environment:
       NODE_ENV: development
-      NEXT_PUBLIC_API_URL: http://localhost:3002
+      API_URL: http://api:3002
+      NEXT_PUBLIC_API_URL: http://api:3002
       AUTH_DEV_MODE: "true"
+      NEXT_PUBLIC_AUTH_STUB: "true"
+      NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
     depends_on:
       - api
     ports:
