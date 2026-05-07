@@ -6,7 +6,8 @@
 
 The code gates, build, focused regression slices, clean-state progressive
 role scenario, full live regression suite, API health checks, screenshot
-capture, and UI review all ran.
+capture, UI review, real integration suite, and docker-compose local verify
+all ran.
 
 ## Scope Closed
 
@@ -21,6 +22,9 @@ capture, and UI review all ran.
   state instead of acting like collapsible content.
 - Export PDF is enabled for exportable report states and correctly disabled
   with a publish-first reason for draft/live states.
+- PDF integration jobs are isolated from local docker workers through a
+  BullMQ prefix, and worker failures now write `failed` back to the DB instead
+  of leaving jobs stuck in `pending`.
 - React duplicate-key risk in dashboard pending-lead fragments is fixed.
 - Shared UI buttons now expose explicit pointer/not-allowed cursor states.
 
@@ -31,8 +35,11 @@ capture, and UI review all ran.
 | Web typecheck                              |   PASS | `rtk pnpm -C apps/web typecheck`                                      |
 | API typecheck                              |   PASS | `rtk pnpm -C apps/api typecheck`                                      |
 | Full lint                                  |   PASS | `rtk proxy pnpm lint` — 4/4 packages                                  |
-| Full unit/contract tests                   |   PASS | `rtk proxy pnpm test` — shared 452, api 644, web 262                  |
+| Full unit/contract tests                   |   PASS | `rtk proxy pnpm test` — shared 452, api 645, web 263                  |
 | Full build                                 |   PASS | `rtk proxy pnpm build` — 5/5 tasks                                    |
+| Real Playwright integration suite          |   PASS | `playwright.integration.config.ts` — 45/45, wipe/reseed               |
+| PDF worker completion integration          |   PASS | 2/2, generated `/pdfs/*.pdf` artifact paths                           |
+| Docker Compose local verify                |   PASS | rebuilt containers, wipe/reseed, web/API/Mailpit/auth.me              |
 | Static chrome Cyrillic grep                |   PASS | no matches in runtime `app/components/lib`, excluding tests/mock data |
 | Agent C dashboard/report/archive/PDF slice |   PASS | 32/32                                                                 |
 | Agent B quick reminders/jobs slice         |   PASS | 3/3                                                                   |
@@ -40,7 +47,7 @@ capture, and UI review all ran.
 | Clean-state progressive role scenario      |   PASS | 1/1 with wipe/reseed                                                  |
 | Full live regression corpus                |   PASS | 179/179                                                               |
 | API health                                 |   PASS | `/health/live`, `/health/ready` ok                                    |
-| Graphify refresh                           |   PASS | 1494 nodes, 1643 edges, 284 communities                               |
+| Graphify refresh                           |   PASS | 1512 nodes, 1682 edges, 280 communities                               |
 
 ## Progressive Role Scenario
 
