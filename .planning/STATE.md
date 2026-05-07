@@ -1,27 +1,27 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.0
-milestone_name: Production Readiness
-status: shipped
+milestone: v8.1
+milestone_name: Visual Identity & AI Maturity
+status: in_progress
 shipped_tag: v8.0.0
 shipped_at: "2026-05-06"
-last_updated: "2026-05-06T20:43:52.000Z"
-last_activity: 2026-05-06 -- phase 39 review/learnings extracted; v8.0 remains shipped and v8.1 remains parked in .planning/backlog/
+last_updated: "2026-05-07T12:00:00.000Z"
+last_activity: 2026-05-07 -- v8.1 promoted from backlog and started (phases 40-42)
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 32
-  completed_plans: 32
-  percent: 100
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 12
+  completed_plans: 0
+  percent: 0
 backlog:
-  - v8.1 — Visual Identity & AI Maturity (3 phases · 12 plans · BRAND-* + AI-EVAL-* + MOB-*)
+  - none
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** v8.0 SHIPPED · v8.1 in backlog
-**Last Updated:** 2026-05-06
+**Status:** v8.1 IN PROGRESS (v8.0 shipped)
+**Last Updated:** 2026-05-07
 
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md
 
 **Core Value:** Leads fill their sections independently via structured forms; system auto-assembles a unified report -- no editing conflicts, with history and analytics.
 
-**Current Focus:** none active — v8.0 production tag landed, v8.1 parked in `.planning/backlog/` until stakeholder PRD or fresh prod feedback unfreezes.
+**Current Focus:** v8.1 polish, role regression hardening, and UI polish
 
 **Resume context:** Per-project Claude memory at `.planning/memory/`. v8.1 promote flow: `git mv .planning/backlog/v8.1-*.md .planning/milestones/` then `/gsd-new-milestone v8.1` and plan the first promoted v8.1 phase.
 
@@ -39,11 +39,11 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Milestone: v8.0 (SHIPPED, tag v8.0.0)
-Phases: 6/6 complete (34..39)
-Plans: 32/32 complete
-Status: production-ready milestone closed 2026-05-06; v8.1 drafted then parked.
-Last activity: 2026-05-06 -- phase 39 review/learnings extracted after v8.0 tag; visual regression baseline + v8.1 scaffold + backlog park remain pushed.
+Milestone: v8.1 (IN PROGRESS, tag parent v8.0.0)
+Phases: 0/3 complete (40..42)
+Plans: 0/12 complete
+Status: active polish wave started, v8.0 is production baseline.
+Last activity: 2026-05-07 -- promote v8.1 roadmap/requirements and open polish planning.
 
 ### v8.0 phase progress
 
