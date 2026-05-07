@@ -1,10 +1,27 @@
 import { defineConfig, devices } from "@playwright/test";
 import * as path from "path";
 
-const API_PORT = Number(process.env.E2E_API_PORT ?? 3002);
-const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3005);
+const API_PORT = Number(process.env.E2E_API_PORT ?? 3102);
+const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3105);
 const API_URL = `http://127.0.0.1:${API_PORT}`;
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
+const BULLMQ_PREFIX =
+  process.env.E2E_BULLMQ_PREFIX ??
+  `customreport-e2e-${process.pid}-${Date.now()}`;
+
+// Keep API helper fixtures and any auth helper fallbacks in sync with
+// the integration web-server port. Tests are launched before web servers,
+// so we seed this in the test process to avoid accidental fallback to
+// host defaults (e.g., 3002).
+if (!process.env.E2E_API_PORT) {
+  process.env.E2E_API_PORT = String(API_PORT);
+}
+if (!process.env.E2E_WEB_PORT) {
+  process.env.E2E_WEB_PORT = String(WEB_PORT);
+}
+if (!process.env.NEXT_PUBLIC_API_URL) {
+  process.env.NEXT_PUBLIC_API_URL = API_URL;
+}
 
 if (!process.env.E2E_DATABASE_URL) {
   throw new Error(
@@ -54,8 +71,8 @@ export default defineConfig({
   webServer: [
     {
       command: "pnpm --filter @customreport/api dev",
-      url: `${API_URL}/health/live`,
-      reuseExistingServer: !process.env.CI,
+      url: `${API_URL}/health/ready`,
+      reuseExistingServer: false,
       timeout: 360_000,
       env: {
         ...process.env,
@@ -68,6 +85,7 @@ export default defineConfig({
         FRONTEND_URL: WEB_URL,
         PDF_BASE_URL: WEB_URL,
         PDF_OUTPUT_DIR: path.join(__dirname, "e2e/integration/.results/pdfs"),
+        BULLMQ_PREFIX,
         NODE_ENV: "test",
         LOG_LEVEL: "warn", // keep test output readable
       },
@@ -75,7 +93,7 @@ export default defineConfig({
     {
       command: `pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
       url: WEB_URL,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 360_000,
       env: {
         ...process.env,

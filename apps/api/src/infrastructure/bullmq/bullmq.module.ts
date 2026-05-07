@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 
 import { DLQMonitorService } from './dlq-monitor.service.js';
+import { getBullMQOptions } from './bullmq-options';
 
 /**
  * BullMQ infrastructure module.
@@ -17,13 +18,7 @@ import { DLQMonitorService } from './dlq-monitor.service.js';
  */
 @Module({
   imports: [
-    BullModule.forRoot({
-      connection: {
-        host: process.env['REDIS_HOST'] ?? 'localhost',
-        port: Number(process.env['REDIS_PORT'] ?? 6379),
-        maxRetriesPerRequest: null,
-      },
-    }),
+    BullModule.forRoot(getBullMQOptions()),
     BullModule.registerQueue({ name: 'pdf-export' }),
     BullModule.registerQueue({ name: 'email-reminder' }),
   ],

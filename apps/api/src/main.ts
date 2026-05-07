@@ -31,6 +31,7 @@ import { createAuthController } from './modules/auth/auth.controller';
 import { createSamlStrategy, createSamlStrategyOptions } from './modules/auth/saml.strategy';
 import { PrismaService } from './infrastructure/prisma/prisma.service';
 import { mountBullBoard } from './infrastructure/bullmq/bull-board.module';
+import { getBullMQOptions } from './infrastructure/bullmq/bullmq-options';
 import { createRateLimits } from './infrastructure/throttler/rate-limit.middleware';
 
 import { ReportSectionsService } from './modules/report-sections/report-sections.service';
@@ -190,13 +191,7 @@ async function bootstrap() {
   // NOTIF-06 (Phase 29-05): read-only Queue handle for the admin DLQ count.
   // Constructed once at boot; Express request lifecycle does not need its
   // own connection. Closed on app shutdown via enableShutdownHooks above.
-  const emailReminderQueue = new Queue('email-reminder', {
-    connection: {
-      host: process.env['REDIS_HOST'] ?? 'localhost',
-      port: Number(process.env['REDIS_PORT'] ?? 6379),
-      maxRetriesPerRequest: null,
-    },
-  });
+  const emailReminderQueue = new Queue('email-reminder', getBullMQOptions());
 
   // Phase 35-06: thin wrapper around the email-reminder Queue handle for the
   // admin DLQ admin tab (`/admin?tab=jobs`). Stays out of the NestJS DI graph

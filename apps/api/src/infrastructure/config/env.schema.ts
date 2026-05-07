@@ -28,6 +28,7 @@ export const envSchema = z
     // Redis (BullMQ)
     REDIS_HOST: z.string().default('localhost'),
     REDIS_PORT: z.coerce.number().int().positive().default(6379),
+    BULLMQ_PREFIX: z.string().optional(),
 
     // SMTP (email reminders)
     SMTP_HOST: z.string().optional(),

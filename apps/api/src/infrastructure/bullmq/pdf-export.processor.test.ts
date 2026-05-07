@@ -16,7 +16,20 @@ vi.mock('@nestjs/common', () => ({
 // Mock bullmq Worker so no Redis connection is attempted
 vi.mock('bullmq', () => ({
   Worker: class {
-    on() {}
+    static instances: Array<{ handlers: Record<string, (...args: never[]) => void> }> = [];
+
+    handlers: Record<string, (...args: never[]) => void> = {};
+
+    constructor() {
+      (this.constructor as typeof import('bullmq').Worker & {
+        instances: Array<{ handlers: Record<string, (...args: never[]) => void> }>;
+      }).instances.push(this);
+    }
+
+    on(event: string, handler: (...args: never[]) => void) {
+      this.handlers[event] = handler;
+    }
+
     close() { return Promise.resolve(); }
   },
 }));
@@ -25,6 +38,7 @@ vi.mock('bullmq', () => ({
 vi.mock('../../modules/pdf-export/pdf-export.service.js', () => ({
   PdfExportService: class {
     markExportCompleted = vi.fn();
+    markExportFailed = vi.fn();
     buildAuthCookies = vi.fn().mockReturnValue([
       {
         name: 'customreport_session',
@@ -58,6 +72,7 @@ vi.mock('node:crypto', () => ({
 // ---------------------------------------------------------------------------
 
 import { chromium } from 'playwright';
+import { Worker } from 'bullmq';
 import { createHash } from 'node:crypto';
 import { PdfExportProcessor } from './pdf-export.processor.js';
 
@@ -68,6 +83,7 @@ import { PdfExportProcessor } from './pdf-export.processor.js';
 function createMockPdfExportService() {
   return {
     markExportCompleted: vi.fn().mockResolvedValue(undefined),
+    markExportFailed: vi.fn().mockResolvedValue(undefined),
     // AUTH-05 (Phase 28-02): processor calls buildAuthCookies before page.goto.
     buildAuthCookies: vi.fn().mockReturnValue([
       {
@@ -199,5 +215,45 @@ describe('PdfExportProcessor.processJob', () => {
     await expect((processor as unknown as ProcessorTestSeam).processJob(job)).rejects.toThrow('navigation failed');
 
     expect(mockBrowser.close).toHaveBeenCalledOnce();
+  });
+});
+
+describe('PdfExportProcessor.onModuleInit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (
+      Worker as unknown as {
+        instances: Array<{ handlers: Record<string, (...args: never[]) => void> }>;
+      }
+    ).instances = [];
+  });
+
+  it('marks the DB export job failed when BullMQ reports terminal failure', () => {
+    const mockService = createMockPdfExportService();
+    const processor = new PdfExportProcessor(mockService as never);
+
+    processor.onModuleInit();
+
+    const instances = (
+      Worker as unknown as {
+        instances: Array<{ handlers: Record<string, (...args: never[]) => void> }>;
+      }
+    ).instances;
+    const failedHandler = instances.at(-1)?.handlers['failed'];
+    expect(failedHandler).toBeTypeOf('function');
+
+    failedHandler?.(
+      createMockJob({
+        reportId: 'report-1',
+        jobId: 'job-1',
+        authToken: 'fake-jwt',
+      }) as never,
+      new Error('browser missing') as never,
+    );
+
+    expect(mockService.markExportFailed).toHaveBeenCalledWith(
+      'job-1',
+      'browser missing',
+    );
   });
 });
