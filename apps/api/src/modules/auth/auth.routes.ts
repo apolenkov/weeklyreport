@@ -149,7 +149,7 @@ export async function buildUserSession(
   const user = existing
     ? await prisma.user.update({
         where: { id: existing.id },
-        data: { samlId: profile.samlId, name: profile.displayName },
+        data: { samlId: profile.samlId, name: profile.displayName, role: profile.role },
       })
     : await prisma.user.create({
         data: {

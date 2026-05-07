@@ -14,8 +14,8 @@ import { useTRPC } from '../../lib/trpc-context';
  * decisions / priorities), and a relative-time of last edit. Polls
  * activity.live every 15 seconds.
  *
- * Click on a row → /lead/report/<reportId>?authorId=<leadId>
- * (existing head-can-view-lead-form pattern).
+ * Click on a row -> /head/report/<reportId>?authorId=<leadId>
+ * (same assembled-report drill-down pattern as lead cards).
  *
  * If the period is closed/published the panel renders a published-period
  * empty state instead of a row grid.
@@ -118,11 +118,11 @@ function ActivityRow({
   readonly row: ActivityLiveRow;
   readonly reportId: string;
 }) {
-  // 35-07 (UX-15): switched to addressed URL `/lead/report/<reportId>`.
+  // 35-07 (UX-15): switched to addressed URL `/head/report/<reportId>`.
   // The legacy `?period=` query is still accepted by the bare route for
   // back-compat, but new links always use the addressed form so they're
   // shareable / bookmarkable.
-  const href = `/lead/report/${encodeURIComponent(reportId)}?authorId=${encodeURIComponent(row.leadId)}`;
+  const href = `/head/report/${encodeURIComponent(reportId)}?authorId=${encodeURIComponent(row.leadId)}`;
   const lastEdit = row.lastEditAt
     ? formatRelative(new Date(row.lastEditAt))
     : 'not started';

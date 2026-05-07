@@ -213,6 +213,7 @@ export function WeeklyReportPage({
   const portfolio: PortfolioProduct[] = view.portfolio as PortfolioProduct[];
   const products: ProductReport[] = view.products as ProductReport[];
   const departmentLabel = weeklyQ.data.departmentName;
+
   const hasReportContent = (report: ProductReport) =>
     Boolean(report.needsAttention) ||
     report.currentWeek.length > 0 ||
@@ -220,14 +221,20 @@ export function WeeklyReportPage({
     report.risks.length > 0 ||
     report.decisions.length > 0 ||
     report.priorities.length > 0;
-  const focusedProductIds = new Set(
-    focusedAuthorId
-      ? products
-          .filter((report) => report.authorIds?.includes(focusedAuthorId) && hasReportContent(report))
-          .map((report) => report.id)
-      : [],
-  );
-  const firstFocusedProductId = focusedProductIds.values().next().value as string | undefined;
+  const authoredProductIds = focusedAuthorId
+    ? products
+        .filter((report) => report.authorIds?.includes(focusedAuthorId))
+        .map((report) => report.id)
+    : [];
+  const focusedProductId = focusedAuthorId
+    ? products.find(
+        (report) =>
+          report.authorIds?.includes(focusedAuthorId) &&
+          hasReportContent(report),
+      )?.id
+    : undefined;
+  const scrollTargetProductId =
+    authoredProductIds.length > 0 ? authoredProductIds[0] : undefined;
   // HeadPeriodNavigator currently renders one period entry; future plans may
   // surface a list of recent periods. For now, surface the active period only.
   const periods: ReportPeriod[] = [
@@ -305,9 +312,9 @@ export function WeeklyReportPage({
           <ProductAccordion
             key={report.id}
             report={report}
-            defaultOpen={focusedProductIds.has(report.id)}
-            highlighted={focusedProductIds.has(report.id)}
-            scrollIntoViewOnHighlight={firstFocusedProductId === report.id}
+            defaultOpen={focusedProductId === report.id}
+            highlighted={focusedProductId === report.id}
+            scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
           />
         ))}
       </div>

@@ -21,6 +21,10 @@ import type { ArchiveReportSummary } from '@customreport/shared';
 
 type StatusConfig = { bg: string; text: string; label: string };
 
+type ReportArchiveSectionProps = {
+  readonly currentReportId?: string | null;
+};
+
 const STATUS_CONFIG = {
   active: {
     bg: 'var(--color-success)',
@@ -41,7 +45,7 @@ const STATUS_CONFIG = {
 
 const PAGE_SIZE = 12;
 
-export function ReportArchiveSection() {
+export function ReportArchiveSection({ currentReportId }: ReportArchiveSectionProps = {}) {
   const trpc = useTRPC();
 
   const archive = useCursorPagination<ArchiveReportSummary>(
@@ -77,29 +81,40 @@ export function ReportArchiveSection() {
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {reports.map((report) => {
+          const isActive = report.id === currentReportId;
+          const href = isActive
+            ? `/head/report/${encodeURIComponent(report.id)}`
+            : `/reports/${report.id}`;
           const config =
             (STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
             STATUS_CONFIG.draft;
-          const isActive = report.status === 'active';
+          const cardConfig = isActive
+            ? STATUS_CONFIG.active
+            : config;
 
           return (
             <a
               key={report.id}
-              href={isActive ? '/head/report' : `/reports/${report.id}`}
-              className="group rounded-[var(--radius)] border bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)] transition-[border-color] duration-150 hover:border-[var(--color-starbucks-accent)]"
+              href={href}
+              className="group cursor-pointer rounded-[var(--radius)] border bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)] transition-[border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-[var(--color-starbucks-accent)] hover:shadow-[0_10px_24px_-18px_rgba(0,0,0,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
               style={{
-                borderLeft: `3px solid ${isActive ? 'var(--color-starbucks-accent)' : 'var(--color-border)'}`,
+                borderLeft: `3px solid ${
+                  isActive ? 'var(--color-starbucks-accent)' : 'var(--color-border)'
+                }`,
                 textDecoration: 'none',
                 color: 'inherit',
+                boxShadow: isActive
+                  ? '0 0 0 2px rgba(0,117,74,0.12), 0 8px 24px -16px rgba(0,0,0,0.2)'
+                  : undefined,
               }}
             >
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-sm font-semibold">{report.weekLabel}</span>
                 <span
                   className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
-                  style={{ background: config.bg, color: config.text }}
+                  style={{ background: cardConfig.bg, color: cardConfig.text }}
                 >
-                  {config.label}
+                  {cardConfig.label}
                 </span>
               </div>
               <div className="text-xs text-[var(--color-muted-foreground)]">

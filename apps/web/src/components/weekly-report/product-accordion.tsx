@@ -104,14 +104,17 @@ export function ProductAccordion({
     >
       <button
         type="button"
-        className={`flex w-full items-center justify-between p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
+        className={`flex w-full items-center justify-between p-4 transition-[background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
           hasContent
-            ? 'cursor-pointer hover:bg-[#f8f6f2]'
-            : 'cursor-default opacity-80'
+            ? 'cursor-pointer hover:bg-[#f8f6f2] hover:border-[var(--color-starbucks-accent)] hover:shadow-[0_10px_24px_-16px_rgba(0,0,0,0.28)]'
+            : 'cursor-default bg-[var(--color-background)] opacity-65'
         }`}
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => {
+          if (hasContent) setExpanded(!expanded);
+        }}
         disabled={!hasContent}
-        aria-expanded={expanded}
+        aria-disabled={!hasContent}
+        aria-expanded={hasContent ? expanded : false}
       >
         <div className="flex items-center gap-3">
           <div
@@ -139,12 +142,18 @@ export function ProductAccordion({
             {report.leads}
           </span>
         </div>
-        <ChevronDown expanded={expanded} />
+        {hasContent ? (
+          <ChevronDown expanded={expanded} />
+        ) : (
+          <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+            No content
+          </span>
+        )}
       </button>
 
       {!hasContent ? (
         <div className="px-4 pb-4">
-          <div className="rounded bg-[var(--color-background)] p-3 text-sm text-[var(--color-muted-foreground)]">
+          <div className="rounded border border-dashed border-[var(--color-border)] bg-[var(--color-muted)] p-3 text-sm text-[var(--color-muted-foreground)]">
             No content submitted for this product.
           </div>
         </div>
