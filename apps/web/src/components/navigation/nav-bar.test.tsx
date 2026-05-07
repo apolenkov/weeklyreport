@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 
 import type { Role } from '@customreport/shared';
 
@@ -49,6 +49,18 @@ function setRole(role: Role | null): void {
   }
 }
 
+function linksInContainer(container: HTMLElement, href: string) {
+  return container.querySelectorAll(`a[href="${href}"]`);
+}
+
+function expectLinkExists(container: HTMLElement, href: string): void {
+  expect(linksInContainer(container, href).length).toBeGreaterThan(0);
+}
+
+function expectLinkMissing(container: HTMLElement, href: string): void {
+  expect(linksInContainer(container, href).length).toBe(0);
+}
+
 describe('NavBar — AUTH-06 role-aware visibility (Phase 29-06)', () => {
   beforeEach(() => {
     useSessionMock.mockReset();
@@ -56,71 +68,71 @@ describe('NavBar — AUTH-06 role-aware visibility (Phase 29-06)', () => {
 
   it('viewer does NOT see /admin link in the DOM', () => {
     setRole('viewer');
-    render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /Админка/ })).toBeNull();
+    const { container } = render(<NavBar />);
+    expectLinkMissing(container, '/admin');
   });
 
   it('viewer does NOT see /head/* links (Dashboard, Weekly Report)', () => {
     setRole('viewer');
-    render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /Дашборд/i })).toBeNull();
-    expect(screen.queryByRole('link', { name: /Сводка/i })).toBeNull();
+    const { container } = render(<NavBar />);
+    expectLinkMissing(container, '/head/dashboard');
+    expectLinkMissing(container, '/head/report');
   });
 
-  it('viewer does NOT see /lead/* links (My Report, History)', () => {
+  it('viewer does NOT see /lead/* links (My Report, My History)', () => {
     setRole('viewer');
-    render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /Мой отчёт/i })).toBeNull();
-    expect(screen.queryByRole('link', { name: /Моя история/i })).toBeNull();
+    const { container } = render(<NavBar />);
+    expectLinkMissing(container, '/lead/report');
+    expectLinkMissing(container, '/reports?tab=drafts');
   });
 
   it('viewer DOES see /reports/* links (Archive)', () => {
     setRole('viewer');
-    render(<NavBar />);
-    // Multiple /reports links may render (desktop + mobile nav) — getAllByRole.
-    const reportsLinks = screen.getAllByRole('link', { name: /Архив/i });
-    expect(reportsLinks.length).toBeGreaterThan(0);
+    const { container } = render(<NavBar />);
+    expectLinkExists(container, '/reports?tab=published');
   });
 
   it('lead does NOT see /head/* links but DOES see /lead/* and /reports/*', () => {
     setRole('lead');
-    render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /Дашборд/i })).toBeNull();
-    expect(screen.getAllByRole('link', { name: /Мой отчёт/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link', { name: /Архив/i }).length).toBeGreaterThan(0);
+    const { container } = render(<NavBar />);
+    expectLinkMissing(container, '/head/dashboard');
+    expectLinkMissing(container, '/head/report');
+    expectLinkExists(container, '/lead/report');
+    expectLinkExists(container, '/reports?tab=drafts');
+    expectLinkExists(container, '/reports?tab=published');
   });
 
   it('lead does NOT see /admin link', () => {
     setRole('lead');
-    render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /Админка/ })).toBeNull();
+    const { container } = render(<NavBar />);
+    expectLinkMissing(container, '/admin');
   });
 
   it('head sees /admin link in the DOM', () => {
     setRole('head');
-    render(<NavBar />);
-    expect(screen.getAllByRole('link', { name: /Админка/ }).length).toBeGreaterThan(0);
+    const { container } = render(<NavBar />);
+    expectLinkExists(container, '/admin');
   });
 
   it('head sees /head/* links (Dashboard, Weekly Report)', () => {
     setRole('head');
-    render(<NavBar />);
-    expect(screen.getAllByRole('link', { name: /Дашборд/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('link', { name: /Сводка/i }).length).toBeGreaterThan(0);
+    const { container } = render(<NavBar />);
+    expectLinkExists(container, '/head/dashboard');
+    expectLinkExists(container, '/head/report');
   });
 
   it('admin sees /admin link', () => {
     setRole('admin');
-    render(<NavBar />);
-    expect(screen.getAllByRole('link', { name: /Админка/ }).length).toBeGreaterThan(0);
+    const { container } = render(<NavBar />);
+    expectLinkExists(container, '/admin');
   });
 
   it('null session (still loading) renders NO role-gated links', () => {
     setRole(null);
-    render(<NavBar />);
-    expect(screen.queryByRole('link', { name: /Админка/ })).toBeNull();
-    expect(screen.queryByRole('link', { name: /Дашборд/i })).toBeNull();
-    expect(screen.queryByRole('link', { name: /Мой отчёт/i })).toBeNull();
+    const { container } = render(<NavBar />);
+    expectLinkMissing(container, '/admin');
+    expectLinkMissing(container, '/head/dashboard');
+    expectLinkMissing(container, '/lead/report');
   });
 
   it('hidden links are absent from the DOM (filtered before render — not CSS-hidden)', () => {
@@ -129,9 +141,9 @@ describe('NavBar — AUTH-06 role-aware visibility (Phase 29-06)', () => {
     // see no enumeration of /admin or /head routes.
     setRole('viewer');
     const { container } = render(<NavBar />);
-    expect(container.innerHTML).not.toContain('href="/admin"');
-    expect(container.innerHTML).not.toContain('href="/head/dashboard"');
-    expect(container.innerHTML).not.toContain('href="/head/report"');
-    expect(container.innerHTML).not.toContain('href="/lead/report"');
+    expectLinkMissing(container, '/admin');
+    expectLinkMissing(container, '/head/dashboard');
+    expectLinkMissing(container, '/head/report');
+    expectLinkMissing(container, '/lead/report');
   });
 });
