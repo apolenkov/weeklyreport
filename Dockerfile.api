@@ -1,6 +1,9 @@
-# Stage 1: Base with pnpm and turbo
-FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat
+# Stage 1: Base with pnpm, turbo, and Playwright browsers.
+# Keep all API stages on the same glibc-based image so dev/prod PDF export
+# can launch Chromium and native node modules are built for the runner OS.
+FROM mcr.microsoft.com/playwright:v1.59.1-noble AS base
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
 RUN npm install -g turbo
 
@@ -38,7 +41,7 @@ RUN pnpm prune --prod --config.ignore-scripts=true
 # NOTE: This image is ~1.4GB due to the Chromium dependency required for PDF export.
 # The 200MB size target applies to the web image (alpine-based, ~150MB).
 # The API image cannot meet 200MB due to Playwright/Chromium — this is an architectural constraint.
-FROM mcr.microsoft.com/playwright:v1.59.0-noble AS runner
+FROM base AS runner
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 nodejs
 WORKDIR /app

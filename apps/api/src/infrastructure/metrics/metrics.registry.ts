@@ -1,4 +1,9 @@
-import { Counter, Registry, collectDefaultMetrics } from 'prom-client';
+import {
+  Counter,
+  Histogram,
+  Registry,
+  collectDefaultMetrics,
+} from 'prom-client';
 
 /**
  * 37-02 / 37-03 / 36-01: shared prom-client registry + counter singletons.
@@ -14,6 +19,14 @@ import { Counter, Registry, collectDefaultMetrics } from 'prom-client';
 export const metricsRegistry = new Registry();
 
 collectDefaultMetrics({ register: metricsRegistry });
+
+export const httpRequestDurationSeconds = new Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'HTTP request duration in seconds',
+  labelNames: ['method', 'route', 'status_code'] as const,
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
+  registers: [metricsRegistry],
+});
 
 /**
  * 37-02 — every BullMQ job that exhausts its retry budget and lands in the

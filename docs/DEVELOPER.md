@@ -22,25 +22,8 @@ pnpm install
 
 # 3. Copy environment config
 cp .env.example .env
-# Edit .env if needed — defaults work for local development
-
-# 4. Start PostgreSQL and Redis
-docker compose up -d postgres redis
-
-# 5. Run database migrations
-pnpm exec prisma migrate dev
-
-# 6. Seed the database with test data
-pnpm exec prisma db seed
-
-# 7. Generate Prisma Client (if not already generated)
-pnpm exec prisma generate
-
-# 8. Build shared packages (required before first dev run)
-pnpm run build --filter=@customreport/shared --filter=@customreport/ui
-
-# 9. Start all dev servers (Next.js + NestJS in parallel)
-pnpm run dev
+# 4. Build, start, wipe/reseed, and verify the full Docker stack
+pnpm docker:local:verify
 ```
 
 After startup:
@@ -49,20 +32,36 @@ After startup:
 | -------- | --------------------- |
 | Frontend | http://localhost:3000 |
 | API      | http://localhost:3002 |
+| Mailpit  | http://localhost:8025 |
 
-The dev login page shows role-selector buttons (Lead, Head, Viewer) — no
-Keycloak setup required when `AUTH_DEV_MODE=true`.
+The verifier writes its proof to
+`.planning/regression/evidence/docker-compose-local/verify.log` and leaves
+the stack running for manual UAT. Keycloak is not required locally when
+`AUTH_DEV_MODE=true`; use `/auth/dev-login?...` URLs or the dev role switcher.
 
-### Docker-based development (alternative)
+### Host-mode development
 
-If you prefer running everything in Docker, including the app servers:
+Use host mode when you want the fastest edit loop after Docker has already
+proved the stack shape:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+docker compose up -d postgres redis mailhog
+pnpm exec prisma migrate deploy
+pnpm exec prisma db seed
+pnpm dev
 ```
 
-This starts PostgreSQL, Redis, API (port 3002), and Web (port 3000) in
-containers with hot-reload volume mounts.
+### Full Docker development without wipe
+
+Use this when you need containerized web/API hot reload but do not want the
+verifier to wipe and reseed the database:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
+This starts PostgreSQL, Redis, Mailpit, API (port 3002), and Web (port 3000)
+in containers with hot-reload volume mounts.
 
 ---
 
@@ -156,12 +155,13 @@ Each app extends the base config with its own `tsconfig.json`.
 
 ### Prisma schema
 
-The schema lives at `prisma/schema.prisma` and defines 16 models:
+The schema lives at `prisma/schema.prisma` and defines 20 models:
 
 - **Core:** User, Project, Report, ReportSection
 - **Content:** ProjectStatus, Item, Risk, Decision, Priority
 - **Features:** PdfExportJob, ReminderRule, ReminderExecution,
-  CarryOverExecution, CarryOverRecord, VersionSnapshot
+  CarryOverExecution, CarryOverRecord, VersionSnapshot, ReopenRequest,
+  AiInsight
 - **Config:** Stage, StageAssignment, AppSettings
 
 Three roles: `lead`, `head`, `viewer`. Report lifecycle:
@@ -207,6 +207,24 @@ Prisma 7 uses `prisma.config.ts` at the repo root for configuration. The
 
 ## 5. Testing
 
+The short rule: unit/type gates protect code, Docker verification protects
+runtime wiring, and Playwright regression protects role workflows plus
+screenshots/logs.
+
+```text
+[typecheck/lint/test/build] --> [docker:local:verify] --> [role regression]
+```
+
+Product-ready quick gate:
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm docker:local:verify
+```
+
 ### Unit & contract tests (Vitest)
 
 ```bash
@@ -228,8 +246,9 @@ The API excludes integration tests by default (`--exclude '**/*.integration.test
 ### Integration tests
 
 ```bash
-# Requires running PostgreSQL and Redis
-cd apps/api && pnpm run test:integration
+# API integration against a dedicated database
+DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e \
+  pnpm --filter @customreport/api test:integration
 ```
 
 Integration tests run against a real database with `--fileParallelism=false`
@@ -243,11 +262,25 @@ pnpm run test:e2e
 
 # Run with Playwright UI
 pnpm run test:e2e:ui
+
+# Web integration on non-conflicting ports
+E2E_DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e \
+E2E_API_PORT=3012 \
+E2E_WEB_PORT=3015 \
+  pnpm --filter @customreport/web test:e2e:integration
+
+# Product-ready role regression against the running Docker stack
+pnpm --filter @customreport/web exec playwright test \
+  --config=e2e/regression/playwright.regression.config.ts \
+  e2e/regression/product-ready-progressive.spec.ts
 ```
 
 Playwright config is at `apps/web/playwright.config.ts`. Tests live in
 `apps/web/e2e/`. The web dev server starts on port 3100 for E2E by default
 (configurable via `E2E_WEB_PORT`).
+
+Regression evidence is written under `.planning/regression/evidence/`; keep
+screenshots and browser network logs with the run when debugging UI failures.
 
 ---
 
@@ -388,6 +421,36 @@ docker compose logs redis
 # Restart everything
 docker compose down && docker compose up -d postgres redis
 ```
+
+### Manual UAT wipe
+
+When you want to keep the local users/products/stages/admin settings but clear
+all report history for manual testing:
+
+```bash
+pnpm db:wipe:manual-uat
+```
+
+Against the Docker stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api \
+  pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts
+```
+
+The dev role switcher exposes the same action as
+`Data` -> `Wipe reports (manual UAT)`.
+
+### Observability stack
+
+```bash
+pnpm observability:up
+open http://localhost:3003
+open http://localhost:9090
+curl http://localhost:3002/metrics | grep http_request_duration_seconds
+```
+
+Grafana default login is `admin` / `admin`.
 
 ### Database connection refused
 

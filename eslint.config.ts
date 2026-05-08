@@ -39,6 +39,7 @@ export default defineConfig([
           allowDefaultProject: [
             '*.config.ts',
             '*.setup.ts',
+            'prisma/*.ts',
             'apps/*/*.config.ts',
             'apps/*/*.setup.ts',
             'apps/*/*.test.ts',

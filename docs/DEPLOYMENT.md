@@ -99,10 +99,11 @@ not set.
 
 ### 2.6 PDF Generation
 
-| Variable         | Required | Default                 | Description                                                                                                                 |
-| ---------------- | -------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `PDF_BASE_URL`   | No       | `http://localhost:3000` | Base URL the API uses to render report pages as PDF. In Docker Compose this should be `http://web:3000` (internal network). |
-| `PDF_OUTPUT_DIR` | No       | `./storage/pdfs`        | Directory where generated PDF files are written. In Docker/Kubernetes mount this at `/app/data/pdfs`.                       |
+| Variable                | Required   | Default                     | Description                                                                                                                 |
+| ----------------------- | ---------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `PDF_BASE_URL`          | No         | `http://localhost:3000`     | Base URL the API uses to render report pages as PDF. In Docker Compose this should be `http://web:3000` (internal network). |
+| `PDF_OUTPUT_DIR`        | No         | `./storage/pdfs`            | Directory where generated PDF files are written. In Docker/Kubernetes mount this at `/app/data/pdfs`.                       |
+| `PDF_EXPORT_JWT_SECRET` | Yes (prod) | dev fallback in development | Short-lived JWT used by the PDF worker to render protected print pages. Must be unique and non-default in production.       |
 
 ### 2.7 Frontend (Web App)
 
@@ -227,6 +228,8 @@ docker compose -f docker-compose.prod.yml ps
 - Health check: `wget` against `/health/live` every 15s.
 - PDF files stored in the `pdfdata` named volume at `/app/data/pdfs`.
 - Start period: 30s (allows Prisma client and Playwright to initialize).
+- API images are built from the official Playwright base image so Chromium is
+  present for `pdf-export` in both dev and production container targets.
 
 **web** -- Next.js 16 standalone server.
 
@@ -267,7 +270,44 @@ docker compose -f docker-compose.prod.yml logs -f api
 docker compose -f docker-compose.prod.yml logs --tail=100 api
 ```
 
-### 3.6 Development Mode
+### 3.6 Observability
+
+Prometheus and Grafana are optional Compose overlays. Use them locally for
+load/latency checks, and use the same files as the starting point for a
+managed production Prometheus/Grafana migration.
+
+```text
+[api /metrics] --> [prometheus] --> [grafana]
+      |                |
+      v                v
+ [json logs]     [postgres/redis exporters]
+```
+
+Local dev stack:
+
+```bash
+pnpm observability:up
+```
+
+Production-like Compose stack:
+
+```bash
+docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
+```
+
+Surfaces:
+
+| Surface     | URL                           |
+| ----------- | ----------------------------- |
+| Prometheus  | http://localhost:9090         |
+| Grafana     | http://localhost:3003         |
+| API metrics | http://localhost:3002/metrics |
+
+Grafana provisioning lives under `deploy/grafana/provisioning/`; dashboard
+JSON lives at `deploy/grafana/customreport-dashboard.json`. Prometheus scrape
+configuration lives at `deploy/prometheus.yml`.
+
+### 3.7 Development Mode
 
 For local development with hot-reload:
 

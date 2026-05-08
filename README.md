@@ -12,7 +12,7 @@ customreport/
 ├── packages/
 │   ├── shared/       Zod schemas, TypeScript types, tRPC router definition
 │   └── ui/           shadcn/ui components, Tailwind CSS v4 design tokens
-├── prisma/           Schema (14 models), migrations, seed data
+├── prisma/           Schema (20 models), migrations, seed data
 └── docker-compose.yml  PostgreSQL 15 + Redis 7
 ```
 
@@ -36,41 +36,58 @@ customreport/
 
 ## Quick Start
 
+For a new engineer, the safest first run is the full Docker verifier. It
+builds the app containers, starts infrastructure, wipes/reseeds the local
+Docker database, proves health endpoints and authenticated tRPC, then leaves
+the UI running for manual testing.
+
 Prerequisites: **Node.js 20+**, **pnpm 10+**, **Docker Desktop**.
 
 ```bash
 # 1. Install dependencies
 pnpm install
 
-# 2. Copy env template (root .env is the single source of truth — both apps read it)
+# 2. Copy env template
 cp .env.example .env
-cp apps/web/.env.example apps/web/.env.local
 
-# 3. Start infrastructure (postgres + redis + mailpit)
-docker compose up -d postgres redis mailhog
-
-# 4. Run migrations and seed (uses .env automatically)
-pnpm exec prisma migrate deploy
-pnpm exec prisma db seed
-
-# 5. Start both dev servers (turbo --parallel)
-pnpm dev
-```
-
-Full-container local verification (web + api + infrastructure in Docker):
-
-```bash
+# 3. Build, start, wipe/reseed, and verify the full local Docker stack
 pnpm docker:local:verify
 ```
 
-This command runs `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`,
-wipes/reseeds the database inside the API container, then verifies web, API,
-Mailpit, dev-login, and authenticated tRPC through the containerized web app.
-Evidence is written to `.planning/regression/evidence/docker-compose-local/`.
+Open:
 
-Open http://localhost:3000. The local API listens on
-http://localhost:3002; the web app proxies `/trpc`, `/auth`, and `/health`
-to that API through Next.js rewrites.
+| Surface       | URL                                |
+| ------------- | ---------------------------------- |
+| Web app       | http://localhost:3000              |
+| API readiness | http://localhost:3002/health/ready |
+| API metrics   | http://localhost:3002/metrics      |
+| Mailpit       | http://localhost:8025              |
+
+Evidence is written to
+`.planning/regression/evidence/docker-compose-local/verify.log`.
+
+Host-mode development is still useful for the fastest edit loop:
+
+```bash
+# 1. Start infrastructure only
+docker compose up -d postgres redis mailhog
+
+# 2. Run migrations and seed
+pnpm exec prisma migrate deploy
+pnpm exec prisma db seed
+
+# 3. Start both dev servers on the host
+pnpm dev
+```
+
+Full-container local development without the verifier:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
+The local API listens on http://localhost:3002; the web app proxies `/trpc`,
+`/auth`, and `/health` to that API through Next.js rewrites.
 
 ### Sign in (dev mode)
 
@@ -94,7 +111,70 @@ Without `&email=...` the `lead` role uses the primary seeded lead,
 ### Dev-only tools
 
 - **Role switcher** — `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` in `apps/web/.env.local` reveals a yellow "DEV: switch role" button at bottom-right of every authenticated page. Drops a dropdown to swap identity, wipe & reseed, or log out without retyping URLs.
+- **Manual UAT wipe** — the role switcher action `Wipe reports (manual UAT)` deletes report history/content/PDF jobs/reminder executions/carry-over/AI insights and local Redis queue state, keeps users/roles/products/stages/stage assignments/app settings, and creates one empty open report with lead sections plus empty product-status placeholders. Terminal equivalent: `pnpm db:wipe:manual-uat`; inside Docker: `docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts`.
 - **Mailpit** — outbound email goes to a local catch-all SMTP. UI at http://localhost:8025 shows every reminder/escalation rendered as HTML. The Compose service is still named `mailhog` for backward-compatible env wiring.
+- **Observability** — `pnpm observability:up` starts Prometheus (http://localhost:9090), Grafana (http://localhost:3003, `admin`/`admin`), Postgres exporter, and Redis exporter against the running local stack.
+
+## Verification And Evidence
+
+Use this order when deciding whether the product is ready for manual UAT or
+a merge:
+
+```text
+[Unit/type gates] --> [Docker verifier] --> [Role regression] --> [Logs/screenshots]
+```
+
+```bash
+# Fast code gates
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+
+# Full local container gate; destructive for the local Docker DB
+pnpm docker:local:verify
+
+# Progressive role lifecycle against the running :3000/:3002 stack
+pnpm --filter @customreport/web exec playwright test \
+  --config=e2e/regression/playwright.regression.config.ts \
+  e2e/regression/product-ready-progressive.spec.ts
+
+# Full regression suite against the running stack
+pnpm --filter @customreport/web exec playwright test \
+  --config=e2e/regression/playwright.regression.config.ts
+```
+
+Regression evidence locations:
+
+| Evidence                       | Path                                                            |
+| ------------------------------ | --------------------------------------------------------------- |
+| Docker verifier log            | `.planning/regression/evidence/docker-compose-local/verify.log` |
+| Product-ready screenshots/logs | `.planning/regression/evidence/product-ready-progressive/`      |
+| Dashboard smoke evidence       | `.planning/regression/evidence/dashboard-post-publish-smoke/`   |
+| Playwright traces/results      | `.planning/regression/agent-c-test-results/`                    |
+
+Operational log checks:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs --tail=200 api
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs --since=10m api web
+pnpm logs:errors
+```
+
+PDF export sanity check inside the API container:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api \
+  sh -c "cd apps/api && node --input-type=module -e \"import { chromium } from 'playwright'; const b = await chromium.launch({ headless: true }); await b.close(); console.log('playwright ok')\""
+```
+
+Observability sanity check:
+
+```bash
+pnpm observability:up
+curl http://localhost:3002/metrics | grep http_request_duration_seconds
+open http://localhost:3003
+```
 
 ### Troubleshooting
 
@@ -103,24 +183,29 @@ Without `&email=...` the `lead` role uses the primary seeded lead,
 | Web cannot reach API                                             | Confirm the API is listening on :3002 (`curl http://localhost:3002/health/ready`) and `apps/web/.env.local` has `NEXT_PUBLIC_API_URL=http://localhost:3002`.                                                                                        |
 | `next-server` eats >500% CPU and `.next/dev/trace` keeps growing | Next 16.2.3 Turbopack regression. Already mitigated via `--webpack` flag in `apps/web/package.json`; if it returns, kill `next dev`, `rm -rf apps/web/.next`, and restart.                                                                          |
 | `PDF_EXPORT_JWT_SECRET is missing or too short` on PDF export    | The Zod schema in `apps/api/src/infrastructure/config/env.schema.ts` carries a dev default — confirm the new `apps/api/src/main.ts` line `process.env['PDF_EXPORT_JWT_SECRET'] ??= env.PDF_EXPORT_JWT_SECRET;` is present. Otherwise add to `.env`. |
+| `pdf-export` failed jobs mention a missing Playwright browser    | Rebuild/recreate the API container: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build api`. Then run the PDF sanity check above and retry failed jobs from `/admin?tab=jobs`.                                           |
+| Dashboard stays on skeleton after a report was published         | Check `weeklyReport.get` in API logs. The endpoint should fall back to the latest published period when no `open/reopened` period exists; this is covered by `weekly-report.prisma-repository.test.ts`.                                             |
 | `prisma migrate reset` blocked by AI-safety guard                | Re-run with `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=да` (Prisma 7 ai-fence).                                                                                                                                                                   |
 | `Cannot find module '@nestjs/schedule'`                          | Lockfile drift after partial install — run `pnpm install` from the repo root.                                                                                                                                                                       |
 
 ## Pages
 
-| Route                 | Role | Description                                                                  |
-| --------------------- | ---- | ---------------------------------------------------------------------------- |
-| `/lead/report`        | lead | Report section form with traffic lights, items, risks, decisions, priorities |
-| `/head/dashboard`     | head | Review dashboard showing all lead submissions                                |
-| `/head/report`        | head | Assembled report with publish action                                         |
-| `/admin`              | head | User, project, period, and reminder management                               |
-| `/reports/history`    | any  | Published report archive                                                     |
-| `/reports/[id]`       | any  | Single published report detail                                               |
-| `/reports/[id]/print` | any  | Print-optimized report for PDF export                                        |
+| Route                    | Role       | Description                                                                  |
+| ------------------------ | ---------- | ---------------------------------------------------------------------------- |
+| `/lead/report`           | lead       | Report section form with traffic lights, items, risks, decisions, priorities |
+| `/head/dashboard`        | head       | Review dashboard showing all lead submissions                                |
+| `/head/report`           | head       | Assembled report with publish action                                         |
+| `/admin`                 | head       | User, project, period, and reminder management                               |
+| `/reports?tab=published` | any        | Published report archive                                                     |
+| `/reports/[id]`          | any        | Single published report detail                                               |
+| `/print/[id]`            | PDF worker | Print-optimized report for PDF export                                        |
 
 ## Data Model
 
-14 Prisma models: User, Project, Report, ReportSection, ProjectStatus, Item, Risk, Decision, Priority, PdfExportJob, ReminderRule, ReminderExecution, CarryOverExecution, CarryOverRecord.
+20 Prisma models: User, Project, Report, ReportSection, ProjectStatus, Item,
+Risk, Decision, Priority, PdfExportJob, ReminderRule, ReminderExecution,
+CarryOverExecution, CarryOverRecord, VersionSnapshot, Stage,
+StageAssignment, ReopenRequest, AppSettings, AiInsight.
 
 ## API
 
@@ -135,29 +220,9 @@ tRPC routers via `/trpc` (proxied through Next.js rewrites):
 
 ## Testing
 
-```bash
-# Product-ready quick gate
-pnpm typecheck
-pnpm lint
-pnpm test
-pnpm build
-
-# API integration against a dedicated DB
-DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e \
-  pnpm --filter @customreport/api test:integration
-
-# Web integration against a dedicated DB and non-conflicting ports
-E2E_DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e \
-E2E_API_PORT=3012 \
-E2E_WEB_PORT=3015 \
-  pnpm --filter @customreport/web test:e2e:integration
-
-# Full Docker verification
-pnpm docker:local:verify
-```
-
 See [docs/OPERATIONS.md](docs/OPERATIONS.md) for the full dev/test/prod runbook,
-including wipe/reseed, regression, and Kubernetes migration mapping.
+including wipe/reseed, regression, log capture, screenshot evidence, and the
+Kubernetes migration mapping.
 
 ### Test Coverage
 

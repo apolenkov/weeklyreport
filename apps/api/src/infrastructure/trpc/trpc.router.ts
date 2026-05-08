@@ -134,7 +134,10 @@ export function createAppRouter(deps: RouterDeps) {
       // the picker works before any session exists.
       listUsers: publicProcedure.query(async () => {
         if (process.env['AUTH_DEV_MODE'] !== 'true') {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Dev mode is not enabled' });
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Dev mode is not enabled',
+          });
         }
         const users = await deps.prisma.user.findMany({
           select: { id: true, email: true, name: true, role: true },
@@ -144,10 +147,19 @@ export function createAppRouter(deps: RouterDeps) {
       }),
 
       wipeAndReseed: protectedProcedure
-        .input(z.object({ variant: z.enum(['minimum', 'advanced']).default('minimum') }))
+        .input(
+          z.object({
+            variant: z
+              .enum(['minimum', 'advanced', 'manual-uat'])
+              .default('minimum'),
+          }),
+        )
         .mutation(async ({ input }) => {
           if (process.env['AUTH_DEV_MODE'] !== 'true') {
-            throw new TRPCError({ code: 'FORBIDDEN', message: 'Dev mode is not enabled' });
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Dev mode is not enabled',
+            });
           }
           // Run Prisma reset as a child process so "wipe & reseed" is a
           // real clean-slate operation in Docker too. The Prisma config
@@ -155,17 +167,26 @@ export function createAppRouter(deps: RouterDeps) {
           const { execSync } = await import('node:child_process');
           const reset = 'pnpm exec prisma migrate reset --force';
           const advancedSeed = 'pnpm exec prisma db seed';
-          const simpleSeed = 'pnpm --dir apps/api exec tsx ../../prisma/seed-simple.ts';
-          const script = input.variant === 'advanced'
-            ? `${reset} && ${advancedSeed}`
-            : `${reset} && ${simpleSeed}`;
+          const simpleSeed =
+            'pnpm --dir apps/api exec tsx ../../prisma/seed-simple.ts';
+          const manualUatWipe =
+            'pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts';
+          const script =
+            input.variant === 'manual-uat'
+              ? manualUatWipe
+              : input.variant === 'advanced'
+                ? reset + ' && ' + advancedSeed
+                : reset + ' && ' + simpleSeed;
           // Resolve repo root from this file (apps/api/src/.../trpc.router.ts).
           // The seed script needs to run with the monorepo root as cwd so
           // pnpm picks up the correct workspace.
           const path = await import('node:path');
           const url = await import('node:url');
           const __filename = url.fileURLToPath(import.meta.url);
-          const repoRoot = path.resolve(path.dirname(__filename), '../../../../..');
+          const repoRoot = path.resolve(
+            path.dirname(__filename),
+            '../../../../..',
+          );
           try {
             const stdout = execSync(script, {
               cwd: repoRoot,
@@ -174,13 +195,18 @@ export function createAppRouter(deps: RouterDeps) {
                 ...process.env,
                 PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: 'давай',
               },
-              timeout: 120_000,
+              timeout: input.variant === 'manual-uat' ? 60_000 : 120_000,
             });
-            return { ok: true, variant: input.variant, output: stdout.split('\n').slice(-15).join('\n') };
+            return {
+              ok: true,
+              variant: input.variant,
+              output: stdout.split('\n').slice(-15).join('\n'),
+            };
           } catch (error) {
-            const stderr = error instanceof Error && 'stderr' in error
-              ? String((error as { stderr?: unknown }).stderr ?? '')
-              : '';
+            const stderr =
+              error instanceof Error && 'stderr' in error
+                ? String((error as { stderr?: unknown }).stderr ?? '')
+                : '';
             throw new TRPCError({
               code: 'INTERNAL_SERVER_ERROR',
               message: `Reseed failed: ${error instanceof Error ? error.message : String(error)}\n${stderr.slice(-500)}`,
@@ -211,7 +237,15 @@ export function createAppRouter(deps: RouterDeps) {
           where: { authorId: ctx.session.userId },
           orderBy: { createdAt: 'desc' },
           include: {
-            report: { select: { id: true, periodStart: true, periodEnd: true, status: true, publishedAt: true } },
+            report: {
+              select: {
+                id: true,
+                periodStart: true,
+                periodEnd: true,
+                status: true,
+                publishedAt: true,
+              },
+            },
           },
         });
 
@@ -264,7 +298,9 @@ export function createAppRouter(deps: RouterDeps) {
             return [];
           }
 
-          return await deps.reviewService.getSubmissionDashboard(activeReportId);
+          return await deps.reviewService.getSubmissionDashboard(
+            activeReportId,
+          );
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -275,10 +311,15 @@ export function createAppRouter(deps: RouterDeps) {
           const activeReportId = ctx.session.activeReportId;
 
           if (!activeReportId) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'No active report in session.' });
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'No active report in session.',
+            });
           }
 
-          return await deps.publicationService.getAssembledReport(activeReportId);
+          return await deps.publicationService.getAssembledReport(
+            activeReportId,
+          );
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -289,10 +330,16 @@ export function createAppRouter(deps: RouterDeps) {
           const activeReportId = ctx.session.activeReportId;
 
           if (!activeReportId) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'No active report in session.' });
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'No active report in session.',
+            });
           }
 
-          return await deps.publicationService.publishReport(activeReportId, ctx.session);
+          return await deps.publicationService.publishReport(
+            activeReportId,
+            ctx.session,
+          );
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -426,11 +473,13 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       saveStageAssignment: headProcedure
-        .input(z.object({
-          userId: z.string().uuid(),
-          stageId: z.string().uuid(),
-          projectId: z.string().uuid(),
-        }))
+        .input(
+          z.object({
+            userId: z.string().uuid(),
+            stageId: z.string().uuid(),
+            projectId: z.string().uuid(),
+          }),
+        )
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.saveStageAssignment(input);
@@ -453,7 +502,9 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ projectId: z.string().uuid() }))
         .query(async ({ input }) => {
           try {
-            return await deps.adminService.listStageAssignments(input.projectId);
+            return await deps.adminService.listStageAssignments(
+              input.projectId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -559,9 +610,13 @@ export function createAppRouter(deps: RouterDeps) {
       // the Admin Panel "Reopen Requests" tab consumes these procedures.
       listReopenRequests: headProcedure
         .input(
-          z.object({
-            status: z.enum(['pending', 'approved', 'rejected', 'all']).default('pending'),
-          }).optional(),
+          z
+            .object({
+              status: z
+                .enum(['pending', 'approved', 'rejected', 'all'])
+                .default('pending'),
+            })
+            .optional(),
         )
         .query(async ({ input }) => {
           try {
@@ -684,7 +739,10 @@ export function createAppRouter(deps: RouterDeps) {
         .input(paginationInputSchema.optional())
         .query(async ({ input, ctx }) => {
           try {
-            return await deps.archiveService.listArchiveReports(input, ctx.session.role);
+            return await deps.archiveService.listArchiveReports(
+              input,
+              ctx.session.role,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -694,7 +752,10 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ reportId: z.string().uuid() }))
         .query(async ({ input, ctx }) => {
           try {
-            return await deps.archiveService.getArchiveReport(input.reportId, ctx.session.role);
+            return await deps.archiveService.getArchiveReport(
+              input.reportId,
+              ctx.session.role,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -704,7 +765,12 @@ export function createAppRouter(deps: RouterDeps) {
     // === Reminders namespace ===
     reminders: router({
       execute: headProcedure
-        .input(z.object({ ruleId: z.string().uuid(), recipientEmail: z.string().email() }))
+        .input(
+          z.object({
+            ruleId: z.string().uuid(),
+            recipientEmail: z.string().email(),
+          }),
+        )
         .mutation(async ({ input }) => {
           try {
             return await deps.remindersService.requestReminderExecution(
@@ -717,13 +783,21 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       listExecutions: headProcedure
-        .input(z.object({ ruleId: z.string().uuid() }).merge(paginationInputSchema.partial()))
+        .input(
+          z
+            .object({ ruleId: z.string().uuid() })
+            .merge(paginationInputSchema.partial()),
+        )
         .query(async ({ input }) => {
           try {
             const { ruleId, cursor, limit } = input;
-            const pagination = cursor || limit ? { cursor, limit: limit ?? 20 } : undefined;
+            const pagination =
+              cursor || limit ? { cursor, limit: limit ?? 20 } : undefined;
 
-            return await deps.remindersService.listExecutions(ruleId, pagination);
+            return await deps.remindersService.listExecutions(
+              ruleId,
+              pagination,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -750,7 +824,12 @@ export function createAppRouter(deps: RouterDeps) {
               orderBy: { fireAt: 'asc' },
             });
             if (!rule) {
-              return { dispatched: 0, alreadySent: 0, skipped: 0, reason: 'no-active-rule' };
+              return {
+                dispatched: 0,
+                alreadySent: 0,
+                skipped: 0,
+                reason: 'no-active-rule',
+              };
             }
             const draftSections = await deps.prisma.reportSection.findMany({
               where: { reportId: input.reportId, status: 'draft' },
@@ -794,7 +873,12 @@ export function createAppRouter(deps: RouterDeps) {
     // === CarryOver namespace ===
     carryOver: router({
       execute: headProcedure
-        .input(z.object({ sourceReportId: z.string().uuid(), targetReportId: z.string().uuid() }))
+        .input(
+          z.object({
+            sourceReportId: z.string().uuid(),
+            targetReportId: z.string().uuid(),
+          }),
+        )
         .mutation(async ({ input }) => {
           try {
             return await deps.carryOverService.executeCarryOver(
@@ -813,7 +897,10 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ reportId: z.string().uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
-            return await deps.periodService.publishPeriod(input.reportId, ctx.session);
+            return await deps.periodService.publishPeriod(
+              input.reportId,
+              ctx.session,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -852,10 +939,12 @@ export function createAppRouter(deps: RouterDeps) {
     // === Lead Form namespace (v4.0) ===
     leadForm: router({
       byPeriod: protectedProcedure
-        .input(z.object({
-          reportId: z.string().uuid(),
-          authorId: z.string().uuid().optional(),
-        }))
+        .input(
+          z.object({
+            reportId: z.string().uuid(),
+            authorId: z.string().uuid().optional(),
+          }),
+        )
         .query(async ({ input, ctx }) => {
           try {
             return await deps.leadFormService.getByPeriod(
@@ -870,10 +959,19 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       fillFrom: protectedProcedure
-        .input(z.object({ targetSectionId: z.string().uuid(), sourceSectionId: z.string().uuid() }))
+        .input(
+          z.object({
+            targetSectionId: z.string().uuid(),
+            sourceSectionId: z.string().uuid(),
+          }),
+        )
         .mutation(async ({ input, ctx }) => {
           try {
-            return await deps.leadFormService.fillFrom(input.targetSectionId, input.sourceSectionId, ctx.session.userId);
+            return await deps.leadFormService.fillFrom(
+              input.targetSectionId,
+              input.sourceSectionId,
+              ctx.session.userId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -883,17 +981,28 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ reportSectionId: z.string().uuid() }))
         .query(async ({ input }) => {
           try {
-            return await deps.leadFormService.listVersions(input.reportSectionId);
+            return await deps.leadFormService.listVersions(
+              input.reportSectionId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
         }),
 
       restoreVersion: protectedProcedure
-        .input(z.object({ reportSectionId: z.string().uuid(), version: z.number().int().positive() }))
+        .input(
+          z.object({
+            reportSectionId: z.string().uuid(),
+            version: z.number().int().positive(),
+          }),
+        )
         .mutation(async ({ input, ctx }) => {
           try {
-            return await deps.leadFormService.restoreVersion(input.reportSectionId, input.version, ctx.session.userId);
+            return await deps.leadFormService.restoreVersion(
+              input.reportSectionId,
+              input.version,
+              ctx.session.userId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -903,7 +1012,10 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ reportSectionId: z.string().uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
-            return await deps.leadFormService.createSnapshot(input.reportSectionId, ctx.session.userId);
+            return await deps.leadFormService.createSnapshot(
+              input.reportSectionId,
+              ctx.session.userId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -913,17 +1025,29 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ reportSectionId: z.string().uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
-            return await deps.leadFormService.revokeSubmission(input.reportSectionId, ctx.session.userId);
+            return await deps.leadFormService.revokeSubmission(
+              input.reportSectionId,
+              ctx.session.userId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
         }),
 
       requestReopen: protectedProcedure
-        .input(z.object({ reportSectionId: z.string().uuid(), reason: z.string().max(500).optional() }))
+        .input(
+          z.object({
+            reportSectionId: z.string().uuid(),
+            reason: z.string().max(500).optional(),
+          }),
+        )
         .mutation(async ({ input, ctx }) => {
           try {
-            return await deps.leadFormService.requestReopen(input.reportSectionId, ctx.session.userId, input.reason);
+            return await deps.leadFormService.requestReopen(
+              input.reportSectionId,
+              ctx.session.userId,
+              input.reason,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -986,7 +1110,10 @@ export function createAppRouter(deps: RouterDeps) {
             });
           } catch (error) {
             if (error instanceof SearchAuthorizationError) {
-              throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
+              throw new TRPCError({
+                code: 'FORBIDDEN',
+                message: error.message,
+              });
             }
             throw mapDomainError(error);
           }
@@ -1055,14 +1182,23 @@ export function createAppRouter(deps: RouterDeps) {
       // AI-03: per-cell on-track advisory verdict (✓ ⚠ ✗).
       // Advisory only — never replaces lead's chosen traffic-light colour.
       onTrack: protectedProcedure
-        .input(z.object({
-          sectionId: z.string().uuid(),
-          projectId: z.string().uuid(),
-        }))
+        .input(
+          z.object({
+            sectionId: z.string().uuid(),
+            projectId: z.string().uuid(),
+          }),
+        )
         .query(async ({ input, ctx }) => {
           try {
-            await assertCanReadSection(deps.prisma, ctx.session, input.sectionId);
-            return await deps.aiService.onTrack(input.sectionId, input.projectId);
+            await assertCanReadSection(
+              deps.prisma,
+              ctx.session,
+              input.sectionId,
+            );
+            return await deps.aiService.onTrack(
+              input.sectionId,
+              input.projectId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
