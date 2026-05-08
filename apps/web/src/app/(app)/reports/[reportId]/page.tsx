@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Suspense, use } from 'react';
+import { Suspense, use } from "react";
 
-import { WeeklyReportPage } from '../../../../components/weekly-report/weekly-report-page';
-import { WeeklyReportSkeleton } from '../../../../components/weekly-report/weekly-report-skeleton';
+import { WeeklyReportPage } from "../../../../components/weekly-report/weekly-report-page";
+import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
 
 /* ------------------------------------------------------------------ */
 /*  Published Report Viewer — Client Component (Phase 21)             */
@@ -21,8 +21,11 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
   const { authorId } = use(searchParams);
 
   return (
-    <main id="main-content" className="min-h-screen bg-[var(--color-background)]">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <main
+      id="main-content"
+      className="min-h-screen bg-[var(--color-background)]"
+    >
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-starbucks-green)]">
@@ -36,7 +39,7 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
             <a
               href="/head/dashboard"
               className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-              style={{ minHeight: '44px' }}
+              style={{ minHeight: "44px" }}
               aria-label="Back to Dashboard"
             >
               Back to Dashboard
@@ -46,7 +49,7 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               className="btn-press inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-green-accent,#00754A)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-green,#006241)]"
-              style={{ minHeight: '44px' }}
+              style={{ minHeight: "44px" }}
               aria-label="Export PDF"
             >
               <svg

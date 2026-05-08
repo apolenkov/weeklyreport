@@ -1,20 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
 import { mapDashboardData } from "../../lib/mappers";
-import { logClientError } from "../../lib/client-error-reporting";
+import {
+  formatClientErrorMessage,
+  logClientError,
+} from "../../lib/client-error-reporting";
 
 import { KpiCards } from "./kpi-cards";
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
-import { LeadReportsGrid } from "./lead-reports-grid";
 import { ReportArchiveSection } from "./report-archive-section";
-import { ToggleAllButton } from "./toggle-all-button";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { ActivityLivePanel } from "./activity-live-panel";
 
@@ -22,9 +23,6 @@ export const DASHBOARD_LOAD_STALL_MS = 8_000;
 
 export function DashboardPage() {
   const trpc = useTRPC();
-  const [toggleAllAction, setToggleAllAction] = useState<"collapse" | "expand">(
-    "collapse",
-  );
   const [loadStalled, setLoadStalled] = useState(false);
 
   const reviewQ = useQuery(trpc.review.dashboard.queryOptions());
@@ -38,9 +36,7 @@ export function DashboardPage() {
         procedure: "review.dashboard",
       });
       toast.error(
-        reviewQ.error instanceof Error
-          ? `Failed to load dashboard: ${reviewQ.error.message}`
-          : "Failed to load dashboard",
+        formatClientErrorMessage("Failed to load dashboard", reviewQ.error),
       );
     }
   }, [reviewQ.isError, reviewQ.error]);
@@ -53,9 +49,7 @@ export function DashboardPage() {
         limit: 12,
       });
       toast.error(
-        archiveQ.error instanceof Error
-          ? `Failed to load archive: ${archiveQ.error.message}`
-          : "Failed to load archive",
+        formatClientErrorMessage("Failed to load archive", archiveQ.error),
       );
     }
   }, [archiveQ.isError, archiveQ.error]);
@@ -68,53 +62,10 @@ export function DashboardPage() {
         reportId: null,
       });
       toast.error(
-        weeklyQ.error instanceof Error
-          ? `Failed to load weekly report: ${weeklyQ.error.message}`
-          : "Failed to load weekly report",
+        formatClientErrorMessage("Failed to load weekly report", weeklyQ.error),
       );
     }
   }, [weeklyQ.isError, weeklyQ.error]);
-
-  const sectionsRef = useRef<HTMLDivElement | null>(null);
-
-  const getAccordionButtons = useCallback(() => {
-    const root = sectionsRef.current;
-    if (!root) return [];
-    return Array.from(
-      root.querySelectorAll<HTMLButtonElement>("[aria-expanded]"),
-    );
-  }, []);
-
-  const syncToggleAllAction = useCallback(() => {
-    const anyExpanded = getAccordionButtons().some(
-      (btn) => btn.getAttribute("aria-expanded") === "true",
-    );
-    setToggleAllAction(anyExpanded ? "collapse" : "expand");
-  }, [getAccordionButtons]);
-
-  const scheduleToggleAllSync = useCallback(() => {
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(syncToggleAllAction);
-    });
-  }, [syncToggleAllAction]);
-
-  function handleToggleAll() {
-    // Scope to dashboard sections — global selector matched the nav drawer
-    // trigger and any other page-level accordion controls.
-    const buttons = getAccordionButtons();
-    const anyExpanded = buttons.some(
-      (btn) => btn.getAttribute("aria-expanded") === "true",
-    );
-    buttons.forEach((btn) => {
-      if (
-        (anyExpanded && btn.getAttribute("aria-expanded") === "true") ||
-        (!anyExpanded && btn.getAttribute("aria-expanded") === "false")
-      ) {
-        btn.click();
-      }
-    });
-    setToggleAllAction(anyExpanded ? "expand" : "collapse");
-  }
 
   const isLoading =
     reviewQ.isLoading || archiveQ.isLoading || weeklyQ.isLoading;
@@ -235,19 +186,14 @@ export function DashboardPage() {
     return () => window.clearTimeout(timer);
   }, [hasDashboardData, queryError, logDashboardStall, markStalledAndRefetch]);
 
-  useEffect(() => {
-    if (!isLoading) scheduleToggleAllSync();
-  }, [isLoading, scheduleToggleAllSync]);
-
   if (queryError) {
     return (
       <DashboardLoadIssue
         title="Could not load dashboard"
-        description={
-          queryError instanceof Error
-            ? queryError.message
-            : "One of the dashboard data requests failed."
-        }
+        description={formatClientErrorMessage(
+          "One of the dashboard data requests failed",
+          queryError,
+        )}
         onRetry={retryDashboardLoad}
       />
     );
@@ -286,15 +232,14 @@ export function DashboardPage() {
     archive: archiveQ.data,
     weeklyReport: weeklyQ.data,
   });
-  const { kpi, leads, blockedAtRisk, pendingLeads } = dashboard;
+  const { kpi, blockedAtRisk, pendingLeads } = dashboard;
   const departmentLabel = weeklyQ.data.departmentName;
+  const canSendReminder =
+    weeklyQ.data.periodStatus !== "published" &&
+    weeklyQ.data.hasActiveReminderRule;
 
   return (
-    <div
-      className="space-y-6"
-      ref={sectionsRef}
-      onClickCapture={scheduleToggleAllSync}
-    >
+    <div className="space-y-6">
       {/* Page header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -307,10 +252,6 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <ToggleAllButton
-            action={toggleAllAction}
-            onToggle={handleToggleAll}
-          />
           <a
             href={`/head/report/${encodeURIComponent(weeklyQ.data.reportId)}`}
             className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
@@ -329,13 +270,14 @@ export function DashboardPage() {
       <KpiCards data={kpi} />
 
       {/* Alert bar for pending leads */}
-      <AlertBar pendingLeads={pendingLeads} reportId={weeklyQ.data.reportId} />
+      <AlertBar
+        pendingLeads={pendingLeads}
+        reportId={weeklyQ.data.reportId}
+        canSendReminder={canSendReminder}
+      />
 
       {/* Blocked & At Risk */}
       <BlockedAtRiskTable items={blockedAtRisk} />
-
-      {/* Lead Reports */}
-      <LeadReportsGrid leads={leads} />
 
       {/* Report Archive — self-contained: owns its own cursor pagination */}
       <ReportArchiveSection currentReportId={weeklyQ.data.reportId} />

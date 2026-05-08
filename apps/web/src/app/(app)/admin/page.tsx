@@ -16,6 +16,7 @@ const tabs = [
   "reminders",
   "reopen",
   "jobs",
+  "actions",
   "settings",
 ] as const;
 type TabId = (typeof tabs)[number];
@@ -26,6 +27,7 @@ const TAB_LABELS: Record<TabId, string> = {
   reminders: "Reminders",
   reopen: "Reopen",
   jobs: "Jobs",
+  actions: "Actions",
   settings: "Settings",
 };
 
@@ -40,7 +42,7 @@ export default async function AdminPage({ searchParams }: Props) {
       id="main-content"
       className="min-h-screen bg-[var(--color-background)]"
     >
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-3">
             <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-starbucks-green)]">

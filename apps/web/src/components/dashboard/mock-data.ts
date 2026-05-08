@@ -25,6 +25,7 @@ export type LeadInfo = {
   lastActivity: string;
   isCurrentUser: boolean;
   productCount?: number;
+  reportContentCount?: number;
 };
 
 // ---- Dashboard Types ----

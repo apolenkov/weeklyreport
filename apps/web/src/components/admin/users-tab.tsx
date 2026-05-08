@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -31,6 +31,7 @@ export function UsersTab({ users }: UsersTabProps) {
   const [showDialog, setShowDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
   const [form, setForm] = useState<UserFormData>(EMPTY_FORM);
+  const [search, setSearch] = useState('');
 
   // Escape closes the Add/Edit dialog. The dialog is rendered inline (not
   // through a Radix wrapper) so we wire the listener manually.
@@ -96,6 +97,16 @@ export function UsersTab({ users }: UsersTabProps) {
 
   const isSaving = saveUserMut.isPending;
   const isDeleting = deleteUserMut.isPending;
+  const filteredUsers = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return users;
+    return users.filter((user) =>
+      [user.name, user.email, user.role, user.department]
+        .join(' ')
+        .toLowerCase()
+        .includes(needle),
+    );
+  }, [search, users]);
 
   return (
     <>
@@ -115,6 +126,15 @@ export function UsersTab({ users }: UsersTabProps) {
           </button>
         </div>
 
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search users..."
+          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+          aria-label="Search users"
+        />
+
         {/* Users table */}
         <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]">
           <table className="w-full text-left text-sm" data-testid="users-table">
@@ -128,7 +148,7 @@ export function UsersTab({ users }: UsersTabProps) {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <tr
                   key={user.id}
                   className="border-b border-[var(--color-border)] last:border-0 hover:bg-[#f8f6f2]"
@@ -164,6 +184,11 @@ export function UsersTab({ users }: UsersTabProps) {
             </tbody>
           </table>
         </div>
+        {filteredUsers.length === 0 && (
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
+            No users match the search.
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Dialog */}

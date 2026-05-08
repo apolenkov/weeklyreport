@@ -48,6 +48,7 @@ export function JobsTab() {
 
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const retryMut = useMutation(
     trpc.admin.jobs.retryFailed.mutationOptions({
@@ -77,6 +78,16 @@ export function JobsTab() {
   );
 
   const jobs = useMemo(() => listQuery.data?.jobs ?? [], [listQuery.data]);
+  const filteredJobs = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return jobs;
+    return jobs.filter((job) =>
+      [job.id, job.name, job.failedReason ?? "", String(job.attemptsMade)]
+        .join(" ")
+        .toLowerCase()
+        .includes(needle),
+    );
+  }, [jobs, search]);
 
   function handleRetry(jobId: string) {
     setRetryingId(jobId);
@@ -99,10 +110,18 @@ export function JobsTab() {
           email-reminder queue
         </h2>
         <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-          Jobs that exhausted their retry limit. Click Retry to put a job back
-          into the queue.
+          Failed email reminder deliveries after all retries. Rules are configured in Reminders; this tab is only for delivery failures.
         </p>
       </div>
+
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search failed jobs..."
+        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+        aria-label="Search failed jobs"
+      />
 
       {listQuery.isPending && <JobsSkeleton />}
 
@@ -116,16 +135,16 @@ export function JobsTab() {
         </div>
       )}
 
-      {!listQuery.isPending && !listQuery.isError && jobs.length === 0 && (
+      {!listQuery.isPending && !listQuery.isError && filteredJobs.length === 0 && (
         <div
           data-testid="jobs-empty-state"
           className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
         >
-          No failed jobs; queue is clean.
+          {jobs.length === 0 ? "No failed email reminder jobs. Queue is clean." : "No failed jobs match the search."}
         </div>
       )}
 
-      {jobs.length > 0 && (
+      {filteredJobs.length > 0 && (
         <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <table className="w-full text-left text-sm" data-testid="jobs-table">
             <thead>
@@ -151,7 +170,7 @@ export function JobsTab() {
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => {
+              {filteredJobs.map((job) => {
                 const isExpanded = expanded.has(job.id);
                 const isRetrying = retryingId === job.id && retryMut.isPending;
                 const reason = job.failedReason || "—";

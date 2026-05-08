@@ -1,5 +1,5 @@
-import { TRPCError } from '@trpc/server';
-import { z } from 'zod';
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 
 import {
   draftSaveSchema,
@@ -16,7 +16,7 @@ import {
   periodComparisonInputSchema,
   searchQueryInputSchema,
   queueNameSchema,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 import {
   router,
@@ -24,36 +24,36 @@ import {
   protectedProcedure,
   headProcedure,
   anyRoleProcedure,
-} from './trpc.middleware.js';
-import { mapDomainError } from './trpc.error-mapper.js';
+} from "./trpc.middleware.js";
+import { mapDomainError } from "./trpc.error-mapper.js";
 
-import type { PrismaClient } from '@prisma/client';
-import type { Queue } from 'bullmq';
+import type { PrismaClient } from "@prisma/client";
+import type { Queue } from "bullmq";
 
-import type { ReportSectionsService } from '../../modules/report-sections/report-sections.service.js';
-import type { ReviewService } from '../../modules/review/review.service.js';
-import type { PublicationService } from '../../modules/publication/publication.service.js';
-import type { PdfExportService } from '../../modules/pdf-export/pdf-export.service.js';
-import type { AdminService } from '../../modules/admin/admin.service.js';
-import type { JobsService } from '../../modules/admin/jobs.service.js';
-import type { RemindersService } from '../../modules/reminders/reminders.service.js';
-import type { CarryOverService } from '../../modules/carry-over/carry-over.service.js';
-import type { ArchiveService } from '../../modules/archive/archive.service.js';
-import type { PeriodService } from '../../modules/period/period.service.js';
-import type { WeeklyReportService } from '../../modules/weekly-report/weekly-report.service.js';
-import type { LeadFormService } from '../../modules/report-sections/lead-form.service.js';
-import type { AnalyticsService } from '../../modules/analytics/analytics.service.js';
-import type { AiService } from '../../modules/ai/ai.service.js';
+import type { ReportSectionsService } from "../../modules/report-sections/report-sections.service.js";
+import type { ReviewService } from "../../modules/review/review.service.js";
+import type { PublicationService } from "../../modules/publication/publication.service.js";
+import type { PdfExportService } from "../../modules/pdf-export/pdf-export.service.js";
+import type { AdminService } from "../../modules/admin/admin.service.js";
+import type { JobsService } from "../../modules/admin/jobs.service.js";
+import type { RemindersService } from "../../modules/reminders/reminders.service.js";
+import type { CarryOverService } from "../../modules/carry-over/carry-over.service.js";
+import type { ArchiveService } from "../../modules/archive/archive.service.js";
+import type { PeriodService } from "../../modules/period/period.service.js";
+import type { WeeklyReportService } from "../../modules/weekly-report/weekly-report.service.js";
+import type { LeadFormService } from "../../modules/report-sections/lead-form.service.js";
+import type { AnalyticsService } from "../../modules/analytics/analytics.service.js";
+import type { AiService } from "../../modules/ai/ai.service.js";
 import {
   SearchAuthorizationError,
   type SearchService,
-} from '../../modules/search/search.service.js';
-import type { ActivityService } from '../../modules/activity/activity.service.js';
+} from "../../modules/search/search.service.js";
+import type { ActivityService } from "../../modules/activity/activity.service.js";
 import {
   assertCanReadReport,
   assertCanReadRisk,
   assertCanReadSection,
-} from '../../modules/ai/ai-authz.js';
+} from "../../modules/ai/ai-authz.js";
 
 type RouterDeps = {
   prisma: PrismaClient;
@@ -133,15 +133,15 @@ export function createAppRouter(deps: RouterDeps) {
       // them (not just the 3 hardcoded role buckets). publicProcedure so
       // the picker works before any session exists.
       listUsers: publicProcedure.query(async () => {
-        if (process.env['AUTH_DEV_MODE'] !== 'true') {
+        if (process.env["AUTH_DEV_MODE"] !== "true") {
           throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Dev mode is not enabled',
+            code: "FORBIDDEN",
+            message: "Dev mode is not enabled",
           });
         }
         const users = await deps.prisma.user.findMany({
           select: { id: true, email: true, name: true, role: true },
-          orderBy: [{ role: 'asc' }, { name: 'asc' }],
+          orderBy: [{ role: "asc" }, { name: "asc" }],
         });
         return users;
       }),
@@ -150,65 +150,65 @@ export function createAppRouter(deps: RouterDeps) {
         .input(
           z.object({
             variant: z
-              .enum(['minimum', 'advanced', 'manual-uat'])
-              .default('minimum'),
+              .enum(["minimum", "advanced", "manual-uat"])
+              .default("minimum"),
           }),
         )
         .mutation(async ({ input }) => {
-          if (process.env['AUTH_DEV_MODE'] !== 'true') {
+          if (process.env["AUTH_DEV_MODE"] !== "true") {
             throw new TRPCError({
-              code: 'FORBIDDEN',
-              message: 'Dev mode is not enabled',
+              code: "FORBIDDEN",
+              message: "Dev mode is not enabled",
             });
           }
           // Run Prisma reset as a child process so "wipe & reseed" is a
           // real clean-slate operation in Docker too. The Prisma config
           // applies migrations; then we run the requested seed explicitly.
-          const { execSync } = await import('node:child_process');
-          const reset = 'pnpm exec prisma migrate reset --force';
-          const advancedSeed = 'pnpm exec prisma db seed';
+          const { execSync } = await import("node:child_process");
+          const reset = "pnpm exec prisma migrate reset --force";
+          const advancedSeed = "pnpm exec prisma db seed";
           const simpleSeed =
-            'pnpm --dir apps/api exec tsx ../../prisma/seed-simple.ts';
+            "pnpm --dir apps/api exec tsx ../../prisma/seed-simple.ts";
           const manualUatWipe =
-            'pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts';
+            "pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts";
           const script =
-            input.variant === 'manual-uat'
+            input.variant === "manual-uat"
               ? manualUatWipe
-              : input.variant === 'advanced'
-                ? reset + ' && ' + advancedSeed
-                : reset + ' && ' + simpleSeed;
+              : input.variant === "advanced"
+                ? reset + " && " + advancedSeed
+                : reset + " && " + simpleSeed;
           // Resolve repo root from this file (apps/api/src/.../trpc.router.ts).
           // The seed script needs to run with the monorepo root as cwd so
           // pnpm picks up the correct workspace.
-          const path = await import('node:path');
-          const url = await import('node:url');
+          const path = await import("node:path");
+          const url = await import("node:url");
           const __filename = url.fileURLToPath(import.meta.url);
           const repoRoot = path.resolve(
             path.dirname(__filename),
-            '../../../../..',
+            "../../../../..",
           );
           try {
             const stdout = execSync(script, {
               cwd: repoRoot,
-              encoding: 'utf8',
+              encoding: "utf8",
               env: {
                 ...process.env,
-                PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: 'давай',
+                PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
               },
-              timeout: input.variant === 'manual-uat' ? 60_000 : 120_000,
+              timeout: input.variant === "manual-uat" ? 60_000 : 120_000,
             });
             return {
               ok: true,
               variant: input.variant,
-              output: stdout.split('\n').slice(-15).join('\n'),
+              output: stdout.split("\n").slice(-15).join("\n"),
             };
           } catch (error) {
             const stderr =
-              error instanceof Error && 'stderr' in error
-                ? String((error as { stderr?: unknown }).stderr ?? '')
-                : '';
+              error instanceof Error && "stderr" in error
+                ? String((error as { stderr?: unknown }).stderr ?? "")
+                : "";
             throw new TRPCError({
-              code: 'INTERNAL_SERVER_ERROR',
+              code: "INTERNAL_SERVER_ERROR",
               message: `Reseed failed: ${error instanceof Error ? error.message : String(error)}\n${stderr.slice(-500)}`,
               cause: error instanceof Error ? error : undefined,
             });
@@ -235,7 +235,7 @@ export function createAppRouter(deps: RouterDeps) {
       myHistory: protectedProcedure.query(async ({ ctx }) => {
         const sections = await deps.prisma.reportSection.findMany({
           where: { authorId: ctx.session.userId },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           include: {
             report: {
               select: {
@@ -318,8 +318,8 @@ export function createAppRouter(deps: RouterDeps) {
 
           if (!activeReportId) {
             throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'No active report in session.',
+              code: "BAD_REQUEST",
+              message: "No active report in session.",
             });
           }
 
@@ -337,8 +337,8 @@ export function createAppRouter(deps: RouterDeps) {
 
           if (!activeReportId) {
             throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'No active report in session.',
+              code: "BAD_REQUEST",
+              message: "No active report in session.",
             });
           }
 
@@ -525,7 +525,7 @@ export function createAppRouter(deps: RouterDeps) {
       listStages: headProcedure.query(async () => {
         try {
           const rows = await deps.prisma.stage.findMany({
-            orderBy: { sortOrder: 'asc' },
+            orderBy: { sortOrder: "asc" },
             select: { id: true, name: true, sortOrder: true },
           });
           return rows;
@@ -540,7 +540,7 @@ export function createAppRouter(deps: RouterDeps) {
       listStageAssignmentCounts: headProcedure.query(async () => {
         try {
           const rows = await deps.prisma.stageAssignment.groupBy({
-            by: ['projectId'],
+            by: ["projectId"],
             _count: { _all: true },
           });
           return rows.map((r) => ({
@@ -566,6 +566,45 @@ export function createAppRouter(deps: RouterDeps) {
         } catch (error) {
           throw mapDomainError(error);
         }
+      }),
+
+      // v8.1: queryable in-app mutation audit history. The log rows are
+      // written by mutationAuditMiddleware and keyed by the same correlation id
+      // as the structured app.log line for support/debug lookups.
+      actionLog: router({
+        list: headProcedure
+          .input(
+            z
+              .object({
+                limit: z.number().int().min(1).max(100).default(50),
+              })
+              .optional(),
+          )
+          .query(async ({ input }) => {
+            try {
+              const rows = await deps.prisma.userActionLog.findMany({
+                orderBy: { createdAt: "desc" },
+                take: input?.limit ?? 50,
+              });
+              return {
+                rows: rows.map((row) => ({
+                  id: row.id,
+                  userId: row.userId,
+                  role: row.role,
+                  procedure: row.procedure,
+                  targetId: row.targetId,
+                  status: row.status,
+                  reason: row.reason,
+                  ip: row.ip,
+                  correlationId: row.correlationId,
+                  durationMs: row.durationMs,
+                  createdAt: row.createdAt.toISOString(),
+                })),
+              };
+            } catch (error) {
+              throw mapDomainError(error);
+            }
+          }),
       }),
 
       // Phase 35-06: BullMQ DLQ admin surface. Lifts the Bull Board view
@@ -622,18 +661,18 @@ export function createAppRouter(deps: RouterDeps) {
           z
             .object({
               status: z
-                .enum(['pending', 'approved', 'rejected', 'all'])
-                .default('pending'),
+                .enum(["pending", "approved", "rejected", "all"])
+                .default("pending"),
             })
             .optional(),
         )
         .query(async ({ input }) => {
           try {
-            const status = input?.status ?? 'pending';
-            const where = status === 'all' ? {} : { status };
+            const status = input?.status ?? "pending";
+            const where = status === "all" ? {} : { status };
             const rows = await deps.prisma.reopenRequest.findMany({
               where,
-              orderBy: { createdAt: 'desc' },
+              orderBy: { createdAt: "desc" },
               take: 100,
               include: {
                 requestedBy: { select: { id: true, name: true, email: true } },
@@ -679,7 +718,7 @@ export function createAppRouter(deps: RouterDeps) {
         .input(
           z.object({
             id: z.string().uuid(),
-            decision: z.enum(['approved', 'rejected']),
+            decision: z.enum(["approved", "rejected"]),
             note: z.string().max(500).optional(),
           }),
         )
@@ -689,8 +728,8 @@ export function createAppRouter(deps: RouterDeps) {
               where: { id: input.id },
               include: { reportSection: true },
             });
-            if (!req) throw new Error('Reopen request not found.');
-            if (req.status !== 'pending') throw new Error('Already processed.');
+            if (!req) throw new Error("Reopen request not found.");
+            if (req.status !== "pending") throw new Error("Already processed.");
 
             return await deps.prisma.$transaction(async (tx) => {
               await tx.reopenRequest.update({
@@ -706,11 +745,11 @@ export function createAppRouter(deps: RouterDeps) {
               // Approve = flip the section back to draft + clear submittedAt
               // so the lead can edit again. The section's revokedAt/revokedBy
               // mirror the existing /head/report revoke flow for audit.
-              if (input.decision === 'approved') {
+              if (input.decision === "approved") {
                 await tx.reportSection.update({
                   where: { id: req.reportSectionId },
                   data: {
-                    status: 'draft',
+                    status: "draft",
                     submittedAt: null,
                     revokedAt: new Date(),
                     revokedBy: ctx.session.userId,
@@ -728,7 +767,7 @@ export function createAppRouter(deps: RouterDeps) {
       pendingReopenCount: headProcedure.query(async () => {
         try {
           const count = await deps.prisma.reopenRequest.count({
-            where: { status: 'pending' },
+            where: { status: "pending" },
           });
           return { count };
         } catch (error) {
@@ -829,19 +868,19 @@ export function createAppRouter(deps: RouterDeps) {
         .mutation(async ({ input }) => {
           try {
             const rule = await deps.prisma.reminderRule.findFirst({
-              where: { reportId: input.reportId, status: 'active' },
-              orderBy: { fireAt: 'asc' },
+              where: { reportId: input.reportId, status: "active" },
+              orderBy: { fireAt: "asc" },
             });
             if (!rule) {
               return {
                 dispatched: 0,
                 alreadySent: 0,
                 skipped: 0,
-                reason: 'no-active-rule',
+                reason: "no-active-rule",
               };
             }
             const draftSections = await deps.prisma.reportSection.findMany({
-              where: { reportId: input.reportId, status: 'draft' },
+              where: { reportId: input.reportId, status: "draft" },
               include: {
                 author: { select: { email: true, notificationOptOut: true } },
               },
@@ -940,9 +979,9 @@ export function createAppRouter(deps: RouterDeps) {
               input?.reportId,
               ctx.session.role,
             );
-            ctx.logger.info('weekly report load succeeded', {
-              phase: 'weekly-report.load',
-              procedure: 'weeklyReport.get',
+            ctx.logger.info("weekly report load succeeded", {
+              phase: "weekly-report.load",
+              procedure: "weeklyReport.get",
               userId: ctx.session.userId,
               role: ctx.session.role,
               requestedReportId,
@@ -958,12 +997,12 @@ export function createAppRouter(deps: RouterDeps) {
                 ? { name: error.name, message: error.message }
                 : { name: typeof error, message: String(error) };
             const logFailure =
-              errorInfo.name === 'WeeklyReportDomainError'
+              errorInfo.name === "WeeklyReportDomainError"
                 ? ctx.logger.warn.bind(ctx.logger)
                 : ctx.logger.error.bind(ctx.logger);
-            logFailure('weekly report load failed', {
-              phase: 'weekly-report.load',
-              procedure: 'weeklyReport.get',
+            logFailure("weekly report load failed", {
+              phase: "weekly-report.load",
+              procedure: "weeklyReport.get",
               userId: ctx.session.userId,
               role: ctx.session.role,
               requestedReportId,
@@ -991,9 +1030,9 @@ export function createAppRouter(deps: RouterDeps) {
               ctx.session.role,
               input.authorId,
             );
-            ctx.logger.info('lead form load succeeded', {
-              phase: 'lead-form.load',
-              procedure: 'leadForm.byPeriod',
+            ctx.logger.info("lead form load succeeded", {
+              phase: "lead-form.load",
+              procedure: "leadForm.byPeriod",
               userId: ctx.session.userId,
               role: ctx.session.role,
               reportId: input.reportId,
@@ -1008,12 +1047,12 @@ export function createAppRouter(deps: RouterDeps) {
                 ? { name: error.name, message: error.message }
                 : { name: typeof error, message: String(error) };
             const logFailure =
-              errorInfo.name === 'LeadFormDomainError'
+              errorInfo.name === "LeadFormDomainError"
                 ? ctx.logger.warn.bind(ctx.logger)
                 : ctx.logger.error.bind(ctx.logger);
-            logFailure('lead form load failed', {
-              phase: 'lead-form.load',
-              procedure: 'leadForm.byPeriod',
+            logFailure("lead form load failed", {
+              phase: "lead-form.load",
+              procedure: "leadForm.byPeriod",
               userId: ctx.session.userId,
               role: ctx.session.role,
               reportId: input.reportId,
@@ -1178,7 +1217,7 @@ export function createAppRouter(deps: RouterDeps) {
           } catch (error) {
             if (error instanceof SearchAuthorizationError) {
               throw new TRPCError({
-                code: 'FORBIDDEN',
+                code: "FORBIDDEN",
                 message: error.message,
               });
             }

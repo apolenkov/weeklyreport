@@ -52,17 +52,17 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
   return (
     <div className="space-y-6">
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        General department settings for CustomReport
+        Reporting group defaults for report headers and navigation
       </p>
 
       <div className="max-w-lg space-y-5">
-        {/* Department Name */}
+        {/* Reporting group display name */}
         <div>
           <label
             htmlFor="dept-name"
             className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
           >
-            Department Name
+            Group display name
           </label>
           <input
             id="dept-name"
@@ -74,7 +74,7 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
             className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
           />
           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            Displayed in report headers and navigation
+            Displayed in report headers and navigation. Examples: Core Development, Platform Guild, Department A.
           </p>
         </div>
 

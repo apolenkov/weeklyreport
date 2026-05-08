@@ -64,16 +64,8 @@ vi.mock("./blocked-at-risk-table", () => ({
   BlockedAtRiskTable: () => <div>Blocked</div>,
 }));
 
-vi.mock("./lead-reports-grid", () => ({
-  LeadReportsGrid: () => <div>Leads</div>,
-}));
-
 vi.mock("./report-archive-section", () => ({
   ReportArchiveSection: () => <div>Archive</div>,
-}));
-
-vi.mock("./toggle-all-button", () => ({
-  ToggleAllButton: () => <button type="button">Toggle All</button>,
 }));
 
 type QueryState = {

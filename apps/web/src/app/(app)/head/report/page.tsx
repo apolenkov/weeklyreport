@@ -1,7 +1,7 @@
-import { Suspense } from 'react';
+import { Suspense } from "react";
 
-import { WeeklyReportPage } from '../../../../components/weekly-report/weekly-report-page';
-import { WeeklyReportSkeleton } from '../../../../components/weekly-report/weekly-report-skeleton';
+import { WeeklyReportPage } from "../../../../components/weekly-report/weekly-report-page";
+import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
 
 type Props = {
   searchParams: Promise<{ authorId?: string; period?: string }>;
@@ -19,8 +19,11 @@ export default async function HeadReportPage({ searchParams }: Props) {
   const { authorId, period } = await searchParams;
 
   return (
-    <main id="main-content" className="min-h-screen bg-[var(--color-background)]">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <main
+      id="main-content"
+      className="min-h-screen bg-[var(--color-background)]"
+    >
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <Suspense fallback={<WeeklyReportSkeleton />}>
           <WeeklyReportPage
             period={period}

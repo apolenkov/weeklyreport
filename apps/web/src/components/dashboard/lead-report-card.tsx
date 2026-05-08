@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import type { LeadInfo } from './mock-data';
-import { useSession } from '../../lib/session-provider';
+import type { LeadInfo } from "./mock-data";
+import { useSession } from "../../lib/session-provider";
 
 type LeadReportCardProps = {
   readonly lead: LeadInfo;
@@ -20,25 +20,25 @@ type StatusConfig = {
 // which is what the `?? STATUS_CONFIG.pending` fallback was always for.
 const STATUS_CONFIG = {
   submitted: {
-    bg: 'var(--color-success)',
-    text: 'var(--color-primary)',
-    label: 'Submitted',
-    avatarBg: 'var(--color-primary)',
-    avatarText: '#fff',
+    bg: "var(--color-success)",
+    text: "var(--color-primary)",
+    label: "Submitted",
+    avatarBg: "var(--color-primary)",
+    avatarText: "#fff",
   },
   draft: {
-    bg: '#fef3c7',
-    text: '#8a6d1b',
-    label: 'Draft',
-    avatarBg: '#fef3c7',
-    avatarText: 'var(--color-starbucks-gold)',
+    bg: "#fef3c7",
+    text: "#8a6d1b",
+    label: "Draft",
+    avatarBg: "#fef3c7",
+    avatarText: "var(--color-starbucks-gold)",
   },
   pending: {
-    bg: 'var(--color-muted)',
-    text: 'var(--color-muted-foreground)',
-    label: 'Pending',
-    avatarBg: 'var(--color-border)',
-    avatarText: 'var(--color-muted-foreground)',
+    bg: "var(--color-muted)",
+    text: "var(--color-muted-foreground)",
+    label: "Pending",
+    avatarBg: "var(--color-border)",
+    avatarText: "var(--color-muted-foreground)",
   },
 } as const satisfies Record<string, StatusConfig>;
 
@@ -47,15 +47,15 @@ const STATUS_CONFIG = {
 // invisible on the dashboard. Blocked stays `#fee2e2` because its text-color
 // is `var(--color-destructive)` (red) on light pink — readable as-is.
 const TRAFFIC_BG: Record<string, string> = {
-  'on-track': 'var(--color-success)',
-  'at-risk': '#d4a017',
-  blocked: '#fee2e2',
+  "on-track": "var(--color-success)",
+  "at-risk": "#d4a017",
+  blocked: "#fee2e2",
 };
 
 const TRAFFIC_TEXT: Record<string, string> = {
-  'on-track': 'var(--color-primary)',
-  'at-risk': '#fff',
-  blocked: 'var(--color-destructive)',
+  "on-track": "var(--color-primary)",
+  "at-risk": "#fff",
+  blocked: "var(--color-destructive)",
 };
 
 function ChevronRight() {
@@ -112,11 +112,14 @@ export function LeadReportCard({ lead }: LeadReportCardProps) {
     (STATUS_CONFIG as Record<string, StatusConfig>)[lead.status] ??
     STATUS_CONFIG.pending;
   const isCurrentUser = lead.isCurrentUser;
-  const isPending = lead.status === 'pending';
+  const isPending = lead.status === "pending";
+  const hasReportContent = (lead.reportContentCount ?? 0) > 0;
   // Lead-role viewer = lock on other rows; head/admin = chevron (drill-down).
-  const showLockForViewer = user?.role === 'lead' && !isCurrentUser;
+  const showLockForViewer = user?.role === "lead" && !isCurrentUser;
 
-  const reportPath = lead.reportId ? `/${encodeURIComponent(lead.reportId)}` : '';
+  const reportPath = lead.reportId
+    ? `/${encodeURIComponent(lead.reportId)}`
+    : "";
   const authorQuery = `?authorId=${encodeURIComponent(lead.id)}`;
   const href = isCurrentUser
     ? `/lead/report${reportPath}${authorQuery}`
@@ -124,25 +127,52 @@ export function LeadReportCard({ lead }: LeadReportCardProps) {
 
   const containerStyle: React.CSSProperties = isCurrentUser
     ? {
-        background: 'var(--color-success)',
-        border: '1.5px solid var(--color-starbucks-accent)',
-        textDecoration: 'none',
-        color: 'inherit',
+        background: "var(--color-success)",
+        border: "1.5px solid var(--color-starbucks-accent)",
+        textDecoration: "none",
+        color: "inherit",
       }
     : {
-        background: lead.status === 'draft' ? '#fffbeb' : 'var(--color-background)',
+        background:
+          lead.status === "draft" ? "#fffbeb" : "var(--color-background)",
         opacity: isPending ? 0.6 : 1,
-        border: '1px solid var(--color-border)',
-        textDecoration: 'none',
-        color: 'inherit',
+        border: "1px solid var(--color-border)",
+        textDecoration: "none",
+        color: "inherit",
       };
+
+  if (!hasReportContent) {
+    return (
+      <div
+        className="flex cursor-default items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)] p-3 opacity-70"
+        aria-label={`${lead.name} has no report content yet`}
+      >
+        <div
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+          style={{ background: config.avatarBg, color: config.avatarText }}
+        >
+          {lead.initials}
+        </div>
+        <span className="flex-1 text-sm font-semibold">
+          {lead.name} &middot; {lead.role}
+        </span>
+        <span className="text-xs text-[var(--color-muted-foreground)]">
+          No content
+        </span>
+      </div>
+    );
+  }
 
   return (
     <a
       href={href}
       className="flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-[background-color,border-color,box-shadow] hover:border-[rgba(0,117,74,0.18)] hover:bg-[#f8f6f2] hover:shadow-[inset_3px_0_0_var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
       style={containerStyle}
-      aria-label={isCurrentUser ? `Open my report — ${lead.name}` : `Open ${lead.name}'s contribution in the weekly report`}
+      aria-label={
+        isCurrentUser
+          ? `Open my report — ${lead.name}`
+          : `Open ${lead.name}'s contribution in the weekly report`
+      }
     >
       {/* Avatar */}
       <div
@@ -176,7 +206,9 @@ export function LeadReportCard({ lead }: LeadReportCardProps) {
       )}
 
       {/* Last activity */}
-      <span className="text-xs text-[var(--color-muted-foreground)]">{lead.lastActivity}</span>
+      <span className="text-xs text-[var(--color-muted-foreground)]">
+        {lead.lastActivity}
+      </span>
 
       {/* Status badge */}
       <span

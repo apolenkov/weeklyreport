@@ -14,6 +14,11 @@ import {
 
 const reportFullInclude = {
   sections: { include: reportSectionFullInclude },
+  reminderRules: {
+    where: { status: 'active' },
+    select: { id: true },
+    take: 1,
+  },
 } as const;
 
 @Injectable()
@@ -85,11 +90,13 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       reportId: report.id,
       periodStart: report.periodStart,
       periodEnd: report.periodEnd,
+      deadline: report.deadline,
       periodStatus: report.periodStatus,
       weekLabel: report.weekLabel,
       departmentName: settings.departmentName,
       submissionCount,
       totalLeads,
+      hasActiveReminderRule: report.reminderRules.length > 0,
       portfolioOverview,
       leadSections,
       escalations,

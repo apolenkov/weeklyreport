@@ -1,12 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom/vitest';
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom/vitest";
 
-import { PublishLockButton } from './publish-lock-button';
-import { expectDefined } from '../../test/expect-defined.js';
+import { PublishLockButton } from "./publish-lock-button";
+import { expectDefined } from "../../test/expect-defined.js";
 
-describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
+describe("PublishLockButton (Phase 22 — plan 22-05)", () => {
   it('renders "Publish & Lock" when periodStatus is open', () => {
     render(
       <PublishLockButton
@@ -17,7 +17,9 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
         onReopen={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /publish & lock/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /publish & lock/i }),
+    ).toBeInTheDocument();
   });
 
   it('renders "Publish & Lock" when periodStatus is reopened', () => {
@@ -30,7 +32,9 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
         onReopen={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /publish & lock/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /publish & lock/i }),
+    ).toBeInTheDocument();
   });
 
   it('renders "Reopen Period" when periodStatus is published', () => {
@@ -43,10 +47,12 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
         onReopen={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /reopen period/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /reopen period/i }),
+    ).toBeInTheDocument();
   });
 
-  it('opens a confirmation dialog before invoking onPublish', async () => {
+  it("opens a confirmation dialog before invoking onPublish", async () => {
     const onPublish = vi.fn();
     render(
       <PublishLockButton
@@ -58,17 +64,21 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: /publish & lock/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /publish & lock/i }),
+    );
     // Dialog opens — only the dialog confirm button calls onPublish
     expect(onPublish).not.toHaveBeenCalled();
-    expect(screen.getByRole('dialog', { name: /confirm publish/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: /confirm publish/i }),
+    ).toBeInTheDocument();
 
     // Cancel does NOT call onPublish
-    await userEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
     expect(onPublish).not.toHaveBeenCalled();
   });
 
-  it('confirming the dialog calls onPublish exactly once', async () => {
+  it("confirming the dialog calls onPublish exactly once", async () => {
     const onPublish = vi.fn();
     render(
       <PublishLockButton
@@ -80,17 +90,19 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: /publish & lock/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /publish & lock/i }),
+    );
     // Pick the dialog's confirm action — the only button labeled exactly "Publish & Lock"
     // inside the dialog (when pendingCount === 0).
-    const dialog = screen.getByRole('dialog', { name: /confirm publish/i });
-    const confirmBtn = dialog.querySelectorAll('button');
+    const dialog = screen.getByRole("dialog", { name: /confirm publish/i });
+    const confirmBtn = dialog.querySelectorAll("button");
     // Last button in dialog footer is the confirm one (label varies on pendingCount)
     await userEvent.click(expectDefined(confirmBtn[confirmBtn.length - 1]));
     expect(onPublish).toHaveBeenCalledTimes(1);
   });
 
-  it('shows pending-leads warning copy when pendingCount > 0', async () => {
+  it("shows pending-leads warning copy when pendingCount > 0", async () => {
     render(
       <PublishLockButton
         pendingCount={2}
@@ -100,7 +112,9 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
         onReopen={vi.fn()}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: /publish & lock/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /publish & lock/i }),
+    );
     expect(screen.getByText(/2 of 6 leads/i)).toBeInTheDocument();
   });
 
@@ -115,15 +129,17 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
         onReopen={onReopen}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: /reopen period/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /reopen period/i }),
+    );
     // The first click only opens the modal — onReopen must not fire yet.
     expect(onReopen).not.toHaveBeenCalled();
     expect(screen.getByText(/reopen this period\?/i)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /^reopen$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^reopen$/i }));
     expect(onReopen).toHaveBeenCalledTimes(1);
   });
 
-  it('cancelling the reopen dialog does not fire onReopen', async () => {
+  it("cancelling the reopen dialog does not fire onReopen", async () => {
     const onReopen = vi.fn();
     render(
       <PublishLockButton
@@ -134,12 +150,14 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
         onReopen={onReopen}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: /reopen period/i }));
-    await userEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /reopen period/i }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
     expect(onReopen).not.toHaveBeenCalled();
   });
 
-  it('disables the trigger button while isPending=true', () => {
+  it("disables the trigger button while isPending=true", () => {
     render(
       <PublishLockButton
         pendingCount={0}
@@ -150,6 +168,30 @@ describe('PublishLockButton (Phase 22 — plan 22-05)', () => {
         isPending
       />,
     );
-    expect(screen.getByRole('button', { name: /publish & lock/i })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /publish & lock/i }),
+    ).toBeDisabled();
+  });
+
+  it("disables publishing when there is no report content", async () => {
+    const onPublish = vi.fn();
+    render(
+      <PublishLockButton
+        pendingCount={6}
+        totalLeads={6}
+        periodStatus="open"
+        onPublish={onPublish}
+        onReopen={vi.fn()}
+        canPublish={false}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: /nothing to publish/i });
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(
+      screen.queryByRole("dialog", { name: /confirm publish/i }),
+    ).not.toBeInTheDocument();
+    expect(onPublish).not.toHaveBeenCalled();
   });
 });

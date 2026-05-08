@@ -124,7 +124,7 @@ export function PortfolioOverviewTable({
                 <button
                   key={product.id}
                   type="button"
-                  className={`group relative flex items-center gap-2 rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
+                  className={`group grid min-h-[76px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
                     isEmpty
                       ? "cursor-default text-[var(--color-muted-foreground)]"
                       : "cursor-pointer hover:shadow-[0_8px_18px_-14px_rgba(0,0,0,0.35),0_0_0_2px_rgba(0,117,74,0.18)]"
@@ -167,9 +167,11 @@ export function PortfolioOverviewTable({
                     {isEmpty ? "–" : STATUS_ICON[product.status]}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium">{product.name}</div>
+                    <div className="truncate text-sm font-medium">
+                      {product.name}
+                    </div>
                     <div className="text-xs text-[var(--color-muted-foreground)]">
-                      {isEmpty ? "No content" : product.statusLabel}
+                      {isEmpty ? "No updates" : product.statusLabel}
                     </div>
                     <span className="text-[11px] text-[var(--color-muted-foreground)]">
                       {product.currentWeekCount} current &middot;{" "}
@@ -178,7 +180,11 @@ export function PortfolioOverviewTable({
                     </span>
                   </div>
                   <span
-                    className="ml-auto flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/55 text-[13px] font-semibold text-[var(--color-primary)] opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                    className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/55 text-[13px] font-semibold text-[var(--color-primary)] shadow-sm transition-opacity ${
+                      isEmpty
+                        ? "opacity-0"
+                        : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+                    }`}
                     aria-hidden="true"
                   >
                     ↓

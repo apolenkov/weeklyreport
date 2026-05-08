@@ -112,7 +112,7 @@ describe('JobsTab — Phase 35-06 BullMQ DLQ admin UI', () => {
     renderTab([], captured);
 
     expect(
-      await screen.findByText(/No failed jobs; queue is clean\./),
+      await screen.findByText(/No failed email reminder jobs\. Queue is clean\./),
     ).toBeInTheDocument();
   });
 

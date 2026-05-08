@@ -45,10 +45,9 @@ test.describe('Head Dashboard', () => {
     await expect(headPage.getByText('4/6').first()).toBeVisible();
   });
 
-  test('Deadline KPI card is visible with countdown', async ({ headPage }) => {
+  test('Deadline KPI card is visible with report deadline', async ({ headPage }) => {
     await expect(headPage.getByText('Deadline')).toBeVisible();
-    // Shows "2d 5h" from mock data
-    await expect(headPage.getByText('2d 5h')).toBeVisible();
+    await expect(headPage.getByLabel(/Deadline:/)).toBeVisible();
   });
 
   test('Risks & Blockers KPI card is visible with counts', async ({ headPage }) => {

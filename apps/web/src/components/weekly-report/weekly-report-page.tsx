@@ -1,33 +1,36 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useRef } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+import { useEffect, useMemo, useRef } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
-import { isoWeekNumber, formatDateRange } from '../../lib/mappers/lead-history';
+import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
 
-import { useTRPC } from '../../lib/trpc-context';
-import { logClientError } from '../../lib/client-error-reporting';
-import { mapWeeklyReport } from '../../lib/mappers';
+import { useTRPC } from "../../lib/trpc-context";
+import {
+  formatClientErrorMessage,
+  logClientError,
+} from "../../lib/client-error-reporting";
+import { mapWeeklyReport } from "../../lib/mappers";
 import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
-} from '../../lib/cache-keys';
+} from "../../lib/cache-keys";
 import type {
   PortfolioProduct,
   ProductReport,
   ReportPeriod,
-} from '../dashboard/mock-data';
+} from "../dashboard/mock-data";
 
-import { HeadPeriodNavigator } from './period-navigator';
-import { PortfolioOverviewTable } from './portfolio-overview-table';
-import { ProductAccordion } from './product-accordion';
-import { PublishLockButton } from './publish-lock-button';
-import { ExportPdfButton } from './export-pdf-button';
-import { WeeklyReportSkeleton } from './weekly-report-skeleton';
-import { AiSummaryCard } from '../ai/ai-summary-card';
+import { HeadPeriodNavigator } from "./period-navigator";
+import { PortfolioOverviewTable } from "./portfolio-overview-table";
+import { ProductAccordion } from "./product-accordion";
+import { PublishLockButton } from "./publish-lock-button";
+import { ExportPdfButton } from "./export-pdf-button";
+import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
+import { AiSummaryCard } from "../ai/ai-summary-card";
 
 type WeeklyReportPageProps = {
   /**
@@ -75,7 +78,7 @@ export function WeeklyReportPage({
   period,
   reportId,
   redirectToCanonical,
-  canonicalBasePath = '/head/report',
+  canonicalBasePath = "/head/report",
   authorId,
 }: WeeklyReportPageProps) {
   const trpc = useTRPC();
@@ -98,11 +101,11 @@ export function WeeklyReportPage({
       onSuccess: () => {
         invalidateDashboard(qc, trpc);
         invalidateLeadHistory(qc, trpc);
-        toast.success('Period published & locked');
+        toast.success("Period published & locked");
       },
       onError: (err: unknown) => {
         toast.error(
-          err instanceof Error ? err.message : 'Failed to publish period',
+          err instanceof Error ? err.message : "Failed to publish period",
         );
       },
     }),
@@ -114,11 +117,11 @@ export function WeeklyReportPage({
         invalidateDashboard(qc, trpc);
         invalidateLeadForm(qc, trpc);
         invalidateLeadHistory(qc, trpc);
-        toast.success('Period reopened');
+        toast.success("Period reopened");
       },
       onError: (err: unknown) => {
         toast.error(
-          err instanceof Error ? err.message : 'Failed to reopen period',
+          err instanceof Error ? err.message : "Failed to reopen period",
         );
       },
     }),
@@ -126,17 +129,15 @@ export function WeeklyReportPage({
 
   useEffect(() => {
     if (weeklyQ.isError) {
-      logClientError('weeklyReport.get.load_failed', weeklyQ.error, {
-        component: 'WeeklyReportPage',
-        procedure: 'weeklyReport.get',
+      logClientError("weeklyReport.get.load_failed", weeklyQ.error, {
+        component: "WeeklyReportPage",
+        procedure: "weeklyReport.get",
         reportId: reportId ?? null,
         period: period ?? null,
         authorId: focusedAuthorId,
       });
       toast.error(
-        weeklyQ.error instanceof Error
-          ? `Failed to load weekly report: ${weeklyQ.error.message}`
-          : 'Failed to load weekly report',
+        formatClientErrorMessage("Failed to load weekly report", weeklyQ.error),
       );
     }
   }, [weeklyQ.isError, weeklyQ.error, reportId, period, focusedAuthorId]);
@@ -154,7 +155,7 @@ export function WeeklyReportPage({
     if (!resolvedReportId) return;
     const authorQuery = focusedAuthorId
       ? `?authorId=${encodeURIComponent(focusedAuthorId)}`
-      : '';
+      : "";
     router.replace(`${canonicalBasePath}/${resolvedReportId}${authorQuery}`);
   }, [
     redirectToCanonical,
@@ -175,7 +176,7 @@ export function WeeklyReportPage({
     return { week: isoWeekNumber(start), range: formatDateRange(start, end) };
   }, [weeklyQ.data]);
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") return;
     if (!titleParts) return;
     const previous = document.title;
     document.title = `Week ${titleParts.week}, ${titleParts.range} - CustomReport`;
@@ -196,12 +197,12 @@ export function WeeklyReportPage({
       '[data-product-accordion-toggle="true"]',
     );
     const anyExpanded = Array.from(buttons).some(
-      (btn) => btn.getAttribute('aria-expanded') === 'true',
+      (btn) => btn.getAttribute("aria-expanded") === "true",
     );
     buttons.forEach((btn) => {
       if (
-        (anyExpanded && btn.getAttribute('aria-expanded') === 'true') ||
-        (!anyExpanded && btn.getAttribute('aria-expanded') === 'false')
+        (anyExpanded && btn.getAttribute("aria-expanded") === "true") ||
+        (!anyExpanded && btn.getAttribute("aria-expanded") === "false")
       ) {
         btn.click();
       }
@@ -244,6 +245,7 @@ export function WeeklyReportPage({
       )?.id
     : undefined;
   const hasExpandableProducts = products.some(hasReportContent);
+  const canPublishReport = submitted > 0 && hasExpandableProducts;
   const scrollTargetProductId =
     authoredProductIds.length > 0 ? authoredProductIds[0] : undefined;
   // HeadPeriodNavigator currently renders one period entry; future plans may
@@ -270,21 +272,17 @@ export function WeeklyReportPage({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className={`btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors ${
-              hasExpandableProducts
-                ? 'hover:bg-[#f8f6f2]'
-                : 'cursor-not-allowed opacity-50'
-            }`}
-            onClick={hasExpandableProducts ? handleToggleAll : undefined}
-            disabled={!hasExpandableProducts}
-            aria-disabled={!hasExpandableProducts}
-            title="Toggle All"
-          >
-            <CollapseIcon />
-            Toggle All
-          </button>
+          {hasExpandableProducts && (
+            <button
+              type="button"
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+              onClick={handleToggleAll}
+              title="Toggle All"
+            >
+              <CollapseIcon />
+              Toggle All
+            </button>
+          )}
           <ExportPdfButton
             reportId={view.period.reportId}
             periodStatus={view.period.periodStatus}
@@ -300,6 +298,8 @@ export function WeeklyReportPage({
               reopenMut.mutate({ reportId: view.period.reportId })
             }
             isPending={publishMut.isPending || reopenMut.isPending}
+            canPublish={canPublishReport}
+            publishDisabledReason="No submitted report content yet."
           />
         </div>
       </div>
@@ -309,9 +309,13 @@ export function WeeklyReportPage({
         <HeadPeriodNavigator periods={periods} />
 
         <div className="flex min-w-[180px] flex-1 items-center justify-center gap-2">
-          <span className="text-sm text-[var(--color-muted-foreground)]">{departmentLabel}</span>
+          <span className="text-sm text-[var(--color-muted-foreground)]">
+            {departmentLabel}
+          </span>
           <span className="text-[var(--color-muted-foreground)]">&middot;</span>
-          <span className="text-sm text-[var(--color-muted-foreground)]">Live portfolio review</span>
+          <span className="text-sm text-[var(--color-muted-foreground)]">
+            Live portfolio review
+          </span>
         </div>
       </div>
 

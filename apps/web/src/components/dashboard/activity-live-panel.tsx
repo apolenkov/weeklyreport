@@ -1,21 +1,25 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
-import type { ActivityLiveResponse, ActivityLiveRow } from '@customreport/shared';
+import type {
+  ActivityLiveResponse,
+  ActivityLiveRow,
+} from "@customreport/shared";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
 /**
- * UX-18 (Phase 35-08): "Activity This Period" panel.
+ * UX-18 (Phase 35-08): "Submission Activity" panel.
  *
  * Renders one row per lead's section in the open report period with a
  * status pill (Draft / Submitted), counts (items / risks /
  * decisions / priorities), and a relative-time of last edit. Polls
  * activity.live every 15 seconds.
  *
- * Click on a row -> /head/report/<reportId>?authorId=<leadId>
- * (same assembled-report drill-down pattern as lead cards).
+ * Rows with content link to /head/report/<reportId>?authorId=<leadId>.
+ * Empty rows stay muted and non-clickable so the dashboard does not send
+ * heads into an empty focused report.
  *
  * If the period is closed/published the panel renders a published-period
  * empty state instead of a row grid.
@@ -40,10 +44,10 @@ export function ActivityLivePanel() {
           id="activity-live-heading"
           className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
         >
-          Activity This Period
+          Submission Activity
         </h2>
         <span className="text-xs text-[var(--color-muted-foreground)]">
-          Refreshes every 15 seconds
+          Shows every lead section; rows with content open the detailed report.
         </span>
       </header>
       {renderBody(query.data, query.isLoading, query.isError, query.error)}
@@ -66,12 +70,9 @@ function renderBody(
   }
 
   if (isError) {
-    const message = error instanceof Error ? error.message : 'Failed to load activity';
-    return (
-      <p className="text-sm text-[var(--color-danger)]">
-        {message}
-      </p>
-    );
+    const message =
+      error instanceof Error ? error.message : "Failed to load activity";
+    return <p className="text-sm text-[var(--color-danger)]">{message}</p>;
   }
 
   if (!data || !data.reportId) {
@@ -82,7 +83,7 @@ function renderBody(
     );
   }
 
-  if (data.periodStatus !== 'open') {
+  if (data.periodStatus !== "open") {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
         Period published; activity is not tracked.
@@ -123,44 +124,84 @@ function ActivityRow({
   // back-compat, but new links always use the addressed form so they're
   // shareable / bookmarkable.
   const href = `/head/report/${encodeURIComponent(reportId)}?authorId=${encodeURIComponent(row.leadId)}`;
+  const contentCount =
+    row.itemCount + row.riskCount + row.decisionCount + row.priorityCount;
+  const hasContent = contentCount > 0;
   const lastEdit = row.lastEditAt
     ? formatRelative(new Date(row.lastEditAt))
-    : 'not started';
+    : "not started";
+  const rowClassName =
+    "flex flex-wrap items-center gap-3 rounded-[var(--radius)] border px-2 py-3 transition-[background-color,border-color,box-shadow]";
+  const interactiveClassName =
+    rowClassName +
+    " cursor-pointer border-transparent hover:border-[rgba(0,117,74,0.14)] hover:bg-[var(--color-success)] hover:shadow-[inset_3px_0_0_var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2";
+  const emptyClassName =
+    rowClassName +
+    " cursor-default border-transparent bg-[rgba(0,0,0,0.025)] opacity-65";
+
+  const content = (
+    <>
+      <div
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-success)] text-[12px] font-semibold text-[var(--color-starbucks-accent)]"
+        aria-hidden="true"
+      >
+        {initials(row.leadName)}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-semibold text-[var(--color-foreground)]">
+            {row.leadName}
+          </span>
+          <StatusPill status={row.status} hasContent={hasContent} />
+        </div>
+        <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          {row.itemCount} items · {row.riskCount} risks · {row.decisionCount}{" "}
+          decisions · {row.priorityCount} priorities
+        </div>
+      </div>
+      <div className="text-right text-xs text-[var(--color-muted-foreground)]">
+        {lastEdit}
+      </div>
+    </>
+  );
 
   return (
     <li>
-      <a
-        href={href}
-        className="flex cursor-pointer flex-wrap items-center gap-3 rounded-[var(--radius)] border border-transparent px-2 py-3 transition-[background-color,border-color,box-shadow] hover:border-[rgba(0,117,74,0.14)] hover:bg-[var(--color-success)] hover:shadow-[inset_3px_0_0_var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
-        title={`Open ${row.leadName} report section`}
-      >
-        <div
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-success)] text-[12px] font-semibold text-[var(--color-starbucks-accent)]"
-          aria-hidden="true"
+      {hasContent ? (
+        <a
+          href={href}
+          className={interactiveClassName}
+          title={`Open ${row.leadName} report section`}
         >
-          {initials(row.leadName)}
+          {content}
+        </a>
+      ) : (
+        <div
+          className={emptyClassName}
+          aria-label={`${row.leadName} has no report content yet`}
+        >
+          {content}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-semibold text-[var(--color-foreground)]">
-              {row.leadName}
-            </span>
-            <StatusPill status={row.status} />
-          </div>
-          <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            {row.itemCount} items · {row.riskCount} risks · {row.decisionCount} decisions · {row.priorityCount} priorities
-          </div>
-        </div>
-        <div className="text-right text-xs text-[var(--color-muted-foreground)]">
-          {lastEdit}
-        </div>
-      </a>
+      )}
     </li>
   );
 }
 
-function StatusPill({ status }: { readonly status: 'draft' | 'submitted' }) {
-  if (status === 'submitted') {
+function StatusPill({
+  status,
+  hasContent,
+}: {
+  readonly status: "draft" | "submitted";
+  readonly hasContent: boolean;
+}) {
+  if (!hasContent) {
+    return (
+      <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+        No content
+      </span>
+    );
+  }
+  if (status === "submitted") {
     return (
       <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-starbucks-accent)]">
         Submitted
@@ -177,7 +218,7 @@ function StatusPill({ status }: { readonly status: 'draft' | 'submitted' }) {
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const first = parts[0];
-  if (!first) return '??';
+  if (!first) return "??";
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
   const last = parts[parts.length - 1] ?? first;
   return (first.charAt(0) + last.charAt(0)).toUpperCase();
@@ -187,7 +228,7 @@ function initials(name: string): string {
 function formatRelative(date: Date): string {
   const diffMs = Date.now() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 30) return 'just now';
+  if (diffSec < 30) return "just now";
   if (diffSec < 60) return `${diffSec}s ago`;
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) return `${diffMin} min ago`;
@@ -195,5 +236,5 @@ function formatRelative(date: Date): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.floor(diffHr / 24);
   if (diffDay < 7) return `${diffDay}d ago`;
-  return date.toLocaleDateString('en-US');
+  return date.toLocaleDateString("en-US");
 }

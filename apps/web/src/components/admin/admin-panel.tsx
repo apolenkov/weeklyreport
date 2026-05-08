@@ -13,6 +13,7 @@ import { RemindersTab } from "./reminders-tab";
 import { SettingsTab } from "./settings-tab";
 import { ReopenTab } from "./reopen-tab";
 import { JobsTab } from "./jobs-tab";
+import { ActionLogTab } from "./action-log-tab";
 import { AdminTabSkeleton } from "./admin-skeleton";
 
 type AdminPanelProps = {
@@ -22,7 +23,7 @@ type AdminPanelProps = {
 
 /**
  * Admin Panel container. Lifts the snapshot + settings queries into the parent
- * so the 5 child tabs can stay presentational. Mutations remain unwired —
+ * so the child tabs can stay presentational. Mutations remain unwired —
  * Phase 22 will replace each tab's local-state mutations with real tRPC calls.
  */
 export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
@@ -79,15 +80,19 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
           need the admin snapshot. */}
       {activeTab === "jobs" && <JobsTab />}
 
+      {activeTab === "actions" && <ActionLogTab />}
+
       {!data &&
         activeTab !== "settings" &&
         activeTab !== "reopen" &&
-        activeTab !== "jobs" && <AdminTabSkeleton variant="table" />}
+        activeTab !== "jobs" &&
+        activeTab !== "actions" && <AdminTabSkeleton variant="table" />}
 
       {data &&
         activeTab !== "settings" &&
         activeTab !== "reopen" &&
-        activeTab !== "jobs" && (
+        activeTab !== "jobs" &&
+        activeTab !== "actions" && (
           <>
             {activeTab === "users" && <UsersTab users={data.users} />}
             {activeTab === "products" && (
@@ -98,7 +103,7 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
               />
             )}
             {activeTab === "reminders" && (
-              <RemindersTab reminders={data.reminders} />
+              <RemindersTab reminders={data.reminders} periods={data.periods} />
             )}
             {!["users", "products", "reminders"].includes(activeTab) && (
               <UsersTab users={data.users} />

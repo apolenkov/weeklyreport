@@ -61,11 +61,13 @@ function makeWeeklyReport(overrides: Partial<WeeklyReportReadModel> = {}): Weekl
     reportId: REPORT_ID,
     periodStart: '2026-04-13T00:00:00.000Z',
     periodEnd: '2026-04-19T23:59:59.000Z',
+    deadline: '2026-04-17T15:00:00.000Z',
     periodStatus: 'open',
     weekLabel: 'Week 16',
     departmentName: 'Core Development',
     submissionCount: overrides.submissionCount ?? 4,
     totalLeads: overrides.totalLeads ?? 6,
+    hasActiveReminderRule: overrides.hasActiveReminderRule ?? true,
     portfolioOverview: overrides.portfolioOverview ?? [
       {
         productId: PROJECT_A,
@@ -225,15 +227,26 @@ describe('mapDashboardData', () => {
     expect(result.kpi.total).toBe(6);
   });
 
-  it('computes deadlineLabel relative to weeklyReport.periodEnd', () => {
-    // periodEnd = 2026-04-19T23:59:59Z, now = 2026-04-17T19:00:00Z -> ~52h -> 2d 4h
+  it('computes deadlineLabel relative to weeklyReport.deadline', () => {
+    // deadline = 2026-04-17T15:00:00Z, now = 2026-04-17T13:00:00Z -> 2h
     const result = mapDashboardData({
       review: makeReview(),
       archive: makeArchive(),
       weeklyReport: makeWeeklyReport(),
-      now: new Date('2026-04-17T19:00:00.000Z'),
+      now: new Date('2026-04-17T13:00:00.000Z'),
     });
-    expect(result.kpi.deadlineLabel).toMatch(/^\d+d \d+h$|^\d+h$/);
+    expect(result.kpi.deadlineLabel).toBe('2h');
+    expect(result.kpi.deadlineTime).toBe('2026-04-17');
+  });
+
+  it('does not show a countdown for a published period', () => {
+    const result = mapDashboardData({
+      review: makeReview(),
+      archive: makeArchive(),
+      weeklyReport: makeWeeklyReport({ periodStatus: 'published' }),
+      now: new Date('2026-04-17T13:00:00.000Z'),
+    });
+    expect(result.kpi.deadlineLabel).toBe('Closed');
   });
 
   it('counts blocked and at-risk escalations into KPI', () => {
