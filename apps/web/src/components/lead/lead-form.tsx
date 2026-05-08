@@ -12,6 +12,7 @@ import {
   invalidateDashboard,
 } from "../../lib/cache-keys";
 import { SessionContext } from "../../lib/session-provider";
+import { logClientError } from "../../lib/client-error-reporting";
 import { mapLeadFormData } from "../../lib/mappers";
 import { ownedStagesForProject } from "../../lib/mappers/lead-form";
 import { stageStatusToTraffic } from "../../lib/mappers/traffic-light";
@@ -408,6 +409,13 @@ export function LeadForm({
   const requestedAuthorId = searchParams.get("authorId") ?? undefined;
   const requestedAuthorIdNormalized = requestedAuthorId?.trim() || undefined;
   const sessionState = useContext(SessionContext);
+  const sessionRole = sessionState?.user?.role ?? null;
+  const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
+  const shouldRouteHeadLikeAwayFromLeadForm =
+    isHeadLikeSession && !requestedAuthorIdNormalized;
+  const shouldDeferForSession = Boolean(
+    sessionState && sessionState.isLoading,
+  );
   const isPinnedAuthorOwnView = Boolean(
     pinnedReportId &&
     requestedAuthorIdNormalized &&
@@ -438,7 +446,10 @@ export function LeadForm({
         ? { authorId: requestedAuthorIdNormalized }
         : {}),
     }),
-    enabled: targetReportId !== "",
+    enabled:
+      targetReportId !== "" &&
+      !shouldRouteHeadLikeAwayFromLeadForm &&
+      !shouldDeferForSession,
   });
 
   // The section id for actions (autosave / submit / revoke) comes from the
@@ -466,6 +477,7 @@ export function LeadForm({
     if (!redirectToCanonical) return;
     if (period) return;
     if (pinnedReportId) return;
+    if (shouldRouteHeadLikeAwayFromLeadForm) return;
     if (!activeReportId) return;
     const authorQuery = requestedAuthorId
       ? `?authorId=${encodeURIComponent(requestedAuthorId)}`
@@ -477,42 +489,84 @@ export function LeadForm({
     pinnedReportId,
     activeReportId,
     requestedAuthorId,
+    shouldRouteHeadLikeAwayFromLeadForm,
     router,
   ]);
+
+  useEffect(() => {
+    if (!shouldRouteHeadLikeAwayFromLeadForm) return;
+    const destination = pinnedReportId
+      ? `/head/report/${encodeURIComponent(pinnedReportId)}`
+      : "/head/dashboard";
+    router.replace(destination);
+  }, [pinnedReportId, router, shouldRouteHeadLikeAwayFromLeadForm]);
 
   // Toast on per-query errors.
   useEffect(() => {
     if (activeQ.isError) {
+      logClientError("leadForm.activeReport.load_failed", activeQ.error, {
+        component: "LeadForm",
+        procedure: "reports.getActive",
+        reportId: pinnedReportId ?? null,
+        authorId: requestedAuthorIdNormalized ?? null,
+      });
       toast.error(
         activeQ.error instanceof Error
           ? `Failed to load active report: ${activeQ.error.message}`
           : "Failed to load active report",
       );
     }
-  }, [activeQ.isError, activeQ.error]);
+  }, [
+    activeQ.isError,
+    activeQ.error,
+    pinnedReportId,
+    requestedAuthorIdNormalized,
+  ]);
 
   useEffect(() => {
     if (byPeriodQ.isError) {
+      logClientError("leadForm.byPeriod.load_failed", byPeriodQ.error, {
+        component: "LeadForm",
+        procedure: "leadForm.byPeriod",
+        reportId: targetReportId || null,
+        authorId: requestedAuthorIdNormalized ?? null,
+        role: sessionRole,
+      });
       toast.error(
         byPeriodQ.error instanceof Error
           ? `Failed to load form: ${byPeriodQ.error.message}`
           : "Failed to load form",
       );
     }
-  }, [byPeriodQ.isError, byPeriodQ.error]);
+  }, [
+    byPeriodQ.isError,
+    byPeriodQ.error,
+    targetReportId,
+    requestedAuthorIdNormalized,
+    sessionRole,
+  ]);
 
   useEffect(() => {
     if (versionsQ.isError) {
+      logClientError("leadForm.versions.load_failed", versionsQ.error, {
+        component: "LeadForm",
+        procedure: "leadForm.versions",
+        reportSectionId: sectionIdForActions || null,
+      });
       toast.error(
         versionsQ.error instanceof Error
           ? `Failed to load versions: ${versionsQ.error.message}`
           : "Failed to load versions",
       );
     }
-  }, [versionsQ.isError, versionsQ.error]);
+  }, [versionsQ.isError, versionsQ.error, sectionIdForActions]);
 
   useEffect(() => {
     if (historyQ.isError) {
+      logClientError("leadForm.history.load_failed", historyQ.error, {
+        component: "LeadForm",
+        procedure: "reports.myHistory",
+      });
       toast.error(
         historyQ.error instanceof Error
           ? `Failed to load history: ${historyQ.error.message}`
@@ -675,6 +729,7 @@ export function LeadForm({
     byPeriodQ.isLoading ||
     versionsQ.isLoading ||
     historyQ.isLoading;
+  const awaitingRoleRedirect = shouldRouteHeadLikeAwayFromLeadForm;
   const awaitingCanonicalRedirect =
     !!redirectToCanonical &&
     !period &&
@@ -753,6 +808,7 @@ export function LeadForm({
   // Skeleton until all queries settle.
   if (
     isLoading ||
+    awaitingRoleRedirect ||
     awaitingCanonicalRedirect ||
     activeQ.data === undefined ||
     !byPeriodQ.data ||

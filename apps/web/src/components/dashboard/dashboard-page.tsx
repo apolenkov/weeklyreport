@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
 import { mapDashboardData } from "../../lib/mappers";
+import { logClientError } from "../../lib/client-error-reporting";
 
 import { KpiCards } from "./kpi-cards";
 import { AlertBar } from "./alert-bar";
@@ -28,6 +29,10 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (reviewQ.isError) {
+      logClientError("dashboard.review.load_failed", reviewQ.error, {
+        component: "DashboardPage",
+        procedure: "review.dashboard",
+      });
       toast.error(
         reviewQ.error instanceof Error
           ? `Failed to load dashboard: ${reviewQ.error.message}`
@@ -38,6 +43,11 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (archiveQ.isError) {
+      logClientError("dashboard.archive.load_failed", archiveQ.error, {
+        component: "DashboardPage",
+        procedure: "archive.list",
+        limit: 12,
+      });
       toast.error(
         archiveQ.error instanceof Error
           ? `Failed to load archive: ${archiveQ.error.message}`
@@ -48,6 +58,11 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (weeklyQ.isError) {
+      logClientError("dashboard.weeklyReport.load_failed", weeklyQ.error, {
+        component: "DashboardPage",
+        procedure: "weeklyReport.get",
+        reportId: null,
+      });
       toast.error(
         weeklyQ.error instanceof Error
           ? `Failed to load weekly report: ${weeklyQ.error.message}`

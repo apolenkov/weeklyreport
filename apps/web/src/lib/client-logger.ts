@@ -2,7 +2,7 @@
 
 // Captures browser console.error/warn, window error events and unhandled
 // promise rejections, batches them, and POSTs to /api/client-logs so all
-// debug data lives in apps/api/.logs/api.log alongside server entries.
+// debug data lives in apps/api/.logs/app.log alongside server entries.
 //
 // Dev-only by default — installCLientLogger() is a no-op when
 // NEXT_PUBLIC_CLIENT_LOG_FORWARDING is not 'true'. Enable via

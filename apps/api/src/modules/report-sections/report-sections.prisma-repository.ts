@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   reportSectionReadModelSchema,
   type ReportSectionReadModel,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import type { ReportSectionsRepository } from './report-sections.service';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type { ReportSectionsRepository } from "./report-sections.service";
 
 /**
  * Shared Prisma include constant for the full ReportSection aggregate.
@@ -41,11 +41,11 @@ export const reportSectionFullInclude = {
   items: true,
   risks: true,
   decisions: true,
-  priorities: { orderBy: { rank: 'asc' as const } },
+  priorities: { orderBy: { rank: "asc" as const } },
 } as const;
 
 type PrismaReportSectionWithRelations = NonNullable<
-  Awaited<ReturnType<PrismaService['reportSection']['findUnique']>>
+  Awaited<ReturnType<PrismaService["reportSection"]["findUnique"]>>
 > & {
   authorId: string;
   author: {
@@ -112,19 +112,19 @@ function aggregateStageTraffic(
 ): string | null {
   let severity = 0;
   for (const stage of stages) {
-    if (stage.status === 'red') {
+    if (stage.status === "red") {
       severity = 3;
       break;
     }
-    if (stage.status === 'yellow') severity = Math.max(severity, 2);
-    if (stage.status === 'green') severity = Math.max(severity, 1);
+    if (stage.status === "yellow") severity = Math.max(severity, 2);
+    if (stage.status === "green") severity = Math.max(severity, 1);
   }
   return severity === 3
-    ? 'red'
+    ? "red"
     : severity === 2
-      ? 'yellow'
+      ? "yellow"
       : severity === 1
-        ? 'green'
+        ? "green"
         : null;
 }
 
@@ -139,10 +139,9 @@ export function mapPrismaToReportSection(
     row.projectStatuses.map((ps) => [ps.projectId, ps.status] as const),
   );
   const stageStatusByKey = new Map(
-    row.stageStatuses.map((ss) => [
-      `${ss.projectId}::${ss.stageId}`,
-      ss.status,
-    ] as const),
+    row.stageStatuses.map(
+      (ss) => [`${ss.projectId}::${ss.stageId}`, ss.status] as const,
+    ),
   );
   const assignmentsByProjectId = new Map<
     string,
@@ -198,7 +197,7 @@ export function mapPrismaToReportSection(
           ownedStages,
         };
       })
-      .sort((a, b) => a.projectName.localeCompare(b.projectName, 'ru')),
+      .sort((a, b) => a.projectName.localeCompare(b.projectName, "ru")),
     items: row.items.map((i) => ({
       id: i.id,
       projectId: i.projectId,
@@ -249,7 +248,9 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
     return report?.status ?? null;
   }
 
-  async getSectionById(reportSectionId: string): Promise<ReportSectionReadModel | null> {
+  async getSectionById(
+    reportSectionId: string,
+  ): Promise<ReportSectionReadModel | null> {
     const row = await this.prisma.reportSection.findUnique({
       where: { id: reportSectionId },
       include: reportSectionFullInclude,
@@ -259,10 +260,14 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
       return null;
     }
 
-    return mapPrismaToReportSection(row as unknown as PrismaReportSectionWithRelations);
+    return mapPrismaToReportSection(
+      row as unknown as PrismaReportSectionWithRelations,
+    );
   }
 
-  async saveSection(section: ReportSectionReadModel): Promise<ReportSectionReadModel> {
+  async saveSection(
+    section: ReportSectionReadModel,
+  ): Promise<ReportSectionReadModel> {
     const sectionId = section.reportSectionId;
 
     await this.prisma.$transaction(
@@ -275,8 +280,12 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
           },
         });
 
-        await tx.projectStatus.deleteMany({ where: { reportSectionId: sectionId } });
-        await tx.stageStatus.deleteMany({ where: { reportSectionId: sectionId } });
+        await tx.projectStatus.deleteMany({
+          where: { reportSectionId: sectionId },
+        });
+        await tx.stageStatus.deleteMany({
+          where: { reportSectionId: sectionId },
+        });
         await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.decision.deleteMany({ where: { reportSectionId: sectionId } });
@@ -371,6 +380,8 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
       include: reportSectionFullInclude,
     });
 
-    return mapPrismaToReportSection(saved as unknown as PrismaReportSectionWithRelations);
+    return mapPrismaToReportSection(
+      saved as unknown as PrismaReportSectionWithRelations,
+    );
   }
 }

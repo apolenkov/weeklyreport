@@ -246,13 +246,18 @@ The API excludes integration tests by default (`--exclude '**/*.integration.test
 ### Integration tests
 
 ```bash
-# API integration against a dedicated database
-DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e \
-  pnpm --filter @customreport/api test:integration
+# Create the dedicated API integration database once
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T postgres \
+  sh -lc 'createdb -U customreport customreport_test 2>/dev/null || true'
+
+# Apply migrations, then run API integration
+DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_test \
+  pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
+pnpm --filter @customreport/api test:integration
 ```
 
-Integration tests run against a real database with `--fileParallelism=false`
-to avoid race conditions.
+Integration tests load `.env.test`, run against a real `customreport_test`
+database, and use `--fileParallelism=false` to avoid race conditions.
 
 ### E2E tests (Playwright)
 

@@ -1,5 +1,12 @@
 import type { ReportSectionReadModel, Role, VersionSnapshot } from '@customreport/shared';
 
+export class LeadFormDomainError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LeadFormDomainError';
+  }
+}
+
 export interface LeadFormRepository {
   getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
   getSectionForPeriod(
@@ -168,7 +175,9 @@ export class LeadFormService {
     const result = await this.repository.getSectionForPeriod(reportId, sectionAuthorId);
 
     if (!result) {
-      throw new Error(`No section found for user in report ${reportId}.`);
+      throw new LeadFormDomainError(
+        `No section found for user in report ${reportId}.`,
+      );
     }
 
     return {

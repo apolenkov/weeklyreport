@@ -115,6 +115,7 @@ export const loggingMiddleware = t.middleware(
 
     const start = performance.now();
     const userId = ctx.session?.userId ?? null;
+    const role = ctx.session?.role ?? null;
 
     ctx.logger.info('trpc request start', {
       phase: 'trpc.request',
@@ -122,6 +123,7 @@ export const loggingMiddleware = t.middleware(
       procedure: path,
       type,
       userId,
+      role,
     });
 
     // Debug-level dump of the raw input. Gated behind LOG_LEVEL=debug so the
@@ -157,6 +159,7 @@ export const loggingMiddleware = t.middleware(
         procedure: path,
         type,
         userId,
+        role,
         duration,
         status: 'success',
       });
@@ -213,6 +216,7 @@ export const loggingMiddleware = t.middleware(
         procedure: path,
         type,
         userId,
+        role,
         duration,
         status: 'error',
         error: {

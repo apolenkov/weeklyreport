@@ -1,22 +1,22 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import {
   createTestPrisma,
   cleanDatabase,
   seedTestData,
   disconnectTestPrisma,
-} from '../../test-utils/prisma-test-helper';
-import { ReportSectionsPrismaRepository } from './report-sections.prisma-repository';
-import { expectDefined } from '../../test-utils/expect-defined.js';
+} from "../../test-utils/prisma-test-helper";
+import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
-describe('ReportSectionsPrismaRepository (integration)', () => {
+describe("ReportSectionsPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
   let repo: ReportSectionsPrismaRepository;
   let testData: Awaited<ReturnType<typeof seedTestData>>;
-  const stageId = 'a0000000-0000-4000-a000-000000000aa1';
+  const stageId = "a0000000-0000-4000-a000-000000000aa1";
 
   async function assignLeadToProject() {
     await prisma.stage.create({
-      data: { id: stageId, name: 'Development', sortOrder: 3 },
+      data: { id: stageId, name: "Development", sortOrder: 3 },
     });
     await prisma.stageAssignment.create({
       data: {
@@ -42,14 +42,14 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
     await disconnectTestPrisma();
   });
 
-  it('getSectionById returns full section with nested relations', async () => {
+  it("getSectionById returns full section with nested relations", async () => {
     await assignLeadToProject();
     // Seed additional nested data for the section
     await prisma.projectStatus.create({
       data: {
         reportSectionId: testData.section.id,
         projectId: testData.project.id,
-        status: 'green',
+        status: "green",
       },
     });
 
@@ -57,10 +57,10 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
       data: {
         reportSectionId: testData.section.id,
         projectId: testData.project.id,
-        type: 'current',
-        text: 'Integration test item',
-        tag: 'feature',
-        workflowStatus: 'in_progress',
+        type: "current",
+        text: "Integration test item",
+        tag: "feature",
+        workflowStatus: "in_progress",
         carriedOver: false,
       },
     });
@@ -69,18 +69,18 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
       data: {
         reportSectionId: testData.section.id,
         projectId: testData.project.id,
-        risk: 'Test risk',
-        impact: 'High',
-        mitigation: 'Mitigate it',
+        risk: "Test risk",
+        impact: "High",
+        mitigation: "Mitigate it",
       },
     });
 
     await prisma.decision.create({
       data: {
         reportSectionId: testData.section.id,
-        text: 'Test decision',
-        owner: 'Test Lead 1',
-        impact: 'Medium',
+        text: "Test decision",
+        owner: "Test Lead 1",
+        impact: "Medium",
       },
     });
 
@@ -88,7 +88,7 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
       data: {
         reportSectionId: testData.section.id,
         rank: 1,
-        text: 'Priority 1',
+        text: "Priority 1",
       },
     });
 
@@ -96,28 +96,34 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
 
     expect(result).not.toBeNull();
     expect(expectDefined(result).reportSectionId).toBe(testData.section.id);
-    expect(expectDefined(result).authorName).toBe('Test Lead 1');
-    expect(expectDefined(result).status).toBe('draft');
+    expect(expectDefined(result).authorName).toBe("Test Lead 1");
+    expect(expectDefined(result).status).toBe("draft");
     expect(expectDefined(result).projects).toHaveLength(1);
-    expect(expectDefined(expectDefined(result).projects[0]).trafficLight).toBe('green');
+    expect(expectDefined(expectDefined(result).projects[0]).trafficLight).toBe(
+      "green",
+    );
     expect(expectDefined(result).items).toHaveLength(1);
-    expect(expectDefined(expectDefined(result).items[0]).text).toBe('Integration test item');
+    expect(expectDefined(expectDefined(result).items[0]).text).toBe(
+      "Integration test item",
+    );
     expect(expectDefined(result).risks).toHaveLength(1);
     expect(expectDefined(result).decisions).toHaveLength(1);
     expect(expectDefined(result).priorities).toHaveLength(1);
   });
 
-  it('getSectionById returns null for non-existent ID', async () => {
-    const result = await repo.getSectionById('ffffffff-ffff-ffff-ffff-ffffffffffff');
+  it("getSectionById returns null for non-existent ID", async () => {
+    const result = await repo.getSectionById(
+      "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    );
     expect(result).toBeNull();
   });
 
-  it('getSectionById excludes product-owner projects without StageAssignment', async () => {
+  it("getSectionById excludes product-owner projects without StageAssignment", async () => {
     await prisma.projectStatus.create({
       data: {
         reportSectionId: testData.section.id,
         projectId: testData.project.id,
-        status: 'red',
+        status: "red",
       },
     });
 
@@ -127,40 +133,40 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
     expect(expectDefined(result).projects).toEqual([]);
   });
 
-  it('getSectionById surfaces authorRole + projects[i].ownedStages from StageAssignment (35-03/04)', async () => {
+  it("getSectionById surfaces authorRole + projects[i].ownedStages from StageAssignment (35-03/04)", async () => {
     await assignLeadToProject();
     await prisma.stageStatus.create({
       data: {
         reportSectionId: testData.section.id,
         projectId: testData.project.id,
         stageId,
-        status: 'yellow',
+        status: "yellow",
       },
     });
 
     const result = await repo.getSectionById(testData.section.id);
     expect(result).not.toBeNull();
     // 35-03: authorRole flows through from User.role.
-    expect(expectDefined(result).authorRole).toBe('lead');
+    expect(expectDefined(result).authorRole).toBe("lead");
     // 35-04: owned stages on the project mirror the StageAssignment row.
     const project = expectDefined(expectDefined(result).projects[0]);
     expect(project.ownedStages).toEqual([
       expect.objectContaining({
-        stageName: 'Development',
+        stageName: "Development",
         sortOrder: 3,
-        status: 'yellow',
+        status: "yellow",
       }),
     ]);
-    expect(project.trafficLight).toBe('yellow');
+    expect(project.trafficLight).toBe("yellow");
   });
 
-  it('saveSection persists stageName on Item / Risk / Decision / Priority (35-04)', async () => {
+  it("saveSection persists stageName on Item / Risk / Decision / Priority (35-04)", async () => {
     await assignLeadToProject();
     await prisma.projectStatus.create({
       data: {
         reportSectionId: testData.section.id,
         projectId: testData.project.id,
-        status: 'green',
+        status: "green",
       },
     });
 
@@ -170,53 +176,51 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
       items: [
         {
           projectId: testData.project.id,
-          type: 'current' as const,
-          text: 'Item with stage',
-          tag: 'feature',
-          workflowStatus: 'in_progress' as const,
+          type: "current" as const,
+          text: "Item with stage",
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
           carriedOver: false,
-          stageName: 'Development',
+          stageName: "Development",
         },
       ],
       risks: [
         {
           projectId: testData.project.id,
-          risk: 'Risk',
-          impact: 'Impact',
-          mitigation: 'Mitigation',
-          stageName: 'Testing',
+          risk: "Risk",
+          impact: "Impact",
+          mitigation: "Mitigation",
+          stageName: "Testing",
         },
       ],
       decisions: [
         {
-          text: 'Decision',
-          owner: 'Owner',
+          text: "Decision",
+          owner: "Owner",
           deadline: null,
-          impact: 'Impact',
+          impact: "Impact",
           resolvedAt: null,
-          stageName: 'Design',
+          stageName: "Design",
         },
       ],
-      priorities: [
-        { rank: 1, text: 'P1', stageName: 'DevOps' },
-      ],
+      priorities: [{ rank: 1, text: "P1", stageName: "DevOps" }],
     };
 
     const saved = await repo.saveSection(modified);
-    expect(expectDefined(saved.items[0]).stageName).toBe('Development');
-    expect(expectDefined(saved.risks[0]).stageName).toBe('Testing');
-    expect(expectDefined(saved.decisions[0]).stageName).toBe('Design');
-    expect(expectDefined(saved.priorities[0]).stageName).toBe('DevOps');
+    expect(expectDefined(saved.items[0]).stageName).toBe("Development");
+    expect(expectDefined(saved.risks[0]).stageName).toBe("Testing");
+    expect(expectDefined(saved.decisions[0]).stageName).toBe("Design");
+    expect(expectDefined(saved.priorities[0]).stageName).toBe("DevOps");
   });
 
-  it('saveSection persists all nested entities and returns updated section', async () => {
+  it("saveSection persists all nested entities and returns updated section", async () => {
     await assignLeadToProject();
     // First seed a project status so the section has a project
     await prisma.projectStatus.create({
       data: {
         reportSectionId: testData.section.id,
         projectId: testData.project.id,
-        status: 'green',
+        status: "green",
       },
     });
 
@@ -227,44 +231,44 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
     // Modify the section with new items, risks, decisions, priorities
     const modified = {
       ...expectDefined(original),
-      status: 'draft' as const,
+      status: "draft" as const,
       projects: [
         {
           projectId: testData.project.id,
-          projectName: 'Test Project 1',
-          trafficLight: 'yellow' as const,
+          projectName: "Test Project 1",
+          trafficLight: "yellow" as const,
         },
       ],
       items: [
         {
           projectId: testData.project.id,
-          type: 'current' as const,
-          text: 'Saved item',
-          tag: 'bugfix',
-          workflowStatus: 'done' as const,
+          type: "current" as const,
+          text: "Saved item",
+          tag: "bugfix",
+          workflowStatus: "done" as const,
           carriedOver: false,
         },
       ],
       risks: [
         {
           projectId: testData.project.id,
-          risk: 'Saved risk',
-          impact: 'Low',
-          mitigation: 'None needed',
+          risk: "Saved risk",
+          impact: "Low",
+          mitigation: "None needed",
         },
       ],
       decisions: [
         {
-          text: 'Saved decision',
-          owner: 'Lead',
+          text: "Saved decision",
+          owner: "Lead",
           deadline: null,
-          impact: 'High',
+          impact: "High",
           resolvedAt: null,
         },
       ],
       priorities: [
-        { rank: 1, text: 'Top priority' },
-        { rank: 2, text: 'Second priority' },
+        { rank: 1, text: "Top priority" },
+        { rank: 2, text: "Second priority" },
       ],
     };
 
@@ -272,13 +276,13 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
 
     expect(saved.reportSectionId).toBe(testData.section.id);
     expect(saved.projects).toHaveLength(1);
-    expect(expectDefined(saved.projects[0]).trafficLight).toBe('yellow');
+    expect(expectDefined(saved.projects[0]).trafficLight).toBe("yellow");
     expect(saved.items).toHaveLength(1);
-    expect(expectDefined(saved.items[0]).text).toBe('Saved item');
+    expect(expectDefined(saved.items[0]).text).toBe("Saved item");
     expect(saved.risks).toHaveLength(1);
-    expect(expectDefined(saved.risks[0]).risk).toBe('Saved risk');
+    expect(expectDefined(saved.risks[0]).risk).toBe("Saved risk");
     expect(saved.decisions).toHaveLength(1);
-    expect(expectDefined(saved.decisions[0]).text).toBe('Saved decision');
+    expect(expectDefined(saved.decisions[0]).text).toBe("Saved decision");
     expect(saved.priorities).toHaveLength(2);
   });
 });

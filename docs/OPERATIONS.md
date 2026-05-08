@@ -184,25 +184,25 @@ Create the dedicated database once:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T postgres \
-  sh -lc 'createdb -U customreport customreport_e2e 2>/dev/null || true'
+  sh -lc 'createdb -U customreport customreport_test 2>/dev/null || true'
 ```
 
 Apply schema:
 
 ```bash
-DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e \
-  pnpm exec prisma migrate deploy
+DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_test \
+  pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
 ```
 
 Run API integration:
 
 ```bash
-DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_e2e \
-  pnpm --filter @customreport/api test:integration
+pnpm --filter @customreport/api test:integration
 ```
 
-Expected result: the command exits `0`; read the live Vitest summary for the
-current test/file count.
+The API integration config loads .env.test, whose DATABASE_URL points at
+customreport_test. Expected result: the command exits `0`; read the live
+Vitest summary for the current test/file count.
 
 ### 5.3 Web Integration
 
@@ -275,9 +275,10 @@ Deleted:
 - carry-over executions/records, reopen requests, version snapshots, AI insights
 - local Redis queue/cache state, unless `MANUAL_UAT_WIPE_FLUSH_REDIS=false`
 
-The script recreates empty `ProjectStatus` rows for every product the lead
-owns or has a stage assignment for, so the lead form still shows assigned
-products with blank traffic lights.
+The script does not recreate product-status placeholders from product
+ownership. After the wipe, lead reports are intentionally empty until an admin
+assigns SDLC stages. This keeps product ownership separate from reporting
+responsibility.
 
 Run from host mode:
 
@@ -315,6 +316,8 @@ Known log signals to treat as regressions:
 | Signal                                        | Meaning                                                         |
 | --------------------------------------------- | --------------------------------------------------------------- |
 | `weeklyReport.get` 5xx                        | Dashboard/report read model is broken                           |
+| `leadForm.byPeriod` `Unexpected error`        | Missing-section/domain path is leaking as an internal error     |
+| head/admin `/lead/report/<id>` with no author | Should redirect to `/head/report/<id>` without leadForm request |
 | `No active report period found` after publish | Current/published period resolution regressed                   |
 | `pdf-export job failed` with missing browser  | API image lacks Playwright Chromium or was not rebuilt          |
 | repeated `DLQMonitorService` alerts           | Retry or clean old failed BullMQ jobs after root cause is fixed |

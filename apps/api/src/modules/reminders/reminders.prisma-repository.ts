@@ -281,7 +281,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
     const executions = await this.prisma.reminderExecution.findMany({
       where: { ruleId },
       include: { rule: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: 100,
     });
 
