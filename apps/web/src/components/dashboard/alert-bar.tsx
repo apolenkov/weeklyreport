@@ -8,6 +8,7 @@ import { useTRPC } from '../../lib/trpc-context';
 type AlertBarProps = {
   readonly pendingLeads: string[];
   readonly reportId: string;
+  readonly canSendReminder: boolean;
 };
 
 function AlertIcon() {
@@ -29,13 +30,19 @@ function AlertIcon() {
   );
 }
 
-export function AlertBar({ pendingLeads, reportId }: AlertBarProps) {
+export function AlertBar({
+  pendingLeads,
+  reportId,
+  canSendReminder,
+}: AlertBarProps) {
   const trpc = useTRPC();
   const dispatchMut = useMutation(
     trpc.reminders.dispatchPending.mutationOptions({
       onSuccess: ({ dispatched, alreadySent, skipped, reason }) => {
         if (reason === 'no-active-rule') {
-          toast.error('No active reminder rule for this period — configure one in Admin → Reminders.');
+          toast.info(
+            'Reminder rule is not configured for this period. Configure it in Admin → Reminders.',
+          );
           return;
         }
         if (dispatched === 0 && alreadySent === 0 && skipped === 0) {
@@ -87,11 +94,24 @@ export function AlertBar({ pendingLeads, reportId }: AlertBarProps) {
       <button
         type="button"
         onClick={() => dispatchMut.mutate({ reportId })}
-        disabled={dispatchMut.isPending}
+        disabled={dispatchMut.isPending || !canSendReminder}
         className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        title={
+          canSendReminder
+            ? undefined
+            : 'Configure a reminder rule in Admin → Reminders first'
+        }
       >
         {dispatchMut.isPending ? 'Sending…' : 'Send Reminder'}
       </button>
+      {!canSendReminder && (
+        <a
+          href="/admin?tab=reminders"
+          className="text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-4 hover:underline"
+        >
+          Configure reminders
+        </a>
+      )}
     </div>
   );
 }

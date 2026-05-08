@@ -23,6 +23,25 @@ model User {
   stageAssignments        StageAssignment[]
 }
 
+model UserActionLog {
+  id            String           @id @default(uuid())
+  userId        String
+  role          Role?
+  procedure     String
+  targetId      String?
+  status        UserActionStatus
+  reason        String?
+  ip            String?
+  correlationId String
+  durationMs    Int
+  createdAt     DateTime         @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([procedure, createdAt(sort: Desc)])
+  @@index([correlationId])
+  @@index([createdAt(sort: Desc)])
+}
+
 model Project {
   id               String                   @id @default(uuid())
   name             String
@@ -358,6 +377,11 @@ enum Role {
   head
   viewer
   admin
+}
+
+enum UserActionStatus {
+  success
+  fail
 }
 
 enum ReportStatus {

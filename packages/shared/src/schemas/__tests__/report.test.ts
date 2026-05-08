@@ -1159,11 +1159,13 @@ describe('weeklyReportReadModelSchema', () => {
     reportId: uuid(),
     periodStart: '2026-04-14',
     periodEnd: '2026-04-18',
+    deadline: '2026-04-17T15:00:00.000Z',
     periodStatus: 'open' as const,
     weekLabel: 'W16-2026',
     departmentName: 'Software Development',
     submissionCount: 3,
     totalLeads: 6,
+    hasActiveReminderRule: true,
     portfolioOverview: [],
     leadSections: [],
     escalations: [],
@@ -1180,6 +1182,12 @@ describe('weeklyReportReadModelSchema', () => {
       weekLabel: null,
     });
     expect(result.success).toBe(true);
+  });
+
+  it('accepts missing hasActiveReminderRule as false for legacy fixtures', () => {
+    const { hasActiveReminderRule: _hasRule, ...report } = validWeeklyReport();
+    const result = weeklyReportReadModelSchema.parse(report);
+    expect(result.hasActiveReminderRule).toBe(false);
   });
 
   it('rejects negative submissionCount', () => {

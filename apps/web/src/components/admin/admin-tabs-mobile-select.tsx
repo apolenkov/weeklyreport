@@ -19,6 +19,7 @@ type AdminTab =
   | "reminders"
   | "reopen"
   | "jobs"
+  | "actions"
   | "settings";
 
 const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
@@ -28,6 +29,7 @@ const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
   { value: "reopen", label: "Reopen" },
   // Phase 35-06: BullMQ DLQ admin UI — failed-job list + retry.
   { value: "jobs", label: "Jobs" },
+  { value: "actions", label: "Actions" },
   { value: "settings", label: "Settings" },
 ];
 

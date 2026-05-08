@@ -1,19 +1,12 @@
-import { TRPCError } from '@trpc/server';
-import { initTRPC } from '@trpc/server';
-import superjson from 'superjson';
+import { TRPCError } from "@trpc/server";
+import { initTRPC } from "@trpc/server";
+import superjson from "superjson";
 
-import { assertRole } from '@customreport/shared/trpc';
-import type { Role, UserSession } from '@customreport/shared';
+import { assertRole } from "@customreport/shared/trpc";
+import type { Role, UserSession } from "@customreport/shared";
 
-import type { TrpcContext } from './trpc.context.js';
-import { httpRequestDurationSeconds } from '../metrics/metrics.registry.js';
-
-// Dev-only: surface TRPCError.cause (the real Prisma/Zod/Error) in the
-// response payload so a 500 in the browser carries the root cause instead of
-// the generic 'Unexpected error' wrapper. Server logs always contain the
-// cause via loggingMiddleware below; this exposes it to the client too, but
-// strictly when AUTH_DEV_MODE is on so production stays opaque.
-const isDevMode = process.env['AUTH_DEV_MODE'] === 'true';
+import type { TrpcContext } from "./trpc.context.js";
+import { httpRequestDurationSeconds } from "../metrics/metrics.registry.js";
 
 /**
  * Describe a tRPC response shape for debug logs without exposing values.
@@ -23,60 +16,51 @@ const isDevMode = process.env['AUTH_DEV_MODE'] === 'true';
  * admin.* call.
  */
 function describeShape(value: unknown): string {
-  if (value === null) return 'null';
+  if (value === null) return "null";
   if (Array.isArray(value)) {
-    if (value.length === 0) return 'array[0]';
+    if (value.length === 0) return "array[0]";
     const inner = describeShape(value[0]);
     return `array[${value.length}]<${inner}>`;
   }
-  if (typeof value === 'object') {
+  if (typeof value === "object") {
     const keys = Object.keys(value as Record<string, unknown>).sort();
-    return `object{${keys.join(',')}}`;
+    return `object{${keys.join(",")}}`;
   }
   return typeof value;
 }
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
-  errorFormatter({ shape, error }) {
-    if (!isDevMode) return shape;
-    const cause = error.cause;
-    if (!cause) return shape;
-    const causeInfo =
-      cause instanceof Error
-        ? {
-            name: cause.constructor.name,
-            message: cause.message,
-            stack: cause.stack,
-            ...('code' in cause
-              ? { code: (cause as { code?: unknown }).code }
-              : {}),
-            ...('meta' in cause
-              ? { meta: (cause as { meta?: unknown }).meta }
-              : {}),
-          }
-        : { raw: String(cause) };
+  errorFormatter({ shape, ctx }) {
+    const {
+      stack: _stack,
+      cause: _cause,
+      ...safeData
+    } = shape.data as Record<string, unknown>;
     return {
       ...shape,
-      data: { ...shape.data, cause: causeInfo },
+      data: {
+        ...safeData,
+        requestId: ctx?.correlationId ?? "no-context",
+      },
     };
   },
 });
 
 const TRPC_ERROR_HTTP_STATUS: Record<string, string> = {
-  BAD_REQUEST: '400',
-  UNAUTHORIZED: '401',
-  FORBIDDEN: '403',
-  NOT_FOUND: '404',
-  METHOD_NOT_SUPPORTED: '405',
-  TIMEOUT: '408',
-  CONFLICT: '409',
-  PRECONDITION_FAILED: '412',
-  PAYLOAD_TOO_LARGE: '413',
-  UNPROCESSABLE_CONTENT: '422',
-  TOO_MANY_REQUESTS: '429',
-  CLIENT_CLOSED_REQUEST: '499',
-  INTERNAL_SERVER_ERROR: '500',
+  BAD_REQUEST: "400",
+  UNAUTHORIZED: "401",
+  FORBIDDEN: "403",
+  NOT_FOUND: "404",
+  METHOD_NOT_SUPPORTED: "405",
+  TIMEOUT: "408",
+  CONFLICT: "409",
+  PRECONDITION_FAILED: "412",
+  PAYLOAD_TOO_LARGE: "413",
+  UNPROCESSABLE_CONTENT: "422",
+  TOO_MANY_REQUESTS: "429",
+  CLIENT_CLOSED_REQUEST: "499",
+  INTERNAL_SERVER_ERROR: "500",
 };
 
 function observeTrpcDuration(
@@ -88,7 +72,7 @@ function observeTrpcDuration(
   httpRequestDurationSeconds.observe(
     {
       method: type.toUpperCase(),
-      route: '/trpc/' + path,
+      route: "/trpc/" + path,
       status_code: statusCode,
     },
     durationMs / 1000,
@@ -109,7 +93,7 @@ export const loggingMiddleware = t.middleware(
     // Phase 31 (AI-SPEC §5.3 / PITFALLS C-3): AI prompts and responses must
     // never reach the structured log stream. Token usage and timing are
     // recorded in AiInsight rows instead.
-    if (path.startsWith('ai.')) {
+    if (path.startsWith("ai.")) {
       return next();
     }
 
@@ -117,9 +101,9 @@ export const loggingMiddleware = t.middleware(
     const userId = ctx.session?.userId ?? null;
     const role = ctx.session?.role ?? null;
 
-    ctx.logger.info('trpc request start', {
-      phase: 'trpc.request',
-      stage: 'start',
+    ctx.logger.info("trpc request start", {
+      phase: "trpc.request",
+      stage: "start",
       procedure: path,
       type,
       userId,
@@ -128,13 +112,13 @@ export const loggingMiddleware = t.middleware(
 
     // Debug-level input breadcrumb. Log shape only, never raw values: report
     // text, UUIDs, emails and admin edits can all appear in tRPC input.
-    if (path !== 'auth.login' && path !== 'auth.refresh') {
+    if (path !== "auth.login" && path !== "auth.refresh") {
       try {
         const rawInput = await getRawInput();
         if (rawInput !== undefined) {
-          ctx.logger.debug('trpc request input', {
-            phase: 'trpc.request',
-            stage: 'input',
+          ctx.logger.debug("trpc request input", {
+            phase: "trpc.request",
+            stage: "input",
             procedure: path,
             type,
             inputShape: describeShape(rawInput),
@@ -150,25 +134,25 @@ export const loggingMiddleware = t.middleware(
     const duration = Math.round(performance.now() - start);
 
     if (result.ok) {
-      observeTrpcDuration(type, path, '200', duration);
-      ctx.logger.info('trpc request end', {
-        phase: 'trpc.request',
-        stage: 'end',
+      observeTrpcDuration(type, path, "200", duration);
+      ctx.logger.info("trpc request end", {
+        phase: "trpc.request",
+        stage: "end",
         procedure: path,
         type,
         userId,
         role,
         duration,
-        status: 'success',
+        status: "success",
       });
       // Debug-level shape breadcrumb. Logs only the response *shape* (top-level
       // keys + array length), never values — earlier `outputPreview` dumped the
       // full serialised response which leaked email/role/userId into the log
       // stream on every auth.me / admin.* / weeklyReport.get call.
       try {
-        ctx.logger.debug('trpc request output', {
-          phase: 'trpc.request',
-          stage: 'output',
+        ctx.logger.debug("trpc request output", {
+          phase: "trpc.request",
+          stage: "output",
           procedure: path,
           type,
           outputShape: describeShape(result.data),
@@ -180,7 +164,7 @@ export const loggingMiddleware = t.middleware(
       observeTrpcDuration(
         type,
         path,
-        TRPC_ERROR_HTTP_STATUS[result.error.code] ?? '500',
+        TRPC_ERROR_HTTP_STATUS[result.error.code] ?? "500",
         duration,
       );
       // Drill into TRPCError.cause so the log stream surfaces the real failure
@@ -197,10 +181,10 @@ export const loggingMiddleware = t.middleware(
               // Stack frames leak file paths + library internals to the log
               // aggregator — surface code/meta only. Prisma's `code` + `meta`
               // are already enough to identify the failed query.
-              ...('code' in cause
+              ...("code" in cause
                 ? { causeCode: (cause as { code?: unknown }).code }
                 : {}),
-              ...('meta' in cause
+              ...("meta" in cause
                 ? { causeMeta: (cause as { meta?: unknown }).meta }
                 : {}),
             }
@@ -208,15 +192,15 @@ export const loggingMiddleware = t.middleware(
             ? { rawCause: String(cause) }
             : undefined;
 
-      ctx.logger.error('trpc request end', {
-        phase: 'trpc.request',
-        stage: 'end',
+      ctx.logger.error("trpc request end", {
+        phase: "trpc.request",
+        stage: "end",
         procedure: path,
         type,
         userId,
         role,
         duration,
-        status: 'error',
+        status: "error",
         error: {
           code: result.error.code,
           message: result.error.message,
@@ -249,18 +233,23 @@ export const loggingMiddleware = t.middleware(
  * deferred to a future phase if SIEM/forensics needs it.
  */
 const TARGET_ID_KEYS = [
-  'sectionId',
-  'reportId',
-  'periodId',
-  'projectId',
-  'leadId',
-  'id',
+  "sectionId",
+  "reportId",
+  "periodId",
+  "projectId",
+  "leadId",
+  "id",
 ] as const;
+
+function truncateReason(reason: string, max = 500): string {
+  if (reason.length <= max) return reason;
+  return reason.slice(0, max).trimEnd();
+}
 
 export const mutationAuditMiddleware = t.middleware(
   async ({ ctx, next, path, type, getRawInput }) => {
-    if (type !== 'mutation') return next();
-    if (path.startsWith('auth.') || path.startsWith('ai.')) return next();
+    if (type !== "mutation") return next();
+    if (path.startsWith("auth.") || path.startsWith("ai.")) return next();
 
     const start = performance.now();
     const result = await next();
@@ -269,11 +258,11 @@ export const mutationAuditMiddleware = t.middleware(
     let target: string | undefined;
     try {
       const raw = await getRawInput();
-      if (raw && typeof raw === 'object') {
+      if (raw && typeof raw === "object") {
         const r = raw as Record<string, unknown>;
         for (const key of TARGET_ID_KEYS) {
           const v = r[key];
-          if (typeof v === 'string') {
+          if (typeof v === "string") {
             target = v;
             break;
           }
@@ -284,16 +273,46 @@ export const mutationAuditMiddleware = t.middleware(
       // extraction rather than crash the audit emit.
     }
 
-    ctx.auditLogger.mutation({
-      userId: ctx.session?.userId ?? 'anonymous',
+    const action = {
+      userId: ctx.session?.userId ?? "anonymous",
       role: ctx.session?.role ?? null,
       ip: ctx.ip,
       procedure: path,
       target,
-      status: result.ok ? 'success' : 'fail',
+      status: result.ok ? "success" : "fail",
       duration,
       ...(result.ok ? {} : { reason: result.error.message }),
-    });
+    } as const;
+
+    ctx.auditLogger.mutation(action);
+
+    if (ctx.prisma?.userActionLog) {
+      try {
+        await ctx.prisma.userActionLog.create({
+          data: {
+            userId: action.userId,
+            role: action.role,
+            procedure: path,
+            targetId: target,
+            status: action.status,
+            reason: result.ok ? null : truncateReason(result.error.message),
+            ip: ctx.ip,
+            correlationId: ctx.correlationId ?? "no-context",
+            durationMs: duration,
+          },
+        });
+      } catch (error) {
+        ctx.logger.warn("user action log persist failed", {
+          phase: "audit.persist",
+          procedure: path,
+          status: action.status,
+          error:
+            error instanceof Error
+              ? { name: error.name, message: error.message }
+              : { name: typeof error, message: String(error) },
+        });
+      }
+    }
 
     return result;
   },
@@ -303,7 +322,7 @@ export const publicProcedure = t.procedure.use(loggingMiddleware);
 
 const isAuthed = t.middleware(({ ctx, next }) => {
   if (!ctx.session) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
   }
 
   return next({ ctx: { session: ctx.session } });
@@ -327,8 +346,8 @@ const isAuthed = t.middleware(({ ctx, next }) => {
  * the check; the middleware is a no-op for non-PDF sessions.
  */
 const PDF_EXPORT_ALLOWED_PATHS: ReadonlySet<string> = new Set([
-  'weeklyReport.get',
-  'archive.detail',
+  "weeklyReport.get",
+  "archive.detail",
 ]);
 
 const pdfExportGuard = t.middleware(
@@ -339,7 +358,7 @@ const pdfExportGuard = t.middleware(
 
     if (!PDF_EXPORT_ALLOWED_PATHS.has(path)) {
       throw new TRPCError({
-        code: 'FORBIDDEN',
+        code: "FORBIDDEN",
         message: `Procedure ${path} not permitted for PDF-export session`,
       });
     }
@@ -353,17 +372,17 @@ const pdfExportGuard = t.middleware(
       raw = undefined;
     }
     const inputReportId =
-      raw && typeof raw === 'object' && 'reportId' in raw
+      raw && typeof raw === "object" && "reportId" in raw
         ? (raw as { reportId?: unknown }).reportId
         : undefined;
 
     if (
-      typeof inputReportId !== 'string' ||
+      typeof inputReportId !== "string" ||
       inputReportId !== ctx.pdfReportId
     ) {
       throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'PDF-export session reportId does not match procedure input',
+        code: "FORBIDDEN",
+        message: "PDF-export session reportId does not match procedure input",
       });
     }
 
@@ -396,11 +415,11 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
       const session = assertRole(ctx.session, allowed);
       return next({ ctx: { session } });
     } catch (err) {
-      if (err instanceof TRPCError && err.code === 'FORBIDDEN') {
+      if (err instanceof TRPCError && err.code === "FORBIDDEN") {
         // T2 mitigation: even when role/userId are missing, emit so the
         // audit trail captures the attempt rather than swallowing it.
         ctx.auditLogger.roleDenied({
-          userId: ctx.session?.userId ?? 'anonymous',
+          userId: ctx.session?.userId ?? "anonymous",
           role: ctx.session?.role ?? null,
           attemptedRole: allowed,
           ip: ctx.ip,
@@ -417,19 +436,19 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
 // the middleware needs the same widening so admin SAML logins can hit
 // admin.* / head.* procedures. Discovered in live test (admin user got 403
 // on admin.dlqCount, admin.snapshot, admin.getSettings).
-const headRoleMiddleware = buildRoleMiddleware(['head', 'admin']);
-const leadRoleMiddleware = buildRoleMiddleware('lead');
-const viewerRoleMiddleware = buildRoleMiddleware('viewer');
+const headRoleMiddleware = buildRoleMiddleware(["head", "admin"]);
+const leadRoleMiddleware = buildRoleMiddleware("lead");
+const viewerRoleMiddleware = buildRoleMiddleware("viewer");
 // AUTH-04 (Phase 28-01): a "any authenticated role" procedure for read paths
 // where the service layer is the actual gate (Prisma `where` filtered by
 // session.role). Necessary for archive.* and weeklyReport.get because heads,
 // leads, admins, and viewers all read the same surface but with different
 // row visibility. Service-level unit tests verify the role-aware filter.
 const anyRoleMiddleware = buildRoleMiddleware([
-  'lead',
-  'head',
-  'admin',
-  'viewer',
+  "lead",
+  "head",
+  "admin",
+  "viewer",
 ]);
 
 export const headProcedure = t.procedure

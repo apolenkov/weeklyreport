@@ -32,11 +32,13 @@ function makeWeeklyReport(
     reportId,
     periodStart: new Date('2026-04-14'),
     periodEnd: new Date('2026-04-18'),
+    deadline: new Date('2026-04-17T15:00:00.000Z'),
     periodStatus: 'open',
     weekLabel: 'W16-2026',
     departmentName: 'Software Development',
     submissionCount: 2,
     totalLeads: 6,
+    hasActiveReminderRule: true,
     portfolioOverview: [
       {
         productId: projectId1,

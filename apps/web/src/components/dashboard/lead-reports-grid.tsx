@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import type { LeadInfo } from './mock-data';
-import { LeadReportCard } from './lead-report-card';
+import type { LeadInfo } from "./mock-data";
+import { LeadReportCard } from "./lead-report-card";
 
 type LeadReportsGridProps = {
   readonly leads: LeadInfo[];
@@ -14,7 +14,7 @@ function UsersIcon() {
     <svg
       viewBox="0 0 24 24"
       className="h-5 w-5 flex-shrink-0"
-      style={{ color: 'var(--color-primary)' }}
+      style={{ color: "var(--color-primary)" }}
       stroke="currentColor"
       fill="none"
       strokeWidth={2}
@@ -37,7 +37,7 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
       stroke="currentColor"
       fill="none"
       strokeWidth={2}
-      style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+      style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
     >
       <path d="M6 9l6 6 6-6" />
     </svg>
@@ -46,7 +46,10 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
 
 export function LeadReportsGrid({ leads }: LeadReportsGridProps) {
   const [expanded, setExpanded] = useState(true);
-  const hasLeads = leads.length > 0;
+  const reportableLeads = leads.filter(
+    (lead) => (lead.reportContentCount ?? 0) > 0,
+  );
+  const hasLeads = reportableLeads.length > 0;
   const isExpanded = hasLeads && expanded;
 
   return (
@@ -54,7 +57,9 @@ export function LeadReportsGrid({ leads }: LeadReportsGridProps) {
       <button
         type="button"
         className={`flex w-full items-center justify-between p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
-          hasLeads ? 'cursor-pointer hover:bg-[#f8f6f2]' : 'cursor-default opacity-65'
+          hasLeads
+            ? "cursor-pointer hover:bg-[#f8f6f2]"
+            : "cursor-default opacity-65"
         }`}
         onClick={() => {
           if (hasLeads) setExpanded(!expanded);
@@ -69,7 +74,7 @@ export function LeadReportsGrid({ leads }: LeadReportsGridProps) {
             Lead Reports
           </span>
           <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]">
-            {leads.length} leads
+            {reportableLeads.length} reports
           </span>
         </div>
         <ChevronDown expanded={isExpanded} />
@@ -78,17 +83,23 @@ export function LeadReportsGrid({ leads }: LeadReportsGridProps) {
       {hasLeads ? (
         <div
           className="grid transition-[grid-template-rows] duration-300"
-          style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
+          style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
         >
           <div className="min-h-0 overflow-hidden">
             <div className="space-y-1.5 px-4 pb-4 pt-4">
-              {leads.map((lead) => (
+              {reportableLeads.map((lead) => (
                 <LeadReportCard key={lead.id} lead={lead} />
               ))}
             </div>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="px-4 pb-4 pt-2">
+          <div className="rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-[var(--color-muted)] px-4 py-3 text-sm text-[var(--color-muted-foreground)]">
+            No lead reports yet.
+          </div>
+        </div>
+      )}
     </div>
   );
 }

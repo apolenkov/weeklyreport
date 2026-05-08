@@ -9,10 +9,9 @@
  * - `review.dashboard` returns `SubmissionDashboardRow[]` only — it does NOT
  *   carry submission counts, deadlines, escalations, or completion percentages.
  *   We source those from `weeklyReport.get` (`WeeklyReportReadModel`) instead.
- * - Neither endpoint exposes a deadline field at the read model level, so the
- *   deadline label is computed relative to `weeklyReport.periodEnd` (best
- *   available proxy). The `deadlineTime` literal "Friday 18:00" is dropped —
- *   we render the localized date instead.
+ * - `weeklyReport.deadline` is the only source for the dashboard deadline.
+ *   Never infer it from `periodEnd`: a period can stay open/reopened while the
+ *   reporting deadline has already passed.
  * - `lastWeekSubmitted` / `lastWeekTotal` have no equivalent in any v5.0 read
  *   model, so they default to 0/0 (the KPI card just renders "0/0"). Phase 22
  *   may add a comparison endpoint.
@@ -57,6 +56,7 @@ export type LeadInfo = {
   lastActivity: string;
   isCurrentUser: boolean;
   productCount?: number;
+  reportContentCount?: number;
 };
 
 export type KpiData = {
@@ -142,8 +142,13 @@ export function formatRelativeDeadline(deadline: Date, now: Date): string {
   return `${hours}h`;
 }
 
-function countItems(section: ReportSectionReadModel): number {
-  return section.items.length;
+function countSectionContent(section: ReportSectionReadModel): number {
+  return (
+    section.items.length +
+    section.risks.length +
+    section.decisions.length +
+    section.priorities.length
+  );
 }
 
 function trafficLightsForLeadByName(
@@ -250,9 +255,12 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
   // -------- Leads --------
   const leads: LeadInfo[] = review.map((row) => {
     const section = sectionByAuthor.get(row.leadId);
-    const itemCount = section ? countItems(section) : 0;
+    const reportContentCount = section ? countSectionContent(section) : 0;
     const status: LeadStatus = section
-      ? deriveLeadStatus({ sectionStatus: section.status, itemCount })
+      ? deriveLeadStatus({
+          sectionStatus: section.status,
+          contentCount: reportContentCount,
+        })
       : 'pending';
 
     // The portfolio overview only carries lead NAMES, so we name-match either way.
@@ -279,6 +287,7 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
       lastActivity,
       isCurrentUser: currentUserId !== undefined && row.leadId === currentUserId,
       productCount: row.projectNames.length,
+      reportContentCount,
     };
   });
 
@@ -299,8 +308,13 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
     0,
   );
 
-  const deadlineLabel = formatRelativeDeadline(weeklyReport.periodEnd, now);
-  const deadlineTime = isoDateLabel(weeklyReport.periodEnd);
+  const isEditablePeriod =
+    weeklyReport.periodStatus === 'open' ||
+    weeklyReport.periodStatus === 'reopened';
+  const deadlineLabel = isEditablePeriod
+    ? formatRelativeDeadline(weeklyReport.deadline, now)
+    : 'Closed';
+  const deadlineTime = isoDateLabel(weeklyReport.deadline);
 
   const kpi: KpiData = {
     submitted,

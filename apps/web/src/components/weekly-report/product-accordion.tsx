@@ -96,7 +96,7 @@ export function ProductAccordion({
       }
     : ((STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
       STATUS_CONFIG["on-track"]);
-  const statusLabel = isEmpty ? "No content" : report.statusLabel;
+  const statusLabel = isEmpty ? "No updates" : report.statusLabel;
 
   useEffect(() => {
     if (highlighted && hasContent) setExpanded(true);
@@ -146,14 +146,14 @@ export function ProductAccordion({
         aria-expanded={hasContent ? expanded : false}
         data-product-accordion-toggle="true"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5 pr-3">
           <div
             className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
             style={{ background: config.avatarBg, color: config.avatarText }}
           >
             {report.initials}
           </div>
-          <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em]">
+          <span className="min-w-0 truncate font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em]">
             {report.name}
           </span>
           <span
@@ -168,16 +168,20 @@ export function ProductAccordion({
           {!isEmpty && report.sectionId ? (
             <OnTrackIcon sectionId={report.sectionId} projectId={report.id} />
           ) : null}
-          <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">
+          <span
+            className={`inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-medium ${
+              isEmpty
+                ? "bg-[rgba(0,0,0,0.06)] text-[var(--color-muted-foreground)]"
+                : "bg-[var(--color-success)] text-[var(--color-primary)]"
+            }`}
+          >
             {report.leads}
           </span>
         </div>
         {hasContent ? (
           <ChevronDown expanded={expanded} />
         ) : (
-          <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
-            No content
-          </span>
+          <span className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
         )}
       </button>
 

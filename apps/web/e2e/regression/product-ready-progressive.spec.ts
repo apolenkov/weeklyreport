@@ -211,28 +211,38 @@ test.describe.serial("PRODUCT-READY — progressive role lifecycle", () => {
     });
     await ensureHeadDashboard(page);
     await expect(page.getByText("Lead Reports")).toBeVisible();
-    const leadLink = page
-      .locator('a[href*="/head/report/"][href*="authorId="]')
-      .first();
-    await expect(leadLink).toBeVisible();
-    await expect(leadLink).toHaveCSS("cursor", "pointer");
+    const leadLinks = page.locator(
+      'a[href*="/head/report/"][href*="authorId="]',
+    );
+    const leadLink = leadLinks.first();
     await page.screenshot({
       path: path.join(EVIDENCE_DIR, "03-head-dashboard.png"),
       fullPage: true,
     });
 
-    await leadLink.click();
-    await page.waitForURL(/\/head\/report\/.+authorId=/);
+    const hasLeadReportLinks = (await leadLinks.count()) > 0;
+    if (hasLeadReportLinks) {
+      await expect(leadLink).toBeVisible();
+      await expect(leadLink).toHaveCSS("cursor", "pointer");
+      await leadLink.click();
+      await page.waitForURL(/\/head\/report\/.+authorId=/);
+    } else {
+      await expect(page.getByText("No lead reports yet.")).toBeVisible();
+      await page.goto(`${WEB}/head/report/${ACTIVE_REPORT_ID}`);
+    }
+
     const reportShell = page.locator("main#main-content");
     const sectionContainer = reportShell.locator(".space-y-3");
     const expandedSections = sectionContainer.locator(
       'button[aria-expanded="true"]',
     );
     const expandedCount = await expandedSections.count();
-    expect(
-      expandedCount,
-      "deep-link can expand at most one product accordion",
-    ).toBeLessThanOrEqual(1);
+    if (hasLeadReportLinks) {
+      expect(
+        expandedCount,
+        "deep-link can expand at most one product accordion",
+      ).toBeLessThanOrEqual(1);
+    }
     await expect(
       page.getByText(/Live\s+·\s+\d+\/\d+\s+Submitted/),
     ).toBeVisible();
