@@ -57,7 +57,12 @@ describe('mapLeadProducts', () => {
           projectName: 'CRM Platform',
           trafficLight: 'green',
           ownedStages: [
-            { stageId: 'stage-dev', stageName: 'Development', sortOrder: 3 },
+            {
+              stageId: 'stage-dev',
+              stageName: 'Development',
+              sortOrder: 3,
+              status: 'green',
+            },
           ],
         },
       ],
@@ -91,6 +96,45 @@ describe('mapLeadProducts', () => {
 
     const [product] = mapLeadProducts(section);
     expect(product?.overallStatus).toBe('empty');
+  });
+
+  it('uses per-stage statuses instead of copying the product status to every owned stage', () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: 'CRM Platform',
+          trafficLight: 'red',
+          ownedStages: [
+            {
+              stageId: '11111111-1111-4111-8111-111111111111',
+              stageName: 'Development',
+              sortOrder: 3,
+              status: 'green',
+            },
+            {
+              stageId: '22222222-2222-4222-8222-222222222222',
+              stageName: 'Testing',
+              sortOrder: 4,
+              status: 'red',
+            },
+            {
+              stageId: '33333333-3333-4333-8333-333333333333',
+              stageName: 'DevOps',
+              sortOrder: 5,
+              status: null,
+            },
+          ],
+        },
+      ],
+    });
+
+    const [product] = mapLeadProducts(section);
+    const stages = new Map(product?.stages.map((s) => [s.stageName, s.status]));
+
+    expect(stages.get('Dev')).toBe('on-track');
+    expect(stages.get('Testing')).toBe('blocked');
+    expect(stages.get('DevOps')).toBe('empty');
   });
 
   it('returns empty array when the section has no projects', () => {

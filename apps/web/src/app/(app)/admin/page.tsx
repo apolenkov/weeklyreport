@@ -1,7 +1,7 @@
-import { AdminPanel } from '../../../components/admin/admin-panel';
-import { AdminTabsMobileSelect } from '../../../components/admin/admin-tabs-mobile-select';
-import { DlqBadge } from '../../../components/admin/dlq-badge';
-import { ReopenTabLabel } from '../../../components/admin/reopen-tab-label';
+import { AdminPanel } from "../../../components/admin/admin-panel";
+import { AdminTabsMobileSelect } from "../../../components/admin/admin-tabs-mobile-select";
+import { DlqBadge } from "../../../components/admin/dlq-badge";
+import { ReopenTabLabel } from "../../../components/admin/reopen-tab-label";
 
 type Props = {
   searchParams: Promise<{ tab?: string; filter?: string }>;
@@ -10,25 +10,36 @@ type Props = {
 // Phase 35-06: 'jobs' tab — BullMQ DLQ admin UI. Order: after 'reopen',
 // before 'settings' so the failure-triage workflow lives next to other
 // reactive admin work (reopen requests / failed-job retries).
-const tabs = ['users', 'products', 'periods', 'reminders', 'reopen', 'jobs', 'settings'] as const;
+const tabs = [
+  "users",
+  "products",
+  "reminders",
+  "reopen",
+  "jobs",
+  "settings",
+] as const;
 type TabId = (typeof tabs)[number];
 
 const TAB_LABELS: Record<TabId, string> = {
-  users: 'Users',
-  products: 'Products',
-  periods: 'Periods',
-  reminders: 'Reminders',
-  reopen: 'Reopen',
-  jobs: 'Jobs',
-  settings: 'Settings',
+  users: "Users",
+  products: "Products",
+  reminders: "Reminders",
+  reopen: "Reopen",
+  jobs: "Jobs",
+  settings: "Settings",
 };
 
 export default async function AdminPage({ searchParams }: Props) {
-  const { tab = 'users', filter = null } = await searchParams;
-  const activeTab: TabId = tabs.includes(tab as TabId) ? (tab as TabId) : 'users';
+  const { tab = "users", filter = null } = await searchParams;
+  const activeTab: TabId = tabs.includes(tab as TabId)
+    ? (tab as TabId)
+    : "users";
 
   return (
-    <main id="main-content" className="min-h-screen bg-[var(--color-background)]">
+    <main
+      id="main-content"
+      className="min-h-screen bg-[var(--color-background)]"
+    >
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-3">
@@ -53,14 +64,18 @@ export default async function AdminPage({ searchParams }: Props) {
                   href={`/admin?tab=${t}`}
                   className={`flex items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-2 text-[13px] font-semibold capitalize transition-colors ${
                     activeTab === t
-                      ? 'bg-[var(--color-starbucks-accent)] text-white shadow-[0_1px_3px_rgba(0,98,65,0.25)]'
-                      : 'text-[var(--color-muted-foreground)] hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]'
+                      ? "bg-[var(--color-starbucks-accent)] text-white shadow-[0_1px_3px_rgba(0,98,65,0.25)]"
+                      : "text-[var(--color-muted-foreground)] hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"
                   }`}
-                  style={{ minHeight: '44px' }}
-                  aria-current={activeTab === t ? 'page' : undefined}
+                  style={{ minHeight: "44px" }}
+                  aria-current={activeTab === t ? "page" : undefined}
                   aria-label={`${TAB_LABELS[t]} tab`}
                 >
-                  {t === 'reopen' ? <ReopenTabLabel active={activeTab === t} /> : t}
+                  {t === "reopen" ? (
+                    <ReopenTabLabel active={activeTab === t} />
+                  ) : (
+                    t
+                  )}
                 </a>
               ))}
             </div>

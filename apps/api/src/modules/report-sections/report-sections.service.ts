@@ -30,16 +30,54 @@ function mergeSection(
   input: DraftSavePayload | SubmitSectionPayload,
   nextStatus: 'draft' | 'submitted',
 ): ReportSectionReadModel {
+  const stageStatusByKey = new Map(
+    (input.stageStatuses ?? []).map((status) => [
+      `${status.projectId}::${status.stageId}`,
+      status.status ?? null,
+    ]),
+  );
+
+  const aggregateTrafficLight = (
+    ownedStages: NonNullable<ReportSectionReadModel['projects'][number]['ownedStages']>,
+  ) => {
+    let severity = 0;
+    for (const stage of ownedStages) {
+      if (stage.status === 'red') {
+        severity = 3;
+        break;
+      }
+      if (stage.status === 'yellow') severity = Math.max(severity, 2);
+      if (stage.status === 'green') severity = Math.max(severity, 1);
+    }
+    return severity === 3
+      ? 'red'
+      : severity === 2
+        ? 'yellow'
+        : severity === 1
+          ? 'green'
+          : null;
+  };
+
   return reportSectionReadModelSchema.parse({
     ...section,
     status: nextStatus,
     submittedAt: nextStatus === 'submitted' ? new Date() : section.submittedAt,
     projects: section.projects.map((project) => ({
       ...project,
-      trafficLight:
+      ownedStages: (project.ownedStages ?? []).map((stage) => {
+        const key = `${project.projectId}::${stage.stageId}`;
+        if (!stageStatusByKey.has(key)) return stage;
+        return { ...stage, status: stageStatusByKey.get(key) ?? null };
+      }),
+    })).map((project) => {
+      const trafficLight =
+        aggregateTrafficLight(project.ownedStages ?? []) ??
         input.projectStatuses.find((status) => status.projectId === project.projectId)
-          ?.status ?? null,
-    })),
+          ?.status ??
+        null;
+
+      return { ...project, trafficLight };
+    }),
     items: input.items,
     risks: input.risks,
     decisions: input.decisions,

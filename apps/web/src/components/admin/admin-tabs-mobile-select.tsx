@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 
 /**
  * MOB-04 (Phase 30-05): native <select> for admin-tab navigation at narrow
@@ -14,23 +14,21 @@ import { useRouter } from 'next/navigation';
  */
 
 type AdminTab =
-  | 'users'
-  | 'products'
-  | 'periods'
-  | 'reminders'
-  | 'reopen'
-  | 'jobs'
-  | 'settings';
+  | "users"
+  | "products"
+  | "reminders"
+  | "reopen"
+  | "jobs"
+  | "settings";
 
 const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
-  { value: 'users', label: 'Users' },
-  { value: 'products', label: 'Products' },
-  { value: 'periods', label: 'Periods' },
-  { value: 'reminders', label: 'Reminders' },
-  { value: 'reopen', label: 'Reopen' },
+  { value: "users", label: "Users" },
+  { value: "products", label: "Products" },
+  { value: "reminders", label: "Reminders" },
+  { value: "reopen", label: "Reopen" },
   // Phase 35-06: BullMQ DLQ admin UI — failed-job list + retry.
-  { value: 'jobs', label: 'Jobs' },
-  { value: 'settings', label: 'Settings' },
+  { value: "jobs", label: "Jobs" },
+  { value: "settings", label: "Settings" },
 ];
 
 type Props = {

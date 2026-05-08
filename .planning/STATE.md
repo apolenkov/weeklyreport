@@ -5,8 +5,8 @@ milestone_name: Visual Identity & AI Maturity
 status: in_progress
 shipped_tag: v8.0.0
 shipped_at: "2026-05-06"
-last_updated: "2026-05-07T18:03:28.000+03:00"
-last_activity: 2026-05-07 -- product-ready regression, UI review, screenshots, logs, and gates passed for v8.1 polish wave
+last_updated: "2026-05-08T11:46:36+03:00"
+last_activity: 2026-05-08 -- manual UAT reopened the product-ready gate; regression retro and domain hardening plan captured
 progress:
   total_phases: 3
   completed_phases: 0
@@ -21,7 +21,7 @@ backlog:
 
 **Project:** Team Status Reporting Web App
 **Status:** v8.1 IN PROGRESS (v8.0 shipped)
-**Last Updated:** 2026-05-07
+**Last Updated:** 2026-05-08
 
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md
 
 **Core Value:** Leads fill their sections independently via structured forms; system auto-assembles a unified report -- no editing conflicts, with history and analytics.
 
-**Current Focus:** v8.1 polish, role regression hardening, and UI polish
+**Current Focus:** v8.1 product-ready hardening: domain-model regression, role matrix, auth redirect, action logs, and UI polish
 
 **Resume context:** Per-project Claude memory at `.planning/memory/`. v8.1 promote flow: `git mv .planning/backlog/v8.1-*.md .planning/milestones/` then `/gsd-new-milestone v8.1` and plan the first promoted v8.1 phase.
 
@@ -42,8 +42,8 @@ See: .planning/PROJECT.md
 Milestone: v8.1 (IN PROGRESS, tag parent v8.0.0)
 Phases: 0/3 complete (40..42)
 Plans: 0/12 complete
-Status: active polish wave started, v8.0 is production baseline.
-Last activity: 2026-05-07 -- product-ready regression, UI review, screenshots, logs, and gates passed for v8.1 polish wave.
+Status: active polish wave started, v8.0 is production baseline. Product-ready gate is reopened after manual UAT found domain-model and UI regressions.
+Last activity: 2026-05-08 -- retro and plan captured in .planning/regression/PRODUCT-READY-RETRO-AND-PLAN-2026-05-08.md; regression scenario inventory extended with DOM-STAGE, DOM-TAG, ROLE-CTX, UI-GEO, and LOG-EV scenarios.
 
 ### v8.0 phase progress
 
@@ -138,7 +138,9 @@ Last activity: 2026-05-07 -- product-ready regression, UI review, screenshots, l
 
 ### Active Blockers
 
-- **Push pending** — 55+ commits ahead of origin/main. VPN/DNS unstable; `ghe.example.org` resolves intermittently. User to verify VPN + run `https_proxy="" command git push origin main` when network is back.
+- **Product-ready gate reopened** — manual UAT found unresolved domain-model issues: reporting scope must use StageAssignment instead of Project.leadId, stage status must be per stage, and content records need optional multi-stage tagging.
+- **Regression gate incomplete** — role matrix, no-cookie redirect, hover geometry, action-log evidence, and scenario-correlated screenshots/logs are planned but not fully automated yet.
+- **Working tree is dirty** — current diff mixes previous UI/wipe/doc polish with the new regression planning artifacts; classify and split before commit/push.
 
 ### v6.1 Backlog (deferred, NOT blocking v6.0 deploy)
 

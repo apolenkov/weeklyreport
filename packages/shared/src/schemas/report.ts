@@ -45,6 +45,12 @@ export const projectStatusInputSchema = z.object({
   status: trafficLightStatusSchema.optional(),
 });
 
+export const stageStatusInputSchema = z.object({
+  projectId: z.string().uuid(),
+  stageId: z.string().uuid(),
+  status: trafficLightStatusSchema.nullable().optional(),
+});
+
 // 35-04: optional SDLC stage label carried per entry. The DB column stays
 // nullable so the column migration is non-destructive for legacy rows
 // seeded before this field existed; the lead-form modals enforce the
@@ -93,6 +99,7 @@ export const draftSaveSchema = z.object({
   reportSectionId: z.string().uuid(),
   status: reportSectionStatusSchema.default("draft"),
   projectStatuses: z.array(projectStatusInputSchema),
+  stageStatuses: z.array(stageStatusInputSchema).default([]),
   items: z.array(itemInputSchema).max(100),
   risks: z.array(riskInputSchema).max(100),
   decisions: z.array(decisionInputSchema).max(100),
@@ -129,6 +136,7 @@ export const ownedStageSchema = z.object({
   stageId: z.string().uuid(),
   stageName: z.string().min(1),
   sortOrder: z.number().int().min(0),
+  status: trafficLightStatusSchema.nullable().optional(),
 });
 
 export const projectReadModelSchema = z.object({

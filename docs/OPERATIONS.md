@@ -252,23 +252,24 @@ Use this when the local base configuration is correct and you want to start
 manual testing from an empty reporting cycle.
 
 ```text
-[users/products/stages/settings] --> [delete report history] --> [empty open report]
-                                                    |
-                                                    v
-                                      [empty product-status rows]
+[users/products/stages/settings] --> [delete reports + stage assignments] --> [empty open report]
+                                                        |
+                                                        v
+                                          [ownership-based product rows]
 ```
 
 Preserved:
 
 - users and roles
 - products and lead ownership
-- stages and stage assignments
+- stages
 - app settings
 - global reminder rules without a report binding
 
 Deleted:
 
 - reports, sections, items, risks, decisions, priorities
+- SDLC stage assignments
 - PDF export jobs and generated-job rows
 - reminder executions and report-bound reminder rules
 - carry-over executions/records, reopen requests, version snapshots, AI insights

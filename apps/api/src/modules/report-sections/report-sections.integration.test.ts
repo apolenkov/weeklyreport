@@ -12,6 +12,20 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
   const prisma = createTestPrisma();
   let repo: ReportSectionsPrismaRepository;
   let testData: Awaited<ReturnType<typeof seedTestData>>;
+  const stageId = 'a0000000-0000-4000-a000-000000000aa1';
+
+  async function assignLeadToProject() {
+    await prisma.stage.create({
+      data: { id: stageId, name: 'Development', sortOrder: 3 },
+    });
+    await prisma.stageAssignment.create({
+      data: {
+        userId: testData.lead.id,
+        stageId,
+        projectId: testData.project.id,
+      },
+    });
+  }
 
   beforeAll(() => {
     // PrismaClient structurally satisfies PrismaService (both extend PrismaClient)
@@ -29,6 +43,7 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
   });
 
   it('getSectionById returns full section with nested relations', async () => {
+    await assignLeadToProject();
     // Seed additional nested data for the section
     await prisma.projectStatus.create({
       data: {
@@ -97,25 +112,29 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
     expect(result).toBeNull();
   });
 
-  it('getSectionById surfaces authorRole + projects[i].ownedStages from StageAssignment (35-03/04)', async () => {
-    // Seed a stage row + StageAssignment for the lead -> project so the
-    // mapper has something to project. ProjectStatus is also required so
-    // the project surfaces in the section's `projects` array.
-    await prisma.stage.create({
-      data: { id: 'a0000000-0000-4000-a000-000000000aa1', name: 'Development', sortOrder: 3 },
-    });
-    await prisma.stageAssignment.create({
-      data: {
-        userId: testData.lead.id,
-        stageId: 'a0000000-0000-4000-a000-000000000aa1',
-        projectId: testData.project.id,
-      },
-    });
+  it('getSectionById excludes product-owner projects without StageAssignment', async () => {
     await prisma.projectStatus.create({
       data: {
         reportSectionId: testData.section.id,
         projectId: testData.project.id,
-        status: 'green',
+        status: 'red',
+      },
+    });
+
+    const result = await repo.getSectionById(testData.section.id);
+
+    expect(result).not.toBeNull();
+    expect(expectDefined(result).projects).toEqual([]);
+  });
+
+  it('getSectionById surfaces authorRole + projects[i].ownedStages from StageAssignment (35-03/04)', async () => {
+    await assignLeadToProject();
+    await prisma.stageStatus.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        stageId,
+        status: 'yellow',
       },
     });
 
@@ -126,11 +145,17 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
     // 35-04: owned stages on the project mirror the StageAssignment row.
     const project = expectDefined(expectDefined(result).projects[0]);
     expect(project.ownedStages).toEqual([
-      expect.objectContaining({ stageName: 'Development', sortOrder: 3 }),
+      expect.objectContaining({
+        stageName: 'Development',
+        sortOrder: 3,
+        status: 'yellow',
+      }),
     ]);
+    expect(project.trafficLight).toBe('yellow');
   });
 
   it('saveSection persists stageName on Item / Risk / Decision / Priority (35-04)', async () => {
+    await assignLeadToProject();
     await prisma.projectStatus.create({
       data: {
         reportSectionId: testData.section.id,
@@ -185,6 +210,7 @@ describe('ReportSectionsPrismaRepository (integration)', () => {
   });
 
   it('saveSection persists all nested entities and returns updated section', async () => {
+    await assignLeadToProject();
     // First seed a project status so the section has a project
     await prisma.projectStatus.create({
       data: {

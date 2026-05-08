@@ -35,6 +35,7 @@ model Project {
   lead             User                     @relation(fields: [leadId], references: [id])
   projectStatuses  ProjectStatus[]
   risks            Risk[]
+  stageStatuses    StageStatus[]
   stageAssignments StageAssignment[]
 
   @@index([leadId])
@@ -84,6 +85,7 @@ model ReportSection {
   author           User                @relation("ReportSectionAuthor", fields: [authorId], references: [id])
   report           Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
   risks            Risk[]
+  stageStatuses    StageStatus[]
   versionSnapshots VersionSnapshot[]
 
   @@unique([reportId, authorId])
@@ -102,6 +104,23 @@ model ProjectStatus {
   reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
 
   @@unique([reportSectionId, projectId])
+}
+
+model StageStatus {
+  id              String              @id @default(uuid())
+  reportSectionId String
+  projectId       String
+  stageId         String
+  status          TrafficLightStatus?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  project         Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  stage           Stage               @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@unique([reportSectionId, projectId, stageId])
+  @@index([projectId])
+  @@index([stageId])
 }
 
 model Item {
@@ -271,6 +290,7 @@ model Stage {
   name             String            @unique
   sortOrder        Int               @default(0)
   createdAt        DateTime          @default(now())
+  stageStatuses     StageStatus[]
   stageAssignments StageAssignment[]
 }
 

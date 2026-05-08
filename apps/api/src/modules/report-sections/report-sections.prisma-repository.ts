@@ -17,17 +17,26 @@ import type { ReportSectionsRepository } from './report-sections.service';
  * without a second round-trip).
  */
 export const reportSectionFullInclude = {
-  author: { select: { name: true, role: true, id: true } },
-  projectStatuses: {
-    include: {
-      project: {
+  author: {
+    select: {
+      name: true,
+      role: true,
+      id: true,
+      stageAssignments: {
         include: {
-          stageAssignments: {
-            include: { stage: true },
-          },
+          project: true,
+          stage: true,
         },
       },
     },
+  },
+  projectStatuses: {
+    include: {
+      project: true,
+    },
+  },
+  stageStatuses: {
+    include: { stage: true },
   },
   items: true,
   risks: true,
@@ -39,19 +48,28 @@ type PrismaReportSectionWithRelations = NonNullable<
   Awaited<ReturnType<PrismaService['reportSection']['findUnique']>>
 > & {
   authorId: string;
-  author: { name: string; role: string; id: string };
+  author: {
+    name: string;
+    role: string;
+    id: string;
+    stageAssignments: Array<{
+      userId: string;
+      stageId: string;
+      projectId: string;
+      project: { id: string; name: string; archived: boolean };
+      stage: { id: string; name: string; sortOrder: number };
+    }>;
+  };
   projectStatuses: Array<{
     projectId: string;
     status: string;
-    project: {
-      id: string;
-      name: string;
-      stageAssignments: Array<{
-        userId: string;
-        stageId: string;
-        stage: { id: string; name: string; sortOrder: number };
-      }>;
-    };
+    project: { id: string; name: string; archived: boolean };
+  }>;
+  stageStatuses: Array<{
+    projectId: string;
+    stageId: string;
+    status: string | null;
+    stage: { id: string; name: string; sortOrder: number };
   }>;
   items: Array<{
     id: string;
@@ -89,6 +107,27 @@ type PrismaReportSectionWithRelations = NonNullable<
   }>;
 };
 
+function aggregateStageTraffic(
+  stages: Array<{ status?: string | null }>,
+): string | null {
+  let severity = 0;
+  for (const stage of stages) {
+    if (stage.status === 'red') {
+      severity = 3;
+      break;
+    }
+    if (stage.status === 'yellow') severity = Math.max(severity, 2);
+    if (stage.status === 'green') severity = Math.max(severity, 1);
+  }
+  return severity === 3
+    ? 'red'
+    : severity === 2
+      ? 'yellow'
+      : severity === 1
+        ? 'green'
+        : null;
+}
+
 /**
  * Maps a Prisma ReportSection with all relations to the domain ReportSectionReadModel.
  * Field names are mapped from Prisma conventions to Zod schema conventions (REPO-09).
@@ -96,7 +135,36 @@ type PrismaReportSectionWithRelations = NonNullable<
 export function mapPrismaToReportSection(
   row: PrismaReportSectionWithRelations,
 ): ReportSectionReadModel {
-  const authorId = row.author.id;
+  const projectStatusByProjectId = new Map(
+    row.projectStatuses.map((ps) => [ps.projectId, ps.status] as const),
+  );
+  const stageStatusByKey = new Map(
+    row.stageStatuses.map((ss) => [
+      `${ss.projectId}::${ss.stageId}`,
+      ss.status,
+    ] as const),
+  );
+  const assignmentsByProjectId = new Map<
+    string,
+    {
+      project: { id: string; name: string; archived: boolean };
+      assignments: typeof row.author.stageAssignments;
+    }
+  >();
+
+  for (const assignment of row.author.stageAssignments) {
+    if (assignment.project.archived) continue;
+    const current = assignmentsByProjectId.get(assignment.projectId);
+    if (current) {
+      current.assignments.push(assignment);
+    } else {
+      assignmentsByProjectId.set(assignment.projectId, {
+        project: assignment.project,
+        assignments: [assignment],
+      });
+    }
+  }
+
   return reportSectionReadModelSchema.parse({
     reportSectionId: row.id,
     reportId: row.reportId,
@@ -108,23 +176,29 @@ export function mapPrismaToReportSection(
     authorRole: row.author.role,
     status: row.status,
     submittedAt: row.submittedAt,
-    projects: row.projectStatuses.map((ps) => ({
-      projectId: ps.projectId,
-      projectName: ps.project.name,
-      trafficLight: ps.status,
-      // 35-04: list of stages this section's author owns on this project.
-      // Filter the eagerly-loaded assignments by author UUID so each
-      // project's `ownedStages[]` is exactly the set the lead-form needs
-      // to render real "mine" chips.
-      ownedStages: ps.project.stageAssignments
-        .filter((sa) => sa.userId === authorId)
-        .map((sa) => ({
-          stageId: sa.stageId,
-          stageName: sa.stage.name,
-          sortOrder: sa.stage.sortOrder,
-        }))
-        .sort((a, b) => a.sortOrder - b.sortOrder),
-    })),
+    projects: [...assignmentsByProjectId.values()]
+      .map(({ project, assignments }) => {
+        const ownedStages = assignments
+          .map((sa) => ({
+            stageId: sa.stageId,
+            stageName: sa.stage.name,
+            sortOrder: sa.stage.sortOrder,
+            status:
+              stageStatusByKey.get(`${project.id}::${sa.stageId}`) ?? null,
+          }))
+          .sort((a, b) => a.sortOrder - b.sortOrder);
+
+        return {
+          projectId: project.id,
+          projectName: project.name,
+          trafficLight:
+            aggregateStageTraffic(ownedStages) ??
+            projectStatusByProjectId.get(project.id) ??
+            null,
+          ownedStages,
+        };
+      })
+      .sort((a, b) => a.projectName.localeCompare(b.projectName, 'ru')),
     items: row.items.map((i) => ({
       id: i.id,
       projectId: i.projectId,
@@ -202,6 +276,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
         });
 
         await tx.projectStatus.deleteMany({ where: { reportSectionId: sectionId } });
+        await tx.stageStatus.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.decision.deleteMany({ where: { reportSectionId: sectionId } });
@@ -215,6 +290,19 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
 
         if (projectData.length > 0) {
           await tx.projectStatus.createMany({ data: projectData });
+        }
+
+        const stageStatusData = section.projects.flatMap((project) =>
+          (project.ownedStages ?? []).map((stage) => ({
+            reportSectionId: sectionId,
+            projectId: project.projectId,
+            stageId: stage.stageId,
+            status: stage.status ?? null,
+          })),
+        );
+
+        if (stageStatusData.length > 0) {
+          await tx.stageStatus.createMany({ data: stageStatusData });
         }
 
         if (section.items.length > 0) {
