@@ -37,6 +37,7 @@ AGENTS.md
 .planning/regression/evidence/docker-compose-local/cookies.txt
 .planning/regression/evidence/docker-compose-local/failure-diagnostics.log
 apps/web/.planning/
+.planning/local-archive/
 apps/web/.tmp_check_*.mjs
 # UAT artifacts: keep the canonical suite scripts in apps/web/.tmp/uat-suite/
 # committed (they document the regression flow) but ignore the binary
