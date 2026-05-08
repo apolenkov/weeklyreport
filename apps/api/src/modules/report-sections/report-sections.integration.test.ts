@@ -6,6 +6,7 @@ import {
   disconnectTestPrisma,
 } from "../../test-utils/prisma-test-helper";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
+import { ReportSectionsService } from "./report-sections.service";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 
 describe("ReportSectionsPrismaRepository (integration)", () => {
@@ -131,6 +132,77 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
 
     expect(result).not.toBeNull();
     expect(expectDefined(result).projects).toEqual([]);
+  });
+
+  it("submitSection ignores product-owner projects without StageAssignment", async () => {
+    await assignLeadToProject();
+    const ownerOnlyProject = await prisma.project.create({
+      data: {
+        id: "a0000000-0000-4000-a000-000000000101",
+        name: "Owner metadata only",
+        leadId: testData.lead.id,
+      },
+    });
+
+    await prisma.projectStatus.createMany({
+      data: [
+        {
+          reportSectionId: testData.section.id,
+          projectId: testData.project.id,
+          status: "green",
+        },
+        {
+          reportSectionId: testData.section.id,
+          projectId: ownerOnlyProject.id,
+          status: "red",
+        },
+      ],
+    });
+
+    const service = new ReportSectionsService(repo);
+    const result = await service.submitSection({
+      reportSectionId: testData.section.id,
+      status: "draft",
+      confirmed: true,
+      projectStatuses: [{ projectId: testData.project.id, status: "green" }],
+      items: [
+        {
+          projectId: testData.project.id,
+          type: "current",
+          text: "Current work for assigned stage only",
+          tag: "feature",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          stageName: "Development",
+        },
+      ],
+      risks: [],
+      decisions: [],
+      priorities: [{ rank: 1, text: "Keep assigned stage moving" }],
+      stageStatuses: [
+        {
+          projectId: testData.project.id,
+          stageId,
+          status: "green",
+        },
+      ],
+    });
+
+    expect(result.status).toBe("submitted");
+    expect(result.projects).toHaveLength(1);
+    expect(expectDefined(result.projects[0]).projectId).toBe(
+      testData.project.id,
+    );
+
+    const ownerOnlyStatus = await prisma.projectStatus.findUnique({
+      where: {
+        reportSectionId_projectId: {
+          reportSectionId: testData.section.id,
+          projectId: ownerOnlyProject.id,
+        },
+      },
+    });
+    expect(ownerOnlyStatus).toBeNull();
   });
 
   it("getSectionById surfaces authorRole + projects[i].ownedStages from StageAssignment (35-03/04)", async () => {

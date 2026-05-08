@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import proxy, { config } from './src/proxy';
+import proxy, { config } from "./src/proxy";
 
 // ---------------------------------------------------------------------------
 // Helpers — build a request-shaped stub that satisfies the subset of
@@ -11,9 +11,9 @@ type CookieJar = Record<string, string>;
 
 function makeRequest(
   pathname: string,
-  search = '',
+  search = "",
   cookies: CookieJar = {},
-): import('next/server').NextRequest {
+): import("next/server").NextRequest {
   const url = `http://localhost:3000${pathname}${search}`;
   const cookieApi = {
     has: (name: string) => Object.prototype.hasOwnProperty.call(cookies, name),
@@ -32,7 +32,7 @@ function makeRequest(
     url,
     nextUrl,
     cookies: cookieApi,
-  } as unknown as import('next/server').NextRequest;
+  } as unknown as import("next/server").NextRequest;
 }
 
 // ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ const ORIGINAL_AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB;
 
 beforeEach(() => {
   // Default to non-stub mode for these tests; individual tests opt into stub.
-  process.env.NEXT_PUBLIC_AUTH_STUB = 'false';
+  process.env.NEXT_PUBLIC_AUTH_STUB = "false";
 });
 
 afterEach(() => {
@@ -59,113 +59,115 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('apps/web/proxy.ts — auth guard', () => {
-  it('redirects to /?next=<path> when no session cookie and AUTH_STUB!=true', () => {
-    const req = makeRequest('/lead/report');
+describe("apps/web/proxy.ts — auth guard", () => {
+  it("redirects to /?next=<path> when no session cookie and AUTH_STUB!=true", () => {
+    const req = makeRequest("/lead/report");
     const response = proxy(req);
 
     // NextResponse.redirect returns a Response with status 307 and a Location header.
     expect(response.status).toBe(307);
-    const location = response.headers.get('location') ?? '';
-    expect(location).toContain('/?next=');
+    const location = response.headers.get("location") ?? "";
+    expect(location).toContain("/?next=");
     // %2F is the URL-encoded form of /
     expect(location).toMatch(/next=%2Flead%2Freport/);
   });
 
-  it('preserves query string in next= param', () => {
-    const req = makeRequest('/lead/report', '?period=2026-W17');
+  it("preserves query string in next= param", () => {
+    const req = makeRequest("/lead/report", "?period=2026-W17");
     const response = proxy(req);
 
     expect(response.status).toBe(307);
-    const location = response.headers.get('location') ?? '';
+    const location = response.headers.get("location") ?? "";
     // searchParams.set encodes the entire string value, so '?' becomes '%3F'.
     expect(location).toMatch(/next=%2Flead%2Freport%3Fperiod%3D2026-W17/);
   });
 
-  it('passes through when a JWT-shaped session cookie is present', () => {
+  it("passes through when a JWT-shaped session cookie is present", () => {
     // Three dot-separated base64-ish segments, total length > 20.
-    const validShapeJwt = 'aaaaaaaaaa.bbbbbbbbbb.cccccccccc';
-    const req = makeRequest('/lead/report', '', {
+    const validShapeJwt = "aaaaaaaaaa.bbbbbbbbbb.cccccccccc";
+    const req = makeRequest("/lead/report", "", {
       customreport_session: validShapeJwt,
     });
     const response = proxy(req);
 
     // NextResponse.next() returns 200 with no Location.
     expect(response.status).toBe(200);
-    expect(response.headers.get('location')).toBeNull();
+    expect(response.headers.get("location")).toBeNull();
   });
 
-  it('redirects when session cookie value is empty string', () => {
-    const req = makeRequest('/lead/report', '', {
-      customreport_session: '',
+  it("redirects when session cookie value is empty string", () => {
+    const req = makeRequest("/lead/report", "", {
+      customreport_session: "",
     });
     const response = proxy(req);
 
     expect(response.status).toBe(307);
-    const location = response.headers.get('location') ?? '';
-    expect(location).toContain('/?next=');
+    const location = response.headers.get("location") ?? "";
+    expect(location).toContain("/?next=");
   });
 
-  it('redirects when session cookie value is non-JWT-shaped (no dots)', () => {
-    const req = makeRequest('/lead/report', '', {
-      customreport_session: 'invalid',
+  it("redirects when session cookie value is non-JWT-shaped (no dots)", () => {
+    const req = makeRequest("/lead/report", "", {
+      customreport_session: "invalid",
     });
     const response = proxy(req);
 
     expect(response.status).toBe(307);
-    expect(response.headers.get('location') ?? '').toContain('/?next=');
+    expect(response.headers.get("location") ?? "").toContain("/?next=");
   });
 
-  it('redirects when session cookie has wrong segment count (2 dots → 2 parts of empties OK, but 4 segments not)', () => {
+  it("redirects when session cookie has wrong segment count (2 dots → 2 parts of empties OK, but 4 segments not)", () => {
     // Two-segment value (only one dot) — must be rejected.
-    const req = makeRequest('/lead/report', '', {
-      customreport_session: 'header.payloadbutnosignature',
+    const req = makeRequest("/lead/report", "", {
+      customreport_session: "header.payloadbutnosignature",
     });
     const response = proxy(req);
 
     expect(response.status).toBe(307);
-    expect(response.headers.get('location') ?? '').toContain('/?next=');
+    expect(response.headers.get("location") ?? "").toContain("/?next=");
   });
 
-  it('redirects when session cookie is JWT-shaped but too short (≤20 chars)', () => {
+  it("redirects when session cookie is JWT-shaped but too short (≤20 chars)", () => {
     // 3 segments separated by dots, but length 14 (≤ 20).
-    const req = makeRequest('/lead/report', '', {
-      customreport_session: 'jwt.token.here',
+    const req = makeRequest("/lead/report", "", {
+      customreport_session: "jwt.token.here",
     });
     const response = proxy(req);
 
     expect(response.status).toBe(307);
-    expect(response.headers.get('location') ?? '').toContain('/?next=');
+    expect(response.headers.get("location") ?? "").toContain("/?next=");
   });
 
-  it('passes through when NEXT_PUBLIC_AUTH_STUB=true regardless of cookie', () => {
-    process.env.NEXT_PUBLIC_AUTH_STUB = 'true';
+  it("redirects no-cookie protected pages even when NEXT_PUBLIC_AUTH_STUB=true", () => {
+    process.env.NEXT_PUBLIC_AUTH_STUB = "true";
 
-    const req = makeRequest('/lead/report'); // no cookie
+    const req = makeRequest("/lead/report"); // no cookie
     const response = proxy(req);
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get('location')).toBeNull();
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location") ?? "").toMatch(
+      /next=%2Flead%2Freport/,
+    );
   });
 });
 
-describe('apps/web/proxy.ts — config matcher', () => {
-  it('exports a config object with a matcher array of four entries', () => {
+describe("apps/web/proxy.ts — config matcher", () => {
+  it("exports a config object with a matcher array of four entries", () => {
     expect(config).toBeDefined();
     expect(Array.isArray(config.matcher)).toBe(true);
     expect((config.matcher as string[]).length).toBe(4);
   });
 
-  it('matcher is a positive allowlist of /lead, /head, /reports, /admin prefixes', () => {
+  it("matcher is a positive allowlist of /lead, /head, /reports, /admin prefixes", () => {
     const matcher = config.matcher as string[];
     // Each entry is one of the four protected prefixes with a :path*
     // suffix. Order is not significant; assert membership.
     expect(matcher).toEqual(
       expect.arrayContaining([
-        '/lead/:path*',
-        '/head/:path*',
-        '/reports/:path*',
-        '/admin/:path*',
+        "/lead/:path*",
+        "/head/:path*",
+        "/reports/:path*",
+        "/admin/:path*",
       ]),
     );
     // Every entry begins with one of the protected prefixes.
@@ -174,7 +176,7 @@ describe('apps/web/proxy.ts — config matcher', () => {
     }
   });
 
-  it('matcher does not include excluded routes (_next, api, trpc, auth, favicon)', () => {
+  it("matcher does not include excluded routes (_next, api, trpc, auth, favicon)", () => {
     const matcher = config.matcher as string[];
     // The allowlist must not mention any route that is intentionally
     // unprotected by the proxy (those handle their own auth or are static).
