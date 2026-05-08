@@ -46,14 +46,22 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
 
 export function LeadReportsGrid({ leads }: LeadReportsGridProps) {
   const [expanded, setExpanded] = useState(true);
+  const hasLeads = leads.length > 0;
+  const isExpanded = hasLeads && expanded;
 
   return (
     <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
       <button
         type="button"
-        className="flex w-full cursor-pointer items-center justify-between p-4 transition-colors hover:bg-[#f8f6f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
-        onClick={() => setExpanded(!expanded)}
-        aria-expanded={expanded}
+        className={`flex w-full items-center justify-between p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
+          hasLeads ? 'cursor-pointer hover:bg-[#f8f6f2]' : 'cursor-default opacity-65'
+        }`}
+        onClick={() => {
+          if (hasLeads) setExpanded(!expanded);
+        }}
+        disabled={!hasLeads}
+        aria-disabled={!hasLeads}
+        aria-expanded={isExpanded}
       >
         <div className="flex items-center gap-3">
           <UsersIcon />
@@ -64,21 +72,23 @@ export function LeadReportsGrid({ leads }: LeadReportsGridProps) {
             {leads.length} leads
           </span>
         </div>
-        <ChevronDown expanded={expanded} />
+        <ChevronDown expanded={isExpanded} />
       </button>
 
-      <div
-        className="grid transition-[grid-template-rows] duration-300"
-        style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
-      >
-        <div className="min-h-0 overflow-hidden">
-          <div className="space-y-1.5 px-4 pb-4">
-            {leads.map((lead) => (
-              <LeadReportCard key={lead.id} lead={lead} />
-            ))}
+      {hasLeads ? (
+        <div
+          className="grid transition-[grid-template-rows] duration-300"
+          style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="space-y-1.5 px-4 pb-4 pt-4">
+              {leads.map((lead) => (
+                <LeadReportCard key={lead.id} lead={lead} />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

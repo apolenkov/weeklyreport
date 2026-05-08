@@ -114,7 +114,7 @@ export function PortfolioOverviewTable({
         style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
+          <div className="grid gap-2 px-4 pb-4 pt-4 sm:grid-cols-2">
             {sortedProducts.map((product) => {
               const isEmpty =
                 product.currentWeekCount === 0 &&
@@ -124,10 +124,10 @@ export function PortfolioOverviewTable({
                 <button
                   key={product.id}
                   type="button"
-                  className={`group relative flex items-center gap-2 rounded-lg p-2.5 text-left transition-[box-shadow,filter,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
+                  className={`group relative flex items-center gap-2 rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
                     isEmpty
                       ? "cursor-default text-[var(--color-muted-foreground)]"
-                      : "cursor-pointer hover:-translate-y-0.5 hover:brightness-[0.98] hover:shadow-[0_8px_18px_-14px_rgba(0,0,0,0.35),0_0_0_2px_rgba(0,117,74,0.18)] active:translate-y-0"
+                      : "cursor-pointer hover:shadow-[0_8px_18px_-14px_rgba(0,0,0,0.35),0_0_0_2px_rgba(0,117,74,0.18)]"
                   }`}
                   style={{
                     background: isEmpty

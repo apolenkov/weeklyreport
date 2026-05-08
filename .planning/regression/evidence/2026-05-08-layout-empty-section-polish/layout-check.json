@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-05-08T11:59:45.327Z",
+  "web": "http://localhost:3000",
+  "api": "http://localhost:3002",
+  "screenshots": {
+    "dashboard": ".planning/regression/evidence/2026-05-08-layout-empty-section-polish/screenshots/dashboard-empty-sections.png",
+    "weeklyReport": ".planning/regression/evidence/2026-05-08-layout-empty-section-polish/screenshots/weekly-report-empty-products.png"
+  },
+  "checks": [
+    {
+      "name": "dashboard blocked empty accordion disabled",
+      "pass": true,
+      "ariaExpanded": "false"
+    },
+    {
+      "name": "dashboard lead reports body has top gap",
+      "pass": true
+    },
+    {
+      "name": "weekly report addressed route marks nav active",
+      "pass": true,
+      "activeWeeklyNavCount": 1
+    },
+    {
+      "name": "weekly report toggle all disabled when all products empty",
+      "pass": true,
+      "ariaDisabled": "true"
+    },
+    {
+      "name": "weekly empty product accordion disabled",
+      "pass": true
+    },
+    {
+      "name": "portfolio overview content has top gap",
+      "pass": true
+    }
+  ],
+  "pass": true
+}

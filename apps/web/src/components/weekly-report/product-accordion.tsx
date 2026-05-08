@@ -144,6 +144,7 @@ export function ProductAccordion({
         disabled={!hasContent}
         aria-disabled={!hasContent}
         aria-expanded={hasContent ? expanded : false}
+        data-product-accordion-toggle="true"
       >
         <div className="flex items-center gap-3">
           <div
@@ -186,7 +187,7 @@ export function ProductAccordion({
           style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="space-y-3 px-4 pb-4 pt-1">
+            <div className="space-y-3 border-t border-[rgba(0,0,0,0.06)] px-4 pb-4 pt-4">
               {/* Needs Attention */}
               {report.needsAttention && (
                 <div>
