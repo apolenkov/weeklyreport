@@ -29,6 +29,20 @@ describe('PublicationPrismaRepository (integration)', () => {
 
   it('getAssembledReport returns full report with all sections', async () => {
     // Add some data to the section to make the report non-trivial
+    const stage = await prisma.stage.create({
+      data: {
+        id: 'a0000000-0000-4000-a000-000000000aa2',
+        name: 'Development',
+        sortOrder: 3,
+      },
+    });
+    await prisma.stageAssignment.create({
+      data: {
+        userId: testData.lead.id,
+        projectId: testData.project.id,
+        stageId: stage.id,
+      },
+    });
     await prisma.projectStatus.create({
       data: {
         reportSectionId: testData.section.id,

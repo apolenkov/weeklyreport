@@ -7,20 +7,22 @@ import {
   type DraftSaveValidationError,
   type ReportSectionReadModel,
   type SubmitSectionPayload,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 export class ReportSectionDomainError extends Error {
   constructor(
-    readonly code: DraftSaveValidationError['code'],
+    readonly code: DraftSaveValidationError["code"],
     message: string,
   ) {
     super(message);
-    this.name = 'ReportSectionDomainError';
+    this.name = "ReportSectionDomainError";
   }
 }
 
 export interface ReportSectionsRepository {
-  getSectionById(reportSectionId: string): Promise<ReportSectionReadModel | null>;
+  getSectionById(
+    reportSectionId: string,
+  ): Promise<ReportSectionReadModel | null>;
   getReportStatus(reportId: string): Promise<string | null>;
   saveSection(section: ReportSectionReadModel): Promise<ReportSectionReadModel>;
 }
@@ -28,7 +30,7 @@ export interface ReportSectionsRepository {
 function mergeSection(
   section: ReportSectionReadModel,
   input: DraftSavePayload | SubmitSectionPayload,
-  nextStatus: 'draft' | 'submitted',
+  nextStatus: "draft" | "submitted",
 ): ReportSectionReadModel {
   const stageStatusByKey = new Map(
     (input.stageStatuses ?? []).map((status) => [
@@ -38,46 +40,51 @@ function mergeSection(
   );
 
   const aggregateTrafficLight = (
-    ownedStages: NonNullable<ReportSectionReadModel['projects'][number]['ownedStages']>,
+    ownedStages: NonNullable<
+      ReportSectionReadModel["projects"][number]["ownedStages"]
+    >,
   ) => {
     let severity = 0;
     for (const stage of ownedStages) {
-      if (stage.status === 'red') {
+      if (stage.status === "red") {
         severity = 3;
         break;
       }
-      if (stage.status === 'yellow') severity = Math.max(severity, 2);
-      if (stage.status === 'green') severity = Math.max(severity, 1);
+      if (stage.status === "yellow") severity = Math.max(severity, 2);
+      if (stage.status === "green") severity = Math.max(severity, 1);
     }
     return severity === 3
-      ? 'red'
+      ? "red"
       : severity === 2
-        ? 'yellow'
+        ? "yellow"
         : severity === 1
-          ? 'green'
+          ? "green"
           : null;
   };
 
   return reportSectionReadModelSchema.parse({
     ...section,
     status: nextStatus,
-    submittedAt: nextStatus === 'submitted' ? new Date() : section.submittedAt,
-    projects: section.projects.map((project) => ({
-      ...project,
-      ownedStages: (project.ownedStages ?? []).map((stage) => {
-        const key = `${project.projectId}::${stage.stageId}`;
-        if (!stageStatusByKey.has(key)) return stage;
-        return { ...stage, status: stageStatusByKey.get(key) ?? null };
-      }),
-    })).map((project) => {
-      const trafficLight =
-        aggregateTrafficLight(project.ownedStages ?? []) ??
-        input.projectStatuses.find((status) => status.projectId === project.projectId)
-          ?.status ??
-        null;
+    submittedAt: nextStatus === "submitted" ? new Date() : section.submittedAt,
+    projects: section.projects
+      .map((project) => ({
+        ...project,
+        ownedStages: (project.ownedStages ?? []).map((stage) => {
+          const key = `${project.projectId}::${stage.stageId}`;
+          if (!stageStatusByKey.has(key)) return stage;
+          return { ...stage, status: stageStatusByKey.get(key) ?? null };
+        }),
+      }))
+      .map((project) => {
+        const trafficLight =
+          aggregateTrafficLight(project.ownedStages ?? []) ??
+          input.projectStatuses.find(
+            (status) => status.projectId === project.projectId,
+          )?.status ??
+          null;
 
-      return { ...project, trafficLight };
-    }),
+        return { ...project, trafficLight };
+      }),
     items: input.items,
     risks: input.risks,
     decisions: input.decisions,
@@ -88,7 +95,9 @@ function mergeSection(
 export class ReportSectionsService {
   constructor(private readonly repository: ReportSectionsRepository) {}
 
-  async getActiveSection(reportSectionId: string): Promise<ReportSectionReadModel> {
+  async getActiveSection(
+    reportSectionId: string,
+  ): Promise<ReportSectionReadModel> {
     const section = await this.repository.getSectionById(reportSectionId);
 
     if (!section) {
@@ -102,26 +111,32 @@ export class ReportSectionsService {
     const parsedInput = draftSaveSchema.parse(input);
     const section = await this.getActiveSection(parsedInput.reportSectionId);
 
-    const reportStatus = await this.repository.getReportStatus(section.reportId);
+    const reportStatus = await this.repository.getReportStatus(
+      section.reportId,
+    );
 
-    if (reportStatus === 'published') {
+    if (reportStatus === "published") {
       throw new ReportSectionDomainError(
-        'SECTION_ALREADY_SUBMITTED',
-        'Cannot edit sections of a published report.',
+        "SECTION_ALREADY_SUBMITTED",
+        "Cannot edit sections of a published report.",
       );
     }
 
-    if (section.status === 'submitted') {
+    if (section.status === "submitted") {
       throw new ReportSectionDomainError(
-        'SECTION_ALREADY_SUBMITTED',
-        'Submitted sections are read-only.',
+        "SECTION_ALREADY_SUBMITTED",
+        "Submitted sections are read-only.",
       );
     }
 
-    return this.repository.saveSection(mergeSection(section, parsedInput, 'draft'));
+    return this.repository.saveSection(
+      mergeSection(section, parsedInput, "draft"),
+    );
   }
 
-  async submitSection(input: SubmitSectionPayload): Promise<ReportSectionReadModel> {
+  async submitSection(
+    input: SubmitSectionPayload,
+  ): Promise<ReportSectionReadModel> {
     const parsedInput = submitSectionSchema.parse(input);
     const section = await this.getActiveSection(parsedInput.reportSectionId);
     const errors = validateSubmitInput(section, parsedInput);
@@ -136,7 +151,7 @@ export class ReportSectionsService {
     }
 
     return this.repository.saveSection(
-      mergeSection(section, parsedInput, 'submitted'),
+      mergeSection(section, parsedInput, "submitted"),
     );
   }
 }

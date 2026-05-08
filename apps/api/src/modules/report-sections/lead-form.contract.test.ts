@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ReportSectionReadModel, VersionSnapshot } from '@customreport/shared';
 
-import { LeadFormService, type LeadFormRepository } from './lead-form.service';
+import {
+  LeadFormDomainError,
+  LeadFormService,
+  type LeadFormRepository,
+} from './lead-form.service';
 import { expectDefined } from '../../test-utils/expect-defined.js';
 
 // ---------------------------------------------------------------------------
@@ -374,6 +378,9 @@ describe('LeadFormService — getByPeriod', () => {
     await expect(
       service.getByPeriod(REPORT_ID, AUTHOR_ID),
     ).rejects.toThrow(`No section found for user in report ${REPORT_ID}.`);
+    await expect(service.getByPeriod(REPORT_ID, AUTHOR_ID)).rejects.toThrow(
+      LeadFormDomainError,
+    );
   });
 });
 

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { ReactNode } from 'react';
 
 import { DevRoleSwitcher } from '../../components/dev/role-switcher';
@@ -22,7 +23,9 @@ type AppGroupLayoutProps = Readonly<{
 export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
   return (
     <SessionProvider>
-      <NavBar />
+      <Suspense fallback={null}>
+        <NavBar />
+      </Suspense>
       {children}
       <DevRoleSwitcher />
     </SessionProvider>

@@ -55,21 +55,21 @@ import type {
   ReportSectionReadModel,
   MyHistoryEntry,
   VersionSnapshot as ApiVersionSnapshot,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { deriveItemStatus, type ItemStatus } from './item-status';
+import { deriveItemStatus, type ItemStatus } from "./item-status";
 import {
   trafficToStageStatus,
   type StageStatus,
   type TrafficLightStatus,
-} from './traffic-light';
+} from "./traffic-light";
 
 // ---- Self-contained re-declarations of presentation types ----
 //
 // Mirrors `apps/web/src/components/lead/mock-data.ts` so consumers can depend
 // on this barrel rather than importing a value from `mock-data.ts`.
 
-export type LeadStageOwnership = 'mine' | 'locked' | 'unassigned';
+export type LeadStageOwnership = "mine" | "locked" | "unassigned";
 
 export type LeadStageAssignment = {
   stageName: string;
@@ -103,7 +103,7 @@ export type LeadRiskEntry = {
   productId: string;
   productName: string;
   stageName: string;
-  severity: 'at-risk' | 'blocked';
+  severity: "at-risk" | "blocked";
   /** The user-controlled "what is the risk" text (= raw `risk` field). */
   text: string;
   /** Schema-required impact narrative; surfaced in the edit dialog. */
@@ -173,34 +173,34 @@ export type LeadCurrentUser = {
    * head/admin-only UI like "Revoke" vs "Request Reopen". Driven by the
    * read model's `authorRole`.
    */
-  authorRole: 'lead' | 'head' | 'admin' | 'viewer';
+  authorRole: "lead" | "head" | "admin" | "viewer";
 };
 
 // ---- Helpers ----
 
 const STAGE_NAMES = [
-  'Planning',
-  'Analysis',
-  'Design',
-  'Dev',
-  'Testing',
-  'DevOps',
-  'Support',
+  "Planning",
+  "Analysis",
+  "Design",
+  "Dev",
+  "Testing",
+  "DevOps",
+  "Support",
 ] as const;
 
 const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ] as const;
 
 function isoWeekNumber(d: Date): number {
@@ -211,7 +211,9 @@ function isoWeekNumber(d: Date): number {
   target.setUTCDate(target.getUTCDate() - dayNum + 3);
   const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
   const firstThursdayDayNum = (firstThursday.getUTCDay() + 6) % 7;
-  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstThursdayDayNum + 3);
+  firstThursday.setUTCDate(
+    firstThursday.getUTCDate() - firstThursdayDayNum + 3,
+  );
   const diffMs = target.getTime() - firstThursday.getTime();
   return 1 + Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
 }
@@ -230,11 +232,11 @@ function formatDateRange(start: Date, end: Date): string {
 function formatRelativeTimestamp(at: Date, now: Date): string {
   const diffMs = now.getTime() - at.getTime();
   const diffSec = Math.max(0, Math.floor(diffMs / 1000));
-  if (diffSec < 60) return 'just now';
+  if (diffSec < 60) return "just now";
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) return `${diffMin} min ago`;
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return diffHour === 1 ? '1h ago' : `${diffHour}h ago`;
+  if (diffHour < 24) return diffHour === 1 ? "1h ago" : `${diffHour}h ago`;
   const month = MONTHS[at.getUTCMonth()];
   const day = at.getUTCDate();
   return `${month} ${day}`;
@@ -251,7 +253,7 @@ function clampRank(rank: number): number {
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/);
   const first = parts[0];
-  if (!first) return '??';
+  if (!first) return "??";
   if (parts.length === 1) {
     return first.slice(0, 2).toUpperCase();
   }
@@ -261,10 +263,19 @@ function initialsFromName(name: string): string {
 
 function buildProjectIndex(
   section: ReportSectionReadModel,
-): Map<string, { name: string; trafficLight: ReportSectionReadModel['projects'][number]['trafficLight'] }> {
+): Map<
+  string,
+  {
+    name: string;
+    trafficLight: ReportSectionReadModel["projects"][number]["trafficLight"];
+  }
+> {
   const map = new Map<
     string,
-    { name: string; trafficLight: ReportSectionReadModel['projects'][number]['trafficLight'] }
+    {
+      name: string;
+      trafficLight: ReportSectionReadModel["projects"][number]["trafficLight"];
+    }
   >();
   for (const project of section.projects) {
     map.set(project.projectId, {
@@ -290,12 +301,14 @@ export function ownedStagesForProject(
   if (projectId) {
     const project = section.projects.find((p) => p.projectId === projectId);
     if (project) {
-      for (const stage of project.ownedStages ?? []) collected.add(stage.stageName);
+      for (const stage of project.ownedStages ?? [])
+        collected.add(stage.stageName);
     }
     return [...collected];
   }
   for (const project of section.projects) {
-    for (const stage of project.ownedStages ?? []) collected.add(stage.stageName);
+    for (const stage of project.ownedStages ?? [])
+      collected.add(stage.stageName);
   }
   return [...collected];
 }
@@ -319,7 +332,10 @@ export function ownedStagesForProject(
  */
 function buildStageGrid(
   ownerLabel: string,
-  ownedStages: readonly { stageName: string; status?: TrafficLightStatus | null }[],
+  ownedStages: readonly {
+    stageName: string;
+    status?: TrafficLightStatus | null;
+  }[],
 ): LeadStageAssignment[] {
   const owned = new Map(
     ownedStages.map((stage) => [stage.stageName.toLowerCase(), stage] as const),
@@ -330,20 +346,20 @@ function buildStageGrid(
       owned.get(lower) ??
       // Aliases between the canonical seeded stage name ("Development") and
       // the compact pipeline label ("Dev").
-      (lower === 'dev' ? owned.get('development') : undefined) ??
-      (lower === 'development' ? owned.get('dev') : undefined);
+      (lower === "dev" ? owned.get("development") : undefined) ??
+      (lower === "development" ? owned.get("dev") : undefined);
     if (ownedStage) {
       return {
         stageName,
         status: trafficToStageStatus(ownedStage.status ?? null),
-        ownership: 'mine' as const,
+        ownership: "mine" as const,
         assignee: ownerLabel,
       };
     }
     return {
       stageName,
-      status: 'empty' as const,
-      ownership: 'unassigned' as const,
+      status: "empty" as const,
+      ownership: "unassigned" as const,
       assignee: null,
     };
   });
@@ -384,7 +400,7 @@ export function mapLeadProducts(
  */
 export function mapLeadItems(
   section: ReportSectionReadModel,
-  itemType: 'current' | 'next',
+  itemType: "current" | "next",
 ): LeadKanbanItem[] {
   const projectIndex = buildProjectIndex(section);
   return section.items
@@ -398,7 +414,7 @@ export function mapLeadItems(
       return {
         id: item.id ?? `${itemType}-${item.projectId}-${item.text.slice(0, 8)}`,
         productId: item.projectId,
-        productName: project?.name ?? 'Unknown',
+        productName: project?.name ?? "Unknown",
         // 35-04: real stage label from DB. Surfaces on the kanban card and
         // groups items by product+stage. Falls back to undefined for
         // legacy rows seeded before the column existed.
@@ -420,19 +436,17 @@ export function mapLeadItems(
  * into `text`, but `handleRisksChange` writes `risk: r.text` straight back, so
  * every render double-concatenated the existing fields and corrupted the row.
  */
-export function mapLeadRisks(
-  section: ReportSectionReadModel,
-): LeadRiskEntry[] {
+export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
   const projectIndex = buildProjectIndex(section);
   return section.risks.map((r, idx) => {
     const project = projectIndex.get(r.projectId);
     return {
       id: r.id ?? `risk-${idx}`,
       productId: r.projectId,
-      productName: project?.name ?? 'Unknown',
+      productName: project?.name ?? "Unknown",
       // 35-04: real stage label from DB; legacy rows fall back to '—'.
-      stageName: r.stageName ?? '—',
-      severity: 'at-risk' as const,
+      stageName: r.stageName ?? "—",
+      severity: "at-risk" as const,
       text: r.risk,
       impact: r.impact,
       mitigation: r.mitigation,
@@ -445,15 +459,15 @@ export function mapLeadDecisions(
 ): LeadDecisionEntry[] {
   return section.decisions.map((d, idx) => ({
     id: d.id ?? `decision-${idx}`,
-    productId: '',
-    productName: 'Department',
+    productId: "",
+    productName: "Department",
     text: d.text,
-    owner: d.owner ?? '',
-    impact: d.impact ?? '',
+    owner: d.owner ?? "",
+    impact: d.impact ?? "",
     deadline: d.deadline
       ? new Date(d.deadline).toISOString().slice(0, 10)
       : null,
-    stageName: d.stageName ?? '—',
+    stageName: d.stageName ?? "—",
   }));
 }
 
@@ -463,7 +477,7 @@ export function mapLeadPriorities(
   return section.priorities.map((p) => ({
     rank: clampRank(p.rank),
     text: p.text,
-    stageName: p.stageName ?? '—',
+    stageName: p.stageName ?? "—",
   }));
 }
 
@@ -487,7 +501,7 @@ export function mapLeadPeriods(
       weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
       dateRange: formatDateRange(e.periodStart, e.periodEnd),
       isCurrent: activeReportId !== null && e.reportId === activeReportId,
-      isSubmitted: e.sectionStatus === 'submitted',
+      isSubmitted: e.sectionStatus === "submitted",
     }));
 }
 
@@ -553,24 +567,28 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   const now = args.now ?? new Date();
   const section = args.byPeriod.section;
   // Lock the form when the period is locked OR the section is already submitted.
-  const readOnly = args.byPeriod.readOnly || section.status === 'submitted';
+  const readOnly = args.byPeriod.readOnly || section.status === "submitted";
 
   // 35-03: surface the section author's role end-to-end. The display label
   // ("Lead", "Head", "Admin") is derived from the role token; the raw
   // token (`authorRole`) is exposed so role-based UI gating doesn't have
   // to reverse-engineer the label string. Defaults to 'lead' when the
   // read model omits it (legacy fixtures, harness-driven tests).
-  const authorRole: 'lead' | 'head' | 'admin' | 'viewer' = args.active.authorRole ?? 'lead';
+  const authorRole: "lead" | "head" | "admin" | "viewer" =
+    args.active.authorRole ?? "lead";
   const roleLabel =
-    authorRole === 'head' ? 'Head'
-      : authorRole === 'admin' ? 'Admin'
-        : authorRole === 'viewer' ? 'Viewer'
-          : 'Lead';
+    authorRole === "head"
+      ? "Head"
+      : authorRole === "admin"
+        ? "Admin"
+        : authorRole === "viewer"
+          ? "Viewer"
+          : "Lead";
 
   return {
     products: mapLeadProducts(section),
-    currentWeekItems: mapLeadItems(section, 'current'),
-    nextWeekItems: mapLeadItems(section, 'next'),
+    currentWeekItems: mapLeadItems(section, "current"),
+    nextWeekItems: mapLeadItems(section, "next"),
     risks: mapLeadRisks(section),
     decisions: mapLeadDecisions(section),
     priorities: mapLeadPriorities(section),

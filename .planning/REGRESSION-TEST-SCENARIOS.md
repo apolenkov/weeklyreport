@@ -2322,11 +2322,14 @@ These are actual defects found during analysis, not just test scenarios:
 
 ## 53. ACTION LOG AND EVIDENCE (LOG-EV-001..LOG-EV-006)
 
-| #          | Scenario                         | Priority | Expected                                                                                          |
-| ---------- | -------------------------------- | -------- | ------------------------------------------------------------------------------------------------- |
-| LOG-EV-001 | Lead creates an item             | P0       | Persistent report.item.created action log entry exists with timestamp, user, route, correlationId |
-| LOG-EV-002 | Lead changes a stage status      | P0       | Persistent report.stage_status.changed action log entry exists with old/new status                |
-| LOG-EV-003 | Lead submits report              | P0       | report.submit.opened and report.submit.confirmed entries exist                                    |
-| LOG-EV-004 | Admin changes a stage assignment | P0       | admin.stage_assignment.changed entry exists                                                       |
-| LOG-EV-005 | Any role scenario completes      | P0       | Browser console has no unexpected errors and network has no 5xx responses                         |
-| LOG-EV-006 | Any role scenario completes      | P0       | Evidence folder contains screenshots and JSON logs named by scenario ID                           |
+| #          | Scenario                         | Priority | Expected                                                                                              |
+| ---------- | -------------------------------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| LOG-EV-001 | Lead creates an item             | P0       | Persistent report.item.created action log entry exists with timestamp, user, route, correlationId     |
+| LOG-EV-002 | Lead changes a stage status      | P0       | Persistent report.stage_status.changed action log entry exists with old/new status                    |
+| LOG-EV-003 | Lead submits report              | P0       | report.submit.opened and report.submit.confirmed entries exist                                        |
+| LOG-EV-004 | Admin changes a stage assignment | P0       | admin.stage_assignment.changed entry exists                                                           |
+| LOG-EV-005 | Any role scenario completes      | P0       | Browser console has no unexpected errors and network has no 5xx responses                             |
+| LOG-EV-006 | Any role scenario completes      | P0       | Evidence folder contains screenshots and JSON logs named by scenario ID                               |
+| LOG-EV-007 | Weekly report load fails         | P0       | Backend log contains weeklyReport.get role/report context; frontend log contains route context        |
+| LOG-EV-008 | Head opens lead report URL       | P0       | Frontend redirects to head report/dashboard; backend has no head-owned leadForm.byPeriod 5xx          |
+| LOG-EV-009 | Lead form load fails             | P0       | Backend log contains leadForm.byPeriod NOT_FOUND with role/report/author context; no Unexpected error |

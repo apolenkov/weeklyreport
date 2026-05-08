@@ -189,7 +189,7 @@ async function bootstrap() {
 
   // Browser → server log forwarder. Captures console.error/warn,
   // window.onerror, unhandledrejection from the web app and writes them to
-  // the same rotating api.log so all debug data lives in one file.
+  // the same rotating app.log so all debug data lives in one file.
   // Dev-only by default; turn on in prod with CLIENT_LOG_FORWARDING=true.
   const clientLogsEnabled =
     env.NODE_ENV === 'development' ||

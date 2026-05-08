@@ -925,12 +925,41 @@ export function createAppRouter(deps: RouterDeps) {
       get: anyRoleProcedure
         .input(z.object({ reportId: z.string().uuid().optional() }).optional())
         .query(async ({ input, ctx }) => {
+          const requestedReportId = input?.reportId ?? null;
           try {
-            return await deps.weeklyReportService.getWeeklyReport(
+            const report = await deps.weeklyReportService.getWeeklyReport(
               input?.reportId,
               ctx.session.role,
             );
+            ctx.logger.info('weekly report load succeeded', {
+              phase: 'weekly-report.load',
+              procedure: 'weeklyReport.get',
+              userId: ctx.session.userId,
+              role: ctx.session.role,
+              requestedReportId,
+              resolvedReportId: report.reportId,
+              periodStatus: report.periodStatus,
+              submissionCount: report.submissionCount,
+              totalLeads: report.totalLeads,
+            });
+            return report;
           } catch (error) {
+            const errorInfo =
+              error instanceof Error
+                ? { name: error.name, message: error.message }
+                : { name: typeof error, message: String(error) };
+            const logFailure =
+              errorInfo.name === 'WeeklyReportDomainError'
+                ? ctx.logger.warn.bind(ctx.logger)
+                : ctx.logger.error.bind(ctx.logger);
+            logFailure('weekly report load failed', {
+              phase: 'weekly-report.load',
+              procedure: 'weeklyReport.get',
+              userId: ctx.session.userId,
+              role: ctx.session.role,
+              requestedReportId,
+              error: errorInfo,
+            });
             throw mapDomainError(error);
           }
         }),
@@ -947,13 +976,41 @@ export function createAppRouter(deps: RouterDeps) {
         )
         .query(async ({ input, ctx }) => {
           try {
-            return await deps.leadFormService.getByPeriod(
+            const form = await deps.leadFormService.getByPeriod(
               input.reportId,
               ctx.session.userId,
               ctx.session.role,
               input.authorId,
             );
+            ctx.logger.info('lead form load succeeded', {
+              phase: 'lead-form.load',
+              procedure: 'leadForm.byPeriod',
+              userId: ctx.session.userId,
+              role: ctx.session.role,
+              reportId: input.reportId,
+              requestedAuthorId: input.authorId ?? null,
+              resolvedAuthorId: form.section.authorId,
+              readOnly: form.readOnly,
+            });
+            return form;
           } catch (error) {
+            const errorInfo =
+              error instanceof Error
+                ? { name: error.name, message: error.message }
+                : { name: typeof error, message: String(error) };
+            const logFailure =
+              errorInfo.name === 'LeadFormDomainError'
+                ? ctx.logger.warn.bind(ctx.logger)
+                : ctx.logger.error.bind(ctx.logger);
+            logFailure('lead form load failed', {
+              phase: 'lead-form.load',
+              procedure: 'leadForm.byPeriod',
+              userId: ctx.session.userId,
+              role: ctx.session.role,
+              reportId: input.reportId,
+              requestedAuthorId: input.authorId ?? null,
+              error: errorInfo,
+            });
             throw mapDomainError(error);
           }
         }),

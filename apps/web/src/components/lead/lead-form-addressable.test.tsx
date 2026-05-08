@@ -25,6 +25,7 @@ import type { ReactNode } from 'react';
 
 import { LeadForm } from './lead-form';
 import { TRPCProxyContext } from '../../lib/trpc-context';
+import { SessionContext } from '../../lib/session-provider';
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -94,6 +95,7 @@ function buildHarness(opts: {
   // The byPeriod section returned by the mock; defaults to active-report data.
   byPeriodSection?: ReturnType<typeof makeSection>;
   byPeriodReadOnly?: boolean;
+  onByPeriodQuery?: () => void;
 }) {
   const trpcMock = {
     reports: {
@@ -155,10 +157,13 @@ function buildHarness(opts: {
       byPeriod: {
         queryOptions: () => ({
           queryKey: ['leadForm.byPeriod'],
-          queryFn: async () => ({
-            section: opts.byPeriodSection ?? makeSection(),
-            readOnly: opts.byPeriodReadOnly ?? false,
-          }),
+          queryFn: async () => {
+            opts.onByPeriodQuery?.();
+            return {
+              section: opts.byPeriodSection ?? makeSection(),
+              readOnly: opts.byPeriodReadOnly ?? false,
+            };
+          },
         }),
         pathFilter: () => ({ queryKey: ['leadForm.byPeriod'] }),
       },
@@ -295,6 +300,40 @@ describe('LeadForm — Phase 35-07 addressable URLs', () => {
 
     // No redirect when explicitly pinned.
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('head session on /lead/report/<reportId> without authorId redirects to head report and does not load lead form', async () => {
+    const byPeriodQuery = vi.fn();
+    const trpcMock = buildHarness({
+      pinnedReportId: PAST_REPORT_ID,
+      onByPeriodQuery: byPeriodQuery,
+    });
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={trpcMock as never}>
+          <SessionContext.Provider
+            value={{
+              user: {
+                id: 'head-id',
+                name: 'Head User',
+                email: 'head@example.test',
+                role: 'head',
+              },
+              isLoading: false,
+              isAuthenticated: true,
+            }}
+          >
+            <LeadForm reportId={PAST_REPORT_ID} />
+          </SessionContext.Provider>
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+    await act(async () => {
+      await flushAll();
+    });
+
+    expect(replace).toHaveBeenCalledWith(`/head/report/${PAST_REPORT_ID}`);
+    expect(byPeriodQuery).not.toHaveBeenCalled();
   });
 
   it('addressed route → sets document.title to the addressed week', async () => {

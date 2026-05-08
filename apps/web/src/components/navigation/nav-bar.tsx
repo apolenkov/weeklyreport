@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
-import type { Role } from '@customreport/shared';
+import type { Role } from "@customreport/shared";
 
 import {
   Sheet,
@@ -11,9 +11,9 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@customreport/ui/components/ui/sheet';
+} from "@customreport/ui/components/ui/sheet";
 
-import { useSession } from '../../lib/session-provider';
+import { useSession } from "../../lib/session-provider";
 
 type NavLink = {
   href: string;
@@ -26,16 +26,20 @@ type NavLink = {
 };
 
 const NAV_LINKS: ReadonlyArray<NavLink> = [
-  { href: '/lead/report', label: 'My Report', roles: ['lead'] },
+  { href: "/lead/report", label: "My Report", roles: ["lead"] },
   // UX-17 (Phase 35-08): "My History" + legacy "Archive" merged into a single
   // /reports page with role-default tabs. The lead-specific link still
   // exists in the nav but now drops into the "My Drafts" tab; the
   // role-shared "Archive" link uses the same URL with the published tab.
-  { href: '/reports?tab=drafts', label: 'My History', roles: ['lead'] },
-  { href: '/head/dashboard', label: 'Dashboard', roles: ['head', 'admin'] },
-  { href: '/head/report', label: 'Weekly Report', roles: ['head', 'admin'] },
-  { href: '/reports?tab=published', label: 'Archive', roles: ['lead', 'head', 'admin', 'viewer'] },
-  { href: '/admin', label: 'Admin', roles: ['head', 'admin'] },
+  { href: "/reports?tab=drafts", label: "My History", roles: ["lead"] },
+  { href: "/head/dashboard", label: "Dashboard", roles: ["head", "admin"] },
+  { href: "/head/report", label: "Weekly Report", roles: ["head", "admin"] },
+  {
+    href: "/reports?tab=published",
+    label: "Archive",
+    roles: ["lead", "head", "admin", "viewer"],
+  },
+  { href: "/admin", label: "Admin", roles: ["head", "admin"] },
 ];
 
 function getRoleLabel(role: Role): string {
@@ -44,39 +48,49 @@ function getRoleLabel(role: Role): string {
   // enum values for backwards compat with tests + auth, but the user
   // never sees "Admin" as a distinct label.
   switch (role) {
-    case 'admin':
-    case 'head':
-      return 'Department Head';
-    case 'lead':
-      return 'Lead';
-    case 'viewer':
-      return 'Viewer';
+    case "admin":
+    case "head":
+      return "Department Head";
+    case "lead":
+      return "Lead";
+    case "viewer":
+      return "Viewer";
   }
 }
 
-function isActiveLink(pathname: string, href: string): boolean {
-  if (href === '/admin') return pathname.startsWith('/admin');
-  if (href === '/head/report') return pathname === '/head/report';
-  if (href === '/head/dashboard') return pathname === '/head/dashboard';
-  // UX-17: tab-bearing /reports links activate when the path is /reports
-  // (the tab query param is the only differentiator). Match both
-  // /reports/foo entries on prefix.
-  if (href.startsWith('/reports?')) return pathname === '/reports' || pathname.startsWith('/reports/');
+function reportsTabFromHref(href: string): string | null {
+  const [, query = ""] = href.split("?");
+  return new URLSearchParams(query).get("tab");
+}
+
+function isActiveLink(
+  pathname: string,
+  activeReportsTab: string | null,
+  href: string,
+): boolean {
+  if (href === "/admin") return pathname.startsWith("/admin");
+  if (href === "/head/report") return pathname === "/head/report";
+  if (href === "/head/dashboard") return pathname === "/head/dashboard";
+  if (href.startsWith("/reports?")) {
+    const hrefTab = reportsTabFromHref(href);
+    if (pathname === "/reports") return activeReportsTab === hrefTab;
+    return hrefTab === "published" && pathname.startsWith("/reports/");
+  }
   return pathname.startsWith(href);
 }
 
 function getLogoHref(role: Role): string {
   switch (role) {
-    case 'admin':
-    case 'head':
-      return '/head/dashboard';
-    case 'viewer':
+    case "admin":
+    case "head":
+      return "/head/dashboard";
+    case "viewer":
       // UX-17 (Phase 35-08): merged reports page; viewer default is the
       // published archive tab.
-      return '/reports?tab=published';
-    case 'lead':
+      return "/reports?tab=published";
+    case "lead":
     default:
-      return '/lead/report';
+      return "/lead/report";
   }
 }
 
@@ -85,7 +99,7 @@ function getLogoHref(role: Role): string {
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const first = parts[0];
-  if (!first) return '??';
+  if (!first) return "??";
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
   const last = parts[parts.length - 1] ?? first;
   return (first.charAt(0) + last.charAt(0)).toUpperCase();
@@ -96,16 +110,16 @@ function NavIcon({ href }: { readonly href: string }) {
   const common = {
     width: 14,
     height: 14,
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
     strokeWidth: 2,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    'aria-hidden': true,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
   };
   switch (href) {
-    case '/lead/report':
+    case "/lead/report":
       // file with edit pencil — "My Report"
       return (
         <svg {...common}>
@@ -113,8 +127,8 @@ function NavIcon({ href }: { readonly href: string }) {
           <polyline points="14 2 14 8 20 8" />
         </svg>
       );
-    case '/lead/history':
-    case '/reports?tab=drafts':
+    case "/lead/history":
+    case "/reports?tab=drafts":
       // clock — "My History"
       return (
         <svg {...common}>
@@ -122,7 +136,7 @@ function NavIcon({ href }: { readonly href: string }) {
           <polyline points="12 6 12 12 16 14" />
         </svg>
       );
-    case '/head/dashboard':
+    case "/head/dashboard":
       // grid — "Dashboard"
       return (
         <svg {...common}>
@@ -132,7 +146,7 @@ function NavIcon({ href }: { readonly href: string }) {
           <rect x="3" y="14" width="7" height="7" />
         </svg>
       );
-    case '/head/report':
+    case "/head/report":
       // document with chart bars — "Weekly Report"
       return (
         <svg {...common}>
@@ -143,15 +157,15 @@ function NavIcon({ href }: { readonly href: string }) {
           <line x1="17" y1="14" x2="17" y2="17" />
         </svg>
       );
-    case '/reports/history':
-    case '/reports?tab=published':
+    case "/reports/history":
+    case "/reports?tab=published":
       // folder/archive — "Archive"
       return (
         <svg {...common}>
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
         </svg>
       );
-    case '/admin':
+    case "/admin":
       // gear — "Admin"
       return (
         <svg {...common}>
@@ -166,14 +180,16 @@ function NavIcon({ href }: { readonly href: string }) {
 
 export function NavBar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useSession();
+  const activeReportsTab = searchParams.get("tab") ?? null;
 
   const role: Role | null = user?.role ?? null;
   const visibleLinks: ReadonlyArray<NavLink> =
     role === null ? [] : NAV_LINKS.filter((link) => link.roles.includes(role));
 
-  const initials = user ? initialsFromName(user.name) : '?';
-  const roleLabel = role ? getRoleLabel(role) : '';
+  const initials = user ? initialsFromName(user.name) : "?";
+  const roleLabel = role ? getRoleLabel(role) : "";
   // Defensive: if a name happens to match the role label verbatim
   // (legacy seed quirk), show only the name to avoid "X · X".
   const nameRoleSame = user ? user.name === roleLabel : false;
@@ -183,7 +199,7 @@ export function NavBar() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo — N-1: monogram "CR" on tealA */}
         <a
-          href={role ? getLogoHref(role) : '/'}
+          href={role ? getLogoHref(role) : "/"}
           className="flex items-center gap-2.5 py-4"
           aria-label="CustomReport home"
         >
@@ -200,19 +216,22 @@ export function NavBar() {
         {/* Navigation — N-2: pill active state, N-3: per-link icon.
             whitespace-nowrap on each pill prevents wrapping when the
             right-rail period+avatar squeeze the available width. */}
-        <nav aria-label="Main navigation" className="hidden sm:flex sm:items-center sm:gap-0.5">
+        <nav
+          aria-label="Main navigation"
+          className="hidden sm:flex sm:items-center sm:gap-0.5"
+        >
           {visibleLinks.map((link) => {
-            const active = isActiveLink(pathname, link.href);
+            const active = isActiveLink(pathname, activeReportsTab, link.href);
             return (
               <a
                 key={link.href}
                 href={link.href}
                 className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-1.5 text-[13px] transition-colors ${
                   active
-                    ? 'bg-[var(--color-success)] font-semibold text-[var(--color-starbucks-accent)]'
-                    : 'font-medium text-[var(--color-muted-foreground)] hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]'
+                    ? "bg-[var(--color-success)] font-semibold text-[var(--color-starbucks-accent)]"
+                    : "font-medium text-[var(--color-muted-foreground)] hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"
                 }`}
-                aria-current={active ? 'page' : undefined}
+                aria-current={active ? "page" : undefined}
               >
                 <NavIcon href={link.href} />
                 {link.label}
@@ -241,7 +260,10 @@ export function NavBar() {
               <span className="whitespace-nowrap text-[13px] text-[var(--color-foreground)]">
                 <span className="font-semibold">{user.name}</span>
                 {!nameRoleSame && (
-                  <span className="text-[var(--color-muted-foreground)]"> · {roleLabel}</span>
+                  <span className="text-[var(--color-muted-foreground)]">
+                    {" "}
+                    · {roleLabel}
+                  </span>
                 )}
               </span>
             </div>
@@ -263,7 +285,12 @@ export function NavBar() {
         <div className="h-[3px] rounded-t bg-[var(--color-starbucks-accent)]" />
       </div>
 
-      <MobileNav links={visibleLinks} pathname={pathname} role={role} />
+      <MobileNav
+        links={visibleLinks}
+        pathname={pathname}
+        activeReportsTab={activeReportsTab}
+        role={role}
+      />
     </header>
   );
 }
@@ -273,10 +300,12 @@ export function NavBar() {
 function MobileNav({
   links,
   pathname,
+  activeReportsTab,
   role,
 }: {
   readonly links: ReadonlyArray<NavLink>;
   readonly pathname: string;
+  readonly activeReportsTab: string | null;
   readonly role: Role | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -312,7 +341,11 @@ function MobileNav({
           </SheetHeader>
           <nav aria-label="Mobile navigation" className="flex flex-col p-2">
             {links.map((link) => {
-              const active = isActiveLink(pathname, link.href);
+              const active = isActiveLink(
+                pathname,
+                activeReportsTab,
+                link.href,
+              );
               return (
                 <a
                   key={link.href}
@@ -320,10 +353,10 @@ function MobileNav({
                   onClick={() => setOpen(false)}
                   className={`flex h-11 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors ${
                     active
-                      ? 'bg-[var(--color-success)] text-[var(--color-starbucks-accent)]'
-                      : 'text-[var(--color-foreground)] hover:bg-[var(--color-muted)]'
+                      ? "bg-[var(--color-success)] text-[var(--color-starbucks-accent)]"
+                      : "text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
                   }`}
-                  aria-current={active ? 'page' : undefined}
+                  aria-current={active ? "page" : undefined}
                 >
                   <NavIcon href={link.href} />
                   {link.label}

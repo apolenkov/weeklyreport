@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { isoWeekNumber, formatDateRange } from '../../lib/mappers/lead-history';
 
 import { useTRPC } from '../../lib/trpc-context';
+import { logClientError } from '../../lib/client-error-reporting';
 import { mapWeeklyReport } from '../../lib/mappers';
 import {
   invalidateDashboard,
@@ -125,13 +126,20 @@ export function WeeklyReportPage({
 
   useEffect(() => {
     if (weeklyQ.isError) {
+      logClientError('weeklyReport.get.load_failed', weeklyQ.error, {
+        component: 'WeeklyReportPage',
+        procedure: 'weeklyReport.get',
+        reportId: reportId ?? null,
+        period: period ?? null,
+        authorId: focusedAuthorId,
+      });
       toast.error(
         weeklyQ.error instanceof Error
           ? `Failed to load weekly report: ${weeklyQ.error.message}`
           : 'Failed to load weekly report',
       );
     }
-  }, [weeklyQ.isError, weeklyQ.error]);
+  }, [weeklyQ.isError, weeklyQ.error, reportId, period, focusedAuthorId]);
 
   // 35-07: bare `/head/report` -> redirect to `/head/report/<reportId>`
   // once the active reportId is known. Skipped when:

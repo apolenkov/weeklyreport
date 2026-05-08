@@ -8,6 +8,8 @@ import { PdfExportDomainError } from '../../modules/pdf-export/pdf-export.servic
 import { ReminderDomainError } from '../../modules/reminders/reminders.service.js';
 import { CarryOverDomainError } from '../../modules/carry-over/carry-over.service.js';
 import { ArchiveDomainError } from '../../modules/archive/archive.service.js';
+import { WeeklyReportDomainError } from '../../modules/weekly-report/weekly-report.service.js';
+import { LeadFormDomainError } from '../../modules/report-sections/lead-form.service.js';
 
 export function mapDomainError(error: unknown): TRPCError {
   if (error instanceof TRPCError) {
@@ -27,6 +29,14 @@ export function mapDomainError(error: unknown): TRPCError {
   }
 
   if (error instanceof PdfExportDomainError || error instanceof ArchiveDomainError) {
+    return new TRPCError({ code: 'NOT_FOUND', message: error.message, cause: error });
+  }
+
+  if (error instanceof WeeklyReportDomainError) {
+    return new TRPCError({ code: 'NOT_FOUND', message: error.message, cause: error });
+  }
+
+  if (error instanceof LeadFormDomainError) {
     return new TRPCError({ code: 'NOT_FOUND', message: error.message, cause: error });
   }
 

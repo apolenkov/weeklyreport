@@ -111,7 +111,7 @@ Without `&email=...` the `lead` role uses the primary seeded lead,
 ### Dev-only tools
 
 - **Role switcher** — `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` in `apps/web/.env.local` reveals a yellow "DEV: switch role" button at bottom-right of every authenticated page. Drops a dropdown to swap identity, wipe & reseed, or log out without retyping URLs.
-- **Manual UAT wipe** — the role switcher action `Wipe reports (manual UAT)` deletes report history/content/PDF jobs/reminder executions/carry-over/AI insights, SDLC stage assignments, and local Redis queue state; keeps users/roles/products/stages/app settings; and creates one empty open report with lead sections plus empty product-status placeholders from product ownership. Terminal equivalent: `pnpm db:wipe:manual-uat`; inside Docker: `docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts`.
+- **Manual UAT wipe** — the role switcher action `Wipe reports (manual UAT)` deletes report history/content/PDF jobs/reminder executions/carry-over/AI insights, SDLC stage assignments, and local Redis queue state; keeps users/roles/products/stages/app settings; and creates one empty open report with lead sections. Products appear in a lead report only after SDLC stage assignments are configured. Terminal equivalent: `pnpm db:wipe:manual-uat`; inside Docker: `docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts`.
 - **Mailpit** — outbound email goes to a local catch-all SMTP. UI at http://localhost:8025 shows every reminder/escalation rendered as HTML. The Compose service is still named `mailhog` for backward-compatible env wiring.
 - **Observability** — `pnpm observability:up` starts Prometheus (http://localhost:9090), Grafana (http://localhost:3003, `admin`/`admin`), Postgres exporter, and Redis exporter against the running local stack.
 
@@ -130,6 +130,13 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
+
+# API integration gate against .env.test customreport_test
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T postgres \
+  sh -lc 'createdb -U customreport customreport_test 2>/dev/null || true'
+DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport_test \
+  pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
+pnpm --filter @customreport/api test:integration
 
 # Full local container gate; destructive for the local Docker DB
 pnpm docker:local:verify
@@ -185,6 +192,7 @@ open http://localhost:3003
 | `PDF_EXPORT_JWT_SECRET is missing or too short` on PDF export    | The Zod schema in `apps/api/src/infrastructure/config/env.schema.ts` carries a dev default — confirm the new `apps/api/src/main.ts` line `process.env['PDF_EXPORT_JWT_SECRET'] ??= env.PDF_EXPORT_JWT_SECRET;` is present. Otherwise add to `.env`. |
 | `pdf-export` failed jobs mention a missing Playwright browser    | Rebuild/recreate the API container: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build api`. Then run the PDF sanity check above and retry failed jobs from `/admin?tab=jobs`.                                           |
 | Dashboard stays on skeleton after a report was published         | Check `weeklyReport.get` in API logs. The endpoint should fall back to the latest published period when no `open/reopened` period exists; this is covered by `weekly-report.prisma-repository.test.ts`.                                             |
+| Head/admin opening `/lead/report/<id>` logs `leadForm.byPeriod`  | This should redirect to `/head/report/<id>` unless `authorId` is present. If it logs a 5xx, check `LeadForm` role redirect and `LeadFormDomainError` mapping.                                                                                       |
 | `prisma migrate reset` blocked by AI-safety guard                | Re-run with `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=да` (Prisma 7 ai-fence).                                                                                                                                                                   |
 | `Cannot find module '@nestjs/schedule'`                          | Lockfile drift after partial install — run `pnpm install` from the repo root.                                                                                                                                                                       |
 

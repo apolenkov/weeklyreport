@@ -290,7 +290,7 @@ model Stage {
   name             String            @unique
   sortOrder        Int               @default(0)
   createdAt        DateTime          @default(now())
-  stageStatuses     StageStatus[]
+  stageStatuses    StageStatus[]
   stageAssignments StageAssignment[]
 }
 

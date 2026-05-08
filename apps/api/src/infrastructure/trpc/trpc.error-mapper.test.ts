@@ -10,6 +10,8 @@ import { PdfExportDomainError } from '../../modules/pdf-export/pdf-export.servic
 import { ReminderDomainError } from '../../modules/reminders/reminders.service.js';
 import { CarryOverDomainError } from '../../modules/carry-over/carry-over.service.js';
 import { ArchiveDomainError } from '../../modules/archive/archive.service.js';
+import { WeeklyReportDomainError } from '../../modules/weekly-report/weekly-report.service.js';
+import { LeadFormDomainError } from '../../modules/report-sections/lead-form.service.js';
 
 describe('mapDomainError', () => {
   // -----------------------------------------------------------------------
@@ -158,6 +160,26 @@ describe('mapDomainError', () => {
 
     expect(mapped.code).toBe('NOT_FOUND');
     expect(mapped.message).toContain('not found');
+  });
+
+  it('maps WeeklyReportDomainError to NOT_FOUND', () => {
+    const error = new WeeklyReportDomainError('Report xyz was not found.');
+    const mapped = mapDomainError(error);
+
+    expect(mapped.code).toBe('NOT_FOUND');
+    expect(mapped.message).toContain('not found');
+    expect(mapped.cause).toBe(error);
+  });
+
+  it('maps LeadFormDomainError to NOT_FOUND', () => {
+    const error = new LeadFormDomainError(
+      'No section found for user in report xyz.',
+    );
+    const mapped = mapDomainError(error);
+
+    expect(mapped.code).toBe('NOT_FOUND');
+    expect(mapped.message).toContain('No section found');
+    expect(mapped.cause).toBe(error);
   });
 
   // -----------------------------------------------------------------------

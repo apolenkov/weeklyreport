@@ -1,26 +1,32 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render } from "@testing-library/react";
 
-import type { Role } from '@customreport/shared';
+import type { Role } from "@customreport/shared";
 
-vi.mock('next/navigation', () => ({
-  usePathname: () => '/lead/report',
+const navigationMock = vi.hoisted(() => ({
+  pathname: "/lead/report",
+  searchParams: new URLSearchParams(),
+}));
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => navigationMock.pathname,
+  useSearchParams: () => navigationMock.searchParams,
 }));
 
 const useSessionMock = vi.fn();
-vi.mock('../../lib/session-provider', () => ({
+vi.mock("../../lib/session-provider", () => ({
   useSession: () => useSessionMock(),
 }));
 
 // Phase 33-04: NavBar now reads the active period via tRPC for the right-rail
 // badge. Tests don't exercise that surface — stub the proxy to a minimal
 // object that satisfies `trpc.weeklyReport.get.queryOptions(...)` calls.
-vi.mock('../../lib/trpc-context', () => ({
+vi.mock("../../lib/trpc-context", () => ({
   useTRPC: () => ({
     weeklyReport: {
       get: {
         queryOptions: () => ({
-          queryKey: ['weeklyReport', 'get'],
+          queryKey: ["weeklyReport", "get"],
           queryFn: async () => null,
           enabled: false,
         }),
@@ -31,18 +37,22 @@ vi.mock('../../lib/trpc-context', () => ({
 
 // useQuery without a real QueryClientProvider would crash; stub it for these
 // role-visibility tests since we don't care about the period badge here.
-vi.mock('@tanstack/react-query', () => ({
+vi.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: undefined, isLoading: false }),
 }));
 
-import { NavBar } from './nav-bar';
+import { NavBar } from "./nav-bar";
 
 function setRole(role: Role | null): void {
   if (role === null) {
-    useSessionMock.mockReturnValue({ user: null, isLoading: true, isAuthenticated: false });
+    useSessionMock.mockReturnValue({
+      user: null,
+      isLoading: true,
+      isAuthenticated: false,
+    });
   } else {
     useSessionMock.mockReturnValue({
-      user: { id: 'u1', name: 'Test User', email: 't@test.local', role },
+      user: { id: "u1", name: "Test User", email: "t@test.local", role },
       isLoading: false,
       isAuthenticated: true,
     });
@@ -61,89 +71,127 @@ function expectLinkMissing(container: HTMLElement, href: string): void {
   expect(linksInContainer(container, href).length).toBe(0);
 }
 
-describe('NavBar — AUTH-06 role-aware visibility (Phase 29-06)', () => {
+function setRoute(pathname: string, query = ""): void {
+  navigationMock.pathname = pathname;
+  navigationMock.searchParams = new URLSearchParams(query);
+}
+
+function expectActiveLink(container: HTMLElement, href: string): void {
+  expect(
+    container.querySelectorAll(`a[href="${href}"][aria-current="page"]`).length,
+  ).toBeGreaterThan(0);
+}
+
+function expectInactiveLink(container: HTMLElement, href: string): void {
+  expect(
+    container.querySelectorAll(`a[href="${href}"][aria-current="page"]`).length,
+  ).toBe(0);
+}
+
+describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
   beforeEach(() => {
     useSessionMock.mockReset();
+    setRoute("/lead/report");
   });
 
-  it('viewer does NOT see /admin link in the DOM', () => {
-    setRole('viewer');
+  it("viewer does NOT see /admin link in the DOM", () => {
+    setRole("viewer");
     const { container } = render(<NavBar />);
-    expectLinkMissing(container, '/admin');
+    expectLinkMissing(container, "/admin");
   });
 
-  it('viewer does NOT see /head/* links (Dashboard, Weekly Report)', () => {
-    setRole('viewer');
+  it("viewer does NOT see /head/* links (Dashboard, Weekly Report)", () => {
+    setRole("viewer");
     const { container } = render(<NavBar />);
-    expectLinkMissing(container, '/head/dashboard');
-    expectLinkMissing(container, '/head/report');
+    expectLinkMissing(container, "/head/dashboard");
+    expectLinkMissing(container, "/head/report");
   });
 
-  it('viewer does NOT see /lead/* links (My Report, My History)', () => {
-    setRole('viewer');
+  it("viewer does NOT see /lead/* links (My Report, My History)", () => {
+    setRole("viewer");
     const { container } = render(<NavBar />);
-    expectLinkMissing(container, '/lead/report');
-    expectLinkMissing(container, '/reports?tab=drafts');
+    expectLinkMissing(container, "/lead/report");
+    expectLinkMissing(container, "/reports?tab=drafts");
   });
 
-  it('viewer DOES see /reports/* links (Archive)', () => {
-    setRole('viewer');
+  it("viewer DOES see /reports/* links (Archive)", () => {
+    setRole("viewer");
     const { container } = render(<NavBar />);
-    expectLinkExists(container, '/reports?tab=published');
+    expectLinkExists(container, "/reports?tab=published");
   });
 
-  it('lead does NOT see /head/* links but DOES see /lead/* and /reports/*', () => {
-    setRole('lead');
+  it("lead does NOT see /head/* links but DOES see /lead/* and /reports/*", () => {
+    setRole("lead");
     const { container } = render(<NavBar />);
-    expectLinkMissing(container, '/head/dashboard');
-    expectLinkMissing(container, '/head/report');
-    expectLinkExists(container, '/lead/report');
-    expectLinkExists(container, '/reports?tab=drafts');
-    expectLinkExists(container, '/reports?tab=published');
+    expectLinkMissing(container, "/head/dashboard");
+    expectLinkMissing(container, "/head/report");
+    expectLinkExists(container, "/lead/report");
+    expectLinkExists(container, "/reports?tab=drafts");
+    expectLinkExists(container, "/reports?tab=published");
   });
 
-  it('lead does NOT see /admin link', () => {
-    setRole('lead');
+  it("lead does NOT see /admin link", () => {
+    setRole("lead");
     const { container } = render(<NavBar />);
-    expectLinkMissing(container, '/admin');
+    expectLinkMissing(container, "/admin");
   });
 
-  it('head sees /admin link in the DOM', () => {
-    setRole('head');
+  it("head sees /admin link in the DOM", () => {
+    setRole("head");
     const { container } = render(<NavBar />);
-    expectLinkExists(container, '/admin');
+    expectLinkExists(container, "/admin");
   });
 
-  it('head sees /head/* links (Dashboard, Weekly Report)', () => {
-    setRole('head');
+  it("head sees /head/* links (Dashboard, Weekly Report)", () => {
+    setRole("head");
     const { container } = render(<NavBar />);
-    expectLinkExists(container, '/head/dashboard');
-    expectLinkExists(container, '/head/report');
+    expectLinkExists(container, "/head/dashboard");
+    expectLinkExists(container, "/head/report");
   });
 
-  it('admin sees /admin link', () => {
-    setRole('admin');
+  it("admin sees /admin link", () => {
+    setRole("admin");
     const { container } = render(<NavBar />);
-    expectLinkExists(container, '/admin');
+    expectLinkExists(container, "/admin");
   });
 
-  it('null session (still loading) renders NO role-gated links', () => {
+  it("null session (still loading) renders NO role-gated links", () => {
     setRole(null);
     const { container } = render(<NavBar />);
-    expectLinkMissing(container, '/admin');
-    expectLinkMissing(container, '/head/dashboard');
-    expectLinkMissing(container, '/lead/report');
+    expectLinkMissing(container, "/admin");
+    expectLinkMissing(container, "/head/dashboard");
+    expectLinkMissing(container, "/lead/report");
   });
 
-  it('hidden links are absent from the DOM (filtered before render — not CSS-hidden)', () => {
+  it("hidden links are absent from the DOM (filtered before render — not CSS-hidden)", () => {
     // T0 invariant from the plan: queryByText returning null is the proof.
     // Critical for AUTH-06 — a hostile viewer who reads the rendered HTML must
     // see no enumeration of /admin or /head routes.
-    setRole('viewer');
+    setRole("viewer");
     const { container } = render(<NavBar />);
-    expectLinkMissing(container, '/admin');
-    expectLinkMissing(container, '/head/dashboard');
-    expectLinkMissing(container, '/head/report');
-    expectLinkMissing(container, '/lead/report');
+    expectLinkMissing(container, "/admin");
+    expectLinkMissing(container, "/head/dashboard");
+    expectLinkMissing(container, "/head/report");
+    expectLinkMissing(container, "/lead/report");
+  });
+
+  it("activates only My History on /reports?tab=drafts", () => {
+    setRole("lead");
+    setRoute("/reports", "tab=drafts");
+
+    const { container } = render(<NavBar />);
+
+    expectActiveLink(container, "/reports?tab=drafts");
+    expectInactiveLink(container, "/reports?tab=published");
+  });
+
+  it("activates only Archive on /reports?tab=published", () => {
+    setRole("lead");
+    setRoute("/reports", "tab=published");
+
+    const { container } = render(<NavBar />);
+
+    expectInactiveLink(container, "/reports?tab=drafts");
+    expectActiveLink(container, "/reports?tab=published");
   });
 });
