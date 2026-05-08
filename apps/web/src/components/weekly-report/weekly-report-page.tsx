@@ -192,7 +192,9 @@ export function WeeklyReportPage({
     // page, so clicking Toggle All also toggled the side menu.
     const root = sectionsRef.current;
     if (!root) return;
-    const buttons = root.querySelectorAll<HTMLButtonElement>('[aria-expanded]');
+    const buttons = root.querySelectorAll<HTMLButtonElement>(
+      '[data-product-accordion-toggle="true"]',
+    );
     const anyExpanded = Array.from(buttons).some(
       (btn) => btn.getAttribute('aria-expanded') === 'true',
     );
@@ -241,6 +243,7 @@ export function WeeklyReportPage({
           hasReportContent(report),
       )?.id
     : undefined;
+  const hasExpandableProducts = products.some(hasReportContent);
   const scrollTargetProductId =
     authoredProductIds.length > 0 ? authoredProductIds[0] : undefined;
   // HeadPeriodNavigator currently renders one period entry; future plans may
@@ -269,8 +272,14 @@ export function WeeklyReportPage({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
-            onClick={handleToggleAll}
+            className={`btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors ${
+              hasExpandableProducts
+                ? 'hover:bg-[#f8f6f2]'
+                : 'cursor-not-allowed opacity-50'
+            }`}
+            onClick={hasExpandableProducts ? handleToggleAll : undefined}
+            disabled={!hasExpandableProducts}
+            aria-disabled={!hasExpandableProducts}
             title="Toggle All"
           >
             <CollapseIcon />

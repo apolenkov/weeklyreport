@@ -63,18 +63,27 @@ function reportsTabFromHref(href: string): string | null {
   return new URLSearchParams(query).get("tab");
 }
 
+function isPublishedReportPath(pathname: string): boolean {
+  return (
+    pathname === "/reports/history" ||
+    /^\/reports\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+      pathname,
+    )
+  );
+}
+
 function isActiveLink(
   pathname: string,
   activeReportsTab: string | null,
   href: string,
 ): boolean {
   if (href === "/admin") return pathname.startsWith("/admin");
-  if (href === "/head/report") return pathname === "/head/report";
+  if (href === "/head/report") return pathname.startsWith("/head/report");
   if (href === "/head/dashboard") return pathname === "/head/dashboard";
   if (href.startsWith("/reports?")) {
     const hrefTab = reportsTabFromHref(href);
     if (pathname === "/reports") return activeReportsTab === hrefTab;
-    return hrefTab === "published" && pathname.startsWith("/reports/");
+    return hrefTab === "published" && isPublishedReportPath(pathname);
   }
   return pathname.startsWith(href);
 }

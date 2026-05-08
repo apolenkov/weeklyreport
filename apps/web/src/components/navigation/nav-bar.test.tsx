@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
 
@@ -149,6 +153,16 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkExists(container, "/head/report");
   });
 
+  it("activates Weekly Report on addressed /head/report/[reportId] pages", () => {
+    setRole("head");
+    setRoute("/head/report/a0000000-0000-4000-8000-000000000001");
+
+    const { container } = render(<NavBar />);
+
+    expectActiveLink(container, "/head/report");
+    expectInactiveLink(container, "/head/dashboard");
+  });
+
   it("admin sees /admin link", () => {
     setRole("admin");
     const { container } = render(<NavBar />);
@@ -193,5 +207,14 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
 
     expectInactiveLink(container, "/reports?tab=drafts");
     expectActiveLink(container, "/reports?tab=published");
+  });
+
+  it("does not activate Archive on report analytics routes", () => {
+    setRole("viewer");
+    setRoute("/reports/trends");
+
+    const { container } = render(<NavBar />);
+
+    expectInactiveLink(container, "/reports?tab=published");
   });
 });

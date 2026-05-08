@@ -44,72 +44,104 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
 
 export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
   const [expanded, setExpanded] = useState(true);
+  const hasItems = items.length > 0;
+  const isExpanded = hasItems && expanded;
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
+    <div
+      className={`overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] ${
+        hasItems
+          ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)]'
+          : 'bg-[rgba(0,0,0,0.035)]'
+      }`}
+    >
       <button
         type="button"
-        className="flex w-full cursor-pointer items-center justify-between p-4 transition-colors hover:bg-[#f8f6f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
-        onClick={() => setExpanded(!expanded)}
-        aria-expanded={expanded}
+        className={`flex w-full items-center justify-between p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
+          hasItems
+            ? 'cursor-pointer hover:bg-[#f8f6f2]'
+            : 'cursor-default opacity-65'
+        }`}
+        onClick={() => {
+          if (hasItems) setExpanded(!expanded);
+        }}
+        disabled={!hasItems}
+        aria-disabled={!hasItems}
+        aria-expanded={isExpanded}
       >
         <div className="flex items-center gap-3">
           <AlertIcon />
-          <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-destructive)]">
+          <span
+            className={`font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] ${
+              hasItems
+                ? 'text-[var(--color-destructive)]'
+                : 'text-[var(--color-muted-foreground)]'
+            }`}
+          >
             Blocked & At Risk
           </span>
-          <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[#fee2e2] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums text-[var(--color-destructive)]">
+          <span
+            className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums ${
+              hasItems
+                ? 'bg-[#fee2e2] text-[var(--color-destructive)]'
+                : 'bg-[var(--color-muted)] text-[var(--color-muted-foreground)]'
+            }`}
+          >
             {items.length} issues
           </span>
         </div>
-        <ChevronDown expanded={expanded} />
+        <span className={hasItems ? undefined : 'opacity-45'}>
+          <ChevronDown expanded={isExpanded} />
+        </span>
       </button>
 
-      <div
-        className="grid transition-[grid-template-rows] duration-300"
-        style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
-      >
-        <div className="min-h-0 overflow-hidden">
-          <div className="space-y-2 px-4 pb-4">
-            {items.map((item) => {
-              const isBlocked = item.severity === 'blocked';
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 rounded-lg p-3"
-                  style={{
-                    background: isBlocked ? '#fdf8f8' : '#fffcf5',
-                    border: isBlocked
-                      ? '1px solid rgba(200,32,20,0.1)'
-                      : '1px solid rgba(212,160,23,0.1)',
-                  }}
-                >
-                  <span
-                    className="inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
+      {hasItems ? (
+        <div
+          className="grid transition-[grid-template-rows] duration-300"
+          style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="space-y-2 px-4 pb-4 pt-4">
+              {items.map((item) => {
+                const isBlocked = item.severity === 'blocked';
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 rounded-lg p-3"
                     style={{
-                      background: isBlocked ? '#fee2e2' : '#fef3c7',
-                      color: isBlocked ? 'var(--color-destructive)' : '#8a6d1b',
+                      background: isBlocked ? '#fdf8f8' : '#fffcf5',
+                      border: isBlocked
+                        ? '1px solid rgba(200,32,20,0.1)'
+                        : '1px solid rgba(212,160,23,0.1)',
                     }}
                   >
-                    {isBlocked ? 'Blocked' : 'At Risk'}
-                  </span>
-                  <div className="flex-1">
-                    <strong className="text-sm">
-                      {item.product} &middot; {item.stage}
-                    </strong>{' '}
-                    <span className="text-xs text-[var(--color-muted-foreground)]">
-                      &middot; {item.assignee}
+                    <span
+                      className="inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
+                      style={{
+                        background: isBlocked ? '#fee2e2' : '#fef3c7',
+                        color: isBlocked ? 'var(--color-destructive)' : '#8a6d1b',
+                      }}
+                    >
+                      {isBlocked ? 'Blocked' : 'At Risk'}
                     </span>
-                    <div className="text-xs text-[var(--color-muted-foreground)]">
-                      {item.description}
+                    <div className="flex-1">
+                      <strong className="text-sm">
+                        {item.product} &middot; {item.stage}
+                      </strong>{' '}
+                      <span className="text-xs text-[var(--color-muted-foreground)]">
+                        &middot; {item.assignee}
+                      </span>
+                      <div className="text-xs text-[var(--color-muted-foreground)]">
+                        {item.description}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

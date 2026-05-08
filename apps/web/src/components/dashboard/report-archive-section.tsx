@@ -96,7 +96,7 @@ export function ReportArchiveSection({ currentReportId }: ReportArchiveSectionPr
             <a
               key={report.id}
               href={href}
-              className="group cursor-pointer rounded-[var(--radius)] border bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)] transition-[border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-[var(--color-starbucks-accent)] hover:shadow-[0_10px_24px_-18px_rgba(0,0,0,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
+              className="group cursor-pointer rounded-[var(--radius)] border bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)] transition-[border-color,box-shadow] duration-150 hover:border-[var(--color-starbucks-accent)] hover:shadow-[0_10px_24px_-18px_rgba(0,0,0,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
               style={{
                 borderLeft: `3px solid ${
                   isActive ? 'var(--color-starbucks-accent)' : 'var(--color-border)'
