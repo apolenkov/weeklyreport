@@ -357,7 +357,9 @@ test.describe("SC-307: Browser back/forward navigation", () => {
       timeout: 15_000,
     });
 
-    await headPage.goto("/head/report");
+    await headPage.goto(
+      "/head/report/a0000000-0000-4000-8000-000000000001?authorId=a0000000-0000-4000-8000-000000000014",
+    );
     await headPage.waitForSelector("#main-content", {
       state: "visible",
       timeout: 15_000,
@@ -370,6 +372,12 @@ test.describe("SC-307: Browser back/forward navigation", () => {
       timeout: 15_000,
     });
     expect(headPage.url()).toContain("/head/dashboard");
+    await expect(headPage.getByText("Loading current period")).not.toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(headPage.getByText("Activity This Period")).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test("SC-307: forward after back returns to the original page", async ({
