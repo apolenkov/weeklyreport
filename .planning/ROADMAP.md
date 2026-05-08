@@ -234,13 +234,39 @@ Plans:
 <details>
 <summary>v5.0 Production Integration (Phases 20-26) - SHIPPED 2026-04-25</summary>
 
-- [x] **Phase 20: Seed & Type Foundation** - Mockup-aligned seed (12 products, 6 leads, 7 stages, 2 periods, idempotent) + mapper layer with 27 tests
-- [x] **Phase 21: tRPC Provider & Client Wiring** - TRPCProvider + tanstack-react-query, 7 container migrations, +99 tests
-- [x] **Phase 22: Interactivity & Status-Risk Sync** - 72 buttons wired, autosave, cursor pagination, SyncSource ref pattern, +156 tests
-- [x] **Phase 23: PDF & Jobs** - BullMQ + Playwright + /pdfs static mount + ExportPdfButton with polling, +37 tests
-- [x] **Phase 24: Auth Guards & Session** - proxy.ts cookie guard + SessionProvider + 401 interceptor + open-redirect sanitization, +16 tests
-- [x] **Phase 25: Production Logging** - nestjs-cls + correlation IDs + async file rotation + tRPC request/response logging, 398/398 api unit tests
-- [x] **Phase 26: E2E Integration Tests** - Dual-server Playwright config + 21 integration tests across 7 specs, 339 mock tests preserved
+### Phase 20: Seed & Type Foundation
+
+Mockup-aligned seed (12 products, 6 leads, 7 stages, 2 periods, idempotent)
+and mapper layer with 27 tests.
+
+### Phase 21: tRPC Provider & Client Wiring
+
+TRPCProvider, tanstack-react-query, 7 container migrations, and +99 tests.
+
+### Phase 22: Interactivity & Status-Risk Sync
+
+72 buttons wired, autosave, cursor pagination, SyncSource ref pattern, and
++156 tests.
+
+### Phase 23: PDF & Jobs
+
+BullMQ, Playwright, /pdfs static mount, and ExportPdfButton polling with +37
+tests.
+
+### Phase 24: Auth Guards & Session
+
+proxy.ts cookie guard, SessionProvider, 401 interceptor, open-redirect
+sanitization, and +16 tests.
+
+### Phase 25: Production Logging
+
+nestjs-cls, correlation IDs, async file rotation, tRPC request/response logging,
+and 398/398 api unit tests.
+
+### Phase 26: E2E Integration Tests
+
+Dual-server Playwright config, 21 integration tests across 7 specs, and 339 mock
+tests preserved.
 
 Full details: [v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 
