@@ -1,7 +1,7 @@
-import 'dotenv/config';
+import "dotenv/config";
 
-import pg from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
+import pg from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import {
   PrismaClient,
   Role,
@@ -13,10 +13,11 @@ import {
   PeriodStatus,
   ReminderRuleKind,
   ReminderRuleStatus,
-} from '@prisma/client';
+} from "@prisma/client";
 
 import {
   SEED_USERS,
+  SEED_REPORTING_GROUPS,
   SEED_PRODUCTS,
   SEED_STAGES,
   SEED_REPORTS,
@@ -27,14 +28,14 @@ import {
   LEAD_DMITRY_ID,
   LEAD_OLGA_ID,
   LEAD_SERGEY_ID,
-} from './seed-constants.js';
+} from "./seed-constants.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 // Map seed user role string to Prisma Role enum
-function toRole(role: 'head' | 'viewer' | 'lead'): Role {
+function toRole(role: "head" | "viewer" | "lead"): Role {
   return Role[role];
 }
 
@@ -68,30 +69,42 @@ function publishedOffset(days: number, hours = 10, minutes = 0): Date {
 //   stageAssignmentId: 00000000b0{P}{S}     -> 10 + 1 + 1 = 12 (P is hex 0..b)
 //   riskId:            00000000090{NN}      -> 11 + 2-digit seq with padStart(2)
 //   decisionId:        00000000000a{S}      -> 11 + 1 = 12
-function sectionId(reportSuffix: '1' | '2', leadIndex: number): string {
+function sectionId(reportSuffix: "1" | "2", leadIndex: number): string {
   return `a0000000-0000-4000-8000-0000000040${reportSuffix}${leadIndex}`;
 }
 
-function itemId(reportSuffix: '1' | '2', leadIndex: number, itemSeq: number): string {
+function itemId(
+  reportSuffix: "1" | "2",
+  leadIndex: number,
+  itemSeq: number,
+): string {
   return `a0000000-0000-4000-8000-000000005${reportSuffix}${leadIndex}${itemSeq}`;
 }
 
-function projectStatusId(reportSuffix: '1' | '2', leadIndex: number, prodSeq: number): string {
+function projectStatusId(
+  reportSuffix: "1" | "2",
+  leadIndex: number,
+  prodSeq: number,
+): string {
   return `a0000000-0000-4000-8000-000000006${reportSuffix}${leadIndex}${prodSeq}`;
 }
 
-function priorityId(reportSuffix: '1' | '2', leadIndex: number, rank: number): string {
+function priorityId(
+  reportSuffix: "1" | "2",
+  leadIndex: number,
+  rank: number,
+): string {
   return `a0000000-0000-4000-8000-000000008${reportSuffix}${leadIndex}${rank}`;
 }
 
 function riskId(seq: number): string {
   // 0000000009 (10) + 2-digit seq = 12
-  return `a0000000-0000-4000-8000-0000000009${seq.toString().padStart(2, '0')}`;
+  return `a0000000-0000-4000-8000-0000000009${seq.toString().padStart(2, "0")}`;
 }
 
 function decisionId(seq: number): string {
   // 00000000000a (12) + seq -> would overflow; use 00000000a (9) + 3-digit pad = 12
-  return `a0000000-0000-4000-8000-00000000a${seq.toString().padStart(3, '0')}`;
+  return `a0000000-0000-4000-8000-00000000a${seq.toString().padStart(3, "0")}`;
 }
 
 function stageAssignmentId(prodSeq: number, stageSeq: number): string {
@@ -99,6 +112,24 @@ function stageAssignmentId(prodSeq: number, stageSeq: number): string {
 }
 
 async function main() {
+  // --- 0. Reporting groups ---
+  for (const group of SEED_REPORTING_GROUPS) {
+    await prisma.reportingGroup.upsert({
+      where: { id: group.id },
+      update: {
+        name: group.name,
+        description: group.description,
+        archived: false,
+      },
+      create: {
+        id: group.id,
+        name: group.name,
+        description: group.description,
+        archived: false,
+      },
+    });
+  }
+
   // --- 1. Users (1 head, 1 viewer, 6 leads) ---
   for (const user of SEED_USERS) {
     await prisma.user.upsert({
@@ -108,6 +139,7 @@ async function main() {
         name: user.name,
         role: toRole(user.role),
         samlId: user.samlId,
+        reportingGroupId: user.reportingGroupId,
       },
       create: {
         id: user.id,
@@ -115,6 +147,7 @@ async function main() {
         name: user.name,
         role: toRole(user.role),
         samlId: user.samlId,
+        reportingGroupId: user.reportingGroupId,
       },
     });
   }
@@ -162,13 +195,12 @@ async function main() {
       const recordId = stageAssignmentId(pIdx, offset);
       await prisma.stageAssignment.upsert({
         where: {
-          userId_stageId_projectId: {
-            userId: product.leadId,
+          stageId_projectId: {
             stageId: stage.id,
             projectId: product.id,
           },
         },
-        update: {},
+        update: { userId: product.leadId },
         create: {
           id: recordId,
           userId: product.leadId,
@@ -244,17 +276,17 @@ async function main() {
     name: string;
     status: ReportSectionStatus;
     submittedAt: Date | null;
-    products: typeof SEED_PRODUCTS[number][]; // products this lead owns
+    products: (typeof SEED_PRODUCTS)[number][]; // products this lead owns
   };
 
-  const productsByLead = (id: string): typeof SEED_PRODUCTS[number][] =>
+  const productsByLead = (id: string): (typeof SEED_PRODUCTS)[number][] =>
     SEED_PRODUCTS.filter((p) => p.leadId === id);
 
   const activeLeadConfigs: LeadConfig[] = [
     {
       leadId: LEAD_1_ID,
       leadIndex: 1,
-      name: 'Тимлид 1',
+      name: "Тимлид 1",
       status: ReportSectionStatus.submitted,
       submittedAt: activeOffset(1, 10),
       products: productsByLead(LEAD_1_ID),
@@ -262,7 +294,7 @@ async function main() {
     {
       leadId: LEAD_MARIA_ID,
       leadIndex: 2,
-      name: 'Мария К.',
+      name: "Мария К.",
       status: ReportSectionStatus.submitted,
       submittedAt: activeOffset(1, 14),
       products: productsByLead(LEAD_MARIA_ID),
@@ -270,7 +302,7 @@ async function main() {
     {
       leadId: LEAD_IGOR_ID,
       leadIndex: 3,
-      name: 'Игорь В.',
+      name: "Игорь В.",
       status: ReportSectionStatus.submitted,
       submittedAt: activeOffset(2, 9, 30),
       products: productsByLead(LEAD_IGOR_ID),
@@ -278,7 +310,7 @@ async function main() {
     {
       leadId: LEAD_DMITRY_ID,
       leadIndex: 4,
-      name: 'Дмитрий С.',
+      name: "Дмитрий С.",
       status: ReportSectionStatus.submitted,
       submittedAt: activeOffset(3, 11, 15),
       products: productsByLead(LEAD_DMITRY_ID),
@@ -286,7 +318,7 @@ async function main() {
     {
       leadId: LEAD_OLGA_ID,
       leadIndex: 5,
-      name: 'Ольга Н.',
+      name: "Ольга Н.",
       status: ReportSectionStatus.draft,
       submittedAt: null,
       products: productsByLead(LEAD_OLGA_ID),
@@ -294,7 +326,7 @@ async function main() {
     {
       leadId: LEAD_SERGEY_ID,
       leadIndex: 6,
-      name: 'Сергей Т.',
+      name: "Сергей Т.",
       status: ReportSectionStatus.draft,
       submittedAt: null,
       products: productsByLead(LEAD_SERGEY_ID),
@@ -316,68 +348,67 @@ async function main() {
   // Item texts in Russian. Product context comes from the item's projectId
   // relation — we don't repeat the product name in the text itself (UI shows
   // it in the section header).
-  const itemTextsByLead: Record<string, { current: string[]; next: string[] }> = {
-    [LEAD_1_ID]: {
-      current: [
-        'Закрыли модуль авторизации — JWT + refresh-token',
-        'Подключили OAuth2 партнёрского API, ждём подтверждения от партнёра',
-        'Оптимизировали поиск клиентов: p99 query 850ms → 180ms',
-        'Webhook retry с экспоненциальным backoff, dead-letter в Redis',
-      ],
-      next: [
-        'Интеграция SSO с порталом клиента (на стороне Ольги)',
-        'Раскатка A/B-тестинг фреймворка',
-      ],
-    },
-    [LEAD_MARIA_ID]: {
-      current: [
-        'QA транзакционного флоу — закрыли 12 из 15 кейсов',
-        'Регресс-сьют чекаута, добавили smoke-тесты для прода',
-        'Contract-тесты с провайдером платежей, нашли 2 расхождения по схеме',
-      ],
-      next: [
-        'Сценарии валидации промокодов (включая edge-cases с истечением)',
-        'Тесты сохранности корзины при смене устройства',
-      ],
-    },
-    [LEAD_IGOR_ID]: {
-      current: [
-        'Тюнинг pool_size в PgBouncer: 40 → 80, p99 latency упало на 22%',
-        'GPU autoscaling на базе HPA + custom metrics',
-        'Обновили DR-runbook: добавили checklist для multi-region failover',
-      ],
-      next: [
-        'Dry-run multi-region failover (запланирован на четверг 15:00)',
-      ],
-    },
-    [LEAD_DMITRY_ID]: {
-      current: [
-        'Миграция CI/CD на GitHub Actions: 8 из 12 пайплайнов уже там',
-        'Интеграция security scanner в pre-merge — блокирует Critical/High',
-        'Тюнинг WAF-правил, ложных срабатываний −40%',
-        'Baseline-скан уязвимостей контейнеров, отчёт собран по 17 образам',
-      ],
-      next: [
-        'Автоматизация ротации секретов (Vault transit-engine)',
-        'Оптимизация build-cache в Docker BuildKit',
-      ],
-    },
-    [LEAD_OLGA_ID]: {
-      current: [
-        'Закрыли интеграцию 3DS v2 — пилот на 5% трафика',
-        'Перевели на короткие сессии (refresh-токен 24 ч)',
-        'Починили двойное списание при timeout — добавили idempotency-key через Redis',
-      ],
-      next: [
-        'Подключить СБП-эквайринг (sandbox-ключи ожидаются 8 мая)',
-        'Biometric-вход — закрыть acceptance с UX',
-      ],
-    },
-    [LEAD_SERGEY_ID]: {
-      current: [],
-      next: [],
-    },
-  };
+  const itemTextsByLead: Record<string, { current: string[]; next: string[] }> =
+    {
+      [LEAD_1_ID]: {
+        current: [
+          "Закрыли модуль авторизации — JWT + refresh-token",
+          "Подключили OAuth2 партнёрского API, ждём подтверждения от партнёра",
+          "Оптимизировали поиск клиентов: p99 query 850ms → 180ms",
+          "Webhook retry с экспоненциальным backoff, dead-letter в Redis",
+        ],
+        next: [
+          "Интеграция SSO с порталом клиента (на стороне Ольги)",
+          "Раскатка A/B-тестинг фреймворка",
+        ],
+      },
+      [LEAD_MARIA_ID]: {
+        current: [
+          "QA транзакционного флоу — закрыли 12 из 15 кейсов",
+          "Регресс-сьют чекаута, добавили smoke-тесты для прода",
+          "Contract-тесты с провайдером платежей, нашли 2 расхождения по схеме",
+        ],
+        next: [
+          "Сценарии валидации промокодов (включая edge-cases с истечением)",
+          "Тесты сохранности корзины при смене устройства",
+        ],
+      },
+      [LEAD_IGOR_ID]: {
+        current: [
+          "Тюнинг pool_size в PgBouncer: 40 → 80, p99 latency упало на 22%",
+          "GPU autoscaling на базе HPA + custom metrics",
+          "Обновили DR-runbook: добавили checklist для multi-region failover",
+        ],
+        next: ["Dry-run multi-region failover (запланирован на четверг 15:00)"],
+      },
+      [LEAD_DMITRY_ID]: {
+        current: [
+          "Миграция CI/CD на GitHub Actions: 8 из 12 пайплайнов уже там",
+          "Интеграция security scanner в pre-merge — блокирует Critical/High",
+          "Тюнинг WAF-правил, ложных срабатываний −40%",
+          "Baseline-скан уязвимостей контейнеров, отчёт собран по 17 образам",
+        ],
+        next: [
+          "Автоматизация ротации секретов (Vault transit-engine)",
+          "Оптимизация build-cache в Docker BuildKit",
+        ],
+      },
+      [LEAD_OLGA_ID]: {
+        current: [
+          "Закрыли интеграцию 3DS v2 — пилот на 5% трафика",
+          "Перевели на короткие сессии (refresh-токен 24 ч)",
+          "Починили двойное списание при timeout — добавили idempotency-key через Redis",
+        ],
+        next: [
+          "Подключить СБП-эквайринг (sandbox-ключи ожидаются 8 мая)",
+          "Biometric-вход — закрыть acceptance с UX",
+        ],
+      },
+      [LEAD_SERGEY_ID]: {
+        current: [],
+        next: [],
+      },
+    };
 
   // Workflow status cycle
   const workflowCycle: ItemWorkflowStatus[] = [
@@ -386,7 +417,7 @@ async function main() {
     ItemWorkflowStatus.in_progress,
     ItemWorkflowStatus.blocked,
   ];
-  const tagCycle = ['feature', 'bugfix', 'infra', 'ops'];
+  const tagCycle = ["feature", "bugfix", "infra", "ops"];
 
   let totalSections = 0;
   let totalItems = 0;
@@ -394,7 +425,7 @@ async function main() {
   let totalPriorities = 0;
 
   for (const cfg of activeLeadConfigs) {
-    const secId = sectionId('1', cfg.leadIndex);
+    const secId = sectionId("1", cfg.leadIndex);
     await prisma.reportSection.upsert({
       where: {
         reportId_authorId: {
@@ -421,7 +452,7 @@ async function main() {
     if (cfg.leadId !== LEAD_SERGEY_ID) {
       for (let pIdx = 0; pIdx < cfg.products.length; pIdx++) {
         const product = cfg.products[pIdx]!;
-        const psId = projectStatusId('1', cfg.leadIndex, pIdx + 1);
+        const psId = projectStatusId("1", cfg.leadIndex, pIdx + 1);
         const lightIdx = (cfg.leadIndex + pIdx) % trafficCycle.length;
         await prisma.projectStatus.upsert({
           where: {
@@ -452,7 +483,7 @@ async function main() {
 
     for (let i = 0; i < texts.current.length; i++) {
       const product = products[i % products.length]!;
-      const id = itemId('1', cfg.leadIndex, itemSeq++);
+      const id = itemId("1", cfg.leadIndex, itemSeq++);
       await prisma.item.upsert({
         where: { id },
         update: {
@@ -478,7 +509,7 @@ async function main() {
 
     for (let i = 0; i < texts.next.length; i++) {
       const product = products[i % products.length]!;
-      const id = itemId('1', cfg.leadIndex, itemSeq++);
+      const id = itemId("1", cfg.leadIndex, itemSeq++);
       await prisma.item.upsert({
         where: { id },
         update: {
@@ -511,43 +542,43 @@ async function main() {
       if (cfg.leadId === LEAD_SERGEY_ID) return [];
       if (cfg.leadId === LEAD_OLGA_ID) {
         return [
-          'Стабилизация 3DS v2 на проде (закрыть L2-инциденты)',
-          'Раскатка СБП-эквайринга на 100% трафика после получения ключей',
-          'Согласовать финальный план PCI DSS аудита с безопасниками',
+          "Стабилизация 3DS v2 на проде (закрыть L2-инциденты)",
+          "Раскатка СБП-эквайринга на 100% трафика после получения ключей",
+          "Согласовать финальный план PCI DSS аудита с безопасниками",
         ];
       }
       if (cfg.leadId === LEAD_1_ID) {
         return [
-          'Закрыть OAuth2 интеграцию (партнёр снял rate-limit)',
-          'Передать SSO flow смежной команде к четвергу',
-          'Выкатить MVP дашборда на staging',
+          "Закрыть OAuth2 интеграцию (партнёр снял rate-limit)",
+          "Передать SSO flow смежной команде к четвергу",
+          "Выкатить MVP дашборда на staging",
         ];
       }
       if (cfg.leadId === LEAD_MARIA_ID) {
         return [
-          'Подписать регресс-сьют (15/15 кейсов зелёных)',
-          'Стабилизировать чекаут — закрыть последние 3 P2-бага',
-          'Завести контракт-тесты с провайдером платежей в CI',
+          "Подписать регресс-сьют (15/15 кейсов зелёных)",
+          "Стабилизировать чекаут — закрыть последние 3 P2-бага",
+          "Завести контракт-тесты с провайдером платежей в CI",
         ];
       }
       if (cfg.leadId === LEAD_IGOR_ID) {
         return [
-          'Закатить новый pool_size PgBouncer на прод после dry-run',
-          'Подтвердить GPU autoscaling на нагрузочном тесте',
-          'Опубликовать обновлённый DR-runbook для дежурных',
+          "Закатить новый pool_size PgBouncer на прод после dry-run",
+          "Подтвердить GPU autoscaling на нагрузочном тесте",
+          "Опубликовать обновлённый DR-runbook для дежурных",
         ];
       }
       // Dmitry
       return [
-        'Финализировать миграцию CI/CD на GitHub Actions (4 пайплайна осталось)',
-        'Раскатать тюнинг WAF после shadow-mode валидации',
-        'Автоматизировать ротацию секретов через Vault transit',
+        "Финализировать миграцию CI/CD на GitHub Actions (4 пайплайна осталось)",
+        "Раскатать тюнинг WAF после shadow-mode валидации",
+        "Автоматизировать ротацию секретов через Vault transit",
       ];
     })();
 
     for (let r = 0; r < priorityTexts.length; r++) {
       const rank = r + 1;
-      const id = priorityId('1', cfg.leadIndex, rank);
+      const id = priorityId("1", cfg.leadIndex, rank);
       await prisma.priority.upsert({
         where: {
           reportSectionId_rank: {
@@ -568,10 +599,10 @@ async function main() {
   }
 
   // ----- Risks (3-4 across active sections) -----
-  const primaryLeadSec = sectionId('1', 1);
-  const mariaSec = sectionId('1', 2);
-  const igorSec = sectionId('1', 3);
-  const dmitrySec = sectionId('1', 4);
+  const primaryLeadSec = sectionId("1", 1);
+  const mariaSec = sectionId("1", 2);
+  const igorSec = sectionId("1", 3);
+  const dmitrySec = sectionId("1", 4);
 
   // Russian-language risks mirroring the items above. Each risk ties to a
   // specific project so the form's per-product chip + risk-card pair stays
@@ -580,34 +611,38 @@ async function main() {
     {
       id: riskId(1),
       reportSectionId: primaryLeadSec,
-      projectId: 'a0000000-0000-4000-8000-000000000201', // CRM Platform
-      risk: 'Партнёрский OAuth2 API режет нас по rate-limit на пиковом трафике',
-      impact: 'Сдвигает milestone SSO на 1 неделю, блокирует смежную команду',
-      mitigation: 'Эскалирована заявка на расширение квоты, параллельно готовим batch-fallback',
+      projectId: "a0000000-0000-4000-8000-000000000201", // CRM Platform
+      risk: "Партнёрский OAuth2 API режет нас по rate-limit на пиковом трафике",
+      impact: "Сдвигает milestone SSO на 1 неделю, блокирует смежную команду",
+      mitigation:
+        "Эскалирована заявка на расширение квоты, параллельно готовим batch-fallback",
     },
     {
       id: riskId(2),
       reportSectionId: primaryLeadSec,
-      projectId: 'a0000000-0000-4000-8000-000000000202', // Data Analytics Suite
-      risk: 'Memory leak в ETL — OOM на больших экстрактах (>2M строк)',
-      impact: 'Блокирует релиз до получения патча от вендора',
-      mitigation: 'Патч ETA 8 мая, временно перешли на chunked extraction по 500K',
+      projectId: "a0000000-0000-4000-8000-000000000202", // Data Analytics Suite
+      risk: "Memory leak в ETL — OOM на больших экстрактах (>2M строк)",
+      impact: "Блокирует релиз до получения патча от вендора",
+      mitigation:
+        "Патч ETA 8 мая, временно перешли на chunked extraction по 500K",
     },
     {
       id: riskId(3),
       reportSectionId: igorSec,
-      projectId: 'a0000000-0000-4000-8000-000000000205', // Cloud Infrastructure
-      risk: 'Миграция PgBouncer требует ~30 мин downtime в проде',
-      impact: 'Окно обслуживания затрагивает зависимые сервисы (auth, payments)',
-      mitigation: 'Окно запланировано в субботу 02:00 МСК, rollback-план провалидирован',
+      projectId: "a0000000-0000-4000-8000-000000000205", // Cloud Infrastructure
+      risk: "Миграция PgBouncer требует ~30 мин downtime в проде",
+      impact:
+        "Окно обслуживания затрагивает зависимые сервисы (auth, payments)",
+      mitigation:
+        "Окно запланировано в субботу 02:00 МСК, rollback-план провалидирован",
     },
     {
       id: riskId(4),
       reportSectionId: dmitrySec,
-      projectId: 'a0000000-0000-4000-8000-000000000208', // Security Gateway
-      risk: 'Тюнинг WAF может выдавать false positives на пиковой нагрузке',
-      impact: 'Часть клиентских запросов может блокироваться без причины',
-      mitigation: 'Раскатка через shadow-mode + кнопка мгновенного rollback',
+      projectId: "a0000000-0000-4000-8000-000000000208", // Security Gateway
+      risk: "Тюнинг WAF может выдавать false positives на пиковой нагрузке",
+      impact: "Часть клиентских запросов может блокироваться без причины",
+      mitigation: "Раскатка через shadow-mode + кнопка мгновенного rollback",
     },
   ];
 
@@ -634,26 +669,26 @@ async function main() {
     {
       id: decisionId(1),
       reportSectionId: primaryLeadSec,
-      text: 'Согласовать расширение OAuth2 квоты у партнёра (нужен sign-off head)',
-      owner: 'Глава департамента',
+      text: "Согласовать расширение OAuth2 квоты у партнёра (нужен sign-off head)",
+      owner: "Глава департамента",
       deadline: activeOffset(8, 15),
-      impact: 'Разблокирует выкатку SSO portal на 100% трафика',
+      impact: "Разблокирует выкатку SSO portal на 100% трафика",
     },
     {
       id: decisionId(2),
       reportSectionId: igorSec,
-      text: 'Утвердить maintenance-window для миграции PgBouncer (Сб 02:00 МСК)',
-      owner: 'Глава департамента',
+      text: "Утвердить maintenance-window для миграции PgBouncer (Сб 02:00 МСК)",
+      owner: "Глава департамента",
       deadline: activeOffset(9, 18),
-      impact: 'Закрывает tech-debt по пулу соединений, разгружает p99',
+      impact: "Закрывает tech-debt по пулу соединений, разгружает p99",
     },
     {
       id: decisionId(3),
       reportSectionId: dmitrySec,
-      text: 'Дать зелёный свет фазовой раскатке WAF в shadow-mode',
-      owner: 'Глава департамента',
+      text: "Дать зелёный свет фазовой раскатке WAF в shadow-mode",
+      owner: "Глава департамента",
       deadline: activeOffset(10, 12),
-      impact: 'Снижает риск инцидентов на проде, безопасный rollback',
+      impact: "Снижает риск инцидентов на проде, безопасный rollback",
     },
   ];
 
@@ -674,7 +709,7 @@ async function main() {
   // ----- Published report (Week 15): all sections submitted, minimal data -----
   for (let i = 0; i < activeLeadConfigs.length; i++) {
     const cfg = activeLeadConfigs[i]!;
-    const secId = sectionId('2', cfg.leadIndex);
+    const secId = sectionId("2", cfg.leadIndex);
     // Submitted between Mon-Fri of the published period; deterministic per
     // lead so reseeding stays idempotent.
     const submitDate = publishedOffset(i % 5, 10 + i);
@@ -704,7 +739,7 @@ async function main() {
     // One project status per product (all green for "history") and one current item
     for (let pIdx = 0; pIdx < cfg.products.length; pIdx++) {
       const product = cfg.products[pIdx]!;
-      const psId = projectStatusId('2', cfg.leadIndex, pIdx + 1);
+      const psId = projectStatusId("2", cfg.leadIndex, pIdx + 1);
       await prisma.projectStatus.upsert({
         where: {
           reportSectionId_projectId: {
@@ -722,7 +757,7 @@ async function main() {
       });
       totalProjectStatuses++;
 
-      const id = itemId('2', cfg.leadIndex, pIdx + 1);
+      const id = itemId("2", cfg.leadIndex, pIdx + 1);
       const prevWeekText = `Закрыли недельные цели по продукту «${product.name}»`;
       await prisma.item.upsert({
         where: { id },
@@ -731,7 +766,7 @@ async function main() {
           projectId: product.id,
           type: ItemType.current,
           text: prevWeekText,
-          tag: 'feature',
+          tag: "feature",
           workflowStatus: ItemWorkflowStatus.done,
         },
         create: {
@@ -740,7 +775,7 @@ async function main() {
           projectId: product.id,
           type: ItemType.current,
           text: prevWeekText,
-          tag: 'feature',
+          tag: "feature",
           workflowStatus: ItemWorkflowStatus.done,
         },
       });
@@ -748,7 +783,7 @@ async function main() {
     }
 
     // One priority per published section
-    const id = priorityId('2', cfg.leadIndex, 1);
+    const id = priorityId("2", cfg.leadIndex, 1);
     await prisma.priority.upsert({
       where: {
         reportSectionId_rank: {
@@ -756,7 +791,10 @@ async function main() {
           rank: 1,
         },
       },
-      update: { id, text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}` },
+      update: {
+        id,
+        text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}`,
+      },
       create: {
         id,
         reportSectionId: secId,
@@ -774,19 +812,19 @@ async function main() {
   escalationReminderAt.setUTCHours(escalationReminderAt.getUTCHours() + 2);
   const reminderRules = [
     {
-      id: 'a0000000-0000-4000-8000-00000000c001',
+      id: "a0000000-0000-4000-8000-00000000c001",
       kind: ReminderRuleKind.deadline,
       fireAt: deadlineReminderAt,
-      timezone: 'Europe/Moscow',
+      timezone: "Europe/Moscow",
       status: ReminderRuleStatus.active,
       version: 1,
       reportId: activeReport.id,
     },
     {
-      id: 'a0000000-0000-4000-8000-00000000c002',
+      id: "a0000000-0000-4000-8000-00000000c002",
       kind: ReminderRuleKind.escalation,
       fireAt: escalationReminderAt,
-      timezone: 'Europe/Moscow',
+      timezone: "Europe/Moscow",
       status: ReminderRuleStatus.active,
       version: 1,
       reportId: activeReport.id,
@@ -810,22 +848,22 @@ async function main() {
 
   // --- 8. AppSettings singleton ---
   await prisma.appSettings.upsert({
-    where: { id: 'singleton' },
+    where: { id: "singleton" },
     update: {
-      departmentName: 'Software Development',
+      departmentName: "Software Development",
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
     },
     create: {
-      id: 'singleton',
-      departmentName: 'Software Development',
+      id: "singleton",
+      departmentName: "Software Development",
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
     },
   });
 
   console.log(
-    `Seeded: ${SEED_USERS.length} users, ${SEED_PRODUCTS.length} products, ` +
+    `Seeded: ${SEED_REPORTING_GROUPS.length} groups, ${SEED_USERS.length} users, ${SEED_PRODUCTS.length} products, ` +
       `${SEED_STAGES.length} stages, ${stageAssignmentCount} assignments, ` +
       `2 reports, ${totalSections} sections, ${totalItems} items, ` +
       `${totalProjectStatuses} project statuses, ${risks.length} risks, ` +

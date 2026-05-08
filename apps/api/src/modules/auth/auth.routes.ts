@@ -1,17 +1,17 @@
-import type { Express, Request, Response, NextFunction } from 'express';
-import express from 'express';
-import passport from 'passport';
-import type { Strategy as SamlStrategy } from '@node-saml/passport-saml';
-import type { PrismaClient, Role } from '@prisma/client';
+import type { Express, Request, Response, NextFunction } from "express";
+import express from "express";
+import passport from "passport";
+import type { Strategy as SamlStrategy } from "@node-saml/passport-saml";
+import type { PrismaClient, Role } from "@prisma/client";
 
-import type { UserSession } from '@customreport/shared';
+import type { UserSession } from "@customreport/shared";
 
-import type { createAuthController } from './auth.controller.js';
+import type { createAuthController } from "./auth.controller.js";
 import {
   createNullAuditLogger,
   type AuditLogger,
-} from '../../lib/audit-logger.js';
-import { loginAttemptsTotal } from '../../infrastructure/metrics/metrics.registry.js';
+} from "../../lib/audit-logger.js";
+import { loginAttemptsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 
 export type SamlProfile = {
   samlId: string;
@@ -27,9 +27,10 @@ export type SamlProfile = {
  * identical bounds. Phase 32-M7 (M-07) — fixes naive `setDate`/`setHours`
  * drift across DST transitions and TZ-mismatched containers.
  */
-export function getCurrentWeekBounds(
-  date: Date = new Date(),
-): { periodStart: Date; periodEnd: Date } {
+export function getCurrentWeekBounds(date: Date = new Date()): {
+  periodStart: Date;
+  periodEnd: Date;
+} {
   const utcDay = date.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
   // Monday is the start-of-week. Sunday (0) maps to "6 days back".
   const diffToMonday = utcDay === 0 ? -6 : 1 - utcDay;
@@ -72,7 +73,11 @@ async function ensureWeeklyReport(
 
   // Create report for this week if it doesn't exist
   const existingReport = await prisma.report.findFirst({
-    where: { status: 'draft', periodStart: { gte: periodStart }, periodEnd: { lte: periodEnd } },
+    where: {
+      status: "draft",
+      periodStart: { gte: periodStart },
+      periodEnd: { lte: periodEnd },
+    },
     select: { id: true },
   });
 
@@ -114,9 +119,9 @@ async function ensureWeeklyReport(
       priorities: {
         createMany: {
           data: [
-            { rank: 1, text: 'Priority 1' },
-            { rank: 2, text: 'Priority 2' },
-            { rank: 3, text: 'Priority 3' },
+            { rank: 1, text: "Priority 1" },
+            { rank: 2, text: "Priority 2" },
+            { rank: 3, text: "Priority 3" },
           ],
         },
       },
@@ -128,7 +133,7 @@ async function ensureWeeklyReport(
       data: projects.map((p) => ({
         reportSectionId: section.id,
         projectId: p.id,
-        status: 'green' as const,
+        status: "green" as const,
       })),
       skipDuplicates: true,
     });
@@ -146,10 +151,33 @@ export async function buildUserSession(
     (await prisma.user.findFirst({ where: { email: profile.email } })) ??
     (await prisma.user.findFirst({ where: { samlId: profile.samlId } }));
 
+  const fallbackReportingGroup = existing
+    ? null
+    : ((await prisma.reportingGroup.findFirst({
+        where: { archived: false },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      })) ??
+      (await prisma.reportingGroup.upsert({
+        where: { id: "a0000000-0000-4000-8000-000000000301" },
+        create: {
+          id: "a0000000-0000-4000-8000-000000000301",
+          name: "Software Development",
+          description: "Default reporting group for newly provisioned users",
+          archived: false,
+        },
+        update: { archived: false },
+        select: { id: true },
+      })));
+
   const user = existing
     ? await prisma.user.update({
         where: { id: existing.id },
-        data: { samlId: profile.samlId, name: profile.displayName, role: profile.role },
+        data: {
+          samlId: profile.samlId,
+          name: profile.displayName,
+          role: profile.role,
+        },
       })
     : await prisma.user.create({
         data: {
@@ -157,17 +185,20 @@ export async function buildUserSession(
           email: profile.email,
           name: profile.displayName,
           role: profile.role,
+          reportingGroupId:
+            fallbackReportingGroup?.id ??
+            "a0000000-0000-4000-8000-000000000301",
         },
       });
 
   // Lead users: find or auto-create their section in the active (draft) report
   let activeSection = await prisma.reportSection.findFirst({
-    where: { authorId: user.id, report: { status: 'draft' } },
+    where: { authorId: user.id, report: { status: "draft" } },
     select: { id: true, reportId: true },
   });
 
   // Auto-create weekly report if lead has no active section
-  if (!activeSection && user.role === 'lead') {
+  if (!activeSection && user.role === "lead") {
     const created = await ensureWeeklyReport(prisma, user.id);
     if (created) {
       activeSection = { id: created.sectionId, reportId: created.reportId };
@@ -178,8 +209,8 @@ export async function buildUserSession(
   const activeReport = activeSection
     ? null
     : await prisma.report.findFirst({
-        where: { status: 'draft' },
-        orderBy: { createdAt: 'desc' },
+        where: { status: "draft" },
+        orderBy: { createdAt: "desc" },
         select: { id: true },
       });
 
@@ -201,42 +232,45 @@ export function mountAuthRoutes(
   env: NodeJS.ProcessEnv,
   auditLogger: AuditLogger = createNullAuditLogger(),
 ): void {
-  const frontendUrl = env.FRONTEND_URL ?? 'http://localhost:3000';
+  const frontendUrl = env.FRONTEND_URL ?? "http://localhost:3000";
 
   // passport @types depend on express@4, project uses express@5 — cast required
-  passport.use('saml', samlStrategy as unknown as passport.Strategy);
+  passport.use("saml", samlStrategy as unknown as passport.Strategy);
 
   // --- GET /auth/saml/login ---
   // In AUTH_DEV_MODE, short-circuit to /auth/dev-login as admin (no real
   // Keycloak running locally). Production registers the passport SAML
   // handler unchanged. Express picks the first registered route, so the
   // dev branch must be mounted BEFORE the passport handler — never both.
-  if (env.AUTH_DEV_MODE === 'true') {
-    expressApp.get('/auth/saml/login', (req: Request, res: Response) => {
+  if (env.AUTH_DEV_MODE === "true") {
+    expressApp.get("/auth/saml/login", (req: Request, res: Response) => {
       const params = new URLSearchParams({
-        role: 'admin',
-        email: 'admin@customreport.local',
+        role: "admin",
+        email: "admin@customreport.local",
       });
-      const next = typeof req.query.next === 'string' ? req.query.next : null;
-      if (next && next.startsWith('/') && !next.includes('://')) {
-        params.set('redirect', next);
+      const next = typeof req.query.next === "string" ? req.query.next : null;
+      if (next && next.startsWith("/") && !next.includes("://")) {
+        params.set("redirect", next);
       }
       res.redirect(`/auth/dev-login?${params.toString()}`);
     });
   } else {
     expressApp.get(
-      '/auth/saml/login',
+      "/auth/saml/login",
       passport.initialize(),
-      passport.authenticate('saml', { session: false }),
+      passport.authenticate("saml", { session: false }),
     );
   }
 
   // --- POST /auth/saml/callback ---
   expressApp.post(
-    '/auth/saml/callback',
+    "/auth/saml/callback",
     express.urlencoded({ extended: false }),
     passport.initialize(),
-    passport.authenticate('saml', { session: false, failureRedirect: `${frontendUrl}/auth/error?reason=invalid_assertion` }),
+    passport.authenticate("saml", {
+      session: false,
+      failureRedirect: `${frontendUrl}/auth/error?reason=invalid_assertion`,
+    }),
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const profile = req.user as SamlProfile | undefined;
@@ -246,12 +280,12 @@ export function mountAuthRoutes(
           // treat as login-fail (T2 mitigation: emit even when role/userId
           // are unknown so the audit trail captures the attempt).
           auditLogger.loginFail({
-            userId: 'anonymous',
+            userId: "anonymous",
             role: null,
-            ip: req.ip ?? 'unknown',
-            reason: 'invalid_assertion',
+            ip: req.ip ?? "unknown",
+            reason: "invalid_assertion",
           });
-          loginAttemptsTotal.inc({ method: 'saml', outcome: 'fail' });
+          loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
           res.redirect(`${frontendUrl}/auth/error?reason=invalid_assertion`);
           return;
         }
@@ -263,29 +297,29 @@ export function mountAuthRoutes(
         auditLogger.loginSuccess({
           userId: session.userId,
           role: session.role,
-          ip: req.ip ?? 'unknown',
+          ip: req.ip ?? "unknown",
         });
-        loginAttemptsTotal.inc({ method: 'saml', outcome: 'success' });
+        loginAttemptsTotal.inc({ method: "saml", outcome: "success" });
 
-        res.setHeader('Set-Cookie', setCookieHeader);
+        res.setHeader("Set-Cookie", setCookieHeader);
         res.redirect(frontendUrl);
       } catch (error) {
         // AUTH-08: any post-passport failure (DB write, JWT signing, etc.)
         // is still a failed login from the user's perspective.
         auditLogger.loginFail({
-          userId: 'anonymous',
+          userId: "anonymous",
           role: null,
-          ip: req.ip ?? 'unknown',
-          reason: error instanceof Error ? error.message : 'callback-error',
+          ip: req.ip ?? "unknown",
+          reason: error instanceof Error ? error.message : "callback-error",
         });
-        loginAttemptsTotal.inc({ method: 'saml', outcome: 'fail' });
+        loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
         next(error);
       }
     },
   );
 
   // --- POST /auth/logout ---
-  expressApp.post('/auth/logout', (request: Request, res: Response) => {
+  expressApp.post("/auth/logout", (request: Request, res: Response) => {
     // AUTH-08: emit logout audit event using whatever session shape was
     // attached upstream (passport-strategy or proxy middleware). When no
     // session is present, fall back to userId='anonymous' / role=null —
@@ -295,94 +329,106 @@ export function mountAuthRoutes(
     // role" entry.
     const reqUser = (request as Request & { user?: UserSession }).user;
     auditLogger.logout({
-      userId: reqUser?.userId ?? 'anonymous',
+      userId: reqUser?.userId ?? "anonymous",
       role: reqUser?.role ?? null,
-      ip: request.ip ?? 'unknown',
+      ip: request.ip ?? "unknown",
     });
 
-    const cookieName = env.AUTH_JWT_COOKIE_NAME ?? 'customreport_session';
+    const cookieName = env.AUTH_JWT_COOKIE_NAME ?? "customreport_session";
     res.setHeader(
-      'Set-Cookie',
+      "Set-Cookie",
       `${cookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
     );
-    res.redirect('/');
+    res.redirect("/");
   });
 
   // --- GET /auth/dev-login (dev mode only) ---
-  if (env.AUTH_DEV_MODE === 'true') {
-    expressApp.get('/auth/dev-login', async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const role = (req.query.role as string) ?? 'head';
-        const validRoles: Role[] = ['lead', 'head', 'admin', 'viewer'];
-        if (!validRoles.includes(role as Role)) {
-          loginAttemptsTotal.inc({ method: 'dev-login', outcome: 'fail' });
-          res.status(400).json({ error: `Invalid role: ${role}. Must be one of: ${validRoles.join(', ')}` });
-          return;
+  if (env.AUTH_DEV_MODE === "true") {
+    expressApp.get(
+      "/auth/dev-login",
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const role = (req.query.role as string) ?? "head";
+          const validRoles: Role[] = ["lead", "head", "admin", "viewer"];
+          if (!validRoles.includes(role as Role)) {
+            loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
+            res.status(400).json({
+              error: `Invalid role: ${role}. Must be one of: ${validRoles.join(", ")}`,
+            });
+            return;
+          }
+
+          const emailByRole: Record<string, string> = {
+            head: "head@customreport.local",
+            lead: "lead1@customreport.local",
+            admin: "admin@customreport.local",
+            viewer: "viewer@customreport.local",
+          };
+          // Fallback names — only used when there is no DB record for the
+          // email (fresh dev DB before seed has run). When a row exists, we
+          // always use the seeded name so the session reflects the database.
+          const nameByRole: Record<string, string> = {
+            head: "Антон К.",
+            lead: "Lead 1",
+            admin: "Антон К.",
+            viewer: "Дарья В.",
+          };
+          const samlIdByRole: Record<string, string> = {
+            head: "head-1",
+            lead: "lead-1",
+            admin: "admin-1",
+            viewer: "viewer-1",
+          };
+
+          // role was validated against `validRoles` above, so the lookup is
+          // always defined — narrow explicitly to satisfy strict TS.
+          const email =
+            (req.query.email as string) ??
+            emailByRole[role] ??
+            `${role}@customreport.local`;
+          const isCustomEmail =
+            req.query.email && req.query.email !== emailByRole[role];
+
+          // Always look up the live DB row first so re-seeds (or schema name
+          // updates) propagate to the session cookie without a code change.
+          const dbUser = await prisma.user.findFirst({
+            where: { email },
+            select: { name: true, samlId: true },
+          });
+
+          const samlId =
+            dbUser?.samlId ??
+            (isCustomEmail
+              ? `dev-${email}`
+              : (samlIdByRole[role] ?? `dev-${role}`));
+          const displayName = dbUser?.name ?? nameByRole[role] ?? role;
+
+          const session = await buildUserSession(prisma, {
+            samlId,
+            email,
+            displayName,
+            role: role as Role,
+          });
+
+          const { setCookieHeader } =
+            authController.issueSessionCookie(session);
+          res.setHeader("Set-Cookie", setCookieHeader);
+          loginAttemptsTotal.inc({ method: "dev-login", outcome: "success" });
+
+          const redirectByRole: Record<string, string> = {
+            head: "/admin",
+            lead: "/lead/report",
+            admin: "/admin",
+            viewer: "/reports/history",
+          };
+          const redirectPath =
+            (req.query.redirect as string) ?? redirectByRole[role] ?? "/";
+          res.redirect(`${frontendUrl}${redirectPath}`);
+        } catch (error) {
+          loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
+          next(error);
         }
-
-        const emailByRole: Record<string, string> = {
-          head: 'head@customreport.local',
-          lead: 'lead1@customreport.local',
-          admin: 'admin@customreport.local',
-          viewer: 'viewer@customreport.local',
-        };
-        // Fallback names — only used when there is no DB record for the
-        // email (fresh dev DB before seed has run). When a row exists, we
-        // always use the seeded name so the session reflects the database.
-        const nameByRole: Record<string, string> = {
-          head: 'Антон К.',
-          lead: 'Lead 1',
-          admin: 'Антон К.',
-          viewer: 'Дарья В.',
-        };
-        const samlIdByRole: Record<string, string> = {
-          head: 'head-1',
-          lead: 'lead-1',
-          admin: 'admin-1',
-          viewer: 'viewer-1',
-        };
-
-        // role was validated against `validRoles` above, so the lookup is
-        // always defined — narrow explicitly to satisfy strict TS.
-        const email =
-          (req.query.email as string) ?? emailByRole[role] ?? `${role}@customreport.local`;
-        const isCustomEmail = req.query.email && req.query.email !== emailByRole[role];
-
-        // Always look up the live DB row first so re-seeds (or schema name
-        // updates) propagate to the session cookie without a code change.
-        const dbUser = await prisma.user.findFirst({
-          where: { email },
-          select: { name: true, samlId: true },
-        });
-
-        const samlId =
-          dbUser?.samlId ??
-          (isCustomEmail ? `dev-${email}` : (samlIdByRole[role] ?? `dev-${role}`));
-        const displayName = dbUser?.name ?? (nameByRole[role] ?? role);
-
-        const session = await buildUserSession(prisma, {
-          samlId,
-          email,
-          displayName,
-          role: role as Role,
-        });
-
-        const { setCookieHeader } = authController.issueSessionCookie(session);
-        res.setHeader('Set-Cookie', setCookieHeader);
-        loginAttemptsTotal.inc({ method: 'dev-login', outcome: 'success' });
-
-        const redirectByRole: Record<string, string> = {
-          head: '/admin',
-          lead: '/lead/report',
-          admin: '/admin',
-          viewer: '/reports/history',
-        };
-        const redirectPath = (req.query.redirect as string) ?? redirectByRole[role] ?? '/';
-        res.redirect(`${frontendUrl}${redirectPath}`);
-      } catch (error) {
-        loginAttemptsTotal.inc({ method: 'dev-login', outcome: 'fail' });
-        next(error);
-      }
-    });
+      },
+    );
   }
 }

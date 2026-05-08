@@ -50,6 +50,7 @@ export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
   await prisma.stage.deleteMany();
   await prisma.project.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.reportingGroup.deleteMany();
 }
 
 /**
@@ -74,6 +75,7 @@ export async function disconnectTestPrisma(): Promise<void> {
 export const TEST_IDS = {
   head: "a0000000-0000-4000-a000-000000000099",
   lead: "a0000000-0000-4000-a000-000000000001",
+  group: "a0000000-0000-4000-a000-000000000009",
   project: "a0000000-0000-4000-a000-000000000100",
   report: "a0000000-0000-4000-a000-000000000010",
   targetReport: "a0000000-0000-4000-a000-000000000020",
@@ -93,6 +95,14 @@ export const TEST_IDS = {
  * Returns all created entities for use in test assertions.
  */
 export async function seedTestData(prisma: PrismaClient) {
+  const group = await prisma.reportingGroup.create({
+    data: {
+      id: TEST_IDS.group,
+      name: "Test Group",
+      description: "Test reporting group",
+    },
+  });
+
   const head = await prisma.user.create({
     data: {
       id: TEST_IDS.head,
@@ -100,6 +110,7 @@ export async function seedTestData(prisma: PrismaClient) {
       name: "Test Head",
       role: "head",
       samlId: "head-test",
+      reportingGroupId: group.id,
     },
   });
 
@@ -110,6 +121,7 @@ export async function seedTestData(prisma: PrismaClient) {
       name: "Test Lead 1",
       role: "lead",
       samlId: "lead-test-1",
+      reportingGroupId: group.id,
     },
   });
 

@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 
 type AdminTab =
   | "users"
+  | "groups"
   | "products"
   | "reminders"
   | "reopen"
@@ -24,6 +25,7 @@ type AdminTab =
 
 const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
   { value: "users", label: "Users" },
+  { value: "groups", label: "Groups" },
   { value: "products", label: "Products" },
   { value: "reminders", label: "Reminders" },
   { value: "reopen", label: "Reopen" },

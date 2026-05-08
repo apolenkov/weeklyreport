@@ -52,21 +52,23 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
   return (
     <div className="space-y-6">
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Reporting group defaults for report headers and navigation
+        Report defaults that affect period creation, deadlines, and report
+        header copy.
       </p>
 
       <div className="max-w-lg space-y-5">
-        {/* Reporting group display name */}
         <div>
           <label
             htmlFor="dept-name"
             className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
           >
-            Group display name
+            Report header name
           </label>
           <input
             id="dept-name"
+            name="department-name"
             type="text"
+            autoComplete="off"
             value={draft.departmentName}
             onChange={(e) =>
               setDraft({ ...draft, departmentName: e.target.value })
@@ -74,7 +76,54 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
             className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
           />
           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            Displayed in report headers and navigation. Examples: Software Development, Platform Guild, Department A.
+            Displayed in report headers. User membership is managed in Groups.
+          </p>
+        </div>
+
+        <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
+          <input
+            name="auto-create-periods"
+            type="checkbox"
+            checked={draft.autoCreatePeriods}
+            onChange={(e) =>
+              setDraft({ ...draft, autoCreatePeriods: e.target.checked })
+            }
+            className="mt-1 h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-starbucks-accent)]"
+          />
+          <span>
+            <span className="block font-medium">Auto-create periods</span>
+            <span className="block text-xs text-[var(--color-muted-foreground)]">
+              Create the next reporting period automatically when the schedule
+              advances.
+            </span>
+          </span>
+        </label>
+
+        <div>
+          <label
+            htmlFor="deadline-days"
+            className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+          >
+            Default deadline days
+          </label>
+          <input
+            id="deadline-days"
+            name="deadline-days"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={30}
+            value={draft.defaultDeadlineDays}
+            onChange={(e) =>
+              setDraft({
+                ...draft,
+                defaultDeadlineDays: Number.parseInt(e.target.value, 10) || 1,
+              })
+            }
+            className="w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+          />
+          <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+            Number of days after period start before reports are due.
           </p>
         </div>
 

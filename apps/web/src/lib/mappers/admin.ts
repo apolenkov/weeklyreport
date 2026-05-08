@@ -11,7 +11,8 @@
  * - `adminSnapshotSchema` does NOT carry stages or stageAssignments. We default
  *   each product to 7 empty stage rows (assigneeId: null) so ProductsTab still
  *   renders. Phase 22 wires real stage assignments via `admin.listStageAssignments`.
- * - `adminUserSchema` has no `department` field. We default to `'Development'`.
+ * - `adminUserSchema` carries reporting group fields. The legacy
+ *   `department` presentation property now renders the group name.
  * - `adminProjectSchema.archived: boolean` collapses to mock `status: 'active'|'archived'`.
  * - `reportPeriodSchema.status` is `'draft'|'published'`. We map `'draft' -> 'open'`
  *   (the schema lacks a `'reopened'` enum at this read endpoint — `periodReadModelSchema`
@@ -30,7 +31,8 @@ import type {
   ReportPeriod,
   AdminReminderRule,
   AppSettings,
-} from '@customreport/shared';
+  ReportingGroup,
+} from "@customreport/shared";
 
 // ---- Form-state -> API-input mappers (Phase 22 / Plan 22-04) ----
 //
@@ -41,33 +43,41 @@ import type {
 
 // ---- Self-contained re-declarations of presentation types ----
 
-export type UserRole = 'lead' | 'head' | 'admin' | 'viewer';
+export type UserRole = "lead" | "head" | "admin" | "viewer";
 
 export type MockUser = {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  groupId: string;
   department: string;
 };
 
+export type MockGroup = {
+  id: string;
+  name: string;
+  description: string | null;
+  archived: boolean;
+};
+
 export type StageName =
-  | 'Planning'
-  | 'Analysis'
-  | 'Design'
-  | 'Development'
-  | 'Testing'
-  | 'DevOps'
-  | 'Support';
+  | "Planning"
+  | "Analysis"
+  | "Design"
+  | "Development"
+  | "Testing"
+  | "DevOps"
+  | "Support";
 
 const STAGE_NAMES: readonly StageName[] = [
-  'Planning',
-  'Analysis',
-  'Design',
-  'Development',
-  'Testing',
-  'DevOps',
-  'Support',
+  "Planning",
+  "Analysis",
+  "Design",
+  "Development",
+  "Testing",
+  "DevOps",
+  "Support",
 ];
 
 export type StageAssignment = {
@@ -80,10 +90,10 @@ export type MockProduct = {
   name: string;
   leadOwnerId: string;
   stages: StageAssignment[];
-  status: 'active' | 'archived';
+  status: "active" | "archived";
 };
 
-export type PeriodStatus = 'open' | 'published' | 'reopened';
+export type PeriodStatus = "open" | "published" | "reopened";
 
 export type MockPeriod = {
   id: string;
@@ -102,7 +112,7 @@ export type MockReminder = {
   // API round-trip fields preserved from `adminReminderRuleSchema`. Surfaced
   // on the mock so the Reminders tab can rebuild a valid `saveReminderRule`
   // input (e.g. when toggling status without re-entering kind/fireAt).
-  kind: 'deadline' | 'follow_up' | 'escalation';
+  kind: "deadline" | "follow_up" | "escalation";
   fireAt: Date;
   timezone: string;
   version: number;
@@ -124,11 +134,15 @@ function emptyStageGrid(): StageAssignment[] {
 /** Returns ISO week label like "Week 17" given a Date in the UTC range. */
 function isoWeekLabel(date: Date): string {
   // ISO week number per ISO-8601: thursday-anchored.
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const d = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  const week = Math.ceil(
+    ((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
+  );
   return `Week ${week}`;
 }
 
@@ -143,8 +157,17 @@ function mapUser(api: AdminUser): MockUser {
     name: api.name,
     email: api.email,
     role: api.role,
-    // API has no department field; default to canonical org unit.
-    department: 'Development',
+    groupId: api.reportingGroupId,
+    department: api.reportingGroupName ?? "Unassigned",
+  };
+}
+
+function mapGroup(api: ReportingGroup): MockGroup {
+  return {
+    id: api.id,
+    name: api.name,
+    description: api.description ?? null,
+    archived: api.archived,
   };
 }
 
@@ -153,7 +176,7 @@ function mapProject(api: AdminProject): MockProduct {
     id: api.id,
     name: api.name,
     leadOwnerId: api.leadId,
-    status: api.archived ? 'archived' : 'active',
+    status: api.archived ? "archived" : "active",
     // Stage assignments are loaded separately via admin.listStageAssignments
     // (Phase 22). For Phase 21 read-only migration, surface an empty 7-stage grid.
     stages: emptyStageGrid(),
@@ -165,7 +188,8 @@ function mapPeriod(api: ReportPeriod): MockPeriod {
   // Mock UI expects 'open' | 'published' | 'reopened'. Map 'draft' -> 'open';
   // 'reopened' is unreachable from this endpoint (only periodReadModelSchema
   // exposes periodStatus).
-  const status: PeriodStatus = api.status === 'published' ? 'published' : 'open';
+  const status: PeriodStatus =
+    api.status === "published" ? "published" : "open";
   return {
     id: api.id,
     weekLabel: isoWeekLabel(api.periodStart),
@@ -176,26 +200,26 @@ function mapPeriod(api: ReportPeriod): MockPeriod {
   };
 }
 
-function reminderName(kind: AdminReminderRule['kind']): string {
+function reminderName(kind: AdminReminderRule["kind"]): string {
   switch (kind) {
-    case 'deadline':
-      return 'Deadline reminder';
-    case 'escalation':
-      return 'Escalation digest';
-    case 'follow_up':
+    case "deadline":
+      return "Deadline reminder";
+    case "escalation":
+      return "Escalation digest";
+    case "follow_up":
     default:
-      return 'Follow-up reminder';
+      return "Follow-up reminder";
   }
 }
 
 function reminderDescription(rule: AdminReminderRule): string {
-  const at = rule.fireAt.toISOString().replace('T', ' ').slice(0, 16);
+  const at = rule.fireAt.toISOString().replace("T", " ").slice(0, 16);
   switch (rule.kind) {
-    case 'deadline':
+    case "deadline":
       return `Send a reminder when the deadline is reached (fires at ${at} UTC).`;
-    case 'escalation':
+    case "escalation":
       return `Send a T+2h escalation digest to the head with all late leads (fires at ${at} UTC).`;
-    case 'follow_up':
+    case "follow_up":
     default:
       return `Send a follow-up reminder to leads who have not submitted (fires at ${at} UTC).`;
   }
@@ -206,7 +230,7 @@ function mapReminder(api: AdminReminderRule): MockReminder {
     id: api.id,
     name: reminderName(api.kind),
     description: reminderDescription(api),
-    active: api.status === 'active',
+    active: api.status === "active",
     kind: api.kind,
     fireAt: api.fireAt,
     timezone: api.timezone,
@@ -218,6 +242,7 @@ function mapReminder(api: AdminReminderRule): MockReminder {
 // ---- Public mappers ----
 
 export type MappedAdminSnapshot = {
+  groups: MockGroup[];
   users: MockUser[];
   products: MockProduct[];
   periods: MockPeriod[];
@@ -233,6 +258,7 @@ export type MappedAdminSnapshot = {
  */
 export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
   return {
+    groups: api.groups.map(mapGroup),
     users: api.users.map(mapUser),
     products: api.projects.map(mapProject),
     periods: api.periods.map(mapPeriod),
@@ -261,18 +287,22 @@ export function mapAdminSettings(api: AppSettings): MockSettings {
  * Zod will reject a non-UUID id at the API boundary.
  */
 function newId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
-  throw new Error('crypto.randomUUID is required to generate ids for admin mutations');
+  throw new Error(
+    "crypto.randomUUID is required to generate ids for admin mutations",
+  );
 }
 
 export type AdminUserFormInput = {
   name: string;
   email: string;
   role: UserRole;
-  // department is currently presentation-only (no API field) — accepted but ignored.
-  department?: string;
+  groupId: string;
 };
 
 /**
@@ -284,12 +314,37 @@ export type AdminUserFormInput = {
 export function toAdminUserInput(
   form: AdminUserFormInput,
   existingId?: string,
-): { id: string; email: string; name: string; role: UserRole } {
+): {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  reportingGroupId: string;
+} {
   return {
     id: existingId ?? newId(),
     email: form.email.trim(),
     name: form.name.trim(),
     role: form.role,
+    reportingGroupId: form.groupId,
+  };
+}
+
+export type ReportingGroupFormInput = {
+  name: string;
+  description?: string | null;
+  archived?: boolean;
+};
+
+export function toReportingGroupInput(
+  form: ReportingGroupFormInput,
+  existingId?: string,
+): { id: string; name: string; description: string | null; archived: boolean } {
+  return {
+    id: existingId ?? newId(),
+    name: form.name.trim(),
+    description: form.description?.trim() ? form.description.trim() : null,
+    archived: form.archived ?? false,
   };
 }
 
@@ -308,13 +363,19 @@ export type AdminProjectFormInput = {
 export function toAdminProjectInput(
   form: AdminProjectFormInput,
   existingId?: string,
-): { id: string; name: string; archived: boolean; leadId: string; leadName: string } {
+): {
+  id: string;
+  name: string;
+  archived: boolean;
+  leadId: string;
+  leadName: string;
+} {
   return {
     id: existingId ?? newId(),
     name: form.name.trim(),
     archived: form.archived ?? false,
     leadId: form.leadOwnerId,
-    leadName: (form.leadName ?? '').trim() || 'Unknown Lead',
+    leadName: (form.leadName ?? "").trim() || "Unknown Lead",
   };
 }
 
@@ -322,7 +383,7 @@ export type ReportPeriodFormInput = {
   startDate: string; // YYYY-MM-DD
   endDate: string;
   deadline: string;
-  status?: 'draft' | 'published';
+  status?: "draft" | "published";
 };
 
 /**
@@ -338,22 +399,22 @@ export function toReportPeriodInput(
   periodStart: Date;
   periodEnd: Date;
   deadline: Date;
-  status: 'draft' | 'published';
+  status: "draft" | "published";
 } {
   return {
     id: existingId ?? newId(),
     periodStart: new Date(form.startDate),
     periodEnd: new Date(form.endDate),
     deadline: new Date(form.deadline),
-    status: form.status ?? 'draft',
+    status: form.status ?? "draft",
   };
 }
 
 export type AdminReminderRuleFormInput = {
-  kind: 'deadline' | 'follow_up' | 'escalation';
+  kind: "deadline" | "follow_up" | "escalation";
   fireAt: Date | string;
   timezone?: string;
-  status?: 'active' | 'paused';
+  status?: "active" | "paused";
   reportId?: string | null;
   version?: number;
 };
@@ -367,23 +428,31 @@ export function toAdminReminderRuleInput(
 ): {
   id: string;
   reportId: string | null;
-  kind: 'deadline' | 'follow_up' | 'escalation';
+  kind: "deadline" | "follow_up" | "escalation";
   fireAt: Date;
   timezone: string;
-  status: 'active' | 'paused';
+  status: "active" | "paused";
   version: number;
 } {
-  const fireAt = form.fireAt instanceof Date ? form.fireAt : new Date(form.fireAt);
+  const fireAt =
+    form.fireAt instanceof Date ? form.fireAt : new Date(form.fireAt);
   return {
     id: existingId ?? newId(),
     reportId: form.reportId ?? null,
     kind: form.kind,
     fireAt,
-    timezone: form.timezone ?? 'UTC',
-    status: form.status ?? 'active',
+    timezone: form.timezone ?? "UTC",
+    status: form.status ?? "active",
     version: form.version ?? 1,
   };
 }
 
 // Internal exports for tests — keep narrow.
-export const __testing = { mapReminder, mapPeriod, mapProject, mapUser, isoWeekLabel };
+export const __testing = {
+  mapReminder,
+  mapPeriod,
+  mapProject,
+  mapUser,
+  mapGroup,
+  isoWeekLabel,
+};

@@ -1,39 +1,47 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import type {
   AdminSnapshot,
   AppSettings,
   StageAssignment,
   UserSession,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { adminRouter } from './admin.router';
+import { adminRouter } from "./admin.router";
 import {
   AdminAccessError,
   AdminService,
   type AdminRepository,
-} from './admin.service';
+} from "./admin.service";
 
 /* ------------------------------------------------------------------ */
 /*  Sessions & defaults                                                */
 /* ------------------------------------------------------------------ */
 
 const headSession: UserSession = {
-  userId: '00000000-0000-4000-8000-000000000001',
-  email: 'head@customreport.local',
-  name: 'Department Head',
-  role: 'head',
-  activeReportId: '22222222-2222-4222-8222-222222222222',
+  userId: "00000000-0000-4000-8000-000000000001",
+  email: "head@customreport.local",
+  name: "Department Head",
+  role: "head",
+  activeReportId: "22222222-2222-4222-8222-222222222222",
   activeReportSectionId: null,
 };
 
 const leadSession: UserSession = {
-  userId: '33333333-3333-4333-8333-333333333333',
-  email: 'lead1@customreport.local',
-  name: 'Lead 1',
-  role: 'lead',
-  activeReportId: '22222222-2222-4222-8222-222222222222',
-  activeReportSectionId: '11111111-1111-4111-8111-111111111111',
+  userId: "33333333-3333-4333-8333-333333333333",
+  email: "lead1@customreport.local",
+  name: "Lead 1",
+  role: "lead",
+  activeReportId: "22222222-2222-4222-8222-222222222222",
+  activeReportSectionId: "11111111-1111-4111-8111-111111111111",
+};
+
+const GROUP_ID = "99999999-9999-4999-8999-999999999991";
+const defaultGroup = {
+  id: GROUP_ID,
+  name: "Software Development",
+  description: null,
+  archived: false,
 };
 
 const initialSnapshot: AdminSnapshot = {
@@ -42,9 +50,12 @@ const initialSnapshot: AdminSnapshot = {
       id: headSession.userId,
       email: headSession.email,
       name: headSession.name,
-      role: 'head',
+      role: "head",
+      reportingGroupId: GROUP_ID,
+      reportingGroupName: defaultGroup.name,
     },
   ],
+  groups: [defaultGroup],
   projects: [],
   periods: [],
   reminderRules: [],
@@ -52,7 +63,7 @@ const initialSnapshot: AdminSnapshot = {
 };
 
 const defaultSettings: AppSettings = {
-  departmentName: 'Development',
+  departmentName: "Development",
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
 };
@@ -84,6 +95,23 @@ function createRepository(
       currentSettings = { ...currentSettings, ...data };
       return structuredClone(currentSettings);
     },
+    async saveReportingGroup(group) {
+      const existingIndex = currentSnapshot.groups.findIndex(
+        (row) => row.id === group.id,
+      );
+      if (existingIndex >= 0) {
+        currentSnapshot.groups[existingIndex] = structuredClone(group);
+      } else {
+        currentSnapshot.groups.push(structuredClone(group));
+      }
+      return structuredClone(group);
+    },
+    async archiveReportingGroup(groupId) {
+      const group = currentSnapshot.groups.find((row) => row.id === groupId);
+      if (!group) throw new Error(`ReportingGroup ${groupId} not found.`);
+      group.archived = true;
+      return structuredClone(group);
+    },
     async saveStageAssignment(data) {
       const key = `${data.userId}:${data.stageId}:${data.projectId}`;
       const existing = [...assignments.values()].find(
@@ -97,8 +125,8 @@ function createRepository(
         userId: data.userId,
         stageId: data.stageId,
         projectId: data.projectId,
-        stageName: 'Development',
-        userName: 'Test User',
+        stageName: "Development",
+        userName: "Test User",
       };
       assignments.set(assignment.id, assignment);
       return structuredClone(assignment);
@@ -121,31 +149,31 @@ function createRepository(
 /*  Settings integration tests                                         */
 /* ------------------------------------------------------------------ */
 
-describe('AdminService — settings (integration)', () => {
-  it('returns default settings when nothing has been configured', async () => {
+describe("AdminService — settings (integration)", () => {
+  it("returns default settings when nothing has been configured", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
     const result = await service.getSettings();
 
     expect(result).toEqual({
-      departmentName: 'Development',
+      departmentName: "Development",
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
     });
   });
 
-  it('updates departmentName and preserves other fields', async () => {
+  it("updates departmentName and preserves other fields", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
-      departmentName: 'New Department',
+      departmentName: "New Department",
     });
 
-    expect(result.departmentName).toBe('New Department');
+    expect(result.departmentName).toBe("New Department");
     expect(result.autoCreatePeriods).toBe(false);
     expect(result.defaultDeadlineDays).toBe(5);
   });
 
-  it('toggles autoCreatePeriods', async () => {
+  it("toggles autoCreatePeriods", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
@@ -155,7 +183,7 @@ describe('AdminService — settings (integration)', () => {
     expect(result.autoCreatePeriods).toBe(true);
   });
 
-  it('changes defaultDeadlineDays', async () => {
+  it("changes defaultDeadlineDays", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
@@ -165,7 +193,7 @@ describe('AdminService — settings (integration)', () => {
     expect(result.defaultDeadlineDays).toBe(10);
   });
 
-  it('admin router rejects non-head access to settings', async () => {
+  it("admin router rejects non-head access to settings", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
 
     await expect(
