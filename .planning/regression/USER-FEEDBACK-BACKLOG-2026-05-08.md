@@ -19,7 +19,7 @@ next regression pass does not rediscover the same gaps from chat/screenshots.
   UFB-013 Activity This Period vs Lead Reports duplicated semantics
   UFB-014 current/next/risk/decision/priority items need optional multi-SDLC stages
   UFB-015 author/owner fields in modals must be read-only/defaulted
-  UFB-016 admin settings must model reporting groups/departments cleanly
+  UFB-016 admin settings must model reporting groups cleanly
   UFB-017 all list forms need search
   UFB-018 reminders tab must expose real configuration, not only queue/status
   UFB-019 Action Log must be understandable and useful for support/debug
@@ -35,7 +35,7 @@ next regression pass does not rediscover the same gaps from chat/screenshots.
 
 ### UFB-001 - Admin stage reassignment
 
-Status: in_progress
+Status: done
 
 User signal:
 
@@ -62,6 +62,7 @@ Regression:
 ```text
 apps/web/e2e/regression/admin-stage-reassignment.spec.ts
 .planning/regression/evidence/2026-05-08-admin-stage-reassignment/README.md
+.planning/regression/evidence/2026-05-08-admin-groups-stage-reassignment/README.md
 ```
 
 ### UFB-002 - Reporting scope source of truth
@@ -209,15 +210,27 @@ Do not free-text edit author fields in item/risk/decision modals.
 
 ### UFB-016 - Admin reporting groups/departments
 
-Status: open
+Status: done
 
 Rule:
 
 ```text
+Use product term: groups.
+Admin must have a Groups form/list to create and maintain groups.
+Users must choose from existing groups; no free-text department input.
+Head is scoped to one group unless multi-group access is explicitly added later.
 Settings should not hard-code CustomReport copy.
-Model reporting groups/departments as configurable groups.
-Users choose from existing groups.
-Head is scoped to one group/department.
+```
+
+Implementation/evidence:
+
+```text
+Prisma model: ReportingGroup
+Admin tab: /admin?tab=groups
+Users tab: group select from existing groups, no free-text department field
+Settings tab: report header defaults only
+Regression: apps/web/e2e/regression/admin-groups.spec.ts
+Evidence: .planning/regression/evidence/2026-05-08-admin-groups-stage-reassignment/README.md
 ```
 
 ### UFB-017 - Search everywhere lists exist
@@ -234,7 +247,7 @@ Need verify all current and future list surfaces.
 
 ### UFB-018 - Reminders config
 
-Status: open
+Status: partially_done
 
 Bug class:
 
@@ -250,6 +263,13 @@ create active reminder rule
 dispatch reminder for current period
 queue row / action log visible
 no misleading empty config
+```
+
+Current:
+
+```text
+/admin?tab=reminders now exposes Add Rule form, report period selector, type, fireAt, timezone, active/paused rules, search.
+Remaining gap: full dispatch/queue/action-log regression for dashboard Send Reminder.
 ```
 
 ### UFB-019 - Action Log clarity
@@ -293,7 +313,7 @@ assert backend log has procedure + cause + correlationId
 
 ### UFB-030 - Base wipe mode
 
-Status: open
+Status: done
 
 Rule:
 
@@ -311,11 +331,18 @@ Decision:
 ```text
 base-empty should clear StageAssignment
 demo-ready can keep StageAssignment
+User decision 2026-05-08: base-empty clears StageAssignment.
+```
+
+Implementation:
+
+```text
+prisma/wipe-manual-uat.ts deletes stageAssignments and preserves users/products/stages/settings.
 ```
 
 ### UFB-031 - Observability docs
 
-Status: open
+Status: in_progress
 
 Rule:
 
@@ -338,4 +365,33 @@ Rule:
 Make background calmer but richer than flat beige.
 Use surface tokens, not ad-hoc one-off colors.
 Run design review against screenshots and domain workflows.
+```
+
+Skill/review sources:
+
+```text
+.planning/regression/UI-REVIEW-2026-05-07.md
+.planning/reports/UI-REVIEW-2026-05-07.md
+.planning/phases/17-ui-redesign/17-UI-REVIEW.md
+.planning/phases/39-performance/39-UI-REVIEW.md
+.planning/regression/UI-UX-FULL-REVIEW-PLAN-2026-05-08.md
+requested skills:
+frontend-design
+bencium-controlled-ux-designer
+ui-ux-pro-max:ckm:design
+ui-ux-pro-max:ckm:ui-styling
+design-audit
+gsd-ui-review
+security-audit
+typography:ui-typography
+ui-ux-pro-max:ui-ux-pro-max
+web-design-guidelines
+```
+
+Current review lanes:
+
+```text
+.planning/regression/review-lanes/2026-05-08-ui-design-lane.md
+.planning/regression/review-lanes/2026-05-08-ui-styling-typography-lane.md
+.planning/regression/review-lanes/2026-05-08-security-accessibility-lane.md
 ```

@@ -8,6 +8,7 @@ import {
   paginationInputSchema,
   adminUserSchema,
   adminProjectSchema,
+  reportingGroupSchema,
   reportPeriodSchema,
   adminReminderRuleSchema,
   appSettingsUpdateSchema,
@@ -416,6 +417,26 @@ export function createAppRouter(deps: RouterDeps) {
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.upsertUser(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      saveReportingGroup: headProcedure
+        .input(reportingGroupSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.upsertReportingGroup(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      archiveReportingGroup: headProcedure
+        .input(z.object({ groupId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.archiveReportingGroup(input.groupId);
           } catch (error) {
             throw mapDomainError(error);
           }

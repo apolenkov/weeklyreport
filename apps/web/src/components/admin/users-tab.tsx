@@ -1,61 +1,88 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { invalidateAdmin } from '../../lib/cache-keys';
-import { toAdminUserInput } from '../../lib/mappers';
-import { useTRPC } from '../../lib/trpc-context';
+import { invalidateAdmin } from "../../lib/cache-keys";
+import { toAdminUserInput } from "../../lib/mappers";
+import { useTRPC } from "../../lib/trpc-context";
 
-import type { MockUser, UserRole } from './mock-data';
+import type { MockGroup, MockUser, UserRole } from "./mock-data";
 
 type UserFormData = {
   name: string;
   email: string;
   role: UserRole;
-  department: string;
+  groupId: string;
 };
 
-const EMPTY_FORM: UserFormData = { name: '', email: '', role: 'lead', department: 'CoreDev' };
+function emptyForm(groups: readonly MockGroup[]): UserFormData {
+  return {
+    name: "",
+    email: "",
+    role: "lead",
+    groupId: groups.find((group) => !group.archived)?.id ?? groups[0]?.id ?? "",
+  };
+}
 
 type UsersTabProps = {
   readonly users: MockUser[];
+  readonly groups: MockGroup[];
 };
 
-export function UsersTab({ users }: UsersTabProps) {
+export function UsersTab({ users, groups }: UsersTabProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
   const [editingUser, setEditingUser] = useState<MockUser | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
-  const [form, setForm] = useState<UserFormData>(EMPTY_FORM);
-  const [search, setSearch] = useState('');
+  const [form, setForm] = useState<UserFormData>(() => emptyForm(groups));
+  const [search, setSearch] = useState("");
+
+  const activeGroups = useMemo(
+    () => groups.filter((group) => !group.archived),
+    [groups],
+  );
+  const groupOptions = useMemo(() => {
+    if (
+      !form.groupId ||
+      activeGroups.some((group) => group.id === form.groupId)
+    ) {
+      return activeGroups;
+    }
+    const assignedArchivedGroup = groups.find(
+      (group) => group.id === form.groupId,
+    );
+    return assignedArchivedGroup
+      ? [...activeGroups, assignedArchivedGroup]
+      : activeGroups;
+  }, [activeGroups, form.groupId, groups]);
 
   // Escape closes the Add/Edit dialog. The dialog is rendered inline (not
   // through a Radix wrapper) so we wire the listener manually.
   useEffect(() => {
     if (!showDialog) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         setShowDialog(false);
       }
     }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
   }, [showDialog]);
 
   const saveUserMut = useMutation(
     trpc.admin.saveUser.mutationOptions({
       onSuccess: () => {
         invalidateAdmin(qc, trpc);
-        toast.success('User saved');
+        toast.success("User saved");
         setShowDialog(false);
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to save user');
+        toast.error(err.message ?? "Failed to save user");
       },
     }),
   );
@@ -64,24 +91,29 @@ export function UsersTab({ users }: UsersTabProps) {
     trpc.admin.deleteUser.mutationOptions({
       onSuccess: () => {
         invalidateAdmin(qc, trpc);
-        toast.success('User deleted');
+        toast.success("User deleted");
         setDeleteTarget(null);
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to delete user');
+        toast.error(err.message ?? "Failed to delete user");
       },
     }),
   );
 
   function openAdd() {
     setEditingUser(null);
-    setForm(EMPTY_FORM);
+    setForm(emptyForm(groups));
     setShowDialog(true);
   }
 
   function openEdit(user: MockUser) {
     setEditingUser(user);
-    setForm({ name: user.name, email: user.email, role: user.role, department: user.department });
+    setForm({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      groupId: user.groupId,
+    });
     setShowDialog(true);
   }
 
@@ -97,12 +129,13 @@ export function UsersTab({ users }: UsersTabProps) {
 
   const isSaving = saveUserMut.isPending;
   const isDeleting = deleteUserMut.isPending;
+  const canSave = form.groupId.length > 0 && !isSaving;
   const filteredUsers = useMemo(() => {
     const needle = search.trim().toLowerCase();
     if (!needle) return users;
     return users.filter((user) =>
       [user.name, user.email, user.role, user.department]
-        .join(' ')
+        .join(" ")
         .toLowerCase()
         .includes(needle),
     );
@@ -130,7 +163,7 @@ export function UsersTab({ users }: UsersTabProps) {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search users..."
+          placeholder="Search users…"
           className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
           aria-label="Search users"
         />
@@ -140,11 +173,21 @@ export function UsersTab({ users }: UsersTabProps) {
           <table className="w-full text-left text-sm" data-testid="users-table">
             <thead>
               <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Name</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Email</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Role</th>
-                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">Department</th>
-                <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">Actions</th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  Name
+                </th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  Email
+                </th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  Role
+                </th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  Group
+                </th>
+                <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -153,12 +196,18 @@ export function UsersTab({ users }: UsersTabProps) {
                   key={user.id}
                   className="border-b border-[var(--color-border)] last:border-0 hover:bg-[#f8f6f2]"
                 >
-                  <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">{user.name}</td>
-                  <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{user.email}</td>
+                  <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
+                    {user.name}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
+                    {user.email}
+                  </td>
                   <td className="px-4 py-3">
                     <RoleBadge role={user.role} />
                   </td>
-                  <td className="px-4 py-3 text-[var(--color-muted-foreground)]">{user.department}</td>
+                  <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
+                    {user.department}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -203,15 +252,18 @@ export function UsersTab({ users }: UsersTabProps) {
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
             aria-modal="true"
-            aria-label={editingUser ? 'Edit user' : 'Add user'}
+            aria-label={editingUser ? "Edit user" : "Add user"}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-              {editingUser ? 'Edit User' : 'Add User'}
+              {editingUser ? "Edit User" : "Add User"}
             </h3>
             <div className="mt-4 space-y-4">
               <div>
-                <label htmlFor="user-name" className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
+                <label
+                  htmlFor="user-name"
+                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+                >
                   Name
                 </label>
                 <input
@@ -223,7 +275,10 @@ export function UsersTab({ users }: UsersTabProps) {
                 />
               </div>
               <div>
-                <label htmlFor="user-email" className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
+                <label
+                  htmlFor="user-email"
+                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+                >
                   Email
                 </label>
                 <input
@@ -235,31 +290,51 @@ export function UsersTab({ users }: UsersTabProps) {
                 />
               </div>
               <div>
-                <label htmlFor="user-role" className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
+                <label
+                  htmlFor="user-role"
+                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+                >
                   Role
                 </label>
                 <select
                   id="user-role"
                   value={form.role}
-                  onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
+                  onChange={(e) =>
+                    setForm({ ...form, role: e.target.value as UserRole })
+                  }
                   className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
                 >
                   <option value="lead">Lead</option>
                   <option value="head">Head</option>
+                  <option value="admin">Admin</option>
                   <option value="viewer">Viewer</option>
                 </select>
               </div>
               <div>
-                <label htmlFor="user-dept" className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
-                  Department
+                <label
+                  htmlFor="user-group"
+                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+                >
+                  Group
                 </label>
-                <input
-                  id="user-dept"
-                  type="text"
-                  value={form.department}
-                  onChange={(e) => setForm({ ...form, department: e.target.value })}
+                <select
+                  id="user-group"
+                  value={form.groupId}
+                  onChange={(e) =>
+                    setForm({ ...form, groupId: e.target.value })
+                  }
                   className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-                />
+                  disabled={groupOptions.length === 0}
+                >
+                  {groupOptions.length === 0 && (
+                    <option value="">No active groups configured</option>
+                  )}
+                  {groupOptions.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.archived ? group.name + " (archived)" : group.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
@@ -274,10 +349,14 @@ export function UsersTab({ users }: UsersTabProps) {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={!canSave}
                 className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSaving ? 'Saving…' : editingUser ? 'Save Changes' : 'Add User'}
+                {isSaving
+                  ? "Saving…"
+                  : editingUser
+                    ? "Save Changes"
+                    : "Add User"}
               </button>
             </div>
           </div>
@@ -314,7 +393,7 @@ export function UsersTab({ users }: UsersTabProps) {
                 disabled={isDeleting}
                 className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isDeleting ? 'Deleting…' : 'Delete'}
+                {isDeleting ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>
@@ -328,10 +407,10 @@ export function UsersTab({ users }: UsersTabProps) {
 
 function RoleBadge({ role }: { readonly role: UserRole }) {
   const styles: Record<UserRole, { bg: string; text: string }> = {
-    lead: { bg: 'var(--color-success)', text: 'var(--color-primary)' },
-    head: { bg: '#e8e0f0', text: '#6b21a8' },
-    admin: { bg: '#fef3c7', text: '#92400e' },
-    viewer: { bg: 'var(--color-muted)', text: 'var(--color-muted-foreground)' },
+    lead: { bg: "var(--color-success)", text: "var(--color-primary)" },
+    head: { bg: "#e8e0f0", text: "#6b21a8" },
+    admin: { bg: "#fef3c7", text: "#92400e" },
+    viewer: { bg: "var(--color-muted)", text: "var(--color-muted-foreground)" },
   };
   const s = styles[role];
 
@@ -347,7 +426,15 @@ function RoleBadge({ role }: { readonly role: UserRole }) {
 
 function PlusIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
     </svg>

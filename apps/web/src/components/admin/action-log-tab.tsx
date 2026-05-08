@@ -19,7 +19,7 @@ function formatTimestamp(value: string): string {
 
 function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
-  return value.slice(0, max - 3).trimEnd() + "...";
+  return value.slice(0, max - 1).trimEnd() + "…";
 }
 
 export function ActionLogTab() {
@@ -58,7 +58,8 @@ export function ActionLogTab() {
           Action Log
         </h2>
         <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-          Latest product actions with support reference ids. Internal proof calls are hidden from this view.
+          Latest product actions with support reference ids. Internal proof
+          calls are hidden from this view.
         </p>
       </div>
 
@@ -66,7 +67,7 @@ export function ActionLogTab() {
         type="search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search actions..."
+        placeholder="Search actions…"
         className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         aria-label="Search actions"
       />
@@ -82,11 +83,15 @@ export function ActionLogTab() {
         </div>
       )}
 
-      {!listQuery.isPending && !listQuery.isError && visibleRows.length === 0 && (
-        <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-          {rows.length === 0 ? "No actions recorded yet." : "No actions match the search."}
-        </div>
-      )}
+      {!listQuery.isPending &&
+        !listQuery.isError &&
+        visibleRows.length === 0 && (
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
+            {rows.length === 0
+              ? "No actions recorded yet."
+              : "No actions match the search."}
+          </div>
+        )}
 
       {visibleRows.length > 0 && (
         <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">

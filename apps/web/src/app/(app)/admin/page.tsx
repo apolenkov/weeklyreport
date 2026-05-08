@@ -12,6 +12,7 @@ type Props = {
 // reactive admin work (reopen requests / failed-job retries).
 const tabs = [
   "users",
+  "groups",
   "products",
   "reminders",
   "reopen",
@@ -23,6 +24,7 @@ type TabId = (typeof tabs)[number];
 
 const TAB_LABELS: Record<TabId, string> = {
   users: "Users",
+  groups: "Groups",
   products: "Products",
   reminders: "Reminders",
   reopen: "Reopen",

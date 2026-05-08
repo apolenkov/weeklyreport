@@ -8,6 +8,7 @@ import { useTRPC } from "../../lib/trpc-context";
 import { mapAdminSnapshot, mapAdminSettings } from "../../lib/mappers";
 
 import { UsersTab } from "./users-tab";
+import { GroupsTab } from "./groups-tab";
 import { ProductsTab } from "./products-tab";
 import { RemindersTab } from "./reminders-tab";
 import { SettingsTab } from "./settings-tab";
@@ -23,8 +24,8 @@ type AdminPanelProps = {
 
 /**
  * Admin Panel container. Lifts the snapshot + settings queries into the parent
- * so the child tabs can stay presentational. Mutations remain unwired —
- * Phase 22 will replace each tab's local-state mutations with real tRPC calls.
+ * so the child tabs can stay focused on form/table behavior while mutations
+ * invalidate the shared admin snapshot.
  */
 export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
   const trpc = useTRPC();
@@ -94,7 +95,10 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
         activeTab !== "jobs" &&
         activeTab !== "actions" && (
           <>
-            {activeTab === "users" && <UsersTab users={data.users} />}
+            {activeTab === "users" && (
+              <UsersTab users={data.users} groups={data.groups} />
+            )}
+            {activeTab === "groups" && <GroupsTab groups={data.groups} />}
             {activeTab === "products" && (
               <ProductsTab
                 products={data.products}
@@ -105,9 +109,9 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
             {activeTab === "reminders" && (
               <RemindersTab reminders={data.reminders} periods={data.periods} />
             )}
-            {!["users", "products", "reminders"].includes(activeTab) && (
-              <UsersTab users={data.users} />
-            )}
+            {!["users", "groups", "products", "reminders"].includes(
+              activeTab,
+            ) && <UsersTab users={data.users} groups={data.groups} />}
           </>
         )}
     </div>

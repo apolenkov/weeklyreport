@@ -267,6 +267,15 @@ export const adminUserSchema = z.object({
   email: z.email(),
   name: z.string().min(1),
   role: roleSchema,
+  reportingGroupId: z.string().uuid(),
+  reportingGroupName: z.string().min(1).max(200).optional(),
+});
+
+export const reportingGroupSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(200),
+  description: z.string().max(500).nullable().optional(),
+  archived: z.boolean(),
 });
 
 export const adminProjectSchema = z.object({
@@ -364,6 +373,7 @@ export const archiveReportDetailSchema = z.object({
 
 export const adminSnapshotSchema = z.object({
   users: z.array(adminUserSchema),
+  groups: z.array(reportingGroupSchema).default([]),
   projects: z.array(adminProjectSchema),
   periods: z.array(reportPeriodSchema),
   reminderRules: z.array(adminReminderRuleSchema),
@@ -540,6 +550,7 @@ export type AssembledReport = z.infer<typeof assembledReportSchema>;
 export type PdfExportRequest = z.infer<typeof pdfExportRequestSchema>;
 export type PdfExportJob = z.infer<typeof pdfExportJobSchema>;
 export type AdminUser = z.infer<typeof adminUserSchema>;
+export type ReportingGroup = z.infer<typeof reportingGroupSchema>;
 export type AdminProject = z.infer<typeof adminProjectSchema>;
 export type ReportPeriod = z.infer<typeof reportPeriodSchema>;
 export type AdminReminderRule = z.infer<typeof adminReminderRuleSchema>;

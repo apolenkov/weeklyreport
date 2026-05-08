@@ -1,27 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   adminSnapshotSchema,
   adminUserSchema,
   adminProjectSchema,
   appSettingsSchema,
+  reportingGroupSchema,
   stageAssignmentSchema,
   reportPeriodSchema,
   adminReminderRuleSchema,
   adminReminderExecutionSchema,
   type AdminSnapshot,
   type AppSettings,
+  type ReportingGroup,
   type StageAssignment,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import type { AdminRepository } from './admin.service';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type { AdminRepository } from "./admin.service";
+
+const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
+const DEFAULT_REPORTING_GROUP_NAME = "Core Development";
 
 /**
  * Extracts recipientEmail from dedupeKey format: "ruleId:isoDate:email".
  */
 function extractRecipientEmail(dedupeKey: string): string {
   const emailMatch = dedupeKey.match(/Z:(.+)$/);
-  return emailMatch?.[1] ?? '';
+  return emailMatch?.[1] ?? "";
 }
 
 /**
@@ -33,10 +38,32 @@ function extractRecipientEmail(dedupeKey: string): string {
 export class AdminPrismaRepository implements AdminRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async ensureFallbackReportingGroup(): Promise<string> {
+    const existing = await this.prisma.reportingGroup.findFirst({
+      where: { archived: false },
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
+    if (existing) return existing.id;
+
+    const created = await this.prisma.reportingGroup.upsert({
+      where: { id: DEFAULT_REPORTING_GROUP_ID },
+      create: {
+        id: DEFAULT_REPORTING_GROUP_ID,
+        name: DEFAULT_REPORTING_GROUP_NAME,
+        description: "Default reporting group for newly provisioned users",
+        archived: false,
+      },
+      update: { archived: false },
+      select: { id: true },
+    });
+    return created.id;
+  }
+
   async getSettings(): Promise<AppSettings> {
     const row = await this.prisma.appSettings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton' },
+      where: { id: "singleton" },
+      create: { id: "singleton" },
       update: {},
     });
 
@@ -49,9 +76,9 @@ export class AdminPrismaRepository implements AdminRepository {
 
   async updateSettings(data: Partial<AppSettings>): Promise<AppSettings> {
     const row = await this.prisma.appSettings.upsert({
-      where: { id: 'singleton' },
+      where: { id: "singleton" },
       create: {
-        id: 'singleton',
+        id: "singleton",
         ...data,
       },
       update: data,
@@ -62,6 +89,34 @@ export class AdminPrismaRepository implements AdminRepository {
       autoCreatePeriods: row.autoCreatePeriods,
       defaultDeadlineDays: row.defaultDeadlineDays,
     });
+  }
+
+  async saveReportingGroup(group: ReportingGroup): Promise<ReportingGroup> {
+    const row = await this.prisma.reportingGroup.upsert({
+      where: { id: group.id },
+      create: {
+        id: group.id,
+        name: group.name,
+        description: group.description ?? null,
+        archived: group.archived,
+      },
+      update: {
+        name: group.name,
+        description: group.description ?? null,
+        archived: group.archived,
+      },
+    });
+
+    return reportingGroupSchema.parse(row);
+  }
+
+  async archiveReportingGroup(groupId: string): Promise<ReportingGroup> {
+    const row = await this.prisma.reportingGroup.update({
+      where: { id: groupId },
+      data: { archived: true },
+    });
+
+    return reportingGroupSchema.parse(row);
   }
 
   async saveStageAssignment(data: {
@@ -108,8 +163,11 @@ export class AdminPrismaRepository implements AdminRepository {
   async listStageAssignments(projectId: string): Promise<StageAssignment[]> {
     const rows = await this.prisma.stageAssignment.findMany({
       where: { projectId },
-      include: { stage: { select: { name: true } }, user: { select: { name: true } } },
-      orderBy: { createdAt: 'asc' },
+      include: {
+        stage: { select: { name: true } },
+        user: { select: { name: true } },
+      },
+      orderBy: { createdAt: "asc" },
     });
 
     return rows.map((row) =>
@@ -125,27 +183,40 @@ export class AdminPrismaRepository implements AdminRepository {
   }
 
   async getSnapshot(): Promise<AdminSnapshot> {
-    const [users, projects, periods, reminderRules, reminderExecutions] =
-      await Promise.all([
-        this.prisma.user.findMany({ orderBy: { name: 'asc' } }),
-        this.prisma.project.findMany({
-          include: { lead: true },
-          orderBy: { name: 'asc' },
-        }),
-        this.prisma.report.findMany({ orderBy: { periodStart: 'desc' } }),
-        this.prisma.reminderRule.findMany({ orderBy: { createdAt: 'desc' } }),
-        this.prisma.reminderExecution.findMany({
-          orderBy: { createdAt: 'desc' },
-        }),
-      ]);
+    const [
+      groups,
+      users,
+      projects,
+      periods,
+      reminderRules,
+      reminderExecutions,
+    ] = await Promise.all([
+      this.prisma.reportingGroup.findMany({ orderBy: { name: "asc" } }),
+      this.prisma.user.findMany({
+        include: { reportingGroup: true },
+        orderBy: { name: "asc" },
+      }),
+      this.prisma.project.findMany({
+        include: { lead: true },
+        orderBy: { name: "asc" },
+      }),
+      this.prisma.report.findMany({ orderBy: { periodStart: "desc" } }),
+      this.prisma.reminderRule.findMany({ orderBy: { createdAt: "desc" } }),
+      this.prisma.reminderExecution.findMany({
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
     return adminSnapshotSchema.parse({
+      groups: groups.map((group) => reportingGroupSchema.parse(group)),
       users: users.map((u) =>
         adminUserSchema.parse({
           id: u.id,
           email: u.email,
           name: u.name,
           role: u.role,
+          reportingGroupId: u.reportingGroupId,
+          reportingGroupName: u.reportingGroup.name,
         }),
       ),
       projects: projects.map((p) =>
@@ -183,7 +254,7 @@ export class AdminPrismaRepository implements AdminRepository {
           ruleId: exec.ruleId,
           reportId: null,
           dedupeKey: exec.dedupeKey,
-          status: exec.status === 'pending' ? 'queued' : exec.status,
+          status: exec.status === "pending" ? "queued" : exec.status,
           scheduledFor: exec.createdAt,
           sentAt: exec.sentAt,
           recipientEmail: extractRecipientEmail(exec.dedupeKey),
@@ -194,10 +265,40 @@ export class AdminPrismaRepository implements AdminRepository {
   }
 
   async saveSnapshot(snapshot: AdminSnapshot): Promise<AdminSnapshot> {
+    const currentGroups = await this.prisma.reportingGroup.findMany();
     const currentUsers = await this.prisma.user.findMany();
     const currentProjects = await this.prisma.project.findMany();
     const currentReports = await this.prisma.report.findMany();
     const currentRules = await this.prisma.reminderRule.findMany();
+
+    // Upsert reporting groups before users so required User.reportingGroupId
+    // can be validated by the database.
+    const currentGroupIds = new Set(currentGroups.map((g) => g.id));
+    for (const group of snapshot.groups) {
+      if (currentGroupIds.has(group.id)) {
+        await this.prisma.reportingGroup.update({
+          where: { id: group.id },
+          data: {
+            name: group.name,
+            description: group.description ?? null,
+            archived: group.archived,
+          },
+        });
+      } else {
+        await this.prisma.reportingGroup.create({
+          data: {
+            id: group.id,
+            name: group.name,
+            description: group.description ?? null,
+            archived: group.archived,
+          },
+        });
+      }
+    }
+
+    const fallbackReportingGroupId =
+      snapshot.groups.find((group) => !group.archived)?.id ??
+      (await this.ensureFallbackReportingGroup());
 
     // Upsert users
     const currentUserIds = new Set(currentUsers.map((u) => u.id));
@@ -211,6 +312,7 @@ export class AdminPrismaRepository implements AdminRepository {
             email: user.email,
             name: user.name,
             role: user.role,
+            reportingGroupId: user.reportingGroupId ?? fallbackReportingGroupId,
           },
         });
       } else {
@@ -221,6 +323,7 @@ export class AdminPrismaRepository implements AdminRepository {
             name: user.name,
             role: user.role,
             samlId: user.email,
+            reportingGroupId: user.reportingGroupId ?? fallbackReportingGroupId,
           },
         });
       }
@@ -245,7 +348,7 @@ export class AdminPrismaRepository implements AdminRepository {
         } catch (error: unknown) {
           // Handle FK constraint violations (Prisma P2003)
           const prismaError = error as { code?: string };
-          if (prismaError.code === 'P2003') {
+          if (prismaError.code === "P2003") {
             // Skip deletion if user is referenced by other tables
             continue;
           }
@@ -324,10 +427,10 @@ export class AdminPrismaRepository implements AdminRepository {
 
     for (const rule of snapshot.reminderRules) {
       const ruleData = {
-        kind: rule.kind as 'deadline' | 'follow_up',
+        kind: rule.kind as "deadline" | "follow_up" | "escalation",
         fireAt: rule.fireAt,
         timezone: rule.timezone,
-        status: rule.status as 'active' | 'paused',
+        status: rule.status as "active" | "paused",
         version: rule.version,
         reportId: rule.reportId || null,
       };

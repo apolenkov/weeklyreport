@@ -110,7 +110,8 @@ export function JobsTab() {
           email-reminder queue
         </h2>
         <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-          Failed email reminder deliveries after all retries. Rules are configured in Reminders; this tab is only for delivery failures.
+          Failed email reminder deliveries after all retries. Rules are
+          configured in Reminders; this tab is only for delivery failures.
         </p>
       </div>
 
@@ -118,7 +119,7 @@ export function JobsTab() {
         type="search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search failed jobs..."
+        placeholder="Search failed jobs…"
         className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         aria-label="Search failed jobs"
       />
@@ -135,14 +136,18 @@ export function JobsTab() {
         </div>
       )}
 
-      {!listQuery.isPending && !listQuery.isError && filteredJobs.length === 0 && (
-        <div
-          data-testid="jobs-empty-state"
-          className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
-        >
-          {jobs.length === 0 ? "No failed email reminder jobs. Queue is clean." : "No failed jobs match the search."}
-        </div>
-      )}
+      {!listQuery.isPending &&
+        !listQuery.isError &&
+        filteredJobs.length === 0 && (
+          <div
+            data-testid="jobs-empty-state"
+            className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
+          >
+            {jobs.length === 0
+              ? "No failed email reminder jobs. Queue is clean."
+              : "No failed jobs match the search."}
+          </div>
+        )}
 
       {filteredJobs.length > 0 && (
         <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
