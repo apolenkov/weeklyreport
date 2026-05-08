@@ -113,6 +113,21 @@ node count w/ < 100 scenarios applicable:       0   (all nodes well-covered)
 
 Coverage healthy across the board. No node is a black hole.
 
+## Manual UAT Regression Addendum (2026-05-08)
+
+The generated matrix was not enough for the manual-UAT defects found on
+2026-05-08. These scenarios are now tracked as explicit user-feedback
+regressions until the generator learns the domain invariants.
+
+```text
+REG-ADM-STAGE-001
+route: /admin?tab=products
+spec: apps/web/e2e/regression/admin-stage-reassignment.spec.ts
+source: .planning/regression/USER-FEEDBACK-BACKLOG-2026-05-08.md#ufb-001
+evidence: .planning/regression/evidence/2026-05-08-admin-stage-reassignment/
+contract: changing one product/stage assignee replaces the existing row
+```
+
 ## Next steps for downstream agents
 
 A Haiku micro-agent dispatched on a chunk receives:

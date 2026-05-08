@@ -69,18 +69,27 @@ export class AdminPrismaRepository implements AdminRepository {
     stageId: string;
     projectId: string;
   }): Promise<StageAssignment> {
-    const row = await this.prisma.stageAssignment.upsert({
-      where: {
-        userId_stageId_projectId: {
-          userId: data.userId,
-          stageId: data.stageId,
-          projectId: data.projectId,
-        },
-      },
-      create: data,
-      update: {},
-      include: { stage: { select: { name: true } }, user: { select: { name: true } } },
+    const existing = await this.prisma.stageAssignment.findFirst({
+      where: { stageId: data.stageId, projectId: data.projectId },
+      select: { id: true },
     });
+
+    const row = existing
+      ? await this.prisma.stageAssignment.update({
+          where: { id: existing.id },
+          data: { userId: data.userId },
+          include: {
+            stage: { select: { name: true } },
+            user: { select: { name: true } },
+          },
+        })
+      : await this.prisma.stageAssignment.create({
+          data,
+          include: {
+            stage: { select: { name: true } },
+            user: { select: { name: true } },
+          },
+        });
 
     return stageAssignmentSchema.parse({
       id: row.id,

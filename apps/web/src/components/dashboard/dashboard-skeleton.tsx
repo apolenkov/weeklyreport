@@ -2,7 +2,7 @@ import { Skeleton } from '@customreport/ui/components/ui/skeleton';
 
 /**
  * Loading-state skeleton for the head dashboard. Mirrors the dimensions of
- * KpiCards / AlertBar / BlockedAtRiskTable / LeadReportsGrid /
+ * Submission Activity / KpiCards / AlertBar / BlockedAtRiskTable /
  * ReportArchiveSection so the load-to-data transition has no layout shift.
  *
  * Stateless and hook-free — safe to render server-side.
@@ -10,6 +10,19 @@ import { Skeleton } from '@customreport/ui/components/ui/skeleton';
 export function DashboardSkeleton() {
   return (
     <div className="space-y-6">
+      {/* Submission Activity */}
+      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <Skeleton className="h-6 w-44" />
+          <Skeleton className="h-4 w-36" />
+        </div>
+        <div className="space-y-1">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-[var(--radius)]" />
+          ))}
+        </div>
+      </div>
+
       {/* KPI Cards (3-up grid) */}
       <div className="grid gap-4 sm:grid-cols-3">
         {[0, 1, 2].map((i) => (
@@ -35,19 +48,6 @@ export function DashboardSkeleton() {
         </div>
         <div className="space-y-2 px-4 pb-4">
           {[0, 1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-lg" />
-          ))}
-        </div>
-      </div>
-
-      {/* Lead Reports header + 6 rows */}
-      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white">
-        <div className="flex items-center justify-between p-4">
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-4 w-4" />
-        </div>
-        <div className="space-y-1.5 px-4 pb-4">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-12 w-full rounded-lg" />
           ))}
         </div>

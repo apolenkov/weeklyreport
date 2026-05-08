@@ -71,12 +71,16 @@ function createRepository(
       return structuredClone(currentSettings);
     },
     async saveStageAssignment(data) {
-      const key = `${data.userId}:${data.stageId}:${data.projectId}`;
       const existing = [...assignments.values()].find(
-        (a) => `${a.userId}:${a.stageId}:${a.projectId}` === key,
+        (a) => a.stageId === data.stageId && a.projectId === data.projectId,
       );
       if (existing) {
-        return structuredClone(existing);
+        const updated: StageAssignment = {
+          ...existing,
+          userId: data.userId,
+        };
+        assignments.set(existing.id, updated);
+        return structuredClone(updated);
       }
       const assignment: StageAssignment = {
         id: crypto.randomUUID(),
@@ -124,7 +128,7 @@ describe('AdminService — stage assignments (integration)', () => {
     expect(created.stageName).toBe('Development');
   });
 
-  it('duplicate assignment returns existing (idempotent)', async () => {
+  it('updates the assignee for the same project stage', async () => {
     const service = new AdminService(createRepository());
 
     const first = await service.saveStageAssignment({
@@ -134,16 +138,18 @@ describe('AdminService — stage assignments (integration)', () => {
     });
 
     const second = await service.saveStageAssignment({
-      userId: USER_ID,
+      userId: USER_ID_2,
       stageId: STAGE_ID,
       projectId: PROJECT_ID,
     });
 
     expect(second.id).toBe(first.id);
+    expect(second.userId).toBe(USER_ID_2);
 
-    // Verify only one exists
+    // Verify only one exists for the product/stage pair.
     const list = await service.listStageAssignments(PROJECT_ID);
     expect(list).toHaveLength(1);
+    expect(list[0]?.userId).toBe(USER_ID_2);
   });
 
   it('deletes an assignment successfully', async () => {
