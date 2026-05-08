@@ -5,6 +5,7 @@ date: 2026-05-08
 source:
   - .planning/regression/evidence/2026-05-08-layout-empty-section-polish/layout-check.json
   - .planning/regression/evidence/2026-05-08-ui-security-guideline-pass/SUMMARY.md
+  - .planning/regression/evidence/2026-05-08-phase16-17-uat/uat-live-results.json
   - .planning/quick/260508-kfo-layout-empty-section-polish/260508-kfo-SUMMARY.md
 ---
 
@@ -144,6 +145,9 @@ Alternative directions rejected for now:
 | Motion/a11y       | empty stage pulse now has motion-reduce:animate-none.                                                                           | web lint PASS                                                   |
 | UI stability      | transition-all removed from apps/web/src.                                                                                       | static grep: 0 matches                                          |
 | Typography        | visible loading/search ellipses use the single ellipsis character.                                                              | web lint/typecheck/test PASS                                    |
+| Live UAT          | phase 17 live replay now covers all 10 original UAT scenarios against localhost:3000/3002.                                      | 10 PASS, 0 FAIL, 2 phase16 BLOCKED                              |
+| Landing           | / in dev stub mode stays on the landing entry surface instead of treating backend DEV_SESSION fallback as explicit login.       | sc-17-01-login.png                                              |
+| URL history       | Reports tab switches use browser history so Back returns from Published to My Drafts.                                           | sc-17-10-url-routing.png                                        |
 
 Verification run:
 
@@ -164,7 +168,6 @@ Verification run:
 
 Still not closed by this pass:
 
-- Full Playwright live role-matrix replay was not rerun.
 - Background/surface token batch is still a design-system task.
 - Correlation-id UX, client error sanitization, and persistent user action log are still planned work.
 - Phase 16 PDF/theme human UAT remains open.

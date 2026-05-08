@@ -1,0 +1,114 @@
+{
+  "generatedAt": "2026-05-08T13:28:27.237Z",
+  "web": "http://localhost:3000",
+  "api": "http://localhost:3002",
+  "evidenceDir": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat",
+  "counts": {
+    "PASS": 10,
+    "FAIL": 0,
+    "BLOCKED": 2
+  },
+  "results": [
+    {
+      "name": "SC-17-01 login page",
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "data": {
+        "hasSso": false,
+        "hasEnterApplication": true,
+        "hasDevRole": false
+      },
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-01-login.png"
+    },
+    {
+      "name": "SC-17-02 lead form page",
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-02-lead-form.png"
+    },
+    {
+      "name": "SC-17-03 lead history surface",
+      "status": "PASS",
+      "detail": "verified canonical merged history surface at /reports?tab=drafts",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-03-lead-history.png"
+    },
+    {
+      "name": "SC-17-04 dashboard page",
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-04-dashboard.png"
+    },
+    {
+      "name": "SC-17-05 weekly report page",
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "data": {
+        "disabledEmptyProductHeaders": 12
+      },
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-05-weekly-report.png"
+    },
+    {
+      "name": "SC-17-06 admin panel",
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-06-admin.png"
+    },
+    {
+      "name": "SC-17-07 print page",
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-07-print.png"
+    },
+    {
+      "name": "SC-17-08 navigation active state",
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "data": {
+        "draftsActive": ["My History"],
+        "publishedActive": ["Archive"],
+        "dashboardActive": ["Dashboard"],
+        "reportActive": ["Weekly Report"]
+      },
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-08-nav-active.png"
+    },
+    {
+      "name": "SC-17-09 design system consistency",
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "data": {
+        "bodyBg": "rgb(242, 240, 235)",
+        "tokenBackground": "#f2f0eb",
+        "tokenCard": "#ffffff",
+        "radius": "0.75rem",
+        "touchTarget": "44px",
+        "font": "Lexend, \"Source Sans 3\", ui-sans-serif, system-ui, sans-serif"
+      },
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-09-design-system.png"
+    },
+    {
+      "name": "SC-17-10 URL routing + browser back",
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-10-url-routing.png"
+    },
+    {
+      "name": "SC-16-01 PDF export runtime",
+      "status": "BLOCKED",
+      "detail": "No published report exists in the live DB; PDF runtime UAT requires a published report or explicit reseed/publish.",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-16-01-pdf-precondition.png",
+      "data": {
+        "publishedReportAvailable": false
+      }
+    },
+    {
+      "name": "SC-16-02 theme toggle visual behavior",
+      "status": "BLOCKED",
+      "detail": "No theme toggle surface is present in the current product build; product decision required before human visual UAT can close.",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-16-02-theme-toggle.png",
+      "data": {
+        "themeControls": 0
+      }
+    }
+  ],
+  "browserLogs": []
+}

@@ -18,6 +18,9 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("../../lib/client-error-reporting", () => ({
+  formatClientErrorMessage: vi.fn((prefix: string, error: unknown) =>
+    error instanceof Error ? `${prefix}: ${error.message}` : prefix,
+  ),
   logClientError: vi.fn(),
 }));
 

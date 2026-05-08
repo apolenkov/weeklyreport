@@ -24,9 +24,10 @@ const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
  *   1. Read auth.me.
  *   2. If a session exists → redirect by role (above table) or honour the
  *      sanitised `next` query param.
- *   3. If no session AND AUTH_STUB → render the dev-login picker grid
- *      (one card per seeded user, grouped by role) so any account can
- *      enter the demo without a terminal.
+ *   3. If AUTH_STUB → stay on the landing page and render the dev-login
+ *      picker grid (one card per seeded user, grouped by role). The backend
+ *      may return a DEV_SESSION fallback without a cookie; the public landing
+ *      page must not treat that fallback as an explicit login.
  *   4. If no session AND not stub → keep the SSO sign-in card.
  */
 type Role = 'lead' | 'head' | 'admin' | 'viewer';
@@ -98,7 +99,7 @@ function LoginPageBody() {
   // Picker data — fetched only in stub mode + when there's no session.
   const usersQ = useQuery({
     ...trpc.dev.listUsers.queryOptions(),
-    enabled: AUTH_STUB && !session && !sessionLoading,
+    enabled: AUTH_STUB,
     staleTime: 60_000,
   });
 
@@ -112,6 +113,7 @@ function LoginPageBody() {
   // the requested `next`). useEffect lets the auth.me query resolve
   // before the navigation — no flicker for stub-mode round-trips.
   useEffect(() => {
+    if (AUTH_STUB) return;
     if (sessionLoading || stayOnLanding) return;
     if (!session) return;
     window.location.replace(safeNext);
@@ -139,7 +141,7 @@ function LoginPageBody() {
     { head: [], admin: [], lead: [], viewer: [] },
   );
 
-  const showDevPicker = AUTH_STUB && !session && !sessionLoading;
+  const showDevPicker = AUTH_STUB && !sessionLoading;
 
   return (
     <main id="main-content" className="flex min-h-svh">

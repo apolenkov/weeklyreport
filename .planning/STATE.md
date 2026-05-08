@@ -5,8 +5,8 @@ milestone_name: Visual Identity & AI Maturity
 status: in_progress
 shipped_tag: v8.0.0
 shipped_at: "2026-05-06"
-last_updated: "2026-05-08T15:35:00+03:00"
-last_activity: 2026-05-08 -- UI/security guideline pass added object-level API guards, redacted tRPC input logging, reports deep-link tabs, reduced-motion fix, Codex GSD config repair, and evidence summary
+last_updated: "2026-05-08T16:23:00+03:00"
+last_activity: 2026-05-08 -- phase 16/17 live UAT replay added 10/10 phase 17 PASS evidence, fixed dev-stub landing fallback and Reports browser-history tabs, and kept phase 16 PDF/theme as explicit blockers
 progress:
   total_phases: 3
   completed_phases: 0
@@ -43,7 +43,7 @@ Milestone: v8.1 (IN PROGRESS, tag parent v8.0.0)
 Phases: 0/3 complete (40..42)
 Plans: 0/12 complete
 Status: active polish wave started, v8.0 is production baseline. Product-ready gate is reopened after manual UAT found domain-model and UI regressions.
-Last activity: 2026-05-08 -- retro and plan captured in .planning/regression/PRODUCT-READY-RETRO-AND-PLAN-2026-05-08.md; UI/security guideline pass captured in .planning/regression/evidence/2026-05-08-ui-security-guideline-pass/SUMMARY.md.
+Last activity: 2026-05-08 -- phase 16/17 live UAT replay captured in .planning/regression/evidence/2026-05-08-phase16-17-uat/uat-live-results.json; phase 17 UAT now has 10 PASS / 0 FAIL, while phase 16 PDF/theme remain explicit blockers.
 
 ### v8.0 phase progress
 
@@ -139,8 +139,8 @@ Last activity: 2026-05-08 -- retro and plan captured in .planning/regression/PRO
 ### Active Blockers
 
 - **Product-ready gate reopened** — manual UAT found unresolved domain-model issues: reporting scope must use StageAssignment instead of Project.leadId, stage status must be per stage, and content records need optional multi-stage tagging.
-- **Regression gate incomplete** — role matrix, no-cookie redirect, hover geometry, action-log evidence, and scenario-correlated screenshots/logs are planned but not fully automated yet.
-- **Live role-matrix UAT not rerun in this patch** — unit/lint/typecheck gates pass, but product-ready closure still needs Playwright role-matrix replay on the dev stack.
+- **Phase 16 human gate remains open** — PDF export runtime needs a published report or explicit reseed/publish approval; theme toggle needs product decision because current UI has no toggle surface.
+- **Regression gate partially incomplete** — phase 17 live role/route UAT now has scenario-correlated screenshots/log capture, but action-log evidence, correlation-id UX, and background/surface token batch remain planned work.
 
 ### v6.1 Backlog (deferred, NOT blocking v6.0 deploy)
 

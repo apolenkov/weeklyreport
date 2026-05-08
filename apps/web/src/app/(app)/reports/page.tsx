@@ -61,7 +61,7 @@ export default function ReportsPage() {
     setTab(nextTab);
     const params = new URLSearchParams(searchParams?.toString());
     params.set('tab', nextTab);
-    router.replace(`/reports?${params.toString()}`, { scroll: false });
+    router.push(`/reports?${params.toString()}`, { scroll: false });
   }
 
   // Keep state in sync if the URL param changes after mount (e.g. user
