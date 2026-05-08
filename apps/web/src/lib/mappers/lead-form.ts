@@ -58,7 +58,11 @@ import type {
 } from '@customreport/shared';
 
 import { deriveItemStatus, type ItemStatus } from './item-status';
-import { trafficToStageStatus, type StageStatus } from './traffic-light';
+import {
+  trafficToStageStatus,
+  type StageStatus,
+  type TrafficLightStatus,
+} from './traffic-light';
 
 // ---- Self-contained re-declarations of presentation types ----
 //
@@ -315,22 +319,23 @@ export function ownedStagesForProject(
  */
 function buildStageGrid(
   ownerLabel: string,
-  ownedStageNames: readonly string[],
-  productStatus: StageStatus,
+  ownedStages: readonly { stageName: string; status?: TrafficLightStatus | null }[],
 ): LeadStageAssignment[] {
-  const owned = new Set(ownedStageNames.map((s) => s.toLowerCase()));
+  const owned = new Map(
+    ownedStages.map((stage) => [stage.stageName.toLowerCase(), stage] as const),
+  );
   return STAGE_NAMES.map((stageName) => {
     const lower = stageName.toLowerCase();
-    const isOwned =
-      owned.has(lower) ||
+    const ownedStage =
+      owned.get(lower) ??
       // Aliases between the canonical seeded stage name ("Development") and
       // the compact pipeline label ("Dev").
-      (lower === 'dev' && owned.has('development')) ||
-      (lower === 'development' && owned.has('dev'));
-    if (isOwned) {
+      (lower === 'dev' ? owned.get('development') : undefined) ??
+      (lower === 'development' ? owned.get('dev') : undefined);
+    if (ownedStage) {
       return {
         stageName,
-        status: productStatus,
+        status: trafficToStageStatus(ownedStage.status ?? null),
         ownership: 'mine' as const,
         assignee: ownerLabel,
       };
@@ -360,13 +365,13 @@ export function mapLeadProducts(
   section: ReportSectionReadModel,
 ): LeadProduct[] {
   return section.projects.map((p) => {
+    const ownedStages = p.ownedStages ?? [];
     const overallStatus = trafficToStageStatus(p.trafficLight);
-    const ownedStageNames = (p.ownedStages ?? []).map((s) => s.stageName);
     return {
       id: p.projectId,
       name: p.projectName,
       overallStatus,
-      stages: buildStageGrid(section.authorName, ownedStageNames, overallStatus),
+      stages: buildStageGrid(section.authorName, ownedStages),
     };
   });
 }

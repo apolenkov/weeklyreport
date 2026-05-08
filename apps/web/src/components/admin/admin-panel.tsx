@@ -1,20 +1,19 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { useTRPC } from '../../lib/trpc-context';
-import { mapAdminSnapshot, mapAdminSettings } from '../../lib/mappers';
+import { useTRPC } from "../../lib/trpc-context";
+import { mapAdminSnapshot, mapAdminSettings } from "../../lib/mappers";
 
-import { UsersTab } from './users-tab';
-import { ProductsTab } from './products-tab';
-import { PeriodsTab } from './periods-tab';
-import { RemindersTab } from './reminders-tab';
-import { SettingsTab } from './settings-tab';
-import { ReopenTab } from './reopen-tab';
-import { JobsTab } from './jobs-tab';
-import { AdminTabSkeleton } from './admin-skeleton';
+import { UsersTab } from "./users-tab";
+import { ProductsTab } from "./products-tab";
+import { RemindersTab } from "./reminders-tab";
+import { SettingsTab } from "./settings-tab";
+import { ReopenTab } from "./reopen-tab";
+import { JobsTab } from "./jobs-tab";
+import { AdminTabSkeleton } from "./admin-skeleton";
 
 type AdminPanelProps = {
   readonly activeTab: string;
@@ -37,7 +36,7 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
       toast.error(
         snapshotQuery.error instanceof Error
           ? `Failed to load admin data: ${snapshotQuery.error.message}`
-          : 'Failed to load admin data',
+          : "Failed to load admin data",
       );
     }
   }, [snapshotQuery.isError, snapshotQuery.error]);
@@ -47,17 +46,21 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
       toast.error(
         settingsQuery.error instanceof Error
           ? `Failed to load settings: ${settingsQuery.error.message}`
-          : 'Failed to load settings',
+          : "Failed to load settings",
       );
     }
   }, [settingsQuery.isError, settingsQuery.error]);
 
-  const data = snapshotQuery.data ? mapAdminSnapshot(snapshotQuery.data) : undefined;
-  const settings = settingsQuery.data ? mapAdminSettings(settingsQuery.data) : undefined;
+  const data = snapshotQuery.data
+    ? mapAdminSnapshot(snapshotQuery.data)
+    : undefined;
+  const settings = settingsQuery.data
+    ? mapAdminSettings(settingsQuery.data)
+    : undefined;
 
   return (
     <div data-testid="admin-panel">
-      {activeTab === 'settings' && (
+      {activeTab === "settings" && (
         <>
           {!settings ? (
             <AdminTabSkeleton variant="form" />
@@ -69,34 +72,39 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
 
       {/* Reopen tab is self-contained — it owns its own queries, doesn't need
           the snapshot/settings context that the other tabs share. */}
-      {activeTab === 'reopen' && <ReopenTab />}
+      {activeTab === "reopen" && <ReopenTab />}
 
       {/* Phase 35-06: Jobs tab is also self-contained — it consumes the
           BullMQ-backed `admin.jobs.listFailed` query directly and doesn't
           need the admin snapshot. */}
-      {activeTab === 'jobs' && <JobsTab />}
+      {activeTab === "jobs" && <JobsTab />}
 
-      {!data && activeTab !== 'settings' && activeTab !== 'reopen' && activeTab !== 'jobs' && (
-        <AdminTabSkeleton variant="table" />
-      )}
+      {!data &&
+        activeTab !== "settings" &&
+        activeTab !== "reopen" &&
+        activeTab !== "jobs" && <AdminTabSkeleton variant="table" />}
 
-      {data && activeTab !== 'settings' && activeTab !== 'reopen' && activeTab !== 'jobs' && (
-        <>
-          {activeTab === 'users' && <UsersTab users={data.users} />}
-          {activeTab === 'products' && (
-            <ProductsTab
-              products={data.products}
-              users={data.users}
-              productFilter={productFilter}
-            />
-          )}
-          {activeTab === 'periods' && <PeriodsTab periods={data.periods} />}
-          {activeTab === 'reminders' && <RemindersTab reminders={data.reminders} />}
-          {!['users', 'products', 'periods', 'reminders'].includes(activeTab) && (
-            <UsersTab users={data.users} />
-          )}
-        </>
-      )}
+      {data &&
+        activeTab !== "settings" &&
+        activeTab !== "reopen" &&
+        activeTab !== "jobs" && (
+          <>
+            {activeTab === "users" && <UsersTab users={data.users} />}
+            {activeTab === "products" && (
+              <ProductsTab
+                products={data.products}
+                users={data.users}
+                productFilter={productFilter}
+              />
+            )}
+            {activeTab === "reminders" && (
+              <RemindersTab reminders={data.reminders} />
+            )}
+            {!["users", "products", "reminders"].includes(activeTab) && (
+              <UsersTab users={data.users} />
+            )}
+          </>
+        )}
     </div>
   );
 }

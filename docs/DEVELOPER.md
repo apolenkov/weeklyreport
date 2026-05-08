@@ -425,7 +425,7 @@ docker compose down && docker compose up -d postgres redis
 ### Manual UAT wipe
 
 When you want to keep the local users/products/stages/admin settings but clear
-all report history for manual testing:
+all report history and SDLC stage assignments for manual testing:
 
 ```bash
 pnpm db:wipe:manual-uat

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -18,6 +18,9 @@ import { ActivityLivePanel } from "./activity-live-panel";
 
 export function DashboardPage() {
   const trpc = useTRPC();
+  const [toggleAllAction, setToggleAllAction] = useState<"collapse" | "expand">(
+    "collapse",
+  );
 
   const reviewQ = useQuery(trpc.review.dashboard.queryOptions());
   const archiveQ = useQuery(trpc.archive.list.queryOptions({ limit: 12 }));
@@ -55,13 +58,32 @@ export function DashboardPage() {
 
   const sectionsRef = useRef<HTMLDivElement | null>(null);
 
+  const getAccordionButtons = useCallback(() => {
+    const root = sectionsRef.current;
+    if (!root) return [];
+    return Array.from(
+      root.querySelectorAll<HTMLButtonElement>("[aria-expanded]"),
+    );
+  }, []);
+
+  const syncToggleAllAction = useCallback(() => {
+    const anyExpanded = getAccordionButtons().some(
+      (btn) => btn.getAttribute("aria-expanded") === "true",
+    );
+    setToggleAllAction(anyExpanded ? "collapse" : "expand");
+  }, [getAccordionButtons]);
+
+  const scheduleToggleAllSync = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(syncToggleAllAction);
+    });
+  }, [syncToggleAllAction]);
+
   function handleToggleAll() {
     // Scope to dashboard sections — global selector matched the nav drawer
     // trigger and any other page-level accordion controls.
-    const root = sectionsRef.current;
-    if (!root) return;
-    const buttons = root.querySelectorAll<HTMLButtonElement>("[aria-expanded]");
-    const anyExpanded = Array.from(buttons).some(
+    const buttons = getAccordionButtons();
+    const anyExpanded = buttons.some(
       (btn) => btn.getAttribute("aria-expanded") === "true",
     );
     buttons.forEach((btn) => {
@@ -72,10 +94,15 @@ export function DashboardPage() {
         btn.click();
       }
     });
+    setToggleAllAction(anyExpanded ? "expand" : "collapse");
   }
 
   const isLoading =
     reviewQ.isLoading || archiveQ.isLoading || weeklyQ.isLoading;
+
+  useEffect(() => {
+    if (!isLoading) scheduleToggleAllSync();
+  }, [isLoading, scheduleToggleAllSync]);
 
   if (isLoading || !reviewQ.data || !archiveQ.data || !weeklyQ.data) {
     return (
@@ -104,7 +131,11 @@ export function DashboardPage() {
   const departmentLabel = weeklyQ.data.departmentName;
 
   return (
-    <div className="space-y-6" ref={sectionsRef}>
+    <div
+      className="space-y-6"
+      ref={sectionsRef}
+      onClickCapture={scheduleToggleAllSync}
+    >
       {/* Page header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -117,7 +148,10 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <ToggleAllButton onToggle={handleToggleAll} />
+          <ToggleAllButton
+            action={toggleAllAction}
+            onToggle={handleToggleAll}
+          />
           <a
             href={`/head/report/${encodeURIComponent(weeklyQ.data.reportId)}`}
             className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"

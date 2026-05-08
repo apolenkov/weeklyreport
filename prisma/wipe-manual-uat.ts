@@ -1,18 +1,18 @@
-import 'dotenv/config';
+import "dotenv/config";
 
-import net from 'node:net';
+import net from "node:net";
 
-import pg from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
+import pg from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import {
   PeriodStatus,
   PrismaClient,
   ReportSectionStatus,
   ReportStatus,
   Role,
-} from '@prisma/client';
+} from "@prisma/client";
 
-import { ACTIVE_REPORT_ID, SEED_REPORTS } from './seed-constants.js';
+import { ACTIVE_REPORT_ID, SEED_REPORTS } from "./seed-constants.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -23,65 +23,65 @@ type CountMap = Record<string, number>;
 function writeRedisCommand(command: string, ...args: string[]): Buffer {
   const parts = [command, ...args];
   return Buffer.from(
-    '*' +
+    "*" +
       parts.length +
-      '\r\n' +
+      "\r\n" +
       parts
-        .map((part) => '$' + Buffer.byteLength(part) + '\r\n' + part)
-        .join('\r\n') +
-      '\r\n',
-    'utf8',
+        .map((part) => "$" + Buffer.byteLength(part) + "\r\n" + part)
+        .join("\r\n") +
+      "\r\n",
+    "utf8",
   );
 }
 
 async function flushRedisDb(): Promise<
   { flushed: true } | { flushed: false; reason: string }
 > {
-  if (process.env.MANUAL_UAT_WIPE_FLUSH_REDIS === 'false') {
-    return { flushed: false, reason: 'disabled-by-env' };
+  if (process.env.MANUAL_UAT_WIPE_FLUSH_REDIS === "false") {
+    return { flushed: false, reason: "disabled-by-env" };
   }
 
-  const host = process.env.REDIS_HOST ?? 'localhost';
-  const port = Number(process.env.REDIS_PORT ?? '6379');
+  const host = process.env.REDIS_HOST ?? "localhost";
+  const port = Number(process.env.REDIS_PORT ?? "6379");
   if (!Number.isInteger(port) || port <= 0) {
-    return { flushed: false, reason: 'invalid-redis-port' };
+    return { flushed: false, reason: "invalid-redis-port" };
   }
 
   return await new Promise((resolve) => {
     const socket = net.createConnection({ host, port });
     const timer = setTimeout(() => {
       socket.destroy();
-      resolve({ flushed: false, reason: 'timeout' });
+      resolve({ flushed: false, reason: "timeout" });
     }, 5_000);
 
-    let response = '';
-    socket.once('connect', () => {
-      socket.write(writeRedisCommand('FLUSHDB'));
+    let response = "";
+    socket.once("connect", () => {
+      socket.write(writeRedisCommand("FLUSHDB"));
     });
-    socket.on('data', (chunk) => {
-      response += chunk.toString('utf8');
-      if (!response.includes('\r\n')) return;
+    socket.on("data", (chunk) => {
+      response += chunk.toString("utf8");
+      if (!response.includes("\r\n")) return;
       clearTimeout(timer);
       socket.end();
-      if (response.startsWith('+OK')) {
+      if (response.startsWith("+OK")) {
         resolve({ flushed: true });
       } else {
         resolve({ flushed: false, reason: response.trim().slice(0, 200) });
       }
     });
-    socket.once('error', (error) => {
+    socket.once("error", (error) => {
       clearTimeout(timer);
       resolve({ flushed: false, reason: error.message });
     });
-    socket.once('close', () => {
+    socket.once("close", () => {
       clearTimeout(timer);
     });
   });
 }
 
 async function main() {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Manual UAT wipe is forbidden when NODE_ENV=production.');
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Manual UAT wipe is forbidden when NODE_ENV=production.");
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -94,13 +94,9 @@ async function main() {
       appSettings: await tx.appSettings.count(),
     };
 
-    if (
-      baseCounts.leads === 0 ||
-      baseCounts.projects === 0 ||
-      baseCounts.stageAssignments === 0
-    ) {
+    if (baseCounts.leads === 0 || baseCounts.projects === 0) {
       throw new Error(
-        'Manual UAT wipe needs seeded base users, products, and stage assignments. Run pnpm db:seed:advanced first.',
+        "Manual UAT wipe needs seeded base users and products. Run pnpm db:seed:advanced first.",
       );
     }
 
@@ -108,6 +104,7 @@ async function main() {
       reports: await tx.report.count(),
       sections: await tx.reportSection.count(),
       projectStatuses: await tx.projectStatus.count(),
+      stageStatuses: await tx.stageStatus.count(),
       items: await tx.item.count(),
       risks: await tx.risk.count(),
       decisions: await tx.decision.count(),
@@ -116,6 +113,7 @@ async function main() {
       reminderRules: await tx.reminderRule.count({
         where: { reportId: { not: null } },
       }),
+      stageAssignments: await tx.stageAssignment.count(),
       reminderExecutions: await tx.reminderExecution.count(),
       carryOverExecutions: await tx.carryOverExecution.count(),
       carryOverRecords: await tx.carryOverRecord.count(),
@@ -138,20 +136,22 @@ async function main() {
       decisions: (await tx.decision.deleteMany({})).count,
       risks: (await tx.risk.deleteMany({})).count,
       items: (await tx.item.deleteMany({})).count,
+      stageStatuses: (await tx.stageStatus.deleteMany({})).count,
       projectStatuses: (await tx.projectStatus.deleteMany({})).count,
       reportSections: (await tx.reportSection.deleteMany({})).count,
       aiInsights: (await tx.aiInsight.deleteMany({})).count,
       reports: (await tx.report.deleteMany({})).count,
+      stageAssignments: (await tx.stageAssignment.deleteMany({})).count,
     };
 
     const settings = await tx.appSettings.findUnique({
-      where: { id: 'singleton' },
+      where: { id: "singleton" },
     });
     if (!settings) {
       await tx.appSettings.create({
         data: {
-          id: 'singleton',
-          departmentName: 'Software Development',
+          id: "singleton",
+          departmentName: "Software Development",
           autoCreatePeriods: false,
           defaultDeadlineDays: 5,
         },
@@ -172,7 +172,7 @@ async function main() {
 
     const leads = await tx.user.findMany({
       where: { role: Role.lead },
-      orderBy: [{ name: 'asc' }, { email: 'asc' }],
+      orderBy: [{ name: "asc" }, { email: "asc" }],
       select: { id: true, email: true, name: true },
     });
 
@@ -189,40 +189,6 @@ async function main() {
       sections.push(section);
     }
 
-    const projectStatusRows: Array<{
-      reportSectionId: string;
-      projectId: string;
-      status: null;
-    }> = [];
-    for (const section of sections) {
-      const projects = await tx.project.findMany({
-        where: {
-          archived: false,
-          OR: [
-            { leadId: section.authorId },
-            { stageAssignments: { some: { userId: section.authorId } } },
-          ],
-        },
-        select: { id: true },
-        orderBy: { name: 'asc' },
-      });
-
-      for (const project of projects) {
-        projectStatusRows.push({
-          reportSectionId: section.id,
-          projectId: project.id,
-          status: null,
-        });
-      }
-    }
-
-    if (projectStatusRows.length > 0) {
-      await tx.projectStatus.createMany({
-        data: projectStatusRows,
-        skipDuplicates: true,
-      });
-    }
-
     const after = {
       reports: await tx.report.count(),
       openReports: await tx.report.count({
@@ -233,6 +199,8 @@ async function main() {
       }),
       sections: await tx.reportSection.count(),
       projectStatuses: await tx.projectStatus.count(),
+      stageStatuses: await tx.stageStatus.count(),
+      stageAssignments: await tx.stageAssignment.count(),
       items: await tx.item.count(),
       risks: await tx.risk.count(),
       decisions: await tx.decision.count(),
@@ -256,7 +224,7 @@ async function main() {
         periodStart: report.periodStart.toISOString(),
         periodEnd: report.periodEnd.toISOString(),
         leadSections: leads.length,
-        projectStatuses: projectStatusRows.length,
+        projectStatuses: 0,
       },
     };
   });
@@ -264,13 +232,13 @@ async function main() {
   const redis = await flushRedisDb();
 
   console.log(
-    '[wipe-manual-uat] Done: ' + JSON.stringify({ ...result, redis }),
+    "[wipe-manual-uat] Done: " + JSON.stringify({ ...result, redis }),
   );
 }
 
 void main()
   .catch((error) => {
-    console.error('[wipe-manual-uat] Failed:', error);
+    console.error("[wipe-manual-uat] Failed:", error);
     process.exitCode = 1;
   })
   .finally(async () => {

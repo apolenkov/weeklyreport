@@ -14,6 +14,7 @@ import {
 import { SessionContext } from "../../lib/session-provider";
 import { mapLeadFormData } from "../../lib/mappers";
 import { ownedStagesForProject } from "../../lib/mappers/lead-form";
+import { stageStatusToTraffic } from "../../lib/mappers/traffic-light";
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
 import {
   useLeadFormAutosave,
@@ -317,6 +318,13 @@ function sectionToDraftPayload(
       projectId: p.projectId,
       status: p.trafficLight ?? undefined,
     })),
+    stageStatuses: section.projects.flatMap((p) =>
+      (p.ownedStages ?? []).map((stage) => ({
+        projectId: p.projectId,
+        stageId: stage.stageId,
+        status: stage.status ?? null,
+      })),
+    ),
     items: section.items
       .filter((it) => hasText(it.text))
       .map((it) => ({
@@ -360,6 +368,32 @@ function sectionToDraftPayload(
         stageName: p.stageName ?? null,
       })),
   };
+}
+
+function normalizeStageName(stageName: string): string {
+  const lower = stageName.toLowerCase();
+  return lower === "development" ? "dev" : lower;
+}
+
+function aggregateTrafficLight(
+  stages: readonly { status?: "green" | "yellow" | "red" | null }[],
+): "green" | "yellow" | "red" | null {
+  let severity = 0;
+  for (const stage of stages) {
+    if (stage.status === "red") {
+      severity = 3;
+      break;
+    }
+    if (stage.status === "yellow") severity = Math.max(severity, 2);
+    if (stage.status === "green") severity = Math.max(severity, 1);
+  }
+  return severity === 3
+    ? "red"
+    : severity === 2
+      ? "yellow"
+      : severity === 1
+        ? "green"
+        : null;
 }
 
 export function LeadForm({
@@ -804,45 +838,34 @@ export function LeadForm({
   function handleProductsChange(next: Product[]) {
     setDraftSection((prev) => {
       if (!prev) return prev;
-      // Map presentation Product[] (with stage statuses) back onto raw projects.
-      // Worst-of-stages → traffic-light. `null` carries the "all stages empty"
-      // case back to the schema as `undefined`, so picking Clear on the only
-      // owned stage actually returns the chip to grey instead of bouncing
-      // back to green via the (deleted) "default to green" branch.
-      // Use a numeric severity so TS' control-flow analysis doesn't end up
-      // narrowing `worst` away from the 'red' branch and emitting "no overlap"
-      // diagnostics on the literal-union comparisons. 0=none, 1=on-track,
-      // 2=at-risk, 3=blocked. Map back to the schema enum after the scan.
-      const worstByProduct = new Map<
+      const nextStageStatusByKey = new Map<
         string,
         "green" | "yellow" | "red" | null
       >();
       for (const p of next) {
-        let severity = 0;
         for (const s of p.stages) {
-          if (s.status === "blocked") {
-            severity = 3;
-            break;
-          }
-          if (s.status === "at-risk") severity = Math.max(severity, 2);
-          else if (s.status === "on-track") severity = Math.max(severity, 1);
-          // 'empty' contributes nothing; loop continues.
+          if (s.ownership !== "mine") continue;
+          nextStageStatusByKey.set(
+            `${p.id}::${normalizeStageName(s.stageName)}`,
+            stageStatusToTraffic(s.status),
+          );
         }
-        const worst: "green" | "yellow" | "red" | null =
-          severity === 3
-            ? "red"
-            : severity === 2
-              ? "yellow"
-              : severity === 1
-                ? "green"
-                : null;
-        worstByProduct.set(p.id, worst);
       }
-      const merged = prev.projects.map((ps) =>
-        worstByProduct.has(ps.projectId)
-          ? { ...ps, trafficLight: worstByProduct.get(ps.projectId) ?? null }
-          : ps,
-      );
+      const merged = prev.projects.map((ps) => {
+        const ownedStages = (ps.ownedStages ?? []).map((stage) => {
+          const key = `${ps.projectId}::${normalizeStageName(stage.stageName)}`;
+          if (!nextStageStatusByKey.has(key)) return stage;
+          return {
+            ...stage,
+            status: nextStageStatusByKey.get(key) ?? null,
+          };
+        });
+        return {
+          ...ps,
+          ownedStages,
+          trafficLight: aggregateTrafficLight(ownedStages),
+        };
+      });
       return { ...prev, projects: merged };
     });
   }
