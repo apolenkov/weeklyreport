@@ -46,6 +46,7 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
 
   function invalidateAssignments() {
     void qc.invalidateQueries(trpc.admin.listStageAssignments.pathFilter());
+    void qc.invalidateQueries(trpc.admin.listStageAssignmentCounts.pathFilter());
   }
 
   const saveMut = useMutation(
@@ -120,8 +121,9 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
             return;
           }
           if (nextUserId === currentAssignee) return;
-          // upsert keyed off (userId, stageId, projectId) — assigning a
-          // previously-unassigned stage just creates the row.
+          // The API treats (projectId, stageId) as one editable slot: selecting
+          // a different lead replaces the assignee instead of adding a second
+          // assignment row for the same stage.
           saveMut.mutate({
             userId: nextUserId,
             stageId: stage.id,

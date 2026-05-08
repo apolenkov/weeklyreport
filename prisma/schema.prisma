@@ -323,7 +323,7 @@ model StageAssignment {
   stage     Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, stageId, projectId])
+  @@unique([stageId, projectId])
   @@index([projectId])
 }
 
