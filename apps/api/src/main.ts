@@ -28,11 +28,15 @@ import { createAppLogger } from './lib/logger';
 import { createAuditLogger } from './lib/audit-logger';
 import { mountAuthRoutes } from './modules/auth/auth.routes';
 import { createAuthController } from './modules/auth/auth.controller';
-import { createSamlStrategy, createSamlStrategyOptions } from './modules/auth/saml.strategy';
+import {
+  createSamlStrategy,
+  createSamlStrategyOptions,
+} from './modules/auth/saml.strategy';
 import { PrismaService } from './infrastructure/prisma/prisma.service';
 import { mountBullBoard } from './infrastructure/bullmq/bull-board.module';
 import { getBullMQOptions } from './infrastructure/bullmq/bullmq-options';
 import { createRateLimits } from './infrastructure/throttler/rate-limit.middleware';
+import { httpRequestDurationSeconds } from './infrastructure/metrics/metrics.registry';
 
 import { ReportSectionsService } from './modules/report-sections/report-sections.service';
 import { ReviewService } from './modules/review/review.service';
@@ -50,6 +54,18 @@ import { AiService } from './modules/ai/ai.service';
 import { SearchService } from './modules/search/search.service';
 import { ActivityService } from './modules/activity/activity.service';
 import { JobsService } from './modules/admin/jobs.service';
+
+const UUID_SEGMENT_RE =
+  /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+
+function normalizeHttpRoute(path: string): string {
+  if (path.startsWith('/pdfs/')) return '/pdfs/:file';
+  if (path.startsWith('/auth/')) return '/auth/*';
+  if (path.startsWith('/health/')) return path;
+  if (path === '/metrics') return '/metrics';
+  if (path === '/api/client-logs') return '/api/client-logs';
+  return path.replace(UUID_SEGMENT_RE, ':id');
+}
 
 async function bootstrap() {
   // AUTH-01 / Phase 32-C M-05: dev-auth fence runs from
@@ -87,7 +103,10 @@ async function bootstrap() {
       samplingRatio: otelDecision.samplingRatio,
     });
   } else {
-    logger.info('otel sdk disabled', { phase: 'otel', reason: otelDecision.reason });
+    logger.info('otel sdk disabled', {
+      phase: 'otel',
+      reason: otelDecision.reason,
+    });
   }
 
   app.enableShutdownHooks();
@@ -113,7 +132,9 @@ async function bootstrap() {
   const allowedOrigins = (() => {
     const single = env.FRONTEND_URL;
     const csv = env.FRONTEND_URLS
-      ? env.FRONTEND_URLS.split(',').map((s) => s.trim()).filter(Boolean)
+      ? env.FRONTEND_URLS.split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
       : [];
     return Array.from(new Set([single, ...csv]));
   })();
@@ -129,34 +150,50 @@ async function bootstrap() {
   // /pdfs/*, /health/*, /metrics, /admin/queues. tRPC has its own
   // procedure-level middleware (trpc.middleware.ts) so we skip /trpc/*
   // here to avoid duplicate envelopes for the same request.
-  app.use((req: express.Request, res: express.Response, nextFn: express.NextFunction) => {
-    if (req.path.startsWith('/trpc')) return nextFn();
-    const start = performance.now();
-    res.on('finish', () => {
-      const duration = Math.round(performance.now() - start);
-      // 4xx/5xx → warn so they show up at info-level prod logs;
-      // 1xx/2xx/3xx → debug so a quiet endpoint doesn't drown logs.
-      const status = res.statusCode;
-      const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'debug';
-      logger[level]('http request', {
-        phase: 'http.request',
-        method: req.method,
-        path: req.path,
-        status,
-        duration,
-        ip: req.ip,
-        userAgent: req.get('user-agent'),
+  app.use(
+    (
+      req: express.Request,
+      res: express.Response,
+      nextFn: express.NextFunction,
+    ) => {
+      if (req.path.startsWith('/trpc')) return nextFn();
+      const start = performance.now();
+      res.on('finish', () => {
+        const duration = Math.round(performance.now() - start);
+        // 4xx/5xx → warn so they show up at info-level prod logs;
+        // 1xx/2xx/3xx → debug so a quiet endpoint doesn't drown logs.
+        const status = res.statusCode;
+        const level =
+          status >= 500 ? 'error' : status >= 400 ? 'warn' : 'debug';
+        logger[level]('http request', {
+          phase: 'http.request',
+          method: req.method,
+          path: req.path,
+          status,
+          duration,
+          ip: req.ip,
+          userAgent: req.get('user-agent'),
+        });
+        httpRequestDurationSeconds.observe(
+          {
+            method: req.method,
+            route: normalizeHttpRoute(req.path),
+            status_code: String(status),
+          },
+          duration / 1000,
+        );
       });
-    });
-    nextFn();
-  });
+      nextFn();
+    },
+  );
 
   // Browser → server log forwarder. Captures console.error/warn,
   // window.onerror, unhandledrejection from the web app and writes them to
   // the same rotating api.log so all debug data lives in one file.
   // Dev-only by default; turn on in prod with CLIENT_LOG_FORWARDING=true.
   const clientLogsEnabled =
-    env.NODE_ENV === 'development' || process.env['CLIENT_LOG_FORWARDING'] === 'true';
+    env.NODE_ENV === 'development' ||
+    process.env['CLIENT_LOG_FORWARDING'] === 'true';
   app.use(
     '/api/client-logs',
     express.json({ limit: '128kb' }),
@@ -172,13 +209,27 @@ async function bootstrap() {
         const e = raw as Record<string, unknown>;
         const lvl = e['level'];
         const level: 'debug' | 'info' | 'warn' | 'error' =
-          lvl === 'debug' || lvl === 'info' || lvl === 'warn' || lvl === 'error' ? lvl : 'info';
-        const msg = typeof e['message'] === 'string' ? (e['message'] as string).slice(0, 2000) : '<non-string>';
+          lvl === 'debug' || lvl === 'info' || lvl === 'warn' || lvl === 'error'
+            ? lvl
+            : 'info';
+        const msg =
+          typeof e['message'] === 'string'
+            ? (e['message'] as string).slice(0, 2000)
+            : '<non-string>';
         logger[level](`client: ${msg}`, {
           phase: 'web.client',
-          source: typeof e['source'] === 'string' ? (e['source'] as string).slice(0, 64) : undefined,
-          url: typeof e['url'] === 'string' ? (e['url'] as string).slice(0, 500) : undefined,
-          stack: typeof e['stack'] === 'string' ? (e['stack'] as string).slice(0, 4000) : undefined,
+          source:
+            typeof e['source'] === 'string'
+              ? (e['source'] as string).slice(0, 64)
+              : undefined,
+          url:
+            typeof e['url'] === 'string'
+              ? (e['url'] as string).slice(0, 500)
+              : undefined,
+          stack:
+            typeof e['stack'] === 'string'
+              ? (e['stack'] as string).slice(0, 4000)
+              : undefined,
           ts: e['ts'],
           ua: req.get('user-agent')?.slice(0, 200),
           ip: req.ip,

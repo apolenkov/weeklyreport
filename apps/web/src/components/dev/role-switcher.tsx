@@ -16,6 +16,7 @@ import {
 import { useTRPC } from '../../lib/trpc-context';
 
 type Role = 'head' | 'lead' | 'admin' | 'viewer';
+type DataResetVariant = 'minimum' | 'advanced' | 'manual-uat';
 
 const ROLE_LABEL: Record<Role, string> = {
   head: 'Department Head',
@@ -62,11 +63,16 @@ export function DevRoleSwitcher() {
 
   const switchTo = (identity: { role: Role; email: string }) => {
     setPending(true);
-    const params = new URLSearchParams({ role: identity.role, email: identity.email });
+    const params = new URLSearchParams({
+      role: identity.role,
+      email: identity.email,
+    });
     window.location.href = `/auth/dev-login?${params.toString()}`;
   };
 
-  const usersByRole = (usersQ.data ?? []).reduce<Record<Role, Array<{ id: string; email: string; name: string; role: Role }>>>(
+  const usersByRole = (usersQ.data ?? []).reduce<
+    Record<Role, Array<{ id: string; email: string; name: string; role: Role }>>
+  >(
     (acc, u) => {
       const r = u.role as Role;
       acc[r] = acc[r] ?? [];
@@ -85,7 +91,7 @@ export function DevRoleSwitcher() {
     }
   };
 
-  const reseed = (variant: 'minimum' | 'advanced') => {
+  const reseed = (variant: DataResetVariant) => {
     setPending(true);
     wipeAndReseedMut.mutate({ variant });
   };
@@ -104,7 +110,11 @@ export function DevRoleSwitcher() {
             DEV: switch role
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" side="top" className="max-h-[80vh] w-72 overflow-y-auto">
+        <DropdownMenuContent
+          align="end"
+          side="top"
+          className="max-h-[80vh] w-72 overflow-y-auto"
+        >
           <DropdownMenuLabel>Login as…</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {usersQ.isLoading && (
@@ -119,7 +129,10 @@ export function DevRoleSwitcher() {
             const list = usersByRole[role];
             if (!list?.length) return [];
             return [
-              <DropdownMenuLabel key={`${role}-label`} className="text-xs uppercase tracking-wide text-muted-foreground">
+              <DropdownMenuLabel
+                key={`${role}-label`}
+                className="text-xs uppercase tracking-wide text-muted-foreground"
+              >
                 {ROLE_LABEL[role]} ({list.length})
               </DropdownMenuLabel>,
               ...list.map((u) => (
@@ -130,7 +143,9 @@ export function DevRoleSwitcher() {
                   className="flex flex-col items-start gap-0.5"
                 >
                   <span className="font-medium">{u.name}</span>
-                  <span className="text-xs text-muted-foreground">{u.email}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {u.email}
+                  </span>
                 </DropdownMenuItem>
               )),
               <DropdownMenuSeparator key={`${role}-sep`} />,
@@ -149,8 +164,17 @@ export function DevRoleSwitcher() {
           >
             Wipe + Reseed (full)
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => reseed('manual-uat')}
+            data-testid="dev-role-switcher-wipe-manual-uat"
+          >
+            Wipe reports (manual UAT)
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={logout} data-testid="dev-role-switcher-logout">
+          <DropdownMenuItem
+            onSelect={logout}
+            data-testid="dev-role-switcher-logout"
+          >
             Logout
           </DropdownMenuItem>
         </DropdownMenuContent>

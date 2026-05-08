@@ -1,10 +1,12 @@
-# Phase 37-03: optional observability stack alongside docker-compose.prod.yml.
+# Optional observability stack for local or production-like Compose runs.
 #
 # Brings up Prometheus + Grafana for local validation of the API's /metrics
-# surface + the seeded dashboard skeleton. Not part of the prod-default
-# compose — the org typically has a managed Prometheus/Grafana already.
+# surface, Postgres exporter, Redis exporter, and the CustomReport dashboard.
+# Not part of the prod-default compose — the org typically has a managed
+# Prometheus/Grafana already.
 #
 # Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.observability.yml up -d
 #   docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
 #
 # Grafana login: admin / admin (forced password change on first login).
@@ -23,21 +25,44 @@ services:
       - --web.console.templates=/usr/share/prometheus/consoles
     ports:
       - "9090:9090"
+    depends_on:
+      - postgres-exporter
+      - redis-exporter
     restart: unless-stopped
 
   grafana:
     image: grafana/grafana:10.4.0
     volumes:
       - grafanadata:/var/lib/grafana
-      - ./deploy/grafana/customreport-dashboard.json:/var/lib/grafana/dashboards/customreport.json:ro
+      - ./deploy/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./deploy/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./deploy/grafana/customreport-dashboard.json:/var/lib/grafana/dashboards/customreport/customreport-dashboard.json:ro
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
     ports:
-      - "3001:3000"
+      - "${GRAFANA_PORT:-3003}:3000"
     depends_on:
       - prometheus
+    restart: unless-stopped
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    environment:
+      DATA_SOURCE_NAME: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

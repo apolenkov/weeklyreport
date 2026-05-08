@@ -13,7 +13,15 @@
 
 import { type Page, type Locator, expect } from '@playwright/test';
 
-const STAGES = ['Planning', 'Analysis', 'Design', 'Dev', 'Testing', 'DevOps', 'Support'] as const;
+const STAGES = [
+  'Planning',
+  'Analysis',
+  'Design',
+  'Dev',
+  'Testing',
+  'DevOps',
+  'Support',
+] as const;
 export type StageName = (typeof STAGES)[number];
 
 export type StatusOption = 'On Track' | 'At Risk' | 'Blocked' | 'Clear';
@@ -36,7 +44,11 @@ export const DEFAULT_LEAD = {
  */
 export async function loginAs(
   page: Page,
-  identity: { role: 'lead' | 'head' | 'admin' | 'viewer'; email: string; next?: string },
+  identity: {
+    role: 'lead' | 'head' | 'admin' | 'viewer';
+    email: string;
+    next?: string;
+  },
 ) {
   const params = new URLSearchParams({
     role: identity.role,
@@ -53,14 +65,19 @@ export async function loginAs(
  *
  * Requires an authenticated session, so call after `loginAs`.
  */
-export async function reseedDatabase(page: Page, variant: 'minimum' | 'advanced' = 'minimum') {
+export async function reseedDatabase(
+  page: Page,
+  variant: 'minimum' | 'advanced' | 'manual-uat' = 'minimum',
+) {
   const body = JSON.stringify({ '0': { json: { variant } } });
   const response = await page.request.post('/trpc/dev.wipeAndReseed?batch=1', {
     data: body,
     headers: { 'content-type': 'application/json' },
   });
   if (!response.ok()) {
-    throw new Error(`reseed failed: ${response.status()} ${await response.text()}`);
+    throw new Error(
+      `reseed failed: ${response.status()} ${await response.text()}`,
+    );
   }
 }
 
@@ -88,12 +105,18 @@ export function waitForSave(page: Page) {
 /** Navigate to /lead/report and wait for the form to hydrate. */
 export async function gotoLeadReport(page: Page) {
   await page.goto('/lead/report');
-  await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-  // Wait for the first accordion header — that means the byPeriod query resolved.
-  await page.getByRole('button', { name: /Product Status/i }).first().waitFor({
+  await page.waitForSelector('#main-content', {
     state: 'visible',
     timeout: 15_000,
   });
+  // Wait for the first accordion header — that means the byPeriod query resolved.
+  await page
+    .getByRole('button', { name: /Product Status/i })
+    .first()
+    .waitFor({
+      state: 'visible',
+      timeout: 15_000,
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -114,10 +137,12 @@ export async function clickStageChip(
 ): Promise<void> {
   const chips = page.locator(`button[aria-label="${stage}: ${status}"]`);
   await chips.nth(productIndex).click();
-  await page.getByRole('menu', { name: new RegExp(`Set status for ${stage}`) }).waitFor({
-    state: 'visible',
-    timeout: 5_000,
-  });
+  await page
+    .getByRole('menu', { name: new RegExp(`Set status for ${stage}`) })
+    .waitFor({
+      state: 'visible',
+      timeout: 5_000,
+    });
 }
 
 export function stagePopover(page: Page): Locator {
@@ -132,8 +157,13 @@ export function stagePopover(page: Page): Locator {
  * against; focus() bypasses hit-testing and Enter on a focused
  * menuitem dispatches an activation click that React's onClick sees.
  */
-export async function selectStageOption(page: Page, option: StatusOption): Promise<void> {
-  const item = stagePopover(page).getByRole('menuitem', { name: new RegExp(option) });
+export async function selectStageOption(
+  page: Page,
+  option: StatusOption,
+): Promise<void> {
+  const item = stagePopover(page).getByRole('menuitem', {
+    name: new RegExp(option),
+  });
   await item.focus();
   await page.keyboard.press('Enter');
   // The popover dismounts on selection; give React a tick to apply the
@@ -179,10 +209,18 @@ export async function openItemAdd(
  * dispatch on the button. We `hover()` the card first to activate the
  * group-hover state, then dispatch the click.
  */
-export async function openItemEdit(page: Page, cardText: string): Promise<void> {
-  const card = page.getByTestId('item-card').filter({ hasText: cardText }).first();
+export async function openItemEdit(
+  page: Page,
+  cardText: string,
+): Promise<void> {
+  const card = page
+    .getByTestId('item-card')
+    .filter({ hasText: cardText })
+    .first();
   await card.hover();
-  await card.getByRole('button', { name: 'Edit', exact: true }).click({ force: true });
+  await card
+    .getByRole('button', { name: 'Edit', exact: true })
+    .click({ force: true });
   await itemDialog(page).waitFor({ state: 'visible', timeout: 5_000 });
 }
 
@@ -192,9 +230,14 @@ export async function openItemEdit(page: Page, cardText: string): Promise<void> 
  * intercept the dispatch.
  */
 export async function deleteItem(page: Page, cardText: string): Promise<void> {
-  const card = page.getByTestId('item-card').filter({ hasText: cardText }).first();
+  const card = page
+    .getByTestId('item-card')
+    .filter({ hasText: cardText })
+    .first();
   await card.hover();
-  await card.getByRole('button', { name: 'Delete', exact: true }).click({ force: true });
+  await card
+    .getByRole('button', { name: 'Delete', exact: true })
+    .click({ force: true });
 }
 
 export function itemDialog(page: Page): Locator {
@@ -206,7 +249,9 @@ export async function fillItemDialog(
   fields: { text?: string; status?: ItemStatus; productName?: string },
 ): Promise<void> {
   if (fields.text !== undefined) {
-    await itemDialog(page).getByLabel(/Description/i).fill(fields.text);
+    await itemDialog(page)
+      .getByLabel(/Description/i)
+      .fill(fields.text);
   }
   if (fields.status) {
     const label = {
@@ -218,28 +263,54 @@ export async function fillItemDialog(
     await itemDialog(page).getByRole('button', { name: label }).click();
   }
   if (fields.productName) {
-    await itemDialog(page).getByLabel(/Product/i).selectOption({ label: fields.productName });
+    await itemDialog(page)
+      .getByLabel(/Product/i)
+      .selectOption({ label: fields.productName });
   }
 }
 
-export async function saveDialog(page: Page, dialogName: RegExp = /dialog/i): Promise<void> {
-  await page.getByRole('dialog', { name: dialogName }).getByRole('button', { name: 'Save' }).click();
+export async function saveDialog(
+  page: Page,
+  dialogName: RegExp = /dialog/i,
+): Promise<void> {
+  await page
+    .getByRole('dialog', { name: dialogName })
+    .getByRole('button', { name: 'Save' })
+    .click();
 }
 
-export async function cancelDialog(page: Page, dialogName: RegExp = /dialog/i): Promise<void> {
-  await page.getByRole('dialog', { name: dialogName }).getByRole('button', { name: /Cancel/ }).click();
+export async function cancelDialog(
+  page: Page,
+  dialogName: RegExp = /dialog/i,
+): Promise<void> {
+  await page
+    .getByRole('dialog', { name: dialogName })
+    .getByRole('button', { name: /Cancel/ })
+    .click();
 }
 
 // ---------------------------------------------------------------------------
 // Accordion sections
 // ---------------------------------------------------------------------------
 
-const SECTION_NAMES = ['Product Status', 'Current Week', 'Next Week', 'Risks & Blockers', 'Decisions', 'Priorities'] as const;
+const SECTION_NAMES = [
+  'Product Status',
+  'Current Week',
+  'Next Week',
+  'Risks & Blockers',
+  'Decisions',
+  'Priorities',
+] as const;
 export type SectionName = (typeof SECTION_NAMES)[number];
 
 /** Expand a collapsed accordion section. No-op if already expanded. */
-export async function expandSection(page: Page, name: SectionName): Promise<void> {
-  const header = page.getByRole('button', { name: new RegExp(`^${name}`), exact: false }).first();
+export async function expandSection(
+  page: Page,
+  name: SectionName,
+): Promise<void> {
+  const header = page
+    .getByRole('button', { name: new RegExp(`^${name}`), exact: false })
+    .first();
   const expanded = await header.getAttribute('aria-expanded');
   if (expanded !== 'true') {
     await header.click();
@@ -256,9 +327,14 @@ export async function expandSection(page: Page, name: SectionName): Promise<void
  * regression on the trafficLight-nullable fix would surface as a
  * decremented count here.
  */
-export async function expectAssignedProducts(page: Page, count: number): Promise<void> {
+export async function expectAssignedProducts(
+  page: Page,
+  count: number,
+): Promise<void> {
   await expect(
-    page.getByRole('button', { name: new RegExp(`${count} assigned products?`) }),
+    page.getByRole('button', {
+      name: new RegExp(`${count} assigned products?`),
+    }),
   ).toBeVisible();
 }
 

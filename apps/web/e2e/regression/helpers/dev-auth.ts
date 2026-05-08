@@ -14,11 +14,17 @@ type DevAuthIdentity = {
   maxRetries?: number;
 };
 
-type AuthMeEntry = { result?: { data?: { json?: unknown } | unknown }; error?: unknown; message?: unknown };
+type AuthMeEntry = {
+  result?: { data?: { json?: unknown } | unknown };
+  error?: unknown;
+  message?: unknown;
+};
 type SessionRoleResult = 'rate_limited' | Role | null;
 
 function parseAuthMeRole(payload: unknown): SessionRoleResult {
-  const entry = (Array.isArray(payload) ? payload[0] : payload) as AuthMeEntry | undefined;
+  const entry = (Array.isArray(payload) ? payload[0] : payload) as
+    | AuthMeEntry
+    | undefined;
   if (!entry) {
     return null;
   }
@@ -63,7 +69,11 @@ async function getSessionRole(page: Page): Promise<SessionRoleResult> {
   return parseAuthMeRole(payload);
 }
 
-function roleFromEmail(role: Role, email: string | undefined, attempt: number): string | undefined {
+function roleFromEmail(
+  role: Role,
+  email: string | undefined,
+  attempt: number,
+): string | undefined {
   if (email) {
     return email;
   }
@@ -88,9 +98,11 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
     if (email) params.set('email', email);
     if (identity.redirect) params.set('redirect', identity.redirect);
 
-    const response = await page.context().request.get(`${WEB_URL}/auth/dev-login?${params.toString()}`, {
-      maxRedirects: 0,
-    });
+    const response = await page
+      .context()
+      .request.get(`${WEB_URL}/auth/dev-login?${params.toString()}`, {
+        maxRedirects: 0,
+      });
 
     if (response.status() < 300 || response.status() >= 400) {
       const body = await response.text().catch(() => '');
@@ -132,7 +144,9 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
             if (!String(error).includes('net::ERR_ABORTED')) throw error;
           });
       } else {
-        await page.goto(`${WEB_URL}/`, { waitUntil: 'domcontentloaded' }).catch(() => null);
+        await page
+          .goto(`${WEB_URL}/`, { waitUntil: 'domcontentloaded' })
+          .catch(() => null);
       }
       return;
     }
@@ -159,7 +173,9 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
           if (!String(error).includes('net::ERR_ABORTED')) throw error;
         });
     } else {
-      await page.goto(`${WEB_URL}/`, { waitUntil: 'domcontentloaded' }).catch(() => null);
+      await page
+        .goto(`${WEB_URL}/`, { waitUntil: 'domcontentloaded' })
+        .catch(() => null);
     }
     return;
   }
@@ -167,32 +183,46 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
 
 export async function wipeAndReseed(
   page: Page,
-  variant: 'minimum' | 'advanced' = 'advanced',
+  variant: 'minimum' | 'advanced' | 'manual-uat' = 'advanced',
 ) {
   const body = JSON.stringify({ '0': { json: { variant } } });
   for (let attempt = 1; attempt <= 4; attempt++) {
-    const response = await page.request.post('/trpc/dev.wipeAndReseed?batch=1', {
-      data: body,
-      headers: { 'content-type': 'application/json' },
-    });
+    const response = await page.request.post(
+      '/trpc/dev.wipeAndReseed?batch=1',
+      {
+        data: body,
+        headers: { 'content-type': 'application/json' },
+      },
+    );
 
     const responseBody = await response.text();
     if (response.ok()) {
       return;
     }
 
-    if (response.status() === 429 && responseBody.includes('rate_limit_exceeded') && attempt === 1) {
+    if (
+      response.status() === 429 &&
+      responseBody.includes('rate_limit_exceeded') &&
+      attempt === 1
+    ) {
       const retryAfterHeader = response.headers()['retry-after'];
-      const retryAfterPayload = Number(/"retryAfter":(\d+)/.exec(responseBody)?.[1] ?? NaN);
+      const retryAfterPayload = Number(
+        /"retryAfter":(\d+)/.exec(responseBody)?.[1] ?? NaN,
+      );
       const retryAfter = Number.isFinite(retryAfterPayload)
         ? retryAfterPayload
         : Number(retryAfterHeader ?? NaN);
-      const resolvedWaitMs = Math.min(Number.isFinite(retryAfter) ? retryAfter * 1000 : 2000, 5000);
+      const resolvedWaitMs = Math.min(
+        Number.isFinite(retryAfter) ? retryAfter * 1000 : 2000,
+        5000,
+      );
       const jitter = 250 * attempt + Math.floor(Math.random() * 250);
       await page.waitForTimeout(resolvedWaitMs + jitter);
       continue;
     }
 
-    throw new Error(`dev.wipeAndReseed failed: ${response.status()} ${responseBody}`);
+    throw new Error(
+      `dev.wipeAndReseed failed: ${response.status()} ${responseBody}`,
+    );
   }
 }

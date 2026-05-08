@@ -5,6 +5,7 @@ import {
   dlqFailedTotal,
   rateLimitHitsTotal,
   loginAttemptsTotal,
+  httpRequestDurationSeconds,
 } from './metrics.registry.js';
 
 describe('37-02 metrics registry', () => {
@@ -24,7 +25,9 @@ describe('37-02 metrics registry', () => {
 
     expect(text).toContain('cr_dlq_failed_total{queue="pdf-export"} 1');
     expect(text).toContain('cr_rate_limit_hits_total{bucket="auth"} 1');
-    expect(text).toContain('cr_login_attempts_total{method="saml",outcome="success"} 1');
+    expect(text).toContain(
+      'cr_login_attempts_total{method="saml",outcome="success"} 1',
+    );
   });
 
   it('separates labels into independent series', async () => {
@@ -43,9 +46,15 @@ describe('37-02 metrics registry', () => {
     loginAttemptsTotal.inc({ method: 'dev-login', outcome: 'success' });
 
     const text = await metricsRegistry.metrics();
-    expect(text).toContain('cr_login_attempts_total{method="saml",outcome="success"} 1');
-    expect(text).toContain('cr_login_attempts_total{method="saml",outcome="fail"} 1');
-    expect(text).toContain('cr_login_attempts_total{method="dev-login",outcome="success"} 1');
+    expect(text).toContain(
+      'cr_login_attempts_total{method="saml",outcome="success"} 1',
+    );
+    expect(text).toContain(
+      'cr_login_attempts_total{method="saml",outcome="fail"} 1',
+    );
+    expect(text).toContain(
+      'cr_login_attempts_total{method="dev-login",outcome="success"} 1',
+    );
   });
 
   it('includes Node.js default metrics (process_cpu_user_seconds_total etc.)', async () => {
@@ -53,5 +62,17 @@ describe('37-02 metrics registry', () => {
     // collectDefaultMetrics() is idempotent per registry; one of the
     // standard heap counters should be present.
     expect(text).toMatch(/^# (HELP|TYPE) nodejs_/m);
+  });
+
+  it('records HTTP latency buckets for Prometheus dashboards', async () => {
+    httpRequestDurationSeconds.observe(
+      { method: 'GET', route: '/health/ready', status_code: '200' },
+      0.042,
+    );
+
+    const text = await metricsRegistry.metrics();
+    expect(text).toContain(
+      'http_request_duration_seconds_count{method="GET",route="/health/ready",status_code="200"} 1',
+    );
   });
 });

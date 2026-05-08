@@ -21,13 +21,23 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async getActiveReportId(): Promise<string | null> {
-    const report = await this.prisma.report.findFirst({
-      where: { periodStatus: 'open' },
+    const editableReport = await this.prisma.report.findFirst({
+      where: { periodStatus: { in: ['open', 'reopened'] } },
       orderBy: { periodStart: 'desc' },
       select: { id: true },
     });
 
-    return report?.id ?? null;
+    if (editableReport) {
+      return editableReport.id;
+    }
+
+    const publishedReport = await this.prisma.report.findFirst({
+      where: { periodStatus: 'published' },
+      orderBy: { periodStart: 'desc' },
+      select: { id: true },
+    });
+
+    return publishedReport?.id ?? null;
   }
 
   async getWeeklyReport(reportId: string): Promise<WeeklyReportReadModel | null> {
