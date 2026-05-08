@@ -67,7 +67,7 @@ apps/web/e2e/regression/admin-stage-reassignment.spec.ts
 
 ### UFB-002 - Reporting scope source of truth
 
-Status: verify_existing
+Status: done
 
 Rule:
 
@@ -84,9 +84,22 @@ owner-only product is not required for submit
 head report can show owner metadata without expanding author scope
 ```
 
+Regression/evidence:
+
+```text
+apps/api/src/modules/report-sections/report-sections.integration.test.ts
+  getSectionById excludes product-owner projects without StageAssignment
+  submitSection ignores product-owner projects without StageAssignment
+
+apps/api/src/modules/report-sections/report-sections.service.test.ts
+  submits by read-model scope and does not require owner-only projects
+
+.planning/regression/evidence/2026-05-08-reporting-scope-submit/README.md
+```
+
 ### UFB-003 - Submit validation by assigned stage only
 
-Status: open
+Status: done
 
 Bug class:
 
@@ -102,9 +115,16 @@ lead with DevOps stages only submits without Security Gateway content
 stage status/risk validation ignores unassigned products
 ```
 
+Current:
+
+```text
+Unit regression PASS: submit validation uses read-model project scope only.
+Integration regression PASS: product-owner-only project does not block submit.
+```
+
 ### UFB-004 - Auth/no-cookie redirect
 
-Status: open
+Status: done
 
 Bug class:
 
@@ -118,6 +138,18 @@ Regression needed:
 ```text
 empty browser context -> /head/dashboard -> redirected or actionable auth state
 no long-lived skeleton after request failure
+```
+
+Implementation/evidence:
+
+```text
+apps/web/src/proxy.ts
+  dev stub no longer bypasses protected routes without session cookie
+
+apps/web/proxy.test.ts
+  redirects no-cookie protected pages even when NEXT_PUBLIC_AUTH_STUB=true
+
+.planning/regression/evidence/2026-05-08-auth-no-cookie-redirect/README.md
 ```
 
 ### UFB-010 - Empty products visual behavior

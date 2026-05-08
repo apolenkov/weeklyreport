@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from "next/server";
 
 // Next.js 16 proxy.ts must live HERE (apps/web/src/proxy.ts) because the
 // project uses a src/ directory layout (apps/web/src/app/...). Per Next.js
@@ -15,11 +15,13 @@ import { NextResponse, type NextRequest } from 'next/server';
  * Next.js 16 proxy.ts — replaces middleware.ts as of Next 16.
  *
  * Auth boundary for v5.0 (AUTH-01..AUTH-04):
- *   - When NEXT_PUBLIC_AUTH_STUB === 'true', everything passes through
- *     (dev/test mode that mirrors the backend's AUTH_DEV_MODE fallback).
- *   - Otherwise, requests to (app)/ routes without the
- *     `customreport_session` cookie are redirected to '/' (the login page)
- *     with the original path preserved as ?next=<encoded path>.
+ *   - Requests to (app)/ routes without the `customreport_session` cookie
+ *     are redirected to '/' (the login page) with the original path
+ *     preserved as ?next=<encoded path>.
+ *   - Dev stub mode still uses the same route gate. The login page exposes
+ *     dev-login user cards; protected pages must not render from the API's
+ *     DEV_SESSION fallback without an explicit browser cookie, because that
+ *     produced skeleton hangs during manual UAT.
  *
  * The matcher excludes routes that must never trigger a redirect:
  *   - '/'              the login page itself (would cause a loop)
@@ -32,13 +34,13 @@ import { NextResponse, type NextRequest } from 'next/server';
  * Role separation lives in v6.0 — this file only checks session existence.
  */
 
-const COOKIE_NAME = 'customreport_session';
+const COOKIE_NAME = "customreport_session";
 
-const PROTECTED_PATH_PREFIXES = ['/lead', '/head', '/reports', '/admin'];
+const PROTECTED_PATH_PREFIXES = ["/lead", "/head", "/reports", "/admin"];
 
 function isProtectedPath(pathname: string): boolean {
-  return PROTECTED_PATH_PREFIXES.some((prefix) =>
-    pathname === prefix || pathname.startsWith(`${prefix}/`),
+  return PROTECTED_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 
@@ -47,12 +49,6 @@ export default function proxy(request: NextRequest): NextResponse {
   // does not reliably exclude paths, so we filter here in the body. Only
   // run the auth check on protected routes.
   if (!isProtectedPath(request.nextUrl.pathname)) {
-    return NextResponse.next();
-  }
-
-  // AUTH_STUB bypass — dev/test mode. Read at request time so test runs that
-  // mutate the env take effect without a rebuild.
-  if (process.env.NEXT_PUBLIC_AUTH_STUB === 'true') {
     return NextResponse.next();
   }
 
@@ -72,7 +68,7 @@ export default function proxy(request: NextRequest): NextResponse {
   const hasValidCookieShape =
     !!cookieValue &&
     cookieValue.length > 20 &&
-    cookieValue.split('.').length === 3;
+    cookieValue.split(".").length === 3;
   if (hasValidCookieShape) {
     return NextResponse.next();
   }
@@ -80,10 +76,10 @@ export default function proxy(request: NextRequest): NextResponse {
   // No session — redirect to '/' (the login page) with the original path
   // preserved as ?next=<path>. URLSearchParams.set encodes the value, so
   // slashes and query strings are properly escaped.
-  const loginUrl = new URL('/', request.url);
+  const loginUrl = new URL("/", request.url);
   const originalPath =
-    request.nextUrl.pathname + (request.nextUrl.search ?? '');
-  loginUrl.searchParams.set('next', originalPath);
+    request.nextUrl.pathname + (request.nextUrl.search ?? "");
+  loginUrl.searchParams.set("next", originalPath);
   return NextResponse.redirect(loginUrl, 307);
 }
 
@@ -98,10 +94,5 @@ export default function proxy(request: NextRequest): NextResponse {
  * reading of PROTECTED_PATH_PREFIXES in the proxy body above.
  */
 export const config = {
-  matcher: [
-    '/lead/:path*',
-    '/head/:path*',
-    '/reports/:path*',
-    '/admin/:path*',
-  ],
+  matcher: ["/lead/:path*", "/head/:path*", "/reports/:path*", "/admin/:path*"],
 };
