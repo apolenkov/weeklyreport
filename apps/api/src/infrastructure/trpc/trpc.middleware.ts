@@ -126,10 +126,8 @@ export const loggingMiddleware = t.middleware(
       role,
     });
 
-    // Debug-level dump of the raw input. Gated behind LOG_LEVEL=debug so the
-    // hot path stays cheap in info-level prod logs. Avoid logging when the
-    // input contains sensitive auth payloads (none today, but keep the
-    // breadcrumb here in case auth.* gains an input in future).
+    // Debug-level input breadcrumb. Log shape only, never raw values: report
+    // text, UUIDs, emails and admin edits can all appear in tRPC input.
     if (path !== 'auth.login' && path !== 'auth.refresh') {
       try {
         const rawInput = await getRawInput();
@@ -139,7 +137,7 @@ export const loggingMiddleware = t.middleware(
             stage: 'input',
             procedure: path,
             type,
-            input: rawInput,
+            inputShape: describeShape(rawInput),
           });
         }
       } catch {

@@ -31,7 +31,10 @@ export const reportSectionsRouter = {
     input: DraftSavePayload,
   ): Promise<ReportSectionReadModel> {
     return reportSectionReadModelSchema.parse(
-      await ctx.reportSectionsService.saveDraft(draftSaveSchema.parse(input)),
+      await ctx.reportSectionsService.saveDraft(
+        draftSaveSchema.parse(input),
+        ctx.session.userId,
+      ),
     );
   },
   async submitSection(
@@ -39,7 +42,10 @@ export const reportSectionsRouter = {
     input: SubmitSectionPayload,
   ): Promise<ReportSectionReadModel> {
     return reportSectionReadModelSchema.parse(
-      await ctx.reportSectionsService.submitSection(submitSectionSchema.parse(input)),
+      await ctx.reportSectionsService.submitSection(
+        submitSectionSchema.parse(input),
+        ctx.session.userId,
+      ),
     );
   },
 };

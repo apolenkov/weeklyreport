@@ -7,6 +7,13 @@ export class LeadFormDomainError extends Error {
   }
 }
 
+export class LeadFormAccessError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LeadFormAccessError';
+  }
+}
+
 export interface LeadFormRepository {
   getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
   getSectionForPeriod(
@@ -74,7 +81,20 @@ export class LeadFormService {
   }
 
   /** API-08: List version snapshots for a section. */
-  async listVersions(sectionId: string): Promise<VersionSnapshot[]> {
+  async listVersions(
+    sectionId: string,
+    userId: string,
+  ): Promise<VersionSnapshot[]> {
+    const section = await this.repository.getSectionById(sectionId);
+
+    if (!section) {
+      throw new LeadFormDomainError(`Section ${sectionId} not found.`);
+    }
+
+    if (section.authorId !== userId) {
+      throw new LeadFormAccessError('Can only list versions for your own section.');
+    }
+
     return this.repository.listVersions(sectionId);
   }
 

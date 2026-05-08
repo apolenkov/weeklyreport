@@ -4,6 +4,7 @@ status: open
 date: 2026-05-08
 source:
   - .planning/regression/evidence/2026-05-08-layout-empty-section-polish/layout-check.json
+  - .planning/regression/evidence/2026-05-08-ui-security-guideline-pass/SUMMARY.md
   - .planning/quick/260508-kfo-layout-empty-section-polish/260508-kfo-SUMMARY.md
 ---
 
@@ -130,6 +131,43 @@ Alternative directions rejected for now:
 - Run gsd-ui-review after Batch 1-4.
 - Update 17-UAT.md only per proven scenario.
 - Do not mark Phase 16 PDF/theme gaps closed from this UI polish pass.
+
+## Applied Safe Fixes 2026-05-08
+
+| Area              | Change                                                                                                                          | Evidence                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| API object access | reports.saveDraft and reports.submit now pass ctx.session.userId and reject edits for another author's ReportSection.           | api test 57 files / 656 tests PASS                              |
+| API object access | leadForm.versions now loads the section and rejects another author's version history.                                           | focused report-sections tests PASS                              |
+| API object access | pdfExport.status is headProcedure and checks requestedBy against the export job owner; cross-user job lookup returns not found. | pdf-export tests PASS                                           |
+| Logging           | tRPC debug logging records inputShape, not raw report/admin/user input.                                                         | static grep: inputShape present, rawInput value logging removed |
+| Web guideline     | reports tab clicks now update /reports?tab=... so nav/deep-link state stays consistent.                                         | web lint/typecheck/test PASS                                    |
+| Motion/a11y       | empty stage pulse now has motion-reduce:animate-none.                                                                           | web lint PASS                                                   |
+| UI stability      | transition-all removed from apps/web/src.                                                                                       | static grep: 0 matches                                          |
+| Typography        | visible loading/search ellipses use the single ellipsis character.                                                              | web lint/typecheck/test PASS                                    |
+
+Verification run:
+
+| Command                                                | Result                    |
+| ------------------------------------------------------ | ------------------------- |
+| rtk proxy pnpm --filter @customreport/api typecheck    | PASS                      |
+| rtk proxy pnpm --filter @customreport/web typecheck    | PASS                      |
+| rtk proxy pnpm --filter @customreport/api lint         | PASS                      |
+| rtk proxy pnpm --filter @customreport/web lint         | PASS                      |
+| rtk proxy pnpm --filter @customreport/api test         | PASS, 57 files, 656 tests |
+| rtk proxy pnpm --filter @customreport/web test         | PASS, 35 files, 277 tests |
+| focused vitest: report-sections, lead-form, pdf-export | PASS, 5 files, 102 tests  |
+| rtk proxy pnpm run typecheck                           | PASS, turbo root          |
+| rtk proxy pnpm run lint                                | PASS, turbo root          |
+| rtk proxy pnpm run test                                | PASS, turbo root          |
+| rtk proxy pnpm run doctor                              | PASS                      |
+| rtk proxy graphify update .                            | PASS                      |
+
+Still not closed by this pass:
+
+- Full Playwright live role-matrix replay was not rerun.
+- Background/surface token batch is still a design-system task.
+- Correlation-id UX, client error sanitization, and persistent user action log are still planned work.
+- Phase 16 PDF/theme human UAT remains open.
 
 ## Verification Plan
 

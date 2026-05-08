@@ -84,10 +84,10 @@ export function ExportPdfButton({
   const title = !isExportable
     ? 'Publish the report first'
     : isGenerating
-      ? 'Generating PDF...'
+      ? 'Generating PDF…'
       : 'Download a PDF copy of this report';
   const label = isGenerating
-    ? 'Generating...'
+    ? 'Generating…'
     : isExportable
       ? 'Export PDF'
       : 'Publish to export PDF';

@@ -115,7 +115,7 @@ export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFr
             <input
               type="text"
               className="mb-2 w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-1.5 pl-8 text-[13px] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-              placeholder="Search reports..."
+              placeholder="Search reports…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{

@@ -244,7 +244,7 @@ export function PeriodsTab({ periods }: PeriodsTabProps) {
                 disabled={isSaving}
                 className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSaving ? 'Saving...' : editingPeriod ? 'Save Changes' : 'Create Period'}
+                {isSaving ? 'Saving…' : editingPeriod ? 'Save Changes' : 'Create Period'}
               </button>
             </div>
           </div>

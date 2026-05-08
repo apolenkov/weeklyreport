@@ -265,9 +265,12 @@ export function createAppRouter(deps: RouterDeps) {
 
       saveDraft: protectedProcedure
         .input(draftSaveSchema)
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
           try {
-            return await deps.reportSectionsService.saveDraft(input);
+            return await deps.reportSectionsService.saveDraft(
+              input,
+              ctx.session.userId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -275,9 +278,12 @@ export function createAppRouter(deps: RouterDeps) {
 
       submit: protectedProcedure
         .input(submitSectionSchema)
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
           try {
-            return await deps.reportSectionsService.submitSection(input);
+            return await deps.reportSectionsService.submitSection(
+              input,
+              ctx.session.userId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -363,11 +369,14 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      status: protectedProcedure
+      status: headProcedure
         .input(z.object({ jobId: z.string().uuid() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
-            return await deps.pdfExportService.getPdfExportStatus(input.jobId);
+            return await deps.pdfExportService.getPdfExportStatus(
+              input.jobId,
+              ctx.session.userId,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -1036,10 +1045,11 @@ export function createAppRouter(deps: RouterDeps) {
 
       versions: protectedProcedure
         .input(z.object({ reportSectionId: z.string().uuid() }))
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
             return await deps.leadFormService.listVersions(
               input.reportSectionId,
+              ctx.session.userId,
             );
           } catch (error) {
             throw mapDomainError(error);

@@ -209,7 +209,7 @@ export function JobsTab() {
                         className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
                         aria-label={`Retry job ${job.id}`}
                       >
-                        {isRetrying ? "Retrying..." : "Retry"}
+                        {isRetrying ? "Retrying…" : "Retry"}
                       </button>
                     </td>
                   </tr>

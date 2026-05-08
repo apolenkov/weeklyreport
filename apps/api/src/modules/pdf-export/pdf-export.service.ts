@@ -15,6 +15,8 @@ export class PdfExportDomainError extends Error {
   }
 }
 
+export type PdfExportJobRecord = PdfExportJob & { requestedBy: string };
+
 export interface PdfExportRepository {
   getPublishedReport(reportId: string): Promise<AssembledReport | null>;
   /**
@@ -26,7 +28,7 @@ export interface PdfExportRepository {
    *                     the prisma repository falls back to `'system'`.
    */
   createExportJob(job: PdfExportJob, requestedBy?: string): Promise<PdfExportJob>;
-  getExportJob(jobId: string): Promise<PdfExportJob | null>;
+  getExportJob(jobId: string): Promise<PdfExportJobRecord | null>;
   saveExportJob(job: PdfExportJob): Promise<PdfExportJob>;
   markExportFailed(jobId: string, error: string): Promise<void>;
 }
@@ -162,10 +164,13 @@ export class PdfExportService {
     return job;
   }
 
-  async getPdfExportStatus(jobId: string): Promise<PdfExportJob> {
+  async getPdfExportStatus(
+    jobId: string,
+    requestedBy?: string,
+  ): Promise<PdfExportJob> {
     const job = await this.repository.getExportJob(jobId);
 
-    if (!job) {
+    if (!job || (requestedBy && job.requestedBy !== requestedBy)) {
       throw new PdfExportDomainError(`PDF export job ${jobId} was not found.`);
     }
 

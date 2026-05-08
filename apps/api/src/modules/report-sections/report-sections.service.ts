@@ -19,6 +19,13 @@ export class ReportSectionDomainError extends Error {
   }
 }
 
+export class ReportSectionAccessError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReportSectionAccessError";
+  }
+}
+
 export interface ReportSectionsRepository {
   getSectionById(
     reportSectionId: string,
@@ -95,6 +102,15 @@ function mergeSection(
 export class ReportSectionsService {
   constructor(private readonly repository: ReportSectionsRepository) {}
 
+  private assertCanEditSection(
+    section: ReportSectionReadModel,
+    actorUserId?: string,
+  ): void {
+    if (actorUserId && section.authorId !== actorUserId) {
+      throw new ReportSectionAccessError("Can only edit your own section.");
+    }
+  }
+
   async getActiveSection(
     reportSectionId: string,
   ): Promise<ReportSectionReadModel> {
@@ -107,9 +123,13 @@ export class ReportSectionsService {
     return reportSectionReadModelSchema.parse(section);
   }
 
-  async saveDraft(input: DraftSavePayload): Promise<ReportSectionReadModel> {
+  async saveDraft(
+    input: DraftSavePayload,
+    actorUserId?: string,
+  ): Promise<ReportSectionReadModel> {
     const parsedInput = draftSaveSchema.parse(input);
     const section = await this.getActiveSection(parsedInput.reportSectionId);
+    this.assertCanEditSection(section, actorUserId);
 
     const reportStatus = await this.repository.getReportStatus(
       section.reportId,
@@ -136,9 +156,11 @@ export class ReportSectionsService {
 
   async submitSection(
     input: SubmitSectionPayload,
+    actorUserId?: string,
   ): Promise<ReportSectionReadModel> {
     const parsedInput = submitSectionSchema.parse(input);
     const section = await this.getActiveSection(parsedInput.reportSectionId);
+    this.assertCanEditSection(section, actorUserId);
     const errors = validateSubmitInput(section, parsedInput);
 
     if (errors.length > 0) {

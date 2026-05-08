@@ -7,7 +7,10 @@ import {
   type PortfolioOverview,
 } from '@customreport/shared';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { PdfExportRepository } from './pdf-export.service.js';
+import type {
+  PdfExportJobRecord,
+  PdfExportRepository,
+} from './pdf-export.service.js';
 import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
@@ -66,7 +69,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     return toExportJob(created);
   }
 
-  async getExportJob(jobId: string): Promise<PdfExportJob | null> {
+  async getExportJob(jobId: string): Promise<PdfExportJobRecord | null> {
     const job = await this.prisma.pdfExportJob.findUnique({
       where: { id: jobId },
     });
@@ -109,17 +112,20 @@ function toExportJob(row: {
   requestedBy: string;
   createdAt: Date;
   updatedAt: Date;
-}): PdfExportJob {
-  return pdfExportJobSchema.parse({
-    jobId: row.id,
-    reportId: row.reportId,
-    status: dbStatusToDomain[row.status] ?? 'queued',
-    requestedAt: row.createdAt,
-    completedAt: row.status === 'completed' ? row.updatedAt : null,
-    checksum: null,
-    templateVersion: 'phase-2-pdf-v1',
-    artifactUrl: row.filePath,
-  });
+}): PdfExportJobRecord {
+  return {
+    ...pdfExportJobSchema.parse({
+      jobId: row.id,
+      reportId: row.reportId,
+      status: dbStatusToDomain[row.status] ?? 'queued',
+      requestedAt: row.createdAt,
+      completedAt: row.status === 'completed' ? row.updatedAt : null,
+      checksum: null,
+      templateVersion: 'phase-2-pdf-v1',
+      artifactUrl: row.filePath,
+    }),
+    requestedBy: row.requestedBy,
+  };
 }
 
 function computePortfolioOverview(

@@ -123,7 +123,7 @@ export function ReopenTab() {
 
       {listQuery.isPending && (
         <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 text-sm text-[var(--color-muted-foreground)]">
-          Loading...
+          Loading…
         </div>
       )}
 
@@ -267,7 +267,7 @@ export function ReopenTab() {
                       disabled={respondMut.isPending}
                       className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-primary)] disabled:opacity-50"
                     >
-                      {respondMut.isPending ? 'Saving...' : 'Approve'}
+                      {respondMut.isPending ? 'Saving…' : 'Approve'}
                     </button>
                   </div>
                 </div>

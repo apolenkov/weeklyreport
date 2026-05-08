@@ -5,8 +5,8 @@ milestone_name: Visual Identity & AI Maturity
 status: in_progress
 shipped_tag: v8.0.0
 shipped_at: "2026-05-06"
-last_updated: "2026-05-08T11:46:36+03:00"
-last_activity: 2026-05-08 -- manual UAT reopened the product-ready gate; regression retro and domain hardening plan captured
+last_updated: "2026-05-08T15:35:00+03:00"
+last_activity: 2026-05-08 -- UI/security guideline pass added object-level API guards, redacted tRPC input logging, reports deep-link tabs, reduced-motion fix, Codex GSD config repair, and evidence summary
 progress:
   total_phases: 3
   completed_phases: 0
@@ -43,7 +43,7 @@ Milestone: v8.1 (IN PROGRESS, tag parent v8.0.0)
 Phases: 0/3 complete (40..42)
 Plans: 0/12 complete
 Status: active polish wave started, v8.0 is production baseline. Product-ready gate is reopened after manual UAT found domain-model and UI regressions.
-Last activity: 2026-05-08 -- retro and plan captured in .planning/regression/PRODUCT-READY-RETRO-AND-PLAN-2026-05-08.md; regression scenario inventory extended with DOM-STAGE, DOM-TAG, ROLE-CTX, UI-GEO, and LOG-EV scenarios.
+Last activity: 2026-05-08 -- retro and plan captured in .planning/regression/PRODUCT-READY-RETRO-AND-PLAN-2026-05-08.md; UI/security guideline pass captured in .planning/regression/evidence/2026-05-08-ui-security-guideline-pass/SUMMARY.md.
 
 ### v8.0 phase progress
 
@@ -140,7 +140,7 @@ Last activity: 2026-05-08 -- retro and plan captured in .planning/regression/PRO
 
 - **Product-ready gate reopened** — manual UAT found unresolved domain-model issues: reporting scope must use StageAssignment instead of Project.leadId, stage status must be per stage, and content records need optional multi-stage tagging.
 - **Regression gate incomplete** — role matrix, no-cookie redirect, hover geometry, action-log evidence, and scenario-correlated screenshots/logs are planned but not fully automated yet.
-- **Working tree is dirty** — current diff mixes previous UI/wipe/doc polish with the new regression planning artifacts; classify and split before commit/push.
+- **Live role-matrix UAT not rerun in this patch** — unit/lint/typecheck gates pass, but product-ready closure still needs Playwright role-matrix replay on the dev stack.
 
 ### v6.1 Backlog (deferred, NOT blocking v6.0 deploy)
 

@@ -195,7 +195,7 @@ function LoginPageBody() {
           ) : (
             <a
               href={AUTH_STUB ? '/auth/dev-login?role=head&email=head@customreport.local&redirect=%2F' : ssoHref}
-              className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-all hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"
+              className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-[background-color,opacity,transform] hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"
               style={{
                 minHeight: '52px',
                 boxShadow: '0 2px 12px rgba(0,98,65,0.2)',
@@ -247,7 +247,7 @@ function DevLoginGrid({
   if (loading) {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Loading demo users...
+        Loading demo users…
       </p>
     );
   }
@@ -271,7 +271,7 @@ function DevLoginGrid({
     <div className="space-y-6 text-left">
       <div>
         <p className="mb-1 text-sm font-semibold text-[var(--color-foreground)]">
-          Login as...
+          Login as…
         </p>
         <p className="text-xs text-[var(--color-muted-foreground)]">
           Click a card to open the start page for that role.

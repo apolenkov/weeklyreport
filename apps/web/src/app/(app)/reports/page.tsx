@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { LeadHistoryList } from '../../../components/lead/lead-history-list';
@@ -35,6 +35,7 @@ const HISTORY_INITIAL_VISIBLE = 10;
 
 export default function ReportsPage() {
   const { user } = useSession();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const role = user?.role ?? null;
@@ -55,6 +56,13 @@ export default function ReportsPage() {
         : 'published';
 
   const [tab, setTab] = useState<TabId>(initialTab);
+
+  function selectTab(nextTab: TabId) {
+    setTab(nextTab);
+    const params = new URLSearchParams(searchParams?.toString());
+    params.set('tab', nextTab);
+    router.replace(`/reports?${params.toString()}`, { scroll: false });
+  }
 
   // Keep state in sync if the URL param changes after mount (e.g. user
   // navigates from /lead/history → 307 → /reports?tab=drafts).
@@ -84,12 +92,12 @@ export default function ReportsPage() {
               label="My Drafts"
               active={tab === 'drafts'}
               disabled={!isLead}
-              onClick={() => setTab('drafts')}
+              onClick={() => selectTab('drafts')}
             />
             <TabButton
               label="Published"
               active={tab === 'published'}
-              onClick={() => setTab('published')}
+              onClick={() => selectTab('published')}
             />
           </div>
 
@@ -98,7 +106,7 @@ export default function ReportsPage() {
               <SearchInput
                 scope={searchScope}
                 placeholder={
-                  isLead ? 'Search my reports...' : 'Search reports and products...'
+                  isLead ? 'Search my reports…' : 'Search reports and products…'
                 }
               />
             </div>

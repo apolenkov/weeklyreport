@@ -186,7 +186,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
         aria-autocomplete="list"
         autoComplete="off"
         value={q}
-        placeholder={placeholder ?? 'Search...'}
+        placeholder={placeholder ?? 'Search…'}
         onFocus={() => setOpen(true)}
         onChange={(e) => {
           setQ(e.target.value);
@@ -208,7 +208,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
               aria-live="polite"
               className="px-3 py-2 text-sm text-[var(--color-muted-foreground)]"
             >
-              Searching...
+              Searching…
             </div>
           )}
 
