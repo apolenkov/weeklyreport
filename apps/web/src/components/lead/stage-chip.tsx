@@ -106,12 +106,12 @@ export function StageChip({ stage, onStatusChange, readOnly = false, linkedRiskC
   }, [showPopover]);
 
   const chipClasses = [
-    'w-full p-2 rounded-lg text-center text-xs font-semibold transition-all duration-150',
+    'w-full p-2 rounded-lg text-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150',
     isEditable && !isEmpty
       ? 'cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_rgba(0,0,0,0.12)]'
       : '',
     isEmpty
-      ? 'cursor-pointer border-dashed animate-[sdlc-pulse_3s_infinite] hover:animate-none hover:shadow-[0_0_0_2px_rgba(0,117,74,0.2)]'
+      ? 'cursor-pointer border-dashed animate-[sdlc-pulse_3s_infinite] motion-reduce:animate-none hover:animate-none hover:shadow-[0_0_0_2px_rgba(0,117,74,0.2)]'
       : '',
     isLocked ? 'opacity-35 cursor-not-allowed grayscale-[0.5]' : '',
     isUnassigned ? 'cursor-not-allowed' : '',

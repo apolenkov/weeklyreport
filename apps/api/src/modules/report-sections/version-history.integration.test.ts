@@ -101,7 +101,7 @@ describe('LeadFormService — listVersions (integration)', () => {
     const repo = createMockRepository(sections, versions);
     const service = new LeadFormService(repo);
 
-    const result = await service.listVersions(sectionId);
+    const result = await service.listVersions(sectionId, userId);
 
     expect(result).toHaveLength(3);
     expect(expectDefined(result[0]).version).toBe(1);
@@ -115,9 +115,19 @@ describe('LeadFormService — listVersions (integration)', () => {
     const repo = createMockRepository(sections, []);
     const service = new LeadFormService(repo);
 
-    const result = await service.listVersions(sectionId);
+    const result = await service.listVersions(sectionId, userId);
 
     expect(result).toHaveLength(0);
+  });
+
+  it('rejects another user section', async () => {
+    const section = makeSection();
+    const sections = new Map([[sectionId, section]]);
+    const service = new LeadFormService(createMockRepository(sections));
+
+    await expect(
+      service.listVersions(sectionId, otherUserId),
+    ).rejects.toThrow('Can only list versions for your own section');
   });
 });
 

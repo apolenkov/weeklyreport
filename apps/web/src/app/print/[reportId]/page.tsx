@@ -352,7 +352,7 @@ function LoadingShell({ reportId }: { reportId: string }) {
       aria-busy="true"
     >
       <p style={{ color: 'rgba(0,0,0,0.58)' }}>
-        Loading report {reportId} ...
+        Loading report {reportId} …
       </p>
     </main>
   );

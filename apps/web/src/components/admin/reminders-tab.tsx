@@ -148,7 +148,7 @@ export function RemindersTab({ reminders }: RemindersTabProps) {
                 {sendingId === reminder.id ? (
                   <>
                     <SpinnerIcon />
-                    Sending...
+                    Sending…
                   </>
                 ) : (
                   <>

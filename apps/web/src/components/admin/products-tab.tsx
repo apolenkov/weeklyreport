@@ -171,7 +171,7 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
             here, or the source report for content hits). */}
         <SearchInput
           scope="all"
-          placeholder="Search all products and reports..."
+          placeholder="Search all products and reports…"
         />
         {productFilter && (
           <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2">
@@ -361,7 +361,7 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
                 disabled={isSaving}
                 className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSaving ? 'Saving...' : editingProduct ? 'Save Changes' : 'Add Product'}
+                {isSaving ? 'Saving…' : editingProduct ? 'Save Changes' : 'Add Product'}
               </button>
             </div>
           </div>

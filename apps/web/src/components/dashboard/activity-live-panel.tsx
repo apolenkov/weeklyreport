@@ -60,7 +60,7 @@ function renderBody(
   if (isLoading && !data) {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Loading activity...
+        Loading activity…
       </p>
     );
   }

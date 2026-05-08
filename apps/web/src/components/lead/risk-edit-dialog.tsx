@@ -276,7 +276,7 @@ export function RiskEditDialog({
                     key={c.value}
                     type="button"
                     onClick={() => setSeverity(c.value)}
-                    className="inline-flex min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-all"
+                    className="inline-flex min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
                     style={{
                       background: selected ? c.bg : 'transparent',
                       color: selected ? c.color : 'var(--color-foreground)',

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ReportSectionReadModel } from '@customreport/shared';
 
 import {
+  ReportSectionAccessError,
   ReportSectionsService,
   type ReportSectionsRepository,
 } from './report-sections.service';
@@ -103,6 +104,30 @@ describe('ReportSectionsService', () => {
     expect(saved.projects[0]?.trafficLight).toBe('yellow');
   });
 
+  it('rejects saveDraft for another user section when actor is supplied', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+
+    await expect(
+      service.saveDraft(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          status: 'draft',
+          projectStatuses: [
+            {
+              projectId: expectDefined(baseSection.projects[0]).projectId,
+              status: 'yellow',
+            },
+          ],
+          items: baseSection.items,
+          risks: [],
+          decisions: [],
+          priorities: baseSection.priorities,
+        },
+        '55555555-5555-4555-8555-555555555555',
+      ),
+    ).rejects.toBeInstanceOf(ReportSectionAccessError);
+  });
+
   it('rejects submit when traffic light is missing', async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
@@ -125,6 +150,31 @@ describe('ReportSectionsService', () => {
     ).rejects.toMatchObject({
       code: 'MISSING_TRAFFIC_LIGHT',
     });
+  });
+
+  it('rejects submit for another user section before validation', async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+
+    await expect(
+      service.submitSection(
+        {
+          reportSectionId: baseSection.reportSectionId,
+          status: 'draft',
+          confirmed: true,
+          projectStatuses: [
+            {
+              projectId: expectDefined(baseSection.projects[0]).projectId,
+              status: 'green',
+            },
+          ],
+          items: baseSection.items,
+          risks: [],
+          decisions: [],
+          priorities: baseSection.priorities,
+        },
+        '55555555-5555-4555-8555-555555555555',
+      ),
+    ).rejects.toBeInstanceOf(ReportSectionAccessError);
   });
 
   describe('saveDraft — published report guard', () => {

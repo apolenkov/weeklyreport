@@ -1148,9 +1148,9 @@ export function LeadForm({
   // Autosave indicator label.
   const autosaveLabel =
     autosave.state === "saving"
-      ? "Saving..."
+      ? "Saving…"
       : autosave.state === "pending"
-        ? "Pending..."
+        ? "Pending…"
         : autosave.state === "saved" && autosave.lastSavedAt
           ? `Saved at ${autosave.lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
           : autosave.state === "error"

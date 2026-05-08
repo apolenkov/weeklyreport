@@ -1,5 +1,20 @@
 {
+  "runtime": "codex",
   "model_profile": "balanced",
+  "model_profile_overrides": {
+    "codex": {
+      "opus": "gpt-5.5",
+      "sonnet": "gpt-5.3-codex",
+      "haiku": "gpt-5.4-mini"
+    }
+  },
+  "dynamic_routing": {
+    "tier_models": {
+      "heavy": "opus",
+      "standard": "sonnet",
+      "light": "haiku"
+    }
+  },
   "commit_docs": false,
   "search_gitignored": false,
   "branching_strategy": "none",
@@ -9,8 +24,13 @@
   "workflow": {
     "research": true,
     "plan_check": true,
+    "code_review": true,
+    "ui_review": true,
     "verifier": true,
     "nyquist_validation": true
+  },
+  "graphify": {
+    "enabled": true
   },
   "parallelization": 1,
   "brave_search": false

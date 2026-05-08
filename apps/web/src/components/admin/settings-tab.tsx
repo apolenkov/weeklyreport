@@ -87,7 +87,7 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
             className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Save settings"
           >
-            {isSaving ? "Saving..." : "Save Settings"}
+            {isSaving ? "Saving…" : "Save Settings"}
           </button>
           {updateSettingsMut.isSuccess && !updateSettingsMut.isPending && (
             <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">

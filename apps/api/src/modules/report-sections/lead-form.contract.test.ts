@@ -207,11 +207,12 @@ describe('LeadFormService — fillFrom', () => {
 describe('LeadFormService — listVersions', () => {
   it('returns ordered list from repository', async () => {
     const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
       listVersions: vi.fn().mockResolvedValue(structuredClone(sampleVersions)),
     });
     const service = new LeadFormService(repo);
 
-    const versions = await service.listVersions(SECTION_ID);
+    const versions = await service.listVersions(SECTION_ID, AUTHOR_ID);
 
     expect(versions).toHaveLength(3);
     expect(expectDefined(versions[0]).version).toBe(3);
@@ -221,12 +222,25 @@ describe('LeadFormService — listVersions', () => {
   });
 
   it('returns empty array when no versions exist', async () => {
-    const repo = createMockRepository();
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+    });
     const service = new LeadFormService(repo);
 
-    const versions = await service.listVersions(SECTION_ID);
+    const versions = await service.listVersions(SECTION_ID, AUTHOR_ID);
 
     expect(versions).toEqual([]);
+  });
+
+  it('fails for another user section', async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.listVersions(SECTION_ID, OTHER_USER_ID),
+    ).rejects.toThrow('Can only list versions for your own section.');
   });
 });
 

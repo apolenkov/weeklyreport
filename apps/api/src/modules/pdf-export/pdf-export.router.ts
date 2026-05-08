@@ -16,6 +16,7 @@ export type PdfExportRouterRequestContext = {
 export type PdfExportRouterStatusContext = {
   pdfExportService: PdfExportService;
   jobId: string;
+  requestedBy?: string;
 };
 
 export const pdfExportRouter = {
@@ -26,7 +27,7 @@ export const pdfExportRouter = {
   },
   async getPdfExportStatus(ctx: PdfExportRouterStatusContext): Promise<PdfExportJob> {
     return pdfExportJobSchema.parse(
-      await ctx.pdfExportService.getPdfExportStatus(ctx.jobId),
+      await ctx.pdfExportService.getPdfExportStatus(ctx.jobId, ctx.requestedBy),
     );
   },
 };

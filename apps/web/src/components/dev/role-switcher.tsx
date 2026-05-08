@@ -118,7 +118,7 @@ export function DevRoleSwitcher() {
           <DropdownMenuLabel>Login as…</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {usersQ.isLoading && (
-            <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
+            <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
           )}
           {usersQ.error && (
             <DropdownMenuItem disabled className="text-red-600">

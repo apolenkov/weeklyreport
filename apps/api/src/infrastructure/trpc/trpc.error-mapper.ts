@@ -1,6 +1,9 @@
 import { TRPCError } from '@trpc/server';
 
-import { ReportSectionDomainError } from '../../modules/report-sections/report-sections.service.js';
+import {
+  ReportSectionAccessError,
+  ReportSectionDomainError,
+} from '../../modules/report-sections/report-sections.service.js';
 import { ReviewAccessError } from '../../modules/review/review.service.js';
 import { PublicationAccessError } from '../../modules/publication/publication.service.js';
 import { AdminAccessError } from '../../modules/admin/admin.service.js';
@@ -9,7 +12,10 @@ import { ReminderDomainError } from '../../modules/reminders/reminders.service.j
 import { CarryOverDomainError } from '../../modules/carry-over/carry-over.service.js';
 import { ArchiveDomainError } from '../../modules/archive/archive.service.js';
 import { WeeklyReportDomainError } from '../../modules/weekly-report/weekly-report.service.js';
-import { LeadFormDomainError } from '../../modules/report-sections/lead-form.service.js';
+import {
+  LeadFormAccessError,
+  LeadFormDomainError,
+} from '../../modules/report-sections/lead-form.service.js';
 
 export function mapDomainError(error: unknown): TRPCError {
   if (error instanceof TRPCError) {
@@ -20,7 +26,12 @@ export function mapDomainError(error: unknown): TRPCError {
     return new TRPCError({ code: 'BAD_REQUEST', message: error.message, cause: error });
   }
 
-  if (error instanceof ReviewAccessError || error instanceof AdminAccessError) {
+  if (
+    error instanceof ReviewAccessError ||
+    error instanceof AdminAccessError ||
+    error instanceof ReportSectionAccessError ||
+    error instanceof LeadFormAccessError
+  ) {
     return new TRPCError({ code: 'FORBIDDEN', message: error.message, cause: error });
   }
 

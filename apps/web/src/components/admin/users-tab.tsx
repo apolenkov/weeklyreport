@@ -252,7 +252,7 @@ export function UsersTab({ users }: UsersTabProps) {
                 disabled={isSaving}
                 className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSaving ? 'Saving...' : editingUser ? 'Save Changes' : 'Add User'}
+                {isSaving ? 'Saving…' : editingUser ? 'Save Changes' : 'Add User'}
               </button>
             </div>
           </div>
@@ -289,7 +289,7 @@ export function UsersTab({ users }: UsersTabProps) {
                 disabled={isDeleting}
                 className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {isDeleting ? 'Deleting…' : 'Delete'}
               </button>
             </div>
           </div>

@@ -5,6 +5,7 @@ import type { AssembledReport, PdfExportJob } from '@customreport/shared';
 import {
   PdfExportDomainError,
   PdfExportService,
+  type PdfExportJobRecord,
   type PdfExportRepository,
 } from './pdf-export.service';
 import { expectDefined } from '../../test-utils/expect-defined.js';
@@ -45,7 +46,7 @@ const draftReport: AssembledReport = {
 // ---------------------------------------------------------------------------
 
 function createRepository(report: AssembledReport | null): PdfExportRepository {
-  const jobs = new Map<string, PdfExportJob>();
+  const jobs = new Map<string, PdfExportJobRecord>();
 
   return {
     async getPublishedReport(id: string) {
@@ -54,8 +55,11 @@ function createRepository(report: AssembledReport | null): PdfExportRepository {
       }
       return null;
     },
-    async createExportJob(job: PdfExportJob) {
-      jobs.set(job.jobId, structuredClone(job));
+    async createExportJob(job: PdfExportJob, requestedBy?: string) {
+      jobs.set(job.jobId, {
+        ...structuredClone(job),
+        requestedBy: requestedBy ?? 'system',
+      });
       return structuredClone(job);
     },
     async getExportJob(jobId: string) {
@@ -63,7 +67,10 @@ function createRepository(report: AssembledReport | null): PdfExportRepository {
       return job ? structuredClone(job) : null;
     },
     async saveExportJob(job: PdfExportJob) {
-      jobs.set(job.jobId, structuredClone(job));
+      jobs.set(job.jobId, {
+        ...structuredClone(job),
+        requestedBy: jobs.get(job.jobId)?.requestedBy ?? 'system',
+      });
       return structuredClone(job);
     },
     async markExportFailed(jobId: string, _error: string) {
@@ -236,6 +243,17 @@ describe('PdfExportService — contract tests', () => {
       expect(fetched.jobId).toBe(created.jobId);
       expect(fetched.reportId).toBe(reportId);
       expect(fetched.status).toBe('queued');
+    });
+
+    it('does not reveal a job to a different requester', async () => {
+      const service = new PdfExportService(createRepository(publishedReport));
+      const ownerId = '00000000-0000-4000-8000-00000000aaaa';
+      const otherId = '00000000-0000-4000-8000-00000000bbbb';
+      const created = await service.requestPdfExport(reportId, ownerId);
+
+      await expect(
+        service.getPdfExportStatus(created.jobId, otherId),
+      ).rejects.toThrow(`PDF export job ${created.jobId} was not found.`);
     });
 
     // 9. getPdfExportStatus — throws PdfExportDomainError when job not found
