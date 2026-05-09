@@ -1,0 +1,150 @@
+/**
+ * UFB-028: Hard reset for clean UAT.
+ *
+ * Drops EVERY row in EVERY app table (CASCADE), flushes Redis (BullMQ + cache),
+ * then re-seeds via seed-simple. Use before manual UAT runs to start from a
+ * known-zero state — no leftover audit logs, no stale jobs, no orphaned admin
+ * data.
+ *
+ *   pnpm db:reset:hard
+ *
+ * Prereqs: docker compose stack running (postgres + redis healthy).
+ */
+
+import { config as loadEnv } from "dotenv";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import net from "node:net";
+import { spawnSync } from "node:child_process";
+
+// Load .env from the repo root regardless of cwd. The script may be invoked
+// via `pnpm --filter @customreport/api exec tsx ../../prisma/reset-hard.ts`,
+// in which case cwd is apps/api (no .env), or directly from the repo root.
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+loadEnv({ path: resolve(REPO_ROOT, ".env") });
+
+import pg from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
+
+const DATABASE_URL: string = (() => {
+  const url = process.env["DATABASE_URL"];
+  if (!url) throw new Error("DATABASE_URL must be set in .env");
+  return url;
+})();
+const REDIS_URL = process.env["REDIS_URL"];
+
+const pool = new pg.Pool({ connectionString: DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+
+function writeRedisCommand(command: string, ...args: string[]): Buffer {
+  const parts = [command, ...args];
+  return Buffer.from(
+    "*" +
+      parts.length +
+      "\r\n" +
+      parts
+        .map((part) => "$" + Buffer.byteLength(part) + "\r\n" + part)
+        .join("") +
+      parts.map(() => "\r\n").join(""),
+  );
+}
+
+async function flushRedis(): Promise<void> {
+  if (!REDIS_URL) {
+    console.warn("[reset-hard] REDIS_URL not set, skipping Redis flush");
+    return;
+  }
+  const url = new URL(REDIS_URL);
+  const host = url.hostname || "localhost";
+  const port = Number(url.port || 6379);
+
+  await new Promise<void>((resolve, reject) => {
+    const sock = net.createConnection({ host, port }, () => {
+      sock.write(writeRedisCommand("FLUSHALL"));
+    });
+    let buf = "";
+    sock.on("data", (chunk) => {
+      buf += chunk.toString("utf8");
+      if (buf.startsWith("+OK")) {
+        sock.end();
+        resolve();
+      } else if (buf.startsWith("-")) {
+        sock.end();
+        reject(new Error(`Redis FLUSHALL failed: ${buf.trim()}`));
+      }
+    });
+    sock.on("error", reject);
+    sock.on("end", () => resolve());
+  });
+
+  console.log("[reset-hard] Redis FLUSHALL: OK");
+}
+
+async function truncateAll(): Promise<void> {
+  // Discover every table in the public schema except prisma's bookkeeping
+  // table — schema drift between repo and DB doesn't break the wipe this way.
+  const rows = await prisma.$queryRawUnsafe<Array<{ tablename: string }>>(
+    `SELECT tablename FROM pg_tables
+       WHERE schemaname = 'public'
+         AND tablename NOT LIKE '\\_prisma%'
+         AND tablename NOT LIKE 'pg_%'
+       ORDER BY tablename`,
+  );
+  if (rows.length === 0) {
+    console.warn("[reset-hard] No app tables found in public schema");
+    return;
+  }
+  const quoted = rows.map((r) => `"${r.tablename}"`).join(", ");
+  await prisma.$executeRawUnsafe(
+    `TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE;`,
+  );
+  console.log(
+    `[reset-hard] TRUNCATE ${rows.length} tables: OK (${rows.map((r) => r.tablename).join(", ")})`,
+  );
+}
+
+async function main(): Promise<void> {
+  console.log("[reset-hard] Starting hard reset…");
+  console.log(`[reset-hard] DATABASE_URL: ${DATABASE_URL.replace(/:[^:@]*@/, ":***@")}`);
+
+  await truncateAll();
+  await flushRedis();
+
+  console.log("[reset-hard] Re-seeding via seed-simple…");
+  // Invoke seed-simple via the api workspace so tsx is on PATH, and pass
+  // process.env explicitly so dotenv-loaded DATABASE_URL crosses the boundary
+  // even though seed-simple.ts itself only reads dotenv from its own cwd.
+  const seed = spawnSync(
+    "pnpm",
+    [
+      "--filter",
+      "@customreport/api",
+      "exec",
+      "tsx",
+      "../../prisma/seed-simple.ts",
+    ],
+    {
+      stdio: "inherit",
+      shell: false,
+      cwd: REPO_ROOT,
+      env: { ...process.env },
+    },
+  );
+  if (seed.status !== 0) {
+    throw new Error(`seed-simple exited with code ${seed.status}`);
+  }
+
+  console.log("[reset-hard] Done. Database + Redis are at the post-seed baseline.");
+}
+
+main()
+  .catch((err: unknown) => {
+    console.error("[reset-hard] FAILED:", err);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  });
