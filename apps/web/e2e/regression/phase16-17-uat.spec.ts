@@ -107,47 +107,47 @@ function runFixtureSql(sql: string): string {
 }
 
 function ensurePdfUatPublishedReport(): void {
-  const sql = [
-    "insert into \\"Report\\" (",
-    "  id,",
-    "  \\"periodStart\\",",
-    "  \\"periodEnd\\",",
-    "  deadline,",
-    "  status,",
-    "  \\"periodStatus\\",",
-    "  \\"publishedAt\\",",
-    "  \\"publishedById\\",",
-    "  \\"weekLabel\\",",
-    "  \\"createdAt\\",",
-    "  \\"updatedAt\\"",
-    ")",
-    "select",
-    "  '" + PDF_UAT_REPORT_ID + "',",
-    "  now() - interval '21 days',",
-    "  now() - interval '15 days',",
-    "  now() - interval '17 days',",
-    "  'published'::\\"ReportStatus\\",",
-    "  'published'::\\"PeriodStatus\\",",
-    "  now(),",
-    "  '" + HEAD_USER_ID + "',",
-    "  'UAT PDF Fixture',",
-    "  now(),",
-    "  now()",
-    "where exists (select 1 from \\"User\\" where id = '" + HEAD_USER_ID + "')",
-    "on conflict (id) do update set",
-    "  status = 'published'::\\"ReportStatus\\",",
-    "  \\"periodStatus\\" = 'published'::\\"PeriodStatus\\",",
-    "  \\"publishedAt\\" = excluded.\\"publishedAt\\",",
-    "  \\"publishedById\\" = excluded.\\"publishedById\\",",
-    "  \\"updatedAt\\" = excluded.\\"updatedAt\\";",
-  ].join("\n");
+  const sql = `
+insert into "Report" (
+  id,
+  "periodStart",
+  "periodEnd",
+  deadline,
+  status,
+  "periodStatus",
+  "publishedAt",
+  "publishedById",
+  "weekLabel",
+  "createdAt",
+  "updatedAt"
+)
+select
+  '${PDF_UAT_REPORT_ID}',
+  now() - interval '21 days',
+  now() - interval '15 days',
+  now() - interval '17 days',
+  'published'::"ReportStatus",
+  'published'::"PeriodStatus",
+  now(),
+  '${HEAD_USER_ID}',
+  'UAT PDF Fixture',
+  now(),
+  now()
+where exists (select 1 from "User" where id = '${HEAD_USER_ID}')
+on conflict (id) do update set
+  status = 'published'::"ReportStatus",
+  "periodStatus" = 'published'::"PeriodStatus",
+  "publishedAt" = excluded."publishedAt",
+  "publishedById" = excluded."publishedById",
+  "updatedAt" = excluded."updatedAt";
+`.trim();
 
   runFixtureSql(sql);
 }
 
 function cleanupPdfUatPublishedReport(): void {
   runFixtureSql(
-    "delete from \\"Report\\" where id = '" + PDF_UAT_REPORT_ID + "';",
+    `delete from "Report" where id = '${PDF_UAT_REPORT_ID}';`,
   );
 }
 
