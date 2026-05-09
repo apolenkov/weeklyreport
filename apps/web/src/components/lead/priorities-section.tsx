@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { PriorityEditDialog } from './priority-edit-dialog';
 import type { PriorityEntry } from './mock-data';
+import { splitStageNames } from './stage-tags';
 
 type PrioritiesSectionProps = {
   readonly priorities: PriorityEntry[];
@@ -160,6 +161,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
     <div className="space-y-3">
       {sorted.map((entry, idx) => {
         const tintKey = (entry.rank === 1 || entry.rank === 2 || entry.rank === 3) ? entry.rank : 'rest';
+        const stageTags = splitStageNames(entry.stageName);
         return (
           <div
             key={`${entry.rank}-${idx}`}
@@ -187,10 +189,19 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
                 {/* 35-04: stage chip — surfaces SDLC scoping next to the
                     text. Hidden for legacy '—' rows so empty placeholders
                     don't clutter. */}
-                {entry.stageName && entry.stageName !== '—' && (
-                  <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]">
-                    {entry.stageName}
+                {stageTags.length === 0 ? (
+                  <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+                    All stages
                   </span>
+                ) : (
+                  stageTags.map((stage) => (
+                  <span
+                    key={stage}
+                    className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+                  >
+                    {stage}
+                  </span>
+                  ))
                 )}
                 {entry.text.trim().length > 0 ? (
                   <span className="break-words text-[var(--color-foreground)]">{entry.text}</span>

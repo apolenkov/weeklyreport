@@ -3,6 +3,7 @@
 import { useCallback, useRef } from 'react';
 
 import type { Product, RiskEntry, StageStatus } from '../components/lead/mock-data';
+import { splitStageNames } from '../components/lead/stage-tags';
 
 /**
  * SyncSource discriminates between user-driven changes and auto-sync changes
@@ -121,7 +122,10 @@ export function useStatusRiskSync(
       const product = products.find((p) => p.id === risk.productId);
       if (!product) return;
 
-      const stage = product.stages.find((s) => s.stageName === risk.stageName);
+      const stageTags = splitStageNames(risk.stageName);
+      const stage = product.stages.find((s) =>
+        stageTags.length > 0 ? stageTags.includes(s.stageName) : true,
+      );
       if (!stage) return;
 
       // Only suggest when the bound stage is not already reflecting a risk.
@@ -129,7 +133,7 @@ export function useStatusRiskSync(
         requestStatusUpdateConfirmation({
           productId: risk.productId,
           productName: product.name,
-          stageName: risk.stageName,
+          stageName: stage.stageName,
           suggestedStatus: risk.severity,
         });
       }

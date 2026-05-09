@@ -115,7 +115,7 @@ export function ProductAccordion({
   return (
     <div
       id={`report-product-${report.id}`}
-      className={`overflow-hidden rounded-[var(--radius)] border shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-[border-color,box-shadow] ${
+      className={`scroll-mt-28 overflow-hidden rounded-[var(--radius)] border shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-[border-color,box-shadow] ${
         isEmpty
           ? "bg-[rgba(0,0,0,0.035)] opacity-90"
           : "bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)]"
@@ -135,7 +135,7 @@ export function ProductAccordion({
         type="button"
         className={`flex w-full items-center justify-between p-4 transition-[background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
           hasContent
-            ? "cursor-pointer hover:bg-[#f8f6f2] hover:border-[var(--color-starbucks-accent)] hover:shadow-[0_10px_24px_-16px_rgba(0,0,0,0.28)]"
+            ? "cursor-pointer hover:bg-[var(--color-surface-muted)]"
             : "cursor-default bg-[var(--color-background)] opacity-65"
         }`}
         onClick={() => {

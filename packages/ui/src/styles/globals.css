@@ -15,17 +15,19 @@
   --font-mono: 'Geist Mono', ui-monospace, monospace;
 
   /* ---- Canvas & surfaces ---- */
-  --color-background: #f2f0eb;
+  --color-background: #eef1ec;
   --color-foreground: rgba(0, 0, 0, 0.87);
 
-  --color-muted: #e8e5df;
+  --color-muted: #e2e6df;
   --color-muted-foreground: rgba(0, 0, 0, 0.54);
 
-  --color-accent: #e0ddd6;
+  --color-accent: #dbe2d8;
   --color-accent-foreground: rgba(0, 0, 0, 0.87);
+  --color-surface-muted: #f7f8f4;
+  --color-empty-surface: rgba(0, 0, 0, 0.045);
 
   /* ---- Skeleton ---- */
-  --color-skeleton: #ddd9d2;
+  --color-skeleton: #d8ddd4;
 
   /* ---- Semantic status colors (traffic lights) ---- */
   --color-success: #d4e9e2;
@@ -36,11 +38,11 @@
   --color-destructive-foreground: #ffffff;
 
   /* ---- Border & ring ---- */
-  --color-border: #d6d1c9;
+  --color-border: #ccd4c8;
   --color-ring: rgba(0, 98, 65, 0.3);
 
   /* ---- Card & popover — elevated surfaces ---- */
-  --color-card: #ffffff;
+  --color-card: #fffefb;
   --color-card-foreground: rgba(0, 0, 0, 0.87);
   --color-popover: #ffffff;
   --color-popover-foreground: rgba(0, 0, 0, 0.87);
@@ -50,7 +52,7 @@
   --color-primary-foreground: #ffffff;
 
   /* ---- Secondary ---- */
-  --color-secondary: #e8e5df;
+  --color-secondary: #e2e6df;
   --color-secondary-foreground: #1e3932;
 
   /* ---- Input ---- */

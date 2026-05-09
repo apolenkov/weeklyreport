@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { DecisionEntry } from './mock-data';
+import { StageMultiSelect } from './stage-multi-select';
 
 type DecisionEditDialogProps = {
   readonly open: boolean;
@@ -44,7 +45,7 @@ export function DecisionEditDialog({
   // bottom error string used to highlight only the first failure and
   // pinned the message under the wrong field, so each border now turns
   // destructive independently.
-  const [errors, setErrors] = useState<{ text?: string; owner?: string; impact?: string; stage?: string }>({});
+  const [errors, setErrors] = useState<{ text?: string; owner?: string; impact?: string }>({});
 
   useEffect(() => {
     if (open) {
@@ -78,7 +79,6 @@ export function DecisionEditDialog({
     if (t.length === 0) next.text = 'Decision text is required';
     if (o.length === 0) next.owner = 'Owner is required';
     if (im.length === 0) next.impact = 'Impact is required';
-    if (stageName.trim().length === 0) next.stage = 'SDLC stage is required';
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -91,7 +91,7 @@ export function DecisionEditDialog({
       owner: o,
       impact: im,
       deadline: deadline ? deadline : null,
-      stageName,
+      stageName: stageName.trim() || '—',
     });
   }
 
@@ -163,13 +163,14 @@ export function DecisionEditDialog({
                 type="text"
                 aria-invalid={errors.owner ? 'true' : 'false'}
                 aria-describedby={errors.owner ? 'dec-owner-error' : undefined}
-                className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                readOnly
+                aria-readonly="true"
+                className={`w-full rounded-xl border bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
                   errors.owner
                     ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
                     : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
                 }`}
                 value={owner}
-                onChange={(e) => { setOwner(e.target.value); setErrors((prev) => ({ ...prev, owner: undefined })); }}
                 placeholder="e.g. yourself or Head"
               />
               {errors.owner && (
@@ -190,34 +191,12 @@ export function DecisionEditDialog({
             </div>
           </div>
 
-          {/* SDLC stage — 35-04 (FEAT-144). Decisions are department-scoped,
-              so options are the union of stages across all assigned
-              projects. */}
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-stage">
-              SDLC Stage *
-            </label>
-            <select
-              id="dec-stage"
-              aria-invalid={errors.stage ? 'true' : 'false'}
-              aria-describedby={errors.stage ? 'dec-stage-error' : undefined}
-              className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:outline-none ${
-                errors.stage
-                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
-                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
-              }`}
-              value={stageName}
-              onChange={(e) => { setStageName(e.target.value); setErrors((prev) => ({ ...prev, stage: undefined })); }}
-            >
-              <option value="">-- Select stage --</option>
-              {(availableStages ?? []).map((stg) => (
-                <option key={stg} value={stg}>{stg}</option>
-              ))}
-            </select>
-            {errors.stage && (
-              <p id="dec-stage-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.stage}</p>
-            )}
-          </div>
+          <StageMultiSelect
+            id="dec-stage"
+            value={stageName}
+            stages={availableStages ?? []}
+            onChange={(next) => setStageName(next ?? '')}
+          />
 
           {/* Impact */}
           <div>

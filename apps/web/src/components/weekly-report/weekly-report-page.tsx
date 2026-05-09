@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -59,20 +59,6 @@ type WeeklyReportPageProps = {
   readonly canonicalBasePath?: string;
   readonly authorId?: string;
 };
-
-function CollapseIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-    >
-      <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
-    </svg>
-  );
-}
 
 export function WeeklyReportPage({
   period,
@@ -185,30 +171,6 @@ export function WeeklyReportPage({
     };
   }, [titleParts]);
 
-  const sectionsRef = useRef<HTMLDivElement | null>(null);
-
-  function handleToggleAll() {
-    // Scope to report-sections only — global `[aria-expanded]` selector also
-    // matched the nav drawer trigger and any other accordion controls on the
-    // page, so clicking Toggle All also toggled the side menu.
-    const root = sectionsRef.current;
-    if (!root) return;
-    const buttons = root.querySelectorAll<HTMLButtonElement>(
-      '[data-product-accordion-toggle="true"]',
-    );
-    const anyExpanded = Array.from(buttons).some(
-      (btn) => btn.getAttribute("aria-expanded") === "true",
-    );
-    buttons.forEach((btn) => {
-      if (
-        (anyExpanded && btn.getAttribute("aria-expanded") === "true") ||
-        (!anyExpanded && btn.getAttribute("aria-expanded") === "false")
-      ) {
-        btn.click();
-      }
-    });
-  }
-
   if (weeklyQ.isLoading || !weeklyQ.data) {
     return <WeeklyReportSkeleton />;
   }
@@ -260,7 +222,7 @@ export function WeeklyReportPage({
   ];
 
   return (
-    <div className="space-y-4" ref={sectionsRef}>
+    <div className="space-y-4">
       {/* Page header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -272,17 +234,6 @@ export function WeeklyReportPage({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {hasExpandableProducts && (
-            <button
-              type="button"
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
-              onClick={handleToggleAll}
-              title="Toggle All"
-            >
-              <CollapseIcon />
-              Toggle All
-            </button>
-          )}
           <ExportPdfButton
             reportId={view.period.reportId}
             periodStatus={view.period.periodStatus}

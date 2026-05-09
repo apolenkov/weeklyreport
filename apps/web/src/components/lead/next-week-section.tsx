@@ -6,6 +6,7 @@ import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { ItemCard } from './item-card';
 import { ItemEditDialog } from './item-edit-dialog';
 import type { KanbanItem, Product } from './mock-data';
+import { splitStageNames } from './stage-tags';
 
 type NextWeekSectionProps = {
   readonly items: KanbanItem[];
@@ -31,7 +32,10 @@ type NextWeekSectionProps = {
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
   const map = new Map<string, KanbanItem[]>();
   for (const item of items) {
-    const key = item.productName;
+    const tags = splitStageNames(item.stageName);
+    const key = tags.length > 0
+      ? `${item.productName} · ${tags.join(', ')}`
+      : item.productName;
     const group = map.get(key) ?? [];
     group.push(item);
     map.set(key, group);

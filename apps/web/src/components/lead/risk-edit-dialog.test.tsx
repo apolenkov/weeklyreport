@@ -1,7 +1,8 @@
 /**
- * 35-04 (FEAT-144): the Risk dialog must require an SDLC stage selection
- * before Save fires. Options come from `stagesForProduct(productId)` —
- * the lead's StageAssignment rows for the active project.
+ * 35-04 / UFB-014: the Risk dialog uses an OPTIONAL multi-stage selector
+ * (`StageMultiSelect`). Empty selection = applies to all assigned stages
+ * for the active project. Options come from `stagesForProduct(productId)`
+ * — the lead's StageAssignment rows.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -18,8 +19,8 @@ const products: Product[] = [
   },
 ];
 
-describe('RiskEditDialog - SDLC stage selector (35-04 / FEAT-144)', () => {
-  it('blocks Save when stage is not selected even if other fields are filled', () => {
+describe('RiskEditDialog - SDLC stage selector (35-04 / UFB-014)', () => {
+  it('saves with empty stageName when no stage is selected (stage is optional)', () => {
     const onSave = vi.fn();
     render(
       <RiskEditDialog
@@ -44,8 +45,15 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / FEAT-144)', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /Save Risk/i }));
 
-    expect(onSave).not.toHaveBeenCalled();
-    expect(screen.getByText(/SDLC stage is required/i)).toBeInTheDocument();
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      text: 'Vendor delay',
+      impact: 'Slips Q3',
+      mitigation: 'Escalate',
+    });
+    // Empty selection → component normalises to em-dash sentinel.
+    const stageName = onSave.mock.calls[0]?.[0].stageName;
+    expect(stageName == null || stageName === '' || stageName === '—').toBe(true);
   });
 
   it('saves with stageName when all required fields including stage are filled', () => {
@@ -71,9 +79,7 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / FEAT-144)', () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: 'Escalate' },
     });
-    fireEvent.change(screen.getByLabelText(/SDLC Stage/i), {
-      target: { value: 'Dev' },
-    });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Dev' }));
 
     fireEvent.click(screen.getByRole('button', { name: /Save Risk/i }));
 
@@ -86,7 +92,7 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / FEAT-144)', () => {
     });
   });
 
-  it('limits the stage dropdown options to stages returned by stagesForProduct', () => {
+  it('limits stage checkboxes to stages returned by stagesForProduct', () => {
     render(
       <RiskEditDialog
         open
@@ -99,9 +105,8 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / FEAT-144)', () => {
       />,
     );
 
-    const select = screen.getByLabelText(/SDLC Stage/i) as HTMLSelectElement;
-    const options = Array.from(select.querySelectorAll('option')).map((o) => o.value);
-    // First entry is the empty placeholder.
-    expect(options).toEqual(['', 'Testing', 'Support']);
+    const checkboxes = screen.getAllByRole('checkbox');
+    const labels = checkboxes.map((cb) => cb.parentElement?.textContent?.trim());
+    expect(labels).toEqual(['Testing', 'Support']);
   });
 });
