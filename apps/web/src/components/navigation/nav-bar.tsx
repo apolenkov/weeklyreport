@@ -32,23 +32,22 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   // exists in the nav but now drops into the "My Drafts" tab; the
   // role-shared "Archive" link uses the same URL with the published tab.
   { href: "/reports?tab=drafts", label: "My History", roles: ["lead"] },
-  { href: "/head/dashboard", label: "Dashboard", roles: ["head", "admin"] },
-  { href: "/head/report", label: "Weekly Report", roles: ["head", "admin"] },
+  { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
+  { href: "/head/report", label: "Weekly Report", roles: ["head"] },
   {
+    // UFB-022: admin role sees only the Admin section, not the
+    // department dashboard/report/archive surfaces.
     href: "/reports?tab=published",
     label: "Archive",
-    roles: ["lead", "head", "admin", "viewer"],
+    roles: ["lead", "head", "viewer"],
   },
   { href: "/admin", label: "Admin", roles: ["head", "admin"] },
 ];
 
 function getRoleLabel(role: Role): string {
-  // Admin is treated as Head in UX (same display label, both have full
-  // department-management access). Schema/auth keep them as separate
-  // enum values for backwards compat with tests + auth, but the user
-  // never sees "Admin" as a distinct label.
   switch (role) {
     case "admin":
+      return "Admin";
     case "head":
       return "Department Head";
     case "lead":
