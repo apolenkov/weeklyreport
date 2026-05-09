@@ -10,6 +10,7 @@ import { useStatusRiskSync } from '../../hooks/use-status-risk-sync';
 import type { Product, RiskEntry, StageStatus } from './mock-data';
 import { RisksSection } from './risks-section';
 import { SdlcPipeline } from './sdlc-pipeline';
+import { splitStageNames, stageNameMatches } from './stage-tags';
 
 /**
  * LeadFormSyncBridge — composes useStatusRiskSync with SdlcPipeline + RisksSection.
@@ -64,6 +65,17 @@ type BridgeContextValue = {
 };
 
 const BridgeContext = createContext<BridgeContextValue | null>(null);
+
+function riskStageKeys(products: Product[], risk: RiskEntry): string[] {
+  const tags = splitStageNames(risk.stageName);
+  if (tags.length > 0) {
+    return tags.map((stageName) => `${risk.productId}::${stageName}`);
+  }
+  const product = products.find((item) => item.id === risk.productId);
+  return (product?.stages ?? []).map(
+    (stage) => `${risk.productId}::${stage.stageName}`,
+  );
+}
 
 function useBridgeContext(componentName: string): BridgeContextValue {
   const ctx = useContext(BridgeContext);
@@ -152,17 +164,22 @@ function Provider({
       // existing additive auto-sync (handleStageStatusChange + handleRiskFilled).
       const nextCounts = new Map<string, number>();
       for (const r of next) {
-        const key = `${r.productId}::${r.stageName}`;
-        nextCounts.set(key, (nextCounts.get(key) ?? 0) + 1);
+        for (const key of riskStageKeys(products, r)) {
+          nextCounts.set(key, (nextCounts.get(key) ?? 0) + 1);
+        }
       }
       const stagesToClear: { productId: string; stageName: string }[] = [];
       const seen = new Set<string>();
       for (const r of risks) {
-        const key = `${r.productId}::${r.stageName}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        if ((nextCounts.get(key) ?? 0) === 0) {
-          stagesToClear.push({ productId: r.productId, stageName: r.stageName });
+        for (const key of riskStageKeys(products, r)) {
+          if (seen.has(key)) continue;
+          seen.add(key);
+          if ((nextCounts.get(key) ?? 0) === 0) {
+            const [productId, stageName] = key.split('::');
+            if (productId && stageName) {
+              stagesToClear.push({ productId, stageName });
+            }
+          }
         }
       }
 
@@ -265,7 +282,10 @@ function computeUnbackedStages(ctx: ReturnType<typeof useBridgeContext>) {
       if (stage.ownership !== 'mine') continue;
       if (stage.status !== 'at-risk' && stage.status !== 'blocked') continue;
       const hasRisk = ctx.risks.some(
-        (r) => r.productId === product.id && r.stageName === stage.stageName && (r.text ?? '').trim().length > 0,
+        (r) =>
+          r.productId === product.id &&
+          stageNameMatches(r.stageName, stage.stageName) &&
+          (r.text ?? '').trim().length > 0,
       );
       if (!hasRisk) {
         out.push({

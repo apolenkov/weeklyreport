@@ -3,6 +3,7 @@
 import { OnTrackIcon } from '../ai/on-track-icon';
 import { StageChip } from './stage-chip';
 import type { Product, RiskEntry, StageStatus } from './mock-data';
+import { splitStageNames } from './stage-tags';
 
 type SdlcPipelineProps = {
   readonly products: Product[];
@@ -72,8 +73,17 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
   // can decide whether to prompt-on-Clear without recomputing.
   const riskCountByKey = new Map<string, number>();
   for (const r of risks ?? []) {
-    const key = `${r.productId}::${r.stageName}`;
-    riskCountByKey.set(key, (riskCountByKey.get(key) ?? 0) + 1);
+    const product = products.find((item) => item.id === r.productId);
+    const stageTags = splitStageNames(r.stageName);
+    const keys =
+      stageTags.length > 0
+        ? stageTags.map((stageName) => `${r.productId}::${stageName}`)
+        : (product?.stages ?? []).map(
+            (stage) => `${r.productId}::${stage.stageName}`,
+          );
+    for (const key of keys) {
+      riskCountByKey.set(key, (riskCountByKey.get(key) ?? 0) + 1);
+    }
   }
 
   return (

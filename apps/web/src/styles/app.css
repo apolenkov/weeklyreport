@@ -6,6 +6,15 @@
 @import "@customreport/ui/styles/globals.css" layer(base);
 
 @layer base {
+  body {
+    background-color: var(--color-background);
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0) 17rem),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.022) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(0, 0, 0, 0.016) 1px, transparent 1px);
+    background-size: auto, 32px 32px, 32px 32px;
+  }
+
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   a[href],

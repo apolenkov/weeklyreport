@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { KanbanItem } from './mock-data';
+import { splitStageNames } from './stage-tags';
 
 type ItemCardProps = {
   readonly item: KanbanItem;
@@ -64,6 +65,7 @@ export function ItemCard({
     STATUS_BADGE['in-progress'];
   const isBlocked = item.status === 'blocked';
   const isPlanned = item.status === 'planned';
+  const stageTags = splitStageNames(item.stageName);
 
   // Local draft for the inline textarea. Reset every time edit mode opens so
   // the field tracks the latest committed text.
@@ -153,6 +155,22 @@ export function ItemCard({
       >
         {badge.label}
       </span>
+      <div className="mb-2 flex flex-wrap gap-1">
+        {stageTags.length === 0 ? (
+          <span className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+            All stages
+          </span>
+        ) : (
+          stageTags.map((stage) => (
+            <span
+              key={stage}
+              className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+            >
+              {stage}
+            </span>
+          ))
+        )}
+      </div>
 
       {/* Item text — editable when in edit mode, static otherwise */}
       {isEditing && !readOnly ? (

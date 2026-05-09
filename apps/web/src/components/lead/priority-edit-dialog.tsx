@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { PriorityEntry } from './mock-data';
+import { StageMultiSelect } from './stage-multi-select';
 
 type PriorityEditDialogProps = {
   readonly open: boolean;
@@ -39,7 +40,7 @@ export function PriorityEditDialog({
   const [text, setText] = useState(priority?.text ?? '');
   const initialStage = priority?.stageName && priority.stageName !== '—' ? priority.stageName : '';
   const [stageName, setStageName] = useState<string>(initialStage);
-  const [errors, setErrors] = useState<{ text?: string; stage?: string }>({});
+  const [errors, setErrors] = useState<{ text?: string }>({});
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -59,7 +60,6 @@ export function PriorityEditDialog({
     const trimmed = text.trim();
     const next: typeof errors = {};
     if (trimmed.length === 0) next.text = 'Priority text is required';
-    if (stageName.trim().length === 0) next.stage = 'SDLC stage is required';
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -67,7 +67,7 @@ export function PriorityEditDialog({
     onSave({
       rank: priority?.rank ?? nextRank,
       text: trimmed,
-      stageName,
+      stageName: stageName.trim() || '—',
     });
   }
 
@@ -136,36 +136,13 @@ export function PriorityEditDialog({
           )}
         </div>
 
-        {/* SDLC stage — 35-04 (FEAT-144). */}
         <div className="mt-4">
-          <label
-            className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-            htmlFor="priority-stage"
-          >
-            SDLC Stage *
-          </label>
-          <select
+          <StageMultiSelect
             id="priority-stage"
-            aria-invalid={errors.stage ? 'true' : 'false'}
-            aria-describedby={errors.stage ? 'priority-stage-error' : undefined}
-            className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:outline-none ${
-              errors.stage
-                ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
-                : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
-            }`}
             value={stageName}
-            onChange={(e) => { setStageName(e.target.value); setErrors((prev) => ({ ...prev, stage: undefined })); }}
-          >
-            <option value="">-- Select stage --</option>
-            {(availableStages ?? []).map((stg) => (
-              <option key={stg} value={stg}>{stg}</option>
-            ))}
-          </select>
-          {errors.stage && (
-            <p id="priority-stage-error" className="mt-1 text-xs text-[var(--color-destructive)]">
-              {errors.stage}
-            </p>
-          )}
+            stages={availableStages ?? []}
+            onChange={(next) => setStageName(next ?? '')}
+          />
         </div>
 
         <div className="mt-5 flex justify-end gap-3">

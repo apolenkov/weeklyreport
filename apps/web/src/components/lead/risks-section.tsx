@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { RiskEditDialog } from './risk-edit-dialog';
 import type { Product, RiskEntry } from './mock-data';
+import { splitStageNames } from './stage-tags';
 
 type RisksSectionProps = {
   readonly risks: RiskEntry[];
@@ -119,6 +120,7 @@ export function RisksSection({
       ) : (
         risks.map((risk) => {
           const isBlocked = risk.severity === 'blocked';
+          const stageTags = splitStageNames(risk.stageName);
           return (
             <div
               key={risk.id}
@@ -141,9 +143,20 @@ export function RisksSection({
                 <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
                   {risk.productName}
                 </span>
-                <span className="text-xs text-[var(--color-muted-foreground)]">
-                  &middot; {risk.stageName} stage
-                </span>
+                {stageTags.length === 0 ? (
+                  <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+                    All stages
+                  </span>
+                ) : (
+                  stageTags.map((stage) => (
+                    <span
+                      key={stage}
+                      className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+                    >
+                      {stage}
+                    </span>
+                  ))
+                )}
                 {!readOnly && (
                   <div className="ml-auto flex gap-1">
                     <button
@@ -217,7 +230,7 @@ export function RisksSection({
         open={pendingDelete !== null}
         title="Delete risk?"
         preview={pendingDelete?.text || '(no description)'}
-        subtitle={pendingDelete ? `${pendingDelete.productName}${pendingDelete.stageName ? ` · ${pendingDelete.stageName} stage` : ''}` : undefined}
+        subtitle={pendingDelete ? `${pendingDelete.productName}${splitStageNames(pendingDelete.stageName).length > 0 ? ` · ${splitStageNames(pendingDelete.stageName).join(', ')}` : ' · all stages'}` : undefined}
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />

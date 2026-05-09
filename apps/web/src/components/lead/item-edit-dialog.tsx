@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { KanbanItem, ItemStatus, Product } from './mock-data';
+import { StageMultiSelect } from './stage-multi-select';
 
 type ItemEditDialogProps = {
   /** Open/close state. Caller controls so it can wire submit/cancel. */
@@ -84,7 +85,7 @@ export function ItemEditDialog({
   // 35-04: SDLC stage selection. Pre-seeds with the existing item.stageName
   // when editing; empty otherwise (forces an explicit choice on save).
   const [stageName, setStageName] = useState<string>(item?.stageName ?? '');
-  const [errors, setErrors] = useState<{ text?: string; stage?: string }>({});
+  const [errors, setErrors] = useState<{ text?: string }>({});
 
   useEffect(() => {
     if (open) {
@@ -115,7 +116,6 @@ export function ItemEditDialog({
     const trimmed = text.trim();
     const next: typeof errors = {};
     if (trimmed.length === 0) next.text = 'Description is required';
-    if (stageName.trim().length === 0) next.stage = 'SDLC stage is required';
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -129,7 +129,7 @@ export function ItemEditDialog({
       id: item?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      stageName,
+      stageName: stageName.trim() || undefined,
       text: trimmed,
       status,
       author: item?.author ?? currentUserName ?? 'You',
@@ -195,33 +195,12 @@ export function ItemEditDialog({
             )}
           </div>
 
-          {/* SDLC stage — 35-04 (FEAT-144). Required, options are limited
-              to stages the lead owns on the active project. */}
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="item-stage">
-              SDLC Stage *
-            </label>
-            <select
-              id="item-stage"
-              aria-invalid={errors.stage ? 'true' : 'false'}
-              aria-describedby={errors.stage ? 'item-stage-error' : undefined}
-              className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:outline-none ${
-                errors.stage
-                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
-                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
-              }`}
-              value={stageName}
-              onChange={(e) => { setStageName(e.target.value); setErrors((prev) => ({ ...prev, stage: undefined })); }}
-            >
-              <option value="">-- Select stage --</option>
-              {(stagesForProduct?.(productId) ?? []).map((stg) => (
-                <option key={stg} value={stg}>{stg}</option>
-              ))}
-            </select>
-            {errors.stage && (
-              <p id="item-stage-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.stage}</p>
-            )}
-          </div>
+          <StageMultiSelect
+            id="item-stage"
+            value={stageName}
+            stages={stagesForProduct?.(productId) ?? []}
+            onChange={(next) => setStageName(next ?? '')}
+          />
 
           {/* Status chips */}
           <div>

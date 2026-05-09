@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { DecisionEditDialog } from './decision-edit-dialog';
 import type { DecisionEntry } from './mock-data';
+import { splitStageNames } from './stage-tags';
 
 type DecisionsSectionProps = {
   readonly decisions: DecisionEntry[];
@@ -129,6 +130,7 @@ export function DecisionsSection({
       ) : (
         decisions.map((decision) => {
           const mine = isMine(decision.owner, currentUserName);
+          const stageTags = splitStageNames(decision.stageName);
           return (
           <div
             key={decision.id}
@@ -140,10 +142,19 @@ export function DecisionsSection({
                 {decision.productName}
               </span>
               {/* 35-04: SDLC stage badge — surfaces scoping next to product. */}
-              {decision.stageName && decision.stageName !== '—' && (
-                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
-                  {decision.stageName}
+              {stageTags.length === 0 ? (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
+                  All stages
                 </span>
+              ) : (
+                stageTags.map((stage) => (
+                <span
+                  key={stage}
+                  className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+                >
+                  {stage}
+                </span>
+                ))
               )}
               {decision.deadline && (
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-semibold text-[#8a6d1b]">
