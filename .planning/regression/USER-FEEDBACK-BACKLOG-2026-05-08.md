@@ -427,3 +427,157 @@ Current review lanes:
 .planning/regression/review-lanes/2026-05-08-ui-styling-typography-lane.md
 .planning/regression/review-lanes/2026-05-08-security-accessibility-lane.md
 ```
+
+### UFB-021 - Landing: вернуть combobox-default-admin
+
+Status: open
+Date: 2026-05-09
+Source: user feedback (chat, screenshot of broken Demo overlap)
+
+Problem:
+
+- Текущий лендинг (commit bc180ffa, Phase 35-08 UX-16) рендерит Demo brand
+  panel слева + grid из 9 dev-login карточек справа.
+- Right panel: `w-full` без `lg:flex-1` когда `showDevPicker=true` →
+  накрывает Demo panel на узких viewport (визуальный bug).
+- User: "раньше был прекрасный комбобокс. По умолчанию входили под админа,
+  потом выбирали роль. Зачем нужно было что-то делать?"
+
+Желаемое поведение:
+
+- Один primary CTA "Войти как Admin" (по умолчанию) → /auth/dev-login?role=admin.
+- Дополнительный role-selector (combobox / dropdown) для смены роли:
+  head | admin | viewer | lead.
+- Убрать grid 9 пользователей с лендинга (он рос с числом seed users).
+
+Files:
+
+- apps/web/src/app/page.tsx (DevLoginGrid → DevLoginCombobox)
+
+### UFB-022 - Admin role: только admin меню
+
+Status: open
+Date: 2026-05-09
+Source: user feedback (chat)
+
+Problem:
+
+- В page.tsx:38 admin редиректится на `/head/dashboard`.
+- Admin-роль видит nav-bar Dashboard + Weekly Report + Reports + Lead etc.
+- User: "роли админа нужны только одно меню — связанное с администрированием".
+
+Желаемое поведение:
+
+- DEFAULT_FOR_ROLE.admin → '/admin' (не /head/dashboard).
+- Nav для admin: только /admin (с табами users/products/periods/...).
+- Убрать Dashboard / Weekly Report / Reports links для admin role.
+
+Files:
+
+- apps/web/src/app/page.tsx — DEFAULT_FOR_ROLE.admin
+- apps/web/src/components/navigation/nav-bar.tsx — фильтрация по role
+
+### UFB-023 - Подтверждено: 4 роли
+
+Status: confirmed (no action)
+Roles: head | admin | viewer | lead
+
+Совпадает с current code (DEFAULT_FOR_ROLE, Role type, ROLE_ORDER).
+
+### UFB-024 - SC-16-02 theme toggle SKIPPED не BLOCKED
+
+Status: open
+Date: 2026-05-09
+Source: user feedback (chat)
+
+Problem:
+
+- SC-16-02 theme toggle visual behavior сейчас рапортует BLOCKED.
+- Decision: theme toggle не нужен (user explicit).
+- BLOCKED означает "не смогли проверить" — вводит в заблуждение,
+  будто фича planned-but-deferred.
+
+Желаемое:
+
+- Заменить status="BLOCKED" → status="SKIPPED" с reason
+  "product decision: no theme toggle".
+- Update в `apps/web/e2e/regression/phase16-17-uat.spec.ts` SC-16-02 logic
+  - uat-live-results.json.
+
+### UFB-025 - Admin: вкладка Groups/Departments (ведение групп = департаментов)
+
+Status: open
+Date: 2026-05-09
+Source: user (chat)
+
+Sentence: "У админа должна быть панель ещё, какие группы есть. Ведение групп равно департаменту по сути."
+
+Action:
+
+- Добавить admin tab "Groups" (или "Departments") в админку.
+- Sidebar nav (ReopenTab/PeriodsTab pattern).
+- CRUD: создание / переименование / удаление группы.
+- Связать с пользователем: каждый user → одна группа.
+
+### UFB-026 - Admin tabs: единый стандарт layout (Users / Groups / Products / Periods / Reopen)
+
+Status: open
+Date: 2026-05-09
+
+Problem: tab-к-tab расхождение:
+
+- Users vs Products: search bar и счётчик строк находятся в разных местах.
+- Periods: по аналогии не стандартизирован.
+- Reopen: search отсутствует.
+
+Action: один tab-template для всех админских вкладок.
+
+- header layout: title + count + search bar (порядок одинаковый везде).
+- table column conventions (id, name, status, ts, actions) — same.
+- toolbar (Add new + filter chips) — same position.
+
+### UFB-027 - Logout button missing / должен возвращать на лендинг
+
+Status: open
+Date: 2026-05-09
+Source: user (chat)
+
+Problem: "не вижу кнопочки Logout, которая будет меня выводить на лендинг".
+
+Action:
+
+- Logout кнопка в nav-bar (рядом с user identity).
+- Click → POST /auth/logout → cookie cleared → redirect /.
+- На лендинге useEffect `if (!session)` показывает CTA снова.
+
+### UFB-028 - Reset DB: полный wipe для чистого UAT
+
+Status: open
+Date: 2026-05-09
+Source: user (chat)
+
+Sentence: "Я хочу, чтобы wipe данных полностью перетирал, в том числе админские штуки, логи, аудиты. Нужна нулёвая база. Как иначе тестировать?"
+
+Action:
+
+- `pnpm db:reset:hard` script.
+- Drops/truncates every table (Report, ReportSection, ItemEntry, Risk, Decision,
+  Priority, ReminderRule, ReminderExecution, ReopenRequest, AuditLog, JobLog,
+  User, StageAssignment, Period, Product, etc.).
+- Затем re-runs migrations + db:seed:simple.
+- Single command, no manual psql.
+
+### UFB-029 - Admin: Settings page header standard
+
+Status: open
+Date: 2026-05-09
+Source: user (chat)
+
+Problem: на странице `/admin?tab=settings` отсутствует стандартный header / section title как на других admin вкладках (Sections example).
+
+Action:
+
+- Audit всех admin tabs (`SettingsTab`, `UsersTab`, `ProductsTab`, `PeriodsTab`,
+  `RemindersTab`, `ReopenTab`, `JobsTab`).
+- Добавить единый `TabHeader` компонент: title + description + actions.
+- Применить на каждой вкладке.

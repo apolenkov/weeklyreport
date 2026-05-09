@@ -16,7 +16,7 @@ const EVIDENCE_DIR = path.resolve(
 );
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 
-type ScenarioStatus = "PASS" | "FAIL" | "BLOCKED";
+type ScenarioStatus = "PASS" | "FAIL" | "BLOCKED" | "SKIPPED";
 
 type ScenarioResult = {
   name: string;
@@ -541,9 +541,9 @@ test.describe.serial("Phase 16/17 live UAT closure", () => {
       ).count();
       result.screenshot = await take(page, "sc-16-02-theme-toggle.png");
       if (themeControls === 0) {
-        result.status = "BLOCKED";
+        result.status = "SKIPPED";
         result.detail =
-          "No theme toggle surface is present in the current product build; product decision required before human visual UAT can close.";
+          "Product decision: theme toggle is not part of the product. Scenario intentionally skipped, not a coverage gap.";
       }
       result.data = { themeControls };
       await page.context().close();
@@ -566,7 +566,7 @@ test.describe.serial("Phase 16/17 live UAT closure", () => {
           acc[result.status] += 1;
           return acc;
         },
-        { PASS: 0, FAIL: 0, BLOCKED: 0 },
+        { PASS: 0, FAIL: 0, BLOCKED: 0, SKIPPED: 0 },
       ),
       results,
       browserLogs: normalizedLogs,
