@@ -63,6 +63,41 @@ export function RemindersTab({ reminders, periods }: RemindersTabProps) {
     }),
   );
 
+  const sendNowMut = useMutation(
+    trpc.reminders.dispatchPending.mutationOptions({
+      onSuccess: ({ dispatched, alreadySent, skipped, reason }) => {
+        invalidateAdmin(qc, trpc);
+        if (reason === "no-active-rule") {
+          toast.error("No active reminder rule is available for this report.");
+          return;
+        }
+        if (dispatched === 0 && alreadySent === 0 && skipped === 0) {
+          toast.info("No pending lead sections need a reminder.");
+          return;
+        }
+        if (dispatched === 0 && alreadySent > 0) {
+          toast.info(
+            `All ${alreadySent} pending lead${alreadySent === 1 ? "" : "s"} already received this cycle's reminder.`,
+          );
+          return;
+        }
+        const extras: string[] = [];
+        if (alreadySent > 0) extras.push(`${alreadySent} already sent this cycle`);
+        if (skipped > 0) extras.push(`${skipped} opted out`);
+        const tail = extras.length ? ` (${extras.join(", ")})` : "";
+        toast.success(
+          `Reminder sent to ${dispatched} lead${dispatched === 1 ? "" : "s"}${tail}.`,
+        );
+      },
+      onError: (err) => {
+        toast.error(err.message ?? "Failed to send reminder");
+      },
+      onSettled: () => {
+        setSendingId(null);
+      },
+    }),
+  );
+
   function handleToggle(reminder: MockReminder) {
     const nextStatus: "active" | "paused" = reminder.active
       ? "paused"
@@ -93,10 +128,17 @@ export function RemindersTab({ reminders, periods }: RemindersTabProps) {
   }
 
   function handleSendNow(id: string) {
+    const reminder = reminders.find((item) => item.id === id);
+    if (!reminder?.reportId) {
+      toast.error("Reminder rule is not linked to a report period.");
+      return;
+    }
+    if (!reminder.active) {
+      toast.error("Paused reminder rules cannot be sent.");
+      return;
+    }
     setSendingId(id);
-    // Send-now is an admin trigger; no dedicated endpoint exists yet — keep
-    // the visual feedback for now and surface a backend gap in SUMMARY.
-    setTimeout(() => setSendingId(null), 1500);
+    sendNowMut.mutate({ reportId: reminder.reportId, ruleId: reminder.id });
   }
 
   function handleCreateRule() {
@@ -320,7 +362,12 @@ export function RemindersTab({ reminders, periods }: RemindersTabProps) {
               <button
                 type="button"
                 onClick={() => handleSendNow(reminder.id)}
-                disabled={sendingId === reminder.id}
+                disabled={
+                  sendingId === reminder.id ||
+                  sendNowMut.isPending ||
+                  !reminder.active ||
+                  !reminder.reportId
+                }
                 className="btn-press inline-flex min-h-[36px] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={`Send ${reminder.name} now`}
               >

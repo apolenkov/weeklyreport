@@ -877,7 +877,12 @@ export function createAppRouter(deps: RouterDeps) {
       // (the client never sees lead emails) and dispatches one execution per
       // pending lead via the existing dedupe-keyed pipeline.
       dispatchPending: headProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(
+          z.object({
+            reportId: z.string().uuid(),
+            ruleId: z.string().uuid().optional(),
+          }),
+        )
         .output(
           z.object({
             dispatched: z.number().int().nonnegative(),
@@ -889,7 +894,11 @@ export function createAppRouter(deps: RouterDeps) {
         .mutation(async ({ input }) => {
           try {
             const rule = await deps.prisma.reminderRule.findFirst({
-              where: { reportId: input.reportId, status: "active" },
+              where: {
+                reportId: input.reportId,
+                status: "active",
+                ...(input.ruleId ? { id: input.ruleId } : {}),
+              },
               orderBy: { fireAt: "asc" },
             });
             if (!rule) {
