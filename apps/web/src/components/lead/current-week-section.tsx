@@ -116,14 +116,14 @@ export function CurrentWeekSection({
   if (isEmpty) {
     if (readOnly) {
       return (
-        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[#f8f6f2] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
           No current-week items.
         </div>
       );
     }
     const product = products?.[0];
     return (
-      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[#f8f6f2] p-8 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-8 text-center">
         <p className="text-sm text-[var(--color-muted-foreground)]">
           No current-week items yet.
         </p>
@@ -192,7 +192,7 @@ export function CurrentWeekSection({
             </div>
             {col.items.length === 0 ? (
               <div
-                className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[#f8f6f2] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
+                className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
                 style={{ minHeight: 110 }}
               >
                 No items yet

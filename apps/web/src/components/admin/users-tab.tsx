@@ -198,7 +198,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
               {filteredUsers.map((user) => (
                 <tr
                   key={user.id}
-                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[#f8f6f2]"
+                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
                 >
                   <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
                     {user.name}
@@ -238,7 +238,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
           </table>
         </div>
         {filteredUsers.length === 0 && (
-          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
             No users match the search.
           </div>
         )}
@@ -346,7 +346,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                 type="button"
                 onClick={() => setShowDialog(false)}
                 disabled={isSaving}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -387,7 +387,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                 type="button"
                 onClick={() => setDeleteTarget(null)}
                 disabled={isDeleting}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>

@@ -85,7 +85,7 @@ export function AiSummaryCard({ reportId }: Props) {
           {isHead ? (
             <button
               type="button"
-              className="rounded-md border border-[rgba(0,0,0,0.15)] bg-transparent px-2 py-1 text-xs font-semibold hover:bg-[#f8f6f2]"
+              className="rounded-md border border-[rgba(0,0,0,0.15)] bg-transparent px-2 py-1 text-xs font-semibold hover:bg-[var(--color-surface-hover)]"
               onClick={() => regenMut.mutate({ reportId })}
               disabled={regenMut.isPending}
               aria-label="Regenerate summary"
@@ -95,7 +95,7 @@ export function AiSummaryCard({ reportId }: Props) {
           ) : null}
           <button
             type="button"
-            className="rounded-md border border-[rgba(0,0,0,0.15)] bg-transparent px-2 py-1 text-xs font-semibold hover:bg-[#f8f6f2]"
+            className="rounded-md border border-[rgba(0,0,0,0.15)] bg-transparent px-2 py-1 text-xs font-semibold hover:bg-[var(--color-surface-hover)]"
             onClick={() => setDismissed(true)}
             aria-label="Dismiss summary"
           >

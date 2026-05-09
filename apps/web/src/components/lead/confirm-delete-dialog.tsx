@@ -122,7 +122,7 @@ export function ConfirmDeleteDialog({
 
         <p
           id="confirm-delete-preview"
-          className="mt-3 line-clamp-2 break-words rounded-md border border-[var(--color-muted)] bg-[#f8f6f2] px-3 py-2 text-sm font-medium text-[var(--color-foreground)]"
+          className="mt-3 line-clamp-2 break-words rounded-md border border-[var(--color-muted)] bg-[var(--color-surface-hover)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)]"
           title={preview}
         >
           {preview}
@@ -143,7 +143,7 @@ export function ConfirmDeleteDialog({
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
-            className="btn-press inline-flex min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-muted)] bg-transparent px-4 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+            className="btn-press inline-flex min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-muted)] bg-transparent px-4 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
             onClick={onCancel}
           >
             Cancel

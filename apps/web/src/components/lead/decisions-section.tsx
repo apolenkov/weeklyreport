@@ -124,7 +124,7 @@ export function DecisionsSection({
   return (
     <div className="space-y-3">
       {decisions.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[#f8f6f2] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
           {readOnly ? 'No decisions reported.' : 'No decisions yet. Use “+ Add Decision” to flag one for the head.'}
         </div>
       ) : (
@@ -175,7 +175,7 @@ export function DecisionsSection({
                 <div className="ml-auto flex gap-1">
                   <button
                     type="button"
-                    className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"
+                    className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                     onClick={() => handleEdit(decision)}
                     aria-label={`Edit decision`}
                   >
@@ -216,7 +216,7 @@ export function DecisionsSection({
       {!readOnly && (
         <button
           type="button"
-          className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+          className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
           onClick={handleAdd}
         >
           + Add Decision

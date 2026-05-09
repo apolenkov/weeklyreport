@@ -120,7 +120,7 @@ export function ActionLogTab() {
       {!listQuery.isPending &&
         !listQuery.isError &&
         visibleRows.length === 0 && (
-          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
             {rows.length === 0
               ? "No actions recorded yet."
               : "No actions match the search."}
@@ -153,7 +153,7 @@ export function ActionLogTab() {
               {visibleRows.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[#f8f6f2]"
+                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
                 >
                   <td className="whitespace-nowrap px-4 py-3 text-[var(--color-muted-foreground)]">
                     {formatTimestamp(row.createdAt)}
@@ -225,7 +225,7 @@ function CorrelationCell({ value }: { readonly value: string }) {
         }
       }}
       title={`${value} (click to copy)`}
-      className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-xs text-[var(--color-foreground)] hover:bg-[#f8f6f2] focus:bg-[#f8f6f2] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+      className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-xs text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
       aria-label={`Copy reference id ${value}`}
     >
       <span>{truncate(value, 14)}</span>

@@ -69,7 +69,7 @@ export default async function AdminPage({ searchParams }: Props) {
                   className={`flex items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-2 text-[13px] font-semibold capitalize transition-colors ${
                     activeTab === t
                       ? "bg-[var(--color-starbucks-accent)] text-white shadow-[0_1px_3px_rgba(0,98,65,0.25)]"
-                      : "text-[var(--color-muted-foreground)] hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"
+                      : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                   }`}
                   style={{ minHeight: "44px" }}
                   aria-current={activeTab === t ? "page" : undefined}

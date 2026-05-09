@@ -138,7 +138,7 @@ export function JobsTab() {
         filteredJobs.length === 0 && (
           <div
             data-testid="jobs-empty-state"
-            className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
+            className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
           >
             {jobs.length === 0
               ? "No failed email reminder jobs. Queue is clean."
@@ -181,7 +181,7 @@ export function JobsTab() {
                 return (
                   <tr
                     key={job.id}
-                    className="border-b border-[var(--color-border)] last:border-0 hover:bg-[#f8f6f2]"
+                    className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
                     data-testid={`jobs-row-${job.id}`}
                   >
                     <td className="px-4 py-3 font-mono text-xs text-[var(--color-foreground)]">
