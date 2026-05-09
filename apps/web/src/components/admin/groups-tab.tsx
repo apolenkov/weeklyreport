@@ -8,6 +8,8 @@ import { invalidateAdmin } from "../../lib/cache-keys";
 import { toReportingGroupInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
 
+import { TabHeader, TabSearch } from "./tab-header";
+
 import type { MockGroup } from "./mock-data";
 
 type GroupFormData = {
@@ -116,28 +118,30 @@ export function GroupsTab({ groups }: GroupsTabProps) {
   return (
     <>
       <div className="space-y-4" data-testid="groups-tab">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            {groups.length} groups configured
-          </p>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-            aria-label="Add group"
-          >
-            <PlusIcon />
-            Add Group
-          </button>
-        </div>
-
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search groups…"
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-          aria-label="Search groups"
+        <TabHeader
+          title="Groups"
+          description={`Reporting groups (departments). ${activeGroupCount} active.`}
+          count={`${groups.length} groups`}
+          search={
+            <TabSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search groups…"
+              testId="groups-search"
+              ariaLabel="Search groups"
+            />
+          }
+          actions={
+            <button
+              type="button"
+              onClick={openAdd}
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+              aria-label="Add group"
+            >
+              <PlusIcon />
+              Add Group
+            </button>
+          }
         />
 
         <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]">

@@ -8,6 +8,8 @@ import { invalidateAdmin } from "../../lib/cache-keys";
 import { toAdminUserInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
 
+import { TabHeader, TabSearch } from "./tab-header";
+
 import type { MockGroup, MockUser, UserRole } from "./mock-data";
 
 type UserFormData = {
@@ -144,28 +146,30 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            {users.length} users registered
-          </p>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-            aria-label="Add new user"
-          >
-            <PlusIcon />
-            Add User
-          </button>
-        </div>
-
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search users…"
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-          aria-label="Search users"
+        <TabHeader
+          title="Users"
+          description="Manage department members and their roles."
+          count={`${users.length} users`}
+          search={
+            <TabSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search users…"
+              testId="users-search"
+              ariaLabel="Search users"
+            />
+          }
+          actions={
+            <button
+              type="button"
+              onClick={openAdd}
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+              aria-label="Add new user"
+            >
+              <PlusIcon />
+              Add User
+            </button>
+          }
         />
 
         {/* Users table */}

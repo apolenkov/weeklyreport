@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
+import { TabHeader, TabSearch } from "./tab-header";
 
 /**
  * Phase 35-06: BullMQ DLQ admin tab.
@@ -105,23 +106,19 @@ export function JobsTab() {
 
   return (
     <div className="space-y-4" data-testid="jobs-tab">
-      <div>
-        <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          email-reminder queue
-        </h2>
-        <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-          Failed email reminder deliveries after all retries. Rules are
-          configured in Reminders; this tab is only for delivery failures.
-        </p>
-      </div>
-
-      <input
-        type="search"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search failed jobs…"
-        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        aria-label="Search failed jobs"
+      <TabHeader
+        title="Failed Jobs"
+        description="Failed email reminder deliveries after all retries. Rules are configured in Reminders; this tab is only for delivery failures."
+        count={`${jobs.length} failed`}
+        search={
+          <TabSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search failed jobs…"
+            testId="jobs-search"
+            ariaLabel="Search failed jobs"
+          />
+        }
       />
 
       {listQuery.isPending && <JobsSkeleton />}

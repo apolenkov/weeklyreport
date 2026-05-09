@@ -178,6 +178,8 @@ describe('JobsTab — Phase 35-06 BullMQ DLQ admin UI', () => {
   it('renders the queue header so the head knows which queue is shown', async () => {
     const captured: Captured = { retryMutationFn: vi.fn() };
     renderTab([], captured);
-    expect(await screen.findByText(/email-reminder queue/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /Failed Jobs/i }),
+    ).toBeInTheDocument();
   });
 });

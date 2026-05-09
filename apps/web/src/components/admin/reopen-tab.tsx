@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { useTRPC } from '../../lib/trpc-context';
+import { TabHeader, TabSearch } from './tab-header';
 
 type FilterStatus = 'pending' | 'approved' | 'rejected' | 'all';
 
@@ -59,6 +60,7 @@ export function ReopenTab() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<FilterStatus>('pending');
+  const [search, setSearch] = useState('');
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [note, setNote] = useState('');
 
@@ -91,35 +93,58 @@ export function ReopenTab() {
 
   const requests = useMemo(() => listQuery.data ?? [], [listQuery.data]);
 
+  const filteredRequests = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return requests;
+    return requests.filter((r) => {
+      const haystack = [
+        r.requestedBy?.name,
+        r.requestedBy?.email,
+        r.report?.weekLabel,
+        r.reason,
+        r.reviewNote,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [requests, search]);
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-            Reopen Requests
-          </h2>
-          <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-            Leads ask for permission to edit a submitted section.
-          </p>
-        </div>
-        <div className="flex gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1">
-          {FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setFilter(f.value)}
-              className={`rounded-[var(--radius-pill)] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                filter === f.value
-                  ? 'bg-[var(--color-starbucks-accent)] text-white'
-                  : 'text-[var(--color-muted-foreground)] hover:bg-[#f8f6f2]'
-              }`}
-              aria-pressed={filter === f.value}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <TabHeader
+        title="Reopen Requests"
+        description="Leads ask for permission to edit a submitted section."
+        count={`${requests.length} requests`}
+        search={
+          <TabSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search by lead, email, week or note…"
+            testId="reopen-search"
+          />
+        }
+        actions={
+          <div className="flex gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1">
+            {FILTERS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setFilter(f.value)}
+                className={`rounded-[var(--radius-pill)] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                  filter === f.value
+                    ? 'bg-[var(--color-starbucks-accent)] text-white'
+                    : 'text-[var(--color-muted-foreground)] hover:bg-[#f8f6f2]'
+                }`}
+                aria-pressed={filter === f.value}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {listQuery.isPending && (
         <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 text-sm text-[var(--color-muted-foreground)]">
@@ -142,7 +167,7 @@ export function ReopenTab() {
       )}
 
       <ul className="space-y-3">
-        {requests.map((r) => {
+        {filteredRequests.map((r) => {
           const isResponding = respondingId === r.id;
           const palette = STATUS_PALETTE[r.status as keyof typeof STATUS_PALETTE];
           const statusLabel = STATUS_LABEL[r.status as keyof typeof STATUS_LABEL];
