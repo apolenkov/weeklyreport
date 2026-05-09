@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { useTRPC } from "../../lib/trpc-context";
+import { TabHeader, TabSearch } from "./tab-header";
 
 function formatTimestamp(value: string): string {
   const date = new Date(value);
@@ -53,23 +54,19 @@ export function ActionLogTab() {
 
   return (
     <div className="space-y-4" data-testid="action-log-tab">
-      <div>
-        <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          Action Log
-        </h2>
-        <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-          Latest product actions with support reference ids. Internal proof
-          calls are hidden from this view.
-        </p>
-      </div>
-
-      <input
-        type="search"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search actions…"
-        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        aria-label="Search actions"
+      <TabHeader
+        title="Action Log"
+        description="Latest product actions with support reference ids. Internal proof calls are hidden from this view."
+        count={`${rows.length} entries`}
+        search={
+          <TabSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search actions…"
+            testId="action-log-search"
+            ariaLabel="Search actions"
+          />
+        }
       />
 
       {listQuery.isPending && <ActionLogSkeleton />}

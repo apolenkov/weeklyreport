@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { useTRPC } from "../../lib/trpc-context";
 
+import { TabHeader } from "./tab-header";
+
 import type { MockSettings } from "./mock-data";
 
 type SettingsTabProps = {
@@ -51,10 +53,10 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-[var(--color-muted-foreground)]">
-        Report defaults that affect period creation, deadlines, and report
-        header copy.
-      </p>
+      <TabHeader
+        title="Settings"
+        description="Report defaults that affect period creation, deadlines, and report header copy."
+      />
 
       <div className="max-w-lg space-y-5">
         <div>

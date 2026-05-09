@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { invalidateAdmin } from '../../lib/cache-keys';
 import { toReportPeriodInput } from '../../lib/mappers';
 import { useTRPC } from '../../lib/trpc-context';
+
+import { TabHeader, TabSearch } from './tab-header';
 
 import type { MockPeriod, PeriodStatus } from './mock-data';
 
@@ -36,6 +38,7 @@ export function PeriodsTab({ periods }: PeriodsTabProps) {
   const [editingPeriod, setEditingPeriod] = useState<MockPeriod | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState<PeriodFormData>(EMPTY_FORM);
+  const [search, setSearch] = useState('');
 
   const savePeriodMut = useMutation(
     trpc.admin.savePeriod.mutationOptions({
@@ -95,23 +98,46 @@ export function PeriodsTab({ periods }: PeriodsTabProps) {
 
   const isSaving = savePeriodMut.isPending;
 
+  const filteredPeriods = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return periods;
+    return periods.filter((p) => {
+      const haystack = [p.weekLabel, p.startDate, p.endDate, p.status]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [periods, search]);
+
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            {periods.length} periods
-          </p>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-            aria-label="Create new period"
-          >
-            <PlusIcon />
-            Create Period
-          </button>
-        </div>
+        <TabHeader
+          title="Periods"
+          description="Reporting periods. Create one per business week."
+          count={`${periods.length} periods`}
+          search={
+            <TabSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search periods…"
+              testId="periods-search"
+              ariaLabel="Search periods"
+            />
+          }
+          actions={
+            <button
+              type="button"
+              onClick={openAdd}
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+              aria-label="Create new period"
+            >
+              <PlusIcon />
+              Create Period
+            </button>
+          }
+        />
 
         {/* Periods table */}
         <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--color-border)]">
@@ -127,7 +153,7 @@ export function PeriodsTab({ periods }: PeriodsTabProps) {
               </tr>
             </thead>
             <tbody>
-              {periods.map((period) => (
+              {filteredPeriods.map((period) => (
                 <tr
                   key={period.id}
                   className="border-b border-[var(--color-border)] last:border-0 hover:bg-[#f8f6f2]"

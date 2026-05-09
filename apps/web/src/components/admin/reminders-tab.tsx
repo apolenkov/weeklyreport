@@ -9,6 +9,8 @@ import { toAdminReminderRuleInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
 import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
 
+import { TabHeader, TabSearch } from "./tab-header";
+
 import type { MockPeriod, MockReminder } from "./mock-data";
 
 type RemindersTabProps = {
@@ -179,25 +181,30 @@ export function RemindersTab({ reminders, periods }: RemindersTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-            Reminder Rules
-          </h2>
-          <p className="mt-0.5 text-sm text-[var(--color-muted-foreground)]">
-            Create active rules per report period so Dashboard can send
-            pending-lead email reminders.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowRuleForm((value) => !value)}
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-        >
-          <PlusIcon />
-          Add Rule
-        </button>
-      </div>
+      <TabHeader
+        title="Reminder Rules"
+        description="Create active rules per report period so Dashboard can send pending-lead email reminders."
+        count={`${reminders.length} rules`}
+        search={
+          <TabSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search reminder rules…"
+            testId="reminders-search"
+            ariaLabel="Search reminder rules"
+          />
+        }
+        actions={
+          <button
+            type="button"
+            onClick={() => setShowRuleForm((value) => !value)}
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+          >
+            <PlusIcon />
+            Add Rule
+          </button>
+        }
+      />
 
       {showRuleForm && (
         <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[#fafaf7] p-4">
@@ -284,15 +291,6 @@ export function RemindersTab({ reminders, periods }: RemindersTabProps) {
           </div>
         </div>
       )}
-
-      <input
-        type="search"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search reminder rules…"
-        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        aria-label="Search reminder rules"
-      />
 
       <div className="space-y-3">
         {filteredReminders.length === 0 && (

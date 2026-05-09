@@ -10,6 +10,8 @@ import { useTRPC } from '../../lib/trpc-context';
 import { ConfirmDeleteDialog } from '../lead/confirm-delete-dialog';
 import { SearchInput } from '../search/search-input';
 
+import { TabHeader } from './tab-header';
+
 import type { MockProduct, MockUser } from './mock-data';
 import { StageAssignmentEditor } from './stage-assignment-editor';
 
@@ -163,15 +165,29 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
   return (
     <>
       <div className="space-y-4">
-        {/* 39-05 (PERF-05): full-text search across all projects + items /
-            risks / decisions in the org (scope='all'). The tRPC procedure
-            rejects 'all' for lead sessions; this tab is admin/head-only via
-            the existing admin-panel route guard so the UI gate is implicit.
-            Result clicks deep-link to the matching surface (project filter
-            here, or the source report for content hits). */}
-        <SearchInput
-          scope="all"
-          placeholder="Search all products and reports…"
+        <TabHeader
+          title="Products"
+          description="Active products + archived. Use the global search to deep-link into reports."
+          count={`${activeProducts.length} active · ${archivedProducts.length} archived`}
+          search={
+            <div className="w-72">
+              <SearchInput
+                scope="all"
+                placeholder="Search all products and reports…"
+              />
+            </div>
+          }
+          actions={
+            <button
+              type="button"
+              onClick={openAdd}
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+              aria-label="Add new product"
+            >
+              <PlusIcon />
+              Add Product
+            </button>
+          }
         />
         {productFilter && (
           <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2">
@@ -186,20 +202,6 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
             </a>
           </div>
         )}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            {activeProducts.length} active products, {archivedProducts.length} archived
-          </p>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-            aria-label="Add new product"
-          >
-            <PlusIcon />
-            Add Product
-          </button>
-        </div>
 
         {/* Products list (table-like structure) */}
         <div className="space-y-3" data-testid="products-table">
