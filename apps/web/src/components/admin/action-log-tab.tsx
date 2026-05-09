@@ -23,6 +23,43 @@ function truncate(value: string, max: number): string {
   return value.slice(0, max - 1).trimEnd() + "…";
 }
 
+/**
+ * UFB-019: turn machine procedure names into a friendlier "Namespace: Action"
+ * label so admins reading the log don't have to translate camelCase mentally.
+ */
+function humanizeProcedure(procedure: string): string {
+  const [ns, action] = procedure.split(".");
+  if (!ns || !action) return procedure;
+  const titleNs = ns.charAt(0).toUpperCase() + ns.slice(1);
+  const spaced = action
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (c) => c.toUpperCase())
+    .trim();
+  return `${titleNs}: ${spaced}`;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  success: "OK",
+  failure: "Error",
+  failed: "Error",
+};
+
+function statusLabel(value: string): string {
+  return STATUS_LABEL[value] ?? value;
+}
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fallthrough */
+  }
+  return false;
+}
+
 export function ActionLogTab() {
   const trpc = useTRPC();
   const [search, setSearch] = useState("");
@@ -130,8 +167,11 @@ export function ActionLogTab() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="font-mono text-xs text-[var(--color-foreground)]">
-                      {row.procedure}
+                    <div
+                      className="text-xs font-semibold text-[var(--color-foreground)]"
+                      title={row.procedure}
+                    >
+                      {humanizeProcedure(row.procedure)}
                     </div>
                     {row.targetId ? (
                       <div className="font-mono text-[11px] text-[var(--color-muted-foreground)]">
@@ -148,16 +188,19 @@ export function ActionLogTab() {
                           : "bg-red-50 text-[var(--color-destructive)]")
                       }
                     >
-                      {row.status}
+                      {statusLabel(row.status)}
                     </span>
                     {row.reason ? (
-                      <div className="mt-1 max-w-[240px] truncate text-xs text-[var(--color-muted-foreground)]">
+                      <div
+                        className="mt-1 max-w-[240px] truncate text-xs text-[var(--color-muted-foreground)]"
+                        title={row.reason}
+                      >
                         {row.reason}
                       </div>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-[var(--color-foreground)]">
-                    {row.correlationId}
+                  <td className="px-4 py-3">
+                    <CorrelationCell value={row.correlationId} />
                   </td>
                 </tr>
               ))}
@@ -166,6 +209,38 @@ export function ActionLogTab() {
         </div>
       )}
     </div>
+  );
+}
+
+function CorrelationCell({ value }: { readonly value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        const ok = await copyToClipboard(value);
+        if (ok) {
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1500);
+        }
+      }}
+      title={`${value} (click to copy)`}
+      className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-xs text-[var(--color-foreground)] hover:bg-[#f8f6f2] focus:bg-[#f8f6f2] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+      aria-label={`Copy reference id ${value}`}
+    >
+      <span>{truncate(value, 14)}</span>
+      <span
+        className={
+          "text-[10px] " +
+          (copied
+            ? "text-[var(--color-primary)]"
+            : "text-[var(--color-muted-foreground)]")
+        }
+        aria-hidden="true"
+      >
+        {copied ? "✓ copied" : "📋"}
+      </span>
+    </button>
   );
 }
 
