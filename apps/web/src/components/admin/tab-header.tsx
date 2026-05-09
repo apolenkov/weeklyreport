@@ -38,9 +38,9 @@ export function TabHeader({
   return (
     <header
       data-testid={resolvedTestId}
-      className="flex flex-wrap items-start justify-between gap-3"
+      className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between"
     >
-      <div className="space-y-1">
+      <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
             {title}
@@ -58,7 +58,7 @@ export function TabHeader({
         ) : null}
       </div>
       {(search || actions) && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2 sm:flex-nowrap">
           {search}
           {actions}
         </div>
@@ -95,7 +95,7 @@ export function TabSearch({
       placeholder={placeholder ?? 'Search…'}
       data-testid={testId}
       aria-label={ariaLabel ?? placeholder ?? 'Search'}
-      className="w-64 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+      className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] sm:w-64"
     />
   );
 }
