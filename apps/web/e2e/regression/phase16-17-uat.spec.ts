@@ -369,8 +369,7 @@ test.describe.serial("Phase 16/17 live UAT closure", () => {
       await expect(
         page.getByRole("heading", { name: /^Dashboard$/ }),
       ).toBeVisible();
-      await expect(page.getByText("Activity This Period")).toBeVisible();
-      await expect(page.getByText("Lead Reports")).toBeVisible();
+      await expect(page.getByText("Submission Activity")).toBeVisible();
       await expect(
         page.getByRole("link", { name: "View Weekly Report" }),
       ).toBeVisible();
@@ -493,8 +492,8 @@ test.describe.serial("Phase 16/17 live UAT closure", () => {
           font: body.fontFamily,
         };
       });
-      expect(metrics.tokenBackground).toBe("#f2f0eb");
-      expect(metrics.tokenCard).toBe("#ffffff");
+      expect(metrics.tokenBackground).toBe("#eef1ec");
+      expect(metrics.tokenCard).toBe("#fffefb");
       expect(metrics.radius).toBe("0.75rem");
       expect(metrics.touchTarget).toBe("44px");
       expect(metrics.font).toMatch(/Lexend|Source Sans 3/);
