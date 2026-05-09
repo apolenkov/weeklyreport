@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -7,10 +8,13 @@ import { loginByCookie } from "./helpers/dev-auth";
 const WEB = "http://localhost:3000";
 const API = "http://localhost:3002";
 const ACTIVE_REPORT_ID = "a0000000-0000-4000-8000-000000000001";
+const PDF_UAT_REPORT_ID = "a0000000-0000-4000-8000-000000160017";
+const HEAD_USER_ID = "a0000000-0000-4000-8000-000000000099";
 const EVIDENCE_DIR = path.resolve(
   __dirname,
   "../../../../.planning/regression/evidence/2026-05-08-phase16-17-uat",
 );
+const REPO_ROOT = path.resolve(__dirname, "../../../..");
 
 type ScenarioStatus = "PASS" | "FAIL" | "BLOCKED";
 
@@ -74,6 +78,77 @@ function attachBrowserLogging(page: Page): void {
       });
     }
   });
+}
+
+function runFixtureSql(sql: string): string {
+  return execFileSync(
+    "docker",
+    [
+      "compose",
+      "exec",
+      "-T",
+      "postgres",
+      "psql",
+      "-U",
+      "customreport",
+      "-d",
+      "customreport",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      sql,
+    ],
+    {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+}
+
+function ensurePdfUatPublishedReport(): void {
+  const sql = [
+    "insert into \\"Report\\" (",
+    "  id,",
+    "  \\"periodStart\\",",
+    "  \\"periodEnd\\",",
+    "  deadline,",
+    "  status,",
+    "  \\"periodStatus\\",",
+    "  \\"publishedAt\\",",
+    "  \\"publishedById\\",",
+    "  \\"weekLabel\\",",
+    "  \\"createdAt\\",",
+    "  \\"updatedAt\\"",
+    ")",
+    "select",
+    "  '" + PDF_UAT_REPORT_ID + "',",
+    "  now() - interval '21 days',",
+    "  now() - interval '15 days',",
+    "  now() - interval '17 days',",
+    "  'published'::\\"ReportStatus\\",",
+    "  'published'::\\"PeriodStatus\\",",
+    "  now(),",
+    "  '" + HEAD_USER_ID + "',",
+    "  'UAT PDF Fixture',",
+    "  now(),",
+    "  now()",
+    "where exists (select 1 from \\"User\\" where id = '" + HEAD_USER_ID + "')",
+    "on conflict (id) do update set",
+    "  status = 'published'::\\"ReportStatus\\",",
+    "  \\"periodStatus\\" = 'published'::\\"PeriodStatus\\",",
+    "  \\"publishedAt\\" = excluded.\\"publishedAt\\",",
+    "  \\"publishedById\\" = excluded.\\"publishedById\\",",
+    "  \\"updatedAt\\" = excluded.\\"updatedAt\\";",
+  ].join("\n");
+
+  runFixtureSql(sql);
+}
+
+function cleanupPdfUatPublishedReport(): void {
+  runFixtureSql(
+    "delete from \\"Report\\" where id = '" + PDF_UAT_REPORT_ID + "';",
+  );
 }
 
 async function newLoggedPage(
