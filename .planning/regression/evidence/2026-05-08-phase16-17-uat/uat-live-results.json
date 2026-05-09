@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-08T13:28:27.237Z",
+  "generatedAt": "2026-05-09T11:53:25.757Z",
   "web": "http://localhost:3000",
   "api": "http://localhost:3002",
   "evidenceDir": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat",
@@ -76,9 +76,9 @@
       "status": "PASS",
       "detail": "verified in live browser",
       "data": {
-        "bodyBg": "rgb(242, 240, 235)",
-        "tokenBackground": "#f2f0eb",
-        "tokenCard": "#ffffff",
+        "bodyBg": "rgb(238, 241, 236)",
+        "tokenBackground": "#eef1ec",
+        "tokenCard": "#fffefb",
         "radius": "0.75rem",
         "touchTarget": "44px",
         "font": "Lexend, \"Source Sans 3\", ui-sans-serif, system-ui, sans-serif"
