@@ -1,87 +1,134 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-04T10:55:00Z",
-  "phase": "ux-overhaul",
-  "phase_name": "Post-v6.0 UX overhaul (ad-hoc, not bound to Phase XX)",
-  "phase_dir": ".planning",
-  "plan": "PLAN-ux-overhaul.md (repo root)",
-  "task": null,
-  "total_tasks": null,
+  "timestamp": "2026-05-09T08:50:27.351Z",
+  "context": "quick",
+  "phase": null,
+  "phase_name": null,
+  "phase_dir": null,
+  "quick_id": "260509-gbi",
+  "quick_name": "phase16-pdf-uat-fixture-closure",
+  "quick_dir": ".planning/quick/260509-gbi-phase16-pdf-uat-fixture-closure",
   "status": "paused",
+  "branch": "main",
+  "head": "b481765",
+  "verification": {
+    "status": "not_run_after_current_edits",
+    "reason": "Paused immediately after partial implementation at user request",
+    "required_commands": [
+      "rtk git diff",
+      "rtk pnpm --filter @customreport/web lint",
+      "rtk pnpm --filter @customreport/web test",
+      "rtk pnpm --filter @customreport/web exec playwright test --config=playwright.regression.config.ts e2e/regression/phase16-17-uat.spec.ts --project=chromium",
+      "rtk proxy graphify update .",
+      "rtk proxy node /Users/ap/.codex/get-shit-done/bin/gsd-tools.cjs audit-open --json",
+      "rtk proxy gsd-sdk query validate.health --raw"
+    ]
+  },
   "completed_tasks": [
-    {"id": 1, "name": "Round-trip CRUD fixes", "status": "done", "commit": "bc097ca"},
-    {"id": 2, "name": "Multi-product seed + portal stage popover + UX plan", "status": "done", "commit": "0cedcf1"},
-    {"id": 3, "name": "Phase 6: dev wipe/reseed buttons", "status": "done", "commit": "393c782"},
-    {"id": 4, "name": "Variable-length priorities + spacing polish", "status": "done", "commit": "5a386c9"},
-    {"id": 5, "name": "Phase 2: column per assigned product, empty-state preserved", "status": "done", "commit": "98e6f34"},
-    {"id": 6, "name": "Phase 4 (M1): Item edit dialog", "status": "done", "commit": "21b1829"},
-    {"id": 7, "name": "Priority delete preserve-bug fix", "status": "done", "commit": "1f6fb7d"},
-    {"id": 8, "name": "Phase 4 (R): Risk edit dialog", "status": "done", "commit": "d9cbad3"},
-    {"id": 9, "name": "Phase 4 (D): Decision edit dialog + empty-state hints", "status": "done", "commit": "17ba7c0"},
-    {"id": 10, "name": "Impact-vs-severity tooltips + owner-aware Edit/Delete", "status": "done", "commit": "6c07486"},
-    {"id": 11, "name": "Phase 5 (M2): Stage popover Save/Cancel form + Aleksandr rename", "status": "done", "commit": "86f1b72"},
-    {"id": 12, "name": "Wire linkedRiskCount + warning banner for unbacked stages", "status": "done", "commit": "d299783"},
-    {"id": 13, "name": "Clear-actually-clears + card alignment + dashed Next-Week", "status": "done", "commit": "925904f"},
-    {"id": 14, "name": "Persistent Clear stage (Prisma migration + repo fix)", "status": "done", "commit": "b549eca"},
-    {"id": 15, "name": "Dev file logging + tRPC errorFormatter cause", "status": "done", "commit": "3e58293"},
-    {"id": 16, "name": "Card line-clamp + period/version disambiguation", "status": "done", "commit": "c066632"},
-    {"id": 17, "name": "Phase 1 E2E suite real-tRPC + NEXT_DIST_DIR + 6-round hardening", "status": "done", "commit": "7a232fc..3f360c1"},
-    {"id": 18, "name": "M20 Delete Confirmation dialog", "status": "done", "commit": "e888090"},
-    {"id": 19, "name": "M19 per-field validation feedback", "status": "done", "commit": "0c8018f"},
-    {"id": 20, "name": "M6 Lead-side Request-Reopen modal", "status": "done", "commit": "f2017ad"},
-    {"id": 21, "name": "M11 version history diff preview + priorities-confirm", "status": "done", "commit": "a406796"},
-    {"id": 22, "name": "M6 button gating fix — display-label match (was system-role match)", "status": "done", "commit": "b1ce61a"},
-    {"id": 23, "name": "Toggle All actually toggles all sections (was no-op placeholder)", "status": "done", "commit": "1c2d014"},
-    {"id": 24, "name": "Header sweep — verified Fill from Previous / Choose dropdown / period nav / version history / Add Item|Risk|Decision|Priority / Submit / Toggle All / Reopen / DEV-switch-role all work", "status": "done", "live_tested": true},
-    {"id": 25, "name": "Cross-page regression sweep — /head/dashboard + /head/report + /admin (users/products/periods/reminders/settings) + /reports (history/trends/viewer/print) + /lead/history", "status": "done", "commit": "098b042..3870586", "live_tested": true},
-    {"id": 26, "name": "Fix React duplicate-key warnings on /head/report (priorities aggregated from N leads collide on rank)", "status": "done", "commit": "098b042"},
-    {"id": 27, "name": "Add confirm gate to Archive product (was destructive without confirm)", "status": "done", "commit": "098b042"},
-    {"id": 28, "name": "Fix Restore product noop (server removeProject hard-codes archived=true; switched to saveProjectMut path)", "status": "done", "commit": "098b042"},
-    {"id": 29, "name": "Extend ConfirmDeleteDialog with confirmLabel + reversible props for non-delete destructive ops", "status": "done", "commit": "098b042"},
-    {"id": 30, "name": "Add confirm gate to Reminder Delete + clean fireAt formatting", "status": "done", "commit": "3870586"},
-    {"id": 31, "name": "Add confirm gate to Reopen Period (was 1-click unpublish of an already-published report)", "status": "done", "commit": "3870586"},
-    {"id": 32, "name": "Real itemCount/riskCount/decisionCount on version snapshots (was hardcoded 0 → M11 diff always blank)", "status": "done", "commit": "(post-3870586)"},
-    {"id": 33, "name": "Stage popover: replace Save/Cancel form with click-to-apply menu", "status": "done", "commit": "(post-3870586)"},
-    {"id": 34, "name": "M10 Head-side Revoke confirm gate", "status": "done", "commit": "(post-3870586)"},
-    {"id": 35, "name": "Un-skip S1.4 + S2.2 — suite is 22/22 passing, 0 skipped", "status": "done", "commit": "(post-3870586)"},
-    {"id": 36, "name": "Risks banner: simplify per-row CTAs → single + Add Risk entry", "status": "done", "commit": "68b7164"},
-    {"id": 37, "name": "Phantom — pending risk on stage-status change removed (auto-add removed from useStatusRiskSync)", "status": "done", "commit": "f6968b5"},
-    {"id": 38, "name": "Warning banner relocated from Risks section to Product Status (above SDLC chips)", "status": "done", "commit": "f6968b5"},
-    {"id": 39, "name": "Priority modal — consistent with Item/Risk/Decision (PriorityEditDialog + section refactor)", "status": "done", "commit": "f6968b5"},
-    {"id": 40, "name": "Period + version nav buttons unified (same chevron icons + same shell shape)", "status": "done", "commit": "510f5e0"},
-    {"id": 41, "name": "Cross-page button consistency audit + admin row-action unification", "status": "done", "commit": "5f30b17"},
-    {"id": 42, "name": "Fix lead-form.test.tsx mock for requestReopen + rewrite stale tests for modal flow", "status": "done", "commit": "(this wave)"},
-    {"id": 43, "name": "Add User / Add Product dialogs close on Escape and overlay click", "status": "done", "commit": "(this wave)"},
-    {"id": 44, "name": "Lead Reports rows on /head/dashboard now drill into /head/report (chevron, no more lock)", "status": "done", "commit": "(this wave)"}
+    {
+      "id": 1,
+      "name": "Restore live baseline",
+      "status": "done",
+      "evidence": "localhost:3000, localhost:3002, Redis and BullMQ health were reachable after full access restart"
+    },
+    {
+      "id": 2,
+      "name": "Start GSD quick context",
+      "status": "done",
+      "evidence": ".planning/quick/260509-gbi-phase16-pdf-uat-fixture-closure/260509-gbi-PLAN.md"
+    },
+    {
+      "id": 3,
+      "name": "Begin UI/domain cleanup implementation",
+      "status": "in_progress",
+      "progress": "optional/multi SDLC stage helpers added; stage tagging wired into several lead form surfaces; weekly report bulk Toggle All removed; Portfolio Overview made static; surface tokens changed"
+    }
   ],
   "remaining_tasks": [
-    {"id": 24, "name": "Save Version button + auto-snapshot timer", "status": "open_question", "rationale": "Three policy options on the table; user has not decided. Default snapshot policy still 'before fillFrom + before restore'."},
-    {"id": 25, "name": "Mobile responsiveness audit on /lead/report", "status": "not_started", "rationale": "Phase 30 covered admin/head; lead-form modal-driven flow not yet pass-tested on iOS/Android viewports. Deferred per user direction."},
-    {"id": 45, "name": "Push 14+ ahead-of-origin commits", "status": "deferred", "rationale": "VPN required + push-guard hook blocked unattended push. Run https_proxy=\"\" command git push origin main when on corp network."},
-    {"id": 46, "name": "linkedRiskCount confirm-on-Clear never trips because risk.stageName defaults to \"—\"", "status": "noted", "rationale": "Risk schema has no stageName — frontend mapper defaults to placeholder. Not actionable until schema gains stageName + UI exposes it."},
-    {"id": 47, "name": "Recharts ResponsiveContainer width=-1/height=-1 warnings on /reports/trends initial mount", "status": "noted", "rationale": "Cosmetic — charts render correctly at 1088×256 once measured. Could be silenced with minWidth={0}."},
-    {"id": 48, "name": "Mapper hard-codes currentUser.role to 'Dev Lead' — Revoke vs Request-Reopen gating relies on read-model role that doesn't exist yet", "status": "noted", "rationale": "Until ReportSectionReadModel carries display role, every Lead-form render shows the Lead-side button. Head/Admin viewing /lead/report?period=X get Lead UX. Affects test coverage but not real flow because Head/Admin don't normally visit /lead/report."}
+    {
+      "id": 4,
+      "name": "Review and repair current diff",
+      "status": "not_started",
+      "note": "Do this before any test or commit of code changes"
+    },
+    {
+      "id": 5,
+      "name": "Complete Phase 16 PDF fixture proof",
+      "status": "not_started",
+      "note": "Temporary published report fixture should be non-destructive and cleaned up"
+    },
+    {
+      "id": 6,
+      "name": "Finish reminders/action-log changes",
+      "status": "not_started",
+      "note": "Wire real dispatch proof, improve readable reference/correlation id UX"
+    },
+    {
+      "id": 7,
+      "name": "Run lint/unit/Playwright evidence and update planning docs",
+      "status": "not_started"
+    },
+    {
+      "id": 8,
+      "name": "Commit and push verified source changes",
+      "status": "not_started"
+    }
   ],
-  "blockers": [],
-  "human_actions_pending": [
-    {"action": "User to decide Save Version policy (auto-snapshot every N minutes vs manual button vs hybrid)", "context": "Open question in PLAN-ux-overhaul.md row 7", "blocking": false}
+  "blockers": [
+    {
+      "description": "Current code changes are unverified and may not typecheck",
+      "type": "technical",
+      "workaround": "Start with rtk git diff and web lint/typecheck before further product work"
+    },
+    {
+      "description": "Phase 16 PDF remains human_needed until live Playwright evidence proves pdfExport.status completed",
+      "type": "technical",
+      "workaround": "Use non-destructive temporary published report fixture; do not publish active report"
+    }
   ],
+  "human_actions_pending": [],
   "decisions": [
-    {"decision": "Modal everywhere for Item/Risk/Decision/Priority", "rationale": "User feedback: inline-text-only is too restrictive; need full-schema editing", "phase": "ux-overhaul"},
-    {"decision": "Severity (enum) and Impact (narrative) kept as separate fields, with tooltips", "rationale": "Option A from 3-way choice; user agreed", "phase": "ux-overhaul"},
-    {"decision": "Decision Owner read-only when not mine", "rationale": "If Owner=Head, lead raises but doesn't act on the decision", "phase": "ux-overhaul"},
-    {"decision": "trafficLight nullable end-to-end so all-empty stages return chip to grey", "rationale": "Migration nullable-project-status. Repo dropped its `.filter(p.trafficLight !== null)` so Clear+Save preserves the lead's project assignment.", "phase": "ux-overhaul"},
-    {"decision": "Names latinised: Aleksandr P. / Maria K. / Igor V.", "rationale": "User asked for given-name + surname-initial format and consistency", "phase": "ux-overhaul"},
-    {"decision": "ItemCard text uses line-clamp-3 + native title tooltip", "rationale": "Long descriptions used to break row alignment; line-clamp keeps the floor at minHeight=110, hover gives full text", "phase": "ux-overhaul"},
-    {"decision": "Period nav prefixed with '📅 Week' label; Version nav swapped chevrons for curved rewind/forward arrows", "rationale": "Two pairs of identical < > arrows visually merged; Calendar-icon and curved arrows disambiguate the control groups", "phase": "ux-overhaul"},
-    {"decision": "Per-field validation map in dialogs (replaces single error string)", "rationale": "Multi-field dialogs (Risk has 3 required fields, Decision has 3) only flagged the first failure; aria-invalid + destructive border per field reads at a glance", "phase": "ux-overhaul"},
-    {"decision": "Priorities-confirm only when row text is non-empty", "rationale": "Empty rows are obvious mistakes — confirm friction wastes time. Only entered text is worth a confirm.", "phase": "ux-overhaul"},
-    {"decision": "M11 version diff is count-level only", "rationale": "Snapshot table doesn't carry per-row content. Server-side history with content-diff tracked as a future deferral.", "phase": "ux-overhaul"},
-    {"decision": "S1.4/S2.2 E2E tests skipped with explicit TODO", "rationale": "Six rounds (force, focus+Enter, dispatchEvent, native click) couldn't beat the fixed-position portal hit-test. Better to skip honestly than carry a brittle assertion that masks regressions. Resolution path: dialog onSave should return the mutation Promise.", "phase": "ux-overhaul"},
-    {"decision": "Every destructive action now goes through ConfirmDeleteDialog (Delete + Archive + Reopen Period)", "rationale": "Cross-page sweep found 3 destructive ops firing on a single click: Archive product, Delete reminder rule, Reopen Period. The shared dialog now supports reversible-mode + custom confirmLabel so it serves archive/reopen flows alongside hard-delete. Symmetry across the app means users learn one confirmation pattern.", "phase": "ux-overhaul"},
-    {"decision": "Reopen Period flipped from no-confirm to confirm (was explicit no-confirm in publish-lock-button by design)", "rationale": "Reopening an already-published report silently invalidates the version directors and other departments have already seen. Publish & Lock has always required confirmation; Reopen needed the same gate for symmetry. Test that asserted 'no confirmation' was rewritten.", "phase": "ux-overhaul"}
+    {
+      "decision": "Do not build theme toggle now",
+      "rationale": "User explicitly said theme toggle is not needed",
+      "phase": "16"
+    },
+    {
+      "decision": "Do not commit unverified source changes during pause",
+      "rationale": "Current diff is partial and tests were not run",
+      "phase": "v8.1 quick cleanup"
+    },
+    {
+      "decision": "Use optional multi-SDLC stage tagging without immediate DB schema migration",
+      "rationale": "Reuse existing nullable string field, comma-separated display/storage, minimize blast radius"
+    }
   ],
-  "uncommitted_files": [],
-  "next_action": "All technically-actionable items closed. 14+ commits ahead of origin spanning the post-v6.0 UX wave. E2E suite 22/22 passing, 14 unit tests passing across lead-form + sync hook. Only non-technical remainders: Save Version policy (user decision required) + mobile audit (user-deferred) + push (VPN required).",
-  "context_notes": "Closing the post-v6.0 UX overhaul wave. Themes: (1) ConfirmDeleteDialog became the universal destructive-confirm primitive — delete/archive/revoke/reopen all flow through one component. (2) Modal-driven CRUD across Item/Risk/Decision/Priority — Priority was the last inline-input holdout, now consistent. (3) User-driven simplification of overengineered UI: stage popover dropped Save/Cancel form, Risks banner dropped per-row CTAs, warning moved up from Risks to Product Status next to the cause. (4) Cross-page button audit caught 4 different Edit/Delete styles in admin and unified to one (h=34, pill, white bg, border). (5) Period + version nav unified to same chevron icons + shell. (6) Pre-existing test gap (10 failing) closed by adding requestReopen mock + rewriting stale tests for the new modal flow. Lesson reinforced: deferred items in HANDOFF often have cheaper fixes than the original theory suggests — re-examine before plumbing heavyweight refactors."
+  "uncommitted_files": [
+    "apps/api/src/infrastructure/trpc/trpc.router.ts",
+    "apps/web/e2e/regression/phase16-17-uat.spec.ts",
+    "apps/web/src/components/admin/reminders-tab.tsx",
+    "apps/web/src/components/admin/reminders-tab.test.tsx",
+    "apps/web/src/components/lead/current-week-section.tsx",
+    "apps/web/src/components/lead/decision-edit-dialog.tsx",
+    "apps/web/src/components/lead/decisions-section.tsx",
+    "apps/web/src/components/lead/item-card.tsx",
+    "apps/web/src/components/lead/item-edit-dialog.tsx",
+    "apps/web/src/components/lead/lead-form-sync-bridge.tsx",
+    "apps/web/src/components/lead/next-week-section.tsx",
+    "apps/web/src/components/lead/priorities-section.tsx",
+    "apps/web/src/components/lead/priority-edit-dialog.tsx",
+    "apps/web/src/components/lead/risk-edit-dialog.tsx",
+    "apps/web/src/components/lead/risks-section.tsx",
+    "apps/web/src/components/lead/sdlc-pipeline.tsx",
+    "apps/web/src/components/lead/stage-multi-select.tsx",
+    "apps/web/src/components/lead/stage-tags.ts",
+    "apps/web/src/components/weekly-report/portfolio-overview-table.tsx",
+    "apps/web/src/components/weekly-report/product-accordion.tsx",
+    "apps/web/src/components/weekly-report/weekly-report-page.tsx",
+    "apps/web/src/hooks/use-status-risk-sync.ts",
+    "apps/web/src/styles/app.css",
+    "packages/ui/src/styles/globals.css"
+  ],
+  "next_action": "Run rtk git diff, fix any TypeScript/lint issues from the partial optional multi-stage implementation, then run focused web lint/test before continuing Phase 16 Playwright proof.",
+  "context_notes": "The work paused immediately after implementation patches. Some files show changes from earlier partial work not fully inspected in this pause step. Treat all dirty source as draft."
 }
