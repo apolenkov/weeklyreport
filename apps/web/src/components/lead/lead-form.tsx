@@ -1186,15 +1186,21 @@ export function LeadForm({
               disabled={isReadOnly || fillFromMut.isPending}
               onFillFrom={handleFillFrom}
             />
-            <button
-              type="button"
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
-              onClick={handleToggleAll}
-              title="Toggle All"
-            >
-              <CollapseIcon />
-              Toggle All
-            </button>
+            {(currentWeekItems.length > 0 ||
+              nextWeekItems.length > 0 ||
+              risks.length > 0 ||
+              decisions.length > 0 ||
+              priorities.length > 0) && (
+              <button
+                type="button"
+                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+                onClick={handleToggleAll}
+                title="Toggle All"
+              >
+                <CollapseIcon />
+                Toggle All
+              </button>
+            )}
             {/*
               35-03: gate on the structured authorRole (Prisma `Role`
               enum) carried by the read model. Pre-35-03 we string-

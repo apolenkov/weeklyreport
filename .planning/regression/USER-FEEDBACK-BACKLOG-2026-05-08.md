@@ -581,3 +581,33 @@ Action:
   `RemindersTab`, `ReopenTab`, `JobsTab`).
 - Добавить единый `TabHeader` компонент: title + description + actions.
 - Применить на каждой вкладке.
+
+## Closure log — 2026-05-10
+
+| UFB     | Status              | Closing commit / note                                                                                                                                                     |
+| ------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UFB-012 | done                | lead-form Toggle All hidden when every items/risks/decisions/priorities list is empty (lead-form.tsx:1183)                                                                |
+| UFB-013 | done                | "Activity This Period" already renamed to "Submission Activity" in 35-08; LeadReportsGrid + LeadReportCard removed as dead code (no longer mounted in dashboard-page.tsx) |
+| UFB-015 | confirmed-no-change | decision-edit-dialog owner is readOnly + aria-readonly; item-edit-dialog author auto-derived from currentUserName, no free-text input                                     |
+| UFB-019 | done                | action-log-tab humanizeProcedure + statusLabel (06e306e)                                                                                                                  |
+| UFB-020 | done                | action-log-tab CorrelationCell with copy-to-clipboard (06e306e)                                                                                                           |
+| UFB-021 | done                | landing single CTA (4fcff57)                                                                                                                                              |
+| UFB-022 | done                | admin nav isolation (4fcff57)                                                                                                                                             |
+| UFB-024 | done                | SC-16-02 SKIPPED status (4fcff57)                                                                                                                                         |
+| UFB-025 | done                | groups-tab exists + standardized via TabHeader (6a1c057)                                                                                                                  |
+| UFB-026 | done                | unified TabHeader across 9 admin tabs (6a1c057)                                                                                                                           |
+| UFB-027 | done                | nav Logout button (e359202)                                                                                                                                               |
+| UFB-028 | done                | pnpm db:reset:hard (e359202)                                                                                                                                              |
+| UFB-029 | done                | settings-tab TabHeader (6a1c057)                                                                                                                                          |
+| UFB-030 | subsumed            | covered by UFB-028 (db:reset:hard already wipes audit + jobs)                                                                                                             |
+| UFB-031 | done                | docs/OBSERVABILITY-ONBOARDING.md (06e306e)                                                                                                                                |
+| TOOL-01 | done                | next-env.d.ts auto-fixed by Next.js dev server back to .next baseline                                                                                                     |
+
+Outstanding:
+
+- UFB-010 (empty products visual reg) — needs live screenshot/baseline
+- UFB-011 (top spacing) — needs visual targets
+- UFB-016 (admin reporting groups schema audit) — partial via UFB-025 base; full schema review pending
+- UFB-017 (search-on-list) — covered for admin via TabSearch + lead history existing search; full inventory pending
+- UFB-032 (UI background tokens) — needs design spec
+- TOOL-02 (48 leaf-fix regression) — backlog, individual triage
