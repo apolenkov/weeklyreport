@@ -611,3 +611,13 @@ Outstanding:
 - UFB-017 (search-on-list) — covered for admin via TabSearch + lead history existing search; full inventory pending
 - UFB-032 (UI background tokens) — needs design spec
 - TOOL-02 (48 leaf-fix regression) — backlog, individual triage
+
+## Closure log — 2026-05-10 (cont.)
+
+| UFB     | Status              | Closing commit / note                                                                                                                                                                                                                                                                                    |
+| ------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UFB-010 | confirmed-no-change | portfolio-overview-table empty-product behaviour already meets the rule: muted EMPTY_CARD_BG, disabled+aria-disabled, cursor-default, no hover-shadow, no expand affordance                                                                                                                              |
+| UFB-011 | needs-evidence      | NavBar is non-sticky; head/report wrapper has py-6 above weekly-report-page space-y-4. No reproducible top-spacing collision in current layout — leave open until a new screenshot surfaces a real overlap                                                                                               |
+| UFB-016 | done-prior          | groups admin tab exists, ReportingGroup Prisma model in place, regression spec at apps/web/e2e/regression/admin-groups.spec.ts                                                                                                                                                                           |
+| UFB-017 | done                | every list surface has search: admin tabs (TabSearch via 6a1c057), /reports archive (SearchInput in reports/page.tsx), /lead/history sidebar (SearchInput). Print + trends pages have no list to search.                                                                                                 |
+| UFB-032 | partial-done        | Two highest-frequency ad-hoc surfaces consolidated into tokens — `--color-surface-hover` (66 callsites of `bg-[#f8f6f2]`) and `--color-surface-empty` (7 callsites of `bg-[#fafaf7]`). Long tail of one-off colours (#fef3c7, #fee2e2, #d4a017, etc.) intentionally left for the next dedicated UI-pass. |

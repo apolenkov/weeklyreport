@@ -207,7 +207,7 @@ export function RemindersTab({ reminders, periods }: RemindersTabProps) {
       />
 
       {showRuleForm && (
-        <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[#fafaf7] p-4">
+        <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-4">
           <div className="grid gap-3 md:grid-cols-4">
             <div>
               <label
@@ -294,7 +294,7 @@ export function RemindersTab({ reminders, periods }: RemindersTabProps) {
 
       <div className="space-y-3">
         {filteredReminders.length === 0 && (
-          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
             {reminders.length === 0
               ? "No reminder rules yet. Add an active rule for the current report period."
               : "No reminder rules match the search."}

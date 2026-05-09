@@ -131,7 +131,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
   const addButton = !readOnly && (
     <button
       type="button"
-      className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+      className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
       onClick={handleAdd}
     >
       + Add Priority
@@ -141,7 +141,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
   if (sorted.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[#f8f6f2] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
           {readOnly ? 'No priorities reported.' : 'No priorities yet. Use “+ Add Priority” to list what matters most.'}
         </div>
         {addButton}
@@ -180,7 +180,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
             </span>
             <button
               type="button"
-              className="flex-1 cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[#f8f6f2] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
+              className="flex-1 cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
               onClick={() => handleEdit(idx)}
               disabled={readOnly}
               aria-label={`Edit priority ${entry.rank}`}
@@ -214,7 +214,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
               <div className="flex gap-1">
                 <button
                   type="button"
-                  className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"
+                  className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                   onClick={() => handleEdit(idx)}
                   aria-label={`Edit priority ${entry.rank}`}
                 >

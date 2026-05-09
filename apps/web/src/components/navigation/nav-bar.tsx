@@ -237,7 +237,7 @@ export function NavBar() {
                 className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-1.5 text-[13px] transition-colors ${
                   active
                     ? "bg-[var(--color-success)] font-semibold text-[var(--color-starbucks-accent)]"
-                    : "font-medium text-[var(--color-muted-foreground)] hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"
+                    : "font-medium text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                 }`}
                 aria-current={active ? "page" : undefined}
               >

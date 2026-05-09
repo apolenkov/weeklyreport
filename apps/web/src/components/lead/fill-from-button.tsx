@@ -100,7 +100,7 @@ export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFr
         {/* Dropdown trigger */}
         <button
           type="button"
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] min-w-[44px] items-center justify-center rounded-l-none rounded-r-[var(--radius-pill)] border border-l-0 border-[var(--color-border)] bg-transparent px-3 text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] min-w-[44px] items-center justify-center rounded-l-none rounded-r-[var(--radius-pill)] border border-l-0 border-[var(--color-border)] bg-transparent px-3 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => setShowDropdown(!showDropdown)}
           disabled={disabled}
           title="Fill from a specific past report"
@@ -129,7 +129,7 @@ export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFr
                 <button
                   key={p.id}
                   type="button"
-                  className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-[#f8f6f2]"
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-[var(--color-surface-hover)]"
                   style={
                     idx === 0
                       ? { background: 'var(--color-success)', border: '1.5px solid var(--color-starbucks-accent)' }
@@ -178,7 +178,7 @@ export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFr
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2]"
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
                 onClick={handleCancel}
               >
                 Cancel

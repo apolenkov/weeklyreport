@@ -156,7 +156,7 @@ export function PeriodsTab({ periods }: PeriodsTabProps) {
               {filteredPeriods.map((period) => (
                 <tr
                   key={period.id}
-                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[#f8f6f2]"
+                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
                 >
                   <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
                     {period.weekLabel}
@@ -260,7 +260,7 @@ export function PeriodsTab({ periods }: PeriodsTabProps) {
                 type="button"
                 onClick={() => setShowDialog(false)}
                 disabled={isSaving}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>

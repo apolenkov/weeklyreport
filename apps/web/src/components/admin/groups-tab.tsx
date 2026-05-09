@@ -169,7 +169,7 @@ export function GroupsTab({ groups }: GroupsTabProps) {
               {filteredGroups.map((group) => (
                 <tr
                   key={group.id}
-                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[#f8f6f2]"
+                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
                 >
                   <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
                     {group.name}
@@ -217,7 +217,7 @@ export function GroupsTab({ groups }: GroupsTabProps) {
         </div>
 
         {filteredGroups.length === 0 && (
-          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[#fafaf7] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
             No groups match the search.
           </div>
         )}
@@ -279,7 +279,7 @@ export function GroupsTab({ groups }: GroupsTabProps) {
                 type="button"
                 onClick={() => setShowDialog(false)}
                 disabled={isSaving}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -320,7 +320,7 @@ export function GroupsTab({ groups }: GroupsTabProps) {
                 type="button"
                 onClick={() => setArchiveTarget(null)}
                 disabled={isArchiving}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[#f8f6f2] disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>

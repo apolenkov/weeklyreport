@@ -230,7 +230,7 @@ export function StageChip({ stage, onStatusChange, readOnly = false, linkedRiskC
                   type="button"
                   role="menuitem"
                   onClick={() => applyStatus(opt.value)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium transition-colors hover:bg-[#f8f6f2]"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-hover)]"
                   style={{
                     background: isCurrent ? cfg.bg : 'transparent',
                     color: isCurrent ? cfg.text : 'var(--color-foreground)',

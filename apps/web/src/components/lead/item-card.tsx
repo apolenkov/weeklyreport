@@ -131,7 +131,7 @@ export function ItemCard({
         <div className="absolute right-2 top-2 flex gap-0.5 opacity-30 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[#f8f6f2] hover:text-[var(--color-foreground)]"
+            className="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
             onClick={() => onEdit?.(item.id)}
             aria-label="Edit"
           >

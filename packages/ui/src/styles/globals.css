@@ -26,6 +26,11 @@
   --color-surface-muted: #f7f8f4;
   --color-empty-surface: rgba(0, 0, 0, 0.045);
 
+  /* UFB-032: shared hover/empty surfaces. Were inlined as bg-[#f8f6f2]
+     (66 callsites) and bg-[#fafaf7] (7 callsites) before consolidation. */
+  --color-surface-hover: #f8f6f2;
+  --color-surface-empty: #fafaf7;
+
   /* ---- Skeleton ---- */
   --color-skeleton: #d8ddd4;
 
