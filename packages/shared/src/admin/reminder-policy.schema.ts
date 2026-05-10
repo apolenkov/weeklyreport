@@ -33,6 +33,18 @@ export const reminderPolicySchema = z.object({
   timezone: z.string().min(1),
   audience: reminderAudienceSchema,
   active: z.boolean(),
+  /**
+   * UFB-036 (Phase 44 scope-extension): validity window for the policy.
+   * `validFrom` defaults to "now" so older fixtures (and the in-memory
+   * test repos) that emit policies without this field still parse — the
+   * schema fills the value rather than rejecting. `validUntil === null`
+   * means the policy is active forever (the UI "forever" checkbox).
+   *
+   * Use `z.coerce.date()` so the wire JSON (ISO string) round-trips into
+   * a JS Date without a separate transform step at every call site.
+   */
+  validFrom: z.coerce.date().default(() => new Date()),
+  validUntil: z.coerce.date().nullable().default(null),
 });
 
 export type ReminderAudience = z.infer<typeof reminderAudienceSchema>;

@@ -108,9 +108,26 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
                 productFilter={productFilter}
               />
             )}
-            {activeTab === "reminders" && (
-              <RemindersTab reminders={data.reminders} periods={data.periods} />
-            )}
+            {activeTab === "reminders" && (() => {
+              // UFB-036 (Phase 44-04): group rules by their owning policy
+              // for the read-only expander on each policy row. Rules whose
+              // `policyId` is `null` (legacy, pre-44-01) are skipped — the
+              // policy editor has no row to attach them to.
+              const derivedRulesByPolicyId: Record<string, typeof data.reminders> = {};
+              for (const rule of data.reminders) {
+                if (rule.policyId === null) continue;
+                const bucket = derivedRulesByPolicyId[rule.policyId] ?? [];
+                bucket.push(rule);
+                derivedRulesByPolicyId[rule.policyId] = bucket;
+              }
+              return (
+                <RemindersTab
+                  policies={data.policies}
+                  derivedRulesByPolicyId={derivedRulesByPolicyId}
+                  periods={data.periods}
+                />
+              );
+            })()}
             {!["users", "groups", "products", "reminders"].includes(
               activeTab,
             ) && <UsersTab users={data.users} groups={data.groups} />}

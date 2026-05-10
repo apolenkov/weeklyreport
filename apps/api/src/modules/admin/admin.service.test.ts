@@ -235,6 +235,7 @@ describe("AdminService", () => {
       status: "active",
       timezone: "Europe/Moscow",
       version: 1,
+      policyId: null,
     });
 
     expect(withProject.projects).toHaveLength(1);
@@ -295,6 +296,7 @@ describe("AdminService", () => {
             timezone: "Europe/Moscow",
             status: "active",
             version: 1,
+            policyId: null,
           },
         ],
         reminderExecutions: [],
@@ -454,6 +456,7 @@ describe("AdminService", () => {
         timezone: "Europe/Moscow",
         status: "active",
         version: 1,
+        policyId: null,
       });
 
       expect(result.reminderRules).toHaveLength(1);
@@ -476,6 +479,7 @@ describe("AdminService", () => {
         timezone: "Europe/Moscow",
         status: "active",
         version: 1,
+        policyId: null,
       });
 
       const result = await service.upsertReminderRule({
@@ -486,6 +490,7 @@ describe("AdminService", () => {
         timezone: "Europe/Moscow",
         status: "paused",
         version: 2,
+        policyId: null,
       });
 
       expect(result.reminderRules).toHaveLength(1);
@@ -645,6 +650,7 @@ describe("removeReminderRule — deletion", () => {
           timezone: "Europe/Moscow",
           status: "active",
           version: 1,
+          policyId: null,
         },
       ],
     };

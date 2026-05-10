@@ -81,6 +81,23 @@ export type MockReminder = {
   timezone: string;
   version: number;
   reportId: string | null;
+  /** UFB-036 (Phase 44-04): policy FK so derived rules can be grouped. */
+  policyId: string | null;
+};
+
+/**
+ * UFB-036 (Phase 44-04): presentation type for the Reminders Tab policy
+ * editor. Mirrors `reminderPolicySchema` 1:1.
+ */
+export type MockReminderPolicy = {
+  id: string;
+  kind: "deadline" | "follow_up" | "escalation";
+  offsetMinutes: number;
+  timezone: string;
+  audience: "lead-with-draft" | "head-of-late";
+  active: boolean;
+  validFrom: Date;
+  validUntil: Date | null;
 };
 
 export type MockSettings = {
@@ -404,6 +421,7 @@ export const MOCK_REMINDERS: MockReminder[] = [
     timezone: "Europe/Moscow",
     version: 1,
     reportId: null,
+    policyId: null,
   },
   {
     id: "rem2",
@@ -415,6 +433,7 @@ export const MOCK_REMINDERS: MockReminder[] = [
     timezone: "Europe/Moscow",
     version: 1,
     reportId: null,
+    policyId: null,
   },
   {
     id: "rem3",
@@ -427,6 +446,7 @@ export const MOCK_REMINDERS: MockReminder[] = [
     timezone: "Europe/Moscow",
     version: 1,
     reportId: null,
+    policyId: null,
   },
 ];
 

@@ -310,6 +310,15 @@ export const adminReminderRuleStatusSchema = z.enum(["active", "paused"]);
 export const adminReminderRuleSchema = z.object({
   id: z.string().uuid(),
   reportId: z.string().uuid().nullable(),
+  /**
+   * UFB-036 (Phase 44-04): the FK back to {@link reminderPolicySchema}.
+   * Optional on input + transform to `null` so existing fixtures that
+   * don't carry the field still validate. The output type is always
+   * `string | null` so consumers can group rules under their owning
+   * policy in the "Active rules per period" read-only expander without
+   * having to handle `undefined`.
+   */
+  policyId: z.string().uuid().nullable().default(null),
   kind: adminReminderRuleKindSchema,
   fireAt: z.coerce.date(),
   timezone: z.string().min(1),
