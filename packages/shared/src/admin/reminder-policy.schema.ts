@@ -26,26 +26,42 @@ export const reminderPolicyKindSchema = z.enum([
   "follow_up",
 ]);
 
-export const reminderPolicySchema = z.object({
-  id: z.string().uuid(),
-  kind: reminderPolicyKindSchema,
-  offsetMinutes: z.number().int(),
-  timezone: z.string().min(1),
-  audience: reminderAudienceSchema,
-  active: z.boolean(),
+export const reminderPolicySchema = z
+  .object({
+    id: z.string().uuid(),
+    kind: reminderPolicyKindSchema,
+    offsetMinutes: z.number().int(),
+    timezone: z.string().min(1),
+    audience: reminderAudienceSchema,
+    active: z.boolean(),
+    /**
+     * UFB-036 (Phase 44 scope-extension): validity window for the policy.
+     * `validFrom` defaults to "now" so older fixtures (and the in-memory
+     * test repos) that emit policies without this field still parse — the
+     * schema fills the value rather than rejecting. `validUntil === null`
+     * means the policy is active forever (the UI "forever" checkbox).
+     *
+     * Use `z.coerce.date()` so the wire JSON (ISO string) round-trips into
+     * a JS Date without a separate transform step at every call site.
+     */
+    validFrom: z.coerce.date().default(() => new Date()),
+    validUntil: z.coerce.date().nullable().default(null),
+  })
   /**
-   * UFB-036 (Phase 44 scope-extension): validity window for the policy.
-   * `validFrom` defaults to "now" so older fixtures (and the in-memory
-   * test repos) that emit policies without this field still parse — the
-   * schema fills the value rather than rejecting. `validUntil === null`
-   * means the policy is active forever (the UI "forever" checkbox).
-   *
-   * Use `z.coerce.date()` so the wire JSON (ISO string) round-trips into
-   * a JS Date without a separate transform step at every call site.
+   * UFB-036 (Phase 44-05): the validity window must be coherent. The UI
+   * already disables Save when `validUntil < validFrom`, but a malicious
+   * admin client could bypass the React layer; the wire-level refine
+   * guarantees the invariant holds at the API boundary too.
    */
-  validFrom: z.coerce.date().default(() => new Date()),
-  validUntil: z.coerce.date().nullable().default(null),
-});
+  .refine(
+    (policy) =>
+      policy.validUntil === null ||
+      policy.validUntil.getTime() >= policy.validFrom.getTime(),
+    {
+      message: "validUntil must be on or after validFrom",
+      path: ["validUntil"],
+    },
+  );
 
 export type ReminderAudience = z.infer<typeof reminderAudienceSchema>;
 export type ReminderPolicyKind = z.infer<typeof reminderPolicyKindSchema>;

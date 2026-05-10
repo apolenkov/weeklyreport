@@ -32,6 +32,9 @@ export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
   await prisma.carryOverExecution.deleteMany();
   await prisma.reminderExecution.deleteMany();
   await prisma.reminderRule.deleteMany();
+  // UFB-036 (Phase 44-05): ReminderPolicy is referenced by ReminderRule
+  // via nullable FK; delete after rules so the cascade is deterministic.
+  await prisma.reminderPolicy.deleteMany();
   await prisma.pdfExportJob.deleteMany();
   await prisma.priority.deleteMany();
   await prisma.decision.deleteMany();
