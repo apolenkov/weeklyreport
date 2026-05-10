@@ -48,6 +48,9 @@ type PrismaReportSectionWithRelations = NonNullable<
   Awaited<ReturnType<PrismaService["reportSection"]["findUnique"]>>
 > & {
   authorId: string;
+  // UFB-049 / Phase 50-B: late column surfaced explicitly so the
+  // mapPrismaToReportSection type narrows without an `unknown` cast.
+  late: boolean;
   author: {
     name: string;
     role: string;
@@ -175,6 +178,11 @@ export function mapPrismaToReportSection(
     authorRole: row.author.role,
     status: row.status,
     submittedAt: row.submittedAt,
+    // UFB-049 / Phase 50-B: late flag stamped by submitSection when
+    // `now > Report.deadline` at submit-time. Coerced to false when
+    // Prisma row predates the migration (defensive — the column default
+    // means this should never fire in practice).
+    late: (row as { late?: boolean }).late ?? false,
     projects: [...assignmentsByProjectId.values()]
       .map(({ project, assignments }) => {
         const ownedStages = assignments
@@ -248,6 +256,23 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
     return report?.status ?? null;
   }
 
+  /**
+   * UFB-049 / Phase 50-B: deadline-aware report lookup used by the
+   * submitSection grace-period gate. Returns null when the report does
+   * not exist so the service can no-op the gate without ad-hoc
+   * try/catch.
+   */
+  async getReportMeta(
+    reportId: string,
+  ): Promise<{ status: string; deadline: Date } | null> {
+    const report = await this.prisma.report.findUnique({
+      where: { id: reportId },
+      select: { status: true, deadline: true },
+    });
+
+    return report ?? null;
+  }
+
   async getSectionById(
     reportSectionId: string,
   ): Promise<ReportSectionReadModel | null> {
@@ -277,6 +302,12 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
           data: {
             status: section.status,
             submittedAt: section.submittedAt,
+            // UFB-049 / Phase 50-B: persist the late flag computed by
+            // ReportSectionsService.submitSection. Default of false in
+            // the schema means existing call sites that don't set it
+            // (e.g. saveDraft, reopen) leave the column unchanged via
+            // the prior value flowing through mergeSection.
+            late: section.late,
           },
         });
 
