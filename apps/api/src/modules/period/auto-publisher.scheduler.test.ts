@@ -73,6 +73,8 @@ describe('AutoPublisherScheduler', () => {
     const prisma = {
       report: {
         findMany: vi.fn().mockResolvedValue([{ id: 'rep-1' }]),
+        // UFB-053: state-machine write happens after publishAuto succeeds.
+        update: vi.fn().mockResolvedValue({}),
       },
       reportSection: { count: vi.fn().mockResolvedValue(2) },
     };
@@ -96,9 +98,17 @@ describe('AutoPublisherScheduler', () => {
 
     expect(result).toEqual({ published: true, periodIds: ['rep-1'] });
     expect(publication.publishAuto).toHaveBeenCalledWith('rep-1');
+    // UFB-053: explicit state-machine write to periodState='published' +
+    // 51-A autoPublished flag.
+    expect(prisma.report.update).toHaveBeenCalledWith({
+      where: { id: 'rep-1' },
+      data: { periodState: 'published', autoPublished: true },
+    });
     expect(audit.periodAutoPublish).toHaveBeenCalledWith({
       periodId: 'rep-1',
       missingSectionsCount: 2,
+      from: 'open',
+      to: 'published',
     });
   });
 
@@ -136,6 +146,8 @@ describe('AutoPublisherScheduler', () => {
         findMany: vi
           .fn()
           .mockResolvedValue([{ id: 'rep-bad' }, { id: 'rep-good' }]),
+        // UFB-053: state write only for the succeeding row.
+        update: vi.fn().mockResolvedValue({}),
       },
       reportSection: { count: vi.fn().mockResolvedValue(0) },
     };
@@ -169,6 +181,14 @@ describe('AutoPublisherScheduler', () => {
     expect(audit.periodAutoPublish).toHaveBeenCalledWith({
       periodId: 'rep-good',
       missingSectionsCount: 0,
+      from: 'open',
+      to: 'published',
+    });
+    // UFB-053: state-machine write only fires for the succeeding row.
+    expect(prisma.report.update).toHaveBeenCalledTimes(1);
+    expect(prisma.report.update).toHaveBeenCalledWith({
+      where: { id: 'rep-good' },
+      data: { periodState: 'published', autoPublished: true },
     });
   });
 });

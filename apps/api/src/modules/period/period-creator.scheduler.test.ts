@@ -42,12 +42,17 @@ type StubPrisma = {
   report: {
     findFirst: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
+    // UFB-053: updateMany used by the SCHEDULED→OPEN sweep at the top of
+    // each tick.
+    updateMany: ReturnType<typeof vi.fn>;
   };
 };
 
 function makePrismaStub(opts: {
   mostRecent: { id: string; periodEnd: Date } | null;
   createdId?: string;
+  // count returned by the SCHEDULED→OPEN updateMany sweep.
+  scheduledFlipped?: number;
 }): StubPrisma {
   return {
     report: {
@@ -57,7 +62,13 @@ function makePrismaStub(opts: {
         periodStart: data.periodStart,
         periodEnd: data.periodEnd,
         deadline: data.deadline,
+        // UFB-053: echo the periodState the scheduler wrote so the
+        // returned shape matches the real prisma client surface.
+        periodState: data.periodState,
       })),
+      updateMany: vi
+        .fn()
+        .mockResolvedValue({ count: opts.scheduledFlipped ?? 0 }),
     },
   };
 }
@@ -121,10 +132,52 @@ describe('PeriodCreatorScheduler', () => {
 
     expect(result).toMatchObject({ created: true, periodId: 'period-new-1' });
     expect(prisma.report.create).toHaveBeenCalledTimes(1);
+    // UFB-053: state column written on create; here periodStart is "this
+    // week's Monday" which is <= now, so the period lands as 'open'.
+    expect(prisma.report.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ periodState: 'open' }),
+      }),
+    );
     expect(audit.periodAutoCreate).toHaveBeenCalledTimes(1);
     expect(audit.periodAutoCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ periodId: 'period-new-1' }),
+      expect.objectContaining({
+        periodId: 'period-new-1',
+        from: null,
+        to: 'open',
+      }),
     );
+  });
+
+  it('UFB-053: SCHEDULED→OPEN sweep flips any past-due scheduled rows at top of tick', async () => {
+    const prisma = makePrismaStub({
+      mostRecent: {
+        id: 'period-future',
+        // The most-recent period ends in the future, so no create happens.
+        // The sweep still runs first.
+        periodEnd: new Date('2026-05-30T23:59:59.999Z'),
+      },
+      scheduledFlipped: 2,
+    });
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoCreate: vi.fn(),
+    };
+    const scheduler = new PeriodCreatorScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(audit),
+    );
+
+    await scheduler.runOnce(new Date('2026-05-12T00:05:00Z'));
+
+    expect(prisma.report.updateMany).toHaveBeenCalledWith({
+      where: { periodState: 'scheduled', periodStart: { lte: expect.any(Date) } },
+      data: { periodState: 'open' },
+    });
   });
 
   it('idempotent: future period already exists → skip, no create, no audit', async () => {

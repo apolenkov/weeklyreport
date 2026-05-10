@@ -82,6 +82,16 @@ export class AutoPublisherScheduler {
       try {
         await this.publicationService.publishAuto(candidate.id);
 
+        // UFB-053 / Phase 51-C: stamp the explicit state column AND the
+        // `autoPublished` audit flag from 51-A. The legacy `status` and
+        // `periodStatus` writes already happened inside `publishAuto`
+        // (see publication.prisma-repository); this update is additive
+        // and idempotent.
+        await this.prisma.report.update({
+          where: { id: candidate.id },
+          data: { periodState: 'published', autoPublished: true },
+        });
+
         // Count sections that never reached `submitted` status; these
         // render as «Не сдал» placeholders downstream. Counted post-
         // publish so the audit number matches what the head dashboard
@@ -96,6 +106,8 @@ export class AutoPublisherScheduler {
         this.auditLogger.periodAutoPublish({
           periodId: candidate.id,
           missingSectionsCount,
+          from: 'open',
+          to: 'published',
         });
         publishedIds.push(candidate.id);
       } catch (err) {

@@ -368,6 +368,10 @@ describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
       periodStart: '2026-05-04T00:00:00.000Z',
       periodEnd: '2026-05-10T23:59:59.999Z',
       deadline: '2026-05-08T15:00:00.000Z',
+      // UFB-053 / Phase 51-C: state-transition payload. Fresh create has
+      // no prior state — `from = null`.
+      from: null,
+      to: 'open',
     });
 
     expect(entries).toHaveLength(1);
@@ -383,6 +387,8 @@ describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
       periodStart: '2026-05-04T00:00:00.000Z',
       periodEnd: '2026-05-10T23:59:59.999Z',
       deadline: '2026-05-08T15:00:00.000Z',
+      from: null,
+      to: 'open',
     });
   });
 
@@ -393,6 +399,9 @@ describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
     audit.periodAutoPublish({
       periodId: '00000000-0000-4000-8000-000000000051',
       missingSectionsCount: 2,
+      // UFB-053 / Phase 51-C: state-transition payload.
+      from: 'open',
+      to: 'published',
     });
 
     expect(entries).toHaveLength(1);
@@ -405,6 +414,8 @@ describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
       ip: 'cron',
       periodId: '00000000-0000-4000-8000-000000000051',
       missingSectionsCount: 2,
+      from: 'open',
+      to: 'published',
     });
   });
 
@@ -414,6 +425,9 @@ describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
 
     audit.periodAutoArchive({
       periodId: '00000000-0000-4000-8000-000000000052',
+      // UFB-053 / Phase 51-C: state-transition payload.
+      from: 'published',
+      to: 'archived',
     });
 
     expect(entries).toHaveLength(1);
@@ -425,6 +439,8 @@ describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
       role: null,
       ip: 'cron',
       periodId: '00000000-0000-4000-8000-000000000052',
+      from: 'published',
+      to: 'archived',
     });
   });
 
@@ -436,11 +452,25 @@ describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
         periodStart: 's',
         periodEnd: 'e',
         deadline: 'd',
+        // UFB-053 / Phase 51-C: state-transition payload.
+        from: null,
+        to: 'open',
       }),
     ).not.toThrow();
     expect(() =>
-      audit.periodAutoPublish({ periodId: 'p2', missingSectionsCount: 0 }),
+      audit.periodAutoPublish({
+        periodId: 'p2',
+        missingSectionsCount: 0,
+        from: 'open',
+        to: 'published',
+      }),
     ).not.toThrow();
-    expect(() => audit.periodAutoArchive({ periodId: 'p3' })).not.toThrow();
+    expect(() =>
+      audit.periodAutoArchive({
+        periodId: 'p3',
+        from: 'published',
+        to: 'archived',
+      }),
+    ).not.toThrow();
   });
 });

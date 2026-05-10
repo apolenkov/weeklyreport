@@ -7,6 +7,7 @@ import type { AuditLogger } from '../../lib/audit-logger.js';
 import { createNullAuditLogger } from '../../lib/audit-logger.js';
 import { computeDeadline } from '../../lib/business-date.js';
 import { getCurrentWeekBounds } from '../auth/auth.routes.js';
+import { initialPeriodState } from '../weekly-report/period-state.js';
 
 /**
  * UFB-049 / Phase 50-B: daily scheduler that creates the next Period when
@@ -63,12 +64,24 @@ export class PeriodCreatorScheduler {
         periodStart: Date;
         periodEnd: Date;
         deadline: Date;
+        periodState: 'scheduled' | 'open';
       }
   > {
     const settings = await this.adminService.getSettings();
     if (!settings.autoCreatePeriods) {
       return { created: false, reason: 'disabled' };
     }
+
+    // UFB-053 / Phase 51-C: before creating, flip any 'scheduled' rows
+    // whose periodStart has been reached to 'open'. This is the
+    // SCHEDULED→OPEN transition for periods minted ahead-of-time on a
+    // previous tick. We keep the write narrow (just `periodState`) — the
+    // legacy `status` tuple was already (`draft`, `archived=false`) at
+    // SCHEDULED-time and stays that way at OPEN-time.
+    await this.prisma.report.updateMany({
+      where: { periodState: 'scheduled', periodStart: { lte: now } },
+      data: { periodState: 'open' },
+    });
 
     // Most recent period across the whole table. If it ends in the future
     // (or right now), nothing to do — the current cycle is still open.
@@ -98,19 +111,34 @@ export class PeriodCreatorScheduler {
       18,
     );
 
+    // UFB-053: choose the initial state based on whether the period's
+    // start has been reached. The 'open' branch matches the pre-51-C
+    // behaviour; the 'scheduled' branch lights up only when the cron
+    // tick mints a period ahead of its start day (a rare-but-possible
+    // path once cadence-aware creation lands in a future plan).
+    const periodState = initialPeriodState(periodStart, now);
+
     const created = await this.prisma.report.create({
-      data: { periodStart, periodEnd, deadline },
-      select: { id: true, periodStart: true, periodEnd: true, deadline: true },
+      data: { periodStart, periodEnd, deadline, periodState },
+      select: {
+        id: true,
+        periodStart: true,
+        periodEnd: true,
+        deadline: true,
+        periodState: true,
+      },
     });
 
     this.logger.log(
-      `auto-create period=${created.id} (${created.periodStart.toISOString()} → ${created.periodEnd.toISOString()})`,
+      `auto-create period=${created.id} state=${created.periodState} (${created.periodStart.toISOString()} → ${created.periodEnd.toISOString()})`,
     );
     this.auditLogger.periodAutoCreate({
       periodId: created.id,
       periodStart: created.periodStart.toISOString(),
       periodEnd: created.periodEnd.toISOString(),
       deadline: created.deadline.toISOString(),
+      from: null,
+      to: created.periodState,
     });
 
     return {
@@ -119,6 +147,12 @@ export class PeriodCreatorScheduler {
       periodStart: created.periodStart,
       periodEnd: created.periodEnd,
       deadline: created.deadline,
+      // The DB column is typed as the wider PeriodState union, but a
+      // freshly-created period can only land in 'scheduled' or 'open'
+      // (the creator never mints a published or archived row). We narrow
+      // back to the original initialPeriodState() value to keep the
+      // public return shape precise.
+      periodState,
     };
   }
 }
