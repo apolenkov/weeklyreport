@@ -40,6 +40,12 @@ function makeAuditSpy(): {
     policyRemove: vi.fn(),
     // UFB-047 / Phase 48-A: organizationUpdate not exercised here either.
     organizationUpdate: vi.fn(),
+    // UFB-049 / Phase 50-B: period auto-* events fired only by the
+    // schedulers, not the tRPC mutation path — exercised by
+    // audit-logger.test.ts. Stubbed here to satisfy the interface.
+    periodAutoCreate: vi.fn(),
+    periodAutoPublish: vi.fn(),
+    periodAutoArchive: vi.fn(),
   };
   return { audit, mutation };
 }
