@@ -110,6 +110,9 @@ function renderTab(args?: {
   policies?: MockReminderPolicy[];
   derivedRulesByPolicyId?: Record<string, MockReminder[]>;
   captured?: Captured;
+  // UFB-048 (Phase 48-B): admin-panel pipes these through from AppSettings.
+  defaultTimezone?: string;
+  defaultAudience?: MockReminderPolicy["audience"];
 }) {
   const captured: Captured = args?.captured ?? {
     saveMutationFn: vi.fn().mockResolvedValue(undefined),
@@ -140,6 +143,8 @@ function renderTab(args?: {
       policies={policies}
       derivedRulesByPolicyId={derivedRulesByPolicyId}
       periods={[period]}
+      defaultTimezone={args?.defaultTimezone}
+      defaultAudience={args?.defaultAudience}
     />,
     { wrapper: Wrapper },
   );
@@ -279,5 +284,24 @@ describe("RemindersTab (Phase 44-04)", () => {
       name: /forever \(no end date\)/i,
     }) as HTMLInputElement;
     expect(foreverCheckbox.checked).toBe(false);
+  });
+
+  // UFB-048 (Phase 48-B): the «New Policy» form prefills timezone and
+  // audience from AppSettings instead of hardcoded constants. Without an
+  // existing policy to pre-fill, the form opens automatically and we assert
+  // the controls reflect the org defaults pumped through props.
+  it("UFB-048: prefills timezone + audience from org defaults on a fresh form", async () => {
+    renderTab({
+      policies: [],
+      derivedRulesByPolicyId: {},
+      defaultTimezone: "Asia/Yekaterinburg",
+      defaultAudience: "head-of-late",
+    });
+
+    const tzSelect = screen.getByLabelText(/Timezone/i) as HTMLSelectElement;
+    expect(tzSelect.value).toBe("Asia/Yekaterinburg");
+
+    const audSelect = screen.getByLabelText(/Audience/i) as HTMLSelectElement;
+    expect(audSelect.value).toBe("head-of-late");
   });
 });

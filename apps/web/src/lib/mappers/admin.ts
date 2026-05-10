@@ -145,10 +145,26 @@ export type MockReminderPolicy = {
   validUntil: Date | null;
 };
 
+// UFB-048 (Phase 48-B): MockSettings expanded with 9 new admin-tunable fields
+// surfaced on the Periods / Reminders / Notifications sub-tabs. Field order
+// mirrors the tab layout for readability. The mapper below copies through 1:1
+// from the wire schema (`appSettingsSchema`).
 export type MockSettings = {
   departmentName: string;
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
+  // Periods tab
+  periodLengthDays: number;
+  workingDays: "mon-fri" | "mon-sat" | "mon-sun";
+  gracePeriodHours: number;
+  allowLateSubmissions: boolean;
+  autoPublishAfterDeadline: boolean;
+  autoArchiveWeeksAfterPublish: number;
+  // Reminders tab
+  defaultTimezone: string;
+  defaultReminderAudience: "lead-with-draft" | "head-of-late";
+  // Notifications tab
+  notificationFromEmail: string | null;
 };
 
 // ---- Helpers ----
@@ -327,6 +343,17 @@ export function mapAdminSettings(api: AppSettings): MockSettings {
     departmentName: api.departmentName,
     autoCreatePeriods: api.autoCreatePeriods,
     defaultDeadlineDays: api.defaultDeadlineDays,
+    // UFB-048 (Phase 48-B): pass-through for the 9 new fields. The wire
+    // schema fills defaults so older API responses still parse cleanly.
+    periodLengthDays: api.periodLengthDays,
+    workingDays: api.workingDays,
+    gracePeriodHours: api.gracePeriodHours,
+    allowLateSubmissions: api.allowLateSubmissions,
+    autoPublishAfterDeadline: api.autoPublishAfterDeadline,
+    autoArchiveWeeksAfterPublish: api.autoArchiveWeeksAfterPublish,
+    defaultTimezone: api.defaultTimezone,
+    defaultReminderAudience: api.defaultReminderAudience,
+    notificationFromEmail: api.notificationFromEmail,
   };
 }
 

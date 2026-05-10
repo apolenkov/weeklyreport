@@ -419,12 +419,35 @@ model ReopenRequest {
   @@index([reportSectionId])
 }
 
+// UFB-048 (Phase 48-B): AppSettings expansion. Nine new org-wide knobs that
+// the admin can flip without a redeploy. All fields have SQL defaults so the
+// existing singleton row is updated in-place by the migration without manual
+// data migration. Semantics:
+//   - workingDays            : metadata-only in v1 (UI hint); deadline math
+//                              stays Mon-Fri until a future scheduler change.
+//   - gracePeriodHours +
+//     allowLateSubmissions   : when allowLateSubmissions=true, leads can
+//                              submit within (deadline + grace); outside the
+//                              window submission is blocked. When false, the
+//                              deadline is hard.
+//   - autoPublishAfterDeadline: scheduler will fire at (deadline + grace);
+//                              missing sections render «Не сдал» placeholder.
+//                              Logic deferred — 48-B persists the toggle only.
 model AppSettings {
-  id                  String   @id @default("singleton")
-  departmentName      String   @default("CoreDev")
-  autoCreatePeriods   Boolean  @default(false)
-  defaultDeadlineDays Int      @default(5)
-  updatedAt           DateTime @updatedAt
+  id                           String           @id @default("singleton")
+  departmentName               String           @default("CoreDev")
+  autoCreatePeriods            Boolean          @default(false)
+  defaultDeadlineDays          Int              @default(5)
+  periodLengthDays             Int              @default(7)
+  workingDays                  WorkingDays      @default(MON_FRI)
+  gracePeriodHours             Int              @default(24)
+  defaultTimezone              String           @default("Europe/Moscow")
+  defaultReminderAudience      ReminderAudience @default(LEAD_WITH_DRAFT)
+  notificationFromEmail        String?
+  allowLateSubmissions         Boolean          @default(true)
+  autoPublishAfterDeadline     Boolean          @default(false)
+  autoArchiveWeeksAfterPublish Int              @default(0)
+  updatedAt                    DateTime         @updatedAt
 }
 
 // UFB-047 (Phase 48-A): organization identity singleton. shortName is the
@@ -539,6 +562,17 @@ enum ReminderRuleKind {
 enum ReminderAudience {
   LEAD_WITH_DRAFT
   HEAD_OF_LATE
+}
+
+// UFB-048 (Phase 48-B): metadata-only enum surfaced in AppSettings for the
+// «working days» admin hint. v1 does NOT change deadline calculation —
+// callers continue to use Mon-Fri. Wire format mirrors the screaming-snake
+// convention of ReminderAudience; admin.prisma-repository.ts owns the
+// wire ↔ Prisma mapper (`mon-fri | mon-sat | mon-sun`).
+enum WorkingDays {
+  MON_FRI
+  MON_SAT
+  MON_SUN
 }
 
 enum ReminderRuleStatus {

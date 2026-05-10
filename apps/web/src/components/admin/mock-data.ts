@@ -100,10 +100,25 @@ export type MockReminderPolicy = {
   validUntil: Date | null;
 };
 
+// UFB-048 (Phase 48-B): MockSettings expanded with 9 new fields. Order
+// mirrors the tab grouping in settings-tab.tsx (Periods → Reminders →
+// Notifications) for readability.
 export type MockSettings = {
   departmentName: string;
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
+  // Periods tab
+  periodLengthDays: number;
+  workingDays: "mon-fri" | "mon-sat" | "mon-sun";
+  gracePeriodHours: number;
+  allowLateSubmissions: boolean;
+  autoPublishAfterDeadline: boolean;
+  autoArchiveWeeksAfterPublish: number;
+  // Reminders tab
+  defaultTimezone: string;
+  defaultReminderAudience: "lead-with-draft" | "head-of-late";
+  // Notifications tab
+  notificationFromEmail: string | null;
 };
 
 // ---- Mock Users (8 total: 6 leads + 1 head + 1 viewer) ----
@@ -456,6 +471,16 @@ export const MOCK_SETTINGS: MockSettings = {
   departmentName: "Core Development",
   autoCreatePeriods: true,
   defaultDeadlineDays: 5,
+  // UFB-048 (Phase 48-B) defaults
+  periodLengthDays: 7,
+  workingDays: "mon-fri",
+  gracePeriodHours: 24,
+  allowLateSubmissions: true,
+  autoPublishAfterDeadline: false,
+  autoArchiveWeeksAfterPublish: 0,
+  defaultTimezone: "Europe/Moscow",
+  defaultReminderAudience: "lead-with-draft",
+  notificationFromEmail: null,
 };
 
 // ---- Helpers ----

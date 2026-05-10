@@ -16,8 +16,12 @@ import {
   type ReminderPolicy,
   type ReportingGroup,
   type StageAssignment,
+  type WorkingDays,
 } from "@customreport/shared";
-import { ReminderAudience as PrismaReminderAudience } from "@prisma/client";
+import {
+  ReminderAudience as PrismaReminderAudience,
+  WorkingDays as PrismaWorkingDays,
+} from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
@@ -38,6 +42,23 @@ const audienceFromPrisma: Record<PrismaReminderAudience, ReminderAudience> = {
 const audienceToPrisma: Record<ReminderAudience, PrismaReminderAudience> = {
   "lead-with-draft": "LEAD_WITH_DRAFT",
   "head-of-late": "HEAD_OF_LATE",
+};
+
+/**
+ * UFB-048 (Phase 48-B): wire ↔ Prisma translators for the new
+ * `WorkingDays` enum. Mirrors the audience mappers above so the DB
+ * convention (`MON_FRI | MON_SAT | MON_SUN`) does not leak past this
+ * boundary into shared schemas or the React UI.
+ */
+const workingDaysFromPrisma: Record<PrismaWorkingDays, WorkingDays> = {
+  MON_FRI: "mon-fri",
+  MON_SAT: "mon-sat",
+  MON_SUN: "mon-sun",
+};
+const workingDaysToPrisma: Record<WorkingDays, PrismaWorkingDays> = {
+  "mon-fri": "MON_FRI",
+  "mon-sat": "MON_SAT",
+  "mon-sun": "MON_SUN",
 };
 
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
@@ -88,6 +109,41 @@ export class AdminPrismaRepository implements AdminRepository {
     return created.id;
   }
 
+  /**
+   * UFB-048 (Phase 48-B): map a Prisma `AppSettings` row to the wire shape.
+   * The screaming-snake `WorkingDays` and `ReminderAudience` enums are
+   * translated here (single boundary) so callers see only lowercase-hyphen.
+   */
+  private rowToAppSettings(row: {
+    departmentName: string;
+    autoCreatePeriods: boolean;
+    defaultDeadlineDays: number;
+    periodLengthDays: number;
+    workingDays: PrismaWorkingDays;
+    gracePeriodHours: number;
+    defaultTimezone: string;
+    defaultReminderAudience: PrismaReminderAudience;
+    notificationFromEmail: string | null;
+    allowLateSubmissions: boolean;
+    autoPublishAfterDeadline: boolean;
+    autoArchiveWeeksAfterPublish: number;
+  }): AppSettings {
+    return appSettingsSchema.parse({
+      departmentName: row.departmentName,
+      autoCreatePeriods: row.autoCreatePeriods,
+      defaultDeadlineDays: row.defaultDeadlineDays,
+      periodLengthDays: row.periodLengthDays,
+      workingDays: workingDaysFromPrisma[row.workingDays],
+      gracePeriodHours: row.gracePeriodHours,
+      defaultTimezone: row.defaultTimezone,
+      defaultReminderAudience: audienceFromPrisma[row.defaultReminderAudience],
+      notificationFromEmail: row.notificationFromEmail,
+      allowLateSubmissions: row.allowLateSubmissions,
+      autoPublishAfterDeadline: row.autoPublishAfterDeadline,
+      autoArchiveWeeksAfterPublish: row.autoArchiveWeeksAfterPublish,
+    });
+  }
+
   async getSettings(): Promise<AppSettings> {
     const row = await this.prisma.appSettings.upsert({
       where: { id: "singleton" },
@@ -95,28 +151,49 @@ export class AdminPrismaRepository implements AdminRepository {
       update: {},
     });
 
-    return appSettingsSchema.parse({
-      departmentName: row.departmentName,
-      autoCreatePeriods: row.autoCreatePeriods,
-      defaultDeadlineDays: row.defaultDeadlineDays,
-    });
+    return this.rowToAppSettings(row);
   }
 
   async updateSettings(data: Partial<AppSettings>): Promise<AppSettings> {
+    // UFB-048: translate enum fields explicitly (mon-fri → MON_FRI, etc.)
+    // before handing the payload to Prisma. Other fields pass through.
+    const dbData: Record<string, unknown> = {};
+    if (data.departmentName !== undefined)
+      dbData.departmentName = data.departmentName;
+    if (data.autoCreatePeriods !== undefined)
+      dbData.autoCreatePeriods = data.autoCreatePeriods;
+    if (data.defaultDeadlineDays !== undefined)
+      dbData.defaultDeadlineDays = data.defaultDeadlineDays;
+    if (data.periodLengthDays !== undefined)
+      dbData.periodLengthDays = data.periodLengthDays;
+    if (data.workingDays !== undefined)
+      dbData.workingDays = workingDaysToPrisma[data.workingDays];
+    if (data.gracePeriodHours !== undefined)
+      dbData.gracePeriodHours = data.gracePeriodHours;
+    if (data.defaultTimezone !== undefined)
+      dbData.defaultTimezone = data.defaultTimezone;
+    if (data.defaultReminderAudience !== undefined)
+      dbData.defaultReminderAudience =
+        audienceToPrisma[data.defaultReminderAudience];
+    if (data.notificationFromEmail !== undefined)
+      dbData.notificationFromEmail = data.notificationFromEmail;
+    if (data.allowLateSubmissions !== undefined)
+      dbData.allowLateSubmissions = data.allowLateSubmissions;
+    if (data.autoPublishAfterDeadline !== undefined)
+      dbData.autoPublishAfterDeadline = data.autoPublishAfterDeadline;
+    if (data.autoArchiveWeeksAfterPublish !== undefined)
+      dbData.autoArchiveWeeksAfterPublish = data.autoArchiveWeeksAfterPublish;
+
     const row = await this.prisma.appSettings.upsert({
       where: { id: "singleton" },
       create: {
         id: "singleton",
-        ...data,
+        ...dbData,
       },
-      update: data,
+      update: dbData,
     });
 
-    return appSettingsSchema.parse({
-      departmentName: row.departmentName,
-      autoCreatePeriods: row.autoCreatePeriods,
-      defaultDeadlineDays: row.defaultDeadlineDays,
-    });
+    return this.rowToAppSettings(row);
   }
 
   async saveReportingGroup(group: ReportingGroup): Promise<ReportingGroup> {

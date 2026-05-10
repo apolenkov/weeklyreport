@@ -1123,6 +1123,132 @@ describe('appSettingsSchema', () => {
     });
     expect(result.success).toBe(true);
   });
+
+  // -------------------------------------------------------------------
+  // UFB-048 (Phase 48-B): 9 new configurable fields. Each has `.default()`
+  // so the original 3-key fixture above still parses; these tests assert
+  // the defaults are applied AND that the new constraints reject garbage.
+  // -------------------------------------------------------------------
+
+  it('UFB-048: applies defaults for the 9 new fields when omitted', () => {
+    const result = appSettingsSchema.safeParse({
+      departmentName: 'CoreDev',
+      autoCreatePeriods: false,
+      defaultDeadlineDays: 5,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.periodLengthDays).toBe(7);
+    expect(result.data.workingDays).toBe('mon-fri');
+    expect(result.data.gracePeriodHours).toBe(24);
+    expect(result.data.defaultTimezone).toBe('Europe/Moscow');
+    expect(result.data.defaultReminderAudience).toBe('lead-with-draft');
+    expect(result.data.notificationFromEmail).toBeNull();
+    expect(result.data.allowLateSubmissions).toBe(true);
+    expect(result.data.autoPublishAfterDeadline).toBe(false);
+    expect(result.data.autoArchiveWeeksAfterPublish).toBe(0);
+  });
+
+  it('UFB-048: rejects periodLengthDays out of [1..31]', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        departmentName: 'D',
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        periodLengthDays: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      appSettingsSchema.safeParse({
+        departmentName: 'D',
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        periodLengthDays: 32,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('UFB-048: rejects unknown workingDays enum value', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        departmentName: 'D',
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        workingDays: 'mon-thu',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('UFB-048: rejects gracePeriodHours out of [0..168]', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        departmentName: 'D',
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        gracePeriodHours: -1,
+      }).success,
+    ).toBe(false);
+    expect(
+      appSettingsSchema.safeParse({
+        departmentName: 'D',
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        gracePeriodHours: 169,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('UFB-048: rejects autoArchiveWeeksAfterPublish > 52', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        departmentName: 'D',
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        autoArchiveWeeksAfterPublish: 53,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('UFB-048: accepts notificationFromEmail null and a valid address', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        departmentName: 'D',
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        notificationFromEmail: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      appSettingsSchema.safeParse({
+        departmentName: 'D',
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        notificationFromEmail: 'reports@example.com',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('UFB-048: rejects malformed notificationFromEmail', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        departmentName: 'D',
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        notificationFromEmail: 'not-an-email',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('UFB-048: rejects unknown defaultReminderAudience', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        departmentName: 'D',
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        defaultReminderAudience: 'everyone',
+      }).success,
+    ).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

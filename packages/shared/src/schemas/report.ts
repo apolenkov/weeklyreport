@@ -442,12 +442,44 @@ export const versionSnapshotSchema = z.object({
 
 // ---------------------------------------------------------------------------
 // v4.0: App settings (D-68)
+// UFB-048 (Phase 48-B): expanded with 9 org-wide configurable knobs. All new
+// fields carry `.default()` so older clients (and pre-48-B test fixtures)
+// that pass the original 3-key payload still parse — the partial update
+// schema also keeps working unchanged.
 // ---------------------------------------------------------------------------
+
+/**
+ * UFB-048: working-days enum surfaced for the AppSettings UI hint. v1 is
+ * metadata-only — deadline math continues to use Mon-Fri regardless of this
+ * value. The wire format is lowercase-hyphen to stay consistent with
+ * `reminder-audience`; the API repository owns the wire ↔ Prisma mapper.
+ */
+export const workingDaysSchema = z.enum(["mon-fri", "mon-sat", "mon-sun"]);
+
+export const reminderAudienceWireSchema = z.enum([
+  "lead-with-draft",
+  "head-of-late",
+]);
 
 export const appSettingsSchema = z.object({
   departmentName: z.string().min(1).max(200),
   autoCreatePeriods: z.boolean(),
   defaultDeadlineDays: z.number().int().min(1).max(30),
+  // ---- UFB-048: Periods knobs -----------------------------------------
+  periodLengthDays: z.number().int().min(1).max(31).default(7),
+  workingDays: workingDaysSchema.default("mon-fri"),
+  gracePeriodHours: z.number().int().min(0).max(168).default(24),
+  allowLateSubmissions: z.boolean().default(true),
+  autoPublishAfterDeadline: z.boolean().default(false),
+  autoArchiveWeeksAfterPublish: z.number().int().min(0).max(52).default(0),
+  // ---- UFB-048: Reminders knobs ---------------------------------------
+  defaultTimezone: z.string().min(1).default("Europe/Moscow"),
+  defaultReminderAudience: reminderAudienceWireSchema.default("lead-with-draft"),
+  // ---- UFB-048: Notifications knobs -----------------------------------
+  // Nullable email; `''` is rejected (admins can clear by sending null).
+  notificationFromEmail: z
+    .union([z.string().email().max(254), z.null()])
+    .default(null),
 });
 
 export const appSettingsUpdateSchema = appSettingsSchema.partial();
@@ -546,6 +578,7 @@ export type Stage = z.infer<typeof stageSchema>;
 export type StageAssignment = z.infer<typeof stageAssignmentSchema>;
 export type VersionSnapshot = z.infer<typeof versionSnapshotSchema>;
 export type AppSettings = z.infer<typeof appSettingsSchema>;
+export type WorkingDays = z.infer<typeof workingDaysSchema>;
 export type PeriodReadModel = z.infer<typeof periodReadModelSchema>;
 export type PortfolioProductOverview = z.infer<
   typeof portfolioProductOverviewSchema

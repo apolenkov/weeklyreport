@@ -12,77 +12,15 @@ import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
 
 import { TabHeader, TabSearch } from "./tab-header";
 import { DerivedRulesPanel } from "./derived-rules-panel";
+// UFB-035: timezone catalog moved to ./timezone-options so the Settings →
+// Reminders sub-tab (UFB-048 / Phase 48-B) can reuse the same curated list.
+import { TIMEZONE_OPTIONS } from "./timezone-options";
 
 import type {
   MockPeriod,
   MockReminder,
   MockReminderPolicy,
 } from "./mock-data";
-
-// UFB-035: curated list of IANA timezones for the reminder fire-at editor.
-// Grouped by region so the select stays human-readable. The full IANA list
-// (~600 zones) would be unwieldy; this covers all Russian time-zones plus
-// the common EU/US/APAC zones the team works with. Add zones here when
-// rollout reaches new regions.
-const TIMEZONE_OPTIONS: ReadonlyArray<{
-  group: string;
-  zones: ReadonlyArray<{ value: string; label: string }>;
-}> = [
-  {
-    group: "Russia",
-    zones: [
-      { value: "Europe/Kaliningrad", label: "Kaliningrad (UTC+2)" },
-      { value: "Europe/Moscow", label: "Moscow (UTC+3)" },
-      { value: "Europe/Samara", label: "Samara (UTC+4)" },
-      { value: "Asia/Yekaterinburg", label: "Yekaterinburg (UTC+5)" },
-      { value: "Asia/Omsk", label: "Omsk (UTC+6)" },
-      { value: "Asia/Novosibirsk", label: "Novosibirsk (UTC+7)" },
-      { value: "Asia/Krasnoyarsk", label: "Krasnoyarsk (UTC+7)" },
-      { value: "Asia/Irkutsk", label: "Irkutsk (UTC+8)" },
-      { value: "Asia/Yakutsk", label: "Yakutsk (UTC+9)" },
-      { value: "Asia/Vladivostok", label: "Vladivostok (UTC+10)" },
-      { value: "Asia/Magadan", label: "Magadan (UTC+11)" },
-      { value: "Asia/Kamchatka", label: "Kamchatka (UTC+12)" },
-    ],
-  },
-  {
-    group: "Europe",
-    zones: [
-      { value: "Europe/London", label: "London (UTC+0/+1)" },
-      { value: "Europe/Berlin", label: "Berlin (UTC+1/+2)" },
-      { value: "Europe/Paris", label: "Paris (UTC+1/+2)" },
-      { value: "Europe/Istanbul", label: "Istanbul (UTC+3)" },
-    ],
-  },
-  {
-    group: "Americas",
-    zones: [
-      { value: "America/New_York", label: "New York (UTC-5/-4)" },
-      { value: "America/Chicago", label: "Chicago (UTC-6/-5)" },
-      { value: "America/Denver", label: "Denver (UTC-7/-6)" },
-      { value: "America/Los_Angeles", label: "Los Angeles (UTC-8/-7)" },
-      { value: "America/Sao_Paulo", label: "São Paulo (UTC-3)" },
-    ],
-  },
-  {
-    group: "Asia / Pacific",
-    zones: [
-      { value: "Asia/Dubai", label: "Dubai (UTC+4)" },
-      { value: "Asia/Karachi", label: "Karachi (UTC+5)" },
-      { value: "Asia/Kolkata", label: "Kolkata (UTC+5:30)" },
-      { value: "Asia/Bangkok", label: "Bangkok (UTC+7)" },
-      { value: "Asia/Shanghai", label: "Shanghai (UTC+8)" },
-      { value: "Asia/Singapore", label: "Singapore (UTC+8)" },
-      { value: "Asia/Tokyo", label: "Tokyo (UTC+9)" },
-      { value: "Asia/Seoul", label: "Seoul (UTC+9)" },
-      { value: "Australia/Sydney", label: "Sydney (UTC+10/+11)" },
-    ],
-  },
-  {
-    group: "Other",
-    zones: [{ value: "UTC", label: "UTC" }],
-  },
-];
 
 const KIND_OPTIONS: ReadonlyArray<{
   value: MockReminderPolicy["kind"];
@@ -115,6 +53,15 @@ type RemindersTabProps = {
   >;
   /** Used by the derived-rules panel to render period labels. */
   readonly periods: ReadonlyArray<MockPeriod>;
+  /**
+   * UFB-048 (Phase 48-B): organisation-wide defaults for new policies.
+   * When the admin opens the «New Policy» form, the timezone and audience
+   * controls prefill from these values instead of hardcoded constants.
+   * Optional — older callers (and component tests that predate 48-B) get
+   * the historical Europe/Moscow + lead-with-draft defaults.
+   */
+  readonly defaultTimezone?: string;
+  readonly defaultAudience?: MockReminderPolicy["audience"];
 };
 
 type PolicyFormState = AdminReminderPolicyFormInput & {
@@ -135,13 +82,22 @@ function isoFromDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function emptyPolicyForm(): PolicyFormState {
+/**
+ * UFB-048 (Phase 48-B): the timezone + audience defaults are now sourced
+ * from AppSettings (the org-wide singleton) rather than hardcoded here.
+ * Historical fallbacks preserved so component tests that don't pipe in
+ * settings still render with the same shape they did pre-48-B.
+ */
+function emptyPolicyForm(opts?: {
+  timezone?: string;
+  audience?: MockReminderPolicy["audience"];
+}): PolicyFormState {
   const today = todayIsoString();
   return {
     kind: "deadline",
     offsetMinutes: -1440, // T-24h
-    timezone: "Europe/Moscow",
-    audience: "lead-with-draft",
+    timezone: opts?.timezone ?? "Europe/Moscow",
+    audience: opts?.audience ?? "lead-with-draft",
     active: true,
     validFromIso: today,
     validUntilIso: null,
@@ -193,6 +149,8 @@ export function RemindersTab({
   policies,
   derivedRulesByPolicyId,
   periods,
+  defaultTimezone,
+  defaultAudience,
 }: RemindersTabProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -200,7 +158,14 @@ export function RemindersTab({
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(policies.length === 0);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<PolicyFormState>(() => emptyPolicyForm());
+  // UFB-048 (Phase 48-B): seed the form with org-wide defaults so the «New
+  // Policy» form opens with the admin's preferred timezone and audience.
+  const [form, setForm] = useState<PolicyFormState>(() =>
+    emptyPolicyForm({
+      timezone: defaultTimezone,
+      audience: defaultAudience,
+    }),
+  );
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const [pendingDelete, setPendingDelete] =
     useState<MockReminderPolicy | null>(null);
@@ -219,7 +184,12 @@ export function RemindersTab({
         );
         setShowForm(false);
         setEditingId(null);
-        setForm(emptyPolicyForm());
+        setForm(
+          emptyPolicyForm({
+            timezone: defaultTimezone,
+            audience: defaultAudience,
+          }),
+        );
       },
       onError: (err: unknown) => {
         const message =
@@ -254,7 +224,13 @@ export function RemindersTab({
 
   function handleNewPolicy() {
     setEditingId(null);
-    setForm(emptyPolicyForm());
+    // UFB-048 (Phase 48-B): seed with org defaults from AppSettings.
+    setForm(
+      emptyPolicyForm({
+        timezone: defaultTimezone,
+        audience: defaultAudience,
+      }),
+    );
     setShowForm(true);
   }
 
@@ -357,7 +333,12 @@ export function RemindersTab({
           onCancel={() => {
             setShowForm(false);
             setEditingId(null);
-            setForm(emptyPolicyForm());
+            setForm(
+              emptyPolicyForm({
+                timezone: defaultTimezone,
+                audience: defaultAudience,
+              }),
+            );
           }}
           onSave={handleSave}
         />

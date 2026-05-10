@@ -45,10 +45,20 @@ const initialSnapshot: AdminSnapshot = {
   policies: [],
 };
 
+// UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs.
 const defaultSettings: AppSettings = {
   departmentName: "CoreDev",
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
+  periodLengthDays: 7,
+  workingDays: "mon-fri",
+  gracePeriodHours: 24,
+  defaultTimezone: "Europe/Moscow",
+  defaultReminderAudience: "lead-with-draft",
+  notificationFromEmail: null,
+  allowLateSubmissions: true,
+  autoPublishAfterDeadline: false,
+  autoArchiveWeeksAfterPublish: 0,
 };
 
 /* ------------------------------------------------------------------ */
