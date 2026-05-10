@@ -55,11 +55,6 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
           ...(sectionScope ? { where: sectionScope } : {}),
           include: reportSectionFullInclude,
         },
-        reminderRules: {
-          where: { status: 'active' },
-          select: { id: true },
-          take: 1,
-        },
       },
     });
 
@@ -91,6 +86,23 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       select: { departmentName: true },
     });
 
+    // Phase 48-C (UFB-038): canSendReminder is now driven by ReminderPolicy
+    // validity windows (Phase 44 model), not by legacy per-report
+    // ReminderRule presence. The UI signal `hasActiveReminderRule` keeps its
+    // wire-format name to avoid a cross-cutting rename, but its semantics
+    // are now: "∃ at least one active ReminderPolicy whose validity window
+    // covers this Report.deadline". Without this migration, head/admin
+    // dashboards still showed "Send Reminder" gated on the legacy
+    // per-period rule existence, which mis-matches the new policy-driven
+    // scheduler that materialises ReminderRule rows lazily.
+    const activePolicyCount = await this.prisma.reminderPolicy.count({
+      where: {
+        active: true,
+        validFrom: { lte: report.deadline },
+        OR: [{ validUntil: null }, { validUntil: { gte: report.deadline } }],
+      },
+    });
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const leadSections = (report.sections as any[]).map(mapPrismaToReportSection);
 
@@ -108,7 +120,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       departmentName: settings.departmentName,
       submissionCount,
       totalLeads,
-      hasActiveReminderRule: report.reminderRules.length > 0,
+      hasActiveReminderRule: activePolicyCount > 0,
       portfolioOverview,
       leadSections,
       escalations,

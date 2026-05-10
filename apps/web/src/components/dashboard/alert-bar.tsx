@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { useTRPC } from '../../lib/trpc-context';
+import { IfRole } from '../auth/if-role';
 
 type AlertBarProps = {
   readonly pendingLeads: string[];
@@ -99,18 +100,20 @@ export function AlertBar({
         title={
           canSendReminder
             ? undefined
-            : 'Configure a reminder rule in Admin → Reminders first'
+            : 'Active reminder policy required — ask your admin'
         }
       >
         {dispatchMut.isPending ? 'Sending…' : 'Send Reminder'}
       </button>
       {!canSendReminder && (
-        <a
-          href="/admin?tab=reminders"
-          className="text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-4 hover:underline"
-        >
-          Configure reminders
-        </a>
+        <IfRole role="admin">
+          <a
+            href="/admin?tab=reminders"
+            className="text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-4 hover:underline"
+          >
+            Configure reminders
+          </a>
+        </IfRole>
       )}
     </div>
   );
