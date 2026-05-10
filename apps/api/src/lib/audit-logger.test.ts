@@ -357,3 +357,90 @@ describe('createAuditLogger — policySave / policyRemove (UFB-036 / 44-05)', ()
     }
   });
 });
+
+describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
+  it('periodAutoCreate emits {event, userId=system, role=null, ip=cron, periodId, dates} on info', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.periodAutoCreate({
+      periodId: '00000000-0000-4000-8000-000000000050',
+      periodStart: '2026-05-04T00:00:00.000Z',
+      periodEnd: '2026-05-10T23:59:59.999Z',
+      deadline: '2026-05-08T15:00:00.000Z',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.message).toBe('audit');
+    expect(entry.context).toEqual({
+      event: 'period.auto-create',
+      userId: 'system',
+      role: null,
+      ip: 'cron',
+      periodId: '00000000-0000-4000-8000-000000000050',
+      periodStart: '2026-05-04T00:00:00.000Z',
+      periodEnd: '2026-05-10T23:59:59.999Z',
+      deadline: '2026-05-08T15:00:00.000Z',
+    });
+  });
+
+  it('periodAutoPublish emits {event, system attribution, periodId, missingSectionsCount} on info', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.periodAutoPublish({
+      periodId: '00000000-0000-4000-8000-000000000051',
+      missingSectionsCount: 2,
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.context).toEqual({
+      event: 'period.auto-publish',
+      userId: 'system',
+      role: null,
+      ip: 'cron',
+      periodId: '00000000-0000-4000-8000-000000000051',
+      missingSectionsCount: 2,
+    });
+  });
+
+  it('periodAutoArchive emits {event, system attribution, periodId} on info', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.periodAutoArchive({
+      periodId: '00000000-0000-4000-8000-000000000052',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.context).toEqual({
+      event: 'period.auto-archive',
+      userId: 'system',
+      role: null,
+      ip: 'cron',
+      periodId: '00000000-0000-4000-8000-000000000052',
+    });
+  });
+
+  it('createNullAuditLogger noop branches for the three new events', () => {
+    const audit = createNullAuditLogger();
+    expect(() =>
+      audit.periodAutoCreate({
+        periodId: 'p1',
+        periodStart: 's',
+        periodEnd: 'e',
+        deadline: 'd',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      audit.periodAutoPublish({ periodId: 'p2', missingSectionsCount: 0 }),
+    ).not.toThrow();
+    expect(() => audit.periodAutoArchive({ periodId: 'p3' })).not.toThrow();
+  });
+});
