@@ -383,11 +383,11 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
     const section = structuredClone(opts.section ?? baseSection);
     // Make the section's traffic light filled so the content validator
     // doesn't fire — we want to test the deadline gate in isolation.
-    const fixed = {
+    const fixed: ReportSectionReadModel = {
       ...section,
       projects: section.projects.map((p) => ({
         ...p,
-        trafficLight: "green" as const,
+        trafficLight: "green" as "green" | "yellow" | "red" | null,
       })),
     };
     let currentSection = fixed;
@@ -413,7 +413,7 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
     return {
       reportSectionId: baseSection.reportSectionId,
       status: "draft" as const,
-      confirmed: true,
+      confirmed: true as const,
       projectStatuses: [
         {
           projectId: expectDefined(baseSection.projects[0]).projectId,
