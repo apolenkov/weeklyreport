@@ -52,6 +52,7 @@ import { WeeklyReportService } from './modules/weekly-report/weekly-report.servi
 import { LeadFormService } from './modules/report-sections/lead-form.service';
 import { AnalyticsService } from './modules/analytics/analytics.service';
 import { AiService } from './modules/ai/ai.service';
+import { AiSummaryService } from './modules/ai/ai-summary.service';
 import { SearchService } from './modules/search/search.service';
 import { ActivityService } from './modules/activity/activity.service';
 import { JobsService } from './modules/admin/jobs.service';
@@ -269,6 +270,10 @@ async function bootstrap() {
     leadFormService: app.get(LeadFormService),
     analyticsService: app.get(AnalyticsService),
     aiService: app.get(AiService),
+    // Phase 54 (UFB-055): period-level RAG summary surface — mock-only
+    // until org picks an LLM provider. Lives next to AiService but
+    // does not share the AiInsight cache (its TTL semantics differ).
+    aiSummaryService: app.get(AiSummaryService),
     searchService: app.get(SearchService),
     activityService: app.get(ActivityService),
     emailReminderQueue,
