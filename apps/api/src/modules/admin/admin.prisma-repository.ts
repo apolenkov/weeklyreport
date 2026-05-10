@@ -4,6 +4,7 @@ import {
   adminUserSchema,
   adminProjectSchema,
   appSettingsSchema,
+  reminderPolicySchema,
   reportingGroupSchema,
   stageAssignmentSchema,
   reportPeriodSchema,
@@ -11,12 +12,32 @@ import {
   adminReminderExecutionSchema,
   type AdminSnapshot,
   type AppSettings,
+  type ReminderAudience,
+  type ReminderPolicy,
   type ReportingGroup,
   type StageAssignment,
 } from "@customreport/shared";
+import { ReminderAudience as PrismaReminderAudience } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { AdminRepository } from "./admin.service";
+
+/**
+ * UFB-036 (Phase 44-02): wire format ↔ Prisma enum mappers for
+ * `ReminderAudience`. The Prisma model uses screaming-snake
+ * (`LEAD_WITH_DRAFT | HEAD_OF_LATE`); the wire/zod contract uses
+ * lowercase-hyphen (`lead-with-draft | head-of-late`). Keeping the
+ * translation here keeps one boundary instead of leaking the DB
+ * convention into the rest of the codebase.
+ */
+const audienceFromPrisma: Record<PrismaReminderAudience, ReminderAudience> = {
+  LEAD_WITH_DRAFT: "lead-with-draft",
+  HEAD_OF_LATE: "head-of-late",
+};
+const audienceToPrisma: Record<ReminderAudience, PrismaReminderAudience> = {
+  "lead-with-draft": "LEAD_WITH_DRAFT",
+  "head-of-late": "HEAD_OF_LATE",
+};
 
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 const DEFAULT_REPORTING_GROUP_NAME = "Software Development";
@@ -184,6 +205,70 @@ export class AdminPrismaRepository implements AdminRepository {
     );
   }
 
+  // -------------------------------------------------------------------
+  // UFB-036 (Phase 44-02): ReminderPolicy CRUD
+  // -------------------------------------------------------------------
+
+  async listReminderPolicies(): Promise<ReminderPolicy[]> {
+    const rows = await this.prisma.reminderPolicy.findMany({
+      orderBy: [{ kind: "asc" }, { offsetMinutes: "asc" }],
+    });
+    return rows.map((row) =>
+      reminderPolicySchema.parse({
+        id: row.id,
+        kind: row.kind,
+        offsetMinutes: row.offsetMinutes,
+        timezone: row.timezone,
+        audience: audienceFromPrisma[row.audience],
+        active: row.active,
+      }),
+    );
+  }
+
+  async saveReminderPolicy(policy: ReminderPolicy): Promise<ReminderPolicy> {
+    const parsed = reminderPolicySchema.parse(policy);
+    const data = {
+      kind: parsed.kind,
+      offsetMinutes: parsed.offsetMinutes,
+      timezone: parsed.timezone,
+      audience: audienceToPrisma[parsed.audience],
+      active: parsed.active,
+    };
+    const row = await this.prisma.reminderPolicy.upsert({
+      where: { id: parsed.id },
+      create: { id: parsed.id, ...data },
+      update: data,
+    });
+    return reminderPolicySchema.parse({
+      id: row.id,
+      kind: row.kind,
+      offsetMinutes: row.offsetMinutes,
+      timezone: row.timezone,
+      audience: audienceFromPrisma[row.audience],
+      active: row.active,
+    });
+  }
+
+  /**
+   * Soft-delete by flipping `active=false`. Hard delete is only allowed
+   * when no `ReminderRule` row references this policy — this matches the
+   * 44-01 schema decision (FK is `ON DELETE SET NULL` so a hard delete
+   * would orphan rules silently). Caller surfaces the explicit guard.
+   */
+  async archiveReminderPolicy(policyId: string): Promise<void> {
+    const derivedRuleCount = await this.prisma.reminderRule.count({
+      where: { policyId },
+    });
+    if (derivedRuleCount === 0) {
+      await this.prisma.reminderPolicy.delete({ where: { id: policyId } });
+      return;
+    }
+    await this.prisma.reminderPolicy.update({
+      where: { id: policyId },
+      data: { active: false },
+    });
+  }
+
   async getSnapshot(): Promise<AdminSnapshot> {
     const [
       groups,
@@ -192,6 +277,7 @@ export class AdminPrismaRepository implements AdminRepository {
       periods,
       reminderRules,
       reminderExecutions,
+      reminderPolicies,
     ] = await Promise.all([
       this.prisma.reportingGroup.findMany({ orderBy: { name: "asc" } }),
       this.prisma.user.findMany({
@@ -206,6 +292,9 @@ export class AdminPrismaRepository implements AdminRepository {
       this.prisma.reminderRule.findMany({ orderBy: { createdAt: "desc" } }),
       this.prisma.reminderExecution.findMany({
         orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.reminderPolicy.findMany({
+        orderBy: [{ kind: "asc" }, { offsetMinutes: "asc" }],
       }),
     ]);
 
@@ -261,6 +350,18 @@ export class AdminPrismaRepository implements AdminRepository {
           sentAt: exec.sentAt,
           recipientEmail: extractRecipientEmail(exec.dedupeKey),
           errorMessage: exec.error,
+        }),
+      ),
+      // UFB-036 (Phase 44-02): policies surfaced inline so the admin
+      // snapshot fetch is one round trip on the wire.
+      policies: reminderPolicies.map((row) =>
+        reminderPolicySchema.parse({
+          id: row.id,
+          kind: row.kind,
+          offsetMinutes: row.offsetMinutes,
+          timezone: row.timezone,
+          audience: audienceFromPrisma[row.audience],
+          active: row.active,
         }),
       ),
     });

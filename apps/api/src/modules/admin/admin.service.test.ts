@@ -57,6 +57,7 @@ const initialSnapshot: AdminSnapshot = {
   periods: [],
   reminderRules: [],
   reminderExecutions: [],
+  policies: [],
 };
 
 const defaultSettings: AppSettings = {
@@ -297,6 +298,7 @@ describe("AdminService", () => {
           },
         ],
         reminderExecutions: [],
+        policies: [],
       };
 
       const service = new AdminService(createRepository(fullSnapshot));
@@ -317,6 +319,7 @@ describe("AdminService", () => {
         periods: [],
         reminderRules: [],
         reminderExecutions: [],
+        policies: [],
       };
 
       const service = new AdminService(createRepository(emptySnapshot));

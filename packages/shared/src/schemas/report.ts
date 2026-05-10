@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { reminderPolicySchema } from "../admin/reminder-policy.schema";
 import { roleSchema } from "./auth";
 
 /** Rejects strings that contain only whitespace or zero-width characters */
@@ -381,6 +382,13 @@ export const adminSnapshotSchema = z.object({
   periods: z.array(reportPeriodSchema),
   reminderRules: z.array(adminReminderRuleSchema),
   reminderExecutions: z.array(adminReminderExecutionSchema).default([]),
+  /**
+   * UFB-036 (Phase 44-02): list of {@link reminderPolicySchema} rows.
+   * `default([])` keeps every existing fixture / parser call site
+   * compatible — older snapshots (and the in-memory test repos) emit
+   * snapshots without this field, and the schema fills the array.
+   */
+  policies: z.array(reminderPolicySchema).default([]),
 });
 
 // ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import {
   reportPeriodSchema,
   adminReminderRuleSchema,
   appSettingsUpdateSchema,
+  reminderPolicySchema,
   trafficLightHistoryInputSchema,
   leadVelocityInputSchema,
   periodComparisonInputSchema,
@@ -464,11 +465,60 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      /**
+       * UFB-036 (Phase 44-02): per-period reminder rules are no longer
+       * written through the admin tab. Rules are derived from
+       * `ReminderPolicy` rows by the period scheduler in 44-03+. The
+       * read path (admin.getSnapshot.reminderRules) stays as-is so the
+       * 44-04 admin UI can still visualize derived rows inline.
+       */
       saveReminderRule: adminProcedure
         .input(adminReminderRuleSchema)
+        .mutation(() => {
+          throw new TRPCError({
+            code: "METHOD_NOT_SUPPORTED",
+            message:
+              "Per-period reminder rules are read-only as of Phase 44 (UFB-036). Use admin.savePolicy instead.",
+          });
+        }),
+
+      /**
+       * UFB-036 (Phase 44-02): list all reminder policies (active +
+       * archived). Used by the admin tab to render the policy editor
+       * grid.
+       */
+      listPolicies: adminProcedure.query(async () => {
+        try {
+          return await deps.adminService.listPolicies();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      /**
+       * UFB-036 (Phase 44-02): upsert a reminder policy by id. Audit
+       * log helper is wired in 44-05.
+       */
+      savePolicy: adminProcedure
+        .input(reminderPolicySchema)
         .mutation(async ({ input }) => {
           try {
-            return await deps.adminService.upsertReminderRule(input);
+            return await deps.adminService.savePolicy(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-036 (Phase 44-02): archive a reminder policy. Repository
+       * hard-deletes when no derived rules exist; otherwise flips the
+       * `active` flag.
+       */
+      removePolicy: adminProcedure
+        .input(z.object({ id: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.removePolicy(input.id);
           } catch (error) {
             throw mapDomainError(error);
           }

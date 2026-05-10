@@ -60,6 +60,7 @@ const initialSnapshot: AdminSnapshot = {
   periods: [],
   reminderRules: [],
   reminderExecutions: [],
+  policies: [],
 };
 
 const defaultSettings: AppSettings = {
