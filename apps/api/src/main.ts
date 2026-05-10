@@ -55,6 +55,7 @@ import { AiService } from './modules/ai/ai.service';
 import { SearchService } from './modules/search/search.service';
 import { ActivityService } from './modules/activity/activity.service';
 import { JobsService } from './modules/admin/jobs.service';
+import { TelemetryService } from './modules/telemetry/telemetry.service';
 
 const UUID_SEGMENT_RE =
   /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
@@ -272,6 +273,8 @@ async function bootstrap() {
     activityService: app.get(ActivityService),
     emailReminderQueue,
     jobsService,
+    // Phase 52 (UFB-054): telemetry.summary backend.
+    telemetryService: app.get(TelemetryService),
   });
 
   // Mount tRPC as Express middleware at /trpc

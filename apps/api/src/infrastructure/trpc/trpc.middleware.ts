@@ -469,6 +469,16 @@ const anyRoleMiddleware = buildRoleMiddleware([
   "admin",
   "viewer",
 ]);
+// Phase 52 (UFB-054): leadership-audience procedure. Used by
+// `telemetry.summary` and any other product-KPI surface that the head,
+// admin, and viewer share but lead must NOT see (a lead is the data
+// subject of these KPIs, not a consumer of them). This is distinct from
+// `anyRoleProcedure` because lead is excluded.
+const leadershipRoleMiddleware = buildRoleMiddleware([
+  "head",
+  "admin",
+  "viewer",
+]);
 
 export const headProcedure = t.procedure
   .use(metricsMiddleware)
@@ -501,6 +511,14 @@ export const adminProcedure = t.procedure
   .use(metricsMiddleware)
   .use(loggingMiddleware)
   .use(adminRoleMiddleware)
+  .use(pdfExportGuard)
+  .use(mutationAuditMiddleware);
+// Phase 52 (UFB-054): leadership procedure — head + admin + viewer.
+// Lead is excluded by design (lead is the data subject of product KPIs).
+export const leadershipProcedure = t.procedure
+  .use(metricsMiddleware)
+  .use(loggingMiddleware)
+  .use(leadershipRoleMiddleware)
   .use(pdfExportGuard)
   .use(mutationAuditMiddleware);
 
