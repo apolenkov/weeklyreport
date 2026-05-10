@@ -343,6 +343,64 @@ export const reportPeriodSchema = z.object({
   periodState: periodStateSchema.optional(),
 });
 
+/**
+ * UFB-052 (Phase 51-B): the lifecycle filter accepted by
+ * `admin.listPeriodsByState`. The two virtual buckets fan out to:
+ *
+ *   active  → { scheduled, open, published-within-reopen-window }
+ *   archive → { archived, published-out-of-reopen-window }
+ *
+ * The exact state enum (`scheduled | open | published | archived`) is
+ * also accepted so callers that already know the precise state can
+ * request a single bucket without the virtual-fan-out logic.
+ */
+export const periodListBucketSchema = z.enum([
+  "active",
+  "archive",
+  "scheduled",
+  "open",
+  "published",
+  "archived",
+]);
+
+/**
+ * UFB-052 (Phase 51-B): the row shape returned by
+ * `admin.listPeriodsByState`. Carries everything the redesigned admin
+ * Periods tab renders without a second round-trip:
+ *
+ *   - `periodState` is the source of truth for the badge color.
+ *   - `submittedCount / totalCount` drives the `4/6` progress badge.
+ *   - `canReopen` is server-precomputed from `allowReopenAfterPublish`
+ *     + `publishedAt + reopenWindowHours` (51-A `AppSettings`), so the
+ *     UI doesn't need to know the reopen-policy rules.
+ *   - `canArchive` mirrors the publish state (and skips already-archived).
+ */
+export const periodListItemSchema = z.object({
+  id: z.string().uuid(),
+  periodStart: reportDate(),
+  periodEnd: reportDate(),
+  deadline: reportDate(),
+  publishedAt: z.coerce.date().nullable(),
+  periodState: periodStateSchema,
+  /**
+   * Mirror of the legacy `periodStatus` enum
+   * (`open | published | reopened`). The admin tab uses it to surface a
+   * small "(reopened)" badge on top of the periodState pill so audit
+   * fidelity is preserved without collapsing the two state machines.
+   */
+  periodStatus: periodStatusSchema,
+  archived: z.boolean(),
+  autoPublished: z.boolean(),
+  autoArchived: z.boolean(),
+  submittedCount: z.number().int().nonnegative(),
+  totalCount: z.number().int().nonnegative(),
+  canReopen: z.boolean(),
+  canArchive: z.boolean(),
+});
+
+export type PeriodListBucket = z.infer<typeof periodListBucketSchema>;
+export type PeriodListItem = z.infer<typeof periodListItemSchema>;
+
 // NOTIF-02 (Phase 29-05): 'escalation' added for T+2h heads-only digest.
 // Bypasses User.notificationOptOut — heads must always be notified.
 export const adminReminderRuleKindSchema = z.enum([
