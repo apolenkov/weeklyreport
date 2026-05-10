@@ -813,6 +813,7 @@ export function createAppRouter(deps: RouterDeps) {
             return await deps.archiveService.listArchiveReports(
               input,
               ctx.session.role,
+              ctx.session,
             );
           } catch (error) {
             throw mapDomainError(error);
@@ -826,6 +827,7 @@ export function createAppRouter(deps: RouterDeps) {
             return await deps.archiveService.getArchiveReport(
               input.reportId,
               ctx.session.role,
+              ctx.session,
             );
           } catch (error) {
             throw mapDomainError(error);
