@@ -374,7 +374,7 @@ export function mountAuthRoutes(
           const nameByRole: Record<string, string> = {
             head: "Антон К.",
             lead: "Lead 1",
-            admin: "Антон К.",
+            admin: "Михаил Б.",
             viewer: "Дарья В.",
           };
           const samlIdByRole: Record<string, string> = {
