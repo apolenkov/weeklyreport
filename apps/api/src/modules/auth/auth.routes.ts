@@ -415,11 +415,13 @@ export function mountAuthRoutes(
           res.setHeader("Set-Cookie", setCookieHeader);
           loginAttemptsTotal.inc({ method: "dev-login", outcome: "success" });
 
+          // UX-16: role-aware default landing. Must stay in sync with
+          // DEFAULT_FOR_ROLE in apps/web/src/app/page.tsx.
           const redirectByRole: Record<string, string> = {
-            head: "/admin",
+            head: "/head/dashboard",
             lead: "/lead/report",
             admin: "/admin",
-            viewer: "/reports/history",
+            viewer: "/reports?tab=published",
           };
           const redirectPath =
             (req.query.redirect as string) ?? redirectByRole[role] ?? "/";
