@@ -27,7 +27,8 @@
     "code_review": true,
     "ui_review": true,
     "verifier": true,
-    "nyquist_validation": true
+    "nyquist_validation": true,
+    "use_worktrees": false
   },
   "graphify": {
     "enabled": true

@@ -13,10 +13,11 @@ import { getServerSession } from '../../../lib/server/get-server-session';
  * renders the ForbiddenPage in-place when the role does not match, so the
  * user never sees admin shell chrome before the tRPC error surfaces.
  *
- * D-AUTH-03 (Phase 27): adminProcedure === headProcedure for v6.0, so the
- * admin segment accepts both 'admin' and 'head' roles.
+ * UFB-038 (2026-05-10): D-AUTH-03 retired — admin segment is admin-only.
+ * Heads have /head/dashboard; the admin panel is not theirs. Both the
+ * tRPC adminProcedure middleware and this layout enforce the same gate.
  */
-const REQUIRED: ReadonlyArray<Role> = ['admin', 'head'];
+const REQUIRED: ReadonlyArray<Role> = ['admin'];
 
 type Props = Readonly<{ children: ReactNode }>;
 

@@ -4,6 +4,7 @@ import {
   publicProcedure,
   protectedProcedure,
   headProcedure,
+  adminProcedure,
   leadProcedure,
   viewerProcedure,
   anyRoleProcedure,
@@ -19,7 +20,8 @@ import { createAppRouter } from '../trpc.router.js';
 //   - protectedProcedure
 //   - leadProcedure
 //   - headProcedure
-//   - viewerProcedure  (adminProcedure === headProcedure for v6.0)
+//   - viewerProcedure
+//   - adminProcedure   (UFB-038: admin-only, no longer a head alias)
 //
 // Detection strategy: each tRPC procedure carries `_def.middlewares` — an
 // array whose first slot is the shared `loggingMiddleware` reference and
@@ -44,6 +46,9 @@ const PROTECTED_CHAIN = (protectedProcedure.query(() => undefined) as unknown as
 const HEAD_CHAIN = (headProcedure.query(() => undefined) as unknown as {
   _def: { middlewares: unknown[] };
 })._def.middlewares.slice(0, -1);
+const ADMIN_CHAIN = (adminProcedure.query(() => undefined) as unknown as {
+  _def: { middlewares: unknown[] };
+})._def.middlewares.slice(0, -1);
 const LEAD_CHAIN = (leadProcedure.query(() => undefined) as unknown as {
   _def: { middlewares: unknown[] };
 })._def.middlewares.slice(0, -1);
@@ -58,6 +63,7 @@ const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
   { name: 'publicProcedure', chain: PUBLIC_CHAIN },
   { name: 'protectedProcedure', chain: PROTECTED_CHAIN },
   { name: 'headProcedure', chain: HEAD_CHAIN },
+  { name: 'adminProcedure', chain: ADMIN_CHAIN },
   { name: 'leadProcedure', chain: LEAD_CHAIN },
   { name: 'viewerProcedure', chain: VIEWER_CHAIN },
   { name: 'anyRoleProcedure', chain: ANY_ROLE_CHAIN },

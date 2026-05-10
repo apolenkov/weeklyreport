@@ -430,13 +430,14 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
   });
 }
 
-// admin is a superset of head: per D-AUTH-03 (Phase 27 CONTEXT) "adminProcedure
-// === headProcedure for v6.0" — admin must pass the head gate. After H-01
-// (Phase 32-c1) widened the Role enum to include 'admin' as a real value,
-// the middleware needs the same widening so admin SAML logins can hit
-// admin.* / head.* procedures. Discovered in live test (admin user got 403
-// on admin.dlqCount, admin.snapshot, admin.getSettings).
+// UFB-038 (2026-05-10): retire D-AUTH-03 alias. headProcedure still allows
+// head + admin (admin is god-mode that inherits head capabilities), but
+// adminProcedure is now its own gate that ONLY admins pass. Heads can no
+// longer access /admin/* tRPC endpoints — they have a dashboard, not an
+// admin panel. Earlier H-01 widening (admin SAML user gets through head
+// procedures) is preserved by keeping admin in the head allowlist.
 const headRoleMiddleware = buildRoleMiddleware(["head", "admin"]);
+const adminRoleMiddleware = buildRoleMiddleware("admin");
 const leadRoleMiddleware = buildRoleMiddleware("lead");
 const viewerRoleMiddleware = buildRoleMiddleware("viewer");
 // AUTH-04 (Phase 28-01): a "any authenticated role" procedure for read paths
@@ -471,7 +472,14 @@ export const anyRoleProcedure = t.procedure
   .use(anyRoleMiddleware)
   .use(pdfExportGuard)
   .use(mutationAuditMiddleware);
-export const adminProcedure = headProcedure;
+// UFB-038: admin-only gate. /admin/* tRPC endpoints attach this; head
+// users get FORBIDDEN. Use headProcedure for endpoints that should be
+// reachable by both head and admin (dashboards, weekly reports, review).
+export const adminProcedure = t.procedure
+  .use(loggingMiddleware)
+  .use(adminRoleMiddleware)
+  .use(pdfExportGuard)
+  .use(mutationAuditMiddleware);
 
 export const router = t.router;
 export const mergeRouters = t.mergeRouters;
