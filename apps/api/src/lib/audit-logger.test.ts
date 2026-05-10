@@ -183,5 +183,54 @@ describe('createNullAuditLogger', () => {
     expect(() =>
       audit.roleDenied({ userId: 'u', role: 'viewer', attemptedRole: 'head', ip: 'x' }),
     ).not.toThrow();
+    expect(() =>
+      audit.scopeDenied({
+        userId: 'u',
+        role: 'viewer',
+        ip: 'x',
+        attemptedScope: 'report',
+        resourceId: '00000000-0000-4000-8000-000000000001',
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe('createAuditLogger — scopeDenied (UFB-040 / 46-05)', () => {
+  it('emits the {event, userId, role, ip, attemptedScope, resourceId} envelope on warn', () => {
+    const calls: Array<{ level: string; meta: Record<string, unknown> }> = [];
+    const logger = {
+      info: () => {
+        /* not used here */
+      },
+      warn: (_msg: string, meta: Record<string, unknown>) =>
+        calls.push({ level: 'warn', meta }),
+      error: () => {
+        /* not used here */
+      },
+      child: () => logger,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any;
+
+    const audit = createAuditLogger(logger);
+    audit.scopeDenied({
+      userId: 'u-viewer',
+      role: 'viewer',
+      ip: '10.0.0.1',
+      attemptedScope: 'report',
+      resourceId: '11111111-1111-4111-8111-111111111111',
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual({
+      level: 'warn',
+      meta: {
+        event: 'scope-denied',
+        userId: 'u-viewer',
+        role: 'viewer',
+        ip: '10.0.0.1',
+        attemptedScope: 'report',
+        resourceId: '11111111-1111-4111-8111-111111111111',
+      },
+    });
   });
 });

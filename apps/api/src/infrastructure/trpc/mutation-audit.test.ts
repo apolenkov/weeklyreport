@@ -31,6 +31,7 @@ function makeAuditSpy(): {
     loginFail: vi.fn(),
     logout: vi.fn(),
     roleDenied: vi.fn(),
+    scopeDenied: vi.fn(),
     mutation,
   };
   return { audit, mutation };
