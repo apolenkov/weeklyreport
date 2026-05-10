@@ -410,6 +410,10 @@ export function createAppRouter(deps: RouterDeps) {
             return await deps.pdfExportService.requestPdfExport(
               input.reportId,
               ctx.session.userId,
+              undefined,
+              // Phase 52-A (UFB-054): role label for
+              // customreport_pdf_export_requests_total{role}.
+              ctx.session.role,
             );
           } catch (error) {
             throw mapDomainError(error);
