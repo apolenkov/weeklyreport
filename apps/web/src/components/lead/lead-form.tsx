@@ -1435,7 +1435,7 @@ export function LeadForm({
               Submit Report?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Your report will be locked and visible to the department head. You
+              Your report will be locked and visible to the group head. You
               will not be able to make changes after submission.
             </p>
             <div className="mt-3 space-y-1 text-sm">

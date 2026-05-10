@@ -67,11 +67,11 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
     trpc.admin.saveReportingGroup.mutationOptions({
       onSuccess: () => {
         invalidateAdmin(qc, trpc);
-        toast.success("Department saved");
+        toast.success("Group saved");
         setShowDialog(false);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to save department");
+        toast.error(err.message ?? "Failed to save group");
       },
     }),
   );
@@ -80,11 +80,11 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
     trpc.admin.archiveReportingGroup.mutationOptions({
       onSuccess: () => {
         invalidateAdmin(qc, trpc);
-        toast.success("Department archived");
+        toast.success("Group archived");
         setArchiveTarget(null);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to archive department");
+        toast.error(err.message ?? "Failed to archive group");
       },
     }),
   );
@@ -141,22 +141,20 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
   return (
     <>
       <div className="space-y-4" data-testid="groups-tab">
-        {/* UFB-047 / Phase 48-A: UI vocabulary sweep — user-facing
-            "Group"/"Groups" → "Department"/"Departments". The underlying
-            Prisma model is still `ReportingGroup` and test ids / data
-            attributes still carry "groups" so test infrastructure and
-            DB code are unaffected. */}
+        {/* UFB-049 (2026-05-11): revert 48-A Department sweep —
+            user wants "Group/Groups" in admin UI. Prisma model
+            (ReportingGroup) and test ids unchanged. */}
         <TabHeader
-          title="Departments"
-          description={`Department groups (organisational units). ${activeGroupCount} active.`}
-          count={`${groups.length} departments`}
+          title="Groups"
+          description={`Reporting groups (organisational units). ${activeGroupCount} active.`}
+          count={`${groups.length} groups`}
           search={
             <TabSearch
               value={search}
               onChange={setSearch}
-              placeholder="Search departments…"
+              placeholder="Search groups…"
               testId="groups-search"
-              ariaLabel="Search departments"
+              ariaLabel="Search groups"
             />
           }
           actions={
@@ -164,10 +162,10 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
               type="button"
               onClick={openAdd}
               className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-              aria-label="Add department"
+              aria-label="Add group"
             >
               <PlusIcon />
-              Add Department
+              Add Group
             </button>
           }
         />
@@ -254,7 +252,7 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
 
         {filteredGroups.length === 0 && (
           <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-            No departments match the search.
+            No groups match the search.
           </div>
         )}
       </div>
@@ -270,11 +268,11 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
             aria-modal="true"
-            aria-label={editingGroup ? "Edit department" : "Add department"}
+            aria-label={editingGroup ? "Edit group" : "Add group"}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-              {editingGroup ? "Edit Department" : "Add Department"}
+              {editingGroup ? "Edit Group" : "Add Group"}
             </h3>
             <div className="mt-4 space-y-4">
               <div>
@@ -380,7 +378,7 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
                   ? "Saving…"
                   : editingGroup
                     ? "Save Changes"
-                    : "Add Department"}
+                    : "Add Group"}
               </button>
             </div>
           </div>
@@ -396,10 +394,10 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
             aria-label="Confirm archive"
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-              Archive Department?
+              Archive Group?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Archive {archiveTarget.name}? Existing users keep the department,
+              Archive {archiveTarget.name}? Existing users keep the group,
               but new users cannot select it.
             </p>
             <div className="mt-6 flex justify-end gap-3">

@@ -143,7 +143,7 @@ function LoginPageBody() {
           </div>
           <div className="mx-auto mb-8 h-0.5 w-16 rounded-full bg-[var(--color-starbucks-gold)]" />
           <p className="mx-auto max-w-xs text-lg leading-relaxed text-white/60">
-            Unified weekly status reporting system for department leads and management
+            Unified weekly status reporting system for group leads and management
           </p>
         </div>
       </div>

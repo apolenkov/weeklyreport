@@ -52,7 +52,7 @@ function getRoleLabel(role: Role): string {
     case "admin":
       return "Admin";
     case "head":
-      return "Department Head";
+      return "Group Head";
     case "lead":
       return "Lead";
     case "viewer":
