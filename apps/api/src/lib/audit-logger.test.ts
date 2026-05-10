@@ -192,6 +192,26 @@ describe('createNullAuditLogger', () => {
         resourceId: '00000000-0000-4000-8000-000000000001',
       }),
     ).not.toThrow();
+    // UFB-036 / Phase 44-05: null logger must accept the new policy
+    // helpers without throwing — same contract as the live impl.
+    expect(() =>
+      audit.policySave({
+        userId: 'u',
+        role: 'admin',
+        ip: 'x',
+        policyId: '00000000-0000-4000-8000-000000000010',
+        kind: 'deadline',
+        action: 'create',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      audit.policyRemove({
+        userId: 'u',
+        role: 'admin',
+        ip: 'x',
+        policyId: '00000000-0000-4000-8000-000000000010',
+      }),
+    ).not.toThrow();
   });
 });
 
@@ -232,5 +252,108 @@ describe('createAuditLogger — scopeDenied (UFB-040 / 46-05)', () => {
         resourceId: '11111111-1111-4111-8111-111111111111',
       },
     });
+  });
+});
+
+describe('createAuditLogger — policySave / policyRemove (UFB-036 / 44-05)', () => {
+  it('policySave emits {event, userId, role, ip, policyId, kind, action} on info', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.policySave({
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.5',
+      policyId: '11111111-1111-4111-8111-111111111110',
+      kind: 'deadline',
+      action: 'create',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.message).toBe('audit');
+    expect(entry.context).toEqual({
+      event: 'admin.policy.save',
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.5',
+      policyId: '11111111-1111-4111-8111-111111111110',
+      kind: 'deadline',
+      action: 'create',
+    });
+  });
+
+  it('policySave passes the action through verbatim (update path)', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.policySave({
+      userId: 'admin-2',
+      role: 'admin',
+      ip: '10.0.0.6',
+      policyId: '22222222-2222-4222-8222-222222222220',
+      kind: 'follow_up',
+      action: 'update',
+    });
+
+    const entry = expectDefined(entries[0]);
+    expect(entry.context).toMatchObject({
+      event: 'admin.policy.save',
+      action: 'update',
+      kind: 'follow_up',
+    });
+  });
+
+  it('policyRemove emits {event, userId, role, ip, policyId} on info', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.policyRemove({
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.5',
+      policyId: '11111111-1111-4111-8111-111111111110',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.message).toBe('audit');
+    expect(entry.context).toEqual({
+      event: 'admin.policy.remove',
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.5',
+      policyId: '11111111-1111-4111-8111-111111111110',
+    });
+  });
+
+  it('PII-safe — no SAML/cookie/token leak through the policy envelope', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.policySave({
+      userId: 'admin-3',
+      role: 'admin',
+      ip: '10.0.0.7',
+      policyId: '33333333-3333-4333-8333-333333333330',
+      kind: 'escalation',
+      action: 'create',
+    });
+    audit.policyRemove({
+      userId: 'admin-3',
+      role: 'admin',
+      ip: '10.0.0.7',
+      policyId: '33333333-3333-4333-8333-333333333330',
+    });
+
+    const forbidden = ['samlAssertion', 'nameID', 'cookie', 'token', 'password', 'authorization'];
+    for (const entry of entries) {
+      const keys = Object.keys(entry.context ?? {});
+      for (const banned of forbidden) {
+        expect(keys).not.toContain(banned);
+      }
+    }
   });
 });

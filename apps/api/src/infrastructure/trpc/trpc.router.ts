@@ -496,29 +496,53 @@ export function createAppRouter(deps: RouterDeps) {
       }),
 
       /**
-       * UFB-036 (Phase 44-02): upsert a reminder policy by id. Audit
-       * log helper is wired in 44-05.
+       * UFB-036 (Phase 44-02 / Phase 44-05): upsert a reminder policy
+       * by id. The dedicated `admin.policy.save` audit event is emitted
+       * in addition to the generic `mutation` envelope so SIEM rules
+       * filtering on `event` (and dashboards splitting create vs update)
+       * don't have to parse the procedure name. Existence check runs
+       * BEFORE the upsert so the audit `action` reflects the pre-state.
        */
       savePolicy: adminProcedure
         .input(reminderPolicySchema)
-        .mutation(async ({ input }) => {
+        .mutation(async ({ ctx, input }) => {
           try {
-            return await deps.adminService.savePolicy(input);
+            const existed = await deps.adminService.policyExists(input.id);
+            const saved = await deps.adminService.savePolicy(input);
+            ctx.auditLogger.policySave({
+              userId: ctx.session?.userId ?? "anonymous",
+              role: ctx.session?.role ?? null,
+              ip: ctx.ip,
+              policyId: saved.id,
+              kind: saved.kind,
+              action: existed ? "update" : "create",
+            });
+            return saved;
           } catch (error) {
             throw mapDomainError(error);
           }
         }),
 
       /**
-       * UFB-036 (Phase 44-02): archive a reminder policy. Repository
-       * hard-deletes when no derived rules exist; otherwise flips the
-       * `active` flag.
+       * UFB-036 (Phase 44-02 / Phase 44-05): archive a reminder policy.
+       * Repository hard-deletes when no derived rules exist; otherwise
+       * flips the `active` flag. The dedicated `admin.policy.remove`
+       * audit event is emitted on the success path only — failed
+       * removals already surface through the generic `mutation` audit
+       * envelope.
        */
       removePolicy: adminProcedure
         .input(z.object({ id: z.string().uuid() }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ ctx, input }) => {
           try {
-            return await deps.adminService.removePolicy(input.id);
+            const result = await deps.adminService.removePolicy(input.id);
+            ctx.auditLogger.policyRemove({
+              userId: ctx.session?.userId ?? "anonymous",
+              role: ctx.session?.role ?? null,
+              ip: ctx.ip,
+              policyId: input.id,
+            });
+            return result;
           } catch (error) {
             throw mapDomainError(error);
           }

@@ -235,6 +235,21 @@ export class AdminService {
   }
 
   /**
+   * UFB-036 (Phase 44-05): existence check used by the tRPC router to
+   * decide whether the upcoming `savePolicy` call is a create or an
+   * update — feeds the `admin.policy.save` audit event so SIEM rules
+   * and dashboards can split the two cases without diffing payloads.
+   * Returns `false` (not an exception) when the policy surface is not
+   * implemented on the repository, so router-level audit emission stays
+   * resilient against in-memory test repos.
+   */
+  async policyExists(policyId: string): Promise<boolean> {
+    if (!this.repository.listReminderPolicies) return false;
+    const rows = await this.repository.listReminderPolicies();
+    return rows.some((row) => row.id === policyId);
+  }
+
+  /**
    * Upsert a reminder policy by id. Input is zod-validated so the
    * audience enum (`lead-with-draft | head-of-late`) and kind enum
    * (`deadline | follow_up | escalation`) cannot drift to invalid wire

@@ -1,4 +1,4 @@
-import type { Role } from '@customreport/shared';
+import type { ReminderPolicyKind, Role } from '@customreport/shared';
 
 import type { AppLogger } from './logger.js';
 
@@ -29,7 +29,9 @@ export type AuditEvent =
   | 'logout'
   | 'role-denied'
   | 'scope-denied'
-  | 'mutation';
+  | 'mutation'
+  | 'admin.policy.save'
+  | 'admin.policy.remove';
 
 export type AuditEnvelope = {
   readonly event: AuditEvent;
@@ -82,6 +84,25 @@ type MutationInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
   readonly reason?: string;
 };
 
+/**
+ * UFB-036 / Phase 44-05: emitted whenever an admin upserts or removes
+ * a {@link ReminderPolicy}. The generic `mutation` envelope already
+ * captures these as `procedure='admin.savePolicy' | 'admin.removePolicy'`,
+ * but a dedicated event lets SIEM rules filter on `event` directly
+ * (mirrors the `scope-denied` precedent from 46-05) and carries the
+ * policy `kind` + create/update `action` so dashboards can split create
+ * vs update without parsing the procedure string.
+ */
+type PolicySaveInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly policyId: string;
+  readonly kind: ReminderPolicyKind;
+  readonly action: 'create' | 'update';
+};
+
+type PolicyRemoveInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly policyId: string;
+};
+
 export interface AuditLogger {
   loginSuccess(input: LoginSuccessInput): void;
   loginFail(input: LoginFailInput): void;
@@ -89,6 +110,8 @@ export interface AuditLogger {
   roleDenied(input: RoleDeniedInput): void;
   scopeDenied(input: ScopeDeniedInput): void;
   mutation(input: MutationInput): void;
+  policySave(input: PolicySaveInput): void;
+  policyRemove(input: PolicyRemoveInput): void;
 }
 
 const AUDIT_MESSAGE = 'audit';
@@ -162,6 +185,26 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         ...(input.reason ? { reason: input.reason } : {}),
       });
     },
+    policySave(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'admin.policy.save',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        policyId: input.policyId,
+        kind: input.kind,
+        action: input.action,
+      });
+    },
+    policyRemove(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'admin.policy.remove',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        policyId: input.policyId,
+      });
+    },
   };
 }
 
@@ -184,6 +227,12 @@ export function createNullAuditLogger(): AuditLogger {
       /* noop */
     },
     mutation() {
+      /* noop */
+    },
+    policySave() {
+      /* noop */
+    },
+    policyRemove() {
       /* noop */
     },
   };

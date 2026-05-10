@@ -33,6 +33,11 @@ function makeAuditSpy(): {
     roleDenied: vi.fn(),
     scopeDenied: vi.fn(),
     mutation,
+    // UFB-036 (Phase 44-05): the policy helpers are not exercised here
+    // (they're verified by audit-logger.test.ts and the router-level
+    // wiring), but the mock has to satisfy the AuditLogger interface.
+    policySave: vi.fn(),
+    policyRemove: vi.fn(),
   };
   return { audit, mutation };
 }

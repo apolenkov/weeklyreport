@@ -20,6 +20,8 @@ const activeRule: AdminReminderRule = {
   timezone: 'Europe/Moscow',
   status: 'active',
   version: 1,
+  // UFB-036 (Phase 44-01): nullable FK back to ReminderPolicy.
+  policyId: null,
 };
 
 const pausedRule: AdminReminderRule = {
