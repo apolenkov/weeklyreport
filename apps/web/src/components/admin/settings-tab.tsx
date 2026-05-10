@@ -51,6 +51,10 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
           <TabsTrigger value="periods">Periods</TabsTrigger>
           <TabsTrigger value="reminders">Reminders</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          {/* UFB-056 / Phase 55-5: external-integrations badges. v1 only
+              surfaces Telegram (seeds-only); future integrations (Slack,
+              MS Teams, webhook fan-out) join the same sub-tab. */}
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
 
         <TabsContent value="identity" className="pt-6">
@@ -67,6 +71,10 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
 
         <TabsContent value="notifications" className="pt-6">
           <NotificationsSubTab serverSettings={serverSettings} />
+        </TabsContent>
+
+        <TabsContent value="integrations" className="pt-6">
+          <IntegrationsSubTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -977,6 +985,104 @@ function NotificationsSubTab({
             Notification settings saved
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Integrations sub-tab (UFB-056 / Phase 55-5) ────────────────────────
+
+/**
+ * Read-only status surface for external integrations. v1 only shows
+ * Telegram: green «Подключён» badge when both `TG_BOT_TOKEN` is set on
+ * the API AND at least one active TelegramBinding row exists. Otherwise
+ * muted «Не активно».
+ *
+ * Phase 55 is seeds-only: there is no real bot, no user-binding UI, no
+ * outbound flow beyond the admin smoke-test (which lives on the API
+ * surface only, not exposed in this tab). The card text states that
+ * explicitly so a head/admin reading the tab does not expect /start to
+ * work yet.
+ */
+function IntegrationsSubTab() {
+  const trpc = useTRPC();
+  const statusQ = useQuery(trpc.admin.integrationsStatus.queryOptions());
+
+  if (statusQ.isLoading) {
+    return (
+      <p className="text-sm text-[var(--color-muted-foreground)]">
+        Loading integrations status…
+      </p>
+    );
+  }
+
+  if (statusQ.isError || !statusQ.data) {
+    return (
+      <p className="text-sm text-red-600">
+        Failed to load integrations status.
+      </p>
+    );
+  }
+
+  const { telegram } = statusQ.data;
+  const isActive = telegram.configured && telegram.bindings > 0;
+
+  return (
+    <div className="max-w-2xl space-y-4">
+      <p className="text-sm text-[var(--color-muted-foreground)]">
+        External integrations available to CustomReport. Activation requires
+        admin-issued credentials and a follow-on rollout phase.
+      </p>
+
+      <div
+        className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4"
+        data-testid="integration-row-telegram"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+              Telegram
+            </h3>
+            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+              Привязка пользователей и реальный бот будут добавлены в
+              отдельной фазе.
+            </p>
+          </div>
+          {isActive ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-primary)]"
+              data-testid="integration-badge-telegram"
+              data-state="active"
+            >
+              Подключён
+            </span>
+          ) : (
+            <span
+              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]"
+              data-testid="integration-badge-telegram"
+              data-state="inactive"
+            >
+              Не активно
+            </span>
+          )}
+        </div>
+
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
+          <dt>Bot configured</dt>
+          <dd
+            className="font-mono"
+            data-testid="integration-telegram-configured"
+          >
+            {telegram.configured ? "yes" : "no"}
+          </dd>
+          <dt>Active bindings</dt>
+          <dd
+            className="font-mono"
+            data-testid="integration-telegram-bindings"
+          >
+            {telegram.bindings}
+          </dd>
+        </dl>
       </div>
     </div>
   );
