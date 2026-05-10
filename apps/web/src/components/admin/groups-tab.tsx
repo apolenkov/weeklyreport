@@ -10,7 +10,9 @@ import { useTRPC } from "../../lib/trpc-context";
 
 import { TabHeader, TabSearch } from "./tab-header";
 
-import type { MockGroup, MockUser } from "./mock-data";
+import { GroupProductsEditor } from "./group-products-editor";
+
+import type { MockGroup, MockProduct, MockUser } from "./mock-data";
 
 type GroupFormData = {
   name: string;
@@ -29,9 +31,14 @@ const EMPTY_FORM: GroupFormData = {
 type GroupsTabProps = {
   readonly groups: MockGroup[];
   readonly users: MockUser[];
+  // UFB-054 / Phase 56-C: product roster for the «Products attached»
+  // section inside the edit dialog. Optional so legacy callers that
+  // don't yet thread products through (e.g. unit tests) keep
+  // compiling — the section short-circuits to an empty list.
+  readonly products?: MockProduct[];
 };
 
-export function GroupsTab({ groups, users }: GroupsTabProps) {
+export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   // UFB-039: only head/admin users may lead a group. Filter the candidate
   // dropdown so leads/viewers can't be picked.
   const headCandidates = useMemo(
@@ -357,6 +364,12 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
                     </span>
                   </label>
                 </div>
+              )}
+              {editingGroup && (
+                <GroupProductsEditor
+                  groupId={editingGroup.id}
+                  products={products}
+                />
               )}
             </div>
             <div className="mt-6 flex justify-end gap-3">

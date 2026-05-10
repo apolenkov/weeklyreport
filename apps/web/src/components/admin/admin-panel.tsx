@@ -100,7 +100,11 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
               <UsersTab users={data.users} groups={data.groups} />
             )}
             {activeTab === "groups" && (
-              <GroupsTab groups={data.groups} users={data.users} />
+              <GroupsTab
+                groups={data.groups}
+                users={data.users}
+                products={data.products}
+              />
             )}
             {activeTab === "products" && (
               <ProductsTab

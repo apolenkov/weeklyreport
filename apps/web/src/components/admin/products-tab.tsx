@@ -11,6 +11,7 @@ import { ConfirmDeleteDialog } from '../lead/confirm-delete-dialog';
 import { SearchInput } from '../search/search-input';
 
 import { TabHeader } from './tab-header';
+import { ProductGroupChips } from './product-group-chips';
 
 import type { MockProduct, MockUser } from './mock-data';
 import { StageAssignmentEditor } from './stage-assignment-editor';
@@ -226,11 +227,18 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
                     >
                       <ChevronIcon expanded={isExpanded} />
                     </button>
-                    <div>
-                      <span className="text-sm font-semibold text-[var(--color-foreground)]">{product.name}</span>
-                      <span className="ml-2 text-xs text-[var(--color-muted-foreground)]">
-                        Owner: {owner?.name ?? 'Unknown'}
-                      </span>
+                    <div className="flex flex-col gap-1">
+                      <div>
+                        <span className="text-sm font-semibold text-[var(--color-foreground)]">{product.name}</span>
+                        <span className="ml-2 text-xs text-[var(--color-muted-foreground)]">
+                          Owner: {owner?.name ?? 'Unknown'}
+                        </span>
+                      </div>
+                      {/* UFB-054 / Phase 56-C: read-only Groups chips
+                          showing which ReportingGroups own this product
+                          via the explicit GroupProduct edge. Editing
+                          lives in the Groups tab. */}
+                      <ProductGroupChips productId={product.id} />
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
