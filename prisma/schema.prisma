@@ -46,6 +46,9 @@ model ReportingGroup {
   users        User[]
   head         User?               @relation("GroupHead", fields: [headUserId], references: [id], onDelete: SetNull)
   viewerAccess ViewerGroupAccess[]
+  // UFB-054 / Phase 56-A: explicit M:M edge to Project (products owned by
+  // this group). Inverse of GroupProduct.group. See `GroupProduct` model.
+  groupProducts GroupProduct[]
 
   @@index([archived])
   @@index([headUserId])
@@ -102,10 +105,39 @@ model Project {
   risks            Risk[]
   stageStatuses    StageStatus[]
   stageAssignments StageAssignment[]
+  // UFB-054 / Phase 56-A: explicit M:M edge to ReportingGroup. Inverse of
+  // GroupProduct.product. Left untouched on backfill; existing read paths
+  // that derive group via `lead.reportingGroupId` continue to work.
+  groupProducts    GroupProduct[]
 
   @@index([leadId])
   @@index([archived])
   @@index([searchTsv], type: Gin)
+}
+
+// UFB-054 / Phase 56-A: explicit Group ↔ Product M:M edge.
+//
+// Today products belong to a group implicitly through `Project.lead.reportingGroupId`.
+// This model represents the explicit edge so:
+//   - a product can belong to multiple groups (cross-departmental);
+//   - lead rotation does not change product ownership at the group level;
+//   - head dashboards can read «my group's products» without joining through User.
+//
+// Backfill (in the same migration) seeds one row per existing Project mapping
+// to `Project.lead.reportingGroupId`. Existing scope-filter consumers continue
+// to derive group from `Project.lead.reportingGroupId` until they opt in via
+// the Phase 56-D flag.
+model GroupProduct {
+  id        String         @id @default(uuid())
+  groupId   String
+  productId String
+  createdAt DateTime       @default(now())
+  group     ReportingGroup @relation(fields: [groupId], references: [id])
+  product   Project        @relation(fields: [productId], references: [id])
+
+  @@unique([groupId, productId])
+  @@index([groupId])
+  @@index([productId])
 }
 
 model Report {
