@@ -279,7 +279,7 @@ Audit status: tech_debt — structurally complete, runtime smoke verification de
 <details open>
 <summary>v6.0 Roles, Quality, AI & Analytics (Phases 27-31) - PLANNING 2026-04-28</summary>
 
-- [ ] **Phase 27: Quality Stabilisation & Role Middleware Factory** - Integration suite green as CI gate; `requireRole` factory shipped with default-deny coverage test (Wave 1: B + A1)
+- [x] **Phase 27: Quality Stabilisation & Role Middleware Factory** - Integration suite green as CI gate; `requireRole` factory shipped with default-deny coverage test (Wave 1: B + A1)
 - [ ] **Phase 28: Role Filters, PDF Cookie Seam, Deadline Reminders & Release Checklist** - Service-layer role filtering; PDF worker cookie injection; T-24h reminders + react-email templates; CHECKLIST.md template (Wave 2: A2 + A4 + E1+E3 + G)
 - [ ] **Phase 29: Real Keycloak SAML, Role-Aware UI & Escalation** - Keycloak SAML in production; layout-level role gates; T+2h escalation digest with audit log (Wave 3a: A3 + A5 + A6 + E2)
 - [ ] **Phase 30: Mobile Polish & Trend Analytics** - 7 pages clean at 375px; analytics tRPC procedures + `/reports/trends` charts (Wave 3b: F + D)
