@@ -22,6 +22,18 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     defaultTimezone: 'Europe/Moscow',
     defaultReminderAudience: 'lead-with-draft',
     notificationFromEmail: null,
+    // UFB-051 (Phase 51-A): period-cycle knobs default to SQL defaults.
+    // The cadence-aware PeriodCreator (bi-weekly, maxOpenPeriods gate)
+    // arrives in 51-C — 51-A keeps the scheduler reading the legacy
+    // `periodLengthDays`/`defaultDeadlineDays` path.
+    firstDayOfWeek: 1,
+    deadlineDayOfWeek: 5,
+    deadlineTime: '18:00',
+    periodCadence: 'weekly',
+    maxOpenPeriods: 1,
+    requireAllSectionsToPublish: true,
+    allowReopenAfterPublish: true,
+    reopenWindowHours: 72,
     ...overrides,
   };
 }
