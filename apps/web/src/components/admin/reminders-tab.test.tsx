@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
 
-import type { MockReminder } from "./mock-data";
+import type {
+  MockPeriod,
+  MockReminder,
+  MockReminderPolicy,
+} from "./mock-data";
 import { RemindersTab } from "./reminders-tab";
 
 const toastSuccess = vi.fn();
@@ -22,12 +26,11 @@ vi.mock("sonner", () => ({
 }));
 
 type Captured = {
-  dispatchMutationFn: ReturnType<typeof vi.fn>;
   saveMutationFn: ReturnType<typeof vi.fn>;
-  deleteMutationFn: ReturnType<typeof vi.fn>;
+  removeMutationFn: ReturnType<typeof vi.fn>;
 };
 
-const period = {
+const period: MockPeriod = {
   id: "a0000000-0000-4000-8000-000000000001",
   weekLabel: "Week 19",
   startDate: "2026-05-04",
@@ -36,16 +39,39 @@ const period = {
   status: "open" as const,
 };
 
-const activeReminder: MockReminder = {
-  id: "a0000000-0000-4000-8000-000000000111",
-  name: "Deadline reminder",
-  description: "Send pending lead reminders",
+const policyDeadline: MockReminderPolicy = {
+  id: "b0000000-0000-4000-8000-000000000001",
+  kind: "deadline",
+  offsetMinutes: -1440,
+  timezone: "Europe/Moscow",
+  audience: "lead-with-draft",
   active: true,
-  kind: "deadline" as const,
-  fireAt: new Date("2026-05-08T10:00:00.000Z"),
+  validFrom: new Date("2026-05-01T00:00:00.000Z"),
+  validUntil: null,
+};
+
+const policyEscalation: MockReminderPolicy = {
+  id: "b0000000-0000-4000-8000-000000000002",
+  kind: "escalation",
+  offsetMinutes: 120,
+  timezone: "Europe/Moscow",
+  audience: "head-of-late",
+  active: false,
+  validFrom: new Date("2026-05-01T00:00:00.000Z"),
+  validUntil: new Date("2026-12-31T00:00:00.000Z"),
+};
+
+const derivedRule: MockReminder = {
+  id: "c0000000-0000-4000-8000-000000000001",
+  name: "Deadline reminder",
+  description: "auto",
+  active: true,
+  kind: "deadline",
+  fireAt: new Date("2026-05-07T10:00:00.000Z"),
   timezone: "Europe/Moscow",
   version: 1,
   reportId: period.id,
+  policyId: policyDeadline.id,
 };
 
 function makeMutationOptions(
@@ -65,39 +91,37 @@ function makeMockTRPC(captured: Captured) {
     admin: {
       snapshot: { pathFilter: () => ({ queryKey: ["admin", "snapshot"] }) },
       getSettings: { pathFilter: () => ({ queryKey: ["admin", "settings"] }) },
-      saveReminderRule: {
+      savePolicy: {
         mutationOptions: (opts: Record<string, unknown>) =>
           makeMutationOptions(captured.saveMutationFn, opts),
       },
-      deleteReminderRule: {
+      removePolicy: {
         mutationOptions: (opts: Record<string, unknown>) =>
-          makeMutationOptions(captured.deleteMutationFn, opts),
+          makeMutationOptions(captured.removeMutationFn, opts),
       },
     },
     weeklyReport: {
       get: { pathFilter: () => ({ queryKey: ["weeklyReport", "get"] }) },
     },
-    reminders: {
-      dispatchPending: {
-        mutationOptions: (opts: Record<string, unknown>) =>
-          makeMutationOptions(captured.dispatchMutationFn, opts),
-      },
-    },
   } as never;
 }
 
-function renderTab(
-  reminders = [activeReminder],
-  captured: Captured = {
-    dispatchMutationFn: vi.fn().mockResolvedValue({
-      dispatched: 2,
-      alreadySent: 1,
-      skipped: 1,
-    }),
-    saveMutationFn: vi.fn(),
-    deleteMutationFn: vi.fn(),
-  },
-) {
+function renderTab(args?: {
+  policies?: MockReminderPolicy[];
+  derivedRulesByPolicyId?: Record<string, MockReminder[]>;
+  captured?: Captured;
+}) {
+  const captured: Captured = args?.captured ?? {
+    saveMutationFn: vi.fn().mockResolvedValue(undefined),
+    removeMutationFn: vi.fn().mockResolvedValue({ success: true }),
+  };
+  const policies = args?.policies ?? [policyDeadline, policyEscalation];
+  const derivedRulesByPolicyId =
+    args?.derivedRulesByPolicyId ?? {
+      [policyDeadline.id]: [derivedRule],
+      [policyEscalation.id]: [],
+    };
+
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -111,55 +135,149 @@ function renderTab(
     );
   }
 
-  return render(<RemindersTab reminders={reminders} periods={[period]} />, {
-    wrapper: Wrapper,
-  });
+  const result = render(
+    <RemindersTab
+      policies={policies}
+      derivedRulesByPolicyId={derivedRulesByPolicyId}
+      periods={[period]}
+    />,
+    { wrapper: Wrapper },
+  );
+  return { ...result, captured };
 }
 
-describe("RemindersTab", () => {
+describe("RemindersTab (Phase 44-04)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("dispatches the selected active rule through reminders.dispatchPending", async () => {
-    const captured: Captured = {
-      dispatchMutationFn: vi.fn().mockResolvedValue({
-        dispatched: 2,
-        alreadySent: 1,
-        skipped: 1,
-      }),
-      saveMutationFn: vi.fn(),
-      deleteMutationFn: vi.fn(),
-    };
+  it("renders the policy list with kind, offset, audience, and validity window", () => {
+    renderTab();
+    const row = screen.getByTestId(`policy-row-${policyDeadline.id}`);
+    expect(row).toHaveTextContent("deadline");
+    expect(row).toHaveTextContent("T-24h");
+    expect(row).toHaveTextContent("lead-with-draft");
+    expect(row).toHaveTextContent("forever");
+    const row2 = screen.getByTestId(`policy-row-${policyEscalation.id}`);
+    expect(row2).toHaveTextContent("escalation");
+    expect(row2).toHaveTextContent("T+2h");
+    expect(row2).toHaveTextContent("→");
+  });
 
-    renderTab([activeReminder], captured);
-
-    await userEvent.click(
-      screen.getByRole("button", { name: /send deadline reminder now/i }),
-    );
-
-    await waitFor(() => {
-      expect(captured.dispatchMutationFn).toHaveBeenCalledTimes(1);
-    });
-    expect(captured.dispatchMutationFn.mock.calls[0]?.[0]).toEqual({
-      reportId: period.id,
-      ruleId: activeReminder.id,
-    });
-    expect(toastSuccess).toHaveBeenCalledWith(
-      "Reminder sent to 2 leads (1 already sent this cycle, 1 opted out).",
+  it("shows the empty-state copy when policies is empty", () => {
+    renderTab({ policies: [], derivedRulesByPolicyId: {} });
+    expect(screen.getByTestId("reminders-empty-state")).toHaveTextContent(
+      /No active reminder policies/i,
     );
   });
 
-  it("does not expose Send Now for paused or unbound rules", () => {
-    renderTab([
-      { ...activeReminder, id: "a0000000-0000-4000-8000-000000000112", active: false },
-      { ...activeReminder, id: "a0000000-0000-4000-8000-000000000113", reportId: null },
-    ]);
+  it("opens the form on 'New Policy' and submits with the form payload", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
 
-    const sendButtons = screen.getAllByRole("button", {
-      name: /send deadline reminder now/i,
+    await user.click(screen.getByTestId("new-policy-button"));
+    expect(screen.getByTestId("policy-form")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("policy-save-button"));
+
+    await waitFor(() => {
+      expect(captured.saveMutationFn).toHaveBeenCalledTimes(1);
     });
-    expect(sendButtons[0]).toBeDisabled();
-    expect(sendButtons[1]).toBeDisabled();
+    const arg = captured.saveMutationFn.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(arg.kind).toBe("deadline");
+    expect(arg.offsetMinutes).toBe(-1440);
+    expect(arg.timezone).toBe("Europe/Moscow");
+    expect(arg.audience).toBe("lead-with-draft");
+    expect(arg.active).toBe(true);
+    expect(arg.validUntil).toBeNull();
+    expect(arg.validFrom).toBeInstanceOf(Date);
+    expect(typeof arg.id).toBe("string");
+  });
+
+  it("disables Save and shows hint when validUntil < validFrom", async () => {
+    const user = userEvent.setup();
+    renderTab({ policies: [], derivedRulesByPolicyId: {} });
+
+    // empty-state spawned an open form (initial showForm = true)
+    expect(screen.getByTestId("policy-form")).toBeInTheDocument();
+
+    // Uncheck "forever" → date input appears
+    await user.click(
+      screen.getByRole("checkbox", { name: /forever \(no end date\)/i }),
+    );
+    const validFrom = screen.getByLabelText(/Valid from/i) as HTMLInputElement;
+    const validUntil = screen.getByLabelText(
+      /^policy-valid-until$|^Valid until$/i,
+    ) as HTMLInputElement;
+
+    // Force validFrom = today, validUntil = day before validFrom.
+    const fromIso = validFrom.value;
+    const before = new Date(fromIso);
+    before.setUTCDate(before.getUTCDate() - 1);
+    const beforeIso = before.toISOString().slice(0, 10);
+
+    await user.clear(validUntil);
+    await user.type(validUntil, beforeIso);
+
+    expect(screen.getByTestId("policy-validity-hint")).toBeInTheDocument();
+    expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+  });
+
+  it("expands a policy row and renders derived rules read-only", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(screen.getByTestId(`expand-${policyDeadline.id}`));
+    const panel = screen.getByTestId(`derived-rules-${policyDeadline.id}`);
+    expect(within(panel).getByText(/Week 19/)).toBeInTheDocument();
+    expect(within(panel).getByText(/deadline/i)).toBeInTheDocument();
+    expect(within(panel).getByText(/Europe\/Moscow/i)).toBeInTheDocument();
+  });
+
+  it("shows derived-rules empty hint for a policy with no rules", async () => {
+    const user = userEvent.setup();
+    renderTab();
+    await user.click(screen.getByTestId(`expand-${policyEscalation.id}`));
+    expect(
+      screen.getByTestId(`derived-rules-empty-${policyEscalation.id}`),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the remove confirm dialog and warns about derived rule count", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+
+    await user.click(screen.getByTestId(`remove-${policyDeadline.id}`));
+    expect(
+      screen.getByText(/This will remove 1 derived rule/i),
+    ).toBeInTheDocument();
+
+    // confirm
+    await user.click(screen.getByRole("button", { name: /confirm|delete/i }));
+    await waitFor(() => {
+      expect(captured.removeMutationFn).toHaveBeenCalledTimes(1);
+    });
+    expect(captured.removeMutationFn.mock.calls[0]?.[0]).toEqual({
+      id: policyDeadline.id,
+    });
+  });
+
+  it("populates the form when editing an existing policy", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(screen.getByTestId(`edit-${policyEscalation.id}`));
+    const audienceSelect = screen.getByLabelText(/Audience/i) as HTMLSelectElement;
+    expect(audienceSelect.value).toBe("head-of-late");
+    const tzSelect = screen.getByLabelText(/Timezone/i) as HTMLSelectElement;
+    expect(tzSelect.value).toBe("Europe/Moscow");
+    // forever checkbox should be UNchecked because validUntil is set
+    const foreverCheckbox = screen.getByRole("checkbox", {
+      name: /forever \(no end date\)/i,
+    }) as HTMLInputElement;
+    expect(foreverCheckbox.checked).toBe(false);
   });
 });

@@ -25,6 +25,7 @@ const activeRule: AdminReminderRule = {
   timezone: 'Europe/Moscow',
   status: 'active',
   version: 1,
+  policyId: null,
 };
 
 const pausedRule: AdminReminderRule = {

@@ -32,6 +32,9 @@ import type {
   AdminReminderRule,
   AppSettings,
   ReportingGroup,
+  ReminderPolicy,
+  ReminderPolicyKind,
+  ReminderAudience,
 } from "@customreport/shared";
 
 // ---- Form-state -> API-input mappers (Phase 22 / Plan 22-04) ----
@@ -118,6 +121,28 @@ export type MockReminder = {
   timezone: string;
   version: number;
   reportId: string | null;
+  // UFB-036 (Phase 44-04): policy FK preserved so the Reminders Tab can
+  // group derived rules under their owning policy in the read-only
+  // expander. `null` for legacy rules (created before 44-01).
+  policyId: string | null;
+};
+
+/**
+ * UFB-036 (Phase 44-04): presentation shape of {@link reminderPolicySchema}
+ * for the Reminders Tab policy editor. Mirrors the wire schema 1:1 except
+ * the wire-only `id` is preserved verbatim — there is no name/description
+ * synthesis here because the editor surfaces every column directly.
+ */
+export type MockReminderPolicy = {
+  id: string;
+  kind: ReminderPolicyKind;
+  offsetMinutes: number;
+  timezone: string;
+  audience: ReminderAudience;
+  active: boolean;
+  validFrom: Date;
+  /** `null` means "forever" (no upper bound). */
+  validUntil: Date | null;
 };
 
 export type MockSettings = {
@@ -238,6 +263,25 @@ function mapReminder(api: AdminReminderRule): MockReminder {
     timezone: api.timezone,
     version: api.version,
     reportId: api.reportId,
+    policyId: api.policyId,
+  };
+}
+
+/**
+ * UFB-036 (Phase 44-04): translates `reminderPolicySchema` → presentation.
+ * Field-for-field; keeps `validFrom` + `validUntil` as JS Dates so the
+ * editor's date inputs can format them with one consistent helper.
+ */
+function mapReminderPolicy(api: ReminderPolicy): MockReminderPolicy {
+  return {
+    id: api.id,
+    kind: api.kind,
+    offsetMinutes: api.offsetMinutes,
+    timezone: api.timezone,
+    audience: api.audience,
+    active: api.active,
+    validFrom: api.validFrom,
+    validUntil: api.validUntil,
   };
 }
 
@@ -249,6 +293,8 @@ export type MappedAdminSnapshot = {
   products: MockProduct[];
   periods: MockPeriod[];
   reminders: MockReminder[];
+  /** UFB-036 (Phase 44-04): policies surfaced for the Reminders Tab editor. */
+  policies: MockReminderPolicy[];
 };
 
 /**
@@ -265,6 +311,9 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
     products: api.projects.map(mapProject),
     periods: api.periods.map(mapPeriod),
     reminders: api.reminderRules.map(mapReminder),
+    // UFB-036 (Phase 44-04): policies are emitted by `admin.snapshot`
+    // (default `[]` keeps older / in-memory test snapshots compatible).
+    policies: api.policies.map(mapReminderPolicy),
   };
 }
 
@@ -457,9 +506,69 @@ export function toAdminReminderRuleInput(
   };
 }
 
+/**
+ * UFB-036 (Phase 44-04): Reminders Tab policy editor form-state.
+ *
+ * The form binds:
+ *   - `kind`, `offsetMinutes`, `timezone`, `audience`, `active`: 1:1 with
+ *     `reminderPolicySchema`.
+ *   - `validFromIso`: `YYYY-MM-DD` from a `<input type="date">`. Always
+ *     present; defaults to today on the "Add" form.
+ *   - `validUntilIso`: `YYYY-MM-DD` or `null`. `null` means the user has
+ *     ticked the "forever" checkbox so the upper bound is open.
+ */
+export type AdminReminderPolicyFormInput = {
+  kind: ReminderPolicyKind;
+  offsetMinutes: number;
+  timezone: string;
+  audience: ReminderAudience;
+  active: boolean;
+  validFromIso: string;
+  validUntilIso: string | null;
+};
+
+/**
+ * Maps the policy form state to the `reminderPolicySchema` payload.
+ *
+ * The "forever" checkbox flips `validUntilIso` to `null` which becomes
+ * `validUntil: null` on the wire. Otherwise the YYYY-MM-DD string is
+ * coerced into a JS Date at midnight UTC (matching how the prisma column
+ * stores `DateTime`); the schema's `z.coerce.date()` accepts either form
+ * but emitting a Date here means the network payload after JSON.stringify
+ * is a clean ISO timestamp.
+ */
+export function toReminderPolicyInput(
+  form: AdminReminderPolicyFormInput,
+  existingId?: string,
+): {
+  id: string;
+  kind: ReminderPolicyKind;
+  offsetMinutes: number;
+  timezone: string;
+  audience: ReminderAudience;
+  active: boolean;
+  validFrom: Date;
+  validUntil: Date | null;
+} {
+  return {
+    id: existingId ?? newId(),
+    kind: form.kind,
+    offsetMinutes: form.offsetMinutes,
+    timezone: form.timezone,
+    audience: form.audience,
+    active: form.active,
+    validFrom: new Date(`${form.validFromIso}T00:00:00.000Z`),
+    validUntil:
+      form.validUntilIso === null
+        ? null
+        : new Date(`${form.validUntilIso}T00:00:00.000Z`),
+  };
+}
+
 // Internal exports for tests — keep narrow.
 export const __testing = {
   mapReminder,
+  mapReminderPolicy,
   mapPeriod,
   mapProject,
   mapUser,

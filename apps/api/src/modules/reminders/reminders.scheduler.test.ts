@@ -27,6 +27,7 @@ const activeRule: AdminReminderRule = {
   timezone: 'UTC',
   status: 'active',
   version: 1,
+  policyId: null,
 };
 
 function dueRuleFromRecipients(
@@ -256,6 +257,7 @@ describe('RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)', ()
     timezone: 'UTC',
     status: 'active',
     version: 1,
+    policyId: null,
   };
 
   function makeEscalationRule(
@@ -436,6 +438,7 @@ describe('RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)', () => {
       timezone: 'UTC',
       status: 'active',
       version: 1,
+      policyId: null,
     };
     const escalationServiceRepo: RemindersRepository = {
       async getRule(rid) {

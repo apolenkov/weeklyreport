@@ -228,6 +228,10 @@ export class AdminPrismaRepository implements AdminRepository {
         timezone: row.timezone,
         audience: audienceFromPrisma[row.audience],
         active: row.active,
+        // UFB-036 (Phase 44-04): surface the validity window so the
+        // Reminders Tab can render and edit it.
+        validFrom: row.validFrom,
+        validUntil: row.validUntil,
       }),
     );
   }
@@ -240,6 +244,8 @@ export class AdminPrismaRepository implements AdminRepository {
       timezone: parsed.timezone,
       audience: audienceToPrisma[parsed.audience],
       active: parsed.active,
+      validFrom: parsed.validFrom,
+      validUntil: parsed.validUntil,
     };
     const row = await this.prisma.reminderPolicy.upsert({
       where: { id: parsed.id },
@@ -253,6 +259,8 @@ export class AdminPrismaRepository implements AdminRepository {
       timezone: row.timezone,
       audience: audienceFromPrisma[row.audience],
       active: row.active,
+      validFrom: row.validFrom,
+      validUntil: row.validUntil,
     });
   }
 
@@ -339,6 +347,9 @@ export class AdminPrismaRepository implements AdminRepository {
         adminReminderRuleSchema.parse({
           id: rule.id,
           reportId: rule.reportId,
+          // UFB-036 (Phase 44-04): expose the policy FK so the admin
+          // UI can group derived rules under their owning policy.
+          policyId: rule.policyId,
           kind: rule.kind,
           fireAt: rule.fireAt,
           timezone: rule.timezone,
@@ -369,6 +380,8 @@ export class AdminPrismaRepository implements AdminRepository {
           timezone: row.timezone,
           audience: audienceFromPrisma[row.audience],
           active: row.active,
+          validFrom: row.validFrom,
+          validUntil: row.validUntil,
         }),
       ),
     });
