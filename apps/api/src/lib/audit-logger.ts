@@ -28,6 +28,7 @@ export type AuditEvent =
   | 'login-fail'
   | 'logout'
   | 'role-denied'
+  | 'scope-denied'
   | 'mutation';
 
 export type AuditEnvelope = {
@@ -44,6 +45,18 @@ type LoginFailInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
 };
 type LogoutInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'>;
 type RoleDeniedInput = Omit<AuditEnvelope, 'event'>;
+
+/**
+ * UFB-040 / Phase 46-05: emitted when a head/viewer (anyone non-admin)
+ * requests a specific resource id that falls outside their group scope.
+ * Mirrors `role-denied` shape but adds a free-form `attemptedScope`
+ * description (e.g. "reportSection", "report") and the offending
+ * `resourceId` so SIEM rules can detect probing patterns.
+ */
+type ScopeDeniedInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly attemptedScope: string;
+  readonly resourceId: string;
+};
 
 /**
  * 36-02 mutation audit envelope.
@@ -74,6 +87,7 @@ export interface AuditLogger {
   loginFail(input: LoginFailInput): void;
   logout(input: LogoutInput): void;
   roleDenied(input: RoleDeniedInput): void;
+  scopeDenied(input: ScopeDeniedInput): void;
   mutation(input: MutationInput): void;
 }
 
@@ -122,6 +136,16 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         ip: input.ip,
       });
     },
+    scopeDenied(input) {
+      logger.warn(AUDIT_MESSAGE, {
+        event: 'scope-denied',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        attemptedScope: input.attemptedScope,
+        resourceId: input.resourceId,
+      });
+    },
     mutation(input) {
       // Successes flow at info; failures flow at warn so the default logger
       // surface escalates appropriately without extra config.
@@ -154,6 +178,9 @@ export function createNullAuditLogger(): AuditLogger {
       /* noop */
     },
     roleDenied() {
+      /* noop */
+    },
+    scopeDenied() {
       /* noop */
     },
     mutation() {
