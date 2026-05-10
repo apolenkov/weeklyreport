@@ -2,6 +2,7 @@
 
 import { Suspense, use } from "react";
 
+import { PeriodSummaryTabs } from "../../../../components/ai/period-summary-tabs";
 import { WeeklyReportPage } from "../../../../components/weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
 
@@ -73,8 +74,15 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
           </div>
         </div>
 
+        {/* Phase 54 (UFB-055): «AI Summary» tab on /reports/<id> page.
+            Default tab renders the existing assembled report; switching to
+            «AI Summary» fires the mock period-summary tRPC query and
+            renders the result with a clear (заглушка) badge until the
+            org wires a real LLM provider. */}
         <Suspense fallback={<WeeklyReportSkeleton />}>
-          <WeeklyReportPage reportId={reportId} authorId={authorId} />
+          <PeriodSummaryTabs periodId={reportId}>
+            <WeeklyReportPage reportId={reportId} authorId={authorId} />
+          </PeriodSummaryTabs>
         </Suspense>
       </div>
     </main>
