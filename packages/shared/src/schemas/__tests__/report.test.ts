@@ -21,6 +21,8 @@ import {
   archiveReportSummarySchema,
   periodStatusSchema,
   periodStateSchema,
+  periodListBucketSchema,
+  periodListItemSchema,
   stageSchema,
   stageAssignmentSchema,
   versionSnapshotSchema,
@@ -932,6 +934,81 @@ describe('periodStateSchema (UFB-053)', () => {
       periodState: 'open',
     });
     expect(parsed.periodState).toBe('open');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 14c: periodListBucketSchema + periodListItemSchema (UFB-052 / Phase 51-B)
+// ---------------------------------------------------------------------------
+
+describe('periodListBucketSchema (UFB-052)', () => {
+  it.each(['active', 'archive', 'scheduled', 'open', 'published', 'archived'])(
+    'accepts %s',
+    (bucket) => {
+      expect(periodListBucketSchema.safeParse(bucket).success).toBe(true);
+    },
+  );
+
+  it('rejects "reopened" (not a state, lives on periodStatus)', () => {
+    expect(periodListBucketSchema.safeParse('reopened').success).toBe(false);
+  });
+
+  it('rejects unknown bucket', () => {
+    expect(periodListBucketSchema.safeParse('all').success).toBe(false);
+  });
+});
+
+describe('periodListItemSchema (UFB-052)', () => {
+  const baseRow = {
+    id: randomUUID(),
+    periodStart: '2026-05-11',
+    periodEnd: '2026-05-17',
+    deadline: '2026-05-15',
+    publishedAt: null,
+    periodState: 'open' as const,
+    periodStatus: 'open' as const,
+    archived: false,
+    autoPublished: false,
+    autoArchived: false,
+    submittedCount: 3,
+    totalCount: 6,
+    canReopen: false,
+    canArchive: false,
+  };
+
+  it('accepts a minimally-valid active row', () => {
+    expect(periodListItemSchema.safeParse(baseRow).success).toBe(true);
+  });
+
+  it('coerces publishedAt from ISO string to Date', () => {
+    const parsed = periodListItemSchema.parse({
+      ...baseRow,
+      periodState: 'published',
+      periodStatus: 'published',
+      publishedAt: '2026-05-15T10:00:00Z',
+      canReopen: true,
+      canArchive: true,
+    });
+    expect(parsed.publishedAt).toBeInstanceOf(Date);
+  });
+
+  it('rejects negative submittedCount', () => {
+    const parsed = periodListItemSchema.safeParse({
+      ...baseRow,
+      submittedCount: -1,
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it('rejects "reopened" on periodState (but accepts on periodStatus)', () => {
+    expect(
+      periodListItemSchema.safeParse({ ...baseRow, periodState: 'reopened' })
+        .success,
+    ).toBe(false);
+    expect(
+      periodListItemSchema.safeParse({ ...baseRow, periodStatus: 'reopened' })
+        .success,
+    ).toBe(true);
   });
 });
 
