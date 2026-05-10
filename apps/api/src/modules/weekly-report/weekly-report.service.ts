@@ -1,4 +1,4 @@
-import type { Role, WeeklyReportReadModel } from '@customreport/shared';
+import type { Role, UserSession, WeeklyReportReadModel } from '@customreport/shared';
 
 export class WeeklyReportDomainError extends Error {
   constructor(message: string) {
@@ -7,8 +7,21 @@ export class WeeklyReportDomainError extends Error {
   }
 }
 
+/**
+ * UFB-040 / Phase 46-04: weekly report visibility scope.
+ * Repository receives the session so it can filter sections, lead users,
+ * and projects by `groupScopeFilter`. Tests pass a narrow Pick.
+ */
+export type WeeklyReportScopeSession = Pick<
+  UserSession,
+  'role' | 'reportingGroupId' | 'viewerGroupAccess'
+>;
+
 export interface WeeklyReportRepository {
-  getWeeklyReport(reportId: string): Promise<WeeklyReportReadModel | null>;
+  getWeeklyReport(
+    reportId: string,
+    session?: WeeklyReportScopeSession,
+  ): Promise<WeeklyReportReadModel | null>;
   getActiveReportId(): Promise<string | null>;
 }
 
@@ -38,6 +51,7 @@ export class WeeklyReportService {
   async getWeeklyReport(
     reportId?: string,
     role?: Role,
+    session?: WeeklyReportScopeSession,
   ): Promise<WeeklyReportReadModel> {
     const resolvedId = reportId ?? (await this.repository.getActiveReportId());
 
@@ -45,7 +59,7 @@ export class WeeklyReportService {
       throw new WeeklyReportDomainError('No active report period found.');
     }
 
-    const report = await this.repository.getWeeklyReport(resolvedId);
+    const report = await this.repository.getWeeklyReport(resolvedId, session);
 
     if (!report) {
       throw new WeeklyReportDomainError(`Report ${resolvedId} not found.`);

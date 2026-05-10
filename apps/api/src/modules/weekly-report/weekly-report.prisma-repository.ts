@@ -6,20 +6,15 @@ import {
   type Escalation,
 } from '@customreport/shared';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { WeeklyReportRepository } from './weekly-report.service.js';
+import { groupScopeFilter } from '../../lib/group-scope.js';
+import type {
+  WeeklyReportRepository,
+  WeeklyReportScopeSession,
+} from './weekly-report.service.js';
 import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
 } from '../report-sections/report-sections.prisma-repository.js';
-
-const reportFullInclude = {
-  sections: { include: reportSectionFullInclude },
-  reminderRules: {
-    where: { status: 'active' },
-    select: { id: true },
-    take: 1,
-  },
-} as const;
 
 @Injectable()
 export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
@@ -45,10 +40,27 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     return publishedReport?.id ?? null;
   }
 
-  async getWeeklyReport(reportId: string): Promise<WeeklyReportReadModel | null> {
+  async getWeeklyReport(
+    reportId: string,
+    session?: WeeklyReportScopeSession,
+  ): Promise<WeeklyReportReadModel | null> {
+    const sectionScope = scopeWhere(session, 'reportSection');
+    const userScope = scopeWhere(session, 'user');
+    const projectScope = scopeWhere(session, 'project');
+
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
-      include: reportFullInclude,
+      include: {
+        sections: {
+          ...(sectionScope ? { where: sectionScope } : {}),
+          include: reportSectionFullInclude,
+        },
+        reminderRules: {
+          where: { status: 'active' },
+          select: { id: true },
+          take: 1,
+        },
+      },
     });
 
     if (!report) {
@@ -56,12 +68,12 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     }
 
     const leadUsers = await this.prisma.user.findMany({
-      where: { role: 'lead' },
+      where: { role: 'lead', ...(userScope ?? {}) },
       select: { id: true },
     });
 
     const projects = await this.prisma.project.findMany({
-      where: { archived: false },
+      where: { archived: false, ...(projectScope ?? {}) },
       include: {
         stageAssignments: true,
       },
@@ -243,4 +255,22 @@ function buildEscalations(
   }
 
   return escalations;
+}
+
+/**
+ * UFB-040 / Phase 46-04: build a Prisma where fragment for the given scope
+ * target from the caller's session, or `undefined` when no filter applies
+ * (admin or no-session paths).
+ */
+function scopeWhere(
+  session: WeeklyReportScopeSession | undefined,
+  target: 'user' | 'reportSection' | 'project',
+): Record<string, unknown> | undefined {
+  if (!session) return undefined;
+  const scope = groupScopeFilter(
+    session as Parameters<typeof groupScopeFilter>[0],
+    target,
+  );
+  if (Object.keys(scope).length === 0) return undefined;
+  return scope;
 }
