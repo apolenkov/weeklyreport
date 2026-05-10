@@ -42,6 +42,11 @@ services:
       # provisioning folder as the ops dashboard so Grafana picks it up
       # on container start.
       - ./deploy/grafana/trpc-latency-dashboard.json:/var/lib/grafana/dashboards/customreport/trpc-latency-dashboard.json:ro
+      # Phase 52 (UFB-054): product-KPI dashboard. Provisioned under a
+      # separate folder ("Product KPIs") via deploy/grafana/provisioning/
+      # dashboards/product-telemetry.yml so the leadership audience does
+      # not have to dig under the engineering folder to find it.
+      - ./deploy/grafana/product-telemetry-dashboard.json:/var/lib/grafana/dashboards/customreport/product-telemetry-dashboard.json:ro
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
