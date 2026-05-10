@@ -61,8 +61,8 @@ const initialSnapshot: AdminSnapshot = {
 };
 
 // UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs.
+// UFB-047 / Phase 49-01: legacy `departmentName` field removed.
 const defaultSettings: AppSettings = {
-  departmentName: "Development",
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
   periodLengthDays: 7,
@@ -725,12 +725,10 @@ describe("AdminService — settings", () => {
   it("updates settings fully", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
     const result = await service.updateSettings({
-      departmentName: "NewDept",
       autoCreatePeriods: true,
       defaultDeadlineDays: 7,
     });
 
-    expect(result.departmentName).toBe("NewDept");
     expect(result.autoCreatePeriods).toBe(true);
     expect(result.defaultDeadlineDays).toBe(7);
   });
@@ -740,7 +738,6 @@ describe("AdminService — settings", () => {
 
     // First do a full update
     await service.updateSettings({
-      departmentName: "DeptA",
       autoCreatePeriods: true,
       defaultDeadlineDays: 10,
     });
@@ -750,7 +747,6 @@ describe("AdminService — settings", () => {
       defaultDeadlineDays: 3,
     });
 
-    expect(result.departmentName).toBe("DeptA");
     expect(result.autoCreatePeriods).toBe(true);
     expect(result.defaultDeadlineDays).toBe(3);
   });

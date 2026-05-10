@@ -66,8 +66,8 @@ const initialSnapshot: AdminSnapshot = {
 // UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs. The integration
 // fixture mirrors the SQL defaults so the in-memory repo round-trips identical
 // shape to the Prisma path.
+// UFB-047 / Phase 49-01: legacy `departmentName` field removed.
 const defaultSettings: AppSettings = {
-  departmentName: "Development",
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
   periodLengthDays: 7,
@@ -196,19 +196,6 @@ describe("AdminService — settings (integration)", () => {
     expect(result.autoPublishAfterDeadline).toBe(true);
     expect(result.autoArchiveWeeksAfterPublish).toBe(12);
     // legacy fields preserved
-    expect(result.departmentName).toBe("Development");
-    expect(result.defaultDeadlineDays).toBe(5);
-  });
-
-  it("updates departmentName and preserves other fields", async () => {
-    const service = new AdminService(createRepository(initialSnapshot));
-
-    const result = await service.updateSettings({
-      departmentName: "New Department",
-    });
-
-    expect(result.departmentName).toBe("New Department");
-    expect(result.autoCreatePeriods).toBe(false);
     expect(result.defaultDeadlineDays).toBe(5);
   });
 

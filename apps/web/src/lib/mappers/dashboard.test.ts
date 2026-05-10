@@ -64,7 +64,6 @@ function makeWeeklyReport(overrides: Partial<WeeklyReportReadModel> = {}): Weekl
     deadline: '2026-04-17T15:00:00.000Z',
     periodStatus: 'open',
     weekLabel: 'Week 16',
-    departmentName: 'Software Development',
     submissionCount: overrides.submissionCount ?? 4,
     totalLeads: overrides.totalLeads ?? 6,
     hasActiveReminderRule: overrides.hasActiveReminderRule ?? true,

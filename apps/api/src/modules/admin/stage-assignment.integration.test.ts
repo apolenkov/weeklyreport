@@ -46,8 +46,8 @@ const initialSnapshot: AdminSnapshot = {
 };
 
 // UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs.
+// UFB-047 / Phase 49-01: legacy `departmentName` field removed.
 const defaultSettings: AppSettings = {
-  departmentName: "Development",
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
   periodLengthDays: 7,

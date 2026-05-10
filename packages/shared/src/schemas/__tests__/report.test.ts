@@ -1063,34 +1063,14 @@ describe('versionSnapshotSchema', () => {
 describe('appSettingsSchema', () => {
   it('accepts valid settings', () => {
     const result = appSettingsSchema.safeParse({
-      departmentName: 'Development',
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
     });
     expect(result.success).toBe(true);
   });
 
-  it('rejects empty departmentName', () => {
-    const result = appSettingsSchema.safeParse({
-      departmentName: '',
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 5,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects departmentName exceeding 200 chars', () => {
-    const result = appSettingsSchema.safeParse({
-      departmentName: 'A'.repeat(201),
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 5,
-    });
-    expect(result.success).toBe(false);
-  });
-
   it('rejects defaultDeadlineDays below 1', () => {
     const result = appSettingsSchema.safeParse({
-      departmentName: 'Dept',
       autoCreatePeriods: true,
       defaultDeadlineDays: 0,
     });
@@ -1099,7 +1079,6 @@ describe('appSettingsSchema', () => {
 
   it('rejects defaultDeadlineDays above 30', () => {
     const result = appSettingsSchema.safeParse({
-      departmentName: 'Dept',
       autoCreatePeriods: true,
       defaultDeadlineDays: 31,
     });
@@ -1108,7 +1087,6 @@ describe('appSettingsSchema', () => {
 
   it('rejects non-boolean autoCreatePeriods', () => {
     const result = appSettingsSchema.safeParse({
-      departmentName: 'Dept',
       autoCreatePeriods: 'yes',
       defaultDeadlineDays: 5,
     });
@@ -1117,7 +1095,6 @@ describe('appSettingsSchema', () => {
 
   it('accepts max boundary values', () => {
     const result = appSettingsSchema.safeParse({
-      departmentName: 'A'.repeat(200),
       autoCreatePeriods: true,
       defaultDeadlineDays: 30,
     });
@@ -1126,13 +1103,13 @@ describe('appSettingsSchema', () => {
 
   // -------------------------------------------------------------------
   // UFB-048 (Phase 48-B): 9 new configurable fields. Each has `.default()`
-  // so the original 3-key fixture above still parses; these tests assert
+  // so the original 2-key fixture above still parses; these tests assert
   // the defaults are applied AND that the new constraints reject garbage.
+  // (Phase 49-01: legacy `departmentName` field removed from this schema.)
   // -------------------------------------------------------------------
 
   it('UFB-048: applies defaults for the 9 new fields when omitted', () => {
     const result = appSettingsSchema.safeParse({
-      departmentName: 'Development',
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
     });
@@ -1152,7 +1129,6 @@ describe('appSettingsSchema', () => {
   it('UFB-048: rejects periodLengthDays out of [1..31]', () => {
     expect(
       appSettingsSchema.safeParse({
-        departmentName: 'D',
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         periodLengthDays: 0,
@@ -1160,7 +1136,6 @@ describe('appSettingsSchema', () => {
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
-        departmentName: 'D',
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         periodLengthDays: 32,
@@ -1171,7 +1146,6 @@ describe('appSettingsSchema', () => {
   it('UFB-048: rejects unknown workingDays enum value', () => {
     expect(
       appSettingsSchema.safeParse({
-        departmentName: 'D',
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         workingDays: 'mon-thu',
@@ -1182,7 +1156,6 @@ describe('appSettingsSchema', () => {
   it('UFB-048: rejects gracePeriodHours out of [0..168]', () => {
     expect(
       appSettingsSchema.safeParse({
-        departmentName: 'D',
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         gracePeriodHours: -1,
@@ -1190,7 +1163,6 @@ describe('appSettingsSchema', () => {
     ).toBe(false);
     expect(
       appSettingsSchema.safeParse({
-        departmentName: 'D',
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         gracePeriodHours: 169,
@@ -1201,7 +1173,6 @@ describe('appSettingsSchema', () => {
   it('UFB-048: rejects autoArchiveWeeksAfterPublish > 52', () => {
     expect(
       appSettingsSchema.safeParse({
-        departmentName: 'D',
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         autoArchiveWeeksAfterPublish: 53,
@@ -1212,7 +1183,6 @@ describe('appSettingsSchema', () => {
   it('UFB-048: accepts notificationFromEmail null and a valid address', () => {
     expect(
       appSettingsSchema.safeParse({
-        departmentName: 'D',
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         notificationFromEmail: null,
@@ -1220,7 +1190,6 @@ describe('appSettingsSchema', () => {
     ).toBe(true);
     expect(
       appSettingsSchema.safeParse({
-        departmentName: 'D',
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         notificationFromEmail: 'reports@example.com',
@@ -1231,7 +1200,6 @@ describe('appSettingsSchema', () => {
   it('UFB-048: rejects malformed notificationFromEmail', () => {
     expect(
       appSettingsSchema.safeParse({
-        departmentName: 'D',
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         notificationFromEmail: 'not-an-email',
@@ -1242,7 +1210,6 @@ describe('appSettingsSchema', () => {
   it('UFB-048: rejects unknown defaultReminderAudience', () => {
     expect(
       appSettingsSchema.safeParse({
-        departmentName: 'D',
         autoCreatePeriods: false,
         defaultDeadlineDays: 5,
         defaultReminderAudience: 'everyone',
@@ -1288,7 +1255,6 @@ describe('weeklyReportReadModelSchema', () => {
     deadline: '2026-04-17T15:00:00.000Z',
     periodStatus: 'open' as const,
     weekLabel: 'W16-2026',
-    departmentName: 'Software Development',
     submissionCount: 3,
     totalLeads: 6,
     hasActiveReminderRule: true,

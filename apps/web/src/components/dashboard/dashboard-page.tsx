@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
 import { mapDashboardData } from "../../lib/mappers";
+import { SessionContext } from "../../lib/session-provider";
 import {
   formatClientErrorMessage,
   logClientError,
@@ -24,6 +25,11 @@ export const DASHBOARD_LOAD_STALL_MS = 8_000;
 export function DashboardPage() {
   const trpc = useTRPC();
   const [loadStalled, setLoadStalled] = useState(false);
+  // UFB-047 / Phase 49-01: brand label sourced from `auth.me.organization`
+  // (the singleton's `fullName`). Replaces the legacy
+  // `weeklyReport.get.departmentName` field that was dropped with the column.
+  const sessionState = useContext(SessionContext);
+  const orgFullName = sessionState?.organization?.fullName ?? null;
 
   const reviewQ = useQuery(trpc.review.dashboard.queryOptions());
   const archiveQ = useQuery(trpc.archive.list.queryOptions({ limit: 12 }));
@@ -233,7 +239,8 @@ export function DashboardPage() {
     weeklyReport: weeklyQ.data,
   });
   const { kpi, blockedAtRisk, pendingLeads } = dashboard;
-  const departmentLabel = weeklyQ.data.departmentName;
+  // UFB-047 / Phase 49-01: see `orgFullName` above.
+  const departmentLabel = orgFullName ?? "CustomReport";
   const canSendReminder =
     weeklyQ.data.periodStatus !== "published" &&
     weeklyQ.data.hasActiveReminderRule;

@@ -32,11 +32,22 @@ export interface LateLead {
   readonly deadlineIso: string;
 }
 
+/**
+ * UFB-047 / Phase 49-01: see {@link DeadlineEmailProps.organization} —
+ * brand strings now flow through the BullMQ payload instead of being
+ * hardcoded in the template.
+ */
+export interface OrganizationBrand {
+  shortName: string;
+  fullName: string;
+}
+
 export interface EscalationEmailProps {
   headName: string;
   cycleDate: string; // YYYY-MM-DD UTC
   reportPeriod: string; // human-readable e.g. "2026-04-13 → 2026-04-19"
   lateLeads: ReadonlyArray<LateLead>;
+  organization: OrganizationBrand;
 }
 
 export function EscalationEmail({
@@ -44,6 +55,7 @@ export function EscalationEmail({
   cycleDate,
   reportPeriod,
   lateLeads,
+  organization,
 }: EscalationEmailProps): React.ReactElement {
   return (
     <Html>
@@ -68,11 +80,11 @@ export function EscalationEmail({
                 ))}
               </ul>
             </Section>
-            {/* UFB-047 / Phase 48-A: brand footer — see deadline.template.tsx
-                for the rationale on the static default during this phase. */}
+            {/* UFB-047 / Phase 49-01: brand footer rendered from the
+                `organization` payload snapshotted at enqueue time. */}
             <Text className="text-sm text-gray-500">
-              Demo — Weekly status reporting for Example Software Department &amp;
-              Operations.
+              {organization.shortName} — Weekly status reporting for{' '}
+              {organization.fullName}.
             </Text>
           </Container>
         </Body>
@@ -93,7 +105,7 @@ export function escalationEmailPlaintext(props: EscalationEmailProps): string {
   }
   lines.push(
     '',
-    '— Demo (Weekly status reporting for Example Software Department)',
+    `— ${props.organization.shortName} (Weekly status reporting for ${props.organization.fullName})`,
   );
   return lines.join('\n');
 }

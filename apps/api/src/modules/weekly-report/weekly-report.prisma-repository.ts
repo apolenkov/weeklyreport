@@ -79,12 +79,9 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     ).length;
 
     const totalLeads = leadUsers.length;
-    const settings = await this.prisma.appSettings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton' },
-      update: {},
-      select: { departmentName: true },
-    });
+    // UFB-047 / Phase 49-01: brand label removed from the weekly read
+    // model. Frontends read `auth.me.organization.fullName` instead, so
+    // the API path no longer touches `AppSettings` here.
 
     // Phase 48-C (UFB-038): canSendReminder is now driven by ReminderPolicy
     // validity windows (Phase 44 model), not by legacy per-report
@@ -117,7 +114,6 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       deadline: report.deadline,
       periodStatus: report.periodStatus,
       weekLabel: report.weekLabel,
-      departmentName: settings.departmentName,
       submissionCount,
       totalLeads,
       hasActiveReminderRule: activePolicyCount > 0,

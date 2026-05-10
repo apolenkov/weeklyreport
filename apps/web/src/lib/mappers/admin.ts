@@ -20,8 +20,9 @@
  * - `weekLabel` is synthesized from `periodStart` (ISO week number).
  * - `adminReminderRuleSchema` has no name/description. We synthesize from `kind`
  *   and `fireAt`.
- * - `appSettingsSchema` is a 1:1 match for `MockSettings` (departmentName,
- *   autoCreatePeriods, defaultDeadlineDays).
+ * - `appSettingsSchema` is a 1:1 match for `MockSettings` (autoCreatePeriods,
+ *   defaultDeadlineDays + the UFB-048 knobs; UFB-047 Phase 49-01 dropped
+ *   the legacy `departmentName` field).
  */
 
 import type {
@@ -149,8 +150,9 @@ export type MockReminderPolicy = {
 // surfaced on the Periods / Reminders / Notifications sub-tabs. Field order
 // mirrors the tab layout for readability. The mapper below copies through 1:1
 // from the wire schema (`appSettingsSchema`).
+// UFB-047 / Phase 49-01: legacy `departmentName` removed alongside the
+// AppSettings column.
 export type MockSettings = {
-  departmentName: string;
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
   // Periods tab
@@ -335,12 +337,12 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
 
 /**
  * Translates `admin.getSettings` API output into the SettingsTab presentation
- * shape. Field-for-field copy — `appSettingsSchema` and `MockSettings` are
- * structurally identical at v5.0.
+ * shape. Field-for-field copy — `appSettingsSchema` and `MockSettings` stay
+ * structurally identical (Phase 49-01: `departmentName` dropped on both
+ * sides at the same time).
  */
 export function mapAdminSettings(api: AppSettings): MockSettings {
   return {
-    departmentName: api.departmentName,
     autoCreatePeriods: api.autoCreatePeriods,
     defaultDeadlineDays: api.defaultDeadlineDays,
     // UFB-048 (Phase 48-B): pass-through for the 9 new fields. The wire

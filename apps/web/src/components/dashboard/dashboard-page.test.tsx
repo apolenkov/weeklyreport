@@ -127,7 +127,7 @@ describe("DashboardPage loading guard", () => {
     });
     setQueryState("archive.list", { data: { items: [], nextCursor: null } });
     setQueryState("weeklyReport.get", {
-      data: { reportId: "report-1", departmentName: "Software Development" },
+      data: { reportId: "report-1" },
     });
 
     render(<DashboardPage />);

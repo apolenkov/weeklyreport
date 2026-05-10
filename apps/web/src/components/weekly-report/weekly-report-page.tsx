@@ -72,10 +72,9 @@ export function WeeklyReportPage({
   const qc = useQueryClient();
   const router = useRouter();
   const focusedAuthorId = authorId ?? null;
-  // UFB-047 / Phase 48-A: prefer the Organization singleton's fullName for
-  // the department label (the rendered PDF header reads this). Falls back
-  // to the legacy `weeklyReport.get.departmentName` when the session has
-  // no org (older JWT or PDF-worker session) so older payloads still work.
+  // UFB-047 / Phase 49-01: department label is the Organization singleton's
+  // `fullName`, hydrated per-request on `auth.me`. The legacy fallback to
+  // `weeklyReport.get.departmentName` was removed when the column dropped.
   const sessionState = useContext(SessionContext);
   const orgFullName = sessionState?.organization?.fullName ?? null;
 
@@ -192,10 +191,10 @@ export function WeeklyReportPage({
   // mock-data presentation types so children keep their imports unchanged.
   const portfolio: PortfolioProduct[] = view.portfolio as PortfolioProduct[];
   const products: ProductReport[] = view.products as ProductReport[];
-  // UFB-047 / Phase 48-A: department label prefers Organization.fullName.
-  // The weeklyReport.get.departmentName field still hangs around for the
-  // PDF-worker (synthetic session w/o org) and pre-48-A JWTs.
-  const departmentLabel = orgFullName ?? weeklyQ.data.departmentName;
+  // UFB-047 / Phase 49-01: department label is exclusively
+  // `auth.me.organization.fullName`. PDF-worker / non-session callers
+  // get a sensible default — the brand never blanks out.
+  const departmentLabel = orgFullName ?? "CustomReport";
 
   const hasReportContent = (report: ProductReport) =>
     Boolean(report.needsAttention) ||

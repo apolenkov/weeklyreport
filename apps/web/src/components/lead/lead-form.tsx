@@ -1252,7 +1252,7 @@ export function LeadForm({
 
           <div className="flex min-w-[220px] flex-1 items-center justify-center gap-2">
             <span className="text-sm text-[var(--color-muted-foreground)]">
-              {draftSection.departmentName ?? "Development"}
+              {sessionState?.organization?.shortName ?? "Development"}
             </span>
             <span className="text-[var(--color-muted-foreground)]">
               &middot;

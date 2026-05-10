@@ -847,16 +847,17 @@ async function main() {
   }
 
   // --- 8. AppSettings singleton ---
+  // UFB-047 / Phase 49-01: legacy `departmentName` field removed; brand
+  // identity is owned by the Organization singleton seeded a few lines
+  // below.
   await prisma.appSettings.upsert({
     where: { id: "singleton" },
     update: {
-      departmentName: "Software Development",
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
     },
     create: {
       id: "singleton",
-      departmentName: "Software Development",
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
     },

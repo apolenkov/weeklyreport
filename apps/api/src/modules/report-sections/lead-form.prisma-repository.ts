@@ -19,16 +19,10 @@ const MAX_SNAPSHOTS = 50;
 export class LeadFormPrismaRepository implements LeadFormRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async getDepartmentName(): Promise<string> {
-    const settings = await this.prisma.appSettings.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton" },
-      update: {},
-      select: { departmentName: true },
-    });
-
-    return settings.departmentName;
-  }
+  // UFB-047 / Phase 49-01: legacy `getDepartmentName()` removed. The
+  // section read model no longer carries a per-section brand label;
+  // frontends pull it from `auth.me.organization` (hydrated per
+  // request) so the source of truth is one row in `Organization`.
 
   async getSectionById(
     sectionId: string,
@@ -42,10 +36,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       return null;
     }
 
-    const section = mapPrismaToReportSection(
+    return mapPrismaToReportSection(
       row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
     );
-    return { ...section, departmentName: await this.getDepartmentName() };
   }
 
   async getSectionForPeriod(
@@ -67,7 +60,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     const section = mapPrismaToReportSection(
       row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
     );
-    const departmentName = await this.getDepartmentName();
 
     // readOnly when the period is not open (published periods are locked;
     // note: 'reopened' is treated as non-open per spec — callers may refine)
@@ -75,7 +67,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       (row as unknown as { report: { periodStatus: string } }).report
         .periodStatus !== "open";
 
-    return { section: { ...section, departmentName }, readOnly };
+    return { section, readOnly };
   }
 
   async revokeSectionSubmission(

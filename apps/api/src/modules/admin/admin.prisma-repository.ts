@@ -115,7 +115,6 @@ export class AdminPrismaRepository implements AdminRepository {
    * translated here (single boundary) so callers see only lowercase-hyphen.
    */
   private rowToAppSettings(row: {
-    departmentName: string;
     autoCreatePeriods: boolean;
     defaultDeadlineDays: number;
     periodLengthDays: number;
@@ -128,8 +127,12 @@ export class AdminPrismaRepository implements AdminRepository {
     autoPublishAfterDeadline: boolean;
     autoArchiveWeeksAfterPublish: number;
   }): AppSettings {
+    // UFB-047 / Phase 49-01: `departmentName` no longer flows through this
+    // mapper — the column is being dropped in the same migration that
+    // ships this code path. Brand identity lives on the `Organization`
+    // singleton (Identity tab in Settings) and is exposed via
+    // `OrganizationService` / `auth.me.organization`.
     return appSettingsSchema.parse({
-      departmentName: row.departmentName,
       autoCreatePeriods: row.autoCreatePeriods,
       defaultDeadlineDays: row.defaultDeadlineDays,
       periodLengthDays: row.periodLengthDays,
@@ -157,9 +160,9 @@ export class AdminPrismaRepository implements AdminRepository {
   async updateSettings(data: Partial<AppSettings>): Promise<AppSettings> {
     // UFB-048: translate enum fields explicitly (mon-fri → MON_FRI, etc.)
     // before handing the payload to Prisma. Other fields pass through.
+    // (UFB-047 / Phase 49-01: `departmentName` removed from the
+    // AppSettings shape — see `rowToAppSettings` for the rationale.)
     const dbData: Record<string, unknown> = {};
-    if (data.departmentName !== undefined)
-      dbData.departmentName = data.departmentName;
     if (data.autoCreatePeriods !== undefined)
       dbData.autoCreatePeriods = data.autoCreatePeriods;
     if (data.defaultDeadlineDays !== undefined)
