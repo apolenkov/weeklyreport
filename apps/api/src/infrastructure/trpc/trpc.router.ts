@@ -8,6 +8,7 @@ import {
   paginationInputSchema,
   adminUserSchema,
   adminProjectSchema,
+  groupProductEdgeInputSchema,
   reportingGroupSchema,
   reportPeriodSchema,
   adminReminderRuleSchema,
@@ -31,6 +32,7 @@ import {
   anyRoleProcedure,
 } from "./trpc.middleware.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
+import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 
 import type { PrismaClient } from "@prisma/client";
 import type { Queue } from "bullmq";
@@ -805,6 +807,59 @@ export function createAppRouter(deps: RouterDeps) {
         }
       }),
 
+      // -----------------------------------------------------------------
+      // UFB-054 (Phase 56-B): explicit Group ↔ Product M:M surface.
+      //
+      // Mutations are idempotent (attach upserts on the unique tuple;
+      // detach uses deleteMany so a double-click is harmless). Reads are
+      // straight findMany joins ordered by name. All four procedures are
+      // gated by adminProcedure — head/admin only, like saveProject and
+      // saveReportingGroup. The generic mutationAuditMiddleware captures
+      // the {procedure, targetId} envelope; no dedicated audit event is
+      // emitted yet (consistent with saveProject — added later only if
+      // SIEM needs the split).
+      // -----------------------------------------------------------------
+
+      attachProductToGroup: adminProcedure
+        .input(groupProductEdgeInputSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.attachProductToGroup(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      detachProductFromGroup: adminProcedure
+        .input(groupProductEdgeInputSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.detachProductFromGroup(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      listGroupProducts: adminProcedure
+        .input(z.object({ groupId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.adminService.listGroupProducts(input.groupId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      listProductGroups: adminProcedure
+        .input(z.object({ productId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.adminService.listProductGroups(input.productId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
       // NOTIF-06 (Phase 29-05): BullMQ DLQ count — failed-jobs set of the
       // email-reminder queue. adminProcedure (admin/head only — D-AUTH-03).
       // Returns { count: 0 } when the Queue handle is absent (e.g. unit test
@@ -984,7 +1039,7 @@ export function createAppRouter(deps: RouterDeps) {
             if (!req) throw new Error("Reopen request not found.");
             if (req.status !== "pending") throw new Error("Already processed.");
 
-            return await deps.prisma.$transaction(async (tx) => {
+            const result = await deps.prisma.$transaction(async (tx) => {
               await tx.reopenRequest.update({
                 where: { id: input.id },
                 data: {
@@ -1012,6 +1067,10 @@ export function createAppRouter(deps: RouterDeps) {
 
               return { success: true as const, decision: input.decision };
             });
+            // Phase 52-A (UFB-054): increment AFTER the transaction commits
+            // so a rolled-back decision does not skew the funnel.
+            customreportReopenRequestsTotal.inc({ state: input.decision });
+            return result;
           } catch (error) {
             throw mapDomainError(error);
           }
