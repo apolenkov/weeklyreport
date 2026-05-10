@@ -21,6 +21,9 @@ export type MockGroup = {
   name: string;
   description: string | null;
   archived: boolean;
+  // UFB-039: optional FK to a head/admin user (display name resolved via
+  // AdminSnapshot.users on the consumer side).
+  headUserId: string | null;
 };
 
 export const DEFAULT_GROUP_ID = "g1";
@@ -94,6 +97,7 @@ export const MOCK_GROUPS: MockGroup[] = [
     name: "Core Development",
     description: "Default reporting group",
     archived: false,
+    headUserId: null,
   },
 ];
 
