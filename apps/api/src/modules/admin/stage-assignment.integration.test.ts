@@ -47,6 +47,7 @@ const initialSnapshot: AdminSnapshot = {
 
 // UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs.
 // UFB-047 / Phase 49-01: legacy `departmentName` field removed.
+// UFB-051 (Phase 51-A): 8 new period-cycle knobs mirror SQL defaults.
 const defaultSettings: AppSettings = {
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
@@ -59,6 +60,14 @@ const defaultSettings: AppSettings = {
   allowLateSubmissions: true,
   autoPublishAfterDeadline: false,
   autoArchiveWeeksAfterPublish: 0,
+  firstDayOfWeek: 1,
+  deadlineDayOfWeek: 5,
+  deadlineTime: "18:00",
+  periodCadence: "weekly",
+  maxOpenPeriods: 1,
+  requireAllSectionsToPublish: true,
+  allowReopenAfterPublish: true,
+  reopenWindowHours: 72,
 };
 
 /* ------------------------------------------------------------------ */

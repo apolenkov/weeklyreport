@@ -79,6 +79,16 @@ const defaultSettings: AppSettings = {
   allowLateSubmissions: true,
   autoPublishAfterDeadline: false,
   autoArchiveWeeksAfterPublish: 0,
+  // UFB-051 (Phase 51-A): period-cycle knobs default to SQL defaults so
+  // the in-memory repo round-trips identical shape to the Prisma path.
+  firstDayOfWeek: 1,
+  deadlineDayOfWeek: 5,
+  deadlineTime: "18:00",
+  periodCadence: "weekly",
+  maxOpenPeriods: 1,
+  requireAllSectionsToPublish: true,
+  allowReopenAfterPublish: true,
+  reopenWindowHours: 72,
 };
 
 /* ------------------------------------------------------------------ */
@@ -217,6 +227,49 @@ describe("AdminService — settings (integration)", () => {
     });
 
     expect(result.defaultDeadlineDays).toBe(10);
+  });
+
+  // UFB-051 (Phase 51-A): round-trip the 8 new period-cycle knobs.
+  it("UFB-051: round-trips the 8 new period-cycle AppSettings fields", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+
+    const result = await service.updateSettings({
+      firstDayOfWeek: 7, // Sunday-first calendar
+      deadlineDayOfWeek: 4, // Thursday deadline
+      deadlineTime: "09:30",
+      periodCadence: "bi-weekly",
+      maxOpenPeriods: 3,
+      requireAllSectionsToPublish: false,
+      allowReopenAfterPublish: false,
+      reopenWindowHours: 24,
+    });
+
+    expect(result.firstDayOfWeek).toBe(7);
+    expect(result.deadlineDayOfWeek).toBe(4);
+    expect(result.deadlineTime).toBe("09:30");
+    expect(result.periodCadence).toBe("bi-weekly");
+    expect(result.maxOpenPeriods).toBe(3);
+    expect(result.requireAllSectionsToPublish).toBe(false);
+    expect(result.allowReopenAfterPublish).toBe(false);
+    expect(result.reopenWindowHours).toBe(24);
+    // legacy + 48-B fields preserved by the PATCH semantics
+    expect(result.defaultDeadlineDays).toBe(5);
+    expect(result.periodLengthDays).toBe(7);
+    expect(result.allowLateSubmissions).toBe(true);
+  });
+
+  it("UFB-051: returns defaults for the 8 new fields when nothing has been configured", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+    const result = await service.getSettings();
+
+    expect(result.firstDayOfWeek).toBe(1);
+    expect(result.deadlineDayOfWeek).toBe(5);
+    expect(result.deadlineTime).toBe("18:00");
+    expect(result.periodCadence).toBe("weekly");
+    expect(result.maxOpenPeriods).toBe(1);
+    expect(result.requireAllSectionsToPublish).toBe(true);
+    expect(result.allowReopenAfterPublish).toBe(true);
+    expect(result.reopenWindowHours).toBe(72);
   });
 
   it("admin router rejects non-head access to settings", async () => {
