@@ -294,6 +294,7 @@ model ReminderRule {
   report     Report?             @relation(fields: [reportId], references: [id])
   policy     ReminderPolicy?     @relation(fields: [policyId], references: [id])
 
+  @@unique([reportId, policyId], map: "uq_rule_report_policy")
   @@index([createdAt(sort: Desc)])
   @@index([status, fireAt])
   @@index([policyId])
