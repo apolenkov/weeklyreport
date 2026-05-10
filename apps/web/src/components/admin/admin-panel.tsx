@@ -10,6 +10,7 @@ import { mapAdminSnapshot, mapAdminSettings } from "../../lib/mappers";
 import { UsersTab } from "./users-tab";
 import { GroupsTab } from "./groups-tab";
 import { ProductsTab } from "./products-tab";
+import { PeriodsTab } from "./periods-tab";
 import { RemindersTab } from "./reminders-tab";
 import { SettingsTab } from "./settings-tab";
 import { ReopenTab } from "./reopen-tab";
@@ -108,6 +109,10 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
                 productFilter={productFilter}
               />
             )}
+            {/* UFB-052 (Phase 51-B): PeriodsTab owns its own queries
+                (admin.listPeriodsByState) so it pulls richer rows than
+                the shared admin snapshot can carry — no props needed. */}
+            {activeTab === "periods" && <PeriodsTab />}
             {activeTab === "reminders" && (() => {
               // UFB-036 (Phase 44-04): group rules by their owning policy
               // for the read-only expander on each policy row. Rules whose
@@ -134,7 +139,7 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
                 />
               );
             })()}
-            {!["users", "groups", "products", "reminders"].includes(
+            {!["users", "groups", "products", "periods", "reminders"].includes(
               activeTab,
             ) && <UsersTab users={data.users} groups={data.groups} />}
           </>
