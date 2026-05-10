@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 39,
+  "title": "Product KPIs — Demo CustomReport",
+  "uid": "product-telemetry",
+  "tags": ["customreport", "product", "kpi", "v8.1", "phase-52", "ufb-054"],
+  "timezone": "browser",
+  "refresh": "60s",
+  "time": { "from": "now-30d", "to": "now" },
+  "description": "Phase 52 (UFB-054) — leadership-readable KPIs distinct from the engineering telemetry on the tRPC Latency dashboard. Audience: head + admin + viewer. Source code: apps/api/src/infrastructure/metrics/metrics.registry.ts (customreport_* series).",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Reports submitted (weekly)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 7 },
+      "datasource": "Prometheus",
+      "description": "Volume of report transitions into the `published` state, bucketed by week. Manual + auto publishes aggregated together; combine with `publishedById` data in the app for the manual-vs-auto split.",
+      "targets": [
+        {
+          "expr": "sum(increase(customreport_reports_submitted_total{job=\"customreport-api\",state=\"published\"}[1w]))",
+          "legendFormat": "published / week"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "bars" }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "On-time ratio (last 4 published periods)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 7 },
+      "datasource": "Prometheus",
+      "description": "Fraction of submitted sections that landed on time (`late=false`) across the four most-recent published periods. Mirrors the `late` badge in the head dashboard. Green ≥ 80%, yellow 60-80%, red < 60%.",
+      "targets": [
+        {
+          "expr": "customreport_reports_on_time_ratio{job=\"customreport-api\"}",
+          "legendFormat": "on-time ratio"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.6 },
+              { "color": "green", "value": 0.8 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Active leads (last period)",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 7 },
+      "datasource": "Prometheus",
+      "description": "Distinct lead authors who submitted a section in the most recently published period. Engagement signal; pairs with publish volume to distinguish 'more leads' from 'same leads filing more often'.",
+      "targets": [
+        {
+          "expr": "customreport_active_leads_total{job=\"customreport-api\"}",
+          "legendFormat": "active leads"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Late vs on-time sections (7d rate)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 7, "w": 12, "h": 7 },
+      "datasource": "Prometheus",
+      "description": "Per-section submission rate, split by the on-time flag stamped at submit time. Stacked bars surface the share of late submissions across the rolling window.",
+      "targets": [
+        {
+          "expr": "sum by (late) (rate(customreport_sections_submitted_total{job=\"customreport-api\"}[7d]))",
+          "legendFormat": "late={{late}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" } }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Reopen request funnel (7d rate)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 7, "w": 12, "h": 7 },
+      "datasource": "Prometheus",
+      "description": "Three-stat funnel: requested / approved / rejected over the last 7 days. Demand (requested) vs head policy stance (approve/reject ratio). A spiking 'requested' with a stable 'approved' is a process signal — leads pushing back on the deadline.",
+      "targets": [
+        {
+          "expr": "sum by (state) (rate(customreport_reopen_requests_total{job=\"customreport-api\"}[7d]))",
+          "legendFormat": "{{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal"
+      }
+    },
+    {
+      "id": 6,
+      "title": "PDF exports by role (24h rate)",
+      "type": "piechart",
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "description": "PDF export requests grouped by requesting role over the last 24 hours. Healthy product sees viewer + head pulling exports; an unhealthy one sees only head pulling on behalf of the director.",
+      "targets": [
+        {
+          "expr": "sum by (role) (rate(customreport_pdf_export_requests_total{job=\"customreport-api\"}[1d]))",
+          "legendFormat": "{{role}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Section submission latency distribution (signed seconds)",
+      "type": "heatmap",
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+      "datasource": "Prometheus",
+      "description": "Heatmap of (deadline − submittedAt). Buckets to the left of 0 = submitted early; buckets to the right = late. A heavy left-side mass is healthy; a creeping right-side tail is the early warning for missed deadlines.",
+      "targets": [
+        {
+          "expr": "sum by (le) (rate(customreport_section_submission_latency_seconds_bucket{job=\"customreport-api\"}[7d]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    }
+  ]
+}
