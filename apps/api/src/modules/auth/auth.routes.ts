@@ -221,6 +221,10 @@ export async function buildUserSession(
     role: user.role,
     activeReportId: activeSection?.reportId ?? activeReport?.id ?? null,
     activeReportSectionId: activeSection?.id ?? null,
+    // UFB-040 / Phase 46-01: carry the user's owning ReportingGroup id in
+    // the JWT so groupScopeFilter does not need a Prisma lookup per request.
+    // viewer sessions still hydrate `viewerGroupAccess` lazily in trpc.context.
+    reportingGroupId: user.reportingGroupId ?? undefined,
   };
 }
 

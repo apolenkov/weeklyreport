@@ -13,6 +13,8 @@ next regression pass does not rediscover the same gaps from chat/screenshots.
   UFB-004 unauthenticated pages must redirect to landing/login, not skeleton hang
 
   P1
+  UFB-042 Leader dropdown in Admin → Groups does not persist selection
+  UFB-044 brand link in nav-bar must route to per-role home, not /head/dashboard
   UFB-010 empty products muted/collapsed/non-expandable in weekly report
   UFB-011 weekly/head layouts need top spacing; no header/content merging
   UFB-012 remove misleading Collapse/Toggle controls when content is empty
@@ -29,6 +31,7 @@ next regression pass does not rediscover the same gaps from chat/screenshots.
   UFB-030 base wipe mode for manual UAT
   UFB-031 Grafana/Prometheus/logging onboarding docs and dashboard links
   UFB-032 richer background/surface tokens and UI review batch
+  UFB-043 rebrand to "PULSE" + visual identity pass (frontend-design)
 ```
 
 ## Items
@@ -706,3 +709,87 @@ Status: done — 8774e53 (head → /head/dashboard, viewer → /reports?tab=publ
 
 Status: done — 0f8ef8f (disable auto-redirect in stub mode, CTA is the only
 explicit path).
+
+### UFB-042 - Leader dropdown in Admin → Groups does not save selection
+
+Status: open
+Priority: P1
+Source: user UAT 2026-05-10 ("Groups / 1 groups / Выбор лидера не работает")
+
+User signal: in `/admin` → Groups tab the new Leader `<select>` (added in UFB-039
+commit `082c4aa`) does not actually persist the chosen `headUserId` when the row
+is saved. Form may be missing the field in the submit payload, or the mapper
+strips it, or the upsert sees `headUserId: undefined` instead of the picked id.
+
+Expected: pick a head user from the dropdown → Save → row reloads with the
+selected leader displayed in the Leader column → DB row has matching
+`headUserId`.
+
+Actual: Save appears to succeed, but the Leader column reverts to "—" / empty
+and DB row keeps `headUserId: NULL`.
+
+Investigation hooks:
+
+- `apps/web/src/components/admin/groups-tab.tsx` — `<select>` value binding +
+  onChange + form payload assembly
+- `apps/web/src/lib/mappers/admin.ts` — `toReportingGroupInput()` should pass
+  `headUserId` through
+- `apps/api/src/modules/admin/admin.prisma-repository.ts:saveReportingGroup`
+  upsert should include `headUserId` in both create and update branches
+- tRPC mutation input zod schema (`packages/shared/src/schemas/report.ts`
+  `reportingGroupSchema`) — must accept `headUserId`
+
+Fix Phase: ad-hoc `quick` after Phase 46 completes (or earlier if user prefers).
+
+### UFB-044 - Brand link in nav-bar must route to per-role home
+
+Status: open
+Priority: P1
+Source: user UAT 2026-05-10 ("когда я кликаю на CustomReport в меню для
+админа меня переводят на http://localhost:3000/head/dashboard")
+
+User signal: clicking the brand wordmark in `nav-bar.tsx` always navigates to
+`/head/dashboard` regardless of session role. Admin sessions should not land
+on a head route. Each role needs its declared home.
+
+Required role → home mapping (canonical):
+
+| role   | home page                | rationale                                   |
+| ------ | ------------------------ | ------------------------------------------- |
+| admin  | `/admin`                 | admin panel is admin-only after UFB-038     |
+| head   | `/head/dashboard`        | submission dashboard is head's main surface |
+| lead   | `/lead/report`           | active section editor                       |
+| viewer | `/reports?tab=published` | published report list, no edit affordances  |
+
+Investigation hooks:
+
+- `apps/web/src/components/navigation/nav-bar.tsx` — brand link `<Link href="...">`
+- centralize the mapping in a shared util `apps/web/src/lib/role-home.ts` so
+  the dev-login redirect (UFB-034) and the brand link share the same source
+  of truth. Re-export from `@customreport/shared` if needed cross-package.
+
+Fix Phase: ad-hoc `quick` after Phase 46 lands (or sooner if stacking).
+
+### UFB-043 - Rebrand to "PULSE" + visual identity pass
+
+Status: open (backlog — explicitly not urgent per user 2026-05-10)
+Priority: P2
+Source: user 2026-05-10 ("давай назовём наше приложение PULSE? и какие-то
+эффекты на это сделаем"). Goal: replace "CustomReport" working name with
+"PULSE" brand, plus a small visual-identity pass (logo wordmark, accent
+animation, hero/landing flourish).
+
+Scope candidates (to be confirmed before exec):
+
+- wordmark "PULSE" in nav-bar + landing hero
+- subtle pulse / heartbeat animation on the brand mark (CSS keyframe)
+- favicon + meta tags
+- README + package.json display name (do NOT rename pnpm package ids — too
+  much churn for v8.1)
+- about/footer "Powered by PULSE"
+
+Phase candidate: new Phase 48 (Brand Identity) post-46/47, or fold into 47
+(presentation mode) since both are visual polish. Decide at planning time.
+Run via `/frontend-design` skill when promoted from backlog.
+
+NOT to do now: full rename of repo, package ids, ENV prefixes, log namespaces.

@@ -27,6 +27,24 @@ export const userSessionSchema = z.object({
   role: sessionRoleSchema,
   activeReportId: z.string().uuid().nullable().optional(),
   activeReportSectionId: z.string().uuid().nullable().optional(),
+  /**
+   * UFB-040 / Phase 46-01: the user's owning reporting group (mirrors
+   * `User.reportingGroupId` in Prisma). Optional on the session shape
+   * because (a) the PDF-export synthetic session has no group context,
+   * (b) legacy JWTs minted before Phase 46 do not carry it. Downstream
+   * consumers (groupScopeFilter) treat `undefined` as "no head/lead
+   * group context" and fall through to viewer-style empty filter.
+   */
+  reportingGroupId: z.string().uuid().optional(),
+  /**
+   * UFB-040 / Phase 46-01: list of `ReportingGroup.id` values the viewer
+   * has been granted access to via the `ViewerGroupAccess` join table.
+   * Hydrated in `trpc.context.ts` for viewer sessions ONLY (head/lead/
+   * admin do not use this list). Empty array is meaningful — it means
+   * the viewer has been provisioned but granted access to no groups,
+   * which `groupScopeFilter` translates into a zero-row filter.
+   */
+  viewerGroupAccess: z.array(z.string().uuid()).optional(),
 });
 
 /**

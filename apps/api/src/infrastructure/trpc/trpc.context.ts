@@ -103,8 +103,10 @@ export function createContextFactory(
     if (token) {
       try {
         const session = authController.verifySessionToken(token);
+        const resolved = await resolveSectionId(session, prisma);
+        const hydrated = await hydrateViewerGroupAccess(resolved, prisma);
         return {
-          session: await resolveSectionId(session, prisma),
+          session: hydrated,
           logger,
           correlationId,
           prisma,
@@ -158,8 +160,10 @@ export function createContextFactory(
     const allowTest =
       isNonProd && process.env["AUTH_DEV_MODE_ALLOW_TEST"] === "true";
     if (devModeEnabled || allowTest) {
+      const devResolved = await resolveSectionId({ ...DEV_SESSION }, prisma);
+      const devHydrated = await hydrateViewerGroupAccess(devResolved, prisma);
       return {
-        session: await resolveSectionId({ ...DEV_SESSION }, prisma),
+        session: devHydrated,
         logger,
         correlationId,
         prisma,
@@ -193,6 +197,27 @@ export function createContextFactory(
  * session keeps activeReportSectionId = null. That is correct -- head users
  * use the review.* endpoints which filter by reportId, not sectionId.
  */
+/**
+ * UFB-040 / Phase 46-01: viewer sessions need an up-to-date list of granted
+ * `ReportingGroup.id`s for groupScopeFilter. We hydrate per-request rather
+ * than baking into the JWT because admin can grant/revoke at any time and
+ * stale JWTs would leak (or block) access.
+ *
+ * No-op for non-viewer roles to keep the hot path cheap.
+ */
+async function hydrateViewerGroupAccess(
+  session: UserSession,
+  prisma: PrismaService,
+): Promise<UserSession> {
+  if (session.role !== "viewer") return session;
+  const grants = await prisma.viewerGroupAccess.findMany({
+    where: { viewerUserId: session.userId },
+    select: { groupId: true },
+  });
+  session.viewerGroupAccess = grants.map((g) => g.groupId);
+  return session;
+}
+
 async function resolveSectionId(
   session: UserSession,
   prisma: PrismaService,
