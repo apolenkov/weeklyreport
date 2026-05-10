@@ -9,6 +9,10 @@ import {
 } from '@customreport/shared';
 
 import { createNullLogger, type AppLogger } from '../../lib/logger';
+import {
+  customreportPeriodStateTransitionsTotal,
+  customreportReportsSubmittedTotal,
+} from '../../infrastructure/metrics/metrics.registry.js';
 
 export class PublicationAccessError extends Error {
   constructor(message: string) {
@@ -136,7 +140,7 @@ export class PublicationService {
     }
 
     this.logger.info('publishing report', { activeReportId, userId: session.userId });
-    return this.repository.saveAssembledReport(
+    const saved = await this.repository.saveAssembledReport(
       assembledReportSchema.parse({
         ...report,
         status: 'published',
@@ -145,6 +149,12 @@ export class PublicationService {
         publishedByName: session.name,
       }),
     );
+    // Phase 52-A: product telemetry. Emit only after the write succeeds —
+    // a failed save would otherwise inflate the counter and corrupt the
+    // on-time ratio numerator at the next gauge scrape.
+    customreportReportsSubmittedTotal.inc({ state: 'published' });
+    customreportPeriodStateTransitionsTotal.inc({ from: 'open', to: 'published' });
+    return saved;
   }
 
   /**
@@ -170,7 +180,7 @@ export class PublicationService {
     }
 
     this.logger.info('auto-publishing report', { activeReportId });
-    return this.repository.saveAssembledReport(
+    const saved = await this.repository.saveAssembledReport(
       assembledReportSchema.parse({
         ...report,
         status: 'published',
@@ -179,5 +189,12 @@ export class PublicationService {
         publishedByName: 'system',
       }),
     );
+    // Phase 52-A: same telemetry as publishReport. Same `state` label so
+    // ops can aggregate without `or` predicates — the manual-vs-auto
+    // distinction is recovered by the period_state_transitions_total
+    // panel paired with publishedById nullness.
+    customreportReportsSubmittedTotal.inc({ state: 'published' });
+    customreportPeriodStateTransitionsTotal.inc({ from: 'open', to: 'published' });
+    return saved;
   }
 }

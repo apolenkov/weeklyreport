@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { AssembledReport, DraftSavePayload, UserSession } from '@customreport/shared';
 
+import {
+  customreportPeriodStateTransitionsTotal,
+  customreportReportsSubmittedTotal,
+} from '../../infrastructure/metrics/metrics.registry.js';
+
 import { publicationRouter } from './publication.router';
 import {
   PublicationAccessError,
@@ -248,7 +253,78 @@ describe('PublicationService', () => {
     // re-stamp a new Date(); idempotent means "no write".
     expect(second.publishedAt).toEqual(first.publishedAt);
   });
+
+  // Phase 52-A (UFB-054): product-telemetry counters bump exactly once per
+  // successful publish, for both the manual and auto paths. Both paths use
+  // `state='published'` so the funnel rolls up cleanly.
+  it('publishReport increments product KPI counters once on success', async () => {
+    const service = new PublicationService(createRepository(assembledReport));
+    const submittedBefore = await getCounterValue(
+      customreportReportsSubmittedTotal,
+      { state: 'published' },
+    );
+    const transitionsBefore = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: 'open', to: 'published' },
+    );
+
+    await service.publishReport(reportId, headSession);
+
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: 'published',
+      }),
+    ).toBe(submittedBefore + 1);
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: 'open',
+        to: 'published',
+      }),
+    ).toBe(transitionsBefore + 1);
+  });
+
+  it('publishAuto increments product KPI counters once on success', async () => {
+    const service = new PublicationService(createRepository(assembledReport));
+    const submittedBefore = await getCounterValue(
+      customreportReportsSubmittedTotal,
+      { state: 'published' },
+    );
+    const transitionsBefore = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: 'open', to: 'published' },
+    );
+
+    await service.publishAuto(reportId);
+
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: 'published',
+      }),
+    ).toBe(submittedBefore + 1);
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: 'open',
+        to: 'published',
+      }),
+    ).toBe(transitionsBefore + 1);
+  });
 });
+
+/**
+ * Helper for prom-client Counter introspection in unit tests. Avoids
+ * leaking prom-client internals into every test file: the registry tracks
+ * (labels → value) pairs and we just find the matching tuple.
+ */
+async function getCounterValue(
+  counter: { get(): Promise<{ values: { value: number; labels: Record<string, string> }[] }> },
+  labels: Record<string, string>,
+): Promise<number> {
+  const snapshot = await counter.get();
+  const match = snapshot.values.find((entry) =>
+    Object.entries(labels).every(([k, v]) => entry.labels[k] === v),
+  );
+  return match?.value ?? 0;
+}
 
 describe('publicationRouter', () => {
   it('allows a head session to read the assembled report', async () => {
