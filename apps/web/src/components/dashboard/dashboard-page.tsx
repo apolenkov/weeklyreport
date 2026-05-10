@@ -14,6 +14,7 @@ import {
 } from "../../lib/client-error-reporting";
 
 import { KpiCards } from "./kpi-cards";
+import { ProductKpiCard } from "./product-kpi-card";
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import { ReportArchiveSection } from "./report-archive-section";
@@ -275,6 +276,13 @@ export function DashboardPage() {
 
       {/* KPI Cards */}
       <KpiCards data={kpi} />
+
+      {/* Phase 52 (UFB-054): product-KPI card — leadership-readable
+          numbers backed by telemetry.summary. Pulls its own data and
+          self-gates: lead role renders null. The head dashboard is
+          already head/admin-only, but the role gate is defence-in-depth
+          for when this card moves to a viewer-accessible surface. */}
+      <ProductKpiCard role={sessionState?.user?.role ?? null} />
 
       {/* Alert bar for pending leads */}
       <AlertBar
