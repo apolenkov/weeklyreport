@@ -68,8 +68,11 @@ export function EscalationEmail({
                 ))}
               </ul>
             </Section>
+            {/* UFB-047 / Phase 48-A: brand footer — see deadline.template.tsx
+                for the rationale on the static default during this phase. */}
             <Text className="text-sm text-gray-500">
-              CustomReport — Weekly status reporting for CoreDev.
+              PEO — Weekly status reporting for Product Engineering &amp;
+              Operations.
             </Text>
           </Container>
         </Body>
@@ -88,6 +91,9 @@ export function escalationEmailPlaintext(props: EscalationEmailProps): string {
   for (const lead of props.lateLeads) {
     lines.push(`  - ${lead.leadName} — ${lead.sectionTitle} (deadline ${lead.deadlineIso})`);
   }
-  lines.push('', '— CustomReport (Weekly status reporting for CoreDev)');
+  lines.push(
+    '',
+    '— PEO (Weekly status reporting for Product Engineering & Operations)',
+  );
   return lines.join('\n');
 }

@@ -17,6 +17,7 @@ import { ReportSectionsModule } from './modules/report-sections/report-sections.
 import { PublicationModule } from './modules/publication/publication.module';
 import { CarryOverModule } from './modules/carry-over/carry-over.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { OrganizationModule } from './modules/organization/organization.module';
 import { PeriodModule } from './modules/period/period.module';
 import { WeeklyReportModule } from './modules/weekly-report/weekly-report.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
@@ -56,6 +57,7 @@ import { assertNoDevAuthInProduction } from './lib/dev-auth-fence';
     PublicationModule,
     CarryOverModule,
     AdminModule,
+    OrganizationModule,
     AnalyticsModule,
     AiModule,
     SearchModule,

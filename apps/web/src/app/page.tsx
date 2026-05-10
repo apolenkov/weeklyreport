@@ -80,6 +80,15 @@ function LoginPageBody() {
   const session = sessionQ.data ?? null;
   const sessionLoading = sessionQ.isLoading;
 
+  // UFB-047 / Phase 48-A: organization identity for the landing hero.
+  // `org.getPublic` is a publicProcedure so the anonymous landing page
+  // can fetch it without a session. On failure (offline / first-boot)
+  // we fall back to the seeded PEO identity so the chrome is never empty.
+  const orgQ = useQuery(trpc.org.getPublic.queryOptions());
+  const orgShortName = orgQ.data?.shortName ?? 'PEO';
+  const orgFullName =
+    orgQ.data?.fullName ?? 'Product Engineering & Operations';
+
   const stayOnLanding = searchParams?.get('stay') === '1';
   const safeNext = sanitizeNext(
     searchParams?.get('next') ?? null,
@@ -127,10 +136,10 @@ function LoginPageBody() {
             className="font-[family-name:var(--font-sans)] text-[56px] font-extrabold leading-none tracking-[0.08em]"
             style={{ textShadow: '0 2px 20px rgba(0,0,0,0.15)' }}
           >
-            PEO
+            {orgShortName}
           </div>
           <div className="mb-8 mt-3 text-sm font-normal uppercase tracking-[0.16em] text-white/70">
-            Product Engineering &amp; Operations
+            {orgFullName}
           </div>
           <div className="mx-auto mb-8 h-0.5 w-16 rounded-full bg-[var(--color-starbucks-gold)]" />
           <p className="mx-auto max-w-xs text-lg leading-relaxed text-white/60">
@@ -145,7 +154,7 @@ function LoginPageBody() {
       <div className="relative flex w-full flex-col items-center justify-center bg-white px-6 sm:px-10 lg:w-[480px] lg:flex-none">
         <div className="w-full max-w-[320px] text-center">
           <h1 className="font-[family-name:var(--font-sans)] text-[32px] font-bold tracking-[-0.02em] text-[var(--color-primary)]">
-            CustomReport
+            {orgShortName}
           </h1>
           <p className="mb-10 mt-2 text-[15px] text-[var(--color-muted-foreground)]">
             Weekly Status Reporting System
@@ -192,7 +201,7 @@ function LoginPageBody() {
           <div className="mx-auto my-10 h-px w-full max-w-[320px] bg-[#ece8e2]" />
 
           <p className="text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
-            CoreDev Department · v8.0
+            {orgFullName} · v8.0
           </p>
         </div>
       </div>

@@ -43,6 +43,7 @@ import { ReviewService } from './modules/review/review.service';
 import { PublicationService } from './modules/publication/publication.service';
 import { PdfExportService } from './modules/pdf-export/pdf-export.service';
 import { AdminService } from './modules/admin/admin.service';
+import { OrganizationService } from './modules/organization/organization.service';
 import { RemindersService } from './modules/reminders/reminders.service';
 import { CarryOverService } from './modules/carry-over/carry-over.service';
 import { ArchiveService } from './modules/archive/archive.service';
@@ -258,6 +259,7 @@ async function bootstrap() {
     publicationService: app.get(PublicationService),
     pdfExportService: app.get(PdfExportService),
     adminService: app.get(AdminService),
+    organizationService: app.get(OrganizationService),
     remindersService: app.get(RemindersService),
     carryOverService: app.get(CarryOverService),
     archiveService: app.get(ArchiveService),

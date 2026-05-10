@@ -49,6 +49,9 @@ describe('SessionProvider + useSession', () => {
 
     expect(result.current).toEqual({
       user: null,
+      // UFB-047 / Phase 48-A: SessionState exposes an `organization` slot
+      // hydrated from the API. Loading/unauthenticated states carry null.
+      organization: null,
       isLoading: true,
       isAuthenticated: false,
     });
@@ -79,6 +82,31 @@ describe('SessionProvider + useSession', () => {
     });
   });
 
+  it('hydrates organization onto SessionState when auth.me carries it (UFB-047)', () => {
+    useQueryMock.mockReturnValue({
+      data: {
+        userId: 'a0000000-0000-4000-8000-000000000099',
+        email: 'head@customreport.local',
+        name: 'Department Head',
+        role: 'head',
+        activeReportId: 'a0000000-0000-4000-8000-000000000001',
+        activeReportSectionId: null,
+        organization: {
+          shortName: 'PEO',
+          fullName: 'Product Engineering & Operations',
+        },
+      },
+      isLoading: false,
+    });
+
+    const { result } = renderHook(() => useSession(), { wrapper });
+
+    expect(result.current.organization).toEqual({
+      shortName: 'PEO',
+      fullName: 'Product Engineering & Operations',
+    });
+  });
+
   it('returns unauthenticated state when auth.me resolves with null', () => {
     useQueryMock.mockReturnValue({ data: null, isLoading: false });
 
@@ -86,6 +114,7 @@ describe('SessionProvider + useSession', () => {
 
     expect(result.current).toEqual({
       user: null,
+      organization: null,
       isLoading: false,
       isAuthenticated: false,
     });

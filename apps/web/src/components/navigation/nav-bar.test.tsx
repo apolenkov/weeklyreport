@@ -51,12 +51,22 @@ function setRole(role: Role | null): void {
   if (role === null) {
     useSessionMock.mockReturnValue({
       user: null,
+      // UFB-047 / Phase 48-A: nav-bar consumes `organization.shortName`.
+      // For the "unauthenticated" case there is no session and thus no
+      // org — the consumer falls back to the seeded 'PEO' default.
+      organization: null,
       isLoading: true,
       isAuthenticated: false,
     });
   } else {
     useSessionMock.mockReturnValue({
       user: { id: "u1", name: "Test User", email: "t@test.local", role },
+      // UFB-047 / Phase 48-A: realistic org hydration so the nav-bar
+      // renders the brand strings consistently with the runtime.
+      organization: {
+        shortName: "PEO",
+        fullName: "Product Engineering & Operations",
+      },
       isLoading: false,
       isAuthenticated: true,
     });

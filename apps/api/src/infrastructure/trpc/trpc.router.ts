@@ -18,6 +18,7 @@ import {
   periodComparisonInputSchema,
   searchQueryInputSchema,
   queueNameSchema,
+  organizationUpdateSchema,
 } from "@customreport/shared";
 
 import {
@@ -38,6 +39,7 @@ import type { ReviewService } from "../../modules/review/review.service.js";
 import type { PublicationService } from "../../modules/publication/publication.service.js";
 import type { PdfExportService } from "../../modules/pdf-export/pdf-export.service.js";
 import type { AdminService } from "../../modules/admin/admin.service.js";
+import type { OrganizationService } from "../../modules/organization/organization.service.js";
 import type { JobsService } from "../../modules/admin/jobs.service.js";
 import type { RemindersService } from "../../modules/reminders/reminders.service.js";
 import type { CarryOverService } from "../../modules/carry-over/carry-over.service.js";
@@ -65,6 +67,17 @@ type RouterDeps = {
   publicationService: PublicationService;
   pdfExportService: PdfExportService;
   adminService: AdminService;
+  /**
+   * UFB-047 / Phase 48-A: organization identity surface.
+   *  - `org.getPublic` (publicProcedure) reads shortName/fullName for the
+   *    anonymous landing hero.
+   *  - `admin.getOrganization` / `admin.updateOrganization` manage the
+   *    singleton row from the Settings → Identity tab.
+   * Optional so existing role-coverage test fixtures that build the
+   * router with `{}` deps keep compiling — those tests stub the entire
+   * `deps` argument and never exercise the org.* paths.
+   */
+  organizationService?: OrganizationService;
   remindersService: RemindersService;
   carryOverService: CarryOverService;
   archiveService: ArchiveService;
@@ -121,7 +134,34 @@ export function createAppRouter(deps: RouterDeps) {
         // Returning null lets the client distinguish "loaded, no session"
         // from "still loading" without throwing — preventing the 401
         // interceptor from triggering an immediate redirect on every load.
+        //
+        // UFB-047 / Phase 48-A: `session.organization` is hydrated by the
+        // context factory (mirrors viewerGroupAccess pattern) so the web
+        // chrome can render the brand without a second round-trip.
         return ctx.session;
+      }),
+    }),
+
+    // === Organization namespace (UFB-047 / Phase 48-A) ===
+    // Public read-only surface for the anonymous landing page. Returns
+    // only the `{ shortName, fullName }` pair — no timestamps, no ids —
+    // so future schema fields cannot leak unintentionally to the public.
+    org: router({
+      getPublic: publicProcedure.query(async () => {
+        try {
+          if (!deps.organizationService) {
+            // Fallback for in-memory test fixtures that don't wire the
+            // service. Mirrors the seed/migration defaults so the landing
+            // page never renders empty even in degraded test contexts.
+            return {
+              shortName: "PEO",
+              fullName: "Product Engineering & Operations",
+            };
+          }
+          return await deps.organizationService.getPublic();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
       }),
     }),
 
@@ -410,6 +450,66 @@ export function createAppRouter(deps: RouterDeps) {
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.updateSettings(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-047 / Phase 48-A: read the singleton `Organization` row for
+       * the Settings → Identity tab. The full row (including timestamps)
+       * is returned so the admin form can show a "last updated" hint;
+       * the public landing page uses `org.getPublic` instead.
+       */
+      getOrganization: adminProcedure.query(async () => {
+        try {
+          if (!deps.organizationService) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message:
+                "OrganizationService is not wired into the tRPC router.",
+            });
+          }
+          return await deps.organizationService.getOrganization();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      /**
+       * UFB-047 / Phase 48-A: update the singleton `Organization` row.
+       * Emits the dedicated `admin.organization.update` audit event in
+       * addition to the generic `mutation` envelope so SIEM rules and
+       * brand-tampering dashboards can filter on `event` without parsing
+       * the procedure string. The before-state is read inside the same
+       * call (small extra query) so the audit line carries both the
+       * previous and the new identity.
+       */
+      updateOrganization: adminProcedure
+        .input(organizationUpdateSchema)
+        .mutation(async ({ ctx, input }) => {
+          try {
+            if (!deps.organizationService) {
+              throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message:
+                  "OrganizationService is not wired into the tRPC router.",
+              });
+            }
+            const previous = await deps.organizationService.getOrganization();
+            const next = await deps.organizationService.updateOrganization(
+              input,
+            );
+            ctx.auditLogger.organizationUpdate({
+              userId: ctx.session?.userId ?? "anonymous",
+              role: ctx.session?.role ?? null,
+              ip: ctx.ip,
+              previousShortName: previous.shortName,
+              previousFullName: previous.fullName,
+              nextShortName: next.shortName,
+              nextFullName: next.fullName,
+            });
+            return next;
           } catch (error) {
             throw mapDomainError(error);
           }

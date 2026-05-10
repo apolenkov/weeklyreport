@@ -183,7 +183,7 @@ function NavIcon({ href }: { readonly href: string }) {
 export function NavBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user } = useSession();
+  const { user, organization } = useSession();
   const activeReportsTab = searchParams.get("tab") ?? null;
 
   const role: Role | null = user?.role ?? null;
@@ -196,22 +196,43 @@ export function NavBar() {
   // (legacy seed quirk), show only the name to avoid "X · X".
   const nameRoleSame = user ? user.name === roleLabel : false;
 
+  // UFB-047 / Phase 48-A: brand strings sourced from the Organization
+  // singleton. The session may briefly lack `organization` during the first
+  // paint after Phase 48-A deploys (older JWTs); falling back to 'PEO' keeps
+  // the chrome stable in that window.
+  const orgShortName = organization?.shortName ?? "PEO";
+  // First letter of each word in shortName (up to 2 chars) for the round
+  // monogram badge. For a 2-3-letter shortName like 'PEO' the monogram is
+  // 'DT' / 'PE' — visually consistent with the legacy 'CR' monogram.
+  const orgMonogram =
+    orgShortName.length <= 2
+      ? orgShortName.toUpperCase()
+      : orgShortName
+          .split(/\s+/)
+          .map((w) => w.charAt(0))
+          .join("")
+          .slice(0, 2)
+          .toUpperCase() || orgShortName.slice(0, 2).toUpperCase();
+
   return (
     <header className="w-full bg-[var(--color-card)]" data-testid="nav-bar">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo — N-1: monogram "CR" on tealA */}
+        {/* Logo — N-1: monogram on tealA. UFB-047 (Phase 48-A): the
+            brand text and monogram are sourced from the Organization
+            singleton (`session.organization.shortName`), falling back to
+            the seeded 'PEO' identity. */}
         <a
           href={role ? getLogoHref(role) : "/"}
           className="flex items-center gap-2.5 py-4"
-          aria-label="CustomReport home"
+          aria-label={`${orgShortName} home`}
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)]">
             <span className="font-[family-name:var(--font-sans)] text-[13px] font-bold tracking-tight text-white">
-              CR
+              {orgMonogram}
             </span>
           </div>
           <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-tight text-[var(--color-foreground)]">
-            CustomReport
+            {orgShortName}
           </span>
         </a>
 

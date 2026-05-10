@@ -38,6 +38,8 @@ function makeAuditSpy(): {
     // wiring), but the mock has to satisfy the AuditLogger interface.
     policySave: vi.fn(),
     policyRemove: vi.fn(),
+    // UFB-047 / Phase 48-A: organizationUpdate not exercised here either.
+    organizationUpdate: vi.fn(),
   };
   return { audit, mutation };
 }

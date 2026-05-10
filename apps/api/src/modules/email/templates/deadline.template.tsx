@@ -55,8 +55,14 @@ export function DeadlineEmail({
                 Open my section
               </Button>
             </Section>
+            {/* UFB-047 / Phase 48-A: brand footer sourced from the
+                Organization singleton's seeded identity. The template
+                renderer does not yet thread the org row through (kept as
+                a follow-up for Phase 48-B once the BullMQ payload carries
+                it), so we render the static default here. */}
             <Text className="text-sm text-gray-500">
-              CustomReport — Weekly status reporting for CoreDev.
+              PEO — Weekly status reporting for Product Engineering &amp;
+              Operations.
             </Text>
           </Container>
         </Body>
@@ -73,6 +79,6 @@ export function deadlineEmailPlaintext(props: DeadlineEmailProps): string {
     '',
     `Open your section: ${props.sectionUrl}`,
     '',
-    '— CustomReport (Weekly status reporting for CoreDev)',
+    '— PEO (Weekly status reporting for Product Engineering & Operations)',
   ].join('\n');
 }

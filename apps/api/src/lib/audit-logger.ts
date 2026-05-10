@@ -31,7 +31,8 @@ export type AuditEvent =
   | 'scope-denied'
   | 'mutation'
   | 'admin.policy.save'
-  | 'admin.policy.remove';
+  | 'admin.policy.remove'
+  | 'admin.organization.update';
 
 export type AuditEnvelope = {
   readonly event: AuditEvent;
@@ -103,6 +104,20 @@ type PolicyRemoveInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
   readonly policyId: string;
 };
 
+/**
+ * UFB-047 / Phase 48-A: emitted on every successful admin update of the
+ * `Organization` singleton (shortName/fullName change). Carries the
+ * before/after values so SIEM rules and dashboards can audit brand
+ * tampering — relevant because the same row drives the landing hero,
+ * nav-bar, and PDF/email headers.
+ */
+type OrganizationUpdateInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly previousShortName: string;
+  readonly previousFullName: string;
+  readonly nextShortName: string;
+  readonly nextFullName: string;
+};
+
 export interface AuditLogger {
   loginSuccess(input: LoginSuccessInput): void;
   loginFail(input: LoginFailInput): void;
@@ -112,6 +127,7 @@ export interface AuditLogger {
   mutation(input: MutationInput): void;
   policySave(input: PolicySaveInput): void;
   policyRemove(input: PolicyRemoveInput): void;
+  organizationUpdate(input: OrganizationUpdateInput): void;
 }
 
 const AUDIT_MESSAGE = 'audit';
@@ -205,6 +221,18 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         policyId: input.policyId,
       });
     },
+    organizationUpdate(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'admin.organization.update',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        previousShortName: input.previousShortName,
+        previousFullName: input.previousFullName,
+        nextShortName: input.nextShortName,
+        nextFullName: input.nextFullName,
+      });
+    },
   };
 }
 
@@ -233,6 +261,9 @@ export function createNullAuditLogger(): AuditLogger {
       /* noop */
     },
     policyRemove() {
+      /* noop */
+    },
+    organizationUpdate() {
       /* noop */
     },
   };
