@@ -47,6 +47,16 @@ function makeStubTrpc(): TRPCProxy {
     admin: {
       snapshot: { pathFilter: () => ({ tag: 'admin.snapshot' }) },
       getSettings: { pathFilter: () => ({ tag: 'admin.getSettings' }) },
+      // UFB-047 / Phase 48-A: invalidateAdmin also flushes the org caches
+      // so brand renames propagate immediately after a Save in the
+      // Identity tab.
+      getOrganization: { pathFilter: () => ({ tag: 'admin.getOrganization' }) },
+    },
+    auth: {
+      me: { pathFilter: () => ({ tag: 'auth.me' }) },
+    },
+    org: {
+      getPublic: { pathFilter: () => ({ tag: 'org.getPublic' }) },
     },
   } as unknown as TRPCProxy;
 }
@@ -89,14 +99,22 @@ describe('cache-keys helpers', () => {
     expect(spy.mock.calls[0]?.[0]).toEqual({ tag: 'reports.myHistory' });
   });
 
-  it('invalidateAdmin targets admin.snapshot + admin.getSettings', () => {
+  it('invalidateAdmin targets admin.snapshot + admin.getSettings + org caches (UFB-047)', () => {
     const qc = new QueryClient();
     const spy = vi.spyOn(qc, 'invalidateQueries').mockReturnValue(Promise.resolve());
     invalidateAdmin(qc, makeStubTrpc());
 
     const tags = spy.mock.calls.map((c) => (c[0] as { tag?: string })?.tag);
     expect(tags).toEqual(
-      expect.arrayContaining(['admin.snapshot', 'admin.getSettings']),
+      expect.arrayContaining([
+        'admin.snapshot',
+        'admin.getSettings',
+        // UFB-047 / Phase 48-A: brand rename must invalidate the org
+        // caches and the auth.me session so the chrome refreshes.
+        'admin.getOrganization',
+        'org.getPublic',
+        'auth.me',
+      ]),
     );
   });
 });

@@ -25,7 +25,7 @@ type AdminTab =
 
 const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
   { value: "users", label: "Users" },
-  { value: "groups", label: "Groups" },
+  { value: "groups", label: "Departments" },
   { value: "products", label: "Products" },
   { value: "reminders", label: "Reminders" },
   { value: "reopen", label: "Reopen" },

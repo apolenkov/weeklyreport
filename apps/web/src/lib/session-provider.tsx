@@ -27,8 +27,19 @@ export type SessionUser = {
   role: 'lead' | 'head' | 'viewer' | 'admin';
 };
 
+/**
+ * UFB-047 / Phase 48-A: organization identity hydrated by the API on the
+ * `auth.me` response. The nav-bar consumes `organization.shortName` for
+ * the brand string; anonymous pages (landing) use `org.getPublic` instead.
+ */
+export type SessionOrganization = {
+  shortName: string;
+  fullName: string;
+};
+
 export type SessionState = {
   user: SessionUser | null;
+  organization: SessionOrganization | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 };
@@ -48,6 +59,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // data === null     → resolved unauthenticated
       return {
         user: null,
+        organization: null,
         isLoading,
         isAuthenticated: false,
       };
@@ -59,6 +71,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         email: data.email,
         role: data.role,
       },
+      // UFB-047 / Phase 48-A: `auth.me` carries the org identity hydrated
+      // per-request by the tRPC context factory. Older JWTs minted before
+      // Phase 48-A still verify (the field is optional in the schema), so
+      // the consumer must handle `organization === null` gracefully.
+      organization: data.organization
+        ? {
+            shortName: data.organization.shortName,
+            fullName: data.organization.fullName,
+          }
+        : null,
       isLoading: false,
       isAuthenticated: true,
     };

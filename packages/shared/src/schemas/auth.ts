@@ -45,6 +45,25 @@ export const userSessionSchema = z.object({
    * which `groupScopeFilter` translates into a zero-row filter.
    */
   viewerGroupAccess: z.array(z.string().uuid()).optional(),
+  /**
+   * UFB-047 / Phase 48-A: organization identity hydrated per-request from
+   * the `Organization` singleton in the tRPC context factory. Optional on
+   * the schema for two reasons:
+   *   1. JWT payloads (signed by createJwtSigner) do NOT carry it — so a
+   *      JWT minted before Phase 48-A still verifies and the context
+   *      factory fills the field after `verifySession`. Baking the field
+   *      into the JWT would invalidate every in-flight cookie on deploy
+   *      and would also stale-cache admin renames until next login.
+   *   2. The PDF-export synthetic session does not need it; the worker
+   *      reads the singleton directly when stamping the report header.
+   * Mirrors the `viewerGroupAccess` hydration pattern.
+   */
+  organization: z
+    .object({
+      shortName: z.string().min(1).max(16),
+      fullName: z.string().min(1).max(200),
+    })
+    .optional(),
 });
 
 /**

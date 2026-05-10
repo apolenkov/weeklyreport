@@ -427,6 +427,21 @@ model AppSettings {
   updatedAt           DateTime @updatedAt
 }
 
+// UFB-047 (Phase 48-A): organization identity singleton. shortName is the
+// compact brand string rendered in the nav-bar / page chrome (≤16 chars);
+// fullName is the long-form description used on the landing hero and in PDF
+// report headers. Singleton invariant enforced at the application layer via
+// `id='singleton'` upsert — not a DB CHECK constraint. Migration seeds the
+// row with Demo / Example Software Department; admins can override via
+// Settings → Identity tab.
+model Organization {
+  id        String   @id @default("singleton")
+  shortName String
+  fullName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model AiInsight {
   id                  String        @id @default(uuid())
   kind                AiInsightKind

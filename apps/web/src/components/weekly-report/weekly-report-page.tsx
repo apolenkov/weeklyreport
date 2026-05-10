@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useContext, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
 
 import { useTRPC } from "../../lib/trpc-context";
+import { SessionContext } from "../../lib/session-provider";
 import {
   formatClientErrorMessage,
   logClientError,
@@ -71,6 +72,12 @@ export function WeeklyReportPage({
   const qc = useQueryClient();
   const router = useRouter();
   const focusedAuthorId = authorId ?? null;
+  // UFB-047 / Phase 48-A: prefer the Organization singleton's fullName for
+  // the department label (the rendered PDF header reads this). Falls back
+  // to the legacy `weeklyReport.get.departmentName` when the session has
+  // no org (older JWT or PDF-worker session) so older payloads still work.
+  const sessionState = useContext(SessionContext);
+  const orgFullName = sessionState?.organization?.fullName ?? null;
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
@@ -185,7 +192,10 @@ export function WeeklyReportPage({
   // mock-data presentation types so children keep their imports unchanged.
   const portfolio: PortfolioProduct[] = view.portfolio as PortfolioProduct[];
   const products: ProductReport[] = view.products as ProductReport[];
-  const departmentLabel = weeklyQ.data.departmentName;
+  // UFB-047 / Phase 48-A: department label prefers Organization.fullName.
+  // The weeklyReport.get.departmentName field still hangs around for the
+  // PDF-worker (synthetic session w/o org) and pre-48-A JWTs.
+  const departmentLabel = orgFullName ?? weeklyQ.data.departmentName;
 
   const hasReportContent = (report: ProductReport) =>
     Boolean(report.needsAttention) ||

@@ -148,7 +148,10 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
         '',
         `This is a reminder to fill in your section for the status report period: ${data.reportPeriod}.`,
         '',
-        'Please log in to CustomReport and submit your section before the deadline.',
+        // UFB-047 / Phase 48-A: legacy fallback path — brand string matches
+        // the Organization singleton's seeded identity (Demo). A follow-up
+        // plan will plumb the dynamic short-name through the job payload.
+        'Please log in to Demo and submit your section before the deadline.',
         '',
         'Thank you.',
       ].join('\n');
