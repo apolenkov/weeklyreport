@@ -96,6 +96,15 @@ const baseSettings: MockSettings = {
   allowLateSubmissions: true,
   autoPublishAfterDeadline: false,
   autoArchiveWeeksAfterPublish: 0,
+  // UFB-051 (Phase 51-A) defaults — mirror SQL.
+  firstDayOfWeek: 1,
+  deadlineDayOfWeek: 5,
+  deadlineTime: '18:00',
+  periodCadence: 'weekly',
+  maxOpenPeriods: 1,
+  requireAllSectionsToPublish: true,
+  allowReopenAfterPublish: true,
+  reopenWindowHours: 72,
   defaultTimezone: 'Europe/Moscow',
   defaultReminderAudience: 'lead-with-draft',
   notificationFromEmail: null,
@@ -303,6 +312,177 @@ describe('SettingsTab — UFB-048 Periods sub-tab (Phase 48-B)', () => {
       name: /auto-publish after deadline/i,
     }) as HTMLInputElement;
     expect(checkbox.disabled).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UFB-051 (Phase 51-A): Periods sub-tab gains 8 new period-cycle inputs.
+// Tests assert: (1) the inputs render with seeded values, (2) edits flow
+// to the updateSettings PATCH payload, (3) the «reopen window» field
+// greys out when «allow reopen» is off (UI-only — enforcement is 51-C).
+// ---------------------------------------------------------------------------
+
+describe('SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)', () => {
+  beforeEach(() => {
+    toastSuccess.mockReset();
+    toastError.mockReset();
+  });
+
+  it('renders the 8 new period-cycle inputs with seeded defaults', async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /periods/i }));
+
+    // firstDayOfWeek — Monday radio is selected by default.
+    const mondayRadio = screen.getByLabelText(/monday \(iso\)/i) as HTMLInputElement;
+    expect(mondayRadio.checked).toBe(true);
+
+    // deadlineDayOfWeek — Friday (5) selected by default.
+    const deadlineDay = screen.getByLabelText(
+      /deadline day of week/i,
+    ) as HTMLSelectElement;
+    expect(deadlineDay.value).toBe('5');
+
+    // deadlineTime — 18:00 default.
+    const deadlineTime = screen.getByLabelText(
+      /deadline time/i,
+    ) as HTMLInputElement;
+    expect(deadlineTime.value).toBe('18:00');
+
+    // periodCadence — weekly default.
+    const weeklyRadio = screen.getByLabelText(
+      /weekly \(7 days\)/i,
+    ) as HTMLInputElement;
+    expect(weeklyRadio.checked).toBe(true);
+
+    // maxOpenPeriods — 1 default.
+    const maxOpen = screen.getByLabelText(
+      /max open periods/i,
+    ) as HTMLInputElement;
+    expect(maxOpen.value).toBe('1');
+
+    // requireAllSectionsToPublish — checked by default.
+    const requireAll = screen.getByRole('checkbox', {
+      name: /require all sections to publish/i,
+    }) as HTMLInputElement;
+    expect(requireAll.checked).toBe(true);
+
+    // allowReopenAfterPublish — checked by default.
+    const allowReopen = screen.getByRole('checkbox', {
+      name: /allow reopen after publish/i,
+    }) as HTMLInputElement;
+    expect(allowReopen.checked).toBe(true);
+
+    // reopenWindowHours — 72 default, enabled (since allowReopen is on).
+    const reopenWindow = screen.getByLabelText(
+      /reopen window \(hours\)/i,
+    ) as HTMLInputElement;
+    expect(reopenWindow.value).toBe('72');
+    expect(reopenWindow.disabled).toBe(false);
+  });
+
+  it('edits the 8 new fields and sends them on Save', async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /periods/i }));
+
+    // Switch firstDayOfWeek → Sunday.
+    fireEvent.click(screen.getByLabelText(/sunday/i));
+
+    // Switch deadlineDayOfWeek → Thursday.
+    fireEvent.change(
+      screen.getByLabelText(/deadline day of week/i) as HTMLSelectElement,
+      { target: { value: '4' } },
+    );
+
+    // Change deadlineTime → 09:30.
+    fireEvent.change(screen.getByLabelText(/deadline time/i), {
+      target: { value: '09:30' },
+    });
+
+    // Switch periodCadence → bi-weekly.
+    fireEvent.click(screen.getByLabelText(/bi-weekly \(14 days\)/i));
+
+    // Bump maxOpenPeriods → 3.
+    fireEvent.change(screen.getByLabelText(/max open periods/i), {
+      target: { value: '3' },
+    });
+
+    // Untick requireAllSectionsToPublish.
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: /require all sections to publish/i,
+      }),
+    );
+
+    // Bump reopenWindowHours → 24.
+    fireEvent.change(screen.getByLabelText(/reopen window \(hours\)/i), {
+      target: { value: '24' },
+    });
+
+    await user.click(
+      screen.getByRole('button', { name: /save period settings/i }),
+    );
+
+    await waitFor(() => {
+      expect(captured.updateSettingsFn).toHaveBeenCalled();
+    });
+    const payload = captured.updateSettingsFn.mock.calls[0]?.[0];
+    expect(payload.firstDayOfWeek).toBe(7);
+    expect(payload.deadlineDayOfWeek).toBe(4);
+    expect(payload.deadlineTime).toBe('09:30');
+    expect(payload.periodCadence).toBe('bi-weekly');
+    expect(payload.maxOpenPeriods).toBe(3);
+    expect(payload.requireAllSectionsToPublish).toBe(false);
+    expect(payload.reopenWindowHours).toBe(24);
+    // allowReopenAfterPublish was not touched — stays true.
+    expect(payload.allowReopenAfterPublish).toBe(true);
+  });
+
+  it('disables reopenWindowHours when allowReopenAfterPublish is off', async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab
+            settings={{ ...baseSettings, allowReopenAfterPublish: false }}
+          />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /periods/i }));
+
+    const reopenWindow = screen.getByLabelText(
+      /reopen window \(hours\)/i,
+    ) as HTMLInputElement;
+    expect(reopenWindow.disabled).toBe(true);
   });
 });
 
