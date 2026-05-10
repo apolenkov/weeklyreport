@@ -60,10 +60,20 @@ const initialSnapshot: AdminSnapshot = {
   policies: [],
 };
 
+// UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs.
 const defaultSettings: AppSettings = {
   departmentName: "Development",
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
+  periodLengthDays: 7,
+  workingDays: "mon-fri",
+  gracePeriodHours: 24,
+  defaultTimezone: "Europe/Moscow",
+  defaultReminderAudience: "lead-with-draft",
+  notificationFromEmail: null,
+  allowLateSubmissions: true,
+  autoPublishAfterDeadline: false,
+  autoArchiveWeeksAfterPublish: 0,
 };
 
 function createRepository(
@@ -682,11 +692,34 @@ describe("AdminService — settings", () => {
     const service = new AdminService(createRepository(initialSnapshot));
     const result = await service.getSettings();
 
-    expect(result).toEqual({
-      departmentName: "Development",
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 5,
+    expect(result).toEqual(defaultSettings);
+  });
+
+  // UFB-048 (Phase 48-B): the 9 new fields round-trip through partial update.
+  it("UFB-048: round-trips the 9 new AppSettings fields", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+
+    const result = await service.updateSettings({
+      periodLengthDays: 14,
+      workingDays: "mon-sun",
+      gracePeriodHours: 0,
+      defaultTimezone: "Europe/Berlin",
+      defaultReminderAudience: "head-of-late",
+      notificationFromEmail: "noreply@example.com",
+      allowLateSubmissions: false,
+      autoPublishAfterDeadline: true,
+      autoArchiveWeeksAfterPublish: 4,
     });
+
+    expect(result.periodLengthDays).toBe(14);
+    expect(result.workingDays).toBe("mon-sun");
+    expect(result.gracePeriodHours).toBe(0);
+    expect(result.defaultTimezone).toBe("Europe/Berlin");
+    expect(result.defaultReminderAudience).toBe("head-of-late");
+    expect(result.notificationFromEmail).toBe("noreply@example.com");
+    expect(result.allowLateSubmissions).toBe(false);
+    expect(result.autoPublishAfterDeadline).toBe(true);
+    expect(result.autoArchiveWeeksAfterPublish).toBe(4);
   });
 
   it("updates settings fully", async () => {

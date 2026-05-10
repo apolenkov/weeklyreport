@@ -63,10 +63,22 @@ const initialSnapshot: AdminSnapshot = {
   policies: [],
 };
 
+// UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs. The integration
+// fixture mirrors the SQL defaults so the in-memory repo round-trips identical
+// shape to the Prisma path.
 const defaultSettings: AppSettings = {
   departmentName: "Development",
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
+  periodLengthDays: 7,
+  workingDays: "mon-fri",
+  gracePeriodHours: 24,
+  defaultTimezone: "Europe/Moscow",
+  defaultReminderAudience: "lead-with-draft",
+  notificationFromEmail: null,
+  allowLateSubmissions: true,
+  autoPublishAfterDeadline: false,
+  autoArchiveWeeksAfterPublish: 0,
 };
 
 /* ------------------------------------------------------------------ */
@@ -155,11 +167,37 @@ describe("AdminService — settings (integration)", () => {
     const service = new AdminService(createRepository(initialSnapshot));
     const result = await service.getSettings();
 
-    expect(result).toEqual({
-      departmentName: "Development",
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 5,
+    expect(result).toEqual(defaultSettings);
+  });
+
+  // UFB-048: round-trip the new fields through updateSettings.
+  it("UFB-048: round-trips the 9 new AppSettings fields", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+
+    const result = await service.updateSettings({
+      periodLengthDays: 14,
+      workingDays: "mon-sat",
+      gracePeriodHours: 48,
+      defaultTimezone: "Asia/Yekaterinburg",
+      defaultReminderAudience: "head-of-late",
+      notificationFromEmail: "reports@example.com",
+      allowLateSubmissions: false,
+      autoPublishAfterDeadline: true,
+      autoArchiveWeeksAfterPublish: 12,
     });
+
+    expect(result.periodLengthDays).toBe(14);
+    expect(result.workingDays).toBe("mon-sat");
+    expect(result.gracePeriodHours).toBe(48);
+    expect(result.defaultTimezone).toBe("Asia/Yekaterinburg");
+    expect(result.defaultReminderAudience).toBe("head-of-late");
+    expect(result.notificationFromEmail).toBe("reports@example.com");
+    expect(result.allowLateSubmissions).toBe(false);
+    expect(result.autoPublishAfterDeadline).toBe(true);
+    expect(result.autoArchiveWeeksAfterPublish).toBe(12);
+    // legacy fields preserved
+    expect(result.departmentName).toBe("Development");
+    expect(result.defaultDeadlineDays).toBe(5);
   });
 
   it("updates departmentName and preserves other fields", async () => {

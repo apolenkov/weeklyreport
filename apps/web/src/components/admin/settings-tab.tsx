@@ -15,6 +15,7 @@ import { invalidateAdmin } from "../../lib/cache-keys";
 import { useTRPC } from "../../lib/trpc-context";
 
 import { TabHeader } from "./tab-header";
+import { TIMEZONE_OPTIONS } from "./timezone-options";
 
 import type { MockSettings } from "./mock-data";
 
@@ -62,17 +63,11 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
         </TabsContent>
 
         <TabsContent value="reminders" className="pt-6">
-          <PlaceholderSubTab
-            title="Reminders"
-            description="Per-policy reminder configuration arrives in Phase 48-B."
-          />
+          <RemindersSubTab serverSettings={serverSettings} />
         </TabsContent>
 
         <TabsContent value="notifications" className="pt-6">
-          <PlaceholderSubTab
-            title="Notifications"
-            description="Per-user notification opt-outs and channel routing arrive in Phase 48-B."
-          />
+          <NotificationsSubTab serverSettings={serverSettings} />
         </TabsContent>
       </Tabs>
     </div>
@@ -227,6 +222,29 @@ function IdentitySubTab() {
   );
 }
 
+// ─── Sub-tab plumbing ────────────────────────────────────────────────────
+//
+// UFB-048 (Phase 48-B): the three sub-tabs share an updateSettings mutation
+// helper. We keep the per-tab state local (each sub-tab owns its own draft +
+// dirty flag) but the mutation itself is a thin reusable wrapper so the
+// "Saved" toasts and onError messages stay consistent across tabs.
+
+function useUpdateSettingsMut(label: string) {
+  const trpc = useTRPC();
+  const qc = useQueryClient();
+  return useMutation(
+    trpc.admin.updateSettings.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success(`${label} saved`);
+      },
+      onError: (err) => {
+        toast.error(err.message ?? `Failed to save ${label.toLowerCase()}`);
+      },
+    }),
+  );
+}
+
 // ─── Periods sub-tab ─────────────────────────────────────────────────────
 
 function PeriodsSubTab({
@@ -234,31 +252,22 @@ function PeriodsSubTab({
 }: {
   readonly serverSettings: MockSettings;
 }) {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
   const [draft, setDraft] = useState<MockSettings>(serverSettings);
-
-  useEffect(() => {
-    setDraft(serverSettings);
-  }, [serverSettings]);
-
-  const updateSettingsMut = useMutation(
-    trpc.admin.updateSettings.mutationOptions({
-      onSuccess: () => {
-        invalidateAdmin(qc, trpc);
-        toast.success("Period settings saved");
-      },
-      onError: (err) => {
-        toast.error(err.message ?? "Failed to save period settings");
-      },
-    }),
-  );
+  useEffect(() => setDraft(serverSettings), [serverSettings]);
+  const updateSettingsMut = useUpdateSettingsMut("Period settings");
 
   function handleSave() {
+    // PATCH semantics — only fields owned by this sub-tab go on the wire.
     updateSettingsMut.mutate({
       departmentName: draft.departmentName,
       autoCreatePeriods: draft.autoCreatePeriods,
       defaultDeadlineDays: draft.defaultDeadlineDays,
+      periodLengthDays: draft.periodLengthDays,
+      workingDays: draft.workingDays,
+      gracePeriodHours: draft.gracePeriodHours,
+      allowLateSubmissions: draft.allowLateSubmissions,
+      autoPublishAfterDeadline: draft.autoPublishAfterDeadline,
+      autoArchiveWeeksAfterPublish: draft.autoArchiveWeeksAfterPublish,
     });
   }
 
@@ -307,6 +316,68 @@ function PeriodsSubTab({
         </p>
       </div>
 
+      {/* ── periodLengthDays (UFB-048) ── */}
+      <div>
+        <label
+          htmlFor="period-length-days"
+          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+        >
+          Period length (days)
+        </label>
+        <input
+          id="period-length-days"
+          name="period-length-days"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={31}
+          value={draft.periodLengthDays}
+          onChange={(e) =>
+            setDraft({
+              ...draft,
+              periodLengthDays: Number.parseInt(e.target.value, 10) || 1,
+            })
+          }
+          className="w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+        />
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          How many days each reporting period spans (default 7 = weekly).
+        </p>
+      </div>
+
+      {/* ── workingDays (UFB-048) ── */}
+      <fieldset>
+        <legend className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
+          Working days
+        </legend>
+        <div className="flex flex-col gap-2">
+          {(["mon-fri", "mon-sat", "mon-sun"] as const).map((opt) => (
+            <label
+              key={opt}
+              className="flex items-center gap-2 text-sm text-[var(--color-foreground)]"
+            >
+              <input
+                type="radio"
+                name="working-days"
+                value={opt}
+                checked={draft.workingDays === opt}
+                onChange={() => setDraft({ ...draft, workingDays: opt })}
+                className="h-4 w-4 accent-[var(--color-starbucks-accent)]"
+              />
+              <span>
+                {opt === "mon-fri" && "Mon-Fri (5-day week)"}
+                {opt === "mon-sat" && "Mon-Sat (6-day week)"}
+                {opt === "mon-sun" && "Mon-Sun (7-day week)"}
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          Metadata only in v1 — UI hint for admins. Deadline math still uses
+          Mon-Fri until a follow-up plan wires the calendar logic.
+        </p>
+      </fieldset>
+
       <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
         <input
           name="auto-create-periods"
@@ -354,6 +425,127 @@ function PeriodsSubTab({
         </p>
       </div>
 
+      {/* ── gracePeriodHours (UFB-048) ── */}
+      <div>
+        <label
+          htmlFor="grace-period-hours"
+          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+        >
+          Grace period (hours)
+        </label>
+        <input
+          id="grace-period-hours"
+          name="grace-period-hours"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={168}
+          value={draft.gracePeriodHours}
+          onChange={(e) =>
+            setDraft({
+              ...draft,
+              gracePeriodHours: Math.max(
+                0,
+                Number.parseInt(e.target.value, 10) || 0,
+              ),
+            })
+          }
+          className="w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+        />
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          Late submissions accepted within this many hours past the deadline
+          when «allow late submissions» is on. Must be 0..168 (one week).
+        </p>
+      </div>
+
+      {/* ── allowLateSubmissions (UFB-048) ── */}
+      <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
+        <input
+          name="allow-late-submissions"
+          type="checkbox"
+          checked={draft.allowLateSubmissions}
+          onChange={(e) =>
+            setDraft({ ...draft, allowLateSubmissions: e.target.checked })
+          }
+          className="mt-1 h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-starbucks-accent)]"
+        />
+        <span>
+          <span className="block font-medium">Allow late submissions</span>
+          <span className="block text-xs text-[var(--color-muted-foreground)]">
+            When on, leads can submit within the grace window above. When off,
+            the deadline is hard — submissions past the deadline are rejected.
+          </span>
+        </span>
+      </label>
+
+      {/* ── autoPublishAfterDeadline (UFB-048) ── */}
+      <label
+        className={`flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)] ${
+          draft.autoCreatePeriods ? "" : "opacity-60"
+        }`}
+      >
+        <input
+          name="auto-publish-after-deadline"
+          type="checkbox"
+          disabled={!draft.autoCreatePeriods}
+          checked={draft.autoPublishAfterDeadline}
+          onChange={(e) =>
+            setDraft({ ...draft, autoPublishAfterDeadline: e.target.checked })
+          }
+          className="mt-1 h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-starbucks-accent)] disabled:cursor-not-allowed"
+        />
+        <span>
+          <span className="block font-medium">
+            Auto-publish after deadline
+          </span>
+          <span className="block text-xs text-[var(--color-muted-foreground)]">
+            Scheduler publishes the period at <code>deadline + grace</code>;
+            missing sections render «Не сдал» placeholder. Scheduler logic is
+            deferred — toggle is persisted, the cron consumer arrives in a
+            follow-up plan.
+            {!draft.autoCreatePeriods && (
+              <>
+                {" "}
+                <b>Requires «Auto-create periods».</b>
+              </>
+            )}
+          </span>
+        </span>
+      </label>
+
+      {/* ── autoArchiveWeeksAfterPublish (UFB-048) ── */}
+      <div>
+        <label
+          htmlFor="auto-archive-weeks"
+          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+        >
+          Auto-archive published periods after (weeks)
+        </label>
+        <input
+          id="auto-archive-weeks"
+          name="auto-archive-weeks"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={52}
+          value={draft.autoArchiveWeeksAfterPublish}
+          onChange={(e) =>
+            setDraft({
+              ...draft,
+              autoArchiveWeeksAfterPublish: Math.max(
+                0,
+                Number.parseInt(e.target.value, 10) || 0,
+              ),
+            })
+          }
+          className="w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+        />
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          0 = never archive. Otherwise: a published period drops out of the
+          default «active» views after N weeks.
+        </p>
+      </div>
+
       <div className="flex items-center gap-3 pt-2">
         <button
           type="button"
@@ -375,21 +567,190 @@ function PeriodsSubTab({
   );
 }
 
-// ─── Placeholder sub-tab (Reminders / Notifications) ─────────────────────
+// ─── Reminders sub-tab (UFB-048) ─────────────────────────────────────────
 
-function PlaceholderSubTab({
-  title,
-  description,
+function RemindersSubTab({
+  serverSettings,
 }: {
-  readonly title: string;
-  readonly description: string;
+  readonly serverSettings: MockSettings;
 }) {
+  const [draft, setDraft] = useState<MockSettings>(serverSettings);
+  useEffect(() => setDraft(serverSettings), [serverSettings]);
+  const updateSettingsMut = useUpdateSettingsMut("Reminder defaults");
+
+  function handleSave() {
+    updateSettingsMut.mutate({
+      defaultTimezone: draft.defaultTimezone,
+      defaultReminderAudience: draft.defaultReminderAudience,
+    });
+  }
+  const isSaving = updateSettingsMut.isPending;
+
   return (
-    <div className="max-w-lg rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-white p-6 text-sm">
-      <p className="font-semibold text-[var(--color-foreground)]">
-        {title} — coming in next release
+    <div className="max-w-lg space-y-5">
+      <p className="text-sm text-[var(--color-muted-foreground)]">
+        Defaults applied to the «New Policy» form on the Reminders tab.
+        Existing policies keep their per-policy values.
       </p>
-      <p className="mt-2 text-[var(--color-muted-foreground)]">{description}</p>
+
+      <div>
+        <label
+          htmlFor="default-timezone"
+          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+        >
+          Default timezone
+        </label>
+        <select
+          id="default-timezone"
+          name="default-timezone"
+          value={draft.defaultTimezone}
+          onChange={(e) =>
+            setDraft({ ...draft, defaultTimezone: e.target.value })
+          }
+          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+        >
+          {TIMEZONE_OPTIONS.map((group) => (
+            <optgroup key={group.group} label={group.group}>
+              {group.zones.map((z) => (
+                <option key={z.value} value={z.value}>
+                  {z.label}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          IANA zone used as default when admins create a new ReminderPolicy.
+        </p>
+      </div>
+
+      <div>
+        <label
+          htmlFor="default-audience"
+          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+        >
+          Default audience
+        </label>
+        <select
+          id="default-audience"
+          name="default-audience"
+          value={draft.defaultReminderAudience}
+          onChange={(e) =>
+            setDraft({
+              ...draft,
+              defaultReminderAudience: e.target
+                .value as MockSettings["defaultReminderAudience"],
+            })
+          }
+          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+        >
+          <option value="lead-with-draft">Leads with draft</option>
+          <option value="head-of-late">Head of late leads</option>
+        </select>
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          Recipient group preselected on the «New Policy» form.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3 pt-2">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Save reminder defaults"
+        >
+          {isSaving ? "Saving…" : "Save Reminder Defaults"}
+        </button>
+        {updateSettingsMut.isSuccess && !updateSettingsMut.isPending && (
+          <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
+            <CheckIcon />
+            Reminder defaults saved
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Notifications sub-tab (UFB-048) ─────────────────────────────────────
+
+function NotificationsSubTab({
+  serverSettings,
+}: {
+  readonly serverSettings: MockSettings;
+}) {
+  const [draft, setDraft] = useState<MockSettings>(serverSettings);
+  useEffect(() => setDraft(serverSettings), [serverSettings]);
+  const updateSettingsMut = useUpdateSettingsMut("Notification settings");
+
+  // The wire schema accepts null (clear) or a valid email; we keep the input
+  // as a string and translate empty → null on save. UI guard: a non-empty
+  // string that fails a basic email shape blocks Save with a hint.
+  const trimmed = draft.notificationFromEmail?.trim() ?? "";
+  const looksLikeEmail = trimmed === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+
+  function handleSave() {
+    updateSettingsMut.mutate({
+      notificationFromEmail: trimmed === "" ? null : trimmed,
+    });
+  }
+  const isSaving = updateSettingsMut.isPending;
+
+  return (
+    <div className="max-w-lg space-y-5">
+      <p className="text-sm text-[var(--color-muted-foreground)]">
+        Used as the From: address on outgoing reminder + escalation emails.
+        Leave blank to fall back to the per-mailer default.
+      </p>
+
+      <div>
+        <label
+          htmlFor="notification-from-email"
+          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+        >
+          Notification from-email
+        </label>
+        <input
+          id="notification-from-email"
+          name="notification-from-email"
+          type="email"
+          autoComplete="off"
+          placeholder="reports@example.com"
+          value={draft.notificationFromEmail ?? ""}
+          onChange={(e) =>
+            setDraft({
+              ...draft,
+              notificationFromEmail:
+                e.target.value === "" ? null : e.target.value,
+            })
+          }
+          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+        />
+        {!looksLikeEmail && (
+          <p className="mt-1 text-xs text-red-600">
+            Enter a valid email or leave the field empty.
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 pt-2">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving || !looksLikeEmail}
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Save notification settings"
+        >
+          {isSaving ? "Saving…" : "Save Notification Settings"}
+        </button>
+        {updateSettingsMut.isSuccess && !updateSettingsMut.isPending && (
+          <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
+            <CheckIcon />
+            Notification settings saved
+          </span>
+        )}
+      </div>
     </div>
   );
 }

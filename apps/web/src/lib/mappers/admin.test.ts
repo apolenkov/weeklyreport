@@ -246,10 +246,50 @@ describe("mapAdminSettings", () => {
       defaultDeadlineDays: 3,
     });
     const mapped = mapAdminSettings(api);
+    // UFB-048 (Phase 48-B): the wire schema applies defaults for the 9 new
+    // fields; the mapper passes them through 1:1. Asserting the full shape
+    // catches future drift between MockSettings and AppSettings.
     expect(mapped).toStrictEqual({
       departmentName: "Platform Engineering",
       autoCreatePeriods: false,
       defaultDeadlineDays: 3,
+      periodLengthDays: 7,
+      workingDays: "mon-fri",
+      gracePeriodHours: 24,
+      allowLateSubmissions: true,
+      autoPublishAfterDeadline: false,
+      autoArchiveWeeksAfterPublish: 0,
+      defaultTimezone: "Europe/Moscow",
+      defaultReminderAudience: "lead-with-draft",
+      notificationFromEmail: null,
     });
+  });
+
+  // UFB-048 (Phase 48-B): explicit round-trip of the 9 new fields.
+  it("UFB-048: round-trips the 9 new AppSettings fields", () => {
+    const api: AppSettings = appSettingsSchema.parse({
+      departmentName: "Engineering",
+      autoCreatePeriods: true,
+      defaultDeadlineDays: 5,
+      periodLengthDays: 14,
+      workingDays: "mon-sat",
+      gracePeriodHours: 12,
+      defaultTimezone: "Asia/Yekaterinburg",
+      defaultReminderAudience: "head-of-late",
+      notificationFromEmail: "reports@example.com",
+      allowLateSubmissions: false,
+      autoPublishAfterDeadline: true,
+      autoArchiveWeeksAfterPublish: 8,
+    });
+    const mapped = mapAdminSettings(api);
+    expect(mapped.periodLengthDays).toBe(14);
+    expect(mapped.workingDays).toBe("mon-sat");
+    expect(mapped.gracePeriodHours).toBe(12);
+    expect(mapped.defaultTimezone).toBe("Asia/Yekaterinburg");
+    expect(mapped.defaultReminderAudience).toBe("head-of-late");
+    expect(mapped.notificationFromEmail).toBe("reports@example.com");
+    expect(mapped.allowLateSubmissions).toBe(false);
+    expect(mapped.autoPublishAfterDeadline).toBe(true);
+    expect(mapped.autoArchiveWeeksAfterPublish).toBe(8);
   });
 });

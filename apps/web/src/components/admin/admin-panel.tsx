@@ -125,6 +125,12 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
                   policies={data.policies}
                   derivedRulesByPolicyId={derivedRulesByPolicyId}
                   periods={data.periods}
+                  // UFB-048 (Phase 48-B): seed the «New Policy» form with
+                  // org-wide defaults from AppSettings. Falls back to
+                  // hardcoded Europe/Moscow + lead-with-draft when settings
+                  // haven't loaded yet (handled inside emptyPolicyForm).
+                  defaultTimezone={settings?.defaultTimezone}
+                  defaultAudience={settings?.defaultReminderAudience}
                 />
               );
             })()}
