@@ -21,6 +21,7 @@ import {
   searchQueryInputSchema,
   queueNameSchema,
   organizationUpdateSchema,
+  adminTestTelegramSendSchema,
 } from "@customreport/shared";
 
 import {
@@ -128,6 +129,15 @@ type RouterDeps = {
    * fixtures can call createAppRouter(stubDeps) without instantiating Redis.
    */
   emailReminderQueue?: Queue;
+  /**
+   * UFB-056 / Phase 55-3: BullMQ Queue handle for `telegram-outbound`.
+   * Drives the admin smoke-test (`admin.testTelegramSend`) so the wiring
+   * (queue → worker → MockTelegramAdapter) is provable without an active
+   * bot. Optional so role-coverage fixtures that build the router with
+   * `{}` deps stay compiling; when undefined the procedure throws
+   * `INTERNAL_SERVER_ERROR` rather than 500-ing on a null deref.
+   */
+  telegramOutboundQueue?: Queue;
   /**
    * Phase 35-06: BullMQ DLQ admin surface — `admin.jobs.listFailed` /
    * `admin.jobs.retryFailed`. Optional so test fixtures and the role-coverage
@@ -476,6 +486,72 @@ export function createAppRouter(deps: RouterDeps) {
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.updateSettings(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-056 / Phase 55-4: read the external-integrations status bundle
+       * for the Settings → Integrations sub-tab. v1 only carries Telegram;
+       * future integrations (Slack, MS Teams, webhook fan-out) extend the
+       * envelope. Telegram is considered «active» only when both the API
+       * has `TG_BOT_TOKEN` set AND at least one TelegramBinding row has
+       * `active=true`. Either gate failing keeps the badge muted.
+       *
+       * adminProcedure-gated (head/admin) so a regular lead can't poll the
+       * binding count.
+       */
+      integrationsStatus: adminProcedure.query(async () => {
+        try {
+          const token = process.env['TG_BOT_TOKEN']?.trim() ?? '';
+          const bindings = await deps.prisma.telegramBinding.count({
+            where: { active: true },
+          });
+          return {
+            telegram: {
+              configured: token !== '',
+              bindings,
+            },
+          };
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      /**
+       * UFB-056 / Phase 55-4: admin smoke-test for the telegram-outbound
+       * queue. Enqueues a single job that the in-process TelegramProcessor
+       * picks up and forwards to the MockTelegramAdapter (or the real bot
+       * once activated). Returns `{ jobId }` so the admin UI can confirm
+       * the job was queued without subscribing to BullMQ events.
+       *
+       * Retry policy lives on the job options (3 attempts, exponential
+       * backoff) so this surface stays generic; producers don't need to
+       * know about queue semantics.
+       */
+      testTelegramSend: adminProcedure
+        .input(adminTestTelegramSendSchema)
+        .mutation(async ({ input }) => {
+          try {
+            if (!deps.telegramOutboundQueue) {
+              throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message:
+                  "Telegram outbound queue is not wired into the tRPC router.",
+              });
+            }
+            const job = await deps.telegramOutboundQueue.add(
+              "telegram-test",
+              { chatId: input.chatId, text: input.text },
+              {
+                attempts: 3,
+                backoff: { type: "exponential", delay: 5_000 },
+                removeOnComplete: { count: 100 },
+                removeOnFail: { count: 500 },
+              },
+            );
+            return { jobId: job.id ?? null };
           } catch (error) {
             throw mapDomainError(error);
           }
