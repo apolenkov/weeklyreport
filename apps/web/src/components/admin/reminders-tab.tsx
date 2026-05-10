@@ -703,14 +703,14 @@ function PolicyForm({
         </div>
 
         <div>
-          <label
-            htmlFor="policy-valid-until"
-            className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-          >
-            Valid until
-          </label>
-          <div className="flex flex-col gap-1">
-            <label className="inline-flex items-center gap-2 text-xs">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <label
+              htmlFor="policy-valid-until"
+              className="text-xs font-semibold text-[var(--color-muted-foreground)]"
+            >
+              Valid until
+            </label>
+            <label className="inline-flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
               <input
                 type="checkbox"
                 checked={form.foreverChecked}
@@ -723,23 +723,22 @@ function PolicyForm({
                 }
                 aria-label="forever (no end date)"
               />
-              <span>forever (no end date)</span>
+              <span>forever</span>
             </label>
-            {!form.foreverChecked && (
-              <input
-                id="policy-valid-until"
-                type="date"
-                value={form.validUntilIso ?? ""}
-                onChange={(e) =>
-                  onChange((prev) => ({
-                    ...prev,
-                    validUntilIso: e.target.value || null,
-                  }))
-                }
-                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-              />
-            )}
           </div>
+          <input
+            id="policy-valid-until"
+            type="date"
+            value={form.validUntilIso ?? ""}
+            disabled={form.foreverChecked}
+            onChange={(e) =>
+              onChange((prev) => ({
+                ...prev,
+                validUntilIso: e.target.value || null,
+              }))
+            }
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-[var(--color-muted)] disabled:opacity-50"
+          />
         </div>
       </div>
 
