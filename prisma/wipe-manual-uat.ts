@@ -148,10 +148,10 @@ async function main() {
       where: { id: "singleton" },
     });
     if (!settings) {
+      // UFB-047 / Phase 49-01: legacy `departmentName` removed.
       await tx.appSettings.create({
         data: {
           id: "singleton",
-          departmentName: "Core Development",
           autoCreatePeriods: false,
           defaultDeadlineDays: 5,
         },

@@ -229,19 +229,16 @@ describe("mapAdminSnapshot", () => {
 describe("mapAdminSettings", () => {
   it("copies all configured fields from appSettingsSchema", () => {
     const api: AppSettings = appSettingsSchema.parse({
-      departmentName: "Core Development",
       autoCreatePeriods: true,
       defaultDeadlineDays: 5,
     });
     const mapped = mapAdminSettings(api);
-    expect(mapped.departmentName).toBe("Core Development");
     expect(mapped.autoCreatePeriods).toBe(true);
     expect(mapped.defaultDeadlineDays).toBe(5);
   });
 
   it("round-trips a non-default configuration", () => {
     const api: AppSettings = appSettingsSchema.parse({
-      departmentName: "Platform Engineering",
       autoCreatePeriods: false,
       defaultDeadlineDays: 3,
     });
@@ -249,8 +246,9 @@ describe("mapAdminSettings", () => {
     // UFB-048 (Phase 48-B): the wire schema applies defaults for the 9 new
     // fields; the mapper passes them through 1:1. Asserting the full shape
     // catches future drift between MockSettings and AppSettings.
+    // UFB-047 / Phase 49-01: legacy `departmentName` removed from both
+    // sides of the mapper.
     expect(mapped).toStrictEqual({
-      departmentName: "Platform Engineering",
       autoCreatePeriods: false,
       defaultDeadlineDays: 3,
       periodLengthDays: 7,
@@ -268,7 +266,6 @@ describe("mapAdminSettings", () => {
   // UFB-048 (Phase 48-B): explicit round-trip of the 9 new fields.
   it("UFB-048: round-trips the 9 new AppSettings fields", () => {
     const api: AppSettings = appSettingsSchema.parse({
-      departmentName: "Engineering",
       autoCreatePeriods: true,
       defaultDeadlineDays: 5,
       periodLengthDays: 14,

@@ -36,7 +36,6 @@ function makeWeeklyReport(
     deadline: new Date('2026-04-17T15:00:00.000Z'),
     periodStatus: 'open',
     weekLabel: 'W16-2026',
-    departmentName: 'Core Development',
     submissionCount: 1,
     totalLeads: 3,
     hasActiveReminderRule: true,

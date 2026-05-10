@@ -166,7 +166,10 @@ export const reportSectionReadModelSchema = z.object({
   authorId: z.string().uuid(),
   authorName: z.string().min(1),
   authorRole: roleSchema.optional(),
-  departmentName: z.string().min(1).max(200).optional(),
+  // UFB-047 / Phase 49-01: `departmentName` removed. Consumers that
+  // need a brand label now read it from the per-request session
+  // (`auth.me.organization.shortName` / `.fullName`) — the section
+  // read-model no longer carries a redundant per-section copy.
   status: reportSectionStatusSchema,
   submittedAt: z.coerce.date().nullable(),
   projects: z.array(projectReadModelSchema),
@@ -462,7 +465,9 @@ export const reminderAudienceWireSchema = z.enum([
 ]);
 
 export const appSettingsSchema = z.object({
-  departmentName: z.string().min(1).max(200),
+  // UFB-047 / Phase 49-01: `departmentName` removed from AppSettings.
+  // Identity / brand strings live on the `Organization` singleton
+  // (`shortName` for compact references, `fullName` for headings).
   autoCreatePeriods: z.boolean(),
   defaultDeadlineDays: z.number().int().min(1).max(30),
   // ---- UFB-048: Periods knobs -----------------------------------------
@@ -560,7 +565,9 @@ export const weeklyReportReadModelSchema = z.object({
   deadline: reportDate(),
   periodStatus: periodStatusSchema,
   weekLabel: z.string().nullable(),
-  departmentName: z.string().min(1).max(200),
+  // UFB-047 / Phase 49-01: `departmentName` removed from the weekly read
+  // model. Frontends pull the brand label from `auth.me.organization`
+  // hydrated on every authenticated request (one source of truth).
   submissionCount: z.number().int().min(0),
   totalLeads: z.number().int().min(0),
   hasActiveReminderRule: z.boolean().default(false),

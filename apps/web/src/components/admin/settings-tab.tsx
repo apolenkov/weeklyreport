@@ -24,19 +24,18 @@ type SettingsTabProps = {
 };
 
 /**
- * UFB-047 / Phase 48-A: Settings tab restructured into a tabbed layout.
+ * UFB-047 / Phase 48-A + 49-01: Settings tab restructured into a tabbed layout.
  *
  * Tab order is intentional:
- *   1. Identity     — Organization singleton (this plan).
- *   2. Periods      — autoCreatePeriods + defaultDeadlineDays + the
- *                     deprecated AppSettings.departmentName banner.
- *   3. Reminders    — placeholder for Phase 48-B.
- *   4. Notifications — placeholder for Phase 48-B.
+ *   1. Identity     — Organization singleton (the only source of truth for
+ *                     brand strings as of Phase 49-01).
+ *   2. Periods      — autoCreatePeriods, defaultDeadlineDays, plus the
+ *                     UFB-048 period-cycle knobs.
+ *   3. Reminders    — defaultTimezone, defaultReminderAudience.
+ *   4. Notifications — notificationFromEmail.
  *
- * The departmentName field still lives on AppSettings for one release; the
- * Identity tab is the new source of truth (Organization.fullName). Once
- * downstream consumers (lead-form, weekly-report) migrate to Organization,
- * a follow-up plan will drop AppSettings.departmentName.
+ * Phase 49-01 dropped the legacy `AppSettings.departmentName` field and
+ * the deprecation banner that flagged its retirement on the Periods tab.
  */
 export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
   return (
@@ -258,8 +257,10 @@ function PeriodsSubTab({
 
   function handleSave() {
     // PATCH semantics — only fields owned by this sub-tab go on the wire.
+    // UFB-047 / Phase 49-01: `departmentName` is no longer part of the
+    // payload; brand identity lives on the Organization singleton (Identity
+    // tab) and is mutated via `admin.updateOrganization`.
     updateSettingsMut.mutate({
-      departmentName: draft.departmentName,
       autoCreatePeriods: draft.autoCreatePeriods,
       defaultDeadlineDays: draft.defaultDeadlineDays,
       periodLengthDays: draft.periodLengthDays,
@@ -275,46 +276,9 @@ function PeriodsSubTab({
 
   return (
     <div className="max-w-lg space-y-5">
-      {/* UFB-047 / Phase 48-A: departmentName is being deprecated in favour
-          of the Organization singleton. The banner alerts admins; the field
-          stays editable for one release so downstream consumers (lead-form,
-          weekly-report) keep working until a follow-up plan rewires them. */}
-      <div
-        className="rounded-[var(--radius-sm)] border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
-        role="status"
-      >
-        <p className="font-semibold">Department name is being deprecated.</p>
-        <p className="mt-1">
-          Use the <b>Identity</b> tab for the brand name shown in the
-          nav-bar, landing hero, and PDF headers. This field still appears in
-          legacy report sections; a follow-up plan will rewire those to read
-          from Identity and drop the field entirely.
-        </p>
-      </div>
-
-      <div>
-        <label
-          htmlFor="dept-name"
-          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-        >
-          Report header name (legacy)
-        </label>
-        <input
-          id="dept-name"
-          name="department-name"
-          type="text"
-          autoComplete="off"
-          value={draft.departmentName}
-          onChange={(e) =>
-            setDraft({ ...draft, departmentName: e.target.value })
-          }
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        />
-        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-          Displayed in legacy report sections. User membership is managed in
-          Departments.
-        </p>
-      </div>
+      {/* UFB-047 / Phase 49-01: legacy `departmentName` deprecation banner
+          + input removed alongside the AppSettings column. Brand identity
+          (short + full name) is owned by the Identity tab. */}
 
       {/* ── periodLengthDays (UFB-048) ── */}
       <div>

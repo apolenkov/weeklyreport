@@ -18,6 +18,15 @@ import { getBullMQOptions } from './bullmq-options';
  * Phase 29 will collapse the union once 'follow-up' and 'escalation' kinds
  * adopt the same template renderer.
  */
+// UFB-047 / Phase 49-01: brand snapshot threaded through every Phase-28+
+// payload. Legacy v2.0 (kind absent) does not carry it — that branch
+// hardcodes the brand and is scheduled for removal once Phase 28+ kinds
+// dominate the queue.
+type ReminderOrganizationJob = {
+  shortName: string;
+  fullName: string;
+};
+
 type EmailReminderJobData =
   | {
       executionId: string;
@@ -32,6 +41,7 @@ type EmailReminderJobData =
       reportPeriod: string;
       deadlineIso: string;
       sectionUrl: string;
+      organization: ReminderOrganizationJob;
     }
   | {
       executionId: string;
@@ -45,6 +55,7 @@ type EmailReminderJobData =
         sectionTitle: string;
         deadlineIso: string;
       }>;
+      organization: ReminderOrganizationJob;
     };
 
 /**
@@ -113,6 +124,8 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
           reportPeriod: data.reportPeriod,
           deadlineIso: data.deadlineIso,
           sectionUrl: data.sectionUrl,
+          // UFB-047 / Phase 49-01: brand snapshot from enqueue time.
+          organization: data.organization,
         },
       });
       await this.emailService.sendMailMultipart(
@@ -131,6 +144,7 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
           cycleDate: data.cycleDate,
           reportPeriod: data.reportPeriod,
           lateLeads: data.lateLeads,
+          organization: data.organization,
         },
       });
       await this.emailService.sendMailMultipart(
@@ -141,17 +155,15 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
       );
     } else {
       // Legacy v2.0 path — preserved verbatim for follow-up reminders that
-      // pre-date the Phase 28 template renderer.
+      // pre-date the Phase 28 template renderer. Brand stays hardcoded on
+      // this branch; once the legacy queue drains we drop this code path.
       const subject = 'Reminder: Weekly Status Report Due';
       const body = [
         'Hello,',
         '',
         `This is a reminder to fill in your section for the status report period: ${data.reportPeriod}.`,
         '',
-        // UFB-047 / Phase 48-A: legacy fallback path — brand string matches
-        // the Organization singleton's seeded identity (PEO). A follow-up
-        // plan will plumb the dynamic short-name through the job payload.
-        'Please log in to PEO and submit your section before the deadline.',
+        'Please log in and submit your section before the deadline.',
         '',
         'Thank you.',
       ].join('\n');

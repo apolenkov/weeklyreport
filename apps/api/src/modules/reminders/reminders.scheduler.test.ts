@@ -11,6 +11,18 @@ import type {
   DueDeadlineRule,
   DueEscalationRule,
 } from './reminders.prisma-repository';
+import type { OrganizationService } from '../organization/organization.service';
+
+// UFB-047 / Phase 49-01: stub OrganizationService used by the scheduler
+// to snapshot the brand identity onto every BullMQ job. Tests drive
+// through the public `getPublic()` surface; the in-memory stub returns a
+// deterministic shape so payload assertions can match `[PEO]` subjects.
+const fakeOrganizationService = {
+  getPublic: async () => ({
+    shortName: 'PEO',
+    fullName: 'Product Engineering & Operations',
+  }),
+} as unknown as OrganizationService;
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                           */
@@ -113,7 +125,11 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
       undefined,
       fakeQueue as never,
     );
-    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+    const scheduler = new RemindersScheduler(
+      service,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
 
     // Tick #1 at 16:00 UTC — same UTC day as the deadline (2026-04-19).
     await scheduler.runOnce(new Date('2026-04-19T16:00:00.000Z'));
@@ -137,7 +153,11 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
       undefined,
       fakeQueue as never,
     );
-    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+    const scheduler = new RemindersScheduler(
+      service,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
 
     await scheduler.runOnce(new Date('2026-04-19T16:00:00.000Z'));
 
@@ -158,7 +178,11 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
       undefined,
       fakeQueue as never,
     );
-    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+    const scheduler = new RemindersScheduler(
+      service,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
 
     await scheduler.runOnce(new Date('2026-04-19T16:00:00.000Z'));
 
@@ -181,7 +205,11 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
       undefined,
       fakeQueue as never,
     );
-    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+    const scheduler = new RemindersScheduler(
+      service,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
 
     await scheduler.runOnce(new Date('2026-04-19T16:00:00.000Z'));
 
@@ -231,7 +259,11 @@ describe('RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)', () => {
     };
 
     const service = new RemindersService(serviceRepo, undefined, fakeQueue as never);
-    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+    const scheduler = new RemindersScheduler(
+      service,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
 
     await scheduler.runOnce(new Date('2026-04-19T16:00:00.000Z'));
     expect(queueAdds).toHaveLength(1);
@@ -327,7 +359,11 @@ describe('RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)', ()
       undefined,
       fakeQueue as never,
     );
-    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+    const scheduler = new RemindersScheduler(
+      service,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
 
     // Tick #1 — same UTC day as escalation fireAt.
     await scheduler.runOnce(new Date('2026-04-19T17:30:00.000Z'));
@@ -357,7 +393,11 @@ describe('RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)', ()
       undefined,
       fakeQueue as never,
     );
-    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+    const scheduler = new RemindersScheduler(
+      service,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
 
     await scheduler.runOnce(new Date('2026-04-19T17:30:00.000Z'));
 
@@ -404,7 +444,11 @@ describe('RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)', () => {
       findDueEscalationRules: vi.fn(async () => []),
     };
     const service = new RemindersService(createServiceRepo(), undefined, fakeQueue as never);
-    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+    const scheduler = new RemindersScheduler(
+      service,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
 
     await scheduler.runOnce(new Date('2026-04-19T16:00:00.000Z'));
 
@@ -458,7 +502,11 @@ describe('RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)', () => {
       },
     };
     const service = new RemindersService(escalationServiceRepo, undefined, fakeQueue as never);
-    const scheduler = new RemindersScheduler(service, fakeRepository as never);
+    const scheduler = new RemindersScheduler(
+      service,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
 
     await scheduler.runOnce(new Date('2026-04-19T17:30:00.000Z'));
 

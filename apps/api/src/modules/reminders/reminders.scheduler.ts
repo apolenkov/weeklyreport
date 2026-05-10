@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
-import { RemindersService } from './reminders.service';
+import { OrganizationService } from '../organization/organization.service';
+
+import { RemindersService, type ReminderOrganization } from './reminders.service';
 import {
   RemindersPrismaRepository,
   type DueDeadlineRule,
@@ -32,6 +34,10 @@ export class RemindersScheduler {
   constructor(
     private readonly service: RemindersService,
     private readonly repository: RemindersPrismaRepository,
+    // UFB-047 / Phase 49-01: brand snapshot is fetched once per `runOnce`
+    // (not per-recipient) so a single tick that fans out to all 6+ leads
+    // hits the `Organization` table exactly once, not 6 times.
+    private readonly organizationService: OrganizationService,
   ) {}
 
   // CronExpression.EVERY_HOUR === '0 * * * *' — fires at the top of every hour.
@@ -47,17 +53,33 @@ export class RemindersScheduler {
    */
   async runOnce(now: Date): Promise<void> {
     const dueDeadlineRules = await this.repository.findDueDeadlineRules(now);
-    for (const rule of dueDeadlineRules) {
-      await this.dispatchRule(rule);
+    const dueEscalationRules = await this.repository.findDueEscalationRules(now);
+
+    // Skip the org fetch entirely when nothing is due — keeps idle ticks
+    // a no-op against the DB.
+    if (dueDeadlineRules.length === 0 && dueEscalationRules.length === 0) {
+      return;
     }
 
-    const dueEscalationRules = await this.repository.findDueEscalationRules(now);
+    const orgPublic = await this.organizationService.getPublic();
+    const organization: ReminderOrganization = {
+      shortName: orgPublic.shortName,
+      fullName: orgPublic.fullName,
+    };
+
+    for (const rule of dueDeadlineRules) {
+      await this.dispatchRule(rule, organization);
+    }
+
     for (const rule of dueEscalationRules) {
-      await this.dispatchEscalation(rule);
+      await this.dispatchEscalation(rule, organization);
     }
   }
 
-  private async dispatchRule(rule: DueDeadlineRule): Promise<void> {
+  private async dispatchRule(
+    rule: DueDeadlineRule,
+    organization: ReminderOrganization,
+  ): Promise<void> {
     const cycleDate = rule.fireAt.toISOString().slice(0, 10); // YYYY-MM-DD UTC
     const sectionUrl = buildSectionUrl(rule.reportId);
     const deadlineIso = rule.fireAt.toISOString();
@@ -73,11 +95,15 @@ export class RemindersScheduler {
         reportPeriod: rule.reportPeriodLabel,
         deadlineIso,
         sectionUrl,
+        organization,
       });
     }
   }
 
-  private async dispatchEscalation(rule: DueEscalationRule): Promise<void> {
+  private async dispatchEscalation(
+    rule: DueEscalationRule,
+    organization: ReminderOrganization,
+  ): Promise<void> {
     // NOTIF-02 (Phase 29-05): one digest email per (rule, head) per cycle.
     // Escalation IGNORES recipient.notificationOptOut (NOTIF-05 contract).
     const cycleDate = rule.fireAt.toISOString().slice(0, 10);
@@ -87,6 +113,7 @@ export class RemindersScheduler {
       headName: rule.head.name,
       reportPeriod: rule.reportPeriodLabel,
       lateLeads: rule.lateLeads,
+      organization,
     });
   }
 }

@@ -88,7 +88,6 @@ function Wrapper({ children }: { children: ReactNode }) {
 // here mirror the SQL defaults so the Periods / Reminders / Notifications
 // sub-tabs render with realistic initial state.
 const baseSettings: MockSettings = {
-  departmentName: 'Core Development',
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
   periodLengthDays: 7,

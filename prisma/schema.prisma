@@ -433,9 +433,12 @@ model ReopenRequest {
 //   - autoPublishAfterDeadline: scheduler will fire at (deadline + grace);
 //                              missing sections render «Не сдал» placeholder.
 //                              Logic deferred — 48-B persists the toggle only.
+// UFB-047 / Phase 49-01: legacy `departmentName` column dropped from this
+// model. Brand identity (short + full name) lives on the `Organization`
+// singleton below; readers consume it via `OrganizationService.getPublic()`
+// or the per-request `auth.me.organization` hydration on the wire.
 model AppSettings {
   id                           String           @id @default("singleton")
-  departmentName               String           @default("CoreDev")
   autoCreatePeriods            Boolean          @default(false)
   defaultDeadlineDays          Int              @default(5)
   periodLengthDays             Int              @default(7)

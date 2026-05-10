@@ -103,8 +103,8 @@ export type MockReminderPolicy = {
 // UFB-048 (Phase 48-B): MockSettings expanded with 9 new fields. Order
 // mirrors the tab grouping in settings-tab.tsx (Periods → Reminders →
 // Notifications) for readability.
+// UFB-047 / Phase 49-01: legacy `departmentName` removed.
 export type MockSettings = {
-  departmentName: string;
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
   // Periods tab
@@ -468,7 +468,6 @@ export const MOCK_REMINDERS: MockReminder[] = [
 // ---- Mock Settings ----
 
 export const MOCK_SETTINGS: MockSettings = {
-  departmentName: "Core Development",
   autoCreatePeriods: true,
   defaultDeadlineDays: 5,
   // UFB-048 (Phase 48-B) defaults

@@ -35,7 +35,18 @@ export interface RemindersRepository {
  * The v2.0 follow-up dedupe key shape
  * (`${rule.id}:${fireAt.toISOString()}:${recipientEmail}`) is preserved for
  * legacy callers that omit `payload`.
+ *
+ * UFB-047 / Phase 49-01: every payload now carries `organization` —
+ * `{shortName, fullName}` snapshotted at enqueue time from the
+ * `Organization` singleton. The worker re-renders the template with that
+ * snapshot, so a mid-flight admin edit of the brand strings does NOT
+ * affect already-queued emails (one fewer race to debug).
  */
+export type ReminderOrganization = {
+  shortName: string;
+  fullName: string;
+};
+
 export type DeadlineReminderPayload = {
   kind: 'deadline';
   cycleDate: string; // ISO YYYY-MM-DD UTC of the fireAt deadline
@@ -43,6 +54,7 @@ export type DeadlineReminderPayload = {
   reportPeriod: string;
   deadlineIso: string;
   sectionUrl: string;
+  organization: ReminderOrganization;
 };
 
 export type EscalationReminderPayload = {
@@ -55,6 +67,7 @@ export type EscalationReminderPayload = {
     sectionTitle: string;
     deadlineIso: string;
   }>;
+  organization: ReminderOrganization;
 };
 
 export type ReminderExecutionPayload =
@@ -137,6 +150,8 @@ export class RemindersService {
           reportPeriod: payload.reportPeriod,
           deadlineIso: payload.deadlineIso,
           sectionUrl: payload.sectionUrl,
+          // UFB-047 / Phase 49-01: brand snapshot — see ReminderOrganization.
+          organization: payload.organization,
         };
       } else if (payload?.kind === 'escalation') {
         queuePayload = {
@@ -147,8 +162,12 @@ export class RemindersService {
           cycleDate: payload.cycleDate,
           reportPeriod: payload.reportPeriod,
           lateLeads: payload.lateLeads,
+          organization: payload.organization,
         };
       } else {
+        // Legacy v2.0 path — no template rendering, plain text body. The
+        // worker's legacy branch hardcodes the brand and is scheduled for
+        // removal once all Phase 28+ kinds dominate the queue.
         queuePayload = {
           executionId: execution.id,
           recipientEmail,
