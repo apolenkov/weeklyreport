@@ -297,7 +297,7 @@ async function main() {
       {
         id: ADMIN_ID,
         email: "admin@customreport.local",
-        name: "Антон К.",
+        name: "Михаил Б.",
         role: Role.admin,
         samlId: "admin-1",
         reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
