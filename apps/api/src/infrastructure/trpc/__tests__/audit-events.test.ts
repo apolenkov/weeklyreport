@@ -88,9 +88,10 @@ describe('AUTH-08 role-denied integration signal', () => {
       ip: '10.0.0.42',
     });
 
-    // attemptedRole carries the allowed Role | Role[] verbatim — headProcedure
-    // accepts ['head', 'admin'] per D-AUTH-03 alias semantics (commit 413ef34
-    // after live-test discovered admin role got 403 on admin.* procedures).
+    // attemptedRole carries the allowed Role | Role[] verbatim. headProcedure
+    // accepts ['head', 'admin'] (admin inherits head capabilities). The
+    // D-AUTH-03 alias adminProcedure === headProcedure was retired by
+    // UFB-038; admin endpoints now use a separate adminProcedure (admin-only).
     expect(audit.context?.['attemptedRole']).toEqual(['head', 'admin']);
 
     // Negative — no spurious login-success was emitted by the role-deny path.

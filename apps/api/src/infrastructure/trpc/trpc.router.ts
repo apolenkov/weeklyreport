@@ -24,6 +24,7 @@ import {
   publicProcedure,
   protectedProcedure,
   headProcedure,
+  adminProcedure,
   anyRoleProcedure,
 } from "./trpc.middleware.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
@@ -386,7 +387,7 @@ export function createAppRouter(deps: RouterDeps) {
 
     // === Admin namespace ===
     admin: router({
-      snapshot: headProcedure.query(async () => {
+      snapshot: adminProcedure.query(async () => {
         try {
           return await deps.adminService.getSnapshot();
         } catch (error) {
@@ -394,7 +395,7 @@ export function createAppRouter(deps: RouterDeps) {
         }
       }),
 
-      getSettings: headProcedure.query(async () => {
+      getSettings: adminProcedure.query(async () => {
         try {
           return await deps.adminService.getSettings();
         } catch (error) {
@@ -402,7 +403,7 @@ export function createAppRouter(deps: RouterDeps) {
         }
       }),
 
-      updateSettings: headProcedure
+      updateSettings: adminProcedure
         .input(appSettingsUpdateSchema)
         .mutation(async ({ input }) => {
           try {
@@ -412,7 +413,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      saveUser: headProcedure
+      saveUser: adminProcedure
         .input(adminUserSchema)
         .mutation(async ({ input }) => {
           try {
@@ -422,7 +423,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      saveReportingGroup: headProcedure
+      saveReportingGroup: adminProcedure
         .input(reportingGroupSchema)
         .mutation(async ({ input }) => {
           try {
@@ -432,7 +433,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      archiveReportingGroup: headProcedure
+      archiveReportingGroup: adminProcedure
         .input(z.object({ groupId: z.string().uuid() }))
         .mutation(async ({ input }) => {
           try {
@@ -442,7 +443,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      saveProject: headProcedure
+      saveProject: adminProcedure
         .input(adminProjectSchema)
         .mutation(async ({ input }) => {
           try {
@@ -452,7 +453,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      savePeriod: headProcedure
+      savePeriod: adminProcedure
         .input(reportPeriodSchema)
         .mutation(async ({ input }) => {
           try {
@@ -462,7 +463,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      saveReminderRule: headProcedure
+      saveReminderRule: adminProcedure
         .input(adminReminderRuleSchema)
         .mutation(async ({ input }) => {
           try {
@@ -472,7 +473,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      deleteUser: headProcedure
+      deleteUser: adminProcedure
         .input(z.object({ userId: z.string().uuid() }))
         .mutation(async ({ input }) => {
           try {
@@ -482,7 +483,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      deleteProject: headProcedure
+      deleteProject: adminProcedure
         .input(z.object({ projectId: z.string().uuid() }))
         .mutation(async ({ input }) => {
           try {
@@ -492,7 +493,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      deleteReminderRule: headProcedure
+      deleteReminderRule: adminProcedure
         .input(z.object({ ruleId: z.string().uuid() }))
         .mutation(async ({ input }) => {
           try {
@@ -502,7 +503,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      saveStageAssignment: headProcedure
+      saveStageAssignment: adminProcedure
         .input(
           z.object({
             userId: z.string().uuid(),
@@ -518,7 +519,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      deleteStageAssignment: headProcedure
+      deleteStageAssignment: adminProcedure
         .input(z.object({ id: z.string().uuid() }))
         .mutation(async ({ input }) => {
           try {
@@ -528,7 +529,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      listStageAssignments: headProcedure
+      listStageAssignments: adminProcedure
         .input(z.object({ projectId: z.string().uuid() }))
         .query(async ({ input }) => {
           try {
@@ -543,7 +544,7 @@ export function createAppRouter(deps: RouterDeps) {
       // Full SDLC stage catalogue. Used by the Stage Assignment editor so it
       // can render *every* stage (including unassigned ones), not just the
       // stages that already have an assignment row for the project.
-      listStages: headProcedure.query(async () => {
+      listStages: adminProcedure.query(async () => {
         try {
           const rows = await deps.prisma.stage.findMany({
             orderBy: { sortOrder: "asc" },
@@ -558,7 +559,7 @@ export function createAppRouter(deps: RouterDeps) {
       // Per-project assignment count for the products-tab "X/7 stages"
       // header. Light query (single GROUP BY) so we can render the count
       // without loading every assignment row.
-      listStageAssignmentCounts: headProcedure.query(async () => {
+      listStageAssignmentCounts: adminProcedure.query(async () => {
         try {
           const rows = await deps.prisma.stageAssignment.groupBy({
             by: ["projectId"],
@@ -574,10 +575,10 @@ export function createAppRouter(deps: RouterDeps) {
       }),
 
       // NOTIF-06 (Phase 29-05): BullMQ DLQ count — failed-jobs set of the
-      // email-reminder queue. headProcedure (admin/head only — D-AUTH-03).
+      // email-reminder queue. adminProcedure (admin/head only — D-AUTH-03).
       // Returns { count: 0 } when the Queue handle is absent (e.g. unit test
       // wiring) so the procedure is always callable.
-      dlqCount: headProcedure.query(async () => {
+      dlqCount: adminProcedure.query(async () => {
         try {
           if (!deps.emailReminderQueue) {
             return { count: 0 };
@@ -593,7 +594,7 @@ export function createAppRouter(deps: RouterDeps) {
       // written by mutationAuditMiddleware and keyed by the same correlation id
       // as the structured app.log line for support/debug lookups.
       actionLog: router({
-        list: headProcedure
+        list: adminProcedure
           .input(
             z
               .object({
@@ -630,11 +631,11 @@ export function createAppRouter(deps: RouterDeps) {
 
       // Phase 35-06: BullMQ DLQ admin surface. Lifts the Bull Board view
       // (/admin/queues) into the in-app /admin?tab=jobs page so the head can
-      // triage failed jobs without leaving the SPA. headProcedure (admin/head
+      // triage failed jobs without leaving the SPA. adminProcedure (admin/head
       // only). Mutation audit (procedure='admin.jobs.retryFailed', target=jobId)
       // is captured by mutationAuditMiddleware automatically.
       jobs: router({
-        listFailed: headProcedure
+        listFailed: adminProcedure
           .input(
             z.object({
               queue: queueNameSchema,
@@ -654,7 +655,7 @@ export function createAppRouter(deps: RouterDeps) {
             }
           }),
 
-        retryFailed: headProcedure
+        retryFailed: adminProcedure
           .input(
             z.object({
               queue: queueNameSchema,
@@ -677,7 +678,7 @@ export function createAppRouter(deps: RouterDeps) {
       // Reopen requests — Lead-initiated, Head-decided. The Lead's
       // `leadForm.requestReopen` mutation persists a row with status=pending;
       // the Admin Panel "Reopen Requests" tab consumes these procedures.
-      listReopenRequests: headProcedure
+      listReopenRequests: adminProcedure
         .input(
           z
             .object({
@@ -735,7 +736,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      respondReopenRequest: headProcedure
+      respondReopenRequest: adminProcedure
         .input(
           z.object({
             id: z.string().uuid(),
@@ -785,7 +786,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      pendingReopenCount: headProcedure.query(async () => {
+      pendingReopenCount: adminProcedure.query(async () => {
         try {
           const count = await deps.prisma.reopenRequest.count({
             where: { status: "pending" },

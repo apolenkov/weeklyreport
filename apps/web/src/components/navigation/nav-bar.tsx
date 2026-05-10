@@ -41,7 +41,9 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
     label: "Archive",
     roles: ["lead", "head", "viewer"],
   },
-  { href: "/admin", label: "Admin", roles: ["head", "admin"] },
+  // UFB-038: admin tab is admin-only. heads have a dashboard, not an admin
+  // panel. The /admin/layout.tsx role gate enforces the same on the route.
+  { href: "/admin", label: "Admin", roles: ["admin"] },
 ];
 
 function getRoleLabel(role: Role): string {

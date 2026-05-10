@@ -140,10 +140,10 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/admin");
   });
 
-  it("head sees /admin link in the DOM", () => {
+  it("head does NOT see /admin link (UFB-038)", () => {
     setRole("head");
     const { container } = render(<NavBar />);
-    expectLinkExists(container, "/admin");
+    expectLinkMissing(container, "/admin");
   });
 
   it("head sees /head/* links (Dashboard, Weekly Report)", () => {
