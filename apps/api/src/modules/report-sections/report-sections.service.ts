@@ -9,6 +9,11 @@ import {
   type SubmitSectionPayload,
 } from "@customreport/shared";
 
+import {
+  customreportSectionsSubmittedTotal,
+  customreportSectionSubmissionLatencySeconds,
+} from "../../infrastructure/metrics/metrics.registry.js";
+
 export class ReportSectionDomainError extends Error {
   constructor(
     readonly code: DraftSaveValidationError["code"],
@@ -254,8 +259,31 @@ export class ReportSectionsService {
       }
     }
 
-    return this.repository.saveSection(
+    const saved = await this.repository.saveSection(
       mergeSection(section, parsedInput, "submitted", late),
     );
+
+    // Phase 52-A (UFB-054): product telemetry. We always bump the
+    // submission counter, labelled by the same `late` flag persisted on
+    // the row, so dashboard math matches the badge in the UI. The
+    // latency histogram observes signed seconds (deadline − now) — but
+    // only when the repository can report the deadline (the in-memory
+    // back-compat repos predate `getReportMeta`). Wrapped in a defensive
+    // try/catch because telemetry MUST NOT break the write path.
+    try {
+      customreportSectionsSubmittedTotal.inc({ late: String(late) });
+      if (this.repository.getReportMeta) {
+        const meta = await this.repository.getReportMeta(section.reportId);
+        if (meta) {
+          // Signed seconds: positive = late, negative = submitted early.
+          const deltaSeconds = (Date.now() - meta.deadline.getTime()) / 1000;
+          customreportSectionSubmissionLatencySeconds.observe(deltaSeconds);
+        }
+      }
+    } catch {
+      // Never let metric emission corrupt the submit response.
+    }
+
+    return saved;
   }
 }
