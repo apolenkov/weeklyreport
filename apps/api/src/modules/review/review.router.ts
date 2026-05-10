@@ -34,7 +34,7 @@ export const reviewRouter = {
     }
 
     return submissionDashboardRowSchema.array().parse(
-      await ctx.reviewService.getSubmissionDashboard(activeReportId),
+      await ctx.reviewService.getSubmissionDashboard(activeReportId, ctx.session),
     );
   },
 };

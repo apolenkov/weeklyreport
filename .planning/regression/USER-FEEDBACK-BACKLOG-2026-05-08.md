@@ -15,6 +15,7 @@ next regression pass does not rediscover the same gaps from chat/screenshots.
   P1
   UFB-042 Leader dropdown in Admin → Groups does not persist selection
   UFB-044 brand link in nav-bar must route to per-role home, not /head/dashboard
+  UFB-045 Edit Group form must expose archived/status toggle
   UFB-010 empty products muted/collapsed/non-expandable in weekly report
   UFB-011 weekly/head layouts need top spacing; no header/content merging
   UFB-012 remove misleading Collapse/Toggle controls when content is empty
@@ -740,6 +741,30 @@ Investigation hooks:
   `reportingGroupSchema`) — must accept `headUserId`
 
 Fix Phase: ad-hoc `quick` after Phase 46 completes (or earlier if user prefers).
+
+### UFB-045 - Edit Group form must allow toggling archived/status
+
+Status: open
+Priority: P1
+Source: user UAT 2026-05-10 ("Edit Group / тогда ещё и статус надо менять уметь")
+
+User signal: when editing an existing ReportingGroup in `/admin?tab=groups`,
+the form has no control to flip `archived` (active ↔ archived). Schema field
+exists (`ReportingGroup.archived: Boolean`), tRPC `reportingGroupSchema`
+already includes it, but the GroupsTab edit form does not surface it.
+
+Required: switch / checkbox in the edit modal labelled "Архивировать"
+(or status select Active / Archived). Disable rather than delete to keep
+historical FK references intact (sections, projects, viewer-access rows).
+
+Bundle with UFB-042 fix (Leader dropdown not persisting) — both are
+GroupsTab form-payload bugs.
+
+Investigation hooks:
+
+- `apps/web/src/components/admin/groups-tab.tsx` — form fields + payload
+- `apps/web/src/lib/mappers/admin.ts` — `toReportingGroupInput()` already
+  passes `archived` through; UI just needs the control
 
 ### UFB-044 - Brand link in nav-bar must route to per-role home
 

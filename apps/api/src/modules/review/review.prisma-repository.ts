@@ -4,15 +4,26 @@ import {
   type SubmissionDashboardRow,
 } from '@customreport/shared';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { ReviewRepository } from './review.service.js';
+import { groupScopeFilter } from '../../lib/group-scope.js';
+import type {
+  DashboardScopeSession,
+  ReviewRepository,
+} from './review.service.js';
 
 @Injectable()
 export class ReviewPrismaRepository implements ReviewRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getSubmissionDashboard(activeReportId: string): Promise<SubmissionDashboardRow[]> {
+  async getSubmissionDashboard(
+    activeReportId: string,
+    session: DashboardScopeSession,
+  ): Promise<SubmissionDashboardRow[]> {
+    const scope = groupScopeFilter(
+      session as Parameters<typeof groupScopeFilter>[0],
+      'reportSection',
+    );
     const sections = await this.prisma.reportSection.findMany({
-      where: { reportId: activeReportId },
+      where: { reportId: activeReportId, ...scope },
       include: {
         author: {
           include: {

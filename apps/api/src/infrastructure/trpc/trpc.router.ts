@@ -308,6 +308,7 @@ export function createAppRouter(deps: RouterDeps) {
 
           return await deps.reviewService.getSubmissionDashboard(
             activeReportId,
+            ctx.session,
           );
         } catch (error) {
           throw mapDomainError(error);

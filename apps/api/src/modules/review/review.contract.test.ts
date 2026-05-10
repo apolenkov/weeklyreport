@@ -20,7 +20,7 @@ const reportId = '22222222-2222-4222-8222-222222222222';
 
 function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
   return {
-    async getSubmissionDashboard(activeReportId: string) {
+    async getSubmissionDashboard(activeReportId, _session) {
       if (activeReportId !== reportId) {
         return [];
       }
@@ -29,6 +29,8 @@ function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
     },
   };
 }
+
+const ADMIN_SESSION = { role: 'admin' as const };
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                           */
@@ -52,7 +54,7 @@ describe('ReviewService — contract tests', () => {
   it('returns empty array for report with no sections', async () => {
     const service = new ReviewService(createRepository([]));
 
-    const rows = await service.getSubmissionDashboard(reportId);
+    const rows = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     expect(rows).toEqual([]);
   });
@@ -73,7 +75,7 @@ describe('ReviewService — contract tests', () => {
     ];
 
     const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(reportId);
+    const result = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     expect(result.map((r) => r.status)).toEqual(['draft', 'submitted']);
   });
@@ -98,7 +100,7 @@ describe('ReviewService — contract tests', () => {
     ];
 
     const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(reportId);
+    const result = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     expect(result.map((r) => r.leadName)).toEqual(['Alpha', 'Bravo', 'Charlie']);
   });
@@ -122,7 +124,7 @@ describe('ReviewService — contract tests', () => {
     };
 
     const service = new ReviewService(repo);
-    const result = await service.getSubmissionDashboard(reportId);
+    const result = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     expect(result).toHaveLength(1);
     expect('extraField' in expectDefined(result[0])).toBe(false);
@@ -144,7 +146,7 @@ describe('ReviewService — contract tests', () => {
     ];
 
     const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(reportId);
+    const result = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
@@ -171,7 +173,7 @@ describe('ReviewService — contract tests', () => {
     ];
 
     const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(reportId);
+    const result = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     expect(result.every((r) => r.status === 'submitted')).toBe(true);
     expect(result.map((r) => r.leadName)).toEqual(['Alpha', 'Bravo']);
@@ -190,7 +192,7 @@ describe('ReviewService — contract tests', () => {
     ];
 
     const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(reportId);
+    const result = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     expect(result.every((r) => r.status === 'draft')).toBe(true);
     expect(result.map((r) => r.leadName)).toEqual(['Alpha', 'Zulu']);
@@ -216,7 +218,7 @@ describe('ReviewService — contract tests', () => {
     ];
 
     const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(reportId);
+    const result = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     expect(result.map((r) => r.leadName)).toEqual(['Андрей', 'Борис', 'Яков']);
   });
@@ -229,7 +231,7 @@ describe('ReviewService — contract tests', () => {
     ];
 
     const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(reportId);
+    const result = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     const submittedCount = result.filter((r) => r.status === 'submitted').length;
     const draftCount = result.filter((r) => r.status === 'draft').length;
@@ -244,7 +246,7 @@ describe('ReviewService — contract tests', () => {
     ];
 
     const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard('99999999-9999-4999-8999-999999999999');
+    const result = await service.getSubmissionDashboard('99999999-9999-4999-8999-999999999999', ADMIN_SESSION);
 
     expect(result).toEqual([]);
   });
@@ -256,7 +258,7 @@ describe('ReviewService — contract tests', () => {
     ];
 
     const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(reportId);
+    const result = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     expect(result.every((r) => r.role === 'lead')).toBe(true);
   });
@@ -293,7 +295,7 @@ describe('ReviewService — contract tests', () => {
     ];
 
     const service = new ReviewService(createRepository(rows));
-    const result = await service.getSubmissionDashboard(reportId);
+    const result = await service.getSubmissionDashboard(reportId, ADMIN_SESSION);
 
     // Drafts first, sorted by Russian name; then submitted, sorted by Russian name
     expect(result.map((r) => `${r.status}:${r.leadName}`)).toEqual([
