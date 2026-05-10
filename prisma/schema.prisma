@@ -311,12 +311,15 @@ model ReminderPolicy {
   timezone      String           @default("Europe/Moscow")
   audience      ReminderAudience
   active        Boolean          @default(true)
+  validFrom     DateTime         @default(now())
+  validUntil    DateTime?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   rules         ReminderRule[]
 
   @@index([kind, active])
   @@index([active])
+  @@index([validFrom, validUntil])
 }
 
 model ReminderExecution {
