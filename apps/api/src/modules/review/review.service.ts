@@ -1,6 +1,7 @@
 import {
   submissionDashboardRowSchema,
   type SubmissionDashboardRow,
+  type UserSession,
 } from '@customreport/shared';
 
 export class ReviewAccessError extends Error {
@@ -10,8 +11,23 @@ export class ReviewAccessError extends Error {
   }
 }
 
+/**
+ * UFB-040 / Phase 46-02: dashboard reads honour group-scope visibility.
+ * The repository receives the requester's session so it can spread
+ * `groupScopeFilter(session, 'reportSection')` into the Prisma where
+ * fragment. Tests can pass a `Pick<UserSession, ...>` instead of a full
+ * session shape.
+ */
+export type DashboardScopeSession = Pick<
+  UserSession,
+  'role' | 'reportingGroupId' | 'viewerGroupAccess'
+>;
+
 export interface ReviewRepository {
-  getSubmissionDashboard(activeReportId: string): Promise<SubmissionDashboardRow[]>;
+  getSubmissionDashboard(
+    activeReportId: string,
+    session: DashboardScopeSession,
+  ): Promise<SubmissionDashboardRow[]>;
 }
 
 const statusOrder: Record<SubmissionDashboardRow['status'], number> = {
@@ -34,8 +50,14 @@ function sortRows(rows: SubmissionDashboardRow[]): SubmissionDashboardRow[] {
 export class ReviewService {
   constructor(private readonly repository: ReviewRepository) {}
 
-  async getSubmissionDashboard(activeReportId: string): Promise<SubmissionDashboardRow[]> {
-    const rows = await this.repository.getSubmissionDashboard(activeReportId);
+  async getSubmissionDashboard(
+    activeReportId: string,
+    session: DashboardScopeSession,
+  ): Promise<SubmissionDashboardRow[]> {
+    const rows = await this.repository.getSubmissionDashboard(
+      activeReportId,
+      session,
+    );
 
     return submissionDashboardRowSchema.array().parse(sortRows(rows));
   }

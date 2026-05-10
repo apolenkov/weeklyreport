@@ -58,7 +58,7 @@ const unsortedRows: SubmissionDashboardRow[] = [
 
 function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
   return {
-    async getSubmissionDashboard(activeReportId: string) {
+    async getSubmissionDashboard(activeReportId: string, _session) {
       if (activeReportId !== reportId) {
         return [];
       }
@@ -68,11 +68,28 @@ function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
   };
 }
 
+const headSessionWithGroup: UserSession = {
+  ...headSession,
+  reportingGroupId: 'a0000000-0000-4000-8000-000000000a01',
+};
+
+const viewerSessionEmptyAccess: UserSession = {
+  userId: '00000000-0000-4000-8000-000000000003',
+  email: 'viewer@customreport.local',
+  name: 'Viewer',
+  role: 'viewer',
+  activeReportId: reportId,
+  activeReportSectionId: null,
+  viewerGroupAccess: [],
+};
+
 describe('ReviewService', () => {
   it('returns one typed row per lead for the active report', async () => {
     const service = new ReviewService(createRepository(unsortedRows));
 
-    await expect(service.getSubmissionDashboard(reportId)).resolves.toMatchObject([
+    await expect(
+      service.getSubmissionDashboard(reportId, headSession),
+    ).resolves.toMatchObject([
       {
         leadName: 'Lead 1',
         projectNames: ['Project 1'],
@@ -94,7 +111,7 @@ describe('ReviewService', () => {
   it('sorts outstanding draft rows before submitted rows and then by lead name', async () => {
     const service = new ReviewService(createRepository(unsortedRows));
 
-    const rows = await service.getSubmissionDashboard(reportId);
+    const rows = await service.getSubmissionDashboard(reportId, headSession);
 
     expect(rows.map((row: SubmissionDashboardRow) => `${row.status}:${row.leadName}`)).toEqual([
       'draft:Lead 1',
@@ -112,6 +129,42 @@ describe('ReviewService', () => {
         session: leadSession,
       }),
     ).rejects.toBeInstanceOf(ReviewAccessError);
+  });
+
+  it('UFB-040 / 46-02: passes the session through to the repository so scope filter applies', async () => {
+    let capturedSession: unknown;
+    const spyRepo: ReviewRepository = {
+      async getSubmissionDashboard(_id, session) {
+        capturedSession = session;
+        return [];
+      },
+    };
+    const service = new ReviewService(spyRepo);
+    await service.getSubmissionDashboard(reportId, headSessionWithGroup);
+    expect(capturedSession).toMatchObject({
+      role: 'head',
+      reportingGroupId: 'a0000000-0000-4000-8000-000000000a01',
+    });
+  });
+
+  it('UFB-040 / 46-02: viewer with empty viewerGroupAccess gets zero rows back (caller responsibility, repo still gets session)', async () => {
+    let capturedSession: unknown;
+    const spyRepo: ReviewRepository = {
+      async getSubmissionDashboard(_id, session) {
+        capturedSession = session;
+        return [];
+      },
+    };
+    const service = new ReviewService(spyRepo);
+    const result = await service.getSubmissionDashboard(
+      reportId,
+      viewerSessionEmptyAccess,
+    );
+    expect(result).toEqual([]);
+    expect(capturedSession).toMatchObject({
+      role: 'viewer',
+      viewerGroupAccess: [],
+    });
   });
 });
 

@@ -28,7 +28,9 @@ describe('ReviewPrismaRepository (integration)', () => {
   });
 
   it('getSubmissionDashboard returns rows for all sections in report', async () => {
-    const rows = await repo.getSubmissionDashboard(testData.report.id);
+    const rows = await repo.getSubmissionDashboard(testData.report.id, {
+      role: 'admin',
+    });
 
     expect(rows).toHaveLength(1);
     expect(expectDefined(rows[0]).leadId).toBe(testData.lead.id);
@@ -38,7 +40,10 @@ describe('ReviewPrismaRepository (integration)', () => {
   });
 
   it('getSubmissionDashboard returns empty array for non-existent report', async () => {
-    const rows = await repo.getSubmissionDashboard('ffffffff-ffff-ffff-ffff-ffffffffffff');
+    const rows = await repo.getSubmissionDashboard(
+      'ffffffff-ffff-ffff-ffff-ffffffffffff',
+      { role: 'admin' },
+    );
     expect(rows).toHaveLength(0);
   });
 });
