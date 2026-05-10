@@ -14,6 +14,7 @@
   },
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "dev:watch": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --watch",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
