@@ -221,6 +221,12 @@ model ReportSection {
   risks            Risk[]
   stageStatuses    StageStatus[]
   versionSnapshots VersionSnapshot[]
+  // Phase 54 (UFB-055): stub RAG ingestion queue. One row per published
+  // section enqueued by PublicationService for later batch processing;
+  // no LLM call happens yet. Cascade on section delete keeps the queue
+  // clean — orphan jobs would be unprocessable anyway since the source
+  // text is gone.
+  aiIngestionJobs  AiIngestionJob[]
 
   @@unique([reportId, authorId])
   @@index([authorId])
@@ -563,6 +569,39 @@ model Organization {
   fullName  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Phase 54 (UFB-055) — AI/RAG ingestion stub queue.
+//
+// Seeds-only scaffolding: when a report is published (manual / auto /
+// period close), one row per ReportSection is enqueued here for later
+// batch processing by a future worker that will call an LLM/embedding
+// provider. No provider is wired in this phase — the table just
+// accumulates rows so the cutover to a real adapter does not require a
+// data-model change.
+//
+// Status state machine:
+//   pending   — newly enqueued, awaiting worker pickup
+//   processed — worker call succeeded (sets `processedAt`)
+//   failed    — worker call exceeded retries (`lastError` populated)
+//   skipped   — worker decided the section is not useful (e.g. empty)
+//
+// Idempotency: there is no unique constraint on `reportSectionId` —
+// re-publishing a period (after reopen) intentionally enqueues a fresh
+// row so the worker re-embeds the latest text. The future worker is
+// expected to deduplicate by content hash, not by section id.
+model AiIngestionJob {
+  id              String        @id @default(uuid())
+  reportSectionId String
+  status          String        @default("pending")
+  attempts        Int           @default(0)
+  lastError       String?
+  createdAt       DateTime      @default(now())
+  processedAt     DateTime?
+  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([reportSectionId])
 }
 
 model AiInsight {
