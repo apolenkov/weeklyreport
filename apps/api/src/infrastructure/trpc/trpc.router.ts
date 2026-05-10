@@ -1012,6 +1012,7 @@ export function createAppRouter(deps: RouterDeps) {
             const report = await deps.weeklyReportService.getWeeklyReport(
               input?.reportId,
               ctx.session.role,
+              ctx.session,
             );
             ctx.logger.info("weekly report load succeeded", {
               phase: "weekly-report.load",

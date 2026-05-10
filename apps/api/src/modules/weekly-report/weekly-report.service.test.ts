@@ -115,7 +115,7 @@ describe('WeeklyReportService — unit tests', () => {
     await service.getWeeklyReport(reportId);
 
     expect(repo.getWeeklyReport).toHaveBeenCalledOnce();
-    expect(repo.getWeeklyReport).toHaveBeenCalledWith(reportId);
+    expect(repo.getWeeklyReport).toHaveBeenCalledWith(reportId, undefined);
     // Should NOT call getActiveReportId when explicit ID is provided
     expect(repo.getActiveReportId).not.toHaveBeenCalled();
   });
@@ -129,7 +129,7 @@ describe('WeeklyReportService — unit tests', () => {
     await service.getWeeklyReport();
 
     expect(repo.getActiveReportId).toHaveBeenCalledOnce();
-    expect(repo.getWeeklyReport).toHaveBeenCalledWith(activeReportId);
+    expect(repo.getWeeklyReport).toHaveBeenCalledWith(activeReportId, undefined);
   });
 
   it('throws WeeklyReportDomainError (not generic Error) for missing report', async () => {
