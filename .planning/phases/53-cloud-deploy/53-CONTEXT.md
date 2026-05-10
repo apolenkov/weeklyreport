@@ -1,8 +1,13 @@
-# Phase 53: Cloud Deployment (STUB)
+# Phase 53: Cloud Deployment (DEFERRED)
 
-**Status:** idea — not yet scoped
+**Status:** DEFERRED indefinitely (2026-05-11 user decision)
 **Driver:** «cloud и будущая интеграция» (2026-05-10 in-chat capture)
-**Distinct from:** Phase 38 (infrastructure-deploy — likely on-prem Docker Compose). This phase is **public-cloud deployment** for production.
+**User decision (2026-05-11):** «зачем это сейчас? on-prem + Docker Compose
+(skip cloud пока)». Phase 38 (on-prem Docker Compose) is sufficient for the
+foreseeable future. Re-open this phase only when org explicitly requests
+cloud migration with budget + data-residency answers.
+**Distinct from:** Phase 38 (infrastructure-deploy — on-prem Docker Compose).
+This phase is **public-cloud deployment** for production — not needed now.
 
 ## Scope (idea-level)
 

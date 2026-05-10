@@ -1,6 +1,26 @@
-# Phase 54: AI Integration & RAG (STUB)
+# Phase 54: AI Integration & RAG (SEEDS + TODO)
 
-**Status:** idea — not yet scoped
+**Status:** seeds-only (2026-05-11 user decision). Land schema + adapter
+interface + placeholder UI; do NOT wire real LLM provider until org picks
+one.
+**User decision (2026-05-11):**
+
+- Hosting: **on-prem** (no public-cloud LLM calls without explicit re-decision)
+- LLM choice: **defer** — adapter abstraction lets the actual model swap
+  later. «API решит всё равно что» — pluggable per environment variable.
+- Rationale: «без LLM без real config = броски в пустоту, пока просто
+  заделы с TODO».
+  **Scope reduction for this round:**
+- Create `AiAdapter` interface (`generate(prompt, context): string`)
+- Implement `MockAiAdapter` returning hardcoded summary for dev/test
+- Wire ingestion stub: on Report.publish event, log to `AiIngestionJob`
+  table (rows for later batch processing); NO embedding call yet
+- UI: «AI Summary» tab in `/reports/<id>` rendering the mock output
+  with a clear «(заглушка)» badge
+- All real LLM logic (embedding, retrieval, prompt-engineering) behind
+  `if (env.AI_PROVIDER === 'mock') return mock` — leave the else branch
+  as `throw new Error('AI provider not configured')` until org decides.
+
 **Driver:** «будущая интеграция с ИИ... RAG и по группам и лидами к ним... RAG будет и в Telegram и summary» (2026-05-10 in-chat capture)
 **Drivers (combined ideas):**
 

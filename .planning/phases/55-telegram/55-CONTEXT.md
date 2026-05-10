@@ -1,6 +1,20 @@
-# Phase 55: Telegram Integration (STUB)
+# Phase 55: Telegram Integration (SEEDS + TODO)
 
-**Status:** idea — not yet scoped
+**Status:** seeds-only (2026-05-11 user decision). Land bot scaffolding +
+binding table + queue, but DO NOT activate without real bot token + config.
+**User decision (2026-05-11):**
+
+- Bot identity: **один бот для всей Demo** (A — single bot for the whole org)
+- Auth binding: defer — leave one-time-token table empty, UI not yet
+- Reasoning: «без real config = броски в пустоту, пока просто заделы»
+  **Scope reduction for this round:**
+- Schema: `TelegramBinding { userId, chatId, linkedAt }` table
+- Stub `TelegramQueue` BullMQ worker that logs payload + skips real send
+  when `process.env.TG_BOT_TOKEN` is empty
+- Adapter interface `TelegramAdapter.send(chatId, msg)` with `MockTelegramAdapter` for dev
+- UI Settings tab: «Integrations» with «Telegram (не активно)» status badge
+- DO NOT implement /start /summary /ask handlers — those require active bot
+
 **Driver:** «RAG будет в Telegram и summary» (2026-05-10 in-chat capture)
 
 ## Scope (idea-level)
