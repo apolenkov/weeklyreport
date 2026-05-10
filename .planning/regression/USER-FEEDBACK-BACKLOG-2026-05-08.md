@@ -13,9 +13,6 @@ next regression pass does not rediscover the same gaps from chat/screenshots.
   UFB-004 unauthenticated pages must redirect to landing/login, not skeleton hang
 
   P1
-  UFB-042 Leader dropdown in Admin → Groups does not persist selection
-  UFB-044 brand link in nav-bar must route to per-role home, not /head/dashboard
-  UFB-045 Edit Group form must expose archived/status toggle
   UFB-010 empty products muted/collapsed/non-expandable in weekly report
   UFB-011 weekly/head layouts need top spacing; no header/content merging
   UFB-012 remove misleading Collapse/Toggle controls when content is empty
@@ -713,9 +710,13 @@ explicit path).
 
 ### UFB-042 - Leader dropdown in Admin → Groups does not save selection
 
-Status: open
-Priority: P1
-Source: user UAT 2026-05-10 ("Groups / 1 groups / Выбор лидера не работает")
+Status: done — 0cdca5e (round-trip contract test in admin.service.test.ts;
+end-to-end chain was already sound, reproduction was likely a stale dev
+cache after the UFB-039 schema migration). User action: `pnpm db:reset:hard`
+
+- restart `pnpm dev` to pick up the schema change locally.
+  Priority: P1
+  Source: user UAT 2026-05-10 ("Groups / 1 groups / Выбор лидера не работает")
 
 User signal: in `/admin` → Groups tab the new Leader `<select>` (added in UFB-039
 commit `082c4aa`) does not actually persist the chosen `headUserId` when the row
@@ -744,7 +745,9 @@ Fix Phase: ad-hoc `quick` after Phase 46 completes (or earlier if user prefers).
 
 ### UFB-045 - Edit Group form must allow toggling archived/status
 
-Status: open
+Status: done — 0cdca5e (Archived checkbox added to Edit Group dialog;
+visible only on edit, not on add; archived field flows through
+GroupFormData → toReportingGroupInput → tRPC).
 Priority: P1
 Source: user UAT 2026-05-10 ("Edit Group / тогда ещё и статус надо менять уметь")
 
@@ -768,7 +771,9 @@ Investigation hooks:
 
 ### UFB-044 - Brand link in nav-bar must route to per-role home
 
-Status: open
+Status: done — 0cdca5e (new apps/web/src/lib/role-home.ts is the canonical
+per-role home util; nav-bar getLogoHref now delegates to it; admin → /admin,
+head → /head/dashboard, lead → /lead/report, viewer → /reports?tab=published).
 Priority: P1
 Source: user UAT 2026-05-10 ("когда я кликаю на CustomReport в меню для
 админа меня переводят на http://localhost:3000/head/dashboard")
