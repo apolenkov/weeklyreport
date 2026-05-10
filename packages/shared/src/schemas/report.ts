@@ -172,6 +172,14 @@ export const reportSectionReadModelSchema = z.object({
   // read-model no longer carries a redundant per-section copy.
   status: reportSectionStatusSchema,
   submittedAt: z.coerce.date().nullable(),
+  // UFB-049 / Phase 50-B: stamped true by submitSection when
+  // `now > Report.deadline` at submit-time (regardless of grace). Drives
+  // a "late" badge on the head dashboard + lead form. Optional in the
+  // inferred TS type so legacy fixtures + Phase 35+ test payloads that
+  // pre-date 50-B still construct ReportSectionReadModel without
+  // breaking. Consumers treat `late === true` only — undefined/false
+  // both mean "on time".
+  late: z.boolean().optional(),
   projects: z.array(projectReadModelSchema),
   items: z.array(itemInputSchema),
   risks: z.array(riskInputSchema),

@@ -357,3 +357,162 @@ describe("ReportSectionsService", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// UFB-049 / Phase 50-B: submitSection deadline gate (grace + late matrix)
+//
+// Combinations under test:
+//
+//   ┌──────────────────────┬──────────────────────┬───────────────────────┐
+//   │ now vs deadline      │ allowLateSubmissions │ Expected outcome      │
+//   ├──────────────────────┼──────────────────────┼───────────────────────┤
+//   │ before deadline      │ (any)                │ submit, late=false    │
+//   │ past deadline,       │ true                 │ submit, late=true     │
+//   │   within grace       │ false                │ submit, late=true     │
+//   │ past grace window    │ true                 │ submit, late=true     │
+//   │ past grace window    │ false                │ 403 ReportSection-    │
+//   │                      │                      │ AccessError           │
+//   └──────────────────────┴──────────────────────┴───────────────────────┘
+// ---------------------------------------------------------------------------
+
+describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
+  function createGracedRepository(opts: {
+    section?: ReportSectionReadModel;
+    deadline: Date;
+  }): ReportSectionsRepository {
+    const section = structuredClone(opts.section ?? baseSection);
+    // Make the section's traffic light filled so the content validator
+    // doesn't fire — we want to test the deadline gate in isolation.
+    const fixed = {
+      ...section,
+      projects: section.projects.map((p) => ({
+        ...p,
+        trafficLight: "green" as const,
+      })),
+    };
+    let currentSection = fixed;
+    return {
+      async getSectionById(id) {
+        if (id !== currentSection.reportSectionId) return null;
+        return structuredClone(currentSection);
+      },
+      async getReportStatus() {
+        return "draft";
+      },
+      async getReportMeta() {
+        return { status: "draft", deadline: opts.deadline };
+      },
+      async saveSection(next) {
+        currentSection = structuredClone(next);
+        return structuredClone(currentSection);
+      },
+    };
+  }
+
+  function validSubmitPayload() {
+    return {
+      reportSectionId: baseSection.reportSectionId,
+      status: "draft" as const,
+      confirmed: true,
+      projectStatuses: [
+        {
+          projectId: expectDefined(baseSection.projects[0]).projectId,
+          status: "green" as const,
+        },
+      ],
+      items: baseSection.items,
+      risks: [],
+      decisions: [],
+      priorities: baseSection.priorities,
+    };
+  }
+
+  const ONE_HOUR = 60 * 60 * 1000;
+
+  it("before deadline: submits with late=false (gate fully bypassed)", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() + 24 * ONE_HOUR),
+    });
+    const service = new ReportSectionsService(repo, async () => ({
+      gracePeriodHours: 24,
+      allowLateSubmissions: false,
+    }));
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(false);
+  });
+
+  it("past deadline within grace + allowLate=true: submits with late=true", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() - 1 * ONE_HOUR),
+    });
+    const service = new ReportSectionsService(repo, async () => ({
+      gracePeriodHours: 24,
+      allowLateSubmissions: true,
+    }));
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(true);
+  });
+
+  it("past deadline within grace + allowLate=false: submits with late=true (grace still permissive)", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() - 1 * ONE_HOUR),
+    });
+    const service = new ReportSectionsService(repo, async () => ({
+      gracePeriodHours: 24,
+      allowLateSubmissions: false,
+    }));
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(true);
+  });
+
+  it("past grace window + allowLate=true: submits with late=true", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() - 48 * ONE_HOUR),
+    });
+    const service = new ReportSectionsService(repo, async () => ({
+      gracePeriodHours: 24,
+      allowLateSubmissions: true,
+    }));
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(true);
+  });
+
+  it("past grace window + allowLate=false: 403 ReportSectionAccessError", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() - 48 * ONE_HOUR),
+    });
+    const service = new ReportSectionsService(repo, async () => ({
+      gracePeriodHours: 24,
+      allowLateSubmissions: false,
+    }));
+
+    await expect(
+      service.submitSection(validSubmitPayload()),
+    ).rejects.toBeInstanceOf(ReportSectionAccessError);
+  });
+
+  it("legacy: no grace-settings provider wired → gate skipped, late stays false even past deadline", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() - 48 * ONE_HOUR),
+    });
+    // No second constructor arg — legacy code path.
+    const service = new ReportSectionsService(repo);
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(false);
+  });
+});
