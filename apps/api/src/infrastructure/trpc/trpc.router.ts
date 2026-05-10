@@ -12,6 +12,7 @@ import {
   reportPeriodSchema,
   adminReminderRuleSchema,
   appSettingsUpdateSchema,
+  periodListBucketSchema,
   reminderPolicySchema,
   trafficLightHistoryInputSchema,
   leadVelocityInputSchema,
@@ -643,6 +644,61 @@ export function createAppRouter(deps: RouterDeps) {
               policyId: input.id,
             });
             return result;
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-052 (Phase 51-B): paginated period list for the redesigned
+       * Admin → Periods tab. Filters by lifecycle bucket
+       * (`active | archive | <PeriodState>`) using the
+       * `(periodState, periodStart desc)` index added in 51-C. Returns
+       * rich rows with server-precomputed `canReopen` / `canArchive`
+       * so the UI does not need to know the reopen-policy rules.
+       */
+      listPeriodsByState: adminProcedure
+        .input(
+          z.object({
+            bucket: periodListBucketSchema,
+            limit: z.number().int().min(1).max(200).optional(),
+          }),
+        )
+        .query(async ({ input }) => {
+          try {
+            return await deps.adminService.listPeriodsByState(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-052 (Phase 51-B): manual archive. Sets both `archived=true`
+       * and `periodState='archived'` atomically so the two-state-machine
+       * invariant from 51-C is preserved.
+       */
+      archivePeriod: adminProcedure
+        .input(z.object({ periodId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.archivePeriod(input.periodId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-052 (Phase 51-B): manual un-archive — flips `archived=false`
+       * and derives the next `periodState` from the legacy
+       * `(status, periodStatus)` tuple at write time (the new state
+       * column lost the pre-archive distinction when it was overwritten
+       * with 'archived').
+       */
+      unarchivePeriod: adminProcedure
+        .input(z.object({ periodId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.unarchivePeriod(input.periodId);
           } catch (error) {
             throw mapDomainError(error);
           }

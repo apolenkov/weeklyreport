@@ -5,6 +5,7 @@ import {
   adminUserSchema,
   appSettingsSchema,
   appSettingsUpdateSchema,
+  periodListItemSchema,
   reminderPolicySchema,
   reportingGroupSchema,
   stageAssignmentSchema,
@@ -14,6 +15,10 @@ import {
   type AdminSnapshot,
   type AdminUser,
   type AppSettings,
+  type PeriodListBucket,
+  type PeriodListItem,
+  type PeriodState,
+  type PeriodStatus,
   type ReminderPolicy,
   type ReportingGroup,
   type ReportPeriod,
@@ -50,7 +55,41 @@ export interface AdminRepository {
   listReminderPolicies?(): Promise<ReminderPolicy[]>;
   saveReminderPolicy?(policy: ReminderPolicy): Promise<ReminderPolicy>;
   archiveReminderPolicy?(policyId: string): Promise<void>;
+  // UFB-052 (Phase 51-B): rich period rows for the redesigned Admin
+  // Periods tab. Optional so existing in-memory test repositories
+  // (e.g. admin.service.test.ts) keep compiling — service callers fall
+  // back to an empty list when the repo doesn't implement it.
+  listPeriodsByState?(filter: {
+    states: readonly PeriodState[];
+    /** Cap is enforced server-side; defaults to 50 when caller omits. */
+    limit: number;
+  }): Promise<PeriodRowFromRepo[]>;
+  archivePeriod?(periodId: string): Promise<void>;
+  unarchivePeriod?(
+    periodId: string,
+  ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }>;
 }
+
+/**
+ * UFB-052 (Phase 51-B): the raw shape returned by `listPeriodsByState`
+ * before the service layer derives `canReopen` / `canArchive`. The
+ * service holds the AppSettings references (`allowReopenAfterPublish`,
+ * `reopenWindowHours`) so the repository stays settings-agnostic.
+ */
+export type PeriodRowFromRepo = {
+  id: string;
+  periodStart: Date;
+  periodEnd: Date;
+  deadline: Date;
+  publishedAt: Date | null;
+  periodState: PeriodState;
+  periodStatus: PeriodStatus;
+  archived: boolean;
+  autoPublished: boolean;
+  autoArchived: boolean;
+  submittedCount: number;
+  totalCount: number;
+};
 
 function sortByName<T extends { name: string }>(rows: T[]): T[] {
   return [...rows].sort((left, right) =>
@@ -282,5 +321,134 @@ export class AdminService {
     this.logger.info("archived reminder policy", { policyId });
     await this.repository.archiveReminderPolicy(policyId);
     return { success: true };
+  }
+
+  // -----------------------------------------------------------------
+  // UFB-052 (Phase 51-B): Admin Periods tab read/archive surface
+  // -----------------------------------------------------------------
+
+  /**
+   * Resolve the virtual buckets `'active' | 'archive'` to a concrete
+   * set of `PeriodState` values. The active bucket excludes `archived`
+   * and `published-out-of-reopen-window` (the published rows that the
+   * UI treats as effectively archived even before the auto-archiver
+   * runs). The archive bucket is the inverse.
+   *
+   * Currently both `published` rows are routed to the active bucket;
+   * the post-fetch derivation of `canReopen` lets the UI surface the
+   * out-of-window rows in the archive section without a second query.
+   * If 51-D wants strict server-side bucketing, this is the seam.
+   */
+  private resolveBucketStates(bucket: PeriodListBucket): PeriodState[] {
+    switch (bucket) {
+      case "active":
+        return ["scheduled", "open", "published"];
+      case "archive":
+        return ["archived"];
+      case "scheduled":
+      case "open":
+      case "published":
+      case "archived":
+        return [bucket];
+      default: {
+        const _exhaustive: never = bucket;
+        throw new Error(`Unknown period bucket: ${String(_exhaustive)}`);
+      }
+    }
+  }
+
+  /**
+   * UFB-052 (Phase 51-B): paginated period list filtered by lifecycle
+   * bucket. Returns rows with server-precomputed `canReopen` (driven
+   * by `AppSettings.allowReopenAfterPublish` + `reopenWindowHours`)
+   * and `canArchive` so the UI doesn't need to know the policy rules.
+   *
+   * The hot path uses the `(periodState, periodStart desc)` composite
+   * index added in 51-C; submission-progress counts come from a single
+   * grouped query against `ReportSection`.
+   */
+  async listPeriodsByState(input: {
+    bucket: PeriodListBucket;
+    limit?: number;
+  }): Promise<PeriodListItem[]> {
+    if (!this.repository.listPeriodsByState) {
+      return [];
+    }
+    const states = this.resolveBucketStates(input.bucket);
+    const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
+    const settings = await this.getSettings();
+    const rows = await this.repository.listPeriodsByState({
+      states,
+      limit,
+    });
+
+    const now = Date.now();
+    return rows.map((row) => {
+      const canReopen =
+        row.periodState === "published" &&
+        settings.allowReopenAfterPublish &&
+        row.publishedAt !== null &&
+        row.publishedAt.getTime() + settings.reopenWindowHours * 3_600_000 >
+          now;
+      // Archive is allowed for any not-yet-archived published period;
+      // the auto-archiver handles the deferred "weeks-after-publish"
+      // path. Manual archive is the head's escape hatch.
+      const canArchive =
+        row.periodState === "published" && !row.archived;
+      return periodListItemSchema.parse({
+        id: row.id,
+        periodStart: row.periodStart,
+        periodEnd: row.periodEnd,
+        deadline: row.deadline,
+        publishedAt: row.publishedAt,
+        periodState: row.periodState,
+        periodStatus: row.periodStatus,
+        archived: row.archived,
+        autoPublished: row.autoPublished,
+        autoArchived: row.autoArchived,
+        submittedCount: row.submittedCount,
+        totalCount: row.totalCount,
+        canReopen,
+        canArchive,
+      });
+    });
+  }
+
+  /**
+   * UFB-052 (Phase 51-B): manual archive — flips both the legacy
+   * `archived` boolean and the new `periodState` enum to `'archived'`
+   * in a single write so the two-state-machine invariant from 51-C
+   * (Open Question 1) is preserved.
+   */
+  async archivePeriod(periodId: string): Promise<{ success: true }> {
+    if (!this.repository.archivePeriod) {
+      throw new Error(
+        "AdminRepository.archivePeriod is not implemented for this repository.",
+      );
+    }
+    this.logger.info("archived period", { periodId });
+    await this.repository.archivePeriod(periodId);
+    return { success: true };
+  }
+
+  /**
+   * UFB-052 (Phase 51-B): un-archive — reverts `archived=false` and
+   * derives the next `periodState` from the legacy tuple at write time
+   * (since the new state column lost the pre-archive distinction
+   * scheduled/open/published when it was set to `'archived'`). The
+   * repository is the only layer that has access to the historical
+   * tuple, so the derivation lives there.
+   */
+  async unarchivePeriod(
+    periodId: string,
+  ): Promise<{ success: true; periodState: PeriodState }> {
+    if (!this.repository.unarchivePeriod) {
+      throw new Error(
+        "AdminRepository.unarchivePeriod is not implemented for this repository.",
+      );
+    }
+    this.logger.info("unarchived period", { periodId });
+    const result = await this.repository.unarchivePeriod(periodId);
+    return { success: true, periodState: result.nextPeriodState };
   }
 }

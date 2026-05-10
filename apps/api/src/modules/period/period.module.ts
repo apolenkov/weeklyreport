@@ -35,9 +35,27 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
     PeriodPrismaRepository,
     {
       provide: PeriodService,
-      useFactory: (repo: PeriodPrismaRepository, cache: AnalyticsCache) =>
-        new PeriodService(repo, () => cache.invalidateAll()),
-      inject: [PeriodPrismaRepository, AnalyticsCache],
+      useFactory: (
+        repo: PeriodPrismaRepository,
+        cache: AnalyticsCache,
+        admin: AdminService,
+      ) =>
+        new PeriodService(
+          repo,
+          () => cache.invalidateAll(),
+          // UFB-052 (Phase 51-B): reopen-policy reader resolves to the
+          // two `AppSettings` knobs from 51-A. Settings.get already
+          // upserts the singleton row so this stays a single round-trip
+          // per reopen call.
+          async () => {
+            const settings = await admin.getSettings();
+            return {
+              allowReopenAfterPublish: settings.allowReopenAfterPublish,
+              reopenWindowHours: settings.reopenWindowHours,
+            };
+          },
+        ),
+      inject: [PeriodPrismaRepository, AnalyticsCache, AdminService],
     },
     // Schedulers use explicit factories so the optional AuditLogger
     // constructor arg stays optional under Nest DI. Without the factory,

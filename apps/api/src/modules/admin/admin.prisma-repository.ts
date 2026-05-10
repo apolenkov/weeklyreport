@@ -13,6 +13,8 @@ import {
   type AdminSnapshot,
   type AppSettings,
   type PeriodCadence,
+  type PeriodState,
+  type PeriodStatus,
   type ReminderAudience,
   type ReminderPolicy,
   type ReportingGroup,
@@ -26,7 +28,10 @@ import {
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
-import type { AdminRepository } from "./admin.service";
+import type {
+  AdminRepository,
+  PeriodRowFromRepo,
+} from "./admin.service";
 
 /**
  * UFB-036 (Phase 44-02): wire format ↔ Prisma enum mappers for
@@ -724,5 +729,144 @@ export class AdminPrismaRepository implements AdminRepository {
     }
 
     return this.getSnapshot();
+  }
+
+  // -------------------------------------------------------------------
+  // UFB-052 (Phase 51-B): Admin Periods tab — list + archive + unarchive
+  // -------------------------------------------------------------------
+
+  /**
+   * Fetch periods matching the supplied state set, sorted newest-first
+   * by `periodStart`. Submission progress (submitted vs total section
+   * count) is fetched in a single grouped query so the list endpoint
+   * stays at O(1) round-trips regardless of page size.
+   *
+   * Uses the `(periodState, periodStart desc)` composite index from
+   * 51-C — no plan-time index gap.
+   */
+  async listPeriodsByState(filter: {
+    states: readonly PeriodState[];
+    limit: number;
+  }): Promise<PeriodRowFromRepo[]> {
+    const reports = await this.prisma.report.findMany({
+      where: { periodState: { in: filter.states as PeriodState[] } },
+      orderBy: { periodStart: "desc" },
+      take: filter.limit,
+      select: {
+        id: true,
+        periodStart: true,
+        periodEnd: true,
+        deadline: true,
+        publishedAt: true,
+        periodState: true,
+        periodStatus: true,
+        archived: true,
+        autoPublished: true,
+        autoArchived: true,
+      },
+    });
+
+    if (reports.length === 0) return [];
+
+    const reportIds = reports.map((r) => r.id);
+
+    // Section progress in two grouped queries (one for totals, one for
+    // submitted). Cheaper than N per-period counts and cheaper than a
+    // single `groupBy` with a `where: status: submitted` because the
+    // totals query also reveals zero-total periods (newly created with
+    // no sections yet — the auto-creator may not have run section
+    // provisioning yet).
+    const [totalRows, submittedRows] = await Promise.all([
+      this.prisma.reportSection.groupBy({
+        by: ["reportId"],
+        where: { reportId: { in: reportIds } },
+        _count: { _all: true },
+      }),
+      this.prisma.reportSection.groupBy({
+        by: ["reportId"],
+        where: { reportId: { in: reportIds }, status: "submitted" },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const totalsById = new Map(
+      totalRows.map((row) => [row.reportId, row._count._all]),
+    );
+    const submittedById = new Map(
+      submittedRows.map((row) => [row.reportId, row._count._all]),
+    );
+
+    return reports.map((r) => ({
+      id: r.id,
+      periodStart: r.periodStart,
+      periodEnd: r.periodEnd,
+      deadline: r.deadline,
+      publishedAt: r.publishedAt,
+      periodState: r.periodState as PeriodState,
+      periodStatus: r.periodStatus as PeriodStatus,
+      archived: r.archived,
+      autoPublished: r.autoPublished,
+      autoArchived: r.autoArchived,
+      submittedCount: submittedById.get(r.id) ?? 0,
+      totalCount: totalsById.get(r.id) ?? 0,
+    }));
+  }
+
+  /**
+   * UFB-052 (Phase 51-B): manual archive. Writes both the legacy
+   * `archived` boolean and the new `periodState='archived'` atomically
+   * so the two-state-machine invariant from 51-C (Open Question 1)
+   * holds even when the auto-archiver scheduler hasn't run yet.
+   */
+  async archivePeriod(periodId: string): Promise<void> {
+    await this.prisma.report.update({
+      where: { id: periodId },
+      data: {
+        archived: true,
+        periodState: "archived",
+      },
+    });
+  }
+
+  /**
+   * UFB-052 (Phase 51-B): un-archive — flips `archived=false` and
+   * derives the next `periodState` from the legacy tuple. The legacy
+   * `(status, periodStatus)` pair is the only ground truth left after
+   * a row was set to `'archived'`, so we read it on the same row and
+   * project back:
+   *
+   *   status='published' OR periodStatus IN ('published','reopened')
+   *     → periodState='published'
+   *   else
+   *     → periodState='open'
+   *
+   * The scheduled→open distinction is lost across an archive round-trip;
+   * that is acceptable because admin archive of a SCHEDULED period is
+   * a tiny edge case (the PeriodCreator scheduler would just re-mint
+   * the row anyway). Documented in the 51-B SUMMARY.
+   */
+  async unarchivePeriod(
+    periodId: string,
+  ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }> {
+    const row = await this.prisma.report.findUnique({
+      where: { id: periodId },
+      select: { status: true, periodStatus: true },
+    });
+    if (!row) {
+      throw new Error(`Report ${periodId} not found.`);
+    }
+    const nextPeriodState: PeriodState =
+      row.status === "published" || row.periodStatus !== "open"
+        ? "published"
+        : "open";
+    const nextPeriodStatus = row.periodStatus as PeriodStatus;
+    await this.prisma.report.update({
+      where: { id: periodId },
+      data: {
+        archived: false,
+        periodState: nextPeriodState,
+      },
+    });
+    return { nextPeriodState, nextPeriodStatus };
   }
 }
