@@ -80,7 +80,7 @@ export const SEED_USERS: readonly SeedUser[] = [
   {
     id: "a0000000-0000-4000-8000-000000000011",
     email: "lead1@customreport.local",
-    name: "Тимлид 1",
+    name: "Василий И.",
     role: "lead",
     samlId: "lead-1",
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
