@@ -5,6 +5,7 @@ import {
   adminUserSchema,
   appSettingsSchema,
   appSettingsUpdateSchema,
+  reminderPolicySchema,
   reportingGroupSchema,
   stageAssignmentSchema,
   reportPeriodSchema,
@@ -13,6 +14,7 @@ import {
   type AdminSnapshot,
   type AdminUser,
   type AppSettings,
+  type ReminderPolicy,
   type ReportingGroup,
   type ReportPeriod,
   type StageAssignment,
@@ -41,6 +43,13 @@ export interface AdminRepository {
   }): Promise<StageAssignment>;
   deleteStageAssignment(id: string): Promise<void>;
   listStageAssignments(projectId: string): Promise<StageAssignment[]>;
+  // UFB-036 (Phase 44-02): ReminderPolicy CRUD. Optional so existing
+  // in-memory test repositories that predate the policies surface keep
+  // compiling — service callers fall back to an empty list when the
+  // repo doesn't implement them.
+  listReminderPolicies?(): Promise<ReminderPolicy[]>;
+  saveReminderPolicy?(policy: ReminderPolicy): Promise<ReminderPolicy>;
+  archiveReminderPolicy?(policyId: string): Promise<void>;
 }
 
 function sortByName<T extends { name: string }>(rows: T[]): T[] {
@@ -206,5 +215,57 @@ export class AdminService {
     return this.repository.saveSnapshot(
       adminSnapshotSchema.parse({ ...snapshot, reminderRules: nextRules }),
     );
+  }
+
+  // -----------------------------------------------------------------
+  // UFB-036 (Phase 44-02): ReminderPolicy surface
+  // -----------------------------------------------------------------
+
+  /**
+   * List all reminder policies (active and archived). Audit-log helper
+   * (`auditLogger.policySave`) is wired in 44-05; this read path stays
+   * silent.
+   */
+  async listPolicies(): Promise<ReminderPolicy[]> {
+    if (!this.repository.listReminderPolicies) {
+      return [];
+    }
+    const rows = await this.repository.listReminderPolicies();
+    return rows.map((row) => reminderPolicySchema.parse(row));
+  }
+
+  /**
+   * Upsert a reminder policy by id. Input is zod-validated so the
+   * audience enum (`lead-with-draft | head-of-late`) and kind enum
+   * (`deadline | follow_up | escalation`) cannot drift to invalid wire
+   * values from a malicious admin client.
+   */
+  async savePolicy(policy: ReminderPolicy): Promise<ReminderPolicy> {
+    const parsed = reminderPolicySchema.parse(policy);
+    if (!this.repository.saveReminderPolicy) {
+      throw new Error(
+        "AdminRepository.saveReminderPolicy is not implemented for this repository.",
+      );
+    }
+    this.logger.info("upserted reminder policy", { policyId: parsed.id });
+    return reminderPolicySchema.parse(
+      await this.repository.saveReminderPolicy(parsed),
+    );
+  }
+
+  /**
+   * Soft-archive a reminder policy. The repository decides whether the
+   * row is hard-deleted (no derived rules) or flipped to `active=false`
+   * (rules still reference it).
+   */
+  async removePolicy(policyId: string): Promise<{ success: true }> {
+    if (!this.repository.archiveReminderPolicy) {
+      throw new Error(
+        "AdminRepository.archiveReminderPolicy is not implemented for this repository.",
+      );
+    }
+    this.logger.info("archived reminder policy", { policyId });
+    await this.repository.archiveReminderPolicy(policyId);
+    return { success: true };
   }
 }
