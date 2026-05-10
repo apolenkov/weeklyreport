@@ -219,3 +219,38 @@ describe("getCurrentWeekBounds — UTC-stable week boundaries (Phase 32-M7 / M-0
     expect(periodEnd.toISOString()).toBe("2026-05-03T23:59:59.999Z");
   });
 });
+
+/**
+ * UFB-048 / Phase 50-A — periodLengthDays setting drives `periodEnd`.
+ *
+ * Pre-50-A: `periodEnd` was always Monday + 6 days (Mon-Sun = 7-day week).
+ * Post-50-A: `getCurrentWeekBounds(date, settings.periodLengthDays)`
+ * recomputes `periodEnd` so admin can switch to e.g. 14-day cycles.
+ */
+describe("getCurrentWeekBounds — periodLengthDays override (Phase 50-A)", () => {
+  it("computes periodEnd = periodStart + (length - 1) days at 23:59:59.999 UTC for length=14", () => {
+    // Thursday 2026-04-30 — Monday anchor is 2026-04-27, +13 days = 2026-05-10.
+    const thu = new Date("2026-04-30T09:00:00.000Z");
+    const { periodStart, periodEnd } = getCurrentWeekBounds(thu, 14);
+
+    expect(periodStart.toISOString()).toBe("2026-04-27T00:00:00.000Z");
+    expect(periodEnd.toISOString()).toBe("2026-05-10T23:59:59.999Z");
+  });
+
+  it("falls back to length=7 when no override is passed (Mon-Sun default)", () => {
+    const thu = new Date("2026-04-30T09:00:00.000Z");
+    const { periodEnd } = getCurrentWeekBounds(thu);
+
+    // No override → Sunday 2026-05-03 (Monday + 6 days).
+    expect(periodEnd.toISOString()).toBe("2026-05-03T23:59:59.999Z");
+  });
+
+  it("collapses to single-day period when length=1 (degenerate but valid)", () => {
+    const thu = new Date("2026-04-30T09:00:00.000Z");
+    const { periodStart, periodEnd } = getCurrentWeekBounds(thu, 1);
+
+    expect(periodStart.toISOString()).toBe("2026-04-27T00:00:00.000Z");
+    // Monday + 0 days = same Monday, end-of-day.
+    expect(periodEnd.toISOString()).toBe("2026-04-27T23:59:59.999Z");
+  });
+});
