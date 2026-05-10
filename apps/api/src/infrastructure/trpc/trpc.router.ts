@@ -53,6 +53,7 @@ import type { WeeklyReportService } from "../../modules/weekly-report/weekly-rep
 import type { LeadFormService } from "../../modules/report-sections/lead-form.service.js";
 import type { AnalyticsService } from "../../modules/analytics/analytics.service.js";
 import type { AiService } from "../../modules/ai/ai.service.js";
+import type { AiSummaryService } from "../../modules/ai/ai-summary.service.js";
 import {
   SearchAuthorizationError,
   type SearchService,
@@ -101,6 +102,13 @@ type RouterDeps = {
    * on outage / missing key / rate limit / budget exceeded.
    */
   aiService: AiService;
+  /**
+   * Phase 54 (UFB-055): period-level RAG summary surface — seeds-only.
+   * Returns a mock-source payload while AI_PROVIDER is unset/`mock`;
+   * the same surface flips to `source: 'ai'` when the org wires a real
+   * provider. Optional so role-coverage test fixtures stay green.
+   */
+  aiSummaryService?: AiSummaryService;
   /**
    * Phase 39-05 (PERF-05): full-text search across Item / Risk / Decision
    * / Project. tsvector + GIN, Russian text-search config. Role-gated
@@ -1620,6 +1628,35 @@ export function createAppRouter(deps: RouterDeps) {
           try {
             await assertCanReadRisk(deps.prisma, ctx.session, input.riskId);
             return await deps.aiService.sentiment(input.riskId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+      // Phase 54 (UFB-055): period-level RAG summary — seeds-only.
+      // Reads the period (Report) + its sections, delegates to the
+      // pluggable AiAdapter (MockAiAdapter today), cached for 60s in
+      // Redis. Authz: leadershipProcedure (head + admin + viewer);
+      // lead is excluded — leads consume their own section view, not
+      // a portfolio summary.
+      //
+      // Returns aiSummarySchema: { summary, source: 'mock'|'ai',
+      // citationIds }. The UI badges `source === 'mock'` as a stub.
+      periodSummary: leadershipProcedure
+        .input(z.object({ periodId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            if (!deps.aiSummaryService) {
+              // Fixture mode (createAppRouter({}) for role-coverage
+              // harnesses): empty mock payload that still parses
+              // aiSummarySchema so the role-coverage harness can hit
+              // the surface without a 500.
+              return {
+                summary: '',
+                source: 'mock' as const,
+                citationIds: [] as string[],
+              };
+            }
+            return await deps.aiSummaryService.getSummary(input.periodId);
           } catch (error) {
             throw mapDomainError(error);
           }

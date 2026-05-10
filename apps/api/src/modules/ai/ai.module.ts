@@ -5,6 +5,7 @@ import { AI_ADAPTER, type AiAdapter } from './ai.adapter.js';
 import { AiIngestionService } from './ai-ingestion.service.js';
 import { AiPrismaFacade } from './ai-facade.js';
 import { AiSummaryCache, NullAiSummaryCache } from './ai-summary.cache.js';
+import { AiSummaryPrismaRepository } from './ai-summary.prisma-repository.js';
 import { AiSummaryService } from './ai-summary.service.js';
 import { AiService } from './ai.service.js';
 import { MockAiAdapter } from './mock-ai.adapter.js';
@@ -45,14 +46,24 @@ export function selectAiAdapter(): AiAdapter {
       useFactory: () => selectAiAdapter(),
     },
     AiSummaryCache,
+    AiSummaryPrismaRepository,
     {
       provide: AiSummaryService,
       // The Redis-backed cache is the production wiring; the in-process
       // null cache stays available for tests that want a clean call
-      // count without going through ioredis.
-      useFactory: (adapter: AiAdapter, cache: AiSummaryCache) =>
-        new AiSummaryService(adapter, cache),
-      inject: [AI_ADAPTER, AiSummaryCache],
+      // count without going through ioredis. The Prisma repository is
+      // attached via setRepository so the AiSummaryService constructor
+      // stays minimal (only the two ports it cannot run without).
+      useFactory: (
+        adapter: AiAdapter,
+        cache: AiSummaryCache,
+        repo: AiSummaryPrismaRepository,
+      ) => {
+        const service = new AiSummaryService(adapter, cache);
+        service.setRepository(repo);
+        return service;
+      },
+      inject: [AI_ADAPTER, AiSummaryCache, AiSummaryPrismaRepository],
     },
     AiIngestionService,
   ],
