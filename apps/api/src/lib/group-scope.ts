@@ -21,12 +21,34 @@ import type { UserSession } from "@customreport/shared";
  *
  * Always returns a plain object so downstream `{ ...other, ...scope }` spreads
  * are safe even when the result is "no filter".
+ *
+ * UFB-054 / Phase 56-D: when `target === 'project'`, an optional
+ * `useExplicitGroupProducts` flag re-routes the fragment to the
+ * explicit `GroupProduct` join table introduced in Phase 56-A. The flag
+ * defaults to `false` so every existing call site retains bit-for-bit
+ * the legacy behaviour (filter via `Project.lead.reportingGroupId`).
+ * Consumers opt in individually (e.g. the head dashboard product list
+ * behind a feature flag) once the GroupProduct edges are
+ * admin-editable.
  */
 export type ScopeTarget = "user" | "reportSection" | "project";
+
+export interface GroupScopeOptions {
+  /**
+   * UFB-054 / Phase 56-D: only honoured when `target === 'project'`.
+   * When `true`, the fragment filters via `groupProducts.some.groupId.in`
+   * (the Phase 56-A M:M join) instead of `lead.reportingGroupId.in`.
+   *
+   * Default `false` so existing call sites keep producing the same SQL
+   * as before this flag existed.
+   */
+  useExplicitGroupProducts?: boolean;
+}
 
 export function groupScopeFilter(
   session: UserSession,
   target: ScopeTarget,
+  options: GroupScopeOptions = {},
 ): Record<string, unknown> {
   if (session.role === "admin") return {};
 
@@ -42,6 +64,13 @@ export function groupScopeFilter(
     case "reportSection":
       return { author: { reportingGroupId: { in: groupIds } } };
     case "project":
+      if (options.useExplicitGroupProducts) {
+        // Phase 56-D opt-in: derive product membership from the explicit
+        // GroupProduct edge rather than the implicit lead.reportingGroupId
+        // path. A product appears in scope when at least one of its
+        // GroupProduct rows points at a group the session can see.
+        return { groupProducts: { some: { groupId: { in: groupIds } } } };
+      }
       return { lead: { reportingGroupId: { in: groupIds } } };
   }
 }
