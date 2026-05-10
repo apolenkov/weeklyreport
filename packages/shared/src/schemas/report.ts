@@ -276,6 +276,9 @@ export const reportingGroupSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(500).nullable().optional(),
   archived: z.boolean(),
+  // UFB-039: optional FK to the User (role=head or admin) that runs this
+  // group. null when the admin has not yet assigned a leader.
+  headUserId: z.string().uuid().nullable().optional(),
 });
 
 export const adminProjectSchema = z.object({

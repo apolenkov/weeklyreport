@@ -10,20 +10,36 @@ import { useTRPC } from "../../lib/trpc-context";
 
 import { TabHeader, TabSearch } from "./tab-header";
 
-import type { MockGroup } from "./mock-data";
+import type { MockGroup, MockUser } from "./mock-data";
 
 type GroupFormData = {
   name: string;
   description: string;
+  headUserId: string; // empty string = no leader
 };
 
-const EMPTY_FORM: GroupFormData = { name: "", description: "" };
+const EMPTY_FORM: GroupFormData = {
+  name: "",
+  description: "",
+  headUserId: "",
+};
 
 type GroupsTabProps = {
   readonly groups: MockGroup[];
+  readonly users: MockUser[];
 };
 
-export function GroupsTab({ groups }: GroupsTabProps) {
+export function GroupsTab({ groups, users }: GroupsTabProps) {
+  // UFB-039: only head/admin users may lead a group. Filter the candidate
+  // dropdown so leads/viewers can't be picked.
+  const headCandidates = useMemo(
+    () => users.filter((u) => u.role === "head" || u.role === "admin"),
+    [users],
+  );
+  const headById = useMemo(
+    () => new Map(headCandidates.map((u) => [u.id, u])),
+    [headCandidates],
+  );
   const trpc = useTRPC();
   const qc = useQueryClient();
 
@@ -82,6 +98,7 @@ export function GroupsTab({ groups }: GroupsTabProps) {
     setForm({
       name: group.name,
       description: group.description ?? "",
+      headUserId: group.headUserId ?? "",
     });
     setShowDialog(true);
   }
@@ -89,7 +106,11 @@ export function GroupsTab({ groups }: GroupsTabProps) {
   function handleSave() {
     saveGroupMut.mutate(
       toReportingGroupInput(
-        { ...form, archived: editingGroup?.archived ?? false },
+        {
+          ...form,
+          archived: editingGroup?.archived ?? false,
+          headUserId: form.headUserId === "" ? null : form.headUserId,
+        },
         editingGroup?.id,
       ),
     );
@@ -158,6 +179,9 @@ export function GroupsTab({ groups }: GroupsTabProps) {
                   Description
                 </th>
                 <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  Leader
+                </th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
                   Status
                 </th>
                 <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
@@ -176,6 +200,11 @@ export function GroupsTab({ groups }: GroupsTabProps) {
                   </td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
                     {group.description || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--color-foreground)]">
+                    {group.headUserId
+                      ? (headById.get(group.headUserId)?.name ?? "—")
+                      : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -272,6 +301,34 @@ export function GroupsTab({ groups }: GroupsTabProps) {
                   rows={3}
                   className="w-full resize-none rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
                 />
+              </div>
+              <div>
+                <label
+                  htmlFor="group-leader"
+                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+                >
+                  Leader
+                </label>
+                <select
+                  id="group-leader"
+                  value={form.headUserId}
+                  onChange={(e) =>
+                    setForm({ ...form, headUserId: e.target.value })
+                  }
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+                >
+                  <option value="">— No leader —</option>
+                  {headCandidates.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.email})
+                    </option>
+                  ))}
+                </select>
+                {headCandidates.length === 0 && (
+                  <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                    No users with role &lsquo;head&rsquo; or &lsquo;admin&rsquo; available.
+                  </p>
+                )}
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">

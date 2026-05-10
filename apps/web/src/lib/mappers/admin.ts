@@ -59,6 +59,7 @@ export type MockGroup = {
   name: string;
   description: string | null;
   archived: boolean;
+  headUserId: string | null;
 };
 
 export type StageName =
@@ -168,6 +169,7 @@ function mapGroup(api: ReportingGroup): MockGroup {
     name: api.name,
     description: api.description ?? null,
     archived: api.archived,
+    headUserId: api.headUserId ?? null,
   };
 }
 
@@ -334,17 +336,25 @@ export type ReportingGroupFormInput = {
   name: string;
   description?: string | null;
   archived?: boolean;
+  headUserId?: string | null;
 };
 
 export function toReportingGroupInput(
   form: ReportingGroupFormInput,
   existingId?: string,
-): { id: string; name: string; description: string | null; archived: boolean } {
+): {
+  id: string;
+  name: string;
+  description: string | null;
+  archived: boolean;
+  headUserId: string | null;
+} {
   return {
     id: existingId ?? newId(),
     name: form.name.trim(),
     description: form.description?.trim() ? form.description.trim() : null,
     archived: form.archived ?? false,
+    headUserId: form.headUserId ?? null,
   };
 }
 

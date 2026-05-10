@@ -99,11 +99,13 @@ export class AdminPrismaRepository implements AdminRepository {
         name: group.name,
         description: group.description ?? null,
         archived: group.archived,
+        headUserId: group.headUserId ?? null,
       },
       update: {
         name: group.name,
         description: group.description ?? null,
         archived: group.archived,
+        headUserId: group.headUserId ?? null,
       },
     });
 
