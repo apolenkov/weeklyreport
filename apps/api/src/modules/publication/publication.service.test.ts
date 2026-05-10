@@ -315,16 +315,18 @@ describe('PublicationService', () => {
  * leaking prom-client internals into every test file: the registry tracks
  * (labels → value) pairs and we just find the matching tuple.
  */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 async function getCounterValue(
-  counter: { get(): Promise<{ values: { value: number; labels: Record<string, string> }[] }> },
+  counter: { get(): Promise<{ values: Array<{ value: number; labels: Record<string, any> }> }> },
   labels: Record<string, string>,
 ): Promise<number> {
   const snapshot = await counter.get();
   const match = snapshot.values.find((entry) =>
-    Object.entries(labels).every(([k, v]) => entry.labels[k] === v),
+    Object.entries(labels).every(([k, v]) => String(entry.labels[k]) === v),
   );
   return match?.value ?? 0;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 describe('publicationRouter', () => {
   it('allows a head session to read the assembled report', async () => {
