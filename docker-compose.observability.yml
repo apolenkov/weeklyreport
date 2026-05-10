@@ -37,6 +37,11 @@ services:
       - ./deploy/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
       - ./deploy/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./deploy/grafana/customreport-dashboard.json:/var/lib/grafana/dashboards/customreport/customreport-dashboard.json:ro
+      # 47-03 (DX-03): tRPC latency dashboard — p50/p95/p99 by procedure,
+      # error rate, top-10 slow, request volume. Mounted into the same
+      # provisioning folder as the ops dashboard so Grafana picks it up
+      # on container start.
+      - ./deploy/grafana/trpc-latency-dashboard.json:/var/lib/grafana/dashboards/customreport/trpc-latency-dashboard.json:ro
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}

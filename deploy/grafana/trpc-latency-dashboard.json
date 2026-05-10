@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 39,
+  "title": "CustomReport — tRPC Latency (DX-03)",
+  "uid": "trpc-latency",
+  "tags": ["customreport", "trpc", "latency", "v8.1", "dx-03"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "tRPC latency p50 / p95 / p99 (top 5 procedures by p95)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 9 },
+      "datasource": "Prometheus",
+      "description": "Per-procedure latency quantiles. Top 5 series by current p95 — anything slow leaks into the legend without scrolling. Use the legend toggle to compare procedures side-by-side.",
+      "targets": [
+        {
+          "expr": "topk(5, histogram_quantile(0.50, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"customreport-api\"}[5m]))))",
+          "legendFormat": "p50 {{procedure}}"
+        },
+        {
+          "expr": "topk(5, histogram_quantile(0.95, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"customreport-api\"}[5m]))))",
+          "legendFormat": "p95 {{procedure}}"
+        },
+        {
+          "expr": "topk(5, histogram_quantile(0.99, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"customreport-api\"}[5m]))))",
+          "legendFormat": "p99 {{procedure}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth" }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "tRPC error rate",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 9, "w": 8, "h": 6 },
+      "datasource": "Prometheus",
+      "description": "Errors / total over a 5-minute rate window. Green < 1%, yellow 1-5%, red > 5%. Excludes auth.* errors which are normal first-load (no session).",
+      "targets": [
+        {
+          "expr": "sum(rate(trpc_request_total{job=\"customreport-api\",status=\"error\",procedure!~\"auth\\\\..*\"}[5m])) / clamp_min(sum(rate(trpc_request_total{job=\"customreport-api\",procedure!~\"auth\\\\..*\"}[5m])), 0.001)",
+          "legendFormat": "error rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Top-10 slowest procedures (p95, 5m)",
+      "type": "bargauge",
+      "gridPos": { "x": 8, "y": 9, "w": 16, "h": 6 },
+      "datasource": "Prometheus",
+      "description": "p95 latency per procedure over the last 5 minutes, ranked top-10. Use for capacity planning and to spot the next optimisation target.",
+      "targets": [
+        {
+          "expr": "topk(10, histogram_quantile(0.95, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"customreport-api\"}[5m]))))",
+          "legendFormat": "{{procedure}}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true
+      },
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 4,
+      "title": "Request volume by procedure (req/s, 1m rate)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 15, "w": 24, "h": 9 },
+      "datasource": "Prometheus",
+      "description": "Per-procedure request rate. Pair with the latency panel above — a slow procedure with high volume is the priority fix.",
+      "targets": [
+        {
+          "expr": "sum by (procedure) (rate(trpc_request_total{job=\"customreport-api\"}[1m]))",
+          "legendFormat": "{{procedure}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "line", "stacking": { "mode": "normal" } }
+        }
+      }
+    }
+  ]
+}
