@@ -47,6 +47,21 @@ export class PeriodPrismaRepository implements PeriodRepository {
     });
   }
 
+  /**
+   * Phase 54 (UFB-055): all section ids for a report. Used by the
+   * ingestion seam to enqueue one stub `AiIngestionJob` row per
+   * section after `publishPeriod` resolves. Returns an empty array
+   * when the report has no sections (legal — period was published
+   * without anyone filling in their section).
+   */
+  async listSectionIds(reportId: string): Promise<string[]> {
+    const sections = await this.prisma.reportSection.findMany({
+      where: { reportId },
+      select: { id: true },
+    });
+    return sections.map((s) => s.id);
+  }
+
   async reopenPeriod(reportId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await tx.report.update({

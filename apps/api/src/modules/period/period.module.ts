@@ -11,6 +11,8 @@ import { AdminModule } from '../admin/admin.module.js';
 import { AdminService } from '../admin/admin.service.js';
 import { PublicationModule } from '../publication/publication.module.js';
 import { PublicationService } from '../publication/publication.service.js';
+import { AiModule } from '../ai/ai.module.js';
+import { AiIngestionService } from '../ai/ai-ingestion.service.js';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
 
 /**
@@ -30,7 +32,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
  * (audit data still goes through the Nest `Logger` debug stream).
  */
 @Module({
-  imports: [AnalyticsModule, AdminModule, PublicationModule],
+  imports: [AnalyticsModule, AdminModule, PublicationModule, AiModule],
   providers: [
     PeriodPrismaRepository,
     {
@@ -39,6 +41,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
         repo: PeriodPrismaRepository,
         cache: AnalyticsCache,
         admin: AdminService,
+        ingestion: AiIngestionService,
       ) =>
         new PeriodService(
           repo,
@@ -54,8 +57,18 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
               reopenWindowHours: settings.reopenWindowHours,
             };
           },
+          // Phase 54 (UFB-055): ingestion hook wired to the
+          // AiIngestionService. Fire-and-forget; service swallows
+          // its own errors so this hook is effectively infallible
+          // from the perspective of the publish path.
+          (sectionIds) => ingestion.enqueueSections(sectionIds),
         ),
-      inject: [PeriodPrismaRepository, AnalyticsCache, AdminService],
+      inject: [
+        PeriodPrismaRepository,
+        AnalyticsCache,
+        AdminService,
+        AiIngestionService,
+      ],
     },
     // Schedulers use explicit factories so the optional AuditLogger
     // constructor arg stays optional under Nest DI. Without the factory,

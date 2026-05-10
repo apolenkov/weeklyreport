@@ -14,6 +14,17 @@ import {
   customreportReportsSubmittedTotal,
 } from '../../infrastructure/metrics/metrics.registry.js';
 
+/**
+ * Phase 54 (UFB-055): fire-and-forget ingestion seam. Wired by
+ * PublicationModule to {@link AiIngestionService.enqueueSections};
+ * unit tests default to a no-op so the 200+ existing tests stay green.
+ * Errors thrown by the port are swallowed by the publish path — the
+ * publish must succeed even when the future RAG pipeline is degraded.
+ */
+export type AiIngestionPublishHook = (
+  sectionIds: readonly string[],
+) => Promise<void>;
+
 export class PublicationAccessError extends Error {
   constructor(message: string) {
     super(message);
@@ -69,8 +80,34 @@ export class PublicationService {
   constructor(
     private readonly repository: PublicationRepository,
     logger?: AppLogger,
+    /**
+     * Phase 54 (UFB-055): on every successful publish, called with the
+     * list of section ids that just landed in the published report.
+     * Defaults to a no-op so existing tests / fixtures stay green.
+     * Errors are swallowed below — publish never fails because of
+     * ingestion bookkeeping.
+     */
+    private readonly ingestionHook: AiIngestionPublishHook = async () =>
+      undefined,
   ) {
     this.logger = logger ?? createNullLogger();
+  }
+
+  /**
+   * Phase 54 (UFB-055): private helper — invokes the ingestion hook
+   * with every section id in the assembled report and swallows any
+   * error so the calling publish path always returns the report.
+   */
+  private async enqueueIngestion(report: AssembledReport): Promise<void> {
+    const ids = report.sections.map((s) => s.reportSectionId);
+    if (ids.length === 0) return;
+    try {
+      await this.ingestionHook(ids);
+    } catch (err) {
+      this.logger.warn('ai ingestion hook failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   async getAssembledReport(activeReportId: string): Promise<AssembledReport> {
@@ -154,6 +191,9 @@ export class PublicationService {
     // on-time ratio numerator at the next gauge scrape.
     customreportReportsSubmittedTotal.inc({ state: 'published' });
     customreportPeriodStateTransitionsTotal.inc({ from: 'open', to: 'published' });
+    // Phase 54 (UFB-055): enqueue ingestion AFTER metrics are emitted —
+    // an ingestion failure must never block telemetry or the response.
+    await this.enqueueIngestion(saved);
     return saved;
   }
 
@@ -195,6 +235,10 @@ export class PublicationService {
     // panel paired with publishedById nullness.
     customreportReportsSubmittedTotal.inc({ state: 'published' });
     customreportPeriodStateTransitionsTotal.inc({ from: 'open', to: 'published' });
+    // Phase 54 (UFB-055): mirror of publishReport — fire-and-forget
+    // ingestion enqueue. Scheduler-driven auto-publishes feed the same
+    // queue so the worker sees both manual and scheduled outputs.
+    await this.enqueueIngestion(saved);
     return saved;
   }
 }

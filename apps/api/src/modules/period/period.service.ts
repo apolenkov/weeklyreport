@@ -18,6 +18,14 @@ export interface PeriodRepository {
   } | null>;
   publishPeriod(reportId: string, userId: string): Promise<void>;
   reopenPeriod(reportId: string): Promise<void>;
+  /**
+   * Phase 54 (UFB-055): list of section ids tied to a report — used by
+   * the ingestion seam to enqueue one stub `AiIngestionJob` row per
+   * section after a period publishes. Optional on the port so existing
+   * unit-test fixtures that don't care about ingestion stay green; the
+   * production repo implements it.
+   */
+  listSectionIds?(reportId: string): Promise<string[]>;
 }
 
 /**
@@ -42,6 +50,17 @@ export type ReopenPolicyReader = () => Promise<{
   reopenWindowHours: number;
 } | null>;
 
+/**
+ * Phase 54 (UFB-055): fire-and-forget ingestion hook called after a
+ * successful `publishPeriod`. Defaults to a no-op so existing tests
+ * (88+) that don't care about ingestion stay green. Errors are
+ * swallowed by the caller so a downstream RAG-pipeline blip cannot
+ * fail a real-user publish action.
+ */
+export type AiIngestionPublishHook = (
+  sectionIds: readonly string[],
+) => Promise<void>;
+
 export class PeriodService {
   constructor(
     private readonly repository: PeriodRepository,
@@ -54,6 +73,13 @@ export class PeriodService {
      * period.module.ts.
      */
     private readonly readReopenPolicy: ReopenPolicyReader = async () => null,
+    /**
+     * Phase 54 (UFB-055): on every successful publishPeriod, called
+     * with the section ids of the just-published period. No-op by
+     * default; production wires AiIngestionService.enqueueSections.
+     */
+    private readonly ingestionHook: AiIngestionPublishHook = async () =>
+      undefined,
   ) {}
 
   async publishPeriod(
@@ -72,6 +98,20 @@ export class PeriodService {
 
     await this.repository.publishPeriod(reportId, session.userId);
     await this.invalidateAnalyticsCache();
+
+    // Phase 54 (UFB-055): fire-and-forget ingestion enqueue. Read the
+    // section ids AFTER the publish transaction so any sections that
+    // raced into the period before commit are still picked up. Errors
+    // never bubble — a RAG pipeline blip must not turn a successful
+    // publish into a 5xx.
+    if (this.repository.listSectionIds) {
+      try {
+        const sectionIds = await this.repository.listSectionIds(reportId);
+        await this.ingestionHook(sectionIds);
+      } catch {
+        // intentionally swallowed
+      }
+    }
 
     return { success: true, reportId };
   }
