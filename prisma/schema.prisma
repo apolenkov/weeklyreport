@@ -26,6 +26,13 @@ model User {
   // UFB-039 back-relations
   ledGroups               ReportingGroup[]    @relation("GroupHead")
   viewerGroupAccess       ViewerGroupAccess[] @relation("ViewerGroupAccessViewer")
+  // UFB-056 / Phase 55-1: optional 1:1 inverse to the Telegram binding
+  // row. Nullable because Telegram is opt-in — most users never bind a
+  // chat. Cascade is intentional on the binding side (drop the row when
+  // the user is removed); on the User side we keep this as a plain
+  // back-relation with no `onDelete` because Users don't need to know
+  // about the binding's existence to be deleted.
+  telegramBinding         TelegramBinding?
 
   @@index([reportingGroupId])
 }
@@ -735,4 +742,28 @@ enum AiInsightKind {
   summary
   sentiment
   on_track
+}
+
+// UFB-056 / Phase 55-1: TelegramBinding — opt-in link between a CustomReport
+// User and a Telegram `chat_id`. Seeds-only scaffolding for Phase 55: the
+// table is created so a future bot can persist /start handshakes without
+// another migration, but no producer writes to it yet. `lastSeenAt` carries
+// the most-recent inbound message timestamp once the real bot lands;
+// `active=false` lets a user mute Telegram delivery without losing the
+// binding (mirrors `notificationOptOut` on User for the email channel).
+//
+// Indices: (active, linkedAt) supports the admin-side `count where active`
+// status query without a sequential scan when bindings grow past a handful.
+// The unique constraints on userId + chatId are 1:1 invariants (one user =
+// at most one Telegram identity, and vice versa).
+model TelegramBinding {
+  id         String    @id @default(uuid())
+  userId     String    @unique
+  chatId     String    @unique
+  linkedAt   DateTime  @default(now())
+  active     Boolean   @default(true)
+  lastSeenAt DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([active, linkedAt])
 }
