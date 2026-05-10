@@ -621,3 +621,88 @@ Outstanding:
 | UFB-016 | done-prior          | groups admin tab exists, ReportingGroup Prisma model in place, regression spec at apps/web/e2e/regression/admin-groups.spec.ts                                                                                                                                                                           |
 | UFB-017 | done                | every list surface has search: admin tabs (TabSearch via 6a1c057), /reports archive (SearchInput in reports/page.tsx), /lead/history sidebar (SearchInput). Print + trends pages have no list to search.                                                                                                 |
 | UFB-032 | partial-done        | Two highest-frequency ad-hoc surfaces consolidated into tokens — `--color-surface-hover` (66 callsites of `bg-[#f8f6f2]`) and `--color-surface-empty` (7 callsites of `bg-[#fafaf7]`). Long tail of one-off colours (#fef3c7, #fee2e2, #d4a017, etc.) intentionally left for the next dedicated UI-pass. |
+
+---
+
+## New ideas — 2026-05-10 (post-wave-5 session)
+
+### UFB-041 - Head presentation mode (slide deck of lead sections)
+
+Status: idea / future phase
+
+User signal:
+
+```text
+"У хэда должен быть режим презентации, красивый. Каждый слайд — отчёт
+лида. Можно пройти по аналогии с PowerPoint, на всю страницу развернуть
+и показать презентацию отчёта."
+```
+
+Shape:
+
+- Trigger: button in `/head/dashboard` или `/head/report` → "Present"
+- Fullscreen mode (no navbar / no shell), one section per slide
+- Keyboard navigation: arrows / space / Esc to exit
+- Slide order: same as section order in dashboard (alphabetical by lead name?
+  or by traffic-light severity?)
+- Slide content:
+  - Lead name + photo / avatar
+  - Project status grid (traffic lights)
+  - Current week items
+  - Risks / decisions / priorities highlights
+- Optional: auto-advance every N seconds for kiosk-mode display
+- Out of scope for v1: animations, transitions, custom themes, exporting
+  to .pptx
+
+Implementation hints:
+
+- Existing `/head/report/[reportId]/print` route already renders all sections
+  on one page — can fork into `/head/report/[reportId]/present` with the
+  same data fetch but per-section pagination + fullscreen API
+- Use `requestFullscreen()` + `keydown` listener
+- shadcn `Carousel` or react-swipeable as the slide engine
+
+Phase candidate: **Phase 47 — Head Presentation Mode** (UI-only, ~5 plans).
+Depends on: nothing structural (data already in dashboard).
+
+### UFB-040 - Group-scope visibility (head sees all; viewer sees all)
+
+Status: planned (Phase 46 — see `.planning/phases/46-group-scope-visibility/`)
+
+Already captured in roadmap. Mention here so backlog reads complete.
+
+### UFB-039 - Reporting groups need leaders + viewer access M:M
+
+Status: done
+
+- Schema: f10857a (ReportingGroup.headUserId + ViewerGroupAccess)
+- UI: 082c4aa (Leader dropdown in Groups tab)
+
+### UFB-038 - head ≠ admin role separation
+
+Status: done — a94a482 (D-AUTH-03 retired, 27 admin endpoints switched to
+adminProcedure, /admin layout REQUIRED=['admin'], nav-bar.tsx admin tab
+admin-only).
+
+### UFB-037 - Demo seed: 8 reporting periods + Russian lead names
+
+Status: done — d5f97b0 (Тимлид 1 → Василий И., 4 historical published
+periods + 2 future open periods + existing 2 = 8 total).
+
+### UFB-036 - Reminder rules per-period model is unusable
+
+Status: planned (Phase 44 — see `.planning/phases/44-reminder-policies/`)
+
+### UFB-035 - Timezone select for reminder rule editor
+
+Status: done — 301f366 (TIMEZONE_OPTIONS curated list, Russia + EU + APAC
+zones in `<optgroup>`s).
+
+### UFB-034 - Dev-login per-role redirect map out of sync
+
+Status: done — 8774e53 (head → /head/dashboard, viewer → /reports?tab=published).
+
+### UFB-033 - Landing infinite reload loop in AUTH_STUB mode
+
+Status: done — 0f8ef8f (disable auto-redirect in stub mode, CTA is the only
+explicit path).
