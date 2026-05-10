@@ -146,4 +146,38 @@ export class PublicationService {
       }),
     );
   }
+
+  /**
+   * UFB-049 / Phase 50-B: scheduler-driven auto-publish. Same effect as
+   * {@link publishReport} but no human actor — `publishedById=null` and
+   * `publishedByName='system'`. Idempotent: re-publishing an already-
+   * published report returns the existing AssembledReport without writing
+   * (the autopublish scheduler queries `status='draft'`, so this branch
+   * is defense-in-depth against a race where two ticks dispatch
+   * concurrently).
+   *
+   * Missing sections are NOT auto-stubbed in the DB — they render as
+   * "Не сдал" at read time from the head dashboard. This keeps the
+   * write path narrow and avoids polluting history with empty sections.
+   */
+  async publishAuto(activeReportId: string): Promise<AssembledReport> {
+    const report = await this.getAssembledReport(activeReportId);
+
+    if (report.status === 'published') {
+      // Idempotent: return the existing assembled report so the scheduler
+      // can treat a race as a no-op without ad-hoc try/catch.
+      return report;
+    }
+
+    this.logger.info('auto-publishing report', { activeReportId });
+    return this.repository.saveAssembledReport(
+      assembledReportSchema.parse({
+        ...report,
+        status: 'published',
+        publishedAt: new Date(),
+        publishedById: null,
+        publishedByName: 'system',
+      }),
+    );
+  }
 }

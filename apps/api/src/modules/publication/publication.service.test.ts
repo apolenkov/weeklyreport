@@ -221,6 +221,33 @@ describe('PublicationService', () => {
       }),
     ).rejects.toBeInstanceOf(PublicationAccessError);
   });
+
+  // UFB-049 / Phase 50-B: scheduler-driven auto-publish bypasses session
+  // attribution. publishedById stays null and publishedByName='system' so
+  // the head dashboard can show a "auto-published" badge by comparing.
+  it('publishAuto stamps system attribution (publishedById=null)', async () => {
+    const service = new PublicationService(createRepository(assembledReport));
+
+    const published = await service.publishAuto(reportId);
+
+    expect(published.status).toBe('published');
+    expect(published.publishedById).toBeNull();
+    expect(published.publishedByName).toBe('system');
+    expect(published.publishedAt).toBeInstanceOf(Date);
+  });
+
+  it('publishAuto is idempotent on already-published reports (no throw, returns current)', async () => {
+    const service = new PublicationService(createRepository(assembledReport));
+
+    const first = await service.publishAuto(reportId);
+    const second = await service.publishAuto(reportId);
+
+    expect(first.status).toBe('published');
+    expect(second.status).toBe('published');
+    // publishedAt should be the same instant — the second call must not
+    // re-stamp a new Date(); idempotent means "no write".
+    expect(second.publishedAt).toEqual(first.publishedAt);
+  });
 });
 
 describe('publicationRouter', () => {
