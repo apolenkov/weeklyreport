@@ -86,11 +86,16 @@ function LoginPageBody() {
     defaultRedirectFor(session?.role as Role | undefined),
   );
 
-  // UFB-021: in dev-stub mode the landing must NOT show a role-grid;
-  // any session (including the implicit DEV_SESSION fallback) bounces
-  // straight to the role-default page so the user never gets stuck on
-  // the picker with a stale cookie.
+  // UFB-033: never auto-redirect in AUTH_STUB mode. The API returns a
+  // DEV_SESSION fallback when no cookie is present, which previously caused
+  // an infinite loop: landing redirects to /head/dashboard → proxy.ts sees
+  // no cookie → 307 back to /?next=%2Fhead%2Fdashboard → repeat. In stub
+  // mode the explicit "Enter Application" CTA is the only way in (it hits
+  // /auth/dev-login which sets the cookie before redirecting). In real-auth
+  // mode the auto-redirect remains correct because a session implies a
+  // verified cookie.
   useEffect(() => {
+    if (AUTH_STUB) return;
     if (sessionLoading || stayOnLanding) return;
     if (!session) return;
     window.location.replace(safeNext);
