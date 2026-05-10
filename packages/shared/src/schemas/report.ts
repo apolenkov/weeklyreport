@@ -328,6 +328,29 @@ export const adminProjectSchema = z.object({
   leadName: z.string().min(1),
 });
 
+/**
+ * UFB-054 (Phase 56-A/B): explicit Group ↔ Product M:M edge row. Returned
+ * by `admin.attachProductToGroup` and consumed by the admin UI list/chip
+ * surfaces. The id is server-assigned; the unique business key is the
+ * (groupId, productId) tuple.
+ */
+export const groupProductSchema = z.object({
+  id: z.string().uuid(),
+  groupId: z.string().uuid(),
+  productId: z.string().uuid(),
+  createdAt: z.coerce.date(),
+});
+
+/**
+ * UFB-054 (Phase 56-B): input for `admin.attachProductToGroup` and
+ * `admin.detachProductFromGroup`. Symmetric because the same tuple
+ * identifies the edge on both sides of the M:M relation.
+ */
+export const groupProductEdgeInputSchema = z.object({
+  groupId: z.string().uuid(),
+  productId: z.string().uuid(),
+});
+
 export const reportPeriodSchema = z.object({
   id: z.string().uuid(),
   periodStart: reportDate(),
@@ -761,6 +784,8 @@ export type PdfExportJob = z.infer<typeof pdfExportJobSchema>;
 export type AdminUser = z.infer<typeof adminUserSchema>;
 export type ReportingGroup = z.infer<typeof reportingGroupSchema>;
 export type AdminProject = z.infer<typeof adminProjectSchema>;
+export type GroupProduct = z.infer<typeof groupProductSchema>;
+export type GroupProductEdgeInput = z.infer<typeof groupProductEdgeInputSchema>;
 export type ReportPeriod = z.infer<typeof reportPeriodSchema>;
 export type AdminReminderRule = z.infer<typeof adminReminderRuleSchema>;
 export type AdminReminderExecution = z.infer<

@@ -32,6 +32,8 @@ import {
   escalationSchema,
   portfolioProductOverviewSchema,
   validateSubmitInput,
+  groupProductSchema,
+  groupProductEdgeInputSchema,
   type ReportSectionReadModel,
   type SubmitSectionPayload,
 } from '../report';
@@ -1717,5 +1719,67 @@ describe('escalationSchema', () => {
       description: 'Issue',
     });
     expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UFB-054 (Phase 56): GroupProduct schemas
+// ---------------------------------------------------------------------------
+
+describe('groupProductSchema (UFB-054)', () => {
+  it('accepts a well-formed row and coerces createdAt to Date', () => {
+    const row = groupProductSchema.parse({
+      id: uuid(),
+      groupId: uuid(),
+      productId: uuid(),
+      createdAt: '2026-05-11T00:00:00.000Z',
+    });
+    expect(row.createdAt).toBeInstanceOf(Date);
+  });
+
+  it('rejects non-uuid groupId / productId', () => {
+    expect(
+      groupProductSchema.safeParse({
+        id: uuid(),
+        groupId: 'not-a-uuid',
+        productId: uuid(),
+        createdAt: new Date(),
+      }).success,
+    ).toBe(false);
+    expect(
+      groupProductSchema.safeParse({
+        id: uuid(),
+        groupId: uuid(),
+        productId: 'also-not-a-uuid',
+        createdAt: new Date(),
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('groupProductEdgeInputSchema (UFB-054)', () => {
+  it('accepts a {groupId, productId} pair of uuids', () => {
+    const groupId = uuid();
+    const productId = uuid();
+    const parsed = groupProductEdgeInputSchema.parse({ groupId, productId });
+    expect(parsed).toEqual({ groupId, productId });
+  });
+
+  it('rejects missing fields', () => {
+    expect(
+      groupProductEdgeInputSchema.safeParse({ groupId: uuid() }).success,
+    ).toBe(false);
+    expect(
+      groupProductEdgeInputSchema.safeParse({ productId: uuid() }).success,
+    ).toBe(false);
+  });
+
+  it('rejects non-uuid values', () => {
+    expect(
+      groupProductEdgeInputSchema.safeParse({
+        groupId: 'nope',
+        productId: uuid(),
+      }).success,
+    ).toBe(false);
   });
 });

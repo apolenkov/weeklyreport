@@ -5,6 +5,7 @@ import {
   adminUserSchema,
   appSettingsSchema,
   appSettingsUpdateSchema,
+  groupProductSchema,
   periodListItemSchema,
   reminderPolicySchema,
   reportingGroupSchema,
@@ -15,6 +16,8 @@ import {
   type AdminSnapshot,
   type AdminUser,
   type AppSettings,
+  type GroupProduct,
+  type GroupProductEdgeInput,
   type PeriodListBucket,
   type PeriodListItem,
   type PeriodState,
@@ -68,6 +71,15 @@ export interface AdminRepository {
   unarchivePeriod?(
     periodId: string,
   ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }>;
+  // UFB-054 (Phase 56-B): explicit Group ↔ Product M:M edge mutations and
+  // read paths. Optional so existing in-memory test repositories that
+  // predate this surface keep compiling — service callers throw when the
+  // repo doesn't implement them. Matches the listReminderPolicies?(...)
+  // pattern above.
+  attachProductToGroup?(input: GroupProductEdgeInput): Promise<GroupProduct>;
+  detachProductFromGroup?(input: GroupProductEdgeInput): Promise<void>;
+  listGroupProducts?(groupId: string): Promise<AdminProject[]>;
+  listProductGroups?(productId: string): Promise<ReportingGroup[]>;
 }
 
 /**
@@ -450,5 +462,74 @@ export class AdminService {
     this.logger.info("unarchived period", { periodId });
     const result = await this.repository.unarchivePeriod(periodId);
     return { success: true, periodState: result.nextPeriodState };
+  }
+
+  // -----------------------------------------------------------------
+  // UFB-054 (Phase 56-B): Group ↔ Product M:M surface
+  // -----------------------------------------------------------------
+
+  /**
+   * Attach a Product to a ReportingGroup. The repository upserts on the
+   * (groupId, productId) unique tuple so re-calls are idempotent — useful
+   * for the UI toggle that may race against itself if a user clicks
+   * twice. Returns the canonical {@link GroupProduct} row so the caller
+   * can echo `createdAt` into the audit envelope.
+   */
+  async attachProductToGroup(
+    input: GroupProductEdgeInput,
+  ): Promise<GroupProduct> {
+    if (!this.repository.attachProductToGroup) {
+      throw new Error(
+        "AdminRepository.attachProductToGroup is not implemented for this repository.",
+      );
+    }
+    this.logger.info("attached product to group", input);
+    return groupProductSchema.parse(
+      await this.repository.attachProductToGroup(input),
+    );
+  }
+
+  /**
+   * Detach a Product from a ReportingGroup. No-op when the edge is
+   * already absent (repository swallows the delete-not-found). Returns
+   * `{ success: true }` so the tRPC mutation has a non-undefined
+   * response shape that audit / toast handlers can key off.
+   */
+  async detachProductFromGroup(
+    input: GroupProductEdgeInput,
+  ): Promise<{ success: true }> {
+    if (!this.repository.detachProductFromGroup) {
+      throw new Error(
+        "AdminRepository.detachProductFromGroup is not implemented for this repository.",
+      );
+    }
+    this.logger.info("detached product from group", input);
+    await this.repository.detachProductFromGroup(input);
+    return { success: true };
+  }
+
+  /**
+   * List the Products attached to a ReportingGroup via the explicit
+   * `GroupProduct` edge. Used by the admin Groups tab's «Products
+   * attached» section. Returns `AdminProject` rows so the UI gets the
+   * existing project shape (id, name, archived, leadId, leadName)
+   * without a second snapshot call.
+   */
+  async listGroupProducts(groupId: string): Promise<AdminProject[]> {
+    if (!this.repository.listGroupProducts) return [];
+    const rows = await this.repository.listGroupProducts(groupId);
+    return rows.map((row) => adminProjectSchema.parse(row));
+  }
+
+  /**
+   * List the ReportingGroups that own a given Product via the explicit
+   * `GroupProduct` edge. Used by the admin Products tab's «Groups»
+   * column. Returns full `ReportingGroup` rows so the chip renderer can
+   * show the group name without a join.
+   */
+  async listProductGroups(productId: string): Promise<ReportingGroup[]> {
+    if (!this.repository.listProductGroups) return [];
+    const rows = await this.repository.listProductGroups(productId);
+    return rows.map((row) => reportingGroupSchema.parse(row));
   }
 }
