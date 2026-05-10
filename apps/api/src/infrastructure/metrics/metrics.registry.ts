@@ -1,5 +1,6 @@
 import {
   Counter,
+  Gauge,
   Histogram,
   Registry,
   collectDefaultMetrics,
@@ -95,5 +96,125 @@ export const trpcRequestTotal = new Counter({
   name: 'trpc_request_total',
   help: 'Total tRPC requests, labeled by procedure/type/status',
   labelNames: ['procedure', 'type', 'status'] as const,
+  registers: [metricsRegistry],
+});
+
+// ============================================================
+// Phase 52 — Product / business-KPI telemetry (UFB-054).
+//
+// Distinct from the engineering telemetry above (which measures
+// latency / errors / DLQ / login). The metrics below answer
+// leadership-readable questions: how many reports landed on time,
+// which roles miss deadlines, how many reopens we churn through,
+// who actually opens PDFs.
+//
+// Prefix `customreport_*` per phase-spec, even though the existing
+// counters use `cr_*`. The mismatch is a deferred consolidation
+// (renaming existing counters would re-baseline production SLOs,
+// which is out of scope here). Tracked in the phase SUMMARY.
+// ============================================================
+
+/**
+ * 52-A — every Report transition into the `published` state increments
+ * this counter (whether driven by an explicit `publishReport` action or
+ * the auto-publisher cron). Labelled by `state` so future expansion
+ * (e.g. `state='archived'`) does not require a new counter.
+ */
+export const customreportReportsSubmittedTotal = new Counter({
+  name: 'customreport_reports_submitted_total',
+  help: 'Total Report state transitions, labelled by destination state',
+  labelNames: ['state'] as const,
+  registers: [metricsRegistry],
+});
+
+/**
+ * 52-A — every ReportSection submission. `late` is the on-time flag
+ * stamped at submit time by ReportSectionsService (`now > deadline`).
+ * The two-label cardinality (late=true|false) keeps the series count
+ * bounded; aggregating with `sum by (late)` answers the «how often do
+ * we miss the deadline» question.
+ */
+export const customreportSectionsSubmittedTotal = new Counter({
+  name: 'customreport_sections_submitted_total',
+  help: 'Total section submissions, labelled by on-time flag',
+  labelNames: ['late'] as const,
+  registers: [metricsRegistry],
+});
+
+/**
+ * 52-A — signed-seconds histogram of (deadline − submittedAt). Negative
+ * buckets surface how far in advance leads typically submit;
+ * positive buckets surface how late they are when they slip.
+ *
+ * Bucket choice is calibrated for a weekly cadence with an 18:00
+ * deadline: -1d / -12h / -1h / 0 / +1h / +4h / +12h / +1d / +3d.
+ */
+export const customreportSectionSubmissionLatencySeconds = new Histogram({
+  name: 'customreport_section_submission_latency_seconds',
+  help: 'Signed seconds (deadline − submittedAt) at submit time. Negative = early, positive = late.',
+  buckets: [-86_400, -43_200, -3_600, 0, 3_600, 14_400, 43_200, 86_400, 259_200],
+  registers: [metricsRegistry],
+});
+
+/**
+ * 52-A — rolling on-time ratio (last 4 published periods, per
+ * ReportSection because that is what the head dashboard's «late» badge
+ * reflects). Set by a `collect` async callback in TelemetryGauges so
+ * the value refreshes lazily at Prometheus scrape time — no scheduler.
+ */
+export const customreportReportsOnTimeRatio = new Gauge({
+  name: 'customreport_reports_on_time_ratio',
+  help: 'Fraction of submitted sections that were on time over the last 4 published periods',
+  registers: [metricsRegistry],
+});
+
+/**
+ * 52-A — distinct lead authors who submitted in the most recently
+ * published period. Engagement signal; pairs with reports_submitted_total
+ * to distinguish «volume up because more leads» from «volume up because
+ * the same leads filed twice».
+ */
+export const customreportActiveLeadsTotal = new Gauge({
+  name: 'customreport_active_leads_total',
+  help: 'Distinct lead authors who submitted in the most recently published period',
+  registers: [metricsRegistry],
+});
+
+/**
+ * 52-A — reopen-request funnel. `state ∈ {requested, approved, rejected}`.
+ * `requested` fires from LeadFormService.requestReopen; `approved` and
+ * `rejected` fire from the admin.respondReopenRequest mutation. The
+ * three-state funnel exposes both demand (requested rate) and the
+ * head's policy stance (approve/reject ratio).
+ */
+export const customreportReopenRequestsTotal = new Counter({
+  name: 'customreport_reopen_requests_total',
+  help: 'Reopen-request lifecycle counter (requested / approved / rejected)',
+  labelNames: ['state'] as const,
+  registers: [metricsRegistry],
+});
+
+/**
+ * 52-A — PDF export requests, labelled by requesting role. Engagement
+ * signal: a healthy product sees viewers + heads pulling exports;
+ * an unhealthy one sees only the head pulling for the director.
+ */
+export const customreportPdfExportRequestsTotal = new Counter({
+  name: 'customreport_pdf_export_requests_total',
+  help: 'Total PDF export requests, labelled by requesting role',
+  labelNames: ['role'] as const,
+  registers: [metricsRegistry],
+});
+
+/**
+ * 52-A — period state-machine transitions (`from` → `to`). Covers
+ * `open → published` (manual + auto), and any future archival
+ * transitions plumbed in. Lets ops distinguish a stuck pipeline
+ * («no published transitions in 7d») from a slow one.
+ */
+export const customreportPeriodStateTransitionsTotal = new Counter({
+  name: 'customreport_period_state_transitions_total',
+  help: 'Period state-machine transitions, labelled by from / to states',
+  labelNames: ['from', 'to'] as const,
   registers: [metricsRegistry],
 });
