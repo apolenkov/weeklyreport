@@ -108,7 +108,7 @@ export function DecisionsSection({
     if (dialogState.open && dialogState.mode === 'create') {
       onChange?.([...decisions, {
         ...saved,
-        productName: saved.productName || defaultProductName || 'Department',
+        productName: saved.productName || defaultProductName || 'Group',
         stageName: saved.stageName ?? '—',
       }]);
     } else {

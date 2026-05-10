@@ -460,7 +460,7 @@ export function mapLeadDecisions(
   return section.decisions.map((d, idx) => ({
     id: d.id ?? `decision-${idx}`,
     productId: "",
-    productName: "Department",
+    productName: "Group",
     text: d.text,
     owner: d.owner ?? "",
     impact: d.impact ?? "",

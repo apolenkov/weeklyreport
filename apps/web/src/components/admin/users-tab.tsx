@@ -148,7 +148,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
       <div className="space-y-4">
         <TabHeader
           title="Users"
-          description="Manage department members and their roles."
+          description="Manage group members and their roles."
           count={`${users.length} users`}
           search={
             <TabSearch
@@ -187,7 +187,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                   Role
                 </th>
                 <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-                  Department
+                  Group
                 </th>
                 <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
                   Actions
@@ -319,7 +319,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                   htmlFor="user-group"
                   className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
                 >
-                  Department
+                  Group
                 </label>
                 <select
                   id="user-group"
@@ -331,7 +331,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                   disabled={groupOptions.length === 0}
                 >
                   {groupOptions.length === 0 && (
-                    <option value="">No active departments configured</option>
+                    <option value="">No active groups configured</option>
                   )}
                   {groupOptions.map((group) => (
                     <option key={group.id} value={group.id}>

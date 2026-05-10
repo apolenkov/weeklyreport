@@ -24,7 +24,7 @@ type TabId = (typeof tabs)[number];
 
 const TAB_LABELS: Record<TabId, string> = {
   users: "Users",
-  groups: "Departments",
+  groups: "Groups",
   products: "Products",
   reminders: "Reminders",
   reopen: "Reopen",

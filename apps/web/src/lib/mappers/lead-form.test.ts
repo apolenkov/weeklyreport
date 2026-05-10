@@ -313,7 +313,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
 
     const [mapped] = mapLeadDecisions(section);
     expect(mapped?.text).toBe("Approve Redis cluster");
-    expect(mapped?.productName).toBe("Department");
+    expect(mapped?.productName).toBe("Group");
   });
 
   it("preserves arbitrary positive ranks (variable-length list) and floors invalid ranks to 1", () => {

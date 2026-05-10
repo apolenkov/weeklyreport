@@ -86,7 +86,7 @@ export function DecisionEditDialog({
     onSave({
       id: decision?.id ?? crypto.randomUUID(),
       productId: decision?.productId ?? '',
-      productName: decision?.productName ?? 'Department',
+      productName: decision?.productName ?? 'Group',
       text: t,
       owner: o,
       impact: im,
