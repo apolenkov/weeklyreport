@@ -32,7 +32,23 @@ type Captured = {
   updateSettingsFn: ReturnType<typeof vi.fn>;
 };
 
-function makeMockTRPC(captured: Captured) {
+// UFB-056 / Phase 55-5: Telegram integration status shape returned by
+// `admin.integrationsStatus`. Default to «not configured, 0 bindings» so
+// tests that don't care about Integrations don't have to opt out.
+type IntegrationStub = {
+  telegram: {
+    configured: boolean;
+    bindings: number;
+  };
+};
+const DEFAULT_INTEGRATIONS: IntegrationStub = {
+  telegram: { configured: false, bindings: 0 },
+};
+
+function makeMockTRPC(
+  captured: Captured,
+  integrations: IntegrationStub = DEFAULT_INTEGRATIONS,
+) {
   return {
     admin: {
       getOrganization: {
@@ -70,6 +86,13 @@ function makeMockTRPC(captured: Captured) {
       },
       snapshot: { pathFilter: () => ({ tag: 'admin.snapshot' }) },
       getSettings: { pathFilter: () => ({ tag: 'admin.getSettings' }) },
+      integrationsStatus: {
+        queryOptions: () => ({
+          queryKey: ['admin', 'integrationsStatus'],
+          queryFn: async () => integrations,
+        }),
+        pathFilter: () => ({ tag: 'admin.integrationsStatus' }),
+      },
     },
     auth: { me: { pathFilter: () => ({ tag: 'auth.me' }) } },
     org: { getPublic: { pathFilter: () => ({ tag: 'org.getPublic' }) } },
@@ -116,7 +139,7 @@ describe('SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)', () => {
     toastError.mockReset();
   });
 
-  it('renders the four tabs in the documented order', async () => {
+  it('renders the five tabs in the documented order', async () => {
     const captured: Captured = {
       updateOrgFn: vi.fn(),
       updateSettingsFn: vi.fn(),
@@ -129,11 +152,13 @@ describe('SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)', () => {
       </Wrapper>,
     );
 
-    // Tab triggers all visible — Identity active by default.
+    // Tab triggers all visible — Identity active by default. UFB-056
+    // (Phase 55-5) added the fifth «Integrations» tab.
     expect(screen.getByRole('tab', { name: /identity/i })).toBeTruthy();
     expect(screen.getByRole('tab', { name: /periods/i })).toBeTruthy();
     expect(screen.getByRole('tab', { name: /reminders/i })).toBeTruthy();
     expect(screen.getByRole('tab', { name: /notifications/i })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /integrations/i })).toBeTruthy();
   });
 
   it('loads the organization row into the Identity form', async () => {
@@ -599,5 +624,96 @@ describe('SettingsTab — UFB-048 Notifications sub-tab (Phase 48-B)', () => {
       name: /save notification settings/i,
     }) as HTMLButtonElement;
     await waitFor(() => expect(saveBtn.disabled).toBe(true));
+  });
+});
+
+// ─── UFB-056 / Phase 55-5: Integrations sub-tab ───────────────────────────
+
+describe('SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)', () => {
+  it('renders the muted «Не активно» badge when neither token nor bindings are set', async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider
+          value={makeMockTRPC(captured, {
+            telegram: { configured: false, bindings: 0 },
+          })}
+        >
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /integrations/i }));
+
+    const badge = await screen.findByTestId('integration-badge-telegram');
+    await waitFor(() => expect(badge.dataset.state).toBe('inactive'));
+    expect(badge.textContent).toMatch(/не активно/i);
+
+    expect(
+      screen.getByTestId('integration-telegram-configured').textContent,
+    ).toBe('no');
+    expect(
+      screen.getByTestId('integration-telegram-bindings').textContent,
+    ).toBe('0');
+  });
+
+  it('renders the green «Подключён» badge when both configured AND bindings > 0', async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider
+          value={makeMockTRPC(captured, {
+            telegram: { configured: true, bindings: 4 },
+          })}
+        >
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /integrations/i }));
+
+    const badge = await screen.findByTestId('integration-badge-telegram');
+    await waitFor(() => expect(badge.dataset.state).toBe('active'));
+    expect(badge.textContent).toMatch(/подключён/i);
+    expect(
+      screen.getByTestId('integration-telegram-bindings').textContent,
+    ).toBe('4');
+  });
+
+  it('keeps the badge muted when token is set but no users are bound yet', async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider
+          value={makeMockTRPC(captured, {
+            telegram: { configured: true, bindings: 0 },
+          })}
+        >
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /integrations/i }));
+
+    const badge = await screen.findByTestId('integration-badge-telegram');
+    await waitFor(() => expect(badge.dataset.state).toBe('inactive'));
+    expect(
+      screen.getByTestId('integration-telegram-configured').textContent,
+    ).toBe('yes');
   });
 });
