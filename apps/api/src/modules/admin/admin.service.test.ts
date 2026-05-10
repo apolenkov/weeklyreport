@@ -831,3 +831,226 @@ describe("AdminService — stage assignments", () => {
     expect(list[0]?.userId).toBe("44444444-4444-4444-8444-444444444444");
   });
 });
+
+// ---------------------------------------------------------------------------
+// UFB-052 (Phase 51-B): listPeriodsByState + archivePeriod + unarchivePeriod
+// ---------------------------------------------------------------------------
+
+import { type PeriodRowFromRepo } from "./admin.service";
+
+const PERIOD_ID_OPEN = "11111111-1111-4111-8111-111111111101";
+const PERIOD_ID_PUBLISHED_FRESH = "11111111-1111-4111-8111-111111111102";
+const PERIOD_ID_PUBLISHED_STALE = "11111111-1111-4111-8111-111111111103";
+const PERIOD_ID_ARCHIVED = "11111111-1111-4111-8111-111111111104";
+
+function periodFixture(
+  id: string,
+  state: PeriodRowFromRepo["periodState"],
+  overrides: Partial<PeriodRowFromRepo> = {},
+): PeriodRowFromRepo {
+  return {
+    id,
+    periodStart: new Date("2026-05-04T00:00:00Z"),
+    periodEnd: new Date("2026-05-10T23:59:59Z"),
+    deadline: new Date("2026-05-09T18:00:00Z"),
+    publishedAt: state === "published" ? new Date() : null,
+    periodState: state,
+    periodStatus:
+      state === "published" || state === "archived" ? "published" : "open",
+    archived: state === "archived",
+    autoPublished: false,
+    autoArchived: state === "archived",
+    submittedCount: 0,
+    totalCount: 6,
+    ...overrides,
+  };
+}
+
+import type { PeriodState, PeriodStatus } from "@customreport/shared";
+
+function makePeriodAwareRepository(
+  rows: PeriodRowFromRepo[],
+  settings: AppSettings = defaultSettings,
+): AdminRepository {
+  const base = createRepository(initialSnapshot, settings);
+  const store = rows.map((r) => ({ ...r }));
+  return {
+    ...base,
+    async listPeriodsByState(filter) {
+      return store
+        .filter((r) => filter.states.includes(r.periodState))
+        .slice(0, filter.limit)
+        .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime());
+    },
+    async archivePeriod(periodId) {
+      const row = store.find((r) => r.id === periodId);
+      if (!row) throw new Error("not found");
+      row.archived = true;
+      row.periodState = "archived";
+    },
+    async unarchivePeriod(
+      periodId,
+    ): Promise<{
+      nextPeriodState: PeriodState;
+      nextPeriodStatus: PeriodStatus;
+    }> {
+      const row = store.find((r) => r.id === periodId);
+      if (!row) throw new Error("not found");
+      const next: PeriodState =
+        row.periodStatus === "open" ? "open" : "published";
+      row.archived = false;
+      row.periodState = next;
+      return { nextPeriodState: next, nextPeriodStatus: row.periodStatus };
+    },
+  };
+}
+
+describe("AdminService — listPeriodsByState (UFB-052)", () => {
+  it("returns empty when repository does not implement the method", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+    const result = await service.listPeriodsByState({ bucket: "active" });
+    expect(result).toEqual([]);
+  });
+
+  it("active bucket fans out to scheduled+open+published", async () => {
+    const fresh = periodFixture(
+      PERIOD_ID_PUBLISHED_FRESH,
+      "published",
+      {
+        publishedAt: new Date(Date.now() - 2 * 3_600_000), // 2h ago
+        periodStart: new Date("2026-05-04T00:00:00Z"),
+      },
+    );
+    const open = periodFixture(PERIOD_ID_OPEN, "open", {
+      periodStart: new Date("2026-05-11T00:00:00Z"),
+    });
+    const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived");
+    const service = new AdminService(
+      makePeriodAwareRepository([fresh, open, archived]),
+    );
+
+    const rows = await service.listPeriodsByState({ bucket: "active" });
+    const ids = rows.map((r) => r.id);
+    expect(ids).toContain(PERIOD_ID_OPEN);
+    expect(ids).toContain(PERIOD_ID_PUBLISHED_FRESH);
+    expect(ids).not.toContain(PERIOD_ID_ARCHIVED);
+  });
+
+  it("archive bucket only contains archived rows", async () => {
+    const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published");
+    const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived");
+    const service = new AdminService(
+      makePeriodAwareRepository([fresh, archived]),
+    );
+
+    const rows = await service.listPeriodsByState({ bucket: "archive" });
+    expect(rows.map((r) => r.id)).toEqual([PERIOD_ID_ARCHIVED]);
+  });
+
+  it("canReopen is true for published rows within window", async () => {
+    const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published", {
+      publishedAt: new Date(Date.now() - 2 * 3_600_000), // 2h ago
+    });
+    const service = new AdminService(
+      makePeriodAwareRepository([fresh], {
+        ...defaultSettings,
+        allowReopenAfterPublish: true,
+        reopenWindowHours: 72,
+      }),
+    );
+
+    const rows = await service.listPeriodsByState({ bucket: "active" });
+    const row = rows.find((r) => r.id === PERIOD_ID_PUBLISHED_FRESH);
+    expect(row?.canReopen).toBe(true);
+  });
+
+  it("canReopen is false for published rows outside window", async () => {
+    const stale = periodFixture(PERIOD_ID_PUBLISHED_STALE, "published", {
+      publishedAt: new Date(Date.now() - 100 * 3_600_000), // 100h ago
+    });
+    const service = new AdminService(
+      makePeriodAwareRepository([stale], {
+        ...defaultSettings,
+        allowReopenAfterPublish: true,
+        reopenWindowHours: 72,
+      }),
+    );
+
+    const rows = await service.listPeriodsByState({ bucket: "active" });
+    expect(rows[0]?.canReopen).toBe(false);
+  });
+
+  it("canReopen is false when allowReopenAfterPublish=false (master switch)", async () => {
+    const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published", {
+      publishedAt: new Date(Date.now() - 2 * 3_600_000),
+    });
+    const service = new AdminService(
+      makePeriodAwareRepository([fresh], {
+        ...defaultSettings,
+        allowReopenAfterPublish: false,
+        reopenWindowHours: 72,
+      }),
+    );
+
+    const rows = await service.listPeriodsByState({ bucket: "active" });
+    expect(rows[0]?.canReopen).toBe(false);
+  });
+
+  it("canArchive is true for published not-yet-archived rows", async () => {
+    const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published");
+    const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived");
+    const service = new AdminService(
+      makePeriodAwareRepository([fresh, archived]),
+    );
+    const active = await service.listPeriodsByState({ bucket: "active" });
+    expect(active[0]?.canArchive).toBe(true);
+    const archive = await service.listPeriodsByState({ bucket: "archive" });
+    expect(archive[0]?.canArchive).toBe(false);
+  });
+
+  it("limit is clamped between 1 and 200", async () => {
+    const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published");
+    const service = new AdminService(makePeriodAwareRepository([fresh]));
+    // Negative gets clamped to 1, then filtered (and the one row matches).
+    const a = await service.listPeriodsByState({ bucket: "active", limit: 0 });
+    expect(a.length).toBeGreaterThan(0);
+    // 1000 gets clamped to 200, but no error.
+    const b = await service.listPeriodsByState({
+      bucket: "active",
+      limit: 1000,
+    });
+    expect(b.length).toBeLessThanOrEqual(200);
+  });
+});
+
+describe("AdminService — archivePeriod / unarchivePeriod (UFB-052)", () => {
+  it("archivePeriod flips state + archived on the in-memory row", async () => {
+    const open = periodFixture(PERIOD_ID_OPEN, "open");
+    const repo = makePeriodAwareRepository([open]);
+    const service = new AdminService(repo);
+
+    const result = await service.archivePeriod(PERIOD_ID_OPEN);
+    expect(result).toEqual({ success: true });
+
+    const rows = await service.listPeriodsByState({ bucket: "archive" });
+    expect(rows.map((r) => r.id)).toContain(PERIOD_ID_OPEN);
+  });
+
+  it("unarchivePeriod returns the derived nextPeriodState", async () => {
+    const archived = periodFixture(PERIOD_ID_ARCHIVED, "archived", {
+      periodStatus: "published",
+    });
+    const service = new AdminService(makePeriodAwareRepository([archived]));
+
+    const result = await service.unarchivePeriod(PERIOD_ID_ARCHIVED);
+    expect(result.success).toBe(true);
+    expect(result.periodState).toBe("published");
+  });
+
+  it("archivePeriod throws when repository does not implement the method", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+    await expect(service.archivePeriod(PERIOD_ID_OPEN)).rejects.toThrow(
+      /not implemented/,
+    );
+  });
+});
