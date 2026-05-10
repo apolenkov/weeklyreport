@@ -13,7 +13,7 @@
 //   - Idempotency is intentionally NOT enforced at this layer. The
 //     worker is the one that dedupes by content hash.
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
 import { createNullLogger, type AppLogger } from '../../lib/logger.js';
@@ -38,13 +38,19 @@ export class NullAiIngestion implements AiIngestionPort {
 
 @Injectable()
 export class AiIngestionService implements AiIngestionPort {
-  private readonly logger: AppLogger;
+  // Logger is intentionally NOT a constructor parameter — Nest's DI
+  // would try to resolve it as a provider and fail (AppLogger is built
+  // in main.ts, not registered as a Nest token). Tests that want to
+  // capture the log signal use `withLogger` to swap in a recording
+  // logger.
+  private logger: AppLogger = createNullLogger();
 
-  constructor(
-    @Inject(PrismaService) private readonly prisma: PrismaService,
-    logger?: AppLogger,
-  ) {
-    this.logger = logger ?? createNullLogger();
+  constructor(private readonly prisma: PrismaService) {}
+
+  /** Test-only: replace the internal logger with a recording logger. */
+  withLogger(logger: AppLogger): this {
+    this.logger = logger;
+    return this;
   }
 
   /**
