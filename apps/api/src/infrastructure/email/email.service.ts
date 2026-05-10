@@ -35,9 +35,21 @@ export class EmailService {
     }
   }
 
-  async sendMail(to: string, subject: string, text: string): Promise<void> {
+  /**
+   * UFB-048 / Phase 50-A: optional per-call `from` override lets the
+   * reminder processor pass `AppSettings.notificationFromEmail` without
+   * mutating shared service state. Null/undefined falls back to the
+   * env-configured `SMTP_FROM` value resolved in the constructor.
+   */
+  async sendMail(
+    to: string,
+    subject: string,
+    text: string,
+    from?: string | null,
+  ): Promise<void> {
+    const fromAddr = from ?? this.fromAddress;
     await this.transporter.sendMail({
-      from: this.fromAddress,
+      from: fromAddr,
       to,
       subject,
       text,
@@ -49,7 +61,7 @@ export class EmailService {
           timestamp: new Date().toISOString(),
           level: 'info',
           message: 'email sent (dev/jsonTransport)',
-          envelope: { from: this.fromAddress, to },
+          envelope: { from: fromAddr, to },
           subject,
         }) + '\n',
       );
@@ -62,15 +74,19 @@ export class EmailService {
    * multipart higher, and clients that don't render HTML still receive the
    * plaintext body. Use this overload for deadline reminders (NOTIF-01) and
    * any future template-rendered email.
+   *
+   * UFB-048 / Phase 50-A: optional `from` override identical to `sendMail`.
    */
   async sendMailMultipart(
     to: string,
     subject: string,
     html: string,
     text: string,
+    from?: string | null,
   ): Promise<void> {
+    const fromAddr = from ?? this.fromAddress;
     await this.transporter.sendMail({
-      from: this.fromAddress,
+      from: fromAddr,
       to,
       subject,
       html,
@@ -83,7 +99,7 @@ export class EmailService {
           timestamp: new Date().toISOString(),
           level: 'info',
           message: 'email sent (dev/jsonTransport, multipart)',
-          envelope: { from: this.fromAddress, to },
+          envelope: { from: fromAddr, to },
           subject,
         }) + '\n',
       );

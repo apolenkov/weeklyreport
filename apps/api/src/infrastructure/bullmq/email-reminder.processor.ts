@@ -2,6 +2,7 @@ import { Injectable, type OnModuleInit, type OnModuleDestroy } from '@nestjs/com
 import { Worker, type Job } from 'bullmq';
 
 import { RemindersService } from '../../modules/reminders/reminders.service';
+import { AdminService } from '../../modules/admin/admin.service';
 import { EmailService } from '../email/email.service';
 import { renderEmail } from '../../modules/email/render-template';
 import { getBullMQOptions } from './bullmq-options';
@@ -71,6 +72,14 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly remindersService: RemindersService,
     private readonly emailService: EmailService,
+    // UFB-048 / Phase 50-A: AdminService surfaces the AppSettings
+    // singleton. We read `notificationFromEmail` once per job and pass
+    // it through to EmailService so admin can swap the From-address
+    // without redeploying. `null` (default) → EmailService falls back to
+    // SMTP_FROM env. Marked optional to keep the test-time constructor
+    // call sites (which instantiate the processor without DI) compiling
+    // unchanged — the processor degrades gracefully if not wired.
+    private readonly adminService?: AdminService,
   ) {}
 
   onModuleInit(): void {
@@ -114,6 +123,13 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
   private async processJob(job: Job<EmailReminderJobData>): Promise<void> {
     const data = job.data;
 
+    // UFB-048 / Phase 50-A: pull the admin-configured From-address. Null
+    // is a valid value (means "use env default"), and a missing
+    // adminService (test-time DI fallback) skips the lookup entirely.
+    const fromOverride = this.adminService
+      ? (await this.adminService.getSettings()).notificationFromEmail
+      : null;
+
     if ('kind' in data && data.kind === 'deadline') {
       // NOTIF-01 (Phase 28-03): render react-email + Tailwind template +
       // matching plaintext, send multipart.
@@ -133,6 +149,7 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
         rendered.subject,
         rendered.html,
         rendered.text,
+        fromOverride,
       );
     } else if ('kind' in data && data.kind === 'escalation') {
       // NOTIF-02 (Phase 29-05): T+2h escalation digest — one email per
@@ -152,6 +169,7 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
         rendered.subject,
         rendered.html,
         rendered.text,
+        fromOverride,
       );
     } else {
       // Legacy v2.0 path — preserved verbatim for follow-up reminders that
@@ -167,7 +185,12 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
         '',
         'Thank you.',
       ].join('\n');
-      await this.emailService.sendMail(data.recipientEmail, subject, body);
+      await this.emailService.sendMail(
+        data.recipientEmail,
+        subject,
+        body,
+        fromOverride,
+      );
     }
 
     await this.remindersService.markReminderSent(data.executionId);
