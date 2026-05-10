@@ -132,3 +132,45 @@ describe("admin reminder-policy contract (UFB-036, Phase 44-02)", () => {
     expect(upsertSpy).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// UFB-054 (Phase 56-B): Group ↔ Product M:M contract guarantees
+// ---------------------------------------------------------------------------
+//
+// Contract assertions:
+//   1. The 4 new procedures exist under the `admin` namespace.
+//   2. Each is built on `adminProcedure` so role coverage is preserved
+//      (head/admin only — leads and viewers cannot call them).
+//
+// The shape inspection is identical to the reminder-policy contract
+// above and intentionally does not invoke a handler — the router is
+// constructed against stub deps and inspected structurally.
+// ---------------------------------------------------------------------------
+
+describe("admin group-product contract (UFB-054, Phase 56-B)", () => {
+  const stubDeps = {} as Parameters<typeof createAppRouter>[0];
+  const appRouter = createAppRouter(stubDeps);
+  const router = appRouter as unknown as {
+    _def: { procedures: Record<string, unknown> };
+  };
+
+  it("exposes admin.attachProductToGroup as an adminProcedure", () => {
+    const proc = getProcedure(router, "admin.attachProductToGroup");
+    expect(isAdminProcedure(proc)).toBe(true);
+  });
+
+  it("exposes admin.detachProductFromGroup as an adminProcedure", () => {
+    const proc = getProcedure(router, "admin.detachProductFromGroup");
+    expect(isAdminProcedure(proc)).toBe(true);
+  });
+
+  it("exposes admin.listGroupProducts as an adminProcedure", () => {
+    const proc = getProcedure(router, "admin.listGroupProducts");
+    expect(isAdminProcedure(proc)).toBe(true);
+  });
+
+  it("exposes admin.listProductGroups as an adminProcedure", () => {
+    const proc = getProcedure(router, "admin.listProductGroups");
+    expect(isAdminProcedure(proc)).toBe(true);
+  });
+});

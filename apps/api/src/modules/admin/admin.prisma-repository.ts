@@ -4,14 +4,18 @@ import {
   adminUserSchema,
   adminProjectSchema,
   appSettingsSchema,
+  groupProductSchema,
   reminderPolicySchema,
   reportingGroupSchema,
   stageAssignmentSchema,
   reportPeriodSchema,
   adminReminderRuleSchema,
   adminReminderExecutionSchema,
+  type AdminProject,
   type AdminSnapshot,
   type AppSettings,
+  type GroupProduct,
+  type GroupProductEdgeInput,
   type PeriodCadence,
   type PeriodState,
   type PeriodStatus,
@@ -868,5 +872,82 @@ export class AdminPrismaRepository implements AdminRepository {
       },
     });
     return { nextPeriodState, nextPeriodStatus };
+  }
+
+  // -----------------------------------------------------------------
+  // UFB-054 (Phase 56-B): Group ↔ Product M:M edge mutations + reads
+  // -----------------------------------------------------------------
+
+  /**
+   * Idempotent attach via Prisma upsert on the (groupId, productId)
+   * unique tuple. The `update: {}` branch is a no-op write so re-calls
+   * return the existing row instead of throwing P2002. Returns the
+   * canonical row (with server-assigned id + createdAt) so the service
+   * can echo the createdAt into the audit envelope.
+   */
+  async attachProductToGroup(
+    input: GroupProductEdgeInput,
+  ): Promise<GroupProduct> {
+    const row = await this.prisma.groupProduct.upsert({
+      where: {
+        groupId_productId: {
+          groupId: input.groupId,
+          productId: input.productId,
+        },
+      },
+      create: {
+        groupId: input.groupId,
+        productId: input.productId,
+      },
+      update: {},
+    });
+    return groupProductSchema.parse(row);
+  }
+
+  /**
+   * No-op safe detach. `deleteMany` on the unique tuple returns
+   * `{ count: 0 }` if the edge is already absent (vs `delete` which
+   * throws). This keeps the UI toggle resilient against double-clicks
+   * and races without a pre-read.
+   */
+  async detachProductFromGroup(input: GroupProductEdgeInput): Promise<void> {
+    await this.prisma.groupProduct.deleteMany({
+      where: { groupId: input.groupId, productId: input.productId },
+    });
+  }
+
+  /**
+   * Return Projects attached to a ReportingGroup ordered by name. The
+   * Project rows are projected to {@link AdminProject} so the UI
+   * consumer can render alongside the existing snapshot.projects rows
+   * without a separate shape.
+   */
+  async listGroupProducts(groupId: string): Promise<AdminProject[]> {
+    const rows = await this.prisma.groupProduct.findMany({
+      where: { groupId },
+      include: { product: { include: { lead: true } } },
+      orderBy: { product: { name: "asc" } },
+    });
+    return rows.map((row) =>
+      adminProjectSchema.parse({
+        id: row.product.id,
+        name: row.product.name,
+        archived: row.product.archived,
+        leadId: row.product.leadId,
+        leadName: row.product.lead.name,
+      }),
+    );
+  }
+
+  /**
+   * Return ReportingGroups attached to a Project ordered by group name.
+   */
+  async listProductGroups(productId: string): Promise<ReportingGroup[]> {
+    const rows = await this.prisma.groupProduct.findMany({
+      where: { productId },
+      include: { group: true },
+      orderBy: { group: { name: "asc" } },
+    });
+    return rows.map((row) => reportingGroupSchema.parse(row.group));
   }
 }

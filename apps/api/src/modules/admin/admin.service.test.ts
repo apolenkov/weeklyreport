@@ -1054,3 +1054,187 @@ describe("AdminService — archivePeriod / unarchivePeriod (UFB-052)", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// UFB-054 (Phase 56-B): Group ↔ Product M:M surface
+// ---------------------------------------------------------------------------
+
+describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
+  const GROUP_A = "11111111-1111-4111-8111-111111111aaa";
+  const GROUP_B = "11111111-1111-4111-8111-111111111bbb";
+  const PRODUCT_X = "22222222-2222-4222-8222-2222222222a1";
+
+  function makeRepoWithGroupProductSurface(
+    snapshot: AdminSnapshot,
+  ): AdminRepository {
+    const base = createRepository(snapshot);
+    const edges = new Map<string, { id: string; createdAt: Date }>();
+    const key = (gid: string, pid: string) => `${gid}::${pid}`;
+    return {
+      ...base,
+      async attachProductToGroup({ groupId, productId }) {
+        const existing = edges.get(key(groupId, productId));
+        if (existing) {
+          return {
+            id: existing.id,
+            groupId,
+            productId,
+            createdAt: existing.createdAt,
+          };
+        }
+        const row = {
+          id: crypto.randomUUID(),
+          groupId,
+          productId,
+          createdAt: new Date("2026-05-11T00:00:00.000Z"),
+        };
+        edges.set(key(groupId, productId), {
+          id: row.id,
+          createdAt: row.createdAt,
+        });
+        return row;
+      },
+      async detachProductFromGroup({ groupId, productId }) {
+        edges.delete(key(groupId, productId));
+      },
+      async listGroupProducts(groupId) {
+        const projectIds = [...edges.entries()]
+          .filter(([k]) => k.startsWith(`${groupId}::`))
+          .map(([, v]) => v.id);
+        // Return any matching projects from the snapshot's projects list.
+        // The in-memory implementation doesn't bother joining by edge id
+        // since the tests inject the snapshot's project rows directly.
+        return projectIds.length > 0
+          ? snapshot.projects.filter((p) =>
+              [...edges.keys()].some((k) => k.endsWith(`::${p.id}`)),
+            )
+          : [];
+      },
+      async listProductGroups(productId) {
+        return [...edges.keys()]
+          .filter((k) => k.endsWith(`::${productId}`))
+          .map((k) => k.split("::")[0])
+          .map((gid) =>
+            expectDefined(snapshot.groups.find((g) => g.id === gid)),
+          );
+      },
+    };
+  }
+
+  const snapshot: AdminSnapshot = {
+    ...initialSnapshot,
+    groups: [
+      defaultGroup,
+      {
+        id: GROUP_A,
+        name: "Platform",
+        description: null,
+        archived: false,
+      },
+      {
+        id: GROUP_B,
+        name: "Integrations",
+        description: null,
+        archived: false,
+      },
+    ],
+    projects: [
+      {
+        id: PRODUCT_X,
+        name: "Платформа интеграций",
+        archived: false,
+        leadId: headSession.userId,
+        leadName: headSession.name,
+      },
+    ],
+  };
+
+  it("attachProductToGroup returns a parsed GroupProduct row", async () => {
+    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    const row = await service.attachProductToGroup({
+      groupId: GROUP_A,
+      productId: PRODUCT_X,
+    });
+    expect(row.groupId).toBe(GROUP_A);
+    expect(row.productId).toBe(PRODUCT_X);
+    expect(row.createdAt).toBeInstanceOf(Date);
+  });
+
+  it("attachProductToGroup is idempotent on the (groupId, productId) tuple", async () => {
+    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    const first = await service.attachProductToGroup({
+      groupId: GROUP_A,
+      productId: PRODUCT_X,
+    });
+    const second = await service.attachProductToGroup({
+      groupId: GROUP_A,
+      productId: PRODUCT_X,
+    });
+    expect(second.id).toBe(first.id);
+  });
+
+  it("detachProductFromGroup returns {success: true} and removes the edge", async () => {
+    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    await service.attachProductToGroup({
+      groupId: GROUP_A,
+      productId: PRODUCT_X,
+    });
+    const result = await service.detachProductFromGroup({
+      groupId: GROUP_A,
+      productId: PRODUCT_X,
+    });
+    expect(result).toEqual({ success: true });
+    const groups = await service.listProductGroups(PRODUCT_X);
+    expect(groups).toEqual([]);
+  });
+
+  it("detachProductFromGroup is idempotent (no-op when edge already absent)", async () => {
+    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    await expect(
+      service.detachProductFromGroup({
+        groupId: GROUP_A,
+        productId: PRODUCT_X,
+      }),
+    ).resolves.toEqual({ success: true });
+  });
+
+  it("listGroupProducts and listProductGroups reflect attached edges", async () => {
+    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    await service.attachProductToGroup({
+      groupId: GROUP_A,
+      productId: PRODUCT_X,
+    });
+    await service.attachProductToGroup({
+      groupId: GROUP_B,
+      productId: PRODUCT_X,
+    });
+    const groupsForProduct = await service.listProductGroups(PRODUCT_X);
+    expect(groupsForProduct.map((g) => g.id).sort()).toEqual(
+      [GROUP_A, GROUP_B].sort(),
+    );
+    const productsForGroupA = await service.listGroupProducts(GROUP_A);
+    expect(productsForGroupA.map((p) => p.id)).toEqual([PRODUCT_X]);
+  });
+
+  it("returns empty arrays when repository does not implement the surface", async () => {
+    const service = new AdminService(createRepository(snapshot));
+    expect(await service.listGroupProducts(GROUP_A)).toEqual([]);
+    expect(await service.listProductGroups(PRODUCT_X)).toEqual([]);
+  });
+
+  it("attach/detach throw when repository does not implement the method", async () => {
+    const service = new AdminService(createRepository(snapshot));
+    await expect(
+      service.attachProductToGroup({
+        groupId: GROUP_A,
+        productId: PRODUCT_X,
+      }),
+    ).rejects.toThrow(/not implemented/);
+    await expect(
+      service.detachProductFromGroup({
+        groupId: GROUP_A,
+        productId: PRODUCT_X,
+      }),
+    ).rejects.toThrow(/not implemented/);
+  });
+});
