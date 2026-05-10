@@ -20,6 +20,7 @@ import {
 import { ReminderAudience as PrismaReminderAudience } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import type { AdminRepository } from "./admin.service";
 
 /**
@@ -57,7 +58,13 @@ function extractRecipientEmail(dedupeKey: string): string {
  */
 @Injectable()
 export class AdminPrismaRepository implements AdminRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    // UFB-036 (Phase 44-03): post-create hook that materializes one
+    // ReminderRule per active ReminderPolicy whose validity window
+    // covers the new period's deadline. Wired in admin.module.ts.
+    private readonly policyApplicator?: PolicyApplicatorService,
+  ) {}
 
   private async ensureFallbackReportingGroup(): Promise<string> {
     const existing = await this.prisma.reportingGroup.findFirst({
@@ -499,6 +506,10 @@ export class AdminPrismaRepository implements AdminRepository {
 
     // Upsert report periods
     const currentReportIds = new Set(currentReports.map((r) => r.id));
+    // UFB-036 (Phase 44-03): track which periods are NEW so we can run
+    // PolicyApplicator on them AFTER the upsert loop commits. Updates
+    // do not re-trigger the applicator — policies attach once at create.
+    const newlyCreatedPeriods: Array<{ id: string; deadline: Date }> = [];
 
     for (const period of snapshot.periods) {
       if (currentReportIds.has(period.id)) {
@@ -520,6 +531,10 @@ export class AdminPrismaRepository implements AdminRepository {
             deadline: period.deadline,
             status: period.status,
           },
+        });
+        newlyCreatedPeriods.push({
+          id: period.id,
+          deadline: period.deadline,
         });
       }
     }
@@ -558,6 +573,16 @@ export class AdminPrismaRepository implements AdminRepository {
       await this.prisma.reminderRule.deleteMany({
         where: { id: { in: removedRuleIds } },
       });
+    }
+
+    // UFB-036 (Phase 44-03): materialize one ReminderRule per active
+    // policy on each newly-created Period. Run AFTER the per-row
+    // commits so a failure in the applicator (e.g. unreachable Prisma
+    // engine) cannot roll back the periods themselves.
+    if (this.policyApplicator) {
+      for (const newPeriod of newlyCreatedPeriods) {
+        await this.policyApplicator.applyToPeriod(newPeriod);
+      }
     }
 
     return this.getSnapshot();
