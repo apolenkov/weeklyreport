@@ -78,12 +78,24 @@ export class AutoArchiverScheduler {
     const archivedIds: string[] = [];
     for (const candidate of candidates) {
       try {
+        // UFB-053 / Phase 51-C: write the legacy `archived` boolean AND
+        // the new `periodState` column AND the 51-A `autoArchived` audit
+        // flag in a single update. Order matters only for downstream
+        // readers; this is atomic at the row level.
         await this.prisma.report.update({
           where: { id: candidate.id },
-          data: { archived: true },
+          data: {
+            archived: true,
+            periodState: 'archived',
+            autoArchived: true,
+          },
         });
         this.logger.log(`auto-archive period=${candidate.id}`);
-        this.auditLogger.periodAutoArchive({ periodId: candidate.id });
+        this.auditLogger.periodAutoArchive({
+          periodId: candidate.id,
+          from: 'published',
+          to: 'archived',
+        });
         archivedIds.push(candidate.id);
       } catch (err) {
         this.logger.error(

@@ -99,11 +99,22 @@ describe('AutoArchiverScheduler', () => {
       periodIds: ['rep-old-1', 'rep-old-2'],
     });
     expect(prisma.report.update).toHaveBeenCalledTimes(2);
+    // UFB-053: writer flips legacy `archived` + new `periodState` + 51-A
+    // `autoArchived` audit flag in a single update.
     expect(prisma.report.update).toHaveBeenNthCalledWith(1, {
       where: { id: 'rep-old-1' },
-      data: { archived: true },
+      data: {
+        archived: true,
+        periodState: 'archived',
+        autoArchived: true,
+      },
     });
     expect(audit.periodAutoArchive).toHaveBeenCalledTimes(2);
+    expect(audit.periodAutoArchive).toHaveBeenNthCalledWith(1, {
+      periodId: 'rep-old-1',
+      from: 'published',
+      to: 'archived',
+    });
   });
 
   it('idempotent: candidate set empty (all rows already archived) → no update, no audit', async () => {

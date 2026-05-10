@@ -49,12 +49,23 @@ export class PublicationPrismaRepository implements PublicationRepository {
   }
 
   async saveAssembledReport(report: AssembledReport): Promise<AssembledReport> {
+    // UFB-053 / Phase 51-C: mirror the legacy `status` write into the new
+    // `periodState` column atomically. We don't translate any other
+    // state — a `status='draft'` save (e.g. a section-update through
+    // PublicationService.updateSectionForReview) maps to
+    // periodState='open', and `status='published'` maps to
+    // periodState='published'. Archive transitions never come through
+    // this path (the AutoArchiver writes periodState='archived' directly).
+    const nextPeriodState =
+      report.status === 'published' ? 'published' : 'open';
+
     await this.prisma.report.update({
       where: { id: report.reportId },
       data: {
         status: report.status,
         publishedAt: report.publishedAt,
         publishedById: report.publishedById,
+        periodState: nextPeriodState,
       },
     });
 

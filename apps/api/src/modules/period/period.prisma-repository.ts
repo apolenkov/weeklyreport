@@ -35,6 +35,11 @@ export class PeriodPrismaRepository implements PeriodRepository {
         data: {
           status: 'published',
           periodStatus: 'published',
+          // UFB-053 / Phase 51-C: write the new state column atomically
+          // with the legacy fields. `periodState` and `periodStatus` are
+          // separate state machines — both move together on a head-driven
+          // publish (open → published on both).
+          periodState: 'published',
           publishedAt: new Date(),
           publishedById: userId,
         },
@@ -48,6 +53,13 @@ export class PeriodPrismaRepository implements PeriodRepository {
         where: { id: reportId },
         data: {
           periodStatus: 'reopened',
+          // UFB-053 / Phase 51-C: on reopen, revert `periodState` to
+          // 'open' (the closest of the four states to "editable again").
+          // `periodStatus` stays distinct with the 'reopened' marker so
+          // consumers that care about reopen-flavour can still discriminate.
+          // See "Open Questions" in the 51-C SUMMARY for the asymmetry
+          // rationale.
+          periodState: 'open',
           reopenedAt: new Date(),
         },
       });

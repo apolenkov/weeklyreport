@@ -1,4 +1,8 @@
-import type { ReminderPolicyKind, Role } from '@customreport/shared';
+import type {
+  PeriodState,
+  ReminderPolicyKind,
+  Role,
+} from '@customreport/shared';
 
 import type { AppLogger } from './logger.js';
 
@@ -146,15 +150,31 @@ type PeriodAutoCreateInput = {
   readonly periodStart: string;
   readonly periodEnd: string;
   readonly deadline: string;
+  /**
+   * UFB-053 / Phase 51-C: state-transition payload. For a fresh create,
+   * `from` is null (no prior state) and `to` is either 'scheduled' (future
+   * period) or 'open' (period that has already started by the time the
+   * tick runs). Mirrors the publish/archive envelopes so SIEM rules and
+   * dashboards can filter on `(from, to)` uniformly across the three
+   * scheduler events.
+   */
+  readonly from: PeriodState | null;
+  readonly to: PeriodState;
 };
 
 type PeriodAutoPublishInput = {
   readonly periodId: string;
   readonly missingSectionsCount: number;
+  /** UFB-053 / Phase 51-C: state transition (typically open → published). */
+  readonly from: PeriodState;
+  readonly to: PeriodState;
 };
 
 type PeriodAutoArchiveInput = {
   readonly periodId: string;
+  /** UFB-053 / Phase 51-C: state transition (typically published → archived). */
+  readonly from: PeriodState;
+  readonly to: PeriodState;
 };
 
 export interface AuditLogger {
@@ -285,6 +305,8 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
         deadline: input.deadline,
+        from: input.from,
+        to: input.to,
       });
     },
     periodAutoPublish(input) {
@@ -295,6 +317,8 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         ip: 'cron',
         periodId: input.periodId,
         missingSectionsCount: input.missingSectionsCount,
+        from: input.from,
+        to: input.to,
       });
     },
     periodAutoArchive(input) {
@@ -304,6 +328,8 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         role: null,
         ip: 'cron',
         periodId: input.periodId,
+        from: input.from,
+        to: input.to,
       });
     },
   };
