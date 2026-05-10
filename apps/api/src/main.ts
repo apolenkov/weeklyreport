@@ -247,6 +247,12 @@ async function bootstrap() {
   // own connection. Closed on app shutdown via enableShutdownHooks above.
   const emailReminderQueue = new Queue('email-reminder', getBullMQOptions());
 
+  // UFB-056 / Phase 55-3: read-only Queue handle for the admin Telegram
+  // smoke-test (`admin.testTelegramSend`). Stays out of the NestJS DI
+  // graph for the same reason as the email queue — see the @nestjs/bullmq
+  // DI bug note in bullmq.module.ts.
+  const telegramOutboundQueue = new Queue('telegram-outbound', getBullMQOptions());
+
   // Phase 35-06: thin wrapper around the email-reminder Queue handle for the
   // admin DLQ admin tab (`/admin?tab=jobs`). Stays out of the NestJS DI graph
   // for the same reason emailReminderQueue does — see the @nestjs/bullmq DI
@@ -277,6 +283,7 @@ async function bootstrap() {
     searchService: app.get(SearchService),
     activityService: app.get(ActivityService),
     emailReminderQueue,
+    telegramOutboundQueue,
     jobsService,
     // Phase 52 (UFB-054): telemetry.summary backend.
     telemetryService: app.get(TelemetryService),
