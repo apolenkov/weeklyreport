@@ -13,6 +13,7 @@ import {
   SheetTrigger,
 } from "@customreport/ui/components/ui/sheet";
 
+import { roleHomePath } from "../../lib/role-home";
 import { useSession } from "../../lib/session-provider";
 
 type NavLink = {
@@ -89,20 +90,11 @@ function isActiveLink(
   return pathname.startsWith(href);
 }
 
-function getLogoHref(role: Role): string {
-  switch (role) {
-    case "admin":
-    case "head":
-      return "/head/dashboard";
-    case "viewer":
-      // UX-17 (Phase 35-08): merged reports page; viewer default is the
-      // published archive tab.
-      return "/reports?tab=published";
-    case "lead":
-    default:
-      return "/lead/report";
-  }
-}
+// UFB-044: per-role home is now centralised in `lib/role-home.ts` and
+// reused by the dev-login redirect (UFB-034). Previously admin and head
+// both pointed at `/head/dashboard`, which sent admin sessions into the
+// head dashboard — see UFB-044 backlog entry for the user-reported flow.
+const getLogoHref = roleHomePath;
 
 // Initials helper — first char of first word + first char of last word;
 // single-word names fall back to the first 2 chars.
