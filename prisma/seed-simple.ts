@@ -1114,6 +1114,22 @@ async function main() {
     });
   }
 
+  // UFB-039: backfill the seed group's headUserId to the seeded head user
+  // and grant the viewer access to it. Lets the dashboard render with a
+  // configured leader and a viewer who already sees the group's reports.
+  console.log("[seed-simple] Setting group leader + viewer access (UFB-039)...");
+  await prisma.reportingGroup.update({
+    where: { id: DEFAULT_REPORTING_GROUP_ID },
+    data: { headUserId: HEAD_ID },
+  });
+  await prisma.viewerGroupAccess.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000000901",
+      viewerUserId: VIEWER_ID,
+      groupId: DEFAULT_REPORTING_GROUP_ID,
+    },
+  });
+
   console.log(
     "[seed-simple] Creating reminder rules (deadline + escalation)...",
   );

@@ -7,36 +7,66 @@ datasource db {
 }
 
 model User {
-  id                      String            @id @default(uuid())
-  email                   String            @unique
+  id                      String              @id @default(uuid())
+  email                   String              @unique
   name                    String
   role                    Role
-  samlId                  String            @unique
+  samlId                  String              @unique
   reportingGroupId        String
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
-  notificationOptOut      Boolean           @default(false)
-  reportingGroup          ReportingGroup    @relation(fields: [reportingGroupId], references: [id])
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  notificationOptOut      Boolean             @default(false)
+  reportingGroup          ReportingGroup      @relation(fields: [reportingGroupId], references: [id])
   ledProjects             Project[]
-  reopenRequestsRequested ReopenRequest[]   @relation("ReopenRequester")
-  reopenRequestsReviewed  ReopenRequest[]   @relation("ReopenReviewer")
-  publishedReports        Report[]          @relation("PublishedBy")
-  authoredReportSections  ReportSection[]   @relation("ReportSectionAuthor")
+  reopenRequestsRequested ReopenRequest[]     @relation("ReopenRequester")
+  reopenRequestsReviewed  ReopenRequest[]     @relation("ReopenReviewer")
+  publishedReports        Report[]            @relation("PublishedBy")
+  authoredReportSections  ReportSection[]     @relation("ReportSectionAuthor")
   stageAssignments        StageAssignment[]
+  // UFB-039 back-relations
+  ledGroups               ReportingGroup[]    @relation("GroupHead")
+  viewerGroupAccess       ViewerGroupAccess[] @relation("ViewerGroupAccessViewer")
 
   @@index([reportingGroupId])
 }
 
 model ReportingGroup {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  archived    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  users       User[]
+  id           String              @id @default(uuid())
+  name         String
+  description  String?
+  archived     Boolean             @default(false)
+  // UFB-039: optional FK to the User (role=head or role=admin) who runs
+  // this reporting group. Nullable because freshly-created groups may not
+  // have a leader assigned yet; a UI guard nudges admins to set one.
+  // Application-level invariant (not DB CHECK): the referenced User's role
+  // must be 'head' or 'admin'.
+  headUserId   String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  users        User[]
+  head         User?               @relation("GroupHead", fields: [headUserId], references: [id], onDelete: SetNull)
+  viewerAccess ViewerGroupAccess[]
 
   @@index([archived])
+  @@index([headUserId])
+}
+
+// UFB-039: viewer↔group M:M access table. A viewer (e.g. Дарья) can be
+// granted visibility into N reporting groups; admins manage rows here from
+// the Users tab. head/admin/lead do NOT use this table — their visibility
+// is derived from User.reportingGroupId (head) or full access (admin) or
+// own section only (lead).
+model ViewerGroupAccess {
+  id           String         @id @default(uuid())
+  viewerUserId String
+  groupId      String
+  createdAt    DateTime       @default(now())
+  viewer       User           @relation("ViewerGroupAccessViewer", fields: [viewerUserId], references: [id], onDelete: Cascade)
+  group        ReportingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([viewerUserId, groupId])
+  @@index([viewerUserId])
+  @@index([groupId])
 }
 
 model UserActionLog {
