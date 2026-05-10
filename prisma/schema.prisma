@@ -136,6 +136,21 @@ model Report {
   // dashboard, admin audit feed) arrive in 51-B / 51-C.
   autoPublished    Boolean              @default(false)
   autoArchived     Boolean              @default(false)
+  // UFB-053 / Phase 51-C: explicit lifecycle state column. The legacy
+  // `status` + `archived` + `periodStatus` tuple is preserved (one-release
+  // compatibility window) and writers update both the new column and the
+  // old fields atomically. Backfill is OPEN | PUBLISHED | ARCHIVED; the
+  // SCHEDULED state is reserved for future periods minted by the
+  // PeriodCreator scheduler (no historical row backfills to SCHEDULED).
+  // Index mirrors the legacy `(status, periodStart)` shape so the
+  // archive/dashboard read paths can swap in 51-B without an index gap.
+  // Note: `PeriodState` and `PeriodStatus` are intentionally separate
+  // state machines — `periodStatus` carries the reopen flavour
+  // (open/published/reopened, no archived); `periodState` carries the
+  // archive lifecycle (scheduled/open/published/archived, no reopened).
+  // On reopen we revert `periodState` to `open` while flipping
+  // `periodStatus` to `reopened` (Open Question — documented in SUMMARY).
+  periodState      PeriodState          @default(open)
   carryOverSources CarryOverExecution[] @relation("CarryOverSource")
   carryOverTargets CarryOverExecution[] @relation("CarryOverTarget")
   pdfExportJobs    PdfExportJob[]
@@ -146,6 +161,7 @@ model Report {
   @@index([periodStart(sort: Desc)])
   @@index([status, periodStart(sort: Desc)])
   @@index([archived, periodStart(sort: Desc)])
+  @@index([periodState, periodStart(sort: Desc)])
 }
 
 model ReportSection {
@@ -597,6 +613,18 @@ enum PeriodStatus {
   open
   published
   reopened
+}
+
+// UFB-053 / Phase 51-C: explicit Period lifecycle enum that replaces the
+// implicit (status × archived × periodStatus) tuple. Lowercase to match the
+// `ReportStatus`/`PeriodSection`/`PeriodStatus` precedent in this schema
+// (the screaming-snake enums are categorically different — they carry
+// metadata, not lifecycle). Wire format mirrors the lowercase Prisma enum.
+enum PeriodState {
+  scheduled
+  open
+  published
+  archived
 }
 
 enum ReopenRequestStatus {
