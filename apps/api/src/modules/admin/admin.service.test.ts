@@ -182,6 +182,33 @@ describe("AdminService", () => {
     expect(archived.archived).toBe(true);
   });
 
+  it("UFB-042: persists headUserId round-trip on upsertReportingGroup", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+    const groupId = "99999999-9999-4999-8999-000000042000";
+    const leaderId = "00000000-0000-4000-8000-000000000099";
+
+    const created = await service.upsertReportingGroup({
+      id: groupId,
+      name: "Group with leader",
+      description: null,
+      archived: false,
+      headUserId: leaderId,
+    });
+    expect(created.headUserId).toBe(leaderId);
+
+    const cleared = await service.upsertReportingGroup({
+      ...created,
+      headUserId: null,
+    });
+    expect(cleared.headUserId).toBeNull();
+
+    const restored = await service.upsertReportingGroup({
+      ...cleared,
+      headUserId: leaderId,
+    });
+    expect(restored.headUserId).toBe(leaderId);
+  });
+
   it("creates projects, periods, and reminder rules", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
 

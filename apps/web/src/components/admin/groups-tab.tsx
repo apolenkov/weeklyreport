@@ -16,12 +16,14 @@ type GroupFormData = {
   name: string;
   description: string;
   headUserId: string; // empty string = no leader
+  archived: boolean;
 };
 
 const EMPTY_FORM: GroupFormData = {
   name: "",
   description: "",
   headUserId: "",
+  archived: false,
 };
 
 type GroupsTabProps = {
@@ -99,6 +101,7 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
       name: group.name,
       description: group.description ?? "",
       headUserId: group.headUserId ?? "",
+      archived: group.archived,
     });
     setShowDialog(true);
   }
@@ -108,7 +111,6 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
       toReportingGroupInput(
         {
           ...form,
-          archived: editingGroup?.archived ?? false,
           headUserId: form.headUserId === "" ? null : form.headUserId,
         },
         editingGroup?.id,
@@ -330,6 +332,29 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
                   </p>
                 )}
               </div>
+              {editingGroup && (
+                <div>
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={form.archived}
+                      onChange={(e) =>
+                        setForm({ ...form, archived: e.target.checked })
+                      }
+                      className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-starbucks-accent)] focus:ring-2 focus:ring-[var(--color-ring)]"
+                    />
+                    <span className="block text-sm">
+                      <span className="font-medium text-[var(--color-foreground)]">
+                        Archived
+                      </span>
+                      <span className="mt-0.5 block text-xs text-[var(--color-muted-foreground)]">
+                        Hidden from new user/group pickers; existing references
+                        keep working.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              )}
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button
