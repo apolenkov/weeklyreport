@@ -66,7 +66,22 @@ Open:
 Evidence is written to
 `.planning/regression/evidence/docker-compose-local/verify.log`.
 
-Host-mode development is still useful for the fastest edit loop:
+**Preferred dev loop (docker compose watch, auto-restart on save):**
+
+```bash
+pnpm dev:watch
+```
+
+This wraps `docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+--watch` (requires Docker Compose v2.22+). On any change under `apps/api/src/`, `apps/web/src/`,
+`packages/shared/src/`, or `prisma/schema.prisma`, the relevant container
+restarts within ~3 seconds. Use this instead of host-mode `pnpm dev` to avoid
+the stale-`node --watch` failure class (long-running container silently stops
+reloading after 12–24 h uptime).
+
+Host-mode development is still available for the fastest edit loop (no
+container layer), at the cost of having to remember `docker compose restart
+api web` after long uptimes:
 
 ```bash
 # 1. Start infrastructure only
@@ -80,7 +95,8 @@ pnpm exec prisma db seed
 pnpm dev
 ```
 
-Full-container local development without the verifier:
+Full-container local development without auto-restart (legacy, useful for
+detached / long-running setups without watch overhead):
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
