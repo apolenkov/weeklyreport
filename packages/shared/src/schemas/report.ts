@@ -472,6 +472,23 @@ export const reminderAudienceWireSchema = z.enum([
   "head-of-late",
 ]);
 
+/**
+ * UFB-051 (Phase 51-A): wire enum for the period cadence. Stored as TEXT
+ * in Postgres (not a DB enum) so adding new cadences (`monthly`, …) is a
+ * one-line zod change and a documentation update — no DB migration. The
+ * 51-A scope ships weekly + bi-weekly; cron consumers (PeriodCreator
+ * cadence-aware step) arrive in 51-C.
+ */
+export const periodCadenceSchema = z.enum(["weekly", "bi-weekly"]);
+
+/**
+ * UFB-051 (Phase 51-A): regex guard for the `deadlineTime` HH:MM-in-24h
+ * string. Pin minutes to two digits and hours to 00..23 so the admin
+ * cannot persist garbage like `"25:00"` or `"9:5"` that would later
+ * break the deadline-computation path (51-C consumer).
+ */
+const deadlineTimeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 export const appSettingsSchema = z.object({
   // UFB-047 / Phase 49-01: `departmentName` removed from AppSettings.
   // Identity / brand strings live on the `Organization` singleton
@@ -493,6 +510,30 @@ export const appSettingsSchema = z.object({
   notificationFromEmail: z
     .union([z.string().email().max(254), z.null()])
     .default(null),
+  // ---- UFB-051 (Phase 51-A): Period-cycle knobs -----------------------
+  // Calendar anchoring + concurrency + publish/reopen gating. All carry
+  // `.default()` so pre-51-A fixtures (and partial PATCH payloads from
+  // older clients) keep parsing. Consumers ship in Phase 51-C — 51-A
+  // persists the values and renders them in the Settings UI only.
+  // ISO weekday numbering: 1=Monday..7=Sunday.
+  firstDayOfWeek: z.number().int().min(1).max(7).default(1),
+  deadlineDayOfWeek: z.number().int().min(1).max(7).default(5),
+  // HH:MM in the configured `defaultTimezone`. Regex pins the format so
+  // garbage values cannot reach the future deadline-computation path.
+  deadlineTime: z.string().regex(deadlineTimeRegex).default("18:00"),
+  periodCadence: periodCadenceSchema.default("weekly"),
+  // Concurrency cap on simultaneously-open periods. Sensible 51-A
+  // default is `1` (current weekly cadence). Upper bound chosen
+  // defensively (`12`) — admins likely never go above a handful but
+  // 12 covers a quarter's worth of overlapping monthly periods.
+  maxOpenPeriods: z.number().int().min(1).max(12).default(1),
+  requireAllSectionsToPublish: z.boolean().default(true),
+  allowReopenAfterPublish: z.boolean().default(true),
+  // Window after `publishedAt` during which a published report can be
+  // reopened. `0..168` (one week) matches the 48-B `gracePeriodHours`
+  // convention. Default `72` (3 days) chosen as a practical floor for
+  // "noticed the bug on Monday, reopen Friday's report" use cases.
+  reopenWindowHours: z.number().int().min(0).max(168).default(72),
 });
 
 export const appSettingsUpdateSchema = appSettingsSchema.partial();
@@ -594,6 +635,7 @@ export type StageAssignment = z.infer<typeof stageAssignmentSchema>;
 export type VersionSnapshot = z.infer<typeof versionSnapshotSchema>;
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 export type WorkingDays = z.infer<typeof workingDaysSchema>;
+export type PeriodCadence = z.infer<typeof periodCadenceSchema>;
 export type PeriodReadModel = z.infer<typeof periodReadModelSchema>;
 export type PortfolioProductOverview = z.infer<
   typeof portfolioProductOverviewSchema

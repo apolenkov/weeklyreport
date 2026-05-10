@@ -1216,6 +1216,156 @@ describe('appSettingsSchema', () => {
       }).success,
     ).toBe(false);
   });
+
+  // -------------------------------------------------------------------
+  // UFB-051 (Phase 51-A): 8 new period-cycle fields on AppSettings.
+  // Same pattern as the 48-B block above — each has `.default()` so
+  // partial PATCH payloads keep working and constraints reject garbage.
+  // -------------------------------------------------------------------
+
+  it('UFB-051: applies defaults for the 8 new period-cycle fields when omitted', () => {
+    const result = appSettingsSchema.safeParse({
+      autoCreatePeriods: false,
+      defaultDeadlineDays: 5,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.firstDayOfWeek).toBe(1);
+    expect(result.data.deadlineDayOfWeek).toBe(5);
+    expect(result.data.deadlineTime).toBe('18:00');
+    expect(result.data.periodCadence).toBe('weekly');
+    expect(result.data.maxOpenPeriods).toBe(1);
+    expect(result.data.requireAllSectionsToPublish).toBe(true);
+    expect(result.data.allowReopenAfterPublish).toBe(true);
+    expect(result.data.reopenWindowHours).toBe(72);
+  });
+
+  it('UFB-051: rejects firstDayOfWeek out of [1..7]', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        firstDayOfWeek: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        firstDayOfWeek: 8,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('UFB-051: rejects deadlineDayOfWeek out of [1..7]', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        deadlineDayOfWeek: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        deadlineDayOfWeek: 8,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('UFB-051: rejects malformed deadlineTime (must be HH:MM 24h)', () => {
+    // Hour out of range
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        deadlineTime: '25:00',
+      }).success,
+    ).toBe(false);
+    // Missing leading zero
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        deadlineTime: '9:30',
+      }).success,
+    ).toBe(false);
+    // Garbage
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        deadlineTime: 'noon',
+      }).success,
+    ).toBe(false);
+    // Valid corner cases pass
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        deadlineTime: '00:00',
+      }).success,
+    ).toBe(true);
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        deadlineTime: '23:59',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('UFB-051: rejects unknown periodCadence value', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        periodCadence: 'monthly',
+      }).success,
+    ).toBe(false);
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        periodCadence: 'bi-weekly',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('UFB-051: rejects maxOpenPeriods out of [1..12]', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        maxOpenPeriods: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        maxOpenPeriods: 13,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('UFB-051: rejects reopenWindowHours out of [0..168]', () => {
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        reopenWindowHours: -1,
+      }).success,
+    ).toBe(false);
+    expect(
+      appSettingsSchema.safeParse({
+        autoCreatePeriods: false,
+        defaultDeadlineDays: 5,
+        reopenWindowHours: 169,
+      }).success,
+    ).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
