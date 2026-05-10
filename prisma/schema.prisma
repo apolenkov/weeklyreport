@@ -121,6 +121,12 @@ model Report {
   periodStatus     PeriodStatus         @default(open)
   reopenedAt       DateTime?
   weekLabel        String?
+  // UFB-049 / Phase 50-B: lifecycle flag set by the auto-archiver scheduler
+  // when `AppSettings.autoArchiveWeeksAfterPublish > 0` AND
+  // `publishedAt + weeks * 7d < now`. Existing rows backfill to false via
+  // the migration default. Indexed alongside periodStart so the archive
+  // dashboard's "last N un-archived" query stays cheap.
+  archived         Boolean              @default(false)
   carryOverSources CarryOverExecution[] @relation("CarryOverSource")
   carryOverTargets CarryOverExecution[] @relation("CarryOverTarget")
   pdfExportJobs    PdfExportJob[]
@@ -130,6 +136,7 @@ model Report {
 
   @@index([periodStart(sort: Desc)])
   @@index([status, periodStart(sort: Desc)])
+  @@index([archived, periodStart(sort: Desc)])
 }
 
 model ReportSection {
@@ -142,6 +149,11 @@ model ReportSection {
   updatedAt        DateTime            @updatedAt
   revokedAt        DateTime?
   revokedBy        String?
+  // UFB-049 / Phase 50-B: stamped true by submitSection when
+  // `now > Report.deadline` (regardless of grace-period). Used by head
+  // dashboard + lead form to render a "late" badge. Existing rows
+  // backfill to false via the migration default.
+  late             Boolean             @default(false)
   decisions        Decision[]
   items            Item[]
   priorities       Priority[]
