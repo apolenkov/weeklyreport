@@ -130,7 +130,7 @@ describe('AUTH-04 viewer scoping', () => {
     await service.listArchiveReports(undefined, 'viewer');
 
     expect(listSpy).toHaveBeenCalledOnce();
-    expect(listSpy).toHaveBeenCalledWith({ status: 'published' });
+    expect(listSpy).toHaveBeenCalledWith({ status: 'published' }, undefined);
   });
 
   it('viewer role injects status:published into getArchiveReport filter', async () => {
@@ -140,7 +140,7 @@ describe('AUTH-04 viewer scoping', () => {
     await service.getArchiveReport(reportId, 'viewer');
 
     expect(getSpy).toHaveBeenCalledOnce();
-    expect(getSpy).toHaveBeenCalledWith(reportId, { status: 'published' });
+    expect(getSpy).toHaveBeenCalledWith(reportId, { status: 'published' }, undefined);
   });
 
   it('viewer requesting a non-published row through repository null receives ArchiveDomainError', async () => {
@@ -162,7 +162,7 @@ describe('AUTH-04 viewer scoping', () => {
     await service.listArchiveReports(undefined, 'head');
 
     expect(listSpy).toHaveBeenCalledOnce();
-    expect(listSpy).toHaveBeenCalledWith({});
+    expect(listSpy).toHaveBeenCalledWith({}, undefined);
   });
 
   it('lead and admin roles also receive an empty filter (head-equivalent for archive read)', async () => {
@@ -170,10 +170,10 @@ describe('AUTH-04 viewer scoping', () => {
     const service = new ArchiveService(repo);
 
     await service.listArchiveReports(undefined, 'lead');
-    expect(listSpy).toHaveBeenLastCalledWith({});
+    expect(listSpy).toHaveBeenLastCalledWith({}, undefined);
 
     await service.listArchiveReports(undefined, 'admin');
-    expect(listSpy).toHaveBeenLastCalledWith({});
+    expect(listSpy).toHaveBeenLastCalledWith({}, undefined);
   });
 
   it('undefined role passes empty filter (legacy contract — repo floor still applies)', async () => {
@@ -182,6 +182,6 @@ describe('AUTH-04 viewer scoping', () => {
 
     await service.listArchiveReports(undefined, undefined);
 
-    expect(listSpy).toHaveBeenCalledWith({});
+    expect(listSpy).toHaveBeenCalledWith({}, undefined);
   });
 });

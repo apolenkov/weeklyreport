@@ -6,6 +6,7 @@ import {
   type PaginationInput,
   type PaginatedResult,
   type Role,
+  type UserSession,
 } from '@customreport/shared';
 
 export class ArchiveDomainError extends Error {
@@ -28,11 +29,30 @@ export interface ArchiveReadFilter {
   status?: 'draft' | 'published';
 }
 
+/**
+ * UFB-040 / Phase 46-03: archive section visibility filter.
+ *
+ * Repository receives the requester's session (or the narrow Pick used by
+ * tests) so it can spread `groupScopeFilter(session, 'reportSection')` into
+ * the nested `sections.where` clause. The Report row itself stays globally
+ * visible (still gated by PUBLISHED_FLOOR + ArchiveReadFilter) so the user
+ * can browse the period list, but the assembled view only includes sections
+ * the requester is allowed to read.
+ */
+export type ArchiveScopeSession = Pick<
+  UserSession,
+  'role' | 'reportingGroupId' | 'viewerGroupAccess'
+>;
+
 export interface ArchiveRepository {
-  listArchiveReports(filter?: ArchiveReadFilter): Promise<ArchiveReportSummary[]>;
+  listArchiveReports(
+    filter?: ArchiveReadFilter,
+    session?: ArchiveScopeSession,
+  ): Promise<ArchiveReportSummary[]>;
   getArchiveReport(
     reportId: string,
     filter?: ArchiveReadFilter,
+    session?: ArchiveScopeSession,
   ): Promise<ArchiveReportDetail | null>;
 }
 
@@ -57,10 +77,11 @@ export class ArchiveService {
   async listArchiveReports(
     pagination?: PaginationInput,
     role?: Role,
+    session?: ArchiveScopeSession,
   ): Promise<PaginatedResult<ArchiveReportSummary>> {
     const filter = buildArchiveReadFilter(role);
     const reports = archiveReportSummarySchema.array().parse(
-      await this.repository.listArchiveReports(filter),
+      await this.repository.listArchiveReports(filter, session),
     );
 
     const sorted = [...reports].sort(
@@ -87,9 +108,13 @@ export class ArchiveService {
     return { items: page, nextCursor };
   }
 
-  async getArchiveReport(reportId: string, role?: Role): Promise<ArchiveReportDetail> {
+  async getArchiveReport(
+    reportId: string,
+    role?: Role,
+    session?: ArchiveScopeSession,
+  ): Promise<ArchiveReportDetail> {
     const filter = buildArchiveReadFilter(role);
-    const detail = await this.repository.getArchiveReport(reportId, filter);
+    const detail = await this.repository.getArchiveReport(reportId, filter, session);
 
     if (!detail) {
       throw new ArchiveDomainError(`Archive report ${reportId} was not found.`);
