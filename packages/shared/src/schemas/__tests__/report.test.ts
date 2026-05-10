@@ -20,6 +20,7 @@ import {
   portfolioOverviewSchema,
   archiveReportSummarySchema,
   periodStatusSchema,
+  periodStateSchema,
   stageSchema,
   stageAssignmentSchema,
   versionSnapshotSchema,
@@ -874,6 +875,63 @@ describe('periodStatusSchema', () => {
 
   it('rejects null', () => {
     expect(periodStatusSchema.safeParse(null).success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 14b: periodStateSchema (UFB-053 / Phase 51-C)
+// ---------------------------------------------------------------------------
+
+describe('periodStateSchema (UFB-053)', () => {
+  it('accepts "scheduled"', () => {
+    expect(periodStateSchema.safeParse('scheduled').success).toBe(true);
+  });
+
+  it('accepts "open"', () => {
+    expect(periodStateSchema.safeParse('open').success).toBe(true);
+  });
+
+  it('accepts "published"', () => {
+    expect(periodStateSchema.safeParse('published').success).toBe(true);
+  });
+
+  it('accepts "archived"', () => {
+    expect(periodStateSchema.safeParse('archived').success).toBe(true);
+  });
+
+  it('rejects "reopened" (lives on periodStatusSchema, not periodStateSchema)', () => {
+    expect(periodStateSchema.safeParse('reopened').success).toBe(false);
+  });
+
+  it('rejects unknown value', () => {
+    expect(periodStateSchema.safeParse('closed').success).toBe(false);
+  });
+
+  it('rejects screaming-snake casing', () => {
+    expect(periodStateSchema.safeParse('OPEN').success).toBe(false);
+  });
+
+  it('reportPeriodSchema: periodState is optional (back-compat)', () => {
+    const parsed = reportPeriodSchema.safeParse({
+      id: randomUUID(),
+      periodStart: '2026-05-11',
+      periodEnd: '2026-05-17',
+      deadline: '2026-05-15',
+      status: 'draft',
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('reportPeriodSchema: periodState carries through when supplied', () => {
+    const parsed = reportPeriodSchema.parse({
+      id: randomUUID(),
+      periodStart: '2026-05-11',
+      periodEnd: '2026-05-17',
+      deadline: '2026-05-15',
+      status: 'draft',
+      periodState: 'open',
+    });
+    expect(parsed.periodState).toBe('open');
   });
 });
 

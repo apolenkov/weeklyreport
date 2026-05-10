@@ -41,6 +41,33 @@ export const reportSectionStatusSchema = z.enum(["draft", "submitted"]);
 export const reportStatusSchema = z.enum(["draft", "published"]);
 export const periodStatusSchema = z.enum(["open", "published", "reopened"]);
 
+/**
+ * UFB-053 (Phase 51-C): explicit lifecycle state for a Period/Report.
+ * Replaces the implicit (status × archived × periodStatus) tuple. The
+ * legacy fields stay around for the one-release compatibility window —
+ * writers update both atomically. Wire format mirrors the lowercase
+ * Prisma enum.
+ *
+ * State transitions wired in 51-C:
+ *   - PeriodCreator   : minted with `scheduled` if periodStart > now,
+ *                       otherwise `open`; flips `scheduled → open` once
+ *                       the period's start day is reached.
+ *   - AutoPublisher   : `open → published` at deadline + grace.
+ *   - AutoArchiver    : `published → archived` after the configured
+ *                       autoArchiveWeeksAfterPublish window.
+ *   - publish (head)  : `open → published` (also legacy
+ *                       status/periodStatus writes).
+ *   - reopen (head)   : `published → open` (also legacy
+ *                       periodStatus='reopened' — see Open Questions in
+ *                       51-C SUMMARY).
+ */
+export const periodStateSchema = z.enum([
+  "scheduled",
+  "open",
+  "published",
+  "archived",
+]);
+
 export const projectStatusInputSchema = z.object({
   projectId: z.string().uuid(),
   status: trafficLightStatusSchema.optional(),
@@ -307,6 +334,13 @@ export const reportPeriodSchema = z.object({
   periodEnd: reportDate(),
   deadline: reportDate(),
   status: reportStatusSchema,
+  /**
+   * UFB-053 (Phase 51-C): explicit lifecycle state. Optional so pre-51-C
+   * fixtures and admin-snapshot payloads keep parsing — consumers that
+   * don't yet read the state fall back to the legacy `status`/`archived`
+   * tuple. 51-B Admin Periods tab consumes this field directly.
+   */
+  periodState: periodStateSchema.optional(),
 });
 
 // NOTIF-02 (Phase 29-05): 'escalation' added for T+2h heads-only digest.
@@ -585,6 +619,12 @@ export const periodReadModelSchema = z.object({
   weekLabel: z.string().nullable(),
   publishedAt: z.coerce.date().nullable(),
   reopenedAt: z.coerce.date().nullable(),
+  /**
+   * UFB-053 (Phase 51-C): explicit lifecycle state. Optional so pre-51-C
+   * fixtures still parse; consumers that don't read it fall back to the
+   * legacy tuple. Read paths in 51-B switch to this field.
+   */
+  periodState: periodStateSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -630,6 +670,7 @@ export const weeklyReportReadModelSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export type PeriodStatus = z.infer<typeof periodStatusSchema>;
+export type PeriodState = z.infer<typeof periodStateSchema>;
 export type Stage = z.infer<typeof stageSchema>;
 export type StageAssignment = z.infer<typeof stageAssignmentSchema>;
 export type VersionSnapshot = z.infer<typeof versionSnapshotSchema>;
