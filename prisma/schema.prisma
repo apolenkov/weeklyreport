@@ -282,6 +282,7 @@ model PdfExportJob {
 model ReminderRule {
   id         String              @id @default(uuid())
   reportId   String?
+  policyId   String?
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
   kind       ReminderRuleKind
@@ -291,9 +292,31 @@ model ReminderRule {
   version    Int                 @default(1)
   executions ReminderExecution[]
   report     Report?             @relation(fields: [reportId], references: [id])
+  policy     ReminderPolicy?     @relation(fields: [policyId], references: [id])
 
   @@index([createdAt(sort: Desc)])
   @@index([status, fireAt])
+  @@index([policyId])
+}
+
+// UFB-036: ReminderPolicy is a parameterized template that ReminderRule rows
+// reference. One policy declares (kind, offsetMinutes, timezone, audience)
+// and acts as the source-of-truth for every concrete rule scheduled against
+// a report. Phase 44-01 introduces the model with nullable FK; later plans
+// flip the FK to NOT NULL once Period.create wires the policy in.
+model ReminderPolicy {
+  id            String           @id @default(uuid())
+  kind          ReminderRuleKind
+  offsetMinutes Int
+  timezone      String           @default("Europe/Moscow")
+  audience      ReminderAudience
+  active        Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  rules         ReminderRule[]
+
+  @@index([kind, active])
+  @@index([active])
 }
 
 model ReminderExecution {
@@ -492,6 +515,11 @@ enum ReminderRuleKind {
   deadline
   follow_up
   escalation
+}
+
+enum ReminderAudience {
+  LEAD_WITH_DRAFT
+  HEAD_OF_LATE
 }
 
 enum ReminderRuleStatus {
