@@ -264,7 +264,7 @@ async function main() {
 
   // ----- Active report (Week 16) sections -----
   // Section status plan (matches MOCK_KPI: submitted: 4, total: 6, pendingCount: 2):
-  //   Тимлид 1 -> submitted (Apr 14 10:00)
+  //   Василий И. -> submitted (Apr 14 10:00)
   //   Maria K.    -> submitted (Apr 14 14:00)
   //   Igor V.     -> submitted (Apr 15 09:30)
   //   Dmitry S.   -> submitted (Apr 16 11:15)
@@ -286,7 +286,7 @@ async function main() {
     {
       leadId: LEAD_1_ID,
       leadIndex: 1,
-      name: "Тимлид 1",
+      name: "Василий И.",
       status: ReportSectionStatus.submitted,
       submittedAt: activeOffset(1, 10),
       products: productsByLead(LEAD_1_ID),

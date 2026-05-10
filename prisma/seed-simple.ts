@@ -160,6 +160,80 @@ const PREV_FRIDAY_DEADLINE = (() => {
   );
 })();
 const PREV_SUBMIT_AT = plusDaysUTC(PREV_MONDAY, 3); // Thursday of previous week
+
+// UFB-037: extra historical + future periods so the Periods admin tab and
+// /reports archive show realistic data instead of a 1-row "0/1 Submission"
+// dashboard. Historical = published (deeper history), future = open
+// (so admins can preview upcoming weeks). Each period gets a deterministic
+// UUID so re-running the seed is idempotent.
+function fridayDeadlineFor(monday: Date): Date {
+  const friday = plusDaysUTC(monday, 4);
+  return new Date(
+    Date.UTC(
+      friday.getUTCFullYear(),
+      friday.getUTCMonth(),
+      friday.getUTCDate(),
+      15,
+      0,
+      0,
+      0,
+    ),
+  );
+}
+
+type ExtraReportSeed = {
+  id: string;
+  monday: Date;
+  status: ReportStatus;
+  periodStatus: PeriodStatus;
+  publishedAt?: Date;
+};
+
+const EXTRA_REPORTS: ExtraReportSeed[] = [
+  // 4 historical published periods (oldest → most recent before PREV)
+  {
+    id: "a0000000-0000-4000-8000-000000000003",
+    monday: plusDaysUTC(ACTIVE_MONDAY, -35),
+    status: ReportStatus.published,
+    periodStatus: PeriodStatus.published,
+    publishedAt: endOfDayUTC(plusDaysUTC(ACTIVE_MONDAY, -29)),
+  },
+  {
+    id: "a0000000-0000-4000-8000-000000000004",
+    monday: plusDaysUTC(ACTIVE_MONDAY, -28),
+    status: ReportStatus.published,
+    periodStatus: PeriodStatus.published,
+    publishedAt: endOfDayUTC(plusDaysUTC(ACTIVE_MONDAY, -22)),
+  },
+  {
+    id: "a0000000-0000-4000-8000-000000000005",
+    monday: plusDaysUTC(ACTIVE_MONDAY, -21),
+    status: ReportStatus.published,
+    periodStatus: PeriodStatus.published,
+    publishedAt: endOfDayUTC(plusDaysUTC(ACTIVE_MONDAY, -15)),
+  },
+  {
+    id: "a0000000-0000-4000-8000-000000000006",
+    monday: plusDaysUTC(ACTIVE_MONDAY, -14),
+    status: ReportStatus.published,
+    periodStatus: PeriodStatus.published,
+    publishedAt: endOfDayUTC(plusDaysUTC(ACTIVE_MONDAY, -8)),
+  },
+  // 2 future open periods (next + week after)
+  {
+    id: "a0000000-0000-4000-8000-000000000007",
+    monday: plusDaysUTC(ACTIVE_MONDAY, 7),
+    status: ReportStatus.draft,
+    periodStatus: PeriodStatus.open,
+  },
+  {
+    id: "a0000000-0000-4000-8000-000000000008",
+    monday: plusDaysUTC(ACTIVE_MONDAY, 14),
+    status: ReportStatus.draft,
+    periodStatus: PeriodStatus.open,
+  },
+];
+
 const ACTIVE_REMINDER_DEADLINE_FIRE = plusDaysUTC(ACTIVE_FRIDAY_DEADLINE, 0);
 const ACTIVE_REMINDER_ESCALATION_FIRE = (() => {
   const r = new Date(ACTIVE_FRIDAY_DEADLINE);
@@ -231,7 +305,7 @@ async function main() {
       {
         id: LEAD_1,
         email: "lead1@customreport.local",
-        name: "Тимлид 1",
+        name: "Василий И.",
         role: Role.lead,
         samlId: "lead-1",
         reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
@@ -413,6 +487,17 @@ async function main() {
         publishedAt: PREV_SUNDAY,
         publishedById: HEAD_ID,
       },
+      ...EXTRA_REPORTS.map((r) => ({
+        id: r.id,
+        periodStart: r.monday,
+        periodEnd: endOfDayUTC(plusDaysUTC(r.monday, 6)),
+        deadline: fridayDeadlineFor(r.monday),
+        weekLabel: `Week ${isoWeekNumber(r.monday)}`,
+        periodStatus: r.periodStatus,
+        status: r.status,
+        publishedAt: r.publishedAt,
+        publishedById: r.publishedAt ? HEAD_ID : null,
+      })),
     ],
   });
 
@@ -436,7 +521,7 @@ async function main() {
       productId: PROD_CRM,
       status: ReportSectionStatus.draft,
       lightStatus: TrafficLightStatus.red,
-      label: "Тимлид 1",
+      label: "Василий И.",
     },
     {
       id: LEAD_MARIA,
@@ -538,7 +623,7 @@ async function main() {
       decisions: [
         {
           text: "Решение: переезд на новый IdP до конца месяца",
-          owner: "Тимлид 1",
+          owner: "Василий И.",
           impact: "Закрывает риск устаревшего OAuth-провайдера",
         },
         {
