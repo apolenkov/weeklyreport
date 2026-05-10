@@ -127,6 +127,15 @@ model Report {
   // the migration default. Indexed alongside periodStart so the archive
   // dashboard's "last N un-archived" query stays cheap.
   archived         Boolean              @default(false)
+  // UFB-051 / Phase 51-A: lifecycle audit flags surfaced by the period
+  // state-machine. `autoPublished` is set true when AutoPublisher (50-B
+  // cron) flips status=draft→published at deadline+grace (vs an explicit
+  // head action). `autoArchived` mirrors that for AutoArchiver. Both
+  // ship as nullable-friendly defaults (`false`) so existing rows
+  // backfill cleanly via the migration default. Consumers (state-machine
+  // dashboard, admin audit feed) arrive in 51-B / 51-C.
+  autoPublished    Boolean              @default(false)
+  autoArchived     Boolean              @default(false)
   carryOverSources CarryOverExecution[] @relation("CarryOverSource")
   carryOverTargets CarryOverExecution[] @relation("CarryOverTarget")
   pdfExportJobs    PdfExportJob[]
@@ -462,6 +471,34 @@ model AppSettings {
   allowLateSubmissions         Boolean          @default(true)
   autoPublishAfterDeadline     Boolean          @default(false)
   autoArchiveWeeksAfterPublish Int              @default(0)
+  // UFB-051 / Phase 51-A: period-cycle expansion. Eight new org-wide
+  // knobs that describe how a period is anchored on the calendar
+  // (firstDayOfWeek, deadlineDayOfWeek, deadlineTime, periodCadence),
+  // how concurrency works (maxOpenPeriods), and how publish/reopen
+  // gating behaves (requireAllSectionsToPublish, allowReopenAfterPublish,
+  // reopenWindowHours). All carry SQL defaults so the singleton row
+  // updates in-place without a manual data migration. Wire schema mirrors
+  // these via `appSettingsSchema` defaults in packages/shared.
+  //
+  // Consumers (PeriodCreator cadence/maxOpenPeriods read, publish gating,
+  // reopen window enforcement) ship in Phase 51-C (state-machine). 51-A
+  // is persistence + Settings UI only — mirrors the 48-B
+  // `autoPublishAfterDeadline` pattern of "toggle now, cron consumer
+  // later".
+  //
+  // firstDayOfWeek + deadlineDayOfWeek use ISO weekday numbering
+  // (1=Monday..7=Sunday). deadlineTime is HH:MM in defaultTimezone.
+  // periodCadence is a wire-format string ("weekly" | "bi-weekly")
+  // kept as TEXT (not enum) so future cadences (monthly, ...) extend
+  // the zod enum without a Prisma migration.
+  firstDayOfWeek               Int              @default(1)
+  deadlineDayOfWeek            Int              @default(5)
+  deadlineTime                 String           @default("18:00")
+  periodCadence                String           @default("weekly")
+  maxOpenPeriods               Int              @default(1)
+  requireAllSectionsToPublish  Boolean          @default(true)
+  allowReopenAfterPublish      Boolean          @default(true)
+  reopenWindowHours            Int              @default(72)
   updatedAt                    DateTime         @updatedAt
 }
 
