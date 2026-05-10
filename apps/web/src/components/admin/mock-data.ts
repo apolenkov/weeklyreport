@@ -104,6 +104,8 @@ export type MockReminderPolicy = {
 // mirrors the tab grouping in settings-tab.tsx (Periods → Reminders →
 // Notifications) for readability.
 // UFB-047 / Phase 49-01: legacy `departmentName` removed.
+// UFB-051 (Phase 51-A): +8 period-cycle knobs on the Periods sub-tab —
+// see comment in `appSettingsSchema` for the semantics.
 export type MockSettings = {
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
@@ -114,6 +116,15 @@ export type MockSettings = {
   allowLateSubmissions: boolean;
   autoPublishAfterDeadline: boolean;
   autoArchiveWeeksAfterPublish: number;
+  // UFB-051 — period-cycle knobs (Periods tab, after the 48-B inputs)
+  firstDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
+  deadlineDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
+  deadlineTime: string; // HH:MM (24h)
+  periodCadence: "weekly" | "bi-weekly";
+  maxOpenPeriods: number;
+  requireAllSectionsToPublish: boolean;
+  allowReopenAfterPublish: boolean;
+  reopenWindowHours: number;
   // Reminders tab
   defaultTimezone: string;
   defaultReminderAudience: "lead-with-draft" | "head-of-late";
@@ -477,6 +488,15 @@ export const MOCK_SETTINGS: MockSettings = {
   allowLateSubmissions: true,
   autoPublishAfterDeadline: false,
   autoArchiveWeeksAfterPublish: 0,
+  // UFB-051 (Phase 51-A) defaults — mirror SQL.
+  firstDayOfWeek: 1,
+  deadlineDayOfWeek: 5,
+  deadlineTime: "18:00",
+  periodCadence: "weekly",
+  maxOpenPeriods: 1,
+  requireAllSectionsToPublish: true,
+  allowReopenAfterPublish: true,
+  reopenWindowHours: 72,
   defaultTimezone: "Europe/Moscow",
   defaultReminderAudience: "lead-with-draft",
   notificationFromEmail: null,

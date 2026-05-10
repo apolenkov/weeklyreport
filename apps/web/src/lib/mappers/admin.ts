@@ -162,6 +162,15 @@ export type MockSettings = {
   allowLateSubmissions: boolean;
   autoPublishAfterDeadline: boolean;
   autoArchiveWeeksAfterPublish: number;
+  // UFB-051 (Phase 51-A) — period-cycle knobs surfaced on the Periods tab.
+  firstDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
+  deadlineDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
+  deadlineTime: string; // HH:MM (24h)
+  periodCadence: "weekly" | "bi-weekly";
+  maxOpenPeriods: number;
+  requireAllSectionsToPublish: boolean;
+  allowReopenAfterPublish: boolean;
+  reopenWindowHours: number;
   // Reminders tab
   defaultTimezone: string;
   defaultReminderAudience: "lead-with-draft" | "head-of-late";
@@ -353,6 +362,17 @@ export function mapAdminSettings(api: AppSettings): MockSettings {
     allowLateSubmissions: api.allowLateSubmissions,
     autoPublishAfterDeadline: api.autoPublishAfterDeadline,
     autoArchiveWeeksAfterPublish: api.autoArchiveWeeksAfterPublish,
+    // UFB-051 (Phase 51-A): pass-through for the 8 period-cycle knobs.
+    // appSettingsSchema fills defaults so a pre-51-A API response still
+    // hydrates the UI without breakage.
+    firstDayOfWeek: api.firstDayOfWeek,
+    deadlineDayOfWeek: api.deadlineDayOfWeek,
+    deadlineTime: api.deadlineTime,
+    periodCadence: api.periodCadence,
+    maxOpenPeriods: api.maxOpenPeriods,
+    requireAllSectionsToPublish: api.requireAllSectionsToPublish,
+    allowReopenAfterPublish: api.allowReopenAfterPublish,
+    reopenWindowHours: api.reopenWindowHours,
     defaultTimezone: api.defaultTimezone,
     defaultReminderAudience: api.defaultReminderAudience,
     notificationFromEmail: api.notificationFromEmail,
