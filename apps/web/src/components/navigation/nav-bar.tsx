@@ -37,6 +37,20 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   // NOT the weekly-report submission surface (director is read-only).
   { href: "/head/dashboard", label: "Dashboard", roles: ["head", "director"] },
   { href: "/head/report", label: "Status Report", roles: ["head"] },
+  // UFB-058 / Phase 60: Status Presentation surface — slide deck view.
+  // Lead → own section as one slide; Head → all group slides;
+  // Viewer/Director → all slides in scope. Slide rendering itself is
+  // stub today; the route shows a «coming soon» until Phase 60 ships.
+  {
+    href: "/lead/slides",
+    label: "Status Presentation",
+    roles: ["lead"],
+  },
+  {
+    href: "/head/slides",
+    label: "Status Presentation",
+    roles: ["head", "viewer", "director"],
+  },
   {
     // UFB-022: admin role sees only the Admin section, not the
     // department dashboard/report/archive surfaces.
