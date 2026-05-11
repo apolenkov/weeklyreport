@@ -1,25 +1,108 @@
 /**
- * Loading-state skeleton for the Weekly Report page. Mirrors the dimensions of
- * the portfolio overview table + accordion sections so the load-to-data
- * transition has no layout shift.
+ * Loading-state skeleton for the Weekly Report page. Mirrors the DOM
+ * structure of `weekly-report-page.tsx` so the load-to-data transition
+ * has zero layout shift (CLS).
+ *
+ * Section-by-section parity (top to bottom, mirrors the real page):
+ *   1. Page header  — title + Live pill | ExportPdf + PublishLock (2 buttons)
+ *   2. Period nav   — HeadPeriodNavigator | "{org} · Live portfolio review"
+ *   3. AI Insights  — full Portfolio-style card (AiSummaryCard pending shape)
+ *   4. Portfolio    — single gradient card + sm:grid-cols-2 product cards
+ *   5. Accordions   — gradient cards × N matching ProductAccordion header
+ *
+ * UFB-072 (2026-05-11): rewritten to remove the old 6-col table skeleton
+ * (Portfolio is a card grid, not a table) and to add the missing AI Insights
+ * slot the user reported («не вижу секции AI в skeleton»).
  *
  * Stateless and hook-free — safe to render server-side.
  */
 
 import { Skeleton } from '@customreport/ui/components/ui/skeleton';
 
-function PortfolioRowSkeleton() {
+/**
+ * Mirrors {@link PortfolioOverviewTable}'s per-product card:
+ *   `grid min-h-[76px] grid-cols-[1.75rem_minmax(0,1fr)_1.5rem]`
+ * with a circular status avatar, a 2-line name/status block, and a
+ * trailing arrow slot (hidden by default in the real card, kept as a
+ * spacer here for column alignment).
+ */
+function PortfolioCardSkeleton() {
   return (
-    <div className="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0">
-      <Skeleton className="col-span-2 h-4 w-full" />
-      <Skeleton className="h-4 w-20" />
-      <Skeleton className="h-4 w-32" />
-      <Skeleton className="h-4 w-12" />
-      <Skeleton className="h-4 w-12" />
+    <div className="grid min-h-[76px] w-full grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg bg-[rgba(0,0,0,0.04)] p-2.5">
+      <Skeleton className="h-7 w-7 rounded-full" />
+      <div className="min-w-0 flex-1 space-y-1">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-3 w-40" />
+      </div>
+      <span className="h-6 w-6" aria-hidden="true" />
     </div>
   );
 }
 
+/**
+ * Mirrors the {@link AiSummaryCard} `pending` state header + body
+ * (sparkle icon + «AI Insights» + pending pill, then 2 shimmer lines,
+ * 3 chip placeholders, and a hint line).
+ */
+function AiSummarySkeleton() {
+  return (
+    <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="flex w-full items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-5 w-5 rounded-sm" />
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
+      </div>
+      <div className="px-4 pb-4">
+        <div className="space-y-2">
+          <div className="h-3 w-11/12 rounded bg-[rgba(0,0,0,0.06)]" />
+          <div className="h-3 w-8/12 rounded bg-[rgba(0,0,0,0.05)]" />
+        </div>
+        <div className="mt-3 flex gap-2">
+          <div className="h-5 w-20 rounded-md bg-[rgba(0,0,0,0.05)]" />
+          <div className="h-5 w-16 rounded-md bg-[rgba(0,0,0,0.05)]" />
+          <div className="h-5 w-24 rounded-md bg-[rgba(0,0,0,0.05)]" />
+        </div>
+        <div className="mt-4 h-3 w-9/12 rounded bg-[rgba(0,0,0,0.04)]" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Mirrors {@link PortfolioOverviewTable}'s outer card: title row
+ * (GridIcon + «Portfolio Overview» + count pill + caption) followed by
+ * a `sm:grid-cols-2` grid of product cards.
+ */
+function PortfolioSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="flex w-full items-center justify-between p-4">
+        <div className="w-full">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-5 w-5 rounded-sm" />
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
+          <Skeleton className="mt-1 h-3 w-72" />
+        </div>
+      </div>
+      <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <PortfolioCardSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Mirrors {@link ProductAccordion} collapsed header: status avatar +
+ * product name + status pill on the left, chevron on the right, inside
+ * the same gradient card frame.
+ */
 function AccordionSkeleton() {
   return (
     <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
@@ -41,8 +124,10 @@ export function WeeklyReportSkeleton() {
       className="space-y-4"
       aria-busy="true"
       aria-label="Loading status report"
+      data-testid="weekly-report-skeleton"
     >
-      {/* Page header */}
+      {/* 1. Page header — title + Live pill | ExportPdf + PublishLock.
+          Real page renders exactly 2 buttons on the right (not 3). */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Skeleton className="h-8 w-40" />
@@ -50,32 +135,33 @@ export function WeeklyReportSkeleton() {
         </div>
         <div className="flex items-center gap-3">
           <Skeleton className="h-11 w-28 rounded-[var(--radius-pill)]" />
-          <Skeleton className="h-11 w-32 rounded-[var(--radius-pill)]" />
-          <Skeleton className="h-11 w-32 rounded-[var(--radius-pill)]" />
+          <Skeleton className="h-11 w-36 rounded-[var(--radius-pill)]" />
         </div>
       </div>
 
-      {/* Period nav shell */}
-      <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5">
+      {/* 2. Period nav shell — HeadPeriodNavigator | dept · Live portfolio review.
+          Right slot is two short bars separated by a dot to mirror the real
+          «{org} · Live portfolio review» line. */}
+      <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">
         <Skeleton className="h-11 w-60 rounded-lg" />
-        <Skeleton className="h-4 w-56" />
-      </div>
-
-      {/* Portfolio overview table */}
-      <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)]">
-        <div className="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] bg-[var(--color-house-green,#1E3932)] px-4 py-3">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-4 w-full bg-white/40" />
-          ))}
+        <div className="flex min-w-[180px] flex-1 items-center justify-center gap-2">
+          <Skeleton className="h-4 w-24" />
+          <span className="text-[var(--color-muted-foreground)]">&middot;</span>
+          <Skeleton className="h-4 w-32" />
         </div>
-        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-          <PortfolioRowSkeleton key={i} />
-        ))}
       </div>
 
-      {/* Per-product accordion placeholders */}
+      {/* 3. AI Insights slot — matches AiSummaryCard pending state shape so
+          the swap from skeleton → real card is zero-CLS. */}
+      <AiSummarySkeleton />
+
+      {/* 4. Portfolio Overview — single gradient card containing a 2-col
+          card grid (6 placeholders to match the seeded product count). */}
+      <PortfolioSkeleton />
+
+      {/* 5. Per-product accordion placeholders — 6 to match portfolio. */}
       <div className="space-y-3">
-        {[0, 1, 2, 3].map((i) => (
+        {[0, 1, 2, 3, 4, 5].map((i) => (
           <AccordionSkeleton key={i} />
         ))}
       </div>
