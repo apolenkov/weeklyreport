@@ -248,6 +248,11 @@ async function main() {
   // Delete in FK-safe order. ReopenRequest references ReportSection → must
   // go before ReportSection deletes. Other CASCADE FKs (ProjectStatus →
   // ReportSection, Items → ReportSection, etc.) flow naturally.
+  //
+  // Phase 54 (AiIngestionJob → ReportSection): drop before ReportSection.
+  // Phase 55 (TelegramBinding → User): drop before User.
+  // Phase 56 (GroupProduct → Project + ReportingGroup): drop before Project.
+  await prisma.aiIngestionJob.deleteMany({});
   await prisma.reminderExecution.deleteMany({});
   await prisma.reminderRule.deleteMany({});
   await prisma.aiInsight.deleteMany({});
@@ -263,8 +268,10 @@ async function main() {
   await prisma.pdfExportJob.deleteMany({});
   await prisma.report.deleteMany({});
   await prisma.stageAssignment.deleteMany({});
+  await prisma.groupProduct.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.stage.deleteMany({});
+  await prisma.telegramBinding.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.reportingGroup.deleteMany({});
 
