@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { INestApplication } from "@nestjs/common";
-import type { UserSession } from "@customreport/shared";
+import { DEFAULT_ORGANIZATION_IDENTITY, type UserSession } from "@customreport/shared";
 
 import { createAuthController } from "../../modules/auth/auth.controller.js";
 import { verifyPdfExportToken } from "../../modules/pdf-export/pdf-export.service.js";
@@ -253,12 +253,14 @@ async function hydrateOrganization(
 ): Promise<UserSession> {
   const now = Date.now();
   if (!orgCache || orgCache.expiresAt < now) {
+    // UFB-060: seed defaults are generic — concrete tenant brand stays
+    // in the seed file / admin-edited Organization row, never in code.
     const row = await prisma.organization.upsert({
       where: { id: "singleton" },
       create: {
         id: "singleton",
-        shortName: "Demo",
-        fullName: "Example Software Department",
+        shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
+        fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
       },
       update: {},
       select: { shortName: true, fullName: true },

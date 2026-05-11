@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   organizationSchema,
+  DEFAULT_ORGANIZATION_IDENTITY,
   type Organization,
   type OrganizationUpdate,
 } from '@customreport/shared';
@@ -16,8 +17,10 @@ import type { OrganizationRepository } from './organization.service.js';
  * finds a row. The defensive `upsert` here is a safety net for edge cases:
  *   - dev DBs reset without `migrate reset` (rare but possible)
  *   - integration tests that truncate `Organization` between cases
- * The defaults match the migration seed (Demo / Example Software Department &
- * Platforms) so the fallback identity is consistent with prod.
+ * UFB-060 (2026-05-11): defaults now come from
+ * `DEFAULT_ORGANIZATION_IDENTITY` ('Org' / 'Organization') so the
+ * fallback is tenant-agnostic. Real brand strings ('Demo' etc.) live in
+ * the seed file and the admin-edited Organization row only.
  */
 @Injectable()
 export class OrganizationPrismaRepository implements OrganizationRepository {
@@ -28,8 +31,8 @@ export class OrganizationPrismaRepository implements OrganizationRepository {
       where: { id: 'singleton' },
       create: {
         id: 'singleton',
-        shortName: 'Demo',
-        fullName: 'Example Software Department',
+        shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
+        fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
       },
       update: {},
     });

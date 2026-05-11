@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-import type { Role } from "@customreport/shared";
+import { DEFAULT_ORGANIZATION_IDENTITY, type Role } from "@customreport/shared";
 
 import {
   Sheet,
@@ -206,9 +206,12 @@ export function NavBar() {
 
   // UFB-047 / Phase 48-A: brand strings sourced from the Organization
   // singleton. The session may briefly lack `organization` during the first
-  // paint after Phase 48-A deploys (older JWTs); falling back to 'Demo' keeps
-  // the chrome stable in that window.
-  const orgShortName = organization?.shortName ?? "Demo";
+  // paint after Phase 48-A deploys (older JWTs); UFB-060 (2026-05-11)
+  // replaces the hard-coded 'Demo' fallback with the generic
+  // DEFAULT_ORGANIZATION_IDENTITY so the chrome never leaks one tenant's
+  // brand into another deployment.
+  const orgShortName =
+    organization?.shortName ?? DEFAULT_ORGANIZATION_IDENTITY.shortName;
   // First letter of each word in shortName (up to 2 chars) for the round
   // monogram badge. For a 2-3-letter shortName like 'Demo' the monogram is
   // 'DT' / 'PE' — visually consistent with the legacy 'CR' monogram.

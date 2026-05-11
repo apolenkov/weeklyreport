@@ -4,6 +4,8 @@ import { Suspense, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 
+import { DEFAULT_ORGANIZATION_IDENTITY } from '@customreport/shared';
+
 import { PulseBackground } from '../components/landing/pulse-background';
 import { PulseMark } from '../components/landing/pulse-mark';
 import { TaglineCycler } from '../components/landing/tagline-cycler';
@@ -101,9 +103,12 @@ function LoginPageBody() {
   // small-caps Demo footnote line below it should swap per tenant.
   // See .planning/phases/59-multi-org-hierarchy/59-CONTEXT.md.
   const orgQ = useQuery(trpc.org.getPublic.queryOptions());
-  const orgShortName = orgQ.data?.shortName ?? 'Demo';
+  // UFB-060: fall back to generic DEFAULT_ORGANIZATION_IDENTITY, not a
+  // hard-coded brand. Real brand strings live in the Organization row.
+  const orgShortName =
+    orgQ.data?.shortName ?? DEFAULT_ORGANIZATION_IDENTITY.shortName;
   const orgFullName =
-    orgQ.data?.fullName ?? 'Example Software Department';
+    orgQ.data?.fullName ?? DEFAULT_ORGANIZATION_IDENTITY.fullName;
 
   const stayOnLanding = searchParams?.get('stay') === '1';
   const safeNext = sanitizeNext(
@@ -156,29 +161,15 @@ function LoginPageBody() {
           the in-app dev role switcher. */}
       <div className="relative flex w-full flex-col items-center justify-center bg-white px-6 sm:px-10 lg:w-[480px] lg:flex-none">
         <div className="w-full max-w-[320px] text-center">
-          {/* UFB-058: mobile / right-panel brand. Same PulseMark
-              component, scoped down via .pulse-mark-compact wrapper. The
-              wrapper inverts colors (gold on white) so the mark stays
-              readable on the light sign-in column. */}
-          <div className="pulse-mark-compact mb-8 flex justify-center">
-            <span
-              className="font-[family-name:Fraunces,serif] text-[40px] leading-none text-[var(--color-primary)]"
-              style={{
-                fontVariationSettings: '"opsz" 144, "wght" 560',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              PULSE
-              <span
-                className="text-[var(--color-starbucks-gold)]"
-                style={{ fontVariationSettings: '"opsz" 144, "wght" 660' }}
-              >
-                ?
-              </span>
-            </span>
-          </div>
+          {/* UFB-060 (2026-05-11): brand mark removed from the right
+              column — the left panel already shows «Your PULSE» at
+              full size, duplicating it on a 480px wide sign-in column
+              was visual noise. Right column is now pure utility: a
+              quiet tagline + the sign-in CTA. The Fraunces font import
+              remains because nav-bar may use it for the in-app
+              brand-pill once authenticated. */}
           <p className="mb-10 mt-2 text-[15px] text-[var(--color-muted-foreground)]">
-            Weekly Status Reporting System
+            Status Reporting System
           </p>
 
           <a
@@ -221,8 +212,12 @@ function LoginPageBody() {
 
           <div className="mx-auto my-10 h-px w-full max-w-[320px] bg-[#ece8e2]" />
 
+          {/* TODO(UFB-061): version string hardcoded. Surface from
+              build-time env (NEXT_PUBLIC_APP_VERSION) injected by CI
+              so the footer never lies about prod. CLAUDE.md TODO
+              discipline rule applies. */}
           <p className="text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
-            {orgFullName} · v8.0
+            {orgFullName}
           </p>
         </div>
       </div>

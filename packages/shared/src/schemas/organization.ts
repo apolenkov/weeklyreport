@@ -49,3 +49,28 @@ export const organizationPublicSchema = z.object({
 export type Organization = z.infer<typeof organizationSchema>;
 export type OrganizationUpdate = z.infer<typeof organizationUpdateSchema>;
 export type OrganizationPublic = z.infer<typeof organizationPublicSchema>;
+
+/**
+ * UFB-060 / Phase 58-followup (2026-05-11): generic fallback for the
+ * organization identity. The previous fallback hard-coded the seed brand
+ * ("Demo" / "Example Software Department") into application code — a
+ * leak of one tenant's identity into a system meant to be deployable for
+ * any organization. After this change:
+ *
+ *   - This constant is the SOLE in-code fallback when org.getPublic fails
+ *     (offline first-boot, race on JWT hydration, etc.).
+ *   - The real brand strings live exclusively in the Organization row of
+ *     the database. The seed file (`prisma/seed-simple.ts`) is the only
+ *     place that still names a concrete brand — and that's demo data, not
+ *     a hard-coded fallback.
+ *   - When Phase 59 (multi-org) ships, this constant stays — it is the
+ *     pre-tenant-resolution chrome render. Once a tenant resolves, real
+ *     values from `session.organization` win.
+ *
+ * Keep these strings ASCII-only so they render in any monospace context
+ * (terminal logs, fallback PDF chrome) without font fallback noise.
+ */
+export const DEFAULT_ORGANIZATION_IDENTITY: OrganizationPublic = {
+  shortName: 'Org',
+  fullName: 'Organization',
+};
