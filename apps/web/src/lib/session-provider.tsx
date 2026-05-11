@@ -1,9 +1,16 @@
 'use client';
 
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useTRPC } from './trpc-context';
+import { writeLastRole, type LastRole } from './last-role';
 
 /**
  * SessionProvider — exposes the currently logged-in user across (app)/ pages.
@@ -88,6 +95,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isAuthenticated: true,
     };
   }, [data, isLoading]);
+
+  // UFB-071 (2026-05-11): persist the last authenticated role + email + name
+  // into localStorage so the landing page can offer a 1-click resume hint
+  // («You were here as {Name} · {Role} — use this role or change?»).
+  // Fire from a useEffect so the write is strictly client-only and never
+  // runs during SSR / prerender.
+  useEffect(() => {
+    if (!value.isAuthenticated || !value.user) return;
+    writeLastRole({
+      role: value.user.role as LastRole,
+      email: value.user.email,
+      name: value.user.name,
+    });
+  }, [value.isAuthenticated, value.user]);
 
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
