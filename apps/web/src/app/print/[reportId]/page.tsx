@@ -379,6 +379,12 @@ export default function PrintReportPage({ params }: Props) {
     return <LoadingShell reportId={reportId} />;
   }
 
+  // R3a: no-period sentinel — this page always has a reportId, so this
+  // branch should not occur in practice, but guard for type safety.
+  if (weeklyQ.data.status === "no-period") {
+    return <LoadingShell reportId={reportId} />;
+  }
+
   const view = mapWeeklyReport(weeklyQ.data);
   const portfolio: PortfolioProduct[] = view.portfolio as PortfolioProduct[];
   const products: ProductReport[] = view.products as ProductReport[];

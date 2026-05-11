@@ -138,8 +138,9 @@ export function WeeklyReportPage({
   // once the active reportId is known. Skipped when:
   //   • a `?period=` query is present (legacy bookmarks)
   //   • the page already renders under `[reportId]` (reportId prop set)
-  //   • there is no resolvable report (weeklyQ data not loaded)
-  const resolvedReportId = weeklyQ.data?.reportId ?? null;
+  //   • there is no resolvable report (weeklyQ data not loaded or no-period)
+  const resolvedReportId =
+    weeklyQ.data?.status === "active" ? (weeklyQ.data.reportId ?? null) : null;
   useEffect(() => {
     if (!redirectToCanonical) return;
     if (period) return;
@@ -161,7 +162,7 @@ export function WeeklyReportPage({
 
   // 35-07: surface the period in the browser tab title.
   const titleParts = useMemo(() => {
-    if (!weeklyQ.data) return null;
+    if (!weeklyQ.data || weeklyQ.data.status === "no-period") return null;
     const start = weeklyQ.data.periodStart;
     const end = weeklyQ.data.periodEnd;
     if (!(start instanceof Date) || !(end instanceof Date)) return null;
@@ -177,8 +178,22 @@ export function WeeklyReportPage({
     };
   }, [titleParts]);
 
-  if (weeklyQ.isLoading || !weeklyQ.data) {
+  if (weeklyQ.isLoading) {
     return <WeeklyReportSkeleton />;
+  }
+
+  // R3a: no active period — show empty state instead of error toast / spinner.
+  if (!weeklyQ.data || weeklyQ.data.status === "no-period") {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <p className="text-lg font-semibold text-[var(--color-foreground)]">
+          No active reporting period
+        </p>
+        <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+          Ask an admin to open a new period to start collecting status reports.
+        </p>
+      </div>
+    );
   }
 
   const view = mapWeeklyReport(weeklyQ.data);
