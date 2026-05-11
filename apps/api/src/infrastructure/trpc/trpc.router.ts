@@ -22,6 +22,7 @@ import {
   queueNameSchema,
   organizationUpdateSchema,
   adminTestTelegramSendSchema,
+  DEFAULT_ORGANIZATION_IDENTITY,
 } from "@customreport/shared";
 
 import {
@@ -182,13 +183,10 @@ export function createAppRouter(deps: RouterDeps) {
       getPublic: publicProcedure.query(async () => {
         try {
           if (!deps.organizationService) {
-            // Fallback for in-memory test fixtures that don't wire the
-            // service. Mirrors the seed/migration defaults so the landing
-            // page never renders empty even in degraded test contexts.
-            return {
-              shortName: "PEO",
-              fullName: "Product Engineering & Operations",
-            };
+            // UFB-060: Fallback for in-memory test fixtures. Generic
+            // identity — the concrete tenant brand lives in the seed
+            // file / admin-edited Organization row, never here.
+            return DEFAULT_ORGANIZATION_IDENTITY;
           }
           return await deps.organizationService.getPublic();
         } catch (error) {

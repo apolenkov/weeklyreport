@@ -12,12 +12,22 @@
  * To change the wording, edit PHRASES below. The animation handles up
  * to 3 phrases without retuning timings; for more phrases, see
  * pulse.css keyframes pulse-tagline-cycle.
+ *
+ * TODO(i18n-future): the PHRASES array is the only hardcoded UI copy
+ * on the landing page. When i18n is introduced, move these to the
+ * locale dictionary (`messages/<lang>/landing.json` or similar) and
+ * read via the i18n hook. The component contract stays the same — it
+ * just receives a string[] from the dictionary. Metric to add on i18n
+ * activation: `customreport_landing_locale_total{locale}` counter so
+ * we see which audiences land here. See CLAUDE.md TODO discipline
+ * rule. Until then, English-only — DB-sourced content (Organization
+ * names, report text) may be Russian, but UI strings stay English.
  */
 
 const PHRASES = [
-  "Корпоративный пульс продуктов",
-  "Срез по группам за неделю",
-  "Здоровье продуктов в одной строке",
+  "Your portfolio's weekly pulse.",
+  "Every group, one heartbeat.",
+  "Status across products, distilled.",
 ] as const;
 
 export function TaglineCycler() {

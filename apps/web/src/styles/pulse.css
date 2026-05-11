@@ -75,42 +75,9 @@
 /* The «?» becomes a logo glyph: gold color + own breathing rhythm +
    a small concentric "heartbeat" dot replacing the stock dot in `?`. */
 
-.pulse-q {
-  position: relative;
-  display: inline-block;
-  margin-left: 0.04em;
-  font-size: inherit;
-  line-height: inherit;
-  font-variation-settings: "opsz" 144, "wght" 620;
-  color: var(--pulse-glow);
-  /* Hide the natural dot in `?` so we can render our own */
-  text-shadow: 0 0 0 currentColor;
-  letter-spacing: -0.04em;
-  animation: pulse-q-breathe 4s ease-in-out infinite 0.5s;
-}
-
-.pulse-q::before {
-  /* Mask out the bottom dot of the glyph so our pulsing circle takes its
-     place. Implemented with a small inset gradient that hides about the
-     dot region. The exact metric is glyph-specific to Fraunces 560-620;
-     tuned visually. */
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 6%;
-  width: 0.34em;
-  height: 0.34em;
-  transform: translateX(-50%);
-  background: var(--pulse-glow);
-  border-radius: 50%;
-  /* This is the heartbeat dot: it scales subtly in counterpoint to the
-     glyph breathing, creating a "two-rhythm" feel — slow chest breath
-     + faster pulse. */
-  animation: pulse-q-dot 1.3s ease-in-out infinite;
-  box-shadow:
-    0 0 0 0 rgba(251, 191, 36, 0.55),
-    0 0 14px 2px rgba(251, 191, 36, 0.25);
-}
+/* `?` glyph dropped 2026-05-11 — PulseMark now reads «Your PULSE» as an
+   assertion. The ECG line moved from passing-through-`?` to running
+   underneath PULSE as a baseline trace (see .pulse-bg-ecg below). */
 
 /* ───── Tagline cycler — three phrases morph in/out ───── */
 
@@ -128,14 +95,19 @@
 .pulse-tagline-phrase {
   position: absolute;
   inset: 0;
-  opacity: 0;
   /* Mask reveal from left — like an ECG trace drawing the phrase across
-     the screen. Three phrases share one 12s cycle; staggered by 4s each. */
+     the screen. Three phrases share one 12s cycle; staggered by 4s each.
+     Initial-state safety: opacity stays at 1 until the first animation
+     frame paints — this prevents a flash of empty/clipped text during
+     the first ~16ms when CSS animations haven't yet sampled the 0% key. */
+  opacity: 1;
   animation: pulse-tagline-cycle 12s cubic-bezier(0.65, 0, 0.35, 1) infinite;
   will-change: opacity, transform, clip-path;
 }
 
-/* The first phrase appears immediately on load; the others stagger. */
+/* Stagger: first phrase starts at t=0 (cycle 0%), second at t=4s (cycle
+   33%, so animation-delay = -4s puts it at its visible peak first),
+   third at t=8s. The negative-delay trick keeps the loop seamless. */
 .pulse-tagline-phrase:nth-child(2) { animation-delay: -8s; }
 .pulse-tagline-phrase:nth-child(3) { animation-delay: -4s; }
 
