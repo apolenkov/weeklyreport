@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -13,8 +12,7 @@ import { useTRPC } from '../../lib/trpc-context';
 import { TabHeader } from './tab-header';
 
 /**
- * UFB-052 (Phase 51-B): Admin → Periods tab. Replaces the flat list
- * with a lifecycle-aware two-section layout:
+ * UFB-052 (Phase 51-B), UFB-067: Admin → Periods tab.
  *
  *   ┌─ Active ────────────────────────────────────────────┐
  *   │  rows with periodState ∈ {scheduled, open, published}│
@@ -26,20 +24,28 @@ import { TabHeader } from './tab-header';
  *   │  collapsed by default; query is gated (opt-in)     │
  *   └────────────────────────────────────────────────────┘
  *
- * Each row exposes a 3-dot action menu whose items vary by state:
+ * UFB-067: row-level actions surface as INLINE ICON BUTTONS rather than
+ * the previous kebab dropdown. Visible icons by state (UAT-2026-05-11
+ * feedback: «иконки прямо в строке проще»):
  *
- *   open       → (no admin actions; auto-publisher handles it)
- *   published  → Reopen (gated server-side) · Archive
- *   archived   → Unarchive
- *   scheduled  → (no admin actions; auto-creator advances it)
+ *   scheduled  → Edit · Archive (if server flag allows)
+ *   open       → Edit · Publish · Archive (if server flag allows)
+ *   published  → Edit · Reopen (if canReopen) · Archive (if canArchive)
+ *   archived   → Edit · Unarchive
  *
- * Action visibility is driven by the server-precomputed `canReopen`
- * and `canArchive` flags on `PeriodListItem`, so the UI does not need
- * to replicate the reopen-policy rules from `AppSettings`.
+ * Edit is unconditional — every row state can have its date envelope /
+ * label patched without a state transition. Other icons keep their
+ * server-flag gates (`canReopen` from reopen-window math; `canArchive`
+ * skips archived + reflects publish state).
+ *
+ * Edit opens the same dialog as «New period» but in `mode: 'edit'` —
+ * pre-fills from the row's current envelope and submits to
+ * `admin.updatePeriodManual` instead of `admin.createPeriodManual`.
  *
  * `period.publish` and `period.reopen` are existing head-procedures
- * (admin role is aliased to head, so they're callable here). Archive
- * + Unarchive are new admin-procedures from 51-B.
+ * (admin role is aliased to head, so they're callable here). Archive +
+ * Unarchive are admin-procedures from 51-B. updatePeriodManual is the
+ * new 67 surface.
  */
 export function PeriodsTab() {
   const trpc = useTRPC();
@@ -54,6 +60,13 @@ export function PeriodsTab() {
   // to admin.createPeriodManual; on success invalidates the period
   // lists so the table reflects the new row without a full reload.
   const [showCreate, setShowCreate] = useState(false);
+
+  // UFB-067: edit-mode dialog state. The same component handles both
+  // create and edit; `editingRow` !== null means the dialog opens in
+  // edit-mode prefilled from this row. Submitting calls
+  // admin.updatePeriodManual; on success invalidates the lists and
+  // closes the dialog.
+  const [editingRow, setEditingRow] = useState<PeriodListItem | null>(null);
 
   const activeQuery = useQuery(
     trpc.admin.listPeriodsByState.queryOptions({ bucket: 'active' }),
@@ -136,6 +149,23 @@ export function PeriodsTab() {
     }),
   );
 
+  // UFB-067: «Edit period» mutation. Same error-pipe pattern as create —
+  // the server-side overlap message identifies the conflicting row and
+  // the not-found message names the missing id; both flow through to the
+  // toast verbatim.
+  const updateMut = useMutation(
+    trpc.admin.updatePeriodManual.mutationOptions({
+      onSuccess: () => {
+        invalidatePeriodLists();
+        toast.success('Period updated');
+        setEditingRow(null);
+      },
+      onError: (err) => {
+        toast.error(err.message ?? 'Failed to update period');
+      },
+    }),
+  );
+
   const activeRows = (activeQuery.data ?? []) as PeriodListItem[];
   const archiveRows = (archiveQuery.data ?? []) as PeriodListItem[];
 
@@ -195,6 +225,7 @@ export function PeriodsTab() {
             onReopen={(row) => reopenMut.mutate({ reportId: row.id })}
             onArchive={(row) => archiveMut.mutate({ periodId: row.id })}
             onUnarchive={(row) => unarchiveMut.mutate({ periodId: row.id })}
+            onEdit={(row) => setEditingRow(row)}
           />
         )}
       </section>
@@ -242,6 +273,7 @@ export function PeriodsTab() {
                 onReopen={(row) => reopenMut.mutate({ reportId: row.id })}
                 onArchive={(row) => archiveMut.mutate({ periodId: row.id })}
                 onUnarchive={(row) => unarchiveMut.mutate({ periodId: row.id })}
+                onEdit={(row) => setEditingRow(row)}
               />
             )}
           </div>
@@ -251,9 +283,37 @@ export function PeriodsTab() {
       {/* UFB-063: «New period» creation dialog ----------------------- */}
       {showCreate && (
         <CreatePeriodDialog
+          mode="create"
           onCancel={() => setShowCreate(false)}
-          onSubmit={(values) => createMut.mutate(values)}
+          onSubmit={(values) =>
+            // Create-mode never emits `null` for weekLabel; narrow the
+            // dialog's union back to the create-schema's `string | undefined`
+            // expectation. The dialog guarantees this — but TS can't see
+            // through the mode discriminator.
+            createMut.mutate({
+              periodStart: values.periodStart,
+              periodEnd: values.periodEnd,
+              deadline: values.deadline,
+              weekLabel: values.weekLabel ?? undefined,
+            })
+          }
           isPending={createMut.isPending}
+        />
+      )}
+
+      {/* UFB-067: «Edit period» dialog — same component, edit mode --- */}
+      {editingRow && (
+        <CreatePeriodDialog
+          mode="edit"
+          initialValues={editingRow}
+          onCancel={() => setEditingRow(null)}
+          onSubmit={(values) =>
+            updateMut.mutate({
+              reportId: editingRow.id,
+              ...values,
+            })
+          }
+          isPending={updateMut.isPending}
         />
       )}
     </div>
@@ -271,6 +331,9 @@ type PeriodTableProps = {
   readonly onReopen: (row: PeriodListItem) => void;
   readonly onArchive: (row: PeriodListItem) => void;
   readonly onUnarchive: (row: PeriodListItem) => void;
+  // UFB-067: row-level edit opens the dialog in edit-mode prefilled
+  // from this row.
+  readonly onEdit: (row: PeriodListItem) => void;
 };
 
 function PeriodTable({
@@ -280,6 +343,7 @@ function PeriodTable({
   onReopen,
   onArchive,
   onUnarchive,
+  onEdit,
 }: PeriodTableProps) {
   return (
     <div
@@ -316,6 +380,7 @@ function PeriodTable({
               onReopen={onReopen}
               onArchive={onArchive}
               onUnarchive={onUnarchive}
+              onEdit={onEdit}
             />
           ))}
         </tbody>
@@ -331,6 +396,7 @@ function PeriodRow({
   onReopen,
   onArchive,
   onUnarchive,
+  onEdit,
 }: {
   readonly row: PeriodListItem;
   readonly testIdPrefix: 'active' | 'archive';
@@ -366,12 +432,13 @@ function PeriodRow({
         {formatDate(row.deadline)}
       </td>
       <td className="px-4 py-3 text-right">
-        <ActionMenu
+        <ActionIconRow
           row={row}
           onPublish={onPublish}
           onReopen={onReopen}
           onArchive={onArchive}
           onUnarchive={onUnarchive}
+          onEdit={onEdit}
         />
       </td>
     </tr>
@@ -446,179 +513,126 @@ function ProgressBadge({
 }
 
 /**
- * 3-dot kebab action menu. The menu items are filtered by the
- * `(periodState, canReopen, canArchive)` triple so the user only sees
- * the legal lifecycle moves for the row.
+ * UFB-067: inline icon-button row for per-row lifecycle actions. Replaces
+ * the previous 3-dot kebab dropdown (UAT-2026-05-11 feedback: «иконки
+ * прямо в строке проще, чем выпадашка»).
  *
- * Open + Scheduled have no admin actions in 51-B — the auto-publisher
- * + auto-creator handle those transitions. Documented as an open
- * question in the SUMMARY.
+ * Visibility rules (driven by server-precomputed flags so the UI does
+ * not have to know the reopen-policy or archive-state rules):
+ *
+ *   - Edit       — unconditional. The Edit dialog only moves dates /
+ *                  label, no state transition required.
+ *   - Publish    — only when `periodState === 'open'`. Matches the
+ *                  /head/report Publish button (auto-publisher handles
+ *                  it for un-clicked rows).
+ *   - Reopen     — only when `periodState === 'published' && canReopen`.
+ *                  `canReopen` is server-computed from the master switch
+ *                  + reopen-window math (51-A AppSettings).
+ *   - Archive    — only when `canArchive` (skips already-archived rows).
+ *   - Unarchive  — only when `periodState === 'archived'`.
+ *
+ * Each icon is 32×32 with a hover state + `aria-label` + `title`. The
+ * `data-testid` shape mirrors the previous kebab menu's item testIds so
+ * existing tests that asserted on `action-publish-{id}` etc. still resolve;
+ * the now-removed `action-menu-trigger-{id}` selector has no replacement
+ * because the dropdown trigger no longer exists.
+ *
+ * No dropdown = no portal = no overflow clipping = the 51-B portal
+ * workaround disappears with this refactor.
  */
-function ActionMenu({
+function ActionIconRow({
   row,
   onPublish,
   onReopen,
   onArchive,
   onUnarchive,
+  onEdit,
 }: {
   readonly row: PeriodListItem;
 } & Omit<PeriodTableProps, 'rows' | 'testIdPrefix'>) {
-  const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number }>({
-    top: 0,
-    left: 0,
-  });
-
-  // UFB-063: the kebab dropdown is rendered via a portal to <body> so
-  // the outer `overflow-x-auto` on the table wrapper does not clip it
-  // (per CSS spec, `overflow-x: auto` with default `overflow-y: visible`
-  // computes to `overflow-y: auto`, which clips an absolutely-positioned
-  // child vertically — Phase 51-B kebab was invisible on UAT). The
-  // portal places the menu at the document level; coords are derived
-  // from the trigger's getBoundingClientRect() and recomputed on scroll
-  // / resize so the menu stays anchored to the row's button.
-  useLayoutEffect(() => {
-    if (!open || !triggerRef.current) return undefined;
-    function reposition() {
-      const trigger = triggerRef.current;
-      if (!trigger) return;
-      const rect = trigger.getBoundingClientRect();
-      // Anchor the menu's right edge to the trigger's right edge
-      // (matches the previous `right-0` absolute positioning).
-      const MENU_MIN_WIDTH = 160; // px — matches min-w-[10rem]
-      setMenuCoords({
-        top: rect.bottom + 4 + window.scrollY,
-        left: Math.max(8, rect.right - MENU_MIN_WIDTH) + window.scrollX,
-      });
-    }
-    reposition();
-    window.addEventListener('scroll', reposition, true);
-    window.addEventListener('resize', reposition);
-    return () => {
-      window.removeEventListener('scroll', reposition, true);
-      window.removeEventListener('resize', reposition);
-    };
-  }, [open]);
-
-  // Click-outside dismissal. With the portal, the menu is no longer a
-  // DOM descendant of `wrapperRef`, so we have to check both the
-  // trigger wrapper AND the menu node before closing.
-  useEffect(() => {
-    if (!open) return undefined;
-    function handler(e: MouseEvent) {
-      const inTrigger = wrapperRef.current?.contains(e.target as Node);
-      const inMenu = menuRef.current?.contains(e.target as Node);
-      if (!inTrigger && !inMenu) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  // Build the menu item list before render so the "no available actions"
-  // branch can disable the trigger button.
-  const items: Array<{
-    label: string;
-    onClick: () => void;
-    testId: string;
-    tone?: 'danger';
-  }> = [];
-
-  if (row.periodState === 'open') {
-    // Head can manually publish an open period without waiting for the
-    // auto-publisher (matches the existing /head/report Publish button).
-    items.push({
-      label: 'Publish now',
-      onClick: () => onPublish(row),
-      testId: `action-publish-${row.id}`,
-    });
-  }
-  if (row.periodState === 'published' && row.canReopen) {
-    items.push({
-      label: 'Reopen',
-      onClick: () => onReopen(row),
-      testId: `action-reopen-${row.id}`,
-    });
-  }
-  if (row.canArchive) {
-    items.push({
-      label: 'Archive',
-      onClick: () => onArchive(row),
-      testId: `action-archive-${row.id}`,
-      tone: 'danger',
-    });
-  }
-  if (row.periodState === 'archived') {
-    items.push({
-      label: 'Unarchive',
-      onClick: () => onUnarchive(row),
-      testId: `action-unarchive-${row.id}`,
-    });
-  }
-
-  const disabled = items.length === 0;
-
-  // SSR guard: createPortal is a no-op during server rendering. The
-  // menu only ever renders when `open` is true, and `open` flips on
-  // user click — so we're always client-side at render time. We still
-  // gate on `typeof document` to keep tests that run without a DOM
-  // (none today, but future contracts) safe.
-  const menu = open && typeof document !== 'undefined' ? (
-    <div
-      ref={menuRef}
-      role="menu"
-      data-testid={`action-menu-${row.id}`}
-      style={{
-        position: 'absolute',
-        top: menuCoords.top,
-        left: menuCoords.left,
-        zIndex: 1000,
-      }}
-      className="min-w-[10rem] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white shadow-md"
-    >
-      {items.map((item) => (
-        <button
-          key={item.testId}
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            setOpen(false);
-            item.onClick();
-          }}
-          data-testid={item.testId}
-          className={`block w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-hover)] ${
-            item.tone === 'danger'
-              ? 'text-[#991b1b]'
-              : 'text-[var(--color-foreground)]'
-          }`}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
-  ) : null;
-
   return (
-    <div ref={wrapperRef} className="relative inline-block">
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        disabled={disabled}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`Actions for period ${row.id}`}
-        data-testid={`action-menu-trigger-${row.id}`}
-        className="btn-press inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent text-[var(--color-muted-foreground)] hover:border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-30"
-      >
-        <KebabIcon />
-      </button>
-      {menu && createPortal(menu, document.body)}
+    <div
+      className="inline-flex items-center gap-1"
+      role="group"
+      aria-label={`Actions for period ${row.id}`}
+      data-testid={`action-icons-${row.id}`}
+    >
+      <IconButton
+        testId={`action-edit-${row.id}`}
+        label="Edit period"
+        onClick={() => onEdit(row)}
+        icon={<EditIcon />}
+      />
+      {row.periodState === 'open' && (
+        <IconButton
+          testId={`action-publish-${row.id}`}
+          label="Publish now"
+          onClick={() => onPublish(row)}
+          icon={<PublishIcon />}
+        />
+      )}
+      {row.periodState === 'published' && row.canReopen && (
+        <IconButton
+          testId={`action-reopen-${row.id}`}
+          label="Reopen period"
+          onClick={() => onReopen(row)}
+          icon={<ReopenIcon />}
+        />
+      )}
+      {row.canArchive && (
+        <IconButton
+          testId={`action-archive-${row.id}`}
+          label="Archive period"
+          onClick={() => onArchive(row)}
+          tone="danger"
+          icon={<ArchiveIcon />}
+        />
+      )}
+      {row.periodState === 'archived' && (
+        <IconButton
+          testId={`action-unarchive-${row.id}`}
+          label="Unarchive period"
+          onClick={() => onUnarchive(row)}
+          icon={<UnarchiveIcon />}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * UFB-067: shared icon-button shell. Centralises the 32×32 sizing, hover
+ * state, and a11y labelling so the individual `ActionIconRow` icons stay
+ * declarative.
+ */
+function IconButton({
+  testId,
+  label,
+  onClick,
+  icon,
+  tone,
+}: {
+  readonly testId: string;
+  readonly label: string;
+  readonly onClick: () => void;
+  readonly icon: React.ReactNode;
+  readonly tone?: 'danger';
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      data-testid={testId}
+      className={`btn-press inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] ${
+        tone === 'danger'
+          ? 'text-[#991b1b] hover:text-[#7f1d1d]'
+          : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-starbucks-accent)]'
+      }`}
+    >
+      {icon}
+    </button>
   );
 }
 
@@ -639,12 +653,104 @@ function Chevron({ expanded }: { readonly expanded: boolean }) {
   );
 }
 
-function KebabIcon() {
+// UFB-067: per-action icons used by the inline ActionIconRow. Each icon
+// is a 16×16 stroke-currentColor SVG that the IconButton shell paints in
+// the appropriate tone (muted by default, danger red for Archive). Paths
+// follow the same lucide-style stroke conventions used elsewhere in the
+// admin tabs so the visual language stays consistent.
+
+function EditIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-      <circle cx="12" cy="5" r="1.6" />
-      <circle cx="12" cy="12" r="1.6" />
-      <circle cx="12" cy="19" r="1.6" />
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function PublishIcon() {
+  // Paper-airplane / "send" silhouette.
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
+
+function ReopenIcon() {
+  // Rotate-counter-clockwise / refresh arrow.
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="1 4 1 10 7 10" />
+      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+    </svg>
+  );
+}
+
+function ArchiveIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="21 8 21 21 3 21 3 8" />
+      <rect x="1" y="3" width="22" height="5" />
+      <line x1="10" y1="12" x2="14" y2="12" />
+    </svg>
+  );
+}
+
+function UnarchiveIcon() {
+  // Archive-restore: archive box with an upward arrow on top.
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="21 8 21 21 3 21 3 8" />
+      <rect x="1" y="3" width="22" height="5" />
+      <polyline points="9 14 12 11 15 14" />
+      <line x1="12" y1="11" x2="12" y2="18" />
     </svg>
   );
 }
@@ -692,25 +798,74 @@ function nextMonday(from: Date): string {
 
 type CreatePeriodValues = {
   periodStart: Date;
+  // UFB-067: nullable in edit-mode so the dialog can clear an existing
+  // weekLabel via explicit `null`. Create-mode submitters never pass
+  // `null` here (empty input → undefined / omit).
   periodEnd?: Date;
   deadline?: Date;
-  weekLabel?: string;
+  weekLabel?: string | null;
 };
 
+/**
+ * UFB-067: render a UTC Date as the `YYYY-MM-DD` value that
+ * `<input type="date">` expects. Used both by the next-Monday default
+ * and by the edit-mode prefill of an existing row's envelope. The slice
+ * matches the existing create-path `${periodStart}T00:00:00.000Z` round-trip
+ * so a no-op edit round-trips without spurious diff.
+ */
+function dateInputValue(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * UFB-067: render a UTC Date as the `YYYY-MM-DDTHH:MM` value that
+ * `<input type="datetime-local">` expects. Matches the inverse of the
+ * existing `new Date(deadline)` parse in handleSubmit — both sides treat
+ * the dialog's value as a wall-clock-in-UTC string. The existing
+ * create-path comment acknowledges the timezone-shaped edge but keeps
+ * the round-trip stable for the typical European admin case.
+ */
+function dateTimeInputValue(d: Date): string {
+  return d.toISOString().slice(0, 16);
+}
+
 function CreatePeriodDialog({
+  mode,
+  initialValues,
   onCancel,
   onSubmit,
   isPending,
 }: {
+  /**
+   * UFB-067: `mode === 'create'` opens the dialog as «New period» with
+   * a next-Monday default; `mode === 'edit'` opens it as «Edit period»
+   * prefilled from `initialValues` (the row being edited).
+   */
+  readonly mode: 'create' | 'edit';
+  readonly initialValues?: PeriodListItem;
   readonly onCancel: () => void;
   readonly onSubmit: (values: CreatePeriodValues) => void;
   readonly isPending: boolean;
 }) {
-  const [periodStart, setPeriodStart] = useState(() => nextMonday(new Date()));
-  const [periodEnd, setPeriodEnd] = useState('');
-  // <input type="datetime-local"> emits "YYYY-MM-DDTHH:MM" in local TZ;
-  // we convert to UTC ISO on submit.
-  const [deadline, setDeadline] = useState('');
+  const isEdit = mode === 'edit' && initialValues !== undefined;
+
+  // Initialise from the row in edit-mode; from nextMonday() otherwise.
+  // The lazy-init form (`useState(() => …)`) keeps both branches cheap.
+  const [periodStart, setPeriodStart] = useState(() =>
+    isEdit ? dateInputValue(initialValues.periodStart) : nextMonday(new Date()),
+  );
+  const [periodEnd, setPeriodEnd] = useState(() =>
+    isEdit ? dateInputValue(initialValues.periodEnd) : '',
+  );
+  const [deadline, setDeadline] = useState(() =>
+    isEdit ? dateTimeInputValue(initialValues.deadline) : '',
+  );
+  // The PeriodListItem schema does not currently expose weekLabel on
+  // the list row (51-B left it out — the table doesn't render it). We
+  // can still prefill from an explicit initialValues override; for now
+  // edit-mode opens with an empty label and the user retypes if needed.
+  // When 51-B/67 surfaces weekLabel on the list-item, swap this to
+  // `initialValues.weekLabel ?? ''`.
   const [weekLabel, setWeekLabel] = useState('');
 
   // Esc-to-close + click-outside (matches the groups-tab dialog pattern).
@@ -727,27 +882,43 @@ function CreatePeriodDialog({
 
   function handleSubmit() {
     if (!periodStart) return;
-    // <input type="date"> emits "YYYY-MM-DD". Treat as UTC midnight so
-    // the server's overlap math and the period-row date pickers stay
-    // in the same frame (server expects UTC dates).
     const startDate = new Date(`${periodStart}T00:00:00.000Z`);
     const endDate = periodEnd
       ? new Date(`${periodEnd}T23:59:59.999Z`)
       : undefined;
-    const deadlineDate = deadline
-      ? // datetime-local has no zone; the browser already interprets it
-        // as local. Convert to UTC by passing through Date.
-        new Date(deadline)
-      : undefined;
+    const deadlineDate = deadline ? new Date(deadline) : undefined;
+
+    // UFB-067: weekLabel clear semantics differ by mode.
+    // - create: empty → `undefined` (omit from payload).
+    // - edit:   empty → `null` (explicit clear of an existing label).
+    let weekLabelValue: string | null | undefined;
+    const trimmed = weekLabel.trim();
+    if (trimmed === '') {
+      weekLabelValue = isEdit ? null : undefined;
+    } else {
+      weekLabelValue = trimmed;
+    }
+
     onSubmit({
       periodStart: startDate,
       periodEnd: endDate,
       deadline: deadlineDate,
-      weekLabel: weekLabel.trim() === '' ? undefined : weekLabel.trim(),
+      weekLabel: weekLabelValue,
     });
   }
 
   const canSubmit = periodStart !== '' && !isPending;
+  const title = isEdit ? 'Edit period' : 'New period';
+  const description = isEdit
+    ? 'Adjust the date envelope or label for this reporting period.'
+    : 'Mints a reporting period without waiting for the daily auto-creator. End date and deadline default from AppSettings when left blank.';
+  const submitCopy = isEdit
+    ? isPending
+      ? 'Saving…'
+      : 'Save'
+    : isPending
+      ? 'Creating…'
+      : 'Create';
 
   return (
     <div
@@ -755,20 +926,20 @@ function CreatePeriodDialog({
       onClick={onCancel}
       role="presentation"
       data-testid="periods-create-dialog"
+      data-dialog-mode={mode}
     >
       <div
         className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
-        aria-label="New period"
+        aria-label={title}
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          New period
+          {title}
         </h3>
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          Mints a reporting period without waiting for the daily auto-creator.
-          End date and deadline default from AppSettings when left blank.
+          {description}
         </p>
         <div className="mt-4 space-y-4">
           <div>
@@ -865,7 +1036,7 @@ function CreatePeriodDialog({
             data-testid="periods-create-submit"
             className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isPending ? 'Creating…' : 'Create'}
+            {submitCopy}
           </button>
         </div>
       </div>

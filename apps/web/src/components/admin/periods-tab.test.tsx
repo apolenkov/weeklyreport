@@ -84,6 +84,8 @@ type Captured = {
   unarchiveMutationFn: ReturnType<typeof vi.fn>;
   // UFB-063
   createMutationFn: ReturnType<typeof vi.fn>;
+  // UFB-067: edit-period mutation surface used by the row-level Edit icon.
+  updateMutationFn: ReturnType<typeof vi.fn>;
   listInputs: Array<{ bucket: string }>;
 };
 
@@ -142,6 +144,17 @@ function makeMockTRPC(opts: {
           onError: mopts['onError'],
         }),
       },
+      // UFB-067: admin.updatePeriodManual mutation surface used by the
+      // row-level Edit icon. Tests assert the payload reaches the server
+      // with the reportId + the changed fields.
+      updatePeriodManual: {
+        pathFilter: () => ({ queryKey: ['admin', 'updatePeriodManual'] }),
+        mutationOptions: (mopts: Record<string, unknown>) => ({
+          mutationFn: opts.captured.updateMutationFn,
+          onSuccess: mopts['onSuccess'],
+          onError: mopts['onError'],
+        }),
+      },
     },
     period: {
       publish: {
@@ -185,6 +198,15 @@ function renderTab(args?: {
       periodEnd: new Date('2026-05-24T23:59:59Z'),
       deadline: new Date('2026-05-22T15:00:00Z'),
       periodState: 'scheduled',
+    }),
+    // UFB-067: updatePeriodManual server returns the updated row.
+    updateMutationFn: vi.fn().mockResolvedValue({
+      periodId: '11111111-1111-4111-8111-111111111102',
+      periodStart: new Date('2026-05-04T00:00:00Z'),
+      periodEnd: new Date('2026-05-10T23:59:59Z'),
+      deadline: new Date('2026-05-09T18:00:00Z'),
+      periodState: 'published',
+      weekLabel: null,
     }),
     listInputs: [],
   };
@@ -276,20 +298,17 @@ describe('PeriodsTab (UFB-052 / Phase 51-B)', () => {
     });
   });
 
-  it('action menu visibility: published-fresh shows Reopen + Archive', async () => {
-    const user = userEvent.setup();
+  // UFB-067: inline icons replaced the kebab dropdown. Tests assert the
+  // icon visibility directly without opening a menu.
+
+  it('inline icons: published-fresh row shows Edit + Reopen + Archive', async () => {
     renderTab();
 
     await waitFor(() => {
       expect(
-        screen.getByTestId(`action-menu-trigger-${publishedFresh.id}`),
+        screen.getByTestId(`action-edit-${publishedFresh.id}`),
       ).toBeInTheDocument();
     });
-
-    await user.click(
-      screen.getByTestId(`action-menu-trigger-${publishedFresh.id}`),
-    );
-
     expect(
       screen.getByTestId(`action-reopen-${publishedFresh.id}`),
     ).toBeInTheDocument();
@@ -298,20 +317,14 @@ describe('PeriodsTab (UFB-052 / Phase 51-B)', () => {
     ).toBeInTheDocument();
   });
 
-  it('action menu visibility: published-stale (canReopen=false) hides Reopen, keeps Archive', async () => {
-    const user = userEvent.setup();
+  it('inline icons: published-stale (canReopen=false) hides Reopen, keeps Edit + Archive', async () => {
     renderTab();
 
     await waitFor(() => {
       expect(
-        screen.getByTestId(`action-menu-trigger-${publishedStale.id}`),
+        screen.getByTestId(`action-edit-${publishedStale.id}`),
       ).toBeInTheDocument();
     });
-
-    await user.click(
-      screen.getByTestId(`action-menu-trigger-${publishedStale.id}`),
-    );
-
     expect(
       screen.queryByTestId(`action-reopen-${publishedStale.id}`),
     ).not.toBeInTheDocument();
@@ -320,41 +333,32 @@ describe('PeriodsTab (UFB-052 / Phase 51-B)', () => {
     ).toBeInTheDocument();
   });
 
-  it('action menu visibility: open row exposes Publish now', async () => {
-    const user = userEvent.setup();
+  it('inline icons: open row exposes Edit + Publish (no Archive when canArchive=false)', async () => {
     renderTab();
 
     await waitFor(() => {
       expect(
-        screen.getByTestId(`action-menu-trigger-${openRow.id}`),
+        screen.getByTestId(`action-edit-${openRow.id}`),
       ).toBeInTheDocument();
     });
-
-    await user.click(screen.getByTestId(`action-menu-trigger-${openRow.id}`));
-
     expect(
       screen.getByTestId(`action-publish-${openRow.id}`),
     ).toBeInTheDocument();
-    // No archive on open rows (canArchive=false).
     expect(
       screen.queryByTestId(`action-archive-${openRow.id}`),
     ).not.toBeInTheDocument();
   });
 
-  it('action menu visibility: archived row exposes Unarchive only', async () => {
+  it('inline icons: archived row exposes Edit + Unarchive only', async () => {
     const user = userEvent.setup();
     renderTab();
 
     await user.click(screen.getByTestId('periods-archive-toggle'));
     await waitFor(() => {
       expect(
-        screen.getByTestId(`action-menu-trigger-${archivedRow.id}`),
+        screen.getByTestId(`action-edit-${archivedRow.id}`),
       ).toBeInTheDocument();
     });
-    await user.click(
-      screen.getByTestId(`action-menu-trigger-${archivedRow.id}`),
-    );
-
     expect(
       screen.getByTestId(`action-unarchive-${archivedRow.id}`),
     ).toBeInTheDocument();
@@ -366,19 +370,16 @@ describe('PeriodsTab (UFB-052 / Phase 51-B)', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('clicking Archive fires the archive mutation with the periodId', async () => {
+  it('clicking Archive icon fires the archive mutation with the periodId', async () => {
     const user = userEvent.setup();
     const { captured } = renderTab();
 
     await waitFor(() => {
       expect(
-        screen.getByTestId(`action-menu-trigger-${publishedFresh.id}`),
+        screen.getByTestId(`action-archive-${publishedFresh.id}`),
       ).toBeInTheDocument();
     });
 
-    await user.click(
-      screen.getByTestId(`action-menu-trigger-${publishedFresh.id}`),
-    );
     await user.click(screen.getByTestId(`action-archive-${publishedFresh.id}`));
 
     await waitFor(() => {
@@ -389,19 +390,16 @@ describe('PeriodsTab (UFB-052 / Phase 51-B)', () => {
     });
   });
 
-  it('clicking Reopen fires the period.reopen mutation with the reportId', async () => {
+  it('clicking Reopen icon fires the period.reopen mutation with the reportId', async () => {
     const user = userEvent.setup();
     const { captured } = renderTab();
 
     await waitFor(() => {
       expect(
-        screen.getByTestId(`action-menu-trigger-${publishedFresh.id}`),
+        screen.getByTestId(`action-reopen-${publishedFresh.id}`),
       ).toBeInTheDocument();
     });
 
-    await user.click(
-      screen.getByTestId(`action-menu-trigger-${publishedFresh.id}`),
-    );
     await user.click(screen.getByTestId(`action-reopen-${publishedFresh.id}`));
 
     await waitFor(() => {
@@ -410,6 +408,22 @@ describe('PeriodsTab (UFB-052 / Phase 51-B)', () => {
     expect(captured.reopenMutationFn.mock.calls[0]?.[0]).toEqual({
       reportId: publishedFresh.id,
     });
+  });
+
+  it('UFB-067: kebab dropdown is gone — no action-menu-trigger-* in DOM', async () => {
+    renderTab();
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(`action-edit-${openRow.id}`),
+      ).toBeInTheDocument();
+    });
+    // The previous kebab dropdown trigger no longer exists in the DOM.
+    // We assert across every active row.
+    for (const id of [openRow.id, publishedFresh.id, publishedStale.id]) {
+      expect(
+        screen.queryByTestId(`action-menu-trigger-${id}`),
+      ).not.toBeInTheDocument();
+    }
   });
 
   it('reopened-status published rows render the "(reopened)" badge', async () => {
@@ -506,31 +520,93 @@ describe('PeriodsTab — «New period» dialog (UFB-063)', () => {
     });
   });
 
-  it('action menu dropdown renders into document.body (portal) so it escapes the table overflow', async () => {
+  // UFB-067: portal test removed — the kebab dropdown is gone (icons are
+  // inline now), and there is no dropdown to portal anywhere.
+});
+
+// ---------------------------------------------------------------------
+// UFB-067: «Edit period» dialog (mode='edit') + inline-icon Edit action
+// ---------------------------------------------------------------------
+
+describe('PeriodsTab — «Edit period» dialog (UFB-067)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('every row state exposes an Edit icon (unconditional)', async () => {
+    renderTab();
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(`action-edit-${openRow.id}`),
+      ).toBeInTheDocument();
+    });
+    expect(
+      screen.getByTestId(`action-edit-${publishedFresh.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`action-edit-${publishedStale.id}`),
+    ).toBeInTheDocument();
+  });
+
+  it('clicking Edit opens the dialog in edit-mode prefilled from the row', async () => {
     const user = userEvent.setup();
     renderTab();
 
-    const trigger = await screen.findByTestId(
-      `action-menu-trigger-${publishedFresh.id}`,
+    await user.click(
+      await screen.findByTestId(`action-edit-${publishedFresh.id}`),
     );
-    await user.click(trigger);
 
-    const menu = screen.getByTestId(`action-menu-${publishedFresh.id}`);
-    // The portal places the menu directly under <body>, NOT inside the
-    // table wrapper (which has overflow-x-auto and would clip an
-    // absolutely-positioned child). Walk up the DOM and assert that no
-    // ancestor between the menu and <body> has overflow set.
-    let parent = menu.parentElement;
-    let foundTable = false;
-    while (parent && parent !== document.body) {
-      if (parent.getAttribute('data-testid')?.startsWith('periods-active-table')) {
-        foundTable = true;
-        break;
-      }
-      parent = parent.parentElement;
-    }
-    expect(foundTable).toBe(false);
-    // And the immediate parent is body itself.
-    expect(menu.parentElement).toBe(document.body);
+    const dialog = screen.getByTestId('periods-create-dialog');
+    expect(dialog).toHaveAttribute('data-dialog-mode', 'edit');
+    // Header should read «Edit period».
+    expect(dialog).toHaveTextContent(/edit period/i);
+    // Start input prefilled from the row's periodStart (2026-05-04 UTC).
+    const startInput = screen.getByTestId('periods-create-start') as HTMLInputElement;
+    expect(startInput.value).toBe('2026-05-04');
+    // End input prefilled from the row's periodEnd (2026-05-10 UTC).
+    const endInput = screen.getByTestId('periods-create-end') as HTMLInputElement;
+    expect(endInput.value).toBe('2026-05-10');
+  });
+
+  it('submitting the edit dialog calls updatePeriodManual with reportId + changed fields', async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+
+    await user.click(
+      await screen.findByTestId(`action-edit-${publishedFresh.id}`),
+    );
+
+    // Change the deadline only — submit and assert payload carries the
+    // reportId from the edited row plus the new deadline.
+    const labelInput = screen.getByTestId('periods-create-label');
+    await user.type(labelInput, 'Q2 close');
+
+    await user.click(screen.getByTestId('periods-create-submit'));
+
+    await waitFor(() => {
+      expect(captured.updateMutationFn).toHaveBeenCalledTimes(1);
+    });
+    const payload = captured.updateMutationFn.mock.calls[0]?.[0] as {
+      reportId: string;
+      weekLabel?: string | null;
+    };
+    expect(payload.reportId).toBe(publishedFresh.id);
+    expect(payload.weekLabel).toBe('Q2 close');
+  });
+
+  it('edit dialog submit button reads «Save» (not «Create») in edit-mode', async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(
+      await screen.findByTestId(`action-edit-${publishedFresh.id}`),
+    );
+
+    expect(screen.getByTestId('periods-create-submit')).toHaveTextContent(
+      /save/i,
+    );
+    expect(screen.getByTestId('periods-create-submit')).not.toHaveTextContent(
+      /create/i,
+    );
   });
 });
