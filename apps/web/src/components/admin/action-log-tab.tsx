@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 
 import { useTRPC } from "../../lib/trpc-context";
+import { useCursorPagination } from "../../lib/use-cursor-pagination";
 import { TabHeader, TabSearch } from "./tab-header";
 
 function formatTimestamp(value: string): string {
@@ -60,13 +60,39 @@ async function copyToClipboard(text: string): Promise<boolean> {
   return false;
 }
 
+type ActionLogRow = {
+  id: string;
+  createdAt: string;
+  userId: string;
+  role: string | null;
+  procedure: string;
+  targetId: string | null;
+  status: string;
+  reason: string | null;
+  correlationId: string;
+};
+
+const PAGE_SIZE = 20;
+
 export function ActionLogTab() {
   const trpc = useTRPC();
   const [search, setSearch] = useState("");
-  const listQuery = useQuery(
-    trpc.admin.actionLog.list.queryOptions({ limit: 50 }),
+
+  const pagination = useCursorPagination<ActionLogRow>(
+    (input) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (trpc.admin.actionLog.list as any).infiniteQueryOptions(
+        { limit: input.limit ?? PAGE_SIZE },
+        {
+          getNextPageParam: (last: { nextCursor: string | null }) =>
+            last.nextCursor ?? undefined,
+          initialCursor: undefined,
+        },
+      ),
+    { limit: PAGE_SIZE },
   );
-  const rows = useMemo(() => listQuery.data?.rows ?? [], [listQuery.data]);
+
+  const rows = pagination.items;
   const visibleRows = useMemo(() => {
     const nonProofRows = rows.filter(
       (row) => !row.correlationId.startsWith("manual-action-log-proof"),
@@ -94,7 +120,11 @@ export function ActionLogTab() {
       <TabHeader
         title="Action Log"
         description="Latest product actions with support reference ids. Internal proof calls are hidden from this view."
-        count={`${rows.length} entries`}
+        count={
+          pagination.isLoading
+            ? "Loading…"
+            : `${rows.length} loaded${pagination.hasNextPage ? "+" : ""}`
+        }
         search={
           <TabSearch
             value={search}
@@ -106,19 +136,22 @@ export function ActionLogTab() {
         }
       />
 
-      {listQuery.isPending && <ActionLogSkeleton />}
+      {pagination.isLoading && <ActionLogSkeleton />}
 
-      {listQuery.isError && (
+      {pagination.isError && (
         <div
           role="alert"
           className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
         >
-          Failed to load action log: {listQuery.error.message}
+          Failed to load action log:{" "}
+          {pagination.error instanceof Error
+            ? pagination.error.message
+            : "Unknown error"}
         </div>
       )}
 
-      {!listQuery.isPending &&
-        !listQuery.isError &&
+      {!pagination.isLoading &&
+        !pagination.isError &&
         visibleRows.length === 0 && (
           <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
             {rows.length === 0
@@ -206,6 +239,19 @@ export function ActionLogTab() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {pagination.hasNextPage && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={pagination.fetchNextPage}
+            disabled={pagination.isFetchingNextPage}
+            className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+          >
+            {pagination.isFetchingNextPage ? "Loading…" : "Load more"}
+          </button>
         </div>
       )}
     </div>
