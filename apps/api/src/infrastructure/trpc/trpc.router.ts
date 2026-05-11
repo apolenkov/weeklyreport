@@ -493,25 +493,32 @@ export function createAppRouter(deps: RouterDeps) {
 
       /**
        * UFB-056 / Phase 55-4: read the external-integrations status bundle
-       * for the Settings → Integrations sub-tab. v1 only carries Telegram;
-       * future integrations (Slack, MS Teams, webhook fan-out) extend the
-       * envelope. Telegram is considered «active» only when both the API
+       * for the Settings → Integrations sub-tab. v1 carries Telegram and CI
+       * Integration. Telegram is considered «active» only when both the API
        * has `TG_BOT_TOKEN` set AND at least one TelegramBinding row has
        * `active=true`. Either gate failing keeps the badge muted.
+       *
+       * CI Integration shows status based on presence of CI_WEBHOOK_SECRET
+       * environment variable.
        *
        * adminProcedure-gated (head/admin) so a regular lead can't poll the
        * binding count.
        */
       integrationsStatus: adminProcedure.query(async () => {
         try {
-          const token = process.env['TG_BOT_TOKEN']?.trim() ?? '';
+          const token = process.env["TG_BOT_TOKEN"]?.trim() ?? "";
           const bindings = await deps.prisma.telegramBinding.count({
             where: { active: true },
           });
+          const ciWebhookSecret =
+            process.env["CI_WEBHOOK_SECRET"]?.trim() ?? "";
           return {
             telegram: {
-              configured: token !== '',
+              configured: token !== "",
               bindings,
+            },
+            ci: {
+              configured: ciWebhookSecret !== "",
             },
           };
         } catch (error) {
@@ -568,8 +575,7 @@ export function createAppRouter(deps: RouterDeps) {
           if (!deps.organizationService) {
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
-              message:
-                "OrganizationService is not wired into the tRPC router.",
+              message: "OrganizationService is not wired into the tRPC router.",
             });
           }
           return await deps.organizationService.getOrganization();
@@ -599,9 +605,8 @@ export function createAppRouter(deps: RouterDeps) {
               });
             }
             const previous = await deps.organizationService.getOrganization();
-            const next = await deps.organizationService.updateOrganization(
-              input,
-            );
+            const next =
+              await deps.organizationService.updateOrganization(input);
             ctx.auditLogger.organizationUpdate({
               userId: ctx.session?.userId ?? "anonymous",
               role: ctx.session?.role ?? null,
@@ -1830,8 +1835,8 @@ export function createAppRouter(deps: RouterDeps) {
               // aiSummarySchema so the role-coverage harness can hit
               // the surface without a 500.
               return {
-                summary: '',
-                source: 'mock' as const,
+                summary: "",
+                source: "mock" as const,
                 citationIds: [] as string[],
               };
             }

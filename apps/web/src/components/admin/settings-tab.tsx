@@ -46,7 +46,10 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
       />
 
       <Tabs defaultValue="identity" className="w-full">
-        <TabsList variant="line" className="border-b border-[var(--color-border)]">
+        <TabsList
+          variant="line"
+          className="border-b border-[var(--color-border)]"
+        >
           <TabsTrigger value="identity">Identity</TabsTrigger>
           <TabsTrigger value="periods">Periods</TabsTrigger>
           <TabsTrigger value="reminders">Reminders</TabsTrigger>
@@ -193,8 +196,7 @@ function IdentitySubTab() {
         />
         <div className="mt-1 flex items-center justify-between text-xs">
           <span className="text-[var(--color-muted-foreground)]">
-            Shown on the landing hero and in PDF report headers (max 200
-            chars).
+            Shown on the landing hero and in PDF report headers (max 200 chars).
           </span>
           <span
             className={
@@ -477,9 +479,7 @@ function PeriodsSubTab({
           className="mt-1 h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-starbucks-accent)] disabled:cursor-not-allowed"
         />
         <span>
-          <span className="block font-medium">
-            Auto-publish after deadline
-          </span>
+          <span className="block font-medium">Auto-publish after deadline</span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
             Scheduler publishes the period at <code>deadline + grace</code>;
             missing sections render «Не сдал» placeholder. Scheduler logic is
@@ -543,10 +543,12 @@ function PeriodsSubTab({
           First day of week
         </legend>
         <div className="flex gap-4">
-          {([
-            { value: 1, label: "Monday (ISO)" },
-            { value: 7, label: "Sunday" },
-          ] as const).map((opt) => (
+          {(
+            [
+              { value: 1, label: "Monday (ISO)" },
+              { value: 7, label: "Sunday" },
+            ] as const
+          ).map((opt) => (
             <label
               key={opt.value}
               className="flex items-center gap-2 text-sm text-[var(--color-foreground)]"
@@ -566,9 +568,9 @@ function PeriodsSubTab({
           ))}
         </div>
         <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-          Anchor for «week N» labels and the weekly cadence start. ISO
-          weekday numbering (1=Mon..7=Sun). Calendar-anchoring logic
-          ships in Phase 51-C.
+          Anchor for «week N» labels and the weekly cadence start. ISO weekday
+          numbering (1=Mon..7=Sun). Calendar-anchoring logic ships in Phase
+          51-C.
         </p>
       </fieldset>
 
@@ -683,8 +685,8 @@ function PeriodsSubTab({
           </span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
             When on, the head cannot publish until every lead has submitted.
-            When off, missing sections render «Не сдал» placeholder.
-            Enforcement ships in Phase 51-C.
+            When off, missing sections render «Не сдал» placeholder. Enforcement
+            ships in Phase 51-C.
           </span>
         </span>
       </label>
@@ -706,8 +708,8 @@ function PeriodsSubTab({
         <span>
           <span className="block font-medium">Allow reopen after publish</span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
-            Lets the head reopen a published period for late corrections.
-            Window enforcement ships in Phase 51-C.
+            Lets the head reopen a published period for late corrections. Window
+            enforcement ships in Phase 51-C.
           </span>
         </span>
       </label>
@@ -744,8 +746,8 @@ function PeriodsSubTab({
           className="w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed"
         />
         <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-          How long after publish a period can still be reopened. 0..168
-          (one week). Greyed out when «allow reopen» is off.
+          How long after publish a period can still be reopened. 0..168 (one
+          week). Greyed out when «allow reopen» is off.
         </p>
       </div>
 
@@ -792,8 +794,8 @@ function RemindersSubTab({
   return (
     <div className="max-w-lg space-y-5">
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Defaults applied to the «New Policy» form on the Reminders tab.
-        Existing policies keep their per-policy values.
+        Defaults applied to the «New Policy» form on the Reminders tab. Existing
+        policies keep their per-policy values.
       </p>
 
       <div>
@@ -891,7 +893,8 @@ function NotificationsSubTab({
   // as a string and translate empty → null on save. UI guard: a non-empty
   // string that fails a basic email shape blocks Save with a hint.
   const trimmed = draft.notificationFromEmail?.trim() ?? "";
-  const looksLikeEmail = trimmed === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  const looksLikeEmail =
+    trimmed === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 
   function handleSave() {
     updateSettingsMut.mutate({
@@ -992,8 +995,9 @@ function IntegrationsSubTab() {
     );
   }
 
-  const { telegram } = statusQ.data;
-  const isActive = telegram.configured && telegram.bindings > 0;
+  const { telegram, ci } = statusQ.data;
+  const isTelegramActive = telegram.configured && telegram.bindings > 0;
+  const isCiConfigured = ci?.configured ?? false;
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -1012,11 +1016,11 @@ function IntegrationsSubTab() {
               Telegram
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Привязка пользователей и реальный бот будут добавлены в
-              отдельной фазе.
+              Привязка пользователей и реальный бот будут добавлены в отдельной
+              фазе.
             </p>
           </div>
-          {isActive ? (
+          {isTelegramActive ? (
             <span
               className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-primary)]"
               data-testid="integration-badge-telegram"
@@ -1044,13 +1048,43 @@ function IntegrationsSubTab() {
             {telegram.configured ? "yes" : "no"}
           </dd>
           <dt>Active bindings</dt>
-          <dd
-            className="font-mono"
-            data-testid="integration-telegram-bindings"
-          >
+          <dd className="font-mono" data-testid="integration-telegram-bindings">
             {telegram.bindings}
           </dd>
         </dl>
+      </div>
+
+      <div
+        className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4"
+        data-testid="integration-row-ci"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+              CI Integration
+            </h3>
+            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+              Connect your CI/CD pipeline for automated report triggers.
+            </p>
+          </div>
+          {isCiConfigured ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-primary)]"
+              data-testid="integration-badge-ci"
+              data-state="configured"
+            >
+              Configured
+            </span>
+          ) : (
+            <span
+              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]"
+              data-testid="integration-badge-ci"
+              data-state="not-configured"
+            >
+              Not configured
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
