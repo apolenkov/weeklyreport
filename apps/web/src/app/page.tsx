@@ -91,6 +91,15 @@ function LoginPageBody() {
   // `org.getPublic` is a publicProcedure so the anonymous landing page
   // can fetch it without a session. On failure (offline / first-boot)
   // we fall back to the seeded Demo identity so the chrome is never empty.
+  //
+  // TODO(Phase-59-multi-org): today there is exactly one Organization
+  // row (singleton). When Phase 59 ships, `org.getPublic` should be
+  // tenant-aware — either derive from the request host (subdomain
+  // routing) or from a `/org/<slug>/...` path segment. The PulseMark
+  // brand string itself can stay org-scoped because the «Your PULSE?»
+  // wordmark is the product brand, not the tenant brand; only the
+  // small-caps Demo footnote line below it should swap per tenant.
+  // See .planning/phases/59-multi-org-hierarchy/59-CONTEXT.md.
   const orgQ = useQuery(trpc.org.getPublic.queryOptions());
   const orgShortName = orgQ.data?.shortName ?? 'Demo';
   const orgFullName =
