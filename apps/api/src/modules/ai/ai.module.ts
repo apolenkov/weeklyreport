@@ -26,7 +26,14 @@ export function selectAiAdapter(): AiAdapter {
   if (provider === 'mock') {
     return new MockAiAdapter();
   }
-  throw new Error(`AI provider not configured: ${provider}`);
+  // TODO(Phase-54-activation): wire real AI provider here when org picks one.
+  // Expected providers: 'anthropic' | 'openai' | 'yandexgpt' | 'llama'.
+  // Each lands in its own adapter file (e.g. `anthropic-ai.adapter.ts`).
+  // See .planning/phases/54-ai-rag/54-PHASE-SUMMARY.md "Open questions".
+  // CLAUDE.md "TODO discipline" rule applies.
+  throw new Error(
+    `Not implemented — see TODO(Phase-54-activation). AI provider not configured: ${provider}`,
+  );
 }
 
 @Module({
