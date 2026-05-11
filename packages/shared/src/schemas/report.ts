@@ -468,6 +468,55 @@ export type AdminCreatePeriodManualResult = z.infer<
   typeof adminCreatePeriodManualResultSchema
 >;
 
+/**
+ * UFB-067: input for `admin.updatePeriodManual` — admin escape hatch that
+ * edits an existing Report's date envelope without re-running the daily
+ * `PeriodCreatorScheduler`. Symmetric counterpart to `createPeriodManual`,
+ * keyed on `reportId` (matches the `period.publish` / `period.reopen`
+ * convention).
+ *
+ * All payload fields are optional: only those provided are written, so
+ * partial PATCH-style edits (e.g. "shift only the deadline") are a single
+ * round-trip. When dates change, the service re-runs the overlap gate —
+ * excluding `reportId` from the conflict candidates so a no-op rewrite of
+ * the same row is allowed.
+ *
+ * `weekLabel` is nullable to let the admin clear an existing label
+ * (`null`) vs leave it untouched (omit the key); `optional()` on top of
+ * `nullable()` keeps the distinction explicit at the wire layer.
+ */
+export const adminUpdatePeriodManualSchema = z.object({
+  reportId: z.string().uuid(),
+  periodStart: z.coerce.date().optional(),
+  periodEnd: z.coerce.date().optional(),
+  deadline: z.coerce.date().optional(),
+  weekLabel: z.string().max(64).nullable().optional(),
+});
+
+export type AdminUpdatePeriodManualInput = z.infer<
+  typeof adminUpdatePeriodManualSchema
+>;
+
+/**
+ * UFB-067: return shape of `admin.updatePeriodManual`. Mirrors the
+ * create-counterpart result so the web layer can echo the updated row
+ * back into the local cache without a second round-trip (in practice we
+ * invalidate `listPeriodsByState` and rely on the refetch, but the shape
+ * stays parallel for consistency).
+ */
+export const adminUpdatePeriodManualResultSchema = z.object({
+  periodId: z.string().uuid(),
+  periodStart: reportDate(),
+  periodEnd: reportDate(),
+  deadline: reportDate(),
+  periodState: periodStateSchema,
+  weekLabel: z.string().nullable(),
+});
+
+export type AdminUpdatePeriodManualResult = z.infer<
+  typeof adminUpdatePeriodManualResultSchema
+>;
+
 // NOTIF-02 (Phase 29-05): 'escalation' added for T+2h heads-only digest.
 // Bypasses User.notificationOptOut — heads must always be notified.
 export const adminReminderRuleKindSchema = z.enum([
