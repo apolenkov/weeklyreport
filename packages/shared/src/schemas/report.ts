@@ -79,11 +79,10 @@ export const stageStatusInputSchema = z.object({
   status: trafficLightStatusSchema.nullable().optional(),
 });
 
-// 35-04: optional SDLC stage label carried per entry. The DB column stays
-// nullable so the column migration is non-destructive for legacy rows
-// seeded before this field existed; the lead-form modals enforce the
-// non-empty constraint client-side once a stage is selectable.
-const stageNameField = z.string().min(1).max(500).nullable().optional();
+// UFB-073 (R1): SDLC stage selection stored as array of stage IDs.
+// Replaces the legacy joined-string `stageName` field.
+// max(20) guards against pathological payloads; normal is 1–7 stages.
+const stageIdsField = z.array(z.string()).max(20).optional();
 
 export const itemInputSchema = z.object({
   id: z.string().uuid().optional(),
@@ -94,7 +93,7 @@ export const itemInputSchema = z.object({
   workflowStatus: itemWorkflowStatusSchema,
   carriedOver: z.boolean().default(false),
   completed: z.boolean().nullable().optional(),
-  stageName: stageNameField,
+  stageIds: stageIdsField,
 });
 
 export const riskInputSchema = z.object({
@@ -103,7 +102,7 @@ export const riskInputSchema = z.object({
   risk: safeText({ max: 500 }),
   impact: safeText({ max: 500 }),
   mitigation: safeText({ max: 500 }),
-  stageName: stageNameField,
+  stageIds: stageIdsField,
 });
 
 export const decisionInputSchema = z.object({
@@ -113,14 +112,14 @@ export const decisionInputSchema = z.object({
   deadline: z.coerce.date().nullable().optional(),
   impact: safeText({ max: 500 }),
   resolvedAt: z.coerce.date().nullable().optional(),
-  stageName: stageNameField,
+  stageIds: stageIdsField,
 });
 
 export const priorityInputSchema = z.object({
   id: z.string().uuid().optional(),
   rank: z.number().int().min(1),
   text: safeText({ max: 200 }),
-  stageName: stageNameField,
+  stageIds: stageIdsField,
 });
 
 export const draftSaveSchema = z.object({

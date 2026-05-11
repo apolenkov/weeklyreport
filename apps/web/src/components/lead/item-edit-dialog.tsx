@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import type { KanbanItem, ItemStatus, Product } from './mock-data';
 import { StageMultiSelect } from './stage-multi-select';
-import { joinStageNames } from './stage-tags';
 
 type ItemEditDialogProps = {
   /** Open/close state. Caller controls so it can wire submit/cancel. */
@@ -83,9 +82,9 @@ export function ItemEditDialog({
   const [text, setText] = useState(initial.text);
   const [status, setStatus] = useState<ItemStatus>(initial.status);
   const [productId, setProductId] = useState(initial.productId);
-  // UFB-073: pre-select all owned stages on create; restore existing on edit.
-  const [stageName, setStageName] = useState<string>(
-    item?.stageName ?? (joinStageNames(stagesForProduct?.(initial.productId) ?? []) ?? ''),
+  // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
+  const [stageIds, setStageIds] = useState<string[]>(
+    item?.stageIds ? [...item.stageIds] : (isCreate ? [...(stagesForProduct?.(initial.productId) ?? [])] : []),
   );
   const [errors, setErrors] = useState<{ text?: string }>({});
 
@@ -94,18 +93,19 @@ export function ItemEditDialog({
       setText(initial.text);
       setStatus(initial.status);
       setProductId(initial.productId);
-      setStageName(item?.stageName ?? (joinStageNames(stagesForProduct?.(initial.productId) ?? []) ?? ''));
+      setStageIds(item?.stageIds ? [...item.stageIds] : (isCreate ? [...(stagesForProduct?.(initial.productId) ?? [])] : []));
       setErrors({});
     }
   }, [
     open,
     item?.id,
-    item?.stageName,
+    item?.stageIds,
     initial.text,
     initial.status,
     initial.productId,
     defaultProductId,
     stagesForProduct,
+    isCreate,
   ]);
 
   if (!open) return null;
@@ -132,7 +132,7 @@ export function ItemEditDialog({
       id: item?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      stageName: stageName.trim() || undefined,
+      stageIds: stageIds.length > 0 ? stageIds : undefined,
       text: trimmed,
       status,
       author: item?.author ?? currentUserName ?? 'You',
@@ -200,9 +200,9 @@ export function ItemEditDialog({
 
           <StageMultiSelect
             id="item-stage"
-            value={stageName}
+            value={stageIds}
             stages={stagesForProduct?.(productId) ?? []}
-            onChange={(next) => setStageName(next ?? '')}
+            onChange={setStageIds}
           />
 
           {/* Status chips */}
