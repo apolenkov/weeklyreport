@@ -10,10 +10,12 @@ import type { Role } from "@customreport/shared";
  *
  * Mapping rationale:
  *
- *   - admin  → `/admin`                  admin panel is admin-only post UFB-038
- *   - head   → `/head/dashboard`         submission dashboard is the head's main surface
- *   - lead   → `/lead/report`            active section editor for the open period
- *   - viewer → `/reports?tab=published`  published archive list, no edit affordances
+ *   - admin    → `/admin`                  admin panel is admin-only post UFB-038
+ *   - head     → `/head/dashboard`         submission dashboard is the head's main surface
+ *   - lead     → `/lead/report`            active section editor for the open period
+ *   - viewer   → `/reports?tab=published`  published archive list, no edit affordances
+ *   - director → `/head/dashboard`         UFB-057 / Phase 57: leadership-audience
+ *                                          read-only landing, mirrors head's surface
  *
  * Anonymous (no role) callers should fall back to `/` and let the proxy /
  * landing redirect logic decide.
@@ -28,5 +30,7 @@ export function roleHomePath(role: Role): string {
       return "/lead/report";
     case "viewer":
       return "/reports?tab=published";
+    case "director":
+      return "/head/dashboard";
   }
 }
