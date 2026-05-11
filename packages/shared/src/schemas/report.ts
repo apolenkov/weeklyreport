@@ -424,6 +424,50 @@ export const periodListItemSchema = z.object({
 export type PeriodListBucket = z.infer<typeof periodListBucketSchema>;
 export type PeriodListItem = z.infer<typeof periodListItemSchema>;
 
+/**
+ * UFB-063: input for `admin.createPeriodManual` — admin escape hatch that
+ * mints a Report row without waiting for the daily `PeriodCreatorScheduler`
+ * (00:05 UTC cron). Targets two scenarios:
+ *
+ *   1. Fresh dev/staging DBs with zero Reports: admins were previously
+ *      blocked until the next cron tick or had to INSERT SQL manually.
+ *   2. Backfill / one-off cycles (e.g. a missed period, off-cadence ad-hoc).
+ *
+ * Only `periodStart` is required. `periodEnd` / `deadline` default from
+ * `AppSettings` (`periodLengthDays`, `defaultDeadlineDays`,
+ * `defaultTimezone`, `workingDays`, `deadlineTime`) so the typical admin
+ * flow is single-field. The service computes both defaults from settings
+ * — no schema-level defaulting (settings are runtime).
+ */
+export const adminCreatePeriodManualSchema = z.object({
+  periodStart: z.coerce.date(),
+  periodEnd: z.coerce.date().optional(),
+  deadline: z.coerce.date().optional(),
+  weekLabel: z.string().max(64).optional(),
+});
+
+export type AdminCreatePeriodManualInput = z.infer<
+  typeof adminCreatePeriodManualSchema
+>;
+
+/**
+ * UFB-063: return shape of `admin.createPeriodManual`. Mirrors the
+ * `PeriodCreatorScheduler.runOnce` outcome — minimal projection of the
+ * newly-minted Report. The web layer invalidates `listPeriodsByState`
+ * afterwards, so we don't need to return the full `PeriodListItem`.
+ */
+export const adminCreatePeriodManualResultSchema = z.object({
+  periodId: z.string().uuid(),
+  periodStart: reportDate(),
+  periodEnd: reportDate(),
+  deadline: reportDate(),
+  periodState: periodStateSchema,
+});
+
+export type AdminCreatePeriodManualResult = z.infer<
+  typeof adminCreatePeriodManualResultSchema
+>;
+
 // NOTIF-02 (Phase 29-05): 'escalation' added for T+2h heads-only digest.
 // Bypasses User.notificationOptOut — heads must always be notified.
 export const adminReminderRuleKindSchema = z.enum([

@@ -39,7 +39,8 @@ export type AuditEvent =
   | 'admin.organization.update'
   | 'period.auto-create'
   | 'period.auto-publish'
-  | 'period.auto-archive';
+  | 'period.auto-archive'
+  | 'period.manual-create';
 
 export type AuditEnvelope = {
   readonly event: AuditEvent;
@@ -177,6 +178,23 @@ type PeriodAutoArchiveInput = {
   readonly to: PeriodState;
 };
 
+/**
+ * UFB-063: emitted when an admin manually mints a Period via
+ * `admin.createPeriodManual`. Unlike `period.auto-create` (system actor,
+ * ip='cron'), this event carries a human actor — `userId` / `role` / `ip`
+ * are real, taken from the tRPC session. Mirrors the auto-create payload
+ * (`from=null`, `to=<initial state>`) so SIEM rules that filter on
+ * `(from, to)` work uniformly across both creation paths.
+ */
+type PeriodManualCreateInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly periodId: string;
+  readonly periodStart: string;
+  readonly periodEnd: string;
+  readonly deadline: string;
+  readonly from: PeriodState | null;
+  readonly to: PeriodState;
+};
+
 export interface AuditLogger {
   loginSuccess(input: LoginSuccessInput): void;
   loginFail(input: LoginFailInput): void;
@@ -190,6 +208,7 @@ export interface AuditLogger {
   periodAutoCreate(input: PeriodAutoCreateInput): void;
   periodAutoPublish(input: PeriodAutoPublishInput): void;
   periodAutoArchive(input: PeriodAutoArchiveInput): void;
+  periodManualCreate(input: PeriodManualCreateInput): void;
 }
 
 const AUDIT_MESSAGE = 'audit';
@@ -332,6 +351,20 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         to: input.to,
       });
     },
+    periodManualCreate(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'period.manual-create',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        periodId: input.periodId,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        deadline: input.deadline,
+        from: input.from,
+        to: input.to,
+      });
+    },
   };
 }
 
@@ -372,6 +405,9 @@ export function createNullAuditLogger(): AuditLogger {
       /* noop */
     },
     periodAutoArchive() {
+      /* noop */
+    },
+    periodManualCreate() {
       /* noop */
     },
   };
