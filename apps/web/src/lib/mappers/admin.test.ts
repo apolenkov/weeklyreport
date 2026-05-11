@@ -261,7 +261,6 @@ describe("mapAdminSettings", () => {
       firstDayOfWeek: 1,
       deadlineDayOfWeek: 5,
       deadlineTime: "18:00",
-      periodCadence: "weekly",
       maxOpenPeriods: 1,
       requireAllSectionsToPublish: true,
       allowReopenAfterPublish: true,
@@ -299,17 +298,15 @@ describe("mapAdminSettings", () => {
     expect(mapped.autoArchiveWeeksAfterPublish).toBe(8);
   });
 
-  // UFB-051 (Phase 51-A): round-trip the 8 new period-cycle knobs through
-  // the wire → MockSettings mapper. Catches drift between the AppSettings
-  // schema and the form-state shape consumed by the Settings UI.
-  it("UFB-051: round-trips the 8 new period-cycle fields", () => {
+  // UFB-051 (Phase 51-A): round-trip the period-cycle knobs through
+  // the wire → MockSettings mapper. UFB-068 removed periodCadence.
+  it("UFB-051: round-trips the period-cycle fields", () => {
     const api: AppSettings = appSettingsSchema.parse({
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
       firstDayOfWeek: 7,
       deadlineDayOfWeek: 4,
       deadlineTime: "09:30",
-      periodCadence: "bi-weekly",
       maxOpenPeriods: 3,
       requireAllSectionsToPublish: false,
       allowReopenAfterPublish: false,
@@ -319,7 +316,6 @@ describe("mapAdminSettings", () => {
     expect(mapped.firstDayOfWeek).toBe(7);
     expect(mapped.deadlineDayOfWeek).toBe(4);
     expect(mapped.deadlineTime).toBe("09:30");
-    expect(mapped.periodCadence).toBe("bi-weekly");
     expect(mapped.maxOpenPeriods).toBe(3);
     expect(mapped.requireAllSectionsToPublish).toBe(false);
     expect(mapped.allowReopenAfterPublish).toBe(false);

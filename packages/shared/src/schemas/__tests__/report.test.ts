@@ -1370,7 +1370,6 @@ describe('appSettingsSchema', () => {
     expect(result.data.firstDayOfWeek).toBe(1);
     expect(result.data.deadlineDayOfWeek).toBe(5);
     expect(result.data.deadlineTime).toBe('18:00');
-    expect(result.data.periodCadence).toBe('weekly');
     expect(result.data.maxOpenPeriods).toBe(1);
     expect(result.data.requireAllSectionsToPublish).toBe(true);
     expect(result.data.allowReopenAfterPublish).toBe(true);
@@ -1453,22 +1452,7 @@ describe('appSettingsSchema', () => {
     ).toBe(true);
   });
 
-  it('UFB-051: rejects unknown periodCadence value', () => {
-    expect(
-      appSettingsSchema.safeParse({
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
-        periodCadence: 'monthly',
-      }).success,
-    ).toBe(false);
-    expect(
-      appSettingsSchema.safeParse({
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
-        periodCadence: 'bi-weekly',
-      }).success,
-    ).toBe(true);
-  });
+  // UFB-068: periodCadence removed — no validation test needed.
 
   it('UFB-051: rejects maxOpenPeriods out of [1..12]', () => {
     expect(

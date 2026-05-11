@@ -283,7 +283,6 @@ function PeriodsSubTab({
       firstDayOfWeek: draft.firstDayOfWeek,
       deadlineDayOfWeek: draft.deadlineDayOfWeek,
       deadlineTime: draft.deadlineTime,
-      periodCadence: draft.periodCadence,
       maxOpenPeriods: draft.maxOpenPeriods,
       requireAllSectionsToPublish: draft.requireAllSectionsToPublish,
       allowReopenAfterPublish: draft.allowReopenAfterPublish,
@@ -630,37 +629,6 @@ function PeriodsSubTab({
           HH:MM in the default timezone (Reminders tab). Default 18:00.
         </p>
       </div>
-
-      {/* ── periodCadence (UFB-051) ──────────────────────────────── */}
-      <fieldset>
-        <legend className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
-          Period cadence
-        </legend>
-        <div className="flex gap-4">
-          {(["weekly", "bi-weekly"] as const).map((opt) => (
-            <label
-              key={opt}
-              className="flex items-center gap-2 text-sm text-[var(--color-foreground)]"
-            >
-              <input
-                type="radio"
-                name="period-cadence"
-                value={opt}
-                checked={draft.periodCadence === opt}
-                onChange={() => setDraft({ ...draft, periodCadence: opt })}
-                className="h-4 w-4 accent-[var(--color-starbucks-accent)]"
-              />
-              <span>
-                {opt === "weekly" ? "Weekly (7 days)" : "Bi-weekly (14 days)"}
-              </span>
-            </label>
-          ))}
-        </div>
-        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-          How often a new period is created. The cadence-aware
-          PeriodCreator ships in Phase 51-C; today this only persists.
-        </p>
-      </fieldset>
 
       {/* ── maxOpenPeriods (UFB-051) ─────────────────────────────── */}
       <div>

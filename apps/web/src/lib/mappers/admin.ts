@@ -166,7 +166,6 @@ export type MockSettings = {
   firstDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
   deadlineDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
   deadlineTime: string; // HH:MM (24h)
-  periodCadence: "weekly" | "bi-weekly";
   maxOpenPeriods: number;
   requireAllSectionsToPublish: boolean;
   allowReopenAfterPublish: boolean;
@@ -362,13 +361,9 @@ export function mapAdminSettings(api: AppSettings): MockSettings {
     allowLateSubmissions: api.allowLateSubmissions,
     autoPublishAfterDeadline: api.autoPublishAfterDeadline,
     autoArchiveWeeksAfterPublish: api.autoArchiveWeeksAfterPublish,
-    // UFB-051 (Phase 51-A): pass-through for the 8 period-cycle knobs.
-    // appSettingsSchema fills defaults so a pre-51-A API response still
-    // hydrates the UI without breakage.
     firstDayOfWeek: api.firstDayOfWeek,
     deadlineDayOfWeek: api.deadlineDayOfWeek,
     deadlineTime: api.deadlineTime,
-    periodCadence: api.periodCadence,
     maxOpenPeriods: api.maxOpenPeriods,
     requireAllSectionsToPublish: api.requireAllSectionsToPublish,
     allowReopenAfterPublish: api.allowReopenAfterPublish,

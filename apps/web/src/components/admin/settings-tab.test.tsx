@@ -123,7 +123,6 @@ const baseSettings: MockSettings = {
   firstDayOfWeek: 1,
   deadlineDayOfWeek: 5,
   deadlineTime: '18:00',
-  periodCadence: 'weekly',
   maxOpenPeriods: 1,
   requireAllSectionsToPublish: true,
   allowReopenAfterPublish: true,
@@ -385,12 +384,6 @@ describe('SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)', () => {
     ) as HTMLInputElement;
     expect(deadlineTime.value).toBe('18:00');
 
-    // periodCadence — weekly default.
-    const weeklyRadio = screen.getByLabelText(
-      /weekly \(7 days\)/i,
-    ) as HTMLInputElement;
-    expect(weeklyRadio.checked).toBe(true);
-
     // maxOpenPeriods — 1 default.
     const maxOpen = screen.getByLabelText(
       /max open periods/i,
@@ -447,9 +440,6 @@ describe('SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)', () => {
       target: { value: '09:30' },
     });
 
-    // Switch periodCadence → bi-weekly.
-    fireEvent.click(screen.getByLabelText(/bi-weekly \(14 days\)/i));
-
     // Bump maxOpenPeriods → 3.
     fireEvent.change(screen.getByLabelText(/max open periods/i), {
       target: { value: '3' },
@@ -478,7 +468,6 @@ describe('SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)', () => {
     expect(payload.firstDayOfWeek).toBe(7);
     expect(payload.deadlineDayOfWeek).toBe(4);
     expect(payload.deadlineTime).toBe('09:30');
-    expect(payload.periodCadence).toBe('bi-weekly');
     expect(payload.maxOpenPeriods).toBe(3);
     expect(payload.requireAllSectionsToPublish).toBe(false);
     expect(payload.reopenWindowHours).toBe(24);

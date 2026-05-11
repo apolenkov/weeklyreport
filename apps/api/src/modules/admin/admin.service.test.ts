@@ -64,8 +64,8 @@ const initialSnapshot: AdminSnapshot = {
 
 // UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs.
 // UFB-047 / Phase 49-01: legacy `departmentName` field removed.
-// UFB-051 (Phase 51-A): 8 new period-cycle knobs (firstDayOfWeek,
-// deadlineDayOfWeek, deadlineTime, periodCadence, maxOpenPeriods,
+// UFB-051 (Phase 51-A): period-cycle knobs (firstDayOfWeek,
+// deadlineDayOfWeek, deadlineTime, maxOpenPeriods,
 // requireAllSectionsToPublish, allowReopenAfterPublish, reopenWindowHours)
 // mirror the SQL defaults from `20260510215245_period_model_expansion`.
 const defaultSettings: AppSettings = {
@@ -83,7 +83,6 @@ const defaultSettings: AppSettings = {
   firstDayOfWeek: 1,
   deadlineDayOfWeek: 5,
   deadlineTime: "18:00",
-  periodCadence: "weekly",
   maxOpenPeriods: 1,
   requireAllSectionsToPublish: true,
   allowReopenAfterPublish: true,

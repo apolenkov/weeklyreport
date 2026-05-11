@@ -681,15 +681,6 @@ export const reminderAudienceWireSchema = z.enum([
 ]);
 
 /**
- * UFB-051 (Phase 51-A): wire enum for the period cadence. Stored as TEXT
- * in Postgres (not a DB enum) so adding new cadences (`monthly`, …) is a
- * one-line zod change and a documentation update — no DB migration. The
- * 51-A scope ships weekly + bi-weekly; cron consumers (PeriodCreator
- * cadence-aware step) arrive in 51-C.
- */
-export const periodCadenceSchema = z.enum(["weekly", "bi-weekly"]);
-
-/**
  * UFB-051 (Phase 51-A): regex guard for the `deadlineTime` HH:MM-in-24h
  * string. Pin minutes to two digits and hours to 00..23 so the admin
  * cannot persist garbage like `"25:00"` or `"9:5"` that would later
@@ -729,7 +720,6 @@ export const appSettingsSchema = z.object({
   // HH:MM in the configured `defaultTimezone`. Regex pins the format so
   // garbage values cannot reach the future deadline-computation path.
   deadlineTime: z.string().regex(deadlineTimeRegex).default("18:00"),
-  periodCadence: periodCadenceSchema.default("weekly"),
   // Concurrency cap on simultaneously-open periods. Sensible 51-A
   // default is `1` (current weekly cadence). Upper bound chosen
   // defensively (`12`) — admins likely never go above a handful but
@@ -850,7 +840,6 @@ export type StageAssignment = z.infer<typeof stageAssignmentSchema>;
 export type VersionSnapshot = z.infer<typeof versionSnapshotSchema>;
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 export type WorkingDays = z.infer<typeof workingDaysSchema>;
-export type PeriodCadence = z.infer<typeof periodCadenceSchema>;
 export type PeriodReadModel = z.infer<typeof periodReadModelSchema>;
 export type PortfolioProductOverview = z.infer<
   typeof portfolioProductOverviewSchema

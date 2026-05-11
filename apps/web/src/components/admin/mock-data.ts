@@ -120,7 +120,6 @@ export type MockSettings = {
   firstDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
   deadlineDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
   deadlineTime: string; // HH:MM (24h)
-  periodCadence: "weekly" | "bi-weekly";
   maxOpenPeriods: number;
   requireAllSectionsToPublish: boolean;
   allowReopenAfterPublish: boolean;
@@ -492,7 +491,6 @@ export const MOCK_SETTINGS: MockSettings = {
   firstDayOfWeek: 1,
   deadlineDayOfWeek: 5,
   deadlineTime: "18:00",
-  periodCadence: "weekly",
   maxOpenPeriods: 1,
   requireAllSectionsToPublish: true,
   allowReopenAfterPublish: true,

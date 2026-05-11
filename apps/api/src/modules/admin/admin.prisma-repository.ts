@@ -16,7 +16,6 @@ import {
   type AppSettings,
   type GroupProduct,
   type GroupProductEdgeInput,
-  type PeriodCadence,
   type PeriodState,
   type PeriodStatus,
   type ReminderAudience,
@@ -136,14 +135,10 @@ export class AdminPrismaRepository implements AdminRepository {
     allowLateSubmissions: boolean;
     autoPublishAfterDeadline: boolean;
     autoArchiveWeeksAfterPublish: number;
-    // UFB-051 (Phase 51-A): period-cycle knobs. `periodCadence` is stored
-    // as TEXT in Postgres so admin-level extensions (`monthly`, …) do not
-    // require a Prisma migration — the zod enum on the wire is the only
-    // place that needs an update.
+    // UFB-051 (Phase 51-A): period-cycle knobs.
     firstDayOfWeek: number;
     deadlineDayOfWeek: number;
     deadlineTime: string;
-    periodCadence: string;
     maxOpenPeriods: number;
     requireAllSectionsToPublish: boolean;
     allowReopenAfterPublish: boolean;
@@ -166,14 +161,9 @@ export class AdminPrismaRepository implements AdminRepository {
       allowLateSubmissions: row.allowLateSubmissions,
       autoPublishAfterDeadline: row.autoPublishAfterDeadline,
       autoArchiveWeeksAfterPublish: row.autoArchiveWeeksAfterPublish,
-      // UFB-051 (Phase 51-A): pass-through. `periodCadence` round-trips as
-      // a plain string — `appSettingsSchema` re-parses through the zod
-      // enum guard so a hand-corrupted DB row (e.g. `'biweekly'` typo)
-      // would still be caught at the service boundary.
       firstDayOfWeek: row.firstDayOfWeek,
       deadlineDayOfWeek: row.deadlineDayOfWeek,
       deadlineTime: row.deadlineTime,
-      periodCadence: row.periodCadence as PeriodCadence,
       maxOpenPeriods: row.maxOpenPeriods,
       requireAllSectionsToPublish: row.requireAllSectionsToPublish,
       allowReopenAfterPublish: row.allowReopenAfterPublish,
@@ -220,18 +210,12 @@ export class AdminPrismaRepository implements AdminRepository {
       dbData.autoPublishAfterDeadline = data.autoPublishAfterDeadline;
     if (data.autoArchiveWeeksAfterPublish !== undefined)
       dbData.autoArchiveWeeksAfterPublish = data.autoArchiveWeeksAfterPublish;
-    // UFB-051 (Phase 51-A): period-cycle knobs. Plain pass-through — the
-    // zod schema on the service boundary has already validated ranges
-    // (`firstDayOfWeek`/`deadlineDayOfWeek` ∈ [1..7], `deadlineTime`
-    // matches HH:MM, `periodCadence` ∈ {weekly, bi-weekly}, …).
     if (data.firstDayOfWeek !== undefined)
       dbData.firstDayOfWeek = data.firstDayOfWeek;
     if (data.deadlineDayOfWeek !== undefined)
       dbData.deadlineDayOfWeek = data.deadlineDayOfWeek;
     if (data.deadlineTime !== undefined)
       dbData.deadlineTime = data.deadlineTime;
-    if (data.periodCadence !== undefined)
-      dbData.periodCadence = data.periodCadence;
     if (data.maxOpenPeriods !== undefined)
       dbData.maxOpenPeriods = data.maxOpenPeriods;
     if (data.requireAllSectionsToPublish !== undefined)
