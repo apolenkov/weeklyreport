@@ -30,13 +30,17 @@ const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
  *      page must not treat that fallback as an explicit login.
  *   4. If no session AND not stub → keep the SSO sign-in card.
  */
-type Role = 'lead' | 'head' | 'admin' | 'viewer';
+type Role = 'lead' | 'head' | 'admin' | 'viewer' | 'director';
 
 const DEFAULT_FOR_ROLE: Record<Role, string> = {
   lead: '/lead/report',
   head: '/head/dashboard',
   admin: '/admin',
   viewer: '/reports?tab=published',
+  // UFB-057 / Phase 57: director lands on /head/dashboard (same as head)
+  // so the product-KPI cards are the first thing they see. The nested
+  // /head/dashboard layout permits director read-only.
+  director: '/head/dashboard',
 };
 
 const FALLBACK_REDIRECT = '/head/dashboard';

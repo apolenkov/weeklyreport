@@ -173,7 +173,7 @@ export type LeadCurrentUser = {
    * head/admin-only UI like "Revoke" vs "Request Reopen". Driven by the
    * read model's `authorRole`.
    */
-  authorRole: "lead" | "head" | "admin" | "viewer";
+  authorRole: "lead" | "head" | "admin" | "viewer" | "director";
 };
 
 // ---- Helpers ----
@@ -574,7 +574,7 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   // token (`authorRole`) is exposed so role-based UI gating doesn't have
   // to reverse-engineer the label string. Defaults to 'lead' when the
   // read model omits it (legacy fixtures, harness-driven tests).
-  const authorRole: "lead" | "head" | "admin" | "viewer" =
+  const authorRole: "lead" | "head" | "admin" | "viewer" | "director" =
     args.active.authorRole ?? "lead";
   const roleLabel =
     authorRole === "head"
@@ -583,7 +583,9 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
         ? "Admin"
         : authorRole === "viewer"
           ? "Viewer"
-          : "Lead";
+          : authorRole === "director"
+            ? "Director"
+            : "Lead";
 
   return {
     products: mapLeadProducts(section),

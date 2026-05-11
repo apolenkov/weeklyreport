@@ -47,7 +47,7 @@ import type {
 
 // ---- Self-contained re-declarations of presentation types ----
 
-export type UserRole = "lead" | "head" | "admin" | "viewer";
+export type UserRole = "lead" | "head" | "admin" | "viewer" | "director";
 
 export type MockUser = {
   id: string;

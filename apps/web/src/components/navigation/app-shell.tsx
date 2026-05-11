@@ -23,6 +23,10 @@ function getRoleLabel(role: Role): string {
     head: 'Head role',
     viewer: 'Viewer role',
     admin: 'Admin role',
+    // UFB-057 / Phase 57: director label appears in the screen-reader hint
+    // alongside the brand mark — distinct token so AT users hear the
+    // leadership-audience role unambiguously.
+    director: 'Director role',
   };
 
   return labels[role];

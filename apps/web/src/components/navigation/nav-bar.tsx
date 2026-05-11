@@ -33,14 +33,17 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   // exists in the nav but now drops into the "My Drafts" tab; the
   // role-shared "Archive" link uses the same URL with the published tab.
   { href: "/reports?tab=drafts", label: "My History", roles: ["lead"] },
-  { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
+  // UFB-057 / Phase 57: 'director' shares the head dashboard surface but
+  // NOT the weekly-report submission surface (director is read-only).
+  { href: "/head/dashboard", label: "Dashboard", roles: ["head", "director"] },
   { href: "/head/report", label: "Weekly Report", roles: ["head"] },
   {
     // UFB-022: admin role sees only the Admin section, not the
     // department dashboard/report/archive surfaces.
+    // UFB-057: director joins the Archive consumers.
     href: "/reports?tab=published",
     label: "Archive",
-    roles: ["lead", "head", "viewer"],
+    roles: ["lead", "head", "viewer", "director"],
   },
   // UFB-038: admin tab is admin-only. heads have a dashboard, not an admin
   // panel. The /admin/layout.tsx role gate enforces the same on the route.
@@ -57,6 +60,11 @@ function getRoleLabel(role: Role): string {
       return "Lead";
     case "viewer":
       return "Viewer";
+    // UFB-057 / Phase 57: director label sits between Admin and Viewer
+    // semantically — it's a leadership consumer that sees everything but
+    // owns nothing. Distinct label so the nav-bar pill is unambiguous.
+    case "director":
+      return "Director";
   }
 }
 
