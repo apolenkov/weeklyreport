@@ -4,7 +4,33 @@ import { Suspense, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 
-import { DEFAULT_ORGANIZATION_IDENTITY } from '@customreport/shared';
+import { DEFAULT_ORGANIZATION_IDENTITY, type OrganizationPublic } from '@customreport/shared';
+
+/**
+ * UFB-070: read org identity injected by RootLayout's server-side fetch.
+ * Returns null when called during SSR (window unavailable) or when the
+ * script tag is missing/malformed — the useQuery initialData falls back to
+ * DEFAULT_ORGANIZATION_IDENTITY in those cases.
+ */
+function readOrgDataFromScript(): OrganizationPublic | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const el = document.getElementById('__org_data');
+    if (!el?.textContent) return undefined;
+    const parsed = JSON.parse(el.textContent) as unknown;
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'shortName' in (parsed as Record<string, unknown>) &&
+      'fullName' in (parsed as Record<string, unknown>)
+    ) {
+      return parsed as OrganizationPublic;
+    }
+  } catch {
+    /* fallthrough */
+  }
+  return undefined;
+}
 
 import { PulseBackground } from '../components/landing/pulse-background';
 import { PulseMark } from '../components/landing/pulse-mark';
@@ -139,7 +165,12 @@ function LoginPageBody() {
   // wordmark is the product brand, not the tenant brand; only the
   // small-caps Demo footnote line below it should swap per tenant.
   // See .planning/phases/59-multi-org-hierarchy/59-CONTEXT.md.
-  const orgQ = useQuery(trpc.org.getPublic.queryOptions());
+  // UFB-070: supply server-injected org data as initialData so the first
+  // render shows the real org name without a flash.
+  const orgQ = useQuery({
+    ...trpc.org.getPublic.queryOptions(),
+    initialData: readOrgDataFromScript(),
+  });
   // UFB-060: fall back to generic DEFAULT_ORGANIZATION_IDENTITY, not a
   // hard-coded brand. Real brand strings live in the Organization row.
   const orgShortName =
