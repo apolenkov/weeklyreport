@@ -144,14 +144,15 @@ describe('WeeklyReportService — unit tests', () => {
     expect((error as Error).message).toContain(reportId);
   });
 
-  it('throws WeeklyReportDomainError when no active and no explicit ID', async () => {
+  it('returns no-period sentinel when no active and no explicit ID', async () => {
+    // R3a: replaces the old "throws WeeklyReportDomainError" contract.
+    // 200 response with { status: 'no-period' } prevents React Query retry storm.
     const repo = createSpyRepository(new Map(), null);
     const service = new WeeklyReportService(repo);
 
-    const error = await service.getWeeklyReport().catch((e: unknown) => e);
+    const result = await service.getWeeklyReport();
 
-    expect(error).toBeInstanceOf(WeeklyReportDomainError);
-    expect((error as Error).message).toContain('No active report');
+    expect(result).toEqual({ status: 'no-period', report: null });
     // Should not have called getWeeklyReport at all
     expect(repo.getWeeklyReport).not.toHaveBeenCalled();
   });
@@ -167,6 +168,8 @@ describe('WeeklyReportService — unit tests', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.periodStatus).toBe('published');
     expect(result.submissionCount).toBe(6);
     expect(result.totalLeads).toBe(6);
@@ -195,6 +198,8 @@ describe('WeeklyReportService — AUTH-04 viewer scoping', () => {
 
     const result = await service.getWeeklyReport(reportId, 'viewer');
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.periodStatus).toBe('published');
     expect(result.reportId).toBe(reportId);
   });
@@ -206,6 +211,8 @@ describe('WeeklyReportService — AUTH-04 viewer scoping', () => {
 
     const result = await service.getWeeklyReport(reportId, 'head');
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.periodStatus).toBe('open');
   });
 
@@ -215,9 +222,11 @@ describe('WeeklyReportService — AUTH-04 viewer scoping', () => {
     const service = new WeeklyReportService(createSpyRepository(reports));
 
     await expect(service.getWeeklyReport(reportId, 'lead')).resolves.toMatchObject({
+      status: 'active',
       periodStatus: 'open',
     });
     await expect(service.getWeeklyReport(reportId, 'admin')).resolves.toMatchObject({
+      status: 'active',
       periodStatus: 'open',
     });
   });
@@ -228,6 +237,8 @@ describe('WeeklyReportService — AUTH-04 viewer scoping', () => {
     const service = new WeeklyReportService(createSpyRepository(reports));
 
     const result = await service.getWeeklyReport(reportId, undefined);
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.periodStatus).toBe('open');
   });
 });

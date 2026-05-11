@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   weeklyReportReadModelSchema,
+  weeklyReportGetResponseSchema,
   type WeeklyReportReadModel,
 } from '@customreport/shared';
 
@@ -114,6 +115,10 @@ describe('WeeklyReportService — contract tests', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
+    // R3a: service now returns discriminated union; active path carries status:'active'
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
+
     expect(result.reportId).toBe(reportId);
     expect(result.periodStatus).toBe('open');
     expect(result.weekLabel).toBe('W16-2026');
@@ -125,8 +130,8 @@ describe('WeeklyReportService — contract tests', () => {
     expect(expectDefined(result.leadSections[0]).authorName).toBe('Lead A');
     expect(result.escalations).toEqual([]);
 
-    // Verify output conforms to the Zod schema
-    const parsed = weeklyReportReadModelSchema.parse(result);
+    // Verify output conforms to the Zod response schema
+    const parsed = weeklyReportGetResponseSchema.parse(result);
     expect(parsed).toEqual(result);
   });
 
@@ -152,21 +157,24 @@ describe('WeeklyReportService — contract tests', () => {
 
     const result = await service.getWeeklyReport();
 
+    // R3a: discriminated union — narrow to active before accessing fields
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.reportId).toBe(activeReportId);
   });
 
-  it('throws when no active report exists and no ID given', async () => {
+  it('returns no-period sentinel when no active report exists and no ID given', async () => {
+    // R3a: replaces the old "throws WeeklyReportDomainError" contract.
+    // The service now returns { status: 'no-period', report: null } instead
+    // of throwing, so the tRPC router returns HTTP 200 and React Query does
+    // not retry 3×.
     const service = new WeeklyReportService(
       createRepository(new Map(), null),
     );
 
-    await expect(service.getWeeklyReport()).rejects.toThrow(
-      WeeklyReportDomainError,
-    );
+    const result = await service.getWeeklyReport();
 
-    await expect(service.getWeeklyReport()).rejects.toThrow(
-      'No active report period found',
-    );
+    expect(result).toEqual({ status: 'no-period', report: null });
   });
 
   it('returns report with escalations (blocked items and at-risk projects)', async () => {
@@ -200,6 +208,8 @@ describe('WeeklyReportService — contract tests', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.escalations).toHaveLength(3);
     expect(result.escalations.map((e) => e.type)).toEqual([
       'blocked',
@@ -233,6 +243,8 @@ describe('WeeklyReportService — contract tests', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.portfolioOverview).toHaveLength(2);
     expect(expectDefined(result.portfolioOverview[0]).worstStatus).toBe('red');
     expect(expectDefined(result.portfolioOverview[1]).worstStatus).toBe('yellow');
@@ -248,19 +260,23 @@ describe('WeeklyReportService — contract tests', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.submissionCount).toBe(0);
     expect(result.leadSections).toEqual([]);
   });
 
-  it('result conforms to Zod schema', async () => {
+  it('result conforms to Zod response schema', async () => {
     const report = makeWeeklyReport();
     const reports = new Map([[reportId, report]]);
     const service = new WeeklyReportService(createRepository(reports));
 
     const result = await service.getWeeklyReport(reportId);
 
-    // The service output must parse cleanly through the canonical schema
-    const parsed = weeklyReportReadModelSchema.parse(result);
+    // The service output must parse cleanly through the canonical response schema
+    const parsed = weeklyReportGetResponseSchema.parse(result);
+    expect(parsed.status).toBe('active');
+    if (parsed.status !== 'active') throw new Error('expected active');
     expect(parsed.reportId).toBe(reportId);
     expect(parsed.leadSections).toHaveLength(1);
   });

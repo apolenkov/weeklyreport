@@ -828,6 +828,21 @@ export const weeklyReportReadModelSchema = z.object({
   escalations: z.array(escalationSchema),
 });
 
+/**
+ * R3a (UFB-HEAD-DASH): discriminated-union response for `weeklyReport.get`.
+ *
+ * When no active Period exists the procedure returns `{ status: 'no-period',
+ * report: null }` instead of throwing NOT_FOUND. This eliminates the React
+ * Query retry storm (3 × retry = 3–5 s spinner) on fresh installs and
+ * between period cycles.
+ *
+ * Consumers guard with `if (data.status === 'no-period') return <EmptyState/>`.
+ */
+export const weeklyReportGetResponseSchema = z.discriminatedUnion('status', [
+  weeklyReportReadModelSchema.extend({ status: z.literal('active') }),
+  z.object({ status: z.literal('no-period'), report: z.null() }),
+]);
+
 // ---------------------------------------------------------------------------
 // v4.0: Type exports
 // ---------------------------------------------------------------------------
@@ -845,6 +860,7 @@ export type PortfolioProductOverview = z.infer<
 >;
 export type Escalation = z.infer<typeof escalationSchema>;
 export type WeeklyReportReadModel = z.infer<typeof weeklyReportReadModelSchema>;
+export type WeeklyReportGetResponse = z.infer<typeof weeklyReportGetResponseSchema>;
 
 export type DraftSavePayload = z.input<typeof draftSaveSchema>;
 export type DraftSaveInput = z.infer<typeof draftSaveSchema>;

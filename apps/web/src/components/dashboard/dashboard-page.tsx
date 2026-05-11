@@ -234,6 +234,28 @@ export function DashboardPage() {
     );
   }
 
+  // R3a: no active period — show empty state instead of error toast / spinner.
+  // weeklyQ.data.status === 'no-period' is a normal 200, never an error.
+  if (weeklyQ.data.status === "no-period") {
+    return (
+      <div className="space-y-6">
+        <header>
+          <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+            Dashboard
+          </h1>
+        </header>
+        <div className="flex flex-col items-center justify-center py-24 text-center rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)]">
+          <p className="text-lg font-semibold text-[var(--color-foreground)]">
+            No active reporting period
+          </p>
+          <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+            Ask an admin to open a new period to start collecting status reports.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const dashboard = mapDashboardData({
     review: reviewQ.data,
     archive: archiveQ.data,

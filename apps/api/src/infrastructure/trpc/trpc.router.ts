@@ -1505,23 +1505,34 @@ export function createAppRouter(deps: RouterDeps) {
         .query(async ({ input, ctx }) => {
           const requestedReportId = input?.reportId ?? null;
           try {
-            const report = await deps.weeklyReportService.getWeeklyReport(
+            const result = await deps.weeklyReportService.getWeeklyReport(
               input?.reportId,
               ctx.session.role,
               ctx.session,
             );
+            // R3a: no-period is a normal 200 response, not an error path.
+            if (result.status === 'no-period') {
+              ctx.logger.info("weekly report: no active period", {
+                phase: "weekly-report.load",
+                procedure: "weeklyReport.get",
+                userId: ctx.session.userId,
+                role: ctx.session.role,
+                requestedReportId,
+              });
+              return result;
+            }
             ctx.logger.info("weekly report load succeeded", {
               phase: "weekly-report.load",
               procedure: "weeklyReport.get",
               userId: ctx.session.userId,
               role: ctx.session.role,
               requestedReportId,
-              resolvedReportId: report.reportId,
-              periodStatus: report.periodStatus,
-              submissionCount: report.submissionCount,
-              totalLeads: report.totalLeads,
+              resolvedReportId: result.reportId,
+              periodStatus: result.periodStatus,
+              submissionCount: result.submissionCount,
+              totalLeads: result.totalLeads,
             });
-            return report;
+            return result;
           } catch (error) {
             const errorInfo =
               error instanceof Error
