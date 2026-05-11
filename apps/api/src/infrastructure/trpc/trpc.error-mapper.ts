@@ -8,6 +8,7 @@ import { ReviewAccessError } from '../../modules/review/review.service.js';
 import { PublicationAccessError } from '../../modules/publication/publication.service.js';
 import {
   AdminAccessError,
+  AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
 } from '../../modules/admin/admin.service.js';
 import { PdfExportDomainError } from '../../modules/pdf-export/pdf-export.service.js';
@@ -63,6 +64,14 @@ export function mapDomainError(error: unknown): TRPCError {
   // admin without any extra translation layer.
   if (error instanceof AdminPeriodOverlapError) {
     return new TRPCError({ code: 'BAD_REQUEST', message: error.message, cause: error });
+  }
+
+  // UFB-067: manual period edit on a missing reportId. Distinct from the
+  // overlap path (which is BAD_REQUEST) — surface as NOT_FOUND so the
+  // admin UI can render a row-removed style empty state rather than a
+  // generic validation error.
+  if (error instanceof AdminPeriodNotFoundError) {
+    return new TRPCError({ code: 'NOT_FOUND', message: error.message, cause: error });
   }
 
   // Unknown error path: preserve `cause` so the loggingMiddleware can log

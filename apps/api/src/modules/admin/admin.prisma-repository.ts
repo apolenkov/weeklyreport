@@ -827,11 +827,19 @@ export class AdminPrismaRepository implements AdminRepository {
   async findOverlappingPeriod(input: {
     periodStart: Date;
     periodEnd: Date;
+    /**
+     * UFB-067: excluded id so the update path can re-run the overlap
+     * gate without self-conflicting against the row being edited. The
+     * Prisma `NOT: { id }` clause stays out of the WHERE when the
+     * caller omits the field — pure additive change for create callers.
+     */
+    excludeId?: string;
   }): Promise<{ id: string; periodStart: Date; periodEnd: Date } | null> {
     const row = await this.prisma.report.findFirst({
       where: {
         periodStart: { lte: input.periodEnd },
         periodEnd: { gte: input.periodStart },
+        ...(input.excludeId ? { NOT: { id: input.excludeId } } : {}),
       },
       orderBy: { periodStart: "desc" },
       select: { id: true, periodStart: true, periodEnd: true },
@@ -883,6 +891,90 @@ export class AdminPrismaRepository implements AdminRepository {
       periodEnd: created.periodEnd,
       deadline: created.deadline,
       periodState: created.periodState as PeriodState,
+    };
+  }
+
+  /**
+   * UFB-067: read a single Report's edit envelope. Used by the service's
+   * updatePeriodManual to surface a `NOT_FOUND` error early and to grab
+   * the `from`-snapshot for the audit envelope.
+   */
+  async readPeriodById(periodId: string): Promise<{
+    id: string;
+    periodStart: Date;
+    periodEnd: Date;
+    deadline: Date;
+    weekLabel: string | null;
+    periodState: PeriodState;
+  } | null> {
+    const row = await this.prisma.report.findUnique({
+      where: { id: periodId },
+      select: {
+        id: true,
+        periodStart: true,
+        periodEnd: true,
+        deadline: true,
+        weekLabel: true,
+        periodState: true,
+      },
+    });
+    if (!row) return null;
+    return {
+      id: row.id,
+      periodStart: row.periodStart,
+      periodEnd: row.periodEnd,
+      deadline: row.deadline,
+      weekLabel: row.weekLabel,
+      periodState: row.periodState as PeriodState,
+    };
+  }
+
+  /**
+   * UFB-067: patch an existing Report's date envelope + weekLabel. The
+   * service has already filtered `data` down to actually-changed fields,
+   * so Prisma's partial-update semantics are exactly what we want — only
+   * supplied keys are written, the rest of the row stays untouched.
+   *
+   * `periodState` is NOT touched here. State transitions belong to the
+   * lifecycle actions (`publish`, `reopen`, `archive`, scheduler). The
+   * Edit dialog only moves dates / label; if a date shift implies a
+   * state transition, that's a follow-up plan.
+   */
+  async updatePeriodManual(input: {
+    reportId: string;
+    data: {
+      periodStart?: Date;
+      periodEnd?: Date;
+      deadline?: Date;
+      weekLabel?: string | null;
+    };
+  }): Promise<{
+    id: string;
+    periodStart: Date;
+    periodEnd: Date;
+    deadline: Date;
+    weekLabel: string | null;
+    periodState: PeriodState;
+  }> {
+    const updated = await this.prisma.report.update({
+      where: { id: input.reportId },
+      data: input.data,
+      select: {
+        id: true,
+        periodStart: true,
+        periodEnd: true,
+        deadline: true,
+        weekLabel: true,
+        periodState: true,
+      },
+    });
+    return {
+      id: updated.id,
+      periodStart: updated.periodStart,
+      periodEnd: updated.periodEnd,
+      deadline: updated.deadline,
+      weekLabel: updated.weekLabel,
+      periodState: updated.periodState as PeriodState,
     };
   }
 

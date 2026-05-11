@@ -4,6 +4,8 @@ import {
   adminProjectSchema,
   adminReminderRuleSchema,
   adminSnapshotSchema,
+  adminUpdatePeriodManualResultSchema,
+  adminUpdatePeriodManualSchema,
   adminUserSchema,
   appSettingsSchema,
   appSettingsUpdateSchema,
@@ -18,6 +20,8 @@ import {
   type AdminProject,
   type AdminReminderRule,
   type AdminSnapshot,
+  type AdminUpdatePeriodManualInput,
+  type AdminUpdatePeriodManualResult,
   type AdminUser,
   type AppSettings,
   type GroupProduct,
@@ -54,6 +58,19 @@ export class AdminPeriodOverlapError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AdminPeriodOverlapError";
+  }
+}
+
+/**
+ * UFB-067: thrown by `updatePeriodManual` when the supplied `reportId`
+ * does not resolve to an existing Report. Maps to `NOT_FOUND` via the
+ * trpc error-mapper so the web layer's toast can copy the message
+ * verbatim ("Period <id> not found").
+ */
+export class AdminPeriodNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminPeriodNotFoundError";
   }
 }
 
@@ -96,9 +113,15 @@ export interface AdminRepository {
   // calling createPeriodManual to surface a friendly error pointing at
   // the blocking row. Returns the first overlap (newest-first); null when
   // free. Optional so in-memory test repos can opt out.
+  //
+  // UFB-067: extended with `excludeId` so the update path can rerun the
+  // overlap gate while excluding the row being edited (otherwise a no-op
+  // rewrite of the same envelope would self-conflict). Backward-compatible
+  // — existing callers that omit the field get unchanged behavior.
   findOverlappingPeriod?(input: {
     periodStart: Date;
     periodEnd: Date;
+    excludeId?: string;
   }): Promise<{ id: string; periodStart: Date; periodEnd: Date } | null>;
   // UFB-063: mint a Report row with the supplied dates + initial state.
   // Mirrors PeriodCreatorScheduler.runOnce's bare `report.create` — no
@@ -115,6 +138,37 @@ export interface AdminRepository {
     periodStart: Date;
     periodEnd: Date;
     deadline: Date;
+    periodState: PeriodState;
+  }>;
+  // UFB-067: read a single period's current envelope for the update path.
+  // Returns null when the id does not resolve so the service can throw
+  // `AdminPeriodNotFoundError` (maps to NOT_FOUND). The current envelope
+  // is also used for the audit `from`-snapshot of changed fields.
+  readPeriodById?(periodId: string): Promise<{
+    id: string;
+    periodStart: Date;
+    periodEnd: Date;
+    deadline: Date;
+    weekLabel: string | null;
+    periodState: PeriodState;
+  } | null>;
+  // UFB-067: patch the date envelope + weekLabel of an existing Report.
+  // Repository writes only the keys present in `data` (partial PATCH);
+  // returns the updated row in the same projection used by `readPeriodById`.
+  updatePeriodManual?(input: {
+    reportId: string;
+    data: {
+      periodStart?: Date;
+      periodEnd?: Date;
+      deadline?: Date;
+      weekLabel?: string | null;
+    };
+  }): Promise<{
+    id: string;
+    periodStart: Date;
+    periodEnd: Date;
+    deadline: Date;
+    weekLabel: string | null;
     periodState: PeriodState;
   }>;
   // UFB-054 (Phase 56-B): explicit Group ↔ Product M:M edge mutations and
@@ -606,6 +660,181 @@ export class AdminService {
       deadline: created.deadline,
       periodState: created.periodState,
     });
+  }
+
+  /**
+   * UFB-067: patch an existing Report's date envelope + weekLabel. Mirror
+   * of `createPeriodManual` for the in-place edit flow exposed in the
+   * Admin → Periods table (each row now carries an inline Edit icon that
+   * opens the same dialog in "edit" mode).
+   *
+   * Semantics:
+   *   - Only fields present in `rawInput` are written. Omitting a key
+   *     leaves the column untouched (true PATCH).
+   *   - `weekLabel: null` is an explicit clear; omitting the key means
+   *     "leave as-is" — the zod schema's `.nullable().optional()` keeps
+   *     the two cases distinguishable on the wire.
+   *   - When the envelope shifts, the overlap gate is re-run with
+   *     `excludeId === reportId` so the row being edited cannot
+   *     self-conflict with its own original envelope.
+   *   - The current row is read once up front; missing → throws
+   *     `AdminPeriodNotFoundError` (maps to NOT_FOUND).
+   *   - No-op edit (zero data keys) short-circuits before the overlap gate
+   *     and skips the audit envelope — there is nothing to audit (the
+   *     `from === to` diff would be empty and SIEM rules that key on a
+   *     non-empty changed-fields list would otherwise log noise).
+   *
+   * Returns the canonical updated row + an audit-diff hint so the router
+   * can emit `period.manual-edit` with the actual delta. The diff list
+   * stays inside the service return value (vs being computed in the
+   * router) because the service is the only layer that has both the
+   * before and after envelopes in scope at the same time.
+   */
+  async updatePeriodManual(
+    rawInput: AdminUpdatePeriodManualInput,
+  ): Promise<{
+    result: AdminUpdatePeriodManualResult;
+    /**
+     * Per-field `(before, after)` snapshots of changed columns. Empty
+     * object means the input was a no-op (zero data keys or all values
+     * matched the existing row); the router treats an empty diff as
+     * "skip audit envelope".
+     */
+    diff: Partial<{
+      periodStart: { from: Date; to: Date };
+      periodEnd: { from: Date; to: Date };
+      deadline: { from: Date; to: Date };
+      weekLabel: { from: string | null; to: string | null };
+    }>;
+  }> {
+    if (!this.repository.updatePeriodManual || !this.repository.readPeriodById) {
+      throw new Error(
+        "AdminRepository.updatePeriodManual / readPeriodById is not implemented for this repository.",
+      );
+    }
+    const input = adminUpdatePeriodManualSchema.parse(rawInput);
+
+    // -- Read existing -------------------------------------------------
+    const existing = await this.repository.readPeriodById(input.reportId);
+    if (!existing) {
+      throw new AdminPeriodNotFoundError(
+        `Period ${input.reportId} not found.`,
+      );
+    }
+
+    // -- Compute the actual diff ---------------------------------------
+    // Build a `data` payload that contains ONLY the keys whose new value
+    // actually differs from the current row. Equal-value writes are
+    // dropped so the audit envelope only carries real changes (matches
+    // the no-op contract in the docstring above).
+    const data: {
+      periodStart?: Date;
+      periodEnd?: Date;
+      deadline?: Date;
+      weekLabel?: string | null;
+    } = {};
+    const diff: Partial<{
+      periodStart: { from: Date; to: Date };
+      periodEnd: { from: Date; to: Date };
+      deadline: { from: Date; to: Date };
+      weekLabel: { from: string | null; to: string | null };
+    }> = {};
+
+    if (
+      input.periodStart !== undefined &&
+      input.periodStart.getTime() !== existing.periodStart.getTime()
+    ) {
+      data.periodStart = input.periodStart;
+      diff.periodStart = { from: existing.periodStart, to: input.periodStart };
+    }
+    if (
+      input.periodEnd !== undefined &&
+      input.periodEnd.getTime() !== existing.periodEnd.getTime()
+    ) {
+      data.periodEnd = input.periodEnd;
+      diff.periodEnd = { from: existing.periodEnd, to: input.periodEnd };
+    }
+    if (
+      input.deadline !== undefined &&
+      input.deadline.getTime() !== existing.deadline.getTime()
+    ) {
+      data.deadline = input.deadline;
+      diff.deadline = { from: existing.deadline, to: input.deadline };
+    }
+    // weekLabel: explicit `null` is an allowed value (clear). Compare on
+    // structural equality (`null === null`, `'foo' === 'foo'`) so an
+    // unchanged-label PATCH is dropped from the diff.
+    if (input.weekLabel !== undefined && input.weekLabel !== existing.weekLabel) {
+      data.weekLabel = input.weekLabel;
+      diff.weekLabel = { from: existing.weekLabel, to: input.weekLabel };
+    }
+
+    // -- No-op short-circuit -------------------------------------------
+    if (Object.keys(data).length === 0) {
+      // Return the existing row unchanged so the web layer's cache echo
+      // stays consistent with a real edit. Diff is empty → router skips
+      // the audit envelope.
+      return {
+        result: adminUpdatePeriodManualResultSchema.parse({
+          periodId: existing.id,
+          periodStart: existing.periodStart,
+          periodEnd: existing.periodEnd,
+          deadline: existing.deadline,
+          periodState: existing.periodState,
+          weekLabel: existing.weekLabel,
+        }),
+        diff,
+      };
+    }
+
+    // -- Overlap gate (only when an envelope key changed) --------------
+    const envelopeChanged =
+      data.periodStart !== undefined || data.periodEnd !== undefined;
+    if (envelopeChanged && this.repository.findOverlappingPeriod) {
+      // Use the new effective envelope (incoming where provided, existing
+      // otherwise) so the overlap check matches what will be written.
+      const effectiveStart = data.periodStart ?? existing.periodStart;
+      const effectiveEnd = data.periodEnd ?? existing.periodEnd;
+      if (effectiveEnd.getTime() < effectiveStart.getTime()) {
+        throw new AdminPeriodOverlapError(
+          `periodEnd (${effectiveEnd.toISOString()}) is before periodStart (${effectiveStart.toISOString()}).`,
+        );
+      }
+      const conflict = await this.repository.findOverlappingPeriod({
+        periodStart: effectiveStart,
+        periodEnd: effectiveEnd,
+        excludeId: input.reportId,
+      });
+      if (conflict) {
+        throw new AdminPeriodOverlapError(
+          `A period already exists for these dates: ${conflict.periodStart
+            .toISOString()
+            .slice(0, 10)}…${conflict.periodEnd.toISOString().slice(0, 10)}.`,
+        );
+      }
+    }
+
+    this.logger.info("updating period manually", {
+      periodId: input.reportId,
+      changedFields: Object.keys(data),
+    });
+
+    const updated = await this.repository.updatePeriodManual({
+      reportId: input.reportId,
+      data,
+    });
+
+    return {
+      result: adminUpdatePeriodManualResultSchema.parse({
+        periodId: updated.id,
+        periodStart: updated.periodStart,
+        periodEnd: updated.periodEnd,
+        deadline: updated.deadline,
+        periodState: updated.periodState,
+        weekLabel: updated.weekLabel,
+      }),
+      diff,
+    };
   }
 
   /**

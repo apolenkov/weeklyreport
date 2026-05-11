@@ -195,6 +195,24 @@ type PeriodManualCreateInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & 
   readonly to: PeriodState;
 };
 
+/**
+ * UFB-067: emitted when an admin edits an existing period's envelope via
+ * `admin.updatePeriodManual`. The `changes` payload carries only the
+ * changed fields' before/after as ISO strings (dates) or string|null
+ * (weekLabel) — same shape the service's diff returns. SIEM filters that
+ * audit "what dates moved" key on `changes.<field>` presence; no-op edits
+ * never reach this event (the router skips emission when diff is empty).
+ */
+type PeriodManualEditInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly periodId: string;
+  readonly changes: Partial<{
+    periodStart: { from: string; to: string };
+    periodEnd: { from: string; to: string };
+    deadline: { from: string; to: string };
+    weekLabel: { from: string | null; to: string | null };
+  }>;
+};
+
 export interface AuditLogger {
   loginSuccess(input: LoginSuccessInput): void;
   loginFail(input: LoginFailInput): void;
@@ -209,6 +227,7 @@ export interface AuditLogger {
   periodAutoPublish(input: PeriodAutoPublishInput): void;
   periodAutoArchive(input: PeriodAutoArchiveInput): void;
   periodManualCreate(input: PeriodManualCreateInput): void;
+  periodManualEdit(input: PeriodManualEditInput): void;
 }
 
 const AUDIT_MESSAGE = 'audit';
@@ -365,6 +384,16 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         to: input.to,
       });
     },
+    periodManualEdit(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'period.manual-edit',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        periodId: input.periodId,
+        changes: input.changes,
+      });
+    },
   };
 }
 
@@ -408,6 +437,9 @@ export function createNullAuditLogger(): AuditLogger {
       /* noop */
     },
     periodManualCreate() {
+      /* noop */
+    },
+    periodManualEdit() {
       /* noop */
     },
   };
