@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { Product, RiskEntry } from './mock-data';
 import { StageMultiSelect } from './stage-multi-select';
+import { joinStageNames } from './stage-tags';
 
 type RiskEditDialogProps = {
   readonly open: boolean;
@@ -57,10 +58,12 @@ export function RiskEditDialog({
   const [productId, setProductId] = useState(risk?.productId ?? seedProduct?.id ?? '');
   const [impact, setImpact] = useState(initialImpact ?? '');
   const [mitigation, setMitigation] = useState(initialMitigation ?? '');
-  // 35-04: pre-seed with the existing stage when editing a row that
-  // already has one (e.g. saved before the column existed shows '—').
-  const initialStage = risk?.stageName && risk.stageName !== '—' ? risk.stageName : '';
-  const [stageName, setStageName] = useState<string>(initialStage);
+  // UFB-073: pre-select all owned stages on create; restore existing on edit.
+  const [stageName, setStageName] = useState<string>(
+    risk?.stageName && risk.stageName !== '—'
+      ? risk.stageName
+      : (joinStageNames(stagesForProduct?.(seedProduct?.id ?? '') ?? []) ?? ''),
+  );
   // Per-field error map: each required field's empty validation reads
   // its own message and toggles its border red. Replaces the old single
   // `error` string that only highlighted the first failure and
@@ -74,7 +77,11 @@ export function RiskEditDialog({
       setProductId(risk?.productId ?? seedProduct?.id ?? '');
       setImpact(initialImpact ?? '');
       setMitigation(initialMitigation ?? '');
-      setStageName(risk?.stageName && risk.stageName !== '—' ? risk.stageName : '');
+      setStageName(
+        risk?.stageName && risk.stageName !== '—'
+          ? risk.stageName
+          : (joinStageNames(stagesForProduct?.(seedProduct?.id ?? '') ?? []) ?? ''),
+      );
       setErrors({});
     }
   }, [
@@ -88,6 +95,7 @@ export function RiskEditDialog({
     initialImpact,
     initialMitigation,
     defaultProductId,
+    stagesForProduct,
   ]);
 
   if (!open) return null;
