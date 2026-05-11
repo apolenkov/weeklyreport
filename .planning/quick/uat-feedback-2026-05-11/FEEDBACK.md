@@ -136,6 +136,35 @@ User accumulating items; not implementing yet. Each item → ticket on close.
 - **Priority:** ▼ medium — current skeleton is already non-jarring, but server-render would be the gold standard.
 - **Risk:** ▼ low — additive, falls back to skeleton if SSR fails.
 
+### 9. Landing — remember last role hint
+
+- **Where:** `/` (landing, AUTH_STUB mode)
+- **User quote:** «Та роль, которая была последней — запоминать её, и в footer лендинга показывать "ты типа под этой ролью заходишь, если надо — поменяй"».
+- **Today:** dev-stub login always defaults to admin. User has to switch role from DevRoleSwitcher post-login.
+- **Proposed (UFB-071):**
+  - On successful dev-login, write `lastRole` to localStorage (or cookie if SSR-friendly)
+  - On landing page: read `lastRole` if present
+  - Below the «Enter Application» CTA: small grey text «Last session: {Role} · change role» where «change role» is a button revealing a role picker
+  - One-click: go to `/auth/dev-login?role={lastRole}&email={lastEmail}` to re-enter same role
+  - If no `lastRole` saved: fall back to current «default role: admin» message
+- **Status:** OPEN — landing polish.
+- **Priority:** ▼ medium — UX nice-to-have for repeat UAT sessions.
+- **Risk:** ▼ low — localStorage only, fully reversible.
+
+### 10. Lead form — pre-select all owned stages by default
+
+- **Where:** lead form (`/lead/report`), Item/Risk/Decision/Priority creation
+- **User quote:** «Когда я заполняю лидом все эти айтемы, наверное, по умолчанию нужно включать все стадии, на которые меня записали. Чтобы я постоянно их не выбирал».
+- **Today:** lead must explicitly pick the stage(s) for each new entry from the dropdown / checkboxes, even though their `StageAssignment[]` already lists which stages they own on this product.
+- **Proposed (UFB-073):**
+  - When the lead opens the «New item» (or risk/decision/priority) dialog, the stage selector should pre-check **all** stages from the lead's `ownedStages` for the current Project
+  - User can de-select any if the item is stage-specific; default = «applies to all my stages»
+  - If lead owns only 1 stage → pre-select that one and hide the picker entirely (no choice → no UI)
+- **Source data:** `report.section.projects[].ownedStages[]` (already in the read model, line `app/api/.../report.ts` near ReportSectionReadModel)
+- **Status:** OPEN
+- **Priority:** ▼ medium — UX speed-up for lead workflow
+- **Risk:** ▼ low — purely default-value change; lead can still de-select
+
 ### 4. CI integration in Settings → Integrations
 
 - **Where:** `/admin?tab=settings` → sub-tab `Integrations` (already exists for Phase 55 Telegram badge)
