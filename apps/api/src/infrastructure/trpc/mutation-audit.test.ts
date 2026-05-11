@@ -51,6 +51,9 @@ function makeAuditSpy(): {
     // the AuditLogger interface; assertions live in
     // audit-logger.test.ts.
     periodManualCreate: vi.fn(),
+    // UFB-067: emitted only by `admin.updatePeriodManual`. Same rationale
+    // as the create event above — mocked for interface compliance.
+    periodManualEdit: vi.fn(),
   };
   return { audit, mutation };
 }

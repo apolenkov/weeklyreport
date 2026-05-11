@@ -7,6 +7,7 @@ import {
   myHistoryEntrySchema,
   paginationInputSchema,
   adminCreatePeriodManualSchema,
+  adminUpdatePeriodManualSchema,
   adminUserSchema,
   adminProjectSchema,
   groupProductEdgeInputSchema,
@@ -801,6 +802,70 @@ export function createAppRouter(deps: RouterDeps) {
               from: null,
               to: result.periodState,
             });
+            return result;
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-067: admin in-place edit for an existing Period's date
+       * envelope + weekLabel. Symmetric counterpart to
+       * `createPeriodManual` so the row-level Edit icon in the Periods
+       * tab can reuse the same `<CreatePeriodDialog>` UI in "edit" mode.
+       *
+       * Audit envelope (`period.manual-edit`) emitted only when the diff
+       * is non-empty — service short-circuits no-op edits, returning an
+       * empty diff which the router treats as "nothing to audit". This
+       * keeps SIEM rules that key on `changes.<field>` presence free of
+       * empty-payload noise from PATCH calls that didn't actually change
+       * the row.
+       */
+      updatePeriodManual: adminProcedure
+        .input(adminUpdatePeriodManualSchema)
+        .mutation(async ({ ctx, input }) => {
+          try {
+            const { result, diff } =
+              await deps.adminService.updatePeriodManual(input);
+            if (Object.keys(diff).length > 0) {
+              // Convert Date instances to ISO strings for the audit
+              // payload (the envelope is shipped to log aggregators that
+              // serialize timestamps to JSON; ISO is the canonical form).
+              const changes: {
+                periodStart?: { from: string; to: string };
+                periodEnd?: { from: string; to: string };
+                deadline?: { from: string; to: string };
+                weekLabel?: { from: string | null; to: string | null };
+              } = {};
+              if (diff.periodStart) {
+                changes.periodStart = {
+                  from: diff.periodStart.from.toISOString(),
+                  to: diff.periodStart.to.toISOString(),
+                };
+              }
+              if (diff.periodEnd) {
+                changes.periodEnd = {
+                  from: diff.periodEnd.from.toISOString(),
+                  to: diff.periodEnd.to.toISOString(),
+                };
+              }
+              if (diff.deadline) {
+                changes.deadline = {
+                  from: diff.deadline.from.toISOString(),
+                  to: diff.deadline.to.toISOString(),
+                };
+              }
+              if (diff.weekLabel) {
+                changes.weekLabel = diff.weekLabel;
+              }
+              ctx.auditLogger.periodManualEdit({
+                userId: ctx.session?.userId ?? "anonymous",
+                role: ctx.session?.role ?? null,
+                ip: ctx.ip,
+                periodId: result.periodId,
+                changes,
+              });
+            }
             return result;
           } catch (error) {
             throw mapDomainError(error);

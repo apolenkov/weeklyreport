@@ -10,6 +10,7 @@ import type {
 import { adminRouter } from "./admin.router";
 import {
   AdminAccessError,
+  AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
   AdminService,
   type AdminRepository,
@@ -1428,6 +1429,249 @@ describe("AdminService — createPeriodManual (UFB-063)", () => {
     await expect(
       service.createPeriodManual({
         periodStart: new Date("2026-05-18T00:00:00.000Z"),
+      }),
+    ).rejects.toThrow(/not implemented/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UFB-067: updatePeriodManual — admin escape hatch for in-place edits
+// ---------------------------------------------------------------------------
+
+type EditableRow = {
+  id: string;
+  periodStart: Date;
+  periodEnd: Date;
+  deadline: Date;
+  weekLabel: string | null;
+  periodState:
+    | "scheduled"
+    | "open"
+    | "published"
+    | "archived";
+};
+
+function makeUpdatePeriodRepository(opts: {
+  /** Pre-seeded periods used by both the read + overlap paths. */
+  seedPeriods: EditableRow[];
+  settings?: AppSettings;
+}): AdminRepository & {
+  readLastUpdated(): {
+    reportId: string;
+    data: {
+      periodStart?: Date;
+      periodEnd?: Date;
+      deadline?: Date;
+      weekLabel?: string | null;
+    };
+  } | null;
+} {
+  const base = createRepository(initialSnapshot, opts.settings ?? defaultSettings);
+  const rows = new Map<string, EditableRow>(
+    opts.seedPeriods.map((row) => [row.id, { ...row }]),
+  );
+  let lastUpdated: ReturnType<
+    ReturnType<typeof makeUpdatePeriodRepository>["readLastUpdated"]
+  > = null;
+  return {
+    ...base,
+    async findOverlappingPeriod(input) {
+      // Half-open intersect + optional self-exclusion (UFB-067).
+      const hit = [...rows.values()]
+        .filter((row) =>
+          input.excludeId ? row.id !== input.excludeId : true,
+        )
+        .filter(
+          (row) =>
+            row.periodStart.getTime() <= input.periodEnd.getTime() &&
+            row.periodEnd.getTime() >= input.periodStart.getTime(),
+        )
+        .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())[0];
+      return hit
+        ? {
+            id: hit.id,
+            periodStart: hit.periodStart,
+            periodEnd: hit.periodEnd,
+          }
+        : null;
+    },
+    async readPeriodById(periodId) {
+      const row = rows.get(periodId);
+      return row ? { ...row } : null;
+    },
+    async updatePeriodManual(input) {
+      const row = rows.get(input.reportId);
+      if (!row) {
+        throw new Error("test repo: row not found");
+      }
+      const next: EditableRow = {
+        ...row,
+        ...(input.data.periodStart !== undefined
+          ? { periodStart: input.data.periodStart }
+          : {}),
+        ...(input.data.periodEnd !== undefined
+          ? { periodEnd: input.data.periodEnd }
+          : {}),
+        ...(input.data.deadline !== undefined
+          ? { deadline: input.data.deadline }
+          : {}),
+        ...(input.data.weekLabel !== undefined
+          ? { weekLabel: input.data.weekLabel }
+          : {}),
+      };
+      rows.set(input.reportId, next);
+      lastUpdated = { reportId: input.reportId, data: input.data };
+      return { ...next };
+    },
+    readLastUpdated() {
+      return lastUpdated;
+    },
+  };
+}
+
+const SEED_ROW_ID = "55555555-5555-4555-8555-555555555501";
+const SEED_OTHER_ID = "55555555-5555-4555-8555-555555555502";
+
+function defaultEditSeed(): EditableRow[] {
+  return [
+    {
+      id: SEED_ROW_ID,
+      periodStart: new Date("2026-05-04T00:00:00.000Z"),
+      periodEnd: new Date("2026-05-10T23:59:59.999Z"),
+      deadline: new Date("2026-05-09T15:00:00.000Z"),
+      weekLabel: "Sprint 11",
+      periodState: "open",
+    },
+  ];
+}
+
+describe("AdminService — updatePeriodManual (UFB-067)", () => {
+  it("happy path: applies the diff and returns the updated row", async () => {
+    const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
+    const service = new AdminService(repo);
+
+    const { result, diff } = await service.updatePeriodManual({
+      reportId: SEED_ROW_ID,
+      deadline: new Date("2026-05-10T15:00:00.000Z"),
+      weekLabel: "Sprint 11 (extended)",
+    });
+
+    expect(result.periodId).toBe(SEED_ROW_ID);
+    expect(result.deadline.toISOString()).toBe("2026-05-10T15:00:00.000Z");
+    expect(result.weekLabel).toBe("Sprint 11 (extended)");
+    // Diff carries only the two changed fields.
+    expect(Object.keys(diff).sort()).toEqual(["deadline", "weekLabel"]);
+    expect(diff.deadline?.from.toISOString()).toBe("2026-05-09T15:00:00.000Z");
+    expect(diff.weekLabel?.from).toBe("Sprint 11");
+    // Repository write only carries the changed keys.
+    const last = repo.readLastUpdated();
+    expect(last?.reportId).toBe(SEED_ROW_ID);
+    expect(Object.keys(last?.data ?? {}).sort()).toEqual(["deadline", "weekLabel"]);
+  });
+
+  it("allows clearing weekLabel via explicit null", async () => {
+    const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
+    const service = new AdminService(repo);
+
+    const { result, diff } = await service.updatePeriodManual({
+      reportId: SEED_ROW_ID,
+      weekLabel: null,
+    });
+
+    expect(result.weekLabel).toBeNull();
+    expect(diff.weekLabel).toEqual({ from: "Sprint 11", to: null });
+  });
+
+  it("rejects when reportId does not resolve", async () => {
+    const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
+    const service = new AdminService(repo);
+
+    await expect(
+      service.updatePeriodManual({
+        reportId: "00000000-0000-4000-8000-000000000000",
+        deadline: new Date("2026-05-10T15:00:00.000Z"),
+      }),
+    ).rejects.toBeInstanceOf(AdminPeriodNotFoundError);
+  });
+
+  it("rejects when shifted envelope overlaps a DIFFERENT existing period", async () => {
+    const repo = makeUpdatePeriodRepository({
+      seedPeriods: [
+        ...defaultEditSeed(),
+        {
+          id: SEED_OTHER_ID,
+          periodStart: new Date("2026-05-11T00:00:00.000Z"),
+          periodEnd: new Date("2026-05-17T23:59:59.999Z"),
+          deadline: new Date("2026-05-16T15:00:00.000Z"),
+          weekLabel: "Sprint 12",
+          periodState: "scheduled",
+        },
+      ],
+    });
+    const service = new AdminService(repo);
+
+    // Try to push SEED_ROW_ID's end into the SEED_OTHER_ID window.
+    await expect(
+      service.updatePeriodManual({
+        reportId: SEED_ROW_ID,
+        periodEnd: new Date("2026-05-12T23:59:59.999Z"),
+      }),
+    ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
+  });
+
+  it("self-edit on the same envelope does NOT trigger overlap (excludeId works)", async () => {
+    const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
+    const service = new AdminService(repo);
+
+    // Shifting deadline only — envelope keys unchanged — should not even
+    // touch the overlap gate. Then shift periodEnd to the same value
+    // (a no-op for periodEnd, change deadline) → still safe.
+    const { result } = await service.updatePeriodManual({
+      reportId: SEED_ROW_ID,
+      periodEnd: new Date("2026-05-10T23:59:59.999Z"), // same as seed
+      deadline: new Date("2026-05-10T15:00:00.000Z"),
+    });
+    expect(result.deadline.toISOString()).toBe("2026-05-10T15:00:00.000Z");
+  });
+
+  it("no-op (zero changed fields) short-circuits without audit / write", async () => {
+    const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
+    const service = new AdminService(repo);
+
+    const { result, diff } = await service.updatePeriodManual({
+      reportId: SEED_ROW_ID,
+      // All values match the seed.
+      periodStart: new Date("2026-05-04T00:00:00.000Z"),
+      periodEnd: new Date("2026-05-10T23:59:59.999Z"),
+      deadline: new Date("2026-05-09T15:00:00.000Z"),
+      weekLabel: "Sprint 11",
+    });
+
+    expect(diff).toEqual({});
+    expect(result.periodId).toBe(SEED_ROW_ID);
+    // Repository write skipped entirely.
+    expect(repo.readLastUpdated()).toBeNull();
+  });
+
+  it("rejects when supplied periodEnd < periodStart", async () => {
+    const repo = makeUpdatePeriodRepository({ seedPeriods: defaultEditSeed() });
+    const service = new AdminService(repo);
+
+    await expect(
+      service.updatePeriodManual({
+        reportId: SEED_ROW_ID,
+        periodStart: new Date("2026-05-20T00:00:00.000Z"),
+        periodEnd: new Date("2026-05-19T00:00:00.000Z"),
+      }),
+    ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
+  });
+
+  it("throws when repository does not implement updatePeriodManual", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+    await expect(
+      service.updatePeriodManual({
+        reportId: SEED_ROW_ID,
+        deadline: new Date("2026-05-10T15:00:00.000Z"),
       }),
     ).rejects.toThrow(/not implemented/);
   });
