@@ -472,5 +472,53 @@ describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
         to: 'archived',
       }),
     ).not.toThrow();
+    // UFB-063: noop branch for the manual-create event.
+    expect(() =>
+      audit.periodManualCreate({
+        userId: 'admin-1',
+        role: 'admin',
+        ip: '10.0.0.1',
+        periodId: 'p4',
+        periodStart: 's',
+        periodEnd: 'e',
+        deadline: 'd',
+        from: null,
+        to: 'open',
+      }),
+    ).not.toThrow();
+  });
+
+  it('periodManualCreate emits {event, real-user attribution, periodId, dates} on info (UFB-063)', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.periodManualCreate({
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.42',
+      periodId: '00000000-0000-4000-8000-000000000063',
+      periodStart: '2026-05-18T00:00:00.000Z',
+      periodEnd: '2026-05-24T23:59:59.999Z',
+      deadline: '2026-05-22T15:00:00.000Z',
+      from: null,
+      to: 'open',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.message).toBe('audit');
+    expect(entry.context).toEqual({
+      event: 'period.manual-create',
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.42',
+      periodId: '00000000-0000-4000-8000-000000000063',
+      periodStart: '2026-05-18T00:00:00.000Z',
+      periodEnd: '2026-05-24T23:59:59.999Z',
+      deadline: '2026-05-22T15:00:00.000Z',
+      from: null,
+      to: 'open',
+    });
   });
 });
