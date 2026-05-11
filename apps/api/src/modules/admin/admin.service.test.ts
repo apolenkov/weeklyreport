@@ -10,6 +10,7 @@ import type {
 import { adminRouter } from "./admin.router";
 import {
   AdminAccessError,
+  AdminPeriodOverlapError,
   AdminService,
   type AdminRepository,
 } from "./admin.service";
@@ -1234,6 +1235,199 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
       service.detachProductFromGroup({
         groupId: GROUP_A,
         productId: PRODUCT_X,
+      }),
+    ).rejects.toThrow(/not implemented/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UFB-063: createPeriodManual — admin escape hatch
+// ---------------------------------------------------------------------------
+
+function makeCreatePeriodRepository(opts: {
+  /** Pre-seeded periods used by the overlap gate. */
+  seedPeriods?: Array<{ id: string; periodStart: Date; periodEnd: Date }>;
+  /** Settings to override; falls back to defaultSettings. */
+  settings?: AppSettings;
+}): AdminRepository & {
+  // Test-only inspector for the row the service asked the repo to mint.
+  readLastCreated(): {
+    periodStart: Date;
+    periodEnd: Date;
+    deadline: Date;
+    weekLabel: string | null;
+    periodState: string;
+  } | null;
+} {
+  const base = createRepository(initialSnapshot, opts.settings ?? defaultSettings);
+  const seed = [...(opts.seedPeriods ?? [])];
+  let lastCreated: ReturnType<
+    ReturnType<typeof makeCreatePeriodRepository>["readLastCreated"]
+  > = null;
+  let counter = 0;
+  return {
+    ...base,
+    async findOverlappingPeriod(input) {
+      // Half-open intersect: existingStart <= newEnd && existingEnd >= newStart.
+      const hit = seed
+        .filter(
+          (p) =>
+            p.periodStart.getTime() <= input.periodEnd.getTime() &&
+            p.periodEnd.getTime() >= input.periodStart.getTime(),
+        )
+        .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())[0];
+      return hit
+        ? {
+            id: hit.id,
+            periodStart: hit.periodStart,
+            periodEnd: hit.periodEnd,
+          }
+        : null;
+    },
+    async createPeriodManual(input) {
+      counter += 1;
+      const id = `11111111-1111-4111-8111-1111111110${String(counter).padStart(
+        2,
+        "0",
+      )}`;
+      lastCreated = {
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        deadline: input.deadline,
+        weekLabel: input.weekLabel,
+        periodState: input.periodState,
+      };
+      seed.push({
+        id,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+      });
+      return {
+        id,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        deadline: input.deadline,
+        periodState: input.periodState,
+      };
+    },
+    readLastCreated() {
+      return lastCreated;
+    },
+  };
+}
+
+describe("AdminService — createPeriodManual (UFB-063)", () => {
+  it("happy path: mints a period with the supplied periodStart and returns the created row", async () => {
+    const repo = makeCreatePeriodRepository({});
+    const service = new AdminService(repo);
+
+    const result = await service.createPeriodManual(
+      {
+        periodStart: new Date("2026-05-18T00:00:00.000Z"),
+      },
+      // Pin `now` to BEFORE periodStart so the initial state is
+      // deterministic ('scheduled').
+      { now: new Date("2026-05-11T12:00:00.000Z") },
+    );
+
+    expect(result.periodId).toMatch(/^[0-9a-f-]+$/);
+    expect(result.periodStart.toISOString()).toBe("2026-05-18T00:00:00.000Z");
+    // periodEnd defaults to start + (periodLengthDays - 1) days + 23:59:59.999
+    // for the configured 7-day periodLength.
+    expect(result.periodEnd.toISOString()).toBe("2026-05-24T23:59:59.999Z");
+    // Initial state derives from now-vs-start; periodStart is in the
+    // future → 'scheduled'.
+    expect(result.periodState).toBe("scheduled");
+  });
+
+  it("derives 'open' when periodStart is at or before now", async () => {
+    const repo = makeCreatePeriodRepository({});
+    const service = new AdminService(repo);
+
+    const result = await service.createPeriodManual(
+      {
+        periodStart: new Date("2026-05-04T00:00:00.000Z"),
+      },
+      { now: new Date("2026-05-11T12:00:00.000Z") },
+    );
+    expect(result.periodState).toBe("open");
+  });
+
+  it("computes default deadline from AppSettings (defaultDeadlineDays + workingDays + deadlineTime)", async () => {
+    const repo = makeCreatePeriodRepository({});
+    const service = new AdminService(repo);
+
+    // defaultSettings: defaultDeadlineDays=5, workingDays='mon-fri',
+    // defaultTimezone='Europe/Moscow', deadlineTime='18:00'. periodStart
+    // is Monday 2026-05-04 00:00 UTC; +5 business days (mon→tue→wed→thu→fri→mon)
+    // lands on Monday 2026-05-11; 18:00 Europe/Moscow == 15:00 UTC. The
+    // `+5 business days` shape matches the scheduler's own date math
+    // (verified against `computeDeadline` in business-date.ts).
+    await service.createPeriodManual({
+      periodStart: new Date("2026-05-04T00:00:00.000Z"),
+    });
+
+    const last = repo.readLastCreated();
+    expect(last).not.toBeNull();
+    expect(last?.deadline.toISOString()).toBe("2026-05-11T15:00:00.000Z");
+  });
+
+  it("respects explicit periodEnd / deadline / weekLabel overrides", async () => {
+    const repo = makeCreatePeriodRepository({});
+    const service = new AdminService(repo);
+
+    const explicitEnd = new Date("2026-05-31T23:59:59.999Z");
+    const explicitDeadline = new Date("2026-05-29T15:00:00.000Z");
+    await service.createPeriodManual({
+      periodStart: new Date("2026-05-25T00:00:00.000Z"),
+      periodEnd: explicitEnd,
+      deadline: explicitDeadline,
+      weekLabel: "Sprint 12 catch-up",
+    });
+
+    const last = repo.readLastCreated();
+    expect(last?.periodEnd.toISOString()).toBe(explicitEnd.toISOString());
+    expect(last?.deadline.toISOString()).toBe(explicitDeadline.toISOString());
+    expect(last?.weekLabel).toBe("Sprint 12 catch-up");
+  });
+
+  it("rejects when [periodStart, periodEnd] overlaps an existing period", async () => {
+    const repo = makeCreatePeriodRepository({
+      seedPeriods: [
+        {
+          id: "existing",
+          periodStart: new Date("2026-05-04T00:00:00.000Z"),
+          periodEnd: new Date("2026-05-10T23:59:59.999Z"),
+        },
+      ],
+    });
+    const service = new AdminService(repo);
+
+    await expect(
+      service.createPeriodManual({
+        // Starts inside the existing period → overlap.
+        periodStart: new Date("2026-05-08T00:00:00.000Z"),
+      }),
+    ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
+  });
+
+  it("rejects when periodEnd < periodStart", async () => {
+    const repo = makeCreatePeriodRepository({});
+    const service = new AdminService(repo);
+
+    await expect(
+      service.createPeriodManual({
+        periodStart: new Date("2026-05-18T00:00:00.000Z"),
+        periodEnd: new Date("2026-05-10T00:00:00.000Z"),
+      }),
+    ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
+  });
+
+  it("throws when repository does not implement createPeriodManual", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+    await expect(
+      service.createPeriodManual({
+        periodStart: new Date("2026-05-18T00:00:00.000Z"),
       }),
     ).rejects.toThrow(/not implemented/);
   });
