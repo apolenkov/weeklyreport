@@ -4,6 +4,9 @@ import { Suspense, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 
+import { PulseBackground } from '../components/landing/pulse-background';
+import { PulseMark } from '../components/landing/pulse-mark';
+import { TaglineCycler } from '../components/landing/tagline-cycler';
 import { useTRPC } from '../lib/trpc-context';
 
 const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
@@ -121,33 +124,20 @@ function LoginPageBody() {
 
   return (
     <main id="main-content" className="flex min-h-svh">
-      {/* Left panel — Demo brand */}
-      <div
-        className="relative hidden flex-1 flex-col items-center justify-center overflow-hidden p-16 text-white lg:flex"
-        style={{
-          background:
-            'linear-gradient(135deg, #1E3932 0%, #006241 40%, #00754A 70%, #2d8f6f 100%)',
-        }}
-      >
-        <div
-          className="absolute inset-0 opacity-100"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
-        <div className="relative z-10 max-w-[400px] text-center">
-          <div
-            className="font-[family-name:var(--font-sans)] text-[56px] font-extrabold leading-none tracking-[0.08em]"
-            style={{ textShadow: '0 2px 20px rgba(0,0,0,0.15)' }}
-          >
-            {orgShortName}
-          </div>
-          <div className="mb-8 mt-3 text-sm font-normal uppercase tracking-[0.16em] text-white/70">
-            {orgFullName}
-          </div>
-          <div className="mx-auto mb-8 h-0.5 w-16 rounded-full bg-[var(--color-starbucks-gold)]" />
-          <p className="mx-auto max-w-xs text-lg leading-relaxed text-white/60">
-            Unified weekly status reporting system for group leads and management
+      {/* Left panel — «Your PULSE?» rebrand (UFB-058 / Phase 58).
+          PulseBackground renders dark green base + dot grid + ECG line.
+          PulseMark + TaglineCycler are positioned above it. The ECG
+          track in pulse.css is pinned to top:50% so the trace visually
+          passes through the `?` glyph of PulseMark. */}
+      <div className="relative hidden flex-1 flex-col items-start justify-center overflow-hidden p-16 text-white lg:flex">
+        <PulseBackground />
+        <div className="relative z-10 max-w-[480px]">
+          <PulseMark />
+          <TaglineCycler />
+          {/* Quiet Demo footnote — keeps org context for users landing
+              from a corporate intranet bookmark. */}
+          <p className="mt-10 text-xs uppercase tracking-[0.22em] text-white/40">
+            {orgShortName} · {orgFullName}
           </p>
         </div>
       </div>
@@ -157,9 +147,27 @@ function LoginPageBody() {
           the in-app dev role switcher. */}
       <div className="relative flex w-full flex-col items-center justify-center bg-white px-6 sm:px-10 lg:w-[480px] lg:flex-none">
         <div className="w-full max-w-[320px] text-center">
-          <h1 className="font-[family-name:var(--font-sans)] text-[32px] font-bold tracking-[-0.02em] text-[var(--color-primary)]">
-            {orgShortName}
-          </h1>
+          {/* UFB-058: mobile / right-panel brand. Same PulseMark
+              component, scoped down via .pulse-mark-compact wrapper. The
+              wrapper inverts colors (gold on white) so the mark stays
+              readable on the light sign-in column. */}
+          <div className="pulse-mark-compact mb-8 flex justify-center">
+            <span
+              className="font-[family-name:Fraunces,serif] text-[40px] leading-none text-[var(--color-primary)]"
+              style={{
+                fontVariationSettings: '"opsz" 144, "wght" 560',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              PULSE
+              <span
+                className="text-[var(--color-starbucks-gold)]"
+                style={{ fontVariationSettings: '"opsz" 144, "wght" 660' }}
+              >
+                ?
+              </span>
+            </span>
+          </div>
           <p className="mb-10 mt-2 text-[15px] text-[var(--color-muted-foreground)]">
             Weekly Status Reporting System
           </p>

@@ -5,6 +5,9 @@
 
 @import "@customreport/ui/styles/globals.css" layer(base);
 
+/* UFB-058 / Phase 58: «Your PULSE?» landing rebrand */
+@import "./pulse.css";
+
 @layer base {
   body {
     background-color: var(--color-background);
