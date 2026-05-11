@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { PriorityEntry } from './mock-data';
 import { StageMultiSelect } from './stage-multi-select';
+import { joinStageNames } from './stage-tags';
 
 type PriorityEditDialogProps = {
   readonly open: boolean;
@@ -38,21 +39,29 @@ export function PriorityEditDialog({
 }: PriorityEditDialogProps) {
   const isCreate = priority === null;
   const [text, setText] = useState(priority?.text ?? '');
-  const initialStage = priority?.stageName && priority.stageName !== '—' ? priority.stageName : '';
-  const [stageName, setStageName] = useState<string>(initialStage);
+  // UFB-073: pre-select all owned stages on create; restore existing on edit.
+  const [stageName, setStageName] = useState<string>(
+    priority?.stageName && priority.stageName !== '—'
+      ? priority.stageName
+      : (joinStageNames(availableStages ?? []) ?? ''),
+  );
   const [errors, setErrors] = useState<{ text?: string }>({});
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setText(priority?.text ?? '');
-    setStageName(priority?.stageName && priority.stageName !== '—' ? priority.stageName : '');
+    setStageName(
+      priority?.stageName && priority.stageName !== '—'
+        ? priority.stageName
+        : (joinStageNames(availableStages ?? []) ?? ''),
+    );
     setErrors({});
     // Focus the input on open. requestAnimationFrame so the portal mount
     // has settled before we steal focus from the underlying overlay.
     const id = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(id);
-  }, [open, priority?.rank, priority?.text, priority?.stageName]);
+  }, [open, priority?.rank, priority?.text, priority?.stageName, availableStages]);
 
   if (!open) return null;
 

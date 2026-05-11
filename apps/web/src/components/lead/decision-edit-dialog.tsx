@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { DecisionEntry } from './mock-data';
 import { StageMultiSelect } from './stage-multi-select';
+import { joinStageNames } from './stage-tags';
 
 type DecisionEditDialogProps = {
   readonly open: boolean;
@@ -38,9 +39,12 @@ export function DecisionEditDialog({
   const [owner, setOwner] = useState(decision?.owner ?? defaultOwner ?? '');
   const [impact, setImpact] = useState(decision?.impact ?? '');
   const [deadline, setDeadline] = useState(decision?.deadline ?? '');
-  // 35-04: SDLC stage; '—' is the legacy placeholder, treated as unset.
-  const initialStage = decision?.stageName && decision.stageName !== '—' ? decision.stageName : '';
-  const [stageName, setStageName] = useState<string>(initialStage);
+  // UFB-073: pre-select all owned stages on create; restore existing on edit.
+  const [stageName, setStageName] = useState<string>(
+    decision?.stageName && decision.stageName !== '—'
+      ? decision.stageName
+      : (joinStageNames(availableStages ?? []) ?? ''),
+  );
   // Per-field error map — same pattern as risk-edit-dialog. The single
   // bottom error string used to highlight only the first failure and
   // pinned the message under the wrong field, so each border now turns
@@ -53,7 +57,11 @@ export function DecisionEditDialog({
       setOwner(decision?.owner ?? defaultOwner ?? '');
       setImpact(decision?.impact ?? '');
       setDeadline(decision?.deadline ?? '');
-      setStageName(decision?.stageName && decision.stageName !== '—' ? decision.stageName : '');
+      setStageName(
+        decision?.stageName && decision.stageName !== '—'
+          ? decision.stageName
+          : (joinStageNames(availableStages ?? []) ?? ''),
+      );
       setErrors({});
     }
   }, [
@@ -65,6 +73,7 @@ export function DecisionEditDialog({
     decision?.deadline,
     decision?.stageName,
     defaultOwner,
+    availableStages,
   ]);
 
   if (!open) return null;

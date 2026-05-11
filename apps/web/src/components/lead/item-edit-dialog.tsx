@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { KanbanItem, ItemStatus, Product } from './mock-data';
 import { StageMultiSelect } from './stage-multi-select';
+import { joinStageNames } from './stage-tags';
 
 type ItemEditDialogProps = {
   /** Open/close state. Caller controls so it can wire submit/cancel. */
@@ -82,9 +83,10 @@ export function ItemEditDialog({
   const [text, setText] = useState(initial.text);
   const [status, setStatus] = useState<ItemStatus>(initial.status);
   const [productId, setProductId] = useState(initial.productId);
-  // 35-04: SDLC stage selection. Pre-seeds with the existing item.stageName
-  // when editing; empty otherwise (forces an explicit choice on save).
-  const [stageName, setStageName] = useState<string>(item?.stageName ?? '');
+  // UFB-073: pre-select all owned stages on create; restore existing on edit.
+  const [stageName, setStageName] = useState<string>(
+    item?.stageName ?? (joinStageNames(stagesForProduct?.(initial.productId) ?? []) ?? ''),
+  );
   const [errors, setErrors] = useState<{ text?: string }>({});
 
   useEffect(() => {
@@ -92,7 +94,7 @@ export function ItemEditDialog({
       setText(initial.text);
       setStatus(initial.status);
       setProductId(initial.productId);
-      setStageName(item?.stageName ?? '');
+      setStageName(item?.stageName ?? (joinStageNames(stagesForProduct?.(initial.productId) ?? []) ?? ''));
       setErrors({});
     }
   }, [
@@ -103,6 +105,7 @@ export function ItemEditDialog({
     initial.status,
     initial.productId,
     defaultProductId,
+    stagesForProduct,
   ]);
 
   if (!open) return null;
