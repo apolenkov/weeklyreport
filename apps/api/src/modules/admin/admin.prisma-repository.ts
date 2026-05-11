@@ -817,6 +817,76 @@ export class AdminPrismaRepository implements AdminRepository {
   }
 
   /**
+   * UFB-063: find the most recent Report whose [periodStart, periodEnd]
+   * range overlaps the supplied half-open range. Used by the service's
+   * pre-create overlap gate to surface the blocking row's date span.
+   * Returns null when the range is free.
+   *
+   * Half-open intersect: a.start <= b.end AND a.end >= b.start.
+   */
+  async findOverlappingPeriod(input: {
+    periodStart: Date;
+    periodEnd: Date;
+  }): Promise<{ id: string; periodStart: Date; periodEnd: Date } | null> {
+    const row = await this.prisma.report.findFirst({
+      where: {
+        periodStart: { lte: input.periodEnd },
+        periodEnd: { gte: input.periodStart },
+      },
+      orderBy: { periodStart: "desc" },
+      select: { id: true, periodStart: true, periodEnd: true },
+    });
+    return row ?? null;
+  }
+
+  /**
+   * UFB-063: mint a Report row with the supplied dates + initial state.
+   * Mirrors `PeriodCreatorScheduler.runOnce`'s bare `report.create` —
+   * `status` defaults to 'draft' and `periodStatus` defaults to 'open'
+   * at the DB layer (see schema.prisma defaults). No PolicyApplicator
+   * call here — the scheduler also skips it (pre-existing gap,
+   * documented in the 063 SUMMARY); fixing both paths is deferred to
+   * keep this plan additive.
+   */
+  async createPeriodManual(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    deadline: Date;
+    weekLabel: string | null;
+    periodState: PeriodState;
+  }): Promise<{
+    id: string;
+    periodStart: Date;
+    periodEnd: Date;
+    deadline: Date;
+    periodState: PeriodState;
+  }> {
+    const created = await this.prisma.report.create({
+      data: {
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        deadline: input.deadline,
+        periodState: input.periodState,
+        weekLabel: input.weekLabel,
+      },
+      select: {
+        id: true,
+        periodStart: true,
+        periodEnd: true,
+        deadline: true,
+        periodState: true,
+      },
+    });
+    return {
+      id: created.id,
+      periodStart: created.periodStart,
+      periodEnd: created.periodEnd,
+      deadline: created.deadline,
+      periodState: created.periodState as PeriodState,
+    };
+  }
+
+  /**
    * UFB-052 (Phase 51-B): manual archive. Writes both the legacy
    * `archived` boolean and the new `periodState='archived'` atomically
    * so the two-state-machine invariant from 51-C (Open Question 1)

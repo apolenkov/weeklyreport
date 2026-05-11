@@ -6,6 +6,7 @@ import {
   submitSectionSchema,
   myHistoryEntrySchema,
   paginationInputSchema,
+  adminCreatePeriodManualSchema,
   adminUserSchema,
   adminProjectSchema,
   groupProductEdgeInputSchema,
@@ -766,6 +767,41 @@ export function createAppRouter(deps: RouterDeps) {
         .query(async ({ input }) => {
           try {
             return await deps.adminService.listPeriodsByState(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-063: admin escape hatch that mints a Period without waiting
+       * for the daily `PeriodCreatorScheduler` (00:05 UTC cron). Fresh
+       * dev/staging DBs were blocked on the cron tick before this
+       * procedure landed; admins can now seed a period from the
+       * Periods-tab «New period» dialog.
+       *
+       * Audit envelope (`period.manual-create`) is emitted from the
+       * router — same pattern as `savePolicy` / `removePolicy` — so
+       * audit IO stays out of the service layer and the SIEM stream
+       * gets a real-user attribution (vs the system+cron `auto-create`
+       * event).
+       */
+      createPeriodManual: adminProcedure
+        .input(adminCreatePeriodManualSchema)
+        .mutation(async ({ ctx, input }) => {
+          try {
+            const result = await deps.adminService.createPeriodManual(input);
+            ctx.auditLogger.periodManualCreate({
+              userId: ctx.session?.userId ?? "anonymous",
+              role: ctx.session?.role ?? null,
+              ip: ctx.ip,
+              periodId: result.periodId,
+              periodStart: result.periodStart.toISOString(),
+              periodEnd: result.periodEnd.toISOString(),
+              deadline: result.deadline.toISOString(),
+              from: null,
+              to: result.periodState,
+            });
+            return result;
           } catch (error) {
             throw mapDomainError(error);
           }
