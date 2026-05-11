@@ -13,27 +13,24 @@ type Props = {
   readonly reportId: string;
 };
 
-// UFB-066: «AI Insights» section icon — four-pointed sparkle (the
-// generative-AI shorthand used by Anthropic, Google, Notion, Figma).
-// Same 24px box + primary stroke as Portfolio's GridIcon for visual
-// consistency across report sections.
-function AiSparkleIcon() {
+// Brain icon for AI unavailable state — modern, friendly, abstract brain shape
+function AiBrainIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-5 w-5 flex-shrink-0"
+      className="h-6 w-6 flex-shrink-0"
       style={{ color: "var(--color-primary)" }}
       stroke="currentColor"
       fill="none"
-      strokeWidth={1.8}
+      strokeWidth={1.5}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {/* large sparkle */}
-      <path d="M12 3 L13.5 9.5 L20 11 L13.5 12.5 L12 19 L10.5 12.5 L4 11 L10.5 9.5 Z" />
-      {/* small companion sparkle top-right */}
-      <path d="M19 4 L19.5 5.6 L21 6 L19.5 6.4 L19 8 L18.5 6.4 L17 6 L18.5 5.6 Z" />
+      {/* brain outline with lobes */}
+      <path d="M12 2C10.343 2 9 3.343 9 5v1c0 1.105-.895 2-2 2H6c-1.657 0-3 1.343-3 3v5c0 1.657 1.343 3 3 3h1c1.105 0 2 .895 2 2v1c0 1.657 1.343 3 3 3s3-1.343 3-3v-1c0-1.105.895-2 2-2h1c1.657 0 3-1.343 3-3v-5c0-1.657-1.343-3-3-3h-1c-1.105 0-2-.895-2-2V5c0-1.657-1.343-3-3-3z" />
+      {/* subtle inner detail - neural spark */}
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
     </svg>
   );
 }
@@ -77,45 +74,37 @@ export function AiSummaryCard({ reportId }: Props) {
   if (!data) return null;
 
   if (!data.available) {
-    // UFB-066 (2026-05-11): match the Portfolio Overview card style — same
-    // radius, border, gradient bg, layered shadow, primary-color icon
-    // header. Reads as a real AI section (sparkle icon + «AI Insights»
-    // header), not as a generic empty muted line. All copy English per
-    // CLAUDE.md «UI strings — English only до i18n» rule.
+    // UFB-066 (2026-05-11): visually improved unavailable state with rounded
+    // corners, soft gradient background, brain icon, and clear messaging.
+    // Reads as a real AI section ready for activation, not as a generic empty
+    // line. All copy English per CLAUDE.md «UI strings — English only до i18n»
+    // rule. TODO(Phase-54-activation): when real provider lands, fold this
+    // into a more specific «ingestion pending» state once the AiIngestionJob
+    // worker is live.
     return (
-      <div className="mt-4 overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
-        <div className="flex w-full items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <AiSparkleIcon />
-            <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
-              AI Insights
-            </span>
-            <span
-              className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-amber-700"
-              aria-label="AI summary pending"
-            >
-              pending
-            </span>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.06)]">
+        <div className="p-6">
+          {/* Header with brain icon and title */}
+          <div className="mb-4 flex items-start gap-4">
+            <div className="mt-1 rounded-lg bg-blue-100 p-2">
+              <AiBrainIcon />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-slate-900">
+                AI Insights Unavailable
+              </h3>
+              <p className="mt-1 text-sm text-slate-600">
+                AI summary will appear here once your AI provider is configured.
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="px-4 pb-4">
-          {/* Shimmer placeholder matching the real summary shape:
-              1 wide narrative line, 1 medium, then 3 highlight chips. */}
-          <div className="space-y-2">
-            <div className="h-3 w-11/12 rounded bg-[rgba(0,0,0,0.06)]" />
-            <div className="h-3 w-8/12 rounded bg-[rgba(0,0,0,0.05)]" />
+
+          {/* Info box with setup guidance */}
+          <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+            <p className="text-xs font-medium text-blue-900">
+              Once enabled, AI will automatically generate summaries based on submitted sections.
+            </p>
           </div>
-          <div className="mt-3 flex gap-2">
-            <div className="h-5 w-20 rounded-md bg-[rgba(0,0,0,0.05)]" />
-            <div className="h-5 w-16 rounded-md bg-[rgba(0,0,0,0.05)]" />
-            <div className="h-5 w-24 rounded-md bg-[rgba(0,0,0,0.05)]" />
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-[var(--color-muted-foreground)]">
-            Summary will be generated once sections are submitted for this period.
-            {/* TODO(Phase-54-activation): when real provider lands, fold this
-                into a more specific «ingestion pending» state once the
-                AiIngestionJob worker is live. */}
-          </p>
         </div>
       </div>
     );
