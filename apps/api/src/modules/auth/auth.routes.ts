@@ -394,7 +394,13 @@ export function mountAuthRoutes(
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const role = (req.query.role as string) ?? "head";
-          const validRoles: Role[] = ["lead", "head", "admin", "viewer"];
+          const validRoles: Role[] = [
+            "lead",
+            "head",
+            "admin",
+            "viewer",
+            "director",
+          ];
           if (!validRoles.includes(role as Role)) {
             loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
             res.status(400).json({
@@ -462,11 +468,15 @@ export function mountAuthRoutes(
 
           // UX-16: role-aware default landing. Must stay in sync with
           // DEFAULT_FOR_ROLE in apps/web/src/app/page.tsx.
+          // UFB-057 / Phase 57: director lands on the same head dashboard
+          // surface as `head` so the product-KPI cards are the first thing
+          // they see; their nested layout permits read-only access.
           const redirectByRole: Record<string, string> = {
             head: "/head/dashboard",
             lead: "/lead/report",
             admin: "/admin",
             viewer: "/reports?tab=published",
+            director: "/head/dashboard",
           };
           const redirectPath =
             (req.query.redirect as string) ?? redirectByRole[role] ?? "/";
