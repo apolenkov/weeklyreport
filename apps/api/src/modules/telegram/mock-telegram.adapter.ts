@@ -9,6 +9,7 @@
 
 import { Injectable } from '@nestjs/common';
 
+import { telegramMessageSentTotal } from '../../infrastructure/metrics/metrics.registry.js';
 import type { TelegramAdapter, TelegramSendResult } from './telegram.adapter.js';
 
 @Injectable()
@@ -39,6 +40,7 @@ export class MockTelegramAdapter implements TelegramAdapter {
         textLength: text.length,
       }) + '\n',
     );
+    telegramMessageSentTotal.inc({ status: 'ok' });
     return { ok: true };
   }
 }

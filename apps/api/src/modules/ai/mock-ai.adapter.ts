@@ -10,6 +10,10 @@
 
 import { Injectable } from '@nestjs/common';
 
+import {
+  aiSummaryDurationSeconds,
+  aiSummaryGeneratedTotal,
+} from '../../infrastructure/metrics/metrics.registry.js';
 import type { AiAdapter, AiAdapterContext } from './ai.adapter.js';
 
 @Injectable()
@@ -25,7 +29,11 @@ export class MockAiAdapter implements AiAdapter {
    * design so test fixtures cannot accidentally rely on its body.
    */
   async generate(_prompt: string, context: AiAdapterContext): Promise<string> {
+    const t0 = Date.now();
     const count = context.sections.length;
-    return `[mock-summary] ${count} sections, period ${context.periodId}`;
+    const result = `[mock-summary] ${count} sections, period ${context.periodId}`;
+    aiSummaryGeneratedTotal.inc({ provider: 'mock', status: 'ok' });
+    aiSummaryDurationSeconds.observe({ provider: 'mock' }, (Date.now() - t0) / 1000);
+    return result;
   }
 }
