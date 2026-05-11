@@ -52,9 +52,60 @@ export function AiSummaryCard({ reportId }: Props) {
   if (!data) return null;
 
   if (!data.available) {
+    // UFB-066: previously this rendered one muted line «AI summary
+    // unavailable.» with no AI affordance — felt unrelated to AI and read
+    // as a generic empty state. New placeholder reads as a paused AI
+    // generation: sparkle icon + 3 shimmer bars approximating the summary
+    // shape + one explicit reason line. Once a real provider is wired
+    // (Phase 54 activation, AI_PROVIDER env), this branch is rarely hit.
     return (
-      <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/70 p-4 text-sm text-[var(--color-muted-foreground)]">
-        AI summary unavailable.
+      <div
+        className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/85 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+        aria-label="AI summary pending"
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700"
+            aria-hidden="true"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2z" />
+              <circle cx="19" cy="4" r="1" />
+              <circle cx="5" cy="19" r="1" />
+            </svg>
+            AI · pending
+          </span>
+          <span className="text-xs text-[var(--color-muted-foreground)]">
+            нет данных для генерации
+          </span>
+        </div>
+        {/* 3-bar shimmer placeholder approximating the real summary shape:
+            one wide narrative line + two short highlight tags. */}
+        <div className="mt-3 space-y-2">
+          <div className="h-3 w-11/12 rounded bg-[var(--color-muted)]/40" />
+          <div className="h-3 w-9/12 rounded bg-[var(--color-muted)]/30" />
+          <div className="mt-2 flex gap-2">
+            <div className="h-4 w-20 rounded bg-[var(--color-muted)]/30" />
+            <div className="h-4 w-16 rounded bg-[var(--color-muted)]/30" />
+            <div className="h-4 w-24 rounded bg-[var(--color-muted)]/30" />
+          </div>
+        </div>
+        <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted-foreground)]">
+          AI summary появится после того, как в периоде будут заполненные
+          секции. {/* TODO(Phase-54-activation): when real provider lands,
+          this branch should rarely surface — fold into a more specific
+          «embedding ingestion pending» message once AiIngestionJob worker
+          is live. */}
+        </p>
       </div>
     );
   }
