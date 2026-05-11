@@ -5,9 +5,8 @@
 -- Phase B (deferred) will make the columns NOT NULL once UI paths wire the
 -- linkage during creation.
 --
--- Backfill copies productId from linked ReportSection if available. If
--- ReportSection.productId does not exist yet, the UPDATE affects 0 rows
--- (safe).
+-- productId starts NULL for all existing rows. Phase B will add NOT NULL
+-- after UI paths populate the column during Decision/Priority creation.
 
 -- AlterTable Decision
 ALTER TABLE "Decision" ADD COLUMN "productId" TEXT;
@@ -21,17 +20,6 @@ ALTER TABLE "Decision" ADD CONSTRAINT "Decision_productId_fkey" FOREIGN KEY ("pr
 -- AddForeignKey Priority_productId
 ALTER TABLE "Priority" ADD CONSTRAINT "Priority_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- Backfill productId from linked ReportSection (if it exists).
--- This is safe even if ReportSection.productId doesn't exist yet;
--- the UPDATE will affect 0 rows.
-UPDATE "Decision" d
-SET "productId" = s."productId"
-FROM "ReportSection" s
-WHERE d."reportSectionId" = s.id
-  AND s."productId" IS NOT NULL;
-
-UPDATE "Priority" p
-SET "productId" = s."productId"
-FROM "ReportSection" s
-WHERE p."reportSectionId" = s.id
-  AND s."productId" IS NOT NULL;
+-- Backfill deferred: ReportSection has no productId column.
+-- Existing rows keep productId = NULL. Phase B (NOT NULL migration)
+-- will require UI paths to wire productId during creation first.
