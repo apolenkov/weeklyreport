@@ -264,7 +264,7 @@ export function DashboardPage() {
             href={`/head/report/${encodeURIComponent(weeklyQ.data.reportId)}`}
             className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
           >
-            View Weekly Report
+            View Status Report
           </a>
         </div>
       </header>
