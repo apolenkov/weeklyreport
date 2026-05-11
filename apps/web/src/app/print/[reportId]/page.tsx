@@ -444,7 +444,7 @@ export default function PrintReportPage({ params }: Props) {
               letterSpacing: '-0.16px',
             }}
           >
-            Software Development — Weekly Status Report
+            Software Development — Status Report
           </h1>
           <p
             style={{
