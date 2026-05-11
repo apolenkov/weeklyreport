@@ -215,7 +215,7 @@ export function mapPrismaToReportSection(
       workflowStatus: i.workflowStatus,
       carriedOver: i.carriedOver,
       completed: i.completed,
-      stageName: i.stageName,
+      stageIds: i.stageName ? i.stageName.split(', ').filter(Boolean) : undefined,
     })),
     risks: row.risks.map((r) => ({
       id: r.id,
@@ -223,7 +223,7 @@ export function mapPrismaToReportSection(
       risk: r.risk,
       impact: r.impact,
       mitigation: r.mitigation,
-      stageName: r.stageName,
+      stageIds: r.stageName ? r.stageName.split(', ').filter(Boolean) : undefined,
     })),
     decisions: row.decisions.map((d) => ({
       id: d.id,
@@ -232,13 +232,13 @@ export function mapPrismaToReportSection(
       deadline: d.deadline,
       impact: d.impact,
       resolvedAt: d.resolvedAt,
-      stageName: d.stageName,
+      stageIds: d.stageName ? d.stageName.split(', ').filter(Boolean) : undefined,
     })),
     priorities: row.priorities.map((p) => ({
       id: p.id,
       rank: p.rank,
       text: p.text,
-      stageName: p.stageName,
+      stageIds: p.stageName ? p.stageName.split(', ').filter(Boolean) : undefined,
     })),
   });
 }
@@ -357,7 +357,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               workflowStatus: i.workflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
-              stageName: i.stageName ?? null,
+              stageName: i.stageIds?.join(', ') ?? null,
             })),
           });
         }
@@ -371,7 +371,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
-              stageName: r.stageName ?? null,
+              stageName: r.stageIds?.join(', ') ?? null,
             })),
           });
         }
@@ -386,7 +386,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               deadline: d.deadline ?? null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
-              stageName: d.stageName ?? null,
+              stageName: d.stageIds?.join(', ') ?? null,
             })),
           });
         }
@@ -398,7 +398,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               reportSectionId: sectionId,
               rank: p.rank,
               text: p.text,
-              stageName: p.stageName ?? null,
+              stageName: p.stageIds?.join(', ') ?? null,
             })),
           });
         }

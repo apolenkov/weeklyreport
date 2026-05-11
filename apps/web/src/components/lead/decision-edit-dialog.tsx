@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import type { DecisionEntry } from './mock-data';
 import { StageMultiSelect } from './stage-multi-select';
-import { joinStageNames } from './stage-tags';
 
 type DecisionEditDialogProps = {
   readonly open: boolean;
@@ -39,11 +38,9 @@ export function DecisionEditDialog({
   const [owner, setOwner] = useState(decision?.owner ?? defaultOwner ?? '');
   const [impact, setImpact] = useState(decision?.impact ?? '');
   const [deadline, setDeadline] = useState(decision?.deadline ?? '');
-  // UFB-073: pre-select all owned stages on create; restore existing on edit.
-  const [stageName, setStageName] = useState<string>(
-    decision?.stageName && decision.stageName !== '—'
-      ? decision.stageName
-      : (joinStageNames(availableStages ?? []) ?? ''),
+  // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
+  const [stageIds, setStageIds] = useState<string[]>(
+    decision?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
   );
   // Per-field error map — same pattern as risk-edit-dialog. The single
   // bottom error string used to highlight only the first failure and
@@ -57,10 +54,8 @@ export function DecisionEditDialog({
       setOwner(decision?.owner ?? defaultOwner ?? '');
       setImpact(decision?.impact ?? '');
       setDeadline(decision?.deadline ?? '');
-      setStageName(
-        decision?.stageName && decision.stageName !== '—'
-          ? decision.stageName
-          : (joinStageNames(availableStages ?? []) ?? ''),
+      setStageIds(
+        decision?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
       );
       setErrors({});
     }
@@ -71,9 +66,10 @@ export function DecisionEditDialog({
     decision?.owner,
     decision?.impact,
     decision?.deadline,
-    decision?.stageName,
+    decision?.stageIds,
     defaultOwner,
     availableStages,
+    isCreate,
   ]);
 
   if (!open) return null;
@@ -100,7 +96,7 @@ export function DecisionEditDialog({
       owner: o,
       impact: im,
       deadline: deadline ? deadline : null,
-      stageName: stageName.trim() || '—',
+      stageIds: stageIds.length > 0 ? stageIds : undefined,
     });
   }
 
@@ -202,9 +198,9 @@ export function DecisionEditDialog({
 
           <StageMultiSelect
             id="dec-stage"
-            value={stageName}
+            value={stageIds}
             stages={availableStages ?? []}
-            onChange={(next) => setStageName(next ?? '')}
+            onChange={setStageIds}
           />
 
           {/* Impact */}

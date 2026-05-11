@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { PriorityEntry } from './mock-data';
 import { StageMultiSelect } from './stage-multi-select';
-import { joinStageNames } from './stage-tags';
 
 type PriorityEditDialogProps = {
   readonly open: boolean;
@@ -39,11 +38,9 @@ export function PriorityEditDialog({
 }: PriorityEditDialogProps) {
   const isCreate = priority === null;
   const [text, setText] = useState(priority?.text ?? '');
-  // UFB-073: pre-select all owned stages on create; restore existing on edit.
-  const [stageName, setStageName] = useState<string>(
-    priority?.stageName && priority.stageName !== '—'
-      ? priority.stageName
-      : (joinStageNames(availableStages ?? []) ?? ''),
+  // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
+  const [stageIds, setStageIds] = useState<string[]>(
+    priority?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
   );
   const [errors, setErrors] = useState<{ text?: string }>({});
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -51,17 +48,15 @@ export function PriorityEditDialog({
   useEffect(() => {
     if (!open) return;
     setText(priority?.text ?? '');
-    setStageName(
-      priority?.stageName && priority.stageName !== '—'
-        ? priority.stageName
-        : (joinStageNames(availableStages ?? []) ?? ''),
+    setStageIds(
+      priority?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
     );
     setErrors({});
     // Focus the input on open. requestAnimationFrame so the portal mount
     // has settled before we steal focus from the underlying overlay.
     const id = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(id);
-  }, [open, priority?.rank, priority?.text, priority?.stageName, availableStages]);
+  }, [open, priority?.rank, priority?.text, priority?.stageIds, availableStages, isCreate]);
 
   if (!open) return null;
 
@@ -76,7 +71,7 @@ export function PriorityEditDialog({
     onSave({
       rank: priority?.rank ?? nextRank,
       text: trimmed,
-      stageName: stageName.trim() || '—',
+      stageIds: stageIds.length > 0 ? stageIds : undefined,
     });
   }
 
@@ -148,9 +143,9 @@ export function PriorityEditDialog({
         <div className="mt-4">
           <StageMultiSelect
             id="priority-stage"
-            value={stageName}
+            value={stageIds}
             stages={availableStages ?? []}
-            onChange={(next) => setStageName(next ?? '')}
+            onChange={setStageIds}
           />
         </div>
 

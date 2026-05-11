@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import type { Product, RiskEntry } from './mock-data';
 import { StageMultiSelect } from './stage-multi-select';
-import { joinStageNames } from './stage-tags';
 
 type RiskEditDialogProps = {
   readonly open: boolean;
@@ -58,11 +57,9 @@ export function RiskEditDialog({
   const [productId, setProductId] = useState(risk?.productId ?? seedProduct?.id ?? '');
   const [impact, setImpact] = useState(initialImpact ?? '');
   const [mitigation, setMitigation] = useState(initialMitigation ?? '');
-  // UFB-073: pre-select all owned stages on create; restore existing on edit.
-  const [stageName, setStageName] = useState<string>(
-    risk?.stageName && risk.stageName !== '—'
-      ? risk.stageName
-      : (joinStageNames(stagesForProduct?.(seedProduct?.id ?? '') ?? []) ?? ''),
+  // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
+  const [stageIds, setStageIds] = useState<string[]>(
+    risk?.stageIds ? [...risk.stageIds] : (isCreate ? [...(stagesForProduct?.(seedProduct?.id ?? '') ?? [])] : []),
   );
   // Per-field error map: each required field's empty validation reads
   // its own message and toggles its border red. Replaces the old single
@@ -77,10 +74,8 @@ export function RiskEditDialog({
       setProductId(risk?.productId ?? seedProduct?.id ?? '');
       setImpact(initialImpact ?? '');
       setMitigation(initialMitigation ?? '');
-      setStageName(
-        risk?.stageName && risk.stageName !== '—'
-          ? risk.stageName
-          : (joinStageNames(stagesForProduct?.(seedProduct?.id ?? '') ?? []) ?? ''),
+      setStageIds(
+        risk?.stageIds ? [...risk.stageIds] : (isCreate ? [...(stagesForProduct?.(seedProduct?.id ?? '') ?? [])] : []),
       );
       setErrors({});
     }
@@ -90,12 +85,13 @@ export function RiskEditDialog({
     risk?.text,
     risk?.severity,
     risk?.productId,
-    risk?.stageName,
+    risk?.stageIds,
     seedProduct?.id,
     initialImpact,
     initialMitigation,
     defaultProductId,
     stagesForProduct,
+    isCreate,
   ]);
 
   if (!open) return null;
@@ -124,7 +120,7 @@ export function RiskEditDialog({
       id: risk?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      stageName: stageName.trim() || '—',
+      stageIds: stageIds.length > 0 ? stageIds : undefined,
       severity,
       text: t,
       impact: im,
@@ -242,9 +238,9 @@ export function RiskEditDialog({
 
           <StageMultiSelect
             id="risk-stage"
-            value={stageName}
+            value={stageIds}
             stages={stagesForProduct?.(productId) ?? []}
-            onChange={(next) => setStageName(next ?? '')}
+            onChange={setStageIds}
           />
 
           {/* Severity chips */}

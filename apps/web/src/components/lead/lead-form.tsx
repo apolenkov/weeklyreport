@@ -337,7 +337,7 @@ function sectionToDraftPayload(
         workflowStatus: it.workflowStatus,
         carriedOver: it.carriedOver ?? false,
         completed: it.completed ?? null,
-        stageName: it.stageName ?? null,
+        stageIds: it.stageIds,
       })),
     risks: section.risks
       .filter((r) => hasText(r.risk) && hasText(r.mitigation))
@@ -347,7 +347,7 @@ function sectionToDraftPayload(
         risk: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
-        stageName: r.stageName ?? null,
+        stageIds: r.stageIds,
       })),
     decisions: section.decisions
       .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
@@ -358,7 +358,7 @@ function sectionToDraftPayload(
         deadline: d.deadline ?? null,
         impact: d.impact,
         resolvedAt: d.resolvedAt ?? null,
-        stageName: d.stageName ?? null,
+        stageIds: d.stageIds,
       })),
     priorities: section.priorities
       .filter((p) => hasText(p.text))
@@ -366,7 +366,7 @@ function sectionToDraftPayload(
         id: p.id,
         rank: p.rank,
         text: p.text,
-        stageName: p.stageName ?? null,
+        stageIds: p.stageIds,
       })),
   };
 }
