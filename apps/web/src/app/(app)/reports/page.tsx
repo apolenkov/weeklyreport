@@ -83,7 +83,7 @@ export default function ReportsPage() {
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
               {isLead
                 ? 'Your drafts and published group reports in one place.'
-                : 'Published weekly group report archive.'}
+                : 'Published group report archive.'}
             </p>
           </header>
 
