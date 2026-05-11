@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 
@@ -10,6 +10,7 @@ import { PulseBackground } from '../components/landing/pulse-background';
 import { PulseMark } from '../components/landing/pulse-mark';
 import { TaglineCycler } from '../components/landing/tagline-cycler';
 import { useTRPC } from '../lib/trpc-context';
+import { readLastRole, type LastRoleRecord } from '../lib/last-role';
 
 const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
 
@@ -47,6 +48,42 @@ const DEFAULT_FOR_ROLE: Record<Role, string> = {
   // /head/dashboard layout permits director read-only.
   director: '/head/dashboard',
 };
+
+/**
+ * UFB-071 (2026-05-11): seeded dev-mode emails per role. The
+ * «Change role» dropdown uses these as the fallback email when no
+ * persisted hint exists for that role. Must stay in sync with the
+ * `emailByRole` table in `apps/api/src/modules/auth/auth.routes.ts`
+ * and the seeded users in `prisma/seed-simple.ts`.
+ */
+const DEV_EMAIL_FOR_ROLE: Record<Role, string> = {
+  lead: 'lead1@customreport.local',
+  head: 'head@customreport.local',
+  admin: 'admin@customreport.local',
+  viewer: 'viewer@customreport.local',
+  director: 'director@customreport.local',
+};
+
+const ROLE_LABEL: Record<Role, string> = {
+  lead: 'Lead',
+  head: 'Head',
+  admin: 'Admin',
+  viewer: 'Viewer',
+  director: 'Director',
+};
+
+/**
+ * Build the `/auth/dev-login` URL for a given role + email, with the
+ * post-login redirect honouring the role's default landing route.
+ */
+function devLoginHref(role: Role, email: string): string {
+  const params = new URLSearchParams({
+    role,
+    email,
+    redirect: DEFAULT_FOR_ROLE[role],
+  });
+  return `/auth/dev-login?${params.toString()}`;
+}
 
 const FALLBACK_REDIRECT = '/head/dashboard';
 
@@ -116,6 +153,17 @@ function LoginPageBody() {
     defaultRedirectFor(session?.role as Role | undefined),
   );
 
+  // UFB-071 (2026-05-11): «Last session» resume hint. Read from
+  // localStorage in a client-only useEffect (never during render /
+  // SSR) so the first paint matches the server-rendered HTML and the
+  // hint pops in only when hydration has run. AUTH_STUB-only.
+  const [lastRole, setLastRole] = useState<LastRoleRecord | null>(null);
+  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
+  useEffect(() => {
+    if (!AUTH_STUB) return;
+    setLastRole(readLastRole());
+  }, []);
+
   // UFB-033: never auto-redirect in AUTH_STUB mode. The API returns a
   // DEV_SESSION fallback when no cookie is present, which previously caused
   // an infinite loop: landing redirects to /head/dashboard → proxy.ts sees
@@ -172,10 +220,15 @@ function LoginPageBody() {
             Status Reporting System
           </p>
 
+          {/* UFB-071: when a last-role hint exists, the primary CTA
+              points at that role's dev-login (one-click resume). Falls
+              back to admin in stub mode / SSO in real mode. */}
           <a
             href={
               AUTH_STUB
-                ? '/auth/dev-login?role=admin&email=admin@customreport.local&redirect=%2Fadmin'
+                ? lastRole
+                  ? devLoginHref(lastRole.role, lastRole.email)
+                  : '/auth/dev-login?role=admin&email=admin@customreport.local&redirect=%2Fadmin'
                 : ssoHref
             }
             className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-[background-color,opacity,transform] hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"
@@ -184,8 +237,13 @@ function LoginPageBody() {
               boxShadow: '0 2px 12px rgba(0,98,65,0.2)',
             }}
             aria-label={
-              AUTH_STUB ? 'Enter application as admin' : 'Sign in with corporate SSO'
+              AUTH_STUB
+                ? lastRole
+                  ? `Enter application as ${lastRole.name} (${ROLE_LABEL[lastRole.role]})`
+                  : 'Enter application as admin'
+                : 'Sign in with corporate SSO'
             }
+            data-testid="primary-cta"
           >
             <svg
               width="18"
@@ -206,9 +264,62 @@ function LoginPageBody() {
 
           <p className="mt-6 text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
             {AUTH_STUB
-              ? 'Dev mode · default role: admin · switch role from in-app menu'
+              ? lastRole
+                ? `Resuming as ${ROLE_LABEL[lastRole.role]} · pick a different role below`
+                : 'Dev mode · default role: admin · switch role from in-app menu'
               : 'Keycloak · SAML 2.0 · Corporate SSO'}
           </p>
+
+          {/* UFB-071: last-session hint with «Change role» picker. Only
+              rendered in AUTH_STUB mode AND when a hint is stored.
+              `lastRole` is null on the first client render (set in a
+              useEffect after hydration) so the SSR HTML matches and no
+              hydration mismatch occurs. */}
+          {AUTH_STUB && lastRole ? (
+            <div
+              className="mt-4 rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
+              data-testid="last-role-hint"
+            >
+              <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
+                Last session:{' '}
+                <span className="font-semibold text-[var(--color-foreground)]">
+                  {lastRole.name}
+                </span>{' '}
+                · {ROLE_LABEL[lastRole.role]}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowRoleSwitcher((v) => !v)}
+                className="mt-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-2 hover:underline"
+                aria-expanded={showRoleSwitcher}
+                aria-controls="last-role-switcher"
+                data-testid="last-role-change"
+              >
+                {showRoleSwitcher ? 'Hide options' : 'Change role'}
+              </button>
+              {showRoleSwitcher ? (
+                <ul
+                  id="last-role-switcher"
+                  className="mt-2 grid grid-cols-2 gap-1.5"
+                  data-testid="last-role-switcher"
+                >
+                  {(
+                    ['lead', 'head', 'admin', 'viewer', 'director'] as const
+                  ).map((role) => (
+                    <li key={role}>
+                      <a
+                        href={devLoginHref(role, DEV_EMAIL_FOR_ROLE[role])}
+                        className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
+                        data-testid={`last-role-option-${role}`}
+                      >
+                        {ROLE_LABEL[role]}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="mx-auto my-10 h-px w-full max-w-[320px] bg-[#ece8e2]" />
 
