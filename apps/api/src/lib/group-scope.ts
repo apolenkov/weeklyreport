@@ -1,6 +1,14 @@
 import type { UserSession } from "@customreport/shared";
 
 /**
+ * TODO(Phase-59-multi-org): future extension layer.
+ * When Organization stops being a singleton and BusinessUnit is added
+ * as an optional cluster between Org and Group, this helper grows a
+ * sibling `businessUnitScopeFilter` for the `super_head` role. Today
+ * it filters only on ReportingGroup membership; tomorrow it must also
+ * narrow by `user.organizationId` and (when applicable) `user.businessUnitId`.
+ * See .planning/phases/59-multi-org-hierarchy/59-CONTEXT.md.
+ *
  * Phase 46-01 (UFB-040): canonical group-scope filter helper.
  *
  * Returns a Prisma `where` fragment that callsites spread into their own
