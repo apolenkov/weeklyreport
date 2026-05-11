@@ -63,7 +63,6 @@ const defaultSettings: AppSettings = {
   firstDayOfWeek: 1,
   deadlineDayOfWeek: 5,
   deadlineTime: "18:00",
-  periodCadence: "weekly",
   maxOpenPeriods: 1,
   requireAllSectionsToPublish: true,
   allowReopenAfterPublish: true,
