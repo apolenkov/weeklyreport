@@ -129,7 +129,7 @@ export function WeeklyReportPage({
         authorId: focusedAuthorId,
       });
       toast.error(
-        formatClientErrorMessage("Failed to load weekly report", weeklyQ.error),
+        formatClientErrorMessage("Failed to load status report", weeklyQ.error),
       );
     }
   }, [weeklyQ.isError, weeklyQ.error, reportId, period, focusedAuthorId]);
