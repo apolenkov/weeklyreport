@@ -36,7 +36,7 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   // UFB-057 / Phase 57: 'director' shares the head dashboard surface but
   // NOT the weekly-report submission surface (director is read-only).
   { href: "/head/dashboard", label: "Dashboard", roles: ["head", "director"] },
-  { href: "/head/report", label: "Weekly Report", roles: ["head"] },
+  { href: "/head/report", label: "Status Report", roles: ["head"] },
   {
     // UFB-022: admin role sees only the Admin section, not the
     // department dashboard/report/archive surfaces.
