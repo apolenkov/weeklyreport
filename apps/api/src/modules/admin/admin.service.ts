@@ -1,4 +1,6 @@
 import {
+  adminCreatePeriodManualResultSchema,
+  adminCreatePeriodManualSchema,
   adminProjectSchema,
   adminReminderRuleSchema,
   adminSnapshotSchema,
@@ -11,6 +13,8 @@ import {
   reportingGroupSchema,
   stageAssignmentSchema,
   reportPeriodSchema,
+  type AdminCreatePeriodManualInput,
+  type AdminCreatePeriodManualResult,
   type AdminProject,
   type AdminReminderRule,
   type AdminSnapshot,
@@ -28,12 +32,28 @@ import {
   type StageAssignment,
 } from "@customreport/shared";
 
+import { computeDeadline } from "../../lib/business-date.js";
 import { createNullLogger, type AppLogger } from "../../lib/logger";
+import { initialPeriodState } from "../weekly-report/period-state.js";
 
 export class AdminAccessError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AdminAccessError";
+  }
+}
+
+/**
+ * UFB-063: thrown by `createPeriodManual` when the requested
+ * [periodStart, periodEnd] range overlaps any existing Report. Mapped to
+ * `BAD_REQUEST` by `mapDomainError` so the web layer can pipe the message
+ * straight to a toast and the admin sees which existing period is in the
+ * way.
+ */
+export class AdminPeriodOverlapError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminPeriodOverlapError";
   }
 }
 
@@ -71,6 +91,32 @@ export interface AdminRepository {
   unarchivePeriod?(
     periodId: string,
   ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }>;
+  // UFB-063: detect any existing Report whose [periodStart, periodEnd]
+  // overlaps the supplied half-open range. The service uses this BEFORE
+  // calling createPeriodManual to surface a friendly error pointing at
+  // the blocking row. Returns the first overlap (newest-first); null when
+  // free. Optional so in-memory test repos can opt out.
+  findOverlappingPeriod?(input: {
+    periodStart: Date;
+    periodEnd: Date;
+  }): Promise<{ id: string; periodStart: Date; periodEnd: Date } | null>;
+  // UFB-063: mint a Report row with the supplied dates + initial state.
+  // Mirrors PeriodCreatorScheduler.runOnce's bare `report.create` — no
+  // section seeding, no PolicyApplicator (deferred; documented in the
+  // 063 SUMMARY as the same gap that affects auto-create).
+  createPeriodManual?(input: {
+    periodStart: Date;
+    periodEnd: Date;
+    deadline: Date;
+    weekLabel: string | null;
+    periodState: PeriodState;
+  }): Promise<{
+    id: string;
+    periodStart: Date;
+    periodEnd: Date;
+    deadline: Date;
+    periodState: PeriodState;
+  }>;
   // UFB-054 (Phase 56-B): explicit Group ↔ Product M:M edge mutations and
   // read paths. Optional so existing in-memory test repositories that
   // predate this surface keep compiling — service callers throw when the
@@ -441,6 +487,125 @@ export class AdminService {
     this.logger.info("archived period", { periodId });
     await this.repository.archivePeriod(periodId);
     return { success: true };
+  }
+
+  /**
+   * UFB-063: admin escape hatch that mints a Period without waiting for
+   * the daily `PeriodCreatorScheduler` (00:05 UTC cron). Targets fresh
+   * dev/staging DBs (zero Reports → admin is blocked) and one-off
+   * backfill cycles.
+   *
+   * Defaulting rules (mirrors the scheduler's date math):
+   *   - `periodEnd` defaults to `periodStart + (settings.periodLengthDays - 1)`
+   *     calendar days at end-of-day (23:59:59.999) so a 7-day period
+   *     starting Mon spans Mon..Sun inclusive.
+   *   - `deadline` defaults to `computeDeadline(periodStart, settings.defaultDeadlineDays,
+   *     settings.workingDays, settings.defaultTimezone, hourFromDeadlineTime)`.
+   *
+   * Validation:
+   *   - `periodEnd >= periodStart` (after applying default).
+   *   - `findOverlappingPeriod` is consulted BEFORE the create to surface
+   *     a friendly error pointing at the blocking row (admin-visible date
+   *     range, not just "already exists").
+   *
+   * The initial `periodState` is derived via `initialPeriodState` — same
+   * rule the scheduler uses (`'scheduled'` when start is in the future,
+   * `'open'` otherwise). The scheduler skips PolicyApplicator on create
+   * (pre-existing gap, see SUMMARY); we mirror that exactly so the two
+   * creation paths stay behaviourally identical and a future fix lands
+   * in one place.
+   */
+  async createPeriodManual(
+    rawInput: AdminCreatePeriodManualInput,
+    options: { now?: Date } = {},
+  ): Promise<AdminCreatePeriodManualResult> {
+    if (!this.repository.createPeriodManual) {
+      throw new Error(
+        "AdminRepository.createPeriodManual is not implemented for this repository.",
+      );
+    }
+    const input = adminCreatePeriodManualSchema.parse(rawInput);
+    const settings = await this.getSettings();
+    const now = options.now ?? new Date();
+
+    // -- Defaults -------------------------------------------------------
+    // periodEnd defaults to (periodStart + periodLengthDays - 1) at the
+    // very end of that day (23:59:59.999 UTC) — matches the scheduler's
+    // (periodStart, periodEnd) shape (start = Monday 00:00:00, end =
+    // Sunday 23:59:59) for a 7-day cycle.
+    const periodEnd =
+      input.periodEnd ??
+      new Date(
+        input.periodStart.getTime() +
+          (settings.periodLengthDays - 1) * 24 * 3_600_000 +
+          (24 * 3_600_000 - 1),
+      );
+
+    if (periodEnd.getTime() < input.periodStart.getTime()) {
+      throw new AdminPeriodOverlapError(
+        `periodEnd (${periodEnd.toISOString()}) is before periodStart (${input.periodStart.toISOString()}).`,
+      );
+    }
+
+    // deadlineTime is "HH:MM"; computeDeadline takes an hour integer. We
+    // strip minutes (the scheduler already does — its hardcoded `18`
+    // matches the default "18:00"). When future plans add sub-hour
+    // granularity, both this call site and the scheduler should be
+    // updated together.
+    const [hourStr] = settings.deadlineTime.split(":");
+    const deadlineHour = Number(hourStr ?? "18");
+
+    const deadline =
+      input.deadline ??
+      computeDeadline(
+        input.periodStart,
+        settings.defaultDeadlineDays,
+        settings.workingDays,
+        settings.defaultTimezone,
+        deadlineHour,
+      );
+
+    // -- Overlap gate ---------------------------------------------------
+    if (this.repository.findOverlappingPeriod) {
+      const conflict = await this.repository.findOverlappingPeriod({
+        periodStart: input.periodStart,
+        periodEnd,
+      });
+      if (conflict) {
+        throw new AdminPeriodOverlapError(
+          `A period already exists for these dates: ${conflict.periodStart
+            .toISOString()
+            .slice(0, 10)}…${conflict.periodEnd.toISOString().slice(0, 10)}.`,
+        );
+      }
+    }
+
+    // -- Mint -----------------------------------------------------------
+    const periodState = initialPeriodState(input.periodStart, now);
+    const weekLabel = input.weekLabel ?? null;
+
+    this.logger.info("creating period manually", {
+      periodStart: input.periodStart.toISOString(),
+      periodEnd: periodEnd.toISOString(),
+      deadline: deadline.toISOString(),
+      periodState,
+    });
+
+    const created = await this.repository.createPeriodManual({
+      periodStart: input.periodStart,
+      periodEnd,
+      deadline,
+      weekLabel,
+      periodState,
+    });
+
+    return adminCreatePeriodManualResultSchema.parse({
+      periodId: created.id,
+      periodStart: created.periodStart,
+      periodEnd: created.periodEnd,
+      deadline: created.deadline,
+      periodState: created.periodState,
+    });
   }
 
   /**
