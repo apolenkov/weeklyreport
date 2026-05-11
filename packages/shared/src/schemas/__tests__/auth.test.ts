@@ -179,7 +179,7 @@ describe('userSessionSchema — nullable JWT fields (BUG-009)', () => {
 
 describe('userSessionSchema — role validation', () => {
   it('accepts each valid session role in context of full session', () => {
-    for (const role of ['lead', 'head', 'admin', 'viewer'] as const) {
+    for (const role of ['lead', 'head', 'admin', 'viewer', 'director'] as const) {
       const session = { ...validSession(), role };
       const result = userSessionSchema.safeParse(session);
       expect(result.success).toBe(true);

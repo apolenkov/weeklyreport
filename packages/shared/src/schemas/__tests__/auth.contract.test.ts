@@ -24,6 +24,10 @@ describe('roleSchema', () => {
     expect(roleSchema.safeParse('admin').success).toBe(true);
   });
 
+  it('accepts "director" — UFB-057 / Phase 57 added director as leadership-audience role', () => {
+    expect(roleSchema.safeParse('director').success).toBe(true);
+  });
+
   it('rejects empty string', () => {
     expect(roleSchema.safeParse('').success).toBe(false);
   });
