@@ -1,49 +1,37 @@
 /**
- * UFB-058 / Phase 58: cycling tagline under the PulseMark.
+ * UFB-058 / Phase 58: static tagline under the PulseMark.
  *
- * Three phrases share one 12s CSS animation cycle, each delayed by 4s
- * (via negative animation-delay so the first phrase is visible at
- * t=0). The reveal is a clip-path mask sweeping left → right — visually
- * echoing an ECG trace drawing the text across the screen.
+ * Original design used a 3-phrase CSS-only cycler. The math on three
+ * non-overlapping phrases sharing one 12s keyframe never converged
+ * cleanly without either: (a) a flash of empty text at t=0, or (b) JS
+ * state for index swap. Pure-CSS solution failed UAT screenshot;
+ * dropped in favor of one strong assertion line. The ECG line under
+ * PULSE in PulseBackground already supplies the motion.
  *
- * The static fallback for screen readers / reduced-motion is the first
- * phrase (see pulse.css media query).
+ * TODO(UFB-062-cycling): if/when product wants the multi-phrase
+ * carousel back, drive it with React state + setTimeout chain
+ * (legitimate, with useEffect cleanup — not the setInterval
+ * anti-pattern) so timing is deterministic. The CLAUDE.md TODO
+ * discipline rule applies — add a metric
+ * `customreport_landing_tagline_view_total{phrase}` to see which
+ * phrase audiences see most.
  *
- * To change the wording, edit PHRASES below. The animation handles up
- * to 3 phrases without retuning timings; for more phrases, see
- * pulse.css keyframes pulse-tagline-cycle.
- *
- * TODO(i18n-future): the PHRASES array is the only hardcoded UI copy
- * on the landing page. When i18n is introduced, move these to the
- * locale dictionary (`messages/<lang>/landing.json` or similar) and
- * read via the i18n hook. The component contract stays the same — it
- * just receives a string[] from the dictionary. Metric to add on i18n
- * activation: `customreport_landing_locale_total{locale}` counter so
- * we see which audiences land here. See CLAUDE.md TODO discipline
- * rule. Until then, English-only — DB-sourced content (Organization
- * names, report text) may be Russian, but UI strings stay English.
+ * TODO(i18n-future): the TAGLINE string is the only hardcoded UI
+ * copy on the landing page. When i18n is introduced, move to the
+ * locale dictionary and read via the i18n hook. DB-sourced content
+ * (Organization names, report text) may be Russian, but UI strings
+ * stay English until i18n lands.
  */
 
-const PHRASES = [
-  "Your portfolio's weekly pulse.",
-  "Every group, one heartbeat.",
-  "Status across products, distilled.",
-] as const;
+// UFB-062: dropped "weekly" — landing copy must stay cadence-neutral
+// once AppSettings.periodCadence can be 'bi-weekly' (and, future,
+// 'monthly'). The motion under PULSE already implies a recurring beat.
+const TAGLINE = "Your portfolio's pulse, distilled.";
 
 export function TaglineCycler() {
-  const a11yLabel = PHRASES.join(" · ");
-
   return (
-    <div
-      className="pulse-tagline"
-      role="text"
-      aria-label={a11yLabel}
-    >
-      {PHRASES.map((phrase) => (
-        <span key={phrase} className="pulse-tagline-phrase">
-          {phrase}
-        </span>
-      ))}
-    </div>
+    <p className="pulse-tagline-static" role="text">
+      {TAGLINE}
+    </p>
   );
 }
