@@ -71,6 +71,6 @@ export type OrganizationPublic = z.infer<typeof organizationPublicSchema>;
  * (terminal logs, fallback PDF chrome) without font fallback noise.
  */
 export const DEFAULT_ORGANIZATION_IDENTITY: OrganizationPublic = {
-  shortName: 'Org',
+  shortName: 'ORG',
   fullName: 'Organization',
 };

@@ -420,6 +420,33 @@
 
 Это правило **обязательно** для всех deferred / seeds-only фаз. Phase 54 (AI/RAG) и Phase 55 (Telegram) ночи 2026-05-11 были выпущены в seeds-режиме — проверь, что в их коде есть TODO-комментарии + заглушки + метрики по этому правилу. Если чего-то не хватает — допиши при первой же правке этих файлов.
 
+### UI strings — English only до i18n (2026-05-11)
+
+Все статические UI-строки в коде — на **английском**. Никаких русских литералов в JSX / `aria-label` / `toast` / `placeholder` / button text / empty state.
+
+**Можно по-русски (это не литералы, а данные):**
+
+- содержимое из БД, рендерится через `{variable}` — `organization.fullName`, `report.section.text`, `project.name`, `user.name`, audit log entries
+- Тестовые fixtures (`*.test.*`, `*.spec.*`, seed files) — симулируют реальный ввод
+
+**Запрещено (литералы в production коде):**
+
+- `<p>Нет данных</p>` → `<p>No data</p>`
+- `toast.success("Сохранено")` → `toast.success("Saved")`
+- `aria-label="Закрыть"` → `aria-label="Close"`
+- `placeholder="Поиск..."` → `placeholder="Search..."`
+- Любые русские строки в `apps/web/src/**/*.tsx` вне комментариев / JSDoc / fixtures
+
+**Reason:** проект ещё не на i18n. Когда i18n внедрим (отдельная фаза, TODO в `landing/tagline-cycler.tsx`), все UI-строки переедут в locale dictionary (`messages/<lang>/...json`), и тогда русский станет одним из выборов. До тех пор — английский = единственный источник правды для UI-копи. Это сохраняет код deployable для любого tenant'а (вспомни UFB-060: «PEO» fallback тоже не должен жить в коде — та же логика).
+
+**How to apply:**
+
+- любой PR / коммит c новым русским литералом в `apps/web/src/**/*.tsx` (не в тестах) — defect, переписать на английский
+- если строка нужна русскоговорящему пользователю — данные кладутся в БД (seed) и UI рендерит `{data}`, не литерал
+- pre-send self-check: `grep -nE '[а-яА-Я]' <changed file>` — каждое совпадение должно быть в комментарии / JSDoc / fixture, иначе переписать
+
+**TODO(i18n-future):** массовый migration UI-копии в locale dictionary + locale switcher + `customreport_landing_locale_total{locale}` metric — отдельная фаза.
+
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->

@@ -191,7 +191,7 @@ function NavIcon({ href }: { readonly href: string }) {
 export function NavBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user, organization } = useSession();
+  const { user, organization, isLoading: sessionLoading } = useSession();
   const activeReportsTab = searchParams.get("tab") ?? null;
 
   const role: Role | null = user?.role ?? null;
@@ -204,14 +204,15 @@ export function NavBar() {
   // (legacy seed quirk), show only the name to avoid "X · X".
   const nameRoleSame = user ? user.name === roleLabel : false;
 
-  // UFB-047 / Phase 48-A: brand strings sourced from the Organization
-  // singleton. The session may briefly lack `organization` during the first
-  // paint after Phase 48-A deploys (older JWTs); UFB-060 (2026-05-11)
-  // replaces the hard-coded 'PEO' fallback with the generic
-  // DEFAULT_ORGANIZATION_IDENTITY so the chrome never leaks one tenant's
-  // brand into another deployment.
-  const orgShortName =
-    organization?.shortName ?? DEFAULT_ORGANIZATION_IDENTITY.shortName;
+  // UFB-066 (2026-05-11): show a skeleton placeholder for the brand pill
+  // while the session query is in-flight, instead of flashing the
+  // DEFAULT_ORGANIZATION_IDENTITY fallback ('ORG') and then swapping to the
+  // real tenant brand ('PEO'). The flash was the «ORG → PEO» pop user saw
+  // on every cold reload.
+  const orgResolved = !sessionLoading && organization !== null;
+  const orgShortName = orgResolved
+    ? organization.shortName
+    : DEFAULT_ORGANIZATION_IDENTITY.shortName;
   // First letter of each word in shortName (up to 2 chars) for the round
   // monogram badge. For a 2-3-letter shortName like 'PEO' the monogram is
   // 'DT' / 'PE' — visually consistent with the legacy 'CR' monogram.
@@ -235,16 +236,34 @@ export function NavBar() {
         <a
           href={role ? getLogoHref(role) : "/"}
           className="flex items-center gap-2.5 py-4"
-          aria-label={`${orgShortName} home`}
+          aria-label={orgResolved ? `${orgShortName} home` : "Loading"}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)]">
-            <span className="font-[family-name:var(--font-sans)] text-[13px] font-bold tracking-tight text-white">
-              {orgMonogram}
-            </span>
-          </div>
-          <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-tight text-[var(--color-foreground)]">
-            {orgShortName}
-          </span>
+          {orgResolved ? (
+            <>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)]">
+                <span className="font-[family-name:var(--font-sans)] text-[13px] font-bold tracking-tight text-white">
+                  {orgMonogram}
+                </span>
+              </div>
+              <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-tight text-[var(--color-foreground)]">
+                {orgShortName}
+              </span>
+            </>
+          ) : (
+            <>
+              {/* UFB-066: brand skeleton until session.organization resolves.
+                  Matches real brand-pill dimensions (h-8 monogram + 80px
+                  text width) so the swap is zero-CLS. */}
+              <div
+                className="h-8 w-8 rounded-full bg-[var(--color-muted)]/40"
+                aria-hidden="true"
+              />
+              <div
+                className="h-4 w-20 rounded bg-[var(--color-muted)]/40"
+                aria-hidden="true"
+              />
+            </>
+          )}
         </a>
 
         {/* Navigation — N-2: pill active state, N-3: per-link icon.

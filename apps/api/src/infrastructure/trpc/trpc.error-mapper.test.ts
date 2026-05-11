@@ -5,7 +5,10 @@ import { mapDomainError } from './trpc.error-mapper.js';
 import { ReportSectionDomainError } from '../../modules/report-sections/report-sections.service.js';
 import { ReviewAccessError } from '../../modules/review/review.service.js';
 import { PublicationAccessError } from '../../modules/publication/publication.service.js';
-import { AdminAccessError } from '../../modules/admin/admin.service.js';
+import {
+  AdminAccessError,
+  AdminPeriodOverlapError,
+} from '../../modules/admin/admin.service.js';
 import { PdfExportDomainError } from '../../modules/pdf-export/pdf-export.service.js';
 import { ReminderDomainError } from '../../modules/reminders/reminders.service.js';
 import { CarryOverDomainError } from '../../modules/carry-over/carry-over.service.js';
@@ -185,6 +188,23 @@ describe('mapDomainError', () => {
   // -----------------------------------------------------------------------
   // ReminderDomainError -> BAD_REQUEST
   // -----------------------------------------------------------------------
+
+  // UFB-063: AdminPeriodOverlapError -> BAD_REQUEST so the «period
+  // already exists» message pipes verbatim to the admin toast.
+  describe('AdminPeriodOverlapError -> BAD_REQUEST', () => {
+    it('maps overlap error to BAD_REQUEST with the original message', () => {
+      const error = new AdminPeriodOverlapError(
+        'A period already exists for these dates: 2026-05-04…2026-05-10.',
+      );
+      const mapped = mapDomainError(error);
+
+      expect(mapped.code).toBe('BAD_REQUEST');
+      expect(mapped.message).toBe(
+        'A period already exists for these dates: 2026-05-04…2026-05-10.',
+      );
+      expect(mapped.cause).toBe(error);
+    });
+  });
 
   describe('ReminderDomainError -> BAD_REQUEST', () => {
     it('maps "rule not found" to BAD_REQUEST', () => {

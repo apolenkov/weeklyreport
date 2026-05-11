@@ -13,6 +13,31 @@ type Props = {
   readonly reportId: string;
 };
 
+// UFB-066: «AI Insights» section icon — four-pointed sparkle (the
+// generative-AI shorthand used by Anthropic, Google, Notion, Figma).
+// Same 24px box + primary stroke as Portfolio's GridIcon for visual
+// consistency across report sections.
+function AiSparkleIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 flex-shrink-0"
+      style={{ color: "var(--color-primary)" }}
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {/* large sparkle */}
+      <path d="M12 3 L13.5 9.5 L20 11 L13.5 12.5 L12 19 L10.5 12.5 L4 11 L10.5 9.5 Z" />
+      {/* small companion sparkle top-right */}
+      <path d="M19 4 L19.5 5.6 L21 6 L19.5 6.4 L19 8 L18.5 6.4 L17 6 L18.5 5.6 Z" />
+    </svg>
+  );
+}
+
 export function AiSummaryCard({ reportId }: Props) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -52,60 +77,46 @@ export function AiSummaryCard({ reportId }: Props) {
   if (!data) return null;
 
   if (!data.available) {
-    // UFB-066: previously this rendered one muted line «AI summary
-    // unavailable.» with no AI affordance — felt unrelated to AI and read
-    // as a generic empty state. New placeholder reads as a paused AI
-    // generation: sparkle icon + 3 shimmer bars approximating the summary
-    // shape + one explicit reason line. Once a real provider is wired
-    // (Phase 54 activation, AI_PROVIDER env), this branch is rarely hit.
+    // UFB-066 (2026-05-11): match the Portfolio Overview card style — same
+    // radius, border, gradient bg, layered shadow, primary-color icon
+    // header. Reads as a real AI section (sparkle icon + «AI Insights»
+    // header), not as a generic empty muted line. All copy English per
+    // CLAUDE.md «UI strings — English only до i18n» rule.
     return (
-      <div
-        className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/85 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
-        aria-label="AI summary pending"
-      >
-        <div className="flex items-center gap-2">
-          <span
-            className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700"
-            aria-hidden="true"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+      <div className="mt-4 overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
+        <div className="flex w-full items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <AiSparkleIcon />
+            <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
+              AI Insights
+            </span>
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-amber-700"
+              aria-label="AI summary pending"
             >
-              <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2z" />
-              <circle cx="19" cy="4" r="1" />
-              <circle cx="5" cy="19" r="1" />
-            </svg>
-            AI · pending
-          </span>
-          <span className="text-xs text-[var(--color-muted-foreground)]">
-            нет данных для генерации
-          </span>
-        </div>
-        {/* 3-bar shimmer placeholder approximating the real summary shape:
-            one wide narrative line + two short highlight tags. */}
-        <div className="mt-3 space-y-2">
-          <div className="h-3 w-11/12 rounded bg-[var(--color-muted)]/40" />
-          <div className="h-3 w-9/12 rounded bg-[var(--color-muted)]/30" />
-          <div className="mt-2 flex gap-2">
-            <div className="h-4 w-20 rounded bg-[var(--color-muted)]/30" />
-            <div className="h-4 w-16 rounded bg-[var(--color-muted)]/30" />
-            <div className="h-4 w-24 rounded bg-[var(--color-muted)]/30" />
+              pending
+            </span>
           </div>
         </div>
-        <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted-foreground)]">
-          AI summary появится после того, как в периоде будут заполненные
-          секции. {/* TODO(Phase-54-activation): when real provider lands,
-          this branch should rarely surface — fold into a more specific
-          «embedding ingestion pending» message once AiIngestionJob worker
-          is live. */}
-        </p>
+        <div className="px-4 pb-4">
+          {/* Shimmer placeholder matching the real summary shape:
+              1 wide narrative line, 1 medium, then 3 highlight chips. */}
+          <div className="space-y-2">
+            <div className="h-3 w-11/12 rounded bg-[rgba(0,0,0,0.06)]" />
+            <div className="h-3 w-8/12 rounded bg-[rgba(0,0,0,0.05)]" />
+          </div>
+          <div className="mt-3 flex gap-2">
+            <div className="h-5 w-20 rounded-md bg-[rgba(0,0,0,0.05)]" />
+            <div className="h-5 w-16 rounded-md bg-[rgba(0,0,0,0.05)]" />
+            <div className="h-5 w-24 rounded-md bg-[rgba(0,0,0,0.05)]" />
+          </div>
+          <p className="mt-4 text-xs leading-relaxed text-[var(--color-muted-foreground)]">
+            Summary will be generated once sections are submitted for this period.
+            {/* TODO(Phase-54-activation): when real provider lands, fold this
+                into a more specific «ingestion pending» state once the
+                AiIngestionJob worker is live. */}
+          </p>
+        </div>
       </div>
     );
   }
