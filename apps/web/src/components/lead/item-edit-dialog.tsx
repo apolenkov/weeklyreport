@@ -159,7 +159,7 @@ export function ItemEditDialog({
       role="presentation"
     >
       <div
-        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl"
+        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
