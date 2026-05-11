@@ -25,7 +25,17 @@ export function selectTelegramAdapter(): TelegramAdapter {
   if (token === '') {
     return new MockTelegramAdapter();
   }
-  throw new Error('Telegram bot not configured');
+  // TODO(Phase-55-activation): wire real bot adapter when TG_BOT_TOKEN is set.
+  // Library candidates: telegraf (mature) or grammY (modern, smaller bundle).
+  // Decision in .planning/phases/55-telegram/55-PHASE-SUMMARY.md "Open questions".
+  // Activation also requires:
+  //   - @BotFather token registered
+  //   - user binding flow (/start <one-time-token>) implementation
+  //   - /summary, /ask command handlers (Phase 54 RAG dependency)
+  // CLAUDE.md "TODO discipline" rule applies.
+  throw new Error(
+    'Not implemented — see TODO(Phase-55-activation). Telegram bot not configured: TG_BOT_TOKEN set but no real adapter.',
+  );
 }
 
 @Module({
