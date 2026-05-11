@@ -46,6 +46,11 @@ function makeAuditSpy(): {
     periodAutoCreate: vi.fn(),
     periodAutoPublish: vi.fn(),
     periodAutoArchive: vi.fn(),
+    // UFB-063: emitted only by `admin.createPeriodManual` (router-level
+    // audit, parallel to the policySave pattern). Mocked here to satisfy
+    // the AuditLogger interface; assertions live in
+    // audit-logger.test.ts.
+    periodManualCreate: vi.fn(),
   };
   return { audit, mutation };
 }
