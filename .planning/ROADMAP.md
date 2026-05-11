@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: shipped 2026-05-06 (26 plan files, 27 summaries; 35-02 subsumed by 35-08) | v8.1: 0/12
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: shipped 2026-05-06 (26 plan files, 27 summaries; 35-02 subsumed by 35-08) | v8.1: in-progress, closure-blocked on product-ready UAT (Phases 40-42: 0/13 plans; Phases 44/46-52/54-57/59-60: ~43 plans executing)
 
 ---
 

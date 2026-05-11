@@ -825,3 +825,58 @@ Phase candidate: new Phase 48 (Brand Identity) post-46/47, or fold into 47
 Run via `/frontend-design` skill when promoted from backlog.
 
 NOT to do now: full rename of repo, package ids, ENV prefixes, log namespaces.
+
+### UFB-058 - Form CRUD persistence regression
+
+**Status**: open
+**Filed**: 2026-05-12
+**Priority**: P0
+**Symptom**: Lead form changes (items, risks, decisions, priorities) not always persisted to DB after autosave; silent draft-save issue.
+**Root cause** (if known): Possible race condition in saveDraft tRPC handler or cursor pagination offset tracking during concurrent edits.
+**Fix**: Audit draft-save idempotency key; add request deduplication + concurrency tests for multi-rapid-save scenarios.
+
+### UFB-059 - Email reminder worker bootstrap
+
+**Status**: open
+**Filed**: 2026-05-12
+**Priority**: P0
+**Symptom**: BullMQ reminder worker not started; `email-reminder` queue not processing; reminders not sent on deadline.
+**Root cause** (if known): `ReminderWorkerService` registration in `apps/api` NestJS module or worker bootstrap missing from Docker Compose / local dev startup.
+**Fix**: Verify `@nestjs/bullmq` worker module registration; ensure `setupWorkers()` called on app init; add startup health check for queue readiness.
+
+### UFB-075 - Decision/Priority product binding
+
+**Status**: in-progress
+**Filed**: 2026-05-12
+**Priority**: P1
+**Phase**: Phase 51 R4-A (productId nullable) complete; Phase 51 R4-B (NOT NULL + UI) pending next session.
+**Symptom**: Current items (Risk/Decision/Priority) do not track which product(s) they apply to; scope is implicit via stage.
+**Root cause** (if known): Schema migration wave 1 added nullable `productId` FK; UI binding form control deferred.
+**Fix**: Phase 51-B adds UI selector for product scope in edit modals; migration 2 flips `productId` to NOT NULL with backfill.
+
+### UFB-076 - Admin pagination sweep
+
+**Status**: open
+**Filed**: 2026-05-12
+**Priority**: P1
+**Symptom**: 7 admin tabs load all rows at once (Users, Products, Periods, Reminders, Jobs, RevenueGroups, etc.); UI hangs on 500+ rows.
+**Root cause** (if known): No cursor pagination wired in admin list endpoints; `tRPC` procedures use `findMany()` without limit.
+**Fix**: Add cursor pagination to all admin list endpoints; bump page size to 50; add infinite-scroll or traditional paging to each admin tab.
+
+### UFB-077 - /api/client-logs endpoint missing
+
+**Status**: open
+**Filed**: 2026-05-12
+**Priority**: P1
+**Symptom**: Frontend tries to POST browser errors/logs to backend but gets 404; error context never reaches backend logs.
+**Root cause** (if known): Endpoint defined in shared schema but not implemented in NestJS controller.
+**Fix**: Implement `POST /api/client-logs` endpoint in `apps/api` auth controller; validate payload + write to structured logger; return 202 Accepted.
+
+### UFB-078 - weeklyReport.get 404 fix
+
+**Status**: closed
+**Filed**: 2026-05-12
+**Closed**: 2026-05-11 commit c131168
+**Symptom**: Calling `weeklyReport.get(reportId)` when no period is open returns 404; should return a "no period" sentinel instead.
+**Root cause**: Endpoint threw on missing period, not graceful fallback.
+**Fix**: DONE — c131168 returns `{ status: 'no-period-available', message: '...' }` sentinel; frontend shows helpful message instead of error toast.
