@@ -304,3 +304,60 @@ Verification gates:
 - `pnpm --filter @customreport/web exec tsc --noEmit` → exit 0
 - Migration applied + Prisma client regenerated in api container
 - `customreport-api-1` healthy after restart
+
+## Activation Playbook (W3.3 — 2026-05-11)
+
+When the org picks an AI provider, activate Phase 54 as follows:
+
+### 1. Environment variables
+
+Set in `.env` / deployment secret store:
+
+```
+AI_PROVIDER=anthropic   # or: openai | yandexgpt | llama
+ANTHROPIC_API_KEY=sk-...  # for anthropic provider
+```
+
+### 2. Implement real adapter
+
+Create `apps/api/src/modules/ai/<provider>-ai.adapter.ts` implementing `AiAdapter`:
+
+```ts
+export class AnthropicAiAdapter implements AiAdapter {
+  async generate(prompt: string, context: AiAdapterContext): Promise<string> { ... }
+}
+```
+
+Wire it in `selectAiAdapter()` (`apps/api/src/modules/ai/ai.module.ts`):
+
+```ts
+if (provider === "anthropic") return new AnthropicAiAdapter();
+```
+
+### 3. Flip activation integration test
+
+Run `apps/api/src/modules/ai/__tests__/activation.integration.test.ts` with
+`AI_PROVIDER=anthropic ANTHROPIC_API_KEY=<key>`. All tests should pass (they
+were previously skipped).
+
+```bash
+AI_PROVIDER=anthropic ANTHROPIC_API_KEY=<key> \
+  pnpm --filter @customreport/api test --run activation.integration
+```
+
+### 4. Smoke test
+
+```bash
+# Check Prometheus counter is incrementing
+curl -s http://localhost:3002/metrics | grep customreport_ai_summary_generated_total
+
+# Call the tRPC endpoint directly
+curl -s "http://localhost:3002/trpc/ai.periodSummary?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22periodId%22%3A%22<uuid>%22%7D%7D%7D"
+```
+
+Expect `source: "ai"` in the response (not `"mock"`).
+
+### 5. Metrics to monitor
+
+- `customreport_ai_summary_generated_total{provider, status}` — should tick with `provider="anthropic", status="ok"`
+- `customreport_ai_summary_duration_seconds{provider}` — p99 < 5s target
