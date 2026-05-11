@@ -83,7 +83,7 @@ export const stageStatusInputSchema = z.object({
 // nullable so the column migration is non-destructive for legacy rows
 // seeded before this field existed; the lead-form modals enforce the
 // non-empty constraint client-side once a stage is selectable.
-const stageNameField = z.string().min(1).max(50).nullable().optional();
+const stageNameField = z.string().min(1).max(500).nullable().optional();
 
 export const itemInputSchema = z.object({
   id: z.string().uuid().optional(),
