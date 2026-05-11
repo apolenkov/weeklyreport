@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -48,6 +49,11 @@ export function PeriodsTab() {
   // until the user opens the section to keep the initial page load to
   // a single round-trip (the active bucket).
   const [showArchive, setShowArchive] = useState(false);
+
+  // UFB-063: «New period» dialog state. Opens via header button; submits
+  // to admin.createPeriodManual; on success invalidates the period
+  // lists so the table reflects the new row without a full reload.
+  const [showCreate, setShowCreate] = useState(false);
 
   const activeQuery = useQuery(
     trpc.admin.listPeriodsByState.queryOptions({ bucket: 'active' }),
@@ -114,6 +120,22 @@ export function PeriodsTab() {
     }),
   );
 
+  // UFB-063: «New period» mutation. Pipes the server error message
+  // through verbatim so overlap conflicts (server emits the colliding
+  // date range) surface in the toast unchanged.
+  const createMut = useMutation(
+    trpc.admin.createPeriodManual.mutationOptions({
+      onSuccess: () => {
+        invalidatePeriodLists();
+        toast.success('Period created');
+        setShowCreate(false);
+      },
+      onError: (err) => {
+        toast.error(err.message ?? 'Failed to create period');
+      },
+    }),
+  );
+
   const activeRows = (activeQuery.data ?? []) as PeriodListItem[];
   const archiveRows = (archiveQuery.data ?? []) as PeriodListItem[];
 
@@ -123,6 +145,18 @@ export function PeriodsTab() {
         title="Periods"
         description="Reporting periods grouped by lifecycle state."
         count={`${activeRows.length} active`}
+        actions={
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+            aria-label="New period"
+            data-testid="periods-new-button"
+          >
+            <PlusIcon />
+            New period
+          </button>
+        }
       />
 
       {/* ---- Active section ----------------------------------------- */}
@@ -213,6 +247,15 @@ export function PeriodsTab() {
           </div>
         )}
       </section>
+
+      {/* UFB-063: «New period» creation dialog ----------------------- */}
+      {showCreate && (
+        <CreatePeriodDialog
+          onCancel={() => setShowCreate(false)}
+          onSubmit={(values) => createMut.mutate(values)}
+          isPending={createMut.isPending}
+        />
+      )}
     </div>
   );
 }
@@ -422,16 +465,53 @@ function ActionMenu({
 } & Omit<PeriodTableProps, 'rows' | 'testIdPrefix'>) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
 
-  // Click-outside dismissal. Mirrors the pattern used by the existing
-  // admin dropdowns (e.g. stage-assignment-editor).
+  // UFB-063: the kebab dropdown is rendered via a portal to <body> so
+  // the outer `overflow-x-auto` on the table wrapper does not clip it
+  // (per CSS spec, `overflow-x: auto` with default `overflow-y: visible`
+  // computes to `overflow-y: auto`, which clips an absolutely-positioned
+  // child vertically — Phase 51-B kebab was invisible on UAT). The
+  // portal places the menu at the document level; coords are derived
+  // from the trigger's getBoundingClientRect() and recomputed on scroll
+  // / resize so the menu stays anchored to the row's button.
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return undefined;
+    function reposition() {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      // Anchor the menu's right edge to the trigger's right edge
+      // (matches the previous `right-0` absolute positioning).
+      const MENU_MIN_WIDTH = 160; // px — matches min-w-[10rem]
+      setMenuCoords({
+        top: rect.bottom + 4 + window.scrollY,
+        left: Math.max(8, rect.right - MENU_MIN_WIDTH) + window.scrollX,
+      });
+    }
+    reposition();
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [open]);
+
+  // Click-outside dismissal. With the portal, the menu is no longer a
+  // DOM descendant of `wrapperRef`, so we have to check both the
+  // trigger wrapper AND the menu node before closing.
   useEffect(() => {
     if (!open) return undefined;
     function handler(e: MouseEvent) {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(e.target as Node)
-      ) {
+      const inTrigger = wrapperRef.current?.contains(e.target as Node);
+      const inMenu = menuRef.current?.contains(e.target as Node);
+      if (!inTrigger && !inMenu) {
         setOpen(false);
       }
     }
@@ -482,9 +562,50 @@ function ActionMenu({
 
   const disabled = items.length === 0;
 
+  // SSR guard: createPortal is a no-op during server rendering. The
+  // menu only ever renders when `open` is true, and `open` flips on
+  // user click — so we're always client-side at render time. We still
+  // gate on `typeof document` to keep tests that run without a DOM
+  // (none today, but future contracts) safe.
+  const menu = open && typeof document !== 'undefined' ? (
+    <div
+      ref={menuRef}
+      role="menu"
+      data-testid={`action-menu-${row.id}`}
+      style={{
+        position: 'absolute',
+        top: menuCoords.top,
+        left: menuCoords.left,
+        zIndex: 1000,
+      }}
+      className="min-w-[10rem] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white shadow-md"
+    >
+      {items.map((item) => (
+        <button
+          key={item.testId}
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            setOpen(false);
+            item.onClick();
+          }}
+          data-testid={item.testId}
+          className={`block w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-hover)] ${
+            item.tone === 'danger'
+              ? 'text-[#991b1b]'
+              : 'text-[var(--color-foreground)]'
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
   return (
     <div ref={wrapperRef} className="relative inline-block">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         disabled={disabled}
@@ -496,33 +617,7 @@ function ActionMenu({
       >
         <KebabIcon />
       </button>
-      {open && (
-        <div
-          role="menu"
-          data-testid={`action-menu-${row.id}`}
-          className="absolute right-0 z-20 mt-1 min-w-[10rem] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white shadow-md"
-        >
-          {items.map((item) => (
-            <button
-              key={item.testId}
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                item.onClick();
-              }}
-              data-testid={item.testId}
-              className={`block w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-hover)] ${
-                item.tone === 'danger'
-                  ? 'text-[#991b1b]'
-                  : 'text-[var(--color-foreground)]'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {menu && createPortal(menu, document.body)}
     </div>
   );
 }
@@ -551,6 +646,230 @@ function KebabIcon() {
       <circle cx="12" cy="12" r="1.6" />
       <circle cx="12" cy="19" r="1.6" />
     </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------
+// UFB-063: CreatePeriodDialog — admin «New period» modal.
+// ---------------------------------------------------------------------
+
+/**
+ * Compute the next Monday after `from` (inclusive: if `from` is already
+ * Monday, return `from` at 00:00 UTC). Used as the sensible default
+ * pre-fill so the typical admin click → submit flow lands on a clean
+ * week boundary that matches the cron's "next Monday" anchoring.
+ */
+function nextMonday(from: Date): string {
+  const d = new Date(from.getTime());
+  // getUTCDay: 0=Sun, 1=Mon..6=Sat. For Sun add 1 day; for any other
+  // weekday add (8 - day) % 7 days. For Monday this evaluates to 0 →
+  // returns `from` unchanged.
+  const day = d.getUTCDay();
+  const offset = day === 0 ? 1 : (8 - day) % 7;
+  d.setUTCDate(d.getUTCDate() + offset);
+  d.setUTCHours(0, 0, 0, 0);
+  // Render as `YYYY-MM-DD` for the <input type="date"> value.
+  return d.toISOString().slice(0, 10);
+}
+
+type CreatePeriodValues = {
+  periodStart: Date;
+  periodEnd?: Date;
+  deadline?: Date;
+  weekLabel?: string;
+};
+
+function CreatePeriodDialog({
+  onCancel,
+  onSubmit,
+  isPending,
+}: {
+  readonly onCancel: () => void;
+  readonly onSubmit: (values: CreatePeriodValues) => void;
+  readonly isPending: boolean;
+}) {
+  const [periodStart, setPeriodStart] = useState(() => nextMonday(new Date()));
+  const [periodEnd, setPeriodEnd] = useState('');
+  // <input type="datetime-local"> emits "YYYY-MM-DDTHH:MM" in local TZ;
+  // we convert to UTC ISO on submit.
+  const [deadline, setDeadline] = useState('');
+  const [weekLabel, setWeekLabel] = useState('');
+
+  // Esc-to-close + click-outside (matches the groups-tab dialog pattern).
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
+
+  function handleSubmit() {
+    if (!periodStart) return;
+    // <input type="date"> emits "YYYY-MM-DD". Treat as UTC midnight so
+    // the server's overlap math and the period-row date pickers stay
+    // in the same frame (server expects UTC dates).
+    const startDate = new Date(`${periodStart}T00:00:00.000Z`);
+    const endDate = periodEnd
+      ? new Date(`${periodEnd}T23:59:59.999Z`)
+      : undefined;
+    const deadlineDate = deadline
+      ? // datetime-local has no zone; the browser already interprets it
+        // as local. Convert to UTC by passing through Date.
+        new Date(deadline)
+      : undefined;
+    onSubmit({
+      periodStart: startDate,
+      periodEnd: endDate,
+      deadline: deadlineDate,
+      weekLabel: weekLabel.trim() === '' ? undefined : weekLabel.trim(),
+    });
+  }
+
+  const canSubmit = periodStart !== '' && !isPending;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
+      onClick={onCancel}
+      role="presentation"
+      data-testid="periods-create-dialog"
+    >
+      <div
+        className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="New period"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+          New period
+        </h3>
+        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+          Mints a reporting period without waiting for the daily auto-creator.
+          End date and deadline default from AppSettings when left blank.
+        </p>
+        <div className="mt-4 space-y-4">
+          <div>
+            <label
+              htmlFor="period-start"
+              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+            >
+              Period start <span className="text-[#991b1b]">*</span>
+            </label>
+            <input
+              id="period-start"
+              type="date"
+              value={periodStart}
+              onChange={(e) => setPeriodStart(e.target.value)}
+              required
+              data-testid="periods-create-start"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="period-end"
+              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+            >
+              Period end{' '}
+              <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                (optional)
+              </span>
+            </label>
+            <input
+              id="period-end"
+              type="date"
+              value={periodEnd}
+              onChange={(e) => setPeriodEnd(e.target.value)}
+              data-testid="periods-create-end"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="period-deadline"
+              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+            >
+              Deadline{' '}
+              <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                (optional)
+              </span>
+            </label>
+            <input
+              id="period-deadline"
+              type="datetime-local"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              data-testid="periods-create-deadline"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="period-label"
+              className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+            >
+              Week label{' '}
+              <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
+                (optional)
+              </span>
+            </label>
+            <input
+              id="period-label"
+              type="text"
+              value={weekLabel}
+              onChange={(e) => setWeekLabel(e.target.value)}
+              maxLength={64}
+              placeholder="e.g. Sprint 12 catch-up"
+              data-testid="periods-create-label"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+            />
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isPending}
+            data-testid="periods-create-cancel"
+            className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            data-testid="periods-create-submit"
+            className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isPending ? 'Creating…' : 'Create'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

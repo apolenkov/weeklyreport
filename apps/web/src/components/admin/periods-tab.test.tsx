@@ -82,6 +82,8 @@ type Captured = {
   reopenMutationFn: ReturnType<typeof vi.fn>;
   archiveMutationFn: ReturnType<typeof vi.fn>;
   unarchiveMutationFn: ReturnType<typeof vi.fn>;
+  // UFB-063
+  createMutationFn: ReturnType<typeof vi.fn>;
   listInputs: Array<{ bucket: string }>;
 };
 
@@ -129,6 +131,17 @@ function makeMockTRPC(opts: {
           onError: mopts['onError'],
         }),
       },
+      // UFB-063: admin.createPeriodManual mutation surface. Captured
+      // so the «New period» dialog test can assert the payload that
+      // would be sent to the server.
+      createPeriodManual: {
+        pathFilter: () => ({ queryKey: ['admin', 'createPeriodManual'] }),
+        mutationOptions: (mopts: Record<string, unknown>) => ({
+          mutationFn: opts.captured.createMutationFn,
+          onSuccess: mopts['onSuccess'],
+          onError: mopts['onError'],
+        }),
+      },
     },
     period: {
       publish: {
@@ -165,6 +178,14 @@ function renderTab(args?: {
     reopenMutationFn: vi.fn().mockResolvedValue({ success: true }),
     archiveMutationFn: vi.fn().mockResolvedValue({ success: true }),
     unarchiveMutationFn: vi.fn().mockResolvedValue({ success: true }),
+    // UFB-063: createPeriodManual server returns the new row's shape.
+    createMutationFn: vi.fn().mockResolvedValue({
+      periodId: '11111111-1111-4111-8111-111111111199',
+      periodStart: new Date('2026-05-18T00:00:00Z'),
+      periodEnd: new Date('2026-05-24T23:59:59Z'),
+      deadline: new Date('2026-05-22T15:00:00Z'),
+      periodState: 'scheduled',
+    }),
     listInputs: [],
   };
 
@@ -423,5 +444,93 @@ describe('PeriodsTab (UFB-052 / Phase 51-B)', () => {
         screen.getByTestId('periods-row-11111111-1111-4111-8111-111111111188-progress'),
       ).toHaveTextContent('—');
     });
+  });
+});
+
+// ---------------------------------------------------------------------
+// UFB-063: «New period» button + dialog + portal-anchored kebab
+// ---------------------------------------------------------------------
+
+describe('PeriodsTab — «New period» dialog (UFB-063)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders the «New period» button in the tab header and opens the dialog on click', async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    const newBtn = await screen.findByTestId('periods-new-button');
+    expect(newBtn).toBeInTheDocument();
+    expect(newBtn).toHaveTextContent(/new period/i);
+
+    await user.click(newBtn);
+    expect(screen.getByTestId('periods-create-dialog')).toBeInTheDocument();
+    // Start input pre-fills with a YYYY-MM-DD value (the next Monday) —
+    // we don't pin the exact date to keep the test stable across runs;
+    // just assert the format is what the server expects.
+    const startInput = screen.getByTestId('periods-create-start') as HTMLInputElement;
+    expect(startInput.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('submits createPeriodManual with the periodStart value and dismisses on success', async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+
+    await user.click(await screen.findByTestId('periods-new-button'));
+
+    // Override the default start so the assertion is precise.
+    const startInput = screen.getByTestId('periods-create-start') as HTMLInputElement;
+    await user.clear(startInput);
+    await user.type(startInput, '2026-05-18');
+
+    const labelInput = screen.getByTestId('periods-create-label');
+    await user.type(labelInput, 'Sprint 12');
+
+    await user.click(screen.getByTestId('periods-create-submit'));
+
+    await waitFor(() => {
+      expect(captured.createMutationFn).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = captured.createMutationFn.mock.calls[0]?.[0] as {
+      periodStart: Date;
+      weekLabel?: string;
+    };
+    // Submitted as UTC midnight (matches the server's date frame).
+    expect(payload.periodStart.toISOString()).toBe('2026-05-18T00:00:00.000Z');
+    expect(payload.weekLabel).toBe('Sprint 12');
+    // Dialog closes after success.
+    await waitFor(() => {
+      expect(screen.queryByTestId('periods-create-dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('action menu dropdown renders into document.body (portal) so it escapes the table overflow', async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    const trigger = await screen.findByTestId(
+      `action-menu-trigger-${publishedFresh.id}`,
+    );
+    await user.click(trigger);
+
+    const menu = screen.getByTestId(`action-menu-${publishedFresh.id}`);
+    // The portal places the menu directly under <body>, NOT inside the
+    // table wrapper (which has overflow-x-auto and would clip an
+    // absolutely-positioned child). Walk up the DOM and assert that no
+    // ancestor between the menu and <body> has overflow set.
+    let parent = menu.parentElement;
+    let foundTable = false;
+    while (parent && parent !== document.body) {
+      if (parent.getAttribute('data-testid')?.startsWith('periods-active-table')) {
+        foundTable = true;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+    expect(foundTable).toBe(false);
+    // And the immediate parent is body itself.
+    expect(menu.parentElement).toBe(document.body);
   });
 });
