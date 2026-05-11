@@ -6,11 +6,15 @@ import type { UserSession } from "@customreport/shared";
  * Returns a Prisma `where` fragment that callsites spread into their own
  * findMany/findFirst queries. The fragment encodes per-role visibility:
  *
- *   - admin  -> {} (no filter; god mode)
- *   - head   -> rows whose owner is in the head's single ReportingGroup
- *   - lead   -> rows whose owner is in the lead's single ReportingGroup
- *   - viewer -> rows whose owner is in any of the viewer's granted groups
- *               (viewer with empty access list -> { id: { in: [] } } i.e. zero rows)
+ *   - admin    -> {} (no filter; god mode, read+write)
+ *   - director -> {} (no filter; god-mode-READ across all groups; UFB-057)
+ *                 director is excluded from admin-only mutations upstream
+ *                 (adminProcedure), so the empty filter here only opens
+ *                 reads — every mutation path still gates on adminProcedure.
+ *   - head     -> rows whose owner is in the head's single ReportingGroup
+ *   - lead     -> rows whose owner is in the lead's single ReportingGroup
+ *   - viewer   -> rows whose owner is in any of the viewer's granted groups
+ *                 (viewer with empty access list -> { id: { in: [] } } i.e. zero rows)
  *
  * `target` selects which entity the fragment is being spread into so the
  * helper knows which relation path to filter on:
@@ -50,7 +54,10 @@ export function groupScopeFilter(
   target: ScopeTarget,
   options: GroupScopeOptions = {},
 ): Record<string, unknown> {
-  if (session.role === "admin") return {};
+  // UFB-057 / Phase 57: director gets the same empty filter as admin
+  // (god-mode-READ). Writes are still gated by `adminProcedure` upstream,
+  // so director can read every group's data but cannot mutate it.
+  if (session.role === "admin" || session.role === "director") return {};
 
   const groupIds = computeAllowedGroupIds(session);
 
