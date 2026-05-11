@@ -831,7 +831,7 @@ function CreatePeriodDialog({
               htmlFor="period-label"
               className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
             >
-              Week label{' '}
+              Period label{' '}
               <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
                 (optional)
               </span>
