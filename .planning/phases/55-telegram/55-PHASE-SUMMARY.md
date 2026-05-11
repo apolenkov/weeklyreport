@@ -284,3 +284,75 @@ binds), and the env-token check never leaks the token to the web tier
 - Commit `6549637` (55-3) — FOUND
 - Commit `5f4c0c5` (55-4) — FOUND
 - Commit `92ed9a1` (55-5) — FOUND
+
+## Activation Playbook (W3.3 — 2026-05-11)
+
+When the org has a Telegram bot token, activate Phase 55 as follows:
+
+### 1. Environment variables
+
+Set in `.env` / deployment secret store:
+
+```
+TG_BOT_TOKEN=<bot_token_from_botfather>
+```
+
+### 2. Implement real adapter
+
+Create `apps/api/src/modules/telegram/real-telegram.adapter.ts` implementing `TelegramAdapter`:
+
+```ts
+export class RealTelegramAdapter implements TelegramAdapter {
+  constructor(private readonly token: string) {}
+  async send(chatId: string, text: string): Promise<TelegramSendResult> {
+    const res = await fetch(
+      `https://api.telegram.org/bot${this.token}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text }),
+      },
+    );
+    return { ok: res.ok };
+  }
+}
+```
+
+Wire it in `telegram.module.ts`:
+
+```ts
+// Replace the throw with:
+return new RealTelegramAdapter(token);
+```
+
+Remove the `TODO(Phase-55-activation)` throw.
+
+### 3. Flip activation integration test
+
+Run `apps/api/src/modules/telegram/__tests__/activation.integration.test.ts` with
+`TG_BOT_TOKEN=<token>`. All tests should pass (they were previously skipped).
+
+```bash
+TG_BOT_TOKEN=<token> \
+  pnpm --filter @customreport/api test --run activation.integration
+```
+
+### 4. Smoke test
+
+```bash
+# Send a test message via the tRPC endpoint
+# (requires a valid chatId — get from /getUpdates after a user messages the bot)
+curl -X POST http://localhost:3002/trpc/telegram.send \
+  -H 'Content-Type: application/json' \
+  -d '{"chatId": "<chat_id>", "text": "Activation test"}'
+
+# Check Prometheus counters
+curl -s http://localhost:3002/metrics | grep customreport_telegram_message_sent_total
+```
+
+Expect the message to appear in Telegram and `status="ok"` in metrics.
+
+### 5. Metrics to monitor
+
+- `customreport_telegram_message_sent_total{status}` — should tick with `status="ok"`
+- `customreport_telegram_binding_total{event}` — user binding events
