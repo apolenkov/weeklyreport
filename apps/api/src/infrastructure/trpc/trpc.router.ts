@@ -1079,21 +1079,24 @@ export function createAppRouter(deps: RouterDeps) {
       // as the structured app.log line for support/debug lookups.
       actionLog: router({
         list: adminProcedure
-          .input(
-            z
-              .object({
-                limit: z.number().int().min(1).max(100).default(50),
-              })
-              .optional(),
-          )
+          .input(paginationInputSchema.optional())
           .query(async ({ input }) => {
             try {
+              const limit = input?.limit ?? 20;
+              const cursor = input?.cursor;
               const rows = await deps.prisma.userActionLog.findMany({
+                take: limit + 1,
+                skip: cursor ? 1 : 0,
+                cursor: cursor ? { id: cursor } : undefined,
                 orderBy: { createdAt: "desc" },
-                take: input?.limit ?? 50,
               });
+              const hasMore = rows.length > limit;
+              const items = rows.slice(0, limit);
+              const nextCursor = hasMore
+                ? (items[items.length - 1]?.id ?? null)
+                : null;
               return {
-                rows: rows.map((row) => ({
+                items: items.map((row) => ({
                   id: row.id,
                   userId: row.userId,
                   role: row.role,
@@ -1106,6 +1109,7 @@ export function createAppRouter(deps: RouterDeps) {
                   durationMs: row.durationMs,
                   createdAt: row.createdAt.toISOString(),
                 })),
+                nextCursor,
               };
             } catch (error) {
               throw mapDomainError(error);
