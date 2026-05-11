@@ -30,7 +30,7 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-starbucks-green)]">
-              Weekly Status Report
+              Status Report
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
               Report ID: {reportId}
