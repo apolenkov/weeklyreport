@@ -40,7 +40,7 @@ export function WeeklyReportSkeleton() {
     <div
       className="space-y-4"
       aria-busy="true"
-      aria-label="Loading weekly report"
+      aria-label="Loading status report"
     >
       {/* Page header */}
       <div className="flex flex-wrap items-center justify-between gap-4">

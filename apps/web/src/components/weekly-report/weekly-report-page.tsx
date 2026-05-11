@@ -236,7 +236,7 @@ export function WeeklyReportPage({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-            Weekly Report
+            Status Report
           </h1>
           <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
             Live &middot; {submitted}/{total} Submitted
