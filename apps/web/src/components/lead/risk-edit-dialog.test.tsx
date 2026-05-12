@@ -112,3 +112,89 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / UFB-014)', () => {
     expect(labels).toEqual(['Testing', 'Support']);
   });
 });
+
+/**
+ * A13/A15 regression: typed text AND selected severity must survive parent
+ * re-renders that pass a new stagesForProduct function reference
+ * (autosave → React Query invalidate cycle).
+ *
+ * Before fix: useEffect has stagesForProduct in deps → fires on new ref →
+ *             setText('') and setSeverity('at-risk') wipe user input.
+ * After fix:  stagesForProduct removed from deps → state preserved.
+ */
+describe('RiskEditDialog — A13/A15 form-race regression', () => {
+  it('preserves typed text when parent re-renders with a new stagesForProduct ref', () => {
+    const onSave = vi.fn();
+    const stagesV1 = () => ['Dev', 'Testing'] as const;
+
+    const { rerender } = render(
+      <RiskEditDialog
+        open={true}
+        risk={null}
+        products={products}
+        onSave={onSave}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={stagesV1}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: 'user typed this — must survive' },
+    });
+    expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue('user typed this — must survive');
+
+    const stagesV2 = () => ['Dev', 'Testing'] as const;
+    rerender(
+      <RiskEditDialog
+        open={true}
+        risk={null}
+        products={products}
+        onSave={onSave}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={stagesV2}
+      />,
+    );
+
+    // A13 bug: before fix, text was wiped back to '' by useEffect firing on
+    // the new stagesForProduct reference.
+    expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue('user typed this — must survive');
+  });
+
+  it('preserves selected Blocked severity when parent re-renders with a new stagesForProduct ref', () => {
+    const stagesV1 = () => ['Dev'] as const;
+
+    const { rerender } = render(
+      <RiskEditDialog
+        open={true}
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={stagesV1}
+      />,
+    );
+
+    // Select "✕ Blocked" severity (the user calls this "Blocker" — A15)
+    fireEvent.click(screen.getByRole('button', { name: /Blocked/i }));
+    expect(screen.getByRole('button', { name: /Blocked/i })).toHaveAttribute('aria-pressed', 'true');
+
+    const stagesV2 = () => ['Dev'] as const;
+    rerender(
+      <RiskEditDialog
+        open={true}
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={stagesV2}
+      />,
+    );
+
+    // A15 bug: before fix, severity was reset to 'at-risk' by the same useEffect.
+    expect(screen.getByRole('button', { name: /Blocked/i })).toHaveAttribute('aria-pressed', 'true');
+  });
+});

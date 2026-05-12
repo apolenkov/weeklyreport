@@ -63,6 +63,7 @@ export function ItemEditDialog({
   onSave,
   onCancel,
 }: ItemEditDialogProps) {
+  "use no memo";
   const isCreate = item === null;
 
   // Local form state — initialize from the bound item (or defaults for create).
@@ -88,6 +89,9 @@ export function ItemEditDialog({
   );
   const [errors, setErrors] = useState<{ text?: string }>({});
 
+  // A13 fix: stagesForProduct excluded from deps — unstable parent ref (new arrow fn
+  // each render) causes form-race on autosave → React Query invalidate cycle.
+  // Dialog is key-reset by parent on open-transition instead.
   useEffect(() => {
     if (open) {
       setText(initial.text);
@@ -96,6 +100,8 @@ export function ItemEditDialog({
       setStageIds(item?.stageIds ? [...item.stageIds] : (isCreate ? [...(stagesForProduct?.(initial.productId) ?? [])] : []));
       setErrors({});
     }
+  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     open,
     item?.id,
@@ -104,7 +110,6 @@ export function ItemEditDialog({
     initial.status,
     initial.productId,
     defaultProductId,
-    stagesForProduct,
     isCreate,
   ]);
 

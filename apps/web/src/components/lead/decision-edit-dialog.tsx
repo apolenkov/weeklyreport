@@ -39,6 +39,7 @@ export function DecisionEditDialog({
   onSave,
   onCancel,
 }: DecisionEditDialogProps) {
+  "use no memo";
   const isCreate = decision === null;
 
   const [text, setText] = useState(decision?.text ?? '');
@@ -54,6 +55,9 @@ export function DecisionEditDialog({
   );
   const [errors, setErrors] = useState<{ text?: string; owner?: string; impact?: string }>({});
 
+  // A13 fix: products and availableStages excluded from deps — unstable parent refs
+  // (new array/fn each render) cause form-race on autosave → React Query invalidate cycle.
+  // Dialog is key-reset by parent on open-transition instead.
   useEffect(() => {
     if (open) {
       setText(decision?.text ?? '');
@@ -66,6 +70,8 @@ export function DecisionEditDialog({
       );
       setErrors({});
     }
+  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     open,
     decision?.id,
@@ -77,8 +83,6 @@ export function DecisionEditDialog({
     decision?.productId,
     defaultOwner,
     defaultProductId,
-    products,
-    availableStages,
     isCreate,
   ]);
 

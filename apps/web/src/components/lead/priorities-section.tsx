@@ -149,6 +149,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
         </div>
         {addButton}
         <PriorityEditDialog
+          key={dialogState.open && dialogState.mode === 'create' ? 'open-new' : 'closed'}
           open={dialogState.open && dialogState.mode === 'create'}
           priority={null}
           nextRank={1}
@@ -242,6 +243,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
       {addButton}
 
       <PriorityEditDialog
+        key={`${dialogState.open}-${dialogState.open && dialogState.mode === 'edit' ? dialogState.priority.rank : 'new'}`}
         open={dialogState.open}
         priority={dialogState.open && dialogState.mode === 'edit' ? dialogState.priority : null}
         nextRank={dialogState.open && dialogState.mode === 'create' ? sorted.length + 1 : (dialogState.open && dialogState.mode === 'edit' ? dialogState.priority.rank : 1)}
