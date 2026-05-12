@@ -278,7 +278,14 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           productId: testData.project.id,
         },
       ],
-      priorities: [{ rank: 1, text: "P1", stageIds: ["DevOps"], productId: testData.project.id }],
+      priorities: [
+        {
+          rank: 1,
+          text: "P1",
+          stageIds: ["DevOps"],
+          productId: testData.project.id,
+        },
+      ],
     };
 
     const saved = await repo.saveSection(modified);
@@ -390,7 +397,9 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
 
     const saved = await repo.saveSection(modified);
     expect(saved.decisions).toHaveLength(1);
-    expect(expectDefined(saved.decisions[0]).productId).toBe(testData.project.id);
+    expect(expectDefined(saved.decisions[0]).productId).toBe(
+      testData.project.id,
+    );
 
     // Confirm persistence via a fresh read
     const refetched = await repo.getSectionById(testData.section.id);
@@ -425,13 +434,15 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
 
     const saved = await repo.saveSection(modified);
     expect(saved.priorities).toHaveLength(1);
-    expect(expectDefined(saved.priorities[0]).productId).toBe(testData.project.id);
+    expect(expectDefined(saved.priorities[0]).productId).toBe(
+      testData.project.id,
+    );
 
     // Confirm persistence via a fresh read
     const refetched = await repo.getSectionById(testData.section.id);
     expect(expectDefined(refetched).priorities).toHaveLength(1);
-    expect(expectDefined(expectDefined(refetched).priorities[0]).productId).toBe(
-      testData.project.id,
-    );
+    expect(
+      expectDefined(expectDefined(refetched).priorities[0]).productId,
+    ).toBe(testData.project.id);
   });
 });

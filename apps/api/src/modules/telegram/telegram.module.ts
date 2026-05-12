@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Module } from "@nestjs/common";
 
-import { MockTelegramAdapter } from './mock-telegram.adapter.js';
-import { TELEGRAM_ADAPTER, type TelegramAdapter } from './telegram.adapter.js';
-import { TelegramProcessor } from './telegram.queue.js';
+import { MockTelegramAdapter } from "./mock-telegram.adapter.js";
+import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
+import { TelegramProcessor } from "./telegram.queue.js";
 
 /**
  * Phase 55 (UFB-056): selects the Telegram adapter based on env.
@@ -21,8 +21,8 @@ import { TelegramProcessor } from './telegram.queue.js';
  * arm and the throw becomes unreachable.
  */
 export function selectTelegramAdapter(): TelegramAdapter {
-  const token = process.env['TG_BOT_TOKEN']?.trim() ?? '';
-  if (token === '') {
+  const token = process.env["TG_BOT_TOKEN"]?.trim() ?? "";
+  if (token === "") {
     return new MockTelegramAdapter();
   }
   // TODO(Phase-55-activation): wire real bot adapter when TG_BOT_TOKEN is set.
@@ -40,7 +40,7 @@ export function selectTelegramAdapter(): TelegramAdapter {
   //   Google OAuth later as a second SSO provider (separate phase).
   // CLAUDE.md "TODO discipline" rule applies.
   throw new Error(
-    'Not implemented — see TODO(Phase-55-activation). Telegram bot not configured: TG_BOT_TOKEN set but no real adapter.',
+    "Not implemented — see TODO(Phase-55-activation). Telegram bot not configured: TG_BOT_TOKEN set but no real adapter.",
   );
 }
 
