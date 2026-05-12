@@ -47,12 +47,21 @@ tsc + eslint + vitest (382 web / 909 api) — все зелёные.
 - `tsc --noEmit` зелёный для обоих пакетов
 - Коммиты: `4ea0884` (schema + migration) + `365f79b` (seed fixes), ветка `main`
 
+## Что сделано (сессия 2026-05-12 — финальное закрытие R4-C)
+
+- `pnpm db:reset:hard` прошёл exit 0 после R4-C (Decision + Priority seed OK)
+- NULL count в БД после seed: Decision=0, Priority=0
+- 2 новых интеграционных теста: `saveSection Decision/Priority productId → getSectionById` (R4-C roundtrip)
+- 2 существующих теста починены: добавлен `productId` в фикстуры
+- Все тесты зелёные: 9/9 integration, 909 api unit, 382 web unit
+- TODO(Phase-55-activation) обновлён: registration = SSO only (Keycloak/SAML), Google OAuth позже
+- Phase 54 AI: TODO остаётся в коде, пользователь выберет провайдера по метрикам сам
+- Коммит: `e42e272`, ветка `main`, запушено в origin
+
 ## Осталось
 
-- `pnpm db:reset:hard` — ещё не запускался после R4-C (нужна проверка)
-- Интеграционные тесты на productId-персистентность не написаны
-- Phase 54 AI-провайдер: ждёт выбора (Anthropic / YandexGPT / Llama)
-- Phase 55 Telegram: ждёт решения по регистрации пользователей
+- Phase 54: выбор AI-провайдера (TODO(Phase-54-activation) в коде, активируется когда нужно)
+- Phase 55: реализация SSO-binding flow для Telegram (TODO(Phase-55-activation))
 
 ## Sweep-команда для новых полей (LEARNED)
 
