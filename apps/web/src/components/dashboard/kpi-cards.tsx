@@ -27,6 +27,7 @@ export function KpiCards({ data }: KpiCardsProps) {
             style={{
               background: `conic-gradient(var(--color-starbucks-accent) 0% ${submissionPercent}%, var(--color-border) ${submissionPercent}% 100%)`,
             }}
+            title={`${data.submitted} of ${data.total} leads submitted this week (${submissionPercent}%)`}
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white">
               <span className="font-[family-name:var(--font-sans)] text-[15px] font-bold leading-none text-[var(--color-primary)]">
