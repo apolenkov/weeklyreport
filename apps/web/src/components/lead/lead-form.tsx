@@ -877,6 +877,8 @@ export function LeadForm({
             impact: d.impact,
             deadline,
             stageName,
+            stageIds: d.stageIds,
+            productId: d.productId || null,
           };
         }
         return {
@@ -887,6 +889,8 @@ export function LeadForm({
           deadline,
           resolvedAt: null,
           stageName,
+          stageIds: d.stageIds,
+          productId: d.productId || null,
         };
       });
       return { ...prev, decisions: merged };
@@ -982,9 +986,9 @@ export function LeadForm({
         const stageName =
           p.stageName && p.stageName !== "—" ? p.stageName : null;
         if (existing) {
-          return { ...existing, text: p.text, stageName };
+          return { ...existing, text: p.text, stageName, stageIds: p.stageIds, productId: p.productId || null };
         }
-        return { rank: p.rank, text: p.text, stageName };
+        return { rank: p.rank, text: p.text, stageName, stageIds: p.stageIds, productId: p.productId || null };
       });
       return { ...prev, priorities: merged };
     });
