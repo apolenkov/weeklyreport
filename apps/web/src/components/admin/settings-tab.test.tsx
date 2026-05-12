@@ -616,10 +616,13 @@ describe('SettingsTab — UFB-048 Notifications sub-tab (Phase 48-B)', () => {
   });
 });
 
-// ─── UFB-056 / Phase 55-5: Integrations sub-tab ───────────────────────────
+// ─── UFB-056 / Phase 55-5: Integrations sub-tab (A11) ────────────────────
 
 describe('SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)', () => {
-  it('renders the muted «Не активно» badge when neither token nor bindings are set', async () => {
+  // A11: Telegram is seeds-only — badge is always "Coming Soon" regardless
+  // of configured/bindings state. Technical details still rendered for
+  // debugging; Slack card (third provider) also always "Coming Soon".
+  it('renders Coming Soon badge for Telegram regardless of configured state', async () => {
     const captured: Captured = {
       updateOrgFn: vi.fn(),
       updateSettingsFn: vi.fn(),
@@ -640,8 +643,8 @@ describe('SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)', () => {
     await user.click(screen.getByRole('tab', { name: /integrations/i }));
 
     const badge = await screen.findByTestId('integration-badge-telegram');
-    await waitFor(() => expect(badge.dataset.state).toBe('inactive'));
-    expect(badge.textContent).toMatch(/не активно/i);
+    await waitFor(() => expect(badge.dataset.state).toBe('coming-soon'));
+    expect(badge.textContent).toMatch(/coming soon/i);
 
     expect(
       screen.getByTestId('integration-telegram-configured').textContent,
@@ -651,7 +654,7 @@ describe('SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)', () => {
     ).toBe('0');
   });
 
-  it('renders the green «Подключён» badge when both configured AND bindings > 0', async () => {
+  it('still shows Coming Soon when token is configured and bindings exist', async () => {
     const captured: Captured = {
       updateOrgFn: vi.fn(),
       updateSettingsFn: vi.fn(),
@@ -672,14 +675,14 @@ describe('SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)', () => {
     await user.click(screen.getByRole('tab', { name: /integrations/i }));
 
     const badge = await screen.findByTestId('integration-badge-telegram');
-    await waitFor(() => expect(badge.dataset.state).toBe('active'));
-    expect(badge.textContent).toMatch(/подключён/i);
+    await waitFor(() => expect(badge.dataset.state).toBe('coming-soon'));
+    expect(badge.textContent).toMatch(/coming soon/i);
     expect(
       screen.getByTestId('integration-telegram-bindings').textContent,
     ).toBe('4');
   });
 
-  it('keeps the badge muted when token is set but no users are bound yet', async () => {
+  it('still shows Coming Soon when token is set but no users are bound yet', async () => {
     const captured: Captured = {
       updateOrgFn: vi.fn(),
       updateSettingsFn: vi.fn(),
@@ -700,9 +703,30 @@ describe('SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)', () => {
     await user.click(screen.getByRole('tab', { name: /integrations/i }));
 
     const badge = await screen.findByTestId('integration-badge-telegram');
-    await waitFor(() => expect(badge.dataset.state).toBe('inactive'));
+    await waitFor(() => expect(badge.dataset.state).toBe('coming-soon'));
     expect(
       screen.getByTestId('integration-telegram-configured').textContent,
     ).toBe('yes');
+  });
+
+  it('renders the Slack Coming Soon card (A11 third provider)', async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /integrations/i }));
+
+    const slackBadge = await screen.findByTestId('integration-badge-slack');
+    await waitFor(() => expect(slackBadge.dataset.state).toBe('coming-soon'));
+    expect(slackBadge.textContent).toMatch(/coming soon/i);
   });
 });
