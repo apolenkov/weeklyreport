@@ -713,12 +713,9 @@ export function LeadForm({
     }),
   );
 
-  // Counter for "every Nth autosave snapshots a version" — purely
-  // client-side. Resets on manual snapshots and on page reload (the
-  // user paid for the manual checkpoint, no need to immediately
-  // double-snapshot 10 saves later).
+  // A16: auto-versioning — track saves; snapshot once per minute if new saves occurred.
   const autosaveCountRef = useRef(0);
-  const AUTO_SNAPSHOT_EVERY = 10;
+  const lastSnapshotCountRef = useRef(0);
 
   // ---- Build draft payload ----
   const draftPayload = useMemo(
@@ -761,11 +758,6 @@ export function LeadForm({
   }, [byPeriodQ.data]);
 
   // Autosave wiring — runs unconditionally to keep hook order stable.
-  // The onSaveSuccess hook drives the silent auto-snapshot path: every
-  // AUTO_SNAPSHOT_EVERY successful saves we checkpoint a version. This
-  // is a safety net for long editing sessions (10 saves ≈ 30s+ of active
-  // work at a 3s debounce floor); the user can still hit "Save Version"
-  // any time for an explicit checkpoint.
   const autosave = useLeadFormAutosave({
     reportSectionId: sectionIdForActions || null,
     payload: draftPayload,
@@ -773,14 +765,25 @@ export function LeadForm({
     initialSavedKey,
     onSaveSuccess: () => {
       autosaveCountRef.current += 1;
-      if (
-        autosaveCountRef.current % AUTO_SNAPSHOT_EVERY === 0 &&
-        sectionIdForActions
-      ) {
-        createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
-      }
     },
   });
+
+  // A16: snapshot once per minute when there are new autosaves since the
+  // last snapshot. Uses a stable ref for mutate so the interval is not
+  // reset on every mutation-state change (isPending, isSuccess, etc.).
+  const snapshotMutateRef = useRef(createSnapshotMut.mutate);
+  snapshotMutateRef.current = createSnapshotMut.mutate;
+
+  useEffect(() => {
+    if (!sectionIdForActions || isReadOnlyEarly || isSubmitted) return;
+    const id = setInterval(() => {
+      if (autosaveCountRef.current > lastSnapshotCountRef.current) {
+        lastSnapshotCountRef.current = autosaveCountRef.current;
+        snapshotMutateRef.current({ reportSectionId: sectionIdForActions });
+      }
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [sectionIdForActions, isReadOnlyEarly, isSubmitted]);
 
   // 35-07: set document.title to surface the addressed week in the browser
   // tab. Format: "Week 19, May 4-10 - CustomReport". Resolved from the
@@ -1140,9 +1143,8 @@ export function LeadForm({
   function handleSaveVersion() {
     if (!sectionIdForActions) return;
     isManualSaveRef.current = true;
-    // Reset the auto-snapshot counter — the user just paid for an explicit
-    // checkpoint, no need to spawn a silent one 10 saves later.
-    autosaveCountRef.current = 0;
+    // Sync lastSnapshotCount so the 1-min interval doesn't double-snapshot.
+    lastSnapshotCountRef.current = autosaveCountRef.current;
     createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
   }
 
