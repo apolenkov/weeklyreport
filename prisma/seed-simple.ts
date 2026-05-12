@@ -1021,6 +1021,7 @@ async function main() {
             ? `a0000000-0000-4000-8000-00000000070${i + 1}`
             : randomUUID(),
         reportSectionId: sectionId,
+        productId: lead.productId,
         text: d.text,
         owner: d.owner,
         impact: d.impact,
@@ -1036,6 +1037,7 @@ async function main() {
             ? `a0000000-0000-4000-8000-00000000080${i + 1}`
             : randomUUID(),
         reportSectionId: sectionId,
+        productId: lead.productId,
         text,
         rank: idx + 1,
         stageName: stageFor(idx),
@@ -1131,6 +1133,7 @@ async function main() {
       data: {
         id: randomUUID(),
         reportSectionId: prevSectionId,
+        productId: lead.productId,
         text: `Приоритет прошлой недели: ${lead.label}`,
         rank: 1,
       },
