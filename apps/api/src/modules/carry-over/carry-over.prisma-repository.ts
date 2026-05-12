@@ -195,6 +195,8 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
               deadline: d.deadline ?? null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
+              stageName: d.stageIds?.join(', ') ?? null,
+              productId: d.productId ?? null,
             })),
           });
         }
