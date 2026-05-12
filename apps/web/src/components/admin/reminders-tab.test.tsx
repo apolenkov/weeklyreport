@@ -171,9 +171,11 @@ describe("RemindersTab (Phase 44-04)", () => {
 
   it("shows the empty-state copy when policies is empty", () => {
     renderTab({ policies: [], derivedRulesByPolicyId: {} });
+    // A8: empty state now shows "No reminder policies yet" heading + CTA button.
     expect(screen.getByTestId("reminders-empty-state")).toHaveTextContent(
-      /No active reminder policies/i,
+      /No reminder policies yet/i,
     );
+    expect(screen.getByRole("button", { name: /create first policy/i })).toBeInTheDocument();
   });
 
   it("opens the form on 'New Policy' and submits with the form payload", async () => {
