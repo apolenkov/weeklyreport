@@ -101,12 +101,14 @@ type PrismaReportSectionWithRelations = NonNullable<
     impact: string;
     resolvedAt: Date | null;
     stageName: string | null;
+    productId: string | null;
   }>;
   priorities: Array<{
     id: string;
     rank: number;
     text: string;
     stageName: string | null;
+    productId: string | null;
   }>;
 };
 
@@ -233,12 +235,14 @@ export function mapPrismaToReportSection(
       impact: d.impact,
       resolvedAt: d.resolvedAt,
       stageIds: d.stageName ? d.stageName.split(', ').filter(Boolean) : undefined,
+      productId: d.productId ?? undefined,
     })),
     priorities: row.priorities.map((p) => ({
       id: p.id,
       rank: p.rank,
       text: p.text,
       stageIds: p.stageName ? p.stageName.split(', ').filter(Boolean) : undefined,
+      productId: p.productId ?? undefined,
     })),
   });
 }
