@@ -314,71 +314,96 @@ export function NavBar() {
             Was previously lg+ (1024px) but at 1024 with 6 nav-link pills + a
             longer role label ("Department Head") the row overflowed
             ~110px. Bumping the threshold up keeps the chrome tidy while
-            preserving the identity signal at every width via the avatar. */}
+            preserving the identity signal at every width via the avatar.
+            UFB-NEW-A1: show skeleton placeholders while session is loading so
+            the right-rail width is stable from first paint → zero CLS on
+            reload. Skeleton dimensions match the resolved identity chrome. */}
         <div className="flex items-center gap-2.5">
-          {user && (
-            <div className="hidden items-center gap-2 xl:flex">
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)]"
-                aria-hidden="true"
-              >
-                {initials}
+          {sessionLoading ? (
+            <>
+              {/* xl+ skeleton: avatar circle + name pill */}
+              <div className="hidden items-center gap-2 xl:flex" aria-hidden="true">
+                <div className="h-8 w-8 rounded-full bg-[var(--color-muted)]/40" />
+                <div className="h-4 w-24 rounded bg-[var(--color-muted)]/40" />
               </div>
-              <span className="whitespace-nowrap text-[13px] text-[var(--color-foreground)]">
-                <span className="font-semibold">{user.name}</span>
-                {!nameRoleSame && (
-                  <span className="text-[var(--color-muted-foreground)]">
-                    {" "}
-                    · {roleLabel}
-                  </span>
-                )}
-              </span>
-            </div>
-          )}
-          {user && (
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] xl:hidden"
-              aria-label={`${user.name} (${roleLabel})`}
-              title={`${user.name} · ${roleLabel}`}
-            >
-              {initials}
-            </div>
-          )}
-          {user && (
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await fetch("/auth/logout", {
-                    method: "POST",
-                    credentials: "include",
-                  });
-                } finally {
-                  window.location.href = "/";
-                }
-              }}
-              data-testid="nav-logout"
-              aria-label="Sign out"
-              title="Sign out"
-              className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              {/* sm-xl skeleton: avatar circle only */}
+              <div
+                className="h-8 w-8 rounded-full bg-[var(--color-muted)]/40 xl:hidden"
                 aria-hidden="true"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-              <span className="hidden xl:inline">Logout</span>
-            </button>
+              />
+              {/* logout button skeleton */}
+              <div
+                className="h-8 w-20 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
+                aria-hidden="true"
+              />
+            </>
+          ) : (
+            <>
+              {user && (
+                <div className="hidden items-center gap-2 xl:flex">
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)]"
+                    aria-hidden="true"
+                  >
+                    {initials}
+                  </div>
+                  <span className="whitespace-nowrap text-[13px] text-[var(--color-foreground)]">
+                    <span className="font-semibold">{user.name}</span>
+                    {!nameRoleSame && (
+                      <span className="text-[var(--color-muted-foreground)]">
+                        {" "}
+                        · {roleLabel}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+              {user && (
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] xl:hidden"
+                  aria-label={`${user.name} (${roleLabel})`}
+                  title={`${user.name} · ${roleLabel}`}
+                >
+                  {initials}
+                </div>
+              )}
+              {user && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await fetch("/auth/logout", {
+                        method: "POST",
+                        credentials: "include",
+                      });
+                    } finally {
+                      window.location.href = "/";
+                    }
+                  }}
+                  data-testid="nav-logout"
+                  aria-label="Sign out"
+                  title="Sign out"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  <span className="hidden xl:inline">Logout</span>
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
