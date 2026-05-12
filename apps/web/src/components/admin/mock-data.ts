@@ -14,6 +14,8 @@ export type MockUser = {
   role: UserRole;
   groupId: string;
   department: string;
+  // A2 (UAT-v7 2026-05-12): soft-deactivation flag from the API.
+  isActive: boolean;
 };
 
 export type MockGroup = {
@@ -151,6 +153,7 @@ export const MOCK_USERS: MockUser[] = [
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
     department: "Core Development",
+    isActive: true,
   },
   {
     id: "u2",
@@ -159,6 +162,7 @@ export const MOCK_USERS: MockUser[] = [
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
     department: "Core Development",
+    isActive: true,
   },
   {
     id: "u3",
@@ -167,6 +171,7 @@ export const MOCK_USERS: MockUser[] = [
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
     department: "Core Development",
+    isActive: true,
   },
   {
     id: "u4",
@@ -175,6 +180,7 @@ export const MOCK_USERS: MockUser[] = [
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
     department: "Core Development",
+    isActive: true,
   },
   {
     id: "u5",
@@ -183,6 +189,7 @@ export const MOCK_USERS: MockUser[] = [
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
     department: "Core Development",
+    isActive: true,
   },
   {
     id: "u6",
@@ -191,6 +198,7 @@ export const MOCK_USERS: MockUser[] = [
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
     department: "Core Development",
+    isActive: true,
   },
   {
     id: "u7",
@@ -199,6 +207,7 @@ export const MOCK_USERS: MockUser[] = [
     role: "head",
     groupId: DEFAULT_GROUP_ID,
     department: "Core Development",
+    isActive: true,
   },
   {
     id: "u8",
@@ -207,6 +216,7 @@ export const MOCK_USERS: MockUser[] = [
     role: "viewer",
     groupId: DEFAULT_GROUP_ID,
     department: "Core Development",
+    isActive: true,
   },
 ];
 

@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { PolicyApplicatorService } from '../reminders/policy-applicator.service';
 import { AdminService } from './admin.service';
 import { AdminPrismaRepository } from './admin.prisma-repository';
+import { SessionRevocationService } from './session-revocation.service';
 
 @Module({
   providers: [
@@ -19,7 +20,11 @@ import { AdminPrismaRepository } from './admin.prisma-repository';
         new AdminService(repo),
       inject: [AdminPrismaRepository],
     },
+    // A2 (UAT-v7 2026-05-12): Redis-backed session revocation for
+    // deactivate/activate. Exported so the tRPC router factory can
+    // inject it via the NestJS DI container.
+    SessionRevocationService,
   ],
-  exports: [AdminService],
+  exports: [AdminService, SessionRevocationService],
 })
 export class AdminModule {}

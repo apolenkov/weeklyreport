@@ -64,6 +64,7 @@ import {
 } from "../../modules/search/search.service.js";
 import type { ActivityService } from "../../modules/activity/activity.service.js";
 import type { TelemetryService } from "../../modules/telemetry/telemetry.service.js";
+import type { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
 import {
   assertCanReadReport,
   assertCanReadRisk,
@@ -158,6 +159,14 @@ type RouterDeps = {
    * procedure is hidden from the surface, not 500-ed.
    */
   telemetryService?: TelemetryService;
+  /**
+   * A2 (UAT-v7 2026-05-12): Redis-backed session revocation for
+   * deactivate/activate user. Optional so existing role-coverage test
+   * fixtures that build the router with `{}` deps keep compiling —
+   * when undefined the mutations still flip isActive in Prisma but skip
+   * the Redis fast-path (sessions expire naturally via JWT TTL).
+   */
+  sessionRevocationService?: SessionRevocationService;
 };
 
 export function createAppRouter(deps: RouterDeps) {
@@ -909,11 +918,65 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      /**
+       * A27: delete a period (Report) and cascade-delete all child rows.
+       * Guard: cannot delete published periods.
+       */
+      deleteReport: adminProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.deleteReport(input.reportId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
       deleteUser: adminProcedure
         .input(z.object({ userId: z.string().uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.removeUser(input.userId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * A2 (UAT-v7 2026-05-12): deactivate a user — sets isActive=false in
+       * Prisma and adds the userId to the Redis revoked set so any in-flight
+       * JWT session is rejected immediately by the context factory.
+       */
+      deactivateUser: adminProcedure
+        .input(z.object({ userId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            await deps.prisma.user.update({
+              where: { id: input.userId },
+              data: { isActive: false },
+            });
+            await deps.sessionRevocationService?.revokeSession(input.userId);
+            return { success: true as const };
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * A2 (UAT-v7 2026-05-12): re-activate a user — sets isActive=true in
+       * Prisma and removes the userId from the Redis revoked set so new logins
+       * can proceed normally.
+       */
+      activateUser: adminProcedure
+        .input(z.object({ userId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            await deps.prisma.user.update({
+              where: { id: input.userId },
+              data: { isActive: true },
+            });
+            await deps.sessionRevocationService?.restoreSession(input.userId);
+            return { success: true as const };
           } catch (error) {
             throw mapDomainError(error);
           }

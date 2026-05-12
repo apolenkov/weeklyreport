@@ -16,6 +16,10 @@ model User {
   createdAt               DateTime            @default(now())
   updatedAt               DateTime            @updatedAt
   notificationOptOut      Boolean             @default(false)
+  // A2 (UAT-v7 2026-05-12): soft-deactivation flag. false = deactivated.
+  // Sessions are immediately revoked in Redis; Prisma is the authoritative
+  // source for the isActive state.
+  isActive                Boolean             @default(true)
   reportingGroup          ReportingGroup      @relation(fields: [reportingGroupId], references: [id])
   ledProjects             Project[]
   reopenRequestsRequested ReopenRequest[]     @relation("ReopenRequester")

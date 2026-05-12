@@ -27,6 +27,7 @@ import {
 import {
   ReminderAudience as PrismaReminderAudience,
   WorkingDays as PrismaWorkingDays,
+  ReportStatus,
 } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -441,6 +442,8 @@ export class AdminPrismaRepository implements AdminRepository {
           role: u.role,
           reportingGroupId: u.reportingGroupId,
           reportingGroupName: u.reportingGroup.name,
+          // A2 (UAT-v7 2026-05-12): surface the soft-deactivation flag.
+          isActive: u.isActive,
         }),
       ),
       projects: projects.map((p) =>
@@ -1018,6 +1021,32 @@ export class AdminPrismaRepository implements AdminRepository {
       },
     });
     return { nextPeriodState, nextPeriodStatus };
+  }
+
+  /**
+   * A27: read a Report's status fields for delete-guard checks.
+   * Returns null if not found.
+   */
+  async readReportForDelete(
+    reportId: string,
+  ): Promise<{ status: ReportStatus; periodStatus: PeriodStatus } | null> {
+    const row = await this.prisma.report.findUnique({
+      where: { id: reportId },
+      select: { status: true, periodStatus: true },
+    });
+    if (!row) return null;
+    return {
+      status: row.status,
+      periodStatus: row.periodStatus as PeriodStatus,
+    };
+  }
+
+  /**
+   * A27: delete a Report and cascade-delete all child rows via Prisma relations
+   * (onDelete: Cascade on ReportSection, Item, Risk, Decision, Priority, etc.).
+   */
+  async deleteReport(reportId: string): Promise<void> {
+    await this.prisma.report.delete({ where: { id: reportId } });
   }
 
   // -----------------------------------------------------------------
