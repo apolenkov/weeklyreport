@@ -36,6 +36,8 @@
     "uat:audit": "node apps/web/uat-suite/mutation-audit.mjs",
     "uat:audit:update": "node apps/web/uat-suite/mutation-audit.mjs --update-allowlist",
     "uat:inventory": "node apps/web/uat-suite/inventory.mjs",
+    "uat:parse-dom": "tsx tools/uat-extractor/parse-dom.ts",
+    "uat:generate": "tsx tools/uat-extractor/generate-playwright.ts",
     "prepare": "husky"
   },
   "devDependencies": {
