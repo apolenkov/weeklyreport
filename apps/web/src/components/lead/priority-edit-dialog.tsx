@@ -44,6 +44,7 @@ export function PriorityEditDialog({
   onSave,
   onCancel,
 }: PriorityEditDialogProps) {
+  "use no memo";
   const isCreate = priority === null;
 
   const [text, setText] = useState(priority?.text ?? '');
@@ -57,6 +58,9 @@ export function PriorityEditDialog({
   const [errors, setErrors] = useState<{ text?: string }>({});
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // A13 fix: products and availableStages excluded from deps — unstable parent refs
+  // (new array/fn each render) cause form-race on autosave → React Query invalidate cycle.
+  // Dialog is key-reset by parent on open-transition instead.
   useEffect(() => {
     if (!open) return;
     setText(priority?.text ?? '');
@@ -69,7 +73,9 @@ export function PriorityEditDialog({
     // has settled before we steal focus from the underlying overlay.
     const id = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(id);
-  }, [open, priority?.rank, priority?.text, priority?.stageIds, priority?.productId, defaultProductId, products, availableStages, isCreate]);
+  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, priority?.rank, priority?.text, priority?.stageIds, priority?.productId, defaultProductId, isCreate]);
 
   if (!open) return null;
 

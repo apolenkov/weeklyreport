@@ -201,6 +201,7 @@ export function NextWeekSection({
       </div>
 
       <ItemEditDialog
+        key={`${dialogState.open}-${dialogState.open && dialogState.mode === 'edit' ? dialogState.item.id : 'new'}`}
         open={dialogState.open}
         item={dialogState.open && dialogState.mode === 'edit' ? dialogState.item : null}
         products={products ?? []}

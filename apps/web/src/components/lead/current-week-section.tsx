@@ -217,6 +217,7 @@ export function CurrentWeekSection({
 
       {/* Edit / Add modal — single instance shared across all columns. */}
       <ItemEditDialog
+        key={`${dialogState.open}-${dialogState.open && dialogState.mode === 'edit' ? dialogState.item.id : 'new'}`}
         open={dialogState.open}
         item={dialogState.open && dialogState.mode === 'edit' ? dialogState.item : null}
         products={products ?? []}

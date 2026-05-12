@@ -227,6 +227,7 @@ export function DecisionsSection({
       )}
 
       <DecisionEditDialog
+        key={`${dialogState.open}-${dialogState.open && dialogState.mode === 'edit' ? dialogState.decision.id : 'new'}`}
         open={dialogState.open}
         decision={dialogState.open && dialogState.mode === 'edit' ? dialogState.decision : null}
         defaultOwner={currentUserName}

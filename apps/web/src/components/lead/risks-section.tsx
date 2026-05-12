@@ -215,6 +215,7 @@ export function RisksSection({
       )}
 
       <RiskEditDialog
+        key={`${dialogState.open}-${dialogState.open && dialogState.mode === 'edit' ? dialogState.risk.id : 'new'}`}
         open={dialogState.open}
         risk={dialogState.open && dialogState.mode === 'edit' ? dialogState.risk : null}
         products={products ?? []}

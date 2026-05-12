@@ -47,6 +47,7 @@ export function RiskEditDialog({
   initialMitigation,
   stagesForProduct,
 }: RiskEditDialogProps) {
+  "use no memo";
   const isCreate = risk === null;
   const seedProduct = isCreate
     ? (products.find((p) => p.id === defaultProductId) ?? products[0])
@@ -67,6 +68,9 @@ export function RiskEditDialog({
   // visually pinned the message under one (potentially wrong) field.
   const [errors, setErrors] = useState<{ text?: string; impact?: string; mitigation?: string }>({});
 
+  // A13/A15 fix: stagesForProduct excluded from deps — unstable parent ref (new arrow fn
+  // each render) causes form-race on autosave → React Query invalidate cycle, resetting
+  // both text (A13) and severity (A15). Dialog is key-reset by parent on open-transition.
   useEffect(() => {
     if (open) {
       setText(risk?.text ?? '');
@@ -79,6 +83,8 @@ export function RiskEditDialog({
       );
       setErrors({});
     }
+  // eslint-disable-next-line react-compiler/react-compiler
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     open,
     risk?.id,
@@ -90,7 +96,6 @@ export function RiskEditDialog({
     initialImpact,
     initialMitigation,
     defaultProductId,
-    stagesForProduct,
     isCreate,
   ]);
 
