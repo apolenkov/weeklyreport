@@ -572,12 +572,17 @@ function ProgressBadge({
     red: { bg: '#fee2e2', text: '#991b1b' },
   } as const;
   const c = colors[tone];
+  const pending = total - submitted;
+  const tooltipText = pending > 0
+    ? `${submitted} of ${total} leads submitted — ${pending} pending`
+    : `All ${total} leads submitted`;
   return (
     <span
       className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-semibold tabular-nums"
       style={{ backgroundColor: c.bg, color: c.text }}
       data-testid={`periods-row-${rowId}-progress`}
       data-progress-tone={tone}
+      title={tooltipText}
     >
       {submitted}/{total}
     </span>
