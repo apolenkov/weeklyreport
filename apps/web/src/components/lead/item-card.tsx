@@ -65,7 +65,7 @@ export function ItemCard({
     STATUS_BADGE['in-progress'];
   const isBlocked = item.status === 'blocked';
   const isPlanned = item.status === 'planned';
-  const stageTags = splitStageNames(item.stageName);
+  const stageTags = (item.stageIds && item.stageIds.length > 0) ? item.stageIds : splitStageNames(item.stageName);
 
   // Local draft for the inline textarea. Reset every time edit mode opens so
   // the field tracks the latest committed text.

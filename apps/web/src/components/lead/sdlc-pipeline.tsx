@@ -74,7 +74,7 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
   const riskCountByKey = new Map<string, number>();
   for (const r of risks ?? []) {
     const product = products.find((item) => item.id === r.productId);
-    const stageTags = splitStageNames(r.stageName);
+    const stageTags = (r.stageIds && r.stageIds.length > 0) ? r.stageIds : splitStageNames(r.stageName);
     const keys =
       stageTags.length > 0
         ? stageTags.map((stageName) => `${r.productId}::${stageName}`)

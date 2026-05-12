@@ -133,7 +133,7 @@ export function DecisionsSection({
       ) : (
         decisions.map((decision) => {
           const mine = isMine(decision.owner, currentUserName);
-          const stageTags = splitStageNames(decision.stageName);
+          const stageTags = (decision.stageIds && decision.stageIds.length > 0) ? decision.stageIds : splitStageNames(decision.stageName);
           return (
           <div
             key={decision.id}
