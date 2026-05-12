@@ -1020,8 +1020,7 @@ function IntegrationsSubTab() {
               Telegram
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Привязка пользователей и реальный бот будут добавлены в отдельной
-              фазе.
+              User binding and real bot will be added in a separate phase.
             </p>
           </div>
           {isTelegramActive ? (
