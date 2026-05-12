@@ -142,6 +142,9 @@ export type LeadPriorityEntry = {
   stageName?: string;
   /** UFB-073 (R1): stage selection as array of stage names. */
   stageIds?: string[];
+  /** R4-B: product this priority is scoped to. */
+  productId?: string;
+  productName?: string;
 };
 
 export type LeadReportPeriod = {
@@ -467,10 +470,11 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
 export function mapLeadDecisions(
   section: ReportSectionReadModel,
 ): LeadDecisionEntry[] {
+  const projectIndex = buildProjectIndex(section);
   return section.decisions.map((d, idx) => ({
     id: d.id ?? `decision-${idx}`,
-    productId: "",
-    productName: "Group",
+    productId: d.productId ?? '',
+    productName: (d.productId ? projectIndex.get(d.productId)?.name : undefined) ?? 'Group',
     text: d.text,
     owner: d.owner ?? "",
     impact: d.impact ?? "",
@@ -484,10 +488,13 @@ export function mapLeadDecisions(
 export function mapLeadPriorities(
   section: ReportSectionReadModel,
 ): LeadPriorityEntry[] {
+  const projectIndex = buildProjectIndex(section);
   return section.priorities.map((p) => ({
     rank: clampRank(p.rank),
     text: p.text,
     stageIds: p.stageIds,
+    productId: p.productId ?? undefined,
+    productName: (p.productId ? projectIndex.get(p.productId)?.name : undefined) ?? undefined,
   }));
 }
 
