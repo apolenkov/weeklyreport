@@ -29,8 +29,12 @@ import {
  * NARROW further (e.g. an explicit `status: 'published'` from a viewer role
  * is identical to the floor and a no-op) but cannot widen — the repo will
  * never return non-published rows even if a caller mis-built the filter.
+ *
+ * A22: `archived: true` added so the Archive tab only shows reports the head
+ * has explicitly archived. Published-but-not-yet-archived reports remain on
+ * the head dashboard until the head moves them to the archive.
  */
-const PUBLISHED_FLOOR = { status: 'published' as const };
+const PUBLISHED_FLOOR = { status: 'published' as const, archived: true };
 
 @Injectable()
 export class ArchivePrismaRepository implements ArchiveRepository {

@@ -1329,6 +1329,40 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+
+      /**
+       * A22: head-only mutation to move a published report into the archive.
+       * Sets `archived=true` on the Report row via adminService.archivePeriod
+       * (which uses Report.id — "period" and "report" are the same table).
+       * After this call the report appears in archive.list and is no longer
+       * shown in the "recently published" surface.
+       */
+      archiveReport: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            await deps.adminService.archivePeriod(input.reportId);
+            return { success: true as const };
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * A22: head-only mutation to un-archive a report (move back to
+       * "published but not archived"). Sets `archived=false` via
+       * adminService.unarchivePeriod and removes it from archive.list.
+       */
+      unarchiveReport: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            await deps.adminService.unarchivePeriod(input.reportId);
+            return { success: true as const };
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
 
     // === Reminders namespace ===

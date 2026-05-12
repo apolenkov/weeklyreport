@@ -32,13 +32,14 @@ describe('ArchivePrismaRepository (integration)', () => {
     const emptyList = await repo.listArchiveReports();
     expect(emptyList).toHaveLength(0);
 
-    // Publish the report
+    // Publish the report AND set archived=true (A22: both flags required)
     await prisma.report.update({
       where: { id: testData.report.id },
       data: {
         status: 'published',
         publishedAt: new Date('2026-04-12T10:00:00.000Z'),
         publishedById: testData.head.id,
+        archived: true,
       },
     });
 
@@ -58,14 +59,65 @@ describe('ArchivePrismaRepository (integration)', () => {
     expect(expectDefined(list[0]).portfolioStatus).toBe('green');
   });
 
-  it('getArchiveReport returns full detail for published report', async () => {
-    // Publish the report with some data
+  it('A22: published-but-NOT-archived reports do NOT appear in archive list', async () => {
+    // Publish the report WITHOUT setting archived=true
     await prisma.report.update({
       where: { id: testData.report.id },
       data: {
         status: 'published',
         publishedAt: new Date('2026-04-12T10:00:00.000Z'),
         publishedById: testData.head.id,
+        // archived remains false (default)
+      },
+    });
+
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        status: 'green',
+      },
+    });
+
+    // A22: archive must be empty — published but not explicitly archived
+    const list = await repo.listArchiveReports();
+    expect(list).toHaveLength(0);
+  });
+
+  it('A22: published-AND-archived reports DO appear in archive list', async () => {
+    // Publish and explicitly archive the report
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: 'published',
+        publishedAt: new Date('2026-04-12T10:00:00.000Z'),
+        publishedById: testData.head.id,
+        archived: true,
+      },
+    });
+
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        status: 'yellow',
+      },
+    });
+
+    const list = await repo.listArchiveReports();
+    expect(list).toHaveLength(1);
+    expect(expectDefined(list[0]).reportId).toBe(testData.report.id);
+  });
+
+  it('getArchiveReport returns full detail for published report', async () => {
+    // Publish the report with some data AND set archived=true (A22: required)
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: 'published',
+        publishedAt: new Date('2026-04-12T10:00:00.000Z'),
+        publishedById: testData.head.id,
+        archived: true,
       },
     });
 
@@ -96,6 +148,8 @@ describe('ArchivePrismaRepository (integration)', () => {
     expect(expectDefined(detail).summary.portfolioStatus).toBe('yellow');
     expect(expectDefined(detail).report.sections).toHaveLength(1);
     expect(expectDefined(expectDefined(detail).report.sections[0]).items).toHaveLength(1);
-    expect(expectDefined(expectDefined(expectDefined(detail).report.sections[0]).items[0]).text).toBe('Archive item');
+    expect(
+      expectDefined(expectDefined(expectDefined(detail).report.sections[0]).items[0]).text,
+    ).toBe('Archive item');
   });
 });

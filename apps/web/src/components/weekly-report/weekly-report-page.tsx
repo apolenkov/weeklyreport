@@ -119,6 +119,22 @@ export function WeeklyReportPage({
     }),
   );
 
+  // A22: archive mutation — head moves a published report into the archive so
+  // it appears in archive.list. Only visible when periodStatus==='published'.
+  const archiveMut = useMutation(
+    trpc.archive.archiveReport.mutationOptions({
+      onSuccess: () => {
+        invalidateDashboard(qc, trpc);
+        toast.success("Report archived");
+      },
+      onError: (err: unknown) => {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to archive report",
+        );
+      },
+    }),
+  );
+
   useEffect(() => {
     if (weeklyQ.isError) {
       logClientError("weeklyReport.get.load_failed", weeklyQ.error, {
@@ -262,6 +278,23 @@ export function WeeklyReportPage({
             reportId={view.period.reportId}
             periodStatus={view.period.periodStatus}
           />
+          {/* A22: "Archive" button — shown to head once the period is published.
+              Moves the report into the archive (sets archived=true) so it
+              appears in the Archive tab. The button is hidden after archiving
+              because this page only navigates to current/active periods. */}
+          {view.period.periodStatus === "published" && (
+            <button
+              type="button"
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() =>
+                archiveMut.mutate({ reportId: view.period.reportId })
+              }
+              disabled={archiveMut.isPending}
+              aria-label="Move this report to the archive"
+            >
+              {archiveMut.isPending ? "Archiving…" : "Archive"}
+            </button>
+          )}
           <PublishLockButton
             pendingCount={pendingCount}
             totalLeads={total}
