@@ -79,6 +79,8 @@ export type PriorityEntry = {
   /** @deprecated Use stageIds. Kept for reading legacy data. */
   stageName?: string;
   stageIds?: string[];
+  productId?: string;
+  productName?: string;
 };
 
 export type ReportPeriod = {
