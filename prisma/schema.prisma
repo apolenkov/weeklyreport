@@ -205,6 +205,9 @@ model Report {
   @@index([status, periodStart(sort: Desc)])
   @@index([archived, periodStart(sort: Desc)])
   @@index([periodState, periodStart(sort: Desc)])
+  // C2 (A24/A21): PARTIAL UNIQUE INDEX "Report_one_open_per_boundary"
+  // ON ("periodStart","periodEnd") WHERE "periodState"='open' — defined via raw migration
+  // (Prisma schema DSL does not support WHERE-clause partial indexes natively).
 }
 
 model ReportSection {
