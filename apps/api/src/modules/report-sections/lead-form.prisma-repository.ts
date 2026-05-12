@@ -230,6 +230,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         carriedOver: boolean;
         completed: boolean | null;
         stageName?: string | null;
+        stageIds?: string[];
       }>;
       risks: Array<{
         projectId: string;
@@ -237,6 +238,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         impact: string;
         mitigation: string;
         stageName?: string | null;
+        stageIds?: string[];
       }>;
       decisions: Array<{
         text: string;
@@ -245,11 +247,15 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         impact: string;
         resolvedAt: string | null;
         stageName?: string | null;
+        stageIds?: string[];
+        productId?: string | null;
       }>;
       priorities: Array<{
         rank: number;
         text: string;
         stageName?: string | null;
+        stageIds?: string[];
+        productId?: string | null;
       }>;
     };
 
@@ -271,7 +277,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               workflowStatus: i.workflowStatus as ItemWorkflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
-              stageName: i.stageName ?? null,
+              stageName: i.stageIds?.join(', ') ?? i.stageName ?? null,
             })),
           });
         }
@@ -284,7 +290,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
-              stageName: r.stageName ?? null,
+              stageName: r.stageIds?.join(', ') ?? r.stageName ?? null,
             })),
           });
         }
@@ -298,7 +304,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               deadline: d.deadline ? new Date(d.deadline) : null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ? new Date(d.resolvedAt) : null,
-              stageName: d.stageName ?? null,
+              stageName: d.stageIds?.join(', ') ?? d.stageName ?? null,
+              productId: d.productId ?? null,
             })),
           });
         }
@@ -309,7 +316,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               reportSectionId: sectionId,
               rank: p.rank,
               text: p.text,
-              stageName: p.stageName ?? null,
+              stageName: p.stageIds?.join(', ') ?? p.stageName ?? null,
+              productId: p.productId ?? null,
             })),
           });
         }

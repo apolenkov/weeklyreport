@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { DecisionEntry } from './mock-data';
+import type { DecisionEntry, Product } from './mock-data';
 import { StageMultiSelect } from './stage-multi-select';
 
 type DecisionEditDialogProps = {
@@ -10,8 +10,7 @@ type DecisionEditDialogProps = {
   readonly decision: DecisionEntry | null;
   /**
    * Default owner for newly-created decisions. Should be the current user's
-   * display name — leads usually own the decisions they raise. Setting this
-   * up-front keeps the chrome out of their way.
+   * display name — leads usually own the decisions they raise.
    */
   readonly defaultOwner?: string;
   /**
@@ -20,6 +19,12 @@ type DecisionEditDialogProps = {
    * the union across projects is the right denominator for the dropdown.
    */
   readonly availableStages?: readonly string[];
+  /**
+   * R4-B: products the lead is assigned to. When more than one, the dialog
+   * shows a product picker so the lead can scope the decision to a product.
+   */
+  readonly products?: readonly Product[];
+  readonly defaultProductId?: string;
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
 };
@@ -29,6 +34,8 @@ export function DecisionEditDialog({
   decision,
   defaultOwner,
   availableStages,
+  products,
+  defaultProductId,
   onSave,
   onCancel,
 }: DecisionEditDialogProps) {
@@ -38,14 +45,13 @@ export function DecisionEditDialog({
   const [owner, setOwner] = useState(decision?.owner ?? defaultOwner ?? '');
   const [impact, setImpact] = useState(decision?.impact ?? '');
   const [deadline, setDeadline] = useState(decision?.deadline ?? '');
+  const [productId, setProductId] = useState(
+    decision?.productId || defaultProductId || products?.[0]?.id || '',
+  );
   // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
   const [stageIds, setStageIds] = useState<string[]>(
     decision?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
   );
-  // Per-field error map — same pattern as risk-edit-dialog. The single
-  // bottom error string used to highlight only the first failure and
-  // pinned the message under the wrong field, so each border now turns
-  // destructive independently.
   const [errors, setErrors] = useState<{ text?: string; owner?: string; impact?: string }>({});
 
   useEffect(() => {
@@ -54,6 +60,7 @@ export function DecisionEditDialog({
       setOwner(decision?.owner ?? defaultOwner ?? '');
       setImpact(decision?.impact ?? '');
       setDeadline(decision?.deadline ?? '');
+      setProductId(decision?.productId || defaultProductId || products?.[0]?.id || '');
       setStageIds(
         decision?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
       );
@@ -67,7 +74,10 @@ export function DecisionEditDialog({
     decision?.impact,
     decision?.deadline,
     decision?.stageIds,
+    decision?.productId,
     defaultOwner,
+    defaultProductId,
+    products,
     availableStages,
     isCreate,
   ]);
@@ -88,10 +98,11 @@ export function DecisionEditDialog({
       setErrors(next);
       return;
     }
+    const selectedProduct = products?.find((p) => p.id === productId);
     onSave({
       id: decision?.id ?? crypto.randomUUID(),
-      productId: decision?.productId ?? '',
-      productName: decision?.productName ?? 'Group',
+      productId: productId || '',
+      productName: selectedProduct?.name ?? decision?.productName ?? 'Group',
       text: t,
       owner: o,
       impact: im,
@@ -124,6 +135,25 @@ export function DecisionEditDialog({
         </h2>
 
         <div className="space-y-4">
+          {/* R4-B: product picker — only when the lead owns more than one product */}
+          {products && products.length > 1 && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-product">
+                Product
+              </label>
+              <select
+                id="dec-product"
+                className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+                value={productId}
+                onChange={(e) => setProductId(e.target.value)}
+              >
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Decision text */}
           <div>
             <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-text">

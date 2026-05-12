@@ -113,6 +113,7 @@ export const decisionInputSchema = z.object({
   impact: safeText({ max: 500 }),
   resolvedAt: z.coerce.date().nullable().optional(),
   stageIds: stageIdsField,
+  productId: z.string().uuid().nullable().optional(),
 });
 
 export const priorityInputSchema = z.object({
@@ -120,6 +121,7 @@ export const priorityInputSchema = z.object({
   rank: z.number().int().min(1),
   text: safeText({ max: 200 }),
   stageIds: stageIdsField,
+  productId: z.string().uuid().nullable().optional(),
 });
 
 export const draftSaveSchema = z.object({

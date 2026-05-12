@@ -1401,6 +1401,8 @@ export function LeadForm({
             onChange={handleDecisionsChange}
             currentUserName={currentUser.name}
             availableStages={availableStages}
+            products={products}
+            defaultProductId={products[0]?.id}
           />
         </AccordionSection>
 
@@ -1418,6 +1420,8 @@ export function LeadForm({
             readOnly={isReadOnly}
             onChange={handlePrioritiesChange}
             availableStages={availableStages}
+            products={products}
+            defaultProductId={products[0]?.id}
           />
         </AccordionSection>
       </form>
