@@ -146,6 +146,9 @@ model GroupProduct {
   group     ReportingGroup @relation(fields: [groupId], references: [id])
   product   Project        @relation(fields: [productId], references: [id])
 
+  // A4: one-product-per-group constraint. Migration deduplicates existing
+  // rows before creating the unique index on groupId alone.
+  @@unique([groupId])
   @@unique([groupId, productId])
   @@index([groupId])
   @@index([productId])
