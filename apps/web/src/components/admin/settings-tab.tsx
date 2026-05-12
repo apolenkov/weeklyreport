@@ -106,8 +106,10 @@ function IdentitySubTab() {
 
   const updateOrgMut = useMutation(
     trpc.admin.updateOrganization.mutationOptions({
-      onSuccess: () => {
+      onSuccess: async () => {
         invalidateAdmin(qc, trpc);
+        // A9: invalidate landing page cache after org name change
+        await fetch('/api/revalidate-org', { method: 'POST' });
         toast.success("Organization identity saved");
       },
       onError: (err) => {
@@ -243,8 +245,10 @@ function useUpdateSettingsMut(label: string) {
   const qc = useQueryClient();
   return useMutation(
     trpc.admin.updateSettings.mutationOptions({
-      onSuccess: () => {
+      onSuccess: async () => {
         invalidateAdmin(qc, trpc);
+        // A9: invalidate landing page cache on any settings change
+        await fetch('/api/revalidate-org', { method: 'POST' });
         toast.success(`${label} saved`);
       },
       onError: (err) => {

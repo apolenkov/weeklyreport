@@ -15,7 +15,11 @@ import { DEFAULT_ORGANIZATION_IDENTITY } from '@customreport/shared';
  * On any failure (API down, network error, bad shape) returns
  * DEFAULT_ORGANIZATION_IDENTITY so the landing page still renders correctly.
  * `cache: 'force-cache'` is intentional — org identity is stable across a
- * deploy and the cache is invalidated on the next deploy automatically.
+ * deploy and the cache is revalidated via POST /api/revalidate-org when
+ * admin updates shortName/fullName in settings.
+ *
+ * A9 (2026-05-12): Added `tags: ['org-public']` for explicit cache invalidation
+ * after admin settings update (previously relied on 60s revalidate interval).
  */
 function resolveApiUrl(): string {
   return process.env['API_URL'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3002';
@@ -52,7 +56,7 @@ export async function getOrgPublic(): Promise<OrganizationPublic> {
     const response = await fetch(url, {
       method: 'GET',
       cache: 'force-cache',
-      next: { revalidate: 60 },
+      next: { tags: ['org-public'], revalidate: 60 },
     });
     if (!response.ok) return DEFAULT_ORGANIZATION_IDENTITY;
     const body = (await response.json()) as unknown;
