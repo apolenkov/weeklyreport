@@ -32,6 +32,12 @@ export function selectTelegramAdapter(): TelegramAdapter {
   //   - @BotFather token registered
   //   - user binding flow (/start <one-time-token>) implementation
   //   - /summary, /ask command handlers (Phase 54 RAG dependency)
+  //
+  // REGISTRATION DECISION (locked 2026-05-12):
+  //   No standalone Telegram registration — users authenticate via SSO only
+  //   (Keycloak/SAML). Telegram binding = linking an already-authenticated
+  //   user's account to their chat_id via a one-time deep-link token.
+  //   Google OAuth later as a second SSO provider (separate phase).
   // CLAUDE.md "TODO discipline" rule applies.
   throw new Error(
     'Not implemented — see TODO(Phase-55-activation). Telegram bot not configured: TG_BOT_TOKEN set but no real adapter.',

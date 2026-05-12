@@ -39,10 +39,18 @@ originSessionId: bba7038f-3313-48a3-895f-09a1520a7c56
 Все 5 мест записи `Decision.productId` / `Priority.productId` закрыты.
 tsc + eslint + vitest (382 web / 909 api) — все зелёные.
 
+## Что сделано (сессия 2026-05-12 — R4-C NOT NULL)
+
+- Миграция `20260512100000_r4c_decision_priority_product_not_null` применена к live DB
+- `Decision.productId` и `Priority.productId` — `NOT NULL` + `onDelete: Cascade`
+- Все 8 файлов с `create/upsert` исправлены (seed.ts, seed-simple.ts, auth.routes.ts, carry-over, lead-form, report-sections, 2 integration tests)
+- `tsc --noEmit` зелёный для обоих пакетов
+- Коммиты: `4ea0884` (schema + migration) + `365f79b` (seed fixes), ветка `main`
+
 ## Осталось
 
-- **Смерджить PR #2** (`night/2026-05-11` → `main`)
-- R4-C: SET NOT NULL миграция (ждёт решения пользователя: нужно ли обязательным?)
+- `pnpm db:reset:hard` — ещё не запускался после R4-C (нужна проверка)
+- Интеграционные тесты на productId-персистентность не написаны
 - Phase 54 AI-провайдер: ждёт выбора (Anthropic / YandexGPT / Llama)
 - Phase 55 Telegram: ждёт решения по регистрации пользователей
 

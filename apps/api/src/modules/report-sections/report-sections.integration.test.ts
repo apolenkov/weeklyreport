@@ -275,9 +275,10 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           impact: "Impact",
           resolvedAt: null,
           stageIds: ["Design"],
+          productId: testData.project.id,
         },
       ],
-      priorities: [{ rank: 1, text: "P1", stageIds: ["DevOps"] }],
+      priorities: [{ rank: 1, text: "P1", stageIds: ["DevOps"], productId: testData.project.id }],
     };
 
     const saved = await repo.saveSection(modified);
@@ -338,11 +339,12 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           deadline: null,
           impact: "High",
           resolvedAt: null,
+          productId: testData.project.id,
         },
       ],
       priorities: [
-        { rank: 1, text: "Top priority" },
-        { rank: 2, text: "Second priority" },
+        { rank: 1, text: "Top priority", productId: testData.project.id },
+        { rank: 2, text: "Second priority", productId: testData.project.id },
       ],
     };
 
@@ -358,5 +360,78 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(saved.decisions).toHaveLength(1);
     expect(expectDefined(saved.decisions[0]).text).toBe("Saved decision");
     expect(saved.priorities).toHaveLength(2);
+  });
+
+  it("saveSection persists Decision.productId and getSectionById returns it (R4-C)", async () => {
+    await assignLeadToProject();
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        status: "green",
+      },
+    });
+
+    const original = await repo.getSectionById(testData.section.id);
+    const modified = {
+      ...expectDefined(original),
+      decisions: [
+        {
+          text: "Decision with product",
+          owner: "Lead",
+          deadline: null,
+          impact: "High",
+          resolvedAt: null,
+          productId: testData.project.id,
+        },
+      ],
+      priorities: [],
+    };
+
+    const saved = await repo.saveSection(modified);
+    expect(saved.decisions).toHaveLength(1);
+    expect(expectDefined(saved.decisions[0]).productId).toBe(testData.project.id);
+
+    // Confirm persistence via a fresh read
+    const refetched = await repo.getSectionById(testData.section.id);
+    expect(expectDefined(refetched).decisions).toHaveLength(1);
+    expect(expectDefined(expectDefined(refetched).decisions[0]).productId).toBe(
+      testData.project.id,
+    );
+  });
+
+  it("saveSection persists Priority.productId and getSectionById returns it (R4-C)", async () => {
+    await assignLeadToProject();
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        status: "green",
+      },
+    });
+
+    const original = await repo.getSectionById(testData.section.id);
+    const modified = {
+      ...expectDefined(original),
+      decisions: [],
+      priorities: [
+        {
+          rank: 1,
+          text: "Priority with product",
+          productId: testData.project.id,
+        },
+      ],
+    };
+
+    const saved = await repo.saveSection(modified);
+    expect(saved.priorities).toHaveLength(1);
+    expect(expectDefined(saved.priorities[0]).productId).toBe(testData.project.id);
+
+    // Confirm persistence via a fresh read
+    const refetched = await repo.getSectionById(testData.section.id);
+    expect(expectDefined(refetched).priorities).toHaveLength(1);
+    expect(expectDefined(expectDefined(refetched).priorities[0]).productId).toBe(
+      testData.project.id,
+    );
   });
 });
