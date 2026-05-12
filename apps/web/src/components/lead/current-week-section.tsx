@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { ItemCard } from './item-card';
@@ -59,6 +59,26 @@ export function CurrentWeekSection({
   stagesForProduct,
 }: CurrentWeekSectionProps) {
   const grouped = groupByProduct(items);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    function check() {
+      if (!el) return;
+      setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+    }
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', check);
+      ro.disconnect();
+    };
+  }, []);
+
   // null = create mode (Add); KanbanItem = edit mode for that row.
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create'; seedProductId: string } | { open: true; mode: 'edit'; item: KanbanItem }
@@ -168,7 +188,8 @@ export function CurrentWeekSection({
         });
 
   return (
-    <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+    <div className="relative">
+      <div ref={scrollRef} className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
       <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(0, 1fr))` }}>
         {columns.map((col) => (
           <div key={col.key} className="min-w-0">
@@ -237,6 +258,14 @@ export function CurrentWeekSection({
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
+      </div>
+      {canScrollDown && (
+        <div
+          className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 rounded-b-lg"
+          style={{ background: 'linear-gradient(to bottom, transparent, var(--color-card))' }}
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 }
