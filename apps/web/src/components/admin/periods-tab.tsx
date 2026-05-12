@@ -1028,7 +1028,23 @@ function CreatePeriodDialog({
     });
   }
 
-  const canSubmit = periodStart !== '' && !isPending;
+  // A6b: deadline range validation.
+  // Deadline must fall within [periodStart, periodEnd] when both are set.
+  const deadlineError: string | null = (() => {
+    if (!deadline) return null;
+    const dl = new Date(deadline);
+    if (periodStart) {
+      const start = new Date(`${periodStart}T00:00:00.000Z`);
+      if (dl < start) return 'Deadline cannot be before period start.';
+    }
+    if (periodEnd) {
+      const end = new Date(`${periodEnd}T23:59:59.999Z`);
+      if (dl > end) return 'Deadline cannot be after period end.';
+    }
+    return null;
+  })();
+
+  const canSubmit = periodStart !== '' && !isPending && !deadlineError;
   const title = isEdit ? 'Edit period' : 'New period';
   const description = isEdit
     ? 'Adjust the date envelope or label for this reporting period.'
@@ -1115,8 +1131,16 @@ function CreatePeriodDialog({
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
               data-testid="periods-create-deadline"
-              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+              className={`w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] ${deadlineError ? 'border-red-400 focus:border-red-400 bg-red-50' : 'border-[var(--color-border)] focus:border-[var(--color-starbucks-accent)] bg-white'}`}
             />
+            {deadlineError && (
+              <p
+                data-testid="periods-deadline-error"
+                className="mt-1 text-xs text-red-600"
+              >
+                {deadlineError}
+              </p>
+            )}
           </div>
           <div>
             <label
