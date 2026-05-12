@@ -64,7 +64,6 @@ function makeWeeklyReport(overrides: Partial<WeeklyReportReadModel> = {}): Weekl
     deadline: '2026-04-17T15:00:00.000Z',
     periodStatus: 'open',
     weekLabel: 'Week 16',
-    departmentName: 'Software Development',
     submissionCount: overrides.submissionCount ?? 4,
     totalLeads: overrides.totalLeads ?? 6,
     hasActiveReminderRule: overrides.hasActiveReminderRule ?? true,
@@ -294,6 +293,38 @@ describe('mapDashboardData', () => {
       now: new Date('2026-04-17T10:00:00.000Z'),
     });
     expect(result.pendingLeads).toEqual(['Cara Lead']);
+  });
+
+  // Phase 48-C (UFB-040): regression for the alert-bar pendingLeads leak.
+  // The mapper's pendingLeads MUST be a strict subset of the upstream
+  // `review` rows (which are pre-filtered server-side via
+  // groupScopeFilter(session, 'reportSection')). If the mapper ever
+  // synthesised leads from a different source — e.g. weeklyReport.leadSections
+  // alone, which is also scoped but only contains leads who already created
+  // a section — that would mask scope leaks at the API boundary. This test
+  // pins the contract: a lead can only land in pendingLeads if their leadId
+  // appears in `review`.
+  it('UFB-040: pendingLeads is a strict subset of the scoped review input', () => {
+    const result = mapDashboardData({
+      review: makeReview(),
+      archive: makeArchive(),
+      weeklyReport: makeWeeklyReport(),
+      now: new Date('2026-04-17T10:00:00.000Z'),
+    });
+    const reviewNames = new Set(makeReview().map((r) => r.leadName));
+    for (const name of result.pendingLeads) {
+      expect(reviewNames.has(name)).toBe(true);
+    }
+  });
+
+  it('UFB-040: empty review (scoped-out caller) yields empty pendingLeads', () => {
+    const result = mapDashboardData({
+      review: [],
+      archive: makeArchive(),
+      weeklyReport: makeWeeklyReport(),
+      now: new Date('2026-04-17T10:00:00.000Z'),
+    });
+    expect(result.pendingLeads).toEqual([]);
   });
 
   it('derives blockedAtRisk severity correctly from escalation type', () => {

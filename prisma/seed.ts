@@ -847,18 +847,36 @@ async function main() {
   }
 
   // --- 8. AppSettings singleton ---
+  // UFB-047 / Phase 49-01: legacy `departmentName` field removed; brand
+  // identity is owned by the Organization singleton seeded a few lines
+  // below.
   await prisma.appSettings.upsert({
     where: { id: "singleton" },
     update: {
-      departmentName: "Software Development",
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
     },
     create: {
       id: "singleton",
-      departmentName: "Software Development",
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
+    },
+  });
+
+  // --- 9. Organization singleton (UFB-047 / Phase 48-A) ---
+  // The migration seeds this row on first apply with ON CONFLICT DO NOTHING.
+  // On a `prisma migrate reset` the table is recreated and re-seeded by the
+  // migration itself; the upsert here is the seed-script's idempotent
+  // restoration after `db seed` runs over an already-migrated DB. We keep the
+  // canonical Demo / Example Software Department identity here so the
+  // dev environment always lands with a sensible brand.
+  await prisma.organization.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: {
+      id: "singleton",
+      shortName: "Demo",
+      fullName: "Example Software Department",
     },
   });
 

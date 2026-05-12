@@ -35,7 +35,6 @@ function makeWeeklyReport(
     deadline: new Date('2026-04-17T15:00:00.000Z'),
     periodStatus: 'open',
     weekLabel: 'W16-2026',
-    departmentName: 'Software Development',
     submissionCount: 2,
     totalLeads: 6,
     hasActiveReminderRule: true,
@@ -106,6 +105,8 @@ describe('WeeklyReportService — integration (data shape)', () => {
 
     const result = await service.getWeeklyReport();
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.reportId).toBe(reportId);
     expect(result.submissionCount).toBe(2);
     expect(result.totalLeads).toBe(6);
@@ -137,6 +138,8 @@ describe('WeeklyReportService — integration (data shape)', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.portfolioOverview).toHaveLength(2);
     expect(expectDefined(result.portfolioOverview[0]).worstStatus).toBe('red');
     expect(expectDefined(result.portfolioOverview[1]).worstStatus).toBe('green');
@@ -166,6 +169,8 @@ describe('WeeklyReportService — integration (data shape)', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.escalations).toHaveLength(2);
     expect(expectDefined(result.escalations[0]).type).toBe('blocked');
     expect(expectDefined(result.escalations[1]).type).toBe('at_risk');
@@ -184,6 +189,8 @@ describe('WeeklyReportService — integration (data shape)', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.leadSections).toHaveLength(0);
     expect(result.portfolioOverview).toHaveLength(0);
     expect(result.escalations).toHaveLength(0);
@@ -201,6 +208,8 @@ describe('WeeklyReportService — integration (data shape)', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     expect(result.periodStatus).toBe('published');
     expect(result.submissionCount).toBe(6);
   });
@@ -256,6 +265,9 @@ describe('WeeklyReportService — integration (data shape)', () => {
     const service = new WeeklyReportService(createSpyRepository(reports));
 
     const result = await service.getWeeklyReport(reportId);
+
+    expect(result.status).toBe('active');
+    if (result.status !== 'active') throw new Error('expected active');
     const section = expectDefined(result.leadSections[0]);
 
     expect(section.items).toHaveLength(1);

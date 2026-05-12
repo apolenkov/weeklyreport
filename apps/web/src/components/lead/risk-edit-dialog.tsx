@@ -57,10 +57,10 @@ export function RiskEditDialog({
   const [productId, setProductId] = useState(risk?.productId ?? seedProduct?.id ?? '');
   const [impact, setImpact] = useState(initialImpact ?? '');
   const [mitigation, setMitigation] = useState(initialMitigation ?? '');
-  // 35-04: pre-seed with the existing stage when editing a row that
-  // already has one (e.g. saved before the column existed shows '—').
-  const initialStage = risk?.stageName && risk.stageName !== '—' ? risk.stageName : '';
-  const [stageName, setStageName] = useState<string>(initialStage);
+  // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
+  const [stageIds, setStageIds] = useState<string[]>(
+    risk?.stageIds ? [...risk.stageIds] : (isCreate ? [...(stagesForProduct?.(seedProduct?.id ?? '') ?? [])] : []),
+  );
   // Per-field error map: each required field's empty validation reads
   // its own message and toggles its border red. Replaces the old single
   // `error` string that only highlighted the first failure and
@@ -74,7 +74,9 @@ export function RiskEditDialog({
       setProductId(risk?.productId ?? seedProduct?.id ?? '');
       setImpact(initialImpact ?? '');
       setMitigation(initialMitigation ?? '');
-      setStageName(risk?.stageName && risk.stageName !== '—' ? risk.stageName : '');
+      setStageIds(
+        risk?.stageIds ? [...risk.stageIds] : (isCreate ? [...(stagesForProduct?.(seedProduct?.id ?? '') ?? [])] : []),
+      );
       setErrors({});
     }
   }, [
@@ -83,11 +85,13 @@ export function RiskEditDialog({
     risk?.text,
     risk?.severity,
     risk?.productId,
-    risk?.stageName,
+    risk?.stageIds,
     seedProduct?.id,
     initialImpact,
     initialMitigation,
     defaultProductId,
+    stagesForProduct,
+    isCreate,
   ]);
 
   if (!open) return null;
@@ -116,7 +120,7 @@ export function RiskEditDialog({
       id: risk?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      stageName: stageName.trim() || '—',
+      stageIds: stageIds.length > 0 ? stageIds : undefined,
       severity,
       text: t,
       impact: im,
@@ -137,7 +141,7 @@ export function RiskEditDialog({
       role="presentation"
     >
       <div
-        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl"
+        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -234,9 +238,9 @@ export function RiskEditDialog({
 
           <StageMultiSelect
             id="risk-stage"
-            value={stageName}
+            value={stageIds}
             stages={stagesForProduct?.(productId) ?? []}
-            onChange={(next) => setStageName(next ?? '')}
+            onChange={setStageIds}
           />
 
           {/* Severity chips */}

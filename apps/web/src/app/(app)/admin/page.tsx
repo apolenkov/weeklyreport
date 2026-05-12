@@ -10,10 +10,16 @@ type Props = {
 // Phase 35-06: 'jobs' tab — BullMQ DLQ admin UI. Order: after 'reopen',
 // before 'settings' so the failure-triage workflow lives next to other
 // reactive admin work (reopen requests / failed-job retries).
+//
+// UFB-052 (Phase 51-B): 'periods' tab — admin period lifecycle list.
+// Position: between 'products' and 'reminders' — products → periods →
+// reminders mirrors the actual data-flow ordering (a period scoped to
+// products, with reminders fired against it).
 const tabs = [
   "users",
   "groups",
   "products",
+  "periods",
   "reminders",
   "reopen",
   "jobs",
@@ -26,6 +32,7 @@ const TAB_LABELS: Record<TabId, string> = {
   users: "Users",
   groups: "Groups",
   products: "Products",
+  periods: "Periods",
   reminders: "Reminders",
   reopen: "Reopen",
   jobs: "Jobs",

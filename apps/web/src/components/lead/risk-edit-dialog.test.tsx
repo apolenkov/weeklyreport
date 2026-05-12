@@ -1,8 +1,10 @@
 /**
  * 35-04 / UFB-014: the Risk dialog uses an OPTIONAL multi-stage selector
- * (`StageMultiSelect`). Empty selection = applies to all assigned stages
- * for the active project. Options come from `stagesForProduct(productId)`
+ * (`StageMultiSelect`). Options come from `stagesForProduct(productId)`
  * — the lead's StageAssignment rows.
+ *
+ * UFB-073: in create mode all owned stages are pre-selected by default.
+ * Deselecting all → em-dash sentinel.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -20,7 +22,7 @@ const products: Product[] = [
 ];
 
 describe('RiskEditDialog - SDLC stage selector (35-04 / UFB-014)', () => {
-  it('saves with empty stageName when no stage is selected (stage is optional)', () => {
+  it('pre-selects all owned stages by default in create mode (UFB-073)', () => {
     const onSave = vi.fn();
     render(
       <RiskEditDialog
@@ -50,10 +52,9 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / UFB-014)', () => {
       text: 'Vendor delay',
       impact: 'Slips Q3',
       mitigation: 'Escalate',
+      // UFB-073 + R1: pre-fill saves as stageIds array (not joined CSV).
+      stageIds: ['Dev', 'Testing'],
     });
-    // Empty selection → component normalises to em-dash sentinel.
-    const stageName = onSave.mock.calls[0]?.[0].stageName;
-    expect(stageName == null || stageName === '' || stageName === '—').toBe(true);
   });
 
   it('saves with stageName when all required fields including stage are filled', () => {
@@ -79,13 +80,14 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / UFB-014)', () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: 'Escalate' },
     });
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Dev' }));
+    // Both stages are pre-selected (UFB-073). Deselect 'Testing' to keep only 'Dev'.
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Testing' }));
 
     fireEvent.click(screen.getByRole('button', { name: /Save Risk/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      stageName: 'Dev',
+      stageIds: ['Dev'],
       text: 'Vendor delay',
       impact: 'Slips Q3',
       mitigation: 'Escalate',

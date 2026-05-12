@@ -148,7 +148,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
       <div className="space-y-4">
         <TabHeader
           title="Users"
-          description="Manage department members and their roles."
+          description="Manage group members and their roles."
           count={`${users.length} users`}
           search={
             <TabSearch
@@ -410,11 +410,15 @@ export function UsersTab({ users, groups }: UsersTabProps) {
 // ---- Helper components ----
 
 function RoleBadge({ role }: { readonly role: UserRole }) {
+  // UFB-057 / Phase 57: director badge uses a distinct steel-blue tone so
+  // it reads apart from admin (amber) and head (purple) while signalling
+  // leadership-audience read-only status.
   const styles: Record<UserRole, { bg: string; text: string }> = {
     lead: { bg: "var(--color-success)", text: "var(--color-primary)" },
     head: { bg: "#e8e0f0", text: "#6b21a8" },
     admin: { bg: "#fef3c7", text: "#92400e" },
     viewer: { bg: "var(--color-muted)", text: "var(--color-muted-foreground)" },
+    director: { bg: "#dbeafe", text: "#1e3a8a" },
   };
   const s = styles[role];
 

@@ -92,7 +92,10 @@ export type LeadKanbanItem = {
   id: string;
   productId: string;
   productName: string;
+  /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
   stageName?: string;
+  /** UFB-073 (R1): stage selection as array of stage names. */
+  stageIds?: string[];
   status: ItemStatus;
   text: string;
   author: string;
@@ -102,7 +105,10 @@ export type LeadRiskEntry = {
   id: string;
   productId: string;
   productName: string;
-  stageName: string;
+  /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
+  stageName?: string;
+  /** UFB-073 (R1): stage selection as array of stage names. */
+  stageIds?: string[];
   severity: "at-risk" | "blocked";
   /** The user-controlled "what is the risk" text (= raw `risk` field). */
   text: string;
@@ -123,15 +129,22 @@ export type LeadDecisionEntry = {
   impact: string;
   /** Optional deadline (ISO yyyy-mm-dd string) — null when not set. */
   deadline: string | null;
-  /** 35-04: SDLC stage label or '—' when legacy/unset. */
-  stageName: string;
+  /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
+  stageName?: string;
+  /** UFB-073 (R1): stage selection as array of stage names. */
+  stageIds?: string[];
 };
 
 export type LeadPriorityEntry = {
   rank: number;
   text: string;
-  /** 35-04: SDLC stage label or '—' when legacy/unset. */
-  stageName: string;
+  /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
+  stageName?: string;
+  /** UFB-073 (R1): stage selection as array of stage names. */
+  stageIds?: string[];
+  /** R4-B: product this priority is scoped to. */
+  productId?: string;
+  productName?: string;
 };
 
 export type LeadReportPeriod = {
@@ -173,7 +186,7 @@ export type LeadCurrentUser = {
    * head/admin-only UI like "Revoke" vs "Request Reopen". Driven by the
    * read model's `authorRole`.
    */
-  authorRole: "lead" | "head" | "admin" | "viewer";
+  authorRole: "lead" | "head" | "admin" | "viewer" | "director";
 };
 
 // ---- Helpers ----
@@ -415,10 +428,10 @@ export function mapLeadItems(
         id: item.id ?? `${itemType}-${item.projectId}-${item.text.slice(0, 8)}`,
         productId: item.projectId,
         productName: project?.name ?? "Unknown",
-        // 35-04: real stage label from DB. Surfaces on the kanban card and
+        // UFB-073 (R1): stage array from DB. Surfaces on the kanban card and
         // groups items by product+stage. Falls back to undefined for
         // legacy rows seeded before the column existed.
-        ...(item.stageName ? { stageName: item.stageName } : {}),
+        ...(item.stageIds ? { stageIds: item.stageIds } : {}),
         status,
         text: item.text,
         author: section.authorName,
@@ -444,8 +457,8 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
       id: r.id ?? `risk-${idx}`,
       productId: r.projectId,
       productName: project?.name ?? "Unknown",
-      // 35-04: real stage label from DB; legacy rows fall back to '—'.
-      stageName: r.stageName ?? "—",
+      // UFB-073 (R1): stage array from DB; legacy rows fall back to undefined.
+      stageIds: r.stageIds,
       severity: "at-risk" as const,
       text: r.risk,
       impact: r.impact,
@@ -457,27 +470,31 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
 export function mapLeadDecisions(
   section: ReportSectionReadModel,
 ): LeadDecisionEntry[] {
+  const projectIndex = buildProjectIndex(section);
   return section.decisions.map((d, idx) => ({
     id: d.id ?? `decision-${idx}`,
-    productId: "",
-    productName: "Department",
+    productId: d.productId ?? '',
+    productName: (d.productId ? projectIndex.get(d.productId)?.name : undefined) ?? 'Group',
     text: d.text,
     owner: d.owner ?? "",
     impact: d.impact ?? "",
     deadline: d.deadline
       ? new Date(d.deadline).toISOString().slice(0, 10)
       : null,
-    stageName: d.stageName ?? "—",
+    stageIds: d.stageIds,
   }));
 }
 
 export function mapLeadPriorities(
   section: ReportSectionReadModel,
 ): LeadPriorityEntry[] {
+  const projectIndex = buildProjectIndex(section);
   return section.priorities.map((p) => ({
     rank: clampRank(p.rank),
     text: p.text,
-    stageName: p.stageName ?? "—",
+    stageIds: p.stageIds,
+    productId: p.productId ?? undefined,
+    productName: (p.productId ? projectIndex.get(p.productId)?.name : undefined) ?? undefined,
   }));
 }
 
@@ -574,7 +591,7 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   // token (`authorRole`) is exposed so role-based UI gating doesn't have
   // to reverse-engineer the label string. Defaults to 'lead' when the
   // read model omits it (legacy fixtures, harness-driven tests).
-  const authorRole: "lead" | "head" | "admin" | "viewer" =
+  const authorRole: "lead" | "head" | "admin" | "viewer" | "director" =
     args.active.authorRole ?? "lead";
   const roleLabel =
     authorRole === "head"
@@ -583,7 +600,9 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
         ? "Admin"
         : authorRole === "viewer"
           ? "Viewer"
-          : "Lead";
+          : authorRole === "director"
+            ? "Director"
+            : "Lead";
 
   return {
     products: mapLeadProducts(section),

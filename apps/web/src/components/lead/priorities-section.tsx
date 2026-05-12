@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { PriorityEditDialog } from './priority-edit-dialog';
-import type { PriorityEntry } from './mock-data';
+import type { PriorityEntry, Product } from './mock-data';
 import { splitStageNames } from './stage-tags';
 
 type PrioritiesSectionProps = {
@@ -16,6 +16,9 @@ type PrioritiesSectionProps = {
    * (union — priorities are department-scoped, no projectId).
    */
   readonly availableStages?: readonly string[];
+  /** R4-B: products the lead is assigned to, passed through to the dialog. */
+  readonly products?: readonly Product[];
+  readonly defaultProductId?: string;
 };
 
 function EditIcon() {
@@ -74,7 +77,7 @@ const RANK_TEXT: Record<1 | 2 | 3 | 'rest', string> = {
  * Ranks renumber sequentially on add / delete so adjacent slots are
  * always 1..N (the schema allows up to 50 per `draftSaveSchema`).
  */
-export function PrioritiesSection({ priorities, readOnly = false, onChange, availableStages }: PrioritiesSectionProps) {
+export function PrioritiesSection({ priorities, readOnly = false, onChange, availableStages, products, defaultProductId }: PrioritiesSectionProps) {
   const sorted = [...priorities].sort((a, b) => a.rank - b.rank);
   const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
   const [dialogState, setDialogState] = useState<
@@ -150,6 +153,8 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
           priority={null}
           nextRank={1}
           availableStages={availableStages}
+          products={products}
+          defaultProductId={defaultProductId}
           onSave={handleDialogSave}
           onCancel={handleDialogCancel}
         />
@@ -241,6 +246,8 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
         priority={dialogState.open && dialogState.mode === 'edit' ? dialogState.priority : null}
         nextRank={dialogState.open && dialogState.mode === 'create' ? sorted.length + 1 : (dialogState.open && dialogState.mode === 'edit' ? dialogState.priority.rank : 1)}
         availableStages={availableStages}
+        products={products}
+        defaultProductId={defaultProductId}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
       />

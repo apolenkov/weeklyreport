@@ -3,11 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { renderEmail } from './render-template';
 import { expectDefined } from '../../test-utils/expect-defined.js';
 
+// UFB-047 / Phase 49-01: brand snapshot now travels with every Phase-28+
+// payload. The renderer reads it; the BullMQ enqueue path snapshots it
+// from `OrganizationService.getPublic()`.
+const organization = {
+  shortName: 'Demo',
+  fullName: 'Example Software Department',
+};
+
 const baseProps = {
   leadName: 'Lead Alpha',
   reportPeriod: '2026-04-13 → 2026-04-19',
   deadlineIso: '2026-04-20T15:00:00.000Z',
   sectionUrl: 'http://localhost:3000/lead/report?reportId=abc-123',
+  organization,
 };
 
 describe('renderEmail — kind="deadline"', () => {
@@ -53,6 +62,7 @@ describe('renderEmail — kind="escalation"', () => {
     headName: 'Department Head',
     cycleDate: '2026-04-19',
     reportPeriod: '2026-04-13 → 2026-04-19',
+    organization,
     lateLeads: [
       {
         leadName: 'Lead Alpha',

@@ -13,6 +13,28 @@ type Props = {
   readonly reportId: string;
 };
 
+// Brain icon for AI unavailable state — modern, friendly, abstract brain shape
+function AiBrainIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-6 w-6 flex-shrink-0"
+      style={{ color: "var(--color-primary)" }}
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {/* brain outline with lobes */}
+      <path d="M12 2C10.343 2 9 3.343 9 5v1c0 1.105-.895 2-2 2H6c-1.657 0-3 1.343-3 3v5c0 1.657 1.343 3 3 3h1c1.105 0 2 .895 2 2v1c0 1.657 1.343 3 3 3s3-1.343 3-3v-1c0-1.105.895-2 2-2h1c1.657 0 3-1.343 3-3v-5c0-1.657-1.343-3-3-3h-1c-1.105 0-2-.895-2-2V5c0-1.657-1.343-3-3-3z" />
+      {/* subtle inner detail - neural spark */}
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function AiSummaryCard({ reportId }: Props) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -52,9 +74,38 @@ export function AiSummaryCard({ reportId }: Props) {
   if (!data) return null;
 
   if (!data.available) {
+    // UFB-066 (2026-05-11): visually improved unavailable state with rounded
+    // corners, soft gradient background, brain icon, and clear messaging.
+    // Reads as a real AI section ready for activation, not as a generic empty
+    // line. All copy English per CLAUDE.md «UI strings — English only до i18n»
+    // rule. TODO(Phase-54-activation): when real provider lands, fold this
+    // into a more specific «ingestion pending» state once the AiIngestionJob
+    // worker is live.
     return (
-      <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/70 p-4 text-sm text-[var(--color-muted-foreground)]">
-        AI summary unavailable.
+      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.06)]">
+        <div className="p-6">
+          {/* Header with brain icon and title */}
+          <div className="mb-4 flex items-start gap-4">
+            <div className="mt-1 rounded-lg bg-blue-100 p-2">
+              <AiBrainIcon />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-slate-900">
+                AI Insights Unavailable
+              </h3>
+              <p className="mt-1 text-sm text-slate-600">
+                AI summary will appear here once your AI provider is configured.
+              </p>
+            </div>
+          </div>
+
+          {/* Info box with setup guidance */}
+          <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+            <p className="text-xs font-medium text-blue-900">
+              Once enabled, AI will automatically generate summaries based on submitted sections.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

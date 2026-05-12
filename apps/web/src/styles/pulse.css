@@ -1,0 +1,233 @@
+/*
+ * Phase 58 / UFB-058: «Your PULSE?» landing rebrand.
+ *
+ * Aesthetic direction: refined editorial-industrial. Corporate SaaS but
+ * living and warm. The ECG line passes through the `?` glyph — that
+ * is the "moment".
+ *
+ * All animations are pure CSS keyframes (no JS, no Framer Motion):
+ *  - GPU-accelerated transforms / opacity / stroke-dashoffset
+ *  - prefers-reduced-motion: reduce → all motion paused
+ *
+ * Tokens (mirrored from app palette):
+ *  --pulse-deep       deepest forest backdrop
+ *  --pulse-mid        existing starbucks-primary mid green
+ *  --pulse-tip        existing starbucks-accent
+ *  --pulse-glow       existing starbucks-gold (the heartbeat tip color)
+ */
+
+:root {
+  --pulse-deep: #0c2620;
+  --pulse-mid: #006241;
+  --pulse-tip: #00754a;
+  --pulse-glow: var(--color-starbucks-gold, #fbbf24);
+  --pulse-line: rgba(255, 255, 255, 0.06);
+}
+
+/* ───── PulseMark — display lettering for «Your PULSE?» ───── */
+
+.pulse-mark {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05em;
+  font-family: "Fraunces", "Times New Roman", serif;
+  font-feature-settings: "ss01" on, "liga" on;
+  color: #fff;
+  /* Pull the whole mark slightly left of the eyeline to break visual
+     symmetry; intentional. */
+  margin-left: -0.05em;
+}
+
+.pulse-word {
+  font-size: clamp(0.95rem, 1vw + 0.5rem, 1.35rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 400;
+  font-variation-settings: "opsz" 14, "wght" 420;
+  margin-bottom: 0.4em;
+  margin-left: 0.4em;
+}
+
+.pulse-strong {
+  display: inline-block;
+  font-size: clamp(4rem, 9vw + 1rem, 8.5rem);
+  line-height: 0.86;
+  letter-spacing: -0.025em;
+  font-variation-settings: "opsz" 144, "wght" 560;
+  /* The breathing animation modulates font-weight via variation-settings,
+     which is GPU-cheap and avoids re-flow because the advance widths in
+     Fraunces variable are pre-computed across the wght axis. */
+  animation: pulse-breathe 6s ease-in-out infinite;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #ffffff 60%,
+    rgba(255, 255, 255, 0.92) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* The «?» becomes a logo glyph: gold color + own breathing rhythm +
+   a small concentric "heartbeat" dot replacing the stock dot in `?`. */
+
+/* `?` glyph dropped 2026-05-11 — PulseMark now reads «Your PULSE» as an
+   assertion. The ECG line moved from passing-through-`?` to running
+   underneath PULSE as a baseline trace (see .pulse-bg-ecg below). */
+
+/* ───── Static tagline under PulseMark ───── */
+
+.pulse-tagline-static {
+  font-family: "Lexend", "Source Sans 3", system-ui, sans-serif;
+  font-size: clamp(0.9rem, 0.6vw + 0.7rem, 1.05rem);
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.5;
+  margin-top: 1.6rem;
+  max-width: 32ch;
+}
+
+/* ───── Background — ECG line + dot grid ───── */
+
+.pulse-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120% 80% at 50% 110%,
+      transparent 0%,
+      rgba(12, 38, 32, 0.55) 70%
+    ),
+    linear-gradient(
+      135deg,
+      var(--pulse-deep) 0%,
+      #143b30 30%,
+      var(--pulse-mid) 65%,
+      var(--pulse-tip) 100%
+    );
+}
+
+/* Dot grid layer — static pattern, very subtle */
+.pulse-bg-dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.06) 1px,
+    transparent 1.5px
+  );
+  background-size: 32px 32px;
+  mask-image: radial-gradient(
+    120% 100% at 50% 50%,
+    rgba(0, 0, 0, 1) 30%,
+    rgba(0, 0, 0, 0.3) 80%,
+    transparent 100%
+  );
+}
+
+/* ECG line — bands across the canvas. Two staggered tracks for depth. */
+.pulse-bg-ecg {
+  position: absolute;
+  /* Position the ECG track exactly along the eyeline of the «PULSE?»
+     baseline. The owning layout column centers vertically, so we pin
+     the SVG to the same band; if the brand block moves, this needs
+     re-tuning. */
+  top: 50%;
+  left: -10%;
+  width: 220%;
+  height: 220px;
+  transform: translateY(-50%);
+  opacity: 0.85;
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.18));
+}
+
+.pulse-bg-ecg path {
+  fill: none;
+  stroke: var(--pulse-glow);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* Each path is its own track; the total stroke length is ~2400 (the
+     viewBox width). The dasharray is the "visible segment" length; the
+     animation slides the dashoffset across, simulating a heartbeat
+     tracing left to right. */
+  stroke-dasharray: 280 4000;
+  animation: pulse-ecg-scan 7s linear infinite;
+}
+
+.pulse-bg-ecg path.track-secondary {
+  opacity: 0.35;
+  stroke-width: 1;
+  animation-duration: 11s;
+  animation-delay: -3s;
+}
+
+/* Hairline at the bottom of the dark column — a quiet horizon. */
+.pulse-bg::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 6%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(251, 191, 36, 0.4) 30%,
+    rgba(251, 191, 36, 0.55) 50%,
+    rgba(251, 191, 36, 0.4) 70%,
+    transparent 100%
+  );
+}
+
+/* ───── Keyframes ───── */
+
+@keyframes pulse-breathe {
+  0%, 100% { font-variation-settings: "opsz" 144, "wght" 540; }
+  50%      { font-variation-settings: "opsz" 144, "wght" 600; }
+}
+
+@keyframes pulse-q-breathe {
+  0%, 100% { font-variation-settings: "opsz" 144, "wght" 600; transform: translateY(0); }
+  50%      { font-variation-settings: "opsz" 144, "wght" 700; transform: translateY(-2px); }
+}
+
+@keyframes pulse-q-dot {
+  0%, 60%, 100% {
+    transform: translateX(-50%) scale(1);
+    box-shadow:
+      0 0 0 0 rgba(251, 191, 36, 0.55),
+      0 0 14px 2px rgba(251, 191, 36, 0.25);
+  }
+  15% {
+    transform: translateX(-50%) scale(1.35);
+    box-shadow:
+      0 0 0 6px rgba(251, 191, 36, 0),
+      0 0 18px 4px rgba(251, 191, 36, 0.45);
+  }
+  30% {
+    transform: translateX(-50%) scale(0.95);
+    box-shadow:
+      0 0 0 0 rgba(251, 191, 36, 0.0),
+      0 0 12px 1px rgba(251, 191, 36, 0.2);
+  }
+}
+
+@keyframes pulse-ecg-scan {
+  0%   { stroke-dashoffset: 4280; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* Honor user motion preferences — kill everything that moves. */
+@media (prefers-reduced-motion: reduce) {
+  .pulse-strong,
+  .pulse-bg-ecg path {
+    animation: none !important;
+  }
+}

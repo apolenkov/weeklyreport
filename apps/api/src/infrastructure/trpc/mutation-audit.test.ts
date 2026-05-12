@@ -33,6 +33,27 @@ function makeAuditSpy(): {
     roleDenied: vi.fn(),
     scopeDenied: vi.fn(),
     mutation,
+    // UFB-036 (Phase 44-05): the policy helpers are not exercised here
+    // (they're verified by audit-logger.test.ts and the router-level
+    // wiring), but the mock has to satisfy the AuditLogger interface.
+    policySave: vi.fn(),
+    policyRemove: vi.fn(),
+    // UFB-047 / Phase 48-A: organizationUpdate not exercised here either.
+    organizationUpdate: vi.fn(),
+    // UFB-049 / Phase 50-B: period auto-* events fired only by the
+    // schedulers, not the tRPC mutation path — exercised by
+    // audit-logger.test.ts. Stubbed here to satisfy the interface.
+    periodAutoCreate: vi.fn(),
+    periodAutoPublish: vi.fn(),
+    periodAutoArchive: vi.fn(),
+    // UFB-063: emitted only by `admin.createPeriodManual` (router-level
+    // audit, parallel to the policySave pattern). Mocked here to satisfy
+    // the AuditLogger interface; assertions live in
+    // audit-logger.test.ts.
+    periodManualCreate: vi.fn(),
+    // UFB-067: emitted only by `admin.updatePeriodManual`. Same rationale
+    // as the create event above — mocked for interface compliance.
+    periodManualEdit: vi.fn(),
   };
   return { audit, mutation };
 }

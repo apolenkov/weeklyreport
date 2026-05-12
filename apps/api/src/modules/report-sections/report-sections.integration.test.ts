@@ -173,7 +173,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           tag: "feature",
           workflowStatus: "in_progress",
           carriedOver: false,
-          stageName: "Development",
+          stageIds: ["Development"],
         },
       ],
       risks: [],
@@ -253,7 +253,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           tag: "feature",
           workflowStatus: "in_progress" as const,
           carriedOver: false,
-          stageName: "Development",
+          stageIds: ["Development"],
         },
       ],
       risks: [
@@ -262,7 +262,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           risk: "Risk",
           impact: "Impact",
           mitigation: "Mitigation",
-          stageName: "Testing",
+          stageIds: ["Testing"],
         },
       ],
       decisions: [
@@ -272,17 +272,17 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           deadline: null,
           impact: "Impact",
           resolvedAt: null,
-          stageName: "Design",
+          stageIds: ["Design"],
         },
       ],
-      priorities: [{ rank: 1, text: "P1", stageName: "DevOps" }],
+      priorities: [{ rank: 1, text: "P1", stageIds: ["DevOps"] }],
     };
 
     const saved = await repo.saveSection(modified);
-    expect(expectDefined(saved.items[0]).stageName).toBe("Development");
-    expect(expectDefined(saved.risks[0]).stageName).toBe("Testing");
-    expect(expectDefined(saved.decisions[0]).stageName).toBe("Design");
-    expect(expectDefined(saved.priorities[0]).stageName).toBe("DevOps");
+    expect(expectDefined(saved.items[0]).stageIds).toEqual(["Development"]);
+    expect(expectDefined(saved.risks[0]).stageIds).toEqual(["Testing"]);
+    expect(expectDefined(saved.decisions[0]).stageIds).toEqual(["Design"]);
+    expect(expectDefined(saved.priorities[0]).stageIds).toEqual(["DevOps"]);
   });
 
   it("saveSection persists all nested entities and returns updated section", async () => {

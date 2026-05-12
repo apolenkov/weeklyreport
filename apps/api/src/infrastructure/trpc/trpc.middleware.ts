@@ -7,6 +7,7 @@ import type { Role, UserSession } from "@customreport/shared";
 
 import type { TrpcContext } from "./trpc.context.js";
 import { httpRequestDurationSeconds } from "../metrics/metrics.registry.js";
+import { trpcMetricsMiddleware as recordTrpcMetrics } from "../metrics/trpc-metrics.middleware.js";
 
 /**
  * Describe a tRPC response shape for debug logs without exposing values.
@@ -78,6 +79,20 @@ function observeTrpcDuration(
     durationMs / 1000,
   );
 }
+
+/**
+ * 47-03 (DX-03): Prometheus middleware — records per-procedure latency
+ * (`trpc_request_duration_seconds`) and request volume
+ * (`trpc_request_total`) with labels `procedure`/`type`/`status`. Wired
+ * BEFORE `loggingMiddleware` on every procedure helper so timings
+ * exclude logger / audit / Prisma-userActionLog overhead. The actual
+ * histogram emit lives in `infrastructure/metrics/trpc-metrics.middleware.ts`
+ * — this thin t.middleware wrapper just delegates to it so the metrics
+ * code stays framework-agnostic and unit-testable without `initTRPC`.
+ */
+export const metricsMiddleware = t.middleware(({ path, type, next }) =>
+  recordTrpcMetrics({ path, type, next }),
+);
 
 /**
  * Logging middleware — emits one entry log on procedure start and one exit log
@@ -318,7 +333,9 @@ export const mutationAuditMiddleware = t.middleware(
   },
 );
 
-export const publicProcedure = t.procedure.use(loggingMiddleware);
+export const publicProcedure = t.procedure
+  .use(metricsMiddleware)
+  .use(loggingMiddleware);
 
 const isAuthed = t.middleware(({ ctx, next }) => {
   if (!ctx.session) {
@@ -391,6 +408,7 @@ const pdfExportGuard = t.middleware(
 );
 
 export const protectedProcedure = t.procedure
+  .use(metricsMiddleware)
   .use(loggingMiddleware)
   .use(isAuthed)
   .use(pdfExportGuard)
@@ -450,24 +468,44 @@ const anyRoleMiddleware = buildRoleMiddleware([
   "head",
   "admin",
   "viewer",
+  "director",
+]);
+// Phase 52 (UFB-054): leadership-audience procedure. Used by
+// `telemetry.summary` and any other product-KPI surface that the head,
+// admin, and viewer share but lead must NOT see (a lead is the data
+// subject of these KPIs, not a consumer of them). This is distinct from
+// `anyRoleProcedure` because lead is excluded.
+//
+// UFB-057 / Phase 57: 'director' joins the leadership audience — directors
+// are the highest-level read-only consumer (god-mode-read across groups)
+// and consume product KPIs at the same level as viewers/admins.
+const leadershipRoleMiddleware = buildRoleMiddleware([
+  "head",
+  "admin",
+  "viewer",
+  "director",
 ]);
 
 export const headProcedure = t.procedure
+  .use(metricsMiddleware)
   .use(loggingMiddleware)
   .use(headRoleMiddleware)
   .use(pdfExportGuard)
   .use(mutationAuditMiddleware);
 export const leadProcedure = t.procedure
+  .use(metricsMiddleware)
   .use(loggingMiddleware)
   .use(leadRoleMiddleware)
   .use(pdfExportGuard)
   .use(mutationAuditMiddleware);
 export const viewerProcedure = t.procedure
+  .use(metricsMiddleware)
   .use(loggingMiddleware)
   .use(viewerRoleMiddleware)
   .use(pdfExportGuard)
   .use(mutationAuditMiddleware);
 export const anyRoleProcedure = t.procedure
+  .use(metricsMiddleware)
   .use(loggingMiddleware)
   .use(anyRoleMiddleware)
   .use(pdfExportGuard)
@@ -476,8 +514,17 @@ export const anyRoleProcedure = t.procedure
 // users get FORBIDDEN. Use headProcedure for endpoints that should be
 // reachable by both head and admin (dashboards, weekly reports, review).
 export const adminProcedure = t.procedure
+  .use(metricsMiddleware)
   .use(loggingMiddleware)
   .use(adminRoleMiddleware)
+  .use(pdfExportGuard)
+  .use(mutationAuditMiddleware);
+// Phase 52 (UFB-054): leadership procedure — head + admin + viewer.
+// Lead is excluded by design (lead is the data subject of product KPIs).
+export const leadershipProcedure = t.procedure
+  .use(metricsMiddleware)
+  .use(loggingMiddleware)
+  .use(leadershipRoleMiddleware)
   .use(pdfExportGuard)
   .use(mutationAuditMiddleware);
 

@@ -10,6 +10,7 @@ import { mapAdminSnapshot, mapAdminSettings } from "../../lib/mappers";
 import { UsersTab } from "./users-tab";
 import { GroupsTab } from "./groups-tab";
 import { ProductsTab } from "./products-tab";
+import { PeriodsTab } from "./periods-tab";
 import { RemindersTab } from "./reminders-tab";
 import { SettingsTab } from "./settings-tab";
 import { ReopenTab } from "./reopen-tab";
@@ -99,7 +100,11 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
               <UsersTab users={data.users} groups={data.groups} />
             )}
             {activeTab === "groups" && (
-              <GroupsTab groups={data.groups} users={data.users} />
+              <GroupsTab
+                groups={data.groups}
+                users={data.users}
+                products={data.products}
+              />
             )}
             {activeTab === "products" && (
               <ProductsTab
@@ -108,10 +113,37 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
                 productFilter={productFilter}
               />
             )}
-            {activeTab === "reminders" && (
-              <RemindersTab reminders={data.reminders} periods={data.periods} />
-            )}
-            {!["users", "groups", "products", "reminders"].includes(
+            {/* UFB-052 (Phase 51-B): PeriodsTab owns its own queries
+                (admin.listPeriodsByState) so it pulls richer rows than
+                the shared admin snapshot can carry — no props needed. */}
+            {activeTab === "periods" && <PeriodsTab />}
+            {activeTab === "reminders" && (() => {
+              // UFB-036 (Phase 44-04): group rules by their owning policy
+              // for the read-only expander on each policy row. Rules whose
+              // `policyId` is `null` (legacy, pre-44-01) are skipped — the
+              // policy editor has no row to attach them to.
+              const derivedRulesByPolicyId: Record<string, typeof data.reminders> = {};
+              for (const rule of data.reminders) {
+                if (rule.policyId === null) continue;
+                const bucket = derivedRulesByPolicyId[rule.policyId] ?? [];
+                bucket.push(rule);
+                derivedRulesByPolicyId[rule.policyId] = bucket;
+              }
+              return (
+                <RemindersTab
+                  policies={data.policies}
+                  derivedRulesByPolicyId={derivedRulesByPolicyId}
+                  periods={data.periods}
+                  // UFB-048 (Phase 48-B): seed the «New Policy» form with
+                  // org-wide defaults from AppSettings. Falls back to
+                  // hardcoded Europe/Moscow + lead-with-draft when settings
+                  // haven't loaded yet (handled inside emptyPolicyForm).
+                  defaultTimezone={settings?.defaultTimezone}
+                  defaultAudience={settings?.defaultReminderAudience}
+                />
+              );
+            })()}
+            {!["users", "groups", "products", "periods", "reminders"].includes(
               activeTab,
             ) && <UsersTab users={data.users} groups={data.groups} />}
           </>

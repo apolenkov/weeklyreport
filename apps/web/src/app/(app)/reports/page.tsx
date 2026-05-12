@@ -82,8 +82,8 @@ export default function ReportsPage() {
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
               {isLead
-                ? 'Your drafts and published department reports in one place.'
-                : 'Published weekly department report archive.'}
+                ? 'Your drafts and published group reports in one place.'
+                : 'Published group report archive.'}
             </p>
           </header>
 
@@ -163,7 +163,7 @@ function EmptyDraftsForNonLead() {
       </p>
       <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
         Leads see their drafts and submitted reports here. Open Published to
-        view the department archive.
+        view the group archive.
       </p>
     </div>
   );

@@ -23,7 +23,6 @@ function baseReport(
     deadline: new Date('2026-04-17T15:00:00Z'),
     periodStatus: 'open',
     weekLabel: 'Week 16',
-    departmentName: 'Software Development',
     submissionCount: 0,
     totalLeads: 0,
     hasActiveReminderRule: true,

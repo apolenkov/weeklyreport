@@ -20,11 +20,23 @@ import {
  * lives next to the component so multipart emails carry both halves —
  * corporate spam filters score multipart > HTML-only.
  */
+/**
+ * UFB-047 / Phase 49-01: brand identity threaded into the template props.
+ * The BullMQ enqueue path snapshots `OrganizationService.getPublic()` into
+ * the job data, so the worker re-renders with whatever the org row said at
+ * enqueue time (immune to mid-flight admin edits of the brand strings).
+ */
+export interface OrganizationBrand {
+  shortName: string;
+  fullName: string;
+}
+
 export interface DeadlineEmailProps {
   leadName: string;
   reportPeriod: string; // human-readable e.g. "2026-W17" or "2026-04-13 to 2026-04-19"
   deadlineIso: string; // ISO datetime
   sectionUrl: string; // deep link to /lead/report
+  organization: OrganizationBrand;
 }
 
 export function DeadlineEmail({
@@ -32,6 +44,7 @@ export function DeadlineEmail({
   reportPeriod,
   deadlineIso,
   sectionUrl,
+  organization,
 }: DeadlineEmailProps): React.ReactElement {
   return (
     <Html>
@@ -55,8 +68,12 @@ export function DeadlineEmail({
                 Open my section
               </Button>
             </Section>
+            {/* UFB-047 / Phase 49-01: brand footer rendered from the
+                `organization` payload snapshotted at enqueue time. Subject
+                uses `shortName` (compact); footer uses `fullName` (long). */}
             <Text className="text-sm text-gray-500">
-              CustomReport — Weekly status reporting for Development.
+              {organization.shortName} — Weekly status reporting for{' '}
+              {organization.fullName}.
             </Text>
           </Container>
         </Body>
@@ -73,6 +90,6 @@ export function deadlineEmailPlaintext(props: DeadlineEmailProps): string {
     '',
     `Open your section: ${props.sectionUrl}`,
     '',
-    '— CustomReport (Weekly status reporting for Development)',
+    `— ${props.organization.shortName} (Weekly status reporting for ${props.organization.fullName})`,
   ].join('\n');
 }

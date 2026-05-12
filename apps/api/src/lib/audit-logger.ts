@@ -1,4 +1,8 @@
-import type { Role } from '@customreport/shared';
+import type {
+  PeriodState,
+  ReminderPolicyKind,
+  Role,
+} from '@customreport/shared';
 
 import type { AppLogger } from './logger.js';
 
@@ -29,7 +33,14 @@ export type AuditEvent =
   | 'logout'
   | 'role-denied'
   | 'scope-denied'
-  | 'mutation';
+  | 'mutation'
+  | 'admin.policy.save'
+  | 'admin.policy.remove'
+  | 'admin.organization.update'
+  | 'period.auto-create'
+  | 'period.auto-publish'
+  | 'period.auto-archive'
+  | 'period.manual-create';
 
 export type AuditEnvelope = {
   readonly event: AuditEvent;
@@ -82,6 +93,126 @@ type MutationInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
   readonly reason?: string;
 };
 
+/**
+ * UFB-036 / Phase 44-05: emitted whenever an admin upserts or removes
+ * a {@link ReminderPolicy}. The generic `mutation` envelope already
+ * captures these as `procedure='admin.savePolicy' | 'admin.removePolicy'`,
+ * but a dedicated event lets SIEM rules filter on `event` directly
+ * (mirrors the `scope-denied` precedent from 46-05) and carries the
+ * policy `kind` + create/update `action` so dashboards can split create
+ * vs update without parsing the procedure string.
+ */
+type PolicySaveInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly policyId: string;
+  readonly kind: ReminderPolicyKind;
+  readonly action: 'create' | 'update';
+};
+
+type PolicyRemoveInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly policyId: string;
+};
+
+/**
+ * UFB-047 / Phase 48-A: emitted on every successful admin update of the
+ * `Organization` singleton (shortName/fullName change). Carries the
+ * before/after values so SIEM rules and dashboards can audit brand
+ * tampering — relevant because the same row drives the landing hero,
+ * nav-bar, and PDF/email headers.
+ */
+type OrganizationUpdateInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly previousShortName: string;
+  readonly previousFullName: string;
+  readonly nextShortName: string;
+  readonly nextFullName: string;
+};
+
+/**
+ * UFB-049 / Phase 50-B: emitted by the period-lifecycle scheduler classes
+ * (`PeriodCreatorScheduler`, `AutoPublisherScheduler`, `AutoArchiverScheduler`).
+ *
+ * No human actor — `userId='system'` and `role=null`. `ip` is omitted from the
+ * envelope (cron has no inbound request); we still set it to the literal
+ * 'cron' so the wire shape is uniform across audit consumers and SIEM rules
+ * keyed on `ip` do not have to special-case missing fields.
+ *
+ * `periodAutoCreate` — fired once per newly-created Period; carries the
+ * computed periodStart/end/deadline so dashboards can sanity-check the
+ * scheduler's date math without joining back to Report.
+ *
+ * `periodAutoPublish` — fired per auto-published Report; carries
+ * `missingSectionsCount` so on-call can quickly tell how many leads got
+ * stamped "Не сдал" by the auto-publish step.
+ *
+ * `periodAutoArchive` — fired per Report flipped to archived=true; carries
+ * just the periodId for traceability.
+ */
+type PeriodAutoCreateInput = {
+  readonly periodId: string;
+  readonly periodStart: string;
+  readonly periodEnd: string;
+  readonly deadline: string;
+  /**
+   * UFB-053 / Phase 51-C: state-transition payload. For a fresh create,
+   * `from` is null (no prior state) and `to` is either 'scheduled' (future
+   * period) or 'open' (period that has already started by the time the
+   * tick runs). Mirrors the publish/archive envelopes so SIEM rules and
+   * dashboards can filter on `(from, to)` uniformly across the three
+   * scheduler events.
+   */
+  readonly from: PeriodState | null;
+  readonly to: PeriodState;
+};
+
+type PeriodAutoPublishInput = {
+  readonly periodId: string;
+  readonly missingSectionsCount: number;
+  /** UFB-053 / Phase 51-C: state transition (typically open → published). */
+  readonly from: PeriodState;
+  readonly to: PeriodState;
+};
+
+type PeriodAutoArchiveInput = {
+  readonly periodId: string;
+  /** UFB-053 / Phase 51-C: state transition (typically published → archived). */
+  readonly from: PeriodState;
+  readonly to: PeriodState;
+};
+
+/**
+ * UFB-063: emitted when an admin manually mints a Period via
+ * `admin.createPeriodManual`. Unlike `period.auto-create` (system actor,
+ * ip='cron'), this event carries a human actor — `userId` / `role` / `ip`
+ * are real, taken from the tRPC session. Mirrors the auto-create payload
+ * (`from=null`, `to=<initial state>`) so SIEM rules that filter on
+ * `(from, to)` work uniformly across both creation paths.
+ */
+type PeriodManualCreateInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly periodId: string;
+  readonly periodStart: string;
+  readonly periodEnd: string;
+  readonly deadline: string;
+  readonly from: PeriodState | null;
+  readonly to: PeriodState;
+};
+
+/**
+ * UFB-067: emitted when an admin edits an existing period's envelope via
+ * `admin.updatePeriodManual`. The `changes` payload carries only the
+ * changed fields' before/after as ISO strings (dates) or string|null
+ * (weekLabel) — same shape the service's diff returns. SIEM filters that
+ * audit "what dates moved" key on `changes.<field>` presence; no-op edits
+ * never reach this event (the router skips emission when diff is empty).
+ */
+type PeriodManualEditInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+  readonly periodId: string;
+  readonly changes: Partial<{
+    periodStart: { from: string; to: string };
+    periodEnd: { from: string; to: string };
+    deadline: { from: string; to: string };
+    weekLabel: { from: string | null; to: string | null };
+  }>;
+};
+
 export interface AuditLogger {
   loginSuccess(input: LoginSuccessInput): void;
   loginFail(input: LoginFailInput): void;
@@ -89,6 +220,14 @@ export interface AuditLogger {
   roleDenied(input: RoleDeniedInput): void;
   scopeDenied(input: ScopeDeniedInput): void;
   mutation(input: MutationInput): void;
+  policySave(input: PolicySaveInput): void;
+  policyRemove(input: PolicyRemoveInput): void;
+  organizationUpdate(input: OrganizationUpdateInput): void;
+  periodAutoCreate(input: PeriodAutoCreateInput): void;
+  periodAutoPublish(input: PeriodAutoPublishInput): void;
+  periodAutoArchive(input: PeriodAutoArchiveInput): void;
+  periodManualCreate(input: PeriodManualCreateInput): void;
+  periodManualEdit(input: PeriodManualEditInput): void;
 }
 
 const AUDIT_MESSAGE = 'audit';
@@ -162,6 +301,99 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         ...(input.reason ? { reason: input.reason } : {}),
       });
     },
+    policySave(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'admin.policy.save',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        policyId: input.policyId,
+        kind: input.kind,
+        action: input.action,
+      });
+    },
+    policyRemove(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'admin.policy.remove',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        policyId: input.policyId,
+      });
+    },
+    organizationUpdate(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'admin.organization.update',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        previousShortName: input.previousShortName,
+        previousFullName: input.previousFullName,
+        nextShortName: input.nextShortName,
+        nextFullName: input.nextFullName,
+      });
+    },
+    periodAutoCreate(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'period.auto-create',
+        userId: 'system',
+        role: null,
+        ip: 'cron',
+        periodId: input.periodId,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        deadline: input.deadline,
+        from: input.from,
+        to: input.to,
+      });
+    },
+    periodAutoPublish(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'period.auto-publish',
+        userId: 'system',
+        role: null,
+        ip: 'cron',
+        periodId: input.periodId,
+        missingSectionsCount: input.missingSectionsCount,
+        from: input.from,
+        to: input.to,
+      });
+    },
+    periodAutoArchive(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'period.auto-archive',
+        userId: 'system',
+        role: null,
+        ip: 'cron',
+        periodId: input.periodId,
+        from: input.from,
+        to: input.to,
+      });
+    },
+    periodManualCreate(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'period.manual-create',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        periodId: input.periodId,
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        deadline: input.deadline,
+        from: input.from,
+        to: input.to,
+      });
+    },
+    periodManualEdit(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: 'period.manual-edit',
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        periodId: input.periodId,
+        changes: input.changes,
+      });
+    },
   };
 }
 
@@ -184,6 +416,30 @@ export function createNullAuditLogger(): AuditLogger {
       /* noop */
     },
     mutation() {
+      /* noop */
+    },
+    policySave() {
+      /* noop */
+    },
+    policyRemove() {
+      /* noop */
+    },
+    organizationUpdate() {
+      /* noop */
+    },
+    periodAutoCreate() {
+      /* noop */
+    },
+    periodAutoPublish() {
+      /* noop */
+    },
+    periodAutoArchive() {
+      /* noop */
+    },
+    periodManualCreate() {
+      /* noop */
+    },
+    periodManualEdit() {
       /* noop */
     },
   };

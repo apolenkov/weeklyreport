@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { DevRoleSwitcher } from '../../components/dev/role-switcher';
 import { NavBar } from '../../components/navigation/nav-bar';
+import { NavBarSkeleton } from '../../components/navigation/nav-bar-skeleton';
 import { SessionProvider } from '../../lib/session-provider';
 
 type AppGroupLayoutProps = Readonly<{
@@ -23,7 +24,10 @@ type AppGroupLayoutProps = Readonly<{
 export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
   return (
     <SessionProvider>
-      <Suspense fallback={null}>
+      {/* UFB-065: skeleton fallback eliminates the nav-bar FOUC flash on
+          cold reload. NavBarSkeleton matches NavBar height exactly so
+          the swap is opacity-only, zero CLS. */}
+      <Suspense fallback={<NavBarSkeleton />}>
         <NavBar />
       </Suspense>
       {children}

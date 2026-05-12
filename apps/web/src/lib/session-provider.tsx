@@ -1,9 +1,16 @@
 'use client';
 
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useTRPC } from './trpc-context';
+import { writeLastRole, type LastRole } from './last-role';
 
 /**
  * SessionProvider — exposes the currently logged-in user across (app)/ pages.
@@ -20,15 +27,29 @@ import { useTRPC } from './trpc-context';
 
 // Phase 27 widened the session-level role enum (sessionRoleSchema) to include
 // 'admin' for SAML claim mapping. adminProcedure === headProcedure for v6.0.
+// UFB-057 / Phase 57: 'director' joins the session-level role enum to mirror
+// shared `sessionRoleSchema`. Director is read-only at leadership level —
+// the SessionUser shape carries the role token; route gates do the rest.
 export type SessionUser = {
   id: string;
   name: string;
   email: string;
-  role: 'lead' | 'head' | 'viewer' | 'admin';
+  role: 'lead' | 'head' | 'viewer' | 'admin' | 'director';
+};
+
+/**
+ * UFB-047 / Phase 48-A: organization identity hydrated by the API on the
+ * `auth.me` response. The nav-bar consumes `organization.shortName` for
+ * the brand string; anonymous pages (landing) use `org.getPublic` instead.
+ */
+export type SessionOrganization = {
+  shortName: string;
+  fullName: string;
 };
 
 export type SessionState = {
   user: SessionUser | null;
+  organization: SessionOrganization | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 };
@@ -48,6 +69,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // data === null     → resolved unauthenticated
       return {
         user: null,
+        organization: null,
         isLoading,
         isAuthenticated: false,
       };
@@ -59,10 +81,34 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         email: data.email,
         role: data.role,
       },
+      // UFB-047 / Phase 48-A: `auth.me` carries the org identity hydrated
+      // per-request by the tRPC context factory. Older JWTs minted before
+      // Phase 48-A still verify (the field is optional in the schema), so
+      // the consumer must handle `organization === null` gracefully.
+      organization: data.organization
+        ? {
+            shortName: data.organization.shortName,
+            fullName: data.organization.fullName,
+          }
+        : null,
       isLoading: false,
       isAuthenticated: true,
     };
   }, [data, isLoading]);
+
+  // UFB-071 (2026-05-11): persist the last authenticated role + email + name
+  // into localStorage so the landing page can offer a 1-click resume hint
+  // («You were here as {Name} · {Role} — use this role or change?»).
+  // Fire from a useEffect so the write is strictly client-only and never
+  // runs during SSR / prerender.
+  useEffect(() => {
+    if (!value.isAuthenticated || !value.user) return;
+    writeLastRole({
+      role: value.user.role as LastRole,
+      email: value.user.email,
+      name: value.user.name,
+    });
+  }, [value.isAuthenticated, value.user]);
 
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>

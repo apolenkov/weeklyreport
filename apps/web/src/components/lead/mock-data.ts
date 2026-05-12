@@ -32,7 +32,9 @@ export type KanbanItem = {
   id: string;
   productId: string;
   productName: string;
+  /** @deprecated Use stageIds. Kept for reading legacy data. */
   stageName?: string;
+  stageIds?: string[];
   status: ItemStatus;
   text: string;
   author: string;
@@ -42,7 +44,9 @@ export type RiskEntry = {
   id: string;
   productId: string;
   productName: string;
-  stageName: string;
+  /** @deprecated Use stageIds. Kept for reading legacy data. */
+  stageName?: string;
+  stageIds?: string[];
   severity: 'at-risk' | 'blocked';
   /** The user-controlled "what is the risk" text (= raw `risk` field). */
   text: string;
@@ -63,16 +67,20 @@ export type DecisionEntry = {
   impact: string;
   /** Optional deadline (ISO date string) — null when not set. */
   deadline: string | null;
-  /** 35-04: SDLC stage (e.g. "Dev", "Testing"). '—' when legacy/unset. */
-  stageName: string;
+  /** @deprecated Use stageIds. Kept for reading legacy data. */
+  stageName?: string;
+  stageIds?: string[];
 };
 
 export type PriorityEntry = {
   /** 1-indexed rank. Schema allows any positive int up to 50 per draft. */
   rank: number;
   text: string;
-  /** 35-04: SDLC stage (e.g. "Dev", "Testing"). '—' when legacy/unset. */
-  stageName: string;
+  /** @deprecated Use stageIds. Kept for reading legacy data. */
+  stageName?: string;
+  stageIds?: string[];
+  productId?: string;
+  productName?: string;
 };
 
 export type ReportPeriod = {

@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { INestApplication } from "@nestjs/common";
-import type { UserSession } from "@customreport/shared";
+import { DEFAULT_ORGANIZATION_IDENTITY, type UserSession } from "@customreport/shared";
 
 import { createAuthController } from "../../modules/auth/auth.controller.js";
 import { verifyPdfExportToken } from "../../modules/pdf-export/pdf-export.service.js";
@@ -16,6 +16,20 @@ const DEV_SESSION: UserSession = {
   activeReportId: "a0000000-0000-4000-8000-000000000001",
   activeReportSectionId: null,
 };
+
+/**
+ * UFB-047 / Phase 48-A: 5-second TTL cache for the Organization singleton.
+ *
+ * The org row is read on every authenticated tRPC call to hydrate
+ * `session.organization`. A short TTL keeps admin renames visible within
+ * ~5s without hammering Postgres on every request. Cache miss path is
+ * a single primary-key lookup, so cold reads are cheap.
+ */
+const ORG_CACHE_TTL_MS = 5_000;
+let orgCache: {
+  value: { shortName: string; fullName: string };
+  expiresAt: number;
+} | null = null;
 
 /**
  * Phase 32-B1 (H-04): synthetic session created when an inbound cookie is
@@ -105,8 +119,9 @@ export function createContextFactory(
         const session = authController.verifySessionToken(token);
         const resolved = await resolveSectionId(session, prisma);
         const hydrated = await hydrateViewerGroupAccess(resolved, prisma);
+        const withOrg = await hydrateOrganization(hydrated, prisma);
         return {
-          session: hydrated,
+          session: withOrg,
           logger,
           correlationId,
           prisma,
@@ -162,8 +177,9 @@ export function createContextFactory(
     if (devModeEnabled || allowTest) {
       const devResolved = await resolveSectionId({ ...DEV_SESSION }, prisma);
       const devHydrated = await hydrateViewerGroupAccess(devResolved, prisma);
+      const devWithOrg = await hydrateOrganization(devHydrated, prisma);
       return {
-        session: devHydrated,
+        session: devWithOrg,
         logger,
         correlationId,
         prisma,
@@ -215,6 +231,46 @@ async function hydrateViewerGroupAccess(
     select: { groupId: true },
   });
   session.viewerGroupAccess = grants.map((g) => g.groupId);
+  return session;
+}
+
+/**
+ * UFB-047 / Phase 48-A: hydrate the singleton organization identity onto
+ * the session so authenticated routes can render the brand without a
+ * second round-trip. We DO NOT bake this into the JWT for two reasons:
+ *   1. JWTs are 1h-lived; admin renames would not propagate until refresh.
+ *   2. Adding required fields to the JWT shape would invalidate every
+ *      in-flight cookie on deploy.
+ *
+ * A 5-second module-level TTL cache (defined above) absorbs the read load —
+ * the org row changes on the order of months, not seconds, so a stale
+ * 5s window is acceptable. The cache is process-local; in a multi-replica
+ * deploy each replica eventually picks up the new value within TTL.
+ */
+async function hydrateOrganization(
+  session: UserSession,
+  prisma: PrismaService,
+): Promise<UserSession> {
+  const now = Date.now();
+  if (!orgCache || orgCache.expiresAt < now) {
+    // UFB-060: seed defaults are generic — concrete tenant brand stays
+    // in the seed file / admin-edited Organization row, never in code.
+    const row = await prisma.organization.upsert({
+      where: { id: "singleton" },
+      create: {
+        id: "singleton",
+        shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
+        fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
+      },
+      update: {},
+      select: { shortName: true, fullName: true },
+    });
+    orgCache = {
+      value: { shortName: row.shortName, fullName: row.fullName },
+      expiresAt: now + ORG_CACHE_TTL_MS,
+    };
+  }
+  session.organization = orgCache.value;
   return session;
 }
 

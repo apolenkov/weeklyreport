@@ -42,12 +42,31 @@ const initialSnapshot: AdminSnapshot = {
   periods: [],
   reminderRules: [],
   reminderExecutions: [],
+  policies: [],
 };
 
+// UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs.
+// UFB-047 / Phase 49-01: legacy `departmentName` field removed.
+// UFB-051 (Phase 51-A): 8 new period-cycle knobs mirror SQL defaults.
 const defaultSettings: AppSettings = {
-  departmentName: "Development",
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
+  periodLengthDays: 7,
+  workingDays: "mon-fri",
+  gracePeriodHours: 24,
+  defaultTimezone: "Europe/Moscow",
+  defaultReminderAudience: "lead-with-draft",
+  notificationFromEmail: null,
+  allowLateSubmissions: true,
+  autoPublishAfterDeadline: false,
+  autoArchiveWeeksAfterPublish: 0,
+  firstDayOfWeek: 1,
+  deadlineDayOfWeek: 5,
+  deadlineTime: "18:00",
+  maxOpenPeriods: 1,
+  requireAllSectionsToPublish: true,
+  allowReopenAfterPublish: true,
+  reopenWindowHours: 72,
 };
 
 /* ------------------------------------------------------------------ */

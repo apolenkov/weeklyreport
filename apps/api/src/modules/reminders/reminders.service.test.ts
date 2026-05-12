@@ -20,6 +20,8 @@ const activeRule: AdminReminderRule = {
   timezone: 'Europe/Moscow',
   status: 'active',
   version: 1,
+  // UFB-036 (Phase 44-01): nullable FK back to ReminderPolicy.
+  policyId: null,
 };
 
 const pausedRule: AdminReminderRule = {
@@ -198,6 +200,11 @@ describe('RemindersService', () => {
       reportPeriod: '2026-04-13 → 2026-04-19',
       deadlineIso: '2026-04-19T15:00:00.000Z',
       sectionUrl: 'http://localhost:3000/lead/report?reportId=abc',
+      // UFB-047 / Phase 49-01: brand snapshot threaded through the payload.
+      organization: {
+        shortName: 'Demo',
+        fullName: 'Example Software Department',
+      },
     };
 
     it('builds dedupeKey of shape ${ruleId}:deadline:${cycleDate}:${email} when payload is provided', async () => {

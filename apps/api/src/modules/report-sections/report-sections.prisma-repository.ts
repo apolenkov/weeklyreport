@@ -48,6 +48,9 @@ type PrismaReportSectionWithRelations = NonNullable<
   Awaited<ReturnType<PrismaService["reportSection"]["findUnique"]>>
 > & {
   authorId: string;
+  // UFB-049 / Phase 50-B: late column surfaced explicitly so the
+  // mapPrismaToReportSection type narrows without an `unknown` cast.
+  late: boolean;
   author: {
     name: string;
     role: string;
@@ -98,12 +101,14 @@ type PrismaReportSectionWithRelations = NonNullable<
     impact: string;
     resolvedAt: Date | null;
     stageName: string | null;
+    productId: string | null;
   }>;
   priorities: Array<{
     id: string;
     rank: number;
     text: string;
     stageName: string | null;
+    productId: string | null;
   }>;
 };
 
@@ -175,6 +180,11 @@ export function mapPrismaToReportSection(
     authorRole: row.author.role,
     status: row.status,
     submittedAt: row.submittedAt,
+    // UFB-049 / Phase 50-B: late flag stamped by submitSection when
+    // `now > Report.deadline` at submit-time. Coerced to false when
+    // Prisma row predates the migration (defensive — the column default
+    // means this should never fire in practice).
+    late: (row as { late?: boolean }).late ?? false,
     projects: [...assignmentsByProjectId.values()]
       .map(({ project, assignments }) => {
         const ownedStages = assignments
@@ -207,7 +217,7 @@ export function mapPrismaToReportSection(
       workflowStatus: i.workflowStatus,
       carriedOver: i.carriedOver,
       completed: i.completed,
-      stageName: i.stageName,
+      stageIds: i.stageName ? i.stageName.split(', ').filter(Boolean) : undefined,
     })),
     risks: row.risks.map((r) => ({
       id: r.id,
@@ -215,7 +225,7 @@ export function mapPrismaToReportSection(
       risk: r.risk,
       impact: r.impact,
       mitigation: r.mitigation,
-      stageName: r.stageName,
+      stageIds: r.stageName ? r.stageName.split(', ').filter(Boolean) : undefined,
     })),
     decisions: row.decisions.map((d) => ({
       id: d.id,
@@ -224,13 +234,15 @@ export function mapPrismaToReportSection(
       deadline: d.deadline,
       impact: d.impact,
       resolvedAt: d.resolvedAt,
-      stageName: d.stageName,
+      stageIds: d.stageName ? d.stageName.split(', ').filter(Boolean) : undefined,
+      productId: d.productId ?? undefined,
     })),
     priorities: row.priorities.map((p) => ({
       id: p.id,
       rank: p.rank,
       text: p.text,
-      stageName: p.stageName,
+      stageIds: p.stageName ? p.stageName.split(', ').filter(Boolean) : undefined,
+      productId: p.productId ?? undefined,
     })),
   });
 }
@@ -246,6 +258,23 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
     });
 
     return report?.status ?? null;
+  }
+
+  /**
+   * UFB-049 / Phase 50-B: deadline-aware report lookup used by the
+   * submitSection grace-period gate. Returns null when the report does
+   * not exist so the service can no-op the gate without ad-hoc
+   * try/catch.
+   */
+  async getReportMeta(
+    reportId: string,
+  ): Promise<{ status: string; deadline: Date } | null> {
+    const report = await this.prisma.report.findUnique({
+      where: { id: reportId },
+      select: { status: true, deadline: true },
+    });
+
+    return report ?? null;
   }
 
   async getSectionById(
@@ -277,6 +306,12 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
           data: {
             status: section.status,
             submittedAt: section.submittedAt,
+            // UFB-049 / Phase 50-B: persist the late flag computed by
+            // ReportSectionsService.submitSection. Default of false in
+            // the schema means existing call sites that don't set it
+            // (e.g. saveDraft, reopen) leave the column unchanged via
+            // the prior value flowing through mergeSection.
+            late: section.late,
           },
         });
 
@@ -326,7 +361,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               workflowStatus: i.workflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
-              stageName: i.stageName ?? null,
+              stageName: i.stageIds?.join(', ') ?? null,
             })),
           });
         }
@@ -340,7 +375,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
-              stageName: r.stageName ?? null,
+              stageName: r.stageIds?.join(', ') ?? null,
             })),
           });
         }
@@ -355,7 +390,8 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               deadline: d.deadline ?? null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
-              stageName: d.stageName ?? null,
+              stageName: d.stageIds?.join(', ') ?? null,
+              productId: d.productId ?? null,
             })),
           });
         }
@@ -367,7 +403,8 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               reportSectionId: sectionId,
               rank: p.rank,
               text: p.text,
-              stageName: p.stageName ?? null,
+              stageName: p.stageIds?.join(', ') ?? null,
+              productId: p.productId ?? null,
             })),
           });
         }

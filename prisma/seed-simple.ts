@@ -54,6 +54,8 @@ const prisma = new PrismaClient({ adapter });
 const HEAD_ID = "a0000000-0000-4000-8000-000000000099";
 const VIEWER_ID = "a0000000-0000-4000-8000-000000000098";
 const ADMIN_ID = "a0000000-0000-4000-8000-000000000097";
+// UFB-057 / Phase 57: dev/demo seed user with role=director.
+const DIRECTOR_ID = "a0000000-0000-4000-8000-000000000096";
 const LEAD_1 = "a0000000-0000-4000-8000-000000000011";
 const LEAD_MARIA = "a0000000-0000-4000-8000-000000000012";
 const LEAD_IGOR = "a0000000-0000-4000-8000-000000000013";
@@ -246,6 +248,11 @@ async function main() {
   // Delete in FK-safe order. ReopenRequest references ReportSection → must
   // go before ReportSection deletes. Other CASCADE FKs (ProjectStatus →
   // ReportSection, Items → ReportSection, etc.) flow naturally.
+  //
+  // Phase 54 (AiIngestionJob → ReportSection): drop before ReportSection.
+  // Phase 55 (TelegramBinding → User): drop before User.
+  // Phase 56 (GroupProduct → Project + ReportingGroup): drop before Project.
+  await prisma.aiIngestionJob.deleteMany({});
   await prisma.reminderExecution.deleteMany({});
   await prisma.reminderRule.deleteMany({});
   await prisma.aiInsight.deleteMany({});
@@ -261,8 +268,10 @@ async function main() {
   await prisma.pdfExportJob.deleteMany({});
   await prisma.report.deleteMany({});
   await prisma.stageAssignment.deleteMany({});
+  await prisma.groupProduct.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.stage.deleteMany({});
+  await prisma.telegramBinding.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.reportingGroup.deleteMany({});
 
@@ -297,9 +306,23 @@ async function main() {
       {
         id: ADMIN_ID,
         email: "admin@customreport.local",
-        name: "Антон К.",
+        name: "Михаил Б.",
         role: Role.admin,
         samlId: "admin-1",
+        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+      },
+      {
+        // UFB-057 / Phase 57: seed director user. Director is god-mode-READ
+        // across all groups, so reportingGroupId is irrelevant for scope
+        // purposes (groupScopeFilter returns {} for director). We still
+        // attach the default group so listings that JOIN the group display
+        // the user in the default group's roster — the read-only badge in
+        // the UI is what signals the role to the operator.
+        id: DIRECTOR_ID,
+        email: "director@customreport.local",
+        name: "Елена Р.",
+        role: Role.director,
+        samlId: "director-1",
         reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
       },
       {

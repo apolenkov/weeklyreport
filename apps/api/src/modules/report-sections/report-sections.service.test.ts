@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { ReportSectionReadModel } from "@customreport/shared";
 
 import {
+  customreportSectionsSubmittedTotal,
+  customreportSectionSubmissionLatencySeconds,
+} from "../../infrastructure/metrics/metrics.registry.js";
+
+import {
   ReportSectionAccessError,
   ReportSectionsService,
   type ReportSectionsRepository,
@@ -357,3 +362,330 @@ describe("ReportSectionsService", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// UFB-049 / Phase 50-B: submitSection deadline gate (grace + late matrix)
+//
+// Combinations under test:
+//
+//   ┌──────────────────────┬──────────────────────┬───────────────────────┐
+//   │ now vs deadline      │ allowLateSubmissions │ Expected outcome      │
+//   ├──────────────────────┼──────────────────────┼───────────────────────┤
+//   │ before deadline      │ (any)                │ submit, late=false    │
+//   │ past deadline,       │ true                 │ submit, late=true     │
+//   │   within grace       │ false                │ submit, late=true     │
+//   │ past grace window    │ true                 │ submit, late=true     │
+//   │ past grace window    │ false                │ 403 ReportSection-    │
+//   │                      │                      │ AccessError           │
+//   └──────────────────────┴──────────────────────┴───────────────────────┘
+// ---------------------------------------------------------------------------
+
+describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
+  function createGracedRepository(opts: {
+    section?: ReportSectionReadModel;
+    deadline: Date;
+  }): ReportSectionsRepository {
+    const section = structuredClone(opts.section ?? baseSection);
+    // Make the section's traffic light filled so the content validator
+    // doesn't fire — we want to test the deadline gate in isolation.
+    const fixed: ReportSectionReadModel = {
+      ...section,
+      projects: section.projects.map((p) => ({
+        ...p,
+        trafficLight: "green" as "green" | "yellow" | "red" | null,
+      })),
+    };
+    let currentSection = fixed;
+    return {
+      async getSectionById(id) {
+        if (id !== currentSection.reportSectionId) return null;
+        return structuredClone(currentSection);
+      },
+      async getReportStatus() {
+        return "draft";
+      },
+      async getReportMeta() {
+        return { status: "draft", deadline: opts.deadline };
+      },
+      async saveSection(next) {
+        currentSection = structuredClone(next);
+        return structuredClone(currentSection);
+      },
+    };
+  }
+
+  function validSubmitPayload() {
+    return {
+      reportSectionId: baseSection.reportSectionId,
+      status: "draft" as const,
+      confirmed: true as const,
+      projectStatuses: [
+        {
+          projectId: expectDefined(baseSection.projects[0]).projectId,
+          status: "green" as const,
+        },
+      ],
+      items: baseSection.items,
+      risks: [],
+      decisions: [],
+      priorities: baseSection.priorities,
+    };
+  }
+
+  const ONE_HOUR = 60 * 60 * 1000;
+
+  it("before deadline: submits with late=false (gate fully bypassed)", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() + 24 * ONE_HOUR),
+    });
+    const service = new ReportSectionsService(repo, async () => ({
+      gracePeriodHours: 24,
+      allowLateSubmissions: false,
+    }));
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(false);
+  });
+
+  it("past deadline within grace + allowLate=true: submits with late=true", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() - 1 * ONE_HOUR),
+    });
+    const service = new ReportSectionsService(repo, async () => ({
+      gracePeriodHours: 24,
+      allowLateSubmissions: true,
+    }));
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(true);
+  });
+
+  it("past deadline within grace + allowLate=false: submits with late=true (grace still permissive)", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() - 1 * ONE_HOUR),
+    });
+    const service = new ReportSectionsService(repo, async () => ({
+      gracePeriodHours: 24,
+      allowLateSubmissions: false,
+    }));
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(true);
+  });
+
+  it("past grace window + allowLate=true: submits with late=true", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() - 48 * ONE_HOUR),
+    });
+    const service = new ReportSectionsService(repo, async () => ({
+      gracePeriodHours: 24,
+      allowLateSubmissions: true,
+    }));
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(true);
+  });
+
+  it("past grace window + allowLate=false: 403 ReportSectionAccessError", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() - 48 * ONE_HOUR),
+    });
+    const service = new ReportSectionsService(repo, async () => ({
+      gracePeriodHours: 24,
+      allowLateSubmissions: false,
+    }));
+
+    await expect(
+      service.submitSection(validSubmitPayload()),
+    ).rejects.toBeInstanceOf(ReportSectionAccessError);
+  });
+
+  it("legacy: no grace-settings provider wired → gate skipped, late stays false even past deadline", async () => {
+    const repo = createGracedRepository({
+      deadline: new Date(Date.now() - 48 * ONE_HOUR),
+    });
+    // No second constructor arg — legacy code path.
+    const service = new ReportSectionsService(repo);
+
+    const saved = await service.submitSection(validSubmitPayload());
+
+    expect(saved.status).toBe("submitted");
+    expect(saved.late).toBe(false);
+  });
+});
+
+// Phase 52-A (UFB-054): product-telemetry counters/histogram. Verifies the
+// submit path bumps `customreport_sections_submitted_total{late}` with the
+// stamped label, and observes a positive value in the latency histogram
+// when submission lands AFTER the deadline.
+describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
+  function buildRepo(deadline: Date): ReportSectionsRepository {
+    const section: ReportSectionReadModel = {
+      reportSectionId: "11111111-1111-4111-8111-111111111111",
+      reportId: "22222222-2222-4222-8222-222222222222",
+      authorId: "33333333-3333-4333-8333-333333333333",
+      authorName: "Lead 1",
+      status: "draft",
+      submittedAt: null,
+      projects: [
+        {
+          projectId: "44444444-4444-4444-8444-444444444444",
+          projectName: "Project 1",
+          trafficLight: "green",
+        },
+      ],
+      items: [],
+      risks: [],
+      decisions: [],
+      priorities: [
+        { rank: 1, text: "p1" },
+        { rank: 2, text: "p2" },
+        { rank: 3, text: "p3" },
+      ],
+    };
+    let current = section;
+    return {
+      async getSectionById(id) {
+        if (id !== current.reportSectionId) return null;
+        return structuredClone(current);
+      },
+      async getReportStatus() {
+        return "draft";
+      },
+      async getReportMeta() {
+        return { status: "draft", deadline };
+      },
+      async saveSection(next) {
+        current = structuredClone(next);
+        return structuredClone(current);
+      },
+    };
+  }
+
+  const ONE_HOUR = 60 * 60 * 1000;
+
+  it("increments late=false counter and observes a negative latency when submitted before deadline", async () => {
+    const before = await counterValue(customreportSectionsSubmittedTotal, {
+      late: "false",
+    });
+    const histBefore = await histogramSum(
+      customreportSectionSubmissionLatencySeconds,
+    );
+
+    const service = new ReportSectionsService(
+      buildRepo(new Date(Date.now() + 6 * ONE_HOUR)),
+      async () => ({ gracePeriodHours: 24, allowLateSubmissions: false }),
+    );
+    await service.submitSection({
+      reportSectionId: "11111111-1111-4111-8111-111111111111",
+      status: "draft" as const,
+      confirmed: true as const,
+      projectStatuses: [
+        {
+          projectId: "44444444-4444-4444-8444-444444444444",
+          status: "green" as const,
+        },
+      ],
+      items: [
+        {
+          projectId: "44444444-4444-4444-8444-444444444444",
+          type: "current" as const,
+          text: "Current item",
+          tag: "feature" as const,
+          workflowStatus: "in_progress" as const,
+        },
+      ],
+      risks: [],
+      decisions: [],
+      priorities: [
+        { rank: 1, text: "p1" },
+        { rank: 2, text: "p2" },
+        { rank: 3, text: "p3" },
+      ],
+    });
+
+    expect(
+      await counterValue(customreportSectionsSubmittedTotal, {
+        late: "false",
+      }),
+    ).toBe(before + 1);
+    // sum delta must be negative (submitted ahead of deadline).
+    const histAfter = await histogramSum(
+      customreportSectionSubmissionLatencySeconds,
+    );
+    expect(histAfter - histBefore).toBeLessThan(0);
+  });
+
+  it("increments late=true counter when submission lands past deadline", async () => {
+    const before = await counterValue(customreportSectionsSubmittedTotal, {
+      late: "true",
+    });
+
+    const service = new ReportSectionsService(
+      buildRepo(new Date(Date.now() - 2 * ONE_HOUR)),
+      async () => ({ gracePeriodHours: 24, allowLateSubmissions: true }),
+    );
+    await service.submitSection({
+      reportSectionId: "11111111-1111-4111-8111-111111111111",
+      status: "draft" as const,
+      confirmed: true as const,
+      projectStatuses: [
+        {
+          projectId: "44444444-4444-4444-8444-444444444444",
+          status: "green" as const,
+        },
+      ],
+      items: [
+        {
+          projectId: "44444444-4444-4444-8444-444444444444",
+          type: "current" as const,
+          text: "Current item",
+          tag: "feature" as const,
+          workflowStatus: "in_progress" as const,
+        },
+      ],
+      risks: [],
+      decisions: [],
+      priorities: [
+        { rank: 1, text: "p1" },
+        { rank: 2, text: "p2" },
+        { rank: 3, text: "p3" },
+      ],
+    });
+
+    expect(
+      await counterValue(customreportSectionsSubmittedTotal, {
+        late: "true",
+      }),
+    ).toBe(before + 1);
+  });
+});
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+async function counterValue(
+  counter: { get(): Promise<{ values: Array<{ value: number; labels: Record<string, any> }> }> },
+  labels: Record<string, string>,
+): Promise<number> {
+  const snapshot = await counter.get();
+  const match = snapshot.values.find((entry) =>
+    Object.entries(labels).every(([k, v]) => String(entry.labels[k]) === v),
+  );
+  return match?.value ?? 0;
+}
+
+async function histogramSum(
+  hist: { get(): Promise<{ values: Array<{ value: number; metricName?: string }> }> },
+): Promise<number> {
+  const snapshot = await hist.get();
+  const sum = snapshot.values.find((e) => e.metricName?.endsWith("_sum"));
+  return sum?.value ?? 0;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */

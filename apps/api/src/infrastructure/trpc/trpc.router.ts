@@ -6,17 +6,25 @@ import {
   submitSectionSchema,
   myHistoryEntrySchema,
   paginationInputSchema,
+  adminCreatePeriodManualSchema,
+  adminUpdatePeriodManualSchema,
   adminUserSchema,
   adminProjectSchema,
+  groupProductEdgeInputSchema,
   reportingGroupSchema,
   reportPeriodSchema,
   adminReminderRuleSchema,
   appSettingsUpdateSchema,
+  periodListBucketSchema,
+  reminderPolicySchema,
   trafficLightHistoryInputSchema,
   leadVelocityInputSchema,
   periodComparisonInputSchema,
   searchQueryInputSchema,
   queueNameSchema,
+  organizationUpdateSchema,
+  adminTestTelegramSendSchema,
+  DEFAULT_ORGANIZATION_IDENTITY,
 } from "@customreport/shared";
 
 import {
@@ -26,8 +34,10 @@ import {
   headProcedure,
   adminProcedure,
   anyRoleProcedure,
+  leadershipProcedure,
 } from "./trpc.middleware.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
+import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 
 import type { PrismaClient } from "@prisma/client";
 import type { Queue } from "bullmq";
@@ -37,6 +47,7 @@ import type { ReviewService } from "../../modules/review/review.service.js";
 import type { PublicationService } from "../../modules/publication/publication.service.js";
 import type { PdfExportService } from "../../modules/pdf-export/pdf-export.service.js";
 import type { AdminService } from "../../modules/admin/admin.service.js";
+import type { OrganizationService } from "../../modules/organization/organization.service.js";
 import type { JobsService } from "../../modules/admin/jobs.service.js";
 import type { RemindersService } from "../../modules/reminders/reminders.service.js";
 import type { CarryOverService } from "../../modules/carry-over/carry-over.service.js";
@@ -46,11 +57,13 @@ import type { WeeklyReportService } from "../../modules/weekly-report/weekly-rep
 import type { LeadFormService } from "../../modules/report-sections/lead-form.service.js";
 import type { AnalyticsService } from "../../modules/analytics/analytics.service.js";
 import type { AiService } from "../../modules/ai/ai.service.js";
+import type { AiSummaryService } from "../../modules/ai/ai-summary.service.js";
 import {
   SearchAuthorizationError,
   type SearchService,
 } from "../../modules/search/search.service.js";
 import type { ActivityService } from "../../modules/activity/activity.service.js";
+import type { TelemetryService } from "../../modules/telemetry/telemetry.service.js";
 import {
   assertCanReadReport,
   assertCanReadRisk,
@@ -64,6 +77,17 @@ type RouterDeps = {
   publicationService: PublicationService;
   pdfExportService: PdfExportService;
   adminService: AdminService;
+  /**
+   * UFB-047 / Phase 48-A: organization identity surface.
+   *  - `org.getPublic` (publicProcedure) reads shortName/fullName for the
+   *    anonymous landing hero.
+   *  - `admin.getOrganization` / `admin.updateOrganization` manage the
+   *    singleton row from the Settings → Identity tab.
+   * Optional so existing role-coverage test fixtures that build the
+   * router with `{}` deps keep compiling — those tests stub the entire
+   * `deps` argument and never exercise the org.* paths.
+   */
+  organizationService?: OrganizationService;
   remindersService: RemindersService;
   carryOverService: CarryOverService;
   archiveService: ArchiveService;
@@ -82,6 +106,13 @@ type RouterDeps = {
    * on outage / missing key / rate limit / budget exceeded.
    */
   aiService: AiService;
+  /**
+   * Phase 54 (UFB-055): period-level RAG summary surface — seeds-only.
+   * Returns a mock-source payload while AI_PROVIDER is unset/`mock`;
+   * the same surface flips to `source: 'ai'` when the org wires a real
+   * provider. Optional so role-coverage test fixtures stay green.
+   */
+  aiSummaryService?: AiSummaryService;
   /**
    * Phase 39-05 (PERF-05): full-text search across Item / Risk / Decision
    * / Project. tsvector + GIN, Russian text-search config. Role-gated
@@ -102,6 +133,15 @@ type RouterDeps = {
    */
   emailReminderQueue?: Queue;
   /**
+   * UFB-056 / Phase 55-3: BullMQ Queue handle for `telegram-outbound`.
+   * Drives the admin smoke-test (`admin.testTelegramSend`) so the wiring
+   * (queue → worker → MockTelegramAdapter) is provable without an active
+   * bot. Optional so role-coverage fixtures that build the router with
+   * `{}` deps stay compiling; when undefined the procedure throws
+   * `INTERNAL_SERVER_ERROR` rather than 500-ing on a null deref.
+   */
+  telegramOutboundQueue?: Queue;
+  /**
    * Phase 35-06: BullMQ DLQ admin surface — `admin.jobs.listFailed` /
    * `admin.jobs.retryFailed`. Optional so test fixtures and the role-coverage
    * harness can build the router with `{}` deps; in that mode the service
@@ -109,6 +149,15 @@ type RouterDeps = {
    * an empty/no-op result.
    */
   jobsService?: JobsService;
+  /**
+   * Phase 52 (UFB-054): product-telemetry surface — `telemetry.summary`
+   * returns the leadership-readable KPI bundle (reports submitted, on-time
+   * ratio, active leads, late sections, pending reopens, PDF export
+   * volume, 4-week sparkline). Optional so role-coverage test fixtures
+   * that build the router with `{}` deps stay green; when undefined the
+   * procedure is hidden from the surface, not 500-ed.
+   */
+  telemetryService?: TelemetryService;
 };
 
 export function createAppRouter(deps: RouterDeps) {
@@ -120,7 +169,31 @@ export function createAppRouter(deps: RouterDeps) {
         // Returning null lets the client distinguish "loaded, no session"
         // from "still loading" without throwing — preventing the 401
         // interceptor from triggering an immediate redirect on every load.
+        //
+        // UFB-047 / Phase 48-A: `session.organization` is hydrated by the
+        // context factory (mirrors viewerGroupAccess pattern) so the web
+        // chrome can render the brand without a second round-trip.
         return ctx.session;
+      }),
+    }),
+
+    // === Organization namespace (UFB-047 / Phase 48-A) ===
+    // Public read-only surface for the anonymous landing page. Returns
+    // only the `{ shortName, fullName }` pair — no timestamps, no ids —
+    // so future schema fields cannot leak unintentionally to the public.
+    org: router({
+      getPublic: publicProcedure.query(async () => {
+        try {
+          if (!deps.organizationService) {
+            // UFB-060: Fallback for in-memory test fixtures. Generic
+            // identity — the concrete tenant brand lives in the seed
+            // file / admin-edited Organization row, never here.
+            return DEFAULT_ORGANIZATION_IDENTITY;
+          }
+          return await deps.organizationService.getPublic();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
       }),
     }),
 
@@ -366,6 +439,10 @@ export function createAppRouter(deps: RouterDeps) {
             return await deps.pdfExportService.requestPdfExport(
               input.reportId,
               ctx.session.userId,
+              undefined,
+              // Phase 52-A (UFB-054): role label for
+              // customreport_pdf_export_requests_total{role}.
+              ctx.session.role,
             );
           } catch (error) {
             throw mapDomainError(error);
@@ -409,6 +486,137 @@ export function createAppRouter(deps: RouterDeps) {
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.updateSettings(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-056 / Phase 55-4: read the external-integrations status bundle
+       * for the Settings → Integrations sub-tab. v1 carries Telegram and CI
+       * Integration. Telegram is considered «active» only when both the API
+       * has `TG_BOT_TOKEN` set AND at least one TelegramBinding row has
+       * `active=true`. Either gate failing keeps the badge muted.
+       *
+       * CI Integration shows status based on presence of CI_WEBHOOK_SECRET
+       * environment variable.
+       *
+       * adminProcedure-gated (head/admin) so a regular lead can't poll the
+       * binding count.
+       */
+      integrationsStatus: adminProcedure.query(async () => {
+        try {
+          const token = process.env["TG_BOT_TOKEN"]?.trim() ?? "";
+          const bindings = await deps.prisma.telegramBinding.count({
+            where: { active: true },
+          });
+          const ciWebhookSecret =
+            process.env["CI_WEBHOOK_SECRET"]?.trim() ?? "";
+          return {
+            telegram: {
+              configured: token !== "",
+              bindings,
+            },
+            ci: {
+              configured: ciWebhookSecret !== "",
+            },
+          };
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      /**
+       * UFB-056 / Phase 55-4: admin smoke-test for the telegram-outbound
+       * queue. Enqueues a single job that the in-process TelegramProcessor
+       * picks up and forwards to the MockTelegramAdapter (or the real bot
+       * once activated). Returns `{ jobId }` so the admin UI can confirm
+       * the job was queued without subscribing to BullMQ events.
+       *
+       * Retry policy lives on the job options (3 attempts, exponential
+       * backoff) so this surface stays generic; producers don't need to
+       * know about queue semantics.
+       */
+      testTelegramSend: adminProcedure
+        .input(adminTestTelegramSendSchema)
+        .mutation(async ({ input }) => {
+          try {
+            if (!deps.telegramOutboundQueue) {
+              throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message:
+                  "Telegram outbound queue is not wired into the tRPC router.",
+              });
+            }
+            const job = await deps.telegramOutboundQueue.add(
+              "telegram-test",
+              { chatId: input.chatId, text: input.text },
+              {
+                attempts: 3,
+                backoff: { type: "exponential", delay: 5_000 },
+                removeOnComplete: { count: 100 },
+                removeOnFail: { count: 500 },
+              },
+            );
+            return { jobId: job.id ?? null };
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-047 / Phase 48-A: read the singleton `Organization` row for
+       * the Settings → Identity tab. The full row (including timestamps)
+       * is returned so the admin form can show a "last updated" hint;
+       * the public landing page uses `org.getPublic` instead.
+       */
+      getOrganization: adminProcedure.query(async () => {
+        try {
+          if (!deps.organizationService) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "OrganizationService is not wired into the tRPC router.",
+            });
+          }
+          return await deps.organizationService.getOrganization();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      /**
+       * UFB-047 / Phase 48-A: update the singleton `Organization` row.
+       * Emits the dedicated `admin.organization.update` audit event in
+       * addition to the generic `mutation` envelope so SIEM rules and
+       * brand-tampering dashboards can filter on `event` without parsing
+       * the procedure string. The before-state is read inside the same
+       * call (small extra query) so the audit line carries both the
+       * previous and the new identity.
+       */
+      updateOrganization: adminProcedure
+        .input(organizationUpdateSchema)
+        .mutation(async ({ ctx, input }) => {
+          try {
+            if (!deps.organizationService) {
+              throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message:
+                  "OrganizationService is not wired into the tRPC router.",
+              });
+            }
+            const previous = await deps.organizationService.getOrganization();
+            const next =
+              await deps.organizationService.updateOrganization(input);
+            ctx.auditLogger.organizationUpdate({
+              userId: ctx.session?.userId ?? "anonymous",
+              role: ctx.session?.role ?? null,
+              ip: ctx.ip,
+              previousShortName: previous.shortName,
+              previousFullName: previous.fullName,
+              nextShortName: next.shortName,
+              nextFullName: next.fullName,
+            });
+            return next;
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -464,11 +672,238 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      /**
+       * UFB-036 (Phase 44-02): per-period reminder rules are no longer
+       * written through the admin tab. Rules are derived from
+       * `ReminderPolicy` rows by the period scheduler in 44-03+. The
+       * read path (admin.getSnapshot.reminderRules) stays as-is so the
+       * 44-04 admin UI can still visualize derived rows inline.
+       */
       saveReminderRule: adminProcedure
         .input(adminReminderRuleSchema)
+        .mutation(() => {
+          throw new TRPCError({
+            code: "METHOD_NOT_SUPPORTED",
+            message:
+              "Per-period reminder rules are read-only as of Phase 44 (UFB-036). Use admin.savePolicy instead.",
+          });
+        }),
+
+      /**
+       * UFB-036 (Phase 44-02): list all reminder policies (active +
+       * archived). Used by the admin tab to render the policy editor
+       * grid.
+       */
+      listPolicies: adminProcedure.query(async () => {
+        try {
+          return await deps.adminService.listPolicies();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
+      /**
+       * UFB-036 (Phase 44-02 / Phase 44-05): upsert a reminder policy
+       * by id. The dedicated `admin.policy.save` audit event is emitted
+       * in addition to the generic `mutation` envelope so SIEM rules
+       * filtering on `event` (and dashboards splitting create vs update)
+       * don't have to parse the procedure name. Existence check runs
+       * BEFORE the upsert so the audit `action` reflects the pre-state.
+       */
+      savePolicy: adminProcedure
+        .input(reminderPolicySchema)
+        .mutation(async ({ ctx, input }) => {
+          try {
+            const existed = await deps.adminService.policyExists(input.id);
+            const saved = await deps.adminService.savePolicy(input);
+            ctx.auditLogger.policySave({
+              userId: ctx.session?.userId ?? "anonymous",
+              role: ctx.session?.role ?? null,
+              ip: ctx.ip,
+              policyId: saved.id,
+              kind: saved.kind,
+              action: existed ? "update" : "create",
+            });
+            return saved;
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-036 (Phase 44-02 / Phase 44-05): archive a reminder policy.
+       * Repository hard-deletes when no derived rules exist; otherwise
+       * flips the `active` flag. The dedicated `admin.policy.remove`
+       * audit event is emitted on the success path only — failed
+       * removals already surface through the generic `mutation` audit
+       * envelope.
+       */
+      removePolicy: adminProcedure
+        .input(z.object({ id: z.string().uuid() }))
+        .mutation(async ({ ctx, input }) => {
+          try {
+            const result = await deps.adminService.removePolicy(input.id);
+            ctx.auditLogger.policyRemove({
+              userId: ctx.session?.userId ?? "anonymous",
+              role: ctx.session?.role ?? null,
+              ip: ctx.ip,
+              policyId: input.id,
+            });
+            return result;
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-052 (Phase 51-B): paginated period list for the redesigned
+       * Admin → Periods tab. Filters by lifecycle bucket
+       * (`active | archive | <PeriodState>`) using the
+       * `(periodState, periodStart desc)` index added in 51-C. Returns
+       * rich rows with server-precomputed `canReopen` / `canArchive`
+       * so the UI does not need to know the reopen-policy rules.
+       */
+      listPeriodsByState: adminProcedure
+        .input(
+          z.object({
+            bucket: periodListBucketSchema,
+            limit: z.number().int().min(1).max(200).optional(),
+          }),
+        )
+        .query(async ({ input }) => {
+          try {
+            return await deps.adminService.listPeriodsByState(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-063: admin escape hatch that mints a Period without waiting
+       * for the daily `PeriodCreatorScheduler` (00:05 UTC cron). Fresh
+       * dev/staging DBs were blocked on the cron tick before this
+       * procedure landed; admins can now seed a period from the
+       * Periods-tab «New period» dialog.
+       *
+       * Audit envelope (`period.manual-create`) is emitted from the
+       * router — same pattern as `savePolicy` / `removePolicy` — so
+       * audit IO stays out of the service layer and the SIEM stream
+       * gets a real-user attribution (vs the system+cron `auto-create`
+       * event).
+       */
+      createPeriodManual: adminProcedure
+        .input(adminCreatePeriodManualSchema)
+        .mutation(async ({ ctx, input }) => {
+          try {
+            const result = await deps.adminService.createPeriodManual(input);
+            ctx.auditLogger.periodManualCreate({
+              userId: ctx.session?.userId ?? "anonymous",
+              role: ctx.session?.role ?? null,
+              ip: ctx.ip,
+              periodId: result.periodId,
+              periodStart: result.periodStart.toISOString(),
+              periodEnd: result.periodEnd.toISOString(),
+              deadline: result.deadline.toISOString(),
+              from: null,
+              to: result.periodState,
+            });
+            return result;
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-067: admin in-place edit for an existing Period's date
+       * envelope + weekLabel. Symmetric counterpart to
+       * `createPeriodManual` so the row-level Edit icon in the Periods
+       * tab can reuse the same `<CreatePeriodDialog>` UI in "edit" mode.
+       *
+       * Audit envelope (`period.manual-edit`) emitted only when the diff
+       * is non-empty — service short-circuits no-op edits, returning an
+       * empty diff which the router treats as "nothing to audit". This
+       * keeps SIEM rules that key on `changes.<field>` presence free of
+       * empty-payload noise from PATCH calls that didn't actually change
+       * the row.
+       */
+      updatePeriodManual: adminProcedure
+        .input(adminUpdatePeriodManualSchema)
+        .mutation(async ({ ctx, input }) => {
+          try {
+            const { result, diff } =
+              await deps.adminService.updatePeriodManual(input);
+            if (Object.keys(diff).length > 0) {
+              // Convert Date instances to ISO strings for the audit
+              // payload (the envelope is shipped to log aggregators that
+              // serialize timestamps to JSON; ISO is the canonical form).
+              const changes: {
+                periodStart?: { from: string; to: string };
+                periodEnd?: { from: string; to: string };
+                deadline?: { from: string; to: string };
+                weekLabel?: { from: string | null; to: string | null };
+              } = {};
+              if (diff.periodStart) {
+                changes.periodStart = {
+                  from: diff.periodStart.from.toISOString(),
+                  to: diff.periodStart.to.toISOString(),
+                };
+              }
+              if (diff.periodEnd) {
+                changes.periodEnd = {
+                  from: diff.periodEnd.from.toISOString(),
+                  to: diff.periodEnd.to.toISOString(),
+                };
+              }
+              if (diff.deadline) {
+                changes.deadline = {
+                  from: diff.deadline.from.toISOString(),
+                  to: diff.deadline.to.toISOString(),
+                };
+              }
+              if (diff.weekLabel) {
+                changes.weekLabel = diff.weekLabel;
+              }
+              ctx.auditLogger.periodManualEdit({
+                userId: ctx.session?.userId ?? "anonymous",
+                role: ctx.session?.role ?? null,
+                ip: ctx.ip,
+                periodId: result.periodId,
+                changes,
+              });
+            }
+            return result;
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-052 (Phase 51-B): manual archive. Sets both `archived=true`
+       * and `periodState='archived'` atomically so the two-state-machine
+       * invariant from 51-C is preserved.
+       */
+      archivePeriod: adminProcedure
+        .input(z.object({ periodId: z.string().uuid() }))
         .mutation(async ({ input }) => {
           try {
-            return await deps.adminService.upsertReminderRule(input);
+            return await deps.adminService.archivePeriod(input.periodId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * UFB-052 (Phase 51-B): manual un-archive — flips `archived=false`
+       * and derives the next `periodState` from the legacy
+       * `(status, periodStatus)` tuple at write time (the new state
+       * column lost the pre-archive distinction when it was overwritten
+       * with 'archived').
+       */
+      unarchivePeriod: adminProcedure
+        .input(z.object({ periodId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.unarchivePeriod(input.periodId);
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -575,6 +1010,59 @@ export function createAppRouter(deps: RouterDeps) {
         }
       }),
 
+      // -----------------------------------------------------------------
+      // UFB-054 (Phase 56-B): explicit Group ↔ Product M:M surface.
+      //
+      // Mutations are idempotent (attach upserts on the unique tuple;
+      // detach uses deleteMany so a double-click is harmless). Reads are
+      // straight findMany joins ordered by name. All four procedures are
+      // gated by adminProcedure — head/admin only, like saveProject and
+      // saveReportingGroup. The generic mutationAuditMiddleware captures
+      // the {procedure, targetId} envelope; no dedicated audit event is
+      // emitted yet (consistent with saveProject — added later only if
+      // SIEM needs the split).
+      // -----------------------------------------------------------------
+
+      attachProductToGroup: adminProcedure
+        .input(groupProductEdgeInputSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.attachProductToGroup(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      detachProductFromGroup: adminProcedure
+        .input(groupProductEdgeInputSchema)
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.detachProductFromGroup(input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      listGroupProducts: adminProcedure
+        .input(z.object({ groupId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.adminService.listGroupProducts(input.groupId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      listProductGroups: adminProcedure
+        .input(z.object({ productId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.adminService.listProductGroups(input.productId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
       // NOTIF-06 (Phase 29-05): BullMQ DLQ count — failed-jobs set of the
       // email-reminder queue. adminProcedure (admin/head only — D-AUTH-03).
       // Returns { count: 0 } when the Queue handle is absent (e.g. unit test
@@ -596,21 +1084,24 @@ export function createAppRouter(deps: RouterDeps) {
       // as the structured app.log line for support/debug lookups.
       actionLog: router({
         list: adminProcedure
-          .input(
-            z
-              .object({
-                limit: z.number().int().min(1).max(100).default(50),
-              })
-              .optional(),
-          )
+          .input(paginationInputSchema.optional())
           .query(async ({ input }) => {
             try {
+              const limit = input?.limit ?? 20;
+              const cursor = input?.cursor;
               const rows = await deps.prisma.userActionLog.findMany({
+                take: limit + 1,
+                skip: cursor ? 1 : 0,
+                cursor: cursor ? { id: cursor } : undefined,
                 orderBy: { createdAt: "desc" },
-                take: input?.limit ?? 50,
               });
+              const hasMore = rows.length > limit;
+              const items = rows.slice(0, limit);
+              const nextCursor = hasMore
+                ? (items[items.length - 1]?.id ?? null)
+                : null;
               return {
-                rows: rows.map((row) => ({
+                items: items.map((row) => ({
                   id: row.id,
                   userId: row.userId,
                   role: row.role,
@@ -623,6 +1114,7 @@ export function createAppRouter(deps: RouterDeps) {
                   durationMs: row.durationMs,
                   createdAt: row.createdAt.toISOString(),
                 })),
+                nextCursor,
               };
             } catch (error) {
               throw mapDomainError(error);
@@ -754,7 +1246,7 @@ export function createAppRouter(deps: RouterDeps) {
             if (!req) throw new Error("Reopen request not found.");
             if (req.status !== "pending") throw new Error("Already processed.");
 
-            return await deps.prisma.$transaction(async (tx) => {
+            const result = await deps.prisma.$transaction(async (tx) => {
               await tx.reopenRequest.update({
                 where: { id: input.id },
                 data: {
@@ -782,6 +1274,10 @@ export function createAppRouter(deps: RouterDeps) {
 
               return { success: true as const, decision: input.decision };
             });
+            // Phase 52-A (UFB-054): increment AFTER the transaction commits
+            // so a rolled-back decision does not skew the funnel.
+            customreportReopenRequestsTotal.inc({ state: input.decision });
+            return result;
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -1009,23 +1505,34 @@ export function createAppRouter(deps: RouterDeps) {
         .query(async ({ input, ctx }) => {
           const requestedReportId = input?.reportId ?? null;
           try {
-            const report = await deps.weeklyReportService.getWeeklyReport(
+            const result = await deps.weeklyReportService.getWeeklyReport(
               input?.reportId,
               ctx.session.role,
               ctx.session,
             );
+            // R3a: no-period is a normal 200 response, not an error path.
+            if (result.status === 'no-period') {
+              ctx.logger.info("weekly report: no active period", {
+                phase: "weekly-report.load",
+                procedure: "weeklyReport.get",
+                userId: ctx.session.userId,
+                role: ctx.session.role,
+                requestedReportId,
+              });
+              return result;
+            }
             ctx.logger.info("weekly report load succeeded", {
               phase: "weekly-report.load",
               procedure: "weeklyReport.get",
               userId: ctx.session.userId,
               role: ctx.session.role,
               requestedReportId,
-              resolvedReportId: report.reportId,
-              periodStatus: report.periodStatus,
-              submissionCount: report.submissionCount,
-              totalLeads: report.totalLeads,
+              resolvedReportId: result.reportId,
+              periodStatus: result.periodStatus,
+              submissionCount: result.submissionCount,
+              totalLeads: result.totalLeads,
             });
-            return report;
+            return result;
           } catch (error) {
             const errorInfo =
               error instanceof Error
@@ -1320,6 +1827,35 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+      // Phase 54 (UFB-055): period-level RAG summary — seeds-only.
+      // Reads the period (Report) + its sections, delegates to the
+      // pluggable AiAdapter (MockAiAdapter today), cached for 60s in
+      // Redis. Authz: leadershipProcedure (head + admin + viewer);
+      // lead is excluded — leads consume their own section view, not
+      // a portfolio summary.
+      //
+      // Returns aiSummarySchema: { summary, source: 'mock'|'ai',
+      // citationIds }. The UI badges `source === 'mock'` as a stub.
+      periodSummary: leadershipProcedure
+        .input(z.object({ periodId: z.string().uuid() }))
+        .query(async ({ input }) => {
+          try {
+            if (!deps.aiSummaryService) {
+              // Fixture mode (createAppRouter({}) for role-coverage
+              // harnesses): empty mock payload that still parses
+              // aiSummarySchema so the role-coverage harness can hit
+              // the surface without a 500.
+              return {
+                summary: "",
+                source: "mock" as const,
+                citationIds: [] as string[],
+              };
+            }
+            return await deps.aiSummaryService.getSummary(input.periodId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
       // AI-03: per-cell on-track advisory verdict (✓ ⚠ ✗).
       // Advisory only — never replaces lead's chosen traffic-light colour.
       onTrack: protectedProcedure
@@ -1344,6 +1880,37 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+    }),
+
+    // === Telemetry namespace (Phase 52 / UFB-054) ===
+    // Product-KPI surface for the in-app dashboard card. Authorised by
+    // `leadershipProcedure` (head + admin + viewer); lead role is denied
+    // because lead is the data subject of these KPIs, not a consumer.
+    // Cached for 60s in Redis (see TelemetryCache); a Redis outage
+    // degrades to direct queries.
+    telemetry: router({
+      summary: leadershipProcedure.query(async () => {
+        try {
+          if (!deps.telemetryService) {
+            // Test-fixture mode (createAppRouter({}) for role-coverage
+            // harnesses). Return a zero-shape payload that still parses
+            // the shared schema so the role-coverage harness can hit
+            // the surface without a 500.
+            return {
+              reportsThisPeriod: 0,
+              onTimeRatio: null,
+              activeLeads: 0,
+              lateSections: 0,
+              pendingReopens: 0,
+              pdfExportsLast7d: 0,
+              sparkline: [] as number[],
+            };
+          }
+          return await deps.telemetryService.getSummary();
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
     }),
   });
 }

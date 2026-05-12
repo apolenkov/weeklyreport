@@ -239,3 +239,71 @@ describe('PeriodService — reopenPeriod (unit)', () => {
     await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(PeriodAccessError);
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  UFB-052 (Phase 51-B): reopen-policy gate                           */
+/* ------------------------------------------------------------------ */
+
+describe('PeriodService — reopen policy gate (UFB-052)', () => {
+  it('throws PeriodAccessError when allowReopenAfterPublish=false', async () => {
+    const reports = new Map([
+      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date() }],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(
+      repo,
+      async () => undefined,
+      async () => ({ allowReopenAfterPublish: false, reopenWindowHours: 72 }),
+    );
+
+    await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(
+      PeriodAccessError,
+    );
+    expect(repo.reopenPeriod).not.toHaveBeenCalled();
+  });
+
+  it('throws PeriodAccessError when reopen window has expired', async () => {
+    const publishedAt = new Date(Date.now() - 100 * 3_600_000); // 100h ago
+    const reports = new Map([
+      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt }],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(
+      repo,
+      async () => undefined,
+      async () => ({ allowReopenAfterPublish: true, reopenWindowHours: 72 }),
+    );
+
+    await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(
+      PeriodAccessError,
+    );
+    expect(repo.reopenPeriod).not.toHaveBeenCalled();
+  });
+
+  it('allows reopen within the window', async () => {
+    const publishedAt = new Date(Date.now() - 2 * 3_600_000); // 2h ago
+    const reports = new Map([
+      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt }],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(
+      repo,
+      async () => undefined,
+      async () => ({ allowReopenAfterPublish: true, reopenWindowHours: 72 }),
+    );
+
+    await service.reopenPeriod(reportId);
+    expect(repo.reopenPeriod).toHaveBeenCalledOnce();
+  });
+
+  it('legacy callers without a policy reader stay un-gated', async () => {
+    const reports = new Map([
+      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date(0) }],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(repo);
+
+    await service.reopenPeriod(reportId);
+    expect(repo.reopenPeriod).toHaveBeenCalledOnce();
+  });
+});

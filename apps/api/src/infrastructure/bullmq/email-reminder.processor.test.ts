@@ -29,6 +29,15 @@ vi.mock('../email/email.service.js', () => ({
   },
 }));
 
+// UFB-048 / Phase 50-A: AdminService is now an optional constructor
+// dependency of EmailReminderProcessor. Mocking the module keeps the
+// test isolated from Prisma + Nest DI.
+vi.mock('../../modules/admin/admin.service.js', () => ({
+  AdminService: class {
+    getSettings = vi.fn();
+  },
+}));
+
 import { EmailReminderProcessor } from './email-reminder.processor.js';
 
 // ---------------------------------------------------------------------------
@@ -44,6 +53,19 @@ function createMockRemindersService() {
 function createMockEmailService() {
   return {
     sendMail: vi.fn().mockResolvedValue(undefined),
+    sendMailMultipart: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+/**
+ * UFB-048 / Phase 50-A: AdminService stub for from-address injection.
+ * Pass `notificationFromEmail` to control what the processor pulls in.
+ */
+function createMockAdminService(notificationFromEmail: string | null = null) {
+  return {
+    getSettings: vi.fn().mockResolvedValue({
+      notificationFromEmail,
+    }),
   };
 }
 
@@ -89,10 +111,63 @@ describe('EmailReminderProcessor.processJob', () => {
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
+    // UFB-048 / Phase 50-A: processor now forwards an optional 4th arg
+    // `from` (null when AdminService is not wired into the constructor).
     expect(mockEmail.sendMail).toHaveBeenCalledWith(
       'lead@test.com',
       'Reminder: Weekly Status Report Due',
       expect.stringContaining('2026-04-07'),
+      null,
+    );
+  });
+
+  // UFB-048 / Phase 50-A: when AdminService is wired and exposes a
+  // non-null notificationFromEmail, the processor must forward that
+  // value to EmailService verbatim so corporate SMTP relays see the
+  // configured From header.
+  it('forwards AppSettings.notificationFromEmail as the From override (UFB-048)', async () => {
+    const mockReminders = createMockRemindersService();
+    const mockEmail = createMockEmailService();
+    const mockAdmin = createMockAdminService('alerts@corp.example.com');
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail as never,
+      mockAdmin as never,
+    );
+    const job = createMockJob(defaultJobData);
+
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
+
+    expect(mockAdmin.getSettings).toHaveBeenCalledTimes(1);
+    expect(mockEmail.sendMail).toHaveBeenCalledWith(
+      'lead@test.com',
+      'Reminder: Weekly Status Report Due',
+      expect.any(String),
+      'alerts@corp.example.com',
+    );
+  });
+
+  // Null notificationFromEmail is a valid admin choice (means "use env
+  // default"). The processor passes null through — EmailService then
+  // falls back to SMTP_FROM in its own resolution.
+  it('passes through null notificationFromEmail unchanged (env fallback at EmailService boundary)', async () => {
+    const mockReminders = createMockRemindersService();
+    const mockEmail = createMockEmailService();
+    const mockAdmin = createMockAdminService(null);
+    const processor = new EmailReminderProcessor(
+      mockReminders as never,
+      mockEmail as never,
+      mockAdmin as never,
+    );
+    const job = createMockJob(defaultJobData);
+
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
+
+    expect(mockEmail.sendMail).toHaveBeenCalledWith(
+      'lead@test.com',
+      'Reminder: Weekly Status Report Due',
+      expect.any(String),
+      null,
     );
   });
 

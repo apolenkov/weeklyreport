@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: shipped 2026-05-06 (26 plan files, 27 summaries; 35-02 subsumed by 35-08) | v8.1: 0/12
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: shipped 2026-05-06 (26 plan files, 27 summaries; 35-02 subsumed by 35-08) | v8.1: in-progress, closure-blocked on product-ready UAT (Phases 40-42: 0/13 plans; Phases 44/46-52/54-57/59-60: ~43 plans executing)
 
 ---
 
@@ -279,7 +279,7 @@ Audit status: tech_debt — structurally complete, runtime smoke verification de
 <details open>
 <summary>v6.0 Roles, Quality, AI & Analytics (Phases 27-31) - PLANNING 2026-04-28</summary>
 
-- [ ] **Phase 27: Quality Stabilisation & Role Middleware Factory** - Integration suite green as CI gate; `requireRole` factory shipped with default-deny coverage test (Wave 1: B + A1)
+- [x] **Phase 27: Quality Stabilisation & Role Middleware Factory** - Integration suite green as CI gate; `requireRole` factory shipped with default-deny coverage test (Wave 1: B + A1)
 - [ ] **Phase 28: Role Filters, PDF Cookie Seam, Deadline Reminders & Release Checklist** - Service-layer role filtering; PDF worker cookie injection; T-24h reminders + react-email templates; CHECKLIST.md template (Wave 2: A2 + A4 + E1+E3 + G)
 - [ ] **Phase 29: Real Keycloak SAML, Role-Aware UI & Escalation** - Keycloak SAML in production; layout-level role gates; T+2h escalation digest with audit log (Wave 3a: A3 + A5 + A6 + E2)
 - [ ] **Phase 30: Mobile Polish & Trend Analytics** - 7 pages clean at 375px; analytics tRPC procedures + `/reports/trends` charts (Wave 3b: F + D)

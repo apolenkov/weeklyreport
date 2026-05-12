@@ -1,0 +1,23 @@
+apiVersion: 1
+
+# Phase 52 (UFB-054) — Product / business-KPI dashboards.
+# Separate provider entry from `customreport.yml` so the dashboard lands
+# in its own Grafana folder ("Product KPIs"), making it discoverable for
+# the leadership audience (head + admin + viewer) without burying it
+# under the engineering folder.
+#
+# Mount: the docker-compose grafana service mounts deploy/grafana into
+# /var/lib/grafana, so a separate `path` value here lets us scope this
+# provider to a sub-directory if we later split the JSON files into
+# folders. For v1 we keep the JSON files co-located in deploy/grafana
+# and rely on the file-provider walker to pick this dashboard up too.
+providers:
+  - name: CustomReport-Product-KPIs
+    orgId: 1
+    folder: Product KPIs
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/customreport

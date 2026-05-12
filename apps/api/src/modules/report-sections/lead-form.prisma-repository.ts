@@ -19,16 +19,10 @@ const MAX_SNAPSHOTS = 50;
 export class LeadFormPrismaRepository implements LeadFormRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async getDepartmentName(): Promise<string> {
-    const settings = await this.prisma.appSettings.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton" },
-      update: {},
-      select: { departmentName: true },
-    });
-
-    return settings.departmentName;
-  }
+  // UFB-047 / Phase 49-01: legacy `getDepartmentName()` removed. The
+  // section read model no longer carries a per-section brand label;
+  // frontends pull it from `auth.me.organization` (hydrated per
+  // request) so the source of truth is one row in `Organization`.
 
   async getSectionById(
     sectionId: string,
@@ -42,10 +36,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       return null;
     }
 
-    const section = mapPrismaToReportSection(
+    return mapPrismaToReportSection(
       row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
     );
-    return { ...section, departmentName: await this.getDepartmentName() };
   }
 
   async getSectionForPeriod(
@@ -67,7 +60,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     const section = mapPrismaToReportSection(
       row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
     );
-    const departmentName = await this.getDepartmentName();
 
     // readOnly when the period is not open (published periods are locked;
     // note: 'reopened' is treated as non-open per spec — callers may refine)
@@ -75,7 +67,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       (row as unknown as { report: { periodStatus: string } }).report
         .periodStatus !== "open";
 
-    return { section: { ...section, departmentName }, readOnly };
+    return { section, readOnly };
   }
 
   async revokeSectionSubmission(
@@ -168,6 +160,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
               stageName: d.stageName ?? null,
+              productId: d.productId ?? null,
             })),
           });
           copiedItems += source.decisions.length;
@@ -181,6 +174,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               rank: p.rank,
               text: p.text,
               stageName: p.stageName ?? null,
+              productId: p.productId ?? null,
             })),
           });
           copiedItems += source.priorities.length;
@@ -238,6 +232,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         carriedOver: boolean;
         completed: boolean | null;
         stageName?: string | null;
+        stageIds?: string[];
       }>;
       risks: Array<{
         projectId: string;
@@ -245,6 +240,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         impact: string;
         mitigation: string;
         stageName?: string | null;
+        stageIds?: string[];
       }>;
       decisions: Array<{
         text: string;
@@ -253,11 +249,15 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         impact: string;
         resolvedAt: string | null;
         stageName?: string | null;
+        stageIds?: string[];
+        productId?: string | null;
       }>;
       priorities: Array<{
         rank: number;
         text: string;
         stageName?: string | null;
+        stageIds?: string[];
+        productId?: string | null;
       }>;
     };
 
@@ -279,7 +279,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               workflowStatus: i.workflowStatus as ItemWorkflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
-              stageName: i.stageName ?? null,
+              stageName: i.stageIds?.join(', ') ?? i.stageName ?? null,
             })),
           });
         }
@@ -292,7 +292,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
-              stageName: r.stageName ?? null,
+              stageName: r.stageIds?.join(', ') ?? r.stageName ?? null,
             })),
           });
         }
@@ -306,7 +306,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               deadline: d.deadline ? new Date(d.deadline) : null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ? new Date(d.resolvedAt) : null,
-              stageName: d.stageName ?? null,
+              stageName: d.stageIds?.join(', ') ?? d.stageName ?? null,
+              productId: d.productId ?? null,
             })),
           });
         }
@@ -317,7 +318,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               reportSectionId: sectionId,
               rank: p.rank,
               text: p.text,
-              stageName: p.stageName ?? null,
+              stageName: p.stageIds?.join(', ') ?? p.stageName ?? null,
+              productId: p.productId ?? null,
             })),
           });
         }

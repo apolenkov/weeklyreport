@@ -109,6 +109,23 @@ async function main(): Promise<void> {
   console.log("[reset-hard] Starting hard reset…");
   console.log(`[reset-hard] DATABASE_URL: ${DATABASE_URL.replace(/:[^:@]*@/, ":***@")}`);
 
+  // Apply any pending migrations first so schema matches Prisma client.
+  // This prevents "not-null constraint" errors from schema drift.
+  console.log("[reset-hard] Applying pending migrations…");
+  const migrate = spawnSync(
+    "pnpm",
+    ["exec", "prisma", "migrate", "deploy"],
+    {
+      stdio: "inherit",
+      shell: false,
+      cwd: REPO_ROOT,
+      env: { ...process.env },
+    },
+  );
+  if (migrate.status !== 0) {
+    throw new Error(`prisma migrate deploy failed with exit code ${migrate.status}`);
+  }
+
   await truncateAll();
   await flushRedis();
 

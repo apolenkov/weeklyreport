@@ -1,5 +1,7 @@
 import type { ReportSectionReadModel, Role, VersionSnapshot } from '@customreport/shared';
 
+import { customreportReopenRequestsTotal } from '../../infrastructure/metrics/metrics.registry.js';
+
 export class LeadFormDomainError extends Error {
   constructor(message: string) {
     super(message);
@@ -179,6 +181,10 @@ export class LeadFormService {
     }
 
     await this.repository.createReopenRequest(sectionId, userId, reason);
+    // Phase 52-A (UFB-054): product telemetry. `state='requested'` is the
+    // funnel's entry — paired with `approved` / `rejected` from the admin
+    // mutation it gives leadership the full demand-vs-policy picture.
+    customreportReopenRequestsTotal.inc({ state: 'requested' });
     return { success: true };
   }
 

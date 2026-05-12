@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { AssembledReport, DraftSavePayload, UserSession } from '@customreport/shared';
 
+import {
+  customreportPeriodStateTransitionsTotal,
+  customreportReportsSubmittedTotal,
+} from '../../infrastructure/metrics/metrics.registry.js';
+
 import { publicationRouter } from './publication.router';
 import {
   PublicationAccessError,
@@ -221,7 +226,107 @@ describe('PublicationService', () => {
       }),
     ).rejects.toBeInstanceOf(PublicationAccessError);
   });
+
+  // UFB-049 / Phase 50-B: scheduler-driven auto-publish bypasses session
+  // attribution. publishedById stays null and publishedByName='system' so
+  // the head dashboard can show a "auto-published" badge by comparing.
+  it('publishAuto stamps system attribution (publishedById=null)', async () => {
+    const service = new PublicationService(createRepository(assembledReport));
+
+    const published = await service.publishAuto(reportId);
+
+    expect(published.status).toBe('published');
+    expect(published.publishedById).toBeNull();
+    expect(published.publishedByName).toBe('system');
+    expect(published.publishedAt).toBeInstanceOf(Date);
+  });
+
+  it('publishAuto is idempotent on already-published reports (no throw, returns current)', async () => {
+    const service = new PublicationService(createRepository(assembledReport));
+
+    const first = await service.publishAuto(reportId);
+    const second = await service.publishAuto(reportId);
+
+    expect(first.status).toBe('published');
+    expect(second.status).toBe('published');
+    // publishedAt should be the same instant — the second call must not
+    // re-stamp a new Date(); idempotent means "no write".
+    expect(second.publishedAt).toEqual(first.publishedAt);
+  });
+
+  // Phase 52-A (UFB-054): product-telemetry counters bump exactly once per
+  // successful publish, for both the manual and auto paths. Both paths use
+  // `state='published'` so the funnel rolls up cleanly.
+  it('publishReport increments product KPI counters once on success', async () => {
+    const service = new PublicationService(createRepository(assembledReport));
+    const submittedBefore = await getCounterValue(
+      customreportReportsSubmittedTotal,
+      { state: 'published' },
+    );
+    const transitionsBefore = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: 'open', to: 'published' },
+    );
+
+    await service.publishReport(reportId, headSession);
+
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: 'published',
+      }),
+    ).toBe(submittedBefore + 1);
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: 'open',
+        to: 'published',
+      }),
+    ).toBe(transitionsBefore + 1);
+  });
+
+  it('publishAuto increments product KPI counters once on success', async () => {
+    const service = new PublicationService(createRepository(assembledReport));
+    const submittedBefore = await getCounterValue(
+      customreportReportsSubmittedTotal,
+      { state: 'published' },
+    );
+    const transitionsBefore = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: 'open', to: 'published' },
+    );
+
+    await service.publishAuto(reportId);
+
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: 'published',
+      }),
+    ).toBe(submittedBefore + 1);
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: 'open',
+        to: 'published',
+      }),
+    ).toBe(transitionsBefore + 1);
+  });
 });
+
+/**
+ * Helper for prom-client Counter introspection in unit tests. Avoids
+ * leaking prom-client internals into every test file: the registry tracks
+ * (labels → value) pairs and we just find the matching tuple.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+async function getCounterValue(
+  counter: { get(): Promise<{ values: Array<{ value: number; labels: Record<string, any> }> }> },
+  labels: Record<string, string>,
+): Promise<number> {
+  const snapshot = await counter.get();
+  const match = snapshot.values.find((entry) =>
+    Object.entries(labels).every(([k, v]) => String(entry.labels[k]) === v),
+  );
+  return match?.value ?? 0;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 describe('publicationRouter', () => {
   it('allows a head session to read the assembled report', async () => {

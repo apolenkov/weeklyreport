@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# DX-02 (47-02): auto-install + auto-generate on rebase/amend.
+# Runs only when the relevant files changed during the rewrite.
+# post-rewrite passes a reason ($1 = "rebase" | "amend") and rewritten
+# SHA pairs on stdin; we just diff the prior HEAD against the new one.
+prev_head="$(git rev-parse 'HEAD@{1}' 2>/dev/null || true)"
+if [ -n "$prev_head" ]; then
+  changed="$(git diff-tree -r --name-only --no-commit-id "$prev_head" HEAD 2>/dev/null || true)"
+else
+  changed=""
+fi
+if echo "$changed" | grep -qE '^pnpm-lock\.yaml$|^package\.json$'; then
+  echo "[post-rewrite] lock or root package.json changed → pnpm install"
+  pnpm install
+fi
+if echo "$changed" | grep -qE '^prisma/schema\.prisma$|^prisma/migrations/'; then
+  echo "[post-rewrite] schema or migrations changed → pnpm exec prisma generate"
+  pnpm exec prisma generate
+fi

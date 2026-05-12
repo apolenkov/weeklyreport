@@ -82,9 +82,10 @@ export function ItemEditDialog({
   const [text, setText] = useState(initial.text);
   const [status, setStatus] = useState<ItemStatus>(initial.status);
   const [productId, setProductId] = useState(initial.productId);
-  // 35-04: SDLC stage selection. Pre-seeds with the existing item.stageName
-  // when editing; empty otherwise (forces an explicit choice on save).
-  const [stageName, setStageName] = useState<string>(item?.stageName ?? '');
+  // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
+  const [stageIds, setStageIds] = useState<string[]>(
+    item?.stageIds ? [...item.stageIds] : (isCreate ? [...(stagesForProduct?.(initial.productId) ?? [])] : []),
+  );
   const [errors, setErrors] = useState<{ text?: string }>({});
 
   useEffect(() => {
@@ -92,17 +93,19 @@ export function ItemEditDialog({
       setText(initial.text);
       setStatus(initial.status);
       setProductId(initial.productId);
-      setStageName(item?.stageName ?? '');
+      setStageIds(item?.stageIds ? [...item.stageIds] : (isCreate ? [...(stagesForProduct?.(initial.productId) ?? [])] : []));
       setErrors({});
     }
   }, [
     open,
     item?.id,
-    item?.stageName,
+    item?.stageIds,
     initial.text,
     initial.status,
     initial.productId,
     defaultProductId,
+    stagesForProduct,
+    isCreate,
   ]);
 
   if (!open) return null;
@@ -129,7 +132,7 @@ export function ItemEditDialog({
       id: item?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      stageName: stageName.trim() || undefined,
+      stageIds: stageIds.length > 0 ? stageIds : undefined,
       text: trimmed,
       status,
       author: item?.author ?? currentUserName ?? 'You',
@@ -156,7 +159,7 @@ export function ItemEditDialog({
       role="presentation"
     >
       <div
-        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl"
+        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -197,9 +200,9 @@ export function ItemEditDialog({
 
           <StageMultiSelect
             id="item-stage"
-            value={stageName}
+            value={stageIds}
             stages={stagesForProduct?.(productId) ?? []}
-            onChange={(next) => setStageName(next ?? '')}
+            onChange={setStageIds}
           />
 
           {/* Status chips */}
