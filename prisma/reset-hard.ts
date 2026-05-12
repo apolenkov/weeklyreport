@@ -26,6 +26,7 @@ loadEnv({ path: resolve(REPO_ROOT, ".env") });
 import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 const DATABASE_URL: string = (() => {
   const url = process.env["DATABASE_URL"];
@@ -106,6 +107,9 @@ async function truncateAll(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  // C7 destructive-guard (UAT plan v7): refuse on prod-looking DATABASE_URL.
+  assertNonProdDestructive("reset-hard");
+
   console.log("[reset-hard] Starting hard reset…");
   console.log(`[reset-hard] DATABASE_URL: ${DATABASE_URL.replace(/:[^:@]*@/, ":***@")}`);
 

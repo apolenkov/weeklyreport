@@ -57,6 +57,7 @@ import {
   SEED_REPORTS,
   VIEWER_USER_ID,
 } from "./seed-constants.js";
+import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -156,9 +157,9 @@ async function flushRedisDb(): Promise<
 // --- Main --------------------------------------------------------------
 
 async function main() {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Manual UAT wipe is forbidden when NODE_ENV=production.");
-  }
+  // C7 destructive-guard (UAT plan v7): refuse on prod-looking DATABASE_URL.
+  // Supersedes earlier NODE_ENV-only check — also catches misconfigured envs.
+  assertNonProdDestructive("wipe-manual-uat");
 
   const result = await prisma.$transaction(
     async (tx) => {

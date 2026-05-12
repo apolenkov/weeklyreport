@@ -46,6 +46,7 @@ import {
   ReminderRuleKind,
   ReminderRuleStatus,
 } from "@prisma/client";
+import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -244,6 +245,9 @@ const ACTIVE_REMINDER_ESCALATION_FIRE = (() => {
 })();
 
 async function main() {
+  // C7 destructive-guard (UAT plan v7): refuse on prod-looking DATABASE_URL.
+  assertNonProdDestructive("seed-simple");
+
   console.log("[seed-simple] Wiping existing data...");
   // Delete in FK-safe order. ReopenRequest references ReportSection → must
   // go before ReportSection deletes. Other CASCADE FKs (ProjectStatus →
