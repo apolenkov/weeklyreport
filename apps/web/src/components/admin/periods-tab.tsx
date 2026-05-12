@@ -69,6 +69,10 @@ export function PeriodsTab() {
   // closes the dialog.
   const [editingRow, setEditingRow] = useState<PeriodListItem | null>(null);
 
+  // A27: delete confirmation state. When user clicks delete, we set this
+  // to the row and show a confirmation dialog.
+  const [deleteConfirm, setDeleteConfirm] = useState<PeriodListItem | null>(null);
+
   const activeQuery = useQuery(
     trpc.admin.listPeriodsByState.queryOptions({ bucket: 'active' }),
   );
@@ -167,6 +171,19 @@ export function PeriodsTab() {
     }),
   );
 
+  // A27: delete period mutation with confirmation guard.
+  const deleteMut = useMutation(
+    trpc.admin.deleteReport.mutationOptions({
+      onSuccess: () => {
+        invalidatePeriodLists();
+        toast.success('Period deleted');
+      },
+      onError: (err) => {
+        toast.error(err.message ?? 'Failed to delete period');
+      },
+    }),
+  );
+
   const activeRows = (activeQuery.data ?? []) as PeriodListItem[];
   const archiveRows = (archiveQuery.data ?? []) as PeriodListItem[];
 
@@ -226,6 +243,7 @@ export function PeriodsTab() {
             onReopen={(row) => reopenMut.mutate({ reportId: row.id })}
             onArchive={(row) => archiveMut.mutate({ periodId: row.id })}
             onUnarchive={(row) => unarchiveMut.mutate({ periodId: row.id })}
+            onDelete={(row) => setDeleteConfirm(row)}
             onEdit={(row) => setEditingRow(row)}
           />
         )}
@@ -274,6 +292,7 @@ export function PeriodsTab() {
                 onReopen={(row) => reopenMut.mutate({ reportId: row.id })}
                 onArchive={(row) => archiveMut.mutate({ periodId: row.id })}
                 onUnarchive={(row) => unarchiveMut.mutate({ periodId: row.id })}
+                onDelete={(row) => setDeleteConfirm(row)}
                 onEdit={(row) => setEditingRow(row)}
               />
             )}
@@ -317,6 +336,52 @@ export function PeriodsTab() {
           isPending={updateMut.isPending}
         />
       )}
+
+      {/* A27: Delete confirmation dialog */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
+          onClick={() => setDeleteConfirm(null)}
+          role="presentation"
+          data-testid="periods-delete-dialog"
+        >
+          <div
+            className="animate-scale-in mx-4 w-full max-w-sm rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Delete period confirmation"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+              Delete period?
+            </h3>
+            <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+              This will permanently delete the period and all draft sections. This action cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleteMut.isPending}
+                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteMut.mutate({ reportId: deleteConfirm.id });
+                  setDeleteConfirm(null);
+                }}
+                disabled={deleteMut.isPending}
+                className="btn-press rounded-[var(--radius-pill)] bg-[#991b1b] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#7f1d1d] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deleteMut.isPending ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -332,6 +397,8 @@ type PeriodTableProps = {
   readonly onReopen: (row: PeriodListItem) => void;
   readonly onArchive: (row: PeriodListItem) => void;
   readonly onUnarchive: (row: PeriodListItem) => void;
+  // A27: delete opens a confirmation dialog before deletion.
+  readonly onDelete: (row: PeriodListItem) => void;
   // UFB-067: row-level edit opens the dialog in edit-mode prefilled
   // from this row.
   readonly onEdit: (row: PeriodListItem) => void;
@@ -344,6 +411,7 @@ function PeriodTable({
   onReopen,
   onArchive,
   onUnarchive,
+  onDelete,
   onEdit,
 }: PeriodTableProps) {
   return (
@@ -381,6 +449,7 @@ function PeriodTable({
               onReopen={onReopen}
               onArchive={onArchive}
               onUnarchive={onUnarchive}
+              onDelete={onDelete}
               onEdit={onEdit}
             />
           ))}
@@ -397,6 +466,7 @@ function PeriodRow({
   onReopen,
   onArchive,
   onUnarchive,
+  onDelete,
   onEdit,
 }: {
   readonly row: PeriodListItem;
@@ -439,6 +509,7 @@ function PeriodRow({
           onReopen={onReopen}
           onArchive={onArchive}
           onUnarchive={onUnarchive}
+          onDelete={onDelete}
           onEdit={onEdit}
         />
       </td>
@@ -547,6 +618,7 @@ function ActionIconRow({
   onReopen,
   onArchive,
   onUnarchive,
+  onDelete,
   onEdit,
 }: {
   readonly row: PeriodListItem;
@@ -597,6 +669,25 @@ function ActionIconRow({
           icon={<UnarchiveIcon />}
         />
       )}
+      {/* A27: Delete button. Show when not published, disabled when published. */}
+      {row.periodStatus === 'published' ? (
+        <IconButton
+          testId={`action-delete-${row.id}`}
+          label="Cannot delete a published period"
+          onClick={() => {}}
+          icon={<DeleteIcon />}
+          tone="danger"
+          disabled={true}
+        />
+      ) : (
+        <IconButton
+          testId={`action-delete-${row.id}`}
+          label="Delete period"
+          onClick={() => onDelete(row)}
+          icon={<DeleteIcon />}
+          tone="danger"
+        />
+      )}
     </div>
   );
 }
@@ -612,24 +703,31 @@ function IconButton({
   onClick,
   icon,
   tone,
+  disabled,
 }: {
   readonly testId: string;
   readonly label: string;
   readonly onClick: () => void;
   readonly icon: React.ReactNode;
   readonly tone?: 'danger';
+  readonly disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
       title={label}
       data-testid={testId}
-      className={`btn-press inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] ${
-        tone === 'danger'
-          ? 'text-[#991b1b] hover:text-[#7f1d1d]'
-          : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-starbucks-accent)]'
+      className={`btn-press inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent transition-colors ${
+        disabled
+          ? 'cursor-not-allowed opacity-50'
+          : `hover:border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] ${
+              tone === 'danger'
+                ? 'text-[#991b1b] hover:text-[#7f1d1d]'
+                : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-starbucks-accent)]'
+            }`
       }`}
     >
       {icon}
@@ -752,6 +850,27 @@ function UnarchiveIcon() {
       <rect x="1" y="3" width="22" height="5" />
       <polyline points="9 14 12 11 15 14" />
       <line x1="12" y1="11" x2="12" y2="18" />
+    </svg>
+  );
+}
+
+function DeleteIcon() {
+  // Trash icon for period deletion.
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
     </svg>
   );
 }

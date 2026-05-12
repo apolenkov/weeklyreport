@@ -56,6 +56,8 @@ export type MockUser = {
   role: UserRole;
   groupId: string;
   department: string;
+  // A2 (UAT-v7 2026-05-12): soft-deactivation flag from the API.
+  isActive: boolean;
 };
 
 export type MockGroup = {
@@ -211,6 +213,8 @@ function mapUser(api: AdminUser): MockUser {
     role: api.role,
     groupId: api.reportingGroupId,
     department: api.reportingGroupName ?? "Unassigned",
+    // A2 (UAT-v7 2026-05-12): default true in case old snapshot rows lack the field.
+    isActive: api.isActive ?? true,
   };
 }
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -34,6 +35,9 @@ type StageAssignmentEditorProps = {
  * Two queries: `listStages` (catalogue) + `listStageAssignments` (per-project
  * rows). We index assignments by stageId and walk the stage catalogue in
  * sortOrder so UI order is deterministic.
+ *
+ * A5: filter leads to only those in the product's owning group. Query the
+ * product's group(s) and match against each lead's reportingGroupId.
  */
 export function StageAssignmentEditor({ projectId, projectName, leads }: StageAssignmentEditorProps) {
   const trpc = useTRPC();
@@ -43,6 +47,24 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
   const assignmentsQuery = useQuery(
     trpc.admin.listStageAssignments.queryOptions({ projectId }),
   );
+
+  // A5: query the product's owning group(s). The schema constraint ensures
+  // each product belongs to exactly one group via the @@unique([groupId])
+  // on GroupProduct. Filter leads to only those in that group.
+  const productGroupsQuery = useQuery(
+    trpc.admin.listProductGroups.queryOptions({ productId: projectId }),
+  );
+
+  const filteredLeads = useMemo(() => {
+    const groups = productGroupsQuery.data ?? [];
+    if (groups.length === 0) {
+      // Product not yet assigned to a group; show all leads (graceful degradation).
+      return leads;
+    }
+    // Typically one group (@@unique([groupId]) constraint), but iterate to be safe.
+    const groupIds = new Set(groups.map((g) => g.id));
+    return leads.filter((lead) => groupIds.has(lead.groupId));
+  }, [leads, productGroupsQuery.data]);
 
   function invalidateAssignments() {
     void qc.invalidateQueries(trpc.admin.listStageAssignments.pathFilter());
@@ -153,7 +175,7 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
               aria-label={`Assign ${stageName} stage for ${projectName}`}
             >
               <option value="">-- unassigned --</option>
-              {leads.map((lead) => (
+              {filteredLeads.map((lead) => (
                 <option key={lead.id} value={lead.id}>
                   {lead.name.split(' ')[0]}
                 </option>

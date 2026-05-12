@@ -216,6 +216,7 @@ describe("mapAdminSnapshot", () => {
           role: "lead",
           reportingGroupId: UUID_GROUP,
           reportingGroupName: "Software Development",
+          isActive: true,
         },
       ],
     });

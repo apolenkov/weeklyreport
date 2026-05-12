@@ -35,6 +35,7 @@ import {
   type ReportPeriod,
   type StageAssignment,
 } from "@customreport/shared";
+import { ReportStatus } from "@prisma/client";
 
 import { computeDeadline } from "../../lib/business-date.js";
 import { createNullLogger, type AppLogger } from "../../lib/logger";
@@ -108,6 +109,15 @@ export interface AdminRepository {
   unarchivePeriod?(
     periodId: string,
   ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }>;
+  // A27: delete a Report (period) and cascade-delete all child rows.
+  // Optional so in-memory test repos can opt out.
+  deleteReport?(reportId: string): Promise<void>;
+  // A27: read a Report for delete-guard checks (status, periodStatus to block published).
+  // Returns null if not found so the service can throw AdminAccessError.
+  readReportForDelete?(reportId: string): Promise<{
+    status: ReportStatus;
+    periodStatus: PeriodStatus;
+  } | null>;
   // UFB-063: detect any existing Report whose [periodStart, periodEnd]
   // overlaps the supplied half-open range. The service uses this BEFORE
   // calling createPeriodManual to surface a friendly error pointing at
@@ -856,6 +866,34 @@ export class AdminService {
     this.logger.info("unarchived period", { periodId });
     const result = await this.repository.unarchivePeriod(periodId);
     return { success: true, periodState: result.nextPeriodState };
+  }
+
+  /**
+   * A27: delete a period (Report row) and cascade-delete all child rows.
+   * Guard: cannot delete published periods. Throws `AdminAccessError` if the
+   * period is published; maps to FORBIDDEN via trpc.error-mapper.
+   */
+  async deleteReport(reportId: string): Promise<{ success: true }> {
+    if (!this.repository.deleteReport) {
+      throw new Error(
+        "AdminRepository.deleteReport is not implemented for this repository.",
+      );
+    }
+    const report = await this.repository.readReportForDelete?.(reportId);
+    if (!report) {
+      throw new AdminAccessError(`Report ${reportId} not found.`);
+    }
+    if (
+      report.status === "published" ||
+      report.periodStatus === "published"
+    ) {
+      throw new AdminAccessError(
+        "Cannot delete a published period. Reopen it first if needed.",
+      );
+    }
+    this.logger.info("deleted report", { reportId });
+    await this.repository.deleteReport(reportId);
+    return { success: true };
   }
 
   // -----------------------------------------------------------------

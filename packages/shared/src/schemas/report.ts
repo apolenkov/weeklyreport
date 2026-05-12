@@ -309,6 +309,9 @@ export const adminUserSchema = z.object({
   role: roleSchema,
   reportingGroupId: z.string().uuid(),
   reportingGroupName: z.string().min(1).max(200).optional(),
+  // A2 (UAT-v7 2026-05-12): soft-deactivation flag. Defaults to true so
+  // existing snapshot rows (created before this field existed) parse cleanly.
+  isActive: z.boolean().default(true),
 });
 
 export const reportingGroupSchema = z.object({

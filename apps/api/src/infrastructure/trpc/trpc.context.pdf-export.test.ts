@@ -34,6 +34,10 @@ function makePrismaStub() {
     reportSection: {
       findFirst: vi.fn(async () => null),
     },
+    // A2 (UAT-v7 2026-05-12): isActive check added to createContextFactory.
+    user: {
+      findUnique: vi.fn(async () => ({ isActive: true })),
+    },
     // UFB-047 / Phase 48-A: see trpc.context.test.ts — the regular session
     // path hydrates `session.organization` from the singleton row before
     // returning. PDF-export-token paths short-circuit before hitting this

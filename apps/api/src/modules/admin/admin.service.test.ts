@@ -52,6 +52,7 @@ const initialSnapshot: AdminSnapshot = {
       role: "head",
       reportingGroupId: GROUP_ID,
       reportingGroupName: defaultGroup.name,
+      isActive: true,
     },
   ],
   groups: [defaultGroup],
@@ -176,6 +177,7 @@ describe("AdminService", () => {
       name: leadSession.name,
       role: "lead",
       reportingGroupId: GROUP_ID,
+      isActive: true,
     });
 
     expect(withLead.users).toHaveLength(2);
@@ -289,6 +291,7 @@ describe("AdminService", () => {
             role: "head",
             reportingGroupId: GROUP_ID,
             reportingGroupName: defaultGroup.name,
+            isActive: true,
           },
         ],
         groups: [defaultGroup],
@@ -367,6 +370,7 @@ describe("AdminService", () => {
         name: "New Lead",
         role: "lead",
         reportingGroupId: GROUP_ID,
+        isActive: true,
       });
 
       expect(result.users).toHaveLength(2);
@@ -385,6 +389,7 @@ describe("AdminService", () => {
         name: "Old Name",
         role: "lead",
         reportingGroupId: GROUP_ID,
+        isActive: true,
       });
 
       // Update the same user by ID
@@ -394,6 +399,7 @@ describe("AdminService", () => {
         name: "Updated Name",
         role: "lead",
         reportingGroupId: GROUP_ID,
+        isActive: true,
       });
 
       expect(result.users).toHaveLength(2); // not 3 — updated, not duplicated
@@ -411,6 +417,7 @@ describe("AdminService", () => {
         name: "Alpha",
         role: "lead",
         reportingGroupId: GROUP_ID,
+        isActive: true,
       });
       const result = await service.upsertUser({
         id: "88888888-8888-4888-8888-888888888888",
@@ -418,6 +425,7 @@ describe("AdminService", () => {
         name: "Zulu",
         role: "lead",
         reportingGroupId: GROUP_ID,
+        isActive: true,
       });
 
       const names = result.users.map((u) => u.name);
@@ -575,6 +583,7 @@ describe("removeUser — DB deletion via repository", () => {
           role: "lead",
           reportingGroupId: GROUP_ID,
           reportingGroupName: defaultGroup.name,
+          isActive: true,
         },
       ],
     };
@@ -600,6 +609,7 @@ describe("removeUser — DB deletion via repository", () => {
           role: "lead",
           reportingGroupId: GROUP_ID,
           reportingGroupName: defaultGroup.name,
+          isActive: true,
         },
         {
           id: "44444444-4444-4444-8444-444444444444",
@@ -608,6 +618,7 @@ describe("removeUser — DB deletion via repository", () => {
           role: "lead",
           reportingGroupId: GROUP_ID,
           reportingGroupName: defaultGroup.name,
+          isActive: true,
         },
       ],
     };

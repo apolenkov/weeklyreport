@@ -102,6 +102,32 @@ export function UsersTab({ users, groups }: UsersTabProps) {
     }),
   );
 
+  // A2 (UAT-v7 2026-05-12): deactivate/activate mutations with immediate
+  // Redis session revocation on the backend.
+  const deactivateUserMut = useMutation(
+    trpc.admin.deactivateUser.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success("User deactivated");
+      },
+      onError: (err) => {
+        toast.error(err.message ?? "Failed to deactivate user");
+      },
+    }),
+  );
+
+  const activateUserMut = useMutation(
+    trpc.admin.activateUser.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success("User activated");
+      },
+      onError: (err) => {
+        toast.error(err.message ?? "Failed to activate user");
+      },
+    }),
+  );
+
   function openAdd() {
     setEditingUser(null);
     setForm(emptyForm(groups));
@@ -198,10 +224,20 @@ export function UsersTab({ users, groups }: UsersTabProps) {
               {filteredUsers.map((user) => (
                 <tr
                   key={user.id}
-                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
+                  className={`border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]${!user.isActive ? " opacity-60" : ""}`}
                 >
                   <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
-                    {user.name}
+                    <span className="flex items-center gap-2">
+                      {user.name}
+                      {!user.isActive && (
+                        <span
+                          className="inline-flex items-center rounded-[var(--radius-pill)] bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-500"
+                          aria-label="Inactive user"
+                        >
+                          inactive
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
                     {user.email}
@@ -222,6 +258,31 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                       >
                         Edit
                       </button>
+                      {user.isActive ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            deactivateUserMut.mutate({ userId: user.id })
+                          }
+                          disabled={deactivateUserMut.isPending}
+                          className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-amber-600 transition-colors hover:border-[rgba(180,100,0,0.3)] hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label={`Deactivate ${user.name}`}
+                        >
+                          Deactivate
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            activateUserMut.mutate({ userId: user.id })
+                          }
+                          disabled={activateUserMut.isPending}
+                          className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label={`Activate ${user.name}`}
+                        >
+                          Activate
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(user)}
