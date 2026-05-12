@@ -380,9 +380,10 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
           });
         }
 
-        if (section.decisions.length > 0) {
+        const decisionsToSave = section.decisions.filter((d) => !!d.productId);
+        if (decisionsToSave.length > 0) {
           await tx.decision.createMany({
-            data: section.decisions.map((d) => ({
+            data: decisionsToSave.map((d) => ({
               ...(d.id ? { id: d.id } : {}),
               reportSectionId: sectionId,
               text: d.text,
@@ -391,20 +392,21 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
               stageName: d.stageIds?.join(', ') ?? null,
-              productId: d.productId ?? null,
+              productId: d.productId as string,
             })),
           });
         }
 
-        if (section.priorities.length > 0) {
+        const prioritiesToSave = section.priorities.filter((p) => !!p.productId);
+        if (prioritiesToSave.length > 0) {
           await tx.priority.createMany({
-            data: section.priorities.map((p) => ({
+            data: prioritiesToSave.map((p) => ({
               ...(p.id ? { id: p.id } : {}),
               reportSectionId: sectionId,
               rank: p.rank,
               text: p.text,
               stageName: p.stageIds?.join(', ') ?? null,
-              productId: p.productId ?? null,
+              productId: p.productId as string,
             })),
           });
         }

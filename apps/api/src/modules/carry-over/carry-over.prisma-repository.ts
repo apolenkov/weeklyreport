@@ -185,9 +185,10 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
           (d) => d.id && !existingDecisionIds.includes(d.id),
         );
 
-        if (newDecisions.length > 0) {
+        const decisionsWithProduct = newDecisions.filter((d) => !!d.productId);
+        if (decisionsWithProduct.length > 0) {
           await tx.decision.createMany({
-            data: newDecisions.map((d) => ({
+            data: decisionsWithProduct.map((d) => ({
               id: d.id ?? undefined,
               reportSectionId: targetSection.reportSectionId,
               text: d.text,
@@ -196,7 +197,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
               stageName: d.stageIds?.join(', ') ?? null,
-              productId: d.productId ?? null,
+              productId: d.productId as string,
             })),
           });
         }
