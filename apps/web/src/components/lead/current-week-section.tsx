@@ -71,11 +71,12 @@ export function CurrentWeekSection({
     }
     check();
     el.addEventListener('scroll', check, { passive: true });
-    const ro = new ResizeObserver(check);
-    ro.observe(el);
+    // ResizeObserver may be absent in SSR / test (jsdom) environments.
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null;
+    ro?.observe(el);
     return () => {
       el.removeEventListener('scroll', check);
-      ro.disconnect();
+      ro?.disconnect();
     };
   }, []);
 
