@@ -283,54 +283,77 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
 
           {/* UFB-071: last-session hint with «Change role» picker. Only
               rendered in AUTH_STUB mode AND when a hint is stored.
-              `lastRole` is null on the first client render (set in a
-              useEffect after hydration) so the SSR HTML matches and no
-              hydration mismatch occurs. */}
-          {AUTH_STUB && lastRole ? (
+              The container is always present in AUTH_STUB mode so the
+              DOM structure is stable across SSR → hydration → useEffect.
+              CSS max-height + opacity transition makes the hint slide in
+              smoothly instead of causing an instant layout shift.
+              In production (AUTH_STUB=false) this block never renders,
+              so there is zero flicker on staging/cloud. */}
+          {AUTH_STUB && (
             <div
-              className="mt-4 rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
-              data-testid="last-role-hint"
+              className="overflow-hidden"
+              style={{
+                maxHeight: lastRole ? '300px' : '0px',
+                opacity: lastRole ? 1 : 0,
+                marginTop: lastRole ? '16px' : '0px',
+                transition:
+                  'max-height 220ms ease-in-out, opacity 220ms ease-in-out, margin-top 220ms ease-in-out',
+              }}
+              aria-hidden={!lastRole}
             >
-              <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
-                Last session:{' '}
-                <span className="font-semibold text-[var(--color-foreground)]">
-                  {lastRole.name}
-                </span>{' '}
-                · {ROLE_LABEL[lastRole.role]}
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowRoleSwitcher((v) => !v)}
-                className="mt-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-2 hover:underline"
-                aria-expanded={showRoleSwitcher}
-                aria-controls="last-role-switcher"
-                data-testid="last-role-change"
-              >
-                {showRoleSwitcher ? 'Hide options' : 'Change role'}
-              </button>
-              {showRoleSwitcher ? (
-                <ul
-                  id="last-role-switcher"
-                  className="mt-2 grid grid-cols-2 gap-1.5"
-                  data-testid="last-role-switcher"
+              {lastRole && (
+                <div
+                  className="rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
+                  data-testid="last-role-hint"
                 >
-                  {(
-                    ['lead', 'head', 'admin', 'viewer', 'director'] as const
-                  ).map((role) => (
-                    <li key={role}>
-                      <a
-                        href={devLoginHref(role, DEV_EMAIL_FOR_ROLE[role])}
-                        className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
-                        data-testid={`last-role-option-${role}`}
-                      >
-                        {ROLE_LABEL[role]}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+                  <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
+                    Last session:{' '}
+                    <span className="font-semibold text-[var(--color-foreground)]">
+                      {lastRole.name}
+                    </span>{' '}
+                    · {ROLE_LABEL[lastRole.role]}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowRoleSwitcher((v) => !v)}
+                    className="mt-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-2 hover:underline"
+                    aria-expanded={showRoleSwitcher}
+                    aria-controls="last-role-switcher"
+                    data-testid="last-role-change"
+                  >
+                    {showRoleSwitcher ? 'Hide options' : 'Change role'}
+                  </button>
+                  {showRoleSwitcher ? (
+                    <ul
+                      id="last-role-switcher"
+                      className="mt-2 grid grid-cols-2 gap-1.5"
+                      data-testid="last-role-switcher"
+                    >
+                      {(
+                        [
+                          'lead',
+                          'head',
+                          'admin',
+                          'viewer',
+                          'director',
+                        ] as const
+                      ).map((role) => (
+                        <li key={role}>
+                          <a
+                            href={devLoginHref(role, DEV_EMAIL_FOR_ROLE[role])}
+                            className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
+                            data-testid={`last-role-option-${role}`}
+                          >
+                            {ROLE_LABEL[role]}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              )}
             </div>
-          ) : null}
+          )}
 
           <div className="mx-auto my-10 h-px w-full max-w-[320px] bg-[#ece8e2]" />
 
