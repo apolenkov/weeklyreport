@@ -359,6 +359,7 @@ function sectionToDraftPayload(
         impact: d.impact,
         resolvedAt: d.resolvedAt ?? null,
         stageIds: d.stageIds,
+        productId: d.productId ?? null,
       })),
     priorities: section.priorities
       .filter((p) => hasText(p.text))
@@ -367,6 +368,7 @@ function sectionToDraftPayload(
         rank: p.rank,
         text: p.text,
         stageIds: p.stageIds,
+        productId: p.productId ?? null,
       })),
   };
 }
