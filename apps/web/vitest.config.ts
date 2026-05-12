@@ -45,6 +45,9 @@ export default defineConfig({
       ),
       '@customreport/api': path.resolve(__dirname, '../../apps/api/src'),
       zod: path.dirname(require.resolve('zod/package.json')),
+      // Replace the `server-only` guard with an empty stub so RSC helper
+      // modules can be imported in jsdom tests without throwing.
+      'server-only': path.resolve(__dirname, 'src/test/server-only-mock.ts'),
     },
   },
 });
