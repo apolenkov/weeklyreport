@@ -576,6 +576,7 @@ async function main() {
       ];
     })();
 
+    const firstProductId = cfg.products[0]?.id ?? "";
     for (let r = 0; r < priorityTexts.length; r++) {
       const rank = r + 1;
       const id = priorityId("1", cfg.leadIndex, rank);
@@ -586,10 +587,11 @@ async function main() {
             rank,
           },
         },
-        update: { id, text: priorityTexts[r]! },
+        update: { id, productId: firstProductId, text: priorityTexts[r]! },
         create: {
           id,
           reportSectionId: secId,
+          productId: firstProductId,
           rank,
           text: priorityTexts[r]!,
         },
@@ -669,6 +671,7 @@ async function main() {
     {
       id: decisionId(1),
       reportSectionId: primaryLeadSec,
+      productId: "a0000000-0000-4000-8000-000000000201",
       text: "Согласовать расширение OAuth2 квоты у партнёра (нужен sign-off head)",
       owner: "Глава департамента",
       deadline: activeOffset(8, 15),
@@ -677,6 +680,7 @@ async function main() {
     {
       id: decisionId(2),
       reportSectionId: igorSec,
+      productId: "a0000000-0000-4000-8000-000000000205",
       text: "Утвердить maintenance-window для миграции PgBouncer (Сб 02:00 МСК)",
       owner: "Глава департамента",
       deadline: activeOffset(9, 18),
@@ -685,6 +689,7 @@ async function main() {
     {
       id: decisionId(3),
       reportSectionId: dmitrySec,
+      productId: "a0000000-0000-4000-8000-000000000207",
       text: "Дать зелёный свет фазовой раскатке WAF в shadow-mode",
       owner: "Глава департамента",
       deadline: activeOffset(10, 12),
@@ -784,6 +789,7 @@ async function main() {
 
     // One priority per published section
     const id = priorityId("2", cfg.leadIndex, 1);
+    const firstProdId = cfg.products[0]?.id ?? "";
     await prisma.priority.upsert({
       where: {
         reportSectionId_rank: {
@@ -793,11 +799,13 @@ async function main() {
       },
       update: {
         id,
+        productId: firstProdId,
         text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}`,
       },
       create: {
         id,
         reportSectionId: secId,
+        productId: firstProdId,
         rank: 1,
         text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}`,
       },
