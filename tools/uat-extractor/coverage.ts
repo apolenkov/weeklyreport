@@ -9,12 +9,12 @@
  * Exit codes: 0 = pass (or gap allowed), 1 = fail
  */
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
-const ROOT = join(__filename, '../../../');
+const ROOT = join(__filename, "../../../");
 
 type MatrixSummary = {
   generatedAt: string;
@@ -33,11 +33,11 @@ type MatrixSummary = {
 };
 
 function main() {
-  const matrixPath = join(ROOT, 'tools/uat-extractor/matrix.json');
+  const matrixPath = join(ROOT, "tools/uat-extractor/matrix.json");
   let matrix: MatrixSummary;
 
   try {
-    const raw = readFileSync(matrixPath, 'utf-8');
+    const raw = readFileSync(matrixPath, "utf-8");
     matrix = JSON.parse(raw) as MatrixSummary;
   } catch (err) {
     console.error(`[ERROR] Cannot read ${matrixPath}`);
@@ -47,23 +47,23 @@ function main() {
 
   const { total, covered, uncovered, coveragePercent } = matrix.summary;
 
-  console.log('\n=== UAT DOM Coverage Report ===\n');
+  console.log("\n=== UAT DOM Coverage Report ===\n");
   console.table({
     Total: total,
     Covered: covered,
     Uncovered: uncovered,
-    'Coverage %': coveragePercent,
+    "Coverage %": coveragePercent,
   });
 
   if (uncovered > 0) {
-    console.log('\nUncovered elements:\n');
+    console.log("\nUncovered elements:\n");
     const uncoveredItems = matrix.elements.filter((el) => !el.covered);
     uncoveredItems.forEach((el) => {
       console.log(`  • ${el.testId} (${el.file}:${el.line})`);
     });
   }
 
-  const allowGap = process.env.UAT_COVERAGE_ALLOW_GAP === 'true';
+  const allowGap = process.env.UAT_COVERAGE_ALLOW_GAP === "true";
 
   if (coveragePercent < 100) {
     if (allowGap) {
@@ -78,7 +78,7 @@ function main() {
     process.exit(1);
   }
 
-  console.log('\n[SUCCESS] 100% coverage ✓\n');
+  console.log("\n[SUCCESS] 100% coverage ✓\n");
   process.exit(0);
 }
 
