@@ -408,6 +408,7 @@ export const periodListItemSchema = z.object({
   periodEnd: reportDate(),
   deadline: reportDate(),
   publishedAt: z.coerce.date().nullable(),
+  weekLabel: z.string().nullable().optional(),
   periodState: periodStateSchema,
   /**
    * Mirror of the legacy `periodStatus` enum

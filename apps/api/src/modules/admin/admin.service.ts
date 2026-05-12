@@ -211,6 +211,7 @@ export type PeriodRowFromRepo = {
   autoArchived: boolean;
   submittedCount: number;
   totalCount: number;
+  weekLabel: string | null;
 };
 
 function sortByName<T extends { name: string }>(rows: T[]): T[] {
@@ -530,6 +531,7 @@ export class AdminService {
         autoArchived: row.autoArchived,
         submittedCount: row.submittedCount,
         totalCount: row.totalCount,
+        weekLabel: row.weekLabel,
         canReopen,
         canArchive,
       });
