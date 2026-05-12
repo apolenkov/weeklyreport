@@ -382,14 +382,22 @@ export function createAppRouter(deps: RouterDeps) {
       // headProcedure.
       dashboard: headProcedure.query(async ({ ctx }) => {
         try {
-          const activeReportId = ctx.session.activeReportId;
+          // A28 (UAT-v7 2026-05-12): resolve the current open/reopened period
+          // from DB instead of ctx.session.activeReportId (which is baked into
+          // the JWT at login and can be stale). This aligns the dashboard with
+          // activity.live, which also queries DB for periodStatus 'open'.
+          const openReport = await ctx.prisma?.report.findFirst({
+            where: { periodStatus: { in: ["open", "reopened"] } },
+            orderBy: { periodStart: "desc" },
+            select: { id: true },
+          });
 
-          if (!activeReportId) {
+          if (!openReport) {
             return [];
           }
 
           return await deps.reviewService.getSubmissionDashboard(
-            activeReportId,
+            openReport.id,
             ctx.session,
           );
         } catch (error) {

@@ -86,6 +86,8 @@ type Captured = {
   createMutationFn: ReturnType<typeof vi.fn>;
   // UFB-067: edit-period mutation surface used by the row-level Edit icon.
   updateMutationFn: ReturnType<typeof vi.fn>;
+  // A27: delete period mutation.
+  deleteMutationFn: ReturnType<typeof vi.fn>;
   listInputs: Array<{ bucket: string }>;
 };
 
@@ -155,6 +157,15 @@ function makeMockTRPC(opts: {
           onError: mopts['onError'],
         }),
       },
+      // A27 (UAT-v7 2026-05-12): delete period (draft/scheduled only).
+      deleteReport: {
+        pathFilter: () => ({ queryKey: ['admin', 'deleteReport'] }),
+        mutationOptions: (mopts: Record<string, unknown>) => ({
+          mutationFn: opts.captured.deleteMutationFn,
+          onSuccess: mopts['onSuccess'],
+          onError: mopts['onError'],
+        }),
+      },
     },
     period: {
       publish: {
@@ -191,6 +202,7 @@ function renderTab(args?: {
     reopenMutationFn: vi.fn().mockResolvedValue({ success: true }),
     archiveMutationFn: vi.fn().mockResolvedValue({ success: true }),
     unarchiveMutationFn: vi.fn().mockResolvedValue({ success: true }),
+    deleteMutationFn: vi.fn().mockResolvedValue({ success: true }),
     // UFB-063: createPeriodManual server returns the new row's shape.
     createMutationFn: vi.fn().mockResolvedValue({
       periodId: '11111111-1111-4111-8111-111111111199',
