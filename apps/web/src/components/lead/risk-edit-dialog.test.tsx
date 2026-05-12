@@ -52,9 +52,9 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / UFB-014)', () => {
       text: 'Vendor delay',
       impact: 'Slips Q3',
       mitigation: 'Escalate',
+      // UFB-073 + R1: pre-fill saves as stageIds array (not joined CSV).
+      stageIds: ['Dev', 'Testing'],
     });
-    // UFB-073: all owned stages are pre-selected → saved as joined CSV.
-    expect(onSave.mock.calls[0]?.[0].stageName).toBe('Dev, Testing');
   });
 
   it('saves with stageName when all required fields including stage are filled', () => {
@@ -87,7 +87,7 @@ describe('RiskEditDialog - SDLC stage selector (35-04 / UFB-014)', () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      stageName: 'Dev',
+      stageIds: ['Dev'],
       text: 'Vendor delay',
       impact: 'Slips Q3',
       mitigation: 'Escalate',

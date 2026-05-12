@@ -24,8 +24,12 @@ import { LAST_ROLE_STORAGE_KEY } from '../lib/last-role';
  *   - «Change role» toggles the 5-role picker
  *   - each picker option links to the correct seeded email
  *
+ * We test LoginPageClient directly (the client component) — the RSC
+ * wrapper page.tsx is a thin async server shell tested via E2E, not unit.
+ * See vitest.config.ts coverage.exclude: 'src/app/ ** /page.tsx'.
+ *
  * AUTH_STUB is read at module-eval time from the env, so we must set
- * it before importing the page module.
+ * it before importing the client module.
  */
 
 const useQueryMock = vi.fn();
@@ -83,11 +87,16 @@ function makeMemoryStorage(): Storage {
   };
 }
 
+const STUB_ORG = {
+  shortName: 'PEO',
+  fullName: 'Product Engineering & Operations',
+};
+
 let storage: Storage;
 
 beforeEach(() => {
   // AUTH_STUB is gated on `process.env.NEXT_PUBLIC_AUTH_STUB === 'true'`
-  // at the module top-level — set BEFORE importing the page module.
+  // at the module top-level — set BEFORE importing the client module.
   process.env.NEXT_PUBLIC_AUTH_STUB = 'true';
 
   storage = makeMemoryStorage();
@@ -102,10 +111,7 @@ beforeEach(() => {
     const key = opts?.queryKey?.[0];
     if (key === 'auth.me') return { data: null, isLoading: false };
     if (key === 'org.getPublic')
-      return {
-        data: { shortName: 'PEO', fullName: 'Product Engineering & Operations' },
-        isLoading: false,
-      };
+      return { data: STUB_ORG, isLoading: false };
     return { data: null, isLoading: false };
   });
 
@@ -120,15 +126,15 @@ afterEach(() => {
   (useSearchParamsMock as Mock).mockReset();
 });
 
-async function loadLandingPage() {
-  const mod = await import('./page');
-  return mod.default;
+async function loadLoginPageClient() {
+  const mod = await import('./login-page.client');
+  return mod.LoginPageClient;
 }
 
 describe('Landing page — last-role hint (UFB-071)', () => {
   it('does not render the hint when no record is stored', async () => {
-    const LoginPage = await loadLandingPage();
-    render(<LoginPage />);
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
     await waitFor(() => {
       expect(screen.getByTestId('primary-cta')).toBeInTheDocument();
     });
@@ -145,8 +151,8 @@ describe('Landing page — last-role hint (UFB-071)', () => {
       }),
     );
 
-    const LoginPage = await loadLandingPage();
-    render(<LoginPage />);
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
 
     const hint = await screen.findByTestId('last-role-hint');
     expect(hint).toBeInTheDocument();
@@ -164,8 +170,8 @@ describe('Landing page — last-role hint (UFB-071)', () => {
       }),
     );
 
-    const LoginPage = await loadLandingPage();
-    render(<LoginPage />);
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
 
     const cta = await screen.findByTestId('primary-cta');
     await waitFor(() => {
@@ -186,8 +192,8 @@ describe('Landing page — last-role hint (UFB-071)', () => {
       }),
     );
 
-    const LoginPage = await loadLandingPage();
-    render(<LoginPage />);
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
 
     const toggle = await screen.findByTestId('last-role-change');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -213,8 +219,8 @@ describe('Landing page — last-role hint (UFB-071)', () => {
       }),
     );
 
-    const LoginPage = await loadLandingPage();
-    render(<LoginPage />);
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
 
     fireEvent.click(await screen.findByTestId('last-role-change'));
 
