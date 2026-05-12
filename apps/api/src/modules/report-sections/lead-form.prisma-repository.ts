@@ -160,6 +160,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
               stageName: d.stageName ?? null,
+              productId: d.productId ?? null,
             })),
           });
           copiedItems += source.decisions.length;
@@ -173,6 +174,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               rank: p.rank,
               text: p.text,
               stageName: p.stageName ?? null,
+              productId: p.productId ?? null,
             })),
           });
           copiedItems += source.priorities.length;

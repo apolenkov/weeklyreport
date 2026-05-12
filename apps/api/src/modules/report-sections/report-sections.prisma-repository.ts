@@ -391,6 +391,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
               stageName: d.stageIds?.join(', ') ?? null,
+              productId: d.productId ?? null,
             })),
           });
         }
@@ -403,6 +404,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               rank: p.rank,
               text: p.text,
               stageName: p.stageIds?.join(', ') ?? null,
+              productId: p.productId ?? null,
             })),
           });
         }
