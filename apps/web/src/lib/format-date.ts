@@ -42,3 +42,27 @@ export function formatPeriodDate(
     year: 'numeric',
   });
 }
+
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/**
+ * Format a period date range for display: "May 11\u201317" (same month) or
+ * "May 11\u2013Jun 3" (cross-month). Uses UTC getUTC* accessors to prevent
+ * off-by-one day shifts for users in UTC+N timezones.
+ */
+export function formatPeriodRange(
+  start: Date | string | null | undefined,
+  end: Date | string | null | undefined,
+): string {
+  if (!start || !end) return '\u2014';
+  const s = start instanceof Date ? start : new Date(start);
+  const e = end instanceof Date ? end : new Date(end);
+  const sMonth = MONTHS_SHORT[s.getUTCMonth()];
+  const sDay = s.getUTCDate();
+  const eMonth = MONTHS_SHORT[e.getUTCMonth()];
+  const eDay = e.getUTCDate();
+  if (s.getUTCMonth() === e.getUTCMonth()) {
+    return `${sMonth} ${sDay}\u2013${eDay}`;
+  }
+  return `${sMonth} ${sDay}\u2013${eMonth} ${eDay}`;
+}
