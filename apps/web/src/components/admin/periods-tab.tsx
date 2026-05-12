@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import type { PeriodListItem, PeriodState } from '@customreport/shared';
 
+import { formatPeriodRange } from '../../lib/format-date';
 import { invalidateAdmin } from '../../lib/cache-keys';
 import { useTRPC } from '../../lib/trpc-context';
 
@@ -408,7 +409,7 @@ function PeriodRow({
       className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
     >
       <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
-        {formatRange(row.periodStart, row.periodEnd)}
+        {formatPeriodRange(row.periodStart, row.periodEnd)}
       </td>
       <td className="px-4 py-3">
         <StateBadge state={row.periodState} />
@@ -1053,18 +1054,3 @@ function formatDate(d: Date | string): string {
   });
 }
 
-function formatRange(start: Date | string, end: Date | string): string {
-  const startDate = typeof start === 'string' ? new Date(start) : start;
-  const endDate = typeof end === 'string' ? new Date(end) : end;
-  const sameMonth = startDate.getUTCMonth() === endDate.getUTCMonth();
-  const startStr = startDate.toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: sameMonth ? undefined : 'short',
-  });
-  const endStr = endDate.toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-  return `${startStr} – ${endStr}`;
-}
