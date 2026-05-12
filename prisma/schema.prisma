@@ -26,6 +26,13 @@ model User {
   // UFB-039 back-relations
   ledGroups               ReportingGroup[]    @relation("GroupHead")
   viewerGroupAccess       ViewerGroupAccess[] @relation("ViewerGroupAccessViewer")
+  // UFB-056 / Phase 55-1: optional 1:1 inverse to the Telegram binding
+  // row. Nullable because Telegram is opt-in — most users never bind a
+  // chat. Cascade is intentional on the binding side (drop the row when
+  // the user is removed); on the User side we keep this as a plain
+  // back-relation with no `onDelete` because Users don't need to know
+  // about the binding's existence to be deleted.
+  telegramBinding         TelegramBinding?
 
   @@index([reportingGroupId])
 }
@@ -46,6 +53,9 @@ model ReportingGroup {
   users        User[]
   head         User?               @relation("GroupHead", fields: [headUserId], references: [id], onDelete: SetNull)
   viewerAccess ViewerGroupAccess[]
+  // UFB-054 / Phase 56-A: explicit M:M edge to Project (products owned by
+  // this group). Inverse of GroupProduct.group. See `GroupProduct` model.
+  groupProducts GroupProduct[]
 
   @@index([archived])
   @@index([headUserId])
@@ -102,10 +112,45 @@ model Project {
   risks            Risk[]
   stageStatuses    StageStatus[]
   stageAssignments StageAssignment[]
+  // UFB-054 / Phase 56-A: explicit M:M edge to ReportingGroup. Inverse of
+  // GroupProduct.product. Left untouched on backfill; existing read paths
+  // that derive group via `lead.reportingGroupId` continue to work.
+  groupProducts    GroupProduct[]
+  // R4-A: optional 1:N edges to Decision and Priority. Phase A establishes
+  // the FK linkage (nullable); Phase B (future) makes them NOT NULL once all
+  // UI paths wire productId during Decision/Priority creation. Backfill
+  // copies productId from linked ReportSection if available.
+  decisions        Decision[]
+  priorities       Priority[]
 
   @@index([leadId])
   @@index([archived])
   @@index([searchTsv], type: Gin)
+}
+
+// UFB-054 / Phase 56-A: explicit Group ↔ Product M:M edge.
+//
+// Today products belong to a group implicitly through `Project.lead.reportingGroupId`.
+// This model represents the explicit edge so:
+//   - a product can belong to multiple groups (cross-departmental);
+//   - lead rotation does not change product ownership at the group level;
+//   - head dashboards can read «my group's products» without joining through User.
+//
+// Backfill (in the same migration) seeds one row per existing Project mapping
+// to `Project.lead.reportingGroupId`. Existing scope-filter consumers continue
+// to derive group from `Project.lead.reportingGroupId` until they opt in via
+// the Phase 56-D flag.
+model GroupProduct {
+  id        String         @id @default(uuid())
+  groupId   String
+  productId String
+  createdAt DateTime       @default(now())
+  group     ReportingGroup @relation(fields: [groupId], references: [id])
+  product   Project        @relation(fields: [productId], references: [id])
+
+  @@unique([groupId, productId])
+  @@index([groupId])
+  @@index([productId])
 }
 
 model Report {
@@ -121,6 +166,36 @@ model Report {
   periodStatus     PeriodStatus         @default(open)
   reopenedAt       DateTime?
   weekLabel        String?
+  // UFB-049 / Phase 50-B: lifecycle flag set by the auto-archiver scheduler
+  // when `AppSettings.autoArchiveWeeksAfterPublish > 0` AND
+  // `publishedAt + weeks * 7d < now`. Existing rows backfill to false via
+  // the migration default. Indexed alongside periodStart so the archive
+  // dashboard's "last N un-archived" query stays cheap.
+  archived         Boolean              @default(false)
+  // UFB-051 / Phase 51-A: lifecycle audit flags surfaced by the period
+  // state-machine. `autoPublished` is set true when AutoPublisher (50-B
+  // cron) flips status=draft→published at deadline+grace (vs an explicit
+  // head action). `autoArchived` mirrors that for AutoArchiver. Both
+  // ship as nullable-friendly defaults (`false`) so existing rows
+  // backfill cleanly via the migration default. Consumers (state-machine
+  // dashboard, admin audit feed) arrive in 51-B / 51-C.
+  autoPublished    Boolean              @default(false)
+  autoArchived     Boolean              @default(false)
+  // UFB-053 / Phase 51-C: explicit lifecycle state column. The legacy
+  // `status` + `archived` + `periodStatus` tuple is preserved (one-release
+  // compatibility window) and writers update both the new column and the
+  // old fields atomically. Backfill is OPEN | PUBLISHED | ARCHIVED; the
+  // SCHEDULED state is reserved for future periods minted by the
+  // PeriodCreator scheduler (no historical row backfills to SCHEDULED).
+  // Index mirrors the legacy `(status, periodStart)` shape so the
+  // archive/dashboard read paths can swap in 51-B without an index gap.
+  // Note: `PeriodState` and `PeriodStatus` are intentionally separate
+  // state machines — `periodStatus` carries the reopen flavour
+  // (open/published/reopened, no archived); `periodState` carries the
+  // archive lifecycle (scheduled/open/published/archived, no reopened).
+  // On reopen we revert `periodState` to `open` while flipping
+  // `periodStatus` to `reopened` (Open Question — documented in SUMMARY).
+  periodState      PeriodState          @default(open)
   carryOverSources CarryOverExecution[] @relation("CarryOverSource")
   carryOverTargets CarryOverExecution[] @relation("CarryOverTarget")
   pdfExportJobs    PdfExportJob[]
@@ -130,6 +205,8 @@ model Report {
 
   @@index([periodStart(sort: Desc)])
   @@index([status, periodStart(sort: Desc)])
+  @@index([archived, periodStart(sort: Desc)])
+  @@index([periodState, periodStart(sort: Desc)])
 }
 
 model ReportSection {
@@ -142,6 +219,11 @@ model ReportSection {
   updatedAt        DateTime            @updatedAt
   revokedAt        DateTime?
   revokedBy        String?
+  // UFB-049 / Phase 50-B: stamped true by submitSection when
+  // `now > Report.deadline` (regardless of grace-period). Used by head
+  // dashboard + lead form to render a "late" badge. Existing rows
+  // backfill to false via the migration default.
+  late             Boolean             @default(false)
   decisions        Decision[]
   items            Item[]
   priorities       Priority[]
@@ -152,6 +234,12 @@ model ReportSection {
   risks            Risk[]
   stageStatuses    StageStatus[]
   versionSnapshots VersionSnapshot[]
+  // Phase 54 (UFB-055): stub RAG ingestion queue. One row per published
+  // section enqueued by PublicationService for later batch processing;
+  // no LLM call happens yet. Cascade on section delete keeps the queue
+  // clean — orphan jobs would be unprocessable anyway since the source
+  // text is gone.
+  aiIngestionJobs  AiIngestionJob[]
 
   @@unique([reportId, authorId])
   @@index([authorId])
@@ -234,6 +322,7 @@ model Risk {
 model Decision {
   id              String                   @id @default(uuid())
   reportSectionId String
+  productId       String?
   text            String
   owner           String
   deadline        DateTime?
@@ -244,8 +333,10 @@ model Decision {
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
   stageName       String?
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  project         Project?                 @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([reportSectionId])
+  @@index([productId])
   @@index([stageName])
   @@index([searchTsv], type: Gin)
 }
@@ -253,14 +344,17 @@ model Decision {
 model Priority {
   id              String        @id @default(uuid())
   reportSectionId String
+  productId       String?
   rank            Int
   text            String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   stageName       String?
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  project         Project?      @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@unique([reportSectionId, rank])
+  @@index([productId])
   @@index([stageName])
 }
 
@@ -282,6 +376,7 @@ model PdfExportJob {
 model ReminderRule {
   id         String              @id @default(uuid())
   reportId   String?
+  policyId   String?
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
   kind       ReminderRuleKind
@@ -291,9 +386,35 @@ model ReminderRule {
   version    Int                 @default(1)
   executions ReminderExecution[]
   report     Report?             @relation(fields: [reportId], references: [id])
+  policy     ReminderPolicy?     @relation(fields: [policyId], references: [id])
 
+  @@unique([reportId, policyId], map: "uq_rule_report_policy")
   @@index([createdAt(sort: Desc)])
   @@index([status, fireAt])
+  @@index([policyId])
+}
+
+// UFB-036: ReminderPolicy is a parameterized template that ReminderRule rows
+// reference. One policy declares (kind, offsetMinutes, timezone, audience)
+// and acts as the source-of-truth for every concrete rule scheduled against
+// a report. Phase 44-01 introduces the model with nullable FK; later plans
+// flip the FK to NOT NULL once Period.create wires the policy in.
+model ReminderPolicy {
+  id            String           @id @default(uuid())
+  kind          ReminderRuleKind
+  offsetMinutes Int
+  timezone      String           @default("Europe/Moscow")
+  audience      ReminderAudience
+  active        Boolean          @default(true)
+  validFrom     DateTime         @default(now())
+  validUntil    DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  rules         ReminderRule[]
+
+  @@index([kind, active])
+  @@index([active])
+  @@index([validFrom, validUntil])
 }
 
 model ReminderExecution {
@@ -392,12 +513,109 @@ model ReopenRequest {
   @@index([reportSectionId])
 }
 
+// UFB-048 (Phase 48-B): AppSettings expansion. Nine new org-wide knobs that
+// the admin can flip without a redeploy. All fields have SQL defaults so the
+// existing singleton row is updated in-place by the migration without manual
+// data migration. Semantics:
+//   - workingDays            : metadata-only in v1 (UI hint); deadline math
+//                              stays Mon-Fri until a future scheduler change.
+//   - gracePeriodHours +
+//     allowLateSubmissions   : when allowLateSubmissions=true, leads can
+//                              submit within (deadline + grace); outside the
+//                              window submission is blocked. When false, the
+//                              deadline is hard.
+//   - autoPublishAfterDeadline: scheduler will fire at (deadline + grace);
+//                              missing sections render «Не сдал» placeholder.
+//                              Logic deferred — 48-B persists the toggle only.
+// UFB-047 / Phase 49-01: legacy `departmentName` column dropped from this
+// model. Brand identity (short + full name) lives on the `Organization`
+// singleton below; readers consume it via `OrganizationService.getPublic()`
+// or the per-request `auth.me.organization` hydration on the wire.
 model AppSettings {
-  id                  String   @id @default("singleton")
-  departmentName      String   @default("CoreDev")
-  autoCreatePeriods   Boolean  @default(false)
-  defaultDeadlineDays Int      @default(5)
-  updatedAt           DateTime @updatedAt
+  id                           String           @id @default("singleton")
+  autoCreatePeriods            Boolean          @default(false)
+  defaultDeadlineDays          Int              @default(5)
+  periodLengthDays             Int              @default(7)
+  workingDays                  WorkingDays      @default(MON_FRI)
+  gracePeriodHours             Int              @default(24)
+  defaultTimezone              String           @default("Europe/Moscow")
+  defaultReminderAudience      ReminderAudience @default(LEAD_WITH_DRAFT)
+  notificationFromEmail        String?
+  allowLateSubmissions         Boolean          @default(true)
+  autoPublishAfterDeadline     Boolean          @default(false)
+  autoArchiveWeeksAfterPublish Int              @default(0)
+  // UFB-051 / Phase 51-A: period-cycle expansion. Seven org-wide knobs
+  // that describe how a period is anchored on the calendar
+  // (firstDayOfWeek, deadlineDayOfWeek, deadlineTime), how concurrency
+  // works (maxOpenPeriods), and how publish/reopen gating behaves
+  // (requireAllSectionsToPublish, allowReopenAfterPublish, reopenWindowHours).
+  // All carry SQL defaults so the singleton row updates in-place without a
+  // manual data migration. Wire schema mirrors these via `appSettingsSchema`
+  // defaults in packages/shared.
+  //
+  // UFB-068: periodCadence (the "weekly"/"bi-weekly" radio) was removed —
+  // it was a dead column that the schedulers never read. Period length is
+  // expressed solely by periodLengthDays.
+  //
+  // firstDayOfWeek + deadlineDayOfWeek use ISO weekday numbering
+  // (1=Monday..7=Sunday). deadlineTime is HH:MM in defaultTimezone.
+  // Period length is controlled exclusively by periodLengthDays above.
+  firstDayOfWeek               Int              @default(1)
+  deadlineDayOfWeek            Int              @default(5)
+  deadlineTime                 String           @default("18:00")
+  maxOpenPeriods               Int              @default(1)
+  requireAllSectionsToPublish  Boolean          @default(true)
+  allowReopenAfterPublish      Boolean          @default(true)
+  reopenWindowHours            Int              @default(72)
+  updatedAt                    DateTime         @updatedAt
+}
+
+// UFB-047 (Phase 48-A): organization identity singleton. shortName is the
+// compact brand string rendered in the nav-bar / page chrome (≤16 chars);
+// fullName is the long-form description used on the landing hero and in PDF
+// report headers. Singleton invariant enforced at the application layer via
+// `id='singleton'` upsert — not a DB CHECK constraint. Migration seeds the
+// row with PEO / Product Engineering & Operations; admins can override via
+// Settings → Identity tab.
+model Organization {
+  id        String   @id @default("singleton")
+  shortName String
+  fullName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Phase 54 (UFB-055) — AI/RAG ingestion stub queue.
+//
+// Seeds-only scaffolding: when a report is published (manual / auto /
+// period close), one row per ReportSection is enqueued here for later
+// batch processing by a future worker that will call an LLM/embedding
+// provider. No provider is wired in this phase — the table just
+// accumulates rows so the cutover to a real adapter does not require a
+// data-model change.
+//
+// Status state machine:
+//   pending   — newly enqueued, awaiting worker pickup
+//   processed — worker call succeeded (sets `processedAt`)
+//   failed    — worker call exceeded retries (`lastError` populated)
+//   skipped   — worker decided the section is not useful (e.g. empty)
+//
+// Idempotency: there is no unique constraint on `reportSectionId` —
+// re-publishing a period (after reopen) intentionally enqueues a fresh
+// row so the worker re-embeds the latest text. The future worker is
+// expected to deduplicate by content hash, not by section id.
+model AiIngestionJob {
+  id              String        @id @default(uuid())
+  reportSectionId String
+  status          String        @default("pending")
+  attempts        Int           @default(0)
+  lastError       String?
+  createdAt       DateTime      @default(now())
+  processedAt     DateTime?
+  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([reportSectionId])
 }
 
 model AiInsight {
@@ -423,6 +641,7 @@ enum Role {
   head
   viewer
   admin
+  director
 }
 
 enum UserActionStatus {
@@ -482,6 +701,18 @@ enum PeriodStatus {
   reopened
 }
 
+// UFB-053 / Phase 51-C: explicit Period lifecycle enum that replaces the
+// implicit (status × archived × periodStatus) tuple. Lowercase to match the
+// `ReportStatus`/`PeriodSection`/`PeriodStatus` precedent in this schema
+// (the screaming-snake enums are categorically different — they carry
+// metadata, not lifecycle). Wire format mirrors the lowercase Prisma enum.
+enum PeriodState {
+  scheduled
+  open
+  published
+  archived
+}
+
 enum ReopenRequestStatus {
   pending
   approved
@@ -494,6 +725,22 @@ enum ReminderRuleKind {
   escalation
 }
 
+enum ReminderAudience {
+  LEAD_WITH_DRAFT
+  HEAD_OF_LATE
+}
+
+// UFB-048 (Phase 48-B): metadata-only enum surfaced in AppSettings for the
+// «working days» admin hint. v1 does NOT change deadline calculation —
+// callers continue to use Mon-Fri. Wire format mirrors the screaming-snake
+// convention of ReminderAudience; admin.prisma-repository.ts owns the
+// wire ↔ Prisma mapper (`mon-fri | mon-sat | mon-sun`).
+enum WorkingDays {
+  MON_FRI
+  MON_SAT
+  MON_SUN
+}
+
 enum ReminderRuleStatus {
   active
   paused
@@ -503,4 +750,28 @@ enum AiInsightKind {
   summary
   sentiment
   on_track
+}
+
+// UFB-056 / Phase 55-1: TelegramBinding — opt-in link between a CustomReport
+// User and a Telegram `chat_id`. Seeds-only scaffolding for Phase 55: the
+// table is created so a future bot can persist /start handshakes without
+// another migration, but no producer writes to it yet. `lastSeenAt` carries
+// the most-recent inbound message timestamp once the real bot lands;
+// `active=false` lets a user mute Telegram delivery without losing the
+// binding (mirrors `notificationOptOut` on User for the email channel).
+//
+// Indices: (active, linkedAt) supports the admin-side `count where active`
+// status query without a sequential scan when bindings grow past a handful.
+// The unique constraints on userId + chatId are 1:1 invariants (one user =
+// at most one Telegram identity, and vice versa).
+model TelegramBinding {
+  id         String    @id @default(uuid())
+  userId     String    @unique
+  chatId     String    @unique
+  linkedAt   DateTime  @default(now())
+  active     Boolean   @default(true)
+  lastSeenAt DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([active, linkedAt])
 }

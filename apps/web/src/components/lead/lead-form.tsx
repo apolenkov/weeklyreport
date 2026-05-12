@@ -337,7 +337,7 @@ function sectionToDraftPayload(
         workflowStatus: it.workflowStatus,
         carriedOver: it.carriedOver ?? false,
         completed: it.completed ?? null,
-        stageName: it.stageName ?? null,
+        stageIds: it.stageIds,
       })),
     risks: section.risks
       .filter((r) => hasText(r.risk) && hasText(r.mitigation))
@@ -347,7 +347,7 @@ function sectionToDraftPayload(
         risk: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
-        stageName: r.stageName ?? null,
+        stageIds: r.stageIds,
       })),
     decisions: section.decisions
       .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
@@ -358,7 +358,8 @@ function sectionToDraftPayload(
         deadline: d.deadline ?? null,
         impact: d.impact,
         resolvedAt: d.resolvedAt ?? null,
-        stageName: d.stageName ?? null,
+        stageIds: d.stageIds,
+        productId: d.productId ?? null,
       })),
     priorities: section.priorities
       .filter((p) => hasText(p.text))
@@ -366,7 +367,8 @@ function sectionToDraftPayload(
         id: p.id,
         rank: p.rank,
         text: p.text,
-        stageName: p.stageName ?? null,
+        stageIds: p.stageIds,
+        productId: p.productId ?? null,
       })),
   };
 }
@@ -875,6 +877,8 @@ export function LeadForm({
             impact: d.impact,
             deadline,
             stageName,
+            stageIds: d.stageIds,
+            productId: d.productId || null,
           };
         }
         return {
@@ -885,6 +889,8 @@ export function LeadForm({
           deadline,
           resolvedAt: null,
           stageName,
+          stageIds: d.stageIds,
+          productId: d.productId || null,
         };
       });
       return { ...prev, decisions: merged };
@@ -980,9 +986,9 @@ export function LeadForm({
         const stageName =
           p.stageName && p.stageName !== "—" ? p.stageName : null;
         if (existing) {
-          return { ...existing, text: p.text, stageName };
+          return { ...existing, text: p.text, stageName, stageIds: p.stageIds, productId: p.productId || null };
         }
-        return { rank: p.rank, text: p.text, stageName };
+        return { rank: p.rank, text: p.text, stageName, stageIds: p.stageIds, productId: p.productId || null };
       });
       return { ...prev, priorities: merged };
     });
@@ -1252,7 +1258,7 @@ export function LeadForm({
 
           <div className="flex min-w-[220px] flex-1 items-center justify-center gap-2">
             <span className="text-sm text-[var(--color-muted-foreground)]">
-              {draftSection.departmentName ?? "CoreDev"}
+              {sessionState?.organization?.shortName ?? "CoreDev"}
             </span>
             <span className="text-[var(--color-muted-foreground)]">
               &middot;
@@ -1401,6 +1407,8 @@ export function LeadForm({
             onChange={handleDecisionsChange}
             currentUserName={currentUser.name}
             availableStages={availableStages}
+            products={products}
+            defaultProductId={products[0]?.id}
           />
         </AccordionSection>
 
@@ -1418,6 +1426,8 @@ export function LeadForm({
             readOnly={isReadOnly}
             onChange={handlePrioritiesChange}
             availableStages={availableStages}
+            products={products}
+            defaultProductId={products[0]?.id}
           />
         </AccordionSection>
       </form>
@@ -1435,7 +1445,7 @@ export function LeadForm({
               Submit Report?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Your report will be locked and visible to the department head. You
+              Your report will be locked and visible to the group head. You
               will not be able to make changes after submission.
             </p>
             <div className="mt-3 space-y-1 text-sm">

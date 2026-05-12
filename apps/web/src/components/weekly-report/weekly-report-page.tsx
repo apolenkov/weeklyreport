@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useContext, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
 
 import { useTRPC } from "../../lib/trpc-context";
+import { SessionContext } from "../../lib/session-provider";
 import {
   formatClientErrorMessage,
   logClientError,
@@ -71,6 +72,11 @@ export function WeeklyReportPage({
   const qc = useQueryClient();
   const router = useRouter();
   const focusedAuthorId = authorId ?? null;
+  // UFB-047 / Phase 49-01: department label is the Organization singleton's
+  // `fullName`, hydrated per-request on `auth.me`. The legacy fallback to
+  // `weeklyReport.get.departmentName` was removed when the column dropped.
+  const sessionState = useContext(SessionContext);
+  const orgFullName = sessionState?.organization?.fullName ?? null;
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
@@ -123,7 +129,7 @@ export function WeeklyReportPage({
         authorId: focusedAuthorId,
       });
       toast.error(
-        formatClientErrorMessage("Failed to load weekly report", weeklyQ.error),
+        formatClientErrorMessage("Failed to load status report", weeklyQ.error),
       );
     }
   }, [weeklyQ.isError, weeklyQ.error, reportId, period, focusedAuthorId]);
@@ -132,8 +138,9 @@ export function WeeklyReportPage({
   // once the active reportId is known. Skipped when:
   //   • a `?period=` query is present (legacy bookmarks)
   //   • the page already renders under `[reportId]` (reportId prop set)
-  //   • there is no resolvable report (weeklyQ data not loaded)
-  const resolvedReportId = weeklyQ.data?.reportId ?? null;
+  //   • there is no resolvable report (weeklyQ data not loaded or no-period)
+  const resolvedReportId =
+    weeklyQ.data?.status === "active" ? (weeklyQ.data.reportId ?? null) : null;
   useEffect(() => {
     if (!redirectToCanonical) return;
     if (period) return;
@@ -155,7 +162,7 @@ export function WeeklyReportPage({
 
   // 35-07: surface the period in the browser tab title.
   const titleParts = useMemo(() => {
-    if (!weeklyQ.data) return null;
+    if (!weeklyQ.data || weeklyQ.data.status === "no-period") return null;
     const start = weeklyQ.data.periodStart;
     const end = weeklyQ.data.periodEnd;
     if (!(start instanceof Date) || !(end instanceof Date)) return null;
@@ -171,8 +178,22 @@ export function WeeklyReportPage({
     };
   }, [titleParts]);
 
-  if (weeklyQ.isLoading || !weeklyQ.data) {
+  if (weeklyQ.isLoading) {
     return <WeeklyReportSkeleton />;
+  }
+
+  // R3a: no active period — show empty state instead of error toast / spinner.
+  if (!weeklyQ.data || weeklyQ.data.status === "no-period") {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <p className="text-lg font-semibold text-[var(--color-foreground)]">
+          No active reporting period
+        </p>
+        <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+          Ask an admin to open a new period to start collecting status reports.
+        </p>
+      </div>
+    );
   }
 
   const view = mapWeeklyReport(weeklyQ.data);
@@ -185,7 +206,10 @@ export function WeeklyReportPage({
   // mock-data presentation types so children keep their imports unchanged.
   const portfolio: PortfolioProduct[] = view.portfolio as PortfolioProduct[];
   const products: ProductReport[] = view.products as ProductReport[];
-  const departmentLabel = weeklyQ.data.departmentName;
+  // UFB-047 / Phase 49-01: department label is exclusively
+  // `auth.me.organization.fullName`. PDF-worker / non-session callers
+  // get a sensible default — the brand never blanks out.
+  const departmentLabel = orgFullName ?? "CustomReport";
 
   const hasReportContent = (report: ProductReport) =>
     Boolean(report.needsAttention) ||
@@ -227,7 +251,7 @@ export function WeeklyReportPage({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-            Weekly Report
+            Status Report
           </h1>
           <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
             Live &middot; {submitted}/{total} Submitted

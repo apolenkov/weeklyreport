@@ -1,4 +1,9 @@
-import type { Role, UserSession, WeeklyReportReadModel } from '@customreport/shared';
+import type {
+  Role,
+  UserSession,
+  WeeklyReportGetResponse,
+  WeeklyReportReadModel,
+} from '@customreport/shared';
 
 export class WeeklyReportDomainError extends Error {
   constructor(message: string) {
@@ -32,6 +37,12 @@ export class WeeklyReportService {
    * AUTH-04 (Phase 28-01): viewers see only PUBLISHED report periods. Non-viewer
    * roles (head/lead/admin) keep their existing visibility (open + published).
    *
+   * R3a (UFB-HEAD-DASH): when no active Period exists the service returns
+   * `{ status: 'no-period', report: null }` instead of throwing. This
+   * eliminates the React Query retry storm (retry: 3 → 3-5 s spinner) on
+   * fresh installs and between period cycles. The router logs this path as
+   * info, not error, so it never pollutes the error dashboard.
+   *
    * Implementation: rather than push the role filter into the repository (which
    * would require a Prisma where-shape leak), we filter the read model after
    * fetch. The repository remains simple and the role gate is verifiable at
@@ -39,24 +50,24 @@ export class WeeklyReportService {
    * tRPC-procedure check.
    *
    * Behaviour:
+   *   - no active period → { status: 'no-period', report: null } (never throws)
+   *   - reportId given but not found → throws WeeklyReportDomainError (explicit
+   *     lookup; the caller asked for a specific report that doesn't exist)
    *   - role==='viewer' AND `report.periodStatus !== 'published'` → throw
-   *     WeeklyReportDomainError (matches the existing not-found contract; the
-   *     viewer simply sees "no published report yet").
-   *   - role===undefined → no scoping (legacy contract preserved for existing
-   *     callers and scripts that pre-date AUTH-04). The router always threads
-   *     `ctx.session.role`, so a viewer session in production cannot reach
-   *     the undefined branch.
-   *   - role==='lead' | 'head' | 'admin' → existing behaviour preserved.
+   *     WeeklyReportDomainError (viewer sees "no published report yet")
+   *   - role===undefined → no scoping (legacy contract for existing callers)
+   *   - role==='lead' | 'head' | 'admin' → existing behaviour preserved
    */
   async getWeeklyReport(
     reportId?: string,
     role?: Role,
     session?: WeeklyReportScopeSession,
-  ): Promise<WeeklyReportReadModel> {
+  ): Promise<WeeklyReportGetResponse> {
     const resolvedId = reportId ?? (await this.repository.getActiveReportId());
 
     if (!resolvedId) {
-      throw new WeeklyReportDomainError('No active report period found.');
+      // R3a: no active period — return sentinel instead of throwing NOT_FOUND.
+      return { status: 'no-period', report: null };
     }
 
     const report = await this.repository.getWeeklyReport(resolvedId, session);
@@ -69,6 +80,6 @@ export class WeeklyReportService {
       throw new WeeklyReportDomainError(`Report ${resolvedId} not found.`);
     }
 
-    return report;
+    return { status: 'active', ...report };
   }
 }

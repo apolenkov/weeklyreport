@@ -6,7 +6,10 @@ import {
   type Escalation,
 } from '@customreport/shared';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import { groupScopeFilter } from '../../lib/group-scope.js';
+import {
+  groupScopeFilter,
+  type GroupScopeOptions,
+} from '../../lib/group-scope.js';
 import type {
   WeeklyReportRepository,
   WeeklyReportScopeSession,
@@ -46,7 +49,27 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
   ): Promise<WeeklyReportReadModel | null> {
     const sectionScope = scopeWhere(session, 'reportSection');
     const userScope = scopeWhere(session, 'user');
-    const projectScope = scopeWhere(session, 'project');
+    // UFB-054 / Phase 56-D consumer migration: the weekly-report portfolio
+    // is the only `'project'`-target scope-filter consumer in the api. Its
+    // semantics are "what products does this group currently own?" — that
+    // matches the explicit GroupProduct M:M edge introduced in Phase 56-A,
+    // not the implicit `lead.reportingGroupId` derivation. Opt this site
+    // into the explicit edge so a product attached to two groups via the
+    // join surfaces in both heads' weekly reports, and a lead rotation
+    // does not silently drop a product from its group's portfolio.
+    //
+    // Lead's write path (saveDraft / submit) does not flow through this
+    // helper — it goes through `auth.routes.ts` with `leadId: userId`
+    // directly — so flipping this site only affects READ visibility.
+    //
+    // TODO(scope-filter-migration / scopeAccessed audit): the migration
+    // plan called for emitting an `auditLog.scopeAccessed` event when a
+    // cross-group product is surfaced. That envelope does not yet exist
+    // on `AuditLogger` (only `scopeDenied` does); high-cardinality logging
+    // design is deferred to a follow-up. See SUMMARY for context.
+    const projectScope = scopeWhere(session, 'project', {
+      useExplicitGroupProducts: true,
+    });
 
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
@@ -54,11 +77,6 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
         sections: {
           ...(sectionScope ? { where: sectionScope } : {}),
           include: reportSectionFullInclude,
-        },
-        reminderRules: {
-          where: { status: 'active' },
-          select: { id: true },
-          take: 1,
         },
       },
     });
@@ -84,11 +102,25 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     ).length;
 
     const totalLeads = leadUsers.length;
-    const settings = await this.prisma.appSettings.upsert({
-      where: { id: 'singleton' },
-      create: { id: 'singleton' },
-      update: {},
-      select: { departmentName: true },
+    // UFB-047 / Phase 49-01: brand label removed from the weekly read
+    // model. Frontends read `auth.me.organization.fullName` instead, so
+    // the API path no longer touches `AppSettings` here.
+
+    // Phase 48-C (UFB-038): canSendReminder is now driven by ReminderPolicy
+    // validity windows (Phase 44 model), not by legacy per-report
+    // ReminderRule presence. The UI signal `hasActiveReminderRule` keeps its
+    // wire-format name to avoid a cross-cutting rename, but its semantics
+    // are now: "∃ at least one active ReminderPolicy whose validity window
+    // covers this Report.deadline". Without this migration, head/admin
+    // dashboards still showed "Send Reminder" gated on the legacy
+    // per-period rule existence, which mis-matches the new policy-driven
+    // scheduler that materialises ReminderRule rows lazily.
+    const activePolicyCount = await this.prisma.reminderPolicy.count({
+      where: {
+        active: true,
+        validFrom: { lte: report.deadline },
+        OR: [{ validUntil: null }, { validUntil: { gte: report.deadline } }],
+      },
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,10 +137,9 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       deadline: report.deadline,
       periodStatus: report.periodStatus,
       weekLabel: report.weekLabel,
-      departmentName: settings.departmentName,
       submissionCount,
       totalLeads,
-      hasActiveReminderRule: report.reminderRules.length > 0,
+      hasActiveReminderRule: activePolicyCount > 0,
       portfolioOverview,
       leadSections,
       escalations,
@@ -265,11 +296,13 @@ function buildEscalations(
 function scopeWhere(
   session: WeeklyReportScopeSession | undefined,
   target: 'user' | 'reportSection' | 'project',
+  options: GroupScopeOptions = {},
 ): Record<string, unknown> | undefined {
   if (!session) return undefined;
   const scope = groupScopeFilter(
     session as Parameters<typeof groupScopeFilter>[0],
     target,
+    options,
   );
   if (Object.keys(scope).length === 0) return undefined;
   return scope;

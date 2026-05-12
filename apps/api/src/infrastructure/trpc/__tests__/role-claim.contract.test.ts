@@ -37,7 +37,7 @@ function buildSession(profile: {
   samlId: string;
   email: string;
   displayName: string;
-  role: 'lead' | 'head' | 'admin' | 'viewer';
+  role: 'lead' | 'head' | 'admin' | 'viewer' | 'director';
 }): UserSession {
   return {
     userId: 'a0000000-0000-4000-8000-000000000001',

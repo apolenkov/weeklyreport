@@ -35,11 +35,31 @@ export class PeriodPrismaRepository implements PeriodRepository {
         data: {
           status: 'published',
           periodStatus: 'published',
+          // UFB-053 / Phase 51-C: write the new state column atomically
+          // with the legacy fields. `periodState` and `periodStatus` are
+          // separate state machines — both move together on a head-driven
+          // publish (open → published on both).
+          periodState: 'published',
           publishedAt: new Date(),
           publishedById: userId,
         },
       });
     });
+  }
+
+  /**
+   * Phase 54 (UFB-055): all section ids for a report. Used by the
+   * ingestion seam to enqueue one stub `AiIngestionJob` row per
+   * section after `publishPeriod` resolves. Returns an empty array
+   * when the report has no sections (legal — period was published
+   * without anyone filling in their section).
+   */
+  async listSectionIds(reportId: string): Promise<string[]> {
+    const sections = await this.prisma.reportSection.findMany({
+      where: { reportId },
+      select: { id: true },
+    });
+    return sections.map((s) => s.id);
   }
 
   async reopenPeriod(reportId: string): Promise<void> {
@@ -48,6 +68,13 @@ export class PeriodPrismaRepository implements PeriodRepository {
         where: { id: reportId },
         data: {
           periodStatus: 'reopened',
+          // UFB-053 / Phase 51-C: on reopen, revert `periodState` to
+          // 'open' (the closest of the four states to "editable again").
+          // `periodStatus` stays distinct with the 'reopened' marker so
+          // consumers that care about reopen-flavour can still discriminate.
+          // See "Open Questions" in the 51-C SUMMARY for the asymmetry
+          // rationale.
+          periodState: 'open',
           reopenedAt: new Date(),
         },
       });

@@ -17,6 +17,7 @@ type AdminTab =
   | "users"
   | "groups"
   | "products"
+  | "periods"
   | "reminders"
   | "reopen"
   | "jobs"
@@ -27,6 +28,8 @@ const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
   { value: "users", label: "Users" },
   { value: "groups", label: "Groups" },
   { value: "products", label: "Products" },
+  // UFB-052 (Phase 51-B): period lifecycle list (Active/Archive split).
+  { value: "periods", label: "Periods" },
   { value: "reminders", label: "Reminders" },
   { value: "reopen", label: "Reopen" },
   // Phase 35-06: BullMQ DLQ admin UI — failed-job list + retry.

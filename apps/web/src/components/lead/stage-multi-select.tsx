@@ -1,13 +1,11 @@
 'use client';
 
-import { splitStageNames, joinStageNames } from './stage-tags';
-
 type StageMultiSelectProps = {
   readonly id: string;
-  readonly value: string | null | undefined;
+  readonly value: string[];
   readonly stages: readonly string[];
   readonly error?: string;
-  readonly onChange: (next: string | null) => void;
+  readonly onChange: (next: string[]) => void;
 };
 
 export function StageMultiSelect({
@@ -17,7 +15,7 @@ export function StageMultiSelect({
   error,
   onChange,
 }: StageMultiSelectProps) {
-  const selected = splitStageNames(value);
+  const selected = value;
   const helperId = `${id}-hint`;
   const errorId = `${id}-error`;
 
@@ -25,8 +23,13 @@ export function StageMultiSelect({
     const next = selected.includes(stage)
       ? selected.filter((item) => item !== stage)
       : [...selected, stage];
-    onChange(joinStageNames(next));
+    onChange(next);
   }
+
+  // Compact display: show first 2 selected labels + "+N more" badge
+  const MAX_VISIBLE = 2;
+  const visibleSelected = selected.slice(0, MAX_VISIBLE);
+  const hiddenCount = selected.length > MAX_VISIBLE ? selected.length - MAX_VISIBLE : 0;
 
   return (
     <fieldset
@@ -75,7 +78,13 @@ export function StageMultiSelect({
         </p>
       ) : (
         <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
-          Scope: {selected.join(', ')}.
+          Scope: {visibleSelected.join(', ')}
+          {hiddenCount > 0 && (
+            <span className="ml-1 inline-flex items-center rounded-full bg-[var(--color-muted)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+              +{hiddenCount} more
+            </span>
+          )}
+          .
         </p>
       )}
       {error && (

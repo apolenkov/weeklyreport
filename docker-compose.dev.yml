@@ -15,6 +15,7 @@ services:
     # Run dev server directly (no --env-file; env comes from 'environment' below)
     command: >
       sh -c "cd apps/api &&
+      pnpm exec prisma generate &&
       exec node
       --import @swc-node/register/esm-register
       --watch src/main.ts"
@@ -44,6 +45,14 @@ services:
         condition: service_healthy
     ports:
       - "3002:3002"
+    develop:
+      watch:
+        - action: restart
+          path: ./apps/api/src
+        - action: restart
+          path: ./packages/shared/src
+        - action: restart
+          path: ./prisma/schema.prisma
 
   web:
     build:
@@ -68,3 +77,9 @@ services:
       - api
     ports:
       - "3000:3000"
+    develop:
+      watch:
+        - action: restart
+          path: ./apps/web/src
+        - action: restart
+          path: ./packages/shared/src

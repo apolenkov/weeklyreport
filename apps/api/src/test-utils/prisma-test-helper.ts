@@ -32,6 +32,9 @@ export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
   await prisma.carryOverExecution.deleteMany();
   await prisma.reminderExecution.deleteMany();
   await prisma.reminderRule.deleteMany();
+  // UFB-036 (Phase 44-05): ReminderPolicy is referenced by ReminderRule
+  // via nullable FK; delete after rules so the cascade is deterministic.
+  await prisma.reminderPolicy.deleteMany();
   await prisma.pdfExportJob.deleteMany();
   await prisma.priority.deleteMany();
   await prisma.decision.deleteMany();
@@ -48,6 +51,11 @@ export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
   // assignments without owning their project lifecycle.
   await prisma.stageAssignment.deleteMany();
   await prisma.stage.deleteMany();
+  // UFB-054 (Phase 56-A): GroupProduct edges hold FKs to both Project and
+  // ReportingGroup with onDelete RESTRICT, so the join rows must drop
+  // before either parent. Wiping here keeps cleanDatabase deterministic
+  // across test runs.
+  await prisma.groupProduct.deleteMany();
   await prisma.project.deleteMany();
   await prisma.user.deleteMany();
   await prisma.reportingGroup.deleteMany();

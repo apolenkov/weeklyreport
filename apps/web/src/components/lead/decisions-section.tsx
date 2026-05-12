@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { DecisionEditDialog } from './decision-edit-dialog';
-import type { DecisionEntry } from './mock-data';
+import type { DecisionEntry, Product } from './mock-data';
 import { splitStageNames } from './stage-tags';
 
 type DecisionsSectionProps = {
@@ -20,9 +20,7 @@ type DecisionsSectionProps = {
   /**
    * Display name of the currently signed-in user. Used to (1) seed the
    * Owner field for newly-created decisions, and (2) hide Edit/Delete on
-   * decisions whose owner is someone else — the lead can raise a decision
-   * but if Owner=Head, the head is the one expected to act, so the row
-   * becomes read-only from the lead's perspective.
+   * decisions whose owner is someone else.
    */
   readonly currentUserName?: string;
   /**
@@ -30,6 +28,9 @@ type DecisionsSectionProps = {
    * Decisions are department-scoped, so the union is the right denominator.
    */
   readonly availableStages?: readonly string[];
+  /** R4-B: products the lead is assigned to, passed through to the dialog. */
+  readonly products?: readonly Product[];
+  readonly defaultProductId?: string;
 };
 
 function isMine(owner: string | undefined, me: string | undefined): boolean {
@@ -74,6 +75,8 @@ export function DecisionsSection({
   defaultProductName,
   currentUserName,
   availableStages,
+  products,
+  defaultProductId,
 }: DecisionsSectionProps) {
   const [dialogState, setDialogState] = useState<
     { open: false } | { open: true; mode: 'create' } | { open: true; mode: 'edit'; decision: DecisionEntry }
@@ -108,7 +111,7 @@ export function DecisionsSection({
     if (dialogState.open && dialogState.mode === 'create') {
       onChange?.([...decisions, {
         ...saved,
-        productName: saved.productName || defaultProductName || 'Department',
+        productName: saved.productName || defaultProductName || 'Group',
         stageName: saved.stageName ?? '—',
       }]);
     } else {
@@ -228,6 +231,8 @@ export function DecisionsSection({
         decision={dialogState.open && dialogState.mode === 'edit' ? dialogState.decision : null}
         defaultOwner={currentUserName}
         availableStages={availableStages}
+        products={products}
+        defaultProductId={defaultProductId}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
       />

@@ -5,522 +5,791 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
-import { toAdminReminderRuleInput } from "../../lib/mappers";
+import { toReminderPolicyInput } from "../../lib/mappers";
+import type { AdminReminderPolicyFormInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
 import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
 
 import { TabHeader, TabSearch } from "./tab-header";
+import { DerivedRulesPanel } from "./derived-rules-panel";
+// UFB-035: timezone catalog moved to ./timezone-options so the Settings →
+// Reminders sub-tab (UFB-048 / Phase 48-B) can reuse the same curated list.
+import { TIMEZONE_OPTIONS } from "./timezone-options";
 
-import type { MockPeriod, MockReminder } from "./mock-data";
+import type {
+  MockPeriod,
+  MockReminder,
+  MockReminderPolicy,
+} from "./mock-data";
 
-// UFB-035: curated list of IANA timezones for the reminder fire-at editor.
-// Grouped by region so the select stays human-readable. The full IANA list
-// (~600 zones) would be unwieldy; this covers all Russian time-zones plus
-// the common EU/US/APAC zones the team works with. Add zones here when
-// rollout reaches new regions.
-const TIMEZONE_OPTIONS: ReadonlyArray<{
-  group: string;
-  zones: ReadonlyArray<{ value: string; label: string }>;
+const KIND_OPTIONS: ReadonlyArray<{
+  value: MockReminderPolicy["kind"];
+  label: string;
 }> = [
-  {
-    group: "Russia",
-    zones: [
-      { value: "Europe/Kaliningrad", label: "Kaliningrad (UTC+2)" },
-      { value: "Europe/Moscow", label: "Moscow (UTC+3)" },
-      { value: "Europe/Samara", label: "Samara (UTC+4)" },
-      { value: "Asia/Yekaterinburg", label: "Yekaterinburg (UTC+5)" },
-      { value: "Asia/Omsk", label: "Omsk (UTC+6)" },
-      { value: "Asia/Novosibirsk", label: "Novosibirsk (UTC+7)" },
-      { value: "Asia/Krasnoyarsk", label: "Krasnoyarsk (UTC+7)" },
-      { value: "Asia/Irkutsk", label: "Irkutsk (UTC+8)" },
-      { value: "Asia/Yakutsk", label: "Yakutsk (UTC+9)" },
-      { value: "Asia/Vladivostok", label: "Vladivostok (UTC+10)" },
-      { value: "Asia/Magadan", label: "Magadan (UTC+11)" },
-      { value: "Asia/Kamchatka", label: "Kamchatka (UTC+12)" },
-    ],
-  },
-  {
-    group: "Europe",
-    zones: [
-      { value: "Europe/London", label: "London (UTC+0/+1)" },
-      { value: "Europe/Berlin", label: "Berlin (UTC+1/+2)" },
-      { value: "Europe/Paris", label: "Paris (UTC+1/+2)" },
-      { value: "Europe/Istanbul", label: "Istanbul (UTC+3)" },
-    ],
-  },
-  {
-    group: "Americas",
-    zones: [
-      { value: "America/New_York", label: "New York (UTC-5/-4)" },
-      { value: "America/Chicago", label: "Chicago (UTC-6/-5)" },
-      { value: "America/Denver", label: "Denver (UTC-7/-6)" },
-      { value: "America/Los_Angeles", label: "Los Angeles (UTC-8/-7)" },
-      { value: "America/Sao_Paulo", label: "São Paulo (UTC-3)" },
-    ],
-  },
-  {
-    group: "Asia / Pacific",
-    zones: [
-      { value: "Asia/Dubai", label: "Dubai (UTC+4)" },
-      { value: "Asia/Karachi", label: "Karachi (UTC+5)" },
-      { value: "Asia/Kolkata", label: "Kolkata (UTC+5:30)" },
-      { value: "Asia/Bangkok", label: "Bangkok (UTC+7)" },
-      { value: "Asia/Shanghai", label: "Shanghai (UTC+8)" },
-      { value: "Asia/Singapore", label: "Singapore (UTC+8)" },
-      { value: "Asia/Tokyo", label: "Tokyo (UTC+9)" },
-      { value: "Asia/Seoul", label: "Seoul (UTC+9)" },
-      { value: "Australia/Sydney", label: "Sydney (UTC+10/+11)" },
-    ],
-  },
-  {
-    group: "Other",
-    zones: [{ value: "UTC", label: "UTC" }],
-  },
+  { value: "deadline", label: "Deadline reminder" },
+  { value: "follow_up", label: "Follow-up reminder" },
+  { value: "escalation", label: "Escalation digest" },
+];
+
+const AUDIENCE_OPTIONS: ReadonlyArray<{
+  value: MockReminderPolicy["audience"];
+  label: string;
+}> = [
+  { value: "lead-with-draft", label: "Leads with draft" },
+  { value: "head-of-late", label: "Head of late leads" },
 ];
 
 type RemindersTabProps = {
-  readonly reminders: MockReminder[];
-  readonly periods: MockPeriod[];
+  /** UFB-036 (Phase 44-04): policies are the new top-level editable rows. */
+  readonly policies: ReadonlyArray<MockReminderPolicy>;
+  /**
+   * Read-only derived rules grouped by `policyId`. The Reminders Tab's
+   * expander surfaces them under each policy. Rules whose `policyId`
+   * is `null` (legacy, pre-44-01) are NOT surfaced here — they still
+   * exist in the DB but live outside the policy model.
+   */
+  readonly derivedRulesByPolicyId: Readonly<
+    Record<string, ReadonlyArray<MockReminder>>
+  >;
+  /** Used by the derived-rules panel to render period labels. */
+  readonly periods: ReadonlyArray<MockPeriod>;
+  /**
+   * UFB-048 (Phase 48-B): organisation-wide defaults for new policies.
+   * When the admin opens the «New Policy» form, the timezone and audience
+   * controls prefill from these values instead of hardcoded constants.
+   * Optional — older callers (and component tests that predate 48-B) get
+   * the historical Europe/Moscow + lead-with-draft defaults.
+   */
+  readonly defaultTimezone?: string;
+  readonly defaultAudience?: MockReminderPolicy["audience"];
 };
 
-type RuleForm = {
-  kind: "deadline" | "follow_up" | "escalation";
-  reportId: string;
-  fireAt: string;
-  timezone: string;
+type PolicyFormState = AdminReminderPolicyFormInput & {
+  /** ISO `YYYY-MM-DD` of "now" when this form was first opened. */
+  todayIso: string;
+  /**
+   * Mirrors the "forever" checkbox. When `true`, `validUntilIso` is
+   * forced to `null` and the upper-bound input is hidden.
+   */
+  foreverChecked: boolean;
 };
 
-export function RemindersTab({ reminders, periods }: RemindersTabProps) {
+function todayIsoString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function isoFromDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * UFB-048 (Phase 48-B): the timezone + audience defaults are now sourced
+ * from AppSettings (the org-wide singleton) rather than hardcoded here.
+ * Historical fallbacks preserved so component tests that don't pipe in
+ * settings still render with the same shape they did pre-48-B.
+ */
+function emptyPolicyForm(opts?: {
+  timezone?: string;
+  audience?: MockReminderPolicy["audience"];
+}): PolicyFormState {
+  const today = todayIsoString();
+  return {
+    kind: "deadline",
+    offsetMinutes: -1440, // T-24h
+    timezone: opts?.timezone ?? "Europe/Moscow",
+    audience: opts?.audience ?? "lead-with-draft",
+    active: true,
+    validFromIso: today,
+    validUntilIso: null,
+    todayIso: today,
+    foreverChecked: true,
+  };
+}
+
+function policyToForm(policy: MockReminderPolicy): PolicyFormState {
+  return {
+    kind: policy.kind,
+    offsetMinutes: policy.offsetMinutes,
+    timezone: policy.timezone,
+    audience: policy.audience,
+    active: policy.active,
+    validFromIso: isoFromDate(policy.validFrom),
+    validUntilIso:
+      policy.validUntil === null ? null : isoFromDate(policy.validUntil),
+    todayIso: todayIsoString(),
+    foreverChecked: policy.validUntil === null,
+  };
+}
+
+/**
+ * Format the wall-clock offset like "T-24h" / "T+2h" / "T-15m" so admins
+ * can sanity-check offsetMinutes at a glance. We avoid Intl-RelativeTimeFormat
+ * here because the canonical "T-24h" form is the one used in the spec docs.
+ */
+function formatOffset(minutes: number): string {
+  if (minutes === 0) return "T+0";
+  const sign = minutes < 0 ? "-" : "+";
+  const abs = Math.abs(minutes);
+  if (abs % 60 === 0) {
+    return `T${sign}${abs / 60}h`;
+  }
+  return `T${sign}${abs}m`;
+}
+
+function formatValidityWindow(policy: MockReminderPolicy): string {
+  const from = isoFromDate(policy.validFrom);
+  if (policy.validUntil === null) {
+    return `since ${from} · forever`;
+  }
+  const until = isoFromDate(policy.validUntil);
+  return `${from} → ${until}`;
+}
+
+export function RemindersTab({
+  policies,
+  derivedRulesByPolicyId,
+  periods,
+  defaultTimezone,
+  defaultAudience,
+}: RemindersTabProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
-  const [sendingId, setSendingId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<MockReminder | null>(null);
   const [search, setSearch] = useState("");
-  const [showRuleForm, setShowRuleForm] = useState(reminders.length === 0);
-  const [form, setForm] = useState<RuleForm>(() => ({
-    kind: "deadline",
-    reportId: periods[0]?.id ?? "",
-    fireAt: toDateTimeLocal(new Date()),
-    timezone: "Europe/Moscow",
-  }));
-
-  const saveRuleMut = useMutation(
-    trpc.admin.saveReminderRule.mutationOptions({
-      onSuccess: () => {
-        invalidateAdmin(qc, trpc);
-        toast.success("Reminder updated");
-        setShowRuleForm(false);
-      },
-      onError: (err) => {
-        toast.error(err.message ?? "Failed to update reminder");
-      },
+  const [showForm, setShowForm] = useState(policies.length === 0);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  // UFB-048 (Phase 48-B): seed the form with org-wide defaults so the «New
+  // Policy» form opens with the admin's preferred timezone and audience.
+  const [form, setForm] = useState<PolicyFormState>(() =>
+    emptyPolicyForm({
+      timezone: defaultTimezone,
+      audience: defaultAudience,
     }),
   );
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [pendingDelete, setPendingDelete] =
+    useState<MockReminderPolicy | null>(null);
 
-  const deleteRuleMut = useMutation(
-    trpc.admin.deleteReminderRule.mutationOptions({
-      onSuccess: () => {
-        invalidateAdmin(qc, trpc);
-        toast.success("Reminder deleted");
-      },
-      onError: (err) => {
-        toast.error(err.message ?? "Failed to delete reminder");
-      },
-    }),
+  const periodById = useMemo(
+    () => new Map(periods.map((p) => [p.id, p] as const)),
+    [periods],
   );
 
-  const sendNowMut = useMutation(
-    trpc.reminders.dispatchPending.mutationOptions({
-      onSuccess: ({ dispatched, alreadySent, skipped, reason }) => {
+  const saveMut = useMutation(
+    trpc.admin.savePolicy.mutationOptions({
+      onSuccess: () => {
         invalidateAdmin(qc, trpc);
-        if (reason === "no-active-rule") {
-          toast.error("No active reminder rule is available for this report.");
-          return;
-        }
-        if (dispatched === 0 && alreadySent === 0 && skipped === 0) {
-          toast.info("No pending lead sections need a reminder.");
-          return;
-        }
-        if (dispatched === 0 && alreadySent > 0) {
-          toast.info(
-            `All ${alreadySent} pending lead${alreadySent === 1 ? "" : "s"} already received this cycle's reminder.`,
-          );
-          return;
-        }
-        const extras: string[] = [];
-        if (alreadySent > 0) extras.push(`${alreadySent} already sent this cycle`);
-        if (skipped > 0) extras.push(`${skipped} opted out`);
-        const tail = extras.length ? ` (${extras.join(", ")})` : "";
         toast.success(
-          `Reminder sent to ${dispatched} lead${dispatched === 1 ? "" : "s"}${tail}.`,
+          editingId ? "Policy updated" : "Policy created",
+        );
+        setShowForm(false);
+        setEditingId(null);
+        setForm(
+          emptyPolicyForm({
+            timezone: defaultTimezone,
+            audience: defaultAudience,
+          }),
         );
       },
-      onError: (err) => {
-        toast.error(err.message ?? "Failed to send reminder");
-      },
-      onSettled: () => {
-        setSendingId(null);
+      onError: (err: unknown) => {
+        const message =
+          err instanceof Error ? err.message : "Failed to save policy";
+        toast.error(message);
       },
     }),
   );
 
-  function handleToggle(reminder: MockReminder) {
-    const nextStatus: "active" | "paused" = reminder.active
-      ? "paused"
-      : "active";
-    saveRuleMut.mutate(
-      toAdminReminderRuleInput(
-        {
-          kind: reminder.kind,
-          fireAt: reminder.fireAt,
-          timezone: reminder.timezone,
-          status: nextStatus,
-          reportId: reminder.reportId,
-          version: reminder.version,
-        },
-        reminder.id,
-      ),
+  const removeMut = useMutation(
+    trpc.admin.removePolicy.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success("Policy removed");
+      },
+      onError: (err: unknown) => {
+        const message =
+          err instanceof Error ? err.message : "Failed to remove policy";
+        toast.error(message);
+      },
+    }),
+  );
+
+  const isMutating = saveMut.isPending || removeMut.isPending;
+
+  // Derived: validity-window guard for the Save button.
+  const validityValid = useMemo(() => {
+    if (form.foreverChecked) return true;
+    if (form.validUntilIso === null) return true;
+    return form.validUntilIso >= form.validFromIso;
+  }, [form.foreverChecked, form.validFromIso, form.validUntilIso]);
+
+  function handleNewPolicy() {
+    setEditingId(null);
+    // UFB-048 (Phase 48-B): seed with org defaults from AppSettings.
+    setForm(
+      emptyPolicyForm({
+        timezone: defaultTimezone,
+        audience: defaultAudience,
+      }),
     );
+    setShowForm(true);
   }
 
-  function handleDelete(reminder: MockReminder) {
-    setPendingDelete(reminder);
+  function handleEditPolicy(policy: MockReminderPolicy) {
+    setEditingId(policy.id);
+    setForm(policyToForm(policy));
+    setShowForm(true);
   }
 
-  function confirmDelete() {
+  function handleSave() {
+    if (!validityValid) {
+      toast.error("End date must be after start date");
+      return;
+    }
+    const payload = toReminderPolicyInput(
+      {
+        kind: form.kind,
+        offsetMinutes: form.offsetMinutes,
+        timezone: form.timezone,
+        audience: form.audience,
+        active: form.active,
+        validFromIso: form.validFromIso,
+        validUntilIso: form.foreverChecked ? null : form.validUntilIso,
+      },
+      editingId ?? undefined,
+    );
+    saveMut.mutate(payload);
+  }
+
+  function handleConfirmRemove() {
     if (!pendingDelete) return;
-    deleteRuleMut.mutate({ ruleId: pendingDelete.id });
+    removeMut.mutate({ id: pendingDelete.id });
     setPendingDelete(null);
   }
 
-  function handleSendNow(id: string) {
-    const reminder = reminders.find((item) => item.id === id);
-    if (!reminder?.reportId) {
-      toast.error("Reminder rule is not linked to a report period.");
-      return;
-    }
-    if (!reminder.active) {
-      toast.error("Paused reminder rules cannot be sent.");
-      return;
-    }
-    setSendingId(id);
-    sendNowMut.mutate({ reportId: reminder.reportId, ruleId: reminder.id });
+  function toggleExpanded(policyId: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(policyId)) {
+        next.delete(policyId);
+      } else {
+        next.add(policyId);
+      }
+      return next;
+    });
   }
 
-  function handleCreateRule() {
-    if (!form.reportId) {
-      toast.error("Select report period before creating a reminder rule");
-      return;
-    }
-    saveRuleMut.mutate(
-      toAdminReminderRuleInput({
-        kind: form.kind,
-        reportId: form.reportId,
-        fireAt: form.fireAt,
-        timezone: form.timezone,
-        status: "active",
-        version: 1,
-      }),
-    );
-  }
-
-  const isMutating = saveRuleMut.isPending || deleteRuleMut.isPending;
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredReminders = useMemo(() => {
-    if (!normalizedSearch) return reminders;
-    return reminders.filter((reminder) =>
+  const filteredPolicies = useMemo(() => {
+    if (!normalizedSearch) return policies;
+    return policies.filter((p) =>
       [
-        reminder.name,
-        reminder.description,
-        reminder.kind,
-        reminder.timezone,
-        reminder.reportId ?? "",
-        reminder.active ? "active" : "paused",
+        p.kind,
+        p.timezone,
+        p.audience,
+        p.active ? "active" : "disabled",
+        formatOffset(p.offsetMinutes),
       ]
         .join(" ")
         .toLowerCase()
         .includes(normalizedSearch),
     );
-  }, [normalizedSearch, reminders]);
+  }, [normalizedSearch, policies]);
 
   return (
     <div className="space-y-4">
       <TabHeader
-        title="Reminder Rules"
-        description="Create active rules per report period so Dashboard can send pending-lead email reminders."
-        count={`${reminders.length} rules`}
+        title="Reminder Policies"
+        description="Configure once. Each policy is auto-applied to every report period whose deadline falls inside the validity window."
+        count={`${policies.length} policies`}
         search={
           <TabSearch
             value={search}
             onChange={setSearch}
-            placeholder="Search reminder rules…"
+            placeholder="Search reminder policies…"
             testId="reminders-search"
-            ariaLabel="Search reminder rules"
+            ariaLabel="Search reminder policies"
           />
         }
         actions={
           <button
             type="button"
-            onClick={() => setShowRuleForm((value) => !value)}
+            onClick={handleNewPolicy}
+            data-testid="new-policy-button"
             className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
           >
             <PlusIcon />
-            Add Rule
+            New Policy
           </button>
         }
       />
 
-      {showRuleForm && (
-        <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-4">
-          <div className="grid gap-3 md:grid-cols-4">
-            <div>
-              <label
-                htmlFor="reminder-kind"
-                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              >
-                Type
-              </label>
-              <select
-                id="reminder-kind"
-                value={form.kind}
-                onChange={(e) =>
-                  setForm({ ...form, kind: e.target.value as RuleForm["kind"] })
-                }
-                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-              >
-                <option value="deadline">Deadline reminder</option>
-                <option value="follow_up">Follow-up reminder</option>
-                <option value="escalation">Escalation digest</option>
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="reminder-report"
-                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              >
-                Report period
-              </label>
-              <select
-                id="reminder-report"
-                value={form.reportId}
-                onChange={(e) => setForm({ ...form, reportId: e.target.value })}
-                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-              >
-                {periods.map((period) => (
-                  <option key={period.id} value={period.id}>
-                    {period.weekLabel} · {period.startDate} - {period.endDate}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="reminder-fire-at"
-                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              >
-                Fire at
-              </label>
-              <input
-                id="reminder-fire-at"
-                type="datetime-local"
-                value={form.fireAt}
-                onChange={(e) => setForm({ ...form, fireAt: e.target.value })}
-                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="reminder-timezone"
-                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              >
-                Timezone
-              </label>
-              <select
-                id="reminder-timezone"
-                value={form.timezone}
-                onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-              >
-                {TIMEZONE_OPTIONS.map((group) => (
-                  <optgroup key={group.group} label={group.group}>
-                    {group.zones.map((zone) => (
-                      <option key={zone.value} value={zone.value}>
-                        {zone.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="mt-3 flex justify-end">
-            <button
-              type="button"
-              onClick={handleCreateRule}
-              disabled={isMutating || periods.length === 0}
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saveRuleMut.isPending ? "Saving…" : "Create Active Rule"}
-            </button>
-          </div>
-        </div>
+      {showForm && (
+        <PolicyForm
+          form={form}
+          editing={editingId !== null}
+          isSaving={saveMut.isPending}
+          validityValid={validityValid}
+          onChange={setForm}
+          onCancel={() => {
+            setShowForm(false);
+            setEditingId(null);
+            setForm(
+              emptyPolicyForm({
+                timezone: defaultTimezone,
+                audience: defaultAudience,
+              }),
+            );
+          }}
+          onSave={handleSave}
+        />
       )}
 
       <div className="space-y-3">
-        {filteredReminders.length === 0 && (
-          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-            {reminders.length === 0
-              ? "No reminder rules yet. Add an active rule for the current report period."
-              : "No reminder rules match the search."}
+        {filteredPolicies.length === 0 && (
+          <div
+            data-testid="reminders-empty-state"
+            className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
+          >
+            {policies.length === 0
+              ? "No active reminder policies. Create one to start sending reminders."
+              : "No reminder policies match the search."}
           </div>
         )}
-        {filteredReminders.map((reminder) => (
-          <div
-            key={reminder.id}
-            className="flex items-center justify-between rounded-[var(--radius)] border border-[var(--color-border)] bg-white px-5 py-4 transition-shadow hover:shadow-sm"
-          >
-            <div className="flex items-center gap-4">
-              {/* Toggle switch */}
-              <button
-                type="button"
-                role="switch"
-                aria-checked={reminder.active}
-                aria-label={`Toggle ${reminder.name}`}
-                onClick={() => handleToggle(reminder)}
-                disabled={isMutating}
-                className="relative h-6 w-11 flex-shrink-0 rounded-full transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
-                style={{
-                  backgroundColor: reminder.active
-                    ? "var(--color-starbucks-accent)"
-                    : "var(--color-border)",
-                }}
-              >
-                <span
-                  className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200"
-                  style={{
-                    transform: reminder.active
-                      ? "translateX(20px)"
-                      : "translateX(0)",
-                  }}
-                />
-              </button>
 
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-[var(--color-foreground)]">
-                    {reminder.name}
-                  </span>
-                  <span
-                    className="rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider"
-                    style={{
-                      backgroundColor: reminder.active
-                        ? "var(--color-success)"
-                        : "var(--color-muted)",
-                      color: reminder.active
-                        ? "var(--color-primary)"
-                        : "var(--color-muted-foreground)",
-                    }}
-                  >
-                    {reminder.active ? "Active" : "Paused"}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">
-                  {reminder.description}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleSendNow(reminder.id)}
-                disabled={
-                  sendingId === reminder.id ||
-                  sendNowMut.isPending ||
-                  !reminder.active ||
-                  !reminder.reportId
-                }
-                className="btn-press inline-flex min-h-[36px] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={`Send ${reminder.name} now`}
-              >
-                {sendingId === reminder.id ? (
-                  <>
-                    <SpinnerIcon />
-                    Sending…
-                  </>
-                ) : (
-                  <>
-                    <SendIcon />
-                    Send Now
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(reminder)}
-                disabled={isMutating}
-                className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={`Delete ${reminder.name}`}
-              >
-                Delete
-              </button>
-            </div>
+        {filteredPolicies.length > 0 && (
+          <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)] bg-white">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--color-surface-empty)] text-left text-xs uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                <tr>
+                  <th className="px-4 py-3">Kind</th>
+                  <th className="px-4 py-3">Offset</th>
+                  <th className="px-4 py-3">Timezone</th>
+                  <th className="px-4 py-3">Audience</th>
+                  <th className="px-4 py-3">Validity</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPolicies.map((policy) => {
+                  const derivedRules =
+                    derivedRulesByPolicyId[policy.id] ?? [];
+                  const isExpanded = expanded.has(policy.id);
+                  return (
+                    <PolicyRow
+                      key={policy.id}
+                      policy={policy}
+                      derivedCount={derivedRules.length}
+                      isExpanded={isExpanded}
+                      isMutating={isMutating}
+                      derivedRules={derivedRules}
+                      periodById={periodById}
+                      onToggle={() => toggleExpanded(policy.id)}
+                      onEdit={() => handleEditPolicy(policy)}
+                      onRemove={() => setPendingDelete(policy)}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        ))}
+        )}
       </div>
 
       <ConfirmDeleteDialog
         open={pendingDelete !== null}
-        title="Delete reminder rule?"
-        preview={pendingDelete?.name ?? ""}
+        title="Remove reminder policy?"
+        preview={pendingDelete ? formatPolicyHeadline(pendingDelete) : ""}
         subtitle={
           pendingDelete
-            ? formatReminderSchedule(
-                pendingDelete.fireAt,
-                pendingDelete.timezone,
-              )
+            ? formatValidityWindow(pendingDelete)
             : undefined
         }
-        consequence="No further emails will be sent for this rule."
-        onConfirm={confirmDelete}
+        consequence={
+          pendingDelete
+            ? `This will remove ${
+                (derivedRulesByPolicyId[pendingDelete.id] ?? []).length
+              } derived rule(s) and stop further reminders.`
+            : ""
+        }
+        onConfirm={handleConfirmRemove}
         onCancel={() => setPendingDelete(null)}
       />
     </div>
   );
 }
 
-function formatReminderSchedule(fireAt: unknown, timezone: string): string {
-  const d = fireAt instanceof Date ? fireAt : new Date(String(fireAt));
-  if (Number.isNaN(d.getTime())) return timezone;
-  const time = d.toISOString().slice(11, 16);
-  return `${time} UTC · ${timezone}`;
+// ---------------------------------------------------------------------------
+// Sub-component: PolicyRow
+// ---------------------------------------------------------------------------
+
+type PolicyRowProps = {
+  readonly policy: MockReminderPolicy;
+  readonly derivedCount: number;
+  readonly isExpanded: boolean;
+  readonly isMutating: boolean;
+  readonly derivedRules: ReadonlyArray<MockReminder>;
+  readonly periodById: ReadonlyMap<string, MockPeriod>;
+  readonly onToggle: () => void;
+  readonly onEdit: () => void;
+  readonly onRemove: () => void;
+};
+
+function PolicyRow({
+  policy,
+  derivedCount,
+  isExpanded,
+  isMutating,
+  derivedRules,
+  periodById,
+  onToggle,
+  onEdit,
+  onRemove,
+}: PolicyRowProps) {
+  return (
+    <>
+      <tr
+        data-testid={`policy-row-${policy.id}`}
+        className="border-t border-[var(--color-border)] hover:bg-[var(--color-surface-empty)]"
+      >
+        <td className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+          {policy.kind}
+        </td>
+        <td className="px-4 py-3 font-mono text-xs">
+          {formatOffset(policy.offsetMinutes)}
+        </td>
+        <td className="px-4 py-3 text-xs">{policy.timezone}</td>
+        <td className="px-4 py-3 text-xs">{policy.audience}</td>
+        <td className="px-4 py-3 text-xs text-[var(--color-muted-foreground)]">
+          {formatValidityWindow(policy)}
+        </td>
+        <td className="px-4 py-3">
+          <span
+            className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider"
+            style={{
+              backgroundColor: policy.active
+                ? "var(--color-success)"
+                : "var(--color-muted)",
+              color: policy.active
+                ? "var(--color-primary)"
+                : "var(--color-muted-foreground)",
+            }}
+          >
+            {policy.active ? "Active" : "Disabled"}
+          </span>
+        </td>
+        <td className="px-4 py-3 text-right">
+          <div className="inline-flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggle}
+              data-testid={`expand-${policy.id}`}
+              aria-expanded={isExpanded}
+              className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)]"
+            >
+              {isExpanded ? "Hide" : "Show"} rules ({derivedCount})
+            </button>
+            <button
+              type="button"
+              onClick={onEdit}
+              disabled={isMutating}
+              data-testid={`edit-${policy.id}`}
+              className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={onRemove}
+              disabled={isMutating}
+              data-testid={`remove-${policy.id}`}
+              className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Remove
+            </button>
+          </div>
+        </td>
+      </tr>
+      {isExpanded && (
+        <tr className="bg-[var(--color-surface-empty)]">
+          <td colSpan={7} className="px-4 py-3">
+            <DerivedRulesPanel
+              policyId={policy.id}
+              rules={derivedRules}
+              periodById={periodById}
+            />
+          </td>
+        </tr>
+      )}
+    </>
+  );
 }
 
-function toDateTimeLocal(value: Date): string {
-  const offsetMs = value.getTimezoneOffset() * 60_000;
-  return new Date(value.getTime() - offsetMs).toISOString().slice(0, 16);
+// ---------------------------------------------------------------------------
+// Sub-component: PolicyForm
+// ---------------------------------------------------------------------------
+
+type PolicyFormProps = {
+  readonly form: PolicyFormState;
+  readonly editing: boolean;
+  readonly isSaving: boolean;
+  readonly validityValid: boolean;
+  readonly onChange: (
+    next: PolicyFormState | ((prev: PolicyFormState) => PolicyFormState),
+  ) => void;
+  readonly onCancel: () => void;
+  readonly onSave: () => void;
+};
+
+function PolicyForm({
+  form,
+  editing,
+  isSaving,
+  validityValid,
+  onChange,
+  onCancel,
+  onSave,
+}: PolicyFormProps) {
+  // Offset shown to admins as a positive number + before/after toggle.
+  const offsetIsBeforeDeadline = form.offsetMinutes <= 0;
+  const offsetMagnitude = Math.abs(form.offsetMinutes);
+
+  return (
+    <div
+      data-testid="policy-form"
+      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-4"
+    >
+      <div className="grid gap-3 md:grid-cols-3">
+        <div>
+          <label
+            htmlFor="policy-kind"
+            className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+          >
+            Kind
+          </label>
+          <select
+            id="policy-kind"
+            value={form.kind}
+            onChange={(e) =>
+              onChange((prev) => ({
+                ...prev,
+                kind: e.target.value as MockReminderPolicy["kind"],
+              }))
+            }
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+          >
+            {KIND_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="policy-offset-minutes"
+            className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+          >
+            Offset (minutes)
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="policy-offset-minutes"
+              type="number"
+              min={0}
+              value={offsetMagnitude}
+              onChange={(e) => {
+                const raw = Number.parseInt(e.target.value, 10);
+                const magnitude = Number.isFinite(raw) && raw >= 0 ? raw : 0;
+                onChange((prev) => ({
+                  ...prev,
+                  offsetMinutes: offsetIsBeforeDeadline
+                    ? -magnitude
+                    : magnitude,
+                }));
+              }}
+              className="w-24 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+            />
+            <select
+              aria-label="before or after deadline"
+              value={offsetIsBeforeDeadline ? "before" : "after"}
+              onChange={(e) =>
+                onChange((prev) => ({
+                  ...prev,
+                  offsetMinutes:
+                    e.target.value === "before"
+                      ? -Math.abs(prev.offsetMinutes)
+                      : Math.abs(prev.offsetMinutes),
+                }))
+              }
+              className="flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+            >
+              <option value="before">before deadline</option>
+              <option value="after">after deadline</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor="policy-timezone"
+            className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+          >
+            Timezone
+          </label>
+          <select
+            id="policy-timezone"
+            value={form.timezone}
+            onChange={(e) =>
+              onChange((prev) => ({ ...prev, timezone: e.target.value }))
+            }
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+          >
+            {TIMEZONE_OPTIONS.map((group) => (
+              <optgroup key={group.group} label={group.group}>
+                {group.zones.map((zone) => (
+                  <option key={zone.value} value={zone.value}>
+                    {zone.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="policy-audience"
+            className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+          >
+            Audience
+          </label>
+          <select
+            id="policy-audience"
+            value={form.audience}
+            onChange={(e) =>
+              onChange((prev) => ({
+                ...prev,
+                audience: e.target.value as MockReminderPolicy["audience"],
+              }))
+            }
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+          >
+            {AUDIENCE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="policy-valid-from"
+            className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+          >
+            Valid from
+          </label>
+          <input
+            id="policy-valid-from"
+            type="date"
+            value={form.validFromIso}
+            onChange={(e) =>
+              onChange((prev) => ({ ...prev, validFromIso: e.target.value }))
+            }
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <label
+              htmlFor="policy-valid-until"
+              className="text-xs font-semibold text-[var(--color-muted-foreground)]"
+            >
+              Valid until
+            </label>
+            <label className="inline-flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
+              <input
+                type="checkbox"
+                checked={form.foreverChecked}
+                onChange={(e) =>
+                  onChange((prev) => ({
+                    ...prev,
+                    foreverChecked: e.target.checked,
+                    validUntilIso: e.target.checked ? null : prev.todayIso,
+                  }))
+                }
+                aria-label="forever (no end date)"
+              />
+              <span>forever</span>
+            </label>
+          </div>
+          <input
+            id="policy-valid-until"
+            type="date"
+            value={form.validUntilIso ?? ""}
+            disabled={form.foreverChecked}
+            onChange={(e) =>
+              onChange((prev) => ({
+                ...prev,
+                validUntilIso: e.target.value || null,
+              }))
+            }
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-[var(--color-muted)] disabled:opacity-50"
+          />
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between">
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.active}
+            onChange={(e) =>
+              onChange((prev) => ({ ...prev, active: e.target.checked }))
+            }
+          />
+          <span>Active</span>
+        </label>
+        <div className="flex items-center gap-2">
+          {!validityValid && (
+            <span
+              data-testid="policy-validity-hint"
+              className="text-xs text-[var(--color-destructive)]"
+            >
+              End date must be after start date
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isSaving || !validityValid}
+            data-testid="policy-save-button"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? "Saving…" : editing ? "Save changes" : "Create policy"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatPolicyHeadline(policy: MockReminderPolicy): string {
+  return `${policy.kind} · ${formatOffset(policy.offsetMinutes)} · ${policy.audience}`;
 }
 
 // ---- Icons ----
-
-function SendIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-    </svg>
-  );
-}
 
 function PlusIcon() {
   return (
@@ -536,22 +805,6 @@ function PlusIcon() {
     >
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function SpinnerIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5 animate-spin"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <circle cx="12" cy="12" r="10" opacity="0.25" />
-      <path d="M12 2a10 10 0 0 1 10 10" opacity="0.75" />
     </svg>
   );
 }

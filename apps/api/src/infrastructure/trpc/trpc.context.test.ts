@@ -23,6 +23,16 @@ function makePrismaStub() {
     reportSection: {
       findFirst: vi.fn(async () => null),
     },
+    // UFB-047 / Phase 48-A: context factory hydrates `session.organization`
+    // from the singleton Organization row. The stub returns the seeded
+    // defaults so the dev-session branches resolve without touching a real
+    // database.
+    organization: {
+      upsert: vi.fn(async () => ({
+        shortName: "PEO",
+        fullName: "Product Engineering & Operations",
+      })),
+    },
   };
 }
 

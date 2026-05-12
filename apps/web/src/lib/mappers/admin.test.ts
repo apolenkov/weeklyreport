@@ -229,27 +229,96 @@ describe("mapAdminSnapshot", () => {
 describe("mapAdminSettings", () => {
   it("copies all configured fields from appSettingsSchema", () => {
     const api: AppSettings = appSettingsSchema.parse({
-      departmentName: "Core Development",
       autoCreatePeriods: true,
       defaultDeadlineDays: 5,
     });
     const mapped = mapAdminSettings(api);
-    expect(mapped.departmentName).toBe("Core Development");
     expect(mapped.autoCreatePeriods).toBe(true);
     expect(mapped.defaultDeadlineDays).toBe(5);
   });
 
   it("round-trips a non-default configuration", () => {
     const api: AppSettings = appSettingsSchema.parse({
-      departmentName: "Platform Engineering",
       autoCreatePeriods: false,
       defaultDeadlineDays: 3,
     });
     const mapped = mapAdminSettings(api);
+    // UFB-048 (Phase 48-B): the wire schema applies defaults for the 9 new
+    // fields; the mapper passes them through 1:1. Asserting the full shape
+    // catches future drift between MockSettings and AppSettings.
+    // UFB-047 / Phase 49-01: legacy `departmentName` removed from both
+    // sides of the mapper.
     expect(mapped).toStrictEqual({
-      departmentName: "Platform Engineering",
       autoCreatePeriods: false,
       defaultDeadlineDays: 3,
+      periodLengthDays: 7,
+      workingDays: "mon-fri",
+      gracePeriodHours: 24,
+      allowLateSubmissions: true,
+      autoPublishAfterDeadline: false,
+      autoArchiveWeeksAfterPublish: 0,
+      // UFB-051 (Phase 51-A): period-cycle knobs default-fall-through.
+      firstDayOfWeek: 1,
+      deadlineDayOfWeek: 5,
+      deadlineTime: "18:00",
+      maxOpenPeriods: 1,
+      requireAllSectionsToPublish: true,
+      allowReopenAfterPublish: true,
+      reopenWindowHours: 72,
+      defaultTimezone: "Europe/Moscow",
+      defaultReminderAudience: "lead-with-draft",
+      notificationFromEmail: null,
     });
+  });
+
+  // UFB-048 (Phase 48-B): explicit round-trip of the 9 new fields.
+  it("UFB-048: round-trips the 9 new AppSettings fields", () => {
+    const api: AppSettings = appSettingsSchema.parse({
+      autoCreatePeriods: true,
+      defaultDeadlineDays: 5,
+      periodLengthDays: 14,
+      workingDays: "mon-sat",
+      gracePeriodHours: 12,
+      defaultTimezone: "Asia/Yekaterinburg",
+      defaultReminderAudience: "head-of-late",
+      notificationFromEmail: "reports@example.com",
+      allowLateSubmissions: false,
+      autoPublishAfterDeadline: true,
+      autoArchiveWeeksAfterPublish: 8,
+    });
+    const mapped = mapAdminSettings(api);
+    expect(mapped.periodLengthDays).toBe(14);
+    expect(mapped.workingDays).toBe("mon-sat");
+    expect(mapped.gracePeriodHours).toBe(12);
+    expect(mapped.defaultTimezone).toBe("Asia/Yekaterinburg");
+    expect(mapped.defaultReminderAudience).toBe("head-of-late");
+    expect(mapped.notificationFromEmail).toBe("reports@example.com");
+    expect(mapped.allowLateSubmissions).toBe(false);
+    expect(mapped.autoPublishAfterDeadline).toBe(true);
+    expect(mapped.autoArchiveWeeksAfterPublish).toBe(8);
+  });
+
+  // UFB-051 (Phase 51-A): round-trip the period-cycle knobs through
+  // the wire → MockSettings mapper. UFB-068 removed periodCadence.
+  it("UFB-051: round-trips the period-cycle fields", () => {
+    const api: AppSettings = appSettingsSchema.parse({
+      autoCreatePeriods: false,
+      defaultDeadlineDays: 5,
+      firstDayOfWeek: 7,
+      deadlineDayOfWeek: 4,
+      deadlineTime: "09:30",
+      maxOpenPeriods: 3,
+      requireAllSectionsToPublish: false,
+      allowReopenAfterPublish: false,
+      reopenWindowHours: 24,
+    });
+    const mapped = mapAdminSettings(api);
+    expect(mapped.firstDayOfWeek).toBe(7);
+    expect(mapped.deadlineDayOfWeek).toBe(4);
+    expect(mapped.deadlineTime).toBe("09:30");
+    expect(mapped.maxOpenPeriods).toBe(3);
+    expect(mapped.requireAllSectionsToPublish).toBe(false);
+    expect(mapped.allowReopenAfterPublish).toBe(false);
+    expect(mapped.reopenWindowHours).toBe(24);
   });
 });

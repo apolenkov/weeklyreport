@@ -5,7 +5,7 @@
 
 // ---- Type Definitions ----
 
-export type UserRole = "lead" | "head" | "admin" | "viewer";
+export type UserRole = "lead" | "head" | "admin" | "viewer" | "director";
 
 export type MockUser = {
   id: string;
@@ -81,12 +81,54 @@ export type MockReminder = {
   timezone: string;
   version: number;
   reportId: string | null;
+  /** UFB-036 (Phase 44-04): policy FK so derived rules can be grouped. */
+  policyId: string | null;
 };
 
+/**
+ * UFB-036 (Phase 44-04): presentation type for the Reminders Tab policy
+ * editor. Mirrors `reminderPolicySchema` 1:1.
+ */
+export type MockReminderPolicy = {
+  id: string;
+  kind: "deadline" | "follow_up" | "escalation";
+  offsetMinutes: number;
+  timezone: string;
+  audience: "lead-with-draft" | "head-of-late";
+  active: boolean;
+  validFrom: Date;
+  validUntil: Date | null;
+};
+
+// UFB-048 (Phase 48-B): MockSettings expanded with 9 new fields. Order
+// mirrors the tab grouping in settings-tab.tsx (Periods → Reminders →
+// Notifications) for readability.
+// UFB-047 / Phase 49-01: legacy `departmentName` removed.
+// UFB-051 (Phase 51-A): +8 period-cycle knobs on the Periods sub-tab —
+// see comment in `appSettingsSchema` for the semantics.
 export type MockSettings = {
-  departmentName: string;
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
+  // Periods tab
+  periodLengthDays: number;
+  workingDays: "mon-fri" | "mon-sat" | "mon-sun";
+  gracePeriodHours: number;
+  allowLateSubmissions: boolean;
+  autoPublishAfterDeadline: boolean;
+  autoArchiveWeeksAfterPublish: number;
+  // UFB-051 — period-cycle knobs (Periods tab, after the 48-B inputs)
+  firstDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
+  deadlineDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
+  deadlineTime: string; // HH:MM (24h)
+  maxOpenPeriods: number;
+  requireAllSectionsToPublish: boolean;
+  allowReopenAfterPublish: boolean;
+  reopenWindowHours: number;
+  // Reminders tab
+  defaultTimezone: string;
+  defaultReminderAudience: "lead-with-draft" | "head-of-late";
+  // Notifications tab
+  notificationFromEmail: string | null;
 };
 
 // ---- Mock Users (8 total: 6 leads + 1 head + 1 viewer) ----
@@ -404,6 +446,7 @@ export const MOCK_REMINDERS: MockReminder[] = [
     timezone: "Europe/Moscow",
     version: 1,
     reportId: null,
+    policyId: null,
   },
   {
     id: "rem2",
@@ -415,6 +458,7 @@ export const MOCK_REMINDERS: MockReminder[] = [
     timezone: "Europe/Moscow",
     version: 1,
     reportId: null,
+    policyId: null,
   },
   {
     id: "rem3",
@@ -427,15 +471,33 @@ export const MOCK_REMINDERS: MockReminder[] = [
     timezone: "Europe/Moscow",
     version: 1,
     reportId: null,
+    policyId: null,
   },
 ];
 
 // ---- Mock Settings ----
 
 export const MOCK_SETTINGS: MockSettings = {
-  departmentName: "Core Development",
   autoCreatePeriods: true,
   defaultDeadlineDays: 5,
+  // UFB-048 (Phase 48-B) defaults
+  periodLengthDays: 7,
+  workingDays: "mon-fri",
+  gracePeriodHours: 24,
+  allowLateSubmissions: true,
+  autoPublishAfterDeadline: false,
+  autoArchiveWeeksAfterPublish: 0,
+  // UFB-051 (Phase 51-A) defaults — mirror SQL.
+  firstDayOfWeek: 1,
+  deadlineDayOfWeek: 5,
+  deadlineTime: "18:00",
+  maxOpenPeriods: 1,
+  requireAllSectionsToPublish: true,
+  allowReopenAfterPublish: true,
+  reopenWindowHours: 72,
+  defaultTimezone: "Europe/Moscow",
+  defaultReminderAudience: "lead-with-draft",
+  notificationFromEmail: null,
 };
 
 // ---- Helpers ----

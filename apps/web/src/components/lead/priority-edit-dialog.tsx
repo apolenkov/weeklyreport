@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import type { PriorityEntry } from './mock-data';
+import type { PriorityEntry, Product } from './mock-data';
 import { StageMultiSelect } from './stage-multi-select';
 
 type PriorityEditDialogProps = {
@@ -17,6 +17,12 @@ type PriorityEditDialogProps = {
    * as decisions.
    */
   readonly availableStages?: readonly string[];
+  /**
+   * R4-B: products the lead is assigned to. When more than one, the dialog
+   * shows a product picker so the lead can scope the priority to a product.
+   */
+  readonly products?: readonly Product[];
+  readonly defaultProductId?: string;
   readonly onSave: (next: PriorityEntry) => void;
   readonly onCancel: () => void;
 };
@@ -33,26 +39,37 @@ export function PriorityEditDialog({
   priority,
   nextRank,
   availableStages,
+  products,
+  defaultProductId,
   onSave,
   onCancel,
 }: PriorityEditDialogProps) {
   const isCreate = priority === null;
+
   const [text, setText] = useState(priority?.text ?? '');
-  const initialStage = priority?.stageName && priority.stageName !== '—' ? priority.stageName : '';
-  const [stageName, setStageName] = useState<string>(initialStage);
+  const [productId, setProductId] = useState(
+    priority?.productId || defaultProductId || products?.[0]?.id || '',
+  );
+  // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
+  const [stageIds, setStageIds] = useState<string[]>(
+    priority?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
+  );
   const [errors, setErrors] = useState<{ text?: string }>({});
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setText(priority?.text ?? '');
-    setStageName(priority?.stageName && priority.stageName !== '—' ? priority.stageName : '');
+    setProductId(priority?.productId || defaultProductId || products?.[0]?.id || '');
+    setStageIds(
+      priority?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
+    );
     setErrors({});
     // Focus the input on open. requestAnimationFrame so the portal mount
     // has settled before we steal focus from the underlying overlay.
     const id = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(id);
-  }, [open, priority?.rank, priority?.text, priority?.stageName]);
+  }, [open, priority?.rank, priority?.text, priority?.stageIds, priority?.productId, defaultProductId, products, availableStages, isCreate]);
 
   if (!open) return null;
 
@@ -64,10 +81,13 @@ export function PriorityEditDialog({
       setErrors(next);
       return;
     }
+    const selectedProduct = products?.find((p) => p.id === productId);
     onSave({
       rank: priority?.rank ?? nextRank,
       text: trimmed,
-      stageName: stageName.trim() || '—',
+      stageIds: stageIds.length > 0 ? stageIds : undefined,
+      productId: productId || undefined,
+      productName: selectedProduct?.name ?? priority?.productName,
     });
   }
 
@@ -93,7 +113,7 @@ export function PriorityEditDialog({
       role="presentation"
     >
       <div
-        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl"
+        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -103,6 +123,25 @@ export function PriorityEditDialog({
           {headerVerb}{' '}
           <span className="text-[var(--color-muted-foreground)]">— {slotLabel}</span>
         </h2>
+
+        {/* R4-B: product picker — only when the lead owns more than one product */}
+        {products && products.length > 1 && (
+          <div className="mb-4">
+            <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="priority-product">
+              Product
+            </label>
+            <select
+              id="priority-product"
+              className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+            >
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label
@@ -139,9 +178,9 @@ export function PriorityEditDialog({
         <div className="mt-4">
           <StageMultiSelect
             id="priority-stage"
-            value={stageName}
+            value={stageIds}
             stages={availableStages ?? []}
-            onChange={(next) => setStageName(next ?? '')}
+            onChange={setStageIds}
           />
         </div>
 

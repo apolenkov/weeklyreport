@@ -104,4 +104,62 @@ describe('AdminPrismaRepository (integration)', () => {
     expect(savedProject).toBeDefined();
     expect(expectDefined(savedProject).name).toBe('New Admin Project');
   });
+
+  // -------------------------------------------------------------------
+  // UFB-054 (Phase 56-B): Group ↔ Product M:M repository methods
+  //
+  // The seeded `lead` user belongs to `group`; the seeded `project` is
+  // led by that user. After the 56-A backfill there is one auto-created
+  // `GroupProduct` row mapping the seeded group to the seeded project.
+  // These tests assert the four explicit-mutation methods behave
+  // idempotently against that real baseline.
+  // -------------------------------------------------------------------
+
+  it('attachProductToGroup is idempotent and detach removes the edge (UFB-054)', async () => {
+    // The seed test cleanDatabase wipes GroupProduct too if the helper
+    // is up to date; we explicitly cleanup edges for this scenario.
+    await prisma.groupProduct.deleteMany({});
+
+    const attached = await repo.attachProductToGroup({
+      groupId: testData.lead.reportingGroupId,
+      productId: testData.project.id,
+    });
+    expect(attached.groupId).toBe(testData.lead.reportingGroupId);
+    expect(attached.productId).toBe(testData.project.id);
+
+    // Re-attach returns the same logical row (same tuple) — idempotent.
+    const reattached = await repo.attachProductToGroup({
+      groupId: testData.lead.reportingGroupId,
+      productId: testData.project.id,
+    });
+    expect(reattached.id).toBe(attached.id);
+
+    // listProductGroups and listGroupProducts reflect the edge.
+    const groupsForProduct = await repo.listProductGroups(
+      testData.project.id,
+    );
+    expect(groupsForProduct.map((g) => g.id)).toContain(
+      testData.lead.reportingGroupId,
+    );
+
+    const productsForGroup = await repo.listGroupProducts(
+      testData.lead.reportingGroupId,
+    );
+    expect(productsForGroup.map((p) => p.id)).toContain(testData.project.id);
+
+    // Detach is a no-op safe operation.
+    await repo.detachProductFromGroup({
+      groupId: testData.lead.reportingGroupId,
+      productId: testData.project.id,
+    });
+    await repo.detachProductFromGroup({
+      groupId: testData.lead.reportingGroupId,
+      productId: testData.project.id,
+    });
+
+    const after = await repo.listProductGroups(testData.project.id);
+    expect(after.map((g) => g.id)).not.toContain(
+      testData.lead.reportingGroupId,
+    );
+  });
 });

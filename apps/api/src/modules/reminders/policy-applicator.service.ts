@@ -1,0 +1,161 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { DateTime } from 'luxon';
+
+import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
+
+/**
+ * UFB-036 (Phase 44-03): the seam that turns ReminderPolicy templates
+ * into concrete ReminderRule rows for a given Period (Report).
+ *
+ * Lifecycle:
+ *   - admin.savePeriod creates a Report row → applyToPeriod(report) is
+ *     called AFTER the create transaction commits
+ *   - prisma/backfill-policy-rules.ts iterates over open periods and
+ *     calls applyToPeriod for each, idempotently
+ *   - the @Cron scheduler keeps querying ReminderRule directly
+ *     (untouched in this plan)
+ *
+ * Validity gate (added on top of plan-as-written, after the scope
+ * extension landed validFrom/validUntil on ReminderPolicy in the same
+ * day): a policy applies to a period only if
+ *   - policy.active === true
+ *   - period.deadline >= policy.validFrom
+ *   - policy.validUntil === null OR period.deadline <= policy.validUntil
+ *
+ * Idempotency: applyToPeriod uses upsert against the
+ * uq_rule_report_policy unique index. Calling twice is a no-op on the
+ * second run; P2002 is caught and logged just in case the unique index
+ * is missing in some pre-44-03 environment.
+ */
+@Injectable()
+export class PolicyApplicatorService {
+  private readonly logger = new Logger(PolicyApplicatorService.name);
+
+  constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * DST-correct fireAt math. The deadline is stored as UTC; we shift it
+   * into the policy's TZ first so adding `offsetMinutes` (almost always
+   * negative, e.g. -1440 for T-24h) lands in the same wall-clock window
+   * the lead expects in their local calendar. Then back to UTC for the
+   * DB column.
+   */
+  computeFireAt(deadline: Date, offsetMinutes: number, tz: string): Date {
+    return DateTime.fromJSDate(deadline, { zone: 'utc' })
+      .setZone(tz)
+      .plus({ minutes: offsetMinutes })
+      .toUTC()
+      .toJSDate();
+  }
+
+  /**
+   * Validity-window gate. Centralized so the unit test and the
+   * applicator and the backfill use the exact same boolean.
+   */
+  static policyAppliesTo(
+    policy: {
+      active: boolean;
+      validFrom: Date;
+      validUntil: Date | null;
+    },
+    period: { deadline: Date },
+  ): boolean {
+    if (!policy.active) return false;
+    if (period.deadline.getTime() < policy.validFrom.getTime()) return false;
+    if (
+      policy.validUntil !== null &&
+      period.deadline.getTime() > policy.validUntil.getTime()
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Attach one ReminderRule per active policy whose validity window
+   * covers period.deadline. Policies that fail the gate produce zero
+   * rules. Idempotent: second call is a no-op (upsert by
+   * uq_rule_report_policy).
+   */
+  async applyToPeriod(period: {
+    id: string;
+    deadline: Date;
+  }): Promise<{ created: number; updated: number; skipped: number }> {
+    const policies = await this.prisma.reminderPolicy.findMany({
+      where: { active: true },
+    });
+
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const policy of policies) {
+      if (!PolicyApplicatorService.policyAppliesTo(policy, period)) {
+        skipped += 1;
+        continue;
+      }
+
+      const fireAt = this.computeFireAt(
+        period.deadline,
+        policy.offsetMinutes,
+        policy.timezone,
+      );
+
+      try {
+        // Look up existing first so we can report created vs updated;
+        // the upsert itself is the source of truth for idempotency.
+        const existing = await this.prisma.reminderRule.findUnique({
+          where: {
+            reportId_policyId: { reportId: period.id, policyId: policy.id },
+          },
+          select: { id: true },
+        });
+
+        await this.prisma.reminderRule.upsert({
+          where: {
+            reportId_policyId: { reportId: period.id, policyId: policy.id },
+          },
+          create: {
+            reportId: period.id,
+            policyId: policy.id,
+            fireAt,
+            kind: policy.kind,
+            timezone: policy.timezone,
+            status: 'active',
+          },
+          update: {
+            fireAt,
+            kind: policy.kind,
+            timezone: policy.timezone,
+            status: 'active',
+          },
+        });
+
+        if (existing) {
+          updated += 1;
+        } else {
+          created += 1;
+        }
+      } catch (error: unknown) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code === 'P2002') {
+          // Two concurrent applyToPeriod calls raced on the same
+          // (reportId, policyId). The unique index prevents duplicates;
+          // log + continue so the loop finishes the rest of the
+          // policies for this period.
+          this.logger.warn(
+            `applyToPeriod race on (period=${period.id}, policy=${policy.id}); rule already exists`,
+          );
+          skipped += 1;
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    this.logger.log(
+      `applyToPeriod period=${period.id}: created=${created} updated=${updated} skipped=${skipped}`,
+    );
+    return { created, updated, skipped };
+  }
+}

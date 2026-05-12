@@ -10,7 +10,9 @@ import { useTRPC } from "../../lib/trpc-context";
 
 import { TabHeader, TabSearch } from "./tab-header";
 
-import type { MockGroup, MockUser } from "./mock-data";
+import { GroupProductsEditor } from "./group-products-editor";
+
+import type { MockGroup, MockProduct, MockUser } from "./mock-data";
 
 type GroupFormData = {
   name: string;
@@ -29,9 +31,14 @@ const EMPTY_FORM: GroupFormData = {
 type GroupsTabProps = {
   readonly groups: MockGroup[];
   readonly users: MockUser[];
+  // UFB-054 / Phase 56-C: product roster for the «Products attached»
+  // section inside the edit dialog. Optional so legacy callers that
+  // don't yet thread products through (e.g. unit tests) keep
+  // compiling — the section short-circuits to an empty list.
+  readonly products?: MockProduct[];
 };
 
-export function GroupsTab({ groups, users }: GroupsTabProps) {
+export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   // UFB-039: only head/admin users may lead a group. Filter the candidate
   // dropdown so leads/viewers can't be picked.
   const headCandidates = useMemo(
@@ -141,9 +148,12 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
   return (
     <>
       <div className="space-y-4" data-testid="groups-tab">
+        {/* UFB-049 (2026-05-11): revert 48-A Department sweep —
+            user wants "Group/Groups" in admin UI. Prisma model
+            (ReportingGroup) and test ids unchanged. */}
         <TabHeader
           title="Groups"
-          description={`Reporting groups (departments). ${activeGroupCount} active.`}
+          description={`Reporting groups (organisational units). ${activeGroupCount} active.`}
           count={`${groups.length} groups`}
           search={
             <TabSearch
@@ -355,6 +365,12 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
                   </label>
                 </div>
               )}
+              {editingGroup && (
+                <GroupProductsEditor
+                  groupId={editingGroup.id}
+                  products={products}
+                />
+              )}
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button
@@ -394,8 +410,8 @@ export function GroupsTab({ groups, users }: GroupsTabProps) {
               Archive Group?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Archive {archiveTarget.name}? Existing users keep the group, but
-              new users cannot select it.
+              Archive {archiveTarget.name}? Existing users keep the group,
+              but new users cannot select it.
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button

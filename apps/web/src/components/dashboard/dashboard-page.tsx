@@ -1,18 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
 import { mapDashboardData } from "../../lib/mappers";
+import { SessionContext } from "../../lib/session-provider";
 import {
   formatClientErrorMessage,
   logClientError,
 } from "../../lib/client-error-reporting";
 
 import { KpiCards } from "./kpi-cards";
+import { ProductKpiCard } from "./product-kpi-card";
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import { ReportArchiveSection } from "./report-archive-section";
@@ -24,6 +26,11 @@ export const DASHBOARD_LOAD_STALL_MS = 8_000;
 export function DashboardPage() {
   const trpc = useTRPC();
   const [loadStalled, setLoadStalled] = useState(false);
+  // UFB-047 / Phase 49-01: brand label sourced from `auth.me.organization`
+  // (the singleton's `fullName`). Replaces the legacy
+  // `weeklyReport.get.departmentName` field that was dropped with the column.
+  const sessionState = useContext(SessionContext);
+  const orgFullName = sessionState?.organization?.fullName ?? null;
 
   const reviewQ = useQuery(trpc.review.dashboard.queryOptions());
   const archiveQ = useQuery(trpc.archive.list.queryOptions({ limit: 12 }));
@@ -62,7 +69,7 @@ export function DashboardPage() {
         reportId: null,
       });
       toast.error(
-        formatClientErrorMessage("Failed to load weekly report", weeklyQ.error),
+        formatClientErrorMessage("Failed to load status report", weeklyQ.error),
       );
     }
   }, [weeklyQ.isError, weeklyQ.error]);
@@ -227,13 +234,36 @@ export function DashboardPage() {
     );
   }
 
+  // R3a: no active period — show empty state instead of error toast / spinner.
+  // weeklyQ.data.status === 'no-period' is a normal 200, never an error.
+  if (weeklyQ.data.status === "no-period") {
+    return (
+      <div className="space-y-6">
+        <header>
+          <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+            Dashboard
+          </h1>
+        </header>
+        <div className="flex flex-col items-center justify-center py-24 text-center rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)]">
+          <p className="text-lg font-semibold text-[var(--color-foreground)]">
+            No active reporting period
+          </p>
+          <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+            Ask an admin to open a new period to start collecting status reports.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const dashboard = mapDashboardData({
     review: reviewQ.data,
     archive: archiveQ.data,
     weeklyReport: weeklyQ.data,
   });
   const { kpi, blockedAtRisk, pendingLeads } = dashboard;
-  const departmentLabel = weeklyQ.data.departmentName;
+  // UFB-047 / Phase 49-01: see `orgFullName` above.
+  const departmentLabel = orgFullName ?? "CustomReport";
   const canSendReminder =
     weeklyQ.data.periodStatus !== "published" &&
     weeklyQ.data.hasActiveReminderRule;
@@ -256,7 +286,7 @@ export function DashboardPage() {
             href={`/head/report/${encodeURIComponent(weeklyQ.data.reportId)}`}
             className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
           >
-            View Weekly Report
+            View Status Report
           </a>
         </div>
       </header>
@@ -268,6 +298,13 @@ export function DashboardPage() {
 
       {/* KPI Cards */}
       <KpiCards data={kpi} />
+
+      {/* Phase 52 (UFB-054): product-KPI card — leadership-readable
+          numbers backed by telemetry.summary. Pulls its own data and
+          self-gates: lead role renders null. The head dashboard is
+          already head/admin-only, but the role gate is defence-in-depth
+          for when this card moves to a viewer-accessible surface. */}
+      <ProductKpiCard role={sessionState?.user?.role ?? null} />
 
       {/* Alert bar for pending leads */}
       <AlertBar

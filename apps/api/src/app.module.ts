@@ -17,12 +17,15 @@ import { ReportSectionsModule } from './modules/report-sections/report-sections.
 import { PublicationModule } from './modules/publication/publication.module';
 import { CarryOverModule } from './modules/carry-over/carry-over.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { OrganizationModule } from './modules/organization/organization.module';
 import { PeriodModule } from './modules/period/period.module';
 import { WeeklyReportModule } from './modules/weekly-report/weekly-report.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AiModule } from './modules/ai/ai.module';
 import { SearchModule } from './modules/search/search.module';
 import { ActivityModule } from './modules/activity/activity.module';
+import { TelemetryModule } from './modules/telemetry/telemetry.module';
+import { TelegramModule } from './modules/telegram/telegram.module';
 import { PdfExportProcessor } from './infrastructure/bullmq/pdf-export.processor';
 import { EmailReminderProcessor } from './infrastructure/bullmq/email-reminder.processor';
 import { EmailService } from './infrastructure/email/email.service';
@@ -56,12 +59,18 @@ import { assertNoDevAuthInProduction } from './lib/dev-auth-fence';
     PublicationModule,
     CarryOverModule,
     AdminModule,
+    OrganizationModule,
     AnalyticsModule,
     AiModule,
     SearchModule,
     ActivityModule,
+    TelemetryModule,
     PeriodModule,
     WeeklyReportModule,
+    // UFB-056 / Phase 55-3: Telegram outbound queue + adapter seam.
+    // Seeds-only — MockTelegramAdapter unless TG_BOT_TOKEN is set, in
+    // which case selectTelegramAdapter throws at boot.
+    TelegramModule,
   ],
   providers: [
     PdfExportProcessor,

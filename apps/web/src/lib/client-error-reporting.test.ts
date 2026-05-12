@@ -28,7 +28,7 @@ function makeTRPCError(
 
 describe("client-error-reporting", () => {
   it("builds a stable log envelope for Error instances", () => {
-    const error = new TypeError("Failed to load weekly report");
+    const error = new TypeError("Failed to load status report");
 
     expect(
       buildClientErrorLogEntry("weeklyReport.get.load_failed", error, {
@@ -36,7 +36,7 @@ describe("client-error-reporting", () => {
       }),
     ).toEqual({
       event: "weeklyReport.get.load_failed",
-      message: "Failed to load weekly report",
+      message: "Failed to load status report",
       name: "TypeError",
       context: { reportId: "report-1" },
     });
@@ -91,8 +91,8 @@ describe("client-error-reporting", () => {
     });
 
     expect(
-      formatClientErrorMessage("Failed to load weekly report", error),
-    ).toBe("Failed to load weekly report. Reference: req-500.");
+      formatClientErrorMessage("Failed to load status report", error),
+    ).toBe("Failed to load status report. Reference: req-500.");
   });
 
   it("adds request id details to the forwarded client log context", () => {

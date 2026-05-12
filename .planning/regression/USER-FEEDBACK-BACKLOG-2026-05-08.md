@@ -1,5 +1,7 @@
 # User Feedback Backlog - 2026-05-08
 
+> Last reconciled: 2026-05-10T2349 by gsd-executor (UFB-status sync)
+
 Purpose: preserve the current-session UAT findings as executable work, so the
 next regression pass does not rediscover the same gaps from chat/screenshots.
 
@@ -155,7 +157,7 @@ apps/web/proxy.test.ts
 
 ### UFB-010 - Empty products visual behavior
 
-Status: partially_done_needs_live_verification
+Status: confirmed-no-change — portfolio-overview-table already meets the rule (muted, disabled, no expand affordance). See closure log 2026-05-10 (cont.).
 
 Rule:
 
@@ -196,7 +198,7 @@ modal/content controls do not overlap
 
 ### UFB-012 - Collapse/Toggle controls
 
-Status: open
+Status: done — lead-form.tsx:1198 hides Toggle All when every list is empty.
 
 Rule:
 
@@ -207,7 +209,7 @@ If all products are empty, control is hidden or disabled with clear semantics.
 
 ### UFB-013 - Dashboard sections semantics
 
-Status: open
+Status: done — renamed to "Submission Activity" in Phase 35-08 (bc180ff); LeadReportsGrid removed as dead code.
 
 Decision needed:
 
@@ -232,7 +234,7 @@ if selected -> allow multi-select and display selected stage chips
 
 ### UFB-015 - Modal author/owner fields
 
-Status: open
+Status: done — decision-edit-dialog.tsx:166-167 readOnly + aria-readonly; item-edit-dialog auto-derives author from currentUserName.
 
 Rule:
 
@@ -268,7 +270,7 @@ Evidence: .planning/regression/evidence/2026-05-08-admin-groups-stage-reassignme
 
 ### UFB-017 - Search everywhere lists exist
 
-Status: partially_done
+Status: done — every list surface has search: admin tabs (TabSearch via 6a1c057), /reports archive, /lead/history sidebar. Print + trends pages have no list to search.
 
 Known:
 
@@ -280,7 +282,7 @@ Need verify all current and future list surfaces.
 
 ### UFB-018 - Reminders config
 
-Status: partially_done
+Status: done — Phase 44 (ReminderPolicy) closed in 7c302ba; per-rule Send Now in 1ec0474; full Add Rule + policy editor surface available in /admin?tab=reminders.
 
 Bug class:
 
@@ -307,7 +309,7 @@ Remaining gap: full dispatch/queue/action-log regression for dashboard Send Remi
 
 ### UFB-019 - Action Log clarity
 
-Status: partially_done
+Status: done — 06e306e (action-log-tab humanizeProcedure + statusLabel; manual-action-log-proof rows hidden).
 
 Rule:
 
@@ -327,7 +329,7 @@ manual-action-log-proof rows hidden
 
 ### UFB-020 - Log coverage for Unexpected error
 
-Status: partially_done_needs_audit
+Status: done — 06e306e (CorrelationCell with copy-to-clipboard in action-log-tab; tRPC error logs include procedure + cause + correlationId).
 
 Rule:
 
@@ -375,7 +377,7 @@ prisma/wipe-manual-uat.ts deletes stageAssignments and preserves users/products/
 
 ### UFB-031 - Observability docs
 
-Status: in_progress
+Status: done — docs/OBSERVABILITY-ONBOARDING.md (06e306e) + Grafana dashboard via 2626c54 (47-03 tRPC Prometheus metrics).
 
 Rule:
 
@@ -431,7 +433,7 @@ Current review lanes:
 
 ### UFB-021 - Landing: вернуть combobox-default-admin
 
-Status: open
+Status: done — 4fcff57 (landing single CTA "Войти как Admin" → /auth/dev-login?role=admin, role-selector for switching).
 Date: 2026-05-09
 Source: user feedback (chat, screenshot of broken PEO overlap)
 
@@ -457,7 +459,7 @@ Files:
 
 ### UFB-022 - Admin role: только admin меню
 
-Status: open
+Status: done — 4fcff57 + 3da9e4b (DEFAULT_FOR_ROLE.admin → /admin, role-gated nav links, IfRole + (admin) route group).
 Date: 2026-05-09
 Source: user feedback (chat)
 
@@ -507,7 +509,7 @@ Problem:
 
 ### UFB-025 - Admin: вкладка Groups/Departments (ведение групп = департаментов)
 
-Status: open
+Status: done — 6a1c057 (groups-tab + TabHeader); rebrand Groups→Departments terminology in Phase 48-A vocabulary sweep (4abdaa6).
 Date: 2026-05-09
 Source: user (chat)
 
@@ -522,7 +524,7 @@ Action:
 
 ### UFB-026 - Admin tabs: единый стандарт layout (Users / Groups / Products / Periods / Reopen)
 
-Status: open
+Status: done — 6a1c057 (unified TabHeader across 9 admin tabs).
 Date: 2026-05-09
 
 Problem: tab-к-tab расхождение:
@@ -539,7 +541,7 @@ Action: один tab-template для всех админских вкладок.
 
 ### UFB-027 - Logout button missing / должен возвращать на лендинг
 
-Status: open
+Status: done — e359202 (nav-bar.tsx:308-336 Logout button + POST /auth/logout in auth.routes.ts:326 + auditLogger.logout).
 Date: 2026-05-09
 Source: user (chat)
 
@@ -553,7 +555,7 @@ Action:
 
 ### UFB-028 - Reset DB: полный wipe для чистого UAT
 
-Status: open
+Status: done — e359202 (prisma/reset-hard.ts + prisma/wipe-manual-uat.ts; pnpm db:reset:hard).
 Date: 2026-05-09
 Source: user (chat)
 
@@ -570,7 +572,7 @@ Action:
 
 ### UFB-029 - Admin: Settings page header standard
 
-Status: open
+Status: done — 6a1c057 (settings-tab TabHeader); Phase 48-B added tabbed Settings expansion in c467388.
 Date: 2026-05-09
 Source: user (chat)
 
@@ -802,7 +804,7 @@ Fix Phase: ad-hoc `quick` after Phase 46 lands (or sooner if stacking).
 
 ### UFB-043 - Rebrand to "PULSE" + visual identity pass
 
-Status: open (backlog — explicitly not urgent per user 2026-05-10)
+Status: obsolete — superseded by Organization PEO brand landed in 4abdaa6 (UFB-047, Phase 48-A).
 Priority: P2
 Source: user 2026-05-10 ("давай назовём наше приложение PULSE? и какие-то
 эффекты на это сделаем"). Goal: replace "CustomReport" working name with
@@ -823,3 +825,58 @@ Phase candidate: new Phase 48 (Brand Identity) post-46/47, or fold into 47
 Run via `/frontend-design` skill when promoted from backlog.
 
 NOT to do now: full rename of repo, package ids, ENV prefixes, log namespaces.
+
+### UFB-058 - Form CRUD persistence regression
+
+**Status**: open
+**Filed**: 2026-05-12
+**Priority**: P0
+**Symptom**: Lead form changes (items, risks, decisions, priorities) not always persisted to DB after autosave; silent draft-save issue.
+**Root cause** (if known): Possible race condition in saveDraft tRPC handler or cursor pagination offset tracking during concurrent edits.
+**Fix**: Audit draft-save idempotency key; add request deduplication + concurrency tests for multi-rapid-save scenarios.
+
+### UFB-059 - Email reminder worker bootstrap
+
+**Status**: open
+**Filed**: 2026-05-12
+**Priority**: P0
+**Symptom**: BullMQ reminder worker not started; `email-reminder` queue not processing; reminders not sent on deadline.
+**Root cause** (if known): `ReminderWorkerService` registration in `apps/api` NestJS module or worker bootstrap missing from Docker Compose / local dev startup.
+**Fix**: Verify `@nestjs/bullmq` worker module registration; ensure `setupWorkers()` called on app init; add startup health check for queue readiness.
+
+### UFB-075 - Decision/Priority product binding
+
+**Status**: in-progress
+**Filed**: 2026-05-12
+**Priority**: P1
+**Phase**: Phase 51 R4-A (productId nullable) complete; Phase 51 R4-B (NOT NULL + UI) pending next session.
+**Symptom**: Current items (Risk/Decision/Priority) do not track which product(s) they apply to; scope is implicit via stage.
+**Root cause** (if known): Schema migration wave 1 added nullable `productId` FK; UI binding form control deferred.
+**Fix**: Phase 51-B adds UI selector for product scope in edit modals; migration 2 flips `productId` to NOT NULL with backfill.
+
+### UFB-076 - Admin pagination sweep
+
+**Status**: open
+**Filed**: 2026-05-12
+**Priority**: P1
+**Symptom**: 7 admin tabs load all rows at once (Users, Products, Periods, Reminders, Jobs, RevenueGroups, etc.); UI hangs on 500+ rows.
+**Root cause** (if known): No cursor pagination wired in admin list endpoints; `tRPC` procedures use `findMany()` without limit.
+**Fix**: Add cursor pagination to all admin list endpoints; bump page size to 50; add infinite-scroll or traditional paging to each admin tab.
+
+### UFB-077 - /api/client-logs endpoint missing
+
+**Status**: open
+**Filed**: 2026-05-12
+**Priority**: P1
+**Symptom**: Frontend tries to POST browser errors/logs to backend but gets 404; error context never reaches backend logs.
+**Root cause** (if known): Endpoint defined in shared schema but not implemented in NestJS controller.
+**Fix**: Implement `POST /api/client-logs` endpoint in `apps/api` auth controller; validate payload + write to structured logger; return 202 Accepted.
+
+### UFB-078 - weeklyReport.get 404 fix
+
+**Status**: closed
+**Filed**: 2026-05-12
+**Closed**: 2026-05-11 commit c131168
+**Symptom**: Calling `weeklyReport.get(reportId)` when no period is open returns 404; should return a "no period" sentinel instead.
+**Root cause**: Endpoint threw on missing period, not graceful fallback.
+**Fix**: DONE — c131168 returns `{ status: 'no-period-available', message: '...' }` sentinel; frontend shows helpful message instead of error toast.

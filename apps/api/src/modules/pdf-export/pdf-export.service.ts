@@ -7,6 +7,7 @@ import {
 import type { Queue } from 'bullmq';
 
 import { createNullLogger, type AppLogger } from '../../lib/logger';
+import { customreportPdfExportRequestsTotal } from '../../infrastructure/metrics/metrics.registry.js';
 
 export class PdfExportDomainError extends Error {
   constructor(message: string) {
@@ -119,6 +120,13 @@ export class PdfExportService {
     reportId: string,
     requestedBy?: string,
     authToken?: string,
+    /**
+     * Phase 52-A (UFB-054): requesting role for the product-telemetry
+     * `customreport_pdf_export_requests_total{role}` counter. Optional —
+     * worker / cron callers default to `'system'`. The label is the
+     * normalised session role string when supplied.
+     */
+    requestedByRole?: string,
   ): Promise<PdfExportJob> {
     const report = await this.repository.getPublishedReport(reportId);
 
@@ -127,6 +135,13 @@ export class PdfExportService {
     }
 
     this.logger.info('requesting PDF export', { reportId, requestedBy });
+    // Phase 52-A (UFB-054): bump role-labelled counter before the queue
+    // enqueue. We're past the validation gate, so a successful enqueue
+    // (or queue-less test scenario) maps 1:1 to a customer-facing
+    // "export requested" event.
+    customreportPdfExportRequestsTotal.inc({
+      role: requestedByRole ?? 'system',
+    });
     const job = await this.repository.createExportJob(
       pdfExportJobSchema.parse({
         jobId: crypto.randomUUID(),

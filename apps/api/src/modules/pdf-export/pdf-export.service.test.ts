@@ -11,6 +11,7 @@ import {
   type PdfExportRepository,
 } from './pdf-export.service';
 import { expectDefined } from '../../test-utils/expect-defined.js';
+import { customreportPdfExportRequestsTotal } from '../../infrastructure/metrics/metrics.registry.js';
 
 const reportId = '22222222-2222-4222-8222-222222222222';
 
@@ -150,7 +151,51 @@ describe('PdfExportService', () => {
       service.getPdfExportStatus(job.jobId, ownerId),
     ).resolves.toMatchObject({ jobId: job.jobId });
   });
+
+  // Phase 52-A (UFB-054): role-labelled counter. Three labels exercised
+  // (head | viewer | system) confirm the optional `requestedByRole` is
+  // threaded through and the omission path defaults to 'system' (worker
+  // / cron callers).
+  it('bumps customreport_pdf_export_requests_total{role} per call', async () => {
+    const service = new PdfExportService(createRepository(publishedReport));
+    const beforeHead = await getCounterValue(customreportPdfExportRequestsTotal, {
+      role: 'head',
+    });
+    const beforeViewer = await getCounterValue(customreportPdfExportRequestsTotal, {
+      role: 'viewer',
+    });
+    const beforeSystem = await getCounterValue(customreportPdfExportRequestsTotal, {
+      role: 'system',
+    });
+
+    await service.requestPdfExport(reportId, 'u-head', undefined, 'head');
+    await service.requestPdfExport(reportId, 'u-viewer', undefined, 'viewer');
+    await service.requestPdfExport(reportId); // role omitted → 'system'
+
+    expect(
+      await getCounterValue(customreportPdfExportRequestsTotal, { role: 'head' }),
+    ).toBe(beforeHead + 1);
+    expect(
+      await getCounterValue(customreportPdfExportRequestsTotal, { role: 'viewer' }),
+    ).toBe(beforeViewer + 1);
+    expect(
+      await getCounterValue(customreportPdfExportRequestsTotal, { role: 'system' }),
+    ).toBe(beforeSystem + 1);
+  });
 });
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+async function getCounterValue(
+  counter: { get(): Promise<{ values: Array<{ value: number; labels: Record<string, any> }> }> },
+  labels: Record<string, string>,
+): Promise<number> {
+  const snapshot = await counter.get();
+  const match = snapshot.values.find((entry) =>
+    Object.entries(labels).every(([k, v]) => String(entry.labels[k]) === v),
+  );
+  return match?.value ?? 0;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // AUTH-05 (Phase 28-02): the 5-min PDF export JWT cookie seam.

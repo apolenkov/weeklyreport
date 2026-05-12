@@ -26,8 +26,16 @@ export type SamlProfile = {
  * so the same call at 23:00 Moscow Sunday and 22:00 UTC Sunday produces
  * identical bounds. Phase 32-M7 (M-07) — fixes naive `setDate`/`setHours`
  * drift across DST transitions and TZ-mismatched containers.
+ *
+ * UFB-048 / Phase 50-A: when `periodLengthDays` is provided, `periodEnd`
+ * is anchored to Monday + (length - 1) days at 23:59:59.999 UTC instead
+ * of the hardcoded 7-day Mon-Sun span. Callers that don't pass the
+ * argument keep the original Mon-Sun (length=7) behaviour.
  */
-export function getCurrentWeekBounds(date: Date = new Date()): {
+export function getCurrentWeekBounds(
+  date: Date = new Date(),
+  periodLengthDays = 7,
+): {
   periodStart: Date;
   periodEnd: Date;
 } {
@@ -50,7 +58,7 @@ export function getCurrentWeekBounds(date: Date = new Date()): {
     Date.UTC(
       date.getUTCFullYear(),
       date.getUTCMonth(),
-      date.getUTCDate() + diffToMonday + 6,
+      date.getUTCDate() + diffToMonday + (periodLengthDays - 1),
       23,
       59,
       59,
@@ -64,12 +72,37 @@ export function getCurrentWeekBounds(date: Date = new Date()): {
 /**
  * Auto-create a draft report + sections for the current week if none exists.
  * Returns the created ReportSection for this lead, or null if user is not a lead.
+ *
+ * UFB-048 / Phase 50-A: reads `AppSettings.periodLengthDays` and
+ * `AppSettings.defaultDeadlineDays` from the singleton row so admin
+ * UI changes propagate to NEW periods immediately. Existing periods
+ * are not recomputed — `findFirst` finds them first, no rewrite.
+ *
+ * The settings row is read inline via Prisma (no AdminService DI threading)
+ * to keep `mountAuthRoutes`' signature surgical — the auth module already
+ * holds a `PrismaClient` reference, and the singleton row is upserted on
+ * read so callers never see "no settings yet" mid-boot.
  */
 async function ensureWeeklyReport(
   prisma: PrismaClient,
   userId: string,
 ): Promise<{ reportId: string; sectionId: string } | null> {
-  const { periodStart, periodEnd } = getCurrentWeekBounds();
+  // UFB-048: load AppSettings singleton (upsert to materialise defaults on
+  // first read). Falls back to schema defaults: periodLengthDays=7,
+  // defaultDeadlineDays=4 — these match the Prisma defaults so a fresh
+  // DB without UI-touched settings still produces a Mon-Sun week with
+  // a Friday deadline, preserving pre-50-A behaviour.
+  const settings = await prisma.appSettings.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton" },
+    update: {},
+    select: { periodLengthDays: true, defaultDeadlineDays: true },
+  });
+
+  const { periodStart, periodEnd } = getCurrentWeekBounds(
+    new Date(),
+    settings.periodLengthDays,
+  );
 
   // Create report for this week if it doesn't exist
   const existingReport = await prisma.report.findFirst({
@@ -86,9 +119,17 @@ async function ensureWeeklyReport(
   if (existingReport) {
     reportId = existingReport.id;
   } else {
-    const deadline = new Date(periodEnd);
-    deadline.setDate(deadline.getDate() - 2); // Friday
-    deadline.setHours(15, 0, 0, 0);
+    // UFB-048: deadline = periodStart + defaultDeadlineDays at 18:00 UTC.
+    // The pre-50-A code computed periodEnd-2d=Fri at 15:00 local; the new
+    // formula puts periodStart(Mon)+4d=Fri at 18:00 UTC for the default
+    // value 4, matching the Friday end-of-day deadline shop teams expect.
+    // The 18:00 hour is hardcoded until Phase 51 surfaces a setting for
+    // deadline time-of-day (see plan 50-A AC).
+    const deadline = new Date(periodStart);
+    deadline.setUTCDate(
+      deadline.getUTCDate() + settings.defaultDeadlineDays,
+    );
+    deadline.setUTCHours(18, 0, 0, 0);
 
     const report = await prisma.report.create({
       data: { periodStart, periodEnd, deadline },
@@ -353,7 +394,13 @@ export function mountAuthRoutes(
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const role = (req.query.role as string) ?? "head";
-          const validRoles: Role[] = ["lead", "head", "admin", "viewer"];
+          const validRoles: Role[] = [
+            "lead",
+            "head",
+            "admin",
+            "viewer",
+            "director",
+          ];
           if (!validRoles.includes(role as Role)) {
             loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
             res.status(400).json({
@@ -374,7 +421,7 @@ export function mountAuthRoutes(
           const nameByRole: Record<string, string> = {
             head: "Антон К.",
             lead: "Lead 1",
-            admin: "Антон К.",
+            admin: "Михаил Б.",
             viewer: "Дарья В.",
           };
           const samlIdByRole: Record<string, string> = {
@@ -421,11 +468,15 @@ export function mountAuthRoutes(
 
           // UX-16: role-aware default landing. Must stay in sync with
           // DEFAULT_FOR_ROLE in apps/web/src/app/page.tsx.
+          // UFB-057 / Phase 57: director lands on the same head dashboard
+          // surface as `head` so the product-KPI cards are the first thing
+          // they see; their nested layout permits read-only access.
           const redirectByRole: Record<string, string> = {
             head: "/head/dashboard",
             lead: "/lead/report",
             admin: "/admin",
             viewer: "/reports?tab=published",
+            director: "/head/dashboard",
           };
           const redirectPath =
             (req.query.redirect as string) ?? redirectByRole[role] ?? "/";

@@ -43,6 +43,7 @@ import { ReviewService } from './modules/review/review.service';
 import { PublicationService } from './modules/publication/publication.service';
 import { PdfExportService } from './modules/pdf-export/pdf-export.service';
 import { AdminService } from './modules/admin/admin.service';
+import { OrganizationService } from './modules/organization/organization.service';
 import { RemindersService } from './modules/reminders/reminders.service';
 import { CarryOverService } from './modules/carry-over/carry-over.service';
 import { ArchiveService } from './modules/archive/archive.service';
@@ -51,9 +52,11 @@ import { WeeklyReportService } from './modules/weekly-report/weekly-report.servi
 import { LeadFormService } from './modules/report-sections/lead-form.service';
 import { AnalyticsService } from './modules/analytics/analytics.service';
 import { AiService } from './modules/ai/ai.service';
+import { AiSummaryService } from './modules/ai/ai-summary.service';
 import { SearchService } from './modules/search/search.service';
 import { ActivityService } from './modules/activity/activity.service';
 import { JobsService } from './modules/admin/jobs.service';
+import { TelemetryService } from './modules/telemetry/telemetry.service';
 
 const UUID_SEGMENT_RE =
   /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
@@ -244,6 +247,12 @@ async function bootstrap() {
   // own connection. Closed on app shutdown via enableShutdownHooks above.
   const emailReminderQueue = new Queue('email-reminder', getBullMQOptions());
 
+  // UFB-056 / Phase 55-3: read-only Queue handle for the admin Telegram
+  // smoke-test (`admin.testTelegramSend`). Stays out of the NestJS DI
+  // graph for the same reason as the email queue — see the @nestjs/bullmq
+  // DI bug note in bullmq.module.ts.
+  const telegramOutboundQueue = new Queue('telegram-outbound', getBullMQOptions());
+
   // Phase 35-06: thin wrapper around the email-reminder Queue handle for the
   // admin DLQ admin tab (`/admin?tab=jobs`). Stays out of the NestJS DI graph
   // for the same reason emailReminderQueue does — see the @nestjs/bullmq DI
@@ -258,6 +267,7 @@ async function bootstrap() {
     publicationService: app.get(PublicationService),
     pdfExportService: app.get(PdfExportService),
     adminService: app.get(AdminService),
+    organizationService: app.get(OrganizationService),
     remindersService: app.get(RemindersService),
     carryOverService: app.get(CarryOverService),
     archiveService: app.get(ArchiveService),
@@ -266,10 +276,17 @@ async function bootstrap() {
     leadFormService: app.get(LeadFormService),
     analyticsService: app.get(AnalyticsService),
     aiService: app.get(AiService),
+    // Phase 54 (UFB-055): period-level RAG summary surface — mock-only
+    // until org picks an LLM provider. Lives next to AiService but
+    // does not share the AiInsight cache (its TTL semantics differ).
+    aiSummaryService: app.get(AiSummaryService),
     searchService: app.get(SearchService),
     activityService: app.get(ActivityService),
     emailReminderQueue,
+    telegramOutboundQueue,
     jobsService,
+    // Phase 52 (UFB-054): telemetry.summary backend.
+    telemetryService: app.get(TelemetryService),
   });
 
   // Mount tRPC as Express middleware at /trpc

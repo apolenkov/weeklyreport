@@ -60,12 +60,34 @@ const initialSnapshot: AdminSnapshot = {
   periods: [],
   reminderRules: [],
   reminderExecutions: [],
+  policies: [],
 };
 
+// UFB-048 (Phase 48-B): AppSettings expanded with 9 new knobs. The integration
+// fixture mirrors the SQL defaults so the in-memory repo round-trips identical
+// shape to the Prisma path.
+// UFB-047 / Phase 49-01: legacy `departmentName` field removed.
 const defaultSettings: AppSettings = {
-  departmentName: "CoreDev",
   autoCreatePeriods: false,
   defaultDeadlineDays: 5,
+  periodLengthDays: 7,
+  workingDays: "mon-fri",
+  gracePeriodHours: 24,
+  defaultTimezone: "Europe/Moscow",
+  defaultReminderAudience: "lead-with-draft",
+  notificationFromEmail: null,
+  allowLateSubmissions: true,
+  autoPublishAfterDeadline: false,
+  autoArchiveWeeksAfterPublish: 0,
+  // UFB-051 (Phase 51-A): period-cycle knobs default to SQL defaults so
+  // the in-memory repo round-trips identical shape to the Prisma path.
+  firstDayOfWeek: 1,
+  deadlineDayOfWeek: 5,
+  deadlineTime: "18:00",
+  maxOpenPeriods: 1,
+  requireAllSectionsToPublish: true,
+  allowReopenAfterPublish: true,
+  reopenWindowHours: 72,
 };
 
 /* ------------------------------------------------------------------ */
@@ -154,22 +176,35 @@ describe("AdminService — settings (integration)", () => {
     const service = new AdminService(createRepository(initialSnapshot));
     const result = await service.getSettings();
 
-    expect(result).toEqual({
-      departmentName: "CoreDev",
-      autoCreatePeriods: false,
-      defaultDeadlineDays: 5,
-    });
+    expect(result).toEqual(defaultSettings);
   });
 
-  it("updates departmentName and preserves other fields", async () => {
+  // UFB-048: round-trip the new fields through updateSettings.
+  it("UFB-048: round-trips the 9 new AppSettings fields", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
-      departmentName: "New Department",
+      periodLengthDays: 14,
+      workingDays: "mon-sat",
+      gracePeriodHours: 48,
+      defaultTimezone: "Asia/Yekaterinburg",
+      defaultReminderAudience: "head-of-late",
+      notificationFromEmail: "reports@example.com",
+      allowLateSubmissions: false,
+      autoPublishAfterDeadline: true,
+      autoArchiveWeeksAfterPublish: 12,
     });
 
-    expect(result.departmentName).toBe("New Department");
-    expect(result.autoCreatePeriods).toBe(false);
+    expect(result.periodLengthDays).toBe(14);
+    expect(result.workingDays).toBe("mon-sat");
+    expect(result.gracePeriodHours).toBe(48);
+    expect(result.defaultTimezone).toBe("Asia/Yekaterinburg");
+    expect(result.defaultReminderAudience).toBe("head-of-late");
+    expect(result.notificationFromEmail).toBe("reports@example.com");
+    expect(result.allowLateSubmissions).toBe(false);
+    expect(result.autoPublishAfterDeadline).toBe(true);
+    expect(result.autoArchiveWeeksAfterPublish).toBe(12);
+    // legacy fields preserved
     expect(result.defaultDeadlineDays).toBe(5);
   });
 
@@ -191,6 +226,46 @@ describe("AdminService — settings (integration)", () => {
     });
 
     expect(result.defaultDeadlineDays).toBe(10);
+  });
+
+  // UFB-051 (Phase 51-A): round-trip the 7 period-cycle knobs (UFB-068 dropped periodCadence).
+  it("UFB-051: round-trips the period-cycle AppSettings fields", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+
+    const result = await service.updateSettings({
+      firstDayOfWeek: 7, // Sunday-first calendar
+      deadlineDayOfWeek: 4, // Thursday deadline
+      deadlineTime: "09:30",
+      maxOpenPeriods: 3,
+      requireAllSectionsToPublish: false,
+      allowReopenAfterPublish: false,
+      reopenWindowHours: 24,
+    });
+
+    expect(result.firstDayOfWeek).toBe(7);
+    expect(result.deadlineDayOfWeek).toBe(4);
+    expect(result.deadlineTime).toBe("09:30");
+    expect(result.maxOpenPeriods).toBe(3);
+    expect(result.requireAllSectionsToPublish).toBe(false);
+    expect(result.allowReopenAfterPublish).toBe(false);
+    expect(result.reopenWindowHours).toBe(24);
+    // legacy + 48-B fields preserved by the PATCH semantics
+    expect(result.defaultDeadlineDays).toBe(5);
+    expect(result.periodLengthDays).toBe(7);
+    expect(result.allowLateSubmissions).toBe(true);
+  });
+
+  it("UFB-051: returns defaults for the period-cycle fields when nothing has been configured", async () => {
+    const service = new AdminService(createRepository(initialSnapshot));
+    const result = await service.getSettings();
+
+    expect(result.firstDayOfWeek).toBe(1);
+    expect(result.deadlineDayOfWeek).toBe(5);
+    expect(result.deadlineTime).toBe("18:00");
+    expect(result.maxOpenPeriods).toBe(1);
+    expect(result.requireAllSectionsToPublish).toBe(true);
+    expect(result.allowReopenAfterPublish).toBe(true);
+    expect(result.reopenWindowHours).toBe(72);
   });
 
   it("admin router rejects non-head access to settings", async () => {

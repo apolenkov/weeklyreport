@@ -7,8 +7,14 @@ import { z } from 'zod';
  * Phase 32-C / H-01: widened to include 'admin' so the SAML callback can
  * persist admin-roled Keycloak users without crashing on Prisma's enum
  * validation. Stays in lockstep with `enum Role` in `prisma/schema.prisma`.
+ *
+ * UFB-057 / Phase 57: 'director' added. Director is a leadership-audience
+ * consumer (read-only view across ALL groups) — distinct from 'admin'
+ * (god-mode, manages users/groups/settings) and from 'head' (owns one
+ * group). Viewer-equivalent in capability but lands on the head-dashboard
+ * surface instead of the published archive.
  */
-export const roleSchema = z.enum(['lead', 'head', 'admin', 'viewer']);
+export const roleSchema = z.enum(['lead', 'head', 'admin', 'viewer', 'director']);
 
 /**
  * Role attached to an authenticated session (JWT / SAML claim).
@@ -17,8 +23,10 @@ export const roleSchema = z.enum(['lead', 'head', 'admin', 'viewer']);
  * the requireRole middleware factory (D-AUTH-03). adminProcedure ===
  * headProcedure for v6.0; the alias is preserved so Phase 29 can split them
  * without breaking call sites.
+ *
+ * UFB-057 / Phase 57: 'director' carried alongside the DB-bound set.
  */
-export const sessionRoleSchema = z.enum(['lead', 'head', 'admin', 'viewer']);
+export const sessionRoleSchema = z.enum(['lead', 'head', 'admin', 'viewer', 'director']);
 
 export const userSessionSchema = z.object({
   userId: z.string().uuid(),
@@ -45,6 +53,25 @@ export const userSessionSchema = z.object({
    * which `groupScopeFilter` translates into a zero-row filter.
    */
   viewerGroupAccess: z.array(z.string().uuid()).optional(),
+  /**
+   * UFB-047 / Phase 48-A: organization identity hydrated per-request from
+   * the `Organization` singleton in the tRPC context factory. Optional on
+   * the schema for two reasons:
+   *   1. JWT payloads (signed by createJwtSigner) do NOT carry it — so a
+   *      JWT minted before Phase 48-A still verifies and the context
+   *      factory fills the field after `verifySession`. Baking the field
+   *      into the JWT would invalidate every in-flight cookie on deploy
+   *      and would also stale-cache admin renames until next login.
+   *   2. The PDF-export synthetic session does not need it; the worker
+   *      reads the singleton directly when stamping the report header.
+   * Mirrors the `viewerGroupAccess` hydration pattern.
+   */
+  organization: z
+    .object({
+      shortName: z.string().min(1).max(16),
+      fullName: z.string().min(1).max(200),
+    })
+    .optional(),
 });
 
 /**

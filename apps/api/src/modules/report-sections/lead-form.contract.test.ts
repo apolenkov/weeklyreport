@@ -8,6 +8,7 @@ import {
   type LeadFormRepository,
 } from './lead-form.service';
 import { expectDefined } from '../../test-utils/expect-defined.js';
+import { customreportReopenRequestsTotal } from '../../infrastructure/metrics/metrics.registry.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -425,7 +426,64 @@ describe('LeadFormService — requestReopen', () => {
       service.requestReopen(SECTION_ID, OTHER_USER_ID),
     ).rejects.toThrow('Can only request reopen for your own section.');
   });
+
+  // Phase 52-A (UFB-054): the `requested` slice of the reopen-funnel
+  // counter increments only on the success path. An unauthorized caller
+  // (different author) MUST NOT bump the counter — that would let any
+  // role inflate the funnel by hammering the endpoint.
+  it('increments customreport_reopen_requests_total{state="requested"} on success', async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(submittedSection)),
+    });
+    const service = new LeadFormService(repo);
+
+    const before = await getCounterValue(customreportReopenRequestsTotal, {
+      state: 'requested',
+    });
+
+    await service.requestReopen(SECTION_ID, AUTHOR_ID, 'typo');
+
+    expect(
+      await getCounterValue(customreportReopenRequestsTotal, {
+        state: 'requested',
+      }),
+    ).toBe(before + 1);
+  });
+
+  it('does not increment the counter when authorization fails', async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(submittedSection)),
+    });
+    const service = new LeadFormService(repo);
+
+    const before = await getCounterValue(customreportReopenRequestsTotal, {
+      state: 'requested',
+    });
+
+    await expect(
+      service.requestReopen(SECTION_ID, OTHER_USER_ID),
+    ).rejects.toThrow();
+
+    expect(
+      await getCounterValue(customreportReopenRequestsTotal, {
+        state: 'requested',
+      }),
+    ).toBe(before);
+  });
 });
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+async function getCounterValue(
+  counter: { get(): Promise<{ values: Array<{ value: number; labels: Record<string, any> }> }> },
+  labels: Record<string, string>,
+): Promise<number> {
+  const snapshot = await counter.get();
+  const match = snapshot.values.find((entry) =>
+    Object.entries(labels).every(([k, v]) => String(entry.labels[k]) === v),
+  );
+  return match?.value ?? 0;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // createSnapshot (Save Version)

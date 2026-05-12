@@ -21,6 +21,13 @@ export function invalidateLeadForm(qc: QueryClient, trpc: TRPCProxy): void {
 export function invalidateAdmin(qc: QueryClient, trpc: TRPCProxy): void {
   void qc.invalidateQueries(trpc.admin.snapshot.pathFilter());
   void qc.invalidateQueries(trpc.admin.getSettings.pathFilter());
+  // UFB-047 / Phase 48-A: admin.updateOrganization changes the brand strings
+  // rendered in the nav-bar (via auth.me) and the landing hero (via
+  // org.getPublic) — both caches must drop so the rename is visible
+  // immediately after Save.
+  void qc.invalidateQueries(trpc.admin.getOrganization.pathFilter());
+  void qc.invalidateQueries(trpc.org.getPublic.pathFilter());
+  void qc.invalidateQueries(trpc.auth.me.pathFilter());
   void qc.invalidateQueries(trpc.weeklyReport.get.pathFilter());
 }
 

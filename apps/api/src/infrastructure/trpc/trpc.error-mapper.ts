@@ -6,7 +6,11 @@ import {
 } from '../../modules/report-sections/report-sections.service.js';
 import { ReviewAccessError } from '../../modules/review/review.service.js';
 import { PublicationAccessError } from '../../modules/publication/publication.service.js';
-import { AdminAccessError } from '../../modules/admin/admin.service.js';
+import {
+  AdminAccessError,
+  AdminPeriodNotFoundError,
+  AdminPeriodOverlapError,
+} from '../../modules/admin/admin.service.js';
 import { PdfExportDomainError } from '../../modules/pdf-export/pdf-export.service.js';
 import { ReminderDomainError } from '../../modules/reminders/reminders.service.js';
 import { CarryOverDomainError } from '../../modules/carry-over/carry-over.service.js';
@@ -53,6 +57,21 @@ export function mapDomainError(error: unknown): TRPCError {
 
   if (error instanceof ReminderDomainError || error instanceof CarryOverDomainError) {
     return new TRPCError({ code: 'BAD_REQUEST', message: error.message, cause: error });
+  }
+
+  // UFB-063: manual period overlap surfaces as BAD_REQUEST so the toast
+  // copy ("period already exists for these dates") flows straight to the
+  // admin without any extra translation layer.
+  if (error instanceof AdminPeriodOverlapError) {
+    return new TRPCError({ code: 'BAD_REQUEST', message: error.message, cause: error });
+  }
+
+  // UFB-067: manual period edit on a missing reportId. Distinct from the
+  // overlap path (which is BAD_REQUEST) — surface as NOT_FOUND so the
+  // admin UI can render a row-removed style empty state rather than a
+  // generic validation error.
+  if (error instanceof AdminPeriodNotFoundError) {
+    return new TRPCError({ code: 'NOT_FOUND', message: error.message, cause: error });
   }
 
   // Unknown error path: preserve `cause` so the loggingMiddleware can log

@@ -192,6 +192,26 @@ describe('createNullAuditLogger', () => {
         resourceId: '00000000-0000-4000-8000-000000000001',
       }),
     ).not.toThrow();
+    // UFB-036 / Phase 44-05: null logger must accept the new policy
+    // helpers without throwing — same contract as the live impl.
+    expect(() =>
+      audit.policySave({
+        userId: 'u',
+        role: 'admin',
+        ip: 'x',
+        policyId: '00000000-0000-4000-8000-000000000010',
+        kind: 'deadline',
+        action: 'create',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      audit.policyRemove({
+        userId: 'u',
+        role: 'admin',
+        ip: 'x',
+        policyId: '00000000-0000-4000-8000-000000000010',
+      }),
+    ).not.toThrow();
   });
 });
 
@@ -230,6 +250,322 @@ describe('createAuditLogger — scopeDenied (UFB-040 / 46-05)', () => {
         ip: '10.0.0.1',
         attemptedScope: 'report',
         resourceId: '11111111-1111-4111-8111-111111111111',
+      },
+    });
+  });
+});
+
+describe('createAuditLogger — policySave / policyRemove (UFB-036 / 44-05)', () => {
+  it('policySave emits {event, userId, role, ip, policyId, kind, action} on info', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.policySave({
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.5',
+      policyId: '11111111-1111-4111-8111-111111111110',
+      kind: 'deadline',
+      action: 'create',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.message).toBe('audit');
+    expect(entry.context).toEqual({
+      event: 'admin.policy.save',
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.5',
+      policyId: '11111111-1111-4111-8111-111111111110',
+      kind: 'deadline',
+      action: 'create',
+    });
+  });
+
+  it('policySave passes the action through verbatim (update path)', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.policySave({
+      userId: 'admin-2',
+      role: 'admin',
+      ip: '10.0.0.6',
+      policyId: '22222222-2222-4222-8222-222222222220',
+      kind: 'follow_up',
+      action: 'update',
+    });
+
+    const entry = expectDefined(entries[0]);
+    expect(entry.context).toMatchObject({
+      event: 'admin.policy.save',
+      action: 'update',
+      kind: 'follow_up',
+    });
+  });
+
+  it('policyRemove emits {event, userId, role, ip, policyId} on info', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.policyRemove({
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.5',
+      policyId: '11111111-1111-4111-8111-111111111110',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.message).toBe('audit');
+    expect(entry.context).toEqual({
+      event: 'admin.policy.remove',
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.5',
+      policyId: '11111111-1111-4111-8111-111111111110',
+    });
+  });
+
+  it('PII-safe — no SAML/cookie/token leak through the policy envelope', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.policySave({
+      userId: 'admin-3',
+      role: 'admin',
+      ip: '10.0.0.7',
+      policyId: '33333333-3333-4333-8333-333333333330',
+      kind: 'escalation',
+      action: 'create',
+    });
+    audit.policyRemove({
+      userId: 'admin-3',
+      role: 'admin',
+      ip: '10.0.0.7',
+      policyId: '33333333-3333-4333-8333-333333333330',
+    });
+
+    const forbidden = ['samlAssertion', 'nameID', 'cookie', 'token', 'password', 'authorization'];
+    for (const entry of entries) {
+      const keys = Object.keys(entry.context ?? {});
+      for (const banned of forbidden) {
+        expect(keys).not.toContain(banned);
+      }
+    }
+  });
+});
+
+describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
+  it('periodAutoCreate emits {event, userId=system, role=null, ip=cron, periodId, dates} on info', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.periodAutoCreate({
+      periodId: '00000000-0000-4000-8000-000000000050',
+      periodStart: '2026-05-04T00:00:00.000Z',
+      periodEnd: '2026-05-10T23:59:59.999Z',
+      deadline: '2026-05-08T15:00:00.000Z',
+      // UFB-053 / Phase 51-C: state-transition payload. Fresh create has
+      // no prior state — `from = null`.
+      from: null,
+      to: 'open',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.message).toBe('audit');
+    expect(entry.context).toEqual({
+      event: 'period.auto-create',
+      userId: 'system',
+      role: null,
+      ip: 'cron',
+      periodId: '00000000-0000-4000-8000-000000000050',
+      periodStart: '2026-05-04T00:00:00.000Z',
+      periodEnd: '2026-05-10T23:59:59.999Z',
+      deadline: '2026-05-08T15:00:00.000Z',
+      from: null,
+      to: 'open',
+    });
+  });
+
+  it('periodAutoPublish emits {event, system attribution, periodId, missingSectionsCount} on info', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.periodAutoPublish({
+      periodId: '00000000-0000-4000-8000-000000000051',
+      missingSectionsCount: 2,
+      // UFB-053 / Phase 51-C: state-transition payload.
+      from: 'open',
+      to: 'published',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.context).toEqual({
+      event: 'period.auto-publish',
+      userId: 'system',
+      role: null,
+      ip: 'cron',
+      periodId: '00000000-0000-4000-8000-000000000051',
+      missingSectionsCount: 2,
+      from: 'open',
+      to: 'published',
+    });
+  });
+
+  it('periodAutoArchive emits {event, system attribution, periodId} on info', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.periodAutoArchive({
+      periodId: '00000000-0000-4000-8000-000000000052',
+      // UFB-053 / Phase 51-C: state-transition payload.
+      from: 'published',
+      to: 'archived',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.context).toEqual({
+      event: 'period.auto-archive',
+      userId: 'system',
+      role: null,
+      ip: 'cron',
+      periodId: '00000000-0000-4000-8000-000000000052',
+      from: 'published',
+      to: 'archived',
+    });
+  });
+
+  it('createNullAuditLogger noop branches for the three new events', () => {
+    const audit = createNullAuditLogger();
+    expect(() =>
+      audit.periodAutoCreate({
+        periodId: 'p1',
+        periodStart: 's',
+        periodEnd: 'e',
+        deadline: 'd',
+        // UFB-053 / Phase 51-C: state-transition payload.
+        from: null,
+        to: 'open',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      audit.periodAutoPublish({
+        periodId: 'p2',
+        missingSectionsCount: 0,
+        from: 'open',
+        to: 'published',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      audit.periodAutoArchive({
+        periodId: 'p3',
+        from: 'published',
+        to: 'archived',
+      }),
+    ).not.toThrow();
+    // UFB-063: noop branch for the manual-create event.
+    expect(() =>
+      audit.periodManualCreate({
+        userId: 'admin-1',
+        role: 'admin',
+        ip: '10.0.0.1',
+        periodId: 'p4',
+        periodStart: 's',
+        periodEnd: 'e',
+        deadline: 'd',
+        from: null,
+        to: 'open',
+      }),
+    ).not.toThrow();
+    // UFB-067: noop branch for the manual-edit event.
+    expect(() =>
+      audit.periodManualEdit({
+        userId: 'admin-1',
+        role: 'admin',
+        ip: '10.0.0.1',
+        periodId: 'p5',
+        changes: { deadline: { from: 'a', to: 'b' } },
+      }),
+    ).not.toThrow();
+  });
+
+  it('periodManualCreate emits {event, real-user attribution, periodId, dates} on info (UFB-063)', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.periodManualCreate({
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.42',
+      periodId: '00000000-0000-4000-8000-000000000063',
+      periodStart: '2026-05-18T00:00:00.000Z',
+      periodEnd: '2026-05-24T23:59:59.999Z',
+      deadline: '2026-05-22T15:00:00.000Z',
+      from: null,
+      to: 'open',
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.message).toBe('audit');
+    expect(entry.context).toEqual({
+      event: 'period.manual-create',
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.42',
+      periodId: '00000000-0000-4000-8000-000000000063',
+      periodStart: '2026-05-18T00:00:00.000Z',
+      periodEnd: '2026-05-24T23:59:59.999Z',
+      deadline: '2026-05-22T15:00:00.000Z',
+      from: null,
+      to: 'open',
+    });
+  });
+
+  it('periodManualEdit emits {event, real-user attribution, changes} on info (UFB-067)', () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.periodManualEdit({
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.42',
+      periodId: '00000000-0000-4000-8000-000000000067',
+      changes: {
+        deadline: {
+          from: '2026-05-09T15:00:00.000Z',
+          to: '2026-05-10T15:00:00.000Z',
+        },
+        weekLabel: { from: 'Sprint 11', to: 'Sprint 11 (extended)' },
+      },
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe('info');
+    expect(entry.message).toBe('audit');
+    expect(entry.context).toEqual({
+      event: 'period.manual-edit',
+      userId: 'admin-1',
+      role: 'admin',
+      ip: '10.0.0.42',
+      periodId: '00000000-0000-4000-8000-000000000067',
+      changes: {
+        deadline: {
+          from: '2026-05-09T15:00:00.000Z',
+          to: '2026-05-10T15:00:00.000Z',
+        },
+        weekLabel: { from: 'Sprint 11', to: 'Sprint 11 (extended)' },
       },
     });
   });

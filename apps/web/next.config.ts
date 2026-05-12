@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
     { source: '/trpc/:path*', destination: `${API_URL}/trpc/:path*` },
     { source: '/auth/:path*', destination: `${API_URL}/auth/:path*` },
     { source: '/health/:path*', destination: `${API_URL}/health/:path*` },
+    { source: '/api/:path*', destination: `${API_URL}/api/:path*` },
   ],
 };
 
