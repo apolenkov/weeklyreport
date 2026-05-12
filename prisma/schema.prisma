@@ -116,10 +116,8 @@ model Project {
   // GroupProduct.product. Left untouched on backfill; existing read paths
   // that derive group via `lead.reportingGroupId` continue to work.
   groupProducts    GroupProduct[]
-  // R4-A: optional 1:N edges to Decision and Priority. Phase A establishes
-  // the FK linkage (nullable); Phase B (future) makes them NOT NULL once all
-  // UI paths wire productId during Decision/Priority creation. Backfill
-  // copies productId from linked ReportSection if available.
+  // R4-C: required 1:N edges to Decision and Priority. productId is NOT NULL
+  // after R4-C migration. Cascade on project delete removes orphaned artefacts.
   decisions        Decision[]
   priorities       Priority[]
 
@@ -322,7 +320,7 @@ model Risk {
 model Decision {
   id              String                   @id @default(uuid())
   reportSectionId String
-  productId       String?
+  productId       String
   text            String
   owner           String
   deadline        DateTime?
@@ -333,7 +331,7 @@ model Decision {
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
   stageName       String?
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  project         Project?                 @relation(fields: [productId], references: [id], onDelete: SetNull)
+  project         Project                  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([reportSectionId])
   @@index([productId])
@@ -344,14 +342,14 @@ model Decision {
 model Priority {
   id              String        @id @default(uuid())
   reportSectionId String
-  productId       String?
+  productId       String
   rank            Int
   text            String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   stageName       String?
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  project         Project?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  project         Project       @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([reportSectionId, rank])
   @@index([productId])

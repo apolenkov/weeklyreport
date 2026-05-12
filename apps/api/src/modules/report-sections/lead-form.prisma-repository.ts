@@ -152,16 +152,18 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         // Copy decisions from source
         if (source.decisions.length > 0) {
           await tx.decision.createMany({
-            data: source.decisions.map((d) => ({
-              reportSectionId: targetSectionId,
-              text: d.text,
-              owner: d.owner,
-              deadline: d.deadline ?? null,
-              impact: d.impact,
-              resolvedAt: d.resolvedAt ?? null,
-              stageName: d.stageName ?? null,
-              productId: d.productId ?? null,
-            })),
+            data: source.decisions
+              .filter((d) => !!d.productId)
+              .map((d) => ({
+                reportSectionId: targetSectionId,
+                text: d.text,
+                owner: d.owner,
+                deadline: d.deadline ?? null,
+                impact: d.impact,
+                resolvedAt: d.resolvedAt ?? null,
+                stageName: d.stageName ?? null,
+                productId: d.productId as string,
+              })),
           });
           copiedItems += source.decisions.length;
         }
@@ -169,13 +171,15 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         // Copy priorities from source
         if (source.priorities.length > 0) {
           await tx.priority.createMany({
-            data: source.priorities.map((p) => ({
-              reportSectionId: targetSectionId,
-              rank: p.rank,
-              text: p.text,
-              stageName: p.stageName ?? null,
-              productId: p.productId ?? null,
-            })),
+            data: source.priorities
+              .filter((p) => !!p.productId)
+              .map((p) => ({
+                reportSectionId: targetSectionId,
+                rank: p.rank,
+                text: p.text,
+                stageName: p.stageName ?? null,
+                productId: p.productId as string,
+              })),
           });
           copiedItems += source.priorities.length;
         }
@@ -297,9 +301,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           });
         }
 
-        if (data.decisions.length > 0) {
+        const decisionsToRestore = data.decisions.filter((d) => !!d.productId);
+        if (decisionsToRestore.length > 0) {
           await tx.decision.createMany({
-            data: data.decisions.map((d) => ({
+            data: decisionsToRestore.map((d) => ({
               reportSectionId: sectionId,
               text: d.text,
               owner: d.owner,
@@ -307,19 +312,20 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               impact: d.impact,
               resolvedAt: d.resolvedAt ? new Date(d.resolvedAt) : null,
               stageName: d.stageIds?.join(', ') ?? d.stageName ?? null,
-              productId: d.productId ?? null,
+              productId: d.productId as string,
             })),
           });
         }
 
-        if (data.priorities.length > 0) {
+        const prioritiesToRestore = data.priorities.filter((p) => !!p.productId);
+        if (prioritiesToRestore.length > 0) {
           await tx.priority.createMany({
-            data: data.priorities.map((p) => ({
+            data: prioritiesToRestore.map((p) => ({
               reportSectionId: sectionId,
               rank: p.rank,
               text: p.text,
               stageName: p.stageIds?.join(', ') ?? p.stageName ?? null,
-              productId: p.productId ?? null,
+              productId: p.productId as string,
             })),
           });
         }

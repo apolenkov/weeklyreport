@@ -79,6 +79,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     await prisma.decision.create({
       data: {
         reportSectionId: testData.section.id,
+        productId: testData.project.id,
         text: "Test decision",
         owner: "Test Lead 1",
         impact: "Medium",
@@ -88,6 +89,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     await prisma.priority.create({
       data: {
         reportSectionId: testData.section.id,
+        productId: testData.project.id,
         rank: 1,
         text: "Priority 1",
       },

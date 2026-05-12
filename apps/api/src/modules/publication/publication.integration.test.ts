@@ -54,6 +54,7 @@ describe('PublicationPrismaRepository (integration)', () => {
     await prisma.priority.create({
       data: {
         reportSectionId: testData.section.id,
+        productId: testData.project.id,
         rank: 1,
         text: 'Top priority',
       },
