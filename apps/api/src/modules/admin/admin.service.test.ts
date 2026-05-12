@@ -874,6 +874,7 @@ function periodFixture(
     autoArchived: state === "archived",
     submittedCount: 0,
     totalCount: 6,
+    weekLabel: null,
     ...overrides,
   };
 }

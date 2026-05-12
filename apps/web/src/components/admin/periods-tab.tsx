@@ -985,13 +985,9 @@ function CreatePeriodDialog({
   const [deadline, setDeadline] = useState(() =>
     isEdit ? dateTimeInputValue(initialValues.deadline) : '',
   );
-  // The PeriodListItem schema does not currently expose weekLabel on
-  // the list row (51-B left it out — the table doesn't render it). We
-  // can still prefill from an explicit initialValues override; for now
-  // edit-mode opens with an empty label and the user retypes if needed.
-  // When 51-B/67 surfaces weekLabel on the list-item, swap this to
-  // `initialValues.weekLabel ?? ''`.
-  const [weekLabel, setWeekLabel] = useState('');
+  const [weekLabel, setWeekLabel] = useState(
+    isEdit ? (initialValues?.weekLabel ?? '') : '',
+  );
 
   // Esc-to-close + click-outside (matches the groups-tab dialog pattern).
   useEffect(() => {

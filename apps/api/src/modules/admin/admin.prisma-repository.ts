@@ -754,6 +754,7 @@ export class AdminPrismaRepository implements AdminRepository {
         archived: true,
         autoPublished: true,
         autoArchived: true,
+        weekLabel: true,
       },
     });
 
@@ -800,6 +801,7 @@ export class AdminPrismaRepository implements AdminRepository {
       autoArchived: r.autoArchived,
       submittedCount: submittedById.get(r.id) ?? 0,
       totalCount: totalsById.get(r.id) ?? 0,
+      weekLabel: r.weekLabel,
     }));
   }
 
