@@ -120,7 +120,7 @@ export function RisksSection({
       ) : (
         risks.map((risk) => {
           const isBlocked = risk.severity === 'blocked';
-          const stageTags = splitStageNames(risk.stageName);
+          const stageTags = (risk.stageIds && risk.stageIds.length > 0) ? risk.stageIds : splitStageNames(risk.stageName);
           return (
             <div
               key={risk.id}
@@ -231,7 +231,7 @@ export function RisksSection({
         open={pendingDelete !== null}
         title="Delete risk?"
         preview={pendingDelete?.text || '(no description)'}
-        subtitle={pendingDelete ? `${pendingDelete.productName}${splitStageNames(pendingDelete.stageName).length > 0 ? ` · ${splitStageNames(pendingDelete.stageName).join(', ')}` : ' · all stages'}` : undefined}
+        subtitle={pendingDelete ? `${pendingDelete.productName}${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? ` · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(', ')}` : ' · all stages'}` : undefined}
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />

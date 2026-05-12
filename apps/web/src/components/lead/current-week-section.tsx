@@ -39,7 +39,7 @@ type CurrentWeekSectionProps = {
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
   const map = new Map<string, KanbanItem[]>();
   for (const item of items) {
-    const tags = splitStageNames(item.stageName);
+    const tags = (item.stageIds && item.stageIds.length > 0) ? item.stageIds : splitStageNames(item.stageName);
     const key = tags.length > 0
       ? `${item.productName} · ${tags.join(', ')}`
       : item.productName;

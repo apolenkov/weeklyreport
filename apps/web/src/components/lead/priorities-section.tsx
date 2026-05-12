@@ -167,7 +167,7 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
     <div className="space-y-3">
       {sorted.map((entry, idx) => {
         const tintKey = (entry.rank === 1 || entry.rank === 2 || entry.rank === 3) ? entry.rank : 'rest';
-        const stageTags = splitStageNames(entry.stageName);
+        const stageTags = (entry.stageIds && entry.stageIds.length > 0) ? entry.stageIds : splitStageNames(entry.stageName);
         return (
           <div
             key={`${entry.rank}-${idx}`}
@@ -192,6 +192,11 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
               aria-label={`Edit priority ${entry.rank}`}
             >
               <div className="flex flex-wrap items-center gap-2">
+                {entry.productName && (
+                  <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
+                    {entry.productName}
+                  </span>
+                )}
                 {/* 35-04: stage chip — surfaces SDLC scoping next to the
                     text. Hidden for legacy '—' rows so empty placeholders
                     don't clutter. */}
