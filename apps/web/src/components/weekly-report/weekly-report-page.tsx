@@ -3,6 +3,7 @@
 import { useContext, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
@@ -332,21 +333,47 @@ export function WeeklyReportPage({
           Dismissible per session via local useState; head-only Regenerate. */}
       <AiSummaryCard reportId={view.period.reportId} />
 
-      {/* Portfolio Overview */}
-      <PortfolioOverviewTable products={portfolio} />
+      {/* A32: empty-state — no submissions in current open/reopened period.
+          When submissionCount === 0 and the period is not yet published,
+          replace the (blank) portfolio table and accordion with a helpful
+          nudge. Keeps header + period nav intact so the head retains context. */}
+      {submitted === 0 && view.period.periodStatus !== "published" ? (
+        <div
+          className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center"
+          data-testid="empty-submissions-state"
+        >
+          <p className="text-base font-semibold text-[var(--color-foreground)]">
+            No submissions yet for {view.period.weekLabel}
+          </p>
+          <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)]">
+            Leads have not filed their sections for this period.
+          </p>
+          <Link
+            href="/reports?tab=published"
+            className="mt-4 text-sm font-medium text-[var(--color-primary)] underline-offset-4 hover:underline"
+          >
+            View last published report in Archive &rarr;
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* Portfolio Overview */}
+          <PortfolioOverviewTable products={portfolio} />
 
-      {/* Per-product accordion sections */}
-      <div className="space-y-3">
-        {products.map((report) => (
-          <ProductAccordion
-            key={report.id}
-            report={report}
-            defaultOpen={focusedProductId === report.id}
-            highlighted={focusedProductId === report.id}
-            scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
-          />
-        ))}
-      </div>
+          {/* Per-product accordion sections */}
+          <div className="space-y-3">
+            {products.map((report) => (
+              <ProductAccordion
+                key={report.id}
+                report={report}
+                defaultOpen={focusedProductId === report.id}
+                highlighted={focusedProductId === report.id}
+                scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
