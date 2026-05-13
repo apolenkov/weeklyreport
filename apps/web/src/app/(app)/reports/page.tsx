@@ -104,7 +104,7 @@ export default function ReportsPage() {
             />
           </div>
 
-          {searchScope && (
+          {searchScope ? (
             <div>
               <SearchInput
                 scope={searchScope}
@@ -113,6 +113,8 @@ export default function ReportsPage() {
                 }
               />
             </div>
+          ) : (
+            <div className="min-h-[44px]" aria-hidden="true" />
           )}
 
           {tab === "drafts" ? (

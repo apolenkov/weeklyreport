@@ -91,6 +91,9 @@ export function CurrentWeekSection({
     | { open: true; mode: "create"; seedProductId: string }
     | { open: true; mode: "edit"; item: KanbanItem }
   >({ open: false });
+  // D-13: monotonic counter so repeated opens of the same item get a fresh
+  // key even when item.id is unchanged (prevents stale stageIds in dialog).
+  const [openSeq, setOpenSeq] = useState(0);
   // Pending-delete state for the M20 confirmation modal — prevents
   // accidental data loss on a stray click. The actual filter+emit
   // happens only after the user confirms.
@@ -101,6 +104,7 @@ export function CurrentWeekSection({
 
   function handleAdd(seedProductId: string) {
     if (readOnly) return;
+    setOpenSeq((n) => n + 1);
     setDialogState({ open: true, mode: "create", seedProductId });
   }
 
@@ -121,6 +125,7 @@ export function CurrentWeekSection({
     if (readOnly) return;
     const item = items.find((i) => i.id === id);
     if (!item) return;
+    setOpenSeq((n) => n + 1);
     setDialogState({ open: true, mode: "edit", item });
   }
 
@@ -260,7 +265,7 @@ export function CurrentWeekSection({
 
         {/* Edit / Add modal — single instance shared across all columns. */}
         <ItemEditDialog
-          key={`${dialogState.open}-${dialogState.open && dialogState.mode === "edit" ? dialogState.item.id : "new"}`}
+          key={`${openSeq}-${dialogState.open && dialogState.mode === "edit" ? dialogState.item.id : "new"}`}
           open={dialogState.open}
           item={
             dialogState.open && dialogState.mode === "edit"

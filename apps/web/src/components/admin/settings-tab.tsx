@@ -1055,11 +1055,18 @@ function IntegrationsSubTab() {
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
               CI Integration
+              <span
+                className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-gold)]"
+                data-testid="integration-badge-ci-coming-soon"
+              >
+                Coming Soon
+              </span>
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
               Connect your CI/CD pipeline for automated report triggers.
+              Configuration fields will be available in a follow-on phase.
             </p>
           </div>
           {isCiConfigured ? (

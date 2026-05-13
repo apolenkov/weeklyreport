@@ -61,11 +61,15 @@ export function NextWeekSection({
     | { open: true; mode: "create"; seedProductId: string }
     | { open: true; mode: "edit"; item: KanbanItem }
   >({ open: false });
+  // D-13: monotonic counter so repeated opens of the same item get a fresh
+  // key even when item.id is unchanged (prevents stale stageIds in dialog).
+  const [openSeq, setOpenSeq] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<KanbanItem | null>(null);
   const isEmpty = grouped.size === 0 && (!products || products.length === 0);
 
   function handleAdd(seedProductId: string) {
     if (readOnly) return;
+    setOpenSeq((n) => n + 1);
     setDialogState({ open: true, mode: "create", seedProductId });
   }
 
@@ -86,6 +90,7 @@ export function NextWeekSection({
     if (readOnly) return;
     const item = items.find((i) => i.id === id);
     if (!item) return;
+    setOpenSeq((n) => n + 1);
     setDialogState({ open: true, mode: "edit", item });
   }
 
@@ -220,7 +225,7 @@ export function NextWeekSection({
       </div>
 
       <ItemEditDialog
-        key={`${dialogState.open}-${dialogState.open && dialogState.mode === "edit" ? dialogState.item.id : "new"}`}
+        key={`${openSeq}-${dialogState.open && dialogState.mode === "edit" ? dialogState.item.id : "new"}`}
         open={dialogState.open}
         item={
           dialogState.open && dialogState.mode === "edit"

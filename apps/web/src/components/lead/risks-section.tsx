@@ -151,6 +151,13 @@ export function RisksSection({
             risk.stageIds && risk.stageIds.length > 0
               ? risk.stageIds
               : splitStageNames(risk.stageName);
+          // D-15: treat as "all stages" only when no specific stages were
+          // selected (empty = applies to all owned stages) OR when every
+          // stage owned by the lead on this product is selected.
+          const ownedStages = stagesForProduct?.(risk.productId) ?? [];
+          const isAllStages =
+            stageTags.length === 0 ||
+            (ownedStages.length > 0 && stageTags.length === ownedStages.length);
           return (
             <div
               key={risk.id}
@@ -173,7 +180,7 @@ export function RisksSection({
                 <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
                   {risk.productName}
                 </span>
-                {stageTags.length === 0 ? (
+                {isAllStages ? (
                   <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
                     All stages
                   </span>

@@ -508,15 +508,25 @@ function PolicyRow({
         </td>
         <td className="px-4 py-3 text-right">
           <div className="inline-flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onToggle}
-              data-testid={`expand-${policy.id}`}
-              aria-expanded={isExpanded}
-              className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)]"
-            >
-              {isExpanded ? "Hide" : "Show"} rules ({derivedCount})
-            </button>
+            <span className="inline-flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={onToggle}
+                data-testid={`expand-${policy.id}`}
+                aria-expanded={isExpanded}
+                className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)]"
+              >
+                {isExpanded ? "Hide" : "Show"} rules ({derivedCount})
+              </button>
+              {derivedCount === 0 && (
+                <span
+                  className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-gold)]"
+                  title="Derived rules are generated automatically once the policy is applied to a period. No rules yet — this policy has not been applied."
+                >
+                  Coming Soon
+                </span>
+              )}
+            </span>
             <button
               type="button"
               onClick={onEdit}
