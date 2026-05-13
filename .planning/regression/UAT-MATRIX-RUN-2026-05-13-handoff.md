@@ -1,7 +1,7 @@
 # Night-throw 2026-05-13 — handoff (handoff-triggered, context >75%)
 
 Plan: `.sisyphus/plans/merry-zooming-blanket.md`
-Branch: `fix/PRJ-11/uat-v7-2026-05-12` · PR #3
+Branch: `fix/PRJ-2/uat-v7-2026-05-12` · PR #3
 
 ## Что сделано этой ночью
 
@@ -85,7 +85,7 @@ git log origin/main..HEAD --oneline  # должно показать +2 комм
 
 ## Триггер handoff
 
-Сработал триггер `Context use >75%`. Я сплю — но я не «застрял», я просто упёрся в технический лимит контекста окна. Все коммиты ночи на ветке `fix/PRJ-11/uat-v7-2026-05-12`, в PR #3 будут видны после push.
+Сработал триггер `Context use >75%`. Я сплю — но я не «застрял», я просто упёрся в технический лимит контекста окна. Все коммиты ночи на ветке `fix/PRJ-2/uat-v7-2026-05-12`, в PR #3 будут видны после push.
 
 ## Hard-stop НЕ сработал
 

@@ -1,6 +1,6 @@
 # UAT v7.4 — Open A-bugs
 
-Branch: `fix/PRJ-11/uat-v7-2026-05-12`
+Branch: `fix/PRJ-2/uat-v7-2026-05-12`
 Extracted: 2026-05-13 via Phase D.1 grep of session-digest-comprehensive-uat-regression-suite.md
 Cross-checked: git log origin/main..HEAD to exclude already-committed IDs
 

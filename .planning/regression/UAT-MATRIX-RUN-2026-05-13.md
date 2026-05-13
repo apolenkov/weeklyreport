@@ -1,6 +1,6 @@
 # UAT MATRIX run — night-throw 2026-05-13
 
-Branch: `fix/PRJ-11/uat-v7-2026-05-12` · Target: PR #3 → `main`
+Branch: `fix/PRJ-2/uat-v7-2026-05-12` · Target: PR #3 → `main`
 Plan: `.sisyphus/plans/merry-zooming-blanket.md`
 
 ## Phase A — Warmup baseline (2026-05-13, начало ночи)
@@ -140,7 +140,7 @@ Regression vs Phase A baseline: ни один счётчик не уменьши
 ## Phase G — Push + final state
 
 ```
-git push origin fix/PRJ-11/uat-v7-2026-05-12
+git push origin fix/PRJ-2/uat-v7-2026-05-12
 ```
 
 Коммитов ahead of main: **39**
