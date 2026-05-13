@@ -279,13 +279,18 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
             {AUTH_STUB ? "Enter Application" : "Sign in with SSO"}
           </a>
 
-          <p className="mt-6 text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
-            {AUTH_STUB
-              ? lastRole
-                ? `Resuming as ${ROLE_LABEL[lastRole.role]} · pick a different role below`
-                : "Dev mode · default role: admin · switch role from in-app menu"
-              : "Keycloak · SAML 2.0 · Corporate SSO"}
-          </p>
+          <div
+            className="mt-6 flex min-h-8 items-start justify-center text-xs leading-4 tracking-[0.02em] text-[var(--color-muted-foreground)]"
+            data-testid="last-role-status"
+          >
+            <p>
+              {AUTH_STUB
+                ? lastRole
+                  ? `Resuming as ${ROLE_LABEL[lastRole.role]} · pick a different role below`
+                  : "Dev mode · default role: admin · switch role from in-app menu"
+                : "Keycloak · SAML 2.0 · Corporate SSO"}
+            </p>
+          </div>
 
           {/* UFB-071: last-session hint with «Change role» picker. Only
               rendered in AUTH_STUB mode AND when a hint is stored.
