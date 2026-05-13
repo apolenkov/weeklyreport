@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-05-12T21:35:39.036Z",
+  "generatedAt": "2026-05-13T06:20:52.728Z",
   "summary": {
     "total": 88,
-    "covered": 17,
-    "uncovered": 71,
-    "coveragePercent": 19
+    "covered": 30,
+    "uncovered": 58,
+    "coveragePercent": 34
   },
   "elements": [
     {
@@ -29,13 +29,13 @@
       "testId": "last-role-change",
       "file": "apps/web/src/app/login-page.client.tsx",
       "line": 322,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "last-role-switcher",
       "file": "apps/web/src/app/login-page.client.tsx",
       "line": 330,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "action-log-tab",
@@ -83,7 +83,7 @@
       "testId": "crud-sheet",
       "file": "apps/web/src/components/admin/groups-tab.tsx",
       "line": 272,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "jobs-tab",
@@ -341,13 +341,13 @@
       "testId": "users-table",
       "file": "apps/web/src/components/admin/users-tab.tsx",
       "line": 203,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "crud-sheet",
       "file": "apps/web/src/components/admin/users-tab.tsx",
       "line": 314,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "report-tab-body",
@@ -401,49 +401,49 @@
       "testId": "product-kpi-card",
       "file": "apps/web/src/components/dashboard/product-kpi-card.tsx",
       "line": 48,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "product-kpi-card",
       "file": "apps/web/src/components/dashboard/product-kpi-card.tsx",
       "line": 65,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "product-kpi-card",
       "file": "apps/web/src/components/dashboard/product-kpi-card.tsx",
       "line": 90,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "dev-role-switcher-trigger",
       "file": "apps/web/src/components/dev/role-switcher.tsx",
       "line": 110,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "dev-role-switcher-reseed-min",
       "file": "apps/web/src/components/dev/role-switcher.tsx",
       "line": 159,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "dev-role-switcher-reseed-full",
       "file": "apps/web/src/components/dev/role-switcher.tsx",
       "line": 165,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "dev-role-switcher-wipe-manual-uat",
       "file": "apps/web/src/components/dev/role-switcher.tsx",
       "line": 171,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "dev-role-switcher-logout",
       "file": "apps/web/src/components/dev/role-switcher.tsx",
       "line": 178,
-      "covered": false
+      "covered": true
     },
     {
       "testId": "head-present-wrapper",

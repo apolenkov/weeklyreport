@@ -8,36 +8,37 @@
  * Output: tests/e2e/*.spec.ts (auto-generated, do not edit manually)
  */
 
-import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
-const ROOT = join(__filename, '../../../');
-const SCENARIO_DIR = join(ROOT, 'UAT-SCENARIO');
-const E2E_DIR = join(ROOT, 'tests/e2e');
+const ROOT = join(__filename, "../../../");
+const SCENARIO_DIR = join(ROOT, "UAT-SCENARIO");
+const E2E_DIR = join(ROOT, "tests/e2e");
 
 mkdirSync(E2E_DIR, { recursive: true });
 
 // ---- Parse scenario items from markdown ----
 
 type ScenarioItem = {
-  id: string;        // e.g. "LF.01"
-  title: string;     // e.g. "Autosave indicator"
-  testId?: string;   // data-testid value if present
-  status: string;    // [ ] | [P] | [M] | [S]
+  id: string; // e.g. "LF.01"
+  title: string; // e.g. "Autosave indicator"
+  testId?: string; // data-testid value if present
+  status: string; // [ ] | [P] | [M] | [S]
   steps: string[];
   expected: string;
 };
 
 function parseScenario(content: string): ScenarioItem[] {
   const items: ScenarioItem[] = [];
-  // Match level-3 headings: ### LF.01 — title
-  const itemPattern = /^### ([A-Z]{1,3}\.\d+) — (.+)$/gm;
+  // Match level-3 headings: ### LF.01 / AUTH-01 / ADM-USERS-01 — title
   const sections = content.split(/^### /m).slice(1);
 
   for (const section of sections) {
-    const headerMatch = section.match(/^([A-Z]{1,3}\.\d+) — (.+)/);
+    const headerMatch = section.match(
+      /^([A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]+)*[-\.]\d+) — (.+)/,
+    );
     if (!headerMatch) continue;
 
     const id = headerMatch[1];
@@ -47,19 +48,19 @@ function parseScenario(content: string): ScenarioItem[] {
     const testId = testIdMatch?.[1];
 
     const statusMatch = section.match(/Status: `\[([ PMSp])\]`/);
-    const status = statusMatch ? statusMatch[1] : ' ';
+    const status = statusMatch ? statusMatch[1] : " ";
 
     const stepsMatch = section.match(/Steps:\n([\s\S]*?)(?=\nExpected:|$)/);
-    const stepsBlock = stepsMatch?.[1] ?? '';
+    const stepsBlock = stepsMatch?.[1] ?? "";
     const steps = stepsBlock
-      .split('\n')
+      .split("\n")
       .filter((l) => /^\d+\./.test(l.trim()))
-      .map((l) => l.trim().replace(/^\d+\.\s*/, ''));
+      .map((l) => l.trim().replace(/^\d+\.\s*/, ""));
 
     const expectedMatch = section.match(/Expected: (.+?)(?:\n|$)/);
-    const expected = expectedMatch?.[1] ?? '';
+    const expected = expectedMatch?.[1] ?? "";
 
-    if (status !== 'S') {
+    if (status !== "S") {
       items.push({ id, title, testId, status, steps, expected });
     }
   }
@@ -80,18 +81,18 @@ import { test, expect } from '@playwright/test';
 
   const tests = items
     .map((item) => {
-      const skip = item.status === 'M' ? '.skip' : '';
+      const skip = item.status === "M" ? ".skip" : "";
       const preNote =
-        item.status === 'P'
+        item.status === "P"
           ? `  // Already covered by unit/component tests.\n`
-          : '';
+          : "";
       const stepsComment =
         item.steps.length > 0
-          ? `  // Steps:\n${item.steps.map((s) => `  //   ${s}`).join('\n')}\n`
-          : '';
+          ? `  // Steps:\n${item.steps.map((s) => `  //   ${s}`).join("\n")}\n`
+          : "";
       const expectedComment = item.expected
         ? `  // Expected: ${item.expected}\n`
-        : '';
+        : "";
       const testIdSelector = item.testId
         ? `  const el = page.getByTestId('${item.testId}');\n  await expect(el).toBeVisible();\n`
         : `  // TODO: add assertions for ${item.id}\n`;
@@ -99,22 +100,24 @@ import { test, expect } from '@playwright/test';
       return `test${skip}('${item.id} — ${item.title}', async ({ page }) => {
 ${preNote}${stepsComment}${expectedComment}${testIdSelector}});`;
     })
-    .join('\n\n');
+    .join("\n\n");
 
-  return header + tests + '\n';
+  return header + tests + "\n";
 }
 
 // ---- Main ----
 
 function main() {
-  const files = readdirSync(SCENARIO_DIR).filter((f) => f.endsWith('.md') && f !== 'README.md');
+  const files = readdirSync(SCENARIO_DIR).filter(
+    (f) => f.endsWith(".md") && f !== "README.md",
+  );
 
   for (const file of files) {
-    const content = readFileSync(join(SCENARIO_DIR, file), 'utf-8');
+    const content = readFileSync(join(SCENARIO_DIR, file), "utf-8");
     const items = parseScenario(content);
     if (items.length === 0) continue;
 
-    const screenName = file.replace('.md', '');
+    const screenName = file.replace(".md", "");
     const specContent = generateSpec(file, items);
     const outPath = join(E2E_DIR, `${screenName}.spec.ts`);
     writeFileSync(outPath, specContent);
