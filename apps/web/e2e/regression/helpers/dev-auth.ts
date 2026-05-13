@@ -2,8 +2,12 @@ import type { Page } from '@playwright/test';
 
 type Role = 'lead' | 'head' | 'admin' | 'viewer';
 
-const API_DEV_LOGIN_URL = 'http://localhost:3002/auth/dev-login';
-const WEB_URL = 'http://localhost:3000';
+// Use relative URL so the request goes through the Playwright baseURL
+// (http://127.0.0.1:3100 in E2E mode) instead of hardcoded localhost:3000.
+// Cookies set via localhost domain are not sent to 127.0.0.1 and the tRPC
+// context DEV_SESSION fallback would return role=head for any unauthenticated
+// request, causing false "role mismatch" failures.
+const DEV_LOGIN_PATH = '/auth/dev-login';
 const COOKIE_NAME = 'customreport_session';
 
 type DevAuthIdentity = {
@@ -100,7 +104,7 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
 
     const response = await page
       .context()
-      .request.get(`${WEB_URL}/auth/dev-login?${params.toString()}`, {
+      .request.get(`${DEV_LOGIN_PATH}?${params.toString()}`, {
         maxRedirects: 0,
       });
 
@@ -111,13 +115,13 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
       );
     }
 
-    const cookies = await page.context().cookies(WEB_URL);
+    const cookies = await page.context().cookies();
     const hasSession = cookies.some(
       (cookie) => cookie.name === COOKIE_NAME && cookie.value.length > 20,
     );
     if (!hasSession) {
       throw new Error(
-        `dev-login did not establish ${COOKIE_NAME} via ${API_DEV_LOGIN_URL}`,
+        `dev-login did not establish ${COOKIE_NAME} via ${DEV_LOGIN_PATH}`,
       );
     }
 
@@ -137,7 +141,7 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
     if (!expectedRole || actualRole === expectedRole) {
       if (identity.redirect) {
         await page
-          .goto(`${WEB_URL}${identity.redirect}`, {
+          .goto(identity.redirect, {
             waitUntil: 'domcontentloaded',
           })
           .catch((error: unknown) => {
@@ -145,7 +149,7 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
           });
       } else {
         await page
-          .goto(`${WEB_URL}/`, { waitUntil: 'domcontentloaded' })
+          .goto('/', { waitUntil: 'domcontentloaded' })
           .catch(() => null);
       }
       return;
@@ -166,7 +170,7 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
   if (assumeRoleFromAuthMe) {
     if (identity.redirect) {
       await page
-        .goto(`${WEB_URL}${identity.redirect}`, {
+        .goto(identity.redirect, {
           waitUntil: 'domcontentloaded',
         })
         .catch((error: unknown) => {
@@ -174,7 +178,7 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
         });
     } else {
       await page
-        .goto(`${WEB_URL}/`, { waitUntil: 'domcontentloaded' })
+        .goto('/', { waitUntil: 'domcontentloaded' })
         .catch(() => null);
     }
     return;
