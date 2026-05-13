@@ -23,7 +23,7 @@ export default async function LeadReportByIdPage({ params }: Props) {
   return (
     <main
       id="main-content"
-      className="min-h-screen bg-[var(--color-background)]"
+      className="min-h-screen bg-[linear-gradient(180deg,rgba(0,98,65,0.04)_0%,var(--color-background)_160px)]"
     >
       <div
         className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8"
