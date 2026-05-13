@@ -113,6 +113,12 @@ export function LeadHistorySidebar({ entries }: LeadHistorySidebarProps) {
             </p>
           )}
         </SidebarCard>
+        <SidebarCard title="Draft History" comingSoon>
+          <p className="text-[13px] text-[var(--color-muted-foreground)]">
+            Draft version history — coming soon. Each save will create a
+            timestamped snapshot so you can review and restore earlier drafts.
+          </p>
+        </SidebarCard>
       </div>
     </aside>
   );
@@ -120,15 +126,24 @@ export function LeadHistorySidebar({ entries }: LeadHistorySidebarProps) {
 
 function SidebarCard({
   title,
+  comingSoon,
   children,
 }: {
   readonly title: string;
+  readonly comingSoon?: boolean;
   readonly children: React.ReactNode;
 }) {
   return (
     <div className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_4px_10px_-8px_rgba(0,0,0,0.18)]">
-      <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-        {title}
+      <div className="mb-3 flex items-center gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+          {title}
+        </span>
+        {comingSoon && (
+          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+            Coming Soon
+          </span>
+        )}
       </div>
       {children}
     </div>

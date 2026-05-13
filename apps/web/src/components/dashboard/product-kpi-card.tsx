@@ -66,7 +66,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
           Product KPIs
         </h2>
         <p className="text-sm text-[var(--color-muted-foreground)]">
-          Не удалось загрузить телеметрию.
+          Failed to load telemetry.
         </p>
       </section>
     );
@@ -103,6 +103,10 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
           className="mt-4 h-16 w-full"
           aria-label="On-time ratio sparkline over the last 4 periods"
         >
+          {/* aria-hidden + tabIndex={-1} suppresses the SVG tabindex=0/focusable="true"
+              that Recharts injects by default — the chart has no interactive value
+              for keyboard users so we remove it from the focus order entirely (D-35). */}
+          <div aria-hidden="true" tabIndex={-1} className="h-full w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={sparklineRows}
@@ -123,6 +127,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
               />
             </LineChart>
           </ResponsiveContainer>
+          </div>
         </div>
       )}
     </section>

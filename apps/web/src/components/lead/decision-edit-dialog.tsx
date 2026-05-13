@@ -217,8 +217,9 @@ export function DecisionEditDialog({
             )}
           </div>
 
-          {/* Owner + Deadline row */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          {/* Owner + Deadline row — items-end aligns the input bottoms even
+              though Owner has an extra helper <p> that makes its column taller (D-14). */}
+          <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
             <div>
               <label
                 className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
