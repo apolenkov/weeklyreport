@@ -66,7 +66,7 @@ test.describe("Admin CRUD (integration)", () => {
     const newShortName = `Tst${Date.now() % 10000}`;
     await shortNameField.fill(newShortName);
 
-    const saveBtn = adminPage.getByRole("button", { name: /^Save Identity$/i });
+    const saveBtn = adminPage.getByRole("button", { name: /save organization identity/i });
     await saveBtn.last().click();
 
     await adminPage.waitForResponse(

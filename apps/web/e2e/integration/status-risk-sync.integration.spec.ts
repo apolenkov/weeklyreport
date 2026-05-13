@@ -112,7 +112,6 @@ test.describe("Status<->Risk sync (integration)", () => {
     await page.locator("#risk-text").fill("Integration risk text");
     await page.locator("#risk-impact").fill("Integration impact text");
     await page.locator("#risk-mitigation").fill("Integration mitigation text");
-    await page.locator("#risk-stage").selectOption({ index: 1 });
     await page.getByRole("button", { name: /^Save Risk$/ }).click();
 
     await expect
