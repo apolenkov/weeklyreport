@@ -45,6 +45,8 @@ A36 (seed fix) ──► A37 (diagnostic) ──► A33 (cross-role confusion)
 A28 + A31 + A32 (assumed done) ──► A35 (director testing unblocked)
 ```
 
+| I-1 | Integration Playwright suite (E2E tests in `apps/web/e2e/integration/`) | apps/web/e2e/integration | **No** | `[blocked: human-decision: prisma-ai-safety-gate]` — `global-setup.ts` calls `prisma migrate reset --force`; Prisma detects Claude Code and blocks without `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` env var. Unit tests (582/582 ✓) + TypeScript (0 errors) clean. Morning command: `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="yes" E2E_DATABASE_URL="postgresql://customreport:localdev@localhost:5432/customreport_e2e" node_modules/.bin/playwright test --config=/home/user/work/customreport/apps/web/playwright.integration.config.ts --reporter=line` |
+
 ## Priority order (from advisor D.2 phase)
 
 1. **A24** — root cause of A21/A33, needs Prisma migration → do first
