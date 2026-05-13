@@ -61,7 +61,7 @@ export function assertNonProdDestructive(scriptName: string): void {
   const isLocalHost =
     host === "localhost" ||
     host === "127.0.0.1" ||
-    host === "postgres" || // docker compose service name
+    host === "postgres" || // docker compose service name (dev-only; prod requires NODE_ENV=production)
     host.endsWith(".local");
 
   const isExplicitNonProdName =
