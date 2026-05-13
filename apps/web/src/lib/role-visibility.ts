@@ -14,19 +14,13 @@ import type { Role } from "@customreport/shared";
  */
 export type RoutePrefix = "/admin" | "/head" | "/lead" | "/reports";
 
-// UFB-057 / Phase 57: 'director' gets the same read-access shape as viewer
-// for `/reports` (published archive) and joins head+admin for `/head` —
-// directors land on /head/dashboard by default. The /head/report
-// submission surface is gated separately by a nested layout (see
-// apps/web/src/app/(app)/head/report/layout.tsx) so director cannot author
-// a weekly report. `/lead` and `/admin` remain closed to director.
 export const ROUTE_ROLE_MAP: Readonly<
   Record<RoutePrefix, ReadonlyArray<Role>>
 > = {
   "/admin": ["admin", "head"],
-  "/head": ["head", "admin", "director"],
+  "/head": ["head", "admin"],
   "/lead": ["lead", "head", "admin"],
-  "/reports": ["lead", "head", "admin", "viewer", "director"],
+  "/reports": ["lead", "head", "admin", "viewer"],
 };
 
 const ROUTE_PREFIXES = Object.keys(ROUTE_ROLE_MAP) as RoutePrefix[];

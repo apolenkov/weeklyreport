@@ -51,8 +51,8 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
         email: "view@x.io",
         name: "Viewer Person",
         role: "viewer",
-        reportingGroupId: UUID_GROUP,
-        reportingGroupName: "Core Development",
+        reportingGroupId: null,
+        reportingGroupName: null,
       },
     ],
     projects: overrides.projects ?? [
@@ -139,6 +139,8 @@ describe("mapAdminSnapshot", () => {
     expect(viewer?.role).toBe("viewer");
     expect(lead?.groupId).toBe(UUID_GROUP);
     expect(lead?.department).toBe("Core Development");
+    expect(viewer?.groupId).toBe("");
+    expect(viewer?.department).toBe("No owning group");
   });
 
   it("translates project archived flag to mock status", () => {

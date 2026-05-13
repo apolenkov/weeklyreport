@@ -78,6 +78,8 @@ export function WeeklyReportPage({
   // `weeklyReport.get.departmentName` was removed when the column dropped.
   const sessionState = useContext(SessionContext);
   const orgFullName = sessionState?.organization?.fullName ?? null;
+  const currentRole = sessionState?.user?.role ?? null;
+  const canMutatePeriod = currentRole === "head" || currentRole === "admin";
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
@@ -283,7 +285,7 @@ export function WeeklyReportPage({
               Moves the report into the archive (sets archived=true) so it
               appears in the Archive tab. The button is hidden after archiving
               because this page only navigates to current/active periods. */}
-          {view.period.periodStatus === "published" && (
+          {canMutatePeriod && view.period.periodStatus === "published" && (
             <button
               type="button"
               className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
@@ -296,20 +298,22 @@ export function WeeklyReportPage({
               {archiveMut.isPending ? "Archiving…" : "Archive"}
             </button>
           )}
-          <PublishLockButton
-            pendingCount={pendingCount}
-            totalLeads={total}
-            periodStatus={view.period.periodStatus}
-            onPublish={() =>
-              publishMut.mutate({ reportId: view.period.reportId })
-            }
-            onReopen={() =>
-              reopenMut.mutate({ reportId: view.period.reportId })
-            }
-            isPending={publishMut.isPending || reopenMut.isPending}
-            canPublish={canPublishReport}
-            publishDisabledReason="No submitted report content yet."
-          />
+          {canMutatePeriod && (
+            <PublishLockButton
+              pendingCount={pendingCount}
+              totalLeads={total}
+              periodStatus={view.period.periodStatus}
+              onPublish={() =>
+                publishMut.mutate({ reportId: view.period.reportId })
+              }
+              onReopen={() =>
+                reopenMut.mutate({ reportId: view.period.reportId })
+              }
+              isPending={publishMut.isPending || reopenMut.isPending}
+              canPublish={canPublishReport}
+              publishDisabledReason="No submitted report content yet."
+            />
+          )}
         </div>
       </div>
 

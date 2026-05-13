@@ -40,17 +40,13 @@ const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === "true";
  *      page must not treat that fallback as an explicit login.
  *   4. If no session AND not stub → keep the SSO sign-in card.
  */
-type Role = "lead" | "head" | "admin" | "viewer" | "director";
+type Role = "lead" | "head" | "admin" | "viewer";
 
 const DEFAULT_FOR_ROLE: Record<Role, string> = {
   lead: "/lead/report",
   head: "/head/dashboard",
   admin: "/admin",
   viewer: "/reports?tab=published",
-  // UFB-057 / Phase 57: director lands on /head/dashboard (same as head)
-  // so the product-KPI cards are the first thing they see. The nested
-  // /head/dashboard layout permits director read-only.
-  director: "/head/dashboard",
 };
 
 /**
@@ -65,7 +61,6 @@ const DEV_EMAIL_FOR_ROLE: Record<Role, string> = {
   head: "head@customreport.local",
   admin: "admin@customreport.local",
   viewer: "viewer@customreport.local",
-  director: "director@customreport.local",
 };
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -73,7 +68,6 @@ const ROLE_LABEL: Record<Role, string> = {
   head: "Head",
   admin: "Admin",
   viewer: "Viewer",
-  director: "Director",
 };
 
 /**
@@ -349,19 +343,22 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
                       className="mt-2 grid grid-cols-2 gap-1.5"
                       data-testid="last-role-switcher"
                     >
-                      {(
-                        ["lead", "head", "admin", "viewer", "director"] as const
-                      ).map((role) => (
-                        <li key={role}>
-                          <a
-                            href={devLoginHref(role, DEV_EMAIL_FOR_ROLE[role])}
-                            className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
-                            data-testid={`last-role-option-${role}`}
-                          >
-                            {ROLE_LABEL[role]}
-                          </a>
-                        </li>
-                      ))}
+                      {(["lead", "head", "admin", "viewer"] as const).map(
+                        (role) => (
+                          <li key={role}>
+                            <a
+                              href={devLoginHref(
+                                role,
+                                DEV_EMAIL_FOR_ROLE[role],
+                              )}
+                              className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
+                              data-testid={`last-role-option-${role}`}
+                            >
+                              {ROLE_LABEL[role]}
+                            </a>
+                          </li>
+                        ),
+                      )}
                     </ul>
                   ) : null}
                 </div>

@@ -232,6 +232,7 @@ function groupItemsByProject(
         status: deriveItemStatus({
           workflowStatus: item.workflowStatus,
           type: item.type,
+          completed: item.completed ?? null,
         }),
       };
       bucket[item.type].push(mapped);

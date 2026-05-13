@@ -29,7 +29,7 @@ export type SeedUser = {
   name: string;
   role: "head" | "viewer" | "lead";
   samlId: string;
-  reportingGroupId: string;
+  reportingGroupId: string | null;
 };
 
 export type SeedReportingGroup = {
@@ -70,7 +70,7 @@ export const SEED_USERS: readonly SeedUser[] = [
     name: "Дарья В.",
     role: "viewer",
     samlId: "viewer-1",
-    reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+    reportingGroupId: null,
   },
   // Phase 35-08: lead names switched to RU Cyrillic so the dashboard +
   // forms match the rest of the demo content. Tests that pin against the

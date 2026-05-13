@@ -578,6 +578,11 @@ export function LeadForm({
   // ---- Local UI + draft state ----
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitFieldError, setSubmitFieldError] = useState<{
+    field: "priorities";
+    message: string;
+  } | null>(null);
+  const prioritiesRef = useRef<HTMLDivElement>(null);
 
   // Draft mirror of the raw API section. Saving + submitting use this; child
   // edits merge field-level changes back by id while preserving every required
@@ -956,6 +961,7 @@ export function LeadForm({
             impact: r.impact,
             mitigation: r.mitigation,
             stageName,
+            stageIds: r.stageIds,
           };
         }
         return {
@@ -965,6 +971,7 @@ export function LeadForm({
           impact: r.impact,
           mitigation: r.mitigation,
           stageName,
+          stageIds: r.stageIds,
         };
       });
       return { ...prev, risks: merged };
@@ -972,6 +979,9 @@ export function LeadForm({
   }
 
   function handlePrioritiesChange(next: PriorityEntry[]) {
+    if (next.some((p) => p.text.trim().length > 0)) {
+      setSubmitFieldError(null);
+    }
     setDraftSection((prev) => {
       if (!prev) return prev;
       // The UI now owns the full priority list (variable length, ranks
@@ -1025,10 +1035,10 @@ export function LeadForm({
       case "blocked":
         return { workflowStatus: "blocked", completed: false };
       case "planned":
-        // 'planned' is computed-only — there's no DB enum for it. Next-week
-        // items default to in_progress workflow status; the type='next' bit
-        // alone makes them render as planned in the UI.
-        return { workflowStatus: "in_progress", completed: false };
+        // 'planned' has no DB enum value. Next-week rows use
+        // completed=null as the explicit presentation marker so reopening the
+        // form can distinguish Planned from In Progress.
+        return { workflowStatus: "in_progress", completed: null };
       case "in-progress":
       default:
         return { workflowStatus: "in_progress", completed: false };
@@ -1059,6 +1069,7 @@ export function LeadForm({
               workflowStatus: raw.workflowStatus,
               completed: raw.completed,
               stageName,
+              stageIds: kb.stageIds,
             };
           }
           return {
@@ -1073,6 +1084,7 @@ export function LeadForm({
             carriedOver: false,
             completed: raw.completed,
             stageName,
+            stageIds: kb.stageIds,
           };
         });
         // Keep all items of the OTHER type unchanged; replace this type with
@@ -1088,11 +1100,29 @@ export function LeadForm({
 
   // ---- Action handlers ----
   function handleSubmit() {
+    if (!draftPayload?.priorities.some((p) => p.text.trim().length > 0)) {
+      setSubmitFieldError({
+        field: "priorities",
+        message: "Add at least one priority before submitting.",
+      });
+      prioritiesRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      prioritiesRef.current?.focus();
+      return;
+    }
+    setSubmitFieldError(null);
     setShowSubmitConfirm(true);
   }
 
   function handleConfirmSubmit() {
     if (!draftPayload) return;
+    if (!draftPayload.priorities.some((p) => p.text.trim().length > 0)) {
+      setShowSubmitConfirm(false);
+      handleSubmit();
+      return;
+    }
     // submitSectionSchema requires every projectStatus to have a non-null
     // status. Coerce undefined -> green optimistically; the server will
     // reject if any are still invalid and toast the error.
@@ -1425,23 +1455,37 @@ export function LeadForm({
         </AccordionSection>
 
         {/* Priorities — variable-length list */}
-        <AccordionSection
-          groupSyncKey={groupSyncKey}
-          groupExpanded={groupExpanded}
-          icon={<StarIcon />}
-          title="Priorities"
-          titleColor="var(--color-starbucks-gold)"
-          badge={`${priorities.length}`}
+        <div
+          ref={prioritiesRef}
+          tabIndex={-1}
+          className="scroll-mt-24 outline-none"
         >
-          <PrioritiesSection
-            priorities={priorities}
-            readOnly={isReadOnly}
-            onChange={handlePrioritiesChange}
-            availableStages={availableStages}
-            products={products}
-            defaultProductId={products[0]?.id}
-          />
-        </AccordionSection>
+          <AccordionSection
+            groupSyncKey={groupSyncKey}
+            groupExpanded={groupExpanded}
+            icon={<StarIcon />}
+            title="Priorities"
+            titleColor="var(--color-starbucks-gold)"
+            badge={`${priorities.length}`}
+          >
+            <PrioritiesSection
+              priorities={priorities}
+              readOnly={isReadOnly}
+              onChange={handlePrioritiesChange}
+              availableStages={availableStages}
+              products={products}
+              defaultProductId={products[0]?.id}
+            />
+            {submitFieldError?.field === "priorities" && (
+              <p
+                role="alert"
+                className="mt-3 text-sm font-medium text-[var(--color-destructive)]"
+              >
+                {submitFieldError.message}
+              </p>
+            )}
+          </AccordionSection>
+        </div>
       </form>
 
       {/* Submit Confirmation Dialog */}

@@ -66,10 +66,9 @@ type CountMap = Record<string, number>;
 
 // --- Extra preset IDs (UFB-069) -----------------------------------------
 // Beyond the 8 canonical IDs in seed-constants (head, viewer, 6 leads), we
-// add: 1 admin, 1 director, 1 finance head, 1 finance lead, and the Finance
+// add: 1 admin, 1 finance head, 1 finance lead, and the Finance
 // reporting group so wipe lands with two real groups instead of one.
 const ADMIN_USER_ID = "a0000000-0000-4000-8000-000000000097";
-const DIRECTOR_USER_ID = "a0000000-0000-4000-8000-000000000096";
 const FINANCE_HEAD_USER_ID = "a0000000-0000-4000-8000-000000000095";
 const FINANCE_LEAD_USER_ID = "a0000000-0000-4000-8000-000000000094";
 const FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
@@ -247,7 +246,7 @@ async function main() {
             name: "Дарья В.",
             role: Role.viewer,
             samlId: "viewer-1",
-            reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+            reportingGroupId: null,
           },
           {
             id: ADMIN_USER_ID,
@@ -255,14 +254,6 @@ async function main() {
             name: "Михаил Б.",
             role: Role.admin,
             samlId: "admin-1",
-            reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
-          },
-          {
-            id: DIRECTOR_USER_ID,
-            email: "director@customreport.local",
-            name: "Елена Р.",
-            role: Role.director,
-            samlId: "director-1",
             reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
           },
           {

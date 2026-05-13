@@ -121,45 +121,67 @@ describe("AdminPrismaRepository (integration)", () => {
     // The seed test cleanDatabase wipes GroupProduct too if the helper
     // is up to date; we explicitly cleanup edges for this scenario.
     await prisma.groupProduct.deleteMany({});
+    const leadGroupId = expectDefined(testData.lead.reportingGroupId);
 
     const attached = await repo.attachProductToGroup({
-      groupId: testData.lead.reportingGroupId,
+      groupId: leadGroupId,
       productId: testData.project.id,
     });
-    expect(attached.groupId).toBe(testData.lead.reportingGroupId);
+    expect(attached.groupId).toBe(leadGroupId);
     expect(attached.productId).toBe(testData.project.id);
 
     // Re-attach returns the same logical row (same tuple) — idempotent.
     const reattached = await repo.attachProductToGroup({
-      groupId: testData.lead.reportingGroupId,
+      groupId: leadGroupId,
       productId: testData.project.id,
     });
     expect(reattached.id).toBe(attached.id);
 
     // listProductGroups and listGroupProducts reflect the edge.
     const groupsForProduct = await repo.listProductGroups(testData.project.id);
-    expect(groupsForProduct.map((g) => g.id)).toContain(
-      testData.lead.reportingGroupId,
-    );
+    expect(groupsForProduct.map((g) => g.id)).toContain(leadGroupId);
 
-    const productsForGroup = await repo.listGroupProducts(
-      testData.lead.reportingGroupId,
-    );
+    const productsForGroup = await repo.listGroupProducts(leadGroupId);
     expect(productsForGroup.map((p) => p.id)).toContain(testData.project.id);
 
     // Detach is a no-op safe operation.
     await repo.detachProductFromGroup({
-      groupId: testData.lead.reportingGroupId,
+      groupId: leadGroupId,
       productId: testData.project.id,
     });
     await repo.detachProductFromGroup({
-      groupId: testData.lead.reportingGroupId,
+      groupId: leadGroupId,
       productId: testData.project.id,
     });
 
     const after = await repo.listProductGroups(testData.project.id);
-    expect(after.map((g) => g.id)).not.toContain(
-      testData.lead.reportingGroupId,
-    );
+    expect(after.map((g) => g.id)).not.toContain(leadGroupId);
+  });
+
+  it("attachProductToGroup rejects moving a product from another group (UAT v7)", async () => {
+    await prisma.groupProduct.deleteMany({});
+    const leadGroupId = expectDefined(testData.lead.reportingGroupId);
+    const otherGroup = await prisma.reportingGroup.create({
+      data: {
+        id: "a0000000-0000-4000-a000-000000000301",
+        name: "Other Group",
+        description: null,
+      },
+    });
+
+    await repo.attachProductToGroup({
+      groupId: leadGroupId,
+      productId: testData.project.id,
+    });
+
+    await expect(
+      repo.attachProductToGroup({
+        groupId: otherGroup.id,
+        productId: testData.project.id,
+      }),
+    ).rejects.toThrow(/already attached to Test Group/);
+
+    const groups = await repo.listProductGroups(testData.project.id);
+    expect(groups.map((g) => g.id)).toEqual([testData.lead.reportingGroupId]);
   });
 });

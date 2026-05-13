@@ -2,6 +2,7 @@ import {
   activityLiveResponseSchema,
   type ActivityLiveResponse,
   type ActivityLiveRow,
+  type UserSession,
 } from "@customreport/shared";
 
 export interface ActivityRepository {
@@ -10,7 +11,7 @@ export interface ActivityRepository {
    * section in that period (or one row per `lead` user if their section
    * does not exist yet — UI shows "ещё не начал" in that case).
    */
-  getLiveActivity(): Promise<ActivityLiveResponse>;
+  getLiveActivity(session: UserSession): Promise<ActivityLiveResponse>;
 }
 
 /**
@@ -24,8 +25,8 @@ export interface ActivityRepository {
 export class ActivityService {
   constructor(private readonly repository: ActivityRepository) {}
 
-  async getLiveActivity(): Promise<ActivityLiveResponse> {
-    const raw = await this.repository.getLiveActivity();
+  async getLiveActivity(session: UserSession): Promise<ActivityLiveResponse> {
+    const raw = await this.repository.getLiveActivity(session);
     return activityLiveResponseSchema.parse(raw);
   }
 }

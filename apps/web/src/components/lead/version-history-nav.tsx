@@ -151,6 +151,13 @@ export function VersionHistoryNav({
   }
 
   function handleRestore(version: number) {
+    if (
+      !window.confirm(
+        `Restore version v${version}? This will replace the current draft with the selected snapshot.`,
+      )
+    ) {
+      return;
+    }
     onRestore?.(version);
     setShowModal(false);
     setCurrentIndex(0);
@@ -207,8 +214,12 @@ export function VersionHistoryNav({
             type="button"
             className="flex min-h-[var(--touch-target-min)] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
             onClick={onSaveVersion}
-            disabled={!canSaveVersion}
-            title="Save Version — checkpoint the current draft"
+            disabled={!canSaveVersion || !isLatest}
+            title={
+              isLatest
+                ? "Save Version — checkpoint the current draft"
+                : "Return to the latest version before saving a checkpoint"
+            }
             aria-label="Save Version"
           >
             <SaveIcon />

@@ -1094,14 +1094,12 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
               createdAt: existing.createdAt,
             };
           }
-          // Reassign: move product from old group to new group.
-          edges.set(productId, { ...existing, groupId });
-          return {
-            id: existing.id,
-            groupId,
-            productId,
-            createdAt: existing.createdAt,
-          };
+          const currentGroup = snapshot.groups.find(
+            (g) => g.id === existing.groupId,
+          );
+          throw new Error(
+            `Product is already attached to ${currentGroup?.name ?? "another group"}. Detach it there before attaching it to another group.`,
+          );
         }
         const row = {
           id: crypto.randomUUID(),
@@ -1185,28 +1183,25 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
     expect(second.id).toBe(first.id);
   });
 
-  it("attachProductToGroup reassigns product to a new group (B1 invariant)", async () => {
+  it("attachProductToGroup rejects attaching a product owned by another group (B1 invariant)", async () => {
     const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
     await service.attachProductToGroup({
       groupId: GROUP_A,
       productId: PRODUCT_X,
     });
 
-    // Reassign to GROUP_B
-    const reassigned = await service.attachProductToGroup({
-      groupId: GROUP_B,
-      productId: PRODUCT_X,
-    });
-    expect(reassigned.groupId).toBe(GROUP_B);
+    await expect(
+      service.attachProductToGroup({
+        groupId: GROUP_B,
+        productId: PRODUCT_X,
+      }),
+    ).rejects.toThrow(/already attached to Platform/);
 
-    // Product is now only in GROUP_B
     const groups = await service.listProductGroups(PRODUCT_X);
-    expect(groups.map((g) => g.id)).toEqual([GROUP_B]);
-    expect(groups.map((g) => g.id)).not.toContain(GROUP_A);
+    expect(groups.map((g) => g.id)).toEqual([GROUP_A]);
 
-    // GROUP_A no longer lists the product
     const groupAProducts = await service.listGroupProducts(GROUP_A);
-    expect(groupAProducts.map((p) => p.id)).not.toContain(PRODUCT_X);
+    expect(groupAProducts.map((p) => p.id)).toContain(PRODUCT_X);
   });
 
   it("detachProductFromGroup returns {success: true} and removes the edge", async () => {
@@ -1236,25 +1231,16 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
 
   it("listGroupProducts and listProductGroups reflect attached edge (B1: one group per product)", async () => {
     const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
-    // Attach to GROUP_A first, then GROUP_B — second call is a reassign.
     await service.attachProductToGroup({
       groupId: GROUP_A,
       productId: PRODUCT_X,
     });
-    await service.attachProductToGroup({
-      groupId: GROUP_B,
-      productId: PRODUCT_X,
-    });
 
-    // Product now belongs to GROUP_B only (reassigned away from GROUP_A).
     const groupsForProduct = await service.listProductGroups(PRODUCT_X);
-    expect(groupsForProduct.map((g) => g.id)).toEqual([GROUP_B]);
+    expect(groupsForProduct.map((g) => g.id)).toEqual([GROUP_A]);
 
-    // GROUP_B lists the product; GROUP_A does not.
-    const productsForGroupB = await service.listGroupProducts(GROUP_B);
-    expect(productsForGroupB.map((p) => p.id)).toContain(PRODUCT_X);
     const productsForGroupA = await service.listGroupProducts(GROUP_A);
-    expect(productsForGroupA.map((p) => p.id)).not.toContain(PRODUCT_X);
+    expect(productsForGroupA.map((p) => p.id)).toContain(PRODUCT_X);
   });
 
   it("returns empty arrays when repository does not implement the surface", async () => {

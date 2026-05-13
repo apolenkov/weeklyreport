@@ -27,14 +27,11 @@ import { writeLastRole, type LastRole } from "./last-role";
 
 // Phase 27 widened the session-level role enum (sessionRoleSchema) to include
 // 'admin' for SAML claim mapping. adminProcedure === headProcedure for v6.0.
-// UFB-057 / Phase 57: 'director' joins the session-level role enum to mirror
-// shared `sessionRoleSchema`. Director is read-only at leadership level —
-// the SessionUser shape carries the role token; route gates do the rest.
 export type SessionUser = {
   id: string;
   name: string;
   email: string;
-  role: "lead" | "head" | "viewer" | "admin" | "director";
+  role: "lead" | "head" | "viewer" | "admin";
 };
 
 /**

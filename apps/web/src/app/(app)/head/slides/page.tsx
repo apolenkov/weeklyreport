@@ -8,7 +8,7 @@
  * The nav link is live so users discover the upcoming feature without
  * a dead 404.
  */
-export default function HeadSlidesPage() {
+export default async function HeadSlidesPage() {
   return (
     <main
       id="main-content"

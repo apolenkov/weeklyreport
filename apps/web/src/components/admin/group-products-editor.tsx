@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
@@ -13,10 +18,12 @@ import type { MockProduct } from "./mock-data";
  * tab edit dialog.
  *
  * Reads `admin.listGroupProducts({ groupId })` for the current group
- * and renders a checkbox toggle per non-archived product. Toggling an
- * attached product runs `admin.detachProductFromGroup`; toggling an
- * unattached product runs `admin.attachProductToGroup`. Both mutations
- * are idempotent on the server (Phase 56-B) so double-clicks are safe.
+ * and renders a checkbox toggle per non-archived product. Products already
+ * owned by another group are shown as locked, because the B1 invariant is
+ * one owning group per product. Toggling an attached product runs
+ * `admin.detachProductFromGroup`; toggling a free product runs
+ * `admin.attachProductToGroup`. Both mutations are idempotent on the server
+ * (Phase 56-B) so double-clicks are safe.
  *
  * The component is intentionally self-contained — it owns its own
  * query/cache key and does not coordinate with the parent `GroupsTab`
@@ -90,9 +97,32 @@ export function GroupProductsEditor({
     [products],
   );
 
+  const productGroupsQueries = useQueries({
+    queries: activeProducts.map((product) =>
+      trpc.admin.listProductGroups.queryOptions({ productId: product.id }),
+    ),
+  });
+
+  const owningGroupByProductId = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+
+    activeProducts.forEach((product, index) => {
+      const owner = productGroupsQueries[index]?.data?.[0];
+      if (owner) map.set(product.id, { id: owner.id, name: owner.name });
+    });
+
+    return map;
+  }, [activeProducts, productGroupsQueries]);
+
   const isPending = attachMut.isPending || detachMut.isPending;
 
   function toggle(productId: string, nextChecked: boolean): void {
+    const owner = owningGroupByProductId.get(productId);
+    if (nextChecked && owner && owner.id !== groupId) {
+      toast.error(`Already attached to ${owner.name}`);
+      return;
+    }
+
     if (nextChecked) {
       attachMut.mutate({ groupId, productId });
     } else {
@@ -109,9 +139,9 @@ export function GroupProductsEditor({
         Products attached
       </legend>
       <p className="mb-2 text-xs text-[var(--color-muted-foreground)]">
-        Explicit Group ↔ Product mapping (UFB-054). Toggle to attach or detach.
-        Independent of product lead — a product belongs to exactly one group (B1
-        invariant: @@unique([productId])).
+        Explicit Group ↔ Product mapping (UFB-054). Toggle to attach or detach
+        free products. Products already attached to another group are locked
+        here.
       </p>
       {attachedQuery.isLoading ? (
         <div
@@ -129,20 +159,64 @@ export function GroupProductsEditor({
           className="max-h-40 space-y-1 overflow-y-auto pr-1"
           data-testid="group-products-list"
         >
-          {activeProducts.map((product) => {
+          {activeProducts.map((product, index) => {
             const checked = attachedIds.has(product.id);
+            const owner = owningGroupByProductId.get(product.id);
+            const ownershipLoading = productGroupsQueries[index]?.isLoading;
+            const lockedByOtherGroup = Boolean(
+              owner && owner.id !== groupId && !checked,
+            );
+            const hintId = `group-product-hint-${product.id}`;
+            const disabled =
+              isPending || lockedByOtherGroup || Boolean(ownershipLoading);
+
             return (
               <li key={product.id}>
-                <label className="flex cursor-pointer items-center gap-2 rounded-sm px-1 py-0.5 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-muted)]">
+                <label
+                  className={[
+                    "flex items-start gap-2 rounded-sm px-1 py-0.5 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-muted)]",
+                    disabled
+                      ? "cursor-not-allowed opacity-70"
+                      : "cursor-pointer",
+                  ].join(" ")}
+                  title={
+                    lockedByOtherGroup && owner
+                      ? `Already attached to ${owner.name}`
+                      : undefined
+                  }
+                >
                   <input
                     type="checkbox"
                     checked={checked}
-                    disabled={isPending}
+                    disabled={disabled}
                     onChange={(e) => toggle(product.id, e.target.checked)}
                     aria-label={`Toggle ${product.name}`}
+                    aria-describedby={
+                      lockedByOtherGroup || ownershipLoading
+                        ? hintId
+                        : undefined
+                    }
                     className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-starbucks-accent)] focus:ring-2 focus:ring-[var(--color-ring)]"
                   />
-                  <span>{product.name}</span>
+                  <span className="min-w-0">
+                    <span>{product.name}</span>
+                    {lockedByOtherGroup && owner && (
+                      <span
+                        id={hintId}
+                        className="block text-xs text-[var(--color-muted-foreground)]"
+                      >
+                        Already attached to {owner.name}
+                      </span>
+                    )}
+                    {ownershipLoading && (
+                      <span
+                        id={hintId}
+                        className="block text-xs text-[var(--color-muted-foreground)]"
+                      >
+                        Checking group assignment…
+                      </span>
+                    )}
+                  </span>
                 </label>
               </li>
             );

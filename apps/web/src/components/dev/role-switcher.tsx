@@ -15,7 +15,7 @@ import {
 
 import { useTRPC } from "../../lib/trpc-context";
 
-type Role = "head" | "lead" | "admin" | "viewer" | "director";
+type Role = "head" | "lead" | "admin" | "viewer";
 type DataResetVariant = "minimum" | "advanced" | "manual-uat";
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -23,11 +23,9 @@ const ROLE_LABEL: Record<Role, string> = {
   admin: "Admin",
   lead: "Lead",
   viewer: "Viewer",
-  // UFB-057 / Phase 57: dev-mode role switcher picker entry.
-  director: "Director",
 };
 
-const ROLE_ORDER: Role[] = ["head", "admin", "director", "lead", "viewer"];
+const ROLE_ORDER: Role[] = ["head", "admin", "lead", "viewer"];
 
 export function DevRoleSwitcher() {
   const [pending, setPending] = useState(false);
@@ -81,7 +79,7 @@ export function DevRoleSwitcher() {
       acc[r].push({ ...u, role: r });
       return acc;
     },
-    { head: [], admin: [], lead: [], viewer: [], director: [] },
+    { head: [], admin: [], lead: [], viewer: [] },
   );
 
   const logout = async () => {
@@ -99,7 +97,7 @@ export function DevRoleSwitcher() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-4 left-4 z-50">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

@@ -20,7 +20,7 @@
  * never crash the landing render.
  */
 
-export type LastRole = "lead" | "head" | "admin" | "viewer" | "director";
+export type LastRole = "lead" | "head" | "admin" | "viewer";
 
 export type LastRoleRecord = {
   readonly role: LastRole;
@@ -35,7 +35,6 @@ const VALID_ROLES: ReadonlySet<LastRole> = new Set<LastRole>([
   "head",
   "admin",
   "viewer",
-  "director",
 ]);
 
 function isLastRoleRecord(value: unknown): value is LastRoleRecord {

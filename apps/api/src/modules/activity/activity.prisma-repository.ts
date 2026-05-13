@@ -3,9 +3,11 @@ import { Injectable } from "@nestjs/common";
 import type {
   ActivityLiveResponse,
   ActivityLiveRow,
+  UserSession,
 } from "@customreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { groupScopeFilter } from "../../lib/group-scope.js";
 import type { ActivityRepository } from "./activity.service.js";
 
 @Injectable()
@@ -23,9 +25,9 @@ export class ActivityPrismaRepository implements ActivityRepository {
    * 4. Map leads → rows (some may have no section yet → status=draft,
    *    counts=0, lastEditAt=null).
    */
-  async getLiveActivity(): Promise<ActivityLiveResponse> {
+  async getLiveActivity(session: UserSession): Promise<ActivityLiveResponse> {
     const report = await this.prisma.report.findFirst({
-      where: { periodStatus: "open" },
+      where: { periodStatus: { in: ["open", "reopened"] } },
       orderBy: { periodStart: "desc" },
       select: {
         id: true,
@@ -46,13 +48,16 @@ export class ActivityPrismaRepository implements ActivityRepository {
     }
 
     const leads = await this.prisma.user.findMany({
-      where: { role: "lead" },
+      where: { role: "lead", ...groupScopeFilter(session, "user") },
       select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     });
 
     const sections = await this.prisma.reportSection.findMany({
-      where: { reportId: report.id },
+      where: {
+        reportId: report.id,
+        ...groupScopeFilter(session, "reportSection"),
+      },
       include: {
         items: { select: { id: true, updatedAt: true } },
         risks: { select: { id: true, updatedAt: true } },
