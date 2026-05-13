@@ -12,6 +12,9 @@ import { SessionRevocationService } from "../../modules/admin/session-revocation
 import type { AppLogger } from "../../lib/logger.js";
 import { createAuditLogger, type AuditLogger } from "../../lib/audit-logger.js";
 
+// D-32: DEV_SESSION must carry reportingGroupId so groupScopeFilter scopes
+// the activity panel to the head's group in dev / integration mode.
+// UUID matches DEFAULT_REPORTING_GROUP_ID in prisma/seed-constants.ts.
 const DEV_SESSION: UserSession = {
   userId: "a0000000-0000-4000-8000-000000000099",
   email: "head@customreport.local",
@@ -19,6 +22,7 @@ const DEV_SESSION: UserSession = {
   role: "head",
   activeReportId: "a0000000-0000-4000-8000-000000000001",
   activeReportSectionId: null,
+  reportingGroupId: "a0000000-0000-4000-8000-000000000301",
 };
 
 /**

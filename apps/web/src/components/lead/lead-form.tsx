@@ -619,8 +619,46 @@ export function LeadForm({
         toast.success("Report submitted");
       },
       onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : "Submit failed";
-        toast.error(msg);
+        // Intercept Zod validation errors from the server and surface
+        // human-readable messages instead of raw JSON.
+        if (err instanceof Error) {
+          const raw = err.message;
+          // Server may return serialized Zod issues as a JSON array string.
+          // Detect priorities.too_small specifically and guide the user.
+          try {
+            const parsed: unknown = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const hasPrioritiesMin = parsed.some(
+                (issue) =>
+                  typeof issue === "object" &&
+                  issue !== null &&
+                  "path" in issue &&
+                  Array.isArray((issue as { path: unknown[] }).path) &&
+                  (issue as { path: unknown[] }).path.includes("priorities") &&
+                  "code" in issue &&
+                  (issue as { code: string }).code === "too_small",
+              );
+              if (hasPrioritiesMin) {
+                toast.error("Please add at least one priority before submitting.");
+                setShowSubmitConfirm(false);
+                setSubmitFieldError({
+                  field: "priorities",
+                  message: "Add at least one priority before submitting.",
+                });
+                prioritiesRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+                return;
+              }
+            }
+          } catch {
+            // Not JSON — fall through to the generic message.
+          }
+          toast.error(raw);
+        } else {
+          toast.error("Submit failed");
+        }
       },
     }),
   );
@@ -1314,6 +1352,7 @@ export function LeadForm({
             <VersionHistoryNav
               versions={versions}
               onRestore={handleRestoreVersion}
+              onVersionChange={handleRestoreVersion}
               onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
               canSaveVersion={!createSnapshotMut.isPending}
             />

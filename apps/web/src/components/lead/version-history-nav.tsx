@@ -8,6 +8,12 @@ type VersionHistoryNavProps = {
   readonly versions: VersionSnapshot[];
   readonly onRestore?: (version: number) => void;
   /**
+   * Called when the user navigates to a different version via the prev/next
+   * arrows (without going through the Restore confirmation flow). The parent
+   * uses this to load the selected version's content into the form.
+   */
+  readonly onVersionChange?: (version: number) => void;
+  /**
    * When provided, renders a "Save Version" button next to the v# pill.
    * Clicking creates an explicit checkpoint via leadForm.createSnapshot
    * (parent-owned mutation, surfaced as a toast). Hidden in read-only /
@@ -130,6 +136,7 @@ function formatDiff(delta: number, label: string): string | null {
 export function VersionHistoryNav({
   versions,
   onRestore,
+  onVersionChange,
   onSaveVersion,
   canSaveVersion = true,
 }: VersionHistoryNavProps) {
@@ -143,11 +150,19 @@ export function VersionHistoryNav({
   const isLatest = currentIndex === 0;
 
   function handlePrev() {
-    if (hasPrev) setCurrentIndex((i) => i + 1);
+    if (!hasPrev) return;
+    const nextIndex = currentIndex + 1;
+    setCurrentIndex(nextIndex);
+    const targetVersion = versions[nextIndex];
+    if (targetVersion) onVersionChange?.(targetVersion.version);
   }
 
   function handleNext() {
-    if (hasNext) setCurrentIndex((i) => i - 1);
+    if (!hasNext) return;
+    const nextIndex = currentIndex - 1;
+    setCurrentIndex(nextIndex);
+    const targetVersion = versions[nextIndex];
+    if (targetVersion) onVersionChange?.(targetVersion.version);
   }
 
   function handleRestore(version: number) {
