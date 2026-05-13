@@ -54,19 +54,25 @@ export function assertNonProdDestructive(scriptName: string): void {
     refuse(`Database name "${lastSegment}" looks like production.`);
   }
 
-  const isLocalHost =
+  // "localhost" / "127.0.0.1" / "*.local" are physically unreachable from
+  // production — allow unconditionally.
+  // "postgres" (Docker Compose service name) is intentionally EXCLUDED: a
+  // staging compose stack can use the same service name while pointing at
+  // production data, so we require an explicit non-prod suffix for it.
+  const isTrulyLocal =
     host === "localhost" ||
     host === "127.0.0.1" ||
-    host === "postgres" || // docker compose service name (dev-only; prod requires NODE_ENV=production)
     host.endsWith(".local");
 
   const isExplicitNonProdName = /_(uat|dev|test|local|staging)$/i.test(
     lastSegment,
   );
 
-  // Allow if EITHER local host OR explicit non-prod suffix.
-  // Reject everything else (remote host + ambiguous name).
-  if (isLocalHost || isExplicitNonProdName) return;
+  // Truly local hosts are always safe.
+  if (isTrulyLocal) return;
+  // All other hosts (including docker-internal "postgres") must carry an
+  // explicit non-prod suffix.
+  if (isExplicitNonProdName) return;
 
   refuse(
     `Host "${host}" is not local and database "${lastSegment}" lacks ` +
