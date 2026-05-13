@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { OnModuleDestroy } from "@nestjs/common";
 import Redis from "ioredis";
 
@@ -22,7 +22,7 @@ export class SessionRevocationService implements OnModuleDestroy {
   private readonly redis: Redis;
 
   /** Allow injecting a custom redis client (used in unit tests). */
-  constructor(@Optional() redis?: Redis) {
+  constructor(redis?: Redis) {
     if (redis) {
       this.redis = redis;
     } else {
