@@ -18,7 +18,7 @@ services:
     environment:
       POSTGRES_USER: customreport
       POSTGRES_PASSWORD: ${DB_PASSWORD:-localdev}
-      POSTGRES_DB: customreport
+      POSTGRES_DB: customreport_uat
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./deploy/postgres/init-pg-stat-statements.sql:/docker-entrypoint-initdb.d/01-pg-stat-statements.sql:ro
@@ -76,7 +76,7 @@ services:
       target: migrator
     command: ["pnpm", "exec", "prisma", "migrate", "deploy"]
     environment:
-      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport
+      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport_uat
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,7 +87,7 @@ services:
       context: .
       dockerfile: Dockerfile.api
     environment:
-      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport
+      DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport_uat
       PORT: 3002
       REDIS_HOST: redis
       REDIS_PORT: 6379
