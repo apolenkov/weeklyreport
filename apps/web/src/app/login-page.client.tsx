@@ -8,6 +8,7 @@ import {
   DEFAULT_ORGANIZATION_IDENTITY,
   type OrganizationPublic,
 } from "@customreport/shared";
+import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
 import { PulseBackground } from "../components/landing/pulse-background";
 import { PulseMark } from "../components/landing/pulse-mark";
@@ -172,10 +173,12 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   // SSR) so the first paint matches the server-rendered HTML and the
   // hint pops in only when hydration has run. AUTH_STUB-only.
   const [lastRole, setLastRole] = useState<LastRoleRecord | null>(null);
+  const [lastRoleLoaded, setLastRoleLoaded] = useState(!AUTH_STUB);
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   useEffect(() => {
     if (!AUTH_STUB) return;
     setLastRole(readLastRole());
+    setLastRoleLoaded(true);
   }, []);
 
   // UFB-033: never auto-redirect in AUTH_STUB mode. The API returns a
@@ -296,17 +299,26 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
             <div
               className="overflow-hidden"
               style={{
-                maxHeight: lastRole ? "300px" : "0px",
-                opacity: lastRole ? 1 : 0,
-                marginTop: lastRole ? "16px" : "0px",
+                maxHeight: lastRoleLoaded && !lastRole ? "0px" : "300px",
+                opacity: lastRoleLoaded && !lastRole ? 0 : 1,
+                marginTop: lastRoleLoaded && !lastRole ? "0px" : "16px",
                 transition:
                   "max-height 220ms ease-in-out, opacity 220ms ease-in-out, margin-top 220ms ease-in-out",
               }}
-              aria-hidden={!lastRole}
+              aria-hidden={lastRoleLoaded && !lastRole}
             >
-              {lastRole && (
+              {!lastRoleLoaded ? (
                 <div
-                  className="rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
+                  className="min-h-[63px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
+                  data-testid="last-role-hint-skeleton"
+                  aria-hidden="true"
+                >
+                  <Skeleton className="h-3.5 w-56" />
+                  <Skeleton className="mt-2 h-3.5 w-20" />
+                </div>
+              ) : lastRole ? (
+                <div
+                  className="min-h-[63px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
                   data-testid="last-role-hint"
                 >
                   <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
@@ -348,7 +360,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
                     </ul>
                   ) : null}
                 </div>
-              )}
+              ) : null}
             </div>
           )}
 
