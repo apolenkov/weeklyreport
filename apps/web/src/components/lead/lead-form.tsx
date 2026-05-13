@@ -1336,7 +1336,7 @@ export function LeadForm({
         <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">
           <PeriodNavigator periods={periods} />
 
-          <div className="flex min-w-[220px] flex-1 items-center justify-center gap-2">
+          <div className="hidden min-w-[220px] flex-1 items-center justify-center gap-2 sm:flex">
             <span className="text-sm text-[var(--color-muted-foreground)]">
               {sessionState?.organization?.shortName ?? "Development"}
             </span>
