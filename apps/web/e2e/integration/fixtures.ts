@@ -23,7 +23,7 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   `http://127.0.0.1:${process.env.E2E_API_PORT ?? 3002}`;
 
-export type Role = 'lead' | 'head' | 'viewer';
+export type Role = 'lead' | 'head' | 'admin' | 'viewer';
 
 /**
  * Mints a real session JWT cookie via the dev-login endpoint and installs it
@@ -72,6 +72,8 @@ type Fixtures = {
   leadPage: Page;
   /** Logged in as the seeded department head. */
   headPage: Page;
+  /** Logged in as the seeded admin user — use for /admin/* routes. */
+  adminPage: Page;
   /** Logged in as the seeded read-only viewer. */
   viewerPage: Page;
   /** Fresh context with NO cookie — for auth-guard tests. */
@@ -93,6 +95,13 @@ export const test = base.extend<Fixtures>({
     const context = await browser.newContext();
     const page = await context.newPage();
     await loginAs(context, { role: 'head' });
+    await use(page);
+    await context.close();
+  },
+  adminPage: async ({ browser }, use) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await loginAs(context, { role: 'admin' });
     await use(page);
     await context.close();
   },
