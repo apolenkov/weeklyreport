@@ -28,6 +28,7 @@ import {
   LEAD_DMITRY_ID,
   LEAD_OLGA_ID,
   LEAD_SERGEY_ID,
+  DEFAULT_REPORTING_GROUP_ID,
 } from "./seed-constants.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -167,6 +168,23 @@ async function main() {
       },
     });
   }
+
+  // --- 2b. GroupProduct: tie the default group to Lead1's first product.
+  // Required by weeklyReport.get projectScope (useExplicitGroupProducts:true).
+  // @@unique([groupId]) allows exactly one product per group.
+  await prisma.groupProduct.upsert({
+    where: {
+      groupId_productId: {
+        groupId: DEFAULT_REPORTING_GROUP_ID,
+        productId: SEED_PRODUCTS[0].id,
+      },
+    },
+    update: {},
+    create: {
+      groupId: DEFAULT_REPORTING_GROUP_ID,
+      productId: SEED_PRODUCTS[0].id,
+    },
+  });
 
   // --- 3. SDLC stages (7) ---
   for (const stage of SEED_STAGES) {
