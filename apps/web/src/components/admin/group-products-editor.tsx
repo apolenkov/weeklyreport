@@ -46,10 +46,18 @@ export function GroupProductsEditor({
 
   const attachMut = useMutation(
     trpc.admin.attachProductToGroup.mutationOptions({
-      onSuccess: async () => {
-        await qc.invalidateQueries({
-          queryKey: trpc.admin.listGroupProducts.queryKey({ groupId }),
-        });
+      onSuccess: async (_data, variables) => {
+        // Attach may be a reassign (B1 invariant: product moves from old
+        // group to new group). Invalidate ALL listGroupProducts queries so
+        // the old group's list also refreshes, not just the current group.
+        await Promise.all([
+          qc.invalidateQueries(trpc.admin.listGroupProducts.pathFilter()),
+          qc.invalidateQueries({
+            queryKey: trpc.admin.listProductGroups.queryKey({
+              productId: variables.productId,
+            }),
+          }),
+        ]);
       },
       onError: (err) => {
         toast.error(err.message ?? "Failed to attach product");
@@ -59,10 +67,17 @@ export function GroupProductsEditor({
 
   const detachMut = useMutation(
     trpc.admin.detachProductFromGroup.mutationOptions({
-      onSuccess: async () => {
-        await qc.invalidateQueries({
-          queryKey: trpc.admin.listGroupProducts.queryKey({ groupId }),
-        });
+      onSuccess: async (_data, variables) => {
+        await Promise.all([
+          qc.invalidateQueries({
+            queryKey: trpc.admin.listGroupProducts.queryKey({ groupId }),
+          }),
+          qc.invalidateQueries({
+            queryKey: trpc.admin.listProductGroups.queryKey({
+              productId: variables.productId,
+            }),
+          }),
+        ]);
       },
       onError: (err) => {
         toast.error(err.message ?? "Failed to detach product");
@@ -95,8 +110,8 @@ export function GroupProductsEditor({
       </legend>
       <p className="mb-2 text-xs text-[var(--color-muted-foreground)]">
         Explicit Group ↔ Product mapping (UFB-054). Toggle to attach or
-        detach. Independent of product lead — a product can belong to
-        multiple groups.
+        detach. Independent of product lead — a product belongs to exactly
+        one group (B1 invariant: @@unique([productId])).
       </p>
       {attachedQuery.isLoading ? (
         <div

@@ -729,4 +729,28 @@ describe('SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)', () => {
     await waitFor(() => expect(slackBadge.dataset.state).toBe('coming-soon'));
     expect(slackBadge.textContent).toMatch(/coming soon/i);
   });
+
+  it('renders the AI Integration Coming Soon card (B8)', async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: /integrations/i }));
+
+    const aiBadge = await screen.findByTestId('integration-badge-ai');
+    await waitFor(() => expect(aiBadge.dataset.state).toBe('coming-soon'));
+    expect(aiBadge.textContent).toMatch(/coming soon/i);
+
+    expect(screen.getByTestId('integration-ai-provider').textContent).toMatch(/not configured/i);
+    expect(screen.getByTestId('integration-ai-rag').textContent).toMatch(/empty/i);
+  });
 });

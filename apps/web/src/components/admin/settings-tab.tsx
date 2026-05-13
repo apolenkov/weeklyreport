@@ -1106,6 +1106,43 @@ function IntegrationsSubTab() {
           </span>
         </div>
       </div>
+
+      {/* AI Integration — Phase 54 seeds-only; placeholder until provider
+          is selected (Anthropic / Yandex / Llama). TODO(Phase-54-activation) */}
+      <div
+        className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
+        data-testid="integration-row-ai"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+              AI Integration
+            </h3>
+            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+              Automatic report summarization, risk extraction and decision
+              drafts via LLM. Provider will be selected in a follow-on phase.
+            </p>
+          </div>
+          <span
+            className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)]"
+            data-testid="integration-badge-ai"
+            data-state="coming-soon"
+          >
+            Coming Soon
+          </span>
+        </div>
+
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
+          <dt>Provider</dt>
+          <dd className="font-mono" data-testid="integration-ai-provider">
+            not configured
+          </dd>
+          <dt>RAG corpus</dt>
+          <dd className="font-mono" data-testid="integration-ai-rag">
+            empty
+          </dd>
+        </dl>
+      </div>
     </div>
   );
 }

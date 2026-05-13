@@ -1057,26 +1057,29 @@ export class AdminPrismaRepository implements AdminRepository {
 
   /**
    * Idempotent attach via Prisma upsert on the (groupId, productId)
-   * unique tuple. The `update: {}` branch is a no-op write so re-calls
-   * return the existing row instead of throwing P2002. Returns the
-   * canonical row (with server-assigned id + createdAt) so the service
-   * can echo the createdAt into the audit envelope.
+   * Atomic reassign: if the product already belongs to the target group
+   * the call is idempotent. If it belongs to a different group, that
+   * row is updated in-place (groupId swap). If no row exists, one is
+   * created. The transaction + @@unique([productId]) constraint means
+   * concurrent attach calls will serialize via the DB unique index.
    */
   async attachProductToGroup(
     input: GroupProductEdgeInput,
   ): Promise<GroupProduct> {
-    const row = await this.prisma.groupProduct.upsert({
-      where: {
-        groupId_productId: {
-          groupId: input.groupId,
-          productId: input.productId,
-        },
-      },
-      create: {
-        groupId: input.groupId,
-        productId: input.productId,
-      },
-      update: {},
+    const row = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.groupProduct.findUnique({
+        where: { productId: input.productId },
+      });
+      if (existing && existing.groupId === input.groupId) return existing;
+      if (existing) {
+        return tx.groupProduct.update({
+          where: { productId: input.productId },
+          data: { groupId: input.groupId },
+        });
+      }
+      return tx.groupProduct.create({
+        data: { groupId: input.groupId, productId: input.productId },
+      });
     });
     return groupProductSchema.parse(row);
   }

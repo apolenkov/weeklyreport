@@ -8,7 +8,15 @@ import { invalidateAdmin } from "../../lib/cache-keys";
 import { toReportingGroupInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
 
-import { TabHeader, TabSearch } from "./tab-header";
+import { TabFilter, TabHeader, TabSearch } from "./tab-header";
+
+// B4: archive quick-filter — default "active" hides archived groups on load
+const ARCHIVE_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "archived", label: "Archived" },
+  { value: "all", label: "All" },
+] as const;
+type ArchiveFilterValue = (typeof ARCHIVE_OPTIONS)[number]["value"];
 
 import { GroupProductsEditor } from "./group-products-editor";
 
@@ -57,6 +65,8 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   const [showDialog, setShowDialog] = useState(false);
   const [form, setForm] = useState<GroupFormData>(EMPTY_FORM);
   const [search, setSearch] = useState("");
+  // B4: archive quick-filter (default "active" — hides archived groups on load)
+  const [archiveFilter, setArchiveFilter] = useState<ArchiveFilterValue>("active");
 
   useEffect(() => {
     if (!showDialog) return;
@@ -127,18 +137,16 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
 
   const filteredGroups = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return groups;
-    return groups.filter((group) =>
-      [
-        group.name,
-        group.description ?? "",
-        group.archived ? "archived" : "active",
-      ]
+    return groups.filter((group) => {
+      if (archiveFilter === "active" && group.archived) return false;
+      if (archiveFilter === "archived" && !group.archived) return false;
+      if (!needle) return true;
+      return [group.name, group.description ?? ""]
         .join(" ")
         .toLowerCase()
-        .includes(needle),
-    );
-  }, [groups, search]);
+        .includes(needle);
+    });
+  }, [groups, search, archiveFilter]);
 
   const isSaving = saveGroupMut.isPending;
   const isArchiving = archiveGroupMut.isPending;
@@ -156,13 +164,22 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
           description={`Reporting groups (organisational units). ${activeGroupCount} active.`}
           count={`${groups.length} groups`}
           search={
-            <TabSearch
-              value={search}
-              onChange={setSearch}
-              placeholder="Search groups…"
-              testId="groups-search"
-              ariaLabel="Search groups"
-            />
+            <>
+              <TabFilter
+                value={archiveFilter}
+                onChange={(v) => setArchiveFilter(v as ArchiveFilterValue)}
+                options={ARCHIVE_OPTIONS}
+                testId="groups-archive-filter"
+                ariaLabel="Filter by archive status"
+              />
+              <TabSearch
+                value={search}
+                onChange={setSearch}
+                placeholder="Search groups…"
+                testId="groups-search"
+                ariaLabel="Search groups"
+              />
+            </>
           }
           actions={
             <button
