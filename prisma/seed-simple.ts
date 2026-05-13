@@ -82,6 +82,8 @@ const STAGE_SUPPORT = "a0000000-0000-4000-8000-000000000707";
 const REPORT_ACTIVE = "a0000000-0000-4000-8000-000000000001";
 const REPORT_PUBLISHED = "a0000000-0000-4000-8000-000000000002";
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
+// A36: second group so head scoping can be tested (head only sees own group's leads)
+const FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
 
 // ---- Date helpers (FIX-01, Phase 35-08) ----
 // Compute the current ISO week in UTC so the active period always covers
@@ -287,6 +289,15 @@ async function main() {
       description: "Default reporting group for CustomReport demo users",
     },
   });
+  // A36: Finance group — LEAD_OLGA + LEAD_SERGEY assigned here so head (in
+  // Core Development) only sees 4 leads, proving group-scope isolation.
+  await prisma.reportingGroup.create({
+    data: {
+      id: FINANCE_GROUP_ID,
+      name: "Finance",
+      description: "Finance and HR reporting group",
+    },
+  });
 
   console.log("[seed-simple] Creating users (RU names)...");
   await prisma.user.createMany({
@@ -362,12 +373,15 @@ async function main() {
         reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
       },
       {
+        // A36: Finance group lead — Olga and Sergey are in Finance so the
+        // Core Development head (Антон К.) does NOT see them in their
+        // dashboard. This proves group-scope isolation end-to-end.
         id: LEAD_OLGA,
         email: "olga@customreport.local",
         name: "Ольга Н.",
         role: Role.lead,
         samlId: "lead-olga",
-        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+        reportingGroupId: FINANCE_GROUP_ID,
       },
       {
         id: LEAD_SERGEY,
@@ -375,7 +389,7 @@ async function main() {
         name: "Сергей Т.",
         role: Role.lead,
         samlId: "lead-sergey",
-        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+        reportingGroupId: FINANCE_GROUP_ID,
       },
     ],
   });
