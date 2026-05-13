@@ -17,7 +17,7 @@ test.describe('Auth guards (integration)', () => {
   test('unauthed user visiting /lead/report is redirected to login', async ({
     unauthedPage,
   }) => {
-    await unauthedPage.goto('/lead/report');
+    await unauthedPage.goto('/lead/report', { waitUntil: 'commit' });
     // proxy.ts redirects to '/' with ?next=<original path>.
     await expect(unauthedPage).toHaveURL(/\/\?next=/);
     expect(unauthedPage.url()).toContain('next=%2Flead%2Freport');
@@ -30,7 +30,7 @@ test.describe('Auth guards (integration)', () => {
     await expect(leadPage).toHaveURL(/\/lead\/report/);
 
     await leadPage.context().clearCookies();
-    await leadPage.goto('/lead/report');
+    await leadPage.goto('/lead/report', { waitUntil: 'commit' });
 
     // Without the cookie, proxy.ts kicks back to login.
     await expect(leadPage).toHaveURL(/\/\?next=/);

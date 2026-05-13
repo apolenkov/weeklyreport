@@ -37,6 +37,7 @@ import {
   leadershipProcedure,
 } from "./trpc.middleware.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
+import { clearOrgCache } from "./trpc.context.js";
 import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 
 import type { PrismaClient } from "@prisma/client";
@@ -624,6 +625,7 @@ export function createAppRouter(deps: RouterDeps) {
             const previous = await deps.organizationService.getOrganization();
             const next =
               await deps.organizationService.updateOrganization(input);
+            clearOrgCache();
             ctx.auditLogger.organizationUpdate({
               userId: ctx.session?.userId ?? "anonymous",
               role: ctx.session?.role ?? null,

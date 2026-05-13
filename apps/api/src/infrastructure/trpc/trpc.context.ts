@@ -32,6 +32,11 @@ let orgCache: {
   expiresAt: number;
 } | null = null;
 
+/** Invalidates the org cache immediately; call after updateOrganization. */
+export function clearOrgCache(): void {
+  orgCache = null;
+}
+
 /**
  * Phase 32-B1 (H-04): synthetic session created when an inbound cookie is
  * a valid PDF-export JWT (kind='pdf-export'). The session must satisfy
