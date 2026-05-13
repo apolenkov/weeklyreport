@@ -447,6 +447,19 @@
 
 **TODO(i18n-future):** массовый migration UI-копии в locale dictionary + locale switcher + `customreport_landing_locale_total{locale}` metric — отдельная фаза.
 
+### Docker DB suffix — обязательное правило (2026-05-14)
+
+`POSTGRES_DB` в docker-compose для нелокальных окружений **должен** содержать суффикс `_uat`, `_dev` или `_test`.
+
+**Причина:** `prisma/_destructive-guard.ts` (H-1) разрешает деструктивные операции (`prisma migrate reset`, `wipe-manual-uat`) только когда имя базы данных содержит явный нелоговый суффикс. Без суффикса wipe-операция будет отклонена с ошибкой «Refusing: database lacks non-prod suffix». Это — намеренная защита от случайного уничтожения данных при docker-compose-коллизии.
+
+**How to apply:**
+
+- `docker-compose.yml`, `docker-compose.dev.yml`, `docker-compose.observability.yml` → `POSTGRES_DB: customreport_uat` (или `_dev`, `_test`)
+- `.env` / `.env.example` → `DATABASE_URL=.../customreport_uat`
+- `docker-compose.prod.yml` → намеренно НЕ трогать; prod-база называется `customreport` и защищена `ALLOW_PROD_DESTRUCTIVE`-флагом
+- При создании нового окружения: проверить `prisma/_destructive-guard.ts` — суффикс должен попасть в белый список
+
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
