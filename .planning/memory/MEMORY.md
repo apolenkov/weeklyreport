@@ -2,3 +2,5 @@
 - [Haiku for mechanical agent work](feedback_haiku_for_regression.md) — default `model: "haiku"` for regression / DOM audit / mutation audit / data pulls
 - [Docker dev stale code](feedback_docker_dev_stale_code.md) — api/web контейнеры с `node --watch` после 24h+ uptime молча перестают перезагружаться; перед UAT всегда `docker compose restart api web`
 - [Night UAT + R4-B 2026-05-11/12](project_night_uat_2026_05_11.md) — PR #2 готов (152 коммита), R4-B productId полностью закрыт (5 мест записи)
+- [UAT v7.4 + .jira rework 2026-05-13](project_uat_v74_2026_05_13.md) — PR #3 готов (49 коммитов), 45/45 тестов, H-1/H-2/H-3 блокируют prod-деплой
+- [Night marathon 2026-05-14](2026-05-14-night-marathon.md) — PR #4 открыт (50 коммитов); 25+ D-\* точек закрыты; docker DB → customreport_uat; Playwright spec создан
