@@ -6,13 +6,13 @@ import {
   type PortfolioOverview,
   type ReportSectionReadModel,
   type UserSession,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { createNullLogger, type AppLogger } from '../../lib/logger';
+import { createNullLogger, type AppLogger } from "../../lib/logger";
 import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
-} from '../../infrastructure/metrics/metrics.registry.js';
+} from "../../infrastructure/metrics/metrics.registry.js";
 
 /**
  * Phase 54 (UFB-055): fire-and-forget ingestion seam. Wired by
@@ -28,7 +28,7 @@ export type AiIngestionPublishHook = (
 export class PublicationAccessError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'PublicationAccessError';
+    this.name = "PublicationAccessError";
   }
 }
 
@@ -41,10 +41,12 @@ function compareSections(
   left: ReportSectionReadModel,
   right: ReportSectionReadModel,
 ): number {
-  return left.authorName.localeCompare(right.authorName, 'ru');
+  return left.authorName.localeCompare(right.authorName, "ru");
 }
 
-function buildPortfolioOverview(sections: ReportSectionReadModel[]): PortfolioOverview {
+function buildPortfolioOverview(
+  sections: ReportSectionReadModel[],
+): PortfolioOverview {
   const totals = sections.reduce(
     (summary, section) => {
       return section.projects.reduce((projectSummary, project) => {
@@ -66,7 +68,7 @@ function buildPortfolioOverview(sections: ReportSectionReadModel[]): PortfolioOv
   );
 
   const status =
-    totals.red > 0 ? 'red' : totals.yellow > 0 ? 'yellow' : 'green';
+    totals.red > 0 ? "red" : totals.yellow > 0 ? "yellow" : "green";
 
   return {
     status,
@@ -104,7 +106,7 @@ export class PublicationService {
     try {
       await this.ingestionHook(ids);
     } catch (err) {
-      this.logger.warn('ai ingestion hook failed', {
+      this.logger.warn("ai ingestion hook failed", {
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -133,8 +135,8 @@ export class PublicationService {
     const parsedInput = draftSaveSchema.parse(input);
     const report = await this.getAssembledReport(activeReportId);
 
-    if (report.status === 'published') {
-      throw new PublicationAccessError('Published reports are immutable.');
+    if (report.status === "published") {
+      throw new PublicationAccessError("Published reports are immutable.");
     }
 
     const nextSections = report.sections.map((section) => {
@@ -147,8 +149,9 @@ export class PublicationService {
         projects: section.projects.map((project) => ({
           ...project,
           trafficLight:
-            parsedInput.projectStatuses.find((status) => status.projectId === project.projectId)
-              ?.status ?? null,
+            parsedInput.projectStatuses.find(
+              (status) => status.projectId === project.projectId,
+            )?.status ?? null,
         })),
         items: parsedInput.items,
         risks: parsedInput.risks,
@@ -172,15 +175,18 @@ export class PublicationService {
   ): Promise<AssembledReport> {
     const report = await this.getAssembledReport(activeReportId);
 
-    if (report.status === 'published') {
-      throw new PublicationAccessError('Report has already been published.');
+    if (report.status === "published") {
+      throw new PublicationAccessError("Report has already been published.");
     }
 
-    this.logger.info('publishing report', { activeReportId, userId: session.userId });
+    this.logger.info("publishing report", {
+      activeReportId,
+      userId: session.userId,
+    });
     const saved = await this.repository.saveAssembledReport(
       assembledReportSchema.parse({
         ...report,
-        status: 'published',
+        status: "published",
         publishedAt: new Date(),
         publishedById: session.userId,
         publishedByName: session.name,
@@ -189,8 +195,11 @@ export class PublicationService {
     // Phase 52-A: product telemetry. Emit only after the write succeeds —
     // a failed save would otherwise inflate the counter and corrupt the
     // on-time ratio numerator at the next gauge scrape.
-    customreportReportsSubmittedTotal.inc({ state: 'published' });
-    customreportPeriodStateTransitionsTotal.inc({ from: 'open', to: 'published' });
+    customreportReportsSubmittedTotal.inc({ state: "published" });
+    customreportPeriodStateTransitionsTotal.inc({
+      from: "open",
+      to: "published",
+    });
     // Phase 54 (UFB-055): enqueue ingestion AFTER metrics are emitted —
     // an ingestion failure must never block telemetry or the response.
     await this.enqueueIngestion(saved);
@@ -213,28 +222,31 @@ export class PublicationService {
   async publishAuto(activeReportId: string): Promise<AssembledReport> {
     const report = await this.getAssembledReport(activeReportId);
 
-    if (report.status === 'published') {
+    if (report.status === "published") {
       // Idempotent: return the existing assembled report so the scheduler
       // can treat a race as a no-op without ad-hoc try/catch.
       return report;
     }
 
-    this.logger.info('auto-publishing report', { activeReportId });
+    this.logger.info("auto-publishing report", { activeReportId });
     const saved = await this.repository.saveAssembledReport(
       assembledReportSchema.parse({
         ...report,
-        status: 'published',
+        status: "published",
         publishedAt: new Date(),
         publishedById: null,
-        publishedByName: 'system',
+        publishedByName: "system",
       }),
     );
     // Phase 52-A: same telemetry as publishReport. Same `state` label so
     // ops can aggregate without `or` predicates — the manual-vs-auto
     // distinction is recovered by the period_state_transitions_total
     // panel paired with publishedById nullness.
-    customreportReportsSubmittedTotal.inc({ state: 'published' });
-    customreportPeriodStateTransitionsTotal.inc({ from: 'open', to: 'published' });
+    customreportReportsSubmittedTotal.inc({ state: "published" });
+    customreportPeriodStateTransitionsTotal.inc({
+      from: "open",
+      to: "published",
+    });
     // Phase 54 (UFB-055): mirror of publishReport — fire-and-forget
     // ingestion enqueue. Scheduler-driven auto-publishes feed the same
     // queue so the worker sees both manual and scheduled outputs.

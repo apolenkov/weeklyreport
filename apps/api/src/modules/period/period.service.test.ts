@@ -1,25 +1,25 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import type { UserSession } from '@customreport/shared';
+import type { UserSession } from "@customreport/shared";
 
 import {
   PeriodAccessError,
   PeriodService,
   type PeriodRepository,
-} from './period.service';
+} from "./period.service";
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
 /* ------------------------------------------------------------------ */
 
-const reportId = '22222222-2222-4222-8222-222222222222';
-const otherReportId = '33333333-3333-4333-8333-333333333333';
+const reportId = "22222222-2222-4222-8222-222222222222";
+const otherReportId = "33333333-3333-4333-8333-333333333333";
 
 const headSession: UserSession = {
-  userId: '00000000-0000-4000-8000-000000000001',
-  email: 'head@customreport.local',
-  name: 'Department Head',
-  role: 'head',
+  userId: "00000000-0000-4000-8000-000000000001",
+  email: "head@customreport.local",
+  name: "Department Head",
+  role: "head",
   activeReportId: reportId,
   activeReportSectionId: null,
 };
@@ -45,7 +45,7 @@ function createSpyRepository(
   const publishFn = vi.fn(async (id: string) => {
     const r = reports.get(id);
     if (r) {
-      r.periodStatus = 'published';
+      r.periodStatus = "published";
       r.publishedAt = new Date();
     }
   });
@@ -53,7 +53,7 @@ function createSpyRepository(
   const reopenFn = vi.fn(async (id: string) => {
     const r = reports.get(id);
     if (r) {
-      r.periodStatus = 'reopened';
+      r.periodStatus = "reopened";
     }
   });
 
@@ -71,10 +71,18 @@ function createSpyRepository(
 /*  publishPeriod — service-level unit tests                           */
 /* ------------------------------------------------------------------ */
 
-describe('PeriodService — publishPeriod (unit)', () => {
-  it('calls repository.publishPeriod with correct args', async () => {
+describe("PeriodService — publishPeriod (unit)", () => {
+  it("calls repository.publishPeriod with correct args", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'draft', periodStatus: 'open', publishedAt: null }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
     ]);
     const repo = createSpyRepository(reports);
     const service = new PeriodService(repo);
@@ -82,12 +90,23 @@ describe('PeriodService — publishPeriod (unit)', () => {
     await service.publishPeriod(reportId, headSession);
 
     expect(repo.publishPeriod).toHaveBeenCalledOnce();
-    expect(repo.publishPeriod).toHaveBeenCalledWith(reportId, headSession.userId);
+    expect(repo.publishPeriod).toHaveBeenCalledWith(
+      reportId,
+      headSession.userId,
+    );
   });
 
-  it('returns the reportId in the success result', async () => {
+  it("returns the reportId in the success result", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'draft', periodStatus: 'open', publishedAt: null }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
     ]);
     const service = new PeriodService(createSpyRepository(reports));
 
@@ -97,12 +116,12 @@ describe('PeriodService — publishPeriod (unit)', () => {
     expect(result.success).toBe(true);
   });
 
-  it('throws plain Error (not PeriodAccessError) when report is missing', async () => {
+  it("throws plain Error (not PeriodAccessError) when report is missing", async () => {
     const service = new PeriodService(createSpyRepository(new Map()));
 
-    await expect(
-      service.publishPeriod(reportId, headSession),
-    ).rejects.toThrow(Error);
+    await expect(service.publishPeriod(reportId, headSession)).rejects.toThrow(
+      Error,
+    );
 
     // Verify it's NOT a PeriodAccessError
     await expect(
@@ -110,20 +129,38 @@ describe('PeriodService — publishPeriod (unit)', () => {
     ).rejects.not.toBeInstanceOf(PeriodAccessError);
   });
 
-  it('does not call repository when period is already published', async () => {
+  it("does not call repository when period is already published", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date() }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(),
+        },
+      ],
     ]);
     const repo = createSpyRepository(reports);
     const service = new PeriodService(repo);
 
-    await expect(service.publishPeriod(reportId, headSession)).rejects.toThrow();
+    await expect(
+      service.publishPeriod(reportId, headSession),
+    ).rejects.toThrow();
     expect(repo.publishPeriod).not.toHaveBeenCalled();
   });
 
-  it('publish-then-reopen-then-publish cycle works', async () => {
+  it("publish-then-reopen-then-publish cycle works", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'draft', periodStatus: 'open', publishedAt: null }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
     ]);
     const repo = createSpyRepository(reports);
     const service = new PeriodService(repo);
@@ -141,9 +178,17 @@ describe('PeriodService — publishPeriod (unit)', () => {
     expect(repo.publishPeriod).toHaveBeenCalledTimes(2);
   });
 
-  it('invalidates analytics cache on successful publish (ANAL-01)', async () => {
+  it("invalidates analytics cache on successful publish (ANAL-01)", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'draft', periodStatus: 'open', publishedAt: null }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
     ]);
     const invalidate = vi.fn(async () => undefined);
     const service = new PeriodService(createSpyRepository(reports), invalidate);
@@ -153,30 +198,58 @@ describe('PeriodService — publishPeriod (unit)', () => {
     expect(invalidate).toHaveBeenCalledOnce();
   });
 
-  it('does NOT invalidate analytics cache when publish fails', async () => {
+  it("does NOT invalidate analytics cache when publish fails", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date() }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(),
+        },
+      ],
     ]);
     const invalidate = vi.fn(async () => undefined);
     const service = new PeriodService(createSpyRepository(reports), invalidate);
 
-    await expect(service.publishPeriod(reportId, headSession)).rejects.toThrow();
+    await expect(
+      service.publishPeriod(reportId, headSession),
+    ).rejects.toThrow();
 
     expect(invalidate).not.toHaveBeenCalled();
   });
 
-  it('different reports are independent', async () => {
+  it("different reports are independent", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'draft', periodStatus: 'open', publishedAt: null }],
-      [otherReportId, { id: otherReportId, status: 'published', periodStatus: 'published', publishedAt: new Date() }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
+      [
+        otherReportId,
+        {
+          id: otherReportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(),
+        },
+      ],
     ]);
     const service = new PeriodService(createSpyRepository(reports));
 
     // First report can be published
-    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual({
-      success: true,
-      reportId,
-    });
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      {
+        success: true,
+        reportId,
+      },
+    );
 
     // Second is already published — should fail
     await expect(
@@ -189,10 +262,18 @@ describe('PeriodService — publishPeriod (unit)', () => {
 /*  reopenPeriod — service-level unit tests                            */
 /* ------------------------------------------------------------------ */
 
-describe('PeriodService — reopenPeriod (unit)', () => {
-  it('calls repository.reopenPeriod with correct reportId', async () => {
+describe("PeriodService — reopenPeriod (unit)", () => {
+  it("calls repository.reopenPeriod with correct reportId", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date() }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(),
+        },
+      ],
     ]);
     const repo = createSpyRepository(reports);
     const service = new PeriodService(repo);
@@ -203,9 +284,17 @@ describe('PeriodService — reopenPeriod (unit)', () => {
     expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
   });
 
-  it('does not call repository when period is not published', async () => {
+  it("does not call repository when period is not published", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'draft', periodStatus: 'open', publishedAt: null }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
     ]);
     const repo = createSpyRepository(reports);
     const service = new PeriodService(repo);
@@ -214,9 +303,17 @@ describe('PeriodService — reopenPeriod (unit)', () => {
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
-  it('invalidates analytics cache on successful reopen (ANAL-01)', async () => {
+  it("invalidates analytics cache on successful reopen (ANAL-01)", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date() }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(),
+        },
+      ],
     ]);
     const invalidate = vi.fn(async () => undefined);
     const service = new PeriodService(createSpyRepository(reports), invalidate);
@@ -226,9 +323,17 @@ describe('PeriodService — reopenPeriod (unit)', () => {
     expect(invalidate).toHaveBeenCalledOnce();
   });
 
-  it('double reopen of a reopened period fails', async () => {
+  it("double reopen of a reopened period fails", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date() }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(),
+        },
+      ],
     ]);
     const service = new PeriodService(createSpyRepository(reports));
 
@@ -236,7 +341,9 @@ describe('PeriodService — reopenPeriod (unit)', () => {
     await service.reopenPeriod(reportId);
 
     // Second reopen fails (now status is 'reopened', not 'published')
-    await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(PeriodAccessError);
+    await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(
+      PeriodAccessError,
+    );
   });
 });
 
@@ -244,10 +351,18 @@ describe('PeriodService — reopenPeriod (unit)', () => {
 /*  UFB-052 (Phase 51-B): reopen-policy gate                           */
 /* ------------------------------------------------------------------ */
 
-describe('PeriodService — reopen policy gate (UFB-052)', () => {
-  it('throws PeriodAccessError when allowReopenAfterPublish=false', async () => {
+describe("PeriodService — reopen policy gate (UFB-052)", () => {
+  it("throws PeriodAccessError when allowReopenAfterPublish=false", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date() }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(),
+        },
+      ],
     ]);
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
@@ -262,10 +377,18 @@ describe('PeriodService — reopen policy gate (UFB-052)', () => {
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
-  it('throws PeriodAccessError when reopen window has expired', async () => {
+  it("throws PeriodAccessError when reopen window has expired", async () => {
     const publishedAt = new Date(Date.now() - 100 * 3_600_000); // 100h ago
     const reports = new Map([
-      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt,
+        },
+      ],
     ]);
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
@@ -280,10 +403,18 @@ describe('PeriodService — reopen policy gate (UFB-052)', () => {
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
-  it('allows reopen within the window', async () => {
+  it("allows reopen within the window", async () => {
     const publishedAt = new Date(Date.now() - 2 * 3_600_000); // 2h ago
     const reports = new Map([
-      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt,
+        },
+      ],
     ]);
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
@@ -296,9 +427,17 @@ describe('PeriodService — reopen policy gate (UFB-052)', () => {
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
   });
 
-  it('legacy callers without a policy reader stay un-gated', async () => {
+  it("legacy callers without a policy reader stay un-gated", async () => {
     const reports = new Map([
-      [reportId, { id: reportId, status: 'published', periodStatus: 'published', publishedAt: new Date(0) }],
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "published",
+          periodStatus: "published",
+          publishedAt: new Date(0),
+        },
+      ],
     ]);
     const repo = createSpyRepository(reports);
     const service = new PeriodService(repo);

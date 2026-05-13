@@ -5,11 +5,24 @@ subsystem: api
 tags: [api, trpc, admin, lead-form, testing]
 dependency_graph:
   requires: [17-02]
-  provides: [leadForm.requestReopen, admin.getSettings, admin.updateSettings, admin.saveStageAssignment, admin.deleteStageAssignment, admin.listStageAssignments]
+  provides:
+    [
+      leadForm.requestReopen,
+      admin.getSettings,
+      admin.updateSettings,
+      admin.saveStageAssignment,
+      admin.deleteStageAssignment,
+      admin.listStageAssignments,
+    ]
   affects: [trpc-router, admin-service, lead-form-service]
 tech_stack:
   added: []
-  patterns: [repository-interface-extension, upsert-on-unique-constraint, spy-repository-testing]
+  patterns:
+    [
+      repository-interface-extension,
+      upsert-on-unique-constraint,
+      spy-repository-testing,
+    ]
 key_files:
   created:
     - apps/api/src/modules/period/period.service.test.ts
@@ -41,34 +54,38 @@ Close 3 missing API endpoints (requestReopen, admin settings CRUD, stage assignm
 
 ## Tasks Completed
 
-| Task | Name | Commit | Key Changes |
-|------|------|--------|-------------|
-| 1 | API-04: leadForm.requestReopen | a3cc4a5 | Service method + repo interface + tRPC procedure + 2 tests |
-| 2 | API-11: admin.getSettings/updateSettings | 4f7937d | Settings CRUD on AppSettings singleton + 3 tests |
-| 3 | API-12: Stage Assignment CRUD | 4beb32b | save/delete/list + Prisma upsert + 3 tests |
-| 4 | Service tests for period + weekly-report | 318f6f1 | 9 period tests + 5 weekly-report tests |
+| Task | Name                                     | Commit  | Key Changes                                                |
+| ---- | ---------------------------------------- | ------- | ---------------------------------------------------------- |
+| 1    | API-04: leadForm.requestReopen           | a3cc4a5 | Service method + repo interface + tRPC procedure + 2 tests |
+| 2    | API-11: admin.getSettings/updateSettings | 4f7937d | Settings CRUD on AppSettings singleton + 3 tests           |
+| 3    | API-12: Stage Assignment CRUD            | 4beb32b | save/delete/list + Prisma upsert + 3 tests                 |
+| 4    | Service tests for period + weekly-report | 318f6f1 | 9 period tests + 5 weekly-report tests                     |
 
 ## Implementation Details
 
 ### API-04: leadForm.requestReopen
+
 - Extended `LeadFormRepository` interface with `createReopenRequest(sectionId, userId, reason?)`
 - Service validates: section exists, caller is author, section is submitted
 - Repository implementation: console.log (no `ReopenRequest` model in Prisma schema)
 - tRPC: `leadForm.requestReopen` (protectedProcedure, mutation)
 
 ### API-11: admin.getSettings / admin.updateSettings
+
 - Extended `AdminRepository` with `getSettings()` and `updateSettings(data)`
 - Prisma: upsert on `AppSettings` singleton (id='singleton') for lazy init
 - All output parsed through `appSettingsSchema` / `appSettingsUpdateSchema`
 - tRPC: `admin.getSettings` (query) + `admin.updateSettings` (mutation), both headProcedure
 
 ### API-12: Stage Assignment CRUD
+
 - Extended `AdminRepository` with `saveStageAssignment`, `deleteStageAssignment`, `listStageAssignments`
 - Prisma: upsert on unique constraint `(userId, stageId, projectId)` for idempotency
 - Read model joins stage.name and user.name for `StageAssignment` schema compliance
 - tRPC: 3 procedures under admin namespace, all headProcedure
 
 ### Service Tests
+
 - **period.service.test.ts** (9 tests): spy-based repo verification, publish-reopen-publish cycle, error type discrimination (Error vs PeriodAccessError), cross-report independence
 - **weekly-report.service.test.ts** (5 tests): spy-based repo call verification, fallback to active report, domain error types, published data passthrough
 
@@ -84,6 +101,7 @@ None - plan executed exactly as written.
 ## Known Stubs
 
 **1. requestReopen repository implementation** (lead-form.prisma-repository.ts, line ~283)
+
 - Logs to console instead of creating a DB record
 - Intentional: plan says "just create a simple record/log" and no ReopenRequest model exists in Prisma schema
 - Future plan will add a Notification model or reopen-request workflow

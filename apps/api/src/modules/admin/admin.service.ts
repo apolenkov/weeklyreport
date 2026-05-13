@@ -516,8 +516,7 @@ export class AdminService {
       // Archive is allowed for any not-yet-archived published period;
       // the auto-archiver handles the deferred "weeks-after-publish"
       // path. Manual archive is the head's escape hatch.
-      const canArchive =
-        row.periodState === "published" && !row.archived;
+      const canArchive = row.periodState === "published" && !row.archived;
       return periodListItemSchema.parse({
         id: row.id,
         periodStart: row.periodStart,
@@ -702,9 +701,7 @@ export class AdminService {
    * router) because the service is the only layer that has both the
    * before and after envelopes in scope at the same time.
    */
-  async updatePeriodManual(
-    rawInput: AdminUpdatePeriodManualInput,
-  ): Promise<{
+  async updatePeriodManual(rawInput: AdminUpdatePeriodManualInput): Promise<{
     result: AdminUpdatePeriodManualResult;
     /**
      * Per-field `(before, after)` snapshots of changed columns. Empty
@@ -719,7 +716,10 @@ export class AdminService {
       weekLabel: { from: string | null; to: string | null };
     }>;
   }> {
-    if (!this.repository.updatePeriodManual || !this.repository.readPeriodById) {
+    if (
+      !this.repository.updatePeriodManual ||
+      !this.repository.readPeriodById
+    ) {
       throw new Error(
         "AdminRepository.updatePeriodManual / readPeriodById is not implemented for this repository.",
       );
@@ -729,9 +729,7 @@ export class AdminService {
     // -- Read existing -------------------------------------------------
     const existing = await this.repository.readPeriodById(input.reportId);
     if (!existing) {
-      throw new AdminPeriodNotFoundError(
-        `Period ${input.reportId} not found.`,
-      );
+      throw new AdminPeriodNotFoundError(`Period ${input.reportId} not found.`);
     }
 
     // -- Compute the actual diff ---------------------------------------
@@ -776,7 +774,10 @@ export class AdminService {
     // weekLabel: explicit `null` is an allowed value (clear). Compare on
     // structural equality (`null === null`, `'foo' === 'foo'`) so an
     // unchanged-label PATCH is dropped from the diff.
-    if (input.weekLabel !== undefined && input.weekLabel !== existing.weekLabel) {
+    if (
+      input.weekLabel !== undefined &&
+      input.weekLabel !== existing.weekLabel
+    ) {
       data.weekLabel = input.weekLabel;
       diff.weekLabel = { from: existing.weekLabel, to: input.weekLabel };
     }
@@ -885,10 +886,7 @@ export class AdminService {
     if (!report) {
       throw new AdminAccessError(`Report ${reportId} not found.`);
     }
-    if (
-      report.status === "published" ||
-      report.periodStatus === "published"
-    ) {
+    if (report.status === "published" || report.periodStatus === "published") {
       throw new AdminAccessError(
         "Cannot delete a published period. Reopen it first if needed.",
       );

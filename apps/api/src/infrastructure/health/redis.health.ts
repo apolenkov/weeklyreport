@@ -1,17 +1,20 @@
-import { Injectable } from '@nestjs/common';
-import type { OnModuleDestroy } from '@nestjs/common';
-import { HealthCheckError, HealthIndicator } from '@nestjs/terminus';
-import type { HealthIndicatorResult } from '@nestjs/terminus';
-import Redis from 'ioredis';
+import { Injectable } from "@nestjs/common";
+import type { OnModuleDestroy } from "@nestjs/common";
+import { HealthCheckError, HealthIndicator } from "@nestjs/terminus";
+import type { HealthIndicatorResult } from "@nestjs/terminus";
+import Redis from "ioredis";
 
 @Injectable()
-export class RedisHealthIndicator extends HealthIndicator implements OnModuleDestroy {
+export class RedisHealthIndicator
+  extends HealthIndicator
+  implements OnModuleDestroy
+{
   private readonly redis: Redis;
 
   constructor() {
     super();
     this.redis = new Redis({
-      host: process.env.REDIS_HOST ?? 'localhost',
+      host: process.env.REDIS_HOST ?? "localhost",
       port: Number(process.env.REDIS_PORT ?? 6379),
       lazyConnect: true,
     });
@@ -23,7 +26,7 @@ export class RedisHealthIndicator extends HealthIndicator implements OnModuleDes
       return this.getStatus(key, true);
     } catch (_error) {
       throw new HealthCheckError(
-        'Redis check failed',
+        "Redis check failed",
         this.getStatus(key, false),
       );
     }

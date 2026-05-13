@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import type { PeriodListItem, PeriodState } from '@customreport/shared';
+import type { PeriodListItem, PeriodState } from "@customreport/shared";
 
-import { formatPeriodRange } from '../../lib/format-date';
-import { invalidateAdmin } from '../../lib/cache-keys';
-import { useTRPC } from '../../lib/trpc-context';
+import { formatPeriodRange } from "../../lib/format-date";
+import { invalidateAdmin } from "../../lib/cache-keys";
+import { useTRPC } from "../../lib/trpc-context";
 
-import { TabHeader, TabSearch } from './tab-header';
+import { TabHeader, TabSearch } from "./tab-header";
 
 /**
  * UFB-052 (Phase 51-B), UFB-067: Admin → Periods tab.
@@ -71,16 +71,18 @@ export function PeriodsTab() {
 
   // A27: delete confirmation state. When user clicks delete, we set this
   // to the row and show a confirmation dialog.
-  const [deleteConfirm, setDeleteConfirm] = useState<PeriodListItem | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<PeriodListItem | null>(
+    null,
+  );
 
   // A3: text search over active periods (weekLabel + date range)
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   const activeQuery = useQuery(
-    trpc.admin.listPeriodsByState.queryOptions({ bucket: 'active' }),
+    trpc.admin.listPeriodsByState.queryOptions({ bucket: "active" }),
   );
   const archiveQuery = useQuery({
-    ...trpc.admin.listPeriodsByState.queryOptions({ bucket: 'archive' }),
+    ...trpc.admin.listPeriodsByState.queryOptions({ bucket: "archive" }),
     enabled: showArchive,
   });
 
@@ -93,10 +95,10 @@ export function PeriodsTab() {
     trpc.period.publish.mutationOptions({
       onSuccess: () => {
         invalidatePeriodLists();
-        toast.success('Period published');
+        toast.success("Period published");
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to publish period');
+        toast.error(err.message ?? "Failed to publish period");
       },
     }),
   );
@@ -105,14 +107,14 @@ export function PeriodsTab() {
     trpc.period.reopen.mutationOptions({
       onSuccess: () => {
         invalidatePeriodLists();
-        toast.success('Period reopened');
+        toast.success("Period reopened");
       },
       onError: (err) => {
         // The 51-B reopen-policy gate (master switch + window) surfaces
         // through `PeriodAccessError → BAD_REQUEST` here; the message
         // already explains *why* the reopen was rejected so we pipe it
         // through verbatim.
-        toast.error(err.message ?? 'Failed to reopen period');
+        toast.error(err.message ?? "Failed to reopen period");
       },
     }),
   );
@@ -121,10 +123,10 @@ export function PeriodsTab() {
     trpc.admin.archivePeriod.mutationOptions({
       onSuccess: () => {
         invalidatePeriodLists();
-        toast.success('Period archived');
+        toast.success("Period archived");
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to archive period');
+        toast.error(err.message ?? "Failed to archive period");
       },
     }),
   );
@@ -133,10 +135,10 @@ export function PeriodsTab() {
     trpc.admin.unarchivePeriod.mutationOptions({
       onSuccess: () => {
         invalidatePeriodLists();
-        toast.success('Period unarchived');
+        toast.success("Period unarchived");
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to unarchive period');
+        toast.error(err.message ?? "Failed to unarchive period");
       },
     }),
   );
@@ -148,11 +150,11 @@ export function PeriodsTab() {
     trpc.admin.createPeriodManual.mutationOptions({
       onSuccess: () => {
         invalidatePeriodLists();
-        toast.success('Period created');
+        toast.success("Period created");
         setShowCreate(false);
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to create period');
+        toast.error(err.message ?? "Failed to create period");
       },
     }),
   );
@@ -165,11 +167,11 @@ export function PeriodsTab() {
     trpc.admin.updatePeriodManual.mutationOptions({
       onSuccess: () => {
         invalidatePeriodLists();
-        toast.success('Period updated');
+        toast.success("Period updated");
         setEditingRow(null);
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to update period');
+        toast.error(err.message ?? "Failed to update period");
       },
     }),
   );
@@ -179,10 +181,10 @@ export function PeriodsTab() {
     trpc.admin.deleteReport.mutationOptions({
       onSuccess: () => {
         invalidatePeriodLists();
-        toast.success('Period deleted');
+        toast.success("Period deleted");
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to delete period');
+        toast.error(err.message ?? "Failed to delete period");
       },
     }),
   );
@@ -201,7 +203,7 @@ export function PeriodsTab() {
     if (!needle) return allActiveRows;
     return allActiveRows.filter((row) =>
       [row.weekLabel, formatPeriodRange(row.periodStart, row.periodEnd)]
-        .join(' ')
+        .join(" ")
         .toLowerCase()
         .includes(needle),
     );
@@ -385,7 +387,8 @@ export function PeriodsTab() {
               Delete period?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              This will permanently delete the period and all draft sections. This action cannot be undone.
+              This will permanently delete the period and all draft sections.
+              This action cannot be undone.
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button
@@ -405,7 +408,7 @@ export function PeriodsTab() {
                 disabled={deleteMut.isPending}
                 className="btn-press rounded-[var(--radius-pill)] bg-[#991b1b] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#7f1d1d] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {deleteMut.isPending ? 'Deleting…' : 'Delete'}
+                {deleteMut.isPending ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>
@@ -421,7 +424,7 @@ export function PeriodsTab() {
 
 type PeriodTableProps = {
   readonly rows: PeriodListItem[];
-  readonly testIdPrefix: 'active' | 'archive';
+  readonly testIdPrefix: "active" | "archive";
   readonly onPublish: (row: PeriodListItem) => void;
   readonly onReopen: (row: PeriodListItem) => void;
   readonly onArchive: (row: PeriodListItem) => void;
@@ -499,8 +502,8 @@ function PeriodRow({
   onEdit,
 }: {
   readonly row: PeriodListItem;
-  readonly testIdPrefix: 'active' | 'archive';
-} & Omit<PeriodTableProps, 'rows' | 'testIdPrefix'>) {
+  readonly testIdPrefix: "active" | "archive";
+} & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
   return (
     <tr
       data-testid={`periods-${testIdPrefix}-row-${row.id}`}
@@ -511,8 +514,10 @@ function PeriodRow({
         {formatPeriodRange(row.periodStart, row.periodEnd)}
       </td>
       <td className="px-4 py-3">
-        {row.periodStatus !== 'reopened' && <StateBadge state={row.periodState} />}
-        {row.periodStatus === 'reopened' && (
+        {row.periodStatus !== "reopened" && (
+          <StateBadge state={row.periodState} />
+        )}
+        {row.periodStatus === "reopened" && (
           <span
             className="ml-2 inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold uppercase text-[#92400e]"
             data-testid={`periods-row-${row.id}-reopened-badge`}
@@ -547,11 +552,18 @@ function PeriodRow({
 }
 
 function StateBadge({ state }: { readonly state: PeriodState }) {
-  const styles: Record<PeriodState, { bg: string; text: string; label: string }> = {
-    scheduled: { bg: '#e5e7eb', text: '#374151', label: 'scheduled' },
-    open: { bg: 'var(--color-success)', text: 'var(--color-primary)', label: 'open' },
-    published: { bg: '#e8e0f0', text: '#6b21a8', label: 'published' },
-    archived: { bg: '#f3f4f6', text: '#6b7280', label: 'archived' },
+  const styles: Record<
+    PeriodState,
+    { bg: string; text: string; label: string }
+  > = {
+    scheduled: { bg: "#e5e7eb", text: "#374151", label: "scheduled" },
+    open: {
+      bg: "var(--color-success)",
+      text: "var(--color-primary)",
+      label: "open",
+    },
+    published: { bg: "#e8e0f0", text: "#6b21a8", label: "published" },
+    archived: { bg: "#f3f4f6", text: "#6b7280", label: "archived" },
   };
   const s = styles[state];
   return (
@@ -593,18 +605,18 @@ function ProgressBadge({
     );
   }
   const ratio = submitted / total;
-  const tone =
-    ratio >= 1 ? 'success' : ratio >= 0.5 ? 'amber' : 'red';
+  const tone = ratio >= 1 ? "success" : ratio >= 0.5 ? "amber" : "red";
   const colors = {
-    success: { bg: 'var(--color-success)', text: 'var(--color-primary)' },
-    amber: { bg: '#fef3c7', text: '#92400e' },
-    red: { bg: '#fee2e2', text: '#991b1b' },
+    success: { bg: "var(--color-success)", text: "var(--color-primary)" },
+    amber: { bg: "#fef3c7", text: "#92400e" },
+    red: { bg: "#fee2e2", text: "#991b1b" },
   } as const;
   const c = colors[tone];
   const pending = total - submitted;
-  const tooltipText = pending > 0
-    ? `${submitted} of ${total} leads submitted — ${pending} pending`
-    : `All ${total} leads submitted`;
+  const tooltipText =
+    pending > 0
+      ? `${submitted} of ${total} leads submitted — ${pending} pending`
+      : `All ${total} leads submitted`;
   return (
     <span
       className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-semibold tabular-nums"
@@ -656,7 +668,7 @@ function ActionIconRow({
   onEdit,
 }: {
   readonly row: PeriodListItem;
-} & Omit<PeriodTableProps, 'rows' | 'testIdPrefix'>) {
+} & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
   return (
     <div
       className="inline-flex items-center gap-1"
@@ -670,7 +682,7 @@ function ActionIconRow({
         onClick={() => onEdit(row)}
         icon={<EditIcon />}
       />
-      {row.periodState === 'open' && (
+      {row.periodState === "open" && (
         <IconButton
           testId={`action-publish-${row.id}`}
           label="Publish now"
@@ -678,7 +690,7 @@ function ActionIconRow({
           icon={<PublishIcon />}
         />
       )}
-      {row.periodState === 'published' && row.canReopen && (
+      {row.periodState === "published" && row.canReopen && (
         <IconButton
           testId={`action-reopen-${row.id}`}
           label="Reopen period"
@@ -695,7 +707,7 @@ function ActionIconRow({
           icon={<ArchiveIcon />}
         />
       )}
-      {row.periodState === 'archived' && (
+      {row.periodState === "archived" && (
         <IconButton
           testId={`action-unarchive-${row.id}`}
           label="Unarchive period"
@@ -704,7 +716,7 @@ function ActionIconRow({
         />
       )}
       {/* A27: Delete button. Show when not published, disabled when published. */}
-      {row.periodStatus === 'published' ? (
+      {row.periodStatus === "published" ? (
         <IconButton
           testId={`action-delete-${row.id}`}
           label="Cannot delete a published period"
@@ -743,7 +755,7 @@ function IconButton({
   readonly label: string;
   readonly onClick: () => void;
   readonly icon: React.ReactNode;
-  readonly tone?: 'danger';
+  readonly tone?: "danger";
   readonly disabled?: boolean;
 }) {
   return (
@@ -756,11 +768,11 @@ function IconButton({
       data-testid={testId}
       className={`btn-press inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent transition-colors ${
         disabled
-          ? 'cursor-not-allowed opacity-50'
+          ? "cursor-not-allowed opacity-50"
           : `hover:border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] ${
-              tone === 'danger'
-                ? 'text-[#991b1b] hover:text-[#7f1d1d]'
-                : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-starbucks-accent)]'
+              tone === "danger"
+                ? "text-[#991b1b] hover:text-[#7f1d1d]"
+                : "text-[var(--color-muted-foreground)] hover:text-[var(--color-starbucks-accent)]"
             }`
       }`}
     >
@@ -773,7 +785,7 @@ function Chevron({ expanded }: { readonly expanded: boolean }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className={`h-4 w-4 transition-transform ${expanded ? 'rotate-90' : ''}`}
+      className={`h-4 w-4 transition-transform ${expanded ? "rotate-90" : ""}`}
       stroke="currentColor"
       fill="none"
       strokeWidth={2}
@@ -995,13 +1007,13 @@ function CreatePeriodDialog({
    * a next-Monday default; `mode === 'edit'` opens it as «Edit period»
    * prefilled from `initialValues` (the row being edited).
    */
-  readonly mode: 'create' | 'edit';
+  readonly mode: "create" | "edit";
   readonly initialValues?: PeriodListItem;
   readonly onCancel: () => void;
   readonly onSubmit: (values: CreatePeriodValues) => void;
   readonly isPending: boolean;
 }) {
-  const isEdit = mode === 'edit' && initialValues !== undefined;
+  const isEdit = mode === "edit" && initialValues !== undefined;
 
   // Initialise from the row in edit-mode; from nextMonday() otherwise.
   // The lazy-init form (`useState(() => …)`) keeps both branches cheap.
@@ -1009,25 +1021,25 @@ function CreatePeriodDialog({
     isEdit ? dateInputValue(initialValues.periodStart) : nextMonday(new Date()),
   );
   const [periodEnd, setPeriodEnd] = useState(() =>
-    isEdit ? dateInputValue(initialValues.periodEnd) : '',
+    isEdit ? dateInputValue(initialValues.periodEnd) : "",
   );
   const [deadline, setDeadline] = useState(() =>
-    isEdit ? dateTimeInputValue(initialValues.deadline) : '',
+    isEdit ? dateTimeInputValue(initialValues.deadline) : "",
   );
   const [weekLabel, setWeekLabel] = useState(
-    isEdit ? (initialValues?.weekLabel ?? '') : '',
+    isEdit ? (initialValues?.weekLabel ?? "") : "",
   );
 
   // Esc-to-close + click-outside (matches the groups-tab dialog pattern).
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         onCancel();
       }
     }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
   }, [onCancel]);
 
   function handleSubmit() {
@@ -1043,7 +1055,7 @@ function CreatePeriodDialog({
     // - edit:   empty → `null` (explicit clear of an existing label).
     let weekLabelValue: string | null | undefined;
     const trimmed = weekLabel.trim();
-    if (trimmed === '') {
+    if (trimmed === "") {
       weekLabelValue = isEdit ? null : undefined;
     } else {
       weekLabelValue = trimmed;
@@ -1064,27 +1076,27 @@ function CreatePeriodDialog({
     const dl = new Date(deadline);
     if (periodStart) {
       const start = new Date(`${periodStart}T00:00:00.000Z`);
-      if (dl < start) return 'Deadline cannot be before period start.';
+      if (dl < start) return "Deadline cannot be before period start.";
     }
     if (periodEnd) {
       const end = new Date(`${periodEnd}T23:59:59.999Z`);
-      if (dl > end) return 'Deadline cannot be after period end.';
+      if (dl > end) return "Deadline cannot be after period end.";
     }
     return null;
   })();
 
-  const canSubmit = periodStart !== '' && !isPending && !deadlineError;
-  const title = isEdit ? 'Edit period' : 'New period';
+  const canSubmit = periodStart !== "" && !isPending && !deadlineError;
+  const title = isEdit ? "Edit period" : "New period";
   const description = isEdit
-    ? 'Adjust the date envelope or label for this reporting period.'
-    : 'Mints a reporting period without waiting for the daily auto-creator. End date and deadline default from AppSettings when left blank.';
+    ? "Adjust the date envelope or label for this reporting period."
+    : "Mints a reporting period without waiting for the daily auto-creator. End date and deadline default from AppSettings when left blank.";
   const submitCopy = isEdit
     ? isPending
-      ? 'Saving…'
-      : 'Save'
+      ? "Saving…"
+      : "Save"
     : isPending
-      ? 'Creating…'
-      : 'Create';
+      ? "Creating…"
+      : "Create";
 
   return (
     <div
@@ -1130,7 +1142,7 @@ function CreatePeriodDialog({
               htmlFor="period-end"
               className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
             >
-              Period end{' '}
+              Period end{" "}
               <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
                 (optional)
               </span>
@@ -1149,7 +1161,7 @@ function CreatePeriodDialog({
               htmlFor="period-deadline"
               className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
             >
-              Deadline{' '}
+              Deadline{" "}
               <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
                 (optional)
               </span>
@@ -1160,7 +1172,7 @@ function CreatePeriodDialog({
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
               data-testid="periods-create-deadline"
-              className={`w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] ${deadlineError ? 'border-red-400 focus:border-red-400 bg-red-50' : 'border-[var(--color-border)] focus:border-[var(--color-starbucks-accent)] bg-white'}`}
+              className={`w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] ${deadlineError ? "border-red-400 focus:border-red-400 bg-red-50" : "border-[var(--color-border)] focus:border-[var(--color-starbucks-accent)] bg-white"}`}
             />
             {deadlineError && (
               <p
@@ -1176,7 +1188,7 @@ function CreatePeriodDialog({
               htmlFor="period-label"
               className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
             >
-              Period label{' '}
+              Period label{" "}
               <span className="text-xs font-normal text-[var(--color-muted-foreground)]">
                 (optional)
               </span>
@@ -1219,11 +1231,10 @@ function CreatePeriodDialog({
 }
 
 function formatDate(d: Date | string): string {
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+  const date = typeof d === "string" ? new Date(d) : d;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
-

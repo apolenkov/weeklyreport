@@ -12,21 +12,27 @@ Structured audit channel for security-relevant events (login success/fail, logou
 ## Audit envelope shape (final)
 
 ```typescript
-export type AuditEvent = 'login-success' | 'login-fail' | 'logout' | 'role-denied';
+export type AuditEvent =
+  | "login-success"
+  | "login-fail"
+  | "logout"
+  | "role-denied";
 
 export type AuditEnvelope = {
   readonly event: AuditEvent;
   readonly userId: string;
-  readonly role: Role | 'unknown';
+  readonly role: Role | "unknown";
   readonly attemptedRole?: ReadonlyArray<Role> | Role;
   readonly ip: string;
 };
 
 export interface AuditLogger {
-  loginSuccess(input: Omit<AuditEnvelope, 'event' | 'attemptedRole'>): void;
-  loginFail(input: Omit<AuditEnvelope, 'event' | 'attemptedRole'> & { reason: string }): void;
-  logout(input: Omit<AuditEnvelope, 'event' | 'attemptedRole'>): void;
-  roleDenied(input: Omit<AuditEnvelope, 'event'>): void;
+  loginSuccess(input: Omit<AuditEnvelope, "event" | "attemptedRole">): void;
+  loginFail(
+    input: Omit<AuditEnvelope, "event" | "attemptedRole"> & { reason: string },
+  ): void;
+  logout(input: Omit<AuditEnvelope, "event" | "attemptedRole">): void;
+  roleDenied(input: Omit<AuditEnvelope, "event">): void;
 }
 ```
 
@@ -34,25 +40,25 @@ export interface AuditLogger {
 
 ## Files modified
 
-| File | LOC delta | Note |
-|------|-----------|------|
-| apps/api/src/lib/audit-logger.ts (new) | +101 | createAuditLogger + createNullAuditLogger |
-| apps/api/src/lib/audit-logger.test.ts (new) | +145 | 6 unit tests, envelope + whitelist coverage |
-| apps/api/src/infrastructure/trpc/__tests__/audit-events.test.ts (new) | +143 | 3 integration-style tests on the role-deny seam |
-| apps/api/src/infrastructure/trpc/trpc.context.ts | +21/-3 | TrpcContext + auditLogger + ip; factory builds auditLogger once |
-| apps/api/src/infrastructure/trpc/trpc.middleware.ts | +27/-12 | Local buildRoleMiddleware emits roleDenied before re-throwing FORBIDDEN |
-| apps/api/src/infrastructure/trpc/trpc.middleware.test.ts | +30/-2 | Test harnesses now include auditLogger + ip |
-| apps/api/src/modules/auth/auth.routes.ts | +37/-2 | SAML callback emits loginSuccess/loginFail; logout route emits logout |
-| apps/api/src/main.ts | +11/-1 | createAuditLogger wired into mountAuthRoutes |
+| File                                                                  | LOC delta | Note                                                                    |
+| --------------------------------------------------------------------- | --------- | ----------------------------------------------------------------------- |
+| apps/api/src/lib/audit-logger.ts (new)                                | +101      | createAuditLogger + createNullAuditLogger                               |
+| apps/api/src/lib/audit-logger.test.ts (new)                           | +145      | 6 unit tests, envelope + whitelist coverage                             |
+| apps/api/src/infrastructure/trpc/**tests**/audit-events.test.ts (new) | +143      | 3 integration-style tests on the role-deny seam                         |
+| apps/api/src/infrastructure/trpc/trpc.context.ts                      | +21/-3    | TrpcContext + auditLogger + ip; factory builds auditLogger once         |
+| apps/api/src/infrastructure/trpc/trpc.middleware.ts                   | +27/-12   | Local buildRoleMiddleware emits roleDenied before re-throwing FORBIDDEN |
+| apps/api/src/infrastructure/trpc/trpc.middleware.test.ts              | +30/-2    | Test harnesses now include auditLogger + ip                             |
+| apps/api/src/modules/auth/auth.routes.ts                              | +37/-2    | SAML callback emits loginSuccess/loginFail; logout route emits logout   |
+| apps/api/src/main.ts                                                  | +11/-1    | createAuditLogger wired into mountAuthRoutes                            |
 
 ## Test counts
 
-| Suite | Before | After | Delta |
-|-------|--------|-------|-------|
-| api unit | 435 / 33 files | 444 / 35 files | +9 / +2 |
-| web unit | 168 (1 pre-existing fail) | 168 (same fail) | 0 |
-| shared unit | 218 | 218 | 0 |
-| typecheck (api + web) | green | green | — |
+| Suite                 | Before                    | After           | Delta   |
+| --------------------- | ------------------------- | --------------- | ------- |
+| api unit              | 435 / 33 files            | 444 / 35 files  | +9 / +2 |
+| web unit              | 168 (1 pre-existing fail) | 168 (same fail) | 0       |
+| shared unit           | 218                       | 218             | 0       |
+| typecheck (api + web) | green                     | green           | —       |
 
 The single web failure (`apps/web/proxy.test.ts`) is pre-existing and not touched by this plan.
 

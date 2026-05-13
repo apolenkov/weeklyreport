@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 /**
  * 34-02: explicit vitest config so CI can run with --coverage and enforce
@@ -14,24 +14,24 @@ export default defineConfig({
     // Mirrors the `test` script's exclude rule so unit + integration runs
     // diverge cleanly. Integration uses --fileParallelism=false on demand.
     exclude: [
-      '**/*.integration.test.ts',
-      '**/*.eval.test.ts',
-      '**/dist/**',
-      '**/node_modules/**',
+      "**/*.integration.test.ts",
+      "**/*.eval.test.ts",
+      "**/dist/**",
+      "**/node_modules/**",
     ],
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'lcov', 'html'],
-      reportsDirectory: './coverage',
-      include: ['src/**/*.ts'],
+      provider: "v8",
+      reporter: ["text", "lcov", "html"],
+      reportsDirectory: "./coverage",
+      include: ["src/**/*.ts"],
       exclude: [
-        'src/**/*.test.ts',
-        'src/**/*.integration.test.ts',
-        'src/**/*.eval.test.ts',
-        'src/**/__tests__/**',
-        'src/**/test-utils/**',
-        'src/main.ts',
-        'src/**/*.module.ts',
+        "src/**/*.test.ts",
+        "src/**/*.integration.test.ts",
+        "src/**/*.eval.test.ts",
+        "src/**/__tests__/**",
+        "src/**/test-utils/**",
+        "src/main.ts",
+        "src/**/*.module.ts",
       ],
       thresholds: {
         statements: 80,

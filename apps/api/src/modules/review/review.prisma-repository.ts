@@ -1,14 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   submissionDashboardRowSchema,
   type SubmissionDashboardRow,
-} from '@customreport/shared';
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import { groupScopeFilter } from '../../lib/group-scope.js';
+} from "@customreport/shared";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { groupScopeFilter } from "../../lib/group-scope.js";
 import type {
   DashboardScopeSession,
   ReviewRepository,
-} from './review.service.js';
+} from "./review.service.js";
 
 @Injectable()
 export class ReviewPrismaRepository implements ReviewRepository {
@@ -20,7 +20,7 @@ export class ReviewPrismaRepository implements ReviewRepository {
   ): Promise<SubmissionDashboardRow[]> {
     const scope = groupScopeFilter(
       session as Parameters<typeof groupScopeFilter>[0],
-      'reportSection',
+      "reportSection",
     );
     const sections = await this.prisma.reportSection.findMany({
       where: { reportId: activeReportId, ...scope },
@@ -41,7 +41,7 @@ export class ReviewPrismaRepository implements ReviewRepository {
 }
 
 type SectionWithAuthor = Awaited<
-  ReturnType<PrismaService['reportSection']['findMany']>
+  ReturnType<PrismaService["reportSection"]["findMany"]>
 >[number] & {
   author: {
     id: string;

@@ -13,6 +13,7 @@ Triggered an audit that found 39 deltas I'd missed. Functional tests + screensho
 **Why:** screenshot-snapshot tests confirm "page renders" but don't validate "page matches design". Mockups have explicit CSS rules (border-style, font-weight, letter-spacing, color hex codes, animation keyframes) that functional tests don't read.
 
 **How to apply:**
+
 - After UI work that's mockup-driven, spawn a general-purpose agent with the mockup HTML + impl source paths and ask it to produce a deltas list (severity-tagged).
 - Pattern to follow: `.planning/MOCKUP-AUDIT-2026-05-05.md` — sections per screen, fields {Mockup says, Impl does, Severity, Fix sketch}.
 - The audit task should explicitly look for: borders (dashed vs solid, color), spacing, typography (size/weight/tracking), colors not matching CSS-variable references, hover/focus/active states, mobile breakpoints, status badges, animations.

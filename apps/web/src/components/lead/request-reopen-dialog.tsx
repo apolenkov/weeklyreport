@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type RequestReopenDialogProps = {
   readonly open: boolean;
@@ -43,12 +43,12 @@ export function RequestReopenDialog({
   onConfirm,
   onCancel,
 }: RequestReopenDialogProps) {
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    setReason('');
+    setReason("");
     // Defer focus so the portal mounts first.
     const id = requestAnimationFrame(() => {
       textareaRef.current?.focus();
@@ -62,16 +62,16 @@ export function RequestReopenDialog({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       e.preventDefault();
       onCancel();
-    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleConfirm();
     }
   }
 
-  if (!open || typeof document === 'undefined') return null;
+  if (!open || typeof document === "undefined") return null;
 
   return createPortal(
     <div
@@ -100,7 +100,7 @@ export function RequestReopenDialog({
             htmlFor="reopen-reason"
             className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
           >
-            Reason{' '}
+            Reason{" "}
             <span className="font-normal text-[var(--color-muted-foreground)]">
               (optional, max 500 chars)
             </span>
@@ -109,7 +109,7 @@ export function RequestReopenDialog({
             id="reopen-reason"
             ref={textareaRef}
             className="w-full resize-y rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-            style={{ minHeight: '80px' }}
+            style={{ minHeight: "80px" }}
             maxLength={500}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -121,7 +121,9 @@ export function RequestReopenDialog({
         </div>
 
         {error && (
-          <p className="mt-2 text-xs text-[var(--color-destructive)]">{error}</p>
+          <p className="mt-2 text-xs text-[var(--color-destructive)]">
+            {error}
+          </p>
         )}
 
         <p className="mt-3 text-[11px] text-[var(--color-muted-foreground)]">
@@ -144,7 +146,7 @@ export function RequestReopenDialog({
             disabled={pending}
             className="btn-press inline-flex min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:opacity-50"
           >
-            {pending ? 'Sending…' : 'Send Request'}
+            {pending ? "Sending…" : "Send Request"}
           </button>
         </div>
       </div>

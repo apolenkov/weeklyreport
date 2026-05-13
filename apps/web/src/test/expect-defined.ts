@@ -10,7 +10,7 @@ export function expectDefined<T>(
   message?: string,
 ): T {
   if (value === null || value === undefined) {
-    throw new Error(message ?? 'expected defined value');
+    throw new Error(message ?? "expected defined value");
   }
   return value;
 }

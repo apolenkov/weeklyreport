@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import type { KanbanItem, ItemStatus, Product } from './mock-data';
-import { StageMultiSelect } from './stage-multi-select';
+import { useEffect, useState } from "react";
+import type { KanbanItem, ItemStatus, Product } from "./mock-data";
+import { StageMultiSelect } from "./stage-multi-select";
 
 type ItemEditDialogProps = {
   /** Open/close state. Caller controls so it can wire submit/cancel. */
@@ -21,7 +21,7 @@ type ItemEditDialogProps = {
    * "Blocked" because those are workflow-state semantics for in-flight
    * work, not yet-to-start work.
    */
-  readonly week: 'current' | 'next';
+  readonly week: "current" | "next";
   /** Author label used as the default for newly-created items. */
   readonly currentUserName?: string;
   /**
@@ -39,17 +39,53 @@ type ItemEditDialogProps = {
   readonly onCancel: () => void;
 };
 
-type Choice = { value: ItemStatus; label: string; bg: string; color: string; border: string };
+type Choice = {
+  value: ItemStatus;
+  label: string;
+  bg: string;
+  color: string;
+  border: string;
+};
 
 const CURRENT_WEEK_CHOICES: readonly Choice[] = [
-  { value: 'completed',   label: '✓ Completed',   bg: 'var(--color-primary)',     color: '#fff',                          border: 'var(--color-primary)' },
-  { value: 'in-progress', label: '! In Progress',      bg: 'var(--color-success)',     color: 'var(--color-primary)',          border: 'var(--color-starbucks-accent)' },
-  { value: 'blocked',     label: '✕ Blocked',     bg: '#fee2e2',                  color: 'var(--color-destructive)',      border: 'var(--color-destructive)' },
+  {
+    value: "completed",
+    label: "✓ Completed",
+    bg: "var(--color-primary)",
+    color: "#fff",
+    border: "var(--color-primary)",
+  },
+  {
+    value: "in-progress",
+    label: "! In Progress",
+    bg: "var(--color-success)",
+    color: "var(--color-primary)",
+    border: "var(--color-starbucks-accent)",
+  },
+  {
+    value: "blocked",
+    label: "✕ Blocked",
+    bg: "#fee2e2",
+    color: "var(--color-destructive)",
+    border: "var(--color-destructive)",
+  },
 ];
 
 const NEXT_WEEK_CHOICES: readonly Choice[] = [
-  { value: 'planned',     label: '○ Planned',     bg: 'var(--color-muted)',       color: 'var(--color-muted-foreground)', border: 'rgba(0,0,0,0.15)' },
-  { value: 'in-progress', label: '! In Progress',      bg: 'var(--color-success)',     color: 'var(--color-primary)',          border: 'var(--color-starbucks-accent)' },
+  {
+    value: "planned",
+    label: "○ Planned",
+    bg: "var(--color-muted)",
+    color: "var(--color-muted-foreground)",
+    border: "rgba(0,0,0,0.15)",
+  },
+  {
+    value: "in-progress",
+    label: "! In Progress",
+    bg: "var(--color-success)",
+    color: "var(--color-primary)",
+    border: "var(--color-starbucks-accent)",
+  },
 ];
 
 export function ItemEditDialog({
@@ -73,19 +109,23 @@ export function ItemEditDialog({
     ? (products.find((p) => p.id === defaultProductId) ?? products[0])
     : null;
   const initial: KanbanItem = item ?? {
-    id: '',
-    productId: seedProduct?.id ?? '',
-    productName: seedProduct?.name ?? '',
-    status: week === 'current' ? 'in-progress' : 'planned',
-    text: '',
-    author: currentUserName ?? 'You',
+    id: "",
+    productId: seedProduct?.id ?? "",
+    productName: seedProduct?.name ?? "",
+    status: week === "current" ? "in-progress" : "planned",
+    text: "",
+    author: currentUserName ?? "You",
   };
   const [text, setText] = useState(initial.text);
   const [status, setStatus] = useState<ItemStatus>(initial.status);
   const [productId, setProductId] = useState(initial.productId);
   // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
   const [stageIds, setStageIds] = useState<string[]>(
-    item?.stageIds ? [...item.stageIds] : (isCreate ? [...(stagesForProduct?.(initial.productId) ?? [])] : []),
+    item?.stageIds
+      ? [...item.stageIds]
+      : isCreate
+        ? [...(stagesForProduct?.(initial.productId) ?? [])]
+        : [],
   );
   const [errors, setErrors] = useState<{ text?: string }>({});
 
@@ -97,11 +137,17 @@ export function ItemEditDialog({
       setText(initial.text);
       setStatus(initial.status);
       setProductId(initial.productId);
-      setStageIds(item?.stageIds ? [...item.stageIds] : (isCreate ? [...(stagesForProduct?.(initial.productId) ?? [])] : []));
+      setStageIds(
+        item?.stageIds
+          ? [...item.stageIds]
+          : isCreate
+            ? [...(stagesForProduct?.(initial.productId) ?? [])]
+            : [],
+      );
       setErrors({});
     }
-  // eslint-disable-next-line react-compiler/react-compiler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     open,
     item?.id,
@@ -115,22 +161,22 @@ export function ItemEditDialog({
 
   if (!open) return null;
 
-  const choices = week === 'current' ? CURRENT_WEEK_CHOICES : NEXT_WEEK_CHOICES;
+  const choices = week === "current" ? CURRENT_WEEK_CHOICES : NEXT_WEEK_CHOICES;
   const selectedProduct = products.find((p) => p.id === productId);
   const headerProductName = selectedProduct?.name ?? initial.productName;
-  const headerVerb = isCreate ? 'Add Item' : 'Edit Item';
+  const headerVerb = isCreate ? "Add Item" : "Edit Item";
 
   function handleSave() {
     const trimmed = text.trim();
     const next: typeof errors = {};
-    if (trimmed.length === 0) next.text = 'Description is required';
+    if (trimmed.length === 0) next.text = "Description is required";
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
     }
     const product = products.find((p) => p.id === productId) ?? products[0];
     if (!product) {
-      setErrors({ text: 'No product available' });
+      setErrors({ text: "No product available" });
       return;
     }
     const out: KanbanItem = {
@@ -140,17 +186,17 @@ export function ItemEditDialog({
       stageIds: stageIds.length > 0 ? stageIds : undefined,
       text: trimmed,
       status,
-      author: item?.author ?? currentUserName ?? 'You',
+      author: item?.author ?? currentUserName ?? "You",
     };
     onSave(out);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       e.preventDefault();
       onCancel();
     }
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSave();
     }
@@ -171,35 +217,55 @@ export function ItemEditDialog({
         aria-label={`${headerVerb} dialog`}
       >
         <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {headerVerb} {headerProductName ? <span className="text-[var(--color-muted-foreground)]">— {headerProductName}</span> : null}
+          {headerVerb}{" "}
+          {headerProductName ? (
+            <span className="text-[var(--color-muted-foreground)]">
+              — {headerProductName}
+            </span>
+          ) : null}
         </h2>
 
         <div className="space-y-4">
           {/* Description */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="item-text">
+            <label
+              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+              htmlFor="item-text"
+            >
               Description *
             </label>
             <textarea
               id="item-text"
               autoFocus
-              aria-invalid={errors.text ? 'true' : 'false'}
-              aria-describedby={errors.text ? 'item-text-error' : undefined}
+              aria-invalid={errors.text ? "true" : "false"}
+              aria-describedby={errors.text ? "item-text-error" : undefined}
               // Border + focus-ring switch to destructive when validation
               // failed so the error reads at-a-glance, not just from the
               // sentence underneath.
               className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
                 errors.text
-                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
-                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+                  ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                  : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
               }`}
-              style={{ minHeight: '70px' }}
+              style={{ minHeight: "70px" }}
               value={text}
-              onChange={(e) => { setText(e.target.value); setErrors((prev) => ({ ...prev, text: undefined })); }}
-              placeholder={week === 'current' ? 'What was done or in progress…' : 'What is planned for next week…'}
+              onChange={(e) => {
+                setText(e.target.value);
+                setErrors((prev) => ({ ...prev, text: undefined }));
+              }}
+              placeholder={
+                week === "current"
+                  ? "What was done or in progress…"
+                  : "What is planned for next week…"
+              }
             />
             {errors.text && (
-              <p id="item-text-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.text}</p>
+              <p
+                id="item-text-error"
+                className="mt-1 text-xs text-[var(--color-destructive)]"
+              >
+                {errors.text}
+              </p>
             )}
           </div>
 
@@ -212,7 +278,9 @@ export function ItemEditDialog({
 
           {/* Status chips */}
           <div>
-            <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">Status</span>
+            <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
+              Status
+            </span>
             <div className="flex flex-wrap gap-2">
               {choices.map((c) => {
                 const selected = status === c.value;
@@ -223,9 +291,9 @@ export function ItemEditDialog({
                     onClick={() => setStatus(c.value)}
                     className="inline-flex min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
                     style={{
-                      background: selected ? c.bg : 'transparent',
-                      color: selected ? c.color : 'var(--color-foreground)',
-                      border: `1.5px solid ${selected ? c.border : 'rgba(0,0,0,0.15)'}`,
+                      background: selected ? c.bg : "transparent",
+                      color: selected ? c.color : "var(--color-foreground)",
+                      border: `1.5px solid ${selected ? c.border : "rgba(0,0,0,0.15)"}`,
                     }}
                     aria-pressed={selected}
                   >
@@ -239,7 +307,10 @@ export function ItemEditDialog({
           {/* Product picker — only meaningful when there are >1 products */}
           {products.length > 1 && (
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="item-product">
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="item-product"
+              >
                 Product
               </label>
               <select
@@ -249,7 +320,9 @@ export function ItemEditDialog({
                 onChange={(e) => setProductId(e.target.value)}
               >
                 {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>

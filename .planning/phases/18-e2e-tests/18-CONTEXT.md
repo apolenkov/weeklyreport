@@ -43,11 +43,12 @@ error path, and visual baseline defined in the mockups.
 8. UI States & Error Handling (SC-51..SC-54) — 4 scenarios
 9. Edge Cases (SC-55..SC-58) — 4 scenarios
 10. Responsive & Accessibility (SC-59..SC-62) — 4 scenarios
-11-28. Advanced scenarios (SC-63..SC-190) — 127 scenarios
-29. Login Stub (SC-191..SC-198) — 8 scenarios
-30. URL-Based Routing (SC-199..SC-209) — 11 scenarios
-31. Nav Bar (SC-210..SC-211) — 2 scenarios
-+ Additional scenarios SC-212..SC-223
+    11-28. Advanced scenarios (SC-63..SC-190) — 127 scenarios
+11. Login Stub (SC-191..SC-198) — 8 scenarios
+12. URL-Based Routing (SC-199..SC-209) — 11 scenarios
+13. Nav Bar (SC-210..SC-211) — 2 scenarios
+
+- Additional scenarios SC-212..SC-223
 
 ## Plan Structure
 

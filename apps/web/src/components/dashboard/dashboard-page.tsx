@@ -249,7 +249,8 @@ export function DashboardPage() {
             No active reporting period
           </p>
           <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-            Ask an admin to open a new period to start collecting status reports.
+            Ask an admin to open a new period to start collecting status
+            reports.
           </p>
         </div>
       </div>

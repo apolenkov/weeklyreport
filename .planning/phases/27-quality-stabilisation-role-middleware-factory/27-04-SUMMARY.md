@@ -93,6 +93,7 @@ The plan's option (a) — extending `roleSchema` directly — collided with the 
 ```
 
 Test files updated for the split:
+
 - `packages/shared/src/schemas/__tests__/auth.test.ts` — added admin-session acceptance to `userSessionSchema` role-validation loop; rephrased the `roleSchema` admin-rejection assertion to clarify it is the DB-narrow enum.
 - `packages/shared/src/schemas/__tests__/auth.contract.test.ts` — same treatment; the "rejects invalid role in session" case now uses `'superadmin'` to exercise unknown-role rejection.
 
@@ -114,12 +115,23 @@ export function requireRole<
 >(
   t: {
     middleware: <$ContextOverrides>(
-      fn: TRPCMiddlewareFunction<TContext, TMeta, object, $ContextOverrides, unknown>,
+      fn: TRPCMiddlewareFunction<
+        TContext,
+        TMeta,
+        object,
+        $ContextOverrides,
+        unknown
+      >,
     ) => TRPCMiddlewareBuilder<TContext, TMeta, $ContextOverrides, unknown>;
   },
   allowed: Role | Role[],
 ): {
-  middleware: TRPCMiddlewareBuilder<TContext, TMeta, { session: UserSession }, unknown>;
+  middleware: TRPCMiddlewareBuilder<
+    TContext,
+    TMeta,
+    { session: UserSession },
+    unknown
+  >;
 };
 ```
 
@@ -130,11 +142,21 @@ The constraint on `t.middleware` declares `$ContextOverrides` as a generic and t
 Strategy: capture middleware-function identities at module init from a starter procedure of each base, then walk `appRouter._def.procedures` and assert each leaf's `_def.middlewares` chain begins with one of those identity-prefixes.
 
 ```typescript
-const PUBLIC_CHAIN = publicProcedure.query(() => undefined)._def.middlewares.slice(0, -1);
-const PROTECTED_CHAIN = protectedProcedure.query(() => undefined)._def.middlewares.slice(0, -1);
-const HEAD_CHAIN = headProcedure.query(() => undefined)._def.middlewares.slice(0, -1);
-const LEAD_CHAIN = leadProcedure.query(() => undefined)._def.middlewares.slice(0, -1);
-const VIEWER_CHAIN = viewerProcedure.query(() => undefined)._def.middlewares.slice(0, -1);
+const PUBLIC_CHAIN = publicProcedure
+  .query(() => undefined)
+  ._def.middlewares.slice(0, -1);
+const PROTECTED_CHAIN = protectedProcedure
+  .query(() => undefined)
+  ._def.middlewares.slice(0, -1);
+const HEAD_CHAIN = headProcedure
+  .query(() => undefined)
+  ._def.middlewares.slice(0, -1);
+const LEAD_CHAIN = leadProcedure
+  .query(() => undefined)
+  ._def.middlewares.slice(0, -1);
+const VIEWER_CHAIN = viewerProcedure
+  .query(() => undefined)
+  ._def.middlewares.slice(0, -1);
 ```
 
 The `.slice(0, -1)` strips the resolver function (always appended last) so the chain compared is just `[loggingMiddleware, ...roleMiddleware]`. Each base produces a unique identity-prefix. `adminProcedure === headProcedure` is covered automatically because they share `HEAD_CHAIN`.
@@ -155,11 +177,11 @@ A third (positive) test asserts `findUncoveredProcedures(realAppRouter) === []` 
 
 ## Test counts before/after
 
-| Suite | Before | After | Delta |
-|-------|--------|-------|-------|
-| `@customreport/shared` | 16 (single file) | 218 (5 files) | +202 (test runner widened — pre-existing tests now picked up) |
-| `@customreport/api` (unit) | 398 | 401 | +3 (role-coverage.test.ts) |
-| `@customreport/web` | 168/169 (1 pre-existing fail) | 168/169 (same fail) | no change |
+| Suite                      | Before                        | After               | Delta                                                         |
+| -------------------------- | ----------------------------- | ------------------- | ------------------------------------------------------------- |
+| `@customreport/shared`     | 16 (single file)              | 218 (5 files)       | +202 (test runner widened — pre-existing tests now picked up) |
+| `@customreport/api` (unit) | 398                           | 401                 | +3 (role-coverage.test.ts)                                    |
+| `@customreport/web`        | 168/169 (1 pre-existing fail) | 168/169 (same fail) | no change                                                     |
 
 The shared delta is mostly from the widened test runner picking up four co-located test files that had been silently skipped — a hidden gain. The new `role.test.ts` itself contributes 8 of those 218 tests (covering UNAUTHORIZED on null, FORBIDDEN on single-role mismatch, allow on match, single+array inputs, equivalent-gate property, error-message content, ordering of UNAUTHORIZED before FORBIDDEN, TRPCError instance check).
 

@@ -4,23 +4,27 @@ import {
   type AdminReminderRule,
   type PaginationInput,
   type PaginatedResult,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import type { Queue } from 'bullmq';
+import type { Queue } from "bullmq";
 
-import { createNullLogger, type AppLogger } from '../../lib/logger';
+import { createNullLogger, type AppLogger } from "../../lib/logger";
 
 export class ReminderDomainError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'ReminderDomainError';
+    this.name = "ReminderDomainError";
   }
 }
 
 export interface RemindersRepository {
   getRule(ruleId: string): Promise<AdminReminderRule | null>;
-  findExecutionByDedupeKey(dedupeKey: string): Promise<AdminReminderExecution | null>;
-  saveExecution(execution: AdminReminderExecution): Promise<AdminReminderExecution>;
+  findExecutionByDedupeKey(
+    dedupeKey: string,
+  ): Promise<AdminReminderExecution | null>;
+  saveExecution(
+    execution: AdminReminderExecution,
+  ): Promise<AdminReminderExecution>;
   getExecution(executionId: string): Promise<AdminReminderExecution | null>;
   listExecutions(ruleId: string): Promise<AdminReminderExecution[]>;
 }
@@ -48,7 +52,7 @@ export type ReminderOrganization = {
 };
 
 export type DeadlineReminderPayload = {
-  kind: 'deadline';
+  kind: "deadline";
   cycleDate: string; // ISO YYYY-MM-DD UTC of the fireAt deadline
   leadName: string;
   reportPeriod: string;
@@ -58,7 +62,7 @@ export type DeadlineReminderPayload = {
 };
 
 export type EscalationReminderPayload = {
-  kind: 'escalation';
+  kind: "escalation";
   cycleDate: string; // ISO YYYY-MM-DD UTC of the escalation fireAt
   headName: string;
   reportPeriod: string;
@@ -106,8 +110,10 @@ export class RemindersService {
       throw new ReminderDomainError(`Reminder rule ${ruleId} was not found.`);
     }
 
-    if (rule.status !== 'active') {
-      throw new ReminderDomainError('Reminder execution requires an active rule.');
+    if (rule.status !== "active") {
+      throw new ReminderDomainError(
+        "Reminder execution requires an active rule.",
+      );
     }
 
     // NOTIF-02 (Phase 29-05): both 'deadline' and 'escalation' use the same
@@ -117,21 +123,25 @@ export class RemindersService {
       ? `${rule.id}:${payload.kind}:${payload.cycleDate}:${recipientEmail}`
       : `${rule.id}:${rule.fireAt.toISOString()}:${recipientEmail}`;
 
-    const existingExecution = await this.repository.findExecutionByDedupeKey(dedupeKey);
+    const existingExecution =
+      await this.repository.findExecutionByDedupeKey(dedupeKey);
 
     if (existingExecution) {
-      this.logger.debug('deduplicated reminder execution', { dedupeKey, ruleId });
+      this.logger.debug("deduplicated reminder execution", {
+        dedupeKey,
+        ruleId,
+      });
       return adminReminderExecutionSchema.parse(existingExecution);
     }
 
-    this.logger.info('creating reminder execution', { ruleId, recipientEmail });
+    this.logger.info("creating reminder execution", { ruleId, recipientEmail });
     const execution = await this.repository.saveExecution(
       adminReminderExecutionSchema.parse({
         id: crypto.randomUUID(),
         ruleId: rule.id,
         reportId: rule.reportId,
         dedupeKey,
-        status: 'queued',
+        status: "queued",
         scheduledFor: rule.fireAt,
         sentAt: null,
         recipientEmail,
@@ -141,11 +151,11 @@ export class RemindersService {
 
     if (this.emailQueue) {
       let queuePayload: Record<string, unknown>;
-      if (payload?.kind === 'deadline') {
+      if (payload?.kind === "deadline") {
         queuePayload = {
           executionId: execution.id,
           recipientEmail,
-          kind: 'deadline',
+          kind: "deadline",
           leadName: payload.leadName,
           reportPeriod: payload.reportPeriod,
           deadlineIso: payload.deadlineIso,
@@ -153,11 +163,11 @@ export class RemindersService {
           // UFB-047 / Phase 49-01: brand snapshot — see ReminderOrganization.
           organization: payload.organization,
         };
-      } else if (payload?.kind === 'escalation') {
+      } else if (payload?.kind === "escalation") {
         queuePayload = {
           executionId: execution.id,
           recipientEmail,
-          kind: 'escalation',
+          kind: "escalation",
           headName: payload.headName,
           cycleDate: payload.cycleDate,
           reportPeriod: payload.reportPeriod,
@@ -171,15 +181,17 @@ export class RemindersService {
         queuePayload = {
           executionId: execution.id,
           recipientEmail,
-          reportPeriod: rule.reportId ?? '',
+          reportPeriod: rule.reportId ?? "",
         };
       }
 
-      await this.emailQueue.add('send', queuePayload, {
+      await this.emailQueue.add("send", queuePayload, {
         attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 },
+        backoff: { type: "exponential", delay: 5000 },
       });
-      this.logger.info('enqueued email reminder job', { executionId: execution.id });
+      this.logger.info("enqueued email reminder job", {
+        executionId: execution.id,
+      });
     }
 
     return execution;
@@ -189,14 +201,16 @@ export class RemindersService {
     const execution = await this.repository.getExecution(executionId);
 
     if (!execution) {
-      throw new ReminderDomainError(`Reminder execution ${executionId} was not found.`);
+      throw new ReminderDomainError(
+        `Reminder execution ${executionId} was not found.`,
+      );
     }
 
-    this.logger.info('marking reminder sent', { executionId });
+    this.logger.info("marking reminder sent", { executionId });
     return this.repository.saveExecution(
       adminReminderExecutionSchema.parse({
         ...execution,
-        status: 'sent',
+        status: "sent",
         sentAt: new Date(),
       }),
     );
@@ -206,9 +220,9 @@ export class RemindersService {
     ruleId: string,
     pagination?: PaginationInput,
   ): Promise<PaginatedResult<AdminReminderExecution>> {
-    const all = adminReminderExecutionSchema.array().parse(
-      await this.repository.listExecutions(ruleId),
-    );
+    const all = adminReminderExecutionSchema
+      .array()
+      .parse(await this.repository.listExecutions(ruleId));
 
     if (!pagination) {
       return { items: all, nextCursor: null };

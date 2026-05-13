@@ -109,9 +109,9 @@ export function GroupProductsEditor({
         Products attached
       </legend>
       <p className="mb-2 text-xs text-[var(--color-muted-foreground)]">
-        Explicit Group ↔ Product mapping (UFB-054). Toggle to attach or
-        detach. Independent of product lead — a product belongs to exactly
-        one group (B1 invariant: @@unique([productId])).
+        Explicit Group ↔ Product mapping (UFB-054). Toggle to attach or detach.
+        Independent of product lead — a product belongs to exactly one group (B1
+        invariant: @@unique([productId])).
       </p>
       {attachedQuery.isLoading ? (
         <div

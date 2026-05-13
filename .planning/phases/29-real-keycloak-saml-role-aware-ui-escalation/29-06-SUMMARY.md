@@ -41,11 +41,13 @@ CC-1 stance: cosmetic UI hide (AUTH-06) ships AFTER the SSR layout gate (AUTH-07
 ## ROUTE_ROLE_MAP final shape
 
 ```typescript
-export const ROUTE_ROLE_MAP: Readonly<Record<RoutePrefix, ReadonlyArray<Role>>> = {
-  '/admin':   ['admin', 'head'],                    // mirrors 29-03 admin layout
-  '/head':    ['head', 'admin'],                    // mirrors 29-03 head layout
-  '/lead':    ['lead', 'head', 'admin'],            // mirrors 29-03 lead layout
-  '/reports': ['lead', 'head', 'admin', 'viewer'],  // mirrors 29-03 reports layout
+export const ROUTE_ROLE_MAP: Readonly<
+  Record<RoutePrefix, ReadonlyArray<Role>>
+> = {
+  "/admin": ["admin", "head"], // mirrors 29-03 admin layout
+  "/head": ["head", "admin"], // mirrors 29-03 head layout
+  "/lead": ["lead", "head", "admin"], // mirrors 29-03 lead layout
+  "/reports": ["lead", "head", "admin", "viewer"], // mirrors 29-03 reports layout
 };
 ```
 
@@ -53,8 +55,8 @@ Routes not in the map (e.g. `/auth/login`) default to visible — they have thei
 
 ## Test matrix (4 roles × 5 routes)
 
-| route | viewer | lead | head | admin |
-|-------|--------|------|------|-------|
+| route            | viewer | lead   | head  | admin |
+| ---------------- | ------ | ------ | ----- | ----- |
 | /admin           | hidden | hidden | shown | shown |
 | /head/dashboard  | hidden | hidden | shown | shown |
 | /head/report     | hidden | hidden | shown | shown |
@@ -68,23 +70,23 @@ Tests cover all 20 (role × route) cells in `role-visibility.test.ts`, plus 10 N
 
 ## Files modified
 
-| File | LOC delta | Note |
-|------|-----------|------|
-| apps/web/src/lib/role-visibility.ts (new) | +40 | `isRouteVisible(route, role)` + `ROUTE_ROLE_MAP` |
-| apps/web/src/lib/role-visibility.test.ts (new) | +60 | 21 unit tests (20 matrix + 1 unmapped + edges) |
-| apps/web/src/components/navigation/nav-bar.tsx | +180/-49 | Session-driven; single NAV_LINKS table; isRouteVisible filter |
-| apps/web/src/components/navigation/nav-bar.test.tsx (new) | +110 | 10 unit tests (per-role + null session + DOM-absence invariant) |
+| File                                                      | LOC delta | Note                                                            |
+| --------------------------------------------------------- | --------- | --------------------------------------------------------------- |
+| apps/web/src/lib/role-visibility.ts (new)                 | +40       | `isRouteVisible(route, role)` + `ROUTE_ROLE_MAP`                |
+| apps/web/src/lib/role-visibility.test.ts (new)            | +60       | 21 unit tests (20 matrix + 1 unmapped + edges)                  |
+| apps/web/src/components/navigation/nav-bar.tsx            | +180/-49  | Session-driven; single NAV_LINKS table; isRouteVisible filter   |
+| apps/web/src/components/navigation/nav-bar.test.tsx (new) | +110      | 10 unit tests (per-role + null session + DOM-absence invariant) |
 
 Total: 4 files, +285 / -49.
 
 ## Test count delta
 
-| Suite | Before (29-05) | After (29-06) | Delta |
-|-------|----------------|---------------|-------|
-| api unit | 473 / 38 files | 473 / 38 files | 0 |
-| shared unit | 452 / 12 files | 452 / 12 files | 0 |
-| web unit | 187 (1 pre-existing fail) | 221 (1 same pre-existing fail) | +34 / +3 files |
-| typecheck (api + web) | green | green | — |
+| Suite                 | Before (29-05)            | After (29-06)                  | Delta          |
+| --------------------- | ------------------------- | ------------------------------ | -------------- |
+| api unit              | 473 / 38 files            | 473 / 38 files                 | 0              |
+| shared unit           | 452 / 12 files            | 452 / 12 files                 | 0              |
+| web unit              | 187 (1 pre-existing fail) | 221 (1 same pre-existing fail) | +34 / +3 files |
+| typecheck (api + web) | green                     | green                          | —              |
 
 The single web failure (`apps/web/proxy.test.ts`) is the same pre-existing failure documented since 29-01 — not touched by this plan.
 
@@ -104,14 +106,14 @@ The single web failure (`apps/web/proxy.test.ts`) is the same pre-existing failu
 
 This commit closes AUTH-06 and is the LAST commit of Phase 29. All six REQ-IDs of the phase are now landed:
 
-| REQ-ID | Plan | Commit | Status |
-|--------|------|--------|--------|
-| AUTH-08 (audit events) | 29-01 | 7a8ebb4 | shipped |
-| AUTH-02 (JWT role claim) | 29-02 | 01ee909 | shipped |
-| AUTH-07 (SSR layout gate) | 29-03 | bda7de7 | shipped |
-| AUTH-01 (SAML cut-over) | 29-04 | abf2028 | **partial** — boot fence + narrowing shipped; mock IdP container deferred (Docker pull blocked) |
-| NOTIF-02/05/06 | 29-05 | 4a60cd9 | shipped |
-| AUTH-06 (nav hides) | 29-06 | ec9c6f4 | shipped |
+| REQ-ID                    | Plan  | Commit  | Status                                                                                          |
+| ------------------------- | ----- | ------- | ----------------------------------------------------------------------------------------------- |
+| AUTH-08 (audit events)    | 29-01 | 7a8ebb4 | shipped                                                                                         |
+| AUTH-02 (JWT role claim)  | 29-02 | 01ee909 | shipped                                                                                         |
+| AUTH-07 (SSR layout gate) | 29-03 | bda7de7 | shipped                                                                                         |
+| AUTH-01 (SAML cut-over)   | 29-04 | abf2028 | **partial** — boot fence + narrowing shipped; mock IdP container deferred (Docker pull blocked) |
+| NOTIF-02/05/06            | 29-05 | 4a60cd9 | shipped                                                                                         |
+| AUTH-06 (nav hides)       | 29-06 | ec9c6f4 | shipped                                                                                         |
 
 29-04 mock-IdP follow-up tickets (documented in 29-04-SUMMARY): pull `quay.io/keycloak/keycloak:26`, mount realm fixture, rewrite `apps/web/e2e/integration/global-setup.ts` to perform real-SAML round-trip. None block the milestone — the boot fence is the production-correctness gate, and the realm fixture is in place from 29-02.
 
@@ -119,16 +121,17 @@ This commit closes AUTH-06 and is the LAST commit of Phase 29. All six REQ-IDs o
 
 The full integration suite (`pnpm test:e2e:integration`) was NOT run inline because it would exceed the 600s watchdog. Per task brief, the unit-test counts are the proxy for non-regression:
 
-| Plan | api unit | shared unit | web unit |
-|------|----------|-------------|----------|
-| 29-01 baseline | 444 | 218 | 168 |
-| 29-02 baseline | 457 | 226 | 168 |
-| 29-03 baseline | 457 | 226 | 182 |
-| 29-04 baseline | 465 | 226 | 182 |
-| 29-05 baseline | 473 | 452 (post-build) | 187 |
-| **29-06 final** | **473** | **452** | **221** |
+| Plan            | api unit | shared unit      | web unit |
+| --------------- | -------- | ---------------- | -------- |
+| 29-01 baseline  | 444      | 218              | 168      |
+| 29-02 baseline  | 457      | 226              | 168      |
+| 29-03 baseline  | 457      | 226              | 182      |
+| 29-04 baseline  | 465      | 226              | 182      |
+| 29-05 baseline  | 473      | 452 (post-build) | 187      |
+| **29-06 final** | **473**  | **452**          | **221**  |
 
 Typecheck:
+
 - `pnpm --filter @customreport/api typecheck` exit 0
 - `pnpm --filter @customreport/web typecheck` exit 0
 

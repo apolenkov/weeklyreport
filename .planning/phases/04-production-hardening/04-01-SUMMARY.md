@@ -14,20 +14,21 @@ Created `useBrowserState` hook and refactored all 6 browser-backed pages to elim
 ### Task 1: Refactor browser-backed state hydration boundaries
 
 **Created** `apps/web/src/lib/use-browser-state.ts` — SSR-safe hook that:
+
 - Returns a deterministic `serverDefault` during SSR and first client render
 - Syncs real browser value (localStorage/cookies) via `useEffect` post-mount
 - Exposes `[state, setState]` tuple like `useState`
 
 **Refactored 6 pages** to replace unsafe `useMemo`/`useState` initializers:
 
-| Page | Browser state | Server default |
-|------|--------------|----------------|
-| `lead/report/page.tsx` | session + section | `defaultLeadSession` + `createDemoSection()` |
-| `head/dashboard/page.tsx` | session + dashboard rows | `defaultLeadSession` + `buildSubmissionDashboardRows(null)` |
-| `head/report/page.tsx` | session + assembled report | `defaultHeadSession` + `buildDraftAssembledReport(createDemoSection())` |
-| `reports/[reportId]/page.tsx` | session + report + exportJob | `defaultViewerSession` + `null` + `null` |
-| `reports/history/page.tsx` | session + archive summaries | `defaultViewerSession` + `[]` |
-| `admin/page.tsx` | session + admin snapshot | `defaultHeadSession` + `defaultSnapshot` |
+| Page                          | Browser state                | Server default                                                          |
+| ----------------------------- | ---------------------------- | ----------------------------------------------------------------------- |
+| `lead/report/page.tsx`        | session + section            | `defaultLeadSession` + `createDemoSection()`                            |
+| `head/dashboard/page.tsx`     | session + dashboard rows     | `defaultLeadSession` + `buildSubmissionDashboardRows(null)`             |
+| `head/report/page.tsx`        | session + assembled report   | `defaultHeadSession` + `buildDraftAssembledReport(createDemoSection())` |
+| `reports/[reportId]/page.tsx` | session + report + exportJob | `defaultViewerSession` + `null` + `null`                                |
+| `reports/history/page.tsx`    | session + archive summaries  | `defaultViewerSession` + `[]`                                           |
+| `admin/page.tsx`              | session + admin snapshot     | `defaultHeadSession` + `defaultSnapshot`                                |
 
 **Exported** `defaultSnapshot` from `admin-runtime.ts` for deterministic server rendering.
 

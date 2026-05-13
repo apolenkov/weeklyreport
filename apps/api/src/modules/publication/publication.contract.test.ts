@@ -1,30 +1,30 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import type {
   AssembledReport,
   DraftSavePayload,
   ReportSectionReadModel,
   UserSession,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 import {
   PublicationAccessError,
   PublicationService,
   type PublicationRepository,
-} from './publication.service';
-import { expectDefined } from '../../test-utils/expect-defined.js';
+} from "./publication.service";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
 /* ------------------------------------------------------------------ */
 
-const reportId = '22222222-2222-4222-8222-222222222222';
+const reportId = "22222222-2222-4222-8222-222222222222";
 
 const headSession: UserSession = {
-  userId: '00000000-0000-4000-8000-000000000001',
-  email: 'head@customreport.local',
-  name: 'Department Head',
-  role: 'head',
+  userId: "00000000-0000-4000-8000-000000000001",
+  email: "head@customreport.local",
+  name: "Department Head",
+  role: "head",
   activeReportId: reportId,
   activeReportSectionId: null,
 };
@@ -42,16 +42,16 @@ function makeSection(
 ): ReportSectionReadModel {
   return {
     reportId,
-    status: 'submitted',
-    submittedAt: new Date('2026-04-09T10:00:00.000Z'),
+    status: "submitted",
+    submittedAt: new Date("2026-04-09T10:00:00.000Z"),
     projects: [],
     items: [],
     risks: [],
     decisions: [],
     priorities: [
-      { rank: 1, text: 'Priority 1' },
-      { rank: 2, text: 'Priority 2' },
-      { rank: 3, text: 'Priority 3' },
+      { rank: 1, text: "Priority 1" },
+      { rank: 2, text: "Priority 2" },
+      { rank: 3, text: "Priority 3" },
     ],
     ...overrides,
   };
@@ -66,15 +66,15 @@ function makeReport(
 ): AssembledReport {
   return {
     reportId,
-    periodStart: new Date('2026-04-06T00:00:00.000Z'),
-    periodEnd: new Date('2026-04-12T23:59:59.000Z'),
-    deadline: new Date('2026-04-10T15:00:00.000Z'),
-    status: 'draft',
+    periodStart: new Date("2026-04-06T00:00:00.000Z"),
+    periodEnd: new Date("2026-04-12T23:59:59.000Z"),
+    deadline: new Date("2026-04-10T15:00:00.000Z"),
+    status: "draft",
     publishedAt: null,
     publishedById: null,
     publishedByName: null,
     portfolioOverview: {
-      status: 'green',
+      status: "green",
       totals: { green: 0, yellow: 0, red: 0 },
     },
     ...overrides,
@@ -85,7 +85,9 @@ function makeReport(
 /*  In-memory mock repository                                          */
 /* ------------------------------------------------------------------ */
 
-function createRepository(report: AssembledReport | null): PublicationRepository {
+function createRepository(
+  report: AssembledReport | null,
+): PublicationRepository {
   let currentReport = report ? structuredClone(report) : null;
 
   return {
@@ -109,40 +111,40 @@ function createRepository(report: AssembledReport | null): PublicationRepository
 /* ------------------------------------------------------------------ */
 
 const sectionAlpha = makeSection({
-  reportSectionId: '11111111-1111-4111-8111-111111111111',
-  authorId: '33333333-3333-4333-8333-333333333331',
-  authorName: 'Alpha Lead',
+  reportSectionId: "11111111-1111-4111-8111-111111111111",
+  authorId: "33333333-3333-4333-8333-333333333331",
+  authorName: "Alpha Lead",
   projects: [
     {
-      projectId: '44444444-4444-4444-8444-444444444441',
-      projectName: 'Project Alpha',
-      trafficLight: 'green',
+      projectId: "44444444-4444-4444-8444-444444444441",
+      projectName: "Project Alpha",
+      trafficLight: "green",
     },
   ],
 });
 
 const sectionBravo = makeSection({
-  reportSectionId: '11111111-1111-4111-8111-111111111112',
-  authorId: '33333333-3333-4333-8333-333333333332',
-  authorName: 'Bravo Lead',
+  reportSectionId: "11111111-1111-4111-8111-111111111112",
+  authorId: "33333333-3333-4333-8333-333333333332",
+  authorName: "Bravo Lead",
   projects: [
     {
-      projectId: '44444444-4444-4444-8444-444444444442',
-      projectName: 'Project Bravo',
-      trafficLight: 'yellow',
+      projectId: "44444444-4444-4444-8444-444444444442",
+      projectName: "Project Bravo",
+      trafficLight: "yellow",
     },
   ],
 });
 
 const sectionCharlie = makeSection({
-  reportSectionId: '11111111-1111-4111-8111-111111111113',
-  authorId: '33333333-3333-4333-8333-333333333333',
-  authorName: 'Charlie Lead',
+  reportSectionId: "11111111-1111-4111-8111-111111111113",
+  authorId: "33333333-3333-4333-8333-333333333333",
+  authorName: "Charlie Lead",
   projects: [
     {
-      projectId: '44444444-4444-4444-8444-444444444443',
-      projectName: 'Project Charlie',
-      trafficLight: 'red',
+      projectId: "44444444-4444-4444-8444-444444444443",
+      projectName: "Project Charlie",
+      trafficLight: "red",
     },
   ],
 });
@@ -151,9 +153,9 @@ const sectionCharlie = makeSection({
 /*  getAssembledReport                                                 */
 /* ------------------------------------------------------------------ */
 
-describe('PublicationService — contract tests', () => {
-  describe('getAssembledReport', () => {
-    it('returns assembled report with sorted sections', async () => {
+describe("PublicationService — contract tests", () => {
+  describe("getAssembledReport", () => {
+    it("returns assembled report with sorted sections", async () => {
       // Sections intentionally out of alphabetical order
       const report = makeReport({
         sections: [sectionCharlie, sectionAlpha, sectionBravo],
@@ -163,38 +165,50 @@ describe('PublicationService — contract tests', () => {
       const result = await service.getAssembledReport(reportId);
 
       expect(result.sections.map((s) => s.authorName)).toEqual([
-        'Alpha Lead',
-        'Bravo Lead',
-        'Charlie Lead',
+        "Alpha Lead",
+        "Bravo Lead",
+        "Charlie Lead",
       ]);
     });
 
-    it('throws when report not found (null from repo)', async () => {
+    it("throws when report not found (null from repo)", async () => {
       const service = new PublicationService(createRepository(null));
 
       await expect(
-        service.getAssembledReport('99999999-9999-4999-8999-999999999999'),
-      ).rejects.toThrow('was not found');
+        service.getAssembledReport("99999999-9999-4999-8999-999999999999"),
+      ).rejects.toThrow("was not found");
     });
 
-    it('builds portfolio overview: all green -> status green', async () => {
+    it("builds portfolio overview: all green -> status green", async () => {
       const report = makeReport({
         sections: [
           makeSection({
-            reportSectionId: '11111111-1111-4111-8111-111111111111',
-            authorId: '33333333-3333-4333-8333-333333333331',
-            authorName: 'Lead A',
+            reportSectionId: "11111111-1111-4111-8111-111111111111",
+            authorId: "33333333-3333-4333-8333-333333333331",
+            authorName: "Lead A",
             projects: [
-              { projectId: '44444444-4444-4444-8444-444444444441', projectName: 'P1', trafficLight: 'green' },
-              { projectId: '44444444-4444-4444-8444-444444444442', projectName: 'P2', trafficLight: 'green' },
+              {
+                projectId: "44444444-4444-4444-8444-444444444441",
+                projectName: "P1",
+                trafficLight: "green",
+              },
+              {
+                projectId: "44444444-4444-4444-8444-444444444442",
+                projectName: "P2",
+                trafficLight: "green",
+              },
             ],
           }),
           makeSection({
-            reportSectionId: '11111111-1111-4111-8111-111111111112',
-            authorId: '33333333-3333-4333-8333-333333333332',
-            authorName: 'Lead B',
+            reportSectionId: "11111111-1111-4111-8111-111111111112",
+            authorId: "33333333-3333-4333-8333-333333333332",
+            authorName: "Lead B",
             projects: [
-              { projectId: '44444444-4444-4444-8444-444444444443', projectName: 'P3', trafficLight: 'green' },
+              {
+                projectId: "44444444-4444-4444-8444-444444444443",
+                projectName: "P3",
+                trafficLight: "green",
+              },
             ],
           }),
         ],
@@ -204,28 +218,36 @@ describe('PublicationService — contract tests', () => {
       const result = await service.getAssembledReport(reportId);
 
       expect(result.portfolioOverview).toEqual({
-        status: 'green',
+        status: "green",
         totals: { green: 3, yellow: 0, red: 0 },
       });
     });
 
-    it('builds portfolio overview: any yellow -> status yellow', async () => {
+    it("builds portfolio overview: any yellow -> status yellow", async () => {
       const report = makeReport({
         sections: [
           makeSection({
-            reportSectionId: '11111111-1111-4111-8111-111111111111',
-            authorId: '33333333-3333-4333-8333-333333333331',
-            authorName: 'Lead A',
+            reportSectionId: "11111111-1111-4111-8111-111111111111",
+            authorId: "33333333-3333-4333-8333-333333333331",
+            authorName: "Lead A",
             projects: [
-              { projectId: '44444444-4444-4444-8444-444444444441', projectName: 'P1', trafficLight: 'green' },
+              {
+                projectId: "44444444-4444-4444-8444-444444444441",
+                projectName: "P1",
+                trafficLight: "green",
+              },
             ],
           }),
           makeSection({
-            reportSectionId: '11111111-1111-4111-8111-111111111112',
-            authorId: '33333333-3333-4333-8333-333333333332',
-            authorName: 'Lead B',
+            reportSectionId: "11111111-1111-4111-8111-111111111112",
+            authorId: "33333333-3333-4333-8333-333333333332",
+            authorName: "Lead B",
             projects: [
-              { projectId: '44444444-4444-4444-8444-444444444442', projectName: 'P2', trafficLight: 'yellow' },
+              {
+                projectId: "44444444-4444-4444-8444-444444444442",
+                projectName: "P2",
+                trafficLight: "yellow",
+              },
             ],
           }),
         ],
@@ -235,12 +257,12 @@ describe('PublicationService — contract tests', () => {
       const result = await service.getAssembledReport(reportId);
 
       expect(result.portfolioOverview).toEqual({
-        status: 'yellow',
+        status: "yellow",
         totals: { green: 1, yellow: 1, red: 0 },
       });
     });
 
-    it('builds portfolio overview: any red -> status red (overrides yellow)', async () => {
+    it("builds portfolio overview: any red -> status red (overrides yellow)", async () => {
       const report = makeReport({
         sections: [sectionAlpha, sectionBravo, sectionCharlie],
       });
@@ -248,30 +270,50 @@ describe('PublicationService — contract tests', () => {
       const service = new PublicationService(createRepository(report));
       const result = await service.getAssembledReport(reportId);
 
-      expect(result.portfolioOverview.status).toBe('red');
+      expect(result.portfolioOverview.status).toBe("red");
       expect(result.portfolioOverview.totals.red).toBeGreaterThan(0);
     });
 
-    it('counts traffic lights correctly in totals — null lights are not counted', async () => {
+    it("counts traffic lights correctly in totals — null lights are not counted", async () => {
       const report = makeReport({
         sections: [
           makeSection({
-            reportSectionId: '11111111-1111-4111-8111-111111111111',
-            authorId: '33333333-3333-4333-8333-333333333331',
-            authorName: 'Lead A',
+            reportSectionId: "11111111-1111-4111-8111-111111111111",
+            authorId: "33333333-3333-4333-8333-333333333331",
+            authorName: "Lead A",
             projects: [
-              { projectId: '44444444-4444-4444-8444-444444444441', projectName: 'P1', trafficLight: 'green' },
-              { projectId: '44444444-4444-4444-8444-444444444442', projectName: 'P2', trafficLight: 'green' },
-              { projectId: '44444444-4444-4444-8444-444444444443', projectName: 'P3 (no light)', trafficLight: null },
+              {
+                projectId: "44444444-4444-4444-8444-444444444441",
+                projectName: "P1",
+                trafficLight: "green",
+              },
+              {
+                projectId: "44444444-4444-4444-8444-444444444442",
+                projectName: "P2",
+                trafficLight: "green",
+              },
+              {
+                projectId: "44444444-4444-4444-8444-444444444443",
+                projectName: "P3 (no light)",
+                trafficLight: null,
+              },
             ],
           }),
           makeSection({
-            reportSectionId: '11111111-1111-4111-8111-111111111112',
-            authorId: '33333333-3333-4333-8333-333333333332',
-            authorName: 'Lead B',
+            reportSectionId: "11111111-1111-4111-8111-111111111112",
+            authorId: "33333333-3333-4333-8333-333333333332",
+            authorName: "Lead B",
             projects: [
-              { projectId: '44444444-4444-4444-8444-444444444444', projectName: 'P4', trafficLight: 'yellow' },
-              { projectId: '44444444-4444-4444-8444-444444444445', projectName: 'P5', trafficLight: 'red' },
+              {
+                projectId: "44444444-4444-4444-8444-444444444444",
+                projectName: "P4",
+                trafficLight: "yellow",
+              },
+              {
+                projectId: "44444444-4444-4444-8444-444444444445",
+                projectName: "P5",
+                trafficLight: "red",
+              },
             ],
           }),
         ],
@@ -286,34 +328,46 @@ describe('PublicationService — contract tests', () => {
         yellow: 1,
         red: 1,
       });
-      expect(result.portfolioOverview.status).toBe('red');
+      expect(result.portfolioOverview.status).toBe("red");
     });
 
-    it('sections sorted by authorName (Russian locale)', async () => {
+    it("sections sorted by authorName (Russian locale)", async () => {
       const report = makeReport({
         sections: [
           makeSection({
-            reportSectionId: '11111111-1111-4111-8111-111111111113',
-            authorId: '33333333-3333-4333-8333-333333333333',
-            authorName: 'Яков',
+            reportSectionId: "11111111-1111-4111-8111-111111111113",
+            authorId: "33333333-3333-4333-8333-333333333333",
+            authorName: "Яков",
             projects: [
-              { projectId: '44444444-4444-4444-8444-444444444443', projectName: 'P3', trafficLight: 'green' },
+              {
+                projectId: "44444444-4444-4444-8444-444444444443",
+                projectName: "P3",
+                trafficLight: "green",
+              },
             ],
           }),
           makeSection({
-            reportSectionId: '11111111-1111-4111-8111-111111111111',
-            authorId: '33333333-3333-4333-8333-333333333331',
-            authorName: 'Андрей',
+            reportSectionId: "11111111-1111-4111-8111-111111111111",
+            authorId: "33333333-3333-4333-8333-333333333331",
+            authorName: "Андрей",
             projects: [
-              { projectId: '44444444-4444-4444-8444-444444444441', projectName: 'P1', trafficLight: 'green' },
+              {
+                projectId: "44444444-4444-4444-8444-444444444441",
+                projectName: "P1",
+                trafficLight: "green",
+              },
             ],
           }),
           makeSection({
-            reportSectionId: '11111111-1111-4111-8111-111111111112',
-            authorId: '33333333-3333-4333-8333-333333333332',
-            authorName: 'Борис',
+            reportSectionId: "11111111-1111-4111-8111-111111111112",
+            authorId: "33333333-3333-4333-8333-333333333332",
+            authorName: "Борис",
             projects: [
-              { projectId: '44444444-4444-4444-8444-444444444442', projectName: 'P2', trafficLight: 'green' },
+              {
+                projectId: "44444444-4444-4444-8444-444444444442",
+                projectName: "P2",
+                trafficLight: "green",
+              },
             ],
           }),
         ],
@@ -323,9 +377,9 @@ describe('PublicationService — contract tests', () => {
       const result = await service.getAssembledReport(reportId);
 
       expect(result.sections.map((s) => s.authorName)).toEqual([
-        'Андрей',
-        'Борис',
-        'Яков',
+        "Андрей",
+        "Борис",
+        "Яков",
       ]);
     });
   });
@@ -334,8 +388,8 @@ describe('PublicationService — contract tests', () => {
   /*  publishReport                                                    */
   /* ---------------------------------------------------------------- */
 
-  describe('publishReport', () => {
-    it('sets status to published, publishedAt, publishedById, publishedByName', async () => {
+  describe("publishReport", () => {
+    it("sets status to published, publishedAt, publishedById, publishedByName", async () => {
       const report = makeReport({
         sections: [sectionAlpha],
       });
@@ -343,16 +397,16 @@ describe('PublicationService — contract tests', () => {
       const service = new PublicationService(createRepository(report));
       const published = await service.publishReport(reportId, headSession);
 
-      expect(published.status).toBe('published');
+      expect(published.status).toBe("published");
       expect(published.publishedAt).toBeInstanceOf(Date);
       expect(published.publishedById).toBe(headSession.userId);
       expect(published.publishedByName).toBe(headSession.name);
     });
 
-    it('throws PublicationAccessError when report already published', async () => {
+    it("throws PublicationAccessError when report already published", async () => {
       const report = makeReport({
-        status: 'published',
-        publishedAt: new Date('2026-04-10T16:00:00.000Z'),
+        status: "published",
+        publishedAt: new Date("2026-04-10T16:00:00.000Z"),
         publishedById: headSession.userId,
         publishedByName: headSession.name,
         sections: [sectionAlpha],
@@ -366,10 +420,10 @@ describe('PublicationService — contract tests', () => {
 
       await expect(
         service.publishReport(reportId, headSession),
-      ).rejects.toThrow('Report has already been published.');
+      ).rejects.toThrow("Report has already been published.");
     });
 
-    it('preserves all sections and portfolio overview', async () => {
+    it("preserves all sections and portfolio overview", async () => {
       const report = makeReport({
         sections: [sectionAlpha, sectionBravo, sectionCharlie],
       });
@@ -379,14 +433,14 @@ describe('PublicationService — contract tests', () => {
 
       expect(published.sections).toHaveLength(3);
       expect(published.portfolioOverview).toEqual({
-        status: 'red',
+        status: "red",
         totals: { green: 1, yellow: 1, red: 1 },
       });
       // Verify section data integrity
       expect(published.sections.map((s) => s.authorName)).toEqual([
-        'Alpha Lead',
-        'Bravo Lead',
-        'Charlie Lead',
+        "Alpha Lead",
+        "Bravo Lead",
+        "Charlie Lead",
       ]);
     });
   });
@@ -395,33 +449,42 @@ describe('PublicationService — contract tests', () => {
   /*  publishReport — P0/P1 regression (REV scenarios)                 */
   /* ---------------------------------------------------------------- */
 
-  describe('publishReport — regression', () => {
-    it('publish sets status to published and makes report immutable (REV-011)', async () => {
+  describe("publishReport — regression", () => {
+    it("publish sets status to published and makes report immutable (REV-011)", async () => {
       const report = makeReport({ sections: [sectionAlpha] });
       const service = new PublicationService(createRepository(report));
 
       const published = await service.publishReport(reportId, headSession);
-      expect(published.status).toBe('published');
+      expect(published.status).toBe("published");
 
       // Attempt to update a section after publish — should be immutable
       const update = {
         reportSectionId: sectionAlpha.reportSectionId,
-        status: 'draft' as const,
-        projectStatuses: [{ projectId: expectDefined(sectionAlpha.projects[0]).projectId, status: 'green' as const }],
+        status: "draft" as const,
+        projectStatuses: [
+          {
+            projectId: expectDefined(sectionAlpha.projects[0]).projectId,
+            status: "green" as const,
+          },
+        ],
         items: [],
         risks: [],
         decisions: [],
-        priorities: [{ rank: 1, text: 'P1' }, { rank: 2, text: 'P2' }, { rank: 3, text: 'P3' }],
+        priorities: [
+          { rank: 1, text: "P1" },
+          { rank: 2, text: "P2" },
+          { rank: 3, text: "P3" },
+        ],
       };
       await expect(
         service.updateSectionForReview(reportId, update),
-      ).rejects.toThrow('Published reports are immutable.');
+      ).rejects.toThrow("Published reports are immutable.");
     });
 
-    it('re-publish of already published report rejected (REV-012)', async () => {
+    it("re-publish of already published report rejected (REV-012)", async () => {
       const report = makeReport({
-        status: 'published',
-        publishedAt: new Date('2026-04-10T16:00:00.000Z'),
+        status: "published",
+        publishedAt: new Date("2026-04-10T16:00:00.000Z"),
         publishedById: headSession.userId,
         publishedByName: headSession.name,
         sections: [sectionAlpha],
@@ -430,10 +493,10 @@ describe('PublicationService — contract tests', () => {
 
       await expect(
         service.publishReport(reportId, headSession),
-      ).rejects.toThrow('Report has already been published.');
+      ).rejects.toThrow("Report has already been published.");
     });
 
-    it('published report includes all lead sections data (REV-020)', async () => {
+    it("published report includes all lead sections data (REV-020)", async () => {
       const report = makeReport({
         sections: [sectionAlpha, sectionBravo, sectionCharlie],
       });
@@ -442,9 +505,9 @@ describe('PublicationService — contract tests', () => {
 
       expect(published.sections).toHaveLength(3);
       const names = published.sections.map((s) => s.authorName);
-      expect(names).toContain('Alpha Lead');
-      expect(names).toContain('Bravo Lead');
-      expect(names).toContain('Charlie Lead');
+      expect(names).toContain("Alpha Lead");
+      expect(names).toContain("Bravo Lead");
+      expect(names).toContain("Charlie Lead");
     });
   });
 
@@ -452,28 +515,28 @@ describe('PublicationService — contract tests', () => {
   /*  updateSectionForReview                                           */
   /* ---------------------------------------------------------------- */
 
-  describe('updateSectionForReview', () => {
-    it('updates matching section traffic lights', async () => {
+  describe("updateSectionForReview", () => {
+    it("updates matching section traffic lights", async () => {
       const report = makeReport({
         sections: [sectionAlpha, sectionBravo],
       });
 
       const update: DraftSavePayload = {
         reportSectionId: sectionAlpha.reportSectionId,
-        status: 'draft',
+        status: "draft",
         projectStatuses: [
           {
             projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            status: 'red',
+            status: "red",
           },
         ],
         items: [],
         risks: [],
         decisions: [],
         priorities: [
-          { rank: 1, text: 'Priority 1' },
-          { rank: 2, text: 'Priority 2' },
-          { rank: 3, text: 'Priority 3' },
+          { rank: 1, text: "Priority 1" },
+          { rank: 2, text: "Priority 2" },
+          { rank: 3, text: "Priority 3" },
         ],
       };
 
@@ -484,13 +547,13 @@ describe('PublicationService — contract tests', () => {
         (s) => s.reportSectionId === sectionAlpha.reportSectionId,
       );
 
-      expect(updatedSection?.projects[0]?.trafficLight).toBe('red');
+      expect(updatedSection?.projects[0]?.trafficLight).toBe("red");
     });
 
-    it('throws PublicationAccessError when report published', async () => {
+    it("throws PublicationAccessError when report published", async () => {
       const report = makeReport({
-        status: 'published',
-        publishedAt: new Date('2026-04-10T16:00:00.000Z'),
+        status: "published",
+        publishedAt: new Date("2026-04-10T16:00:00.000Z"),
         publishedById: headSession.userId,
         publishedByName: headSession.name,
         sections: [sectionAlpha],
@@ -498,20 +561,20 @@ describe('PublicationService — contract tests', () => {
 
       const update: DraftSavePayload = {
         reportSectionId: sectionAlpha.reportSectionId,
-        status: 'draft',
+        status: "draft",
         projectStatuses: [
           {
             projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            status: 'yellow',
+            status: "yellow",
           },
         ],
         items: [],
         risks: [],
         decisions: [],
         priorities: [
-          { rank: 1, text: 'Priority 1' },
-          { rank: 2, text: 'Priority 2' },
-          { rank: 3, text: 'Priority 3' },
+          { rank: 1, text: "Priority 1" },
+          { rank: 2, text: "Priority 2" },
+          { rank: 3, text: "Priority 3" },
         ],
       };
 
@@ -523,38 +586,38 @@ describe('PublicationService — contract tests', () => {
 
       await expect(
         service.updateSectionForReview(reportId, update),
-      ).rejects.toThrow('Published reports are immutable.');
+      ).rejects.toThrow("Published reports are immutable.");
     });
 
-    it('leaves non-matching sections unchanged', async () => {
+    it("leaves non-matching sections unchanged", async () => {
       const report = makeReport({
         sections: [sectionAlpha, sectionBravo],
       });
 
       const update: DraftSavePayload = {
         reportSectionId: sectionAlpha.reportSectionId,
-        status: 'draft',
+        status: "draft",
         projectStatuses: [
           {
             projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            status: 'red',
+            status: "red",
           },
         ],
         items: [
           {
             projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            type: 'current',
-            text: 'Updated item',
-            tag: 'feature',
-            workflowStatus: 'in_progress',
+            type: "current",
+            text: "Updated item",
+            tag: "feature",
+            workflowStatus: "in_progress",
           },
         ],
         risks: [],
         decisions: [],
         priorities: [
-          { rank: 1, text: 'Priority 1' },
-          { rank: 2, text: 'Priority 2' },
-          { rank: 3, text: 'Priority 3' },
+          { rank: 1, text: "Priority 1" },
+          { rank: 2, text: "Priority 2" },
+          { rank: 3, text: "Priority 3" },
         ],
       };
 
@@ -566,11 +629,11 @@ describe('PublicationService — contract tests', () => {
       );
 
       // Bravo section should still have its original traffic light
-      expect(unchangedSection?.projects[0]?.trafficLight).toBe('yellow');
+      expect(unchangedSection?.projects[0]?.trafficLight).toBe("yellow");
       expect(unchangedSection?.items).toEqual(sectionBravo.items);
     });
 
-    it('recalculates portfolio overview after update', async () => {
+    it("recalculates portfolio overview after update", async () => {
       // Start: Alpha = green, Bravo = yellow => portfolio should be yellow
       const report = makeReport({
         sections: [sectionAlpha, sectionBravo],
@@ -579,32 +642,32 @@ describe('PublicationService — contract tests', () => {
       // Verify initial state: green + yellow => yellow
       const service = new PublicationService(createRepository(report));
       const initial = await service.getAssembledReport(reportId);
-      expect(initial.portfolioOverview.status).toBe('yellow');
+      expect(initial.portfolioOverview.status).toBe("yellow");
 
       // Update Alpha from green to red
       const update: DraftSavePayload = {
         reportSectionId: sectionAlpha.reportSectionId,
-        status: 'draft',
+        status: "draft",
         projectStatuses: [
           {
             projectId: expectDefined(sectionAlpha.projects[0]).projectId,
-            status: 'red',
+            status: "red",
           },
         ],
         items: [],
         risks: [],
         decisions: [],
         priorities: [
-          { rank: 1, text: 'Priority 1' },
-          { rank: 2, text: 'Priority 2' },
-          { rank: 3, text: 'Priority 3' },
+          { rank: 1, text: "Priority 1" },
+          { rank: 2, text: "Priority 2" },
+          { rank: 3, text: "Priority 3" },
         ],
       };
 
       const result = await service.updateSectionForReview(reportId, update);
 
       // After update: Alpha = red, Bravo = yellow => portfolio should be red
-      expect(result.portfolioOverview.status).toBe('red');
+      expect(result.portfolioOverview.status).toBe("red");
       expect(result.portfolioOverview.totals).toEqual({
         green: 0,
         yellow: 1,

@@ -1,14 +1,14 @@
-import { Module } from '@nestjs/common';
+import { Module } from "@nestjs/common";
 
-import { PrismaModule } from '../../infrastructure/prisma/prisma.module.js';
-import { AI_ADAPTER, type AiAdapter } from './ai.adapter.js';
-import { AiIngestionService } from './ai-ingestion.service.js';
-import { AiPrismaFacade } from './ai-facade.js';
-import { AiSummaryCache, NullAiSummaryCache } from './ai-summary.cache.js';
-import { AiSummaryPrismaRepository } from './ai-summary.prisma-repository.js';
-import { AiSummaryService } from './ai-summary.service.js';
-import { AiService } from './ai.service.js';
-import { MockAiAdapter } from './mock-ai.adapter.js';
+import { PrismaModule } from "../../infrastructure/prisma/prisma.module.js";
+import { AI_ADAPTER, type AiAdapter } from "./ai.adapter.js";
+import { AiIngestionService } from "./ai-ingestion.service.js";
+import { AiPrismaFacade } from "./ai-facade.js";
+import { AiSummaryCache, NullAiSummaryCache } from "./ai-summary.cache.js";
+import { AiSummaryPrismaRepository } from "./ai-summary.prisma-repository.js";
+import { AiSummaryService } from "./ai-summary.service.js";
+import { AiService } from "./ai.service.js";
+import { MockAiAdapter } from "./mock-ai.adapter.js";
 
 /**
  * Phase 54 (UFB-055): selects the adapter based on env. `mock` (or
@@ -22,8 +22,8 @@ import { MockAiAdapter } from './mock-ai.adapter.js';
  * the only place that knows about provider selection.
  */
 export function selectAiAdapter(): AiAdapter {
-  const provider = process.env['AI_PROVIDER'] ?? 'mock';
-  if (provider === 'mock') {
+  const provider = process.env["AI_PROVIDER"] ?? "mock";
+  if (provider === "mock") {
     return new MockAiAdapter();
   }
   // TODO(Phase-54-activation): wire real AI provider here when org picks one.

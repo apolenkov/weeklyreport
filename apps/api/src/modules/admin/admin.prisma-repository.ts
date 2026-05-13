@@ -32,10 +32,7 @@ import {
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
-import type {
-  AdminRepository,
-  PeriodRowFromRepo,
-} from "./admin.service";
+import type { AdminRepository, PeriodRowFromRepo } from "./admin.service";
 
 /**
  * UFB-036 (Phase 44-02): wire format ↔ Prisma enum mappers for

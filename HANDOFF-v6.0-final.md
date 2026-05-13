@@ -19,6 +19,7 @@ Closed v6.0 milestone autonomously over multiple subagent waves. Shipped 5 phase
 ### Pushed to origin/main
 
 **v6.0 phases:**
+
 - Phase 27 — Quality + Role Middleware (5 plans + 7 gap-closure 27-05a..e)
 - Phase 28 — Filters + PDF cookie + Reminders + Checklist (4 plans, CC-1 enforced)
 - Phase 29 — SAML cut-over + Role-aware UI + Escalation (6 plans, CC-1 ordering)
@@ -26,6 +27,7 @@ Closed v6.0 milestone autonomously over multiple subagent waves. Shipped 5 phase
 - Phase 31 — AI Insights, Haiku-only (3 plans + AI-SPEC.md)
 
 **Phase 32 review remediation (parallel 4 subagents):**
+
 - A: AI cost guard (C-01), prompt sanitizer (H-05), AI authz (M-02)
 - B: PDF JWT verifier (H-04), cookie url field (M-01)
 - C: Admin role enum widening (H-01), dedupe regex (H-02), Redis namespace (M-04), dev-auth fence (M-05)
@@ -33,15 +35,18 @@ Closed v6.0 milestone autonomously over multiple subagent waves. Shipped 5 phase
 - M-06 narrative cap, M-07 UTC week-boundary, M-08 audit null role
 
 **Live-test bugs (via Playwright MCP):**
+
 - `22318d6` — `/reports/history` was blind redirect to `/head/dashboard`, fixed to render `<ReportArchiveSection />`
 - `413ef34` — `headProcedure` accepts admin role (was strict 'head' only despite D-AUTH-03 saying "alias")
 
 **Cascade fixes:**
+
 - `3afa4f9` — web `UserRole` widened to include 'admin'
 - `3995097` — `roles.guard.test` invalid-role test updated
 - `d4892cc` — `audit-events.test:92` attemptedRole now `['head','admin']`
 
 **Mockup parity (Phase 32 mockup):**
+
 - M1 (`59947f6`) — OnTrackIcon mount via mapper UUID threading
 - M2 — already shipped Phase 17-04
 - M3 (`7489783`) — SDLC tooltip portal pattern
@@ -61,23 +66,27 @@ Closed v6.0 milestone autonomously over multiple subagent waves. Shipped 5 phase
 ## Current State
 
 ### Git
+
 ```
 On branch main
 Your branch is up to date with 'origin/main'. (0 commits ahead)
 ```
 
 ### Test Counts (all green)
+
 - api: 594/594 unit
 - shared: 452/452
 - web: 234/234
 - integration: 84/84 (chromium + mobile-ios + mobile-android, 3 consecutive runs)
 
 ### Typecheck
+
 - `@customreport/api` ✅
 - `@customreport/web` ✅
 - `@customreport/shared` ✅
 
 ### Dev Environment Running
+
 - Web: http://localhost:3000 (Next.js 16, Turbopack)
 - API: http://localhost:3001 (NestJS 11, --watch)
 - Postgres: localhost:5432 (Docker)
@@ -85,6 +94,7 @@ Your branch is up to date with 'origin/main'. (0 commits ahead)
 - DB seeded: 8 users, 12 products (ARCHIVED 9 via SQL — only CRM Platform, Mobile Banking App, Cloud Infrastructure visible), 2 reports, 2 ReminderRules (added via SQL)
 
 ### .env Config
+
 ```
 AUTH_DEV_MODE=true               # /auth/dev-login enabled
 NEXT_PUBLIC_AUTH_STUB=false      # proxy.ts enforces cookie check
@@ -99,6 +109,7 @@ ANTHROPIC_API_KEY=               # NOT set — AI features graceful-disabled
 ## Live-Test Verification (browser via Playwright MCP)
 
 Verified in real browser:
+
 - ✅ `/auth/dev-login?role=head|lead|admin|viewer` — all 4 roles login + redirect
 - ✅ Head dashboard — submissions 4/6, blocked & at-risk list, archive
 - ✅ Head weekly-report — Portfolio Overview 12 products → now 3 visible after archive
@@ -118,19 +129,23 @@ Screenshots: `head-dashboard.png`, `head-weekly-report.png`, `lead-report.png`, 
 ### prisma/seed-simple.ts (created, NOT working)
 
 Started building 2-tier seed system (simple = 3 products / 3 leads for demo, advanced = current 12/6 for tests). File written but FAILED at runtime:
+
 ```
 Argument `userId` is missing.
 at prisma/seed-simple.ts:115:3
 ```
+
 The error is at the `reportSection.create` or `projectStatus.create` block — likely missing required `userId` field on one of the models. Schema may have a field I missed.
 
 **To fix:** read `prisma/schema.prisma` for `ReportSection` model fields, identify required `userId` (likely on `VersionSnapshot` or similar created indirectly), update `seed-simple.ts` accordingly.
 
 **Then add npm scripts:**
+
 ```json
 "db:seed:simple": "tsx prisma/seed-simple.ts",
 "db:seed:advanced": "tsx prisma/seed.ts"
 ```
+
 And keep `prisma.config.ts` `migrations.seed` pointing at `seed.ts` (default = advanced for tests).
 
 ### Dev Role Switcher Widget (NOT started — user request)
@@ -138,6 +153,7 @@ And keep `prisma.config.ts` `migrations.seed` pointing at `seed.ts` (default = a
 User asked for a floating bottom-right corner dropdown in dev mode that switches roles inline (no manual `/auth/dev-login` URL).
 
 **Design:**
+
 - Component: `apps/web/src/components/dev/role-switcher.tsx`
 - Visibility: only when `process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === 'true'` (or check `AUTH_DEV_MODE`)
 - Mounted in: `apps/web/src/app/(app)/layout.tsx` or app-shell — fixed position
@@ -181,21 +197,22 @@ These die on next `prisma migrate reset --force && db:seed`. Must be folded into
 
 ## Key Files to Review
 
-| File | Why |
-|---|---|
-| `prisma/seed-simple.ts` | In-progress, needs fix |
-| `prisma/schema.prisma` | For finding missing `userId` field |
-| `prisma/seed.ts` | Reference for correct seed shape |
-| `apps/web/src/app/(app)/layout.tsx` | Mount point for dev role switcher |
+| File                                           | Why                                                                |
+| ---------------------------------------------- | ------------------------------------------------------------------ |
+| `prisma/seed-simple.ts`                        | In-progress, needs fix                                             |
+| `prisma/schema.prisma`                         | For finding missing `userId` field                                 |
+| `prisma/seed.ts`                               | Reference for correct seed shape                                   |
+| `apps/web/src/app/(app)/layout.tsx`            | Mount point for dev role switcher                                  |
 | `apps/api/src/modules/auth/auth.routes.ts:264` | `/auth/dev-login` endpoint (existing, role switcher will hit this) |
-| `.planning/STATE.md` | v6.0 closing notes + v6.1 backlog |
-| `.env` | Current dev config |
+| `.planning/STATE.md`                           | v6.0 closing notes + v6.1 backlog                                  |
+| `.env`                                         | Current dev config                                                 |
 
 ---
 
 ## Command Reference
 
 ### Dev servers (already running, may need restart)
+
 ```bash
 # Status check
 lsof -i :3000 -i :3001 -P | head
@@ -211,6 +228,7 @@ pkill -f "node.*main.ts"; pkill -f "next-server"
 ```
 
 ### Login URLs
+
 ```
 http://localhost:3001/auth/dev-login?role=head
 http://localhost:3001/auth/dev-login?role=lead&email=polenkov@customreport.local
@@ -221,6 +239,7 @@ http://localhost:3001/auth/dev-login?role=viewer
 ```
 
 ### Reset DB (destructive)
+
 ```bash
 PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm exec prisma migrate reset --force
 # Auto-runs seed.ts (advanced). For simple seed:
@@ -228,6 +247,7 @@ PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm exec tsx prisma/se
 ```
 
 ### Run tests
+
 ```bash
 pnpm --filter @customreport/api test
 pnpm --filter @customreport/shared test
@@ -237,6 +257,7 @@ cd apps/web && E2E_DATABASE_URL='postgresql://customreport:localdev@localhost:54
 ```
 
 ### Push (already up to date as of this handoff)
+
 ```bash
 https_proxy="" command git push origin main
 ```

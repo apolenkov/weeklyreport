@@ -1618,7 +1618,7 @@ export function createAppRouter(deps: RouterDeps) {
               ctx.session,
             );
             // R3a: no-period is a normal 200 response, not an error path.
-            if (result.status === 'no-period') {
+            if (result.status === "no-period") {
               ctx.logger.info("weekly report: no active period", {
                 phase: "weekly-report.load",
                 procedure: "weeklyReport.get",

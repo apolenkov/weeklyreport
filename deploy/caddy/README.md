@@ -5,10 +5,10 @@ containers, and adds security headers.
 
 ## Files
 
-| File              | When to use                                                                 |
-| ----------------- | --------------------------------------------------------------------------- |
-| `Caddyfile`       | Production. Auto-HTTPS via Let's Encrypt; needs `CADDY_SITE_ADDRESS` set to a publicly resolvable hostname and `CADDY_ACME_EMAIL` for cert notifications. |
-| `Caddyfile.staging` | Staging / air-gapped / LE rate-limited. Uses caddy's built-in CA (`tls internal`). |
+| File                | When to use                                                                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Caddyfile`         | Production. Auto-HTTPS via Let's Encrypt; needs `CADDY_SITE_ADDRESS` set to a publicly resolvable hostname and `CADDY_ACME_EMAIL` for cert notifications. |
+| `Caddyfile.staging` | Staging / air-gapped / LE rate-limited. Uses caddy's built-in CA (`tls internal`).                                                                        |
 
 ## Required env vars (in `.env.prod`)
 

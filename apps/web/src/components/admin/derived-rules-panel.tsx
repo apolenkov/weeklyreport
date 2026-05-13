@@ -30,8 +30,8 @@ export function DerivedRulesPanel({
         data-testid={`derived-rules-empty-${policyId}`}
         className="rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-3 text-xs text-[var(--color-muted-foreground)]"
       >
-        No derived rules yet. Create a report period whose deadline falls
-        inside the policy's validity window to generate rules.
+        No derived rules yet. Create a report period whose deadline falls inside
+        the policy's validity window to generate rules.
       </div>
     );
   }

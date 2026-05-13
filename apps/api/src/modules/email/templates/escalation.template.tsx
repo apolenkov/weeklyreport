@@ -1,4 +1,4 @@
-import * as React from 'react';
+import * as React from "react";
 import {
   Html,
   Head,
@@ -9,7 +9,7 @@ import {
   Heading,
   Text,
   Section,
-} from '@react-email/components';
+} from "@react-email/components";
 
 /**
  * NOTIF-02 (Phase 29-05): T+2h escalation digest sent to the head when leads
@@ -68,14 +68,16 @@ export function EscalationEmail({
               Late draft sections — {cycleDate}
             </Heading>
             <Text className="text-gray-700">
-              Hello {headName}, the following lead{lateLeads.length === 1 ? '' : 's'} have not submitted
-              their section of the {reportPeriod} weekly report:
+              Hello {headName}, the following lead
+              {lateLeads.length === 1 ? "" : "s"} have not submitted their
+              section of the {reportPeriod} weekly report:
             </Text>
             <Section className="my-4">
               <ul className="list-disc pl-6 text-gray-800">
                 {lateLeads.map((lead, index) => (
                   <li key={`${lead.leadName}-${index}`} className="my-1">
-                    <strong>{lead.leadName}</strong> — {lead.sectionTitle} (deadline {lead.deadlineIso})
+                    <strong>{lead.leadName}</strong> — {lead.sectionTitle}{" "}
+                    (deadline {lead.deadlineIso})
                   </li>
                 ))}
               </ul>
@@ -83,7 +85,7 @@ export function EscalationEmail({
             {/* UFB-047 / Phase 49-01: brand footer rendered from the
                 `organization` payload snapshotted at enqueue time. */}
             <Text className="text-sm text-gray-500">
-              {organization.shortName} — Weekly status reporting for{' '}
+              {organization.shortName} — Weekly status reporting for{" "}
               {organization.fullName}.
             </Text>
           </Container>
@@ -96,16 +98,18 @@ export function EscalationEmail({
 export function escalationEmailPlaintext(props: EscalationEmailProps): string {
   const lines = [
     `Hello ${props.headName},`,
-    '',
-    `The following lead${props.lateLeads.length === 1 ? '' : 's'} have not submitted their section of the ${props.reportPeriod} weekly report (${props.cycleDate}):`,
-    '',
+    "",
+    `The following lead${props.lateLeads.length === 1 ? "" : "s"} have not submitted their section of the ${props.reportPeriod} weekly report (${props.cycleDate}):`,
+    "",
   ];
   for (const lead of props.lateLeads) {
-    lines.push(`  - ${lead.leadName} — ${lead.sectionTitle} (deadline ${lead.deadlineIso})`);
+    lines.push(
+      `  - ${lead.leadName} — ${lead.sectionTitle} (deadline ${lead.deadlineIso})`,
+    );
   }
   lines.push(
-    '',
+    "",
     `— ${props.organization.shortName} (Weekly status reporting for ${props.organization.fullName})`,
   );
-  return lines.join('\n');
+  return lines.join("\n");
 }

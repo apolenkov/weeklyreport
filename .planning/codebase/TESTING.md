@@ -5,21 +5,25 @@
 ## Test Framework
 
 **Runner:**
+
 - Vitest 4.x (unit, contract, integration tests)
 - Playwright 1.55+ (E2E browser tests)
 
 **Config files:**
+
 - `apps/web/vitest.config.ts` -- jsdom environment, react plugin, path aliases
 - `apps/web/playwright.config.ts` -- Chromium project, auth setup, webServer config
 - `playwright.config.ts` (root) -- re-exports from `apps/web/playwright.config.ts`
 - API has no vitest.config.ts -- uses root `vitest` from monorepo devDependencies with defaults
 
 **Assertion Library:**
+
 - Vitest built-in `expect` (no globals -- explicit imports required)
 - `@testing-library/jest-dom` matchers for web component tests
 - Playwright built-in `expect` for E2E
 
 **Run Commands:**
+
 ```bash
 pnpm run test                    # Run all unit tests via turbo (excludes integration)
 pnpm --filter @customreport/api run test          # API unit tests only
@@ -37,21 +41,23 @@ pnpm run test:e2e:ui             # Playwright E2E with interactive UI
 
 **Naming convention (three tiers):**
 
-| Suffix | Type | Dependencies | Location Pattern |
-|--------|------|-------------|-----------------|
-| `*.service.test.ts` | Unit | In-memory fakes | `apps/api/src/modules/{module}/{module}.service.test.ts` |
-| `*.contract.test.ts` | Contract | Zod schemas, in-memory fakes | `apps/api/src/modules/{module}/{module}.contract.test.ts` |
-| `*.integration.test.ts` | Integration | Real PostgreSQL via Prisma | `apps/api/src/modules/{module}/{module}.integration.test.ts` |
-| `*.test.ts` | Unit | Vitest, vi.spyOn for I/O | `apps/api/src/lib/logger.test.ts`, `apps/api/src/infrastructure/**/*.test.ts` |
-| `*.test.ts` / `*.test.tsx` | Component | jsdom, MSW, testing-library | `apps/web/src/**/*.test.ts` |
-| `*.spec.ts` | E2E | Playwright, browser | `apps/web/e2e/**/*.spec.ts` |
+| Suffix                     | Type        | Dependencies                 | Location Pattern                                                              |
+| -------------------------- | ----------- | ---------------------------- | ----------------------------------------------------------------------------- |
+| `*.service.test.ts`        | Unit        | In-memory fakes              | `apps/api/src/modules/{module}/{module}.service.test.ts`                      |
+| `*.contract.test.ts`       | Contract    | Zod schemas, in-memory fakes | `apps/api/src/modules/{module}/{module}.contract.test.ts`                     |
+| `*.integration.test.ts`    | Integration | Real PostgreSQL via Prisma   | `apps/api/src/modules/{module}/{module}.integration.test.ts`                  |
+| `*.test.ts`                | Unit        | Vitest, vi.spyOn for I/O     | `apps/api/src/lib/logger.test.ts`, `apps/api/src/infrastructure/**/*.test.ts` |
+| `*.test.ts` / `*.test.tsx` | Component   | jsdom, MSW, testing-library  | `apps/web/src/**/*.test.ts`                                                   |
+| `*.spec.ts`                | E2E         | Playwright, browser          | `apps/web/e2e/**/*.spec.ts`                                                   |
 
 **Shared schema tests** in a `__tests__/` directory:
+
 - `packages/shared/src/schemas/__tests__/report.test.ts`
 - `packages/shared/src/schemas/__tests__/auth.test.ts`
 - `packages/shared/src/schemas/__tests__/auth.contract.test.ts`
 
 **Directory structure:**
+
 ```
 apps/api/src/
   modules/admin/
@@ -102,11 +108,22 @@ packages/shared/src/
 ## Test Structure
 
 **Vitest globals are disabled.** Always import test utilities explicitly:
+
 ```typescript
-import { describe, expect, it, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import {
+  describe,
+  expect,
+  it,
+  vi,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from "vitest";
 ```
 
 **Suite Organization:**
+
 ```typescript
 import { describe, expect, it } from 'vitest';
 import type { AdminSnapshot, UserSession } from '@customreport/shared';
@@ -148,6 +165,7 @@ describe('AdminService', () => {
 ```
 
 **Patterns:**
+
 - **Setup:** Fixtures defined as module-level constants or factory functions. No `beforeEach` for unit tests (each test creates its own service instance).
 - **Teardown:** Integration tests use `beforeEach(cleanDatabase)` and `afterAll(disconnectTestPrisma)`.
 - **Assertions:** Prefer `expect(x).toBe(y)` for primitives, `expect(x).toEqual(y)` for objects, `expect(x).toMatchObject(y)` for partial matches.
@@ -161,7 +179,9 @@ describe('AdminService', () => {
 
 ```typescript
 // Pattern: define createRepository() factory that implements the full interface
-function createRepository(section: ReportSectionReadModel): ReportSectionsRepository {
+function createRepository(
+  section: ReportSectionReadModel,
+): ReportSectionsRepository {
   let currentSection = structuredClone(section);
 
   return {
@@ -170,7 +190,7 @@ function createRepository(section: ReportSectionReadModel): ReportSectionsReposi
       return structuredClone(currentSection);
     },
     async getReportStatus() {
-      return 'draft';
+      return "draft";
     },
     async saveSection(nextSection) {
       currentSection = structuredClone(nextSection);
@@ -181,6 +201,7 @@ function createRepository(section: ReportSectionReadModel): ReportSectionsReposi
 ```
 
 **Key rules:**
+
 - Use `structuredClone()` for all return values to prevent test mutation leaking
 - Implement the full repository interface (not partial mocks)
 - Use `new Map()` for in-memory collection storage when needed
@@ -189,15 +210,17 @@ function createRepository(section: ReportSectionReadModel): ReportSectionsReposi
 ### API Tests: vi.spyOn for I/O
 
 Used only for I/O operations like stdout/stderr:
+
 ```typescript
-const spy = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
-const logger = createAppLogger({ minLevel: 'info' });
-logger.info('hello');
+const spy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+const logger = createAppLogger({ minLevel: "info" });
+logger.info("hello");
 const parsed = JSON.parse(spy.mock.calls[0]![0] as string);
-expect(parsed).toMatchObject({ level: 'info', message: 'hello' });
+expect(parsed).toMatchObject({ level: "info", message: "hello" });
 ```
 
 Always restore mocks in `afterEach`:
+
 ```typescript
 afterEach(() => vi.restoreAllMocks());
 ```
@@ -207,31 +230,36 @@ afterEach(() => vi.restoreAllMocks());
 **Handler location:** `apps/web/src/test/msw-handlers.ts`
 
 **Setup:** `apps/web/vitest.setup.ts`
-```typescript
-import { server } from './src/test/msw-handlers';
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
-afterEach(() => { server.resetHandlers(); cleanup(); });
+```typescript
+import { server } from "./src/test/msw-handlers";
+
+beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+afterEach(() => {
+  server.resetHandlers();
+  cleanup();
+});
 afterAll(() => server.close());
 ```
 
 **MSW handler pattern (tRPC-aware):**
-```typescript
-import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
-import superjson from 'superjson';
 
-const API_URL = 'http://localhost:3001/trpc';
+```typescript
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import superjson from "superjson";
+
+const API_URL = "http://localhost:3001/trpc";
 
 export const handlers = [
   http.get(`${API_URL}/*`, ({ request }) => {
     const url = new URL(request.url);
-    const pathname = url.pathname.replace('/trpc/', '');
-    const procedures = pathname.split(',');
+    const pathname = url.pathname.replace("/trpc/", "");
+    const procedures = pathname.split(",");
 
     const results = procedures.map((proc) => {
       switch (proc) {
-        case 'reports.getActive':
+        case "reports.getActive":
           return { result: { data: superjson.serialize(createMockSection()) } };
         // ...
         default:
@@ -248,12 +276,14 @@ export const server = setupServer(...handlers);
 **Important:** tRPC uses superjson for serialization. All mock responses must wrap data with `superjson.serialize()`.
 
 ### What to Mock
+
 - Repository interfaces (via in-memory fakes) for service unit tests
 - tRPC API responses (via MSW) for web component tests
 - stdout/stderr (via vi.spyOn) for logger tests
 - File system operations (via temp directories) for file-based tests
 
 ### What NOT to Mock
+
 - Zod schemas -- always use real schemas in tests
 - Domain error classes -- test the actual error mapping
 - The Prisma client in integration tests -- use real DB
@@ -298,26 +328,27 @@ export async function cleanDatabase(prisma: PrismaClient): Promise<void> {
 Location: `apps/web/src/test/fixtures.ts`
 
 ```typescript
-import type { ReportSectionReadModel } from '@customreport/shared';
+import type { ReportSectionReadModel } from "@customreport/shared";
 
 export function createDemoSection(): ReportSectionReadModel {
   return {
-    reportSectionId: '11111111-1111-4111-8111-111111111111',
-    reportId: '22222222-2222-4222-8222-222222222222',
+    reportSectionId: "11111111-1111-4111-8111-111111111111",
+    reportId: "22222222-2222-4222-8222-222222222222",
     // ... typed to match Zod schema exactly
   };
 }
 ```
 
 **Schema test fixtures** (in `packages/shared/src/schemas/__tests__/report.test.ts`):
+
 ```typescript
 const uuid = () => randomUUID();
 const validItem = () => ({
   projectId: uuid(),
-  type: 'current' as const,
-  text: 'Ship feature X',
-  tag: 'feature',
-  workflowStatus: 'in_progress' as const,
+  type: "current" as const,
+  text: "Ship feature X",
+  tag: "feature",
+  workflowStatus: "in_progress" as const,
 });
 
 // Boundary-testing helpers:
@@ -330,6 +361,7 @@ const makeItems = (count: number) =>
 **Requirements:** No coverage thresholds enforced. No coverage config in vitest or CI.
 
 **View Coverage:**
+
 ```bash
 pnpm --filter @customreport/api exec vitest run --coverage
 pnpm --filter @customreport/web exec vitest run --coverage
@@ -351,6 +383,7 @@ pnpm --filter @customreport/web exec vitest run --coverage
 - **Pattern:** Use in-memory fakes, call service, parse output through Zod schema, test both valid and invalid data
 - **Validates schema boundary contracts** between layers
 - **Example:**
+
 ```typescript
 it('validates output through Zod schema (rejects malformed data)', async () => {
   const malformed = { reportId: 'not-a-uuid', ... } as unknown as ArchiveReportSummary;
@@ -366,6 +399,7 @@ it('validates output conforms to archiveReportSummarySchema', async () => {
   }
 });
 ```
+
 - **Files:** `apps/api/src/modules/archive/archive.contract.test.ts`, `apps/api/src/modules/carry-over/carry-over.contract.test.ts`, `apps/api/src/modules/pdf-export/pdf-export.contract.test.ts`, `apps/api/src/modules/period/period.contract.test.ts`, `apps/api/src/modules/publication/publication.contract.test.ts`, `apps/api/src/modules/reminders/reminders.contract.test.ts`, `apps/api/src/modules/report-sections/report-sections.contract.test.ts`, `apps/api/src/modules/report-sections/lead-form.contract.test.ts`, `apps/api/src/modules/review/review.contract.test.ts`, `apps/api/src/modules/weekly-report/weekly-report.contract.test.ts`
 
 ### Schema Boundary Tests (`packages/shared`)
@@ -386,12 +420,15 @@ it('validates output conforms to archiveReportSummarySchema', async () => {
 - **Scope:** Test Prisma repository implementations against real PostgreSQL
 - **Requires:** Running PostgreSQL database (`DATABASE_URL` env var or default `customreport_test`)
 - **Pattern:**
+
 ```typescript
-describe('AdminPrismaRepository (integration)', () => {
+describe("AdminPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
   let repo: AdminPrismaRepository;
 
-  beforeAll(() => { repo = new AdminPrismaRepository(prisma as never); });
+  beforeAll(() => {
+    repo = new AdminPrismaRepository(prisma as never);
+  });
   beforeEach(async () => {
     await cleanDatabase(prisma);
     testData = await seedTestData(prisma);
@@ -401,12 +438,13 @@ describe('AdminPrismaRepository (integration)', () => {
     await disconnectTestPrisma();
   });
 
-  it('getSnapshot returns users, projects, periods, and rules', async () => {
+  it("getSnapshot returns users, projects, periods, and rules", async () => {
     const snapshot = await repo.getSnapshot();
     expect(snapshot.users.length).toBeGreaterThanOrEqual(2);
   });
 });
 ```
+
 - **Run separately:** `pnpm --filter @customreport/api run test:integration`
 - **Sequential execution:** Uses `--fileParallelism=false` to prevent DB conflicts
 - **14 integration test files** across `apps/api/src/modules/`
@@ -427,7 +465,7 @@ type Fixtures = {
 export const test = base.extend<Fixtures>({
   leadPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({
-      storageState: path.join(AUTH_DIR, 'lead.json'),
+      storageState: path.join(AUTH_DIR, "lead.json"),
     });
     const page = await ctx.newPage();
     await use(page);
@@ -437,24 +475,33 @@ export const test = base.extend<Fixtures>({
 ```
 
 **E2E test pattern:**
-```typescript
-import { test, expect } from './fixtures';
 
-test.describe('Lead Report Page', () => {
+```typescript
+import { test, expect } from "./fixtures";
+
+test.describe("Lead Report Page", () => {
   test.beforeEach(async ({ leadPage }) => {
-    await leadPage.goto('/lead/report');
-    await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
-    await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
+    await leadPage.goto("/lead/report");
+    await leadPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await leadPage
+      .getByText("Product Status")
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await leadPage.waitForLoadState("networkidle", { timeout: 15_000 });
   });
 
   test('shows "My Report" heading', async ({ leadPage }) => {
-    await expect(leadPage.getByRole('heading', { name: 'My Report' })).toBeVisible();
+    await expect(
+      leadPage.getByRole("heading", { name: "My Report" }),
+    ).toBeVisible();
   });
 });
 ```
 
 **Playwright config details:**
+
 - Tests on Chromium only (Desktop Chrome)
 - Auth setup project runs first, writes storage state to `e2e/.auth/`
 - WebServer auto-starts Next.js on port 3100 with `AUTH_DEV_MODE=true`
@@ -465,6 +512,7 @@ test.describe('Lead Report Page', () => {
 - Screenshots: only on failure
 
 **Current E2E test files:**
+
 - `apps/web/e2e/lead-journey.spec.ts` -- Lead report form
 - `apps/web/e2e/head-dashboard.spec.ts` -- Head dashboard
 - `apps/web/e2e/weekly-report.spec.ts` -- Weekly report view
@@ -481,8 +529,9 @@ test.describe('Lead Report Page', () => {
 ## Common Patterns
 
 **Async Testing:**
+
 ```typescript
-it('loads a lead section', async () => {
+it("loads a lead section", async () => {
   const service = new ReportSectionsService(createRepository(baseSection));
   await expect(
     service.getActiveSection(baseSection.reportSectionId),
@@ -493,12 +542,15 @@ it('loads a lead section', async () => {
 ```
 
 **Error Testing:**
+
 ```typescript
-it('throws ArchiveDomainError when not found', async () => {
+it("throws ArchiveDomainError when not found", async () => {
   const repo = createInMemoryRepository([], new Map());
   const service = new ArchiveService(repo);
 
-  await expect(service.getArchiveReport(missingId)).rejects.toThrow(ArchiveDomainError);
+  await expect(service.getArchiveReport(missingId)).rejects.toThrow(
+    ArchiveDomainError,
+  );
   await expect(service.getArchiveReport(missingId)).rejects.toThrow(
     `Archive report ${missingId} was not found.`,
   );
@@ -506,8 +558,9 @@ it('throws ArchiveDomainError when not found', async () => {
 ```
 
 **Schema Boundary Testing:**
+
 ```typescript
-it('rejects items array with 101 elements (exceeds max)', () => {
+it("rejects items array with 101 elements (exceeds max)", () => {
   const draft = { ...validDraft(), items: makeItems(101) };
   const result = draftSaveSchema.safeParse(draft);
   expect(result.success).toBe(false);
@@ -515,6 +568,7 @@ it('rejects items array with 101 elements (exceeds max)', () => {
 ```
 
 **Regression Test Labeling:**
+
 ```typescript
 describe('upsertUser -- regression (ADM-020, ADM-021)', () => {
   it('creates a new user (ADM-020)', async () => { ... });
@@ -524,17 +578,17 @@ describe('upsertUser -- regression (ADM-020, ADM-021)', () => {
 
 ## Test Inventory Summary
 
-| Category | Count | Location |
-|----------|-------|----------|
-| API unit tests | 17 files | `apps/api/src/modules/*/*.service.test.ts`, `apps/api/src/modules/auth/*.test.ts`, `apps/api/src/lib/*.test.ts`, `apps/api/src/infrastructure/**/*.test.ts` |
-| API contract tests | 10 files | `apps/api/src/modules/*/*.contract.test.ts` |
-| API integration tests | 14 files | `apps/api/src/modules/*/*.integration.test.ts` |
-| API E2E test | 1 file | `apps/api/src/modules/auth/auth.e2e.spec.ts` |
-| Shared schema tests | 4 files | `packages/shared/src/schemas/__tests__/*.test.ts`, `packages/shared/src/trpc/router.test.ts` |
-| Web unit tests | 1 file | `apps/web/src/server/auth/session.test.ts` |
-| Web E2E tests | 12 files | `apps/web/e2e/**/*.spec.ts` |
-| **Total** | **59 files** | |
+| Category              | Count        | Location                                                                                                                                                    |
+| --------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API unit tests        | 17 files     | `apps/api/src/modules/*/*.service.test.ts`, `apps/api/src/modules/auth/*.test.ts`, `apps/api/src/lib/*.test.ts`, `apps/api/src/infrastructure/**/*.test.ts` |
+| API contract tests    | 10 files     | `apps/api/src/modules/*/*.contract.test.ts`                                                                                                                 |
+| API integration tests | 14 files     | `apps/api/src/modules/*/*.integration.test.ts`                                                                                                              |
+| API E2E test          | 1 file       | `apps/api/src/modules/auth/auth.e2e.spec.ts`                                                                                                                |
+| Shared schema tests   | 4 files      | `packages/shared/src/schemas/__tests__/*.test.ts`, `packages/shared/src/trpc/router.test.ts`                                                                |
+| Web unit tests        | 1 file       | `apps/web/src/server/auth/session.test.ts`                                                                                                                  |
+| Web E2E tests         | 12 files     | `apps/web/e2e/**/*.spec.ts`                                                                                                                                 |
+| **Total**             | **59 files** |                                                                                                                                                             |
 
 ---
 
-*Testing analysis: 2026-04-24*
+_Testing analysis: 2026-04-24_

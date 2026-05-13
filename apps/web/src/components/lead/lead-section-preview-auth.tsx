@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
-import { useTRPC } from '../../lib/trpc-context';
-import { WeeklyReportPage } from '../weekly-report/weekly-report-page';
+import { useTRPC } from "../../lib/trpc-context";
+import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 
 type Props = {
   readonly reportId: string;

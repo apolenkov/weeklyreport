@@ -6,11 +6,7 @@ import type { ReactNode } from "react";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
 
-import type {
-  MockPeriod,
-  MockReminder,
-  MockReminderPolicy,
-} from "./mock-data";
+import type { MockPeriod, MockReminder, MockReminderPolicy } from "./mock-data";
 import { RemindersTab } from "./reminders-tab";
 
 const toastSuccess = vi.fn();
@@ -119,11 +115,10 @@ function renderTab(args?: {
     removeMutationFn: vi.fn().mockResolvedValue({ success: true }),
   };
   const policies = args?.policies ?? [policyDeadline, policyEscalation];
-  const derivedRulesByPolicyId =
-    args?.derivedRulesByPolicyId ?? {
-      [policyDeadline.id]: [derivedRule],
-      [policyEscalation.id]: [],
-    };
+  const derivedRulesByPolicyId = args?.derivedRulesByPolicyId ?? {
+    [policyDeadline.id]: [derivedRule],
+    [policyEscalation.id]: [],
+  };
 
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -133,7 +128,9 @@ function renderTab(args?: {
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>{children}</TRPCProxyContext.Provider>
+        <TRPCProxyContext.Provider value={trpc}>
+          {children}
+        </TRPCProxyContext.Provider>
       </QueryClientProvider>
     );
   }
@@ -175,7 +172,9 @@ describe("RemindersTab (Phase 44-04)", () => {
     expect(screen.getByTestId("reminders-empty-state")).toHaveTextContent(
       /No reminder policies yet/i,
     );
-    expect(screen.getByRole("button", { name: /create first policy/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /create first policy/i }),
+    ).toBeInTheDocument();
   });
 
   it("opens the form on 'New Policy' and submits with the form payload", async () => {
@@ -277,7 +276,9 @@ describe("RemindersTab (Phase 44-04)", () => {
     renderTab();
 
     await user.click(screen.getByTestId(`edit-${policyEscalation.id}`));
-    const audienceSelect = screen.getByLabelText(/Audience/i) as HTMLSelectElement;
+    const audienceSelect = screen.getByLabelText(
+      /Audience/i,
+    ) as HTMLSelectElement;
     expect(audienceSelect.value).toBe("head-of-late");
     const tzSelect = screen.getByLabelText(/Timezone/i) as HTMLSelectElement;
     expect(tzSelect.value).toBe("Europe/Moscow");

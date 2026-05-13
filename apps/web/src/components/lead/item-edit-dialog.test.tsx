@@ -6,21 +6,21 @@
  *             setText(initial.text) wipes user input.
  * After fix:  stagesForProduct removed from deps → text preserved.
  */
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 
-import { ItemEditDialog } from './item-edit-dialog';
-import type { Product } from './mock-data';
+import { ItemEditDialog } from "./item-edit-dialog";
+import type { Product } from "./mock-data";
 
 const products: Product[] = [
-  { id: 'p1', name: 'DevOps Tools', overallStatus: 'on-track', stages: [] },
+  { id: "p1", name: "DevOps Tools", overallStatus: "on-track", stages: [] },
 ];
 
-describe('ItemEditDialog — A13 form-race regression', () => {
-  it('preserves typed text when parent re-renders with a new stagesForProduct ref', () => {
+describe("ItemEditDialog — A13 form-race regression", () => {
+  it("preserves typed text when parent re-renders with a new stagesForProduct ref", () => {
     const onSave = vi.fn();
     const onCancel = vi.fn();
-    const stagesV1 = () => ['Dev', 'Testing'] as const;
+    const stagesV1 = () => ["Dev", "Testing"] as const;
 
     const { rerender } = render(
       <ItemEditDialog
@@ -36,11 +36,13 @@ describe('ItemEditDialog — A13 form-race regression', () => {
     );
 
     const textField = screen.getByLabelText(/Description \*/i);
-    fireEvent.change(textField, { target: { value: 'user typed this — must survive' } });
-    expect(textField).toHaveValue('user typed this — must survive');
+    fireEvent.change(textField, {
+      target: { value: "user typed this — must survive" },
+    });
+    expect(textField).toHaveValue("user typed this — must survive");
 
     // Simulate autosave parent re-render: new function reference, same return value.
-    const stagesV2 = () => ['Dev', 'Testing'] as const;
+    const stagesV2 = () => ["Dev", "Testing"] as const;
     rerender(
       <ItemEditDialog
         open={true}
@@ -56,6 +58,6 @@ describe('ItemEditDialog — A13 form-race regression', () => {
 
     // A13 bug: before fix, text was wiped back to '' by useEffect firing on
     // the new stagesForProduct reference.
-    expect(textField).toHaveValue('user typed this — must survive');
+    expect(textField).toHaveValue("user typed this — must survive");
   });
 });

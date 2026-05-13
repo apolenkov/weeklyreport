@@ -111,23 +111,23 @@ async function main(): Promise<void> {
   assertNonProdDestructive("reset-hard");
 
   console.log("[reset-hard] Starting hard reset…");
-  console.log(`[reset-hard] DATABASE_URL: ${DATABASE_URL.replace(/:[^:@]*@/, ":***@")}`);
+  console.log(
+    `[reset-hard] DATABASE_URL: ${DATABASE_URL.replace(/:[^:@]*@/, ":***@")}`,
+  );
 
   // Apply any pending migrations first so schema matches Prisma client.
   // This prevents "not-null constraint" errors from schema drift.
   console.log("[reset-hard] Applying pending migrations…");
-  const migrate = spawnSync(
-    "pnpm",
-    ["exec", "prisma", "migrate", "deploy"],
-    {
-      stdio: "inherit",
-      shell: false,
-      cwd: REPO_ROOT,
-      env: { ...process.env },
-    },
-  );
+  const migrate = spawnSync("pnpm", ["exec", "prisma", "migrate", "deploy"], {
+    stdio: "inherit",
+    shell: false,
+    cwd: REPO_ROOT,
+    env: { ...process.env },
+  });
   if (migrate.status !== 0) {
-    throw new Error(`prisma migrate deploy failed with exit code ${migrate.status}`);
+    throw new Error(
+      `prisma migrate deploy failed with exit code ${migrate.status}`,
+    );
   }
 
   await truncateAll();
@@ -157,7 +157,9 @@ async function main(): Promise<void> {
     throw new Error(`seed-simple exited with code ${seed.status}`);
   }
 
-  console.log("[reset-hard] Done. Database + Redis are at the post-seed baseline.");
+  console.log(
+    "[reset-hard] Done. Database + Redis are at the post-seed baseline.",
+  );
 }
 
 main()

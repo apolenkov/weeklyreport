@@ -51,6 +51,7 @@ completed: 2026-04-12
 - **Files modified:** 2
 
 ## Accomplishments
+
 - Fixed 7 schema-layer bugs (BUG-002, BUG-006, BUG-009, BUG-013, BUG-014, BUG-015, BUG-016)
 - Created safeText() reusable helper that applies null byte rejection and zero-width-space-only rejection to all user-facing text fields
 - Added .max(100) limits to items/risks/decisions arrays and .max(50) to priorities preventing unbounded payloads
@@ -65,10 +66,12 @@ Each task was committed atomically:
 2. **Task 2: Harden text sanitization and JWT schema (BUG-009,013,014)** - `69477fd` (fix)
 
 ## Files Created/Modified
+
 - `packages/shared/src/schemas/report.ts` - Added safeText(), reportDate(), unique rank refinement, array limits, expanded carry-over status
 - `packages/shared/src/schemas/auth.ts` - Made activeReportId and activeReportSectionId nullable().optional()
 
 ## Decisions Made
+
 - Created reusable `safeText()` helper instead of adding individual `.refine()` calls on each field -- reduces duplication and ensures consistent validation across all text fields
 - Applied `reportDate()` only to period boundary fields (periodStart, periodEnd, deadline, publishedAt in archives) -- not to operational dates like sentAt or completedAt which have different semantics
 
@@ -77,6 +80,7 @@ Each task was committed atomically:
 None - plan executed exactly as written.
 
 ## Issues Encountered
+
 - Pre-existing TypeScript errors in apps/api (Prisma client not generated, BullMQ imports) -- these are not caused by schema changes and are out of scope for this plan
 
 ## User Setup Required
@@ -84,6 +88,7 @@ None - plan executed exactly as written.
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 - Schema hardening complete, ready for schema boundary Vitest tests (13-04-PLAN)
 - safeText() and reportDate() helpers are testable building blocks for comprehensive boundary testing
 - Downstream apps compile correctly with the shared package changes
@@ -98,5 +103,6 @@ None - no external service configuration required.
 - [x] Shared package TypeScript compiles without errors
 
 ---
-*Phase: 13-quality-assurance-polish*
-*Completed: 2026-04-12*
+
+_Phase: 13-quality-assurance-polish_
+_Completed: 2026-04-12_

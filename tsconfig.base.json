@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "allowJs": false,
@@ -21,18 +17,10 @@
     "verbatimModuleSyntax": true,
     "baseUrl": ".",
     "paths": {
-      "@customreport/shared": [
-        "packages/shared/src/index.ts"
-      ],
-      "@customreport/shared/*": [
-        "packages/shared/src/*"
-      ],
-      "@customreport/ui": [
-        "packages/ui/src/index.ts"
-      ],
-      "@customreport/ui/*": [
-        "packages/ui/src/*"
-      ]
+      "@customreport/shared": ["packages/shared/src/index.ts"],
+      "@customreport/shared/*": ["packages/shared/src/*"],
+      "@customreport/ui": ["packages/ui/src/index.ts"],
+      "@customreport/ui/*": ["packages/ui/src/*"]
     }
   }
 }

@@ -6,14 +6,14 @@
 //   prompt cache when the rubric is ≥1024 tokens (AI-SPEC §1).
 // - All SDK errors are normalised to AiUnavailableError so callers have
 //   one catch-target.
-import Anthropic from '@anthropic-ai/sdk';
-import { z, type ZodType } from 'zod';
+import Anthropic from "@anthropic-ai/sdk";
+import { z, type ZodType } from "zod";
 
 export class AiUnavailableError extends Error {
   public readonly underlying?: unknown;
   constructor(message: string, underlying?: unknown) {
     super(message);
-    this.name = 'AiUnavailableError';
+    this.name = "AiUnavailableError";
     this.underlying = underlying;
   }
 }
@@ -22,7 +22,7 @@ export class AiRateLimitError extends Error {
   public readonly underlying?: unknown;
   constructor(message: string, underlying?: unknown) {
     super(message);
-    this.name = 'AiRateLimitError';
+    this.name = "AiRateLimitError";
     this.underlying = underlying;
   }
 }
@@ -58,9 +58,9 @@ export type AnthropicClientFactory = () => Anthropic;
 let _cachedClient: Anthropic | null = null;
 const defaultFactory: AnthropicClientFactory = () => {
   if (!_cachedClient) {
-    const apiKey = process.env['ANTHROPIC_API_KEY'];
+    const apiKey = process.env["ANTHROPIC_API_KEY"];
     if (!apiKey) {
-      throw new AiUnavailableError('ANTHROPIC_API_KEY is not set');
+      throw new AiUnavailableError("ANTHROPIC_API_KEY is not set");
     }
     _cachedClient = new Anthropic({ apiKey });
   }
@@ -88,7 +88,7 @@ export async function runStructured<S extends ZodType>(
     client = factory();
   } catch (err) {
     if (err instanceof AiUnavailableError) throw err;
-    throw new AiUnavailableError('Failed to construct Anthropic client', err);
+    throw new AiUnavailableError("Failed to construct Anthropic client", err);
   }
 
   // Zod 4 native JSON Schema export.
@@ -101,12 +101,12 @@ export async function runStructured<S extends ZodType>(
       max_tokens: opts.maxTokens ?? 1024,
       system: [
         {
-          type: 'text',
+          type: "text",
           text: opts.system,
-          cache_control: { type: 'ephemeral' },
+          cache_control: { type: "ephemeral" },
         },
       ],
-      messages: [{ role: 'user', content: opts.user }],
+      messages: [{ role: "user", content: opts.user }],
       tools: [
         {
           name: opts.toolName,
@@ -114,13 +114,13 @@ export async function runStructured<S extends ZodType>(
           input_schema: inputSchema as never,
         },
       ],
-      tool_choice: { type: 'tool', name: opts.toolName },
+      tool_choice: { type: "tool", name: opts.toolName },
     });
   } catch (err) {
     // Normalise SDK errors. RateLimitError and APIError have name fields.
-    const name = (err as { name?: string } | null)?.name ?? '';
-    if (name === 'RateLimitError') {
-      throw new AiRateLimitError('Anthropic rate-limit hit', err);
+    const name = (err as { name?: string } | null)?.name ?? "";
+    if (name === "RateLimitError") {
+      throw new AiRateLimitError("Anthropic rate-limit hit", err);
     }
     throw new AiUnavailableError(
       `Anthropic request failed: ${(err as Error).message}`,
@@ -130,11 +130,11 @@ export async function runStructured<S extends ZodType>(
 
   // streaming response objects don't have content. We only run non-stream.
   const blocks = (response as { content: Array<{ type: string }> }).content;
-  const toolBlock = blocks.find((b) => b.type === 'tool_use') as
-    | { type: 'tool_use'; input: unknown }
+  const toolBlock = blocks.find((b) => b.type === "tool_use") as
+    | { type: "tool_use"; input: unknown }
     | undefined;
   if (!toolBlock) {
-    throw new AiUnavailableError('Anthropic response missing tool_use block');
+    throw new AiUnavailableError("Anthropic response missing tool_use block");
   }
   const parsed = opts.schema.safeParse(toolBlock.input);
   if (!parsed.success) {
@@ -152,9 +152,9 @@ export async function runStructured<S extends ZodType>(
 
 export function extractUsage(raw: Record<string, number>): AnthropicUsage {
   return {
-    inputTokens: Number(raw['input_tokens'] ?? 0),
-    outputTokens: Number(raw['output_tokens'] ?? 0),
-    cacheCreationTokens: Number(raw['cache_creation_input_tokens'] ?? 0),
-    cacheReadTokens: Number(raw['cache_read_input_tokens'] ?? 0),
+    inputTokens: Number(raw["input_tokens"] ?? 0),
+    outputTokens: Number(raw["output_tokens"] ?? 0),
+    cacheCreationTokens: Number(raw["cache_creation_input_tokens"] ?? 0),
+    cacheReadTokens: Number(raw["cache_read_input_tokens"] ?? 0),
   };
 }

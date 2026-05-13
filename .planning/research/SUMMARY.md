@@ -27,6 +27,7 @@ The dominant risk surface is the **auth transition itself**: removing `AUTH_DEV_
 Existing stack carries forward unchanged. v6.0 adds four packages:
 
 **Core additions:**
+
 - **`@anthropic-ai/sdk` ^0.90.0** (apps/api) — direct Claude access; ships `betaZodTool` so Zod schemas in `packages/shared` are the single source of truth for tool input. Models: **Haiku 4.5** for sentiment classification + summarisation; **Sonnet 4.6** for multi-signal "on-track" judgement. Opus 4.7 explicitly NOT used (5× cost, marginal lift on these tasks).
 - **`recharts` ^3.3.0 + shadcn-ui Chart wrappers** (apps/web) — composable React + SVG, native Tailwind v4 CSS-variable theming (matches Starbucks cream/teal/gold palette automatically). Wrappers installed via `pnpm dlx shadcn@latest add chart`. All chart components live in `apps/web/src/components/charts/` as `'use client'` boundaries; pages stay RSC.
 - **`react-email` ^3 + `@react-email/components`** (apps/api) — `.tsx` email templates with the `<Tailwind>` wrapper (utility classes compile to inline styles at render time). Existing nodemailer + BullMQ pipeline carries delivery; templates live in `apps/api/src/modules/email/templates/`.
@@ -34,6 +35,7 @@ Existing stack carries forward unchanged. v6.0 adds four packages:
 **Explicitly rejected (do NOT add):** LangChain.js, Vercel AI SDK, separate Python AI service, Tremor, Plotly/D3, raw Tailwind SVG charts, `trpc-shield`, Storybook, MJML, `cron`/`node-cron`, `zod-to-json-schema`. Reasons documented in STACK.md "What NOT to Add".
 
 **No-package features:**
+
 - A (RBAC): custom `requireRole(['head'])` tRPC middleware factory in `packages/shared/src/trpc/`, ~30 LOC, replaces the inline `isHead` check at `trpc.middleware.ts:71-81`.
 - B (quality): config/cleanup only.
 - F (mobile): new Playwright projects (`mobile-ios`/`mobile-android`) using existing `@playwright/test` `devices` exports.
@@ -44,6 +46,7 @@ Existing stack carries forward unchanged. v6.0 adds four packages:
 ### Expected Features (per theme)
 
 **A — Auth & roles (foundational for C/E):**
+
 - AUTH-01..03: real Keycloak SAML, four-role JWT (`lead`/`head`/`admin`/`viewer`), role assertion on every tRPC procedure (default-deny).
 - AUTH-04: role-aware UI hiding (cosmetic only).
 - AUTH-05: cookie injection in BullMQ pdf-export — same plan as `AUTH_DEV_MODE` removal (CC-1 hinge).
@@ -51,12 +54,14 @@ Existing stack carries forward unchanged. v6.0 adds four packages:
 - Anti: self-service role request, custom user CRUD beyond samlId-cache, MFA in our app, password reset (delegated to Keycloak).
 
 **B — Quality polish:**
+
 - QA-01: single root cause behind 5 integration-suite Playwright timeouts (likely autosave debounce racing).
 - QA-02: `prisma generate` postinstall (NOT root — see B-2 pitfall).
 - QA-03: delete `apps/web/src/proxy.ts` (dead duplicate; live = `apps/web/proxy.ts`).
 - QA-04: rename `_userId` in `period.contract.test.ts:65`; flip Phase 22 VERIFICATION.md status.
 
 **C — AI features (gated by AI-SPEC.md):**
+
 - AI-01: 2-3 sentence executive summary card on assembled report (dismissible, never auto-fills narrative).
 - AI-02: sentiment badge per Risk row.
 - AI-03: smart "on-track" advisory icon overlay (lead's colour stays authoritative).
@@ -64,20 +69,24 @@ Existing stack carries forward unchanged. v6.0 adds four packages:
 - Anti: AI replaces narrative; auto-fills lead's textarea; changes traffic-light; sentiment auto-escalates.
 
 **D — Trend analytics:**
+
 - ANAL-01..04: per-project sparkline of last N periods, stacked bar of green/yellow/red counts, period-over-period delta table, carry-over rate per lead.
 - Operates on immutable published data; viewer access acceptable.
 - Anti: real-time dashboards, item-level drilldown, cross-departmental comparison.
 
 **E — Email reminders (extend, don't duplicate):**
+
 - NOTIF-01..06: T-24h pre-deadline reminder, T+2h escalation digest to head, plaintext+HTML parity, per-user opt-out (head escalation NOT opt-outable), idempotent jobIds, DLQ.
 - Most infra exists from v1.0–v2.0.
 - Anti: nag mode, head deadline reminders, director escalation, Telegram/Slack.
 
 **F — Mobile polish:**
+
 - MOB-01..07: no horizontal scroll at 375px; ≥44px tap targets; `head/dashboard` portfolio grid → card list; admin tabs → select; PDF embed → "Open PDF" button on mobile; top shell → hamburger.
 - Anti: native iOS/Android, mobile-first redesign, offline mode.
 
 **G — Release checklist:**
+
 - REL-01..05: `CHECKLIST.md` template + per-release fills under `.planning/milestones/v{N}-CHECKLIST.md`; each item maps 1:1 to `REGRESSION-TEST-SCENARIOS.md` IDs; signoff line.
 
 ### Architecture Approach
@@ -117,28 +126,36 @@ Existing stack carries forward unchanged. v6.0 adds four packages:
 All four research files independently converged on the same build order. Adopt it.
 
 ### Wave 1 — Foundations (parallelizable)
+
 **Phase 27 — B + A1**
+
 - Rationale: B unblocks integration suite as CI gate; A1 self-contained refactor.
 - Delivers: integration suite green ≥3 runs; postinstall hook; dead `proxy.ts` deleted; `_userId` rename; Phase 22 VERIFICATION re-status; `roleProcedure` factory.
 - Avoids: CC-6, B-2, B-3, A-1.
 - Research flag: skip (standard patterns).
 
 ### Wave 2 — Auth depth + adjacent infra (parallel after Wave 1)
+
 **Phase 28 — A2 + A4 + E1+E3 + G**
+
 - Rationale: A2 consumes A1; A4 closes Phase 24 seam (CC-1); E1+E3 reads existing reminder code first (E-1 mitigation); G anytime-clean.
 - Delivers: archive/weeklyReport viewer-scoped; PDF worker auth-cookie; 3 email templates; CHECKLIST.md.
 - Avoids: A-3, CC-4, CC-3, E-1.
 - Research flag: 5-min `jwt.sign expiresIn` check.
 
 ### Wave 3 — Auth tail + product surfaces (parallel after Wave 2)
+
 **Phase 29 — A3 + A5 + A6 + E2 + F + D**
+
 - Rationale: A3+A5+A6 close auth loop (A6 LAST); E2 layers escalation; F independent; D operates on immutable published data.
 - Delivers: layout-level role gates (recommended); navigation hiding; real Keycloak SAML; staged DEV_SESSION removal via `AUTH_DEV_MODE_ALLOW_TEST`; T+2h escalation; 7 pages mobile-clean at 375px; analytics module + 3 chart components on `/reports/trends`.
 - Avoids: CC-2, A-2, D-1, D-2, D-3, D-4, F-1, F-2, E-2, E-3.
 - Research flag: shadcn-Chart smoke task (CC-5) in Wave 2; otherwise standard.
 
 ### Wave 4 — AI (gated by AI-SPEC.md)
+
 **Phase 30+ — C, preceded by `/gsd-ai-integration-phase`**
+
 - Rationale: depends on Wave 3 finalised role scoping AND AI-SPEC.md (model selection, prompt design, cost/latency, PII boundary, golden-set rubric, on-prem-vs-hosted).
 - Delivers: `ai-summary` queue; `AiInsight` audit + `ReportSummary` cache tables; `ai.summary.get`/`ai.sentiment.list`/`ai.judgement.get`; summary card; risk badges; smart on-track advisory; cost-tracking; prompt-caching with ≥1024-token rubric.
 - Avoids: C-1..C-6.
@@ -153,6 +170,7 @@ All four research files independently converged on the same build order. Adopt i
 ### Research Flags
 
 **Phases needing deeper research during planning:**
+
 - **Phase 30+ (C):** AI-SPEC.md required. Decisions: cost-vs-confidentiality, model assignment, prompt rubric ≥1024 tokens, golden-set fixtures (8–12 reports), eval-step CI threshold.
 
 **Standard patterns (skip phase research):** Phase 27 (B + A1), Phase 28 (A2 + A4 + E1+E3 + G), Phase 29 (A3 + A5 + A6 + E2 + F + D).
@@ -161,12 +179,12 @@ All four research files independently converged on the same build order. Adopt i
 
 ## Confidence Assessment
 
-| Area | Confidence | Notes |
-|------|------------|-------|
-| Stack | **HIGH** | Context7-verified; existing untouched. MEDIUM: Sonnet 4.6 sufficiency for on-track judgement (golden-set required). |
-| Features | **HIGH** A/B/E/F/G; **MEDIUM** C/D | A/B/E/F/G well-known patterns with exact pointers. C depends on AI-SPEC. D sparkline-vs-bar density a UX call. |
-| Architecture | **HIGH** | Verified at exact line numbers. Raw-`Worker` requirement grep-confirmed. |
-| Pitfalls | **HIGH** CC-1/CC-2/CC-6/A-1..4/B-1..4; **MEDIUM** C/D/E/F | Cross-cutting + A/B from audit + grep. C/D/E/F best-practice. |
+| Area         | Confidence                                                | Notes                                                                                                               |
+| ------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Stack        | **HIGH**                                                  | Context7-verified; existing untouched. MEDIUM: Sonnet 4.6 sufficiency for on-track judgement (golden-set required). |
+| Features     | **HIGH** A/B/E/F/G; **MEDIUM** C/D                        | A/B/E/F/G well-known patterns with exact pointers. C depends on AI-SPEC. D sparkline-vs-bar density a UX call.      |
+| Architecture | **HIGH**                                                  | Verified at exact line numbers. Raw-`Worker` requirement grep-confirmed.                                            |
+| Pitfalls     | **HIGH** CC-1/CC-2/CC-6/A-1..4/B-1..4; **MEDIUM** C/D/E/F | Cross-cutting + A/B from audit + grep. C/D/E/F best-practice.                                                       |
 
 **Overall confidence:** **HIGH.** Strict additive scope. Two MEDIUM areas deferred to plan-time validation, not roadmap-blocking.
 
@@ -183,6 +201,7 @@ All four research files independently converged on the same build order. Adopt i
 ## Sources
 
 ### Primary (HIGH confidence)
+
 - `.planning/research/STACK.md` (Context7-verified)
 - `.planning/research/FEATURES.md`
 - `.planning/research/ARCHITECTURE.md` (verified at exact line numbers)
@@ -190,16 +209,19 @@ All four research files independently converged on the same build order. Adopt i
 - `.planning/PROJECT.md`
 
 ### Secondary
+
 - Anthropic release notes (Haiku 4.5 / Sonnet 4.6 / Opus 4.7) + prompt-caching docs
 - shadcn-ui charts page
 - BullMQ + nodemailer best-practice docs
 
 ### Tertiary (plan-time validation needed)
+
 - AI quality on real lead data (Sonnet 4.6 sufficiency)
 - iOS Safari PDF embed
 - Existing reminder dedupe key shape
 
 ---
-*Research synthesized: 2026-04-28*
-*Ready for roadmap: yes*
-*Build order locked: B + A1 → A2 + A4 + E1+E3 + G → A3 + A5 + A6 + E2 + F + D → C (gated by AI-SPEC.md)*
+
+_Research synthesized: 2026-04-28_
+_Ready for roadmap: yes_
+_Build order locked: B + A1 → A2 + A4 + E1+E3 + G → A3 + A5 + A6 + E2 + F + D → C (gated by AI-SPEC.md)_

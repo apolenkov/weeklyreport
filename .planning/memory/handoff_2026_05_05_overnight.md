@@ -38,6 +38,7 @@ TOTAL                              11/30  shipped (37%)
 ## Что закрыто конкретно
 
 ### Phase 34 — Quality Foundation
+
 - **34-01** husky + lint-staged + commitlint (pre-commit, commit-msg, pre-push). Bypass: `--no-verify` или `SKIP_PREPUSH=1`.
 - **34-02** vitest coverage thresholds (web 70/60, api 80/70). CI uploads `coverage-reports` artifact.
 - **34-03** DOM-walker + mutation-audit moved out of `.tmp/` into tracked `apps/web/uat-suite/`. New CI step `pnpm uat:audit` fails on unexpected black holes; `mutation-audit.allowlist.json` carves out `carryOver.execute` (cron-only). Inventory walker stays manual (needs dev servers).
@@ -45,30 +46,33 @@ TOTAL                              11/30  shipped (37%)
 - **34-07** push-guard helper (`scripts/push-guard.sh`) + Playwright dual-reporter (github+json) + `scripts/flaky-rate.mjs` parses results.json into per-spec flaky metric, uploaded as 30-day artifact. CONTRIBUTING.md is new.
 
 ### Phase 35 — UX Polish (partial)
+
 - **35-01** "0/7 stages" counter regression fixed via new `admin.listStageAssignmentCounts` tRPC query (single Prisma groupBy). Deferred 3 LOW mockup deltas (DEC-2 / SDLC-3 / LF-1) for visual review with you.
 
 ### Phase 36 — Security & Audit
+
 - **36-01** express-rate-limit on /auth (5/min) and /trpc (200/min). NODE_ENV=test → 1000/min so E2E doesn't flake. 429 response is structured JSON with Retry-After hint.
 - **36-03** production fences in env.schema (NODE_ENV=production && AUTH_DEV_MODE=true → boot abort; PDF_EXPORT_JWT_SECRET dev fallback in prod → abort; FRONTEND_URLS containing `*` → abort).
 - **36-04** multi-origin CORS via FRONTEND_URLS CSV env. main.ts builds `[FRONTEND_URL, ...FRONTEND_URLS]` array; enableCors reflects only matched origins, never wildcard. .env.example documents the new var.
 
 ### Phase 38 — Infrastructure & Deploy (partial)
-- **38-01** apps/api/scripts/migrate.sh wrapper for the migrate init-container; docker-compose.prod.yml hardened (every prod env required via `${VAR:?msg}`, all five SMTP_*, all four KEYCLOAK_SAML_*, FRONTEND_URLS supported, /health/ready healthcheck instead of /health/live, start_period 60s, apilogs volume). docker-compose.yml (dev) flipped from NODE_ENV=production+AUTH_DEV_MODE=true (which the new fence rejects) to NODE_ENV=development.
+
+- **38-01** apps/api/scripts/migrate.sh wrapper for the migrate init-container; docker-compose.prod.yml hardened (every prod env required via `${VAR:?msg}`, all five SMTP*\*, all four KEYCLOAK_SAML*\*, FRONTEND_URLS supported, /health/ready healthcheck instead of /health/live, start_period 60s, apilogs volume). docker-compose.yml (dev) flipped from NODE_ENV=production+AUTH_DEV_MODE=true (which the new fence rejects) to NODE_ENV=development.
 - **38-04** RUNBOOK.md + INCIDENT-PLAYBOOK.md. RUNBOOK has detect→triage→resolve→escalate for 10 failure modes. INCIDENT-PLAYBOOK has severity matrix + standard rollback (incl. across destructive migrations) + on-call rotation template + postmortem template.
 
 ## Что НЕ закрыто и почему
 
-| Plan | Why deferred |
-|---|---|
-| 34-05 (TS error rollup) | Needs visual diff per fix; your review preferred |
-| 34-06 (ESLint warning sweep) | ~272 warnings touching dozens of files; high merge-conflict risk overnight |
-| 35-02..06 (UX polish UI plans) | All require visual verification — UI changes I can't validate alone |
-| 35-07 (addressable URLs) | Routing change needs full E2E sweep before push |
-| 36-02 (audit-trail extension) | Big tRPC middleware change touching every mutation; needs review |
-| 37-* (Observability — OTel, DLQ alert, Prom config) | Infrastructure setup; needs you to verify Jaeger/Grafana flow |
-| 38-02 (caddy reverse-proxy + TLS) | Real Let's Encrypt rate-limits on staging — needs your domain decision |
-| 38-03 (SAML samlify mock) | Integration test scaffolding — easier to do attended |
-| 39-* (Performance — PgBouncer, Turbopack, k6, indexes) | Need prod stack up + your perf targets |
+| Plan                                                    | Why deferred                                                               |
+| ------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 34-05 (TS error rollup)                                 | Needs visual diff per fix; your review preferred                           |
+| 34-06 (ESLint warning sweep)                            | ~272 warnings touching dozens of files; high merge-conflict risk overnight |
+| 35-02..06 (UX polish UI plans)                          | All require visual verification — UI changes I can't validate alone        |
+| 35-07 (addressable URLs)                                | Routing change needs full E2E sweep before push                            |
+| 36-02 (audit-trail extension)                           | Big tRPC middleware change touching every mutation; needs review           |
+| 37-\* (Observability — OTel, DLQ alert, Prom config)    | Infrastructure setup; needs you to verify Jaeger/Grafana flow              |
+| 38-02 (caddy reverse-proxy + TLS)                       | Real Let's Encrypt rate-limits on staging — needs your domain decision     |
+| 38-03 (SAML samlify mock)                               | Integration test scaffolding — easier to do attended                       |
+| 39-\* (Performance — PgBouncer, Turbopack, k6, indexes) | Need prod stack up + your perf targets                                     |
 
 ## State checks (sanity)
 
@@ -85,6 +89,7 @@ TOTAL                              11/30  shipped (37%)
 ## Suprise asks logged for v8.1
 
 1. **Dark-mode B2B redesign** (UX-16):
+
    ```
    navy #0F172A mesh gradient + emerald #22C55E aurora glows
    + glassmorphism cards (semi-transparent + thin glowing borders)
@@ -92,6 +97,7 @@ TOTAL                              11/30  shipped (37%)
    + dot grid background
    + premium B2B Enterprise feel
    ```
+
    Belongs in a new visual-redesign milestone (v8.1 Phase 40), NOT in v8.0 production-readiness.
 
 2. **Локальная контейнеризация только** — confirmed; v8.0 stays Docker Compose, K8s deferred until org demands.

@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
-import type { Role } from '@customreport/shared';
+import type { Role } from "@customreport/shared";
 
-import { ForbiddenPage } from '../../../components/forbidden-page';
-import { getServerSession } from '../../../lib/server/get-server-session';
+import { ForbiddenPage } from "../../../components/forbidden-page";
+import { getServerSession } from "../../../lib/server/get-server-session";
 
 /**
  * AUTH-07 (Phase 29-03): SSR role gate for /head/* routes.
@@ -19,7 +19,7 @@ import { getServerSession } from '../../../lib/server/get-server-session';
  * narrows the allow-list back to {head, admin} — director is read-only
  * and must not author a weekly report.
  */
-const REQUIRED: ReadonlyArray<Role> = ['head', 'admin', 'director'];
+const REQUIRED: ReadonlyArray<Role> = ["head", "admin", "director"];
 
 type Props = Readonly<{ children: ReactNode }>;
 

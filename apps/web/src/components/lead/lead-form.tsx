@@ -415,9 +415,7 @@ export function LeadForm({
   const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
   const shouldRouteHeadLikeAwayFromLeadForm =
     isHeadLikeSession && !requestedAuthorIdNormalized;
-  const shouldDeferForSession = Boolean(
-    sessionState && sessionState.isLoading,
-  );
+  const shouldDeferForSession = Boolean(sessionState && sessionState.isLoading);
   const isPinnedAuthorOwnView = Boolean(
     pinnedReportId &&
     requestedAuthorIdNormalized &&
@@ -989,9 +987,21 @@ export function LeadForm({
         const stageName =
           p.stageName && p.stageName !== "—" ? p.stageName : null;
         if (existing) {
-          return { ...existing, text: p.text, stageName, stageIds: p.stageIds, productId: p.productId || null };
+          return {
+            ...existing,
+            text: p.text,
+            stageName,
+            stageIds: p.stageIds,
+            productId: p.productId || null,
+          };
         }
-        return { rank: p.rank, text: p.text, stageName, stageIds: p.stageIds, productId: p.productId || null };
+        return {
+          rank: p.rank,
+          text: p.text,
+          stageName,
+          stageIds: p.stageIds,
+          productId: p.productId || null,
+        };
       });
       return { ...prev, priorities: merged };
     });
@@ -1447,8 +1457,8 @@ export function LeadForm({
               Submit Report?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Your report will be locked and visible to the group head. You
-              will not be able to make changes after submission.
+              Your report will be locked and visible to the group head. You will
+              not be able to make changes after submission.
             </p>
             <div className="mt-3 space-y-1 text-sm">
               <div className="flex items-center gap-2">

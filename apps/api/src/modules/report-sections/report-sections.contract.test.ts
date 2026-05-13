@@ -1,56 +1,60 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import type { ReportSectionReadModel } from '@customreport/shared';
+import type { ReportSectionReadModel } from "@customreport/shared";
 
 import {
   ReportSectionDomainError,
   ReportSectionsService,
   type ReportSectionsRepository,
-} from './report-sections.service';
-import { expectDefined } from '../../test-utils/expect-defined.js';
+} from "./report-sections.service";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const SECTION_ID = '11111111-1111-4111-8111-111111111111';
-const REPORT_ID = '22222222-2222-4222-8222-222222222222';
-const AUTHOR_ID = '33333333-3333-4333-8333-333333333333';
-const PROJECT_ID_1 = '44444444-4444-4444-8444-444444444444';
-const PROJECT_ID_2 = '55555555-5555-4555-8555-555555555555';
+const SECTION_ID = "11111111-1111-4111-8111-111111111111";
+const REPORT_ID = "22222222-2222-4222-8222-222222222222";
+const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
+const PROJECT_ID_1 = "44444444-4444-4444-8444-444444444444";
+const PROJECT_ID_2 = "55555555-5555-4555-8555-555555555555";
 
 const baseSection: ReportSectionReadModel = {
   reportSectionId: SECTION_ID,
   reportId: REPORT_ID,
   authorId: AUTHOR_ID,
-  authorName: 'Lead 1',
-  status: 'draft',
+  authorName: "Lead 1",
+  status: "draft",
   submittedAt: null,
   projects: [
-    { projectId: PROJECT_ID_1, projectName: 'Project Alpha', trafficLight: null },
+    {
+      projectId: PROJECT_ID_1,
+      projectName: "Project Alpha",
+      trafficLight: null,
+    },
   ],
   items: [
     {
       projectId: PROJECT_ID_1,
-      type: 'current',
-      text: 'Deliver feature X',
-      tag: 'feature',
-      workflowStatus: 'in_progress',
+      type: "current",
+      text: "Deliver feature X",
+      tag: "feature",
+      workflowStatus: "in_progress",
       carriedOver: false,
     },
   ],
   risks: [],
   decisions: [],
   priorities: [
-    { rank: 1, text: 'Priority 1' },
-    { rank: 2, text: 'Priority 2' },
-    { rank: 3, text: 'Priority 3' },
+    { rank: 1, text: "Priority 1" },
+    { rank: 2, text: "Priority 2" },
+    { rank: 3, text: "Priority 3" },
   ],
 };
 
 function createRepository(
   section: ReportSectionReadModel,
-  reportStatus: string = 'draft',
+  reportStatus: string = "draft",
 ): ReportSectionsRepository {
   let currentSection = structuredClone(section);
 
@@ -74,8 +78,8 @@ function createRepository(
 function validDraft(overrides: Record<string, unknown> = {}) {
   return {
     reportSectionId: SECTION_ID,
-    status: 'draft' as const,
-    projectStatuses: [{ projectId: PROJECT_ID_1, status: 'green' as const }],
+    status: "draft" as const,
+    projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" as const }],
     items: baseSection.items,
     risks: [],
     decisions: [],
@@ -96,44 +100,46 @@ function validSubmit(overrides: Record<string, unknown> = {}) {
 // getActiveSection
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — getActiveSection', () => {
-  it('returns section when found', async () => {
+describe("ReportSectionsService — getActiveSection", () => {
+  it("returns section when found", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
     const section = await service.getActiveSection(SECTION_ID);
 
     expect(section.reportSectionId).toBe(SECTION_ID);
-    expect(section.authorName).toBe('Lead 1');
+    expect(section.authorName).toBe("Lead 1");
   });
 
-  it('throws when section ID does not exist', async () => {
+  it("throws when section ID does not exist", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.getActiveSection('99999999-9999-4999-8999-999999999999'),
-    ).rejects.toThrow('was not found');
+      service.getActiveSection("99999999-9999-4999-8999-999999999999"),
+    ).rejects.toThrow("was not found");
   });
 
-  it('returns submitted section (read-only, no error)', async () => {
+  it("returns submitted section (read-only, no error)", async () => {
     const submitted: ReportSectionReadModel = {
       ...baseSection,
-      status: 'submitted',
-      submittedAt: new Date('2026-04-06T12:00:00Z'),
-      projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
+      status: "submitted",
+      submittedAt: new Date("2026-04-06T12:00:00Z"),
+      projects: [
+        { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
+      ],
     };
     const service = new ReportSectionsService(createRepository(submitted));
     const result = await service.getActiveSection(SECTION_ID);
 
-    expect(result.status).toBe('submitted');
+    expect(result.status).toBe("submitted");
     expect(result.submittedAt).toBeInstanceOf(Date);
   });
 
-  it('validates section through Zod schema (reportSectionReadModelSchema)', async () => {
+  it("validates section through Zod schema (reportSectionReadModelSchema)", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
     const result = await service.getActiveSection(SECTION_ID);
 
     // All required fields present and typed correctly
-    expect(typeof result.reportSectionId).toBe('string');
-    expect(typeof result.reportId).toBe('string');
+    expect(typeof result.reportSectionId).toBe("string");
+    expect(typeof result.reportId).toBe("string");
     expect(Array.isArray(result.projects)).toBe(true);
     expect(Array.isArray(result.items)).toBe(true);
     expect(Array.isArray(result.priorities)).toBe(true);
@@ -144,26 +150,28 @@ describe('ReportSectionsService — getActiveSection', () => {
 // saveDraft — happy path
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — saveDraft happy path', () => {
-  it('updates traffic light status', async () => {
+describe("ReportSectionsService — saveDraft happy path", () => {
+  it("updates traffic light status", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(validDraft({
-      projectStatuses: [{ projectId: PROJECT_ID_1, status: 'yellow' }],
-    }));
+    const saved = await service.saveDraft(
+      validDraft({
+        projectStatuses: [{ projectId: PROJECT_ID_1, status: "yellow" }],
+      }),
+    );
 
-    expect(saved.projects[0]?.trafficLight).toBe('yellow');
+    expect(saved.projects[0]?.trafficLight).toBe("yellow");
   });
 
-  it('updates items list', async () => {
+  it("updates items list", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
     const newItems = [
       ...baseSection.items,
       {
         projectId: PROJECT_ID_1,
-        type: 'next' as const,
-        text: 'Plan feature Y',
-        tag: 'planning',
-        workflowStatus: 'in_progress' as const,
+        type: "next" as const,
+        text: "Plan feature Y",
+        tag: "planning",
+        workflowStatus: "in_progress" as const,
         carriedOver: false,
       },
     ];
@@ -172,64 +180,78 @@ describe('ReportSectionsService — saveDraft happy path', () => {
     expect(saved.items).toHaveLength(2);
   });
 
-  it('updates risks list', async () => {
+  it("updates risks list", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(validDraft({
-      risks: [{
-        projectId: PROJECT_ID_1,
-        risk: 'Deadline risk',
-        impact: 'Revenue',
-        mitigation: 'Hire contractor',
-      }],
-    }));
+    const saved = await service.saveDraft(
+      validDraft({
+        risks: [
+          {
+            projectId: PROJECT_ID_1,
+            risk: "Deadline risk",
+            impact: "Revenue",
+            mitigation: "Hire contractor",
+          },
+        ],
+      }),
+    );
 
     expect(saved.risks).toHaveLength(1);
-    expect(saved.risks[0]?.risk).toBe('Deadline risk');
+    expect(saved.risks[0]?.risk).toBe("Deadline risk");
   });
 
-  it('updates decisions list', async () => {
+  it("updates decisions list", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(validDraft({
-      decisions: [{
-        text: 'Upgrade DB',
-        owner: 'Alice',
-        impact: 'Better performance',
-      }],
-    }));
+    const saved = await service.saveDraft(
+      validDraft({
+        decisions: [
+          {
+            text: "Upgrade DB",
+            owner: "Alice",
+            impact: "Better performance",
+          },
+        ],
+      }),
+    );
 
     expect(saved.decisions).toHaveLength(1);
   });
 
-  it('updates priorities', async () => {
+  it("updates priorities", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(validDraft({
-      priorities: [
-        { rank: 1, text: 'New priority 1' },
-        { rank: 2, text: 'New priority 2' },
-        { rank: 3, text: 'New priority 3' },
-      ],
-    }));
+    const saved = await service.saveDraft(
+      validDraft({
+        priorities: [
+          { rank: 1, text: "New priority 1" },
+          { rank: 2, text: "New priority 2" },
+          { rank: 3, text: "New priority 3" },
+        ],
+      }),
+    );
 
-    expect(saved.priorities[0]?.text).toBe('New priority 1');
+    expect(saved.priorities[0]?.text).toBe("New priority 1");
   });
 
-  it('preserves draft status after save', async () => {
+  it("preserves draft status after save", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
     const saved = await service.saveDraft(validDraft());
 
-    expect(saved.status).toBe('draft');
+    expect(saved.status).toBe("draft");
     expect(saved.submittedAt).toBeNull();
   });
 
-  it('clears traffic light when status is undefined (draft allows optional)', async () => {
+  it("clears traffic light when status is undefined (draft allows optional)", async () => {
     const withLight: ReportSectionReadModel = {
       ...baseSection,
-      projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
+      projects: [
+        { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
+      ],
     };
     const service = new ReportSectionsService(createRepository(withLight));
-    const saved = await service.saveDraft(validDraft({
-      projectStatuses: [{ projectId: PROJECT_ID_1 }],
-    }));
+    const saved = await service.saveDraft(
+      validDraft({
+        projectStatuses: [{ projectId: PROJECT_ID_1 }],
+      }),
+    );
 
     expect(saved.projects[0]?.trafficLight).toBeNull();
   });
@@ -239,72 +261,74 @@ describe('ReportSectionsService — saveDraft happy path', () => {
 // saveDraft — error paths
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — saveDraft error paths', () => {
-  it('rejects when section is already submitted', async () => {
+describe("ReportSectionsService — saveDraft error paths", () => {
+  it("rejects when section is already submitted", async () => {
     const submitted: ReportSectionReadModel = {
       ...baseSection,
-      status: 'submitted',
-      submittedAt: new Date('2026-04-06T12:00:00Z'),
-      projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
+      status: "submitted",
+      submittedAt: new Date("2026-04-06T12:00:00Z"),
+      projects: [
+        { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
+      ],
     };
     const service = new ReportSectionsService(createRepository(submitted));
 
-    await expect(
-      service.saveDraft(validDraft()),
-    ).rejects.toMatchObject({
-      code: 'SECTION_ALREADY_SUBMITTED',
-      message: 'Submitted sections are read-only.',
+    await expect(service.saveDraft(validDraft())).rejects.toMatchObject({
+      code: "SECTION_ALREADY_SUBMITTED",
+      message: "Submitted sections are read-only.",
     });
   });
 
-  it('rejects when report is published', async () => {
+  it("rejects when report is published", async () => {
     const service = new ReportSectionsService(
-      createRepository(baseSection, 'published'),
+      createRepository(baseSection, "published"),
     );
 
-    await expect(
-      service.saveDraft(validDraft()),
-    ).rejects.toMatchObject({
-      code: 'SECTION_ALREADY_SUBMITTED',
-      message: 'Cannot edit sections of a published report.',
+    await expect(service.saveDraft(validDraft())).rejects.toMatchObject({
+      code: "SECTION_ALREADY_SUBMITTED",
+      message: "Cannot edit sections of a published report.",
     });
   });
 
-  it('rejects when section ID does not exist', async () => {
+  it("rejects when section ID does not exist", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.saveDraft(validDraft({
-        reportSectionId: '99999999-9999-4999-8999-999999999999',
-      })),
-    ).rejects.toThrow('was not found');
+      service.saveDraft(
+        validDraft({
+          reportSectionId: "99999999-9999-4999-8999-999999999999",
+        }),
+      ),
+    ).rejects.toThrow("was not found");
   });
 
-  it('thrown error is ReportSectionDomainError for business rule violations', async () => {
+  it("thrown error is ReportSectionDomainError for business rule violations", async () => {
     const submitted: ReportSectionReadModel = {
       ...baseSection,
-      status: 'submitted',
-      submittedAt: new Date('2026-04-06T12:00:00Z'),
-      projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
+      status: "submitted",
+      submittedAt: new Date("2026-04-06T12:00:00Z"),
+      projects: [
+        { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
+      ],
     };
     const service = new ReportSectionsService(createRepository(submitted));
 
     try {
       await service.saveDraft(validDraft());
-      expect.fail('Should have thrown');
+      expect.fail("Should have thrown");
     } catch (error) {
       expect(error).toBeInstanceOf(ReportSectionDomainError);
     }
   });
 
-  it('rejects items exceeding max array length (Zod: max 100)', async () => {
+  it("rejects items exceeding max array length (Zod: max 100)", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
     const tooManyItems = Array.from({ length: 101 }, () => ({
       projectId: PROJECT_ID_1,
-      type: 'current' as const,
-      text: 'Item',
-      tag: 'tag',
-      workflowStatus: 'in_progress' as const,
+      type: "current" as const,
+      text: "Item",
+      tag: "tag",
+      workflowStatus: "in_progress" as const,
       carriedOver: false,
     }));
 
@@ -313,45 +337,53 @@ describe('ReportSectionsService — saveDraft error paths', () => {
     ).rejects.toThrow();
   });
 
-  it('rejects item with empty text (safeText min 1)', async () => {
+  it("rejects item with empty text (safeText min 1)", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.saveDraft(validDraft({
-        items: [{
-          projectId: PROJECT_ID_1,
-          type: 'current',
-          text: '',
-          tag: 'bug',
-          workflowStatus: 'in_progress',
-          carriedOver: false,
-        }],
-      })),
+      service.saveDraft(
+        validDraft({
+          items: [
+            {
+              projectId: PROJECT_ID_1,
+              type: "current",
+              text: "",
+              tag: "bug",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+            },
+          ],
+        }),
+      ),
     ).rejects.toThrow();
   });
 
-  it('rejects item with null byte in text', async () => {
+  it("rejects item with null byte in text", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.saveDraft(validDraft({
-        items: [{
-          projectId: PROJECT_ID_1,
-          type: 'current',
-          text: 'Hello\u0000World',
-          tag: 'bug',
-          workflowStatus: 'in_progress',
-          carriedOver: false,
-        }],
-      })),
+      service.saveDraft(
+        validDraft({
+          items: [
+            {
+              projectId: PROJECT_ID_1,
+              type: "current",
+              text: "Hello\u0000World",
+              tag: "bug",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+            },
+          ],
+        }),
+      ),
     ).rejects.toThrow();
   });
 
-  it('rejects invalid UUID in reportSectionId', async () => {
+  it("rejects invalid UUID in reportSectionId", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.saveDraft(validDraft({ reportSectionId: 'not-a-uuid' })),
+      service.saveDraft(validDraft({ reportSectionId: "not-a-uuid" })),
     ).rejects.toThrow();
   });
 });
@@ -360,44 +392,50 @@ describe('ReportSectionsService — saveDraft error paths', () => {
 // submitSection — happy path
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — submitSection happy path', () => {
-  it('submits section with valid input', async () => {
+describe("ReportSectionsService — submitSection happy path", () => {
+  it("submits section with valid input", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
     const result = await service.submitSection(validSubmit());
 
-    expect(result.status).toBe('submitted');
+    expect(result.status).toBe("submitted");
     expect(result.submittedAt).toBeInstanceOf(Date);
   });
 
-  it('sets traffic light from input', async () => {
+  it("sets traffic light from input", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const result = await service.submitSection(validSubmit({
-      projectStatuses: [{ projectId: PROJECT_ID_1, status: 'red' }],
-    }));
+    const result = await service.submitSection(
+      validSubmit({
+        projectStatuses: [{ projectId: PROJECT_ID_1, status: "red" }],
+      }),
+    );
 
-    expect(result.projects[0]?.trafficLight).toBe('red');
+    expect(result.projects[0]?.trafficLight).toBe("red");
   });
 
-  it('preserves items, risks, decisions, priorities from input', async () => {
+  it("preserves items, risks, decisions, priorities from input", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const result = await service.submitSection(validSubmit({
-      items: [
-        {
-          projectId: PROJECT_ID_1,
-          type: 'current',
-          text: 'Task A',
-          tag: 'feature',
-          workflowStatus: 'done',
-          carriedOver: false,
-        },
-      ],
-      risks: [{
-        projectId: PROJECT_ID_1,
-        risk: 'Risk',
-        impact: 'Impact',
-        mitigation: 'Mitigation',
-      }],
-    }));
+    const result = await service.submitSection(
+      validSubmit({
+        items: [
+          {
+            projectId: PROJECT_ID_1,
+            type: "current",
+            text: "Task A",
+            tag: "feature",
+            workflowStatus: "done",
+            carriedOver: false,
+          },
+        ],
+        risks: [
+          {
+            projectId: PROJECT_ID_1,
+            risk: "Risk",
+            impact: "Impact",
+            mitigation: "Mitigation",
+          },
+        ],
+      }),
+    );
 
     expect(result.items).toHaveLength(1);
     expect(result.risks).toHaveLength(1);
@@ -408,111 +446,134 @@ describe('ReportSectionsService — submitSection happy path', () => {
 // submitSection — validation errors
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — submitSection validation errors', () => {
-  it('rejects when section already submitted', async () => {
+describe("ReportSectionsService — submitSection validation errors", () => {
+  it("rejects when section already submitted", async () => {
     const submitted: ReportSectionReadModel = {
       ...baseSection,
-      status: 'submitted',
-      submittedAt: new Date('2026-04-06T12:00:00Z'),
-      projects: [{ ...expectDefined(baseSection.projects[0]), trafficLight: 'green' }],
+      status: "submitted",
+      submittedAt: new Date("2026-04-06T12:00:00Z"),
+      projects: [
+        { ...expectDefined(baseSection.projects[0]), trafficLight: "green" },
+      ],
     };
     const service = new ReportSectionsService(createRepository(submitted));
 
-    await expect(
-      service.submitSection(validSubmit()),
-    ).rejects.toMatchObject({ code: 'SECTION_ALREADY_SUBMITTED' });
+    await expect(service.submitSection(validSubmit())).rejects.toMatchObject({
+      code: "SECTION_ALREADY_SUBMITTED",
+    });
   });
 
-  it('rejects when traffic light is missing for a project', async () => {
+  it("rejects when traffic light is missing for a project", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.submitSection(validSubmit({
-        projectStatuses: [{ projectId: '99999999-9999-4999-8999-999999999999', status: 'green' }],
-      })),
-    ).rejects.toMatchObject({ code: 'MISSING_TRAFFIC_LIGHT' });
+      service.submitSection(
+        validSubmit({
+          projectStatuses: [
+            {
+              projectId: "99999999-9999-4999-8999-999999999999",
+              status: "green",
+            },
+          ],
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "MISSING_TRAFFIC_LIGHT" });
   });
 
-  it('rejects when no current items for a project', async () => {
+  it("rejects when no current items for a project", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.submitSection(validSubmit({
-        items: [{
-          projectId: PROJECT_ID_1,
-          type: 'next',
-          text: 'Future work',
-          tag: 'planning',
-          workflowStatus: 'in_progress',
-          carriedOver: false,
-        }],
-      })),
-    ).rejects.toMatchObject({ code: 'MISSING_CURRENT_ITEM' });
+      service.submitSection(
+        validSubmit({
+          items: [
+            {
+              projectId: PROJECT_ID_1,
+              type: "next",
+              text: "Future work",
+              tag: "planning",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+            },
+          ],
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "MISSING_CURRENT_ITEM" });
   });
 
-  it('rejects when priorities have empty text', async () => {
+  it("rejects when priorities have empty text", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.submitSection(validSubmit({
-        priorities: [
-          { rank: 1, text: '' },
-          { rank: 2, text: 'OK' },
-          { rank: 3, text: 'OK' },
-        ],
-      })),
+      service.submitSection(
+        validSubmit({
+          priorities: [
+            { rank: 1, text: "" },
+            { rank: 2, text: "OK" },
+            { rank: 3, text: "OK" },
+          ],
+        }),
+      ),
     ).rejects.toThrow(); // Zod rejects empty text before validateSubmitInput
   });
 
-  it('rejects when zero priorities', async () => {
+  it("rejects when zero priorities", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.submitSection(validSubmit({
-        priorities: [],
-      })),
+      service.submitSection(
+        validSubmit({
+          priorities: [],
+        }),
+      ),
     ).rejects.toThrow(); // Zod .min(1) check
   });
 
-  it('accepts 1 priority (dynamic: min 1)', async () => {
+  it("accepts 1 priority (dynamic: min 1)", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const result = await service.submitSection(validSubmit({
-      priorities: [{ rank: 1, text: 'Only one' }],
-    }));
+    const result = await service.submitSection(
+      validSubmit({
+        priorities: [{ rank: 1, text: "Only one" }],
+      }),
+    );
 
-    expect(result.status).toBe('submitted');
+    expect(result.status).toBe("submitted");
     expect(result.priorities).toHaveLength(1);
   });
 
-  it('accepts 5 priorities (dynamic: no upper limit)', async () => {
+  it("accepts 5 priorities (dynamic: no upper limit)", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const result = await service.submitSection(validSubmit({
-      priorities: [
-        { rank: 1, text: 'P1' },
-        { rank: 2, text: 'P2' },
-        { rank: 3, text: 'P3' },
-        { rank: 4, text: 'P4' },
-        { rank: 5, text: 'P5' },
-      ],
-    }));
+    const result = await service.submitSection(
+      validSubmit({
+        priorities: [
+          { rank: 1, text: "P1" },
+          { rank: 2, text: "P2" },
+          { rank: 3, text: "P3" },
+          { rank: 4, text: "P4" },
+          { rank: 5, text: "P5" },
+        ],
+      }),
+    );
 
     expect(result.priorities).toHaveLength(5);
   });
 
-  it('rejects duplicate priority ranks', async () => {
+  it("rejects duplicate priority ranks", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.submitSection(validSubmit({
-        priorities: [
-          { rank: 1, text: 'P1' },
-          { rank: 1, text: 'P2' },
-        ],
-      })),
+      service.submitSection(
+        validSubmit({
+          priorities: [
+            { rank: 1, text: "P1" },
+            { rank: 1, text: "P2" },
+          ],
+        }),
+      ),
     ).rejects.toThrow(); // Zod refine: unique ranks
   });
 
-  it('rejects confirmed: false', async () => {
+  it("rejects confirmed: false", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
@@ -524,13 +585,15 @@ describe('ReportSectionsService — submitSection validation errors', () => {
     ).rejects.toThrow(); // Zod: z.literal(true)
   });
 
-  it('rejects empty projectStatuses', async () => {
+  it("rejects empty projectStatuses", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.submitSection(validSubmit({
-        projectStatuses: [],
-      })),
+      service.submitSection(
+        validSubmit({
+          projectStatuses: [],
+        }),
+      ),
     ).rejects.toThrow(); // Zod: .min(1)
   });
 });
@@ -539,41 +602,51 @@ describe('ReportSectionsService — submitSection validation errors', () => {
 // Multi-project scenarios
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — multi-project', () => {
+describe("ReportSectionsService — multi-project", () => {
   const multiProjectSection: ReportSectionReadModel = {
     ...baseSection,
     projects: [
-      { projectId: PROJECT_ID_1, projectName: 'Project Alpha', trafficLight: null },
-      { projectId: PROJECT_ID_2, projectName: 'Project Beta', trafficLight: null },
+      {
+        projectId: PROJECT_ID_1,
+        projectName: "Project Alpha",
+        trafficLight: null,
+      },
+      {
+        projectId: PROJECT_ID_2,
+        projectName: "Project Beta",
+        trafficLight: null,
+      },
     ],
     items: [
       {
         projectId: PROJECT_ID_1,
-        type: 'current',
-        text: 'Alpha task',
-        tag: 'feature',
-        workflowStatus: 'in_progress',
+        type: "current",
+        text: "Alpha task",
+        tag: "feature",
+        workflowStatus: "in_progress",
         carriedOver: false,
       },
       {
         projectId: PROJECT_ID_2,
-        type: 'current',
-        text: 'Beta task',
-        tag: 'feature',
-        workflowStatus: 'in_progress',
+        type: "current",
+        text: "Beta task",
+        tag: "feature",
+        workflowStatus: "in_progress",
         carriedOver: false,
       },
     ],
   };
 
-  it('saveDraft updates traffic lights for multiple projects', async () => {
-    const service = new ReportSectionsService(createRepository(multiProjectSection));
+  it("saveDraft updates traffic lights for multiple projects", async () => {
+    const service = new ReportSectionsService(
+      createRepository(multiProjectSection),
+    );
     const saved = await service.saveDraft({
       reportSectionId: SECTION_ID,
-      status: 'draft',
+      status: "draft",
       projectStatuses: [
-        { projectId: PROJECT_ID_1, status: 'green' },
-        { projectId: PROJECT_ID_2, status: 'yellow' },
+        { projectId: PROJECT_ID_1, status: "green" },
+        { projectId: PROJECT_ID_2, status: "yellow" },
       ],
       items: multiProjectSection.items,
       risks: [],
@@ -581,65 +654,73 @@ describe('ReportSectionsService — multi-project', () => {
       priorities: baseSection.priorities,
     });
 
-    expect(saved.projects[0]?.trafficLight).toBe('green');
-    expect(saved.projects[1]?.trafficLight).toBe('yellow');
+    expect(saved.projects[0]?.trafficLight).toBe("green");
+    expect(saved.projects[1]?.trafficLight).toBe("yellow");
   });
 
-  it('submit requires traffic light for EVERY project', async () => {
-    const service = new ReportSectionsService(createRepository(multiProjectSection));
+  it("submit requires traffic light for EVERY project", async () => {
+    const service = new ReportSectionsService(
+      createRepository(multiProjectSection),
+    );
 
     // Only provide traffic light for one project
     await expect(
       service.submitSection({
         reportSectionId: SECTION_ID,
-        status: 'draft',
+        status: "draft",
         confirmed: true,
-        projectStatuses: [{ projectId: PROJECT_ID_1, status: 'green' }],
+        projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
         items: multiProjectSection.items,
         risks: [],
         decisions: [],
         priorities: baseSection.priorities,
       }),
-    ).rejects.toMatchObject({ code: 'MISSING_TRAFFIC_LIGHT' });
+    ).rejects.toMatchObject({ code: "MISSING_TRAFFIC_LIGHT" });
   });
 
-  it('submit requires current item for EVERY project', async () => {
-    const service = new ReportSectionsService(createRepository(multiProjectSection));
+  it("submit requires current item for EVERY project", async () => {
+    const service = new ReportSectionsService(
+      createRepository(multiProjectSection),
+    );
 
     // Only provide current item for project 1
     await expect(
       service.submitSection({
         reportSectionId: SECTION_ID,
-        status: 'draft',
+        status: "draft",
         confirmed: true,
         projectStatuses: [
-          { projectId: PROJECT_ID_1, status: 'green' },
-          { projectId: PROJECT_ID_2, status: 'yellow' },
+          { projectId: PROJECT_ID_1, status: "green" },
+          { projectId: PROJECT_ID_2, status: "yellow" },
         ],
-        items: [{
-          projectId: PROJECT_ID_1,
-          type: 'current',
-          text: 'Only for Alpha',
-          tag: 'feature',
-          workflowStatus: 'in_progress',
-          carriedOver: false,
-        }],
+        items: [
+          {
+            projectId: PROJECT_ID_1,
+            type: "current",
+            text: "Only for Alpha",
+            tag: "feature",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+          },
+        ],
         risks: [],
         decisions: [],
         priorities: baseSection.priorities,
       }),
-    ).rejects.toMatchObject({ code: 'MISSING_CURRENT_ITEM' });
+    ).rejects.toMatchObject({ code: "MISSING_CURRENT_ITEM" });
   });
 
-  it('submit succeeds when all projects have traffic light and current item', async () => {
-    const service = new ReportSectionsService(createRepository(multiProjectSection));
+  it("submit succeeds when all projects have traffic light and current item", async () => {
+    const service = new ReportSectionsService(
+      createRepository(multiProjectSection),
+    );
     const result = await service.submitSection({
       reportSectionId: SECTION_ID,
-      status: 'draft',
+      status: "draft",
       confirmed: true,
       projectStatuses: [
-        { projectId: PROJECT_ID_1, status: 'green' },
-        { projectId: PROJECT_ID_2, status: 'red' },
+        { projectId: PROJECT_ID_1, status: "green" },
+        { projectId: PROJECT_ID_2, status: "red" },
       ],
       items: multiProjectSection.items,
       risks: [],
@@ -647,9 +728,9 @@ describe('ReportSectionsService — multi-project', () => {
       priorities: baseSection.priorities,
     });
 
-    expect(result.status).toBe('submitted');
-    expect(result.projects[0]?.trafficLight).toBe('green');
-    expect(result.projects[1]?.trafficLight).toBe('red');
+    expect(result.status).toBe("submitted");
+    expect(result.projects[0]?.trafficLight).toBe("green");
+    expect(result.projects[1]?.trafficLight).toBe("red");
   });
 });
 
@@ -657,37 +738,41 @@ describe('ReportSectionsService — multi-project', () => {
 // Edge cases
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — edge cases', () => {
-  it('saveDraft with empty items/risks/decisions is allowed', async () => {
+describe("ReportSectionsService — edge cases", () => {
+  it("saveDraft with empty items/risks/decisions is allowed", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(validDraft({
-      items: [],
-      risks: [],
-      decisions: [],
-    }));
+    const saved = await service.saveDraft(
+      validDraft({
+        items: [],
+        risks: [],
+        decisions: [],
+      }),
+    );
 
     expect(saved.items).toHaveLength(0);
     expect(saved.risks).toHaveLength(0);
     expect(saved.decisions).toHaveLength(0);
   });
 
-  it('saveDraft is idempotent — same input twice produces same result', async () => {
+  it("saveDraft is idempotent — same input twice produces same result", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
     const first = await service.saveDraft(validDraft());
     const second = await service.saveDraft(validDraft());
 
-    expect(first.projects[0]?.trafficLight).toBe(second.projects[0]?.trafficLight);
+    expect(first.projects[0]?.trafficLight).toBe(
+      second.projects[0]?.trafficLight,
+    );
     expect(first.items.length).toBe(second.items.length);
   });
 
-  it('section with max boundary items (100) can be saved', async () => {
+  it("section with max boundary items (100) can be saved", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
     const maxItems = Array.from({ length: 100 }, (_, i) => ({
       projectId: PROJECT_ID_1,
-      type: 'current' as const,
+      type: "current" as const,
       text: `Item ${i + 1}`,
-      tag: 'feature',
-      workflowStatus: 'in_progress' as const,
+      tag: "feature",
+      workflowStatus: "in_progress" as const,
       carriedOver: false,
     }));
     const saved = await service.saveDraft(validDraft({ items: maxItems }));
@@ -695,15 +780,17 @@ describe('ReportSectionsService — edge cases', () => {
     expect(saved.items).toHaveLength(100);
   });
 
-  it('draft save preserves project list from section (not from input)', async () => {
+  it("draft save preserves project list from section (not from input)", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(validDraft({
-      projectStatuses: [], // empty project statuses
-    }));
+    const saved = await service.saveDraft(
+      validDraft({
+        projectStatuses: [], // empty project statuses
+      }),
+    );
 
     // Projects come from the section, not input
     expect(saved.projects).toHaveLength(1);
-    expect(saved.projects[0]?.projectName).toBe('Project Alpha');
+    expect(saved.projects[0]?.projectName).toBe("Project Alpha");
     // But traffic light is cleared since no matching status in input
     expect(saved.projects[0]?.trafficLight).toBeNull();
   });
@@ -713,36 +800,44 @@ describe('ReportSectionsService — edge cases', () => {
 // P0/P1 Regression — traffic light statuses (LEAD-060)
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — traffic light all valid statuses', () => {
-  it('sets traffic light to green', async () => {
+describe("ReportSectionsService — traffic light all valid statuses", () => {
+  it("sets traffic light to green", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(validDraft({
-      projectStatuses: [{ projectId: PROJECT_ID_1, status: 'green' }],
-    }));
-    expect(saved.projects[0]?.trafficLight).toBe('green');
+    const saved = await service.saveDraft(
+      validDraft({
+        projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
+      }),
+    );
+    expect(saved.projects[0]?.trafficLight).toBe("green");
   });
 
-  it('sets traffic light to yellow', async () => {
+  it("sets traffic light to yellow", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(validDraft({
-      projectStatuses: [{ projectId: PROJECT_ID_1, status: 'yellow' }],
-    }));
-    expect(saved.projects[0]?.trafficLight).toBe('yellow');
+    const saved = await service.saveDraft(
+      validDraft({
+        projectStatuses: [{ projectId: PROJECT_ID_1, status: "yellow" }],
+      }),
+    );
+    expect(saved.projects[0]?.trafficLight).toBe("yellow");
   });
 
-  it('sets traffic light to red', async () => {
+  it("sets traffic light to red", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(validDraft({
-      projectStatuses: [{ projectId: PROJECT_ID_1, status: 'red' }],
-    }));
-    expect(saved.projects[0]?.trafficLight).toBe('red');
+    const saved = await service.saveDraft(
+      validDraft({
+        projectStatuses: [{ projectId: PROJECT_ID_1, status: "red" }],
+      }),
+    );
+    expect(saved.projects[0]?.trafficLight).toBe("red");
   });
 
-  it('sets traffic light to null when status is omitted', async () => {
+  it("sets traffic light to null when status is omitted", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(validDraft({
-      projectStatuses: [{ projectId: PROJECT_ID_1 }],
-    }));
+    const saved = await service.saveDraft(
+      validDraft({
+        projectStatuses: [{ projectId: PROJECT_ID_1 }],
+      }),
+    );
     expect(saved.projects[0]?.trafficLight).toBeNull();
   });
 });
@@ -751,24 +846,37 @@ describe('ReportSectionsService — traffic light all valid statuses', () => {
 // P1 Regression — items with varied tag/workflowStatus combos (LEAD-070)
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — item tag and workflowStatus combinations', () => {
-  const tags = ['feature', 'bugfix', 'infra', 'ops', 'support', 'tech-debt'] as const;
-  const statuses = ['done', 'in_progress', 'blocked'] as const;
+describe("ReportSectionsService — item tag and workflowStatus combinations", () => {
+  const tags = [
+    "feature",
+    "bugfix",
+    "infra",
+    "ops",
+    "support",
+    "tech-debt",
+  ] as const;
+  const statuses = ["done", "in_progress", "blocked"] as const;
 
   for (const tag of tags) {
     for (const ws of statuses) {
       it(`accepts item with tag="${tag}" workflowStatus="${ws}"`, async () => {
-        const service = new ReportSectionsService(createRepository(baseSection));
-        const saved = await service.saveDraft(validDraft({
-          items: [{
-            projectId: PROJECT_ID_1,
-            type: 'current',
-            text: `Test item ${tag}/${ws}`,
-            tag,
-            workflowStatus: ws,
-            carriedOver: false,
-          }],
-        }));
+        const service = new ReportSectionsService(
+          createRepository(baseSection),
+        );
+        const saved = await service.saveDraft(
+          validDraft({
+            items: [
+              {
+                projectId: PROJECT_ID_1,
+                type: "current",
+                text: `Test item ${tag}/${ws}`,
+                tag,
+                workflowStatus: ws,
+                carriedOver: false,
+              },
+            ],
+          }),
+        );
         expect(saved.items).toHaveLength(1);
         expect(saved.items[0]?.tag).toBe(tag);
         expect(saved.items[0]?.workflowStatus).toBe(ws);
@@ -781,28 +889,28 @@ describe('ReportSectionsService — item tag and workflowStatus combinations', (
 // P0 Regression — submit double-submit idempotency (LEAD-050)
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — double submit rejected', () => {
-  it('second submit on same section throws SECTION_ALREADY_SUBMITTED', async () => {
+describe("ReportSectionsService — double submit rejected", () => {
+  it("second submit on same section throws SECTION_ALREADY_SUBMITTED", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     // First submit succeeds
     const submitted = await service.submitSection(validSubmit());
-    expect(submitted.status).toBe('submitted');
+    expect(submitted.status).toBe("submitted");
 
     // Second submit rejects
-    await expect(
-      service.submitSection(validSubmit()),
-    ).rejects.toMatchObject({ code: 'SECTION_ALREADY_SUBMITTED' });
+    await expect(service.submitSection(validSubmit())).rejects.toMatchObject({
+      code: "SECTION_ALREADY_SUBMITTED",
+    });
   });
 
-  it('saveDraft after submit is rejected (LEAD-051)', async () => {
+  it("saveDraft after submit is rejected (LEAD-051)", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await service.submitSection(validSubmit());
 
-    await expect(
-      service.saveDraft(validDraft()),
-    ).rejects.toMatchObject({ code: 'SECTION_ALREADY_SUBMITTED' });
+    await expect(service.saveDraft(validDraft())).rejects.toMatchObject({
+      code: "SECTION_ALREADY_SUBMITTED",
+    });
   });
 });
 
@@ -810,62 +918,78 @@ describe('ReportSectionsService — double submit rejected', () => {
 // P1 Regression — Zod validation for risks and decisions (LEAD-080, LEAD-085)
 // ---------------------------------------------------------------------------
 
-describe('ReportSectionsService — risk/decision Zod validation', () => {
-  it('rejects risk with empty risk text', async () => {
+describe("ReportSectionsService — risk/decision Zod validation", () => {
+  it("rejects risk with empty risk text", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.saveDraft(validDraft({
-        risks: [{
-          projectId: PROJECT_ID_1,
-          risk: '',
-          impact: 'Some impact',
-          mitigation: 'Some mitigation',
-        }],
-      })),
+      service.saveDraft(
+        validDraft({
+          risks: [
+            {
+              projectId: PROJECT_ID_1,
+              risk: "",
+              impact: "Some impact",
+              mitigation: "Some mitigation",
+            },
+          ],
+        }),
+      ),
     ).rejects.toThrow();
   });
 
-  it('rejects risk with empty impact text', async () => {
+  it("rejects risk with empty impact text", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.saveDraft(validDraft({
-        risks: [{
-          projectId: PROJECT_ID_1,
-          risk: 'A valid risk',
-          impact: '',
-          mitigation: 'Some mitigation',
-        }],
-      })),
+      service.saveDraft(
+        validDraft({
+          risks: [
+            {
+              projectId: PROJECT_ID_1,
+              risk: "A valid risk",
+              impact: "",
+              mitigation: "Some mitigation",
+            },
+          ],
+        }),
+      ),
     ).rejects.toThrow();
   });
 
-  it('rejects decision with empty text', async () => {
+  it("rejects decision with empty text", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.saveDraft(validDraft({
-        decisions: [{
-          text: '',
-          owner: 'Owner',
-          impact: 'Impact',
-        }],
-      })),
+      service.saveDraft(
+        validDraft({
+          decisions: [
+            {
+              text: "",
+              owner: "Owner",
+              impact: "Impact",
+            },
+          ],
+        }),
+      ),
     ).rejects.toThrow();
   });
 
-  it('rejects decision with empty owner', async () => {
+  it("rejects decision with empty owner", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
     await expect(
-      service.saveDraft(validDraft({
-        decisions: [{
-          text: 'Valid decision',
-          owner: '',
-          impact: 'Impact',
-        }],
-      })),
+      service.saveDraft(
+        validDraft({
+          decisions: [
+            {
+              text: "Valid decision",
+              owner: "",
+              impact: "Impact",
+            },
+          ],
+        }),
+      ),
     ).rejects.toThrow();
   });
 });

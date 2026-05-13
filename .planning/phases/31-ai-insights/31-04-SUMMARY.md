@@ -28,16 +28,16 @@ AI-03 is parked as a deferred v7.0+ knob in CONTEXT.md `<deferred>`
 
 **8 fixtures** at `apps/api/src/modules/ai/__fixtures__/golden-set/`:
 
-| File | Coverage |
-|---|---|
-| fx-001-all-green.json | All-green stable team |
-| fx-002-mixed.json | 4G / 3Y / 1R, modest blockers |
-| fx-003-mostly-red.json | Multiple blockers, escalation likely |
-| fx-004-missing-section.json | One lead skipped (sick) |
-| fx-005-short-text.json | Terse sections |
-| fx-006-long-text.json | Verbose narrative |
-| fx-007-risks-heavy.json | Many risks across sections |
-| fx-008-decisions-heavy.json | Multiple decisions awaiting head |
+| File                        | Coverage                             |
+| --------------------------- | ------------------------------------ |
+| fx-001-all-green.json       | All-green stable team                |
+| fx-002-mixed.json           | 4G / 3Y / 1R, modest blockers        |
+| fx-003-mostly-red.json      | Multiple blockers, escalation likely |
+| fx-004-missing-section.json | One lead skipped (sick)              |
+| fx-005-short-text.json      | Terse sections                       |
+| fx-006-long-text.json       | Verbose narrative                    |
+| fx-007-risks-heavy.json     | Many risks across sections           |
+| fx-008-decisions-heavy.json | Multiple decisions awaiting head     |
 
 All synthetic — placeholder names (Acme, Globex, Initech, etc.); no real
 client names, no real deal sizes, no real financials. README in the
@@ -46,6 +46,7 @@ directory marks the set as `draft, awaiting head sign-off (C-5)`.
 ## Eval test thresholds
 
 `apps/api/src/modules/ai/__tests__/golden-set.eval.test.ts`:
+
 - **Skip guard:** `describe.skipIf(!process.env['ANTHROPIC_API_KEY'])`
 - **Per-fixture timeout:** 60s
 - **Pass thresholds (loose — tighten after head review):**
@@ -110,9 +111,9 @@ unrelated to Phase 31 and tracked outside.
 
 ## Test counts
 
-| Suite | Before | After | Delta |
-|---|---|---|---|
-| api unit | 510 / 43 files | 516 / 43 files | +6 |
+| Suite    | Before                                             | After                                | Delta     |
+| -------- | -------------------------------------------------- | ------------------------------------ | --------- |
+| api unit | 510 / 43 files                                     | 516 / 43 files                       | +6        |
 | web unit | 228 passing (1 pre-existing fail in proxy.test.ts) | 228 passing (same pre-existing fail) | unchanged |
 
 ## UI mount note (deferred to v6.1)
@@ -127,6 +128,7 @@ mapper layer is a refactor that exceeds this plan's atomic-commit
 budget.
 
 The deliverables that DID land:
+
 - `ai.onTrack` tRPC procedure (callable from any client now)
 - `OnTrackIcon` client component (importable, tested via type
   inference)
@@ -141,6 +143,7 @@ also resolve the v6.1 head sign-off on golden-set thresholds).
 ## Files modified
 
 17 files in this commit:
+
 - 1 new prompt: `prompts/on-track.ts`
 - 1 new component: `on-track-icon.tsx`
 - 8 new fixtures in `__fixtures__/golden-set/` + README
@@ -155,6 +158,7 @@ also resolve the v6.1 head sign-off on golden-set thresholds).
 
 Phase 31 complete pending head sign-off on golden-set rubric (C-5
 deferred per CONTEXT.md). The deferred v6.1 follow-up plan should:
+
 1. Refactor weekly-report mapper to thread reportSectionId/projectId
    UUIDs.
 2. Mount `<OnTrackIcon>` adjacent to the lead's traffic-light colour
@@ -174,13 +178,13 @@ with a real tRPC-fed mapper, `<OnTrackIcon>` cannot be mounted.
 
 **Files involved:**
 
-| File | What changes |
-|---|---|
-| `apps/web/src/components/dashboard/mock-data.ts` | Either delete and replace with a tRPC-fed loader, or widen `Lead.id`/`TrafficLight` types to accept real UUIDs alongside the existing string slugs (compat shim only). |
-| `apps/web/src/components/dashboard/lead-report-card.tsx` | Source of `trafficLights[]` data; needs to receive `reportSectionId` (Lead -> ReportSection) and `projectId` per cell. |
-| `apps/web/src/components/weekly-report/product-accordion.tsx` | Mount point — render `<OnTrackIcon sectionId={tl.reportSectionId} projectId={tl.projectId} />` next to each cell's traffic-light dot. |
+| File                                                           | What changes                                                                                                                                                                                                                                        |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/components/dashboard/mock-data.ts`               | Either delete and replace with a tRPC-fed loader, or widen `Lead.id`/`TrafficLight` types to accept real UUIDs alongside the existing string slugs (compat shim only).                                                                              |
+| `apps/web/src/components/dashboard/lead-report-card.tsx`       | Source of `trafficLights[]` data; needs to receive `reportSectionId` (Lead -> ReportSection) and `projectId` per cell.                                                                                                                              |
+| `apps/web/src/components/weekly-report/product-accordion.tsx`  | Mount point — render `<OnTrackIcon sectionId={tl.reportSectionId} projectId={tl.projectId} />` next to each cell's traffic-light dot.                                                                                                               |
 | `apps/web/src/components/weekly-report/weekly-report-page.tsx` | Top of the data flow; calls `trpc.report.getCurrent.useQuery()` (or equivalent — confirm name during plan-phase) and shapes the response into the `ProductReport[]` the accordion consumes. The mapper here is where the UUID threading must start. |
-| `apps/api/src/modules/report/...` (router) | Confirm the existing `report.*` tRPC procedure already exposes `reportSectionId` and `projectId` per cell; if not, widen the response DTO. |
+| `apps/api/src/modules/report/...` (router)                     | Confirm the existing `report.*` tRPC procedure already exposes `reportSectionId` and `projectId` per cell; if not, widen the response DTO.                                                                                                          |
 
 **Type widening sketch:**
 
@@ -189,11 +193,11 @@ with a real tRPC-fed mapper, `<OnTrackIcon>` cannot be mounted.
 export type TrafficLight = {
   // existing fields…
   reportSectionId: string; // UUID — required for ai.onTrack
-  projectId: string;       // UUID — required for ai.onTrack
+  projectId: string; // UUID — required for ai.onTrack
 };
 
 export type Lead = {
-  id: string;              // becomes UUID, drop synthetic 'polenkov'
+  id: string; // becomes UUID, drop synthetic 'polenkov'
   // …
 };
 ```

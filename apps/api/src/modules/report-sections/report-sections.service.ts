@@ -180,9 +180,7 @@ export class ReportSectionsService {
     }
     const graceMs = settings.gracePeriodHours * 3_600_000;
     if (now > deadlineMs + graceMs && !settings.allowLateSubmissions) {
-      throw new ReportSectionAccessError(
-        "Past deadline; submissions closed.",
-      );
+      throw new ReportSectionAccessError("Past deadline; submissions closed.");
     }
     // now > deadline (possibly within grace, or grace+late allowed) → stamp late.
     return true;

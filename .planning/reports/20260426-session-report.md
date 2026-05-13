@@ -36,13 +36,13 @@
 
 ### Decisions Made
 
-| Decision | Rationale |
-|---|---|
-| Use `command git push` to bypass user shell wrapper | User's `git push → "Did you really want PUSH?"` interactive prompt cannot be answered from non-TTY tool calls; user explicitly confirmed twice |
-| Set `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'` | Prisma 7 AI safeguard requires explicit user-consent text for destructive `migrate reset` ops; user said "давай" — exact text used per Prisma's instruction |
+| Decision                                                                          | Rationale                                                                                                                                                                             |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Use `command git push` to bypass user shell wrapper                               | User's `git push → "Did you really want PUSH?"` interactive prompt cannot be answered from non-TTY tool calls; user explicitly confirmed twice                                        |
+| Set `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`                         | Prisma 7 AI safeguard requires explicit user-consent text for destructive `migrate reset` ops; user said "давай" — exact text used per Prisma's instruction                           |
 | Replace negative-lookahead matcher with allowlist + body guard (defence-in-depth) | Negative-lookahead with \| alternation does not work reliably in Next.js 16's matcher; allowlist alone or guard alone would be sufficient — both together prevents future regressions |
-| Keep `.env.test` edit uncommitted | Plan critical_fact #5 — let user review the secret-adjacent change separately |
-| Fix proxy.ts matcher in this quick task (scope expansion) | Plan rule explicitly allows infra-blocker fixes; advisor confirmed this is real Phase 24 verification gap, not scope creep |
+| Keep `.env.test` edit uncommitted                                                 | Plan critical_fact #5 — let user review the secret-adjacent change separately                                                                                                         |
+| Fix proxy.ts matcher in this quick task (scope expansion)                         | Plan rule explicitly allows infra-blocker fixes; advisor confirmed this is real Phase 24 verification gap, not scope creep                                                            |
 
 ## Files Changed
 
@@ -61,23 +61,25 @@
 ```
 
 Uncommitted (deliberate per plan):
+
 - `.env.test` (E2E_DATABASE_URL appended — for review)
 - `.env` (created at repo root — gitignored, cross-machine setup)
 
 ## Commits This Session
 
-| Hash | Message |
-|---|---|
-| `d394832` | test(quick-260426-vxp): fix weekly-report-page tRPC mock for pdfExport surface |
+| Hash      | Message                                                                                                        |
+| --------- | -------------------------------------------------------------------------------------------------------------- |
+| `d394832` | test(quick-260426-vxp): fix weekly-report-page tRPC mock for pdfExport surface                                 |
 | `a4a482c` | docs(quick-260426-vxp): close v5.0 tech debt — Vitest mock fixed, integration suite blocked on docker registry |
-| `cc1a0ec` | fix(quick-260426-vxp): unblock Phase 26 integration suite first-run |
-| `e700b23` | docs(quick-260426-vxp): integration suite first-run completed (8/21 pass) |
+| `cc1a0ec` | fix(quick-260426-vxp): unblock Phase 26 integration suite first-run                                            |
+| `e700b23` | docs(quick-260426-vxp): integration suite first-run completed (8/21 pass)                                      |
 
 ## Blockers & Open Items
 
 **Push blocked (network):** all 4 commits are local. `git push origin main` fails because the corp GitHub Enterprise (`ghe.example.org`) is reachable only through a local gost proxy at `localhost:1081`, which currently returns 503. User needs to start VPN/gost; then `! git push origin main` from terminal.
 
 **v6.0 backlog candidates (from this session):**
+
 1. **Phase 26 integration test stabilization** — 5 tRPC POST timeout failures (single root cause likely):
    - `admin-crud:94` (admin product list reflects DB)
    - `cross-role-lifecycle:24` (submit→publish→locked)
@@ -88,20 +90,21 @@ Uncommitted (deliberate per plan):
 3. **Cleanup `apps/web/src/proxy.ts`** — dead duplicate of root `apps/web/proxy.ts` (advisor flagged for v6.0)
 
 **Out-of-scope HANDOFF items still pending:**
+
 - #2 Phase 22 manual UI smoke (4 items) — requires browser
 - #3 Phase 23 PDF download manual smoke — requires browser
 - #5 Phase 24 cookie injection — explicitly deferred to v6.0+ per user
 
 ## Estimated Resource Usage
 
-| Metric | Estimate |
-|--------|----------|
-| Commits | 4 |
-| Files changed | 9 |
-| Plans executed | 1 (`260426-vxp-PLAN.md`) |
-| Subagents spawned | 2 (gsd-planner, gsd-executor) + 1 advisor consult |
-| Integration suite runs | 8 attempts (7 failed at progressive infra layers, 8th completed) |
-| Production-code edits | 4 files (`proxy.ts`, `global-setup.ts`, `playwright.integration.config.ts`, `weekly-report-page.test.tsx`) |
+| Metric                 | Estimate                                                                                                   |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Commits                | 4                                                                                                          |
+| Files changed          | 9                                                                                                          |
+| Plans executed         | 1 (`260426-vxp-PLAN.md`)                                                                                   |
+| Subagents spawned      | 2 (gsd-planner, gsd-executor) + 1 advisor consult                                                          |
+| Integration suite runs | 8 attempts (7 failed at progressive infra layers, 8th completed)                                           |
+| Production-code edits  | 4 files (`proxy.ts`, `global-setup.ts`, `playwright.integration.config.ts`, `weekly-report-page.test.tsx`) |
 
 > **Note:** Token and cost estimates require API-level instrumentation.
 > These metrics reflect observable session activity only.
@@ -113,4 +116,4 @@ Uncommitted (deliberate per plan):
 
 ---
 
-*Generated by `/gsd-session-report` on 2026-04-26*
+_Generated by `/gsd-session-report` on 2026-04-26_

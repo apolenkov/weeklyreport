@@ -901,9 +901,7 @@ function makePeriodAwareRepository(
       row.archived = true;
       row.periodState = "archived";
     },
-    async unarchivePeriod(
-      periodId,
-    ): Promise<{
+    async unarchivePeriod(periodId): Promise<{
       nextPeriodState: PeriodState;
       nextPeriodStatus: PeriodStatus;
     }> {
@@ -926,14 +924,10 @@ describe("AdminService — listPeriodsByState (UFB-052)", () => {
   });
 
   it("active bucket fans out to scheduled+open+published", async () => {
-    const fresh = periodFixture(
-      PERIOD_ID_PUBLISHED_FRESH,
-      "published",
-      {
-        publishedAt: new Date(Date.now() - 2 * 3_600_000), // 2h ago
-        periodStart: new Date("2026-05-04T00:00:00Z"),
-      },
-    );
+    const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published", {
+      publishedAt: new Date(Date.now() - 2 * 3_600_000), // 2h ago
+      periodStart: new Date("2026-05-04T00:00:00Z"),
+    });
     const open = periodFixture(PERIOD_ID_OPEN, "open", {
       periodStart: new Date("2026-05-11T00:00:00Z"),
     });
@@ -1082,7 +1076,10 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
   ): AdminRepository {
     const base = createRepository(snapshot);
     // B1 invariant: keyed by productId alone — one product, one group.
-    const edges = new Map<string, { id: string; groupId: string; createdAt: Date }>();
+    const edges = new Map<
+      string,
+      { id: string; groupId: string; createdAt: Date }
+    >();
     return {
       ...base,
       async attachProductToGroup({ groupId, productId }) {
@@ -1090,11 +1087,21 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
         if (existing) {
           if (existing.groupId === groupId) {
             // Idempotent: same group, return canonical row.
-            return { id: existing.id, groupId, productId, createdAt: existing.createdAt };
+            return {
+              id: existing.id,
+              groupId,
+              productId,
+              createdAt: existing.createdAt,
+            };
           }
           // Reassign: move product from old group to new group.
           edges.set(productId, { ...existing, groupId });
-          return { id: existing.id, groupId, productId, createdAt: existing.createdAt };
+          return {
+            id: existing.id,
+            groupId,
+            productId,
+            createdAt: existing.createdAt,
+          };
         }
         const row = {
           id: crypto.randomUUID(),
@@ -1119,7 +1126,9 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
       async listProductGroups(productId) {
         const entry = edges.get(productId);
         if (!entry) return [];
-        return [expectDefined(snapshot.groups.find((g) => g.id === entry.groupId))];
+        return [
+          expectDefined(snapshot.groups.find((g) => g.id === entry.groupId)),
+        ];
       },
     };
   }
@@ -1178,10 +1187,16 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
 
   it("attachProductToGroup reassigns product to a new group (B1 invariant)", async () => {
     const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
-    await service.attachProductToGroup({ groupId: GROUP_A, productId: PRODUCT_X });
+    await service.attachProductToGroup({
+      groupId: GROUP_A,
+      productId: PRODUCT_X,
+    });
 
     // Reassign to GROUP_B
-    const reassigned = await service.attachProductToGroup({ groupId: GROUP_B, productId: PRODUCT_X });
+    const reassigned = await service.attachProductToGroup({
+      groupId: GROUP_B,
+      productId: PRODUCT_X,
+    });
     expect(reassigned.groupId).toBe(GROUP_B);
 
     // Product is now only in GROUP_B
@@ -1222,8 +1237,14 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
   it("listGroupProducts and listProductGroups reflect attached edge (B1: one group per product)", async () => {
     const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
     // Attach to GROUP_A first, then GROUP_B — second call is a reassign.
-    await service.attachProductToGroup({ groupId: GROUP_A, productId: PRODUCT_X });
-    await service.attachProductToGroup({ groupId: GROUP_B, productId: PRODUCT_X });
+    await service.attachProductToGroup({
+      groupId: GROUP_A,
+      productId: PRODUCT_X,
+    });
+    await service.attachProductToGroup({
+      groupId: GROUP_B,
+      productId: PRODUCT_X,
+    });
 
     // Product now belongs to GROUP_B only (reassigned away from GROUP_A).
     const groupsForProduct = await service.listProductGroups(PRODUCT_X);
@@ -1278,7 +1299,10 @@ function makeCreatePeriodRepository(opts: {
     periodState: string;
   } | null;
 } {
-  const base = createRepository(initialSnapshot, opts.settings ?? defaultSettings);
+  const base = createRepository(
+    initialSnapshot,
+    opts.settings ?? defaultSettings,
+  );
   const seed = [...(opts.seedPeriods ?? [])];
   let lastCreated: ReturnType<
     ReturnType<typeof makeCreatePeriodRepository>["readLastCreated"]
@@ -1462,11 +1486,7 @@ type EditableRow = {
   periodEnd: Date;
   deadline: Date;
   weekLabel: string | null;
-  periodState:
-    | "scheduled"
-    | "open"
-    | "published"
-    | "archived";
+  periodState: "scheduled" | "open" | "published" | "archived";
 };
 
 function makeUpdatePeriodRepository(opts: {
@@ -1484,7 +1504,10 @@ function makeUpdatePeriodRepository(opts: {
     };
   } | null;
 } {
-  const base = createRepository(initialSnapshot, opts.settings ?? defaultSettings);
+  const base = createRepository(
+    initialSnapshot,
+    opts.settings ?? defaultSettings,
+  );
   const rows = new Map<string, EditableRow>(
     opts.seedPeriods.map((row) => [row.id, { ...row }]),
   );
@@ -1496,9 +1519,7 @@ function makeUpdatePeriodRepository(opts: {
     async findOverlappingPeriod(input) {
       // Half-open intersect + optional self-exclusion (UFB-067).
       const hit = [...rows.values()]
-        .filter((row) =>
-          input.excludeId ? row.id !== input.excludeId : true,
-        )
+        .filter((row) => (input.excludeId ? row.id !== input.excludeId : true))
         .filter(
           (row) =>
             row.periodStart.getTime() <= input.periodEnd.getTime() &&
@@ -1584,7 +1605,10 @@ describe("AdminService — updatePeriodManual (UFB-067)", () => {
     // Repository write only carries the changed keys.
     const last = repo.readLastUpdated();
     expect(last?.reportId).toBe(SEED_ROW_ID);
-    expect(Object.keys(last?.data ?? {}).sort()).toEqual(["deadline", "weekLabel"]);
+    expect(Object.keys(last?.data ?? {}).sort()).toEqual([
+      "deadline",
+      "weekLabel",
+    ]);
   });
 
   it("allows clearing weekLabel via explicit null", async () => {

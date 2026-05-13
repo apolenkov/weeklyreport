@@ -11,6 +11,7 @@
 ## Why now (and not before)
 
 The webpack pin was added defensively after a runaway compile loop. Investigation tied it to:
+
 1. CLS correlationId initialization order (closed in Phase 29 cls-middleware fix)
 2. Env validation timing (closed in 32-C M-05 dev-auth fence migration)
 3. Stub-mode SAML re-init storm (closed when AUTH_DEV_MODE_ALLOW_TEST landed)

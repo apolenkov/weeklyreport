@@ -57,6 +57,7 @@ Lead History page now reads from `reports.myHistory` via tRPC + `useQuery` with 
 Pure, fully unit-tested module that translates the API `MyHistoryEntry` (Zod-inferred from `myHistoryEntrySchema` in `packages/shared/src/schemas/report.ts`) to the existing `HistoryEntry` presentation shape. The mapper owns its own type alias re-declaration so consumers depend on the mapper barrel rather than `mock-data.ts`.
 
 Exports:
+
 - `mapHistoryEntries(api, now?)` — composite mapper
 - `formatDateRange(start, end)` — `Apr 14-20` / `Apr 28-May 4`
 - `formatSubmittedAt(submittedAt, now?)` — `just now` / `N min ago` / `N hour(s) ago` / `Apr 18`
@@ -72,6 +73,7 @@ Presentational `<LeadHistorySkeleton count?: number>` mirroring the 3-col card g
 ### Page (`apps/web/src/app/(app)/lead/history/page.tsx`)
 
 Converted from synchronous server component reading `MOCK_HISTORY` to a `'use client'` container:
+
 - `const trpc = useTRPC()`
 - `const { data, isLoading, isError, error } = useQuery(trpc.reports.myHistory.queryOptions())`
 - `useEffect` on `[isError, error]` calls `toast.error(error?.message ?? 'Failed to load report history.')`
@@ -87,10 +89,20 @@ Single-line change: type import rewired from `./mock-data` to `../../lib/mappers
 The plan's `<interfaces>` block was speculative ("verify exact field names by reading the file"). The real `myHistoryEntrySchema` exposes:
 
 ```ts
-{ sectionId, reportId, periodStart, periodEnd, reportStatus, sectionStatus, submittedAt, publishedAt }
+{
+  (sectionId,
+    reportId,
+    periodStart,
+    periodEnd,
+    reportStatus,
+    sectionStatus,
+    submittedAt,
+    publishedAt);
+}
 ```
 
 It does **not** carry `weekLabel`, `trafficLights`, `itemCount`, `riskCount`, or `decisionCount`. The mapper handles this with:
+
 - `weekLabel` ← computed via `isoWeekNumber(periodStart)`
 - `id` ← `sectionId`
 - `periodId` ← `reportId` (acceptable for routing; downstream resolution by reportId works equally well)

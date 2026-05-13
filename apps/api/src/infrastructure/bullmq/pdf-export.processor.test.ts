@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { Job } from 'bullmq';
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { Job } from "bullmq";
 
 // ---------------------------------------------------------------------------
 // Module mocks — factories use vi.fn() inline (no outer variable references)
@@ -7,44 +7,52 @@ import type { Job } from 'bullmq';
 // ---------------------------------------------------------------------------
 
 // Mock NestJS common so decorators are no-ops in tests
-vi.mock('@nestjs/common', () => ({
+vi.mock("@nestjs/common", () => ({
   Injectable: () => (target: unknown) => target,
   OnModuleInit: class {},
   OnModuleDestroy: class {},
 }));
 
 // Mock bullmq Worker so no Redis connection is attempted
-vi.mock('bullmq', () => ({
+vi.mock("bullmq", () => ({
   Worker: class {
-    static instances: Array<{ handlers: Record<string, (...args: never[]) => void> }> = [];
+    static instances: Array<{
+      handlers: Record<string, (...args: never[]) => void>;
+    }> = [];
 
     handlers: Record<string, (...args: never[]) => void> = {};
 
     constructor() {
-      (this.constructor as typeof import('bullmq').Worker & {
-        instances: Array<{ handlers: Record<string, (...args: never[]) => void> }>;
-      }).instances.push(this);
+      (
+        this.constructor as typeof import("bullmq").Worker & {
+          instances: Array<{
+            handlers: Record<string, (...args: never[]) => void>;
+          }>;
+        }
+      ).instances.push(this);
     }
 
     on(event: string, handler: (...args: never[]) => void) {
       this.handlers[event] = handler;
     }
 
-    close() { return Promise.resolve(); }
+    close() {
+      return Promise.resolve();
+    }
   },
 }));
 
 // Mock the service (and its transitive @customreport/shared dependency)
-vi.mock('../../modules/pdf-export/pdf-export.service.js', () => ({
+vi.mock("../../modules/pdf-export/pdf-export.service.js", () => ({
   PdfExportService: class {
     markExportCompleted = vi.fn();
     markExportFailed = vi.fn();
     buildAuthCookies = vi.fn().mockReturnValue([
       {
-        name: 'customreport_session',
-        value: 'fake-jwt',
-        domain: 'localhost',
-        path: '/',
+        name: "customreport_session",
+        value: "fake-jwt",
+        domain: "localhost",
+        path: "/",
         httpOnly: true,
         secure: false,
       },
@@ -52,18 +60,18 @@ vi.mock('../../modules/pdf-export/pdf-export.service.js', () => ({
   },
 }));
 
-vi.mock('playwright', () => ({
+vi.mock("playwright", () => ({
   chromium: {
     launch: vi.fn(),
   },
 }));
 
-vi.mock('node:fs', () => ({
+vi.mock("node:fs", () => ({
   writeFileSync: vi.fn(),
   mkdirSync: vi.fn(),
 }));
 
-vi.mock('node:crypto', () => ({
+vi.mock("node:crypto", () => ({
   createHash: vi.fn(),
 }));
 
@@ -71,10 +79,10 @@ vi.mock('node:crypto', () => ({
 // Import after mocks
 // ---------------------------------------------------------------------------
 
-import { chromium } from 'playwright';
-import { Worker } from 'bullmq';
-import { createHash } from 'node:crypto';
-import { PdfExportProcessor } from './pdf-export.processor.js';
+import { chromium } from "playwright";
+import { Worker } from "bullmq";
+import { createHash } from "node:crypto";
+import { PdfExportProcessor } from "./pdf-export.processor.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -87,10 +95,10 @@ function createMockPdfExportService() {
     // AUTH-05 (Phase 28-02): processor calls buildAuthCookies before page.goto.
     buildAuthCookies: vi.fn().mockReturnValue([
       {
-        name: 'customreport_session',
-        value: 'fake-jwt',
-        domain: 'localhost',
-        path: '/',
+        name: "customreport_session",
+        value: "fake-jwt",
+        domain: "localhost",
+        path: "/",
         httpOnly: true,
         secure: false,
       },
@@ -113,7 +121,7 @@ type ProcessorTestSeam = {
 function setupMocks() {
   const mockPage = {
     goto: vi.fn().mockResolvedValue(undefined),
-    pdf: vi.fn().mockResolvedValue(Buffer.from('pdf-bytes')),
+    pdf: vi.fn().mockResolvedValue(Buffer.from("pdf-bytes")),
   };
 
   // AUTH-05 (Phase 28-02): processor now creates a context first then a page so
@@ -132,7 +140,7 @@ function setupMocks() {
 
   vi.mocked(createHash).mockReturnValue({
     update: vi.fn().mockReturnThis(),
-    digest: vi.fn().mockReturnValue('abc123hash'),
+    digest: vi.fn().mockReturnValue("abc123hash"),
   } as never);
 
   return { mockPage, mockBrowser, mockContext };
@@ -142,27 +150,35 @@ function setupMocks() {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('PdfExportProcessor.processJob', () => {
+describe("PdfExportProcessor.processJob", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('launches Chromium with headless: true', async () => {
+  it("launches Chromium with headless: true", async () => {
     setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
-    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
+    const job = createMockJob({
+      reportId: "report-1",
+      jobId: "job-1",
+      authToken: "fake-jwt",
+    });
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     expect(chromium.launch).toHaveBeenCalledWith({ headless: true });
   });
 
-  it('navigates to correct report URL', async () => {
+  it("navigates to correct report URL", async () => {
     const { mockPage } = setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
-    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
+    const job = createMockJob({
+      reportId: "report-1",
+      jobId: "job-1",
+      authToken: "fake-jwt",
+    });
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
@@ -170,65 +186,81 @@ describe('PdfExportProcessor.processJob', () => {
     // (app) route group) so the print viewport doesn't inherit NavBar/DEV
     // switcher chrome — see commit d45e5b2.
     expect(mockPage.goto).toHaveBeenCalledWith(
-      'http://localhost:3000/print/report-1',
-      { waitUntil: 'networkidle' },
+      "http://localhost:3000/print/report-1",
+      { waitUntil: "networkidle" },
     );
   });
 
-  it('generates PDF with A4 format and printBackground: true', async () => {
+  it("generates PDF with A4 format and printBackground: true", async () => {
     const { mockPage } = setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
-    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
+    const job = createMockJob({
+      reportId: "report-1",
+      jobId: "job-1",
+      authToken: "fake-jwt",
+    });
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     expect(mockPage.pdf).toHaveBeenCalledWith({
-      format: 'A4',
+      format: "A4",
       printBackground: true,
     });
   });
 
-  it('marks export completed with correct args', async () => {
+  it("marks export completed with correct args", async () => {
     setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
-    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
+    const job = createMockJob({
+      reportId: "report-1",
+      jobId: "job-1",
+      authToken: "fake-jwt",
+    });
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     expect(mockService.markExportCompleted).toHaveBeenCalledWith(
-      'job-1',
-      '/pdfs/job-1.pdf',
-      'abc123hash',
+      "job-1",
+      "/pdfs/job-1.pdf",
+      "abc123hash",
     );
   });
 
-  it('closes browser in finally block even if page.goto throws', async () => {
+  it("closes browser in finally block even if page.goto throws", async () => {
     const { mockPage, mockBrowser } = setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
-    const job = createMockJob({ reportId: 'report-1', jobId: 'job-1', authToken: 'fake-jwt' });
+    const job = createMockJob({
+      reportId: "report-1",
+      jobId: "job-1",
+      authToken: "fake-jwt",
+    });
 
-    mockPage.goto.mockRejectedValue(new Error('navigation failed'));
+    mockPage.goto.mockRejectedValue(new Error("navigation failed"));
 
-    await expect((processor as unknown as ProcessorTestSeam).processJob(job)).rejects.toThrow('navigation failed');
+    await expect(
+      (processor as unknown as ProcessorTestSeam).processJob(job),
+    ).rejects.toThrow("navigation failed");
 
     expect(mockBrowser.close).toHaveBeenCalledOnce();
   });
 });
 
-describe('PdfExportProcessor.onModuleInit', () => {
+describe("PdfExportProcessor.onModuleInit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (
       Worker as unknown as {
-        instances: Array<{ handlers: Record<string, (...args: never[]) => void> }>;
+        instances: Array<{
+          handlers: Record<string, (...args: never[]) => void>;
+        }>;
       }
     ).instances = [];
   });
 
-  it('marks the DB export job failed when BullMQ reports terminal failure', () => {
+  it("marks the DB export job failed when BullMQ reports terminal failure", () => {
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
 
@@ -236,24 +268,26 @@ describe('PdfExportProcessor.onModuleInit', () => {
 
     const instances = (
       Worker as unknown as {
-        instances: Array<{ handlers: Record<string, (...args: never[]) => void> }>;
+        instances: Array<{
+          handlers: Record<string, (...args: never[]) => void>;
+        }>;
       }
     ).instances;
-    const failedHandler = instances.at(-1)?.handlers['failed'];
-    expect(failedHandler).toBeTypeOf('function');
+    const failedHandler = instances.at(-1)?.handlers["failed"];
+    expect(failedHandler).toBeTypeOf("function");
 
     failedHandler?.(
       createMockJob({
-        reportId: 'report-1',
-        jobId: 'job-1',
-        authToken: 'fake-jwt',
+        reportId: "report-1",
+        jobId: "job-1",
+        authToken: "fake-jwt",
       }) as never,
-      new Error('browser missing') as never,
+      new Error("browser missing") as never,
     );
 
     expect(mockService.markExportFailed).toHaveBeenCalledWith(
-      'job-1',
-      'browser missing',
+      "job-1",
+      "browser missing",
     );
   });
 });

@@ -1,10 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron } from "@nestjs/schedule";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { AdminService } from '../admin/admin.service';
-import type { AuditLogger } from '../../lib/audit-logger.js';
-import { createNullAuditLogger } from '../../lib/audit-logger.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { AdminService } from "../admin/admin.service";
+import type { AuditLogger } from "../../lib/audit-logger.js";
+import { createNullAuditLogger } from "../../lib/audit-logger.js";
 
 /**
  * UFB-049 / Phase 50-B: daily scheduler that flips published Reports to
@@ -37,7 +37,7 @@ export class AutoArchiverScheduler {
   }
 
   // Every day at 00:15 UTC.
-  @Cron('15 0 * * *')
+  @Cron("15 0 * * *")
   async runDaily(): Promise<void> {
     await this.runOnce(new Date());
   }
@@ -50,21 +50,20 @@ export class AutoArchiverScheduler {
   async runOnce(
     now: Date,
   ): Promise<
-    | { archived: false; reason: 'disabled' }
+    | { archived: false; reason: "disabled" }
     | { archived: true; periodIds: ReadonlyArray<string> }
   > {
     const settings = await this.adminService.getSettings();
     if (settings.autoArchiveWeeksAfterPublish <= 0) {
-      return { archived: false, reason: 'disabled' };
+      return { archived: false, reason: "disabled" };
     }
 
-    const weeksMs =
-      settings.autoArchiveWeeksAfterPublish * 7 * 24 * 3_600_000;
+    const weeksMs = settings.autoArchiveWeeksAfterPublish * 7 * 24 * 3_600_000;
     const cutoff = new Date(now.getTime() - weeksMs);
 
     const candidates = await this.prisma.report.findMany({
       where: {
-        status: 'published',
+        status: "published",
         archived: false,
         publishedAt: { lt: cutoff, not: null },
       },
@@ -86,15 +85,15 @@ export class AutoArchiverScheduler {
           where: { id: candidate.id },
           data: {
             archived: true,
-            periodState: 'archived',
+            periodState: "archived",
             autoArchived: true,
           },
         });
         this.logger.log(`auto-archive period=${candidate.id}`);
         this.auditLogger.periodAutoArchive({
           periodId: candidate.id,
-          from: 'published',
-          to: 'archived',
+          from: "published",
+          to: "archived",
         });
         archivedIds.push(candidate.id);
       } catch (err) {

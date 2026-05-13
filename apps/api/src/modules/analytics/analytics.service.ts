@@ -11,7 +11,7 @@ import {
   type LeadVelocityOutput,
   type PeriodComparisonInput,
   type PeriodComparisonOutput,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 /**
  * AnalyticsRepository contract — Prisma-free at the service boundary so the
@@ -19,9 +19,13 @@ import {
  * analytics.prisma-repository.ts.
  */
 export interface AnalyticsRepository {
-  trafficLightHistory(input: TrafficLightHistoryInput): Promise<TrafficLightHistoryOutput>;
+  trafficLightHistory(
+    input: TrafficLightHistoryInput,
+  ): Promise<TrafficLightHistoryOutput>;
   leadVelocity(input: LeadVelocityInput): Promise<LeadVelocityOutput>;
-  periodComparison(input: PeriodComparisonInput): Promise<PeriodComparisonOutput>;
+  periodComparison(
+    input: PeriodComparisonInput,
+  ): Promise<PeriodComparisonOutput>;
 }
 
 /**
@@ -37,16 +41,16 @@ export interface AnalyticsCachePort {
 // collide with other applications sharing the Redis instance. The cache's
 // SCAN-based invalidation (analytics.cache.ts) walks the same prefix, so all
 // three sub-prefixes must remain on the `customreport:analytics:` root.
-const PREFIX_HISTORY = 'customreport:analytics:traffic-light:';
-const PREFIX_VELOCITY = 'customreport:analytics:lead-velocity:';
-const PREFIX_COMPARISON = 'customreport:analytics:period-comparison:';
+const PREFIX_HISTORY = "customreport:analytics:traffic-light:";
+const PREFIX_VELOCITY = "customreport:analytics:lead-velocity:";
+const PREFIX_COMPARISON = "customreport:analytics:period-comparison:";
 
 /**
  * Stable JSON.stringify with sorted keys so equivalent inputs hit the same
  * cache key regardless of property order in the call site.
  */
 function stableHash(value: unknown): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
   const keys = Object.keys(value as Record<string, unknown>).sort();
   return JSON.stringify(value, keys);
 }
@@ -57,24 +61,34 @@ export class AnalyticsService {
     private readonly cache: AnalyticsCachePort,
   ) {}
 
-  async trafficLightHistory(input: TrafficLightHistoryInput): Promise<TrafficLightHistoryOutput> {
+  async trafficLightHistory(
+    input: TrafficLightHistoryInput,
+  ): Promise<TrafficLightHistoryOutput> {
     const parsed = trafficLightHistoryInputSchema.parse(input);
     const key = `${PREFIX_HISTORY}${stableHash(parsed)}`;
-    const result = await this.cache.getOrCompute(key, () => this.repository.trafficLightHistory(parsed));
+    const result = await this.cache.getOrCompute(key, () =>
+      this.repository.trafficLightHistory(parsed),
+    );
     return trafficLightHistoryOutputSchema.parse(result);
   }
 
   async leadVelocity(input: LeadVelocityInput): Promise<LeadVelocityOutput> {
     const parsed = leadVelocityInputSchema.parse(input);
     const key = `${PREFIX_VELOCITY}${stableHash(parsed)}`;
-    const result = await this.cache.getOrCompute(key, () => this.repository.leadVelocity(parsed));
+    const result = await this.cache.getOrCompute(key, () =>
+      this.repository.leadVelocity(parsed),
+    );
     return leadVelocityOutputSchema.parse(result);
   }
 
-  async periodComparison(input: PeriodComparisonInput): Promise<PeriodComparisonOutput> {
+  async periodComparison(
+    input: PeriodComparisonInput,
+  ): Promise<PeriodComparisonOutput> {
     const parsed = periodComparisonInputSchema.parse(input);
     const key = `${PREFIX_COMPARISON}${stableHash(parsed)}`;
-    const result = await this.cache.getOrCompute(key, () => this.repository.periodComparison(parsed));
+    const result = await this.cache.getOrCompute(key, () =>
+      this.repository.periodComparison(parsed),
+    );
     return periodComparisonOutputSchema.parse(result);
   }
 }

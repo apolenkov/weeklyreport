@@ -117,13 +117,13 @@
 
 Phases → REQ-IDs map (locked by roadmapper 2026-04-28).
 
-| Phase | Wave | REQs |
-|---|---|---|
-| 27 | 1 | QA-01, QA-02, QA-03, QA-04, AUTH-03 |
-| 28 | 2 | AUTH-04, AUTH-05, AUTH-01 *(PDF-only enable via `AUTH_DEV_MODE_ALLOW_TEST`)*, NOTIF-01, NOTIF-03, NOTIF-04, REL-01, REL-02, REL-03, REL-04, REL-05 |
-| 29 | 3 | AUTH-01 *(full Keycloak SAML in production)*, AUTH-02, AUTH-06, AUTH-07, AUTH-08, NOTIF-02, NOTIF-05, NOTIF-06 |
-| 30 | 3 | MOB-01, MOB-02, MOB-03, MOB-04, MOB-05, MOB-06, MOB-07, ANAL-01, ANAL-02, ANAL-03, ANAL-04 |
-| 31 | 4 | AI-01, AI-02, AI-03 *(gated by AI-SPEC.md)* |
+| Phase | Wave | REQs                                                                                                                                               |
+| ----- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 27    | 1    | QA-01, QA-02, QA-03, QA-04, AUTH-03                                                                                                                |
+| 28    | 2    | AUTH-04, AUTH-05, AUTH-01 _(PDF-only enable via `AUTH_DEV_MODE_ALLOW_TEST`)_, NOTIF-01, NOTIF-03, NOTIF-04, REL-01, REL-02, REL-03, REL-04, REL-05 |
+| 29    | 3    | AUTH-01 _(full Keycloak SAML in production)_, AUTH-02, AUTH-06, AUTH-07, AUTH-08, NOTIF-02, NOTIF-05, NOTIF-06                                     |
+| 30    | 3    | MOB-01, MOB-02, MOB-03, MOB-04, MOB-05, MOB-06, MOB-07, ANAL-01, ANAL-02, ANAL-03, ANAL-04                                                         |
+| 31    | 4    | AI-01, AI-02, AI-03 _(gated by AI-SPEC.md)_                                                                                                        |
 
 **Note on AUTH-01 split:** AUTH-01 spans two phases by design. Phase 28 enables `AUTH_DEV_MODE_ALLOW_TEST=true` so the PDF cookie path (AUTH-05) and integration suite can run against a mock IdP container without flipping production. Phase 29 performs the actual Keycloak SAML cut-over and removes `AUTH_DEV_MODE` from non-test code paths. Both halves are required to consider AUTH-01 satisfied.
 
@@ -131,5 +131,5 @@ Phases → REQ-IDs map (locked by roadmapper 2026-04-28).
 
 ---
 
-*v1 requirement count: 8 (A) + 4 (B) + 3 (C) + 4 (D) + 6 (E) + 7 (F) + 5 (G) = **37 REQ-IDs***
-*Future deferred: 12 differentiators + 3 plan-time gaps*
+\*v1 requirement count: 8 (A) + 4 (B) + 3 (C) + 4 (D) + 6 (E) + 7 (F) + 5 (G) = **37 REQ-IDs\***
+_Future deferred: 12 differentiators + 3 plan-time gaps_

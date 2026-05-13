@@ -1,8 +1,8 @@
-import rateLimit, { ipKeyGenerator, type Options } from 'express-rate-limit';
-import type { RequestHandler } from 'express';
+import rateLimit, { ipKeyGenerator, type Options } from "express-rate-limit";
+import type { RequestHandler } from "express";
 
-import type { AppLogger } from '../../lib/logger';
-import { rateLimitHitsTotal } from '../metrics/metrics.registry.js';
+import type { AppLogger } from "../../lib/logger";
+import { rateLimitHitsTotal } from "../metrics/metrics.registry.js";
 
 /**
  * 36-01 rate-limit middleware factory.
@@ -27,7 +27,7 @@ export function createRateLimits(options: {
 
   const baseConfig: Partial<Options> = {
     windowMs: 60_000,
-    standardHeaders: 'draft-7',
+    standardHeaders: "draft-7",
     legacyHeaders: false,
     // Use the X-Forwarded-For header when behind a reverse proxy (caddy/nginx).
     // Express's `app.set('trust proxy', 1)` upstream makes this safe.
@@ -38,13 +38,13 @@ export function createRateLimits(options: {
     // every request because varying low bits of an IPv6 address would let
     // a single client bypass the limit by churning suffixes.
     keyGenerator: (req) => {
-      const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+      const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
       return ipKeyGenerator(ip);
     },
     handler: (req, res, _next, opts) => {
-      const bucket = opts.statusCode === 429 ? String(opts.message) : 'unknown';
-      logger.warn('rate limit hit', {
-        phase: 'rate-limit',
+      const bucket = opts.statusCode === 429 ? String(opts.message) : "unknown";
+      logger.warn("rate limit hit", {
+        phase: "rate-limit",
         path: req.path,
         ip: req.ip,
         bucket,
@@ -53,8 +53,8 @@ export function createRateLimits(options: {
       // bucket" has data.
       rateLimitHitsTotal.inc({ bucket });
       res.status(opts.statusCode).json({
-        error: 'rate_limit_exceeded',
-        message: 'Too many requests. Please retry shortly.',
+        error: "rate_limit_exceeded",
+        message: "Too many requests. Please retry shortly.",
         retryAfter: Math.ceil(opts.windowMs / 1000),
       });
     },
@@ -63,13 +63,13 @@ export function createRateLimits(options: {
   const authLimiter = rateLimit({
     ...baseConfig,
     limit: isTest ? 1000 : 5,
-    message: 'auth',
+    message: "auth",
   });
 
   const trpcLimiter = rateLimit({
     ...baseConfig,
     limit: isTest ? 1000 : 200,
-    message: 'trpc',
+    message: "trpc",
   });
 
   return { authLimiter, trpcLimiter };

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import type { SearchHit } from '@customreport/shared';
+import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
+import type { SearchHit } from "@customreport/shared";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { SearchRepository } from './search.service.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { SearchRepository } from "./search.service.js";
 
 /**
  * Row shape returned by every UNION ALL chunk. All four chunks project the
@@ -11,7 +11,7 @@ import type { SearchRepository } from './search.service.js';
  * into typed SearchHit records.
  */
 type RawHit = {
-  type: 'item' | 'risk' | 'decision' | 'project';
+  type: "item" | "risk" | "decision" | "project";
   id: string;
   title: string;
   snippet: string;
@@ -49,7 +49,7 @@ export class SearchPrismaRepository implements SearchRepository {
 
   async search(params: {
     q: string;
-    scope: 'mine' | 'all';
+    scope: "mine" | "all";
     userId: string;
     limit: number;
   }): Promise<SearchHit[]> {
@@ -60,27 +60,25 @@ export class SearchPrismaRepository implements SearchRepository {
     const perType = limit;
 
     // Headline options: keep the markers consistent with the UI parser.
-    const headlineOpts = 'MaxWords=12,MinWords=4,StartSel=<<,StopSel=>>';
+    const headlineOpts = "MaxWords=12,MinWords=4,StartSel=<<,StopSel=>>";
 
     // Mine-scope FK gates expressed as Prisma.sql fragments so we can
     // splice them into the UNION ALL with bound `userId`. For scope='all'
     // we splice an empty fragment.
     const itemMineFilter =
-      scope === 'mine'
+      scope === "mine"
         ? Prisma.sql`AND rs."authorId" = ${userId}`
         : Prisma.empty;
     const riskMineFilter =
-      scope === 'mine'
+      scope === "mine"
         ? Prisma.sql`AND rs."authorId" = ${userId}`
         : Prisma.empty;
     const decisionMineFilter =
-      scope === 'mine'
+      scope === "mine"
         ? Prisma.sql`AND rs."authorId" = ${userId}`
         : Prisma.empty;
     const projectMineFilter =
-      scope === 'mine'
-        ? Prisma.sql`AND p."leadId" = ${userId}`
-        : Prisma.empty;
+      scope === "mine" ? Prisma.sql`AND p."leadId" = ${userId}` : Prisma.empty;
 
     const rows = await this.prisma.$queryRaw<RawHit[]>(Prisma.sql`
       SELECT * FROM (
@@ -173,9 +171,9 @@ export class SearchPrismaRepository implements SearchRepository {
       (r): SearchHit => ({
         type: r.type,
         id: r.id,
-        title: r.title ?? '',
-        snippet: r.snippet ?? '',
-        rank: typeof r.rank === 'number' ? r.rank : Number(r.rank ?? 0),
+        title: r.title ?? "",
+        snippet: r.snippet ?? "",
+        rank: typeof r.rank === "number" ? r.rank : Number(r.rank ?? 0),
         ...(r.projectId ? { projectId: r.projectId } : {}),
         ...(r.reportId ? { reportId: r.reportId } : {}),
         ...(r.reportSectionId ? { reportSectionId: r.reportSectionId } : {}),

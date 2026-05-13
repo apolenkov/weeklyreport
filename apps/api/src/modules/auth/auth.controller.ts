@@ -1,7 +1,7 @@
-import { serialize } from 'cookie';
-import jwt from 'jsonwebtoken';
+import { serialize } from "cookie";
+import jwt from "jsonwebtoken";
 
-import { userSessionSchema, type UserSession } from '@customreport/shared';
+import { userSessionSchema, type UserSession } from "@customreport/shared";
 
 const ONE_HOUR_IN_SECONDS = 60 * 60;
 
@@ -14,7 +14,7 @@ function requireJwtSecret(env: NodeJS.ProcessEnv): string {
   const secret = env.AUTH_JWT_SECRET;
 
   if (!secret) {
-    throw new Error('Missing required environment variable: AUTH_JWT_SECRET');
+    throw new Error("Missing required environment variable: AUTH_JWT_SECRET");
   }
 
   return secret;
@@ -28,7 +28,7 @@ export function createJwtSigner(env: NodeJS.ProcessEnv): JwtSigner {
       const parsedPayload = userSessionSchema.parse(payload);
 
       return jwt.sign(parsedPayload, secret, {
-        algorithm: 'HS256',
+        algorithm: "HS256",
         expiresIn: ONE_HOUR_IN_SECONDS,
       });
     },
@@ -40,12 +40,15 @@ export function createJwtSigner(env: NodeJS.ProcessEnv): JwtSigner {
   };
 }
 
-export function createSessionCookie(token: string, env: NodeJS.ProcessEnv): string {
-  return serialize(env.AUTH_JWT_COOKIE_NAME ?? 'customreport_session', token, {
+export function createSessionCookie(
+  token: string,
+  env: NodeJS.ProcessEnv,
+): string {
+  return serialize(env.AUTH_JWT_COOKIE_NAME ?? "customreport_session", token, {
     httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
+    secure: env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
     maxAge: ONE_HOUR_IN_SECONDS,
   });
 }

@@ -28,6 +28,7 @@ Out of scope: visual regression baseline (Phase 35), audit-trail extension (Phas
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 - `.github/workflows/ci.yml` already runs lint+typecheck+unit+E2E+Docker build before this phase. Phase 34 extends with coverage flag, mutation-audit step, migrate-reset job.

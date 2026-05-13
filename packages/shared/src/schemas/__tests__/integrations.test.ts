@@ -1,13 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   adminTestTelegramSendSchema,
   integrationsStatusSchema,
   telegramIntegrationStatusSchema,
-} from '../integrations';
+} from "../integrations";
 
-describe('telegramIntegrationStatusSchema (Phase 55 / UFB-056)', () => {
-  it('accepts the off-state (no token, no bindings)', () => {
+describe("telegramIntegrationStatusSchema (Phase 55 / UFB-056)", () => {
+  it("accepts the off-state (no token, no bindings)", () => {
     expect(
       telegramIntegrationStatusSchema.safeParse({
         configured: false,
@@ -16,7 +16,7 @@ describe('telegramIntegrationStatusSchema (Phase 55 / UFB-056)', () => {
     ).toBe(true);
   });
 
-  it('accepts the on-state (token + bindings)', () => {
+  it("accepts the on-state (token + bindings)", () => {
     expect(
       telegramIntegrationStatusSchema.safeParse({
         configured: true,
@@ -25,7 +25,7 @@ describe('telegramIntegrationStatusSchema (Phase 55 / UFB-056)', () => {
     ).toBe(true);
   });
 
-  it('rejects fractional bindings', () => {
+  it("rejects fractional bindings", () => {
     expect(
       telegramIntegrationStatusSchema.safeParse({
         configured: true,
@@ -34,7 +34,7 @@ describe('telegramIntegrationStatusSchema (Phase 55 / UFB-056)', () => {
     ).toBe(false);
   });
 
-  it('rejects negative bindings count', () => {
+  it("rejects negative bindings count", () => {
     expect(
       telegramIntegrationStatusSchema.safeParse({
         configured: true,
@@ -44,8 +44,8 @@ describe('telegramIntegrationStatusSchema (Phase 55 / UFB-056)', () => {
   });
 });
 
-describe('integrationsStatusSchema', () => {
-  it('wraps the telegram status under a `telegram` key', () => {
+describe("integrationsStatusSchema", () => {
+  it("wraps the telegram status under a `telegram` key", () => {
     const parsed = integrationsStatusSchema.parse({
       telegram: { configured: false, bindings: 0 },
     });
@@ -53,7 +53,7 @@ describe('integrationsStatusSchema', () => {
     expect(parsed.telegram.bindings).toBe(0);
   });
 
-  it('rejects payload missing the telegram envelope', () => {
+  it("rejects payload missing the telegram envelope", () => {
     expect(
       integrationsStatusSchema.safeParse({
         bindings: 0,
@@ -63,51 +63,51 @@ describe('integrationsStatusSchema', () => {
   });
 });
 
-describe('adminTestTelegramSendSchema', () => {
-  it('accepts a numeric-looking chatId as a string', () => {
+describe("adminTestTelegramSendSchema", () => {
+  it("accepts a numeric-looking chatId as a string", () => {
     const result = adminTestTelegramSendSchema.safeParse({
-      chatId: '123456789',
-      text: 'hello',
+      chatId: "123456789",
+      text: "hello",
     });
     expect(result.success).toBe(true);
   });
 
-  it('accepts a negative-prefixed group chat id', () => {
+  it("accepts a negative-prefixed group chat id", () => {
     const result = adminTestTelegramSendSchema.safeParse({
-      chatId: '-1001234567890',
-      text: 'hello',
+      chatId: "-1001234567890",
+      text: "hello",
     });
     expect(result.success).toBe(true);
   });
 
-  it('trims whitespace around chatId and text', () => {
+  it("trims whitespace around chatId and text", () => {
     const result = adminTestTelegramSendSchema.parse({
-      chatId: '  123  ',
-      text: '  body  ',
+      chatId: "  123  ",
+      text: "  body  ",
     });
-    expect(result.chatId).toBe('123');
-    expect(result.text).toBe('body');
+    expect(result.chatId).toBe("123");
+    expect(result.text).toBe("body");
   });
 
-  it('rejects empty chatId after trimming', () => {
+  it("rejects empty chatId after trimming", () => {
     expect(
-      adminTestTelegramSendSchema.safeParse({ chatId: '   ', text: 'x' })
+      adminTestTelegramSendSchema.safeParse({ chatId: "   ", text: "x" })
         .success,
     ).toBe(false);
   });
 
-  it('rejects empty text after trimming', () => {
+  it("rejects empty text after trimming", () => {
     expect(
-      adminTestTelegramSendSchema.safeParse({ chatId: '1', text: '   ' })
+      adminTestTelegramSendSchema.safeParse({ chatId: "1", text: "   " })
         .success,
     ).toBe(false);
   });
 
-  it('rejects text longer than the Telegram 4096-char cap', () => {
+  it("rejects text longer than the Telegram 4096-char cap", () => {
     expect(
       adminTestTelegramSendSchema.safeParse({
-        chatId: '1',
-        text: 'x'.repeat(4097),
+        chatId: "1",
+        text: "x".repeat(4097),
       }).success,
     ).toBe(false);
   });

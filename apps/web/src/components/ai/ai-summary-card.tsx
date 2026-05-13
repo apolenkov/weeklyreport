@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
 // Phase 31 (AI-01) — Executive summary card. Renders above the assembled
 // report; never overwrites the head's own narrative. Dismissible per
 // session via local useState (no DB persistence). Regenerate button is
 // gated by the head role — non-heads only see the summary itself.
-import { useContext, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTRPC } from '../../lib/trpc-context';
-import { SessionContext } from '../../lib/session-provider';
+import { useContext, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTRPC } from "../../lib/trpc-context";
+import { SessionContext } from "../../lib/session-provider";
 
 type Props = {
   readonly reportId: string;
@@ -43,7 +43,7 @@ export function AiSummaryCard({ reportId }: Props) {
   // production app shell always wraps; missing context here means a
   // narrow unit-test render and we simply hide the head-only Regenerate.
   const sessionState = useContext(SessionContext);
-  const isHead = sessionState?.user?.role === 'head';
+  const isHead = sessionState?.user?.role === "head";
   const [dismissed, setDismissed] = useState(false);
 
   const summaryQ = useQuery(trpc.ai.summary.queryOptions({ reportId }));
@@ -102,7 +102,8 @@ export function AiSummaryCard({ reportId }: Props) {
           {/* Info box with setup guidance */}
           <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3">
             <p className="text-xs font-medium text-blue-900">
-              Once enabled, AI will automatically generate summaries based on submitted sections.
+              Once enabled, AI will automatically generate summaries based on
+              submitted sections.
             </p>
           </div>
         </div>
@@ -112,11 +113,11 @@ export function AiSummaryCard({ reportId }: Props) {
 
   const { result } = data;
   const toneClass =
-    result.tone === 'positive'
-      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-      : result.tone === 'negative'
-        ? 'text-red-700 bg-red-50 border-red-200'
-        : 'text-amber-700 bg-amber-50 border-amber-200';
+    result.tone === "positive"
+      ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+      : result.tone === "negative"
+        ? "text-red-700 bg-red-50 border-red-200"
+        : "text-amber-700 bg-amber-50 border-amber-200";
 
   return (
     <div className="rounded-xl border border-[rgba(0,0,0,0.08)] bg-white/85 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -129,7 +130,9 @@ export function AiSummaryCard({ reportId }: Props) {
             AI · {result.tone}
           </span>
           {data.cached ? (
-            <span className="text-xs text-[var(--color-muted-foreground)]">cached</span>
+            <span className="text-xs text-[var(--color-muted-foreground)]">
+              cached
+            </span>
           ) : null}
         </div>
         <div className="flex items-center gap-2">
@@ -141,7 +144,7 @@ export function AiSummaryCard({ reportId }: Props) {
               disabled={regenMut.isPending}
               aria-label="Regenerate summary"
             >
-              {regenMut.isPending ? 'Regenerating…' : 'Regenerate'}
+              {regenMut.isPending ? "Regenerating…" : "Regenerate"}
             </button>
           ) : null}
           <button

@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import type { AppSettings } from '@customreport/shared';
+import type { AppSettings } from "@customreport/shared";
 
-import { PeriodCreatorScheduler } from './period-creator.scheduler.js';
-import { createNullAuditLogger } from '../../lib/audit-logger.js';
+import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
+import { createNullAuditLogger } from "../../lib/audit-logger.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -14,13 +14,13 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     autoCreatePeriods: true,
     defaultDeadlineDays: 4,
     periodLengthDays: 7,
-    workingDays: 'mon-fri',
+    workingDays: "mon-fri",
     gracePeriodHours: 24,
     allowLateSubmissions: true,
     autoPublishAfterDeadline: false,
     autoArchiveWeeksAfterPublish: 0,
-    defaultTimezone: 'Europe/Moscow',
-    defaultReminderAudience: 'lead-with-draft',
+    defaultTimezone: "Europe/Moscow",
+    defaultReminderAudience: "lead-with-draft",
     notificationFromEmail: null,
     // UFB-051 (Phase 51-A): period-cycle knobs default to SQL defaults.
     // The cadence-aware PeriodCreator (bi-weekly, maxOpenPeriods gate)
@@ -28,7 +28,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     // `periodLengthDays`/`defaultDeadlineDays` path.
     firstDayOfWeek: 1,
     deadlineDayOfWeek: 5,
-    deadlineTime: '18:00',
+    deadlineTime: "18:00",
     maxOpenPeriods: 1,
     requireAllSectionsToPublish: true,
     allowReopenAfterPublish: true,
@@ -57,7 +57,7 @@ function makePrismaStub(opts: {
     report: {
       findFirst: vi.fn().mockResolvedValue(opts.mostRecent),
       create: vi.fn().mockImplementation(async ({ data }) => ({
-        id: opts.createdId ?? 'period-new',
+        id: opts.createdId ?? "period-new",
         periodStart: data.periodStart,
         periodEnd: data.periodEnd,
         deadline: data.deadline,
@@ -83,8 +83,8 @@ const asAny = (x: unknown) => x as any;
 // idempotent)
 // ---------------------------------------------------------------------------
 
-describe('PeriodCreatorScheduler', () => {
-  it('skip-when-disabled: autoCreatePeriods=false → no create, no audit', async () => {
+describe("PeriodCreatorScheduler", () => {
+  it("skip-when-disabled: autoCreatePeriods=false → no create, no audit", async () => {
     const prisma = makePrismaStub({ mostRecent: null });
     const admin = {
       getSettings: vi
@@ -98,21 +98,21 @@ describe('PeriodCreatorScheduler', () => {
       audit,
     );
 
-    const result = await scheduler.runOnce(new Date('2026-05-12T00:05:00Z'));
+    const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
 
-    expect(result).toEqual({ created: false, reason: 'disabled' });
+    expect(result).toEqual({ created: false, reason: "disabled" });
     expect(prisma.report.findFirst).not.toHaveBeenCalled();
     expect(prisma.report.create).not.toHaveBeenCalled();
   });
 
-  it('fire-when-eligible: prev period ended in the past → creates new Period + emits audit', async () => {
+  it("fire-when-eligible: prev period ended in the past → creates new Period + emits audit", async () => {
     // Previous period ended last Sunday; today is Monday → create next period.
     const prisma = makePrismaStub({
       mostRecent: {
-        id: 'period-old',
-        periodEnd: new Date('2026-05-10T23:59:59.999Z'),
+        id: "period-old",
+        periodEnd: new Date("2026-05-10T23:59:59.999Z"),
       },
-      createdId: 'period-new-1',
+      createdId: "period-new-1",
     });
     const admin = {
       getSettings: vi.fn().mockResolvedValue(makeSettings()),
@@ -127,34 +127,34 @@ describe('PeriodCreatorScheduler', () => {
       asAny(audit),
     );
 
-    const result = await scheduler.runOnce(new Date('2026-05-12T00:05:00Z'));
+    const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
 
-    expect(result).toMatchObject({ created: true, periodId: 'period-new-1' });
+    expect(result).toMatchObject({ created: true, periodId: "period-new-1" });
     expect(prisma.report.create).toHaveBeenCalledTimes(1);
     // UFB-053: state column written on create; here periodStart is "this
     // week's Monday" which is <= now, so the period lands as 'open'.
     expect(prisma.report.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ periodState: 'open' }),
+        data: expect.objectContaining({ periodState: "open" }),
       }),
     );
     expect(audit.periodAutoCreate).toHaveBeenCalledTimes(1);
     expect(audit.periodAutoCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        periodId: 'period-new-1',
+        periodId: "period-new-1",
         from: null,
-        to: 'open',
+        to: "open",
       }),
     );
   });
 
-  it('UFB-053: SCHEDULED→OPEN sweep flips any past-due scheduled rows at top of tick', async () => {
+  it("UFB-053: SCHEDULED→OPEN sweep flips any past-due scheduled rows at top of tick", async () => {
     const prisma = makePrismaStub({
       mostRecent: {
-        id: 'period-future',
+        id: "period-future",
         // The most-recent period ends in the future, so no create happens.
         // The sweep still runs first.
-        periodEnd: new Date('2026-05-30T23:59:59.999Z'),
+        periodEnd: new Date("2026-05-30T23:59:59.999Z"),
       },
       scheduledFlipped: 2,
     });
@@ -171,19 +171,22 @@ describe('PeriodCreatorScheduler', () => {
       asAny(audit),
     );
 
-    await scheduler.runOnce(new Date('2026-05-12T00:05:00Z'));
+    await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
 
     expect(prisma.report.updateMany).toHaveBeenCalledWith({
-      where: { periodState: 'scheduled', periodStart: { lte: expect.any(Date) } },
-      data: { periodState: 'open' },
+      where: {
+        periodState: "scheduled",
+        periodStart: { lte: expect.any(Date) },
+      },
+      data: { periodState: "open" },
     });
   });
 
-  it('idempotent: future period already exists → skip, no create, no audit', async () => {
+  it("idempotent: future period already exists → skip, no create, no audit", async () => {
     const prisma = makePrismaStub({
       mostRecent: {
-        id: 'period-current',
-        periodEnd: new Date('2026-05-17T23:59:59.999Z'), // ends in the future
+        id: "period-current",
+        periodEnd: new Date("2026-05-17T23:59:59.999Z"), // ends in the future
       },
     });
     const admin = {
@@ -199,11 +202,11 @@ describe('PeriodCreatorScheduler', () => {
       asAny(audit),
     );
 
-    const result = await scheduler.runOnce(new Date('2026-05-12T00:05:00Z'));
+    const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
 
     expect(result).toEqual({
       created: false,
-      reason: 'future-period-exists',
+      reason: "future-period-exists",
     });
     expect(prisma.report.create).not.toHaveBeenCalled();
     expect(audit.periodAutoCreate).not.toHaveBeenCalled();

@@ -15,7 +15,11 @@ affects: [13-07, 13-08]
 
 tech-stack:
   added: []
-  patterns: ["OKLCH color tokens in @theme directive", "Semantic status classes (text-success, text-warning)"]
+  patterns:
+    [
+      "OKLCH color tokens in @theme directive",
+      "Semantic status classes (text-success, text-warning)",
+    ]
 
 key-files:
   created:
@@ -86,16 +90,19 @@ Each task was committed atomically:
 ### Adjustments
 
 **1. data-table.tsx does not exist -- skipped aria-sort**
+
 - **Found during:** Task 1 (reading planned files)
 - **Issue:** Plan references `packages/ui/src/components/data-table.tsx` for aria-sort, but the component has not been created yet
 - **Resolution:** Skipped. Will be addressed when DataTable is implemented.
 
 **2. role-nav.tsx already complete from Wave 1**
+
 - **Found during:** Task 1 (reading current file state)
 - **Issue:** role-nav.tsx already has `aria-current` and `<nav>` landmark from Plan 13-03
 - **Resolution:** No changes needed. Plan expected these to be missing but Wave 1 fixed them.
 
 **3. globals.css created from scratch**
+
 - **Found during:** Task 2 (file doesn't exist)
 - **Issue:** Plan assumed globals.css already existed and needed modification. The file did not exist.
 - **Resolution:** Created the full design token system from scratch with all required tokens.
@@ -124,5 +131,6 @@ None. All changes are complete implementations, not placeholders.
 - DataTable aria-sort should be added when the component is created
 
 ---
-*Phase: 13-quality-assurance-polish*
-*Completed: 2026-04-12*
+
+_Phase: 13-quality-assurance-polish_
+_Completed: 2026-04-12_

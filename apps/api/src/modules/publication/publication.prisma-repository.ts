@@ -1,15 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   assembledReportSchema,
   type AssembledReport,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import type { PublicationRepository } from './publication.service';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type { PublicationRepository } from "./publication.service";
 import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
-} from '../report-sections/report-sections.prisma-repository';
+} from "../report-sections/report-sections.prisma-repository";
 
 /** Prisma include for a full report with all sections and their nested relations. */
 const reportFullInclude = {
@@ -21,7 +21,9 @@ const reportFullInclude = {
 export class PublicationPrismaRepository implements PublicationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getAssembledReport(activeReportId: string): Promise<AssembledReport | null> {
+  async getAssembledReport(
+    activeReportId: string,
+  ): Promise<AssembledReport | null> {
     const row = await this.prisma.report.findUnique({
       where: { id: activeReportId },
       include: reportFullInclude,
@@ -43,7 +45,10 @@ export class PublicationPrismaRepository implements PublicationRepository {
       publishedAt: row.publishedAt,
       publishedById: row.publishedById,
       publishedByName: row.publishedBy?.name ?? null,
-      portfolioOverview: { status: 'green', totals: { green: 0, yellow: 0, red: 0 } },
+      portfolioOverview: {
+        status: "green",
+        totals: { green: 0, yellow: 0, red: 0 },
+      },
       sections,
     });
   }
@@ -57,7 +62,7 @@ export class PublicationPrismaRepository implements PublicationRepository {
     // periodState='published'. Archive transitions never come through
     // this path (the AutoArchiver writes periodState='archived' directly).
     const nextPeriodState =
-      report.status === 'published' ? 'published' : 'open';
+      report.status === "published" ? "published" : "open";
 
     await this.prisma.report.update({
       where: { id: report.reportId },

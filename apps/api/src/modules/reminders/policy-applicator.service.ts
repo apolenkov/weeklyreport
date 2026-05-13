@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { DateTime } from 'luxon';
+import { Injectable, Logger } from "@nestjs/common";
+import { DateTime } from "luxon";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
 /**
  * UFB-036 (Phase 44-03): the seam that turns ReminderPolicy templates
@@ -41,7 +41,7 @@ export class PolicyApplicatorService {
    * DB column.
    */
   computeFireAt(deadline: Date, offsetMinutes: number, tz: string): Date {
-    return DateTime.fromJSDate(deadline, { zone: 'utc' })
+    return DateTime.fromJSDate(deadline, { zone: "utc" })
       .setZone(tz)
       .plus({ minutes: offsetMinutes })
       .toUTC()
@@ -121,13 +121,13 @@ export class PolicyApplicatorService {
             fireAt,
             kind: policy.kind,
             timezone: policy.timezone,
-            status: 'active',
+            status: "active",
           },
           update: {
             fireAt,
             kind: policy.kind,
             timezone: policy.timezone,
-            status: 'active',
+            status: "active",
           },
         });
 
@@ -138,7 +138,7 @@ export class PolicyApplicatorService {
         }
       } catch (error: unknown) {
         const code = (error as { code?: string } | null)?.code;
-        if (code === 'P2002') {
+        if (code === "P2002") {
           // Two concurrent applyToPeriod calls raced on the same
           // (reportId, policyId). The unique index prevents duplicates;
           // log + continue so the loop finishes the rest of the

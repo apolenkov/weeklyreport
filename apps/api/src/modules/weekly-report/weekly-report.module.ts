@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { WeeklyReportService } from './weekly-report.service.js';
-import { WeeklyReportPrismaRepository } from './weekly-report.prisma-repository.js';
+import { Module } from "@nestjs/common";
+import { WeeklyReportService } from "./weekly-report.service.js";
+import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository.js";
 
 @Module({
   providers: [

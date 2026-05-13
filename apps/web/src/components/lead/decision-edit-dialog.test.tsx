@@ -6,19 +6,19 @@
  *             setText('') wipes user input.
  * After fix:  availableStages removed from deps → state preserved.
  */
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 
-import { DecisionEditDialog } from './decision-edit-dialog';
-import type { Product } from './mock-data';
+import { DecisionEditDialog } from "./decision-edit-dialog";
+import type { Product } from "./mock-data";
 
 const products: Product[] = [
-  { id: 'p1', name: 'CRM', overallStatus: 'on-track', stages: [] },
+  { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
 ];
 
-describe('DecisionEditDialog — A13 form-race regression', () => {
-  it('preserves typed text when parent re-renders with a new availableStages ref', () => {
-    const stagesV1 = ['Planning', 'Dev'] as const;
+describe("DecisionEditDialog — A13 form-race regression", () => {
+  it("preserves typed text when parent re-renders with a new availableStages ref", () => {
+    const stagesV1 = ["Planning", "Dev"] as const;
 
     const { rerender } = render(
       <DecisionEditDialog
@@ -34,11 +34,13 @@ describe('DecisionEditDialog — A13 form-race regression', () => {
     );
 
     const textField = screen.getByLabelText(/^Decision \*/i);
-    fireEvent.change(textField, { target: { value: 'user typed this — must survive' } });
-    expect(textField).toHaveValue('user typed this — must survive');
+    fireEvent.change(textField, {
+      target: { value: "user typed this — must survive" },
+    });
+    expect(textField).toHaveValue("user typed this — must survive");
 
     // Simulate autosave parent re-render: new array reference, same values.
-    const stagesV2 = ['Planning', 'Dev'] as const;
+    const stagesV2 = ["Planning", "Dev"] as const;
     rerender(
       <DecisionEditDialog
         open={true}
@@ -54,17 +56,17 @@ describe('DecisionEditDialog — A13 form-race regression', () => {
 
     // A13 bug: before fix, text was wiped back to '' by useEffect firing on
     // the new availableStages reference.
-    expect(textField).toHaveValue('user typed this — must survive');
+    expect(textField).toHaveValue("user typed this — must survive");
   });
 
-  it('saves with required fields when text, owner and impact are filled', () => {
+  it("saves with required fields when text, owner and impact are filled", () => {
     const onSave = vi.fn();
     render(
       <DecisionEditDialog
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        availableStages={['Planning', 'Dev']}
+        availableStages={["Planning", "Dev"]}
         products={products}
         defaultProductId="p1"
         onSave={onSave}
@@ -73,18 +75,18 @@ describe('DecisionEditDialog — A13 form-race regression', () => {
     );
 
     fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
-      target: { value: 'Approve Q3 hiring plan' },
+      target: { value: "Approve Q3 hiring plan" },
     });
     fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
-      target: { value: 'Unblocks team expansion' },
+      target: { value: "Unblocks team expansion" },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Save Decision/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      text: 'Approve Q3 hiring plan',
-      impact: 'Unblocks team expansion',
-      owner: 'Test Lead',
+      text: "Approve Q3 hiring plan",
+      impact: "Unblocks team expansion",
+      owner: "Test Lead",
     });
   });
 });

@@ -1,22 +1,27 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import type { AppLogger } from './logger.js';
-import { createAuditLogger, createNullAuditLogger } from './audit-logger.js';
-import { expectDefined } from '../test-utils/expect-defined.js';
+import type { AppLogger } from "./logger.js";
+import { createAuditLogger, createNullAuditLogger } from "./audit-logger.js";
+import { expectDefined } from "../test-utils/expect-defined.js";
 
-type Captured = { level: 'info' | 'warn' | 'error' | 'debug'; message: string; context?: Record<string, unknown> };
+type Captured = {
+  level: "info" | "warn" | "error" | "debug";
+  message: string;
+  context?: Record<string, unknown>;
+};
 
 function makeCapturingLogger(): { logger: AppLogger; entries: Captured[] } {
   const entries: Captured[] = [];
-  const push = (level: Captured['level']) =>
+  const push =
+    (level: Captured["level"]) =>
     (message: string, context?: Record<string, unknown>) => {
       entries.push({ level, message, context });
     };
   const logger: AppLogger = {
-    debug: push('debug'),
-    info: push('info'),
-    warn: push('warn'),
-    error: push('error'),
+    debug: push("debug"),
+    info: push("info"),
+    warn: push("warn"),
+    error: push("error"),
     child() {
       return logger;
     },
@@ -24,78 +29,78 @@ function makeCapturingLogger(): { logger: AppLogger; entries: Captured[] } {
   return { logger, entries };
 }
 
-describe('createAuditLogger', () => {
-  it('loginSuccess emits exactly the {event, userId, role, ip} envelope on info', () => {
+describe("createAuditLogger", () => {
+  it("loginSuccess emits exactly the {event, userId, role, ip} envelope on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.loginSuccess({
-      userId: 'u1',
-      role: 'lead',
-      ip: '10.0.0.1',
+      userId: "u1",
+      role: "lead",
+      ip: "10.0.0.1",
     });
 
     expect(entries).toHaveLength(1);
     const entry = expectDefined(entries[0]);
-    expect(entry.level).toBe('info');
-    expect(entry.message).toBe('audit');
+    expect(entry.level).toBe("info");
+    expect(entry.message).toBe("audit");
     expect(entry.context).toEqual({
-      event: 'login-success',
-      userId: 'u1',
-      role: 'lead',
-      ip: '10.0.0.1',
+      event: "login-success",
+      userId: "u1",
+      role: "lead",
+      ip: "10.0.0.1",
     });
     // Whitelist enforced — attemptedRole MUST NOT appear on a login-success
     // envelope; the type system blocks it at compile time and the
     // implementation never spreads extra keys.
-    expect(Object.keys(entry.context ?? {})).not.toContain('attemptedRole');
+    expect(Object.keys(entry.context ?? {})).not.toContain("attemptedRole");
   });
 
-  it('roleDenied emits the {event, userId, role, attemptedRole, ip} envelope on warn', () => {
+  it("roleDenied emits the {event, userId, role, attemptedRole, ip} envelope on warn", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.roleDenied({
-      userId: 'viewer-1',
-      role: 'viewer',
-      attemptedRole: ['head'],
-      ip: '10.0.0.2',
+      userId: "viewer-1",
+      role: "viewer",
+      attemptedRole: ["head"],
+      ip: "10.0.0.2",
     });
 
     expect(entries).toHaveLength(1);
     const entry = expectDefined(entries[0]);
-    expect(entry.level).toBe('warn');
-    expect(entry.message).toBe('audit');
+    expect(entry.level).toBe("warn");
+    expect(entry.message).toBe("audit");
     expect(entry.context).toEqual({
-      event: 'role-denied',
-      userId: 'viewer-1',
-      role: 'viewer',
-      attemptedRole: ['head'],
-      ip: '10.0.0.2',
+      event: "role-denied",
+      userId: "viewer-1",
+      role: "viewer",
+      attemptedRole: ["head"],
+      ip: "10.0.0.2",
     });
   });
 
-  it('loginFail carries the reason and emits on warn', () => {
+  it("loginFail carries the reason and emits on warn", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     // Phase 32-M8 (M-08): anonymous events emit role: null (was 'unknown').
     audit.loginFail({
-      userId: 'anonymous',
+      userId: "anonymous",
       role: null,
-      ip: '10.0.0.3',
-      reason: 'token-verify-failed',
+      ip: "10.0.0.3",
+      reason: "token-verify-failed",
     });
 
     expect(entries).toHaveLength(1);
     const entry = expectDefined(entries[0]);
-    expect(entry.level).toBe('warn');
+    expect(entry.level).toBe("warn");
     expect(entry.context).toEqual({
-      event: 'login-fail',
-      userId: 'anonymous',
+      event: "login-fail",
+      userId: "anonymous",
       role: null,
-      ip: '10.0.0.3',
-      reason: 'token-verify-failed',
+      ip: "10.0.0.3",
+      reason: "token-verify-failed",
     });
   });
 
@@ -107,60 +112,67 @@ describe('createAuditLogger', () => {
     const audit = createAuditLogger(logger);
 
     audit.logout({
-      userId: 'anonymous',
+      userId: "anonymous",
       role: null,
-      ip: '10.0.0.5',
+      ip: "10.0.0.5",
     });
 
     expect(entries).toHaveLength(1);
-    expect(expectDefined(entries[0]).level).toBe('info');
+    expect(expectDefined(entries[0]).level).toBe("info");
     expect(expectDefined(entries[0]).context).toEqual({
-      event: 'logout',
-      userId: 'anonymous',
+      event: "logout",
+      userId: "anonymous",
       role: null,
-      ip: '10.0.0.5',
+      ip: "10.0.0.5",
     });
     // Strict guard against regression — must not be the legacy literal.
-    expect(expectDefined(entries[0]).context?.['role']).not.toBe('unknown');
+    expect(expectDefined(entries[0]).context?.["role"]).not.toBe("unknown");
   });
 
-  it('logout emits {event, userId, role, ip} on info', () => {
+  it("logout emits {event, userId, role, ip} on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.logout({
-      userId: 'u9',
-      role: 'head',
-      ip: '127.0.0.1',
+      userId: "u9",
+      role: "head",
+      ip: "127.0.0.1",
     });
 
     expect(entries).toHaveLength(1);
-    expect(expectDefined(entries[0]).level).toBe('info');
+    expect(expectDefined(entries[0]).level).toBe("info");
     expect(expectDefined(entries[0]).context).toEqual({
-      event: 'logout',
-      userId: 'u9',
-      role: 'head',
-      ip: '127.0.0.1',
+      event: "logout",
+      userId: "u9",
+      role: "head",
+      ip: "127.0.0.1",
     });
   });
 
-  it('no SAML / cookie / token field can leak into the audit envelope', () => {
+  it("no SAML / cookie / token field can leak into the audit envelope", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.loginSuccess({
-      userId: 'u1',
-      role: 'lead',
-      ip: '10.0.0.1',
+      userId: "u1",
+      role: "lead",
+      ip: "10.0.0.1",
     });
     audit.roleDenied({
-      userId: 'u2',
-      role: 'viewer',
-      attemptedRole: 'head',
-      ip: '10.0.0.4',
+      userId: "u2",
+      role: "viewer",
+      attemptedRole: "head",
+      ip: "10.0.0.4",
     });
 
-    const forbidden = ['samlAssertion', 'nameID', 'cookie', 'token', 'password', 'authorization'];
+    const forbidden = [
+      "samlAssertion",
+      "nameID",
+      "cookie",
+      "token",
+      "password",
+      "authorization",
+    ];
     for (const entry of entries) {
       const keys = Object.keys(entry.context ?? {});
       for (const banned of forbidden) {
@@ -170,60 +182,67 @@ describe('createAuditLogger', () => {
   });
 });
 
-describe('createNullAuditLogger', () => {
-  it('all methods are no-ops and do not throw', () => {
+describe("createNullAuditLogger", () => {
+  it("all methods are no-ops and do not throw", () => {
     const audit = createNullAuditLogger();
     expect(() =>
-      audit.loginSuccess({ userId: 'u', role: 'lead', ip: 'x' }),
+      audit.loginSuccess({ userId: "u", role: "lead", ip: "x" }),
     ).not.toThrow();
     expect(() =>
-      audit.loginFail({ userId: 'u', role: null, ip: 'x', reason: 'r' }),
+      audit.loginFail({ userId: "u", role: null, ip: "x", reason: "r" }),
     ).not.toThrow();
-    expect(() => audit.logout({ userId: 'u', role: 'lead', ip: 'x' })).not.toThrow();
     expect(() =>
-      audit.roleDenied({ userId: 'u', role: 'viewer', attemptedRole: 'head', ip: 'x' }),
+      audit.logout({ userId: "u", role: "lead", ip: "x" }),
+    ).not.toThrow();
+    expect(() =>
+      audit.roleDenied({
+        userId: "u",
+        role: "viewer",
+        attemptedRole: "head",
+        ip: "x",
+      }),
     ).not.toThrow();
     expect(() =>
       audit.scopeDenied({
-        userId: 'u',
-        role: 'viewer',
-        ip: 'x',
-        attemptedScope: 'report',
-        resourceId: '00000000-0000-4000-8000-000000000001',
+        userId: "u",
+        role: "viewer",
+        ip: "x",
+        attemptedScope: "report",
+        resourceId: "00000000-0000-4000-8000-000000000001",
       }),
     ).not.toThrow();
     // UFB-036 / Phase 44-05: null logger must accept the new policy
     // helpers without throwing — same contract as the live impl.
     expect(() =>
       audit.policySave({
-        userId: 'u',
-        role: 'admin',
-        ip: 'x',
-        policyId: '00000000-0000-4000-8000-000000000010',
-        kind: 'deadline',
-        action: 'create',
+        userId: "u",
+        role: "admin",
+        ip: "x",
+        policyId: "00000000-0000-4000-8000-000000000010",
+        kind: "deadline",
+        action: "create",
       }),
     ).not.toThrow();
     expect(() =>
       audit.policyRemove({
-        userId: 'u',
-        role: 'admin',
-        ip: 'x',
-        policyId: '00000000-0000-4000-8000-000000000010',
+        userId: "u",
+        role: "admin",
+        ip: "x",
+        policyId: "00000000-0000-4000-8000-000000000010",
       }),
     ).not.toThrow();
   });
 });
 
-describe('createAuditLogger — scopeDenied (UFB-040 / 46-05)', () => {
-  it('emits the {event, userId, role, ip, attemptedScope, resourceId} envelope on warn', () => {
+describe("createAuditLogger — scopeDenied (UFB-040 / 46-05)", () => {
+  it("emits the {event, userId, role, ip, attemptedScope, resourceId} envelope on warn", () => {
     const calls: Array<{ level: string; meta: Record<string, unknown> }> = [];
     const logger = {
       info: () => {
         /* not used here */
       },
       warn: (_msg: string, meta: Record<string, unknown>) =>
-        calls.push({ level: 'warn', meta }),
+        calls.push({ level: "warn", meta }),
       error: () => {
         /* not used here */
       },
@@ -233,122 +252,129 @@ describe('createAuditLogger — scopeDenied (UFB-040 / 46-05)', () => {
 
     const audit = createAuditLogger(logger);
     audit.scopeDenied({
-      userId: 'u-viewer',
-      role: 'viewer',
-      ip: '10.0.0.1',
-      attemptedScope: 'report',
-      resourceId: '11111111-1111-4111-8111-111111111111',
+      userId: "u-viewer",
+      role: "viewer",
+      ip: "10.0.0.1",
+      attemptedScope: "report",
+      resourceId: "11111111-1111-4111-8111-111111111111",
     });
 
     expect(calls).toHaveLength(1);
     expect(calls[0]).toEqual({
-      level: 'warn',
+      level: "warn",
       meta: {
-        event: 'scope-denied',
-        userId: 'u-viewer',
-        role: 'viewer',
-        ip: '10.0.0.1',
-        attemptedScope: 'report',
-        resourceId: '11111111-1111-4111-8111-111111111111',
+        event: "scope-denied",
+        userId: "u-viewer",
+        role: "viewer",
+        ip: "10.0.0.1",
+        attemptedScope: "report",
+        resourceId: "11111111-1111-4111-8111-111111111111",
       },
     });
   });
 });
 
-describe('createAuditLogger — policySave / policyRemove (UFB-036 / 44-05)', () => {
-  it('policySave emits {event, userId, role, ip, policyId, kind, action} on info', () => {
+describe("createAuditLogger — policySave / policyRemove (UFB-036 / 44-05)", () => {
+  it("policySave emits {event, userId, role, ip, policyId, kind, action} on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.policySave({
-      userId: 'admin-1',
-      role: 'admin',
-      ip: '10.0.0.5',
-      policyId: '11111111-1111-4111-8111-111111111110',
-      kind: 'deadline',
-      action: 'create',
+      userId: "admin-1",
+      role: "admin",
+      ip: "10.0.0.5",
+      policyId: "11111111-1111-4111-8111-111111111110",
+      kind: "deadline",
+      action: "create",
     });
 
     expect(entries).toHaveLength(1);
     const entry = expectDefined(entries[0]);
-    expect(entry.level).toBe('info');
-    expect(entry.message).toBe('audit');
+    expect(entry.level).toBe("info");
+    expect(entry.message).toBe("audit");
     expect(entry.context).toEqual({
-      event: 'admin.policy.save',
-      userId: 'admin-1',
-      role: 'admin',
-      ip: '10.0.0.5',
-      policyId: '11111111-1111-4111-8111-111111111110',
-      kind: 'deadline',
-      action: 'create',
+      event: "admin.policy.save",
+      userId: "admin-1",
+      role: "admin",
+      ip: "10.0.0.5",
+      policyId: "11111111-1111-4111-8111-111111111110",
+      kind: "deadline",
+      action: "create",
     });
   });
 
-  it('policySave passes the action through verbatim (update path)', () => {
+  it("policySave passes the action through verbatim (update path)", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.policySave({
-      userId: 'admin-2',
-      role: 'admin',
-      ip: '10.0.0.6',
-      policyId: '22222222-2222-4222-8222-222222222220',
-      kind: 'follow_up',
-      action: 'update',
+      userId: "admin-2",
+      role: "admin",
+      ip: "10.0.0.6",
+      policyId: "22222222-2222-4222-8222-222222222220",
+      kind: "follow_up",
+      action: "update",
     });
 
     const entry = expectDefined(entries[0]);
     expect(entry.context).toMatchObject({
-      event: 'admin.policy.save',
-      action: 'update',
-      kind: 'follow_up',
+      event: "admin.policy.save",
+      action: "update",
+      kind: "follow_up",
     });
   });
 
-  it('policyRemove emits {event, userId, role, ip, policyId} on info', () => {
+  it("policyRemove emits {event, userId, role, ip, policyId} on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.policyRemove({
-      userId: 'admin-1',
-      role: 'admin',
-      ip: '10.0.0.5',
-      policyId: '11111111-1111-4111-8111-111111111110',
+      userId: "admin-1",
+      role: "admin",
+      ip: "10.0.0.5",
+      policyId: "11111111-1111-4111-8111-111111111110",
     });
 
     expect(entries).toHaveLength(1);
     const entry = expectDefined(entries[0]);
-    expect(entry.level).toBe('info');
-    expect(entry.message).toBe('audit');
+    expect(entry.level).toBe("info");
+    expect(entry.message).toBe("audit");
     expect(entry.context).toEqual({
-      event: 'admin.policy.remove',
-      userId: 'admin-1',
-      role: 'admin',
-      ip: '10.0.0.5',
-      policyId: '11111111-1111-4111-8111-111111111110',
+      event: "admin.policy.remove",
+      userId: "admin-1",
+      role: "admin",
+      ip: "10.0.0.5",
+      policyId: "11111111-1111-4111-8111-111111111110",
     });
   });
 
-  it('PII-safe — no SAML/cookie/token leak through the policy envelope', () => {
+  it("PII-safe — no SAML/cookie/token leak through the policy envelope", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.policySave({
-      userId: 'admin-3',
-      role: 'admin',
-      ip: '10.0.0.7',
-      policyId: '33333333-3333-4333-8333-333333333330',
-      kind: 'escalation',
-      action: 'create',
+      userId: "admin-3",
+      role: "admin",
+      ip: "10.0.0.7",
+      policyId: "33333333-3333-4333-8333-333333333330",
+      kind: "escalation",
+      action: "create",
     });
     audit.policyRemove({
-      userId: 'admin-3',
-      role: 'admin',
-      ip: '10.0.0.7',
-      policyId: '33333333-3333-4333-8333-333333333330',
+      userId: "admin-3",
+      role: "admin",
+      ip: "10.0.0.7",
+      policyId: "33333333-3333-4333-8333-333333333330",
     });
 
-    const forbidden = ['samlAssertion', 'nameID', 'cookie', 'token', 'password', 'authorization'];
+    const forbidden = [
+      "samlAssertion",
+      "nameID",
+      "cookie",
+      "token",
+      "password",
+      "authorization",
+    ];
     for (const entry of entries) {
       const keys = Object.keys(entry.context ?? {});
       for (const banned of forbidden) {
@@ -358,214 +384,214 @@ describe('createAuditLogger — policySave / policyRemove (UFB-036 / 44-05)', ()
   });
 });
 
-describe('createAuditLogger — period.auto-* (UFB-049 / 50-B)', () => {
-  it('periodAutoCreate emits {event, userId=system, role=null, ip=cron, periodId, dates} on info', () => {
+describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
+  it("periodAutoCreate emits {event, userId=system, role=null, ip=cron, periodId, dates} on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.periodAutoCreate({
-      periodId: '00000000-0000-4000-8000-000000000050',
-      periodStart: '2026-05-04T00:00:00.000Z',
-      periodEnd: '2026-05-10T23:59:59.999Z',
-      deadline: '2026-05-08T15:00:00.000Z',
+      periodId: "00000000-0000-4000-8000-000000000050",
+      periodStart: "2026-05-04T00:00:00.000Z",
+      periodEnd: "2026-05-10T23:59:59.999Z",
+      deadline: "2026-05-08T15:00:00.000Z",
       // UFB-053 / Phase 51-C: state-transition payload. Fresh create has
       // no prior state — `from = null`.
       from: null,
-      to: 'open',
+      to: "open",
     });
 
     expect(entries).toHaveLength(1);
     const entry = expectDefined(entries[0]);
-    expect(entry.level).toBe('info');
-    expect(entry.message).toBe('audit');
+    expect(entry.level).toBe("info");
+    expect(entry.message).toBe("audit");
     expect(entry.context).toEqual({
-      event: 'period.auto-create',
-      userId: 'system',
+      event: "period.auto-create",
+      userId: "system",
       role: null,
-      ip: 'cron',
-      periodId: '00000000-0000-4000-8000-000000000050',
-      periodStart: '2026-05-04T00:00:00.000Z',
-      periodEnd: '2026-05-10T23:59:59.999Z',
-      deadline: '2026-05-08T15:00:00.000Z',
+      ip: "cron",
+      periodId: "00000000-0000-4000-8000-000000000050",
+      periodStart: "2026-05-04T00:00:00.000Z",
+      periodEnd: "2026-05-10T23:59:59.999Z",
+      deadline: "2026-05-08T15:00:00.000Z",
       from: null,
-      to: 'open',
+      to: "open",
     });
   });
 
-  it('periodAutoPublish emits {event, system attribution, periodId, missingSectionsCount} on info', () => {
+  it("periodAutoPublish emits {event, system attribution, periodId, missingSectionsCount} on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.periodAutoPublish({
-      periodId: '00000000-0000-4000-8000-000000000051',
+      periodId: "00000000-0000-4000-8000-000000000051",
       missingSectionsCount: 2,
       // UFB-053 / Phase 51-C: state-transition payload.
-      from: 'open',
-      to: 'published',
+      from: "open",
+      to: "published",
     });
 
     expect(entries).toHaveLength(1);
     const entry = expectDefined(entries[0]);
-    expect(entry.level).toBe('info');
+    expect(entry.level).toBe("info");
     expect(entry.context).toEqual({
-      event: 'period.auto-publish',
-      userId: 'system',
+      event: "period.auto-publish",
+      userId: "system",
       role: null,
-      ip: 'cron',
-      periodId: '00000000-0000-4000-8000-000000000051',
+      ip: "cron",
+      periodId: "00000000-0000-4000-8000-000000000051",
       missingSectionsCount: 2,
-      from: 'open',
-      to: 'published',
+      from: "open",
+      to: "published",
     });
   });
 
-  it('periodAutoArchive emits {event, system attribution, periodId} on info', () => {
+  it("periodAutoArchive emits {event, system attribution, periodId} on info", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.periodAutoArchive({
-      periodId: '00000000-0000-4000-8000-000000000052',
+      periodId: "00000000-0000-4000-8000-000000000052",
       // UFB-053 / Phase 51-C: state-transition payload.
-      from: 'published',
-      to: 'archived',
+      from: "published",
+      to: "archived",
     });
 
     expect(entries).toHaveLength(1);
     const entry = expectDefined(entries[0]);
-    expect(entry.level).toBe('info');
+    expect(entry.level).toBe("info");
     expect(entry.context).toEqual({
-      event: 'period.auto-archive',
-      userId: 'system',
+      event: "period.auto-archive",
+      userId: "system",
       role: null,
-      ip: 'cron',
-      periodId: '00000000-0000-4000-8000-000000000052',
-      from: 'published',
-      to: 'archived',
+      ip: "cron",
+      periodId: "00000000-0000-4000-8000-000000000052",
+      from: "published",
+      to: "archived",
     });
   });
 
-  it('createNullAuditLogger noop branches for the three new events', () => {
+  it("createNullAuditLogger noop branches for the three new events", () => {
     const audit = createNullAuditLogger();
     expect(() =>
       audit.periodAutoCreate({
-        periodId: 'p1',
-        periodStart: 's',
-        periodEnd: 'e',
-        deadline: 'd',
+        periodId: "p1",
+        periodStart: "s",
+        periodEnd: "e",
+        deadline: "d",
         // UFB-053 / Phase 51-C: state-transition payload.
         from: null,
-        to: 'open',
+        to: "open",
       }),
     ).not.toThrow();
     expect(() =>
       audit.periodAutoPublish({
-        periodId: 'p2',
+        periodId: "p2",
         missingSectionsCount: 0,
-        from: 'open',
-        to: 'published',
+        from: "open",
+        to: "published",
       }),
     ).not.toThrow();
     expect(() =>
       audit.periodAutoArchive({
-        periodId: 'p3',
-        from: 'published',
-        to: 'archived',
+        periodId: "p3",
+        from: "published",
+        to: "archived",
       }),
     ).not.toThrow();
     // UFB-063: noop branch for the manual-create event.
     expect(() =>
       audit.periodManualCreate({
-        userId: 'admin-1',
-        role: 'admin',
-        ip: '10.0.0.1',
-        periodId: 'p4',
-        periodStart: 's',
-        periodEnd: 'e',
-        deadline: 'd',
+        userId: "admin-1",
+        role: "admin",
+        ip: "10.0.0.1",
+        periodId: "p4",
+        periodStart: "s",
+        periodEnd: "e",
+        deadline: "d",
         from: null,
-        to: 'open',
+        to: "open",
       }),
     ).not.toThrow();
     // UFB-067: noop branch for the manual-edit event.
     expect(() =>
       audit.periodManualEdit({
-        userId: 'admin-1',
-        role: 'admin',
-        ip: '10.0.0.1',
-        periodId: 'p5',
-        changes: { deadline: { from: 'a', to: 'b' } },
+        userId: "admin-1",
+        role: "admin",
+        ip: "10.0.0.1",
+        periodId: "p5",
+        changes: { deadline: { from: "a", to: "b" } },
       }),
     ).not.toThrow();
   });
 
-  it('periodManualCreate emits {event, real-user attribution, periodId, dates} on info (UFB-063)', () => {
+  it("periodManualCreate emits {event, real-user attribution, periodId, dates} on info (UFB-063)", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.periodManualCreate({
-      userId: 'admin-1',
-      role: 'admin',
-      ip: '10.0.0.42',
-      periodId: '00000000-0000-4000-8000-000000000063',
-      periodStart: '2026-05-18T00:00:00.000Z',
-      periodEnd: '2026-05-24T23:59:59.999Z',
-      deadline: '2026-05-22T15:00:00.000Z',
+      userId: "admin-1",
+      role: "admin",
+      ip: "10.0.0.42",
+      periodId: "00000000-0000-4000-8000-000000000063",
+      periodStart: "2026-05-18T00:00:00.000Z",
+      periodEnd: "2026-05-24T23:59:59.999Z",
+      deadline: "2026-05-22T15:00:00.000Z",
       from: null,
-      to: 'open',
+      to: "open",
     });
 
     expect(entries).toHaveLength(1);
     const entry = expectDefined(entries[0]);
-    expect(entry.level).toBe('info');
-    expect(entry.message).toBe('audit');
+    expect(entry.level).toBe("info");
+    expect(entry.message).toBe("audit");
     expect(entry.context).toEqual({
-      event: 'period.manual-create',
-      userId: 'admin-1',
-      role: 'admin',
-      ip: '10.0.0.42',
-      periodId: '00000000-0000-4000-8000-000000000063',
-      periodStart: '2026-05-18T00:00:00.000Z',
-      periodEnd: '2026-05-24T23:59:59.999Z',
-      deadline: '2026-05-22T15:00:00.000Z',
+      event: "period.manual-create",
+      userId: "admin-1",
+      role: "admin",
+      ip: "10.0.0.42",
+      periodId: "00000000-0000-4000-8000-000000000063",
+      periodStart: "2026-05-18T00:00:00.000Z",
+      periodEnd: "2026-05-24T23:59:59.999Z",
+      deadline: "2026-05-22T15:00:00.000Z",
       from: null,
-      to: 'open',
+      to: "open",
     });
   });
 
-  it('periodManualEdit emits {event, real-user attribution, changes} on info (UFB-067)', () => {
+  it("periodManualEdit emits {event, real-user attribution, changes} on info (UFB-067)", () => {
     const { logger, entries } = makeCapturingLogger();
     const audit = createAuditLogger(logger);
 
     audit.periodManualEdit({
-      userId: 'admin-1',
-      role: 'admin',
-      ip: '10.0.0.42',
-      periodId: '00000000-0000-4000-8000-000000000067',
+      userId: "admin-1",
+      role: "admin",
+      ip: "10.0.0.42",
+      periodId: "00000000-0000-4000-8000-000000000067",
       changes: {
         deadline: {
-          from: '2026-05-09T15:00:00.000Z',
-          to: '2026-05-10T15:00:00.000Z',
+          from: "2026-05-09T15:00:00.000Z",
+          to: "2026-05-10T15:00:00.000Z",
         },
-        weekLabel: { from: 'Sprint 11', to: 'Sprint 11 (extended)' },
+        weekLabel: { from: "Sprint 11", to: "Sprint 11 (extended)" },
       },
     });
 
     expect(entries).toHaveLength(1);
     const entry = expectDefined(entries[0]);
-    expect(entry.level).toBe('info');
-    expect(entry.message).toBe('audit');
+    expect(entry.level).toBe("info");
+    expect(entry.message).toBe("audit");
     expect(entry.context).toEqual({
-      event: 'period.manual-edit',
-      userId: 'admin-1',
-      role: 'admin',
-      ip: '10.0.0.42',
-      periodId: '00000000-0000-4000-8000-000000000067',
+      event: "period.manual-edit",
+      userId: "admin-1",
+      role: "admin",
+      ip: "10.0.0.42",
+      periodId: "00000000-0000-4000-8000-000000000067",
       changes: {
         deadline: {
-          from: '2026-05-09T15:00:00.000Z',
-          to: '2026-05-10T15:00:00.000Z',
+          from: "2026-05-09T15:00:00.000Z",
+          to: "2026-05-10T15:00:00.000Z",
         },
-        weekLabel: { from: 'Sprint 11', to: 'Sprint 11 (extended)' },
+        weekLabel: { from: "Sprint 11", to: "Sprint 11 (extended)" },
       },
     });
   });

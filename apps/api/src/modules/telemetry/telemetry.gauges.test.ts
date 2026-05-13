@@ -1,14 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   customreportActiveLeadsTotal,
   customreportReportsOnTimeRatio,
-} from '../../infrastructure/metrics/metrics.registry.js';
+} from "../../infrastructure/metrics/metrics.registry.js";
 
 import {
   TelemetryGauges,
   type TelemetryGaugesPort,
-} from './telemetry.gauges.js';
+} from "./telemetry.gauges.js";
 
 function buildPort(opts: {
   onTimeRatio?: number | null;
@@ -26,7 +26,9 @@ function buildPort(opts: {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function gaugeValue(gauge: {
-  get(): Promise<{ values: Array<{ value: number; labels: Record<string, any> }> }>;
+  get(): Promise<{
+    values: Array<{ value: number; labels: Record<string, any> }>;
+  }>;
 }): Promise<number | null> {
   const snapshot = await gauge.get();
   const first = snapshot.values[0];
@@ -34,8 +36,8 @@ async function gaugeValue(gauge: {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-describe('TelemetryGauges — Phase 52-A (UFB-054)', () => {
-  it('on-time ratio gauge updates from the port at scrape time', async () => {
+describe("TelemetryGauges — Phase 52-A (UFB-054)", () => {
+  it("on-time ratio gauge updates from the port at scrape time", async () => {
     const gauges = new TelemetryGauges(buildPort({ onTimeRatio: 0.85 }));
     gauges.onModuleInit();
 
@@ -44,7 +46,7 @@ describe('TelemetryGauges — Phase 52-A (UFB-054)', () => {
     gauges.onModuleDestroy();
   });
 
-  it('active-leads gauge updates from the port at scrape time', async () => {
+  it("active-leads gauge updates from the port at scrape time", async () => {
     const gauges = new TelemetryGauges(buildPort({ activeLeads: 6 }));
     gauges.onModuleInit();
 
@@ -53,7 +55,7 @@ describe('TelemetryGauges — Phase 52-A (UFB-054)', () => {
     gauges.onModuleDestroy();
   });
 
-  it('on-time ratio gauge stays unset when the port returns null (no eligible data)', async () => {
+  it("on-time ratio gauge stays unset when the port returns null (no eligible data)", async () => {
     // Pre-set a sentinel so we can prove the collect callback did NOT
     // overwrite it when the port returns null. Real production would
     // surface NaN to Prom; the dashboard renders that as "no data".
@@ -66,7 +68,7 @@ describe('TelemetryGauges — Phase 52-A (UFB-054)', () => {
     gauges.onModuleDestroy();
   });
 
-  it('onModuleDestroy clears the collect callback so a torn-down port does not fire', async () => {
+  it("onModuleDestroy clears the collect callback so a torn-down port does not fire", async () => {
     const gauges = new TelemetryGauges(buildPort({ activeLeads: 9 }));
     gauges.onModuleInit();
     expect(await gaugeValue(customreportActiveLeadsTotal)).toBe(9);

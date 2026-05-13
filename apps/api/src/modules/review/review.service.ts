@@ -2,12 +2,12 @@ import {
   submissionDashboardRowSchema,
   type SubmissionDashboardRow,
   type UserSession,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 export class ReviewAccessError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'ReviewAccessError';
+    this.name = "ReviewAccessError";
   }
 }
 
@@ -20,7 +20,7 @@ export class ReviewAccessError extends Error {
  */
 export type DashboardScopeSession = Pick<
   UserSession,
-  'role' | 'reportingGroupId' | 'viewerGroupAccess'
+  "role" | "reportingGroupId" | "viewerGroupAccess"
 >;
 
 export interface ReviewRepository {
@@ -30,7 +30,7 @@ export interface ReviewRepository {
   ): Promise<SubmissionDashboardRow[]>;
 }
 
-const statusOrder: Record<SubmissionDashboardRow['status'], number> = {
+const statusOrder: Record<SubmissionDashboardRow["status"], number> = {
   draft: 0,
   submitted: 1,
 };
@@ -43,7 +43,7 @@ function sortRows(rows: SubmissionDashboardRow[]): SubmissionDashboardRow[] {
       return statusDiff;
     }
 
-    return left.leadName.localeCompare(right.leadName, 'ru');
+    return left.leadName.localeCompare(right.leadName, "ru");
   });
 }
 

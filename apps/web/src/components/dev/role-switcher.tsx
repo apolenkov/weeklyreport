@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
-import { Button } from '@customreport/ui/components/ui/button';
+import { Button } from "@customreport/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,31 +11,31 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@customreport/ui/components/ui/dropdown-menu';
+} from "@customreport/ui/components/ui/dropdown-menu";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
-type Role = 'head' | 'lead' | 'admin' | 'viewer' | 'director';
-type DataResetVariant = 'minimum' | 'advanced' | 'manual-uat';
+type Role = "head" | "lead" | "admin" | "viewer" | "director";
+type DataResetVariant = "minimum" | "advanced" | "manual-uat";
 
 const ROLE_LABEL: Record<Role, string> = {
-  head: 'Department Head',
-  admin: 'Admin',
-  lead: 'Lead',
-  viewer: 'Viewer',
+  head: "Department Head",
+  admin: "Admin",
+  lead: "Lead",
+  viewer: "Viewer",
   // UFB-057 / Phase 57: dev-mode role switcher picker entry.
-  director: 'Director',
+  director: "Director",
 };
 
-const ROLE_ORDER: Role[] = ['head', 'admin', 'director', 'lead', 'viewer'];
+const ROLE_ORDER: Role[] = ["head", "admin", "director", "lead", "viewer"];
 
 export function DevRoleSwitcher() {
   const [pending, setPending] = useState(false);
   const trpc = useTRPC();
 
   const enabled =
-    process.env.NODE_ENV !== 'production' &&
-    process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === 'true';
+    process.env.NODE_ENV !== "production" &&
+    process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === "true";
 
   const usersQ = useQuery({
     ...trpc.dev.listUsers.queryOptions(),
@@ -87,9 +87,9 @@ export function DevRoleSwitcher() {
   const logout = async () => {
     setPending(true);
     try {
-      await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch("/auth/logout", { method: "POST", credentials: "include" });
     } finally {
-      window.location.href = '/';
+      window.location.href = "/";
     }
   };
 
@@ -155,19 +155,19 @@ export function DevRoleSwitcher() {
           })}
           <DropdownMenuLabel>Data</DropdownMenuLabel>
           <DropdownMenuItem
-            onSelect={() => reseed('minimum')}
+            onSelect={() => reseed("minimum")}
             data-testid="dev-role-switcher-reseed-min"
           >
             Wipe + Reseed (minimum)
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={() => reseed('advanced')}
+            onSelect={() => reseed("advanced")}
             data-testid="dev-role-switcher-reseed-full"
           >
             Wipe + Reseed (full)
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={() => reseed('manual-uat')}
+            onSelect={() => reseed("manual-uat")}
             data-testid="dev-role-switcher-wipe-manual-uat"
           >
             Wipe reports (manual UAT)

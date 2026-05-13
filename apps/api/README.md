@@ -4,17 +4,17 @@ NestJS 11 backend with tRPC API, Prisma ORM, and JWT/SAML authentication.
 
 ## Modules
 
-| Module | Purpose |
-|--------|---------|
-| `auth` | SAML login/callback/logout, dev-login, JWT cookie sessions |
-| `report-sections` | Lead report CRUD: getActive, saveDraft, submit |
-| `review` | Head dashboard and assembled report views |
-| `publication` | Report publishing workflow |
-| `pdf-export` | Async PDF generation via Playwright |
-| `admin` | User, project, period, reminder CRUD |
-| `reminders` | Email reminder rules and execution |
-| `carry-over` | Carry previous report data to next period |
-| `archive` | Published report history |
+| Module            | Purpose                                                    |
+| ----------------- | ---------------------------------------------------------- |
+| `auth`            | SAML login/callback/logout, dev-login, JWT cookie sessions |
+| `report-sections` | Lead report CRUD: getActive, saveDraft, submit             |
+| `review`          | Head dashboard and assembled report views                  |
+| `publication`     | Report publishing workflow                                 |
+| `pdf-export`      | Async PDF generation via Playwright                        |
+| `admin`           | User, project, period, reminder CRUD                       |
+| `reminders`       | Email reminder rules and execution                         |
+| `carry-over`      | Carry previous report data to next period                  |
+| `archive`         | Published report history                                   |
 
 ## tRPC Routers
 

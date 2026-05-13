@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { QueryClientProvider } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
-import { Toaster } from '@customreport/ui/components/ui/sonner';
-import { makeQueryClient } from './query-client';
-import { makeTRPCProxy, type TRPCProxy } from './trpc';
-import { TRPCProxyContext } from './trpc-context';
-import { installClientLogger } from './client-logger';
+import { QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useState, type ReactNode } from "react";
+import { Toaster } from "@customreport/ui/components/ui/sonner";
+import { makeQueryClient } from "./query-client";
+import { makeTRPCProxy, type TRPCProxy } from "./trpc";
+import { TRPCProxyContext } from "./trpc-context";
+import { installClientLogger } from "./client-logger";
 
 type TRPCProviderProps = Readonly<{ children: ReactNode }>;
 

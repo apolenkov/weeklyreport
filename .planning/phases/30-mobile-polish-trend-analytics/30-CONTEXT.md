@@ -10,6 +10,7 @@
 Wave 4 of v6.0: all 7 product pages usable on 375px viewport; head + viewers see how traffic lights, velocity, risk delta moved across last 12 periods.
 
 **In scope (11 REQ-IDs):**
+
 - MOB-01..07: mobile polish — Playwright mobile-ios/mobile-android projects, 375px no-horizontal-scroll assertions, touch targets ≥44px, head dashboard table → card list at md-, admin tabs → native select on narrow, lead risk editor full-screen Dialog on mobile, PDF preview → "Open PDF" button on mobile, hamburger menu in app-shell
 - ANAL-01: `analytics.trafficLightHistory` tRPC procedure with Redis cache + invalidation hooks on period.publish/period.reopen
 - ANAL-02: `analytics.leadVelocity` Prisma GROUP BY, TZ-stable
@@ -17,6 +18,7 @@ Wave 4 of v6.0: all 7 product pages usable on 375px viewport; head + viewers see
 - ANAL-04: `/reports/trends` RSC page with shadcn-ui Chart + recharts (sparkline, stacked bar, delta table); null vs zero visually distinct
 
 **Out of scope:**
+
 - AI features (Phase 31)
 - Email reminder UX (Phase 29 closed it)
 
@@ -28,9 +30,11 @@ Wave 4 of v6.0: all 7 product pages usable on 375px viewport; head + viewers see
 ## Implementation Decisions
 
 ### Claude's Discretion
+
 All implementation choices at Claude's discretion — discuss skipped per workflow.skip_discuss=true. Use ROADMAP phase description, success criteria, ARCHITECTURE.md, Phase 27/28/29 PHASE artifacts.
 
 ### Locked Decisions from Research
+
 - `recharts` + shadcn-ui Chart (Tailwind v4 CSS-variable theming; Tremor/Plotly/D3 rejected per StackResearch)
 - TZ-stable: server pre-formats ISO 'YYYY-MM-DD' labels — no client-side `new Date()` (per D-2 pitfall)
 - Redis cache TTL 1h, key `analytics:traffic-light:${query-hash}`; invalidate on `period.publish` + `period.reopen` (already-existing publish/reopen flows in `apps/api/src/modules/period/`)
@@ -38,6 +42,7 @@ All implementation choices at Claude's discretion — discuss skipped per workfl
 - shadcn-ui Chart on top of recharts: lazy-import client boundaries, RSC page wrapper
 
 ### Phase Sequencing (suggested)
+
 - Plan 30-01 — ANAL-01 trafficLightHistory tRPC + Redis cache + invalidation hooks (foundation; depends on Phase 28 role middleware)
 - Plan 30-02 — ANAL-02/03 leadVelocity + periodComparison tRPC + integration tests under TZ=Moscow/UTC
 - Plan 30-03 — ANAL-04 `/reports/trends` RSC page + 3 chart client-boundary components
@@ -47,9 +52,11 @@ All implementation choices at Claude's discretion — discuss skipped per workfl
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 ### Reusable Assets
+
 - `apps/web/playwright.config.ts` (mock E2E) and `apps/web/playwright.integration.config.ts` — base for adding mobile-ios/mobile-android projects
 - `packages/ui/src/components/ui/button.tsx` — shadcn-ui Button (extend with size='touch')
 - `apps/web/src/components/navigation/app-shell.tsx` — current nav (Phase 29 added role hides; extend with mobile hamburger)
@@ -57,12 +64,14 @@ All implementation choices at Claude's discretion — discuss skipped per workfl
 - `apps/web/src/lib/trpc.ts` — TRPCProvider with httpBatchLink (analytics queries piggyback)
 
 ### Established Patterns
+
 - Prisma GROUP BY queries: see Phase 28 `archive.service.ts` for shape
 - Redis caching: ioredis already in stack; key `${prefix}:${query-hash}` pattern from Phase 28 PDF cookie work
 - shadcn-ui Chart: install via `pnpm dlx shadcn@latest add chart` if not already present; uses CSS variables from Tailwind v4 @theme
 - RSC + lazy client boundary: `'use client'` directive on chart components only, RSC page imports them via dynamic import
 
 ### Integration Points
+
 - Phase 28 role filters: `analytics.*` procedures must use `headProcedure` or `viewerProcedure` per role
 - Phase 31 (AI) consumes `analytics.*` data for AI summaries
 - Mobile tests require Playwright Chromium installed (already done from Phase 27)

@@ -17,7 +17,7 @@
  * Stateless and hook-free — safe to render server-side.
  */
 
-import { Skeleton } from '@customreport/ui/components/ui/skeleton';
+import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
 /**
  * Mirrors {@link PortfolioOverviewTable}'s per-product card:

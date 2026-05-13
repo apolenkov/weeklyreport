@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 // Captures browser console.error/warn, window error events and unhandled
 // promise rejections, batches them, and POSTs to /api/client-logs so all
@@ -8,12 +8,12 @@
 // NEXT_PUBLIC_CLIENT_LOG_FORWARDING is not 'true'. Enable via
 // .env.development by default; opt-in in prod.
 
-type Level = 'debug' | 'info' | 'warn' | 'error';
+type Level = "debug" | "info" | "warn" | "error";
 
 type Entry = {
   level: Level;
   message: string;
-  source: 'console' | 'window-error' | 'unhandled-rejection';
+  source: "console" | "window-error" | "unhandled-rejection";
   url?: string;
   stack?: string;
   ts: number;
@@ -29,7 +29,7 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 function safeStringify(arg: unknown): string {
   if (arg instanceof Error) return arg.message;
-  if (typeof arg === 'string') return arg;
+  if (typeof arg === "string") return arg;
   try {
     return JSON.stringify(arg);
   } catch {
@@ -55,9 +55,9 @@ async function flush() {
   if (queue.length === 0) return;
   const batch = queue.splice(0, queue.length);
   try {
-    await fetch('/api/client-logs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    await fetch("/api/client-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ entries: batch }),
       keepalive: true,
     });
@@ -69,8 +69,8 @@ async function flush() {
 
 export function installClientLogger(): void {
   if (installed) return;
-  if (typeof window === 'undefined') return;
-  if (process.env.NEXT_PUBLIC_CLIENT_LOG_FORWARDING !== 'true') return;
+  if (typeof window === "undefined") return;
+  if (process.env.NEXT_PUBLIC_CLIENT_LOG_FORWARDING !== "true") return;
   installed = true;
 
   const origError = console.error.bind(console);
@@ -78,9 +78,9 @@ export function installClientLogger(): void {
 
   console.error = (...args: unknown[]) => {
     enqueue({
-      level: 'error',
-      message: args.map(safeStringify).join(' '),
-      source: 'console',
+      level: "error",
+      message: args.map(safeStringify).join(" "),
+      source: "console",
       url: window.location.href,
       stack: args.find((a): a is Error => a instanceof Error)?.stack,
       ts: Date.now(),
@@ -90,32 +90,32 @@ export function installClientLogger(): void {
 
   console.warn = (...args: unknown[]) => {
     enqueue({
-      level: 'warn',
-      message: args.map(safeStringify).join(' '),
-      source: 'console',
+      level: "warn",
+      message: args.map(safeStringify).join(" "),
+      source: "console",
       url: window.location.href,
       ts: Date.now(),
     });
     origWarn(...args);
   };
 
-  window.addEventListener('error', (event) => {
+  window.addEventListener("error", (event) => {
     enqueue({
-      level: 'error',
+      level: "error",
       message: event.message,
-      source: 'window-error',
+      source: "window-error",
       url: event.filename || window.location.href,
       stack: event.error instanceof Error ? event.error.stack : undefined,
       ts: Date.now(),
     });
   });
 
-  window.addEventListener('unhandledrejection', (event) => {
+  window.addEventListener("unhandledrejection", (event) => {
     const reason = event.reason;
     enqueue({
-      level: 'error',
+      level: "error",
       message: safeStringify(reason),
-      source: 'unhandled-rejection',
+      source: "unhandled-rejection",
       url: window.location.href,
       stack: reason instanceof Error ? reason.stack : undefined,
       ts: Date.now(),
@@ -123,7 +123,7 @@ export function installClientLogger(): void {
   });
 
   // Flush on tab hide/unload.
-  window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') void flush();
+  window.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") void flush();
   });
 }

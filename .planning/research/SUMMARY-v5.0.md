@@ -20,13 +20,16 @@ Key risks: (1) Type divergence breaks compilation if handled via find-and-replac
 No new framework decisions -- v5.0 builds on the existing stack. Only targeted additions:
 
 **New packages (apps/web):**
+
 - `@trpc/tanstack-react-query` ^11.16.0: React Compiler-safe tRPC client -- MANDATORY because reactCompiler: true is enabled and classic @trpc/react-query proxy hooks break under React Compiler
 - `client-only` + `server-only`: Required by tRPC RSC setup for boundary markers
 
 **New packages (apps/api):**
+
 - `nestjs-cls` ^6.2.0: Request-scoped correlation ID propagation via AsyncLocalStorage -- integrates with NestJS DI, referenced in official NestJS docs, 500K+ weekly downloads
 
 **Package to remove:**
+
 - `@trpc/react-query`: Breaks under React Compiler (hooks-as-props pattern violates rules of hooks)
 
 **Logger decision (RESOLVED):** The existing custom AppLoggerImpl is NOT pino (STACK.md's recommendation to add pino is overruled). The custom logger already handles structured JSON, daily rotation, pruning, and child loggers. Enhance it with nestjs-cls for correlation ID propagation via AsyncLocalStorage. Do NOT replace with pino or winston -- that is over-engineering for 6 users and risks breaking the existing tested interface.
@@ -34,6 +37,7 @@ No new framework decisions -- v5.0 builds on the existing stack. Only targeted a
 ### Expected Features
 
 **Must have (table stakes) -- without these, v5.0 is still a prototype:**
+
 - **TS-1: Type alignment** -- Mapper layer translating API types to component prop types (6 semantic mismatches identified)
 - **TS-2: Database seed** -- Mockup-aligned seed with exact names, UUIDs, and data counts matching current UI
 - **TS-3: tRPC client wiring** -- Replace 38 mock imports across 7 containers with useQuery/useMutation calls
@@ -41,11 +45,13 @@ No new framework decisions -- v5.0 builds on the existing stack. Only targeted a
 - **TS-5: Auth session guard** -- proxy.ts cookie check (session-existence only, no role enforcement in v5.0)
 
 **Should have (differentiators):**
+
 - **DF-1: Stage-to-Risk auto-sync** -- User-requested. Auto-create risk when stage set to At Risk/Blocked. Safe/additive.
 - **DF-3: Logging enhancement** -- Add nestjs-cls correlation IDs + request/response logging to existing custom logger
 - **DF-4: Integration tests** -- 20-30 Playwright tests against real API (separate directory, not replacing mock tests)
 
 **Defer to v6.0:**
+
 - DF-2 (Risk-to-Stage suggestion) -- Requires user confirmation UX, lower priority
 - tRPC client RSC prefetching optimization (already forced to migrate client, but RSC prefetch is optional)
 - Role-based route guards (PROJECT.md: "admin with full access for regression")
@@ -73,17 +79,19 @@ The v4.0 codebase has clean container/presentation separation: 7 container compo
 
 5. **Status-to-Risk sync creates infinite loops** -- Stage change triggers risk creation, risk creation triggers stage change. Use a SyncSource ref flag ('user' | 'auto-sync'), NOT debounce. Auto-sync only fires on user-initiated actions.
 
-**Dismissed:** PITFALLS.md Pitfall 7 claims no /trpc rewrite exists in next.config.ts. This is factually wrong -- verified: rewrites with /trpc/:path* destination already configured. Ignore this pitfall.
+**Dismissed:** PITFALLS.md Pitfall 7 claims no /trpc rewrite exists in next.config.ts. This is factually wrong -- verified: rewrites with /trpc/:path\* destination already configured. Ignore this pitfall.
 
 ## Implications for Roadmap
 
 ### Phase 1: Seed + Type Foundation
+
 **Rationale:** Everything depends on matching data and correct types. These two are independent of each other and can run in parallel.
 **Delivers:** (a) Test-backward seed in prisma/seed.ts with DEV_SESSION UUIDs, canonical names, mockup-aligned data counts; (b) Mapper layer in apps/web/src/lib/mappers/ with unit tests for all 6 semantic mismatches; (c) seed-constants.ts as single source of truth for names/IDs.
 **Addresses:** TS-1, TS-2
 **Avoids:** Pitfalls 1 (type divergence), 3 (UUID mismatch), 6 (name inconsistency across mocks)
 
 ### Phase 2: tRPC Provider + Client Migration
+
 **Rationale:** Unblocks all page wiring. Must happen before any useQuery call. Includes mandatory migration from @trpc/react-query to @trpc/tanstack-react-query because React Compiler is enabled.
 **Delivers:** (a) TRPCProvider in (app)/layout.tsx; (b) New tRPC client using createTRPCOptionsProxy with queryOptions pattern; (c) Error boundaries around major page sections; (d) Smoke test proving superjson Date roundtrip works.
 **Addresses:** TS-3 (prerequisite)
@@ -91,18 +99,21 @@ The v4.0 codebase has clean container/presentation separation: 7 container compo
 **Research flag:** Verify exact @trpc/tanstack-react-query API surface -- STACK.md notes "verify exact import names against package exports during implementation."
 
 ### Phase 3: Page-by-Page tRPC Wiring
+
 **Rationale:** Incremental migration limits blast radius. One page at a time, run E2E after each.
 **Delivers:** All 7 container components using real tRPC queries instead of mock data. Loading skeletons for async states.
 **Order within phase (simplest to most complex):**
+
 1. Lead History (single endpoint, flat data)
 2. Admin Panel (single snapshot endpoint, 6 tabs)
 3. Weekly Report + Archive pages (single endpoint, shape mapping)
 4. Dashboard (3 endpoints, computed KPI)
 5. Lead Form (4+ endpoints, complex state)
-**Addresses:** TS-3
-**Avoids:** Pitfall 4 (E2E three-way breakage -- caught incrementally), Pitfall 11 (loading states)
+   **Addresses:** TS-3
+   **Avoids:** Pitfall 4 (E2E three-way breakage -- caught incrementally), Pitfall 11 (loading states)
 
 ### Phase 4: Button Interactivity + Status-Risk Sync
+
 **Rationale:** Mutations depend on queries being stable. Status-Risk sync is user-requested and builds on mutation infrastructure.
 **Delivers:** (a) 72 onClick handlers wired to real mutations; (b) Stage-to-Risk auto-create (safe/additive direction); (c) Optimistic updates for perceived instant feedback.
 **Addresses:** TS-4, DF-1
@@ -110,18 +121,21 @@ The v4.0 codebase has clean container/presentation separation: 7 container compo
 **Note on DF-2:** Risk-to-Stage suggestion (reverse direction) requires user confirmation and should defer to v6.0. Stage-to-Risk is safe because adding a risk row is additive. Risk-to-Stage changes dashboard state and needs consent.
 
 ### Phase 5: Auth Session Guard (parallel with Phase 3-4)
+
 **Rationale:** Independent of mock-to-real migration. Can start as soon as provider exists.
 **Delivers:** (a) proxy.ts cookie-existence check redirecting unauthenticated users; (b) Session context in (app)/layout.tsx for NavBar user display; (c) AUTH_DEV_MODE respected on both frontend and backend.
 **Addresses:** TS-5
 **Avoids:** Pitfall 9 (split-brain between frontend guard and backend DEV_MODE)
 
 ### Phase 6: Logging Enhancement (parallel with Phase 3-4)
+
 **Rationale:** Fully independent. No UI impact. Can run in parallel with any other phase.
 **Delivers:** (a) nestjs-cls integration for request-scoped correlation IDs; (b) CorrelationIdMiddleware stores ID via ClsService; (c) tRPC request/response logging middleware (procedure, userId, durationMs); (d) Error serialization improvement.
 **Addresses:** DF-3
 **Avoids:** Pitfall 10 (logger is NOT pino -- enhance, do not replace)
 
 ### Phase 7: E2E Integration Tests
+
 **Rationale:** Must come last -- requires all wiring stable, seed correct, auth working.
 **Delivers:** (a) New e2e/integration/ directory (separate from existing mock tests); (b) Playwright dual-server config (API + Web); (c) Auth setup via dev-login endpoint; (d) 20-30 core integration tests proving full stack; (e) Existing 339 mock-based tests preserved as regression safety net.
 **Addresses:** DF-4
@@ -130,6 +144,7 @@ The v4.0 codebase has clean container/presentation separation: 7 container compo
 ### Phase Ordering Rationale
 
 The ordering is load-bearing:
+
 - **Seed + Types first** because every subsequent phase depends on data existing in PostgreSQL and mappers transforming it correctly. Doing these in parallel saves time (they are independent).
 - **Provider + client migration second** because no useQuery call works without it, and the React Compiler forces the classic-to-new migration to happen at this stage, not later.
 - **Page wiring third** because queries must work before mutations make sense.
@@ -140,10 +155,12 @@ The ordering is load-bearing:
 ### Research Flags
 
 **Needs deeper research during planning:**
+
 - **Phase 2 (tRPC client migration):** Verify exact @trpc/tanstack-react-query exports and queryOptions API against installed version. STACK.md notes to check import names at implementation time.
 - **Phase 4 (Status-Risk sync):** Custom UX with no off-the-shelf pattern. Edge cases (multiple risks per product+stage, locked stages, revert to On Track) need design review during planning.
 
 **Standard patterns (skip research-phase):**
+
 - **Phase 1 (Seed + Mappers):** Well-understood Prisma seed + pure function mappers. No research needed.
 - **Phase 3 (Page wiring):** tRPC useQuery/useMutation is thoroughly documented. Pattern is mechanical.
 - **Phase 5 (Auth guard):** Next.js 16 proxy.ts pattern is documented. Existing code covers 90% of the work.
@@ -152,12 +169,12 @@ The ordering is load-bearing:
 
 ## Confidence Assessment
 
-| Area | Confidence | Notes |
-|------|------------|-------|
-| Stack | **HIGH** | All packages verified against installed versions. React Compiler status confirmed by inspecting next.config.ts. Only gap: pino-roll 4.0 + pino 10 exact compat (irrelevant since we keep custom logger). |
-| Features | **HIGH** | Full codebase inspection: 38 mock imports counted, 72 interactive elements inventoried, dependency graph derived from import analysis. |
-| Architecture | **HIGH** | Container/presentation split verified file-by-file. tRPC plumbing (client, server, rewrite) all confirmed in source. Data flow traced end-to-end. |
-| Pitfalls | **HIGH** | 13 of 14 pitfalls verified against actual codebase. Pitfall 7 (no /trpc rewrite) dismissed as factually incorrect. |
+| Area         | Confidence | Notes                                                                                                                                                                                                    |
+| ------------ | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stack        | **HIGH**   | All packages verified against installed versions. React Compiler status confirmed by inspecting next.config.ts. Only gap: pino-roll 4.0 + pino 10 exact compat (irrelevant since we keep custom logger). |
+| Features     | **HIGH**   | Full codebase inspection: 38 mock imports counted, 72 interactive elements inventoried, dependency graph derived from import analysis.                                                                   |
+| Architecture | **HIGH**   | Container/presentation split verified file-by-file. tRPC plumbing (client, server, rewrite) all confirmed in source. Data flow traced end-to-end.                                                        |
+| Pitfalls     | **HIGH**   | 13 of 14 pitfalls verified against actual codebase. Pitfall 7 (no /trpc rewrite) dismissed as factually incorrect.                                                                                       |
 
 **Overall confidence:** HIGH
 
@@ -171,15 +188,17 @@ The ordering is load-bearing:
 ## Sources
 
 ### Primary (HIGH confidence -- direct codebase inspection)
-- apps/web/next.config.ts -- Confirmed: reactCompiler: true, /trpc/:path* rewrite exists
+
+- apps/web/next.config.ts -- Confirmed: reactCompiler: true, /trpc/:path\* rewrite exists
 - apps/web/src/lib/trpc.ts -- tRPC client configured with superjson, unused
 - apps/api/src/infrastructure/trpc/trpc.context.ts -- DEV_SESSION UUIDs hardcoded
 - apps/api/src/lib/logger.ts -- Custom AppLoggerImpl, NOT pino
-- apps/web/src/components/*/mock-data.ts -- 3 files, 15+ types, divergent from Zod schemas
+- apps/web/src/components/\*/mock-data.ts -- 3 files, 15+ types, divergent from Zod schemas
 - packages/shared/src/schemas/report.ts -- Canonical Zod schemas
 - prisma/schema.prisma -- 19 models, traffic light + workflow status enums
 
 ### Secondary (HIGH confidence -- official documentation)
+
 - [tRPC TanStack React Query Setup](https://trpc.io/docs/client/tanstack-react-query/setup)
 - [tRPC React Compiler Migration Blog](https://trpc.io/blog/introducing-tanstack-react-query-client)
 - [nestjs-cls Official Docs](https://papooch.github.io/nestjs-cls/introduction/quick-start)
@@ -188,9 +207,11 @@ The ordering is load-bearing:
 - [Next.js 16 proxy.ts Convention](https://nextjs.org/docs/app/api-reference/file-conventions/proxy)
 
 ### Tertiary (MEDIUM confidence -- needs validation during implementation)
+
 - pino-roll 4.0 + pino 10 compatibility (same author, same protocol, no explicit statement) -- irrelevant for v5.0 since we keep custom logger
 - @trpc/tanstack-react-query exact export names -- verify against installed package
 
 ---
-*Research completed: 2026-04-25*
-*Ready for roadmap: yes*
+
+_Research completed: 2026-04-25_
+_Ready for roadmap: yes_

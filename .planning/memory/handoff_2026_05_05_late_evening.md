@@ -17,6 +17,7 @@ User opened with screenshot of broken nav ("что это за херня так
 **Tests + types green:** web 237/237, api 598/598, tsc clean both apps.
 
 **State carried into next session:**
+
 - Branch `main` at HEAD
 - Dev stack still running (postgres + redis + mailpit)
 - Re-seeded once with new RU content; demo now shows realistic Russian text without product-name duplication

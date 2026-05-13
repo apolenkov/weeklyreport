@@ -7,7 +7,9 @@
 ## What shipped
 
 ### RUNBOOK.md
+
 10 failure modes with `detect → triage → resolve → escalate` per entry:
+
 1. Postgres down
 2. Redis down
 3. SMTP fail / emails not sending
@@ -22,6 +24,7 @@
 Each entry has copy-pasteable commands (docker compose exec, psql, redis-cli, curl, openssl). Architecture diagram at top.
 
 ### INCIDENT-PLAYBOOK.md
+
 - Severity matrix (SEV-1..4) with response cadence
 - Detect → Triage → Communicate → Mitigate → Resolve → Postmortem flow diagram
 - Standard rollback procedure (incl. across destructive migrations — explicit "stop, restore from backup, then checkout" sequence)
@@ -29,6 +32,7 @@ Each entry has copy-pasteable commands (docker compose exec, psql, redis-cli, cu
 - 5-section postmortem template (Summary, Timeline, Root cause, Impact, What went well/didn't, Action items)
 
 ### README.md
+
 New "Operating in production" section linking RUNBOOK + INCIDENT-PLAYBOOK + CONTRIBUTING.
 
 ## Verification

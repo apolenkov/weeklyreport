@@ -7,6 +7,7 @@
 **Overall:** Monorepo with NestJS (DI container) + tRPC (API surface) + Next.js (frontend), using a Repository pattern with Zod-validated domain services.
 
 **Key Characteristics:**
+
 - NestJS provides dependency injection and module system, but NOT the HTTP API surface
 - tRPC mounted as Express middleware at `/trpc` is the sole API contract for the frontend
 - NestJS `@Controller` decorators are used ONLY for health checks (`/health/*`), Prometheus metrics (`/metrics`), and SAML auth routes (`/auth/*`)
@@ -17,6 +18,7 @@
 ## Layers
 
 **Shared Schemas (packages/shared):**
+
 - Purpose: Single source of truth for all data types and validation rules
 - Location: `packages/shared/src/`
 - Contains: Zod schemas (`schemas/auth.ts`, `schemas/report.ts`), exported types, shared validation functions like `validateSubmitInput()`
@@ -24,6 +26,7 @@
 - Used by: Both `apps/api` and `apps/web` via `@customreport/shared`
 
 **UI Component Library (packages/ui):**
+
 - Purpose: Reusable shadcn/ui components and design tokens
 - Location: `packages/ui/src/`
 - Contains: Base UI primitives (`components/ui/*.tsx`), composition components (`data-table.tsx`, `crud-sheet.tsx`, `traffic-light-badge.tsx`, `confirm-dialog.tsx`), hooks, utility `cn()` function
@@ -31,6 +34,7 @@
 - Used by: `apps/web` via `@customreport/ui`
 
 **tRPC Infrastructure (API Gateway):**
+
 - Purpose: Defines the full API contract, authentication middleware, and error mapping
 - Location: `apps/api/src/infrastructure/trpc/`
 - Contains:
@@ -42,6 +46,7 @@
 - Used by: Express middleware mount in `main.ts`
 
 **Domain Modules (Business Logic):**
+
 - Purpose: Encapsulate domain logic per business capability
 - Location: `apps/api/src/modules/{module-name}/`
 - Contains: Service class, repository interface, Prisma repository implementation, NestJS module, domain error class, tests
@@ -49,6 +54,7 @@
 - Used by: `trpc.router.ts` (via NestJS DI resolution in `main.ts`)
 
 **NestJS Infrastructure:**
+
 - Purpose: Dependency injection container, middleware, health checks, job queues
 - Location: `apps/api/src/infrastructure/`
 - Contains: Prisma service, BullMQ module, email service, health indicators, metrics, correlation ID middleware
@@ -56,6 +62,7 @@
 - Used by: Domain modules (via DI)
 
 **Next.js Frontend:**
+
 - Purpose: Server-rendered React UI for all user roles
 - Location: `apps/web/src/`
 - Contains: App Router pages, domain-specific components, tRPC client setup, auth session helpers
@@ -66,19 +73,19 @@
 
 Each module in `apps/api/src/modules/` follows the same internal pattern:
 
-| Module | Purpose | Service | Key Operations |
-|--------|---------|---------|----------------|
-| `report-sections` | Lead report editing | `ReportSectionsService`, `LeadFormService` | getActiveSection, saveDraft, submitSection, fillFrom, versions, revoke, requestReopen |
-| `review` | Head submission dashboard | `ReviewService` | getSubmissionDashboard |
-| `publication` | Report assembly and publishing | `PublicationService` | getAssembledReport, publishReport, updateSectionForReview |
-| `pdf-export` | PDF generation via BullMQ | `PdfExportService` | requestPdfExport, getPdfExportStatus, markExportCompleted |
-| `admin` | User/project/period/reminder CRUD | `AdminService` | getSnapshot, upsertUser, upsertProject, upsertPeriod, getSettings, updateSettings, stageAssignments |
-| `reminders` | Email reminder scheduling | `RemindersService` | requestReminderExecution, markReminderSent, listExecutions |
-| `carry-over` | Cross-period item transfer | `CarryOverService` | executeCarryOver (items + decisions) |
-| `archive` | Published report history | `ArchiveService` | listArchiveReports, getArchiveReport |
-| `period` | Period lifecycle (publish/reopen) | `PeriodService` | publishPeriod, reopenPeriod |
-| `weekly-report` | Assembled weekly report read model | `WeeklyReportService` | getWeeklyReport |
-| `auth` | SAML SSO + JWT sessions | Auth controller + strategies | login, callback, logout, dev-login, JWT sign/verify |
+| Module            | Purpose                            | Service                                    | Key Operations                                                                                      |
+| ----------------- | ---------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `report-sections` | Lead report editing                | `ReportSectionsService`, `LeadFormService` | getActiveSection, saveDraft, submitSection, fillFrom, versions, revoke, requestReopen               |
+| `review`          | Head submission dashboard          | `ReviewService`                            | getSubmissionDashboard                                                                              |
+| `publication`     | Report assembly and publishing     | `PublicationService`                       | getAssembledReport, publishReport, updateSectionForReview                                           |
+| `pdf-export`      | PDF generation via BullMQ          | `PdfExportService`                         | requestPdfExport, getPdfExportStatus, markExportCompleted                                           |
+| `admin`           | User/project/period/reminder CRUD  | `AdminService`                             | getSnapshot, upsertUser, upsertProject, upsertPeriod, getSettings, updateSettings, stageAssignments |
+| `reminders`       | Email reminder scheduling          | `RemindersService`                         | requestReminderExecution, markReminderSent, listExecutions                                          |
+| `carry-over`      | Cross-period item transfer         | `CarryOverService`                         | executeCarryOver (items + decisions)                                                                |
+| `archive`         | Published report history           | `ArchiveService`                           | listArchiveReports, getArchiveReport                                                                |
+| `period`          | Period lifecycle (publish/reopen)  | `PeriodService`                            | publishPeriod, reopenPeriod                                                                         |
+| `weekly-report`   | Assembled weekly report read model | `WeeklyReportService`                      | getWeeklyReport                                                                                     |
+| `auth`            | SAML SSO + JWT sessions            | Auth controller + strategies               | login, callback, logout, dev-login, JWT sign/verify                                                 |
 
 ## tRPC Router Namespaces
 
@@ -152,6 +159,7 @@ appRouter
 4. `PdfExportProcessor` (`apps/api/src/infrastructure/bullmq/pdf-export.processor.ts`) picks up job, renders via Playwright, updates status
 
 **State Management:**
+
 - Server-side: PostgreSQL via Prisma (all state), Redis (BullMQ job queues)
 - Session: JWT cookie (`customreport_session`), 1-hour expiry, signed with HS256
 - Frontend: Currently mock data; tRPC client configured in `apps/web/src/lib/trpc.ts` with `@trpc/react-query` + superjson transformer
@@ -159,9 +167,11 @@ appRouter
 ## Key Abstractions
 
 **Repository Interface Pattern:**
+
 - Purpose: Decouple domain services from data access
 - Examples: `ReportSectionsRepository` in `apps/api/src/modules/report-sections/report-sections.service.ts`, `ReviewRepository` in `apps/api/src/modules/review/review.service.ts`
 - Pattern: Service class defines a TypeScript `interface` for its repository. A separate `*PrismaRepository` class (decorated with `@Injectable()`) implements it. NestJS module wires them together via `useFactory`:
+
 ```typescript
 // apps/api/src/modules/review/review.module.ts
 {
@@ -172,27 +182,32 @@ appRouter
 ```
 
 **Domain Error Classes:**
+
 - Purpose: Typed error signaling from service to router
 - Examples: `ReportSectionDomainError`, `ReviewAccessError`, `PublicationAccessError`, `AdminAccessError`, `PdfExportDomainError`, `ReminderDomainError`, `CarryOverDomainError`, `ArchiveDomainError`
 - Pattern: Each module defines its own error class extending `Error`. The central error mapper (`apps/api/src/infrastructure/trpc/trpc.error-mapper.ts`) translates each domain error to the appropriate tRPC error code.
 
 **Zod Parse-at-Boundary:**
+
 - Purpose: Runtime validation at every data boundary
 - Pattern: Both service input AND output are validated with Zod `.parse()`. Repository mappers also call `.parse()` when converting Prisma rows to domain models. This ensures type safety is enforced at runtime, not just compile time.
 
 ## Entry Points
 
 **API Server:**
+
 - Location: `apps/api/src/main.ts`
 - Triggers: `pnpm dev` (via Turborepo), Docker container start
 - Responsibilities: Creates NestJS app, mounts tRPC as Express middleware at `/trpc`, mounts SAML auth routes, mounts BullBoard UI, starts HTTP listener on `env.PORT` (default 3001)
 
 **Web Server:**
+
 - Location: `apps/web/src/app/layout.tsx` (root layout), `apps/web/src/proxy.ts` (Next.js middleware)
 - Triggers: `pnpm dev` (via Turborepo), Docker container start
 - Responsibilities: Renders React pages via App Router, proxies auth redirects via `proxy.ts` (replaces middleware.ts in Next.js 16)
 
 **BullMQ Processors:**
+
 - Location: `apps/api/src/infrastructure/bullmq/pdf-export.processor.ts`, `apps/api/src/infrastructure/bullmq/email-reminder.processor.ts`
 - Triggers: Jobs added to Redis queues
 - Responsibilities: PDF generation via Playwright, email sending via SMTP
@@ -200,12 +215,14 @@ appRouter
 ## Authentication & Authorization
 
 **Authentication Flow:**
+
 - SAML SSO via Keycloak IdP (`@node-saml/passport-saml`)
 - Routes: `GET /auth/saml/login` (initiate), `POST /auth/saml/callback` (consume assertion), `POST /auth/logout`, `GET /auth/dev-login` (dev mode only)
 - On successful SAML callback, `buildUserSession()` in `apps/api/src/modules/auth/auth.routes.ts` upserts the user in PostgreSQL, auto-creates weekly report sections for leads, and issues a signed JWT cookie
 - JWT: HS256, 1-hour expiry, stored in `customreport_session` httpOnly cookie
 
 **Authorization (3 tiers):**
+
 - `publicProcedure` - No auth required (currently unused in router)
 - `protectedProcedure` - Any authenticated user (leads, heads, viewers)
 - `headProcedure` - Head role only (admin, publication, period lifecycle, PDF export)
@@ -218,6 +235,7 @@ appRouter
 **Strategy:** Domain errors bubble up from services, get mapped to tRPC error codes in the central router via `mapDomainError()`.
 
 **Patterns:**
+
 - Every router procedure wraps service calls in `try/catch` and calls `mapDomainError(error)` before rethrowing
 - Domain errors map to HTTP-equivalent codes: `ReportSectionDomainError` -> `BAD_REQUEST`, `ReviewAccessError`/`AdminAccessError` -> `FORBIDDEN`, `PublicationAccessError` -> `CONFLICT`, `PdfExportDomainError`/`ArchiveDomainError` -> `NOT_FOUND`
 - Unknown errors become `INTERNAL_SERVER_ERROR` with generic message (no leak)
@@ -241,26 +259,26 @@ appRouter
 
 Prisma schema at `prisma/schema.prisma` (monorepo root). Key models:
 
-| Model | Purpose | Key Relations |
-|-------|---------|---------------|
-| `User` | System users (leads, head, viewer) | -> ReportSection[], Project[], StageAssignment[] |
-| `Project` | Products/projects led by leads | -> User (lead), ProjectStatus[], Item[], Risk[] |
-| `Report` | Weekly report period container | -> ReportSection[], PdfExportJob[], ReminderRule[] |
-| `ReportSection` | One lead's contribution to a report | -> User (author), Report, ProjectStatus[], Item[], Risk[], Decision[], Priority[], VersionSnapshot[] |
-| `ProjectStatus` | Traffic light per project per section | Unique on [reportSectionId, projectId] |
-| `Item` | Current/next week work items | -> ReportSection, Project |
-| `Risk` | Project risks with impact/mitigation | -> ReportSection, Project |
-| `Decision` | Management decisions with deadlines | -> ReportSection |
-| `Priority` | Ranked priorities per section | Unique on [reportSectionId, rank] |
-| `PdfExportJob` | Async PDF generation tracking | -> Report |
-| `ReminderRule` | Scheduled email reminder rules | -> Report, ReminderExecution[] |
-| `ReminderExecution` | Individual reminder send tracking | -> ReminderRule |
-| `CarryOverExecution` | Cross-period item transfer tracking | -> Report (source), Report (target) |
-| `VersionSnapshot` | Autosave history (JSON data) | -> ReportSection |
-| `Stage` | SDLC pipeline stages | -> StageAssignment[] |
-| `StageAssignment` | User-stage-project ownership | -> User, Stage, Project |
-| `AppSettings` | Singleton application config | None |
+| Model                | Purpose                               | Key Relations                                                                                        |
+| -------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `User`               | System users (leads, head, viewer)    | -> ReportSection[], Project[], StageAssignment[]                                                     |
+| `Project`            | Products/projects led by leads        | -> User (lead), ProjectStatus[], Item[], Risk[]                                                      |
+| `Report`             | Weekly report period container        | -> ReportSection[], PdfExportJob[], ReminderRule[]                                                   |
+| `ReportSection`      | One lead's contribution to a report   | -> User (author), Report, ProjectStatus[], Item[], Risk[], Decision[], Priority[], VersionSnapshot[] |
+| `ProjectStatus`      | Traffic light per project per section | Unique on [reportSectionId, projectId]                                                               |
+| `Item`               | Current/next week work items          | -> ReportSection, Project                                                                            |
+| `Risk`               | Project risks with impact/mitigation  | -> ReportSection, Project                                                                            |
+| `Decision`           | Management decisions with deadlines   | -> ReportSection                                                                                     |
+| `Priority`           | Ranked priorities per section         | Unique on [reportSectionId, rank]                                                                    |
+| `PdfExportJob`       | Async PDF generation tracking         | -> Report                                                                                            |
+| `ReminderRule`       | Scheduled email reminder rules        | -> Report, ReminderExecution[]                                                                       |
+| `ReminderExecution`  | Individual reminder send tracking     | -> ReminderRule                                                                                      |
+| `CarryOverExecution` | Cross-period item transfer tracking   | -> Report (source), Report (target)                                                                  |
+| `VersionSnapshot`    | Autosave history (JSON data)          | -> ReportSection                                                                                     |
+| `Stage`              | SDLC pipeline stages                  | -> StageAssignment[]                                                                                 |
+| `StageAssignment`    | User-stage-project ownership          | -> User, Stage, Project                                                                              |
+| `AppSettings`        | Singleton application config          | None                                                                                                 |
 
 ---
 
-*Architecture analysis: 2026-04-24*
+_Architecture analysis: 2026-04-24_

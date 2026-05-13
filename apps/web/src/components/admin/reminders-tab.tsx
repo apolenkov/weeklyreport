@@ -16,11 +16,7 @@ import { DerivedRulesPanel } from "./derived-rules-panel";
 // Reminders sub-tab (UFB-048 / Phase 48-B) can reuse the same curated list.
 import { TIMEZONE_OPTIONS } from "./timezone-options";
 
-import type {
-  MockPeriod,
-  MockReminder,
-  MockReminderPolicy,
-} from "./mock-data";
+import type { MockPeriod, MockReminder, MockReminderPolicy } from "./mock-data";
 
 const KIND_OPTIONS: ReadonlyArray<{
   value: MockReminderPolicy["kind"];
@@ -167,8 +163,9 @@ export function RemindersTab({
     }),
   );
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const [pendingDelete, setPendingDelete] =
-    useState<MockReminderPolicy | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<MockReminderPolicy | null>(
+    null,
+  );
 
   const periodById = useMemo(
     () => new Map(periods.map((p) => [p.id, p] as const)),
@@ -179,9 +176,7 @@ export function RemindersTab({
     trpc.admin.savePolicy.mutationOptions({
       onSuccess: () => {
         invalidateAdmin(qc, trpc);
-        toast.success(
-          editingId ? "Policy updated" : "Policy created",
-        );
+        toast.success(editingId ? "Policy updated" : "Policy created");
         setShowForm(false);
         setEditingId(null);
         setForm(
@@ -354,8 +349,18 @@ export function RemindersTab({
               <>
                 <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-border)]">
                   {/* Bell icon */}
-                  <svg className="h-5 w-5 text-[var(--color-muted-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                  <svg
+                    className="h-5 w-5 text-[var(--color-muted-foreground)]"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+                    />
                   </svg>
                 </div>
                 <p className="text-sm font-medium text-[var(--color-foreground)]">
@@ -398,8 +403,7 @@ export function RemindersTab({
               </thead>
               <tbody>
                 {filteredPolicies.map((policy) => {
-                  const derivedRules =
-                    derivedRulesByPolicyId[policy.id] ?? [];
+                  const derivedRules = derivedRulesByPolicyId[policy.id] ?? [];
                   const isExpanded = expanded.has(policy.id);
                   return (
                     <PolicyRow
@@ -427,9 +431,7 @@ export function RemindersTab({
         title="Remove reminder policy?"
         preview={pendingDelete ? formatPolicyHeadline(pendingDelete) : ""}
         subtitle={
-          pendingDelete
-            ? formatValidityWindow(pendingDelete)
-            : undefined
+          pendingDelete ? formatValidityWindow(pendingDelete) : undefined
         }
         consequence={
           pendingDelete

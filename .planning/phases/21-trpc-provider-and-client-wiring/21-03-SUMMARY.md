@@ -44,12 +44,14 @@ Admin Panel (5 tabs) and head Dashboard now read live data from `admin.snapshot`
 ## What was built
 
 ### Composite mappers
+
 - `mapAdminSnapshot(api: AdminSnapshot)` — translates the single admin snapshot into 4 mock-shaped slices (`users`, `products`, `periods`, `reminders`).
 - `mapAdminSettings(api: AppSettings)` — 1:1 passthrough into `MockSettings`.
 - `mapDashboardData({ review, archive, weeklyReport, now?, currentUserId? })` — composes 3 endpoints into `{ kpi, leads, blockedAtRisk, archive, pendingLeads }`.
 - `formatRelativeDeadline(deadline, now)` exported helper for KPI deadline label.
 
 ### UI
+
 - `AdminTabSkeleton` (`variant: 'table' | 'form'`) — matches final dimensions to prevent layout shift.
 - `DashboardSkeleton` — KPI 3-up + alert bar + blocked table + leads grid + archive 4-up.
 - `AdminPanel` lifts both queries (`admin.snapshot`, `admin.getSettings`) and dispatches mock-shaped slices to each tab.
@@ -58,19 +60,20 @@ Admin Panel (5 tabs) and head Dashboard now read live data from `admin.snapshot`
 - `DashboardPage` composes `review.dashboard`, `archive.list({ limit: 12 })`, `weeklyReport.get({})` with three `useQuery` calls + three `useEffect` toast handlers + skeleton fallback.
 
 ### Tests
+
 - `admin.test.ts` — 11 cases (11 tests pass): empty snapshot, role passthrough, archived flag, 7-stage grid synthesis, period status mapping, weekLabel/date synthesis, reminder active/paused, reminder name synthesis, ID/email preservation, settings 2 round-trips.
 - `dashboard.test.ts` — 12 cases (12 tests pass): deadline 'Past' / hours / days, kpi.submitted, deadlineLabel format, blockedCount/atRiskCount, decisionCount, lead status derivation across 3 leads, pendingLeads list, blockedAtRisk severities, archive synthesis, isCurrentUser flag.
 - All test fixtures built from `*Schema.parse(...)` so future schema drift surfaces in tests, not at runtime.
 
 ## Schemas used
 
-| API call | Zod schema | Notes |
-|----------|-----------|-------|
-| `admin.snapshot` | `adminSnapshotSchema` | `{ users, projects, periods, reminderRules, reminderExecutions }` — does NOT include stages/stageAssignments |
-| `admin.getSettings` | `appSettingsSchema` | exact 1:1 with `MockSettings` |
-| `review.dashboard` | `submissionDashboardRowSchema[]` | row-only — no aggregate KPI fields |
-| `archive.list` | `paginationInputSchema` (input) -> `PaginatedResult<ArchiveReportSummary>` | passed `{ limit: 12 }` |
-| `weeklyReport.get` | input `z.object({ reportId: z.string().uuid().optional() }).optional()`; output `weeklyReportReadModelSchema` | called with `{}` to use server-side active-report fallback |
+| API call            | Zod schema                                                                                                    | Notes                                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `admin.snapshot`    | `adminSnapshotSchema`                                                                                         | `{ users, projects, periods, reminderRules, reminderExecutions }` — does NOT include stages/stageAssignments |
+| `admin.getSettings` | `appSettingsSchema`                                                                                           | exact 1:1 with `MockSettings`                                                                                |
+| `review.dashboard`  | `submissionDashboardRowSchema[]`                                                                              | row-only — no aggregate KPI fields                                                                           |
+| `archive.list`      | `paginationInputSchema` (input) -> `PaginatedResult<ArchiveReportSummary>`                                    | passed `{ limit: 12 }`                                                                                       |
+| `weeklyReport.get`  | input `z.object({ reportId: z.string().uuid().optional() }).optional()`; output `weeklyReportReadModelSchema` | called with `{}` to use server-side active-report fallback                                                   |
 
 ## Deviations from Plan
 
@@ -87,13 +90,14 @@ Admin Panel (5 tabs) and head Dashboard now read live data from `admin.snapshot`
 **Found during:** Task 1 (mapper authoring)
 **Issue:** Plan's `<behavior>` for `mapDashboardData` assumes `review.dashboard` carries `submittedCount`, `totalLeads`, `avgCompletionPct`, `periodDeadline`, `escalations`. None of these exist; it is `SubmissionDashboardRow[]` only.
 **Fix:** KPIs sourced from `weeklyReport.get`:
-  - `kpi.submitted` ← `weeklyReport.submissionCount`
-  - `kpi.total` ← `weeklyReport.totalLeads`
-  - `kpi.blockedCount` / `kpi.atRiskCount` ← `weeklyReport.escalations` filtered by `type`
-  - `kpi.decisionCount` ← sum of `decisions.length` across `weeklyReport.leadSections`
-  - `blockedAtRisk` ← `weeklyReport.escalations` (mapping `unresolved_risk` → `at-risk`)
-  - lead status ← `review.dashboard` row + matching section in `weeklyReport.leadSections` (via `deriveLeadStatus`).
-**Files modified:** `apps/web/src/lib/mappers/dashboard.ts` (Task 1 commit `2f50290`).
+
+- `kpi.submitted` ← `weeklyReport.submissionCount`
+- `kpi.total` ← `weeklyReport.totalLeads`
+- `kpi.blockedCount` / `kpi.atRiskCount` ← `weeklyReport.escalations` filtered by `type`
+- `kpi.decisionCount` ← sum of `decisions.length` across `weeklyReport.leadSections`
+- `blockedAtRisk` ← `weeklyReport.escalations` (mapping `unresolved_risk` → `at-risk`)
+- lead status ← `review.dashboard` row + matching section in `weeklyReport.leadSections` (via `deriveLeadStatus`).
+  **Files modified:** `apps/web/src/lib/mappers/dashboard.ts` (Task 1 commit `2f50290`).
 
 ### [Rule 2] Deadline field absent from read models
 
@@ -156,13 +160,13 @@ Called with `{}` (empty object) to use the server-side active-report fallback in
 
 ## Verification
 
-| Check | Result |
-|------|--------|
-| `pnpm --filter @customreport/web typecheck` | passes |
-| `pnpm --filter @customreport/web vitest run` | 73 / 73 tests pass (11 admin + 12 dashboard new) |
-| `pnpm --filter @customreport/web build` | passes |
-| Admin tab MOCK_* value-import grep | clean |
-| Dashboard MOCK_* references + required strings grep | clean |
+| Check                                                 | Result                                           |
+| ----------------------------------------------------- | ------------------------------------------------ |
+| `pnpm --filter @customreport/web typecheck`           | passes                                           |
+| `pnpm --filter @customreport/web vitest run`          | 73 / 73 tests pass (11 admin + 12 dashboard new) |
+| `pnpm --filter @customreport/web build`               | passes                                           |
+| Admin tab MOCK\_\* value-import grep                  | clean                                            |
+| Dashboard MOCK\_\* references + required strings grep | clean                                            |
 
 ## Commits
 

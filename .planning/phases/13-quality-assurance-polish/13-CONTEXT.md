@@ -8,12 +8,14 @@
 ## Phase Boundary
 
 This phase transforms the functional CustomReport app into a production-quality product by:
+
 1. Fixing all discovered bugs from regression analysis
 2. Adding comprehensive test coverage (Vitest unit + Playwright E2E)
 3. Conducting UX/UI review and fixing accessibility/localization/visual gaps
 4. Ensuring all E2E tests pass in CI
 
 **Input artifacts:**
+
 - `.planning/REGRESSION-TEST-SCENARIOS.md` — 1788 scenarios in 48 categories
 - BUG-001..BUG-025 — discovered bugs with severity and location
 
@@ -25,6 +27,7 @@ This phase transforms the functional CustomReport app into a production-quality 
 ### Bug Fixes (BUG-001..BUG-025) — ALL LOCKED
 
 **P0 bugs (must fix first):**
+
 - BUG-001: saveDraft must check parent report's published status before allowing edits
 - BUG-002: Add Zod refinement for unique priority ranks in submitSectionSchema
 - BUG-003: Carry-over must use findMany (not findFirst) to process ALL sections
@@ -36,6 +39,7 @@ This phase transforms the functional CustomReport app into a production-quality 
 - BUG-022: PDF processor must set auth cookie before Playwright navigation
 
 **P1 bugs:**
+
 - BUG-005: Add markExportFailed method and wire to BullMQ onFailed
 - BUG-006: Expand carryOverStatusSchema to include pending/failed
 - BUG-007: Fix toRuleDomain to read kind from DB field (not hardcode 'deadline')
@@ -53,18 +57,21 @@ This phase transforms the functional CustomReport app into a production-quality 
 - BUG-025: Replace RoleNav <a> with Next.js <Link> for client-side navigation
 
 ### Vitest Unit Tests — LOCKED
+
 - Schema boundary tests (ZOD-001..080 + EDGE-BV scenarios)
 - Business logic tests (carry-over, submit validation, portfolio overview, error mapping)
 - Service tests (state machines, concurrency guards)
 - Target: cover every if-branch in services
 
 ### Playwright E2E Tests — LOCKED
+
 - Expand existing 4 journeys with edge cases from regression scenarios
 - Add visual regression screenshots of every page state (loading, error, empty, populated, submitted, published)
 - Add accessibility audit (keyboard navigation, ARIA attributes)
 - Add responsive checks (320px, 375px, 768px, 1024px, 1920px)
 
 ### UX/UI Polish — LOCKED
+
 - Fix A11Y gaps: sidebar <nav> landmark, aria-current on desktop nav, aria-disabled on read-only groups
 - Fix skeleton contrast (accent vs background nearly invisible)
 - Fix dark mode gap (add token overrides or explicitly disable)
@@ -72,11 +79,13 @@ This phase transforms the functional CustomReport app into a production-quality 
 - Add -webkit-print-color-adjust: exact for PDF backgrounds
 
 ### Localization — LOCKED
+
 - All dates: ru-RU with timeZone: 'UTC' for period dates
 - Validation messages: keep English (API layer, not user-facing in practice)
 - UI labels: keep English (explicit decision — project uses English UI)
 
 ### Claude's Discretion
+
 - Test file organization (directory structure, naming conventions)
 - Test utilities and fixtures (shared helpers)
 - Exact Playwright screenshot breakpoints
@@ -86,19 +95,23 @@ This phase transforms the functional CustomReport app into a production-quality 
 </decisions>
 
 <canonical_refs>
+
 ## Canonical References
 
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Regression Scenarios
+
 - `.planning/REGRESSION-TEST-SCENARIOS.md` — Full 1788-scenario test plan with priorities
 
 ### Existing Tests
+
 - `apps/web/e2e/` — Existing Playwright E2E tests (4 journeys)
 - `apps/web/playwright.config.ts` — Playwright configuration
 - `apps/api/src/**/*.spec.ts` — Existing Vitest unit tests
 
 ### Bug Locations
+
 - `apps/api/src/modules/report-sections/` — BUG-001 (saveDraft immutability)
 - `apps/api/src/modules/carry-over/` — BUG-003, BUG-004 (findFirst, idempotency)
 - `apps/api/src/modules/pdf-export/` — BUG-005, BUG-022 (markFailed, auth cookie)
@@ -113,6 +126,7 @@ This phase transforms the functional CustomReport app into a production-quality 
 - `apps/web/src/components/head/assembled-report-review.tsx` — BUG-024 (empty items)
 
 ### Design System
+
 - `packages/ui/src/styles/globals.css` — OKLCH tokens, print fallbacks
 - `packages/ui/src/styles/traffic-lights.css` — Traffic light colors
 
@@ -140,5 +154,5 @@ This phase transforms the functional CustomReport app into a production-quality 
 
 ---
 
-*Phase: 13-quality-assurance-polish*
-*Context gathered: 2026-04-12 via regression analysis*
+_Phase: 13-quality-assurance-polish_
+_Context gathered: 2026-04-12 via regression analysis_

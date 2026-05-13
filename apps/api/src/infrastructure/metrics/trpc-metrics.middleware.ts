@@ -1,9 +1,9 @@
-import type { TRPCError } from '@trpc/server';
+import type { TRPCError } from "@trpc/server";
 
 import {
   trpcRequestDurationSeconds,
   trpcRequestTotal,
-} from './metrics.registry.js';
+} from "./metrics.registry.js";
 
 /**
  * 47-03 (DX-03) — minimal contract this middleware needs from the tRPC
@@ -42,7 +42,7 @@ export type TrpcMiddlewareResult<T = unknown> =
  */
 type TrpcMiddlewareArgs<R extends TrpcMiddlewareResult> = {
   path: string;
-  type: 'query' | 'mutation' | 'subscription';
+  type: "query" | "mutation" | "subscription";
   next: () => Promise<R>;
 };
 
@@ -55,13 +55,13 @@ export async function trpcMetricsMiddleware<R extends TrpcMiddlewareResult>(
 
   try {
     const result = await next();
-    const status = result.ok ? 'success' : 'error';
+    const status = result.ok ? "success" : "error";
     endTimer({ ...labels, status });
     trpcRequestTotal.inc({ ...labels, status });
     return result;
   } catch (err) {
-    endTimer({ ...labels, status: 'error' });
-    trpcRequestTotal.inc({ ...labels, status: 'error' });
+    endTimer({ ...labels, status: "error" });
+    trpcRequestTotal.inc({ ...labels, status: "error" });
     throw err;
   }
 }

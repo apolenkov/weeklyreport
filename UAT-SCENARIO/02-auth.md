@@ -174,7 +174,7 @@ Steps:
 Expected:
 
 - Navigates to `/auth/dev-login?role=head&email=head@customreport.local&redirect=%2Fhead%2Fdashboard`.
-- Session issued → browser redirects to role's default landing route.
+- Session issued → browser redirects to role default landing route.
 
 Edge cases:
 
@@ -550,7 +550,7 @@ Status: `[P]`
 
 ---
 
-### AUTH-25 — Wrong role redirected to role's default landing
+### AUTH-25 — Wrong role redirected to role default landing
 
 **Route:** `/` + redirect params
 **State precondition:** user logged in as "lead", tries `/admin`

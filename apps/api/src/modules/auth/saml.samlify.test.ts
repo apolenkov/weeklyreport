@@ -31,36 +31,36 @@
  * once via `openssl req -x509 -newkey rsa:2048 -nodes -days 36500`. Not
  * real secrets — labelled CN=customreport-test-{idp,sp}.
  */
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 
-import { describe, it, expect, beforeAll } from 'vitest';
-import samlify from 'samlify';
-import { expectDefined } from '../../test-utils/expect-defined.js';
+import { describe, it, expect, beforeAll } from "vitest";
+import samlify from "samlify";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 // `validator` shipped by samlify is required-but-not-bundled to avoid the
 // xmldom transitive surface. We swap in a permissive validator for tests
 // because the assertion XML we mint is well-formed by construction; the
 // security check we care about is signature validation, not XSD shape.
 const noopValidator = {
-  validate: () => Promise.resolve('skipped'),
+  validate: () => Promise.resolve("skipped"),
 };
 samlify.setSchemaValidator(noopValidator);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const fixtures = resolve(__dirname, '__fixtures__/saml');
+const fixtures = resolve(__dirname, "__fixtures__/saml");
 
-const idpKey = readFileSync(resolve(fixtures, 'idp-key.pem'), 'utf8');
-const idpCert = readFileSync(resolve(fixtures, 'idp-cert.pem'), 'utf8');
-const spKey = readFileSync(resolve(fixtures, 'sp-key.pem'), 'utf8');
-const spCert = readFileSync(resolve(fixtures, 'sp-cert.pem'), 'utf8');
+const idpKey = readFileSync(resolve(fixtures, "idp-key.pem"), "utf8");
+const idpCert = readFileSync(resolve(fixtures, "idp-cert.pem"), "utf8");
+const spKey = readFileSync(resolve(fixtures, "sp-key.pem"), "utf8");
+const spCert = readFileSync(resolve(fixtures, "sp-cert.pem"), "utf8");
 
 const TEST_USER = {
-  nameID: 'mock-user-1',
-  nameIDFormat: 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
-  email: 'mock@customreport.test',
-  displayName: 'Mock User',
-  role: 'lead',
+  nameID: "mock-user-1",
+  nameIDFormat: "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified",
+  email: "mock@customreport.test",
+  displayName: "Mock User",
+  role: "lead",
 };
 
 type IdPInstance = ReturnType<typeof samlify.IdentityProvider>;
@@ -68,7 +68,7 @@ type SPInstance = ReturnType<typeof samlify.ServiceProvider>;
 
 function buildIdP(): IdPInstance {
   return samlify.IdentityProvider({
-    entityID: 'http://idp.test/metadata',
+    entityID: "http://idp.test/metadata",
     privateKey: idpKey,
     privateKeyPass: undefined,
     isAssertionEncrypted: false,
@@ -78,7 +78,7 @@ function buildIdP(): IdPInstance {
     singleSignOnService: [
       {
         Binding: samlify.Constants.wording.binding.post,
-        Location: 'http://idp.test/sso',
+        Location: "http://idp.test/sso",
       },
     ],
   });
@@ -86,7 +86,7 @@ function buildIdP(): IdPInstance {
 
 function buildSP(useIdpCert: string): SPInstance {
   return samlify.ServiceProvider({
-    entityID: 'http://sp.test/metadata',
+    entityID: "http://sp.test/metadata",
     privateKey: spKey,
     privateKeyPass: undefined,
     signingCert: spCert,
@@ -98,7 +98,7 @@ function buildSP(useIdpCert: string): SPInstance {
     assertionConsumerService: [
       {
         Binding: samlify.Constants.wording.binding.post,
-        Location: 'http://sp.test/acs',
+        Location: "http://sp.test/acs",
       },
     ],
     // The IdP cert pinned on the SP side. Any mismatch → signature
@@ -139,7 +139,7 @@ async function mintSignedResponse(
   return result.context;
 }
 
-describe('38-03 SAML hardening — samlify mock IdP integration', () => {
+describe("38-03 SAML hardening — samlify mock IdP integration", () => {
   let idp: IdPInstance;
   let sp: SPInstance;
 
@@ -148,7 +148,7 @@ describe('38-03 SAML hardening — samlify mock IdP integration', () => {
     sp = buildSP(idpCert);
   });
 
-  it('signed-assertion validation: a freshly signed response parses cleanly', async () => {
+  it("signed-assertion validation: a freshly signed response parses cleanly", async () => {
     const responseB64 = await mintSignedResponse(idp, sp);
 
     const result = await sp.parseLoginResponse(
@@ -172,37 +172,35 @@ describe('38-03 SAML hardening — samlify mock IdP integration', () => {
     // payload; non-empty extraction proves the assertion was decoded
     // post-signature-verification.
     expect(extract.nameID).toBeTruthy();
-    expect(extract.issuer).toBe('http://idp.test/metadata');
-    expect(extract.audience).toBe('http://sp.test/metadata');
+    expect(extract.issuer).toBe("http://idp.test/metadata");
+    expect(extract.audience).toBe("http://sp.test/metadata");
   });
 
-  it('signature tamper rejection: mutating one byte of the signed XML rejects', async () => {
+  it("signature tamper rejection: mutating one byte of the signed XML rejects", async () => {
     const responseB64 = await mintSignedResponse(idp, sp);
-    const xml = Buffer.from(responseB64, 'base64').toString('utf8');
+    const xml = Buffer.from(responseB64, "base64").toString("utf8");
 
     // Locate the SignatureValue and flip one base64 char inside it. The
     // SignatureValue is the canonical "signed bytes" — any mutation must
     // cause the canonicalised hash to disagree with the decrypted signature.
-    const sigMatch = xml.match(/<ds:SignatureValue>([\s\S]+?)<\/ds:SignatureValue>/);
+    const sigMatch = xml.match(
+      /<ds:SignatureValue>([\s\S]+?)<\/ds:SignatureValue>/,
+    );
     expect(sigMatch).not.toBeNull();
     const original = expectDefined(expectDefined(sigMatch)[1]);
     // Flip middle character. Avoid the trailing '=' padding.
     const mid = Math.floor(original.length / 2);
     const flipped =
       original.slice(0, mid) +
-      (original[mid] === 'A' ? 'B' : 'A') +
+      (original[mid] === "A" ? "B" : "A") +
       original.slice(mid + 1);
     const tampered = xml.replace(original, flipped);
-    const tamperedB64 = Buffer.from(tampered, 'utf8').toString('base64');
+    const tamperedB64 = Buffer.from(tampered, "utf8").toString("base64");
 
     await expect(
-      sp.parseLoginResponse(
-        idp,
-        samlify.Constants.wording.binding.post,
-        { body: { SAMLResponse: tamperedB64 } } as unknown as Parameters<
-          typeof sp.parseLoginResponse
-        >[2],
-      ),
+      sp.parseLoginResponse(idp, samlify.Constants.wording.binding.post, {
+        body: { SAMLResponse: tamperedB64 },
+      } as unknown as Parameters<typeof sp.parseLoginResponse>[2]),
     ).rejects.toThrow();
   });
 });

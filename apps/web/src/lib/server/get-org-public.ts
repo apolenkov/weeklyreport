@@ -1,7 +1,7 @@
-import 'server-only';
+import "server-only";
 
-import type { OrganizationPublic } from '@customreport/shared';
-import { DEFAULT_ORGANIZATION_IDENTITY } from '@customreport/shared';
+import type { OrganizationPublic } from "@customreport/shared";
+import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
 
 /**
  * UFB-070 (2026-05-11): server-only helper that pre-fetches the org identity
@@ -22,7 +22,11 @@ import { DEFAULT_ORGANIZATION_IDENTITY } from '@customreport/shared';
  * after admin settings update (previously relied on 60s revalidate interval).
  */
 function resolveApiUrl(): string {
-  return process.env['API_URL'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3002';
+  return (
+    process.env["API_URL"] ??
+    process.env["NEXT_PUBLIC_API_URL"] ??
+    "http://localhost:3002"
+  );
 }
 
 type TrpcBatchEntry = {
@@ -38,13 +42,14 @@ function decodeOrgPublicResponse(body: unknown): OrganizationPublic | null {
   if (data === null || data === undefined) return null;
   // superjson transformer wraps in { json: <payload> }
   const payload =
-    typeof data === 'object' && 'json' in (data as Record<string, unknown>)
+    typeof data === "object" && "json" in (data as Record<string, unknown>)
       ? (data as { json: unknown }).json
       : data;
-  if (!payload || typeof payload !== 'object') return null;
+  if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
-  if (typeof p['shortName'] !== 'string' || typeof p['fullName'] !== 'string') return null;
-  return { shortName: p['shortName'], fullName: p['fullName'] };
+  if (typeof p["shortName"] !== "string" || typeof p["fullName"] !== "string")
+    return null;
+  return { shortName: p["shortName"], fullName: p["fullName"] };
 }
 
 export async function getOrgPublic(): Promise<OrganizationPublic> {
@@ -54,9 +59,9 @@ export async function getOrgPublic(): Promise<OrganizationPublic> {
 
   try {
     const response = await fetch(url, {
-      method: 'GET',
-      cache: 'force-cache',
-      next: { tags: ['org-public'], revalidate: 60 },
+      method: "GET",
+      cache: "force-cache",
+      next: { tags: ["org-public"], revalidate: 60 },
     });
     if (!response.ok) return DEFAULT_ORGANIZATION_IDENTITY;
     const body = (await response.json()) as unknown;

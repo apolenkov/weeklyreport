@@ -4,15 +4,15 @@ Next.js 16 frontend with App Router, React 19, shadcn/ui, and Tailwind CSS v4.
 
 ## Pages
 
-| Route | Role | Component |
-|-------|------|-----------|
-| `/lead/report` | lead | ReportSectionForm — traffic lights, items, risks, decisions, priorities |
-| `/head/dashboard` | head | Review dashboard with lead submission status |
-| `/head/report` | head | Assembled report with publish action |
-| `/admin` | head | AdminPanel — users, projects, periods, reminders (tabbed CRUD) |
-| `/reports/history` | any | Published report archive with DataTable |
-| `/reports/[id]` | any | Single report detail |
-| `/reports/[id]/print` | any | Print-optimized layout for PDF export |
+| Route                 | Role | Component                                                               |
+| --------------------- | ---- | ----------------------------------------------------------------------- |
+| `/lead/report`        | lead | ReportSectionForm — traffic lights, items, risks, decisions, priorities |
+| `/head/dashboard`     | head | Review dashboard with lead submission status                            |
+| `/head/report`        | head | Assembled report with publish action                                    |
+| `/admin`              | head | AdminPanel — users, projects, periods, reminders (tabbed CRUD)          |
+| `/reports/history`    | any  | Published report archive with DataTable                                 |
+| `/reports/[id]`       | any  | Single report detail                                                    |
+| `/reports/[id]/print` | any  | Print-optimized layout for PDF export                                   |
 
 ## API Proxy
 

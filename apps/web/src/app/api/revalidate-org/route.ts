@@ -1,7 +1,7 @@
-import { revalidatePath } from 'next/cache';
-import { NextResponse } from 'next/server';
+import { revalidatePath } from "next/cache";
+import { NextResponse } from "next/server";
 
-import { getServerSession } from '../../../lib/server/get-server-session';
+import { getServerSession } from "../../../lib/server/get-server-session";
 
 /**
  * A9: Invalidate the landing page org-public cache after admin settings update.
@@ -10,8 +10,8 @@ import { getServerSession } from '../../../lib/server/get-server-session';
 export async function POST() {
   const session = await getServerSession();
   if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  revalidatePath('/', 'layout');
+  revalidatePath("/", "layout");
   return NextResponse.json({ revalidated: true });
 }

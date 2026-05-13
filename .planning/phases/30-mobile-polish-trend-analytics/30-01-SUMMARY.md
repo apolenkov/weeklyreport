@@ -39,7 +39,7 @@ apps/api/src/modules/analytics/
 
 ## Files
 
-- apps/api/src/modules/analytics/* (created)
+- apps/api/src/modules/analytics/\* (created)
 - apps/api/src/modules/period/period.service.ts (invalidator port added; default no-op preserves existing tests)
 - apps/api/src/modules/period/period.service.test.ts (3 new assertions)
 - apps/api/src/modules/period/period.module.ts (AnalyticsCache injection)

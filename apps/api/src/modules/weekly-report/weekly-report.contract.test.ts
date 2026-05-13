@@ -1,27 +1,27 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   weeklyReportReadModelSchema,
   weeklyReportGetResponseSchema,
   type WeeklyReportReadModel,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 import {
   WeeklyReportService,
   WeeklyReportDomainError,
   type WeeklyReportRepository,
-} from './weekly-report.service';
-import { expectDefined } from '../../test-utils/expect-defined.js';
+} from "./weekly-report.service";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
 /* ------------------------------------------------------------------ */
 
-const reportId = '11111111-1111-4111-8111-111111111111';
-const activeReportId = '22222222-2222-4222-8222-222222222222';
-const sectionId = '33333333-3333-4333-8333-333333333333';
-const authorId = '44444444-4444-4444-8444-444444444444';
-const projectId = '55555555-5555-4555-8555-555555555555';
+const reportId = "11111111-1111-4111-8111-111111111111";
+const activeReportId = "22222222-2222-4222-8222-222222222222";
+const sectionId = "33333333-3333-4333-8333-333333333333";
+const authorId = "44444444-4444-4444-8444-444444444444";
+const projectId = "55555555-5555-4555-8555-555555555555";
 
 /* ------------------------------------------------------------------ */
 /*  Fixtures                                                           */
@@ -32,21 +32,21 @@ function makeWeeklyReport(
 ): WeeklyReportReadModel {
   return weeklyReportReadModelSchema.parse({
     reportId,
-    periodStart: new Date('2026-04-14'),
-    periodEnd: new Date('2026-04-18'),
-    deadline: new Date('2026-04-17T15:00:00.000Z'),
-    periodStatus: 'open',
-    weekLabel: 'W16-2026',
+    periodStart: new Date("2026-04-14"),
+    periodEnd: new Date("2026-04-18"),
+    deadline: new Date("2026-04-17T15:00:00.000Z"),
+    periodStatus: "open",
+    weekLabel: "W16-2026",
     submissionCount: 1,
     totalLeads: 3,
     hasActiveReminderRule: true,
     portfolioOverview: [
       {
         productId: projectId,
-        productName: 'Project Alpha',
-        worstStatus: 'green',
+        productName: "Project Alpha",
+        worstStatus: "green",
         stageCount: 2,
-        leadNames: ['Lead A'],
+        leadNames: ["Lead A"],
       },
     ],
     leadSections: [
@@ -54,30 +54,36 @@ function makeWeeklyReport(
         reportSectionId: sectionId,
         reportId,
         authorId,
-        authorName: 'Lead A',
-        status: 'submitted',
-        submittedAt: new Date('2026-04-16T10:00:00.000Z'),
+        authorName: "Lead A",
+        status: "submitted",
+        submittedAt: new Date("2026-04-16T10:00:00.000Z"),
         projects: [
           {
             projectId,
-            projectName: 'Project Alpha',
-            trafficLight: 'green',
+            projectName: "Project Alpha",
+            trafficLight: "green",
           },
         ],
         items: [
           {
-            id: '66666666-6666-4666-8666-666666666666',
+            id: "66666666-6666-4666-8666-666666666666",
             projectId,
-            type: 'current',
-            text: 'Implemented feature X',
-            tag: 'dev',
-            workflowStatus: 'done',
+            type: "current",
+            text: "Implemented feature X",
+            tag: "dev",
+            workflowStatus: "done",
             carriedOver: false,
           },
         ],
         risks: [],
         decisions: [],
-        priorities: [{ id: '77777777-7777-4777-8777-777777777777', rank: 1, text: 'Finish feature X' }],
+        priorities: [
+          {
+            id: "77777777-7777-4777-8777-777777777777",
+            rank: 1,
+            text: "Finish feature X",
+          },
+        ],
       },
     ],
     escalations: [],
@@ -107,8 +113,8 @@ function createRepository(
 /*  Tests                                                              */
 /* ------------------------------------------------------------------ */
 
-describe('WeeklyReportService — contract tests', () => {
-  it('returns compiled weekly report data for a given reportId', async () => {
+describe("WeeklyReportService — contract tests", () => {
+  it("returns compiled weekly report data for a given reportId", async () => {
     const report = makeWeeklyReport();
     const reports = new Map([[reportId, report]]);
     const service = new WeeklyReportService(createRepository(reports));
@@ -116,18 +122,20 @@ describe('WeeklyReportService — contract tests', () => {
     const result = await service.getWeeklyReport(reportId);
 
     // R3a: service now returns discriminated union; active path carries status:'active'
-    expect(result.status).toBe('active');
-    if (result.status !== 'active') throw new Error('expected active');
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
 
     expect(result.reportId).toBe(reportId);
-    expect(result.periodStatus).toBe('open');
-    expect(result.weekLabel).toBe('W16-2026');
+    expect(result.periodStatus).toBe("open");
+    expect(result.weekLabel).toBe("W16-2026");
     expect(result.submissionCount).toBe(1);
     expect(result.totalLeads).toBe(3);
     expect(result.portfolioOverview).toHaveLength(1);
-    expect(expectDefined(result.portfolioOverview[0]).productName).toBe('Project Alpha');
+    expect(expectDefined(result.portfolioOverview[0]).productName).toBe(
+      "Project Alpha",
+    );
     expect(result.leadSections).toHaveLength(1);
-    expect(expectDefined(result.leadSections[0]).authorName).toBe('Lead A');
+    expect(expectDefined(result.leadSections[0]).authorName).toBe("Lead A");
     expect(result.escalations).toEqual([]);
 
     // Verify output conforms to the Zod response schema
@@ -135,20 +143,20 @@ describe('WeeklyReportService — contract tests', () => {
     expect(parsed).toEqual(result);
   });
 
-  it('throws WeeklyReportDomainError when report is not found', async () => {
+  it("throws WeeklyReportDomainError when report is not found", async () => {
     const reports = new Map<string, WeeklyReportReadModel>();
     const service = new WeeklyReportService(createRepository(reports));
 
     await expect(
-      service.getWeeklyReport('99999999-9999-4999-8999-999999999999'),
+      service.getWeeklyReport("99999999-9999-4999-8999-999999999999"),
     ).rejects.toThrow(WeeklyReportDomainError);
 
     await expect(
-      service.getWeeklyReport('99999999-9999-4999-8999-999999999999'),
-    ).rejects.toThrow('not found');
+      service.getWeeklyReport("99999999-9999-4999-8999-999999999999"),
+    ).rejects.toThrow("not found");
   });
 
-  it('uses active report when no ID is given', async () => {
+  it("uses active report when no ID is given", async () => {
     const report = makeWeeklyReport({ reportId: activeReportId });
     const reports = new Map([[activeReportId, report]]);
     const service = new WeeklyReportService(
@@ -158,48 +166,46 @@ describe('WeeklyReportService — contract tests', () => {
     const result = await service.getWeeklyReport();
 
     // R3a: discriminated union — narrow to active before accessing fields
-    expect(result.status).toBe('active');
-    if (result.status !== 'active') throw new Error('expected active');
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
     expect(result.reportId).toBe(activeReportId);
   });
 
-  it('returns no-period sentinel when no active report exists and no ID given', async () => {
+  it("returns no-period sentinel when no active report exists and no ID given", async () => {
     // R3a: replaces the old "throws WeeklyReportDomainError" contract.
     // The service now returns { status: 'no-period', report: null } instead
     // of throwing, so the tRPC router returns HTTP 200 and React Query does
     // not retry 3×.
-    const service = new WeeklyReportService(
-      createRepository(new Map(), null),
-    );
+    const service = new WeeklyReportService(createRepository(new Map(), null));
 
     const result = await service.getWeeklyReport();
 
-    expect(result).toEqual({ status: 'no-period', report: null });
+    expect(result).toEqual({ status: "no-period", report: null });
   });
 
-  it('returns report with escalations (blocked items and at-risk projects)', async () => {
+  it("returns report with escalations (blocked items and at-risk projects)", async () => {
     const report = makeWeeklyReport({
       escalations: [
         {
-          type: 'blocked',
-          productName: 'Project Alpha',
+          type: "blocked",
+          productName: "Project Alpha",
           stageName: null,
-          leadName: 'Lead A',
-          description: 'Blocked by external dependency',
+          leadName: "Lead A",
+          description: "Blocked by external dependency",
         },
         {
-          type: 'at_risk',
-          productName: 'Project Alpha',
+          type: "at_risk",
+          productName: "Project Alpha",
           stageName: null,
-          leadName: 'Lead A',
-          description: 'Project Project Alpha is flagged red.',
+          leadName: "Lead A",
+          description: "Project Project Alpha is flagged red.",
         },
         {
-          type: 'unresolved_risk',
-          productName: 'Project Alpha',
+          type: "unresolved_risk",
+          productName: "Project Alpha",
           stageName: null,
-          leadName: 'Lead A',
-          description: 'Key developer may leave',
+          leadName: "Lead A",
+          description: "Key developer may leave",
         },
       ],
     });
@@ -208,33 +214,33 @@ describe('WeeklyReportService — contract tests', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
-    expect(result.status).toBe('active');
-    if (result.status !== 'active') throw new Error('expected active');
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
     expect(result.escalations).toHaveLength(3);
     expect(result.escalations.map((e) => e.type)).toEqual([
-      'blocked',
-      'at_risk',
-      'unresolved_risk',
+      "blocked",
+      "at_risk",
+      "unresolved_risk",
     ]);
   });
 
-  it('returns report with multiple portfolio products and worst status computed', async () => {
-    const secondProjectId = '88888888-8888-4888-8888-888888888888';
+  it("returns report with multiple portfolio products and worst status computed", async () => {
+    const secondProjectId = "88888888-8888-4888-8888-888888888888";
     const report = makeWeeklyReport({
       portfolioOverview: [
         {
           productId: projectId,
-          productName: 'Project Alpha',
-          worstStatus: 'red',
+          productName: "Project Alpha",
+          worstStatus: "red",
           stageCount: 2,
-          leadNames: ['Lead A'],
+          leadNames: ["Lead A"],
         },
         {
           productId: secondProjectId,
-          productName: 'Project Beta',
-          worstStatus: 'yellow',
+          productName: "Project Beta",
+          worstStatus: "yellow",
           stageCount: 1,
-          leadNames: ['Lead B'],
+          leadNames: ["Lead B"],
         },
       ],
     });
@@ -243,14 +249,16 @@ describe('WeeklyReportService — contract tests', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
-    expect(result.status).toBe('active');
-    if (result.status !== 'active') throw new Error('expected active');
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
     expect(result.portfolioOverview).toHaveLength(2);
-    expect(expectDefined(result.portfolioOverview[0]).worstStatus).toBe('red');
-    expect(expectDefined(result.portfolioOverview[1]).worstStatus).toBe('yellow');
+    expect(expectDefined(result.portfolioOverview[0]).worstStatus).toBe("red");
+    expect(expectDefined(result.portfolioOverview[1]).worstStatus).toBe(
+      "yellow",
+    );
   });
 
-  it('returns report with zero submissions', async () => {
+  it("returns report with zero submissions", async () => {
     const report = makeWeeklyReport({
       submissionCount: 0,
       leadSections: [],
@@ -260,13 +268,13 @@ describe('WeeklyReportService — contract tests', () => {
 
     const result = await service.getWeeklyReport(reportId);
 
-    expect(result.status).toBe('active');
-    if (result.status !== 'active') throw new Error('expected active');
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
     expect(result.submissionCount).toBe(0);
     expect(result.leadSections).toEqual([]);
   });
 
-  it('result conforms to Zod response schema', async () => {
+  it("result conforms to Zod response schema", async () => {
     const report = makeWeeklyReport();
     const reports = new Map([[reportId, report]]);
     const service = new WeeklyReportService(createRepository(reports));
@@ -275,8 +283,8 @@ describe('WeeklyReportService — contract tests', () => {
 
     // The service output must parse cleanly through the canonical response schema
     const parsed = weeklyReportGetResponseSchema.parse(result);
-    expect(parsed.status).toBe('active');
-    if (parsed.status !== 'active') throw new Error('expected active');
+    expect(parsed.status).toBe("active");
+    if (parsed.status !== "active") throw new Error("expected active");
     expect(parsed.reportId).toBe(reportId);
     expect(parsed.leadSections).toHaveLength(1);
   });

@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
+import { Injectable } from "@nestjs/common";
+import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 
 /**
  * SMTP email service wrapping nodemailer.
@@ -16,17 +16,17 @@ export class EmailService {
   private readonly isDev: boolean;
 
   constructor() {
-    this.fromAddress = process.env['SMTP_FROM'] ?? 'noreply@example.com';
-    const host = process.env['SMTP_HOST'];
+    this.fromAddress = process.env["SMTP_FROM"] ?? "noreply@example.com";
+    const host = process.env["SMTP_HOST"];
 
     if (host) {
       this.isDev = false;
       this.transporter = nodemailer.createTransport({
         host,
-        port: Number(process.env['SMTP_PORT'] ?? 587),
+        port: Number(process.env["SMTP_PORT"] ?? 587),
         secure: false,
-        auth: process.env['SMTP_USER']
-          ? { user: process.env['SMTP_USER'], pass: process.env['SMTP_PASS'] }
+        auth: process.env["SMTP_USER"]
+          ? { user: process.env["SMTP_USER"], pass: process.env["SMTP_PASS"] }
           : undefined,
       });
     } else {
@@ -59,11 +59,11 @@ export class EmailService {
       process.stdout.write(
         JSON.stringify({
           timestamp: new Date().toISOString(),
-          level: 'info',
-          message: 'email sent (dev/jsonTransport)',
+          level: "info",
+          message: "email sent (dev/jsonTransport)",
           envelope: { from: fromAddr, to },
           subject,
-        }) + '\n',
+        }) + "\n",
       );
     }
   }
@@ -97,11 +97,11 @@ export class EmailService {
       process.stdout.write(
         JSON.stringify({
           timestamp: new Date().toISOString(),
-          level: 'info',
-          message: 'email sent (dev/jsonTransport, multipart)',
+          level: "info",
+          message: "email sent (dev/jsonTransport, multipart)",
           envelope: { from: fromAddr, to },
           subject,
-        }) + '\n',
+        }) + "\n",
       );
     }
   }

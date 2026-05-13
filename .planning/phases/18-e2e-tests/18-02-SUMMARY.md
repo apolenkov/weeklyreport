@@ -46,6 +46,7 @@ metrics:
 ## What Was Built
 
 ### Step 1: Head Dashboard E2E (11 tests)
+
 - Page header: "Dashboard" heading, week/department context line
 - KPI cards: Submissions (4/6), Deadline (2d 5h), Risks & Blockers (blocked/at-risk/decisions counts)
 - Alert bar: pending leads (Olga N., Sergey T.), Send Reminder button
@@ -53,6 +54,7 @@ metrics:
 - Report Archive: heading with total count, week labels, Active/Published badges
 
 ### Step 2: Weekly Report E2E (10 tests)
+
 - Page header: "Weekly Report" heading, Live submission badge (4/6 Submitted)
 - Period navigator: select element with Week 16 default, Previous/Next week arrow buttons
 - Portfolio Overview: section heading, 12 products badge, product card names
@@ -61,6 +63,7 @@ metrics:
 - Export PDF: button visible
 
 ### Step 3: PDF/Print Page E2E (3 tests)
+
 - Print page renders at /reports/w16/print with heading
 - Company header with "Core Development" title and "4/6 leads submitted"
 - Portfolio overview table with product names and column headers
@@ -68,6 +71,7 @@ metrics:
 ## Verification
 
 All 29 tests pass:
+
 ```
 PASS (29) FAIL (0)
 Time: ~10s
@@ -77,29 +81,32 @@ Run command: `cd apps/web && npx playwright test --project=chromium e2e/head-das
 
 ## Commits
 
-| Task | Description | Hash | Files |
-|------|-------------|------|-------|
-| 1 | Head Dashboard E2E tests | b6f7cf9 | apps/web/e2e/head-dashboard.spec.ts |
-| 2 | Weekly Report E2E tests | 7d029fc | apps/web/e2e/weekly-report.spec.ts |
-| 3 | PDF/Print page E2E tests | 116dcc3 | apps/web/e2e/pdf-export.spec.ts |
+| Task | Description              | Hash    | Files                               |
+| ---- | ------------------------ | ------- | ----------------------------------- |
+| 1    | Head Dashboard E2E tests | b6f7cf9 | apps/web/e2e/head-dashboard.spec.ts |
+| 2    | Weekly Report E2E tests  | 7d029fc | apps/web/e2e/weekly-report.spec.ts  |
+| 3    | PDF/Print page E2E tests | 116dcc3 | apps/web/e2e/pdf-export.spec.ts     |
 
 ## Deviations from Plan
 
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Strict mode violations on duplicate text**
+
 - **Found during:** Tasks 1-2
 - **Issue:** Playwright strict mode requires unique element matches. Text like "Week 16", "4/6", "Apr 14", "Live", and "haven't submitted" appeared multiple times on the page.
 - **Fix:** Used `.first()`, more specific text strings, and `.getByRole()` with name constraints to create unique locators.
 - **Files modified:** head-dashboard.spec.ts, weekly-report.spec.ts
 
 **2. [Rule 2 - Missing functionality] "Revoke" button test replaced with lock icon test**
+
 - **Found during:** Task 1
 - **Issue:** Plan references "Revoke button on submitted cards" but the actual UI shows a lock icon (LockIcon SVG) on non-current-user cards, not a Revoke button.
 - **Fix:** Replaced the test with "lock icon visible on non-current-user cards" that matches the actual rendered UI.
 - **Files modified:** head-dashboard.spec.ts
 
 **3. [Rule 3 - Blocking] Print page has no #main-content id**
+
 - **Found during:** Task 3
 - **Issue:** The print page `<main>` element uses inline styles but no `id="main-content"`, so the standard `waitForSelector('#main-content')` pattern would fail.
 - **Fix:** Wait for the heading element directly: `getByRole('heading', { name: 'Core Development' })`.

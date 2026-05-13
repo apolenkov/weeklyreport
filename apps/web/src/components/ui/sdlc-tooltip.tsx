@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Singleton tooltip portal for SDLC stage chips. Mirrors the mockup's
@@ -24,8 +24,8 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from 'react';
-import { createPortal } from 'react-dom';
+} from "react";
+import { createPortal } from "react-dom";
 
 type TooltipState = {
   content: string;
@@ -50,7 +50,11 @@ export function useSdlcTooltip(): ContextValue {
   return ctx;
 }
 
-export function SdlcTooltipProvider({ children }: { readonly children: ReactNode }) {
+export function SdlcTooltipProvider({
+  children,
+}: {
+  readonly children: ReactNode;
+}) {
   const [state, setState] = useState<TooltipState | null>(null);
   const [mounted, setMounted] = useState(false);
 

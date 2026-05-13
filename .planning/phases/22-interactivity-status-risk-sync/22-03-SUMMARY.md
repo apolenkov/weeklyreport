@@ -2,7 +2,15 @@
 phase: 22-interactivity-status-risk-sync
 plan: 03
 subsystem: ui
-tags: [tanstack-query, useInfiniteQuery, trpc, next-navigation, cursor-pagination, period-navigator]
+tags:
+  [
+    tanstack-query,
+    useInfiniteQuery,
+    trpc,
+    next-navigation,
+    cursor-pagination,
+    period-navigator,
+  ]
 
 requires:
   - phase: 21-trpc-provider-and-client-wiring
@@ -92,12 +100,14 @@ Each task was committed atomically:
 ## Files Created/Modified
 
 ### Created
+
 - `apps/web/src/lib/use-cursor-pagination.ts` — Generic hook wrapping useInfiniteQuery; flattens pages, renames flags ergonomically.
 - `apps/web/src/lib/use-cursor-pagination.test.ts` — 5 cases: initial load, append, end-of-pages, error, disabled.
 - `apps/web/src/components/lead/period-navigator.test.tsx` — 4 cases for Lead nav URL behavior.
 - `apps/web/src/components/weekly-report/period-navigator.test.tsx` — 3 cases for Head nav routing.
 
 ### Modified
+
 - `apps/web/src/components/lead/period-navigator.tsx` — `router.replace` + `usePathname` + `URLSearchParams`-based query mutation.
 - `apps/web/src/components/weekly-report/period-navigator.tsx` — Past periods now `router.push('/reports/<reportId>')`; current period stays on basePath.
 - `apps/web/src/components/dashboard/report-archive-section.tsx` — Self-contained; uses `useCursorPagination` against `trpc.archive.list.infiniteQueryOptions`; renders Load More button; drops `reports`/`totalCount` props.
@@ -149,6 +159,7 @@ None — plan executed as written. Pre-existing code already had Lead PeriodNavi
 - Future server-cursor support for `reports.myHistory` and `leadForm.versions`: deferred to Phase 23+ when the read endpoints can be extended without a v5.0 contract break. Hook is ready to consume them when they ship.
 
 ---
-*Phase: 22-interactivity-status-risk-sync*
-*Plan: 03*
-*Completed: 2026-04-25*
+
+_Phase: 22-interactivity-status-risk-sync_
+_Plan: 03_
+_Completed: 2026-04-25_

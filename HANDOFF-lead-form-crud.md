@@ -14,12 +14,14 @@ audit.
 ## What was done
 
 ### Audit
+
 Full-app sweep (Explore agent). Verdict: dead UI is **localized to
 lead-form** — Head Dashboard, Admin, Weekly Report are all healthy.
 Five critical buttons (`+ Add` × 4 + Edit/Delete on ItemCard) had no
 handlers and the parent never passed callbacks down.
 
 ### Implementation (committed in `e885b76`)
+
 - `current-week-section.tsx`, `next-week-section.tsx` — wired `+ Add`
   via `onItemsChange?.([...items, newItem])`. ItemCard now receives
   `onEdit` / `onDelete` / `isEditing` / `onTextSave`. New items
@@ -45,6 +47,7 @@ handlers and the parent never passed callbacks down.
     rank-2/rank-3 inserts. Now upserts.
 
 ### Seed enrichment (committed in `2fed39f`)
+
 Per active section: 3 current items (mix of in_progress/blocked/done),
 2 next items, 2 decisions (one with deadline), 3 priorities (filling
 all 3 slots). Polenkov gets 2 VersionSnapshot rows so Restore is
@@ -55,6 +58,7 @@ Counts: `{sections:6, items:21, decisions:6, priorities:12,
 versionSnapshots:2}`.
 
 ### Empty-row filter (committed in `2fed39f`)
+
 `sectionToDraftPayload` now filters rows whose required text fields
 are empty/whitespace-only. Without this, `+ Add Risk` would create a
 new empty row → autosave fires after 3s → backend rejects on
@@ -66,6 +70,7 @@ new empty row → autosave fires after 3s → backend rejects on
 - priorities: `text` non-empty
 
 ### Observability (committed earlier in session, `54f48dd`)
+
 - LOG_LEVEL=debug surfaces every Prisma query (with duration), every
   tRPC input/output (4KB-truncated), and every HTTP request.
 - tRPC error-mapper now preserves `cause`; middleware logs `cause.name`,

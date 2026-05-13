@@ -1,57 +1,57 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import type { SubmissionDashboardRow, UserSession } from '@customreport/shared';
+import type { SubmissionDashboardRow, UserSession } from "@customreport/shared";
 
-import { reviewRouter } from './review.router';
+import { reviewRouter } from "./review.router";
 import {
   ReviewAccessError,
   ReviewService,
   type ReviewRepository,
-} from './review.service';
+} from "./review.service";
 
-const reportId = '22222222-2222-4222-8222-222222222222';
+const reportId = "22222222-2222-4222-8222-222222222222";
 
 const headSession: UserSession = {
-  userId: '00000000-0000-4000-8000-000000000001',
-  email: 'head@customreport.local',
-  name: 'Department Head',
-  role: 'head',
+  userId: "00000000-0000-4000-8000-000000000001",
+  email: "head@customreport.local",
+  name: "Department Head",
+  role: "head",
   activeReportId: reportId,
   activeReportSectionId: null,
 };
 
 const leadSession: UserSession = {
-  userId: '00000000-0000-4000-8000-000000000002',
-  email: 'lead1@customreport.local',
-  name: 'Lead 1',
-  role: 'lead',
+  userId: "00000000-0000-4000-8000-000000000002",
+  email: "lead1@customreport.local",
+  name: "Lead 1",
+  role: "lead",
   activeReportId: reportId,
-  activeReportSectionId: '33333333-3333-4333-8333-333333333333',
+  activeReportSectionId: "33333333-3333-4333-8333-333333333333",
 };
 
 const unsortedRows: SubmissionDashboardRow[] = [
   {
-    leadId: '00000000-0000-4000-8000-000000000012',
-    leadName: 'Lead 2',
-    role: 'lead',
-    projectNames: ['Project 2'],
-    status: 'submitted',
-    submittedAt: new Date('2026-04-09T10:00:00.000Z'),
+    leadId: "00000000-0000-4000-8000-000000000012",
+    leadName: "Lead 2",
+    role: "lead",
+    projectNames: ["Project 2"],
+    status: "submitted",
+    submittedAt: new Date("2026-04-09T10:00:00.000Z"),
   },
   {
-    leadId: '00000000-0000-4000-8000-000000000013',
-    leadName: 'Lead 3',
-    role: 'lead',
-    projectNames: ['Project 3'],
-    status: 'draft',
+    leadId: "00000000-0000-4000-8000-000000000013",
+    leadName: "Lead 3",
+    role: "lead",
+    projectNames: ["Project 3"],
+    status: "draft",
     submittedAt: null,
   },
   {
-    leadId: '00000000-0000-4000-8000-000000000011',
-    leadName: 'Lead 1',
-    role: 'lead',
-    projectNames: ['Project 1'],
-    status: 'draft',
+    leadId: "00000000-0000-4000-8000-000000000011",
+    leadName: "Lead 1",
+    role: "lead",
+    projectNames: ["Project 1"],
+    status: "draft",
     submittedAt: null,
   },
 ];
@@ -70,57 +70,57 @@ function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
 
 const headSessionWithGroup: UserSession = {
   ...headSession,
-  reportingGroupId: 'a0000000-0000-4000-8000-000000000a01',
+  reportingGroupId: "a0000000-0000-4000-8000-000000000a01",
 };
 
 const viewerSessionEmptyAccess: UserSession = {
-  userId: '00000000-0000-4000-8000-000000000003',
-  email: 'viewer@customreport.local',
-  name: 'Viewer',
-  role: 'viewer',
+  userId: "00000000-0000-4000-8000-000000000003",
+  email: "viewer@customreport.local",
+  name: "Viewer",
+  role: "viewer",
   activeReportId: reportId,
   activeReportSectionId: null,
   viewerGroupAccess: [],
 };
 
-describe('ReviewService', () => {
-  it('returns one typed row per lead for the active report', async () => {
+describe("ReviewService", () => {
+  it("returns one typed row per lead for the active report", async () => {
     const service = new ReviewService(createRepository(unsortedRows));
 
     await expect(
       service.getSubmissionDashboard(reportId, headSession),
     ).resolves.toMatchObject([
       {
-        leadName: 'Lead 1',
-        projectNames: ['Project 1'],
-        status: 'draft',
+        leadName: "Lead 1",
+        projectNames: ["Project 1"],
+        status: "draft",
       },
       {
-        leadName: 'Lead 3',
-        projectNames: ['Project 3'],
-        status: 'draft',
+        leadName: "Lead 3",
+        projectNames: ["Project 3"],
+        status: "draft",
       },
       {
-        leadName: 'Lead 2',
-        projectNames: ['Project 2'],
-        status: 'submitted',
+        leadName: "Lead 2",
+        projectNames: ["Project 2"],
+        status: "submitted",
       },
     ]);
   });
 
-  it('sorts outstanding draft rows before submitted rows and then by lead name', async () => {
+  it("sorts outstanding draft rows before submitted rows and then by lead name", async () => {
     const service = new ReviewService(createRepository(unsortedRows));
 
     const rows = await service.getSubmissionDashboard(reportId, headSession);
 
-    expect(rows.map((row: SubmissionDashboardRow) => `${row.status}:${row.leadName}`)).toEqual([
-      'draft:Lead 1',
-      'draft:Lead 3',
-      'submitted:Lead 2',
-    ]);
+    expect(
+      rows.map(
+        (row: SubmissionDashboardRow) => `${row.status}:${row.leadName}`,
+      ),
+    ).toEqual(["draft:Lead 1", "draft:Lead 3", "submitted:Lead 2"]);
   });
 
-  it('rejects non-head access before returning dashboard data', async () => {
+  it("rejects non-head access before returning dashboard data", async () => {
     const service = new ReviewService(createRepository(unsortedRows));
 
     await expect(
@@ -131,7 +131,7 @@ describe('ReviewService', () => {
     ).rejects.toBeInstanceOf(ReviewAccessError);
   });
 
-  it('UFB-040 / 46-02: passes the session through to the repository so scope filter applies', async () => {
+  it("UFB-040 / 46-02: passes the session through to the repository so scope filter applies", async () => {
     let capturedSession: unknown;
     const spyRepo: ReviewRepository = {
       async getSubmissionDashboard(_id, session) {
@@ -142,12 +142,12 @@ describe('ReviewService', () => {
     const service = new ReviewService(spyRepo);
     await service.getSubmissionDashboard(reportId, headSessionWithGroup);
     expect(capturedSession).toMatchObject({
-      role: 'head',
-      reportingGroupId: 'a0000000-0000-4000-8000-000000000a01',
+      role: "head",
+      reportingGroupId: "a0000000-0000-4000-8000-000000000a01",
     });
   });
 
-  it('UFB-040 / 46-02: viewer with empty viewerGroupAccess gets zero rows back (caller responsibility, repo still gets session)', async () => {
+  it("UFB-040 / 46-02: viewer with empty viewerGroupAccess gets zero rows back (caller responsibility, repo still gets session)", async () => {
     let capturedSession: unknown;
     const spyRepo: ReviewRepository = {
       async getSubmissionDashboard(_id, session) {
@@ -162,14 +162,14 @@ describe('ReviewService', () => {
     );
     expect(result).toEqual([]);
     expect(capturedSession).toMatchObject({
-      role: 'viewer',
+      role: "viewer",
       viewerGroupAccess: [],
     });
   });
 });
 
-describe('reviewRouter', () => {
-  it('allows a head session to read the active report dashboard', async () => {
+describe("reviewRouter", () => {
+  it("allows a head session to read the active report dashboard", async () => {
     const service = new ReviewService(createRepository(unsortedRows));
 
     await expect(

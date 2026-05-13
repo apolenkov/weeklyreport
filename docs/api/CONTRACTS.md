@@ -8,11 +8,13 @@ All tRPC endpoints are mounted at `/trpc`. Auth routes are plain Express REST.
 ## REST Auth Routes
 
 ### `GET /auth/saml/login`
+
 - **Auth**: None (initiates SAML flow)
 - **Behavior**: Redirects to Keycloak IdP
 - **Response**: HTTP 302 redirect
 
 ### `POST /auth/saml/callback`
+
 - **Auth**: SAML assertion from IdP
 - **Content-Type**: `application/x-www-form-urlencoded`
 - **Behavior**:
@@ -29,11 +31,13 @@ All tRPC endpoints are mounted at `/trpc`. Auth routes are plain Express REST.
 - **Cookie**: `customreport_session=<JWT>; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600`
 
 ### `POST /auth/logout`
+
 - **Auth**: None (clears cookie regardless)
 - **Behavior**: Sets cookie `Max-Age=0`, redirects to `/`
 - **Response**: HTTP 302 redirect
 
 ### `GET /auth/dev-login` (dev mode only)
+
 - **Auth**: None
 - **Query params**:
   - `role` (optional, default: `head`): `lead` | `head` | `viewer`
@@ -59,6 +63,7 @@ All tRPC endpoints are mounted at `/trpc`. Auth routes are plain Express REST.
 
 Every tRPC call extracts JWT from `customreport_session` cookie.
 Context type:
+
 ```typescript
 type TrpcContext = {
   session: UserSession | null;
@@ -67,19 +72,19 @@ type TrpcContext = {
 
 ### Error mapping
 
-| Domain Error | tRPC Code | HTTP Status |
-|-------------|-----------|-------------|
-| `ReportSectionDomainError` | `BAD_REQUEST` | 400 |
-| `ReviewAccessError` | `FORBIDDEN` | 403 |
-| `AdminAccessError` | `FORBIDDEN` | 403 |
-| `PublicationAccessError` | `CONFLICT` | 409 |
-| `PdfExportDomainError` | `NOT_FOUND` | 404 |
-| `ArchiveDomainError` | `NOT_FOUND` | 404 |
-| `ReminderDomainError` | `BAD_REQUEST` | 400 |
-| `CarryOverDomainError` | `BAD_REQUEST` | 400 |
-| Unknown error | `INTERNAL_SERVER_ERROR` | 500 |
-| No session | `UNAUTHORIZED` | 401 |
-| Not head role | `FORBIDDEN` | 403 |
+| Domain Error               | tRPC Code               | HTTP Status |
+| -------------------------- | ----------------------- | ----------- |
+| `ReportSectionDomainError` | `BAD_REQUEST`           | 400         |
+| `ReviewAccessError`        | `FORBIDDEN`             | 403         |
+| `AdminAccessError`         | `FORBIDDEN`             | 403         |
+| `PublicationAccessError`   | `CONFLICT`              | 409         |
+| `PdfExportDomainError`     | `NOT_FOUND`             | 404         |
+| `ArchiveDomainError`       | `NOT_FOUND`             | 404         |
+| `ReminderDomainError`      | `BAD_REQUEST`           | 400         |
+| `CarryOverDomainError`     | `BAD_REQUEST`           | 400         |
+| Unknown error              | `INTERNAL_SERVER_ERROR` | 500         |
+| No session                 | `UNAUTHORIZED`          | 401         |
+| Not head role              | `FORBIDDEN`             | 403         |
 
 ---
 
@@ -93,51 +98,52 @@ type TrpcContext = {
 ```typescript
 // Output schema
 {
-  reportSectionId: string;    // UUID
-  reportId: string;           // UUID
-  authorId: string;           // UUID
-  authorName: string;         // min 1 char
-  status: 'draft' | 'submitted';
+  reportSectionId: string; // UUID
+  reportId: string; // UUID
+  authorId: string; // UUID
+  authorName: string; // min 1 char
+  status: "draft" | "submitted";
   submittedAt: Date | null;
   projects: Array<{
-    projectId: string;        // UUID
-    projectName: string;      // min 1 char
-    trafficLight: 'green' | 'yellow' | 'red' | null;
+    projectId: string; // UUID
+    projectName: string; // min 1 char
+    trafficLight: "green" | "yellow" | "red" | null;
   }>;
   items: Array<{
-    id?: string;              // UUID, optional
-    projectId: string;        // UUID
-    type: 'current' | 'next';
-    text: string;             // 1-500 chars, safeText
-    tag: string;              // 1-50 chars, safeText
-    workflowStatus: 'done' | 'in_progress' | 'blocked';
+    id?: string; // UUID, optional
+    projectId: string; // UUID
+    type: "current" | "next";
+    text: string; // 1-500 chars, safeText
+    tag: string; // 1-50 chars, safeText
+    workflowStatus: "done" | "in_progress" | "blocked";
     carriedOver: boolean;
     completed: boolean | null;
   }>;
   risks: Array<{
-    id?: string;              // UUID, optional
-    projectId: string;        // UUID
-    risk: string;             // 1-500 chars, safeText
-    impact: string;           // 1-500 chars, safeText
-    mitigation: string;       // 1-500 chars, safeText
+    id?: string; // UUID, optional
+    projectId: string; // UUID
+    risk: string; // 1-500 chars, safeText
+    impact: string; // 1-500 chars, safeText
+    mitigation: string; // 1-500 chars, safeText
   }>;
   decisions: Array<{
-    id?: string;              // UUID, optional
-    text: string;             // 1-500 chars, safeText
-    owner: string;            // 1-200 chars, safeText
+    id?: string; // UUID, optional
+    text: string; // 1-500 chars, safeText
+    owner: string; // 1-200 chars, safeText
     deadline: Date | null;
-    impact: string;           // 1-500 chars, safeText
+    impact: string; // 1-500 chars, safeText
     resolvedAt: Date | null;
   }>;
   priorities: Array<{
-    id?: string;              // UUID, optional
-    rank: number;             // int, 1-3
-    text: string;             // 1-200 chars, safeText
+    id?: string; // UUID, optional
+    rank: number; // int, 1-3
+    text: string; // 1-200 chars, safeText
   }>;
 }
 ```
 
 **Behavior**:
+
 - Returns `null` if `ctx.session.activeReportSectionId` is null
 - Throws `Error` (-> 500) if section exists in session but not in DB
 
@@ -157,11 +163,11 @@ Array<{
   reportId: string;
   periodStart: Date;
   periodEnd: Date;
-  reportStatus: 'draft' | 'published';
-  sectionStatus: 'draft' | 'submitted';
+  reportStatus: "draft" | "published";
+  sectionStatus: "draft" | "submitted";
   submittedAt: Date | null;
   publishedAt: Date | null;
-}>
+}>;
 ```
 
 **Behavior**: Returns all ReportSections authored by current user, ordered by `createdAt` desc.
@@ -198,6 +204,7 @@ Array<{
   - Zod validation failure -> 400 `BAD_REQUEST`
 
 **Behavior**:
+
 1. Parses input through `draftSaveSchema`
 2. Loads section from DB
 3. Checks report status (must not be published)
@@ -216,19 +223,19 @@ Array<{
 ```typescript
 // Input schema (submitSectionSchema = draftSaveSchema + extensions)
 {
-  reportSectionId: string;    // UUID
-  confirmed: true;            // literal true required
+  reportSectionId: string; // UUID
+  confirmed: true; // literal true required
   projectStatuses: Array<{
-    projectId: string;        // UUID
-    status: 'green' | 'yellow' | 'red';  // REQUIRED (not optional)
-  }>;  // min 1 entry
-  items: Array<ItemInput>;    // max 100
-  risks: Array<RiskInput>;    // max 100
-  decisions: Array<DecisionInput>;  // max 100
+    projectId: string; // UUID
+    status: "green" | "yellow" | "red"; // REQUIRED (not optional)
+  }>; // min 1 entry
+  items: Array<ItemInput>; // max 100
+  risks: Array<RiskInput>; // max 100
+  decisions: Array<DecisionInput>; // max 100
   priorities: Array<{
-    rank: number;             // int, 1-3
-    text: string;             // 1-200 chars, safeText
-  }>;  // EXACTLY 3, unique ranks
+    rank: number; // int, 1-3
+    text: string; // 1-200 chars, safeText
+  }>; // EXACTLY 3, unique ranks
 }
 ```
 
@@ -241,6 +248,7 @@ Array<{
   - `MISSING_PRIORITIES` -> 400 "Top 3 priorities must be filled before submit."
 
 **Validation chain** (after Zod parse):
+
 1. Check section not already submitted
 2. For each project in section: verify matching traffic light in input
 3. For each project: verify at least one `current` type item
@@ -257,16 +265,17 @@ Array<{
 
 ```typescript
 Array<{
-  leadId: string;             // UUID
-  leadName: string;           // min 1 char
-  role: 'lead' | 'head' | 'viewer';
-  projectNames: string[];     // names of projects assigned to lead
-  status: 'draft' | 'submitted';
+  leadId: string; // UUID
+  leadName: string; // min 1 char
+  role: "lead" | "head" | "viewer";
+  projectNames: string[]; // names of projects assigned to lead
+  status: "draft" | "submitted";
   submittedAt: Date | null;
-}>
+}>;
 ```
 
-**Behavior**: 
+**Behavior**:
+
 - Requires `activeReportId` in session (throws generic Error -> 500 if null)
 - Returns all sections for active report
 - Sorted: drafts first, then submitted; within same status, by leadName (Russian locale collation)
@@ -303,6 +312,7 @@ Array<{
 ```
 
 **Behavior**:
+
 - Requires `activeReportId` in session
 - Builds portfolio overview: status = red if any red, yellow if any yellow, else green
 - Sections sorted alphabetically by author name
@@ -321,6 +331,7 @@ Array<{
   - Lead/viewer calling -> 403 `FORBIDDEN`
 
 **Behavior**:
+
 1. Loads assembled report
 2. Checks status is 'draft'
 3. Sets status='published', publishedAt=now(), publishedById=session.userId, publishedByName=session.name
@@ -337,13 +348,13 @@ Array<{
 
 ```typescript
 {
-  jobId: string;              // UUID
-  reportId: string;           // UUID
-  status: 'queued' | 'processing' | 'completed' | 'failed';
+  jobId: string; // UUID
+  reportId: string; // UUID
+  status: "queued" | "processing" | "completed" | "failed";
   requestedAt: Date;
   completedAt: Date | null;
   checksum: string | null;
-  templateVersion: string;    // currently 'phase-2-pdf-v1'
+  templateVersion: string; // currently 'phase-2-pdf-v1'
   artifactUrl: string | null;
 }
 ```
@@ -376,35 +387,35 @@ Array<{
 ```typescript
 {
   users: Array<{
-    id: string;               // UUID
-    email: string;            // valid email
-    name: string;             // min 1 char
-    role: 'lead' | 'head' | 'viewer';
+    id: string; // UUID
+    email: string; // valid email
+    name: string; // min 1 char
+    role: "lead" | "head" | "viewer";
   }>;
   projects: Array<{
-    id: string;               // UUID
-    name: string;             // min 1 char
+    id: string; // UUID
+    name: string; // min 1 char
     archived: boolean;
-    leadId: string;           // UUID
-    leadName: string;         // min 1 char
+    leadId: string; // UUID
+    leadName: string; // min 1 char
   }>;
   periods: Array<{
-    id: string;               // UUID
-    periodStart: Date;        // >= year 2000
-    periodEnd: Date;          // >= year 2000
-    deadline: Date;           // >= year 2000
-    status: 'draft' | 'published';
+    id: string; // UUID
+    periodStart: Date; // >= year 2000
+    periodEnd: Date; // >= year 2000
+    deadline: Date; // >= year 2000
+    status: "draft" | "published";
   }>;
   reminderRules: Array<{
-    id: string;               // UUID
-    reportId: string;         // UUID
-    kind: 'deadline' | 'follow_up';
+    id: string; // UUID
+    reportId: string; // UUID
+    kind: "deadline" | "follow_up";
     fireAt: Date;
-    timezone: string;         // min 1 char
-    status: 'active' | 'paused';
-    version: number;          // int >= 1
+    timezone: string; // min 1 char
+    status: "active" | "paused";
+    version: number; // int >= 1
   }>;
-  reminderExecutions: Array<ReminderExecution>;  // defaults to []
+  reminderExecutions: Array<ReminderExecution>; // defaults to []
 }
 ```
 
@@ -418,10 +429,10 @@ Array<{
 
 ```typescript
 {
-  id: string;                 // UUID
-  email: string;              // valid email
-  name: string;               // min 1 char
-  role: 'lead' | 'head' | 'viewer';
+  id: string; // UUID
+  email: string; // valid email
+  name: string; // min 1 char
+  role: "lead" | "head" | "viewer";
 }
 ```
 
@@ -438,11 +449,11 @@ Array<{
 
 ```typescript
 {
-  id: string;                 // UUID
-  name: string;               // min 1 char
+  id: string; // UUID
+  name: string; // min 1 char
   archived: boolean;
-  leadId: string;             // UUID
-  leadName: string;           // min 1 char
+  leadId: string; // UUID
+  leadName: string; // min 1 char
 }
 ```
 
@@ -459,11 +470,11 @@ Array<{
 
 ```typescript
 {
-  id: string;                 // UUID
-  periodStart: Date;          // >= year 2000
-  periodEnd: Date;            // >= year 2000
-  deadline: Date;             // >= year 2000
-  status: 'draft' | 'published';
+  id: string; // UUID
+  periodStart: Date; // >= year 2000
+  periodEnd: Date; // >= year 2000
+  deadline: Date; // >= year 2000
+  status: "draft" | "published";
 }
 ```
 
@@ -479,13 +490,13 @@ Array<{
 
 ```typescript
 {
-  id: string;                 // UUID
-  reportId: string;           // UUID
-  kind: 'deadline' | 'follow_up';
+  id: string; // UUID
+  reportId: string; // UUID
+  kind: "deadline" | "follow_up";
   fireAt: Date;
-  timezone: string;           // min 1 char, e.g. 'Europe/Moscow'
-  status: 'active' | 'paused';
-  version: number;            // int >= 1
+  timezone: string; // min 1 char, e.g. 'Europe/Moscow'
+  status: "active" | "paused";
+  version: number; // int >= 1
 }
 ```
 
@@ -534,13 +545,13 @@ Array<{
 
 ```typescript
 Array<{
-  reportId: string;           // UUID
-  periodStart: Date;          // >= year 2000
-  periodEnd: Date;            // >= year 2000
-  publishedAt: Date;          // >= year 2000
-  publishedByName: string;    // min 1 char
-  portfolioStatus: 'green' | 'yellow' | 'red';
-}>
+  reportId: string; // UUID
+  periodStart: Date; // >= year 2000
+  periodEnd: Date; // >= year 2000
+  publishedAt: Date; // >= year 2000
+  publishedByName: string; // min 1 char
+  portfolioStatus: "green" | "yellow" | "red";
+}>;
 ```
 
 **Behavior**: Returns all published reports, sorted by `publishedAt` descending.
@@ -557,7 +568,7 @@ Array<{
 ```typescript
 {
   summary: ArchiveReportSummary;
-  report: AssembledReport;    // full report with all sections
+  report: AssembledReport; // full report with all sections
 }
 ```
 
@@ -574,11 +585,11 @@ Array<{
 
 ```typescript
 {
-  id: string;                 // UUID
-  ruleId: string;             // UUID
-  reportId: string;           // UUID
-  dedupeKey: string;          // "{ruleId}:{fireAt ISO}:{email}"
-  status: 'queued' | 'sent' | 'failed';
+  id: string; // UUID
+  ruleId: string; // UUID
+  reportId: string; // UUID
+  dedupeKey: string; // "{ruleId}:{fireAt ISO}:{email}"
+  status: "queued" | "sent" | "failed";
   scheduledFor: Date;
   sentAt: Date | null;
   recipientEmail: string;
@@ -643,6 +654,7 @@ Array<{
 ### safeText validation
 
 All user-facing text fields use `safeText()`:
+
 1. **Min length**: 1 character (default) — empty strings rejected
 2. **Max length**: varies (50 for tags, 200 for priorities/owners, 500 for text fields)
 3. **No null bytes**: `\u0000` rejected (PostgreSQL incompatible)
@@ -651,13 +663,13 @@ All user-facing text fields use `safeText()`:
 
 ### Array limits
 
-| Field | Draft max | Submit constraint |
-|-------|-----------|-------------------|
-| items | 100 | At least 1 `current` item per project |
-| risks | 100 | No minimum |
-| decisions | 100 | No minimum |
-| priorities | 50 (draft) | Exactly 3 with unique ranks (submit) |
-| projectStatuses | unbounded | Min 1 with required status (submit) |
+| Field           | Draft max  | Submit constraint                     |
+| --------------- | ---------- | ------------------------------------- |
+| items           | 100        | At least 1 `current` item per project |
+| risks           | 100        | No minimum                            |
+| decisions       | 100        | No minimum                            |
+| priorities      | 50 (draft) | Exactly 3 with unique ranks (submit)  |
+| projectStatuses | unbounded  | Min 1 with required status (submit)   |
 
 ### Date validation
 

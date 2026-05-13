@@ -13,6 +13,7 @@ Hidden when AI is unavailable (does NOT block the row).
 ## Cache reuse evidence
 
 `apps/api/src/modules/ai/__tests__/ai.service.test.ts`:
+
 - `cache miss → SDK called → row upserted with kind=sentiment`
 - `cache hit on second call with identical text → SDK NOT called`
 - `two different riskIds with identical text share one cached row`
@@ -28,17 +29,17 @@ the risks-and-blockers list. Sized 24×24 max so no layout shift on mobile.
 
 ## Failure modes
 
-| Path | UI behaviour |
-|---|---|
-| Loading | tiny grey pulsing dot |
-| Available | colored pill with `AI · level` and tooltip rationale |
-| Unavailable / not_found | `null` (badge hidden) — risk row still renders |
+| Path                    | UI behaviour                                         |
+| ----------------------- | ---------------------------------------------------- |
+| Loading                 | tiny grey pulsing dot                                |
+| Available               | colored pill with `AI · level` and tooltip rationale |
+| Unavailable / not_found | `null` (badge hidden) — risk row still renders       |
 
 ## Test counts
 
-| Suite | Before | After | Delta |
-|---|---|---|---|
-| api unit | 504 / 43 files | 510 / 43 files | +6 |
+| Suite    | Before                            | After                                | Delta     |
+| -------- | --------------------------------- | ------------------------------------ | --------- |
+| api unit | 504 / 43 files                    | 510 / 43 files                       | +6        |
 | web unit | 228 passing (1 pre-existing fail) | 228 passing (same pre-existing fail) | unchanged |
 
 ## System prompt length
@@ -50,6 +51,7 @@ test) — qualifies for the Anthropic ≥1024-token cache breakpoint with
 ## Files modified
 
 7 files:
+
 - 2 new: `prompts/sentiment.ts`, `risk-sentiment-badge.tsx`
 - 5 modified: `ai.service.ts` (+sentiment method), `trpc.router.ts`
   (+ai.sentiment mount), `ai.service.test.ts` (+sentiment block),

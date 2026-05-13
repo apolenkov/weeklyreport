@@ -8,9 +8,9 @@
  * explicit workflow status.
  */
 
-export type ItemWorkflowStatus = 'done' | 'in_progress' | 'blocked';
-export type ItemType = 'current' | 'next';
-export type ItemStatus = 'in-progress' | 'completed' | 'blocked' | 'planned';
+export type ItemWorkflowStatus = "done" | "in_progress" | "blocked";
+export type ItemType = "current" | "next";
+export type ItemStatus = "in-progress" | "completed" | "blocked" | "planned";
 
 /**
  * Converts a stored ItemWorkflowStatus to its presentation ItemStatus.
@@ -19,14 +19,14 @@ export type ItemStatus = 'in-progress' | 'completed' | 'blocked' | 'planned';
  */
 export function workflowToItemStatus(
   ws: ItemWorkflowStatus,
-): Exclude<ItemStatus, 'planned'> {
+): Exclude<ItemStatus, "planned"> {
   switch (ws) {
-    case 'done':
-      return 'completed';
-    case 'in_progress':
-      return 'in-progress';
-    case 'blocked':
-      return 'blocked';
+    case "done":
+      return "completed";
+    case "in_progress":
+      return "in-progress";
+    case "blocked":
+      return "blocked";
   }
 }
 
@@ -35,15 +35,15 @@ export function workflowToItemStatus(
  * 'planned' has no API equivalent and is excluded at the type level.
  */
 export function itemStatusToWorkflow(
-  status: Exclude<ItemStatus, 'planned'>,
+  status: Exclude<ItemStatus, "planned">,
 ): ItemWorkflowStatus {
   switch (status) {
-    case 'completed':
-      return 'done';
-    case 'in-progress':
-      return 'in_progress';
-    case 'blocked':
-      return 'blocked';
+    case "completed":
+      return "done";
+    case "in-progress":
+      return "in_progress";
+    case "blocked":
+      return "blocked";
   }
 }
 
@@ -64,9 +64,9 @@ export function deriveItemStatus(item: {
   workflowStatus: ItemWorkflowStatus | null;
   type: ItemType;
 }): ItemStatus {
-  if (item.type === 'next') return 'planned';
+  if (item.type === "next") return "planned";
   if (item.workflowStatus) {
     return workflowToItemStatus(item.workflowStatus);
   }
-  return 'in-progress';
+  return "in-progress";
 }

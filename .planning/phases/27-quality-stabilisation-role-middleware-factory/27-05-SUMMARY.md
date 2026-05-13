@@ -41,15 +41,15 @@ issues, in line with the plan's intended atomic-commit discipline.
 
 ## Fixes shipped (per-commit)
 
-| # | Commit | Scope | Closes |
-|---|--------|-------|--------|
-| 27-05a | `00e0e7e` | `apps/web/e2e/integration/global-setup.ts` — explicit `prisma db seed` after `migrate reset` | cross-role-lifecycle:24 |
-| 27-05b | `c5c3d89` | Move `apps/web/proxy.ts` → `apps/web/src/proxy.ts`; reverse the false invariant from QA-03; update `proxy.test.ts` import | auth-guards:17 + :26 |
-| 27-05c | `1181b92` | `apps/web/playwright.integration.config.ts` — explicit `NEXT_PUBLIC_AUTH_STUB: 'false'` (defense-in-depth complement to 27-05b) | (preventive) |
-| 27-05d | `c1c98b5` | New routes: `apps/web/src/app/(app)/admin/products/page.tsx` + `apps/web/src/app/(app)/admin/settings/page.tsx` (thin redirects to `/admin?tab=…`) | admin-crud:94 |
-| 27-05d-fixup-1 | `a9e4a9d` | `admin-crud.integration.spec.ts:94` — `expect(locator).toBeVisible()` gate before `page.content()` | admin-crud:94 flake |
-| 27-05d-fixup-2 | `c1478b4` | `admin-crud.integration.spec.ts:94` — `.first()` on the wait locator (strict-mode violation: 2 product spans) | admin-crud:94 strict-mode |
-| 27-05e | `fc639ef` | `lead-journey.integration.spec.ts:143` — exact selector `'Fill from Previous'` + click `'Replace & Fill'` confirm; `status-risk-sync.integration.spec.ts:23` — exact selector `'! At Risk'` | lead-journey:143 + status-risk-sync:23 |
+| #              | Commit    | Scope                                                                                                                                                                                       | Closes                                 |
+| -------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| 27-05a         | `00e0e7e` | `apps/web/e2e/integration/global-setup.ts` — explicit `prisma db seed` after `migrate reset`                                                                                                | cross-role-lifecycle:24                |
+| 27-05b         | `c5c3d89` | Move `apps/web/proxy.ts` → `apps/web/src/proxy.ts`; reverse the false invariant from QA-03; update `proxy.test.ts` import                                                                   | auth-guards:17 + :26                   |
+| 27-05c         | `1181b92` | `apps/web/playwright.integration.config.ts` — explicit `NEXT_PUBLIC_AUTH_STUB: 'false'` (defense-in-depth complement to 27-05b)                                                             | (preventive)                           |
+| 27-05d         | `c1c98b5` | New routes: `apps/web/src/app/(app)/admin/products/page.tsx` + `apps/web/src/app/(app)/admin/settings/page.tsx` (thin redirects to `/admin?tab=…`)                                          | admin-crud:94                          |
+| 27-05d-fixup-1 | `a9e4a9d` | `admin-crud.integration.spec.ts:94` — `expect(locator).toBeVisible()` gate before `page.content()`                                                                                          | admin-crud:94 flake                    |
+| 27-05d-fixup-2 | `c1478b4` | `admin-crud.integration.spec.ts:94` — `.first()` on the wait locator (strict-mode violation: 2 product spans)                                                                               | admin-crud:94 strict-mode              |
+| 27-05e         | `fc639ef` | `lead-journey.integration.spec.ts:143` — exact selector `'Fill from Previous'` + click `'Replace & Fill'` confirm; `status-risk-sync.integration.spec.ts:23` — exact selector `'! At Risk'` | lead-journey:143 + status-risk-sync:23 |
 
 The orchestrator framed this as 5 atomic fixes; the actual work was 4 root
 causes (one of which spawned 2 fixup commits as test flakiness was

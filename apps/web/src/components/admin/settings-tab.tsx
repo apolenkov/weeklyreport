@@ -109,7 +109,7 @@ function IdentitySubTab() {
       onSuccess: async () => {
         invalidateAdmin(qc, trpc);
         // A9: invalidate landing page cache after org name change
-        await fetch('/api/revalidate-org', { method: 'POST' });
+        await fetch("/api/revalidate-org", { method: "POST" });
         toast.success("Organization identity saved");
       },
       onError: (err) => {
@@ -248,7 +248,7 @@ function useUpdateSettingsMut(label: string) {
       onSuccess: async () => {
         invalidateAdmin(qc, trpc);
         // A9: invalidate landing page cache on any settings change
-        await fetch('/api/revalidate-org', { method: 'POST' });
+        await fetch("/api/revalidate-org", { method: "POST" });
         toast.success(`${label} saved`);
       },
       onError: (err) => {
@@ -486,8 +486,8 @@ function PeriodsSubTab({
           <span className="block font-medium">Auto-publish after deadline</span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
             Scheduler publishes the period at <code>deadline + grace</code>;
-            missing sections render 'No submission' placeholder. Scheduler logic is
-            deferred — toggle is persisted, the cron consumer arrives in a
+            missing sections render 'No submission' placeholder. Scheduler logic
+            is deferred — toggle is persisted, the cron consumer arrives in a
             follow-up plan.
             {!draft.autoCreatePeriods && (
               <>
@@ -689,8 +689,8 @@ function PeriodsSubTab({
           </span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
             When on, the head cannot publish until every lead has submitted.
-            When off, missing sections render 'No submission' placeholder. Enforcement
-            ships in Phase 51-C.
+            When off, missing sections render 'No submission' placeholder.
+            Enforcement ships in Phase 51-C.
           </span>
         </span>
       </label>

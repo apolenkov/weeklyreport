@@ -64,6 +64,7 @@ completed: 2026-04-24
 - **Files modified:** 9
 
 ## Accomplishments
+
 - Playwright E2E infrastructure: auth setup, role fixtures, test helpers, CJS-compatible tsconfig
 - 15 Lead journey tests: page header, SDLC pipeline, period navigator, Fill From, version history, accordion sections, submit dialog flow
 - 4 Lead history tests: heading, cards, dates/status, traffic light dots
@@ -79,6 +80,7 @@ Each task was committed atomically:
 4. **Task 4: Fix ESM/hydration issues** - `6711052` (fix) -- CJS tsconfig, allowedDevOrigins, retry-click
 
 ## Files Created/Modified
+
 - `apps/web/playwright.config.ts` - Simplified config: removed API server, switched to next dev
 - `apps/web/e2e/auth.setup.ts` - Writes empty storage state files per role (lead, head, admin, viewer)
 - `apps/web/e2e/fixtures.ts` - Role-scoped page fixtures (leadPage, headPage) + helper functions
@@ -90,6 +92,7 @@ Each task was committed atomically:
 - `apps/web/.gitignore` - Added e2e/.results/ and e2e/.auth/
 
 ## Decisions Made
+
 - **CJS tsconfig for E2E:** The monorepo uses `module: ESNext` + `verbatimModuleSyntax: true` which causes Playwright's transformer to emit ESM that Node.js tries to run as CJS. A separate `e2e/tsconfig.json` with `module: CommonJS` fixes this.
 - **allowedDevOrigins:** Next.js 16 blocks cross-origin HMR WebSocket from `127.0.0.1` by default, which prevents client JS from hydrating React components. Adding `127.0.0.1` to `allowedDevOrigins` fixes hydration.
 - **No-op auth:** Pages render mock data without auth cookies. Auth setup writes empty files so test infrastructure is ready for future real auth.
@@ -100,6 +103,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 3 - Blocking] Fixed ESM/CJS module interop for Playwright**
+
 - **Found during:** Task 1 verification (test listing)
 - **Issue:** Playwright couldn't load test files -- `require is not defined in ES module scope` and `exports is not defined`
 - **Fix:** Created `e2e/tsconfig.json` with `module: CommonJS`, replaced `import.meta.dirname` with `__dirname`
@@ -108,6 +112,7 @@ Each task was committed atomically:
 - **Committed in:** `6711052`
 
 **2. [Rule 1 - Bug] Fixed React hydration failure in E2E tests**
+
 - **Found during:** Task 2 verification (submit dialog tests failing)
 - **Issue:** All button clicks had no effect -- React event handlers never attached because Next.js 16 blocked HMR WebSocket from `127.0.0.1`, preventing client JS bundle loading
 - **Fix:** Added `allowedDevOrigins: ['127.0.0.1', 'localhost']` to next.config.ts; added retry-click pattern for submit dialog tests
@@ -121,17 +126,21 @@ Each task was committed atomically:
 **Impact on plan:** Both fixes essential for tests to run. No scope creep.
 
 ## Issues Encountered
+
 - Next.js 16 cross-origin dev resource blocking is a new behavior not present in earlier versions. The `allowedDevOrigins` config option resolves it.
 - React Compiler (enabled via `reactCompiler: true`) does not expose `__reactFiber` or `__reactProps` on DOM elements, making traditional React fiber detection impossible for hydration checks.
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 - E2E infrastructure (fixtures, helpers, auth setup) ready for all future E2E plans (18-02 through 18-07)
 - `headPage` fixture already created for 18-02 (Head journey)
 - The `allowedDevOrigins` fix benefits all future E2E test plans
 
 ---
-*Phase: 18-e2e-tests*
-*Completed: 2026-04-24*
+
+_Phase: 18-e2e-tests_
+_Completed: 2026-04-24_

@@ -38,11 +38,7 @@ export function assertNonProdDestructive(scriptName: string): void {
   }
 
   const lastSegment = (url.split("?")[0]?.split("/").pop() ?? "").toLowerCase();
-  const host =
-    url
-      .replace(/.*@/, "")
-      .split(/[:/]/)[0]
-      ?.toLowerCase() ?? "";
+  const host = url.replace(/.*@/, "").split(/[:/]/)[0]?.toLowerCase() ?? "";
 
   const refuse = (reason: string): never => {
     const masked = url.replace(/:[^:@]*@/, ":***@");
@@ -64,8 +60,9 @@ export function assertNonProdDestructive(scriptName: string): void {
     host === "postgres" || // docker compose service name (dev-only; prod requires NODE_ENV=production)
     host.endsWith(".local");
 
-  const isExplicitNonProdName =
-    /_(uat|dev|test|local|staging)$/i.test(lastSegment);
+  const isExplicitNonProdName = /_(uat|dev|test|local|staging)$/i.test(
+    lastSegment,
+  );
 
   // Allow if EITHER local host OR explicit non-prod suffix.
   // Reject everything else (remote host + ambiguous name).

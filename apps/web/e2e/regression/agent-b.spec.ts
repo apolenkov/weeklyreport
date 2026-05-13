@@ -173,12 +173,10 @@ test.describe("Section 3 — LEAD REPORT FORM", () => {
     // Find any text input on the page; type and listen for saveDraft response.
     const input = page.locator('input[type="text"], textarea').first();
     if (!(await input.isVisible().catch(() => false))) {
-      test
-        .info()
-        .annotations.push({
-          type: "INCONCLUSIVE",
-          description: "no editable input visible on /lead/report",
-        });
+      test.info().annotations.push({
+        type: "INCONCLUSIVE",
+        description: "no editable input visible on /lead/report",
+      });
       return;
     }
     const savePromise = page
@@ -204,12 +202,10 @@ test.describe("Section 3 — LEAD REPORT FORM", () => {
       .locator('button[aria-label*=": "]:not(:disabled)')
       .first();
     if (!(await chip.isVisible().catch(() => false))) {
-      test
-        .info()
-        .annotations.push({
-          type: "INCONCLUSIVE",
-          description: "no stage chip visible",
-        });
+      test.info().annotations.push({
+        type: "INCONCLUSIVE",
+        description: "no stage chip visible",
+      });
       return;
     }
     const savePromise = page
@@ -236,12 +232,10 @@ test.describe("Section 3 — LEAD REPORT FORM", () => {
     // Find an "Add item" button.
     const addBtn = page.getByRole("button", { name: /Add item to/ }).first();
     if (!(await addBtn.isVisible().catch(() => false))) {
-      test
-        .info()
-        .annotations.push({
-          type: "INCONCLUSIVE",
-          description: "no Add item button visible",
-        });
+      test.info().annotations.push({
+        type: "INCONCLUSIVE",
+        description: "no Add item button visible",
+      });
       return;
     }
     await addBtn.click();
@@ -262,19 +256,15 @@ test.describe("Section 3 — LEAD REPORT FORM", () => {
         "stage selector should be populated",
       ).toBeGreaterThan(0);
       // Annotate count for the report.
-      test
-        .info()
-        .annotations.push({
-          type: "stage-count",
-          description: `dialog stage options: ${stages.length}`,
-        });
+      test.info().annotations.push({
+        type: "stage-count",
+        description: `dialog stage options: ${stages.length}`,
+      });
     } else {
-      test
-        .info()
-        .annotations.push({
-          type: "INCONCLUSIVE",
-          description: "stage <select> not found in item dialog",
-        });
+      test.info().annotations.push({
+        type: "INCONCLUSIVE",
+        description: "stage <select> not found in item dialog",
+      });
     }
     await shot(page, "LEAD-035");
     // Cancel out so we don't pollute state.
@@ -297,12 +287,10 @@ test.describe("Section 3 — LEAD REPORT FORM", () => {
     // If not present, we still keep scenario meaningful via header visibility.
     const addItemBtns = page.getByRole("button", { name: /Add item/i });
     const count = await addItemBtns.count();
-    test
-      .info()
-      .annotations.push({
-        type: "add-item-buttons",
-        description: String(count),
-      });
+    test.info().annotations.push({
+      type: "add-item-buttons",
+      description: String(count),
+    });
     if (count === 0) {
       test.info().annotations.push({
         type: "INCONCLUSIVE",
@@ -324,12 +312,10 @@ test.describe("Section 3 — LEAD REPORT FORM", () => {
     await gotoLead(page);
     const addBtn = page.getByRole("button", { name: /Add item to/ }).first();
     if (!(await addBtn.isVisible().catch(() => false))) {
-      test
-        .info()
-        .annotations.push({
-          type: "INCONCLUSIVE",
-          description: "no Add item button",
-        });
+      test.info().annotations.push({
+        type: "INCONCLUSIVE",
+        description: "no Add item button",
+      });
       return;
     }
     await addBtn.click();
@@ -491,12 +477,10 @@ test.describe("Section 3 — LEAD REPORT FORM", () => {
         "35-07: period nav should use path segment, not ?period= query",
       ).toBeFalsy();
     } else {
-      test
-        .info()
-        .annotations.push({
-          type: "INCONCLUSIVE",
-          description: "no period nav buttons found",
-        });
+      test.info().annotations.push({
+        type: "INCONCLUSIVE",
+        description: "no period nav buttons found",
+      });
     }
     await shot(page, "LEAD-period-nav");
   });
@@ -515,12 +499,10 @@ test.describe("Section 3 — LEAD REPORT FORM", () => {
       })
       .first();
     if (!(await toggleAll.isVisible().catch(() => false))) {
-      test
-        .info()
-        .annotations.push({
-          type: "INCONCLUSIVE",
-          description: "Toggle All button not visible on /weekly",
-        });
+      test.info().annotations.push({
+        type: "INCONCLUSIVE",
+        description: "Toggle All button not visible on /weekly",
+      });
       return;
     }
     // Sheet (drawer) would have role="dialog" + aria-modal="true". Capture state before/after.
@@ -608,12 +590,10 @@ test.describe("Section 8 — ADMIN PANEL", () => {
       .catch(() => false);
     // Lead should NOT see the admin heading.
     expect(heading, "lead must not see Admin Panel heading").toBeFalsy();
-    test
-      .info()
-      .annotations.push({
-        type: "lead-redirect",
-        description: `path=${url.pathname} isAdminPath=${isAdminPath}`,
-      });
+    test.info().annotations.push({
+      type: "lead-redirect",
+      description: `path=${url.pathname} isAdminPath=${isAdminPath}`,
+    });
     await shot(page, "ADM-005");
   });
 
@@ -655,12 +635,10 @@ test.describe("Section 8 — ADMIN PANEL", () => {
       })
       .first();
     if (!(await addBtn.isVisible().catch(() => false))) {
-      test
-        .info()
-        .annotations.push({
-          type: "INCONCLUSIVE",
-          description: "Add User button not found",
-        });
+      test.info().annotations.push({
+        type: "INCONCLUSIVE",
+        description: "Add User button not found",
+      });
       return;
     }
     await addBtn.click();
@@ -687,12 +665,10 @@ test.describe("Section 8 — ADMIN PANEL", () => {
     const counters = page.locator("text=/\\d+\\/7\\s*stage/i");
     const count = await counters.count();
     if (count === 0) {
-      test
-        .info()
-        .annotations.push({
-          type: "INCONCLUSIVE",
-          description: "no X/7 stages counter found on products tab",
-        });
+      test.info().annotations.push({
+        type: "INCONCLUSIVE",
+        description: "no X/7 stages counter found on products tab",
+      });
       await shot(page, "ADM-040");
       return;
     }
@@ -702,12 +678,10 @@ test.describe("Section 8 — ADMIN PANEL", () => {
       texts.push((await counters.nth(i).textContent())?.trim() ?? "");
     }
     const nonZero = texts.filter((t) => /^[1-9]\d*\/7/.test(t));
-    test
-      .info()
-      .annotations.push({
-        type: "stage-counters",
-        description: texts.join(" | "),
-      });
+    test.info().annotations.push({
+      type: "stage-counters",
+      description: texts.join(" | "),
+    });
     expect(
       nonZero.length,
       `35-08: at least one product should show non-zero X/7 stages (saw: ${texts.join(", ")})`,
@@ -727,12 +701,10 @@ test.describe("Section 8 — ADMIN PANEL", () => {
       .locator('h3, [class*="product-name"]')
       .allTextContents()
       .catch(() => []);
-    test
-      .info()
-      .annotations.push({
-        type: "admin-products",
-        description: productNames.slice(0, 8).join(" | "),
-      });
+    test.info().annotations.push({
+      type: "admin-products",
+      description: productNames.slice(0, 8).join(" | "),
+    });
     await shot(page, "ADM-stage-propagation");
   });
 
@@ -766,12 +738,10 @@ test.describe("Section 8 — ADMIN PANEL", () => {
     expect(ruleSignal, "reminders tab must render rule rows").toBeGreaterThan(
       0,
     );
-    test
-      .info()
-      .annotations.push({
-        type: "reminder-controls",
-        description: `runBtn=${await runBtn.count()} switches=${await switches.count()}`,
-      });
+    test.info().annotations.push({
+      type: "reminder-controls",
+      description: `runBtn=${await runBtn.count()} switches=${await switches.count()}`,
+    });
     await shot(page, "ADM-080");
   });
 
@@ -831,12 +801,10 @@ test.describe("Section 8 — ADMIN PANEL", () => {
       .catch(() => null);
     const inputs = page.locator("input, select, textarea");
     const count = await inputs.count();
-    test
-      .info()
-      .annotations.push({
-        type: "settings-inputs",
-        description: String(count),
-      });
+    test.info().annotations.push({
+      type: "settings-inputs",
+      description: String(count),
+    });
     expect(
       count,
       "settings tab must render at least one form field",

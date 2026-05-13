@@ -1,17 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { TRPCError } from '@trpc/server';
+import { describe, expect, it } from "vitest";
+import { TRPCError } from "@trpc/server";
 
-import {
-  router,
-  publicProcedure,
-  headProcedure,
-} from '../trpc.middleware.js';
-import type { AppLogger } from '../../../lib/logger.js';
+import { router, publicProcedure, headProcedure } from "../trpc.middleware.js";
+import type { AppLogger } from "../../../lib/logger.js";
 import {
   createAuditLogger,
   type AuditLogger,
-} from '../../../lib/audit-logger.js';
-import { expectDefined } from '../../../test-utils/expect-defined.js';
+} from "../../../lib/audit-logger.js";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 
 // ---------------------------------------------------------------------------
 // AUTH-08 audit-events end-to-end signal test (Phase 29-01).
@@ -25,22 +21,23 @@ import { expectDefined } from '../../../test-utils/expect-defined.js';
 // ---------------------------------------------------------------------------
 
 type Captured = {
-  level: 'info' | 'warn' | 'error' | 'debug';
+  level: "info" | "warn" | "error" | "debug";
   message: string;
   context?: Record<string, unknown>;
 };
 
 function makeCapturingLogger(): { logger: AppLogger; entries: Captured[] } {
   const entries: Captured[] = [];
-  const push = (level: Captured['level']) =>
+  const push =
+    (level: Captured["level"]) =>
     (message: string, context?: Record<string, unknown>) => {
       entries.push({ level, message, context });
     };
   const logger: AppLogger = {
-    debug: push('debug'),
-    info: push('info'),
-    warn: push('warn'),
-    error: push('error'),
+    debug: push("debug"),
+    info: push("info"),
+    warn: push("warn"),
+    error: push("error"),
     child() {
       return logger;
     },
@@ -49,86 +46,86 @@ function makeCapturingLogger(): { logger: AppLogger; entries: Captured[] } {
 }
 
 const testRouter = router({
-  publicRoute: publicProcedure.query(() => 'public-ok'),
-  headRoute: headProcedure.query(() => 'head-ok'),
+  publicRoute: publicProcedure.query(() => "public-ok"),
+  headRoute: headProcedure.query(() => "head-ok"),
 });
 
-describe('AUTH-08 role-denied integration signal', () => {
-  it('a viewer call to a head-only procedure produces exactly one role-denied envelope', async () => {
+describe("AUTH-08 role-denied integration signal", () => {
+  it("a viewer call to a head-only procedure produces exactly one role-denied envelope", async () => {
     const { logger, entries } = makeCapturingLogger();
     const auditLogger: AuditLogger = createAuditLogger(logger);
 
     const caller = testRouter.createCaller({
       session: {
-        userId: 'viewer-1',
-        email: 'viewer@test.com',
-        name: 'Viewer User',
-        role: 'viewer',
+        userId: "viewer-1",
+        email: "viewer@test.com",
+        name: "Viewer User",
+        role: "viewer",
         activeReportId: null,
         activeReportSectionId: null,
       },
       logger,
       auditLogger,
-      ip: '10.0.0.42',
+      ip: "10.0.0.42",
       isPdfExport: false,
       pdfReportId: null,
     });
 
     await expect(caller.headRoute()).rejects.toBeInstanceOf(TRPCError);
 
-    const auditEntries = entries.filter((e) => e.message === 'audit');
+    const auditEntries = entries.filter((e) => e.message === "audit");
     expect(auditEntries).toHaveLength(1);
 
     const audit = expectDefined(auditEntries[0]);
-    expect(audit.level).toBe('warn');
+    expect(audit.level).toBe("warn");
     expect(audit.context).toMatchObject({
-      event: 'role-denied',
-      userId: 'viewer-1',
-      role: 'viewer',
-      ip: '10.0.0.42',
+      event: "role-denied",
+      userId: "viewer-1",
+      role: "viewer",
+      ip: "10.0.0.42",
     });
 
     // attemptedRole carries the allowed Role | Role[] verbatim. headProcedure
     // accepts ['head', 'admin'] (admin inherits head capabilities). The
     // D-AUTH-03 alias adminProcedure === headProcedure was retired by
     // UFB-038; admin endpoints now use a separate adminProcedure (admin-only).
-    expect(audit.context?.['attemptedRole']).toEqual(['head', 'admin']);
+    expect(audit.context?.["attemptedRole"]).toEqual(["head", "admin"]);
 
     // Negative — no spurious login-success was emitted by the role-deny path.
     const loginSuccesses = entries.filter(
-      (e) => e.context?.['event'] === 'login-success',
+      (e) => e.context?.["event"] === "login-success",
     );
     expect(loginSuccesses).toHaveLength(0);
   });
 
-  it('an authenticated session to a public procedure does NOT produce any audit envelope', async () => {
+  it("an authenticated session to a public procedure does NOT produce any audit envelope", async () => {
     const { logger, entries } = makeCapturingLogger();
     const auditLogger: AuditLogger = createAuditLogger(logger);
 
     const caller = testRouter.createCaller({
       session: {
-        userId: 'lead-1',
-        email: 'lead@test.com',
-        name: 'Lead User',
-        role: 'lead',
-        activeReportId: 'r1',
-        activeReportSectionId: 's1',
+        userId: "lead-1",
+        email: "lead@test.com",
+        name: "Lead User",
+        role: "lead",
+        activeReportId: "r1",
+        activeReportSectionId: "s1",
       },
       logger,
       auditLogger,
-      ip: '10.0.0.7',
+      ip: "10.0.0.7",
       isPdfExport: false,
       pdfReportId: null,
     });
 
     const result = await caller.publicRoute();
-    expect(result).toBe('public-ok');
+    expect(result).toBe("public-ok");
 
-    const auditEntries = entries.filter((e) => e.message === 'audit');
+    const auditEntries = entries.filter((e) => e.message === "audit");
     expect(auditEntries).toHaveLength(0);
   });
 
-  it('an unauthenticated call to a head-only procedure surfaces UNAUTHORIZED with NO role-denied emit', async () => {
+  it("an unauthenticated call to a head-only procedure surfaces UNAUTHORIZED with NO role-denied emit", async () => {
     // T2 boundary: UNAUTHORIZED (no session) is handled by assertRole's
     // first branch, which throws BEFORE the role check. The factory only
     // emits role-denied when the FORBIDDEN branch fires, so an unauthed
@@ -141,16 +138,16 @@ describe('AUTH-08 role-denied integration signal', () => {
       session: null,
       logger,
       auditLogger,
-      ip: '10.0.0.99',
+      ip: "10.0.0.99",
       isPdfExport: false,
       pdfReportId: null,
     });
 
     await expect(caller.headRoute()).rejects.toMatchObject({
-      code: 'UNAUTHORIZED',
+      code: "UNAUTHORIZED",
     });
 
-    const auditEntries = entries.filter((e) => e.message === 'audit');
+    const auditEntries = entries.filter((e) => e.message === "audit");
     expect(auditEntries).toHaveLength(0);
   });
 });

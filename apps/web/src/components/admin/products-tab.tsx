@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { invalidateAdmin } from '../../lib/cache-keys';
-import { toAdminProjectInput } from '../../lib/mappers';
-import { useTRPC } from '../../lib/trpc-context';
-import { ConfirmDeleteDialog } from '../lead/confirm-delete-dialog';
-import { SearchInput } from '../search/search-input';
+import { invalidateAdmin } from "../../lib/cache-keys";
+import { toAdminProjectInput } from "../../lib/mappers";
+import { useTRPC } from "../../lib/trpc-context";
+import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
+import { SearchInput } from "../search/search-input";
 
-import { TabHeader, TabSearch } from './tab-header';
-import { ProductGroupChips } from './product-group-chips';
+import { TabHeader, TabSearch } from "./tab-header";
+import { ProductGroupChips } from "./product-group-chips";
 
-import type { MockProduct, MockUser } from './mock-data';
-import { StageAssignmentEditor } from './stage-assignment-editor';
+import type { MockProduct, MockUser } from "./mock-data";
+import { StageAssignmentEditor } from "./stage-assignment-editor";
 
 type ProductsTabProps = {
   readonly products: MockProduct[];
@@ -22,31 +22,39 @@ type ProductsTabProps = {
   readonly productFilter?: string | null;
 };
 
-export function ProductsTab({ products, users, productFilter }: ProductsTabProps) {
+export function ProductsTab({
+  products,
+  users,
+  productFilter,
+}: ProductsTabProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<MockProduct | null>(null);
-  const [formName, setFormName] = useState('');
-  const [formLeadId, setFormLeadId] = useState('');
-  const [pendingArchive, setPendingArchive] = useState<MockProduct | null>(null);
+  const [editingProduct, setEditingProduct] = useState<MockProduct | null>(
+    null,
+  );
+  const [formName, setFormName] = useState("");
+  const [formLeadId, setFormLeadId] = useState("");
+  const [pendingArchive, setPendingArchive] = useState<MockProduct | null>(
+    null,
+  );
   // B5: local name filter (distinct from the global SearchInput deep-link)
-  const [localSearch, setLocalSearch] = useState('');
+  const [localSearch, setLocalSearch] = useState("");
 
   // Escape closes the Add/Edit dialog (mirrors users-tab — the inline
   // dialog has no Radix wrapper so we attach the listener manually).
   useEffect(() => {
     if (!showDialog) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         setShowDialog(false);
       }
     }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
   }, [showDialog]);
 
   useEffect(() => {
@@ -59,10 +67,11 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
   // B9: exclude deactivated users from picker; existing assignments to
   // deactivated leads remain visible via getUserById (full users list).
   const leads = useMemo(
-    () => users.filter((u) => u.role === 'lead' && u.isActive),
+    () => users.filter((u) => u.role === "lead" && u.isActive),
     [users],
   );
-  const getUserById = (id: string): MockUser | undefined => users.find((u) => u.id === id);
+  const getUserById = (id: string): MockUser | undefined =>
+    users.find((u) => u.id === id);
 
   // 35-01: per-project assignment counts from the live DB. The mock-data
   // mapper hands every product a stages array of 7 nulls (assignment data
@@ -81,11 +90,11 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
     trpc.admin.saveProject.mutationOptions({
       onSuccess: () => {
         invalidateAdmin(qc, trpc);
-        toast.success('Product saved');
+        toast.success("Product saved");
         setShowDialog(false);
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to save product');
+        toast.error(err.message ?? "Failed to save product");
       },
     }),
   );
@@ -94,18 +103,18 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
     trpc.admin.deleteProject.mutationOptions({
       onSuccess: () => {
         invalidateAdmin(qc, trpc);
-        toast.success('Product archived');
+        toast.success("Product archived");
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to archive product');
+        toast.error(err.message ?? "Failed to archive product");
       },
     }),
   );
 
   function openAdd() {
     setEditingProduct(null);
-    setFormName('');
-    setFormLeadId(leads[0]?.id ?? '');
+    setFormName("");
+    setFormLeadId(leads[0]?.id ?? "");
     setShowDialog(true);
   }
 
@@ -124,7 +133,7 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
           name: formName,
           leadOwnerId: formLeadId,
           leadName: lead?.name,
-          archived: editingProduct?.status === 'archived',
+          archived: editingProduct?.status === "archived",
         },
         editingProduct?.id,
       ),
@@ -171,8 +180,10 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
     return list;
   }, [products, productFilter, localSearch]);
   const filterMatched = !!productFilter && filteredProducts.length > 0;
-  const activeProducts = filteredProducts.filter((p) => p.status === 'active');
-  const archivedProducts = filteredProducts.filter((p) => p.status === 'archived');
+  const activeProducts = filteredProducts.filter((p) => p.status === "active");
+  const archivedProducts = filteredProducts.filter(
+    (p) => p.status === "archived",
+  );
 
   const isSaving = saveProjectMut.isPending;
   const isArchiving = deleteProjectMut.isPending;
@@ -216,7 +227,9 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
         {productFilter && (
           <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2">
             <span className="text-sm text-[var(--color-muted-foreground)]">
-              {filterMatched ? 'Showing product from search' : 'Product from search not found'}
+              {filterMatched
+                ? "Showing product from search"
+                : "Product from search not found"}
             </span>
             <a
               href="/admin?tab=products"
@@ -243,18 +256,22 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setExpandedId(isExpanded ? null : product.id)}
+                      onClick={() =>
+                        setExpandedId(isExpanded ? null : product.id)
+                      }
                       className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-                      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} stage assignments for ${product.name}`}
+                      aria-label={`${isExpanded ? "Collapse" : "Expand"} stage assignments for ${product.name}`}
                       aria-expanded={isExpanded}
                     >
                       <ChevronIcon expanded={isExpanded} />
                     </button>
                     <div className="flex flex-col gap-1">
                       <div>
-                        <span className="text-sm font-semibold text-[var(--color-foreground)]">{product.name}</span>
+                        <span className="text-sm font-semibold text-[var(--color-foreground)]">
+                          {product.name}
+                        </span>
                         <span className="ml-2 text-xs text-[var(--color-muted-foreground)]">
-                          Owner: {owner?.name ?? 'Unknown'}
+                          Owner: {owner?.name ?? "Unknown"}
                         </span>
                       </div>
                       {/* UFB-054 / Phase 56-C: read-only Groups chips
@@ -265,7 +282,9 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-[var(--color-muted-foreground)]">{assignedCount}/7 stages</span>
+                    <span className="text-xs text-[var(--color-muted-foreground)]">
+                      {assignedCount}/7 stages
+                    </span>
                     <button
                       type="button"
                       onClick={() => openEdit(product)}
@@ -289,12 +308,16 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
                 {/* Stage assignments (expandable) */}
                 <div
                   className="grid transition-[grid-template-rows] duration-300"
-                  style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
+                  style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
                 >
                   <div className="min-h-0 overflow-hidden">
                     <div className="border-t border-[var(--color-border)] px-4 pb-4">
                       {isExpanded && (
-                        <StageAssignmentEditor projectId={product.id} projectName={product.name} leads={leads} />
+                        <StageAssignmentEditor
+                          projectId={product.id}
+                          projectName={product.name}
+                          leads={leads}
+                        />
                       )}
                     </div>
                   </div>
@@ -315,7 +338,9 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
                 key={product.id}
                 className="flex items-center justify-between rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3"
               >
-                <span className="text-sm text-[var(--color-muted-foreground)]">{product.name}</span>
+                <span className="text-sm text-[var(--color-muted-foreground)]">
+                  {product.name}
+                </span>
                 <button
                   type="button"
                   onClick={() => handleRestore(product)}
@@ -342,15 +367,18 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
             aria-modal="true"
-            aria-label={editingProduct ? 'Edit product' : 'Add product'}
+            aria-label={editingProduct ? "Edit product" : "Add product"}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-              {editingProduct ? 'Edit Product' : 'Add Product'}
+              {editingProduct ? "Edit Product" : "Add Product"}
             </h3>
             <div className="mt-4 space-y-4">
               <div>
-                <label htmlFor="product-name" className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
+                <label
+                  htmlFor="product-name"
+                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+                >
                   Product Name
                 </label>
                 <input
@@ -362,7 +390,10 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
                 />
               </div>
               <div>
-                <label htmlFor="product-lead" className="mb-1 block text-sm font-medium text-[var(--color-foreground)]">
+                <label
+                  htmlFor="product-lead"
+                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+                >
                   Lead Owner
                 </label>
                 <select
@@ -394,7 +425,11 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
                 disabled={isSaving}
                 className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSaving ? 'Saving…' : editingProduct ? 'Save Changes' : 'Add Product'}
+                {isSaving
+                  ? "Saving…"
+                  : editingProduct
+                    ? "Save Changes"
+                    : "Add Product"}
               </button>
             </div>
           </div>
@@ -404,7 +439,7 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
       <ConfirmDeleteDialog
         open={pendingArchive !== null}
         title="Archive product?"
-        preview={pendingArchive?.name ?? ''}
+        preview={pendingArchive?.name ?? ""}
         subtitle="Lead assignments and stage data are preserved."
         consequence="The product will disappear from active forms and dashboards until restored."
         confirmLabel="Archive"
@@ -443,7 +478,7 @@ function ChevronIcon({ expanded }: { readonly expanded: boolean }) {
       stroke="currentColor"
       fill="none"
       strokeWidth={2}
-      style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
+      style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}
     >
       <path d="M9 18l6-6-6-6" />
     </svg>

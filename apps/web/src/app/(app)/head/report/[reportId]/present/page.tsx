@@ -1,8 +1,8 @@
-import { Suspense } from 'react';
-import Link from 'next/link';
+import { Suspense } from "react";
+import Link from "next/link";
 
-import { WeeklyReportSkeleton } from '../../../../../../components/weekly-report/weekly-report-skeleton';
-import { HeadPresentClient } from '../../../../../../components/head/head-present-client';
+import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";
+import { HeadPresentClient } from "../../../../../../components/head/head-present-client";
 
 type Props = {
   params: Promise<{ reportId: string }>;

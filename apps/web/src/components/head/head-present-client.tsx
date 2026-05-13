@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { WeeklyReportPage } from '../weekly-report/weekly-report-page';
+import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 
 type Props = {
   readonly reportId: string;
@@ -29,18 +29,21 @@ export function HeadPresentClient({ reportId }: Props) {
   const getSections = useCallback((): Element[] => {
     if (!wrapperRef.current) return [];
     return Array.from(
-      wrapperRef.current.querySelectorAll('[data-product-accordion-toggle]'),
+      wrapperRef.current.querySelectorAll("[data-product-accordion-toggle]"),
     );
   }, []);
 
-  const scrollToSection = useCallback((idx: number) => {
-    const sections = getSections();
-    if (!sections.length) return;
-    const clamped = Math.max(0, Math.min(idx, sections.length - 1));
-    setCurrentIndex(clamped);
-    setSectionCount(sections.length);
-    sections[clamped]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [getSections]);
+  const scrollToSection = useCallback(
+    (idx: number) => {
+      const sections = getSections();
+      if (!sections.length) return;
+      const clamped = Math.max(0, Math.min(idx, sections.length - 1));
+      setCurrentIndex(clamped);
+      setSectionCount(sections.length);
+      sections[clamped]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+    [getSections],
+  );
 
   const goNext = useCallback(() => {
     setCurrentIndex((prev) => {
@@ -63,28 +66,32 @@ export function HeadPresentClient({ reportId }: Props) {
     const el = wrapperRef.current;
     if (!el) return;
     if (!document.fullscreenElement) {
-      el.requestFullscreen().catch(() => {/* ignore if denied */});
+      el.requestFullscreen().catch(() => {
+        /* ignore if denied */
+      });
     } else {
-      document.exitFullscreen().catch(() => {/* ignore */});
+      document.exitFullscreen().catch(() => {
+        /* ignore */
+      });
     }
   }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      if (e.key === 'ArrowRight' || e.key === 'j') goNext();
-      else if (e.key === 'ArrowLeft' || e.key === 'k') goPrev();
-      else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "ArrowRight" || e.key === "j") goNext();
+      else if (e.key === "ArrowLeft" || e.key === "k") goPrev();
+      else if (e.key === "f" || e.key === "F") toggleFullscreen();
     }
     function onFullscreenChange() {
       setIsFullscreen(!!document.fullscreenElement);
     }
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => {
-      document.removeEventListener('keydown', onKey);
-      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
     };
   }, [goNext, goPrev, toggleFullscreen]);
 
@@ -100,7 +107,7 @@ export function HeadPresentClient({ reportId }: Props) {
     <div
       ref={wrapperRef}
       data-testid="head-present-wrapper"
-      className={isFullscreen ? 'overflow-auto bg-white p-8' : undefined}
+      className={isFullscreen ? "overflow-auto bg-white p-8" : undefined}
     >
       {sectionCount > 1 && (
         <div className="mb-4 flex items-center gap-3">
@@ -114,7 +121,10 @@ export function HeadPresentClient({ reportId }: Props) {
           >
             ←
           </button>
-          <span className="text-sm text-[var(--color-muted-foreground)]" data-testid="present-counter">
+          <span
+            className="text-sm text-[var(--color-muted-foreground)]"
+            data-testid="present-counter"
+          >
             {currentIndex + 1} / {sectionCount}
           </span>
           <button
@@ -134,7 +144,7 @@ export function HeadPresentClient({ reportId }: Props) {
             data-testid="present-fullscreen"
             className="ml-auto rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] px-3 py-1 text-sm font-medium"
           >
-            {isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            {isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           </button>
         </div>
       )}

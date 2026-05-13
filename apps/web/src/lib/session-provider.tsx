@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   createContext,
@@ -6,11 +6,11 @@ import {
   useEffect,
   useMemo,
   type ReactNode,
-} from 'react';
-import { useQuery } from '@tanstack/react-query';
+} from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { useTRPC } from './trpc-context';
-import { writeLastRole, type LastRole } from './last-role';
+import { useTRPC } from "./trpc-context";
+import { writeLastRole, type LastRole } from "./last-role";
 
 /**
  * SessionProvider — exposes the currently logged-in user across (app)/ pages.
@@ -34,7 +34,7 @@ export type SessionUser = {
   id: string;
   name: string;
   email: string;
-  role: 'lead' | 'head' | 'viewer' | 'admin' | 'director';
+  role: "lead" | "head" | "viewer" | "admin" | "director";
 };
 
 /**
@@ -118,7 +118,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 export function useSession(): SessionState {
   const ctx = useContext(SessionContext);
   if (!ctx) {
-    throw new Error('useSession must be used within <SessionProvider>');
+    throw new Error("useSession must be used within <SessionProvider>");
   }
   return ctx;
 }

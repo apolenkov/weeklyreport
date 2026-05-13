@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import type { DecisionEntry, Product } from './mock-data';
-import { StageMultiSelect } from './stage-multi-select';
+import { useEffect, useState } from "react";
+import type { DecisionEntry, Product } from "./mock-data";
+import { StageMultiSelect } from "./stage-multi-select";
 
 type DecisionEditDialogProps = {
   readonly open: boolean;
@@ -42,36 +42,44 @@ export function DecisionEditDialog({
   "use no memo";
   const isCreate = decision === null;
 
-  const [text, setText] = useState(decision?.text ?? '');
-  const [owner, setOwner] = useState(decision?.owner ?? defaultOwner ?? '');
-  const [impact, setImpact] = useState(decision?.impact ?? '');
-  const [deadline, setDeadline] = useState(decision?.deadline ?? '');
+  const [text, setText] = useState(decision?.text ?? "");
+  const [owner, setOwner] = useState(decision?.owner ?? defaultOwner ?? "");
+  const [impact, setImpact] = useState(decision?.impact ?? "");
+  const [deadline, setDeadline] = useState(decision?.deadline ?? "");
   const [productId, setProductId] = useState(
-    decision?.productId || defaultProductId || products?.[0]?.id || '',
+    decision?.productId || defaultProductId || products?.[0]?.id || "",
   );
   // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
   const [stageIds, setStageIds] = useState<string[]>(
-    decision?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
+    decision?.stageIds ??
+      (isCreate ? (availableStages ? [...availableStages] : []) : []),
   );
-  const [errors, setErrors] = useState<{ text?: string; owner?: string; impact?: string }>({});
+  const [errors, setErrors] = useState<{
+    text?: string;
+    owner?: string;
+    impact?: string;
+  }>({});
 
   // A13 fix: products and availableStages excluded from deps — unstable parent refs
   // (new array/fn each render) cause form-race on autosave → React Query invalidate cycle.
   // Dialog is key-reset by parent on open-transition instead.
   useEffect(() => {
     if (open) {
-      setText(decision?.text ?? '');
-      setOwner(decision?.owner ?? defaultOwner ?? '');
-      setImpact(decision?.impact ?? '');
-      setDeadline(decision?.deadline ?? '');
-      setProductId(decision?.productId || defaultProductId || products?.[0]?.id || '');
+      setText(decision?.text ?? "");
+      setOwner(decision?.owner ?? defaultOwner ?? "");
+      setImpact(decision?.impact ?? "");
+      setDeadline(decision?.deadline ?? "");
+      setProductId(
+        decision?.productId || defaultProductId || products?.[0]?.id || "",
+      );
       setStageIds(
-        decision?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
+        decision?.stageIds ??
+          (isCreate ? (availableStages ? [...availableStages] : []) : []),
       );
       setErrors({});
     }
-  // eslint-disable-next-line react-compiler/react-compiler
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     open,
     decision?.id,
@@ -88,16 +96,16 @@ export function DecisionEditDialog({
 
   if (!open) return null;
 
-  const headerVerb = isCreate ? 'Add Decision' : 'Edit Decision';
+  const headerVerb = isCreate ? "Add Decision" : "Edit Decision";
 
   function handleSave() {
     const t = text.trim();
     const o = owner.trim();
     const im = impact.trim();
     const next: typeof errors = {};
-    if (t.length === 0) next.text = 'Decision text is required';
-    if (o.length === 0) next.owner = 'Owner is required';
-    if (im.length === 0) next.impact = 'Impact is required';
+    if (t.length === 0) next.text = "Decision text is required";
+    if (o.length === 0) next.owner = "Owner is required";
+    if (im.length === 0) next.impact = "Impact is required";
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -105,8 +113,8 @@ export function DecisionEditDialog({
     const selectedProduct = products?.find((p) => p.id === productId);
     onSave({
       id: decision?.id ?? crypto.randomUUID(),
-      productId: productId || '',
-      productName: selectedProduct?.name ?? decision?.productName ?? 'Group',
+      productId: productId || "",
+      productName: selectedProduct?.name ?? decision?.productName ?? "Group",
       text: t,
       owner: o,
       impact: im,
@@ -116,8 +124,14 @@ export function DecisionEditDialog({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleSave(); }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onCancel();
+    }
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSave();
+    }
   }
 
   return (
@@ -142,7 +156,10 @@ export function DecisionEditDialog({
           {/* R4-B: product picker — only when the lead owns more than one product */}
           {products && products.length > 1 && (
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-product">
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="dec-product"
+              >
                 Product
               </label>
               <select
@@ -152,7 +169,9 @@ export function DecisionEditDialog({
                 onChange={(e) => setProductId(e.target.value)}
               >
                 {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -160,64 +179,87 @@ export function DecisionEditDialog({
 
           {/* Decision text */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-text">
+            <label
+              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+              htmlFor="dec-text"
+            >
               Decision *
             </label>
             <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-              The choice you need leadership to make — phrase it as a yes/no
-              or short statement, not a discussion topic.
+              The choice you need leadership to make — phrase it as a yes/no or
+              short statement, not a discussion topic.
             </p>
             <textarea
               id="dec-text"
               autoFocus
-              aria-invalid={errors.text ? 'true' : 'false'}
-              aria-describedby={errors.text ? 'dec-text-error' : undefined}
+              aria-invalid={errors.text ? "true" : "false"}
+              aria-describedby={errors.text ? "dec-text-error" : undefined}
               className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
                 errors.text
-                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
-                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+                  ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                  : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
               }`}
-              style={{ minHeight: '60px' }}
+              style={{ minHeight: "60px" }}
               value={text}
-              onChange={(e) => { setText(e.target.value); setErrors((prev) => ({ ...prev, text: undefined })); }}
+              onChange={(e) => {
+                setText(e.target.value);
+                setErrors((prev) => ({ ...prev, text: undefined }));
+              }}
               placeholder="e.g. Approve hiring of 2 SDETs in Q3"
             />
             {errors.text && (
-              <p id="dec-text-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.text}</p>
+              <p
+                id="dec-text-error"
+                className="mt-1 text-xs text-[var(--color-destructive)]"
+              >
+                {errors.text}
+              </p>
             )}
           </div>
 
           {/* Owner + Deadline row */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-owner">
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="dec-owner"
+              >
                 Owner *
               </label>
               <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-                Who is accountable. Defaults to you. If the owner is someone else
-                (e.g. Head, PM), you raise the decision but they make the call.
+                Who is accountable. Defaults to you. If the owner is someone
+                else (e.g. Head, PM), you raise the decision but they make the
+                call.
               </p>
               <input
                 id="dec-owner"
                 type="text"
-                aria-invalid={errors.owner ? 'true' : 'false'}
-                aria-describedby={errors.owner ? 'dec-owner-error' : undefined}
+                aria-invalid={errors.owner ? "true" : "false"}
+                aria-describedby={errors.owner ? "dec-owner-error" : undefined}
                 readOnly
                 aria-readonly="true"
                 className={`w-full rounded-xl border bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
                   errors.owner
-                    ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
-                    : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
                 }`}
                 value={owner}
                 placeholder="e.g. yourself or Head"
               />
               {errors.owner && (
-                <p id="dec-owner-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.owner}</p>
+                <p
+                  id="dec-owner-error"
+                  className="mt-1 text-xs text-[var(--color-destructive)]"
+                >
+                  {errors.owner}
+                </p>
               )}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-deadline">
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="dec-deadline"
+              >
                 Deadline
               </label>
               <input
@@ -239,25 +281,36 @@ export function DecisionEditDialog({
 
           {/* Impact */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="dec-impact">
+            <label
+              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+              htmlFor="dec-impact"
+            >
               Impact *
             </label>
             <textarea
               id="dec-impact"
-              aria-invalid={errors.impact ? 'true' : 'false'}
-              aria-describedby={errors.impact ? 'dec-impact-error' : undefined}
+              aria-invalid={errors.impact ? "true" : "false"}
+              aria-describedby={errors.impact ? "dec-impact-error" : undefined}
               className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
                 errors.impact
-                  ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
-                  : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+                  ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                  : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
               }`}
-              style={{ minHeight: '50px' }}
+              style={{ minHeight: "50px" }}
               value={impact}
-              onChange={(e) => { setImpact(e.target.value); setErrors((prev) => ({ ...prev, impact: undefined })); }}
+              onChange={(e) => {
+                setImpact(e.target.value);
+                setErrors((prev) => ({ ...prev, impact: undefined }));
+              }}
               placeholder="What changes when this is decided?"
             />
             {errors.impact && (
-              <p id="dec-impact-error" className="mt-1 text-xs text-[var(--color-destructive)]">{errors.impact}</p>
+              <p
+                id="dec-impact-error"
+                className="mt-1 text-xs text-[var(--color-destructive)]"
+              >
+                {errors.impact}
+              </p>
             )}
           </div>
         </div>

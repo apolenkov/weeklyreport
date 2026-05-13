@@ -13,6 +13,7 @@ session memory; this plan persists the next-step queue.
 ## Tier 1 — Performance / DX (highest daily-impact)
 
 ### 1.1 — Turbopack experiment
+
 - Currently `apps/web/package.json` dev: `next dev --webpack` (forced webpack
   due to a runaway loop in earlier session, fix commit `f0142b6`)
 - The runaway-causing bugs (CLS correlationId, env loading, stub mode) are
@@ -30,6 +31,7 @@ session memory; this plan persists the next-step queue.
 - **Estimated effort:** 10 min experiment, 30 min if compatibility issues
 
 ### 1.2 — CI workflow (`.github/workflows/ci.yml`)
+
 - No CI exists. Next merge to `main` could regress without anyone noticing.
 - **Steps:** create workflow that on push/PR runs:
   - `pnpm install --frozen-lockfile`
@@ -43,6 +45,7 @@ session memory; this plan persists the next-step queue.
 ## Tier 2 — Closing deferred mockup items
 
 ### 2.1 — HIST-2 Quick Filters card
+
 - Sidebar already has Reporting Overview + Recent Pattern (commit `418bcff`).
 - Mockup s9 specs a third card with filter chips: "All", "Submitted", "Drafts".
 - **Steps:**
@@ -55,6 +58,7 @@ session memory; this plan persists the next-step queue.
 - **Estimated effort:** 25 min
 
 ### 2.2 — Visual snapshot baseline
+
 - Audit recommended Playwright snapshot diff at 1280×800 — currently no
   baseline exists.
 - **Steps:**
@@ -70,6 +74,7 @@ session memory; this plan persists the next-step queue.
 ## Tier 3 — Production prep
 
 ### 3.1 — `.env.example` audit
+
 - Current `.env.example` lists ~5 vars. Real schema has many more
   (`apps/api/src/infrastructure/config/env.schema.ts` has the full list).
 - **Steps:** generate `.env.example` from the Zod schema, group by purpose
@@ -78,15 +83,17 @@ session memory; this plan persists the next-step queue.
 - **Estimated effort:** 30 min
 
 ### 3.2 — README "Run the tests" + dev onboarding
+
 - README currently sparse on dev setup. New contributor would struggle.
 - **Steps:** add sections — Prereqs (Node 22+, pnpm 10+, Docker), First
   setup (`docker compose up -d postgres redis mailhog && pnpm install &&
-  pnpm prisma migrate deploy && pnpm prisma db seed`), Run the apps
+pnpm prisma migrate deploy && pnpm prisma db seed`), Run the apps
   (`pnpm dev`), Run the tests (`pnpm test`), UAT regression (point at
   `apps/web/.tmp/uat-suite/`).
 - **Estimated effort:** 20 min
 
 ### 3.3 — BullMQ Bull Board mount verify
+
 - `apps/api/src/main.ts` mounts `/admin/queues` (bull-board). `DlqBadge`
   component pulls failed-job count.
 - **Steps:** open `http://localhost:3002/admin/queues` as admin, verify all
@@ -97,6 +104,7 @@ session memory; this plan persists the next-step queue.
 ## Tier 4 — Optional but valuable
 
 ### 4.1 — AI features end-to-end audit
+
 - Code has `ai.summary`, `ai.sentiment`, `ai.regenerateSummary` tRPC
   procedures. Anthropic SDK in deps.
 - **Steps:** verify ANTHROPIC_API_KEY env handling, hit a procedure manually
@@ -105,6 +113,7 @@ session memory; this plan persists the next-step queue.
 - **Estimated effort:** 30 min
 
 ### 4.2 — Mockup MEDIUM/LOW backlog still open
+
 - Of 39 mockup deltas, all HIGH closed and most MEDIUM/LOW closed. A few
   small items remain in `.planning/MOCKUP-AUDIT-2026-05-05.md`:
   - DEC-2 — verify `--color-canvas` alias resolves to `#f4f1eb`

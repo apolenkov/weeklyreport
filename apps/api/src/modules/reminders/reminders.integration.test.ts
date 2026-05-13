@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import {
   createTestPrisma,
   cleanDatabase,
   seedTestData,
   disconnectTestPrisma,
   TEST_IDS,
-} from '../../test-utils/prisma-test-helper';
-import { RemindersPrismaRepository } from './reminders.prisma-repository';
-import { expectDefined } from '../../test-utils/expect-defined.js';
+} from "../../test-utils/prisma-test-helper";
+import { RemindersPrismaRepository } from "./reminders.prisma-repository";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
-describe('RemindersPrismaRepository (integration)', () => {
+describe("RemindersPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
   let repo: RemindersPrismaRepository;
   let testData: Awaited<ReturnType<typeof seedTestData>>;
@@ -26,10 +26,10 @@ describe('RemindersPrismaRepository (integration)', () => {
     await prisma.reminderRule.create({
       data: {
         id: TEST_IDS.reminderRule,
-        kind: 'deadline',
-        fireAt: new Date('2026-04-11T09:00:00.000Z'),
-        timezone: 'Europe/Moscow',
-        status: 'active',
+        kind: "deadline",
+        fireAt: new Date("2026-04-11T09:00:00.000Z"),
+        timezone: "Europe/Moscow",
+        status: "active",
         version: 1,
         reportId: testData.report.id,
       },
@@ -41,16 +41,16 @@ describe('RemindersPrismaRepository (integration)', () => {
     await disconnectTestPrisma();
   });
 
-  it('saveExecution creates execution with deduplication', async () => {
+  it("saveExecution creates execution with deduplication", async () => {
     const execution = {
       id: TEST_IDS.reminderExec1,
       ruleId: TEST_IDS.reminderRule,
       reportId: testData.report.id,
       dedupeKey: `${TEST_IDS.reminderRule}-2026-04-11`,
-      status: 'queued' as const,
-      scheduledFor: new Date('2026-04-11T09:00:00.000Z'),
+      status: "queued" as const,
+      scheduledFor: new Date("2026-04-11T09:00:00.000Z"),
       sentAt: null,
-      recipientEmail: '',
+      recipientEmail: "",
       errorMessage: null,
     };
 
@@ -58,17 +58,17 @@ describe('RemindersPrismaRepository (integration)', () => {
     expect(created.id).toBe(execution.id);
     expect(created.ruleId).toBe(TEST_IDS.reminderRule);
     expect(created.dedupeKey).toBe(execution.dedupeKey);
-    expect(created.status).toBe('queued');
+    expect(created.status).toBe("queued");
 
     // Upsert with same dedupeKey should update, not create duplicate
     const updated = await repo.saveExecution({
       ...execution,
-      status: 'sent' as const,
-      sentAt: new Date('2026-04-11T09:00:05.000Z'),
+      status: "sent" as const,
+      sentAt: new Date("2026-04-11T09:00:05.000Z"),
     });
 
     expect(updated.dedupeKey).toBe(execution.dedupeKey);
-    expect(updated.status).toBe('sent');
+    expect(updated.status).toBe("sent");
 
     // Verify only one execution exists
     const allExecutions = await prisma.reminderExecution.findMany({
@@ -77,15 +77,15 @@ describe('RemindersPrismaRepository (integration)', () => {
     expect(allExecutions).toHaveLength(1);
   });
 
-  it('listExecutions returns executions ordered by createdAt', async () => {
+  it("listExecutions returns executions ordered by createdAt", async () => {
     // Create two executions
     await prisma.reminderExecution.create({
       data: {
         id: TEST_IDS.reminderExec1,
         ruleId: TEST_IDS.reminderRule,
         dedupeKey: `${TEST_IDS.reminderRule}-2026-04-04`,
-        status: 'sent',
-        sentAt: new Date('2026-04-04T09:00:00.000Z'),
+        status: "sent",
+        sentAt: new Date("2026-04-04T09:00:00.000Z"),
       },
     });
 
@@ -94,7 +94,7 @@ describe('RemindersPrismaRepository (integration)', () => {
         id: TEST_IDS.reminderExec2,
         ruleId: TEST_IDS.reminderRule,
         dedupeKey: `${TEST_IDS.reminderRule}-2026-04-11`,
-        status: 'pending',
+        status: "pending",
       },
     });
 
