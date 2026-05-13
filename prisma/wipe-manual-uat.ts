@@ -28,7 +28,6 @@
 import "dotenv/config";
 
 import net from "node:net";
-import { randomUUID } from "node:crypto";
 
 import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -398,23 +397,11 @@ async function main() {
       });
 
       // ---------- 5. RESEED: GroupProduct M:M edges (UFB-054 / Phase 56) ----------
-      // One row per project, mapping to the lead's reporting group. Every
-      // primary lead lives in Software Development → all 6 products attach
-      // there. Finance has no products in v1 (room for admin to add).
-      await tx.groupProduct.createMany({
-        data: [
-          PROD_CRM,
-          PROD_MOBILE,
-          PROD_CLOUD,
-          PROD_DEVOPS,
-          PROD_PAYMENTS,
-          PROD_HR,
-        ].map((productId) => ({
-          id: randomUUID(),
-          groupId: DEFAULT_REPORTING_GROUP_ID,
-          productId,
-        })),
-      });
+      // A4 added @@unique([groupId]) — each reporting group may only own ONE
+      // product. Assigning all 6 products to DEFAULT_REPORTING_GROUP_ID
+      // violates that constraint. seed-simple.ts intentionally leaves
+      // groupProduct empty, so we do the same here: the wipe step already
+      // cleaned groupProduct rows (line 201); no re-creation needed.
 
       // ---------- 6. RESEED: Stages + StageAssignments ----------
       await tx.stage.createMany({
