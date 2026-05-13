@@ -8,7 +8,7 @@ import { invalidateAdmin } from "../../lib/cache-keys";
 import { toAdminUserInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
 
-import { TabHeader, TabSearch } from "./tab-header";
+import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
 import type { MockGroup, MockUser, UserRole } from "./mock-data";
 
@@ -28,6 +28,16 @@ function emptyForm(groups: readonly MockGroup[]): UserFormData {
   };
 }
 
+// A3: role quick-filter options — declared module-level so no per-render alloc
+const ROLE_OPTIONS = [
+  { value: "", label: "All roles" },
+  { value: "lead", label: "Lead" },
+  { value: "head", label: "Head" },
+  { value: "admin", label: "Admin" },
+  { value: "viewer", label: "Viewer" },
+  { value: "director", label: "Director" },
+] as const;
+
 type UsersTabProps = {
   readonly users: MockUser[];
   readonly groups: MockGroup[];
@@ -42,6 +52,8 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
   const [form, setForm] = useState<UserFormData>(() => emptyForm(groups));
   const [search, setSearch] = useState("");
+  // A3: role quick-filter ("" = all roles)
+  const [roleFilter, setRoleFilter] = useState("");
 
   const activeGroups = useMemo(
     () => groups.filter((group) => !group.archived),
@@ -160,14 +172,15 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   const canSave = form.groupId.length > 0 && !isSaving;
   const filteredUsers = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return users;
-    return users.filter((user) =>
-      [user.name, user.email, user.role, user.department]
+    return users.filter((user) => {
+      if (roleFilter && user.role !== roleFilter) return false;
+      if (!needle) return true;
+      return [user.name, user.email, user.role, user.department]
         .join(" ")
         .toLowerCase()
-        .includes(needle),
-    );
-  }, [search, users]);
+        .includes(needle);
+    });
+  }, [search, roleFilter, users]);
 
   return (
     <>
@@ -177,13 +190,22 @@ export function UsersTab({ users, groups }: UsersTabProps) {
           description="Manage group members and their roles."
           count={`${users.length} users`}
           search={
-            <TabSearch
-              value={search}
-              onChange={setSearch}
-              placeholder="Search users…"
-              testId="users-search"
-              ariaLabel="Search users"
-            />
+            <>
+              <TabFilter
+                value={roleFilter}
+                onChange={setRoleFilter}
+                options={ROLE_OPTIONS}
+                testId="users-role-filter"
+                ariaLabel="Filter by role"
+              />
+              <TabSearch
+                value={search}
+                onChange={setSearch}
+                placeholder="Search users…"
+                testId="users-search"
+                ariaLabel="Search users"
+              />
+            </>
           }
           actions={
             <button

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -10,7 +10,7 @@ import { formatPeriodRange } from '../../lib/format-date';
 import { invalidateAdmin } from '../../lib/cache-keys';
 import { useTRPC } from '../../lib/trpc-context';
 
-import { TabHeader } from './tab-header';
+import { TabHeader, TabSearch } from './tab-header';
 
 /**
  * UFB-052 (Phase 51-B), UFB-067: Admin → Periods tab.
@@ -72,6 +72,9 @@ export function PeriodsTab() {
   // A27: delete confirmation state. When user clicks delete, we set this
   // to the row and show a confirmation dialog.
   const [deleteConfirm, setDeleteConfirm] = useState<PeriodListItem | null>(null);
+
+  // A3: text search over active periods (weekLabel + date range)
+  const [search, setSearch] = useState('');
 
   const activeQuery = useQuery(
     trpc.admin.listPeriodsByState.queryOptions({ bucket: 'active' }),
@@ -184,15 +187,41 @@ export function PeriodsTab() {
     }),
   );
 
-  const activeRows = (activeQuery.data ?? []) as PeriodListItem[];
-  const archiveRows = (archiveQuery.data ?? []) as PeriodListItem[];
+  const allActiveRows = useMemo(
+    () => (activeQuery.data ?? []) as PeriodListItem[],
+    [activeQuery.data],
+  );
+  const archiveRows = useMemo(
+    () => (archiveQuery.data ?? []) as PeriodListItem[],
+    [archiveQuery.data],
+  );
+
+  const activeRows = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    if (!needle) return allActiveRows;
+    return allActiveRows.filter((row) =>
+      [row.weekLabel, formatPeriodRange(row.periodStart, row.periodEnd)]
+        .join(' ')
+        .toLowerCase()
+        .includes(needle),
+    );
+  }, [allActiveRows, search]);
 
   return (
     <div className="space-y-6">
       <TabHeader
         title="Periods"
         description="Reporting periods grouped by lifecycle state."
-        count={`${activeRows.length} active`}
+        count={`${allActiveRows.length} active`}
+        search={
+          <TabSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search periods…"
+            testId="periods-search"
+            ariaLabel="Search periods"
+          />
+        }
         actions={
           <button
             type="button"
