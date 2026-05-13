@@ -5,7 +5,7 @@
 
 // ---- Type Definitions ----
 
-export type UserRole = "lead" | "head" | "admin" | "viewer" | "director";
+export type UserRole = "lead" | "head" | "admin" | "viewer";
 
 export type MockUser = {
   id: string;
@@ -214,8 +214,8 @@ export const MOCK_USERS: MockUser[] = [
     name: "Olga Mirtova",
     email: "o.mirtova@example.com",
     role: "viewer",
-    groupId: DEFAULT_GROUP_ID,
-    department: "Software Development",
+    groupId: "",
+    department: "No owning group",
     isActive: true,
   },
 ];

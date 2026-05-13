@@ -12,7 +12,7 @@ model User {
   name                    String
   role                    Role
   samlId                  String              @unique
-  reportingGroupId        String
+  reportingGroupId        String?
   createdAt               DateTime            @default(now())
   updatedAt               DateTime            @updatedAt
   notificationOptOut      Boolean             @default(false)
@@ -20,7 +20,7 @@ model User {
   // Sessions are immediately revoked in Redis; Prisma is the authoritative
   // source for the isActive state.
   isActive                Boolean             @default(true)
-  reportingGroup          ReportingGroup      @relation(fields: [reportingGroupId], references: [id])
+  reportingGroup          ReportingGroup?     @relation(fields: [reportingGroupId], references: [id])
   ledProjects             Project[]
   reopenRequestsRequested ReopenRequest[]     @relation("ReopenRequester")
   reopenRequestsReviewed  ReopenRequest[]     @relation("ReopenReviewer")
@@ -42,21 +42,21 @@ model User {
 }
 
 model ReportingGroup {
-  id           String              @id @default(uuid())
-  name         String
-  description  String?
-  archived     Boolean             @default(false)
+  id            String              @id @default(uuid())
+  name          String
+  description   String?
+  archived      Boolean             @default(false)
   // UFB-039: optional FK to the User (role=head or role=admin) who runs
   // this reporting group. Nullable because freshly-created groups may not
   // have a leader assigned yet; a UI guard nudges admins to set one.
   // Application-level invariant (not DB CHECK): the referenced User's role
   // must be 'head' or 'admin'.
-  headUserId   String?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  users        User[]
-  head         User?               @relation("GroupHead", fields: [headUserId], references: [id], onDelete: SetNull)
-  viewerAccess ViewerGroupAccess[]
+  headUserId    String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  users         User[]
+  head          User?               @relation("GroupHead", fields: [headUserId], references: [id], onDelete: SetNull)
+  viewerAccess  ViewerGroupAccess[]
   // UFB-054 / Phase 56-A: explicit M:M edge to Project (products owned by
   // this group). Inverse of GroupProduct.group. See `GroupProduct` model.
   groupProducts GroupProduct[]
@@ -154,7 +154,6 @@ model GroupProduct {
   // reporting group; a group can contain many products.
   @@unique([productId])
   @@index([groupId])
-  @@index([productId])
 }
 
 model Report {
@@ -206,14 +205,14 @@ model Report {
   reminderRules    ReminderRule[]
   publishedBy      User?                @relation("PublishedBy", fields: [publishedById], references: [id])
   sections         ReportSection[]
+  // C2 (A24/A21): PARTIAL UNIQUE INDEX "Report_one_open_per_boundary"
+  // ON ("periodStart","periodEnd") WHERE "periodState"='open' — defined via raw migration
+  // (Prisma schema DSL does not support WHERE-clause partial indexes natively).
 
   @@index([periodStart(sort: Desc)])
   @@index([status, periodStart(sort: Desc)])
   @@index([archived, periodStart(sort: Desc)])
   @@index([periodState, periodStart(sort: Desc)])
-  // C2 (A24/A21): PARTIAL UNIQUE INDEX "Report_one_open_per_boundary"
-  // ON ("periodStart","periodEnd") WHERE "periodState"='open' — defined via raw migration
-  // (Prisma schema DSL does not support WHERE-clause partial indexes natively).
 }
 
 model ReportSection {
@@ -264,6 +263,7 @@ model ProjectStatus {
   reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
 
   @@unique([reportSectionId, projectId])
+  @@index([projectId])
 }
 
 model StageStatus {
@@ -377,6 +377,7 @@ model PdfExportJob {
   report      Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@index([reportId])
+  @@index([requestedBy])
   @@index([status, createdAt(sort: Desc)])
 }
 
@@ -475,7 +476,6 @@ model VersionSnapshot {
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
 
   @@unique([reportSectionId, version])
-  @@index([reportSectionId, version(sort: Desc)])
 }
 
 model Stage {
@@ -498,6 +498,7 @@ model StageAssignment {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([stageId, projectId])
+  @@index([userId])
   @@index([projectId])
 }
 
@@ -518,6 +519,8 @@ model ReopenRequest {
 
   @@index([status, createdAt])
   @@index([reportSectionId])
+  @@index([requestedById])
+  @@index([reviewedById])
 }
 
 // UFB-048 (Phase 48-B): AppSettings expansion. Nine new org-wide knobs that
@@ -648,7 +651,6 @@ enum Role {
   head
   viewer
   admin
-  director
 }
 
 enum UserActionStatus {

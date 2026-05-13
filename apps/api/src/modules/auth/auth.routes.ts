@@ -202,9 +202,10 @@ export async function buildUserSession(
     (await prisma.user.findFirst({ where: { email: profile.email } })) ??
     (await prisma.user.findFirst({ where: { samlId: profile.samlId } }));
 
-  const fallbackReportingGroup = existing
-    ? null
-    : ((await prisma.reportingGroup.findFirst({
+  const needsOwningGroup =
+    profile.role !== "viewer" && (!existing || !existing.reportingGroupId);
+  const fallbackReportingGroup = needsOwningGroup
+    ? ((await prisma.reportingGroup.findFirst({
         where: { archived: false },
         orderBy: { createdAt: "asc" },
         select: { id: true },
@@ -219,7 +220,14 @@ export async function buildUserSession(
         },
         update: { archived: false },
         select: { id: true },
-      })));
+      })))
+    : null;
+  const nextReportingGroupId =
+    profile.role === "viewer"
+      ? null
+      : (existing?.reportingGroupId ??
+        fallbackReportingGroup?.id ??
+        "a0000000-0000-4000-8000-000000000301");
 
   const user = existing
     ? await prisma.user.update({
@@ -228,6 +236,7 @@ export async function buildUserSession(
           samlId: profile.samlId,
           name: profile.displayName,
           role: profile.role,
+          reportingGroupId: nextReportingGroupId,
         },
       })
     : await prisma.user.create({
@@ -236,9 +245,7 @@ export async function buildUserSession(
           email: profile.email,
           name: profile.displayName,
           role: profile.role,
-          reportingGroupId:
-            fallbackReportingGroup?.id ??
-            "a0000000-0000-4000-8000-000000000301",
+          reportingGroupId: nextReportingGroupId,
         },
       });
 
@@ -274,7 +281,8 @@ export async function buildUserSession(
     activeReportSectionId: activeSection?.id ?? null,
     // UFB-040 / Phase 46-01: carry the user's owning ReportingGroup id in
     // the JWT so groupScopeFilter does not need a Prisma lookup per request.
-    // viewer sessions still hydrate `viewerGroupAccess` lazily in trpc.context.
+    // viewer sessions may have no owning group; their visibility hydrates
+    // through `viewerGroupAccess` lazily in trpc.context.
     reportingGroupId: user.reportingGroupId ?? undefined,
   };
 }
@@ -404,13 +412,7 @@ export function mountAuthRoutes(
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const role = (req.query.role as string) ?? "head";
-          const validRoles: Role[] = [
-            "lead",
-            "head",
-            "admin",
-            "viewer",
-            "director",
-          ];
+          const validRoles: Role[] = ["lead", "head", "admin", "viewer"];
           if (!validRoles.includes(role as Role)) {
             loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
             res.status(400).json({
@@ -478,15 +480,11 @@ export function mountAuthRoutes(
 
           // UX-16: role-aware default landing. Must stay in sync with
           // DEFAULT_FOR_ROLE in apps/web/src/app/page.tsx.
-          // UFB-057 / Phase 57: director lands on the same head dashboard
-          // surface as `head` so the product-KPI cards are the first thing
-          // they see; their nested layout permits read-only access.
           const redirectByRole: Record<string, string> = {
             head: "/head/dashboard",
             lead: "/lead/report",
             admin: "/admin",
             viewer: "/reports?tab=published",
-            director: "/head/dashboard",
           };
           const redirectPath =
             (req.query.redirect as string) ?? redirectByRole[role] ?? "/";

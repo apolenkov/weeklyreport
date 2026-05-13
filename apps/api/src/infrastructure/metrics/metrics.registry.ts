@@ -198,8 +198,7 @@ export const customreportReopenRequestsTotal = new Counter({
 
 /**
  * 52-A — PDF export requests, labelled by requesting role. Engagement
- * signal: a healthy product sees viewers + heads pulling exports;
- * an unhealthy one sees only the head pulling for the director.
+ * signal: a healthy product sees viewers + heads pulling exports.
  */
 export const customreportPdfExportRequestsTotal = new Counter({
   name: "customreport_pdf_export_requests_total",

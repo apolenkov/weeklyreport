@@ -1880,9 +1880,9 @@ export function createAppRouter(deps: RouterDeps) {
     // текущий период" panel. headProcedure — only heads (and admins,
     // aliased) consume the per-lead status snapshot.
     activity: router({
-      live: headProcedure.query(async () => {
+      live: headProcedure.query(async ({ ctx }) => {
         try {
-          return await deps.activityService.getLiveActivity();
+          return await deps.activityService.getLiveActivity(ctx.session);
         } catch (error) {
           throw mapDomainError(error);
         }

@@ -8,7 +8,7 @@ type LeadHistorySidebarProps = {
 
 /**
  * HIST-2 (Phase 33-04): right-rail companion for the lead history page.
- * Mockup s9 specs three stacked cards — Reporting Overview, Recent Pattern,
+ * Mockup s9 specs three stacked cards — My History Summary, Submission Status,
  * Quick Filters — that turn the history page from a flat archive into a
  * working surface. We ship the first two (stats + pattern); Quick Filters
  * are deferred until the parent page owns filter state worth wiring.
@@ -42,9 +42,9 @@ export function LeadHistorySidebar({ entries }: LeadHistorySidebarProps) {
   }
 
   return (
-    <aside aria-label="Reporting overview">
+    <aside aria-label="My history summary">
       <div className="space-y-4">
-        <SidebarCard title="Reporting Overview">
+        <SidebarCard title="My History Summary">
           <StatGrid>
             <Stat
               label="Submissions"
@@ -87,7 +87,7 @@ export function LeadHistorySidebar({ entries }: LeadHistorySidebarProps) {
           </div>
         </SidebarCard>
 
-        <SidebarCard title="Recent Pattern">
+        <SidebarCard title="Submission Status">
           {streak >= 2 ? (
             <p className="text-[13px] text-[var(--color-foreground)]">
               Submitted <strong>{streak}</strong>{" "}

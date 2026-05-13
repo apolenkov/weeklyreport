@@ -50,6 +50,7 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
+import { SessionContext, type SessionUser } from "../../lib/session-provider";
 import { WeeklyReportPage } from "./weekly-report-page";
 import { expectDefined } from "../../test/expect-defined.js";
 
@@ -293,6 +294,7 @@ function renderPage(
   data: ReturnType<typeof makeWeeklyReportData>,
   captured: Captured,
   authorId?: string,
+  role: SessionUser["role"] = "head",
 ) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -301,9 +303,23 @@ function renderPage(
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>
-          {children}
-        </TRPCProxyContext.Provider>
+        <SessionContext.Provider
+          value={{
+            user: {
+              id: "head-user-id",
+              name: "Test User",
+              email: "test.user@example.com",
+              role,
+            },
+            organization: null,
+            isLoading: false,
+            isAuthenticated: true,
+          }}
+        >
+          <TRPCProxyContext.Provider value={trpc}>
+            {children}
+          </TRPCProxyContext.Provider>
+        </SessionContext.Provider>
       </QueryClientProvider>
     );
   }
@@ -434,6 +450,26 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
 
     expect(
       screen.queryByTestId("empty-submissions-state"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("viewer can read a published report without period mutation actions", async () => {
+    const captured: Captured = {
+      publishMutationFn: vi.fn(),
+      reopenMutationFn: vi.fn(),
+      pdfExportRequestMutationFn: vi.fn(),
+    };
+    const published = makeWeeklyReportData("published");
+
+    renderPage(published, captured, undefined, "viewer");
+
+    await screen.findByRole("button", { name: /export pdf/i });
+
+    expect(
+      screen.queryByRole("button", { name: /^archive$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /reopen period/i }),
     ).not.toBeInTheDocument();
   });
 

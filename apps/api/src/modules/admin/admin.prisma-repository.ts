@@ -437,8 +437,8 @@ export class AdminPrismaRepository implements AdminRepository {
           email: u.email,
           name: u.name,
           role: u.role,
-          reportingGroupId: u.reportingGroupId,
-          reportingGroupName: u.reportingGroup.name,
+          reportingGroupId: u.reportingGroupId ?? null,
+          reportingGroupName: u.reportingGroup?.name ?? null,
           // A2 (UAT-v7 2026-05-12): surface the soft-deactivation flag.
           isActive: u.isActive,
         }),
@@ -546,6 +546,10 @@ export class AdminPrismaRepository implements AdminRepository {
     const snapshotUserIds = new Set(snapshot.users.map((u) => u.id));
 
     for (const user of snapshot.users) {
+      const reportingGroupId =
+        user.role === "viewer"
+          ? null
+          : (user.reportingGroupId ?? fallbackReportingGroupId);
       if (currentUserIds.has(user.id)) {
         await this.prisma.user.update({
           where: { id: user.id },
@@ -553,7 +557,7 @@ export class AdminPrismaRepository implements AdminRepository {
             email: user.email,
             name: user.name,
             role: user.role,
-            reportingGroupId: user.reportingGroupId ?? fallbackReportingGroupId,
+            reportingGroupId,
           },
         });
       } else {
@@ -564,7 +568,7 @@ export class AdminPrismaRepository implements AdminRepository {
             name: user.name,
             role: user.role,
             samlId: user.email,
-            reportingGroupId: user.reportingGroupId ?? fallbackReportingGroupId,
+            reportingGroupId,
           },
         });
       }
@@ -1053,12 +1057,10 @@ export class AdminPrismaRepository implements AdminRepository {
   // -----------------------------------------------------------------
 
   /**
-   * Idempotent attach via Prisma upsert on the (groupId, productId)
-   * Atomic reassign: if the product already belongs to the target group
-   * the call is idempotent. If it belongs to a different group, that
-   * row is updated in-place (groupId swap). If no row exists, one is
-   * created. The transaction + @@unique([productId]) constraint means
-   * concurrent attach calls will serialize via the DB unique index.
+   * Strict one-group-per-product attach. If the product already belongs
+   * to the target group the call is idempotent. If it belongs to a
+   * different group we reject instead of silently moving ownership; the
+   * admin UI must detach from the current group first.
    */
   async attachProductToGroup(
     input: GroupProductEdgeInput,
@@ -1069,10 +1071,13 @@ export class AdminPrismaRepository implements AdminRepository {
       });
       if (existing && existing.groupId === input.groupId) return existing;
       if (existing) {
-        return tx.groupProduct.update({
-          where: { productId: input.productId },
-          data: { groupId: input.groupId },
+        const currentGroup = await tx.reportingGroup.findUnique({
+          where: { id: existing.groupId },
+          select: { name: true },
         });
+        throw new Error(
+          `Product is already attached to ${currentGroup?.name ?? "another group"}. Detach it there before attaching it to another group.`,
+        );
       }
       return tx.groupProduct.create({
         data: { groupId: input.groupId, productId: input.productId },

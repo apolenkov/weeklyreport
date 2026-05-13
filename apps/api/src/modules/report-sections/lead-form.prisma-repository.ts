@@ -401,11 +401,13 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         impact: d.impact,
         resolvedAt: d.resolvedAt?.toISOString() ?? null,
         stageName: d.stageName ?? null,
+        productId: d.productId,
       })),
       priorities: section.priorities.map((p) => ({
         rank: p.rank,
         text: p.text,
         stageName: p.stageName ?? null,
+        productId: p.productId,
       })),
     };
 

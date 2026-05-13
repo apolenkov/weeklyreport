@@ -110,9 +110,7 @@ export function verifySamlProfile(
     const rawRole = rawProfile["role"];
     const role: Role =
       typeof rawRole === "string" &&
-      ["lead", "head", "admin", "viewer", "director"].includes(
-        rawRole.toLowerCase(),
-      )
+      ["lead", "head", "admin", "viewer"].includes(rawRole.toLowerCase())
         ? (rawRole.toLowerCase() as Role)
         : "viewer";
     return { ok: true, profile: { samlId, email, displayName, role } };

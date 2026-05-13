@@ -21,7 +21,7 @@ import { useTRPC } from "../../lib/trpc-context";
  * accessibility labelling.
  */
 type ProductKpiCardProps = {
-  readonly role?: "lead" | "head" | "admin" | "viewer" | "director" | null;
+  readonly role?: "lead" | "head" | "admin" | "viewer" | null;
 };
 
 export function ProductKpiCard({ role }: ProductKpiCardProps) {
@@ -30,13 +30,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
   // the empty result is meaningless to a lead anyway. `enabled` gates
   // the call cleanly; React Query won't fire the request until the role
   // is in the leadership set.
-  // UFB-057 / Phase 57: director joins the leadership audience that sees
-  // the product-KPI card — matches the leadershipProcedure server gate.
-  const isLeadership =
-    role === "head" ||
-    role === "admin" ||
-    role === "viewer" ||
-    role === "director";
+  const isLeadership = role === "head" || role === "admin" || role === "viewer";
   const summaryQ = useQuery({
     ...trpc.telemetry.summary.queryOptions(),
     enabled: isLeadership,

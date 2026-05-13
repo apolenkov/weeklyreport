@@ -182,7 +182,7 @@ describe("Landing page — last-role hint (UFB-071)", () => {
     expect(href).toContain("redirect=%2Flead%2Freport");
   });
 
-  it("«Change role» toggles a 5-role picker (lead/head/admin/viewer/director)", async () => {
+  it("«Change role» toggles a 4-role picker (lead/head/admin/viewer)", async () => {
     storage.setItem(
       LAST_ROLE_STORAGE_KEY,
       JSON.stringify({
@@ -204,7 +204,7 @@ describe("Landing page — last-role hint (UFB-071)", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     const switcher = screen.getByTestId("last-role-switcher");
     expect(switcher).toBeInTheDocument();
-    for (const role of ["lead", "head", "admin", "viewer", "director"]) {
+    for (const role of ["lead", "head", "admin", "viewer"]) {
       expect(
         screen.getByTestId(`last-role-option-${role}`),
       ).toBeInTheDocument();
@@ -226,10 +226,10 @@ describe("Landing page — last-role hint (UFB-071)", () => {
 
     fireEvent.click(await screen.findByTestId("last-role-change"));
 
-    const directorOption = screen.getByTestId("last-role-option-director");
-    const href = directorOption.getAttribute("href") ?? "";
-    expect(href).toContain("role=director");
-    expect(href).toContain("email=director%40customreport.local");
-    expect(href).toContain("redirect=%2Fhead%2Fdashboard");
+    const viewerOption = screen.getByTestId("last-role-option-viewer");
+    const href = viewerOption.getAttribute("href") ?? "";
+    expect(href).toContain("role=viewer");
+    expect(href).toContain("email=viewer%40customreport.local");
+    expect(href).toContain("redirect=%2Freports%3Ftab%3Dpublished");
   });
 });

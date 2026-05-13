@@ -169,22 +169,26 @@ async function main() {
     });
   }
 
-  // --- 2b. GroupProduct: tie the default group to Lead1's first product.
-  // Required by weeklyReport.get projectScope (useExplicitGroupProducts:true).
-  // @@unique([groupId]) allows exactly one product per group.
-  await prisma.groupProduct.upsert({
-    where: {
-      groupId_productId: {
-        groupId: DEFAULT_REPORTING_GROUP_ID,
-        productId: SEED_PRODUCTS[0].id,
+  // --- 2b. GroupProduct: every product has exactly one owning group.
+  // Product group is the report grouping source of truth; derive it from the
+  // seeded lead's reporting group so seed data satisfies the UAT invariant.
+  const groupByLeadId = new Map(
+    SEED_USERS.map((user) => [user.id, user.reportingGroupId] as const),
+  );
+  for (const product of SEED_PRODUCTS) {
+    await prisma.groupProduct.upsert({
+      where: { productId: product.id },
+      update: {
+        groupId:
+          groupByLeadId.get(product.leadId) ?? DEFAULT_REPORTING_GROUP_ID,
       },
-    },
-    update: {},
-    create: {
-      groupId: DEFAULT_REPORTING_GROUP_ID,
-      productId: SEED_PRODUCTS[0].id,
-    },
-  });
+      create: {
+        groupId:
+          groupByLeadId.get(product.leadId) ?? DEFAULT_REPORTING_GROUP_ID,
+        productId: product.id,
+      },
+    });
+  }
 
   // --- 3. SDLC stages (7) ---
   for (const stage of SEED_STAGES) {

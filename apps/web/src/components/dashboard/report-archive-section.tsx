@@ -84,51 +84,58 @@ export function ReportArchiveSection({
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {reports.map((report) => {
-          const isActive = report.id === currentReportId;
-          const href = isActive
-            ? `/head/report/${encodeURIComponent(report.id)}`
-            : `/reports/${report.id}`;
-          const config =
-            (STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
-            STATUS_CONFIG.draft;
-          const cardConfig = isActive ? STATUS_CONFIG.active : config;
+        {archive.isLoading ? (
+          <ArchiveSkeletonGrid />
+        ) : (
+          reports.map((report) => {
+            const isActive = report.id === currentReportId;
+            const href = isActive
+              ? `/head/report/${encodeURIComponent(report.id)}`
+              : `/reports/${report.id}`;
+            const config =
+              (STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
+              STATUS_CONFIG.draft;
+            const cardConfig = isActive ? STATUS_CONFIG.active : config;
 
-          return (
-            <a
-              key={report.id}
-              href={href}
-              className="group cursor-pointer rounded-[var(--radius)] border bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)] transition-[border-color,box-shadow] duration-150 hover:border-[var(--color-starbucks-accent)] hover:shadow-[0_10px_24px_-18px_rgba(0,0,0,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
-              style={{
-                borderLeft: `3px solid ${
-                  isActive
-                    ? "var(--color-starbucks-accent)"
-                    : "var(--color-border)"
-                }`,
-                textDecoration: "none",
-                color: "inherit",
-                boxShadow: isActive
-                  ? "0 0 0 2px rgba(0,117,74,0.12), 0 8px 24px -16px rgba(0,0,0,0.2)"
-                  : undefined,
-              }}
-            >
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-sm font-semibold">
-                  {report.weekLabel}
-                </span>
-                <span
-                  className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
-                  style={{ background: cardConfig.bg, color: cardConfig.text }}
-                >
-                  {cardConfig.label}
-                </span>
-              </div>
-              <div className="text-xs text-[var(--color-muted-foreground)]">
-                {report.dateRange}
-              </div>
-            </a>
-          );
-        })}
+            return (
+              <a
+                key={report.id}
+                href={href}
+                className="group cursor-pointer rounded-[var(--radius)] border bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)] transition-[border-color,box-shadow] duration-150 hover:border-[var(--color-starbucks-accent)] hover:shadow-[0_10px_24px_-18px_rgba(0,0,0,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
+                style={{
+                  borderLeft: `3px solid ${
+                    isActive
+                      ? "var(--color-starbucks-accent)"
+                      : "var(--color-border)"
+                  }`,
+                  textDecoration: "none",
+                  color: "inherit",
+                  boxShadow: isActive
+                    ? "0 0 0 2px rgba(0,117,74,0.12), 0 8px 24px -16px rgba(0,0,0,0.2)"
+                    : undefined,
+                }}
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-sm font-semibold">
+                    {report.weekLabel}
+                  </span>
+                  <span
+                    className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
+                    style={{
+                      background: cardConfig.bg,
+                      color: cardConfig.text,
+                    }}
+                  >
+                    {cardConfig.label}
+                  </span>
+                </div>
+                <div className="text-xs text-[var(--color-muted-foreground)]">
+                  {report.dateRange}
+                </div>
+              </a>
+            );
+          })
+        )}
       </div>
 
       {/* Load more */}
@@ -153,4 +160,21 @@ export function ReportArchiveSection({
       )}
     </div>
   );
+}
+
+function ArchiveSkeletonGrid() {
+  return Array.from({ length: 8 }, (_, idx) => (
+    <div
+      key={idx}
+      aria-hidden="true"
+      className="min-h-[88px] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4"
+      style={{ borderLeft: "3px solid var(--color-border)" }}
+    >
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="h-4 w-24 rounded bg-[var(--color-muted)]" />
+        <div className="h-5 w-16 rounded-[var(--radius-pill)] bg-[var(--color-muted)]" />
+      </div>
+      <div className="h-3 w-32 rounded bg-[var(--color-muted)]" />
+    </div>
+  ));
 }

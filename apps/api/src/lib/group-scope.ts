@@ -15,10 +15,6 @@ import type { UserSession } from "@customreport/shared";
  * findMany/findFirst queries. The fragment encodes per-role visibility:
  *
  *   - admin    -> {} (no filter; god mode, read+write)
- *   - director -> {} (no filter; god-mode-READ across all groups; UFB-057)
- *                 director is excluded from admin-only mutations upstream
- *                 (adminProcedure), so the empty filter here only opens
- *                 reads — every mutation path still gates on adminProcedure.
  *   - head     -> rows whose owner is in the head's single ReportingGroup
  *   - lead     -> rows whose owner is in the lead's single ReportingGroup
  *   - viewer   -> rows whose owner is in any of the viewer's granted groups
@@ -62,10 +58,7 @@ export function groupScopeFilter(
   target: ScopeTarget,
   options: GroupScopeOptions = {},
 ): Record<string, unknown> {
-  // UFB-057 / Phase 57: director gets the same empty filter as admin
-  // (god-mode-READ). Writes are still gated by `adminProcedure` upstream,
-  // so director can read every group's data but cannot mutate it.
-  if (session.role === "admin" || session.role === "director") return {};
+  if (session.role === "admin") return {};
 
   const groupIds = computeAllowedGroupIds(session);
 

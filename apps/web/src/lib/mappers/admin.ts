@@ -47,7 +47,7 @@ import type {
 
 // ---- Self-contained re-declarations of presentation types ----
 
-export type UserRole = "lead" | "head" | "admin" | "viewer" | "director";
+export type UserRole = "lead" | "head" | "admin" | "viewer";
 
 export type MockUser = {
   id: string;
@@ -211,8 +211,8 @@ function mapUser(api: AdminUser): MockUser {
     name: api.name,
     email: api.email,
     role: api.role,
-    groupId: api.reportingGroupId,
-    department: api.reportingGroupName ?? "Unassigned",
+    groupId: api.reportingGroupId ?? "",
+    department: api.reportingGroupName ?? "No owning group",
     // A2 (UAT-v7 2026-05-12): default true in case old snapshot rows lack the field.
     isActive: api.isActive ?? true,
   };
@@ -418,14 +418,14 @@ export function toAdminUserInput(
   email: string;
   name: string;
   role: UserRole;
-  reportingGroupId: string;
+  reportingGroupId: string | null;
 } {
   return {
     id: existingId ?? newId(),
     email: form.email.trim(),
     name: form.name.trim(),
     role: form.role,
-    reportingGroupId: form.groupId,
+    reportingGroupId: form.groupId || null,
   };
 }
 
