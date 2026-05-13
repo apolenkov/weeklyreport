@@ -38,6 +38,14 @@ const ROLE_OPTIONS = [
   { value: "director", label: "Director" },
 ] as const;
 
+// B3: status quick-filter — default "active" hides deactivated users on load
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "all", label: "All" },
+] as const;
+type StatusFilterValue = (typeof STATUS_OPTIONS)[number]["value"];
+
 type UsersTabProps = {
   readonly users: MockUser[];
   readonly groups: MockGroup[];
@@ -54,6 +62,8 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   const [search, setSearch] = useState("");
   // A3: role quick-filter ("" = all roles)
   const [roleFilter, setRoleFilter] = useState("");
+  // B3: status quick-filter (default "active" — hides deactivated on load)
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("active");
 
   const activeGroups = useMemo(
     () => groups.filter((group) => !group.archived),
@@ -174,13 +184,15 @@ export function UsersTab({ users, groups }: UsersTabProps) {
     const needle = search.trim().toLowerCase();
     return users.filter((user) => {
       if (roleFilter && user.role !== roleFilter) return false;
+      if (statusFilter === "active" && !user.isActive) return false;
+      if (statusFilter === "inactive" && user.isActive) return false;
       if (!needle) return true;
       return [user.name, user.email, user.role, user.department]
         .join(" ")
         .toLowerCase()
         .includes(needle);
     });
-  }, [search, roleFilter, users]);
+  }, [search, roleFilter, statusFilter, users]);
 
   return (
     <>
@@ -191,6 +203,13 @@ export function UsersTab({ users, groups }: UsersTabProps) {
           count={`${users.length} users`}
           search={
             <>
+              <TabFilter
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(v as StatusFilterValue)}
+                options={STATUS_OPTIONS}
+                testId="users-status-filter"
+                ariaLabel="Filter by status"
+              />
               <TabFilter
                 value={roleFilter}
                 onChange={setRoleFilter}

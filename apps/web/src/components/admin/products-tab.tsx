@@ -10,7 +10,7 @@ import { useTRPC } from '../../lib/trpc-context';
 import { ConfirmDeleteDialog } from '../lead/confirm-delete-dialog';
 import { SearchInput } from '../search/search-input';
 
-import { TabHeader } from './tab-header';
+import { TabHeader, TabSearch } from './tab-header';
 import { ProductGroupChips } from './product-group-chips';
 
 import type { MockProduct, MockUser } from './mock-data';
@@ -32,6 +32,8 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
   const [formName, setFormName] = useState('');
   const [formLeadId, setFormLeadId] = useState('');
   const [pendingArchive, setPendingArchive] = useState<MockProduct | null>(null);
+  // B5: local name filter (distinct from the global SearchInput deep-link)
+  const [localSearch, setLocalSearch] = useState('');
 
   // Escape closes the Add/Edit dialog (mirrors users-tab — the inline
   // dialog has no Radix wrapper so we attach the listener manually).
@@ -54,7 +56,12 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
     }
   }, [productFilter, products]);
 
-  const leads = useMemo(() => users.filter((u) => u.role === 'lead'), [users]);
+  // B9: exclude deactivated users from picker; existing assignments to
+  // deactivated leads remain visible via getUserById (full users list).
+  const leads = useMemo(
+    () => users.filter((u) => u.role === 'lead' && u.isActive),
+    [users],
+  );
   const getUserById = (id: string): MockUser | undefined => users.find((u) => u.id === id);
 
   // 35-01: per-project assignment counts from the live DB. The mock-data
@@ -153,9 +160,16 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
     setPendingArchive(null);
   }
 
-  const filteredProducts = productFilter
-    ? products.filter((product) => product.id === productFilter)
-    : products;
+  const filteredProducts = useMemo(() => {
+    let list = productFilter
+      ? products.filter((p) => p.id === productFilter)
+      : products;
+    const needle = localSearch.trim().toLowerCase();
+    if (needle) {
+      list = list.filter((p) => p.name.toLowerCase().includes(needle));
+    }
+    return list;
+  }, [products, productFilter, localSearch]);
   const filterMatched = !!productFilter && filteredProducts.length > 0;
   const activeProducts = filteredProducts.filter((p) => p.status === 'active');
   const archivedProducts = filteredProducts.filter((p) => p.status === 'archived');
@@ -171,12 +185,21 @@ export function ProductsTab({ products, users, productFilter }: ProductsTabProps
           description="Active products + archived. Use the global search to deep-link into reports."
           count={`${activeProducts.length} active · ${archivedProducts.length} archived`}
           search={
-            <div className="w-72">
-              <SearchInput
-                scope="all"
-                placeholder="Search all products and reports…"
+            <>
+              <TabSearch
+                value={localSearch}
+                onChange={setLocalSearch}
+                placeholder="Filter products…"
+                testId="products-local-search"
+                ariaLabel="Filter products by name"
               />
-            </div>
+              <div className="w-72">
+                <SearchInput
+                  scope="all"
+                  placeholder="Search all products and reports…"
+                />
+              </div>
+            </>
           }
           actions={
             <button
