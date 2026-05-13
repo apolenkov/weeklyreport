@@ -32,7 +32,7 @@ Cross-checked: git log origin/main..HEAD to exclude already-committed IDs
 | A35 | Director Viewer role testing deferred (blocked by A28/A31/A32)                  | director/\*                                                  | No                     | `[locked-deferred: testing-deferred-until-A28/31/32]`                                                              |
 | A36 | UAT seed data: correct user/group/product/stage distribution                    | prisma/seed-simple.ts                                        | **Yes** (rewrite seed) | `[done: this session] added FINANCE_GROUP_ID + moved LEAD_OLGA+LEAD_SERGEY to Finance group`                       |
 | A37 | Diagnostic step — compare post-wipe DB state vs A36 target                      | Database inspection                                          | No                     | `[resolved by A36: 2 groups in seed; DEFAULT has 4 leads, FINANCE has 2; head scoping verifiable by running seed]` |
-| A39 | Process retro: lessons learned / TDD discipline audit                           | Documentation                                                | No                     | `[ ]`                                                                                                              |
+| A39 | Process retro: lessons learned / TDD discipline audit                           | Documentation                                                | No                     | `[done: this session] UAT-V7-LESSONS-LEARNED-2026-05-13.md`                                                        |
 
 ## Dependency graph
 
