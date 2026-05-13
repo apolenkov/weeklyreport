@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import type { Queue } from 'bullmq';
+import type { Queue } from "bullmq";
 
-import { JobsService } from './jobs.service';
+import { JobsService } from "./jobs.service";
 
 type FakeJob = {
   id: string;
@@ -17,12 +17,12 @@ type FakeJob = {
 
 function makeJob(overrides: Partial<FakeJob> & { id: string }): FakeJob {
   return {
-    name: 'send-reminder-email',
-    failedReason: 'SMTP timeout',
-    stacktrace: ['at smtpClient.send (smtp.ts:42)'],
+    name: "send-reminder-email",
+    failedReason: "SMTP timeout",
+    stacktrace: ["at smtpClient.send (smtp.ts:42)"],
     attemptsMade: 3,
     timestamp: 1_700_000_000_000,
-    data: { recipient: 'lead@example.com' },
+    data: { recipient: "lead@example.com" },
     retry: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -45,80 +45,108 @@ function makeQueue(opts: {
   return queue;
 }
 
-describe('JobsService — 35-06 BullMQ DLQ admin surface', () => {
-  it('listFailed: returns mapped failed jobs with default page size', async () => {
+describe("JobsService — 35-06 BullMQ DLQ admin surface", () => {
+  it("listFailed: returns mapped failed jobs with default page size", async () => {
     const failed = Array.from({ length: 3 }, (_, i) =>
       makeJob({ id: `job-${i}`, attemptsMade: i + 1 }),
     );
     const service = new JobsService(makeQueue({ failed }));
 
-    const result = await service.listFailed({ queue: 'email-reminder' });
+    const result = await service.listFailed({ queue: "email-reminder" });
 
     expect(result.jobs).toHaveLength(3);
     expect(result.jobs[0]).toMatchObject({
-      id: 'job-0',
-      name: 'send-reminder-email',
-      failedReason: 'SMTP timeout',
+      id: "job-0",
+      name: "send-reminder-email",
+      failedReason: "SMTP timeout",
       attemptsMade: 1,
       timestamp: 1_700_000_000_000,
     });
-    expect(result.jobs[0]?.stacktrace).toEqual(['at smtpClient.send (smtp.ts:42)']);
+    expect(result.jobs[0]?.stacktrace).toEqual([
+      "at smtpClient.send (smtp.ts:42)",
+    ]);
     // 3 jobs returned in a 50-slot page → cursor is exhausted.
     expect(result.nextCursor).toBeNull();
   });
 
-  it('listFailed: uses (start, start+limit-1) as inclusive bounds for BullMQ pagination', async () => {
-    const failed = Array.from({ length: 60 }, (_, i) => makeJob({ id: `job-${i}` }));
+  it("listFailed: uses (start, start+limit-1) as inclusive bounds for BullMQ pagination", async () => {
+    const failed = Array.from({ length: 60 }, (_, i) =>
+      makeJob({ id: `job-${i}` }),
+    );
     const queue = makeQueue({ failed });
     const service = new JobsService(queue);
 
-    await service.listFailed({ queue: 'email-reminder', cursor: 0, limit: 50 });
+    await service.listFailed({ queue: "email-reminder", cursor: 0, limit: 50 });
     expect(queue.getFailed).toHaveBeenCalledWith(0, 49);
 
-    await service.listFailed({ queue: 'email-reminder', cursor: 50, limit: 50 });
+    await service.listFailed({
+      queue: "email-reminder",
+      cursor: 50,
+      limit: 50,
+    });
     expect(queue.getFailed).toHaveBeenLastCalledWith(50, 99);
   });
 
-  it('listFailed: advances cursor while page is full and returns null when partial', async () => {
-    const failed = Array.from({ length: 70 }, (_, i) => makeJob({ id: `job-${i}` }));
+  it("listFailed: advances cursor while page is full and returns null when partial", async () => {
+    const failed = Array.from({ length: 70 }, (_, i) =>
+      makeJob({ id: `job-${i}` }),
+    );
     const service = new JobsService(makeQueue({ failed }));
 
-    const page1 = await service.listFailed({ queue: 'email-reminder', limit: 50 });
+    const page1 = await service.listFailed({
+      queue: "email-reminder",
+      limit: 50,
+    });
     expect(page1.jobs).toHaveLength(50);
     expect(page1.nextCursor).toBe(50);
 
-    const page2 = await service.listFailed({ queue: 'email-reminder', cursor: 50, limit: 50 });
+    const page2 = await service.listFailed({
+      queue: "email-reminder",
+      cursor: 50,
+      limit: 50,
+    });
     expect(page2.jobs).toHaveLength(20);
     expect(page2.nextCursor).toBeNull();
   });
 
-  it('listFailed: returns empty list when the Queue handle is absent (test harness)', async () => {
+  it("listFailed: returns empty list when the Queue handle is absent (test harness)", async () => {
     const service = new JobsService(undefined);
-    const result = await service.listFailed({ queue: 'email-reminder' });
+    const result = await service.listFailed({ queue: "email-reminder" });
     expect(result).toEqual({ jobs: [], nextCursor: null });
   });
 
-  it('retryFailed: calls job.retry() on the resolved job and reports retried=true', async () => {
-    const job = makeJob({ id: 'job-99' });
+  it("retryFailed: calls job.retry() on the resolved job and reports retried=true", async () => {
+    const job = makeJob({ id: "job-99" });
     const service = new JobsService(makeQueue({ failed: [job] }));
 
-    const result = await service.retryFailed({ queue: 'email-reminder', jobId: 'job-99' });
+    const result = await service.retryFailed({
+      queue: "email-reminder",
+      jobId: "job-99",
+    });
 
     expect(job.retry).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({ retried: true, jobId: 'job-99' });
+    expect(result).toEqual({ retried: true, jobId: "job-99" });
   });
 
-  it('retryFailed: returns retried=false when the job no longer exists (pruned / parallel retry)', async () => {
-    const service = new JobsService(makeQueue({ failed: [], getJob: () => undefined }));
+  it("retryFailed: returns retried=false when the job no longer exists (pruned / parallel retry)", async () => {
+    const service = new JobsService(
+      makeQueue({ failed: [], getJob: () => undefined }),
+    );
 
-    const result = await service.retryFailed({ queue: 'email-reminder', jobId: 'gone' });
+    const result = await service.retryFailed({
+      queue: "email-reminder",
+      jobId: "gone",
+    });
 
-    expect(result).toEqual({ retried: false, jobId: 'gone' });
+    expect(result).toEqual({ retried: false, jobId: "gone" });
   });
 
-  it('retryFailed: returns retried=false when the Queue handle is absent', async () => {
+  it("retryFailed: returns retried=false when the Queue handle is absent", async () => {
     const service = new JobsService(undefined);
-    const result = await service.retryFailed({ queue: 'email-reminder', jobId: 'job-1' });
-    expect(result).toEqual({ retried: false, jobId: 'job-1' });
+    const result = await service.retryFailed({
+      queue: "email-reminder",
+      jobId: "job-1",
+    });
+    expect(result).toEqual({ retried: false, jobId: "job-1" });
   });
 });

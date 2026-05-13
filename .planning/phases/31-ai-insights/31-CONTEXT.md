@@ -11,11 +11,13 @@
 Wave 5 / final v6.0: heads get 2-3 sentence executive summary, every risk row carries sentiment badge, lead traffic-light cells show on-track advisory icon. AI never overwrites human content or changes chosen colours.
 
 **In scope (3 REQ-IDs):**
+
 - AI-01: Executive summary (2-3 sentences) above head's narrative textarea, dismissible, head-only Regenerate button. Haiku 4.5 + betaZodTool + cached on contentHash.
 - AI-02: Sentiment badge per Risk row (low/medium/high) — Haiku 4.5 + structured Zod tool output. Cached per Risk content hash. AiInsight Prisma row records `usage.{input,output,cache_creation,cache_read}_tokens`.
 - AI-03: On-track advisory icon (✓/⚠/✗) alongside lead's traffic light — Haiku 4.5 (user pick — deviation from ROADMAP suggesting Sonnet 4.6) with pre-computed counts in system prompt under `DO NOT change these numbers`. Eval-step CI threshold against 8-12 report golden-set.
 
 **Out of scope:**
+
 - RAG / vector search (user explicitly excluded)
 - Multi-document grounding (one report at a time)
 - Long-term memory of leads
@@ -27,6 +29,7 @@ Wave 5 / final v6.0: heads get 2-3 sentence executive summary, every risk row ca
 ## Implementation Decisions
 
 ### Locked Decisions
+
 - **Anthropic SDK direct** (no LangChain, no Vercel AI SDK — per StackResearch)
 - **Haiku 4.5 for ALL three features** (AI-01, AI-02, AI-03) — user picked cheapest. ROADMAP suggested Sonnet for AI-03 but per-render cost ($0.001 vs $0.01) wins. Quality trade-off acknowledged; eval rubric will catch regressions.
 - **No Opus 4.7 anywhere** (5× cost, marginal lift per StackResearch)
@@ -36,12 +39,14 @@ Wave 5 / final v6.0: heads get 2-3 sentence executive summary, every risk row ca
 - **Anthropic data-retention OFF** (success criterion 4) — verified at workspace level, documented in AI-SPEC.
 
 ### Module Isolation (success criterion 4)
+
 - All AI code in `apps/api/src/modules/ai/**`
-- ESLint `no-restricted-imports` blocks raw `@prisma/client` in ai/**; ai module accesses DB only via internal facades
+- ESLint `no-restricted-imports` blocks raw `@prisma/client` in ai/\*\*; ai module accesses DB only via internal facades
 - Logging middleware excludes `ai.*` tRPC procedures (no prompt/response in logs)
-- Lint rule bans `logger.*` of `prompt` / `messages` / `response.content` in ai/**
+- Lint rule bans `logger.*` of `prompt` / `messages` / `response.content` in ai/\*\*
 
 ### Eval Strategy (AI-03 gate)
+
 - 8-12 report golden-set fixtures committed at `apps/api/src/modules/ai/__fixtures__/golden-set/`
 - Each fixture: full report JSON + expected outputs (summary, per-risk sentiment, per-cell on-track verdict)
 - Eval test in `apps/api/src/modules/ai/__tests__/golden-set.eval.test.ts` runs against live Haiku API (skipped in CI by default; runs on-demand via `pnpm test:ai-eval`)
@@ -49,6 +54,7 @@ Wave 5 / final v6.0: heads get 2-3 sentence executive summary, every risk row ca
 - Head sign-off on golden-set deferred (currently in v6.0 STATE.md as blocker C-5) — AI-SPEC marks fixtures as "draft, awaiting head sign-off"
 
 ### Phase Sequencing (suggested 4-plan split)
+
 - 31-01 — AI-SPEC.md (the design contract — produced as part of this phase, not a separate ceremony)
 - 31-02 — AI-01 executive summary feature (Haiku + betaZodTool + AiInsight Prisma table + cached procedure + RSC card UI)
 - 31-03 — AI-02 risk sentiment badge (Haiku + Zod tool output + per-Risk cache + RSC badge UI)
@@ -57,20 +63,24 @@ Wave 5 / final v6.0: heads get 2-3 sentence executive summary, every risk row ca
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 ### Reusable Assets
+
 - `packages/shared/src/schemas/` — Zod schemas pattern; AI tool outputs follow same convention
 - `apps/api/src/infrastructure/trpc/trpc.middleware.ts` — viewerProcedure / headProcedure for AI procedures (read-only access, head-only Regenerate)
 - `apps/web/src/components/charts/` — RSC + lazy-import client boundary pattern from Phase 30 (mirror for AI badge components)
 - Phase 28-04 CHECKLIST.md already has placeholder line `pnpm test:ai-eval` — Phase 31 fills it in
 
 ### Established Patterns
+
 - Anthropic SDK: `@anthropic-ai/sdk` (already in stack research; install via pnpm)
 - contentHash: `crypto.createHash('sha256').update(JSON.stringify(content)).digest('hex')`
 - Zod tool: `betaZodTool({ name, description, schema, ... })` from anthropic v0.90+
 
 ### Integration Points
+
 - AI-01 card lives at top of `apps/web/src/app/(app)/head/report/[reportId]/page.tsx` (or wherever assembled report renders)
 - AI-02 badges integrate with existing risk-row component
 - AI-03 icons overlay traffic-light cells in lead/head views

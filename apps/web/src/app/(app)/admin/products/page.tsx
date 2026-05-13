@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
 
 /**
  * `/admin/products` — thin alias that forwards to the canonical
@@ -8,5 +8,5 @@ import { redirect } from 'next/navigation';
  * logic remains centralized in the AdminPanel component.
  */
 export default function AdminProductsPage(): never {
-  redirect('/admin?tab=products');
+  redirect("/admin?tab=products");
 }

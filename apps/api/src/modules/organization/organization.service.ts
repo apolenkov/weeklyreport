@@ -4,9 +4,9 @@ import {
   type Organization,
   type OrganizationPublic,
   type OrganizationUpdate,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { createNullLogger, type AppLogger } from '../../lib/logger.js';
+import { createNullLogger, type AppLogger } from "../../lib/logger.js";
 
 export interface OrganizationRepository {
   /**
@@ -71,7 +71,7 @@ export class OrganizationService {
 
   async updateOrganization(input: OrganizationUpdate): Promise<Organization> {
     const next = await this.repository.updateOrganization(input);
-    this.logger.info('updated organization', {
+    this.logger.info("updated organization", {
       shortName: next.shortName,
       fullName: next.fullName,
     });

@@ -66,7 +66,9 @@ test.describe("Admin CRUD (integration)", () => {
     const newShortName = `Tst${Date.now() % 10000}`;
     await shortNameField.fill(newShortName);
 
-    const saveBtn = adminPage.getByRole("button", { name: /save organization identity/i });
+    const saveBtn = adminPage.getByRole("button", {
+      name: /save organization identity/i,
+    });
     await saveBtn.last().click();
 
     await adminPage.waitForResponse(
@@ -82,16 +84,12 @@ test.describe("Admin CRUD (integration)", () => {
       const shortNamePattern = new RegExp(escapeRegExp(newShortName));
 
       await adminPage.goto("/head/dashboard");
-      await expect(
-        adminPage.getByText(shortNamePattern).first(),
-      ).toBeVisible();
+      await expect(adminPage.getByText(shortNamePattern).first()).toBeVisible();
 
       await adminPage.goto(
         `/lead/report/${ACTIVE_REPORT_ID}?authorId=${LEAD_OLGA_ID}`,
       );
-      await expect(
-        adminPage.getByText(shortNamePattern).first(),
-      ).toBeVisible();
+      await expect(adminPage.getByText(shortNamePattern).first()).toBeVisible();
     } finally {
       // Restore seed value to avoid cross-test pollution.
       await prisma.organization.update({

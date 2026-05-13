@@ -14,6 +14,7 @@ All Wave 1 deliverables implemented and committed.
 ## What Was Built
 
 ### Schema Migration (SCH-01..07)
+
 - PeriodStatus enum (open, published, reopened)
 - Report: periodStatus, weekLabel, reopenedAt fields
 - ReportSection: revokedAt, revokedBy fields
@@ -23,23 +24,27 @@ All Wave 1 deliverables implemented and committed.
 - Migration runs clean, seed populates all new models
 
 ### Shared Zod Schemas
+
 - periodStatusSchema, stageSchema, stageAssignmentSchema
 - versionSnapshotSchema, appSettingsSchema
 - periodReadModelSchema, weeklyReportReadModelSchema
 - portfolioProductOverviewSchema, escalationSchema
 
 ### Login Page (UI-12, API-13)
+
 - Split-screen: Demo brand gradient left, auth right
 - SSO button + 4 dev stub role buttons (lead/head/admin/viewer)
 - Uses existing /auth/dev-login route
 
 ### Design System (UI-17)
+
 - Starbucks theme: cream canvas (#f2f0eb), teal primary (#006241/#00754A)
 - Gold accents (#cba258), house green (#1e3932)
 - Lexend + Source Sans 3 fonts via Google Fonts
 - Skip-link, btn-press animation, focus rings
 
 ### URL Routing Skeleton (UI-14)
+
 - All pages accept searchParams (period, tab)
 - max-w-6xl layout on all pages
 - id="main-content" targets for skip-link

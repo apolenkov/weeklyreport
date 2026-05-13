@@ -1,7 +1,7 @@
-import { Injectable, type OnModuleDestroy } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Injectable, type OnModuleDestroy } from "@nestjs/common";
+import Redis from "ioredis";
 
-import type { TelemetryCachePort } from './telemetry.service.js';
+import type { TelemetryCachePort } from "./telemetry.service.js";
 
 /**
  * Phase 52 (UFB-054) — Redis cache for the `telemetry.summary` tRPC
@@ -16,7 +16,7 @@ import type { TelemetryCachePort } from './telemetry.service.js';
  * to direct repository calls. Writes are best-effort.
  */
 const TTL_SECONDS = 60;
-const PREFIX = 'customreport:telemetry:';
+const PREFIX = "customreport:telemetry:";
 
 @Injectable()
 export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
@@ -24,15 +24,15 @@ export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
 
   constructor() {
     this.redis = new Redis({
-      host: process.env['REDIS_HOST'] ?? 'localhost',
-      port: Number(process.env['REDIS_PORT'] ?? 6379),
+      host: process.env["REDIS_HOST"] ?? "localhost",
+      port: Number(process.env["REDIS_PORT"] ?? 6379),
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
     });
     // Suppress unhandled error events on transient Redis blips — the
     // service is designed to degrade gracefully to direct queries.
-    this.redis.on('error', () => undefined);
+    this.redis.on("error", () => undefined);
   }
 
   async getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T> {

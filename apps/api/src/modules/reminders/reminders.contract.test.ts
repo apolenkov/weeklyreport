@@ -1,49 +1,47 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
 import {
   adminReminderExecutionSchema,
   type AdminReminderExecution,
   type AdminReminderRule,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 import {
   ReminderDomainError,
   RemindersService,
   type RemindersRepository,
-} from './reminders.service';
-import { expectDefined } from '../../test-utils/expect-defined.js';
+} from "./reminders.service";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
 const activeRule: AdminReminderRule = {
-  id: '66666666-6666-4666-8666-666666666666',
-  reportId: '22222222-2222-4222-8222-222222222222',
-  kind: 'deadline',
-  fireAt: new Date('2026-04-10T09:00:00.000Z'),
-  timezone: 'Europe/Moscow',
-  status: 'active',
+  id: "66666666-6666-4666-8666-666666666666",
+  reportId: "22222222-2222-4222-8222-222222222222",
+  kind: "deadline",
+  fireAt: new Date("2026-04-10T09:00:00.000Z"),
+  timezone: "Europe/Moscow",
+  status: "active",
   version: 1,
   policyId: null,
 };
 
 const pausedRule: AdminReminderRule = {
   ...activeRule,
-  id: '77777777-7777-4777-8777-777777777777',
-  status: 'paused',
+  id: "77777777-7777-4777-8777-777777777777",
+  status: "paused",
 };
 
-const recipientEmail = 'lead1@customreport.local';
-const recipientEmail2 = 'lead2@customreport.local';
+const recipientEmail = "lead1@customreport.local";
+const recipientEmail2 = "lead2@customreport.local";
 
 // ---------------------------------------------------------------------------
 // In-memory repository
 // ---------------------------------------------------------------------------
 
-function createRepository(
-  ...rules: AdminReminderRule[]
-): RemindersRepository {
+function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
 
   return {
@@ -83,10 +81,10 @@ function createMockQueue() {
 // Contract tests
 // ---------------------------------------------------------------------------
 
-describe('RemindersService — contract tests', () => {
-  describe('requestReminderExecution', () => {
+describe("RemindersService — contract tests", () => {
+  describe("requestReminderExecution", () => {
     // 1. creates execution for active rule
-    it('creates an execution for an active rule', async () => {
+    it("creates an execution for an active rule", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const execution = await service.requestReminderExecution(
         activeRule.id,
@@ -102,9 +100,9 @@ describe('RemindersService — contract tests', () => {
     });
 
     // 2. throws when rule not found
-    it('throws ReminderDomainError when rule is not found', async () => {
+    it("throws ReminderDomainError when rule is not found", async () => {
       const service = new RemindersService(createRepository(activeRule));
-      const unknownRuleId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      const unknownRuleId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
       await expect(
         service.requestReminderExecution(unknownRuleId, recipientEmail),
@@ -116,7 +114,7 @@ describe('RemindersService — contract tests', () => {
     });
 
     // 3. throws when rule is paused (status !== 'active')
-    it('throws ReminderDomainError when rule is paused', async () => {
+    it("throws ReminderDomainError when rule is paused", async () => {
       const service = new RemindersService(createRepository(pausedRule));
 
       await expect(
@@ -125,11 +123,11 @@ describe('RemindersService — contract tests', () => {
 
       await expect(
         service.requestReminderExecution(pausedRule.id, recipientEmail),
-      ).rejects.toThrow('Reminder execution requires an active rule.');
+      ).rejects.toThrow("Reminder execution requires an active rule.");
     });
 
     // 4. deduplicates by ruleId:fireAt:email key
-    it('deduplicates by ruleId:fireAt:email composite key', async () => {
+    it("deduplicates by ruleId:fireAt:email composite key", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
       const first = await service.requestReminderExecution(
@@ -149,7 +147,7 @@ describe('RemindersService — contract tests', () => {
     });
 
     // 5. returns existing execution on duplicate
-    it('returns the existing execution on duplicate request', async () => {
+    it("returns the existing execution on duplicate request", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
       const original = await service.requestReminderExecution(
@@ -167,12 +165,12 @@ describe('RemindersService — contract tests', () => {
     });
 
     // 6. enqueues BullMQ job when queue provided
-    it('enqueues a BullMQ job when a queue is provided', async () => {
+    it("enqueues a BullMQ job when a queue is provided", async () => {
       const mockQueue = createMockQueue();
       const service = new RemindersService(
         createRepository(activeRule),
         undefined,
-        mockQueue as unknown as import('bullmq').Queue,
+        mockQueue as unknown as import("bullmq").Queue,
       );
 
       const execution = await service.requestReminderExecution(
@@ -182,18 +180,18 @@ describe('RemindersService — contract tests', () => {
 
       expect(mockQueue.add).toHaveBeenCalledTimes(1);
       expect(mockQueue.add).toHaveBeenCalledWith(
-        'send',
+        "send",
         {
           executionId: execution.id,
           recipientEmail,
           reportPeriod: activeRule.reportId,
         },
-        { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+        { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
       );
     });
 
     // 7. works without queue (null queue)
-    it('works without a queue (null queue)', async () => {
+    it("works without a queue (null queue)", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
       const execution = await service.requestReminderExecution(
@@ -202,7 +200,7 @@ describe('RemindersService — contract tests', () => {
       );
 
       expect(execution).toBeDefined();
-      expect(execution.status).toBe('queued');
+      expect(execution.status).toBe("queued");
     });
 
     // 8. sets status to 'queued'
@@ -213,11 +211,11 @@ describe('RemindersService — contract tests', () => {
         recipientEmail,
       );
 
-      expect(execution.status).toBe('queued');
+      expect(execution.status).toBe("queued");
     });
 
     // 9. sets recipientEmail correctly
-    it('sets recipientEmail correctly', async () => {
+    it("sets recipientEmail correctly", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
       const exec1 = await service.requestReminderExecution(
@@ -237,8 +235,8 @@ describe('RemindersService — contract tests', () => {
   });
 
   // P0/P1 Regression — execution edge cases (REM-001..012)
-  describe('requestReminderExecution — regression', () => {
-    it('execution has correct scheduledFor from rule.fireAt (REM-001)', async () => {
+  describe("requestReminderExecution — regression", () => {
+    it("execution has correct scheduledFor from rule.fireAt (REM-001)", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const execution = await service.requestReminderExecution(
         activeRule.id,
@@ -246,10 +244,12 @@ describe('RemindersService — contract tests', () => {
       );
 
       expect(execution.scheduledFor).toBeInstanceOf(Date);
-      expect(execution.scheduledFor.toISOString()).toBe(activeRule.fireAt.toISOString());
+      expect(execution.scheduledFor.toISOString()).toBe(
+        activeRule.fireAt.toISOString(),
+      );
     });
 
-    it('execution has correct reportId from rule (REM-001)', async () => {
+    it("execution has correct reportId from rule (REM-001)", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const execution = await service.requestReminderExecution(
         activeRule.id,
@@ -259,7 +259,7 @@ describe('RemindersService — contract tests', () => {
       expect(execution.reportId).toBe(activeRule.reportId);
     });
 
-    it('execution starts with sentAt=null and errorMessage=null', async () => {
+    it("execution starts with sentAt=null and errorMessage=null", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const execution = await service.requestReminderExecution(
         activeRule.id,
@@ -270,18 +270,24 @@ describe('RemindersService — contract tests', () => {
       expect(execution.errorMessage).toBeNull();
     });
 
-    it('different recipients create different executions (REM-002 dedup by email)', async () => {
+    it("different recipients create different executions (REM-002 dedup by email)", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
-      const exec1 = await service.requestReminderExecution(activeRule.id, 'a@test.com');
-      const exec2 = await service.requestReminderExecution(activeRule.id, 'b@test.com');
+      const exec1 = await service.requestReminderExecution(
+        activeRule.id,
+        "a@test.com",
+      );
+      const exec2 = await service.requestReminderExecution(
+        activeRule.id,
+        "b@test.com",
+      );
 
       expect(exec1.id).not.toBe(exec2.id);
       expect(exec1.dedupeKey).not.toBe(exec2.dedupeKey);
     });
   });
 
-  describe('markReminderSent', () => {
+  describe("markReminderSent", () => {
     // 10. sets status to 'sent' and sentAt
     it('sets status to "sent" and populates sentAt', async () => {
       const service = new RemindersService(createRepository(activeRule));
@@ -294,30 +300,34 @@ describe('RemindersService — contract tests', () => {
       const sent = await service.markReminderSent(queued.id);
       const after = new Date();
 
-      expect(sent.status).toBe('sent');
+      expect(sent.status).toBe("sent");
       expect(sent.sentAt).toBeInstanceOf(Date);
-      expect(expectDefined(sent.sentAt).getTime()).toBeGreaterThanOrEqual(before.getTime());
-      expect(expectDefined(sent.sentAt).getTime()).toBeLessThanOrEqual(after.getTime());
+      expect(expectDefined(sent.sentAt).getTime()).toBeGreaterThanOrEqual(
+        before.getTime(),
+      );
+      expect(expectDefined(sent.sentAt).getTime()).toBeLessThanOrEqual(
+        after.getTime(),
+      );
     });
 
     // 11. throws when execution not found
-    it('throws ReminderDomainError when execution is not found', async () => {
+    it("throws ReminderDomainError when execution is not found", async () => {
       const service = new RemindersService(createRepository(activeRule));
-      const missingId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+      const missingId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
-      await expect(
-        service.markReminderSent(missingId),
-      ).rejects.toBeInstanceOf(ReminderDomainError);
+      await expect(service.markReminderSent(missingId)).rejects.toBeInstanceOf(
+        ReminderDomainError,
+      );
 
-      await expect(
-        service.markReminderSent(missingId),
-      ).rejects.toThrow(`Reminder execution ${missingId} was not found.`);
+      await expect(service.markReminderSent(missingId)).rejects.toThrow(
+        `Reminder execution ${missingId} was not found.`,
+      );
     });
   });
 
-  describe('listExecutions', () => {
+  describe("listExecutions", () => {
     // 12. returns all executions for rule
-    it('returns all executions for a rule', async () => {
+    it("returns all executions for a rule", async () => {
       const service = new RemindersService(createRepository(activeRule));
 
       await service.requestReminderExecution(activeRule.id, recipientEmail);
@@ -331,7 +341,7 @@ describe('RemindersService — contract tests', () => {
     });
 
     // 13. returns empty array when no executions
-    it('returns an empty array when no executions exist', async () => {
+    it("returns an empty array when no executions exist", async () => {
       const service = new RemindersService(createRepository(activeRule));
       const result = await service.listExecutions(activeRule.id);
 
@@ -339,7 +349,7 @@ describe('RemindersService — contract tests', () => {
     });
 
     // 14. validates output through Zod schema
-    it('validates output through Zod schema', async () => {
+    it("validates output through Zod schema", async () => {
       const service = new RemindersService(createRepository(activeRule));
       await service.requestReminderExecution(activeRule.id, recipientEmail);
 
@@ -352,8 +362,8 @@ describe('RemindersService — contract tests', () => {
 
       // Verify Zod coercion produced correct types
       expect(execution.scheduledFor).toBeInstanceOf(Date);
-      expect(typeof execution.id).toBe('string');
-      expect(typeof execution.dedupeKey).toBe('string');
+      expect(typeof execution.id).toBe("string");
+      expect(typeof execution.dedupeKey).toBe("string");
       expect(execution.sentAt).toBeNull();
       expect(execution.errorMessage).toBeNull();
 

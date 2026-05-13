@@ -10,7 +10,7 @@
 
 1. AUTH_DEV_MODE=true → "AUTH_DEV_MODE=true is forbidden when NODE_ENV=production"
 2. PDF_EXPORT_JWT_SECRET equal to documented dev fallback `'dev-only-replace-in-production-min-32-chars'` → "PDF_EXPORT_JWT_SECRET must be overridden in production (default dev value detected)"
-3. FRONTEND_URLS (when set) contains a `*` entry after split-trim → "FRONTEND_URLS must not include '*' in production"
+3. FRONTEND_URLS (when set) contains a `*` entry after split-trim → "FRONTEND_URLS must not include '\*' in production"
 
 ## Side effect on existing dev compose
 

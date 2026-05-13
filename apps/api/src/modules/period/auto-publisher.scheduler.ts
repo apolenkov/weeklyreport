@@ -1,11 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { AdminService } from '../admin/admin.service';
-import { PublicationService } from '../publication/publication.service';
-import type { AuditLogger } from '../../lib/audit-logger.js';
-import { createNullAuditLogger } from '../../lib/audit-logger.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { AdminService } from "../admin/admin.service";
+import { PublicationService } from "../publication/publication.service";
+import type { AuditLogger } from "../../lib/audit-logger.js";
+import { createNullAuditLogger } from "../../lib/audit-logger.js";
 
 /**
  * UFB-049 / Phase 50-B: hourly scheduler that auto-publishes draft Reports
@@ -52,12 +52,12 @@ export class AutoPublisherScheduler {
   async runOnce(
     now: Date,
   ): Promise<
-    | { published: false; reason: 'disabled' }
+    | { published: false; reason: "disabled" }
     | { published: true; periodIds: ReadonlyArray<string> }
   > {
     const settings = await this.adminService.getSettings();
     if (!settings.autoPublishAfterDeadline) {
-      return { published: false, reason: 'disabled' };
+      return { published: false, reason: "disabled" };
     }
 
     const graceMs = settings.gracePeriodHours * 3_600_000;
@@ -66,10 +66,10 @@ export class AutoPublisherScheduler {
     // Candidate set: draft Reports whose deadline + grace is in the past.
     const candidates = await this.prisma.report.findMany({
       where: {
-        status: 'draft',
+        status: "draft",
         deadline: { lt: cutoff },
       },
-      orderBy: { deadline: 'asc' },
+      orderBy: { deadline: "asc" },
       select: { id: true },
     });
 
@@ -89,7 +89,7 @@ export class AutoPublisherScheduler {
         // and idempotent.
         await this.prisma.report.update({
           where: { id: candidate.id },
-          data: { periodState: 'published', autoPublished: true },
+          data: { periodState: "published", autoPublished: true },
         });
 
         // Count sections that never reached `submitted` status; these
@@ -97,7 +97,7 @@ export class AutoPublisherScheduler {
         // publish so the audit number matches what the head dashboard
         // will surface.
         const missingSectionsCount = await this.prisma.reportSection.count({
-          where: { reportId: candidate.id, status: 'draft' },
+          where: { reportId: candidate.id, status: "draft" },
         });
 
         this.logger.log(
@@ -106,8 +106,8 @@ export class AutoPublisherScheduler {
         this.auditLogger.periodAutoPublish({
           periodId: candidate.id,
           missingSectionsCount,
-          from: 'open',
-          to: 'published',
+          from: "open",
+          to: "published",
         });
         publishedIds.push(candidate.id);
       } catch (err) {

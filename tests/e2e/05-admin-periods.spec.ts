@@ -2,43 +2,47 @@
 // Do not edit manually — update UAT-SCENARIO/05-admin-periods.md.md instead.
 // Run: pnpm uat:generate
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('AP.01 — Periods table renders active periods', async ({ page }) => {
-  // Expected: rows for scheduled/open/published periods.  
-  const el = page.getByTestId('periods-active-table');
+test("AP.01 — Periods table renders active periods", async ({ page }) => {
+  // Expected: rows for scheduled/open/published periods.
+  const el = page.getByTestId("periods-active-table");
   await expect(el).toBeVisible();
 });
 
-test('AP.02 — Create Period dialog opens', async ({ page }) => {
-  // Expected: dialog with period-start, period-end, deadline, label fields.  
-  const el = page.getByTestId('periods-create-dialog');
+test("AP.02 — Create Period dialog opens", async ({ page }) => {
+  // Expected: dialog with period-start, period-end, deadline, label fields.
+  const el = page.getByTestId("periods-create-dialog");
   await expect(el).toBeVisible();
 });
 
-test('AP.03 — Deadline validation blocks submit (A6b)', async ({ page }) => {
-  // Expected: red hint + Submit disabled.  
-  const el = page.getByTestId('periods-deadline-error');
+test("AP.03 — Deadline validation blocks submit (A6b)", async ({ page }) => {
+  // Expected: red hint + Submit disabled.
+  const el = page.getByTestId("periods-deadline-error");
   await expect(el).toBeVisible();
 });
 
-test('AP.04 — Edit pre-fills weekLabel (A6a)', async ({ page }) => {
-  // Expected: label field prefilled.  
-  const el = page.getByTestId('periods-create-label');
+test("AP.04 — Edit pre-fills weekLabel (A6a)", async ({ page }) => {
+  // Expected: label field prefilled.
+  const el = page.getByTestId("periods-create-label");
   await expect(el).toBeVisible();
 });
 
-test('AP.05 — Delete period shows confirm dialog', async ({ page }) => {
-  const el = page.getByTestId('periods-delete-dialog');
+test("AP.05 — Delete period shows confirm dialog", async ({ page }) => {
+  const el = page.getByTestId("periods-delete-dialog");
   await expect(el).toBeVisible();
 });
 
-test('AP.06 — Archive/Unarchive buttons trigger state change', async ({ page }) => {
-  const el = page.getByTestId('archive-period-btn');
+test("AP.06 — Archive/Unarchive buttons trigger state change", async ({
+  page,
+}) => {
+  const el = page.getByTestId("archive-period-btn");
   await expect(el).toBeVisible();
 });
 
-test('AP.07 — Submission progress badge shows tooltip (A29)', async ({ page }) => {
-  const el = page.getByTestId('period-progress-badge');
+test("AP.07 — Submission progress badge shows tooltip (A29)", async ({
+  page,
+}) => {
+  const el = page.getByTestId("period-progress-badge");
   await expect(el).toBeVisible();
 });

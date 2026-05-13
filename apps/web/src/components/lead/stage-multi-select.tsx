@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 type StageMultiSelectProps = {
   readonly id: string;
@@ -29,17 +29,21 @@ export function StageMultiSelect({
   // Compact display: show first 2 selected labels + "+N more" badge
   const MAX_VISIBLE = 2;
   const visibleSelected = selected.slice(0, MAX_VISIBLE);
-  const hiddenCount = selected.length > MAX_VISIBLE ? selected.length - MAX_VISIBLE : 0;
+  const hiddenCount =
+    selected.length > MAX_VISIBLE ? selected.length - MAX_VISIBLE : 0;
 
   return (
     <fieldset
       aria-describedby={error ? `${helperId} ${errorId}` : helperId}
-      aria-invalid={error ? 'true' : 'false'}
+      aria-invalid={error ? "true" : "false"}
     >
       <legend className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
         SDLC Stages
       </legend>
-      <p id={helperId} className="mb-2 text-[11px] text-[var(--color-muted-foreground)]">
+      <p
+        id={helperId}
+        className="mb-2 text-[11px] text-[var(--color-muted-foreground)]"
+      >
         Optional. Leave empty to apply to all assigned stages.
       </p>
       {stages.length === 0 ? (
@@ -54,10 +58,10 @@ export function StageMultiSelect({
               <label
                 key={stage}
                 className={
-                  'inline-flex min-h-[34px] items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors ' +
+                  "inline-flex min-h-[34px] items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors " +
                   (checked
-                    ? 'border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-primary)]'
-                    : 'border-[rgba(0,0,0,0.18)] bg-white text-[var(--color-foreground)] hover:border-[var(--color-starbucks-accent)]')
+                    ? "border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-primary)]"
+                    : "border-[rgba(0,0,0,0.18)] bg-white text-[var(--color-foreground)] hover:border-[var(--color-starbucks-accent)]")
                 }
               >
                 <input
@@ -78,7 +82,7 @@ export function StageMultiSelect({
         </p>
       ) : (
         <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
-          Scope: {visibleSelected.join(', ')}
+          Scope: {visibleSelected.join(", ")}
           {hiddenCount > 0 && (
             <span className="ml-1 inline-flex items-center rounded-full bg-[var(--color-muted)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
               +{hiddenCount} more
@@ -88,7 +92,10 @@ export function StageMultiSelect({
         </p>
       )}
       {error && (
-        <p id={errorId} className="mt-1 text-xs text-[var(--color-destructive)]">
+        <p
+          id={errorId}
+          className="mt-1 text-xs text-[var(--color-destructive)]"
+        >
           {error}
         </p>
       )}

@@ -1,10 +1,10 @@
-import { Module } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Module } from "@nestjs/common";
+import Redis from "ioredis";
 
-import { PolicyApplicatorService } from '../reminders/policy-applicator.service';
-import { AdminService } from './admin.service';
-import { AdminPrismaRepository } from './admin.prisma-repository';
-import { SessionRevocationService } from './session-revocation.service';
+import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
+import { AdminService } from "./admin.service";
+import { AdminPrismaRepository } from "./admin.prisma-repository";
+import { SessionRevocationService } from "./session-revocation.service";
 
 @Module({
   providers: [
@@ -17,8 +17,7 @@ import { SessionRevocationService } from './session-revocation.service';
     AdminPrismaRepository,
     {
       provide: AdminService,
-      useFactory: (repo: AdminPrismaRepository) =>
-        new AdminService(repo),
+      useFactory: (repo: AdminPrismaRepository) => new AdminService(repo),
       inject: [AdminPrismaRepository],
     },
     // A2b: satisfy DI so NestJS resolves the Redis type dep; the

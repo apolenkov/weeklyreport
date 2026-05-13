@@ -2,77 +2,85 @@
 // Do not edit manually — update UAT-SCENARIO/02-auth.md.md instead.
 // Run: pnpm uat:generate
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('AUTH-01 — SAML login button renders on landing', async ({ page }) => {
+test("AUTH-01 — SAML login button renders on landing", async ({ page }) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Navigate to `/` in production environment (AUTH_DEV_MODE=false).
   //   Observe the primary CTA button.
   // Expected: button text shows "Sign in with SSO"; aria-label confirms "Sign in with corporate SSO".
-  const el = page.getByTestId('primary-cta');
+  const el = page.getByTestId("primary-cta");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-02 — Dev-mode landing shows "Enter Application" CTA', async ({ page }) => {
+test('AUTH-02 — Dev-mode landing shows "Enter Application" CTA', async ({
+  page,
+}) => {
   // Steps:
   //   Set `AUTH_DEV_MODE=true` (build env).
   //   Clear browser localStorage.
   //   Navigate to `/`.
-  const el = page.getByTestId('primary-cta');
+  const el = page.getByTestId("primary-cta");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-03 — Last-role hint renders after previous session', async ({ page }) => {
+test("AUTH-03 — Last-role hint renders after previous session", async ({
+  page,
+}) => {
   // Steps:
   //   Log in as `lead` (sets lastRole in localStorage).
   //   Logout via dev-role switcher or `/auth/logout`.
   //   Revisit `/`.
-  const el = page.getByTestId('last-role-hint');
+  const el = page.getByTestId("last-role-hint");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-04 — Primary CTA resumes last role', async ({ page }) => {
+test("AUTH-04 — Primary CTA resumes last role", async ({ page }) => {
   // Steps:
   //   Return to `/` after prior logout (lastRole is "lead", email "lead1@customreport.local").
   //   Click the primary "Enter Application" button.
-  const el = page.getByTestId('primary-cta');
+  const el = page.getByTestId("primary-cta");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-05 — "Change role" button expands role switcher', async ({ page }) => {
+test('AUTH-05 — "Change role" button expands role switcher', async ({
+  page,
+}) => {
   // Steps:
   //   Navigate to `/`.
   //   Click "Change role" button within the last-role-hint.
-  const el = page.getByTestId('last-role-change');
+  const el = page.getByTestId("last-role-change");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-06 — Role switcher grid renders all roles', async ({ page }) => {
+test("AUTH-06 — Role switcher grid renders all roles", async ({ page }) => {
   // Steps:
   //   Navigate to `/`.
   //   Expand the role switcher grid.
   //   Count visible role option buttons.
-  const el = page.getByTestId('last-role-switcher');
+  const el = page.getByTestId("last-role-switcher");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-07 — Click role option resumes as that role', async ({ page }) => {
+test("AUTH-07 — Click role option resumes as that role", async ({ page }) => {
   // Steps:
   //   Expand the role switcher grid.
   //   Click "Head" button (or any role option).
-  const el = page.getByTestId('last-role-option-head');
+  const el = page.getByTestId("last-role-option-head");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-08 — /auth/dev-login accepts role + email + redirect params', async ({ page }) => {
+test("AUTH-08 — /auth/dev-login accepts role + email + redirect params", async ({
+  page,
+}) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Navigate directly to `/auth/dev-login?role=lead&email=lead1@customreport.local&redirect=%2Flead%2Freport`.
   // TODO: add assertions for AUTH-08
 });
 
-test('AUTH-09 — /auth/dev-login sets role claim in JWT', async ({ page }) => {
+test("AUTH-09 — /auth/dev-login sets role claim in JWT", async ({ page }) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Navigate to `/auth/dev-login?role=admin&email=admin@customreport.local`.
@@ -81,33 +89,41 @@ test('AUTH-09 — /auth/dev-login sets role claim in JWT', async ({ page }) => {
   // TODO: add assertions for AUTH-09
 });
 
-test('AUTH-10 — /auth/dev-login accepts custom email (non-seeded)', async ({ page }) => {
+test("AUTH-10 — /auth/dev-login accepts custom email (non-seeded)", async ({
+  page,
+}) => {
   // Steps:
   //   Navigate to `/auth/dev-login?role=head&email=custom@example.com`.
   //   Check session.
   // TODO: add assertions for AUTH-10
 });
 
-test.skip('AUTH-11 — /auth/saml/login initiates SAML auth in production', async ({ page }) => {
+test.skip("AUTH-11 — /auth/saml/login initiates SAML auth in production", async ({
+  page,
+}) => {
   // Steps:
   //   Navigate to `/auth/saml/login`.
   // TODO: add assertions for AUTH-11
 });
 
-test('AUTH-12 — /auth/saml/login redirects to /auth/dev-login in dev mode', async ({ page }) => {
+test("AUTH-12 — /auth/saml/login redirects to /auth/dev-login in dev mode", async ({
+  page,
+}) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Navigate to `/auth/saml/login`.
   // TODO: add assertions for AUTH-12
 });
 
-test('AUTH-13 — /auth/saml/login respects `next` query param', async ({ page }) => {
+test("AUTH-13 — /auth/saml/login respects `next` query param", async ({
+  page,
+}) => {
   // Steps:
   //   Navigate to `/auth/saml/login?next=%2Fhead%2Fdashboard`.
   // TODO: add assertions for AUTH-13
 });
 
-test('AUTH-14 — /auth/logout clears session cookie', async ({ page }) => {
+test("AUTH-14 — /auth/logout clears session cookie", async ({ page }) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Log in as any role.
@@ -115,7 +131,9 @@ test('AUTH-14 — /auth/logout clears session cookie', async ({ page }) => {
   // TODO: add assertions for AUTH-14
 });
 
-test.skip('AUTH-15 — /auth/logout audit logs the session before clearing', async ({ page }) => {
+test.skip("AUTH-15 — /auth/logout audit logs the session before clearing", async ({
+  page,
+}) => {
   // Steps:
   //   Log in as `head`.
   //   POST to `/auth/logout`.
@@ -123,73 +141,87 @@ test.skip('AUTH-15 — /auth/logout audit logs the session before clearing', asy
   // TODO: add assertions for AUTH-15
 });
 
-test('AUTH-16 — Dev role switcher button renders in dev mode', async ({ page }) => {
+test("AUTH-16 — Dev role switcher button renders in dev mode", async ({
+  page,
+}) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Log in as any role in dev environment.
   //   Look for the fixed button in bottom-right corner.
   // Expected: "DEV: switch role" button visible, amber styling.
-  const el = page.getByTestId('dev-role-switcher-trigger');
+  const el = page.getByTestId("dev-role-switcher-trigger");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-17 — Dev role switcher dropdown loads user list per role', async ({ page }) => {
+test("AUTH-17 — Dev role switcher dropdown loads user list per role", async ({
+  page,
+}) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Click "DEV: switch role".
   //   Dropdown opens.
-  const el = page.getByTestId('dev-role-switcher-trigger');
+  const el = page.getByTestId("dev-role-switcher-trigger");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-18 — Click user item switches to that role', async ({ page }) => {
+test("AUTH-18 — Click user item switches to that role", async ({ page }) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Open dropdown.
   //   Click lead user item.
-  const el = page.getByTestId('dev-role-switcher-lead-lead1@customreport.local');
+  const el = page.getByTestId(
+    "dev-role-switcher-lead-lead1@customreport.local",
+  );
   await expect(el).toBeVisible();
 });
 
-test('AUTH-19 — Reseed (minimum) wipes and reseeds DB', async ({ page }) => {
+test("AUTH-19 — Reseed (minimum) wipes and reseeds DB", async ({ page }) => {
   // Steps:
   //   Click "Wipe + Reseed (minimum)".
   // Expected: backend wipes reports/sections/versions, reseeds minimal data, hard-reloads page.
-  const el = page.getByTestId('dev-role-switcher-reseed-min');
+  const el = page.getByTestId("dev-role-switcher-reseed-min");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-20 — Reseed (full) wipes everything and reseeds', async ({ page }) => {
+test("AUTH-20 — Reseed (full) wipes everything and reseeds", async ({
+  page,
+}) => {
   // Steps:
   //   Click "Wipe + Reseed (full)".
   // Expected: full wipe + reseed; session may be invalidated if user deleted.
-  const el = page.getByTestId('dev-role-switcher-reseed-full');
+  const el = page.getByTestId("dev-role-switcher-reseed-full");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-21 — Wipe reports (manual UAT) preserves users and periods', async ({ page }) => {
+test("AUTH-21 — Wipe reports (manual UAT) preserves users and periods", async ({
+  page,
+}) => {
   // Steps:
   //   Click "Wipe reports (manual UAT)".
   // Expected: reports/sections/versions wiped; users/periods preserved; session valid.
-  const el = page.getByTestId('dev-role-switcher-wipe-manual-uat');
+  const el = page.getByTestId("dev-role-switcher-wipe-manual-uat");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-22 — Dev role switcher logout button clears session', async ({ page }) => {
+test("AUTH-22 — Dev role switcher logout button clears session", async ({
+  page,
+}) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Click "Logout" menu item.
   // Expected: POST /auth/logout, cookie cleared, navigates to `/`.
-  const el = page.getByTestId('dev-role-switcher-logout');
+  const el = page.getByTestId("dev-role-switcher-logout");
   await expect(el).toBeVisible();
 });
 
-test('AUTH-23 — Invalid role in /auth/dev-login returns 400', async ({ page }) => {
+test("AUTH-23 — Invalid role in /auth/dev-login returns 400", async ({
+  page,
+}) => {
   // Expected: HTTP 400, JSON body with error, no session cookie set.
   // TODO: add assertions for AUTH-23
 });
 
-test('AUTH-24 — Closed session redirects to landing', async ({ page }) => {
+test("AUTH-24 — Closed session redirects to landing", async ({ page }) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Log in as lead.
@@ -199,7 +231,9 @@ test('AUTH-24 — Closed session redirects to landing', async ({ page }) => {
   // TODO: add assertions for AUTH-24
 });
 
-test('AUTH-25 — Wrong role redirected to role's default landing', async ({ page }) => {
+test("AUTH-25 — Wrong role redirected to role default landing", async ({
+  page,
+}) => {
   // Already covered by unit/component tests.
   // Steps:
   //   Log in as lead.

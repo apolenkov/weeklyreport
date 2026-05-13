@@ -283,7 +283,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               workflowStatus: i.workflowStatus as ItemWorkflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
-              stageName: i.stageIds?.join(', ') ?? i.stageName ?? null,
+              stageName: i.stageIds?.join(", ") ?? i.stageName ?? null,
             })),
           });
         }
@@ -296,7 +296,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
-              stageName: r.stageIds?.join(', ') ?? r.stageName ?? null,
+              stageName: r.stageIds?.join(", ") ?? r.stageName ?? null,
             })),
           });
         }
@@ -311,20 +311,22 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               deadline: d.deadline ? new Date(d.deadline) : null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ? new Date(d.resolvedAt) : null,
-              stageName: d.stageIds?.join(', ') ?? d.stageName ?? null,
+              stageName: d.stageIds?.join(", ") ?? d.stageName ?? null,
               productId: d.productId as string,
             })),
           });
         }
 
-        const prioritiesToRestore = data.priorities.filter((p) => !!p.productId);
+        const prioritiesToRestore = data.priorities.filter(
+          (p) => !!p.productId,
+        );
         if (prioritiesToRestore.length > 0) {
           await tx.priority.createMany({
             data: prioritiesToRestore.map((p) => ({
               reportSectionId: sectionId,
               rank: p.rank,
               text: p.text,
-              stageName: p.stageIds?.join(', ') ?? p.stageName ?? null,
+              stageName: p.stageIds?.join(", ") ?? p.stageName ?? null,
               productId: p.productId as string,
             })),
           });

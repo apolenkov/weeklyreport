@@ -17,36 +17,49 @@
  * spans. Errors during start are non-fatal — the api boots even if the
  * collector is unreachable, just without traces.
  */
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-base';
-import { resourceFromAttributes } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
-import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
-import { ExpressInstrumentation } from '@opentelemetry/instrumentation-express';
-import { PrismaInstrumentation } from '@prisma/instrumentation';
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { TraceIdRatioBasedSampler } from "@opentelemetry/sdk-trace-base";
+import { resourceFromAttributes } from "@opentelemetry/resources";
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from "@opentelemetry/semantic-conventions";
+import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
+import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
+import { PrismaInstrumentation } from "@prisma/instrumentation";
 
 export type OtelBootstrapResult =
-  | { started: true; reason: 'enabled'; samplingRatio: number; endpoint: string }
-  | { started: false; reason: 'disabled-flag' }
-  | { started: false; reason: 'no-endpoint' };
+  | {
+      started: true;
+      reason: "enabled";
+      samplingRatio: number;
+      endpoint: string;
+    }
+  | { started: false; reason: "disabled-flag" }
+  | { started: false; reason: "no-endpoint" };
 
-export function decideOtelBootstrap(env: NodeJS.ProcessEnv = process.env): OtelBootstrapResult {
-  if ((env.OTEL_SDK_DISABLED ?? '').toLowerCase() === 'true') {
-    return { started: false, reason: 'disabled-flag' };
+export function decideOtelBootstrap(
+  env: NodeJS.ProcessEnv = process.env,
+): OtelBootstrapResult {
+  if ((env.OTEL_SDK_DISABLED ?? "").toLowerCase() === "true") {
+    return { started: false, reason: "disabled-flag" };
   }
   const endpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT;
   if (!endpoint) {
-    return { started: false, reason: 'no-endpoint' };
+    return { started: false, reason: "no-endpoint" };
   }
-  const ratio = Number(env.OTEL_TRACES_SAMPLER_ARG ?? '0.1');
-  const samplingRatio = Number.isFinite(ratio) && ratio >= 0 && ratio <= 1 ? ratio : 0.1;
-  return { started: true, reason: 'enabled', samplingRatio, endpoint };
+  const ratio = Number(env.OTEL_TRACES_SAMPLER_ARG ?? "0.1");
+  const samplingRatio =
+    Number.isFinite(ratio) && ratio >= 0 && ratio <= 1 ? ratio : 0.1;
+  return { started: true, reason: "enabled", samplingRatio, endpoint };
 }
 
 let sdk: NodeSDK | null = null;
 
-export function startOtel(env: NodeJS.ProcessEnv = process.env): OtelBootstrapResult {
+export function startOtel(
+  env: NodeJS.ProcessEnv = process.env,
+): OtelBootstrapResult {
   const decision = decideOtelBootstrap(env);
   if (!decision.started) {
     return decision;
@@ -54,12 +67,12 @@ export function startOtel(env: NodeJS.ProcessEnv = process.env): OtelBootstrapRe
 
   sdk = new NodeSDK({
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: env.OTEL_SERVICE_NAME ?? 'customreport-api',
-      [ATTR_SERVICE_VERSION]: env.OTEL_SERVICE_VERSION ?? 'dev',
+      [ATTR_SERVICE_NAME]: env.OTEL_SERVICE_NAME ?? "customreport-api",
+      [ATTR_SERVICE_VERSION]: env.OTEL_SERVICE_VERSION ?? "dev",
     }),
     sampler: new TraceIdRatioBasedSampler(decision.samplingRatio),
     traceExporter: new OTLPTraceExporter({
-      url: `${decision.endpoint.replace(/\/$/, '')}/v1/traces`,
+      url: `${decision.endpoint.replace(/\/$/, "")}/v1/traces`,
     }),
     instrumentations: [
       new HttpInstrumentation(),
@@ -85,8 +98,8 @@ export function startOtel(env: NodeJS.ProcessEnv = process.env): OtelBootstrapRe
       );
     });
   };
-  process.once('SIGTERM', shutdown);
-  process.once('SIGINT', shutdown);
+  process.once("SIGTERM", shutdown);
+  process.once("SIGINT", shutdown);
 
   return decision;
 }

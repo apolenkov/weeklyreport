@@ -1,10 +1,10 @@
-import { Suspense } from 'react';
-import type { ReactNode } from 'react';
+import { Suspense } from "react";
+import type { ReactNode } from "react";
 
-import { DevRoleSwitcher } from '../../components/dev/role-switcher';
-import { NavBar } from '../../components/navigation/nav-bar';
-import { NavBarSkeleton } from '../../components/navigation/nav-bar-skeleton';
-import { SessionProvider } from '../../lib/session-provider';
+import { DevRoleSwitcher } from "../../components/dev/role-switcher";
+import { NavBar } from "../../components/navigation/nav-bar";
+import { NavBarSkeleton } from "../../components/navigation/nav-bar-skeleton";
+import { SessionProvider } from "../../lib/session-provider";
 
 type AppGroupLayoutProps = Readonly<{
   children: ReactNode;

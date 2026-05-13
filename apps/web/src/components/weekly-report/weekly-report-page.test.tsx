@@ -432,7 +432,9 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     // Wait for render to settle.
     await screen.findByRole("button", { name: /reopen period/i });
 
-    expect(screen.queryByTestId("empty-submissions-state")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("empty-submissions-state"),
+    ).not.toBeInTheDocument();
   });
 
   it("on publish success: invalidateDashboard + invalidateLeadHistory fire and a success toast appears", async () => {

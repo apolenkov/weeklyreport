@@ -62,18 +62,18 @@ packages/shared (@customreport/shared)
 
 ### tRPC Router Namespaces (36 endpoints)
 
-| Namespace | Endpoints | Guard Level | Frontend Consumer |
-|-----------|-----------|-------------|-------------------|
-| `reports` | getActive, myHistory, saveDraft, submit | protectedProcedure | LeadForm |
-| `review` | dashboard, assembledReport, publish | headProcedure | DashboardPage, WeeklyReportPage |
-| `pdfExport` | request, status | headProcedure | ExportPdfButton |
-| `admin` | snapshot, getSettings, updateSettings, saveUser, saveProject, savePeriod, saveReminderRule, deleteUser, deleteProject, deleteReminderRule, saveStageAssignment, deleteStageAssignment, listStageAssignments | headProcedure | AdminPanel tabs |
-| `archive` | list, detail | protectedProcedure | ReportArchiveSection, archive pages |
-| `reminders` | execute, listExecutions | headProcedure | RemindersTab |
-| `carryOver` | execute | headProcedure | (manual trigger) |
-| `period` | publish, reopen | headProcedure | PublishLockButton |
-| `weeklyReport` | get | protectedProcedure | WeeklyReportPage |
-| `leadForm` | byPeriod, fillFrom, versions, restoreVersion, revoke, requestReopen | mixed | LeadForm, FillFromButton, VersionHistoryNav |
+| Namespace      | Endpoints                                                                                                                                                                                                   | Guard Level        | Frontend Consumer                           |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------------------------------------- |
+| `reports`      | getActive, myHistory, saveDraft, submit                                                                                                                                                                     | protectedProcedure | LeadForm                                    |
+| `review`       | dashboard, assembledReport, publish                                                                                                                                                                         | headProcedure      | DashboardPage, WeeklyReportPage             |
+| `pdfExport`    | request, status                                                                                                                                                                                             | headProcedure      | ExportPdfButton                             |
+| `admin`        | snapshot, getSettings, updateSettings, saveUser, saveProject, savePeriod, saveReminderRule, deleteUser, deleteProject, deleteReminderRule, saveStageAssignment, deleteStageAssignment, listStageAssignments | headProcedure      | AdminPanel tabs                             |
+| `archive`      | list, detail                                                                                                                                                                                                | protectedProcedure | ReportArchiveSection, archive pages         |
+| `reminders`    | execute, listExecutions                                                                                                                                                                                     | headProcedure      | RemindersTab                                |
+| `carryOver`    | execute                                                                                                                                                                                                     | headProcedure      | (manual trigger)                            |
+| `period`       | publish, reopen                                                                                                                                                                                             | headProcedure      | PublishLockButton                           |
+| `weeklyReport` | get                                                                                                                                                                                                         | protectedProcedure | WeeklyReportPage                            |
+| `leadForm`     | byPeriod, fillFrom, versions, restoreVersion, revoke, requestReopen                                                                                                                                         | mixed              | LeadForm, FillFromButton, VersionHistoryNav |
 
 ---
 
@@ -82,6 +82,7 @@ packages/shared (@customreport/shared)
 ### 1. tRPC Provider Wiring (Layout-Level)
 
 **What already exists and works:**
+
 - `apps/web/src/lib/trpc.ts` -- `createTRPCReact<AppRouter>()` + `createTRPCClient()` with superjson and `/trpc` URL
 - `@trpc/react-query@11.16.0`, `@tanstack/react-query@5.97.0`, `superjson@2.2.6` all installed in `apps/web/package.json`
 - `next.config.ts` -- `/trpc/:path*` rewrite to API port already configured
@@ -121,17 +122,17 @@ The mock-data types are a **presentation model**. The Zod schemas are a **data m
 
 **Divergence inventory:**
 
-| Mock Type (UI) | Zod/Prisma Type (DB) | Transformation |
-|---------------|---------------------|----------------|
-| `ProductStatus: 'on-track' \| 'at-risk' \| 'blocked'` | `TrafficLightStatus: 'green' \| 'yellow' \| 'red'` | `green->on-track, yellow->at-risk, red->blocked` |
-| `LeadStatus: 'submitted' \| 'draft' \| 'pending'` | `ReportSectionStatus: 'draft' \| 'submitted'` | `pending` is computed: section exists, status=draft, no items |
-| `ItemStatus: 'in-progress' \| 'completed' \| 'blocked' \| 'planned'` | `ItemWorkflowStatus: 'done' \| 'in_progress' \| 'blocked'` | `done->completed, in_progress->in-progress`; `planned` is computed from `type='next'` items |
-| `ReportStatus: 'active' \| 'published' \| 'draft'` (archive mock) | `ReportStatus: 'draft' \| 'published'` | `active` is computed: status=draft + is current period |
-| `MockProduct.stages[].status: StageStatus` | No direct Zod schema for pipeline stage status | Computed from ProjectStatus + StageAssignment join |
-| `KpiData` (dashboard) | No single endpoint | Computed from `review.dashboard` + period data |
-| `BlockedAtRiskItem` | No single endpoint | Derived from assembled report escalations |
-| `PortfolioProduct` (weekly report) | `PortfolioProductOverview` (Zod) | Shape differs: mock has `statusLabel` string, `leads` string; Zod has `leadNames` array, `worstStatus` enum |
-| `PeriodStatus: 'open' \| 'published' \| 'reopened'` (admin mock) | `PeriodStatus` (Zod) | **Match** -- one of the few |
+| Mock Type (UI)                                                       | Zod/Prisma Type (DB)                                       | Transformation                                                                                              |
+| -------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `ProductStatus: 'on-track' \| 'at-risk' \| 'blocked'`                | `TrafficLightStatus: 'green' \| 'yellow' \| 'red'`         | `green->on-track, yellow->at-risk, red->blocked`                                                            |
+| `LeadStatus: 'submitted' \| 'draft' \| 'pending'`                    | `ReportSectionStatus: 'draft' \| 'submitted'`              | `pending` is computed: section exists, status=draft, no items                                               |
+| `ItemStatus: 'in-progress' \| 'completed' \| 'blocked' \| 'planned'` | `ItemWorkflowStatus: 'done' \| 'in_progress' \| 'blocked'` | `done->completed, in_progress->in-progress`; `planned` is computed from `type='next'` items                 |
+| `ReportStatus: 'active' \| 'published' \| 'draft'` (archive mock)    | `ReportStatus: 'draft' \| 'published'`                     | `active` is computed: status=draft + is current period                                                      |
+| `MockProduct.stages[].status: StageStatus`                           | No direct Zod schema for pipeline stage status             | Computed from ProjectStatus + StageAssignment join                                                          |
+| `KpiData` (dashboard)                                                | No single endpoint                                         | Computed from `review.dashboard` + period data                                                              |
+| `BlockedAtRiskItem`                                                  | No single endpoint                                         | Derived from assembled report escalations                                                                   |
+| `PortfolioProduct` (weekly report)                                   | `PortfolioProductOverview` (Zod)                           | Shape differs: mock has `statusLabel` string, `leads` string; Zod has `leadNames` array, `worstStatus` enum |
+| `PeriodStatus: 'open' \| 'published' \| 'reopened'` (admin mock)     | `PeriodStatus` (Zod)                                       | **Match** -- one of the few                                                                                 |
 
 **Recommended approach -- mapper module:**
 
@@ -159,15 +160,15 @@ Each mapper is a pure function: `(apiResponse: ZodInferredType) => MockCompatibl
 
 **Migration unit inventory:**
 
-| Container | Mock Imports | tRPC Endpoints Needed | Complexity |
-|-----------|-------------|----------------------|------------|
-| `dashboard/dashboard-page.tsx` | MOCK_KPI, MOCK_LEADS, MOCK_BLOCKED_AT_RISK, MOCK_ARCHIVE, MOCK_PENDING_LEADS | review.dashboard, archive.list, weeklyReport.get | HIGH -- KPI is computed from multiple sources |
-| `lead/lead-form.tsx` | MOCK_PRODUCTS, MOCK_CURRENT/NEXT_WEEK_ITEMS, MOCK_RISKS, MOCK_DECISIONS, MOCK_PRIORITIES, MOCK_PERIODS, MOCK_VERSIONS, CURRENT_USER | reports.getActive, leadForm.byPeriod, leadForm.versions, reports.myHistory | HIGH -- most mock imports, complex state |
-| `admin/admin-panel.tsx` (via 6 tabs) | MOCK_USERS, MOCK_PRODUCTS, MOCK_PERIODS, MOCK_REMINDERS, MOCK_SETTINGS | admin.snapshot, admin.getSettings | MEDIUM -- snapshot returns everything in one call |
-| `weekly-report/weekly-report-page.tsx` | MOCK_REPORT_PERIODS, MOCK_PORTFOLIO, MOCK_PRODUCT_REPORTS | weeklyReport.get | MEDIUM -- single endpoint, but significant shape mapping |
-| `app/(app)/reports/[reportId]/page.tsx` | Same as weekly report | weeklyReport.get by reportId | LOW -- mirrors weekly report |
-| `app/(app)/reports/[reportId]/print/page.tsx` | Same as above | Same | LOW |
-| `app/(app)/lead/history/page.tsx` | MOCK_HISTORY | reports.myHistory | LOW -- direct mapping |
+| Container                                     | Mock Imports                                                                                                                        | tRPC Endpoints Needed                                                      | Complexity                                               |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `dashboard/dashboard-page.tsx`                | MOCK_KPI, MOCK_LEADS, MOCK_BLOCKED_AT_RISK, MOCK_ARCHIVE, MOCK_PENDING_LEADS                                                        | review.dashboard, archive.list, weeklyReport.get                           | HIGH -- KPI is computed from multiple sources            |
+| `lead/lead-form.tsx`                          | MOCK_PRODUCTS, MOCK_CURRENT/NEXT_WEEK_ITEMS, MOCK_RISKS, MOCK_DECISIONS, MOCK_PRIORITIES, MOCK_PERIODS, MOCK_VERSIONS, CURRENT_USER | reports.getActive, leadForm.byPeriod, leadForm.versions, reports.myHistory | HIGH -- most mock imports, complex state                 |
+| `admin/admin-panel.tsx` (via 6 tabs)          | MOCK_USERS, MOCK_PRODUCTS, MOCK_PERIODS, MOCK_REMINDERS, MOCK_SETTINGS                                                              | admin.snapshot, admin.getSettings                                          | MEDIUM -- snapshot returns everything in one call        |
+| `weekly-report/weekly-report-page.tsx`        | MOCK_REPORT_PERIODS, MOCK_PORTFOLIO, MOCK_PRODUCT_REPORTS                                                                           | weeklyReport.get                                                           | MEDIUM -- single endpoint, but significant shape mapping |
+| `app/(app)/reports/[reportId]/page.tsx`       | Same as weekly report                                                                                                               | weeklyReport.get by reportId                                               | LOW -- mirrors weekly report                             |
+| `app/(app)/reports/[reportId]/print/page.tsx` | Same as above                                                                                                                       | Same                                                                       | LOW                                                      |
+| `app/(app)/lead/history/page.tsx`             | MOCK_HISTORY                                                                                                                        | reports.myHistory                                                          | LOW -- direct mapping                                    |
 
 **Child components that need NO changes (25+ files, receive data via props):**
 
@@ -205,6 +206,7 @@ export function DashboardPage() {
 **Required seed:** Must match mockup data -- 12 products, 6 named leads (Platanov A., Maria K., Igor V., Dmitry S., Olga N., Sergey T.), 7 SDLC stages, stage assignments, 2+ report periods with traffic lights, items, risks, decisions, priorities.
 
 **Key assertions to preserve (sampled from E2E tests):**
+
 - `"4/6"` (submissions KPI) -- 4 of 6 leads must have submitted sections
 - `"2d 5h"` (deadline KPI) -- either seed produces a fixed-time deadline, or this assertion becomes dynamic
 - `"Olga N."` and `"Sergey T."` -- seed must use these exact names for pending leads
@@ -227,12 +229,12 @@ export function DashboardPage() {
 
 **What already exists and works:**
 
-| Layer | File | Behavior |
-|-------|------|----------|
-| Next.js proxy | `apps/web/src/proxy.ts` | Checks `customreport_session` cookie; redirects to SAML login for `/lead`, `/head`, `/reports`, `/admin`; **no-op when `AUTH_DEV_MODE=true` or non-production** |
-| tRPC context | `apps/api/src/infrastructure/trpc/trpc.context.ts` | Extracts session from cookie; falls back to DEV_SESSION (`role: head`, fixed UUID) when `AUTH_DEV_MODE=true` |
-| tRPC middleware | `apps/api/src/infrastructure/trpc/trpc.middleware.ts` | `protectedProcedure` requires any session; `headProcedure` requires `role === 'head'` |
-| Server auth | `apps/web/src/server/auth/session.ts` | `extractSessionToken()` and `parseSessionPayload()` -- utility functions, currently unused by layouts |
+| Layer           | File                                                  | Behavior                                                                                                                                                        |
+| --------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Next.js proxy   | `apps/web/src/proxy.ts`                               | Checks `customreport_session` cookie; redirects to SAML login for `/lead`, `/head`, `/reports`, `/admin`; **no-op when `AUTH_DEV_MODE=true` or non-production** |
+| tRPC context    | `apps/api/src/infrastructure/trpc/trpc.context.ts`    | Extracts session from cookie; falls back to DEV_SESSION (`role: head`, fixed UUID) when `AUTH_DEV_MODE=true`                                                    |
+| tRPC middleware | `apps/api/src/infrastructure/trpc/trpc.middleware.ts` | `protectedProcedure` requires any session; `headProcedure` requires `role === 'head'`                                                                           |
+| Server auth     | `apps/web/src/server/auth/session.ts`                 | `extractSessionToken()` and `parseSessionPayload()` -- utility functions, currently unused by layouts                                                           |
 
 **What v5.0 needs:**
 
@@ -265,6 +267,7 @@ export default async function AppGroupLayout({ children }) {
 ### 6. Logging Architecture
 
 **Correction from milestone brief:** The logger is NOT pino. It is a custom `AppLoggerImpl` at `apps/api/src/lib/logger.ts` with:
+
 - JSON serialization via `JSON.stringify`
 - stdout/stderr output via `process.stdout.write` / `process.stderr.write`
 - File logging via `appendFileSync` (blocking I/O)
@@ -288,6 +291,7 @@ Required: Request -> CorrelationIdMiddleware (sets header) -> tRPC context (extr
 **B. tRPC request/response logging middleware:**
 
 Add a tRPC middleware that logs every procedure call:
+
 - Fields: `correlationId`, `procedure`, `type` (query/mutation), `userId`, `durationMs`
 - On error: log error code and message (without stack traces in production)
 
@@ -300,6 +304,7 @@ Add a tRPC middleware that logs every procedure call:
 **D. Optional: Replace appendFileSync with buffered writes.**
 
 The current blocking I/O on every log call is acceptable for 6 users but not production-grade. Options:
+
 - Switch to pino with `pino.destination()` (async, 30x faster) -- recommended
 - Keep custom logger but add `fs.createWriteStream` buffering
 
@@ -308,6 +313,7 @@ The current blocking I/O on every log call is acceptable for 6 users but not pro
 ### 7. Playwright E2E Architecture for Real API
 
 **Current state (`apps/web/playwright.config.ts`):**
+
 - `webServer` starts Next.js dev on port 3100 with `AUTH_DEV_MODE=true`
 - No API server started -- tests run against mock data rendered client-side
 - `auth.setup.ts` writes empty storage state files (no real auth)
@@ -319,6 +325,7 @@ The current blocking I/O on every log call is acceptable for 6 users but not pro
 **A. Test infrastructure -- start API + DB alongside Next.js:**
 
 Playwright config needs multiple webServer entries:
+
 1. PostgreSQL + Redis (Docker Compose or pre-existing)
 2. NestJS API server on port 3101 with `AUTH_DEV_MODE=true`
 3. Next.js dev server on port 3100
@@ -329,8 +336,8 @@ Playwright config needs multiple webServer entries:
 // apps/web/e2e/global-setup.ts
 export default async function globalSetup() {
   // Reset database to known state (test-backward seed)
-  execSync('pnpm --filter @customreport/api exec prisma migrate reset --force');
-  execSync('pnpm --filter @customreport/api exec prisma db seed');
+  execSync("pnpm --filter @customreport/api exec prisma migrate reset --force");
+  execSync("pnpm --filter @customreport/api exec prisma db seed");
 }
 ```
 
@@ -340,9 +347,9 @@ Replace empty storage states with actual dev-login endpoint calls:
 
 ```typescript
 // apps/web/e2e/auth.setup.ts (rewritten)
-setup('authenticate as lead', async ({ request }) => {
-  const response = await request.post('http://127.0.0.1:3101/auth/dev-login', {
-    data: { email: 'platanov@customreport.local', role: 'lead' },
+setup("authenticate as lead", async ({ request }) => {
+  const response = await request.post("http://127.0.0.1:3101/auth/dev-login", {
+    data: { email: "platanov@customreport.local", role: "lead" },
   });
   // Extract session cookie and write real storage state
 });
@@ -447,49 +454,49 @@ setup('authenticate as lead', async ({ request }) => {
 
 ### New Files
 
-| File | Purpose |
-|------|---------|
+| File                                                  | Purpose                                       |
+| ----------------------------------------------------- | --------------------------------------------- |
 | `apps/web/src/components/providers/trpc-provider.tsx` | `'use client'` wrapper for QueryClient + tRPC |
-| `apps/web/src/lib/mappers/index.ts` | Barrel export for all mappers |
-| `apps/web/src/lib/mappers/traffic-light.ts` | green/yellow/red <-> on-track/at-risk/blocked |
-| `apps/web/src/lib/mappers/lead-status.ts` | Compute LeadStatus from section data |
-| `apps/web/src/lib/mappers/item-status.ts` | ItemWorkflowStatus -> display ItemStatus |
-| `apps/web/src/lib/mappers/dashboard.ts` | Multi-endpoint -> DashboardPage props |
-| `apps/web/src/lib/mappers/weekly-report.ts` | WeeklyReportReadModel -> component props |
-| `apps/web/src/lib/mappers/lead-form.ts` | API responses -> LeadForm component props |
-| `apps/web/src/lib/mappers/admin.ts` | AdminSnapshot -> admin tab props |
-| `apps/web/e2e/global-setup.ts` | DB reset + seed before test run |
-| `docker-compose.test.yml` | Test-specific infra (DB + Redis) |
+| `apps/web/src/lib/mappers/index.ts`                   | Barrel export for all mappers                 |
+| `apps/web/src/lib/mappers/traffic-light.ts`           | green/yellow/red <-> on-track/at-risk/blocked |
+| `apps/web/src/lib/mappers/lead-status.ts`             | Compute LeadStatus from section data          |
+| `apps/web/src/lib/mappers/item-status.ts`             | ItemWorkflowStatus -> display ItemStatus      |
+| `apps/web/src/lib/mappers/dashboard.ts`               | Multi-endpoint -> DashboardPage props         |
+| `apps/web/src/lib/mappers/weekly-report.ts`           | WeeklyReportReadModel -> component props      |
+| `apps/web/src/lib/mappers/lead-form.ts`               | API responses -> LeadForm component props     |
+| `apps/web/src/lib/mappers/admin.ts`                   | AdminSnapshot -> admin tab props              |
+| `apps/web/e2e/global-setup.ts`                        | DB reset + seed before test run               |
+| `docker-compose.test.yml`                             | Test-specific infra (DB + Redis)              |
 
 ### Modified Files
 
-| File | Change |
-|------|--------|
-| `apps/web/src/app/layout.tsx` | Wrap children with TRPCProvider |
-| `apps/web/src/app/(app)/layout.tsx` | Read session cookie, provide user context |
-| `apps/web/src/components/dashboard/dashboard-page.tsx` | Replace MOCK_* with trpc queries + mappers |
-| `apps/web/src/components/lead/lead-form.tsx` | Replace MOCK_* with trpc queries + mappers + mutations |
-| `apps/web/src/components/admin/*.tsx` (admin-panel + 6 tabs) | Replace admin mock data with trpc queries, add mutation handlers |
-| `apps/web/src/components/weekly-report/weekly-report-page.tsx` | Replace mock with trpc query |
-| `apps/web/src/app/(app)/lead/history/page.tsx` | Replace MOCK_HISTORY with trpc query |
-| `apps/web/src/app/(app)/reports/[reportId]/page.tsx` | Replace mock with trpc query by reportId |
-| `apps/web/src/app/(app)/reports/[reportId]/print/page.tsx` | Same |
-| `prisma/seed.ts` | Complete rewrite with realistic mock-matching data |
-| `apps/web/playwright.config.ts` | Add API server, DB, global-setup |
-| `apps/web/e2e/auth.setup.ts` | Real dev-login instead of empty states |
-| `apps/web/e2e/fixtures.ts` | Update storage state paths if needed |
-| `apps/api/src/infrastructure/trpc/trpc.context.ts` | Extract correlationId from request |
-| `apps/api/src/infrastructure/trpc/trpc.middleware.ts` | Add request logging middleware |
-| `apps/api/src/lib/logger.ts` | Optional: upgrade to pino or add buffered writes |
+| File                                                           | Change                                                           |
+| -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `apps/web/src/app/layout.tsx`                                  | Wrap children with TRPCProvider                                  |
+| `apps/web/src/app/(app)/layout.tsx`                            | Read session cookie, provide user context                        |
+| `apps/web/src/components/dashboard/dashboard-page.tsx`         | Replace MOCK\_\* with trpc queries + mappers                     |
+| `apps/web/src/components/lead/lead-form.tsx`                   | Replace MOCK\_\* with trpc queries + mappers + mutations         |
+| `apps/web/src/components/admin/*.tsx` (admin-panel + 6 tabs)   | Replace admin mock data with trpc queries, add mutation handlers |
+| `apps/web/src/components/weekly-report/weekly-report-page.tsx` | Replace mock with trpc query                                     |
+| `apps/web/src/app/(app)/lead/history/page.tsx`                 | Replace MOCK_HISTORY with trpc query                             |
+| `apps/web/src/app/(app)/reports/[reportId]/page.tsx`           | Replace mock with trpc query by reportId                         |
+| `apps/web/src/app/(app)/reports/[reportId]/print/page.tsx`     | Same                                                             |
+| `prisma/seed.ts`                                               | Complete rewrite with realistic mock-matching data               |
+| `apps/web/playwright.config.ts`                                | Add API server, DB, global-setup                                 |
+| `apps/web/e2e/auth.setup.ts`                                   | Real dev-login instead of empty states                           |
+| `apps/web/e2e/fixtures.ts`                                     | Update storage state paths if needed                             |
+| `apps/api/src/infrastructure/trpc/trpc.context.ts`             | Extract correlationId from request                               |
+| `apps/api/src/infrastructure/trpc/trpc.middleware.ts`          | Add request logging middleware                                   |
+| `apps/api/src/lib/logger.ts`                                   | Optional: upgrade to pino or add buffered writes                 |
 
 ### Files to DELETE after migration
 
-| File | Reason |
-|------|--------|
-| `apps/web/src/components/dashboard/mock-data.ts` | Replaced by real API data + mappers |
-| `apps/web/src/components/lead/mock-data.ts` | Replaced by real API data + mappers |
-| `apps/web/src/components/admin/mock-data.ts` | Replaced by real API data + mappers |
-| `apps/web/src/components/common/api-readiness-placeholder.tsx` | Obsolete stub from pre-v3 era |
+| File                                                           | Reason                              |
+| -------------------------------------------------------------- | ----------------------------------- |
+| `apps/web/src/components/dashboard/mock-data.ts`               | Replaced by real API data + mappers |
+| `apps/web/src/components/lead/mock-data.ts`                    | Replaced by real API data + mappers |
+| `apps/web/src/components/admin/mock-data.ts`                   | Replaced by real API data + mappers |
+| `apps/web/src/components/common/api-readiness-placeholder.tsx` | Obsolete stub from pre-v3 era       |
 
 ---
 
@@ -581,34 +588,35 @@ User clicks "Submit Report"
 
 ## Scalability Considerations
 
-| Concern | v5.0 (6 leads) | Future (50 leads) |
-|---------|----------------|-------------------|
-| tRPC batching | httpBatchLink handles 3-5 parallel queries per page load | May need to split into separate batch groups or add server-side aggregation |
-| Query invalidation | Invalidate by key after mutations | Add optimistic updates for perceived performance |
-| Dashboard aggregation | Compute KPI in frontend from 3 queries | Move to dedicated backend aggregation endpoint |
-| Seed data volume | ~200 rows total | Separate test-seed from production-seed scripts |
-| E2E parallelism | Single worker (CI: 1 worker) | Need per-worker DB isolation or shared read-only seed |
+| Concern               | v5.0 (6 leads)                                           | Future (50 leads)                                                           |
+| --------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------- |
+| tRPC batching         | httpBatchLink handles 3-5 parallel queries per page load | May need to split into separate batch groups or add server-side aggregation |
+| Query invalidation    | Invalidate by key after mutations                        | Add optimistic updates for perceived performance                            |
+| Dashboard aggregation | Compute KPI in frontend from 3 queries                   | Move to dedicated backend aggregation endpoint                              |
+| Seed data volume      | ~200 rows total                                          | Separate test-seed from production-seed scripts                             |
+| E2E parallelism       | Single worker (CI: 1 worker)                             | Need per-worker DB isolation or shared read-only seed                       |
 
 ---
 
 ## Confidence Assessment
 
-| Area | Confidence | Basis |
-|------|------------|-------|
-| tRPC plumbing readiness | HIGH | Client, server, rewrite all verified in source files |
-| Type divergence analysis | HIGH | Line-by-line comparison of mock-data.ts vs report.ts Zod schemas |
-| Container/presentation split | HIGH | All 7 containers and 25+ children inspected |
-| E2E test fragility | HIGH | Assertions in head-dashboard.spec.ts and others checked directly |
-| Logger implementation | HIGH | Custom AppLoggerImpl verified -- NOT pino as brief claimed |
-| Auth guard state | HIGH | proxy.ts, trpc.context.ts, trpc.middleware.ts all read |
-| Build order dependencies | HIGH | Dependency chain derived from import graph analysis |
-| Seed backward-compatibility | MEDIUM | Assertion extraction was sampled, not exhaustive -- full extraction needed during implementation |
+| Area                         | Confidence | Basis                                                                                            |
+| ---------------------------- | ---------- | ------------------------------------------------------------------------------------------------ |
+| tRPC plumbing readiness      | HIGH       | Client, server, rewrite all verified in source files                                             |
+| Type divergence analysis     | HIGH       | Line-by-line comparison of mock-data.ts vs report.ts Zod schemas                                 |
+| Container/presentation split | HIGH       | All 7 containers and 25+ children inspected                                                      |
+| E2E test fragility           | HIGH       | Assertions in head-dashboard.spec.ts and others checked directly                                 |
+| Logger implementation        | HIGH       | Custom AppLoggerImpl verified -- NOT pino as brief claimed                                       |
+| Auth guard state             | HIGH       | proxy.ts, trpc.context.ts, trpc.middleware.ts all read                                           |
+| Build order dependencies     | HIGH       | Dependency chain derived from import graph analysis                                              |
+| Seed backward-compatibility  | MEDIUM     | Assertion extraction was sampled, not exhaustive -- full extraction needed during implementation |
 
 ---
 
 ## Sources
 
 All findings from direct codebase inspection:
+
 - `apps/web/src/lib/trpc.ts` -- tRPC client configuration (superjson, /trpc URL)
 - `apps/web/package.json` -- @trpc/react-query@11.16.0, @tanstack/react-query@5.97.0
 - `apps/web/next.config.ts` -- /trpc rewrite already configured
@@ -616,9 +624,9 @@ All findings from direct codebase inspection:
 - `apps/api/src/infrastructure/trpc/trpc.middleware.ts` -- auth guards (protected, head)
 - `apps/api/src/infrastructure/trpc/trpc.context.ts` -- session extraction + DEV_SESSION
 - `apps/api/src/main.ts` -- bootstrap, tRPC mount at /trpc
-- `apps/web/src/components/dashboard/mock-data.ts` -- dashboard presentation types + MOCK_* constants
-- `apps/web/src/components/lead/mock-data.ts` -- lead form presentation types + MOCK_* constants
-- `apps/web/src/components/admin/mock-data.ts` -- admin presentation types + MOCK_* constants
+- `apps/web/src/components/dashboard/mock-data.ts` -- dashboard presentation types + MOCK\_\* constants
+- `apps/web/src/components/lead/mock-data.ts` -- lead form presentation types + MOCK\_\* constants
+- `apps/web/src/components/admin/mock-data.ts` -- admin presentation types + MOCK\_\* constants
 - `apps/web/src/components/dashboard/dashboard-page.tsx` -- container importing 5 mock constants
 - `apps/web/src/components/lead/lead-form.tsx` -- container importing 9 mock constants
 - `packages/shared/src/schemas/report.ts` -- canonical Zod schemas (data-layer types)

@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
-import type { MockUser, StageName } from './mock-data';
+import type { MockUser, StageName } from "./mock-data";
 
 const STAGE_COLORS: Record<StageName, string> = {
-  Planning: 'var(--color-starbucks-green)',
-  Analysis: 'var(--color-starbucks-accent)',
-  Design: 'var(--color-starbucks-gold)',
-  Development: 'var(--color-primary)',
-  Testing: 'var(--color-destructive)',
-  DevOps: '#6366f1',
-  Support: 'var(--color-muted-foreground)',
+  Planning: "var(--color-starbucks-green)",
+  Analysis: "var(--color-starbucks-accent)",
+  Design: "var(--color-starbucks-gold)",
+  Development: "var(--color-primary)",
+  Testing: "var(--color-destructive)",
+  DevOps: "#6366f1",
+  Support: "var(--color-muted-foreground)",
 };
 
 type StageAssignmentEditorProps = {
@@ -39,7 +39,11 @@ type StageAssignmentEditorProps = {
  * A5: filter leads to only those in the product's owning group. Query the
  * product's group(s) and match against each lead's reportingGroupId.
  */
-export function StageAssignmentEditor({ projectId, projectName, leads }: StageAssignmentEditorProps) {
+export function StageAssignmentEditor({
+  projectId,
+  projectName,
+  leads,
+}: StageAssignmentEditorProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
@@ -68,17 +72,19 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
 
   function invalidateAssignments() {
     void qc.invalidateQueries(trpc.admin.listStageAssignments.pathFilter());
-    void qc.invalidateQueries(trpc.admin.listStageAssignmentCounts.pathFilter());
+    void qc.invalidateQueries(
+      trpc.admin.listStageAssignmentCounts.pathFilter(),
+    );
   }
 
   const saveMut = useMutation(
     trpc.admin.saveStageAssignment.mutationOptions({
       onSuccess: () => {
         invalidateAssignments();
-        toast.success('Stage assignment saved');
+        toast.success("Stage assignment saved");
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to save stage assignment');
+        toast.error(err.message ?? "Failed to save stage assignment");
       },
     }),
   );
@@ -87,10 +93,10 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
     trpc.admin.deleteStageAssignment.mutationOptions({
       onSuccess: () => {
         invalidateAssignments();
-        toast.success('Stage assignment removed');
+        toast.success("Stage assignment removed");
       },
       onError: (err) => {
-        toast.error(err.message ?? 'Failed to remove stage assignment');
+        toast.error(err.message ?? "Failed to remove stage assignment");
       },
     }),
   );
@@ -99,9 +105,7 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
   const assignments = assignmentsQuery.data ?? [];
 
   // Map stageId → assignment for O(1) lookup as we walk the stage catalogue.
-  const assignmentByStage = new Map(
-    assignments.map((a) => [a.stageId, a]),
-  );
+  const assignmentByStage = new Map(assignments.map((a) => [a.stageId, a]));
 
   if (stagesQuery.isLoading || assignmentsQuery.isLoading) {
     return (
@@ -131,9 +135,10 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
       {stages.map((stage) => {
         const stageName = stage.name as StageName;
-        const stageColor = STAGE_COLORS[stageName] ?? 'var(--color-muted-foreground)';
+        const stageColor =
+          STAGE_COLORS[stageName] ?? "var(--color-muted-foreground)";
         const assignment = assignmentByStage.get(stage.id);
-        const currentAssignee = assignment?.userId ?? '';
+        const currentAssignee = assignment?.userId ?? "";
         const selectId = `${projectId}-${stage.id}`;
 
         function handleChange(nextUserId: string) {
@@ -169,15 +174,15 @@ export function StageAssignmentEditor({ projectId, projectName, leads }: StageAs
               disabled={saveMut.isPending || deleteMut.isPending}
               className={`w-full rounded-[var(--radius-sm)] border bg-white px-1.5 py-1.5 text-xs transition-colors focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50 ${
                 currentAssignee
-                  ? 'border-[var(--color-border)] text-[var(--color-foreground)]'
-                  : 'border-dashed border-[var(--color-muted-foreground)] text-[var(--color-muted-foreground)]'
+                  ? "border-[var(--color-border)] text-[var(--color-foreground)]"
+                  : "border-dashed border-[var(--color-muted-foreground)] text-[var(--color-muted-foreground)]"
               }`}
               aria-label={`Assign ${stageName} stage for ${projectName}`}
             >
               <option value="">-- unassigned --</option>
               {filteredLeads.map((lead) => (
                 <option key={lead.id} value={lead.id}>
-                  {lead.name.split(' ')[0]}
+                  {lead.name.split(" ")[0]}
                 </option>
               ))}
             </select>

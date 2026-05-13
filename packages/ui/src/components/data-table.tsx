@@ -104,7 +104,9 @@ export function DataTable<T>({
                 )}
                 tabIndex={column.sortable ? 0 : undefined}
                 role={column.sortable ? "columnheader" : undefined}
-                aria-sort={column.sortable ? (ariaSortValue ?? "none") : undefined}
+                aria-sort={
+                  column.sortable ? (ariaSortValue ?? "none") : undefined
+                }
                 onClick={
                   column.sortable
                     ? () => setSort((prev) => cycleSort(prev, column.key))
@@ -123,13 +125,13 @@ export function DataTable<T>({
               >
                 <span className="inline-flex items-center gap-1">
                   {column.header}
-                  {column.sortable && isActive && (
-                    sort.direction === "asc" ? (
+                  {column.sortable &&
+                    isActive &&
+                    (sort.direction === "asc" ? (
                       <ChevronUp className="size-4" />
                     ) : (
                       <ChevronDown className="size-4" />
-                    )
-                  )}
+                    ))}
                 </span>
               </TableHead>
             );
@@ -139,17 +141,14 @@ export function DataTable<T>({
       <TableBody>
         {sortedData.length === 0 ? (
           <TableRow className="hover:bg-transparent">
-            <TableCell
-              colSpan={columns.length}
-              className="text-center py-12"
-            >
+            <TableCell colSpan={columns.length} className="text-center py-12">
               <div className="flex flex-col items-center gap-2">
                 <p className="text-lg font-semibold text-muted-foreground">
                   No data yet
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  There are no entries to display. They will appear here
-                  once data is available.
+                  There are no entries to display. They will appear here once
+                  data is available.
                 </p>
               </div>
             </TableCell>

@@ -1,18 +1,21 @@
-'use client';
+"use client";
 
-import { Suspense, useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 
-import { DEFAULT_ORGANIZATION_IDENTITY, type OrganizationPublic } from '@customreport/shared';
+import {
+  DEFAULT_ORGANIZATION_IDENTITY,
+  type OrganizationPublic,
+} from "@customreport/shared";
 
-import { PulseBackground } from '../components/landing/pulse-background';
-import { PulseMark } from '../components/landing/pulse-mark';
-import { TaglineCycler } from '../components/landing/tagline-cycler';
-import { useTRPC } from '../lib/trpc-context';
-import { readLastRole, type LastRoleRecord } from '../lib/last-role';
+import { PulseBackground } from "../components/landing/pulse-background";
+import { PulseMark } from "../components/landing/pulse-mark";
+import { TaglineCycler } from "../components/landing/tagline-cycler";
+import { useTRPC } from "../lib/trpc-context";
+import { readLastRole, type LastRoleRecord } from "../lib/last-role";
 
-const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
+const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === "true";
 
 /**
  * UX-16 (Phase 35-08): role-aware default landing.
@@ -36,17 +39,17 @@ const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === 'true';
  *      page must not treat that fallback as an explicit login.
  *   4. If no session AND not stub → keep the SSO sign-in card.
  */
-type Role = 'lead' | 'head' | 'admin' | 'viewer' | 'director';
+type Role = "lead" | "head" | "admin" | "viewer" | "director";
 
 const DEFAULT_FOR_ROLE: Record<Role, string> = {
-  lead: '/lead/report',
-  head: '/head/dashboard',
-  admin: '/admin',
-  viewer: '/reports?tab=published',
+  lead: "/lead/report",
+  head: "/head/dashboard",
+  admin: "/admin",
+  viewer: "/reports?tab=published",
   // UFB-057 / Phase 57: director lands on /head/dashboard (same as head)
   // so the product-KPI cards are the first thing they see. The nested
   // /head/dashboard layout permits director read-only.
-  director: '/head/dashboard',
+  director: "/head/dashboard",
 };
 
 /**
@@ -57,19 +60,19 @@ const DEFAULT_FOR_ROLE: Record<Role, string> = {
  * and the seeded users in `prisma/seed-simple.ts`.
  */
 const DEV_EMAIL_FOR_ROLE: Record<Role, string> = {
-  lead: 'lead1@customreport.local',
-  head: 'head@customreport.local',
-  admin: 'admin@customreport.local',
-  viewer: 'viewer@customreport.local',
-  director: 'director@customreport.local',
+  lead: "lead1@customreport.local",
+  head: "head@customreport.local",
+  admin: "admin@customreport.local",
+  viewer: "viewer@customreport.local",
+  director: "director@customreport.local",
 };
 
 const ROLE_LABEL: Record<Role, string> = {
-  lead: 'Lead',
-  head: 'Head',
-  admin: 'Admin',
-  viewer: 'Viewer',
-  director: 'Director',
+  lead: "Lead",
+  head: "Head",
+  admin: "Admin",
+  viewer: "Viewer",
+  director: "Director",
 };
 
 /**
@@ -85,7 +88,7 @@ function devLoginHref(role: Role, email: string): string {
   return `/auth/dev-login?${params.toString()}`;
 }
 
-const FALLBACK_REDIRECT = '/head/dashboard';
+const FALLBACK_REDIRECT = "/head/dashboard";
 
 function defaultRedirectFor(role: Role | null | undefined): string {
   if (!role) return FALLBACK_REDIRECT;
@@ -99,9 +102,9 @@ function defaultRedirectFor(role: Role | null | undefined): string {
  */
 function sanitizeNext(value: string | null, fallback: string): string {
   if (!value) return fallback;
-  if (!value.startsWith('/')) return fallback;
-  if (value.includes('://')) return fallback;
-  if (value.startsWith('//')) return fallback;
+  if (!value.startsWith("/")) return fallback;
+  if (value.includes("://")) return fallback;
+  if (value.startsWith("//")) return fallback;
   return value;
 }
 
@@ -158,9 +161,9 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   const orgFullName =
     orgQ.data?.fullName ?? DEFAULT_ORGANIZATION_IDENTITY.fullName;
 
-  const stayOnLanding = searchParams?.get('stay') === '1';
+  const stayOnLanding = searchParams?.get("stay") === "1";
   const safeNext = sanitizeNext(
-    searchParams?.get('next') ?? null,
+    searchParams?.get("next") ?? null,
     defaultRedirectFor(session?.role as Role | undefined),
   );
 
@@ -192,7 +195,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
 
   const ssoHref =
     safeNext === FALLBACK_REDIRECT
-      ? '/auth/saml/login'
+      ? "/auth/saml/login"
       : `/auth/saml/login?next=${encodeURIComponent(safeNext)}`;
 
   return (
@@ -239,20 +242,20 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
               AUTH_STUB
                 ? lastRole
                   ? devLoginHref(lastRole.role, lastRole.email)
-                  : '/auth/dev-login?role=admin&email=admin@customreport.local&redirect=%2Fadmin'
+                  : "/auth/dev-login?role=admin&email=admin@customreport.local&redirect=%2Fadmin"
                 : ssoHref
             }
             className="flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-4 font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-white transition-[background-color,opacity,transform] hover:bg-[var(--color-primary)] hover:-translate-y-px active:translate-y-0 active:opacity-90"
             style={{
-              minHeight: '52px',
-              boxShadow: '0 2px 12px rgba(0,98,65,0.2)',
+              minHeight: "52px",
+              boxShadow: "0 2px 12px rgba(0,98,65,0.2)",
             }}
             aria-label={
               AUTH_STUB
                 ? lastRole
                   ? `Enter application as ${lastRole.name} (${ROLE_LABEL[lastRole.role]})`
-                  : 'Enter application as admin'
-                : 'Sign in with corporate SSO'
+                  : "Enter application as admin"
+                : "Sign in with corporate SSO"
             }
             data-testid="primary-cta"
           >
@@ -270,15 +273,15 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
               <polyline points="10 17 15 12 10 7" />
               <line x1="15" y1="12" x2="3" y2="12" />
             </svg>
-            {AUTH_STUB ? 'Enter Application' : 'Sign in with SSO'}
+            {AUTH_STUB ? "Enter Application" : "Sign in with SSO"}
           </a>
 
           <p className="mt-6 text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
             {AUTH_STUB
               ? lastRole
                 ? `Resuming as ${ROLE_LABEL[lastRole.role]} · pick a different role below`
-                : 'Dev mode · default role: admin · switch role from in-app menu'
-              : 'Keycloak · SAML 2.0 · Corporate SSO'}
+                : "Dev mode · default role: admin · switch role from in-app menu"
+              : "Keycloak · SAML 2.0 · Corporate SSO"}
           </p>
 
           {/* UFB-071: last-session hint with «Change role» picker. Only
@@ -293,11 +296,11 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
             <div
               className="overflow-hidden"
               style={{
-                maxHeight: lastRole ? '300px' : '0px',
+                maxHeight: lastRole ? "300px" : "0px",
                 opacity: lastRole ? 1 : 0,
-                marginTop: lastRole ? '16px' : '0px',
+                marginTop: lastRole ? "16px" : "0px",
                 transition:
-                  'max-height 220ms ease-in-out, opacity 220ms ease-in-out, margin-top 220ms ease-in-out',
+                  "max-height 220ms ease-in-out, opacity 220ms ease-in-out, margin-top 220ms ease-in-out",
               }}
               aria-hidden={!lastRole}
             >
@@ -307,10 +310,10 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
                   data-testid="last-role-hint"
                 >
                   <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
-                    Last session:{' '}
+                    Last session:{" "}
                     <span className="font-semibold text-[var(--color-foreground)]">
                       {lastRole.name}
-                    </span>{' '}
+                    </span>{" "}
                     · {ROLE_LABEL[lastRole.role]}
                   </p>
                   <button
@@ -321,7 +324,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
                     aria-controls="last-role-switcher"
                     data-testid="last-role-change"
                   >
-                    {showRoleSwitcher ? 'Hide options' : 'Change role'}
+                    {showRoleSwitcher ? "Hide options" : "Change role"}
                   </button>
                   {showRoleSwitcher ? (
                     <ul
@@ -330,13 +333,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
                       data-testid="last-role-switcher"
                     >
                       {(
-                        [
-                          'lead',
-                          'head',
-                          'admin',
-                          'viewer',
-                          'director',
-                        ] as const
+                        ["lead", "head", "admin", "viewer", "director"] as const
                       ).map((role) => (
                         <li key={role}>
                           <a

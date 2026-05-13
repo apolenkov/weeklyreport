@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * 39-05 (PERF-05): full-text search.
@@ -12,7 +12,12 @@ import { z } from 'zod';
  * `rank` comes from `ts_rank(searchTsv, plainto_tsquery(...))`. The service
  * orders results by rank descending and caps at the requested limit.
  */
-export const searchHitTypeSchema = z.enum(['item', 'risk', 'decision', 'project']);
+export const searchHitTypeSchema = z.enum([
+  "item",
+  "risk",
+  "decision",
+  "project",
+]);
 export type SearchHitType = z.infer<typeof searchHitTypeSchema>;
 
 export const searchHitSchema = z.object({
@@ -47,7 +52,7 @@ export type SearchHit = z.infer<typeof searchHitSchema>;
  */
 export const searchQueryInputSchema = z.object({
   q: z.string().min(2).max(200),
-  scope: z.enum(['mine', 'all']).default('mine'),
+  scope: z.enum(["mine", "all"]).default("mine"),
   limit: z.number().int().min(1).max(50).default(20),
 });
 export type SearchQueryInput = z.infer<typeof searchQueryInputSchema>;

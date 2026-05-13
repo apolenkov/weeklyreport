@@ -7,12 +7,12 @@ import {
   type PaginatedResult,
   type Role,
   type UserSession,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 export class ArchiveDomainError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'ArchiveDomainError';
+    this.name = "ArchiveDomainError";
   }
 }
 
@@ -26,7 +26,7 @@ export class ArchiveDomainError extends Error {
  * and 'draft' (in-progress).
  */
 export interface ArchiveReadFilter {
-  status?: 'draft' | 'published';
+  status?: "draft" | "published";
 }
 
 /**
@@ -41,7 +41,7 @@ export interface ArchiveReadFilter {
  */
 export type ArchiveScopeSession = Pick<
   UserSession,
-  'role' | 'reportingGroupId' | 'viewerGroupAccess'
+  "role" | "reportingGroupId" | "viewerGroupAccess"
 >;
 
 export interface ArchiveRepository {
@@ -64,9 +64,11 @@ export interface ArchiveRepository {
  * scripts) the filter is empty — the repository's hardcoded floor still
  * keeps everyone on published rows, so widening here is safe.
  */
-export function buildArchiveReadFilter(role: Role | undefined): ArchiveReadFilter {
-  if (role === 'viewer') {
-    return { status: 'published' };
+export function buildArchiveReadFilter(
+  role: Role | undefined,
+): ArchiveReadFilter {
+  if (role === "viewer") {
+    return { status: "published" };
   }
   return {};
 }
@@ -80,9 +82,9 @@ export class ArchiveService {
     session?: ArchiveScopeSession,
   ): Promise<PaginatedResult<ArchiveReportSummary>> {
     const filter = buildArchiveReadFilter(role);
-    const reports = archiveReportSummarySchema.array().parse(
-      await this.repository.listArchiveReports(filter, session),
-    );
+    const reports = archiveReportSummarySchema
+      .array()
+      .parse(await this.repository.listArchiveReports(filter, session));
 
     const sorted = [...reports].sort(
       (left, right) => right.publishedAt.getTime() - left.publishedAt.getTime(),
@@ -114,7 +116,11 @@ export class ArchiveService {
     session?: ArchiveScopeSession,
   ): Promise<ArchiveReportDetail> {
     const filter = buildArchiveReadFilter(role);
-    const detail = await this.repository.getArchiveReport(reportId, filter, session);
+    const detail = await this.repository.getArchiveReport(
+      reportId,
+      filter,
+      session,
+    );
 
     if (!detail) {
       throw new ArchiveDomainError(`Archive report ${reportId} was not found.`);

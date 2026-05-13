@@ -4,7 +4,7 @@ import {
   Histogram,
   Registry,
   collectDefaultMetrics,
-} from 'prom-client';
+} from "prom-client";
 
 /**
  * 37-02 / 37-03 / 36-01: shared prom-client registry + counter singletons.
@@ -22,9 +22,9 @@ export const metricsRegistry = new Registry();
 collectDefaultMetrics({ register: metricsRegistry });
 
 export const httpRequestDurationSeconds = new Histogram({
-  name: 'http_request_duration_seconds',
-  help: 'HTTP request duration in seconds',
-  labelNames: ['method', 'route', 'status_code'] as const,
+  name: "http_request_duration_seconds",
+  help: "HTTP request duration in seconds",
+  labelNames: ["method", "route", "status_code"] as const,
   buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
   registers: [metricsRegistry],
 });
@@ -36,9 +36,9 @@ export const httpRequestDurationSeconds = new Histogram({
  * value vs DLQ_ALERT_THRESHOLD provides the page.
  */
 export const dlqFailedTotal = new Counter({
-  name: 'cr_dlq_failed_total',
-  help: 'Total BullMQ jobs that exhausted their retry budget',
-  labelNames: ['queue'] as const,
+  name: "cr_dlq_failed_total",
+  help: "Total BullMQ jobs that exhausted their retry budget",
+  labelNames: ["queue"] as const,
   registers: [metricsRegistry],
 });
 
@@ -48,9 +48,9 @@ export const dlqFailedTotal = new Counter({
  * a spike before the rate-limit log line scrolls off.
  */
 export const rateLimitHitsTotal = new Counter({
-  name: 'cr_rate_limit_hits_total',
-  help: 'Total HTTP responses returned by the rate-limit middleware',
-  labelNames: ['bucket'] as const,
+  name: "cr_rate_limit_hits_total",
+  help: "Total HTTP responses returned by the rate-limit middleware",
+  labelNames: ["bucket"] as const,
   registers: [metricsRegistry],
 });
 
@@ -60,9 +60,9 @@ export const rateLimitHitsTotal = new Counter({
  * (real outage) from "login attempt rate spiked" (brute-force).
  */
 export const loginAttemptsTotal = new Counter({
-  name: 'cr_login_attempts_total',
-  help: 'Total authentication attempts',
-  labelNames: ['method', 'outcome'] as const,
+  name: "cr_login_attempts_total",
+  help: "Total authentication attempts",
+  labelNames: ["method", "outcome"] as const,
   registers: [metricsRegistry],
 });
 
@@ -78,9 +78,9 @@ export const loginAttemptsTotal = new Counter({
  * cover up to 10s for the slow PDF + Prisma cold-start outliers.
  */
 export const trpcRequestDurationSeconds = new Histogram({
-  name: 'trpc_request_duration_seconds',
-  help: 'tRPC request duration in seconds, labeled by procedure/type/status',
-  labelNames: ['procedure', 'type', 'status'] as const,
+  name: "trpc_request_duration_seconds",
+  help: "tRPC request duration in seconds, labeled by procedure/type/status",
+  labelNames: ["procedure", "type", "status"] as const,
   buckets: [0.005, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
   registers: [metricsRegistry],
 });
@@ -93,9 +93,9 @@ export const trpcRequestDurationSeconds = new Histogram({
  * standard Grafana-recipe expression assumes a separate `_total`.
  */
 export const trpcRequestTotal = new Counter({
-  name: 'trpc_request_total',
-  help: 'Total tRPC requests, labeled by procedure/type/status',
-  labelNames: ['procedure', 'type', 'status'] as const,
+  name: "trpc_request_total",
+  help: "Total tRPC requests, labeled by procedure/type/status",
+  labelNames: ["procedure", "type", "status"] as const,
   registers: [metricsRegistry],
 });
 
@@ -121,9 +121,9 @@ export const trpcRequestTotal = new Counter({
  * (e.g. `state='archived'`) does not require a new counter.
  */
 export const customreportReportsSubmittedTotal = new Counter({
-  name: 'customreport_reports_submitted_total',
-  help: 'Total Report state transitions, labelled by destination state',
-  labelNames: ['state'] as const,
+  name: "customreport_reports_submitted_total",
+  help: "Total Report state transitions, labelled by destination state",
+  labelNames: ["state"] as const,
   registers: [metricsRegistry],
 });
 
@@ -135,9 +135,9 @@ export const customreportReportsSubmittedTotal = new Counter({
  * we miss the deadline» question.
  */
 export const customreportSectionsSubmittedTotal = new Counter({
-  name: 'customreport_sections_submitted_total',
-  help: 'Total section submissions, labelled by on-time flag',
-  labelNames: ['late'] as const,
+  name: "customreport_sections_submitted_total",
+  help: "Total section submissions, labelled by on-time flag",
+  labelNames: ["late"] as const,
   registers: [metricsRegistry],
 });
 
@@ -150,9 +150,11 @@ export const customreportSectionsSubmittedTotal = new Counter({
  * deadline: -1d / -12h / -1h / 0 / +1h / +4h / +12h / +1d / +3d.
  */
 export const customreportSectionSubmissionLatencySeconds = new Histogram({
-  name: 'customreport_section_submission_latency_seconds',
-  help: 'Signed seconds (deadline − submittedAt) at submit time. Negative = early, positive = late.',
-  buckets: [-86_400, -43_200, -3_600, 0, 3_600, 14_400, 43_200, 86_400, 259_200],
+  name: "customreport_section_submission_latency_seconds",
+  help: "Signed seconds (deadline − submittedAt) at submit time. Negative = early, positive = late.",
+  buckets: [
+    -86_400, -43_200, -3_600, 0, 3_600, 14_400, 43_200, 86_400, 259_200,
+  ],
   registers: [metricsRegistry],
 });
 
@@ -163,8 +165,8 @@ export const customreportSectionSubmissionLatencySeconds = new Histogram({
  * the value refreshes lazily at Prometheus scrape time — no scheduler.
  */
 export const customreportReportsOnTimeRatio = new Gauge({
-  name: 'customreport_reports_on_time_ratio',
-  help: 'Fraction of submitted sections that were on time over the last 4 published periods',
+  name: "customreport_reports_on_time_ratio",
+  help: "Fraction of submitted sections that were on time over the last 4 published periods",
   registers: [metricsRegistry],
 });
 
@@ -175,8 +177,8 @@ export const customreportReportsOnTimeRatio = new Gauge({
  * the same leads filed twice».
  */
 export const customreportActiveLeadsTotal = new Gauge({
-  name: 'customreport_active_leads_total',
-  help: 'Distinct lead authors who submitted in the most recently published period',
+  name: "customreport_active_leads_total",
+  help: "Distinct lead authors who submitted in the most recently published period",
   registers: [metricsRegistry],
 });
 
@@ -188,9 +190,9 @@ export const customreportActiveLeadsTotal = new Gauge({
  * head's policy stance (approve/reject ratio).
  */
 export const customreportReopenRequestsTotal = new Counter({
-  name: 'customreport_reopen_requests_total',
-  help: 'Reopen-request lifecycle counter (requested / approved / rejected)',
-  labelNames: ['state'] as const,
+  name: "customreport_reopen_requests_total",
+  help: "Reopen-request lifecycle counter (requested / approved / rejected)",
+  labelNames: ["state"] as const,
   registers: [metricsRegistry],
 });
 
@@ -200,9 +202,9 @@ export const customreportReopenRequestsTotal = new Counter({
  * an unhealthy one sees only the head pulling for the director.
  */
 export const customreportPdfExportRequestsTotal = new Counter({
-  name: 'customreport_pdf_export_requests_total',
-  help: 'Total PDF export requests, labelled by requesting role',
-  labelNames: ['role'] as const,
+  name: "customreport_pdf_export_requests_total",
+  help: "Total PDF export requests, labelled by requesting role",
+  labelNames: ["role"] as const,
   registers: [metricsRegistry],
 });
 
@@ -213,9 +215,9 @@ export const customreportPdfExportRequestsTotal = new Counter({
  * («no published transitions in 7d») from a slow one.
  */
 export const customreportPeriodStateTransitionsTotal = new Counter({
-  name: 'customreport_period_state_transitions_total',
-  help: 'Period state-machine transitions, labelled by from / to states',
-  labelNames: ['from', 'to'] as const,
+  name: "customreport_period_state_transitions_total",
+  help: "Period state-machine transitions, labelled by from / to states",
+  labelNames: ["from", "to"] as const,
   registers: [metricsRegistry],
 });
 
@@ -233,9 +235,9 @@ export const customreportPeriodStateTransitionsTotal = new Counter({
  * a separate counter.
  */
 export const aiSummaryGeneratedTotal = new Counter({
-  name: 'customreport_ai_summary_generated_total',
-  help: 'Total AI summary generation attempts',
-  labelNames: ['provider', 'status'] as const,
+  name: "customreport_ai_summary_generated_total",
+  help: "Total AI summary generation attempts",
+  labelNames: ["provider", "status"] as const,
   registers: [metricsRegistry],
 });
 
@@ -245,9 +247,9 @@ export const aiSummaryGeneratedTotal = new Counter({
  * range: 0.1s–30s. Cache-served results are not observed here.
  */
 export const aiSummaryDurationSeconds = new Histogram({
-  name: 'customreport_ai_summary_duration_seconds',
-  help: 'AI summary generation duration in seconds (adapter call only)',
-  labelNames: ['provider'] as const,
+  name: "customreport_ai_summary_duration_seconds",
+  help: "AI summary generation duration in seconds (adapter call only)",
+  labelNames: ["provider"] as const,
   buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 30],
   registers: [metricsRegistry],
 });
@@ -263,9 +265,9 @@ export const aiSummaryDurationSeconds = new Histogram({
  * failures before users notice missed notifications.
  */
 export const telegramMessageSentTotal = new Counter({
-  name: 'customreport_telegram_message_sent_total',
-  help: 'Total outbound Telegram message attempts',
-  labelNames: ['status'] as const,
+  name: "customreport_telegram_message_sent_total",
+  help: "Total outbound Telegram message attempts",
+  labelNames: ["status"] as const,
   registers: [metricsRegistry],
 });
 
@@ -276,8 +278,8 @@ export const telegramMessageSentTotal = new Counter({
  * is being used.
  */
 export const telegramBindingTotal = new Counter({
-  name: 'customreport_telegram_binding_total',
-  help: 'Telegram user binding lifecycle events',
-  labelNames: ['event'] as const,
+  name: "customreport_telegram_binding_total",
+  help: "Telegram user binding lifecycle events",
+  labelNames: ["event"] as const,
   registers: [metricsRegistry],
 });

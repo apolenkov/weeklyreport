@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { Line, LineChart, ResponsiveContainer, Tooltip, YAxis } from 'recharts';
+import { useQuery } from "@tanstack/react-query";
+import { Line, LineChart, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
 /**
  * Phase 52 (UFB-054) — in-app KPI card backed by `telemetry.summary`.
@@ -21,7 +21,7 @@ import { useTRPC } from '../../lib/trpc-context';
  * accessibility labelling.
  */
 type ProductKpiCardProps = {
-  readonly role?: 'lead' | 'head' | 'admin' | 'viewer' | 'director' | null;
+  readonly role?: "lead" | "head" | "admin" | "viewer" | "director" | null;
 };
 
 export function ProductKpiCard({ role }: ProductKpiCardProps) {
@@ -33,7 +33,10 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
   // UFB-057 / Phase 57: director joins the leadership audience that sees
   // the product-KPI card — matches the leadershipProcedure server gate.
   const isLeadership =
-    role === 'head' || role === 'admin' || role === 'viewer' || role === 'director';
+    role === "head" ||
+    role === "admin" ||
+    role === "viewer" ||
+    role === "director";
   const summaryQ = useQuery({
     ...trpc.telemetry.summary.queryOptions(),
     enabled: isLeadership,
@@ -77,7 +80,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
 
   const s = summaryQ.data;
   const onTimePct =
-    s.onTimeRatio === null ? '—' : `${Math.round(s.onTimeRatio * 100)}%`;
+    s.onTimeRatio === null ? "—" : `${Math.round(s.onTimeRatio * 100)}%`;
   // Recharts wants `{x,y}` rows; map sparkline → indexed points.
   const sparklineRows = s.sparkline.map((value, idx) => ({
     period: idx + 1,
@@ -113,7 +116,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
             >
               <YAxis hide domain={[0, 100]} />
               <Tooltip
-                formatter={(value) => [`${value}%`, 'on-time']}
+                formatter={(value) => [`${value}%`, "on-time"]}
                 labelFormatter={(label) => `Period ${String(label)}`}
               />
               <Line

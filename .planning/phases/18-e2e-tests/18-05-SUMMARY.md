@@ -9,7 +9,8 @@ dependency_graph:
   affects: [apps/web/e2e]
 tech_stack:
   added: []
-  patterns: [retry-click-hydration, role-scoped-fixtures, dropdown-panel-selectors]
+  patterns:
+    [retry-click-hydration, role-scoped-fixtures, dropdown-panel-selectors]
 key_files:
   created:
     - apps/web/e2e/period-features.spec.ts
@@ -32,13 +33,14 @@ E2E tests for period navigation, fill-from-previous, and autosave version histor
 
 ## Completed Tasks
 
-| Task | Description | Commit | Files |
-|------|-------------|--------|-------|
-| 1 | Period features E2E tests (14 cases) | dcee75f | apps/web/e2e/period-features.spec.ts |
+| Task | Description                          | Commit  | Files                                |
+| ---- | ------------------------------------ | ------- | ------------------------------------ |
+| 1    | Period features E2E tests (14 cases) | dcee75f | apps/web/e2e/period-features.spec.ts |
 
 ## Test Coverage
 
 ### Period Navigation (E2E-06) -- 5 tests
+
 1. Period navigator visible on lead form
 2. Period navigator shows week label text (Week 16 default, 5 options)
 3. Left/right arrow buttons visible, clickable, state changes on navigation
@@ -46,12 +48,14 @@ E2E tests for period navigation, fill-from-previous, and autosave version histor
 5. Period navigator visible on head weekly report (headPage fixture)
 
 ### Fill From (E2E-07) -- 4 tests
+
 6. Fill from Previous button visible on lead form
 7. Fill from dropdown opens on click and shows period list with search
 8. Fill from dropdown has searchable input (filters by text)
 9. Clicking a period option shows confirmation dialog with Cancel and Replace & Fill
 
 ### Version History (E2E-08) -- 5 tests
+
 10. Version history navigator visible with arrow buttons
 11. Autosaved indicator visible
 12. Version navigation arrows functional (v3 to v2 transition)
@@ -63,12 +67,14 @@ E2E tests for period navigation, fill-from-previous, and autosave version histor
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Fixed dropdown item selector conflict**
+
 - **Found during:** Test execution, test 7
 - **Issue:** `getByText('Week 15').nth(1)` resolved to hidden `<option>` in period select instead of dropdown panel item
 - **Fix:** Scoped selector to `.absolute.right-0` dropdown container
 - **Files modified:** apps/web/e2e/period-features.spec.ts
 
 **2. [Rule 1 - Bug] Fixed strict mode violation on date range text**
+
 - **Found during:** Test execution, test 8
 - **Issue:** `locator('text=Mar 31-Apr 6')` matched both dropdown item and select option (2 elements)
 - **Fix:** Scoped to dropdown container to ensure single match

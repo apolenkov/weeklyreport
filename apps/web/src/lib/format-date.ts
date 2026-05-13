@@ -5,23 +5,19 @@
  */
 
 /** Format a date for display (ru-RU locale, medium style). */
-export function formatDate(
-  date: Date | string | null | undefined,
-): string {
-  if (!date) return '\u2014';
+export function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return "\u2014";
   const d = date instanceof Date ? date : new Date(date);
-  return d.toLocaleDateString('ru-RU', { dateStyle: 'medium' });
+  return d.toLocaleDateString("ru-RU", { dateStyle: "medium" });
 }
 
 /** Format a date with time (ru-RU locale, short date + short time). */
-export function formatDateTime(
-  date: Date | string | null | undefined,
-): string {
-  if (!date) return '\u2014';
+export function formatDateTime(date: Date | string | null | undefined): string {
+  if (!date) return "\u2014";
   const d = date instanceof Date ? date : new Date(date);
-  return d.toLocaleString('ru-RU', {
-    dateStyle: 'short',
-    timeStyle: 'short',
+  return d.toLocaleString("ru-RU", {
+    dateStyle: "short",
+    timeStyle: "short",
   });
 }
 
@@ -33,17 +29,30 @@ export function formatDateTime(
 export function formatPeriodDate(
   date: Date | string | null | undefined,
 ): string {
-  if (!date) return '\u2014';
+  if (!date) return "\u2014";
   const d = date instanceof Date ? date : new Date(date);
-  return d.toLocaleDateString('ru-RU', {
-    timeZone: 'UTC',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  return d.toLocaleDateString("ru-RU", {
+    timeZone: "UTC",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 }
 
-const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 /**
  * Format a period date range for display: "May 11\u201317" (same month) or
@@ -54,7 +63,7 @@ export function formatPeriodRange(
   start: Date | string | null | undefined,
   end: Date | string | null | undefined,
 ): string {
-  if (!start || !end) return '\u2014';
+  if (!start || !end) return "\u2014";
   const s = start instanceof Date ? start : new Date(start);
   const e = end instanceof Date ? end : new Date(end);
   const sMonth = MONTHS_SHORT[s.getUTCMonth()];

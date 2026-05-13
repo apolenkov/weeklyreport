@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import { ConfirmDeleteDialog } from './confirm-delete-dialog';
-import { PriorityEditDialog } from './priority-edit-dialog';
-import type { PriorityEntry, Product } from './mock-data';
-import { splitStageNames } from './stage-tags';
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
+import { PriorityEditDialog } from "./priority-edit-dialog";
+import type { PriorityEntry, Product } from "./mock-data";
+import { splitStageNames } from "./stage-tags";
 
 type PrioritiesSectionProps = {
   readonly priorities: PriorityEntry[];
@@ -54,18 +54,18 @@ function DeleteIcon() {
   );
 }
 
-const RANK_TINT: Record<1 | 2 | 3 | 'rest', string> = {
-  1: '#cba258',
-  2: '#dfc49d',
-  3: 'var(--color-muted)',
-  rest: 'var(--color-muted)',
+const RANK_TINT: Record<1 | 2 | 3 | "rest", string> = {
+  1: "#cba258",
+  2: "#dfc49d",
+  3: "var(--color-muted)",
+  rest: "var(--color-muted)",
 };
 
-const RANK_TEXT: Record<1 | 2 | 3 | 'rest', string> = {
-  1: '#fff',
-  2: '#8a6d1b',
-  3: 'var(--color-muted-foreground)',
-  rest: 'var(--color-muted-foreground)',
+const RANK_TEXT: Record<1 | 2 | 3 | "rest", string> = {
+  1: "#fff",
+  2: "#8a6d1b",
+  3: "var(--color-muted-foreground)",
+  rest: "var(--color-muted-foreground)",
 };
 
 /**
@@ -77,13 +77,20 @@ const RANK_TEXT: Record<1 | 2 | 3 | 'rest', string> = {
  * Ranks renumber sequentially on add / delete so adjacent slots are
  * always 1..N (the schema allows up to 50 per `draftSaveSchema`).
  */
-export function PrioritiesSection({ priorities, readOnly = false, onChange, availableStages, products, defaultProductId }: PrioritiesSectionProps) {
+export function PrioritiesSection({
+  priorities,
+  readOnly = false,
+  onChange,
+  availableStages,
+  products,
+  defaultProductId,
+}: PrioritiesSectionProps) {
   const sorted = [...priorities].sort((a, b) => a.rank - b.rank);
   const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
   const [dialogState, setDialogState] = useState<
     | { open: false }
-    | { open: true; mode: 'create' }
-    | { open: true; mode: 'edit'; priority: PriorityEntry; idx: number }
+    | { open: true; mode: "create" }
+    | { open: true; mode: "edit"; priority: PriorityEntry; idx: number }
   >({ open: false });
 
   function emit(next: PriorityEntry[]) {
@@ -96,19 +103,19 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
 
   function handleAdd() {
     if (readOnly) return;
-    setDialogState({ open: true, mode: 'create' });
+    setDialogState({ open: true, mode: "create" });
   }
 
   function handleEdit(idx: number) {
     if (readOnly) return;
     const target = sorted[idx];
     if (!target) return;
-    setDialogState({ open: true, mode: 'edit', priority: target, idx });
+    setDialogState({ open: true, mode: "edit", priority: target, idx });
   }
 
   function handleDialogSave(saved: PriorityEntry) {
     if (!dialogState.open) return;
-    if (dialogState.mode === 'create') {
+    if (dialogState.mode === "create") {
       emit([...sorted, saved]);
     } else {
       emit(sorted.map((p, i) => (i === dialogState.idx ? saved : p)));
@@ -145,12 +152,18 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
     return (
       <div className="space-y-3">
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
-          {readOnly ? 'No priorities reported.' : 'No priorities yet. Use “+ Add Priority” to list what matters most.'}
+          {readOnly
+            ? "No priorities reported."
+            : "No priorities yet. Use “+ Add Priority” to list what matters most."}
         </div>
         {addButton}
         <PriorityEditDialog
-          key={dialogState.open && dialogState.mode === 'create' ? 'open-new' : 'closed'}
-          open={dialogState.open && dialogState.mode === 'create'}
+          key={
+            dialogState.open && dialogState.mode === "create"
+              ? "open-new"
+              : "closed"
+          }
+          open={dialogState.open && dialogState.mode === "create"}
           priority={null}
           nextRank={1}
           availableStages={availableStages}
@@ -166,8 +179,14 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
   return (
     <div className="space-y-3">
       {sorted.map((entry, idx) => {
-        const tintKey = (entry.rank === 1 || entry.rank === 2 || entry.rank === 3) ? entry.rank : 'rest';
-        const stageTags = (entry.stageIds && entry.stageIds.length > 0) ? entry.stageIds : splitStageNames(entry.stageName);
+        const tintKey =
+          entry.rank === 1 || entry.rank === 2 || entry.rank === 3
+            ? entry.rank
+            : "rest";
+        const stageTags =
+          entry.stageIds && entry.stageIds.length > 0
+            ? entry.stageIds
+            : splitStageNames(entry.stageName);
         return (
           <div
             key={`${entry.rank}-${idx}`}
@@ -176,11 +195,14 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
             // PRI-1 (Phase 33-04): mockup distinguishes the row tint between
             // top-2 (gold-light `#faf6ee`) and rank 3+ (canvas `#f4f1eb`).
             // Earlier every row used the same gold-light wash, blurring rank.
-            style={{ background: entry.rank <= 2 ? '#faf6ee' : '#f4f1eb' }}
+            style={{ background: entry.rank <= 2 ? "#faf6ee" : "#f4f1eb" }}
           >
             <span
               className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[family-name:var(--font-sans)] text-sm font-bold tabular-nums"
-              style={{ background: RANK_TINT[tintKey], color: RANK_TEXT[tintKey] }}
+              style={{
+                background: RANK_TINT[tintKey],
+                color: RANK_TEXT[tintKey],
+              }}
             >
               {entry.rank}
             </span>
@@ -206,18 +228,22 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
                   </span>
                 ) : (
                   stageTags.map((stage) => (
-                  <span
-                    key={stage}
-                    className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
-                  >
-                    {stage}
-                  </span>
+                    <span
+                      key={stage}
+                      className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+                    >
+                      {stage}
+                    </span>
                   ))
                 )}
                 {entry.text.trim().length > 0 ? (
-                  <span className="break-words text-[var(--color-foreground)]">{entry.text}</span>
+                  <span className="break-words text-[var(--color-foreground)]">
+                    {entry.text}
+                  </span>
                 ) : (
-                  <span className="text-[var(--color-muted-foreground)]">— pending</span>
+                  <span className="text-[var(--color-muted-foreground)]">
+                    — pending
+                  </span>
                 )}
               </div>
             </button>
@@ -248,10 +274,20 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
       {addButton}
 
       <PriorityEditDialog
-        key={`${dialogState.open}-${dialogState.open && dialogState.mode === 'edit' ? dialogState.priority.rank : 'new'}`}
+        key={`${dialogState.open}-${dialogState.open && dialogState.mode === "edit" ? dialogState.priority.rank : "new"}`}
         open={dialogState.open}
-        priority={dialogState.open && dialogState.mode === 'edit' ? dialogState.priority : null}
-        nextRank={dialogState.open && dialogState.mode === 'create' ? sorted.length + 1 : (dialogState.open && dialogState.mode === 'edit' ? dialogState.priority.rank : 1)}
+        priority={
+          dialogState.open && dialogState.mode === "edit"
+            ? dialogState.priority
+            : null
+        }
+        nextRank={
+          dialogState.open && dialogState.mode === "create"
+            ? sorted.length + 1
+            : dialogState.open && dialogState.mode === "edit"
+              ? dialogState.priority.rank
+              : 1
+        }
         availableStages={availableStages}
         products={products}
         defaultProductId={defaultProductId}
@@ -262,8 +298,16 @@ export function PrioritiesSection({ priorities, readOnly = false, onChange, avai
       <ConfirmDeleteDialog
         open={pendingDeleteIdx !== null}
         title="Delete priority?"
-        preview={pendingDeleteIdx !== null ? sorted[pendingDeleteIdx]?.text || '(empty)' : ''}
-        subtitle={pendingDeleteIdx !== null ? `Priority ${pendingDeleteIdx + 1}` : undefined}
+        preview={
+          pendingDeleteIdx !== null
+            ? sorted[pendingDeleteIdx]?.text || "(empty)"
+            : ""
+        }
+        subtitle={
+          pendingDeleteIdx !== null
+            ? `Priority ${pendingDeleteIdx + 1}`
+            : undefined
+        }
         onConfirm={confirmDelete}
         onCancel={() => setPendingDeleteIdx(null)}
       />

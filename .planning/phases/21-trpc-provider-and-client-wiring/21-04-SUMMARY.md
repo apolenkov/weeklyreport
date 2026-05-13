@@ -67,13 +67,13 @@ Total new tests: **26**. Cumulative web vitest pass rate after this plan: **99 /
 
 ## Schemas used
 
-| API call           | Zod schema                                                                                                      | Notes                                                                                                                   |
-| ------------------ | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `reports.getActive`  | `reportSectionReadModelSchema \| null`                                                                            | Returns ONE section (the user's active section) — not a wider envelope. `currentUserId` = `section.authorId`. |
-| `leadForm.byPeriod`  | input: `{ reportId: uuid }`; output: `{ section: ReportSectionReadModel; readOnly: boolean }`                     | Returns ONE section, not aggregated lead-form data. The plan's `<interfaces>` block was wrong (Rule 2 deviation).         |
-| `leadForm.versions`  | input: **`{ reportSectionId: uuid }`** (NOT `sectionId`); output: `versionSnapshotSchema[]`                     | Plan said `{ sectionId }`; actual key is `reportSectionId`. Adjusted at call site.                                         |
-| `reports.myHistory`  | `myHistoryEntrySchema[]` (no input)                                                                             | Reused from 21-02. Period dropdown derives `weekLabel`/`dateRange` from `periodStart`/`periodEnd`.                        |
-| `weeklyReport.get`   | input: `z.object({ reportId: uuid().optional() }).optional()`; output: `weeklyReportReadModelSchema`            | Accepts `{}` for active-period fallback and `{ reportId }` for scoped reads. Per-page choice documented below.            |
+| API call            | Zod schema                                                                                           | Notes                                                                                                             |
+| ------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `reports.getActive` | `reportSectionReadModelSchema \| null`                                                               | Returns ONE section (the user's active section) — not a wider envelope. `currentUserId` = `section.authorId`.     |
+| `leadForm.byPeriod` | input: `{ reportId: uuid }`; output: `{ section: ReportSectionReadModel; readOnly: boolean }`        | Returns ONE section, not aggregated lead-form data. The plan's `<interfaces>` block was wrong (Rule 2 deviation). |
+| `leadForm.versions` | input: **`{ reportSectionId: uuid }`** (NOT `sectionId`); output: `versionSnapshotSchema[]`          | Plan said `{ sectionId }`; actual key is `reportSectionId`. Adjusted at call site.                                |
+| `reports.myHistory` | `myHistoryEntrySchema[]` (no input)                                                                  | Reused from 21-02. Period dropdown derives `weekLabel`/`dateRange` from `periodStart`/`periodEnd`.                |
+| `weeklyReport.get`  | input: `z.object({ reportId: uuid().optional() }).optional()`; output: `weeklyReportReadModelSchema` | Accepts `{}` for active-period fallback and `{ reportId }` for scoped reads. Per-page choice documented below.    |
 
 ## `weeklyReport.get` input — `period` vs `reportId`
 
@@ -88,7 +88,7 @@ Total new tests: **26**. Cumulative web vitest pass rate after this plan: **99 /
 `reports/[reportId]/page.tsx` and `reports/[reportId]/print/page.tsx` now use the Next.js 16 client-side convention:
 
 ```ts
-import { use } from 'react';
+import { use } from "react";
 
 type Props = { params: Promise<{ reportId: string }> };
 
@@ -141,16 +141,18 @@ The `params` prop is a `Promise` in Next.js 16; `use(params)` unwraps it synchro
 **Found during:** Task 1 / Task 1 weekly-report mapper
 **Issue:** Mock `RiskEntry.severity` distinguishes 'at-risk' vs 'blocked'. Schema only has `{ projectId, risk, impact, mitigation }`.
 **Fix:**
-  - In `mapLeadRisks` (lead form), severity defaults to `'at-risk'`. `stageName` defaults to "—". Text is composed as `${risk} — Impact: ${impact} — Mitigation: ${mitigation}`.
-  - In `mapWeeklyReport`, severity is INFERRED: if any item in the same project has `workflowStatus === 'blocked'`, the project's risks are flagged 'blocked'. Otherwise 'at-risk'. This matches the heuristic the mock data used.
+
+- In `mapLeadRisks` (lead form), severity defaults to `'at-risk'`. `stageName` defaults to "—". Text is composed as `${risk} — Impact: ${impact} — Mitigation: ${mitigation}`.
+- In `mapWeeklyReport`, severity is INFERRED: if any item in the same project has `workflowStatus === 'blocked'`, the project's risks are flagged 'blocked'. Otherwise 'at-risk'. This matches the heuristic the mock data used.
 
 ### [Rule 2] `DecisionEntry.productId` / `.productName` not on `decisionInputSchema`
 
 **Found during:** Task 1
 **Issue:** Mock decisions have `productId` + `productName`. Schema decisions are department-scoped (`{ text, owner, deadline?, impact, resolvedAt? }`).
 **Fix:**
-  - In `mapLeadDecisions`, `productId = ''` and `productName = 'Department'`. The lead UI renders decisions in a flat list (productName isn't currently shown).
-  - In `mapWeeklyReport`, decisions attach to the section author's first project (so the per-product accordion renders them under the lead's primary product). Sections with no projects drop their decisions.
+
+- In `mapLeadDecisions`, `productId = ''` and `productName = 'Department'`. The lead UI renders decisions in a flat list (productName isn't currently shown).
+- In `mapWeeklyReport`, decisions attach to the section author's first project (so the per-product accordion renders them under the lead's primary product). Sections with no projects drop their decisions.
 
 ### [Rule 2] `VersionSnapshot` aggregates not stored
 
@@ -180,12 +182,12 @@ The `params` prop is a `Promise` in Next.js 16; `use(params)` unwraps it synchro
 
 ## TODO(Phase 22) markers added
 
-| File                                                          | Count | Sites                                                                                                                                                                                |
-| ------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apps/web/src/components/lead/lead-form.tsx`                  | **8** | `handleSubmit`, `handleConfirmSubmit`, FillFromButton onFillFrom, VersionHistoryNav onRestore, SDLC pipeline saveDraft, Risks saveDraft, Decisions saveDraft, Priorities saveDraft   |
-| `apps/web/src/components/weekly-report/weekly-report-page.tsx`| **2** | `ExportPdfButton onExport` (`pdfExport.request`), `PublishLockButton onPublish` (`period.publish`)                                                                                   |
-| `apps/web/src/app/(app)/reports/[reportId]/page.tsx`          | 0     | (pure routing wrapper; no mutations)                                                                                                                                                 |
-| `apps/web/src/app/(app)/reports/[reportId]/print/page.tsx`    | 0     | (pure render; no interactive controls)                                                                                                                                               |
+| File                                                           | Count | Sites                                                                                                                                                                              |
+| -------------------------------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/components/lead/lead-form.tsx`                   | **8** | `handleSubmit`, `handleConfirmSubmit`, FillFromButton onFillFrom, VersionHistoryNav onRestore, SDLC pipeline saveDraft, Risks saveDraft, Decisions saveDraft, Priorities saveDraft |
+| `apps/web/src/components/weekly-report/weekly-report-page.tsx` | **2** | `ExportPdfButton onExport` (`pdfExport.request`), `PublishLockButton onPublish` (`period.publish`)                                                                                 |
+| `apps/web/src/app/(app)/reports/[reportId]/page.tsx`           | 0     | (pure routing wrapper; no mutations)                                                                                                                                               |
+| `apps/web/src/app/(app)/reports/[reportId]/print/page.tsx`     | 0     | (pure render; no interactive controls)                                                                                                                                             |
 
 Total: **10 markers** across 2 files. Phase 22 planner uses this to scope mutation tasks.
 
@@ -203,11 +205,11 @@ The Phase 22 cleanup will: (a) move all the presentation type aliases out of `mo
 
 ## Verification
 
-| Check                                                                                | Result                                       |
-| ------------------------------------------------------------------------------------ | -------------------------------------------- |
-| `pnpm --filter @customreport/web typecheck`                                          | passes                                       |
-| `pnpm --filter @customreport/web vitest run`                                         | **99 / 99 tests pass** (+26 new)             |
-| `pnpm --filter @customreport/web build`                                              | passes                                       |
+| Check                                                                                     | Result                                                 |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `pnpm --filter @customreport/web typecheck`                                               | passes                                                 |
+| `pnpm --filter @customreport/web vitest run`                                              | **99 / 99 tests pass** (+26 new)                       |
+| `pnpm --filter @customreport/web build`                                                   | passes                                                 |
 | Cross-plan grep: `import\s*\{[^}]*\bMOCK_[A-Z_]+\b` under `apps/web/src/{app,components}` | **no matches** (no value imports of `MOCK_*` anywhere) |
 
 ## Commits

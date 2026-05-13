@@ -19,9 +19,9 @@
  * matches the seed-simple anchor week.
  */
 
-import type { Locator, Page } from '@playwright/test';
+import type { Locator, Page } from "@playwright/test";
 
-export const FROZEN_TIME = new Date('2026-05-06T10:00:00Z');
+export const FROZEN_TIME = new Date("2026-05-06T10:00:00Z");
 
 /**
  * Patch Date / setTimeout / requestAnimationFrame inside the page so every
@@ -47,10 +47,13 @@ export async function freezeClock(page: Page): Promise<void> {
  */
 export async function waitForVisualStable(
   page: Page,
-  mainSelector = '#main-content',
+  mainSelector = "#main-content",
 ): Promise<void> {
-  await page.waitForSelector(mainSelector, { state: 'visible', timeout: 15_000 });
-  await page.waitForLoadState('networkidle', { timeout: 15_000 });
+  await page.waitForSelector(mainSelector, {
+    state: "visible",
+    timeout: 15_000,
+  });
+  await page.waitForLoadState("networkidle", { timeout: 15_000 });
   // Fonts may finish after networkidle (next/font loads via CSS without a
   // request after the .woff2 is cached). Catch the eval failure when a
   // race happens during navigation — the diff threshold absorbs the tiny
@@ -71,10 +74,10 @@ export async function waitForVisualStable(
 export function driftyMasks(page: Page): Locator[] {
   return [
     // Generic <time> tags — used by activity feeds and history badges.
-    page.locator('time'),
+    page.locator("time"),
     // Activity-live panel relative-time strings ("X минут назад").
     page.locator('[data-testid="activity-live-relative-time"]'),
     // Any element opted-in via a stable test-id.
-    page.locator('[data-visual-mask]'),
+    page.locator("[data-visual-mask]"),
   ];
 }

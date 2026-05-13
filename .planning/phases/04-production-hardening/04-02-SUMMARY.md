@@ -14,6 +14,7 @@ Added centralized structured JSON logging with daily file rotation and wired it 
 ### Task 1: Add centralized API logger with rotation
 
 **Created** `apps/api/src/lib/logger.ts` — zero-dependency logger abstraction:
+
 - `AppLogger` interface (debug/info/warn/error/child)
 - `AppLoggerImpl` with structured JSON output to stdout/stderr + optional daily file rotation
 - `NullLogger` for testing (null object pattern)
@@ -22,6 +23,7 @@ Added centralized structured JSON logging with daily file rotation and wired it 
 - `child(context)` for scoped logging with inherited base context
 
 **Created** `apps/api/src/lib/logger.test.ts` — 12 tests covering:
+
 - stdout/stderr routing by level
 - minLevel filtering
 - service name injection
@@ -33,18 +35,19 @@ Added centralized structured JSON logging with daily file rotation and wired it 
 - NullLogger no-op behavior
 
 **Wired into bootstrap** `apps/api/src/main.ts`:
+
 - Creates logger with `LOG_LEVEL` and `LOG_DIR` env var support
 - Logs bootstrap start/complete
 
 **Wired into 5 services** (optional `logger?: AppLogger` parameter, defaults to NullLogger):
 
-| Service | Log points |
-|---------|-----------|
-| `RemindersService` | execution creation, deduplication, mark sent |
-| `PdfExportService` | export request, export completed |
-| `CarryOverService` | carry-over execution with item/decision counts |
-| `PublicationService` | report publish |
-| `AdminService` | user upsert |
+| Service              | Log points                                     |
+| -------------------- | ---------------------------------------------- |
+| `RemindersService`   | execution creation, deduplication, mark sent   |
+| `PdfExportService`   | export request, export completed               |
+| `CarryOverService`   | carry-over execution with item/decision counts |
+| `PublicationService` | report publish                                 |
+| `AdminService`       | user upsert                                    |
 
 ### Task 2: Apply deep design and E2E hardening fixes
 

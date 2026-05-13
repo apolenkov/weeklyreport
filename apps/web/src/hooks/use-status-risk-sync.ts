@@ -1,9 +1,13 @@
-'use client';
+"use client";
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef } from "react";
 
-import type { Product, RiskEntry, StageStatus } from '../components/lead/mock-data';
-import { splitStageNames } from '../components/lead/stage-tags';
+import type {
+  Product,
+  RiskEntry,
+  StageStatus,
+} from "../components/lead/mock-data";
+import { splitStageNames } from "../components/lead/stage-tags";
 
 /**
  * SyncSource discriminates between user-driven changes and auto-sync changes
@@ -12,7 +16,7 @@ import { splitStageNames } from '../components/lead/stage-tags';
  *
  * See: .planning/research/PITFALLS.md (Pitfall 5)
  */
-export type SyncSource = 'user' | 'auto-sync';
+export type SyncSource = "user" | "auto-sync";
 
 type ProductsUpdater = Product[] | ((prev: Product[]) => Product[]);
 type RisksUpdater = RiskEntry[] | ((prev: RiskEntry[]) => RiskEntry[]);
@@ -21,7 +25,7 @@ export type StatusUpdateSuggestionParams = {
   productId: string;
   productName: string;
   stageName: string;
-  suggestedStatus: 'at-risk' | 'blocked';
+  suggestedStatus: "at-risk" | "blocked";
 };
 
 export type UseStatusRiskSyncArgs = {
@@ -35,7 +39,9 @@ export type UseStatusRiskSyncArgs = {
    * it must call `applyStatusSuggestion` to mutate the stage with auto-sync
    * source (skipping the inverse trigger).
    */
-  requestStatusUpdateConfirmation: (params: StatusUpdateSuggestionParams) => void;
+  requestStatusUpdateConfirmation: (
+    params: StatusUpdateSuggestionParams,
+  ) => void;
 };
 
 export type UseStatusRiskSyncResult = {
@@ -77,21 +83,17 @@ export type UseStatusRiskSyncResult = {
 export function useStatusRiskSync(
   args: UseStatusRiskSyncArgs,
 ): UseStatusRiskSyncResult {
-  const {
-    products,
-    risks,
-    onProductsChange,
-    requestStatusUpdateConfirmation,
-  } = args;
+  const { products, risks, onProductsChange, requestStatusUpdateConfirmation } =
+    args;
 
-  const syncSourceRef = useRef<SyncSource>('user');
+  const syncSourceRef = useRef<SyncSource>("user");
 
   const handleStageStatusChange = useCallback(
     (
       productId: string,
       stageName: string,
       newStatus: StageStatus,
-      _source: SyncSource = 'user',
+      _source: SyncSource = "user",
     ) => {
       // Update the stage status. No automatic side-effects on Risks —
       // the warning banner above the list is now the sole "you marked
@@ -112,9 +114,9 @@ export function useStatusRiskSync(
   );
 
   const handleRiskFilled = useCallback(
-    (riskId: string, source: SyncSource = 'user') => {
+    (riskId: string, source: SyncSource = "user") => {
       // Loop guard: short-circuit auto-sync triggers (Pitfall 5).
-      if (source === 'auto-sync') return;
+      if (source === "auto-sync") return;
 
       const risk = risks.find((r) => r.id === riskId);
       if (!risk) return;
@@ -129,7 +131,7 @@ export function useStatusRiskSync(
       if (!stage) return;
 
       // Only suggest when the bound stage is not already reflecting a risk.
-      if (stage.status === 'on-track' || stage.status === 'empty') {
+      if (stage.status === "on-track" || stage.status === "empty") {
         requestStatusUpdateConfirmation({
           productId: risk.productId,
           productName: product.name,
@@ -143,9 +145,9 @@ export function useStatusRiskSync(
 
   const applyStatusSuggestion = useCallback(
     (productId: string, stageName: string, status: StageStatus) => {
-      syncSourceRef.current = 'auto-sync';
-      handleStageStatusChange(productId, stageName, status, 'auto-sync');
-      syncSourceRef.current = 'user';
+      syncSourceRef.current = "auto-sync";
+      handleStageStatusChange(productId, stageName, status, "auto-sync");
+      syncSourceRef.current = "user";
     },
     [handleStageStatusChange],
   );

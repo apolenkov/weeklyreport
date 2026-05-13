@@ -8,8 +8,8 @@
  * to a particular UI module.
  */
 
-export type TrafficLightStatus = 'green' | 'yellow' | 'red';
-export type StageStatus = 'on-track' | 'at-risk' | 'blocked' | 'empty';
+export type TrafficLightStatus = "green" | "yellow" | "red";
+export type StageStatus = "on-track" | "at-risk" | "blocked" | "empty";
 
 /**
  * Converts an API TrafficLightStatus (or null for "no data") into the
@@ -24,14 +24,14 @@ export function trafficToStageStatus(
   trafficLight: TrafficLightStatus | null,
 ): StageStatus {
   switch (trafficLight) {
-    case 'green':
-      return 'on-track';
-    case 'yellow':
-      return 'at-risk';
-    case 'red':
-      return 'blocked';
+    case "green":
+      return "on-track";
+    case "yellow":
+      return "at-risk";
+    case "red":
+      return "blocked";
     case null:
-      return 'empty';
+      return "empty";
   }
 }
 
@@ -43,13 +43,13 @@ export function stageStatusToTraffic(
   status: StageStatus,
 ): TrafficLightStatus | null {
   switch (status) {
-    case 'on-track':
-      return 'green';
-    case 'at-risk':
-      return 'yellow';
-    case 'blocked':
-      return 'red';
-    case 'empty':
+    case "on-track":
+      return "green";
+    case "at-risk":
+      return "yellow";
+    case "blocked":
+      return "red";
+    case "empty":
       return null;
   }
 }

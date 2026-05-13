@@ -16,7 +16,11 @@ affects: [phase-18-backend, pdf-export-pipeline]
 
 tech-stack:
   added: []
-  patterns: [inline-style print template for PDF rendering, service-level integration tests with mock repos]
+  patterns:
+    [
+      inline-style print template for PDF rendering,
+      service-level integration tests with mock repos,
+    ]
 
 key-files:
   created:
@@ -90,7 +94,7 @@ Each task was committed atomically:
 ## Decisions Made
 
 - **Print template uses inline styles instead of Tailwind CSS** -- Inline styles ensure reliable rendering in Playwright's PDF capture; Tailwind classes may not resolve correctly in headless browser context without full CSS extraction
-- **Integration tests use mock repositories, not Prisma DB** -- Follows existing *.service.test.ts pattern; these test service logic with controlled mock data, not database behavior
+- **Integration tests use mock repositories, not Prisma DB** -- Follows existing \*.service.test.ts pattern; these test service logic with controlled mock data, not database behavior
 - **Skipped Step 5 (MSW handlers)** -- Not in success criteria and MSW infrastructure not set up yet for web tests
 
 ## Deviations from Plan
@@ -98,6 +102,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Removed unused imports for strict TypeScript compliance**
+
 - **Found during:** Verification (typecheck + web build)
 - **Issue:** Unused imports (MOCK_LEADS, VersionSnapshot, WeeklyReportDomainError, leadSession, sectionId2, authorId2) caused strict TS errors
 - **Fix:** Removed all unused imports from 5 files
@@ -134,5 +139,6 @@ None - no external service configuration required.
 All 10 files verified present. All 5 commit hashes verified in git log.
 
 ---
-*Phase: 17-ui-redesign*
-*Completed: 2026-04-24*
+
+_Phase: 17-ui-redesign_
+_Completed: 2026-04-24_

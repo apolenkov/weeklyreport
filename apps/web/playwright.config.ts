@@ -1,5 +1,5 @@
-import { defineConfig, devices } from '@playwright/test';
-import * as path from 'path';
+import { defineConfig, devices } from "@playwright/test";
+import * as path from "path";
 
 const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3100);
 const API_PORT = Number(process.env.E2E_API_PORT ?? 3101);
@@ -7,12 +7,12 @@ const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 const API_URL = `http://127.0.0.1:${API_PORT}`;
 
 // Repo root (apps/web/playwright.config.ts → ../..).
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
 export default defineConfig({
-  testDir: 'e2e',
-  testIgnore: ['**/integration/**'],
-  outputDir: 'e2e/.results',
+  testDir: "e2e",
+  testIgnore: ["**/integration/**"],
+  outputDir: "e2e/.results",
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,
@@ -23,24 +23,24 @@ export default defineConfig({
   // `json` written to `e2e/.results/results.json` so the flaky-rate metric
   // step can compute passed-on-retry / total. Local dev keeps the html UI.
   reporter: process.env.CI
-    ? [['github'], ['json', { outputFile: 'e2e/.results/results.json' }]]
-    : 'html',
+    ? [["github"], ["json", { outputFile: "e2e/.results/results.json" }]]
+    : "html",
   use: {
     baseURL: WEB_URL,
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    reducedMotion: 'reduce',
+    trace: "on-first-retry",
+    screenshot: "only-on-failure",
+    reducedMotion: "reduce",
   },
 
   projects: [
     // Auth setup -- writes storage state files from real /auth/dev-login.
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
 
     // Journey tests run after setup.
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup'],
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
       testIgnore: [/auth\.setup\.ts/, /integration[\\/]/, /visual[\\/]/],
     },
 
@@ -53,15 +53,15 @@ export default defineConfig({
     // so darwin baselines are stored separately from linux baselines. CI
     // generates its own linux-pinned set on first run via --update-snapshots.
     {
-      name: 'visual',
-      testDir: 'e2e/visual',
-      dependencies: ['setup'],
+      name: "visual",
+      testDir: "e2e/visual",
+      dependencies: ["setup"],
       use: {
-        ...devices['Desktop Chrome'],
+        ...devices["Desktop Chrome"],
         viewport: { width: 1280, height: 800 },
-        locale: 'ru-RU',
-        colorScheme: 'light',
-        timezoneId: 'UTC',
+        locale: "ru-RU",
+        colorScheme: "light",
+        timezoneId: "UTC",
       },
       expect: {
         toHaveScreenshot: {
@@ -70,8 +70,8 @@ export default defineConfig({
           maxDiffPixelRatio: 0.001,
           maxDiffPixels: 100,
           threshold: 0.1,
-          animations: 'disabled',
-          caret: 'hide',
+          animations: "disabled",
+          caret: "hide",
         },
       },
     },
@@ -84,21 +84,21 @@ export default defineConfig({
   webServer: [
     {
       command: `node --env-file=${REPO_ROOT}/.env --import @swc-node/register/esm-register src/main.ts`,
-      cwd: path.join(REPO_ROOT, 'apps', 'api'),
+      cwd: path.join(REPO_ROOT, "apps", "api"),
       url: `${API_URL}/health/live`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       env: {
         ...process.env,
         PORT: String(API_PORT),
-        AUTH_DEV_MODE: 'true',
-        NODE_ENV: 'test',
+        AUTH_DEV_MODE: "true",
+        NODE_ENV: "test",
         FRONTEND_URL: WEB_URL,
-        LOG_DIR: '.logs/e2e',
+        LOG_DIR: ".logs/e2e",
         // Phase 39-06: stub Anthropic so the AI summary card renders a
         // frozen narrative — without this the screenshot diff would catch
         // every probabilistic re-roll from Haiku as a regression.
-        AI_VISUAL_STUB: 'true',
+        AI_VISUAL_STUB: "true",
       },
     },
     {
@@ -109,16 +109,16 @@ export default defineConfig({
       env: {
         ...process.env,
         NEXT_PUBLIC_API_URL: API_URL,
-        AUTH_DEV_MODE: 'true',
-        NODE_ENV: 'test',
+        AUTH_DEV_MODE: "true",
+        NODE_ENV: "test",
         // Phase 39-06: enables the dev-login picker on the landing page so
         // the "logged-out landing" baseline captures the picker grid (the
         // SSO-only fallback would be a near-empty card).
-        NEXT_PUBLIC_AUTH_STUB: 'true',
+        NEXT_PUBLIC_AUTH_STUB: "true",
         // Distinct distDir lets the E2E web server coexist with the
         // user's `pnpm dev` Next instance — N16 fingerprints the dev
         // process by repo dir + .next, so isolating .next is enough.
-        NEXT_DIST_DIR: '.next-e2e',
+        NEXT_DIST_DIR: ".next-e2e",
       },
     },
   ],

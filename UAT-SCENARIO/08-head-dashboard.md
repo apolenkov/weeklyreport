@@ -54,7 +54,7 @@ Edge cases:
 
 Status: `[ ]`
 
-### DASH-04 — Activity Live Panel shows all leads' submission statuses
+### DASH-04 — Activity Live Panel shows all lead submission statuses
 
 **Element:** `<section aria-labelledby="activity-live-heading">`
 

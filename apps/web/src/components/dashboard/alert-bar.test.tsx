@@ -129,9 +129,7 @@ describe("AlertBar — Phase 48-C role gating", () => {
   it("renders nothing when there are no pending leads", () => {
     mockRole("admin");
 
-    const { container } = render(
-      <AlertBar {...baseProps} pendingLeads={[]} />,
-    );
+    const { container } = render(<AlertBar {...baseProps} pendingLeads={[]} />);
 
     expect(container).toBeEmptyDOMElement();
   });

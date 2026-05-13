@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { OnTrackIcon } from '../ai/on-track-icon';
-import { StageChip } from './stage-chip';
-import type { Product, RiskEntry, StageStatus } from './mock-data';
-import { splitStageNames } from './stage-tags';
+import { OnTrackIcon } from "../ai/on-track-icon";
+import { StageChip } from "./stage-chip";
+import type { Product, RiskEntry, StageStatus } from "./mock-data";
+import { splitStageNames } from "./stage-tags";
 
 type SdlcPipelineProps = {
   readonly products: Product[];
@@ -35,36 +35,64 @@ type SdlcPipelineProps = {
    * section, but the link "you painted this red — describe it" reads
    * better when it's right next to the chips themselves.
    */
-  readonly unbackedStages?: readonly { productId: string; productName: string; stageName: string; severity: 'at-risk' | 'blocked' }[];
+  readonly unbackedStages?: readonly {
+    productId: string;
+    productName: string;
+    stageName: string;
+    severity: "at-risk" | "blocked";
+  }[];
 };
 
 function ProductStatusBadge({ status }: { readonly status: StageStatus }) {
-  if (status === 'on-track') {
-    return <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[11px] font-semibold text-[var(--color-primary)]">On Track</span>;
+  if (status === "on-track") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[11px] font-semibold text-[var(--color-primary)]">
+        On Track
+      </span>
+    );
   }
-  if (status === 'at-risk') {
-    return <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fef3c7] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[11px] font-semibold text-[#8a6d1b]">! At Risk</span>;
+  if (status === "at-risk") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fef3c7] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[11px] font-semibold text-[#8a6d1b]">
+        ! At Risk
+      </span>
+    );
   }
-  if (status === 'blocked') {
-    return <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fee2e2] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[11px] font-semibold text-[var(--color-destructive)]">&times; Blocked</span>;
+  if (status === "blocked") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fee2e2] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[11px] font-semibold text-[var(--color-destructive)]">
+        &times; Blocked
+      </span>
+    );
   }
   return null;
 }
 
 function getProductBackground(status: StageStatus): string {
-  if (status === 'blocked') return '#fdf8f8';
-  if (status === 'at-risk') return '#fffcf5';
-  return 'var(--color-background)';
+  if (status === "blocked") return "#fdf8f8";
+  if (status === "at-risk") return "#fffcf5";
+  return "var(--color-background)";
 }
 
 function getProductBorderColor(status: StageStatus): string {
-  if (status === 'blocked') return 'rgba(200,32,20,0.15)';
-  if (status === 'at-risk') return 'rgba(212,160,23,0.15)';
-  return 'var(--color-muted)';
+  if (status === "blocked") return "rgba(200,32,20,0.15)";
+  if (status === "at-risk") return "rgba(212,160,23,0.15)";
+  return "var(--color-muted)";
 }
 
-export function SdlcPipeline({ products, readOnly = false, onStatusChange, sectionId, risks, unbackedStages = [] }: SdlcPipelineProps) {
-  function handleStatusChange(productId: string, stageName: string, newStatus: StageStatus) {
+export function SdlcPipeline({
+  products,
+  readOnly = false,
+  onStatusChange,
+  sectionId,
+  risks,
+  unbackedStages = [],
+}: SdlcPipelineProps) {
+  function handleStatusChange(
+    productId: string,
+    stageName: string,
+    newStatus: StageStatus,
+  ) {
     if (readOnly) return;
     onStatusChange?.(productId, stageName, newStatus);
   }
@@ -74,7 +102,10 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
   const riskCountByKey = new Map<string, number>();
   for (const r of risks ?? []) {
     const product = products.find((item) => item.id === r.productId);
-    const stageTags = (r.stageIds && r.stageIds.length > 0) ? r.stageIds : splitStageNames(r.stageName);
+    const stageTags =
+      r.stageIds && r.stageIds.length > 0
+        ? r.stageIds
+        : splitStageNames(r.stageName);
     const keys =
       stageTags.length > 0
         ? stageTags.map((stageName) => `${r.productId}::${stageName}`)
@@ -91,21 +122,29 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
       {!readOnly && unbackedStages.length > 0 && (
         <div
           className="rounded-lg p-3"
-          style={{ background: '#fffbeb', border: '1px solid rgba(212,160,23,0.35)' }}
+          style={{
+            background: "#fffbeb",
+            border: "1px solid rgba(212,160,23,0.35)",
+          }}
           role="note"
         >
           <div className="flex items-start gap-2">
-            <span className="mt-0.5 inline-flex items-center justify-center text-base" style={{ color: '#d4a017' }} aria-hidden="true">
+            <span
+              className="mt-0.5 inline-flex items-center justify-center text-base"
+              style={{ color: "#d4a017" }}
+              aria-hidden="true"
+            >
               ⚠
             </span>
             <div className="flex-1">
-              <p className="text-sm font-semibold" style={{ color: '#8a6d1b' }}>
+              <p className="text-sm font-semibold" style={{ color: "#8a6d1b" }}>
                 {unbackedStages.length === 1
-                  ? '1 stage marked at-risk/blocked has no risk written.'
+                  ? "1 stage marked at-risk/blocked has no risk written."
                   : `${unbackedStages.length} stages marked at-risk/blocked have no risk written.`}
               </p>
-              <p className="mt-0.5 text-[12px]" style={{ color: '#8a6d1b' }}>
-                Open Risks &amp; Blockers below and use <strong>+ Add Risk</strong> to describe what's blocking.
+              <p className="mt-0.5 text-[12px]" style={{ color: "#8a6d1b" }}>
+                Open Risks &amp; Blockers below and use{" "}
+                <strong>+ Add Risk</strong> to describe what's blocking.
               </p>
               <ul className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
                 {unbackedStages.map((s) => (
@@ -113,11 +152,17 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
                     key={`${s.productId}::${s.stageName}`}
                     className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5"
                     style={{
-                      background: s.severity === 'blocked' ? '#fee2e2' : '#fef3c7',
-                      color: s.severity === 'blocked' ? 'var(--color-destructive)' : '#8a6d1b',
+                      background:
+                        s.severity === "blocked" ? "#fee2e2" : "#fef3c7",
+                      color:
+                        s.severity === "blocked"
+                          ? "var(--color-destructive)"
+                          : "#8a6d1b",
                     }}
                   >
-                    <span className="font-semibold">{s.severity === 'blocked' ? '✕' : '!'}</span>
+                    <span className="font-semibold">
+                      {s.severity === "blocked" ? "✕" : "!"}
+                    </span>
                     <span>{s.productName}</span>
                     <span aria-hidden="true">·</span>
                     <span>{s.stageName}</span>
@@ -156,7 +201,9 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
                 >
                   <span
                     className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--color-destructive)]"
-                    style={{ animation: 'risk-pulse 1.6s ease-in-out infinite' }}
+                    style={{
+                      animation: "risk-pulse 1.6s ease-in-out infinite",
+                    }}
                     aria-hidden="true"
                   />
                   {product.riskSummary}
@@ -168,19 +215,27 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
                   small badge so the row reads "✕ Dev · ✕ Testing · ! At Risk"
                   even when the SDLC chip row is collapsed. */}
               {product.stages
-                .filter((s) => s.status === 'at-risk' || s.status === 'blocked')
+                .filter((s) => s.status === "at-risk" || s.status === "blocked")
                 .map((s) => (
                   <span
                     key={`stage-badge-${s.stageName}`}
                     className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-1.5 py-0.5 text-[10px] font-semibold"
                     style={
-                      s.status === 'blocked'
-                        ? { background: 'rgba(200,32,20,0.12)', color: 'var(--color-destructive)' }
-                        : { background: 'rgba(212,160,23,0.15)', color: '#8a6d1b' }
+                      s.status === "blocked"
+                        ? {
+                            background: "rgba(200,32,20,0.12)",
+                            color: "var(--color-destructive)",
+                          }
+                        : {
+                            background: "rgba(212,160,23,0.15)",
+                            color: "#8a6d1b",
+                          }
                     }
                     title={`${s.stageName} · ${s.status}`}
                   >
-                    <span aria-hidden="true">{s.status === 'blocked' ? '✕' : '!'}</span>
+                    <span aria-hidden="true">
+                      {s.status === "blocked" ? "✕" : "!"}
+                    </span>
                     {s.stageName}
                   </span>
                 ))}
@@ -203,11 +258,12 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
                     className="flex items-center text-lg font-bold"
                     style={{
                       color:
-                        stage.ownership === 'mine' || product.stages[idx - 1]?.ownership === 'mine'
-                          ? 'var(--color-starbucks-accent)'
-                          : 'var(--color-muted-foreground)',
-                      marginTop: '-14px',
-                      alignSelf: 'center',
+                        stage.ownership === "mine" ||
+                        product.stages[idx - 1]?.ownership === "mine"
+                          ? "var(--color-starbucks-accent)"
+                          : "var(--color-muted-foreground)",
+                      marginTop: "-14px",
+                      alignSelf: "center",
                     }}
                   >
                     &rarr;
@@ -217,7 +273,10 @@ export function SdlcPipeline({ products, readOnly = false, onStatusChange, secti
                   <StageChip
                     stage={stage}
                     readOnly={readOnly}
-                    linkedRiskCount={riskCountByKey.get(`${product.id}::${stage.stageName}`) ?? 0}
+                    linkedRiskCount={
+                      riskCountByKey.get(`${product.id}::${stage.stageName}`) ??
+                      0
+                    }
                     onStatusChange={(name, status) =>
                       handleStatusChange(product.id, name, status)
                     }

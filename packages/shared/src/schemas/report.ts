@@ -708,7 +708,8 @@ export const appSettingsSchema = z.object({
   autoArchiveWeeksAfterPublish: z.number().int().min(0).max(52).default(0),
   // ---- UFB-048: Reminders knobs ---------------------------------------
   defaultTimezone: z.string().min(1).default("Europe/Moscow"),
-  defaultReminderAudience: reminderAudienceWireSchema.default("lead-with-draft"),
+  defaultReminderAudience:
+    reminderAudienceWireSchema.default("lead-with-draft"),
   // ---- UFB-048: Notifications knobs -----------------------------------
   // Nullable email; `''` is rejected (admins can clear by sending null).
   notificationFromEmail: z
@@ -844,9 +845,9 @@ export const weeklyReportReadModelSchema = z.object({
  *
  * Consumers guard with `if (data.status === 'no-period') return <EmptyState/>`.
  */
-export const weeklyReportGetResponseSchema = z.discriminatedUnion('status', [
-  weeklyReportReadModelSchema.extend({ status: z.literal('active') }),
-  z.object({ status: z.literal('no-period'), report: z.null() }),
+export const weeklyReportGetResponseSchema = z.discriminatedUnion("status", [
+  weeklyReportReadModelSchema.extend({ status: z.literal("active") }),
+  z.object({ status: z.literal("no-period"), report: z.null() }),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -866,7 +867,9 @@ export type PortfolioProductOverview = z.infer<
 >;
 export type Escalation = z.infer<typeof escalationSchema>;
 export type WeeklyReportReadModel = z.infer<typeof weeklyReportReadModelSchema>;
-export type WeeklyReportGetResponse = z.infer<typeof weeklyReportGetResponseSchema>;
+export type WeeklyReportGetResponse = z.infer<
+  typeof weeklyReportGetResponseSchema
+>;
 
 export type DraftSavePayload = z.input<typeof draftSaveSchema>;
 export type DraftSaveInput = z.infer<typeof draftSaveSchema>;

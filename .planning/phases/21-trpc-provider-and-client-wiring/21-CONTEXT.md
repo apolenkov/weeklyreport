@@ -10,6 +10,7 @@
 Frontend fetches all data from the real API through tRPC hooks. Every page renders server data with loading and error states. This phase is the bridge between the UI prototype (mock data) and the working API.
 
 **Key deliverables:**
+
 1. TRPCProvider client component with QueryClientProvider (useState pattern, no SSR leak)
 2. Wire providers into apps/web/src/app/(app)/layout.tsx
 3. Migrate from `@trpc/react-query` to `@trpc/tanstack-react-query` (React Compiler compat)
@@ -27,12 +28,14 @@ Frontend fetches all data from the real API through tRPC hooks. Every page rende
 ## Implementation Decisions
 
 ### Provider Setup
+
 - **TRPCProvider location**: `apps/web/src/lib/trpc-provider.tsx` — new client component
 - **Wiring**: Add to `apps/web/src/app/layout.tsx` (root, not (app)/layout) so it covers login + app routes
 - **QueryClient**: Use `useState(() => new QueryClient(...))` to prevent SSR leak (research pitfall #5)
 - **DevTools**: ReactQueryDevtools enabled in development only
 
 ### Migration Order (incremental, simplest first)
+
 1. Lead History (smallest, read-only)
 2. Admin Panel (CRUD, but isolated)
 3. Lead Form (largest, has autosave — but only queries here, mutations in Phase 22)
@@ -40,21 +43,25 @@ Frontend fetches all data from the real API through tRPC hooks. Every page rende
 5. Weekly Report (composed view)
 
 ### Type Bridging
+
 - Mappers from Phase 20 used in containers ONLY
 - Presentation children stay unchanged (props remain in mock-shape)
 - New pattern: container reads `useQuery(...)` → applies `mapXxxToPresentation(...)` → passes mock-shaped props down
 
 ### Loading & Error UX
+
 - Skeleton component already exists at `apps/web/src/components/ui/skeleton.tsx`
 - Toast: use `sonner` (already installed via shadcn/ui)
 - Error boundary: one wrapper at (app)/layout level, catches all unhandled
 
 ### Cache Strategy
+
 - No mutations wired in this phase (Phase 22)
 - staleTime: 30s for queries
 - refetchOnWindowFocus: true
 
 ### Claude's Discretion
+
 - Component-by-component migration order if dependencies emerge
 - Loading skeleton shapes (match existing UI dimensions)
 - Toast variants (success/error/info)
@@ -62,20 +69,24 @@ Frontend fetches all data from the real API through tRPC hooks. Every page rende
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 ### Reusable Assets
+
 - `apps/web/src/lib/trpc.ts` — tRPC client already configured with superjson + httpBatchLink
 - `apps/web/src/components/ui/skeleton.tsx` — Skeleton component
 - `packages/ui/src/components/sonner.tsx` — Toast (sonner) provider
 - `apps/web/src/lib/mappers/` — Type mappers from Phase 20
 
 ### Established Patterns
+
 - All container components currently import from local `mock-data.ts` files
 - Pages use Next.js 16 App Router with 'use client' directive
 - React Compiler enabled — automatic memoization
 
 ### Integration Points
+
 - `apps/web/src/app/layout.tsx` — root layout (wrap providers here)
 - 7 container files (per architecture research):
   - apps/web/src/components/lead/lead-form.tsx

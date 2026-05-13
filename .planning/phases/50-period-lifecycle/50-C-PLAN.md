@@ -19,7 +19,7 @@ math; every Period date computation routes through it.
   - `nextBusinessDay(date: Date, workingDays: WorkingDays, tz: string): Date`
   - `addBusinessDays(date: Date, n: number, workingDays: WorkingDays, tz: string): Date`
   - `computeDeadline(periodStart: Date, deadlineDays: number,
-   workingDays: WorkingDays, tz: string, deadlineHour: number): Date`
+workingDays: WorkingDays, tz: string, deadlineHour: number): Date`
 - Implementation uses Luxon (already installed via Phase 44-03).
 - `nextBusinessDay` skips Sat+Sun for `mon-fri`, skips Sun for
   `mon-sat`, never skips for `mon-sun`.

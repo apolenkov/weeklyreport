@@ -40,7 +40,10 @@ describe("WeeklyReportPrismaRepository — cross-group GroupProduct visibility (
   const PROJECT_ID = "a0000000-0000-4000-a000-0000000000d1";
   const REPORT_ID = "a0000000-0000-4000-a000-0000000000e1";
 
-  function session(role: "head", reportingGroupId: string): WeeklyReportScopeSession {
+  function session(
+    role: "head",
+    reportingGroupId: string,
+  ): WeeklyReportScopeSession {
     return { role, reportingGroupId };
   }
 

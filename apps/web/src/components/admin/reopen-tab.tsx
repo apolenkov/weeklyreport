@@ -1,48 +1,54 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { useTRPC } from '../../lib/trpc-context';
-import { TabHeader, TabSearch } from './tab-header';
+import { useTRPC } from "../../lib/trpc-context";
+import { TabHeader, TabSearch } from "./tab-header";
 
-type FilterStatus = 'pending' | 'approved' | 'rejected' | 'all';
+type FilterStatus = "pending" | "approved" | "rejected" | "all";
 
 const FILTERS: ReadonlyArray<{ value: FilterStatus; label: string }> = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' },
-  { value: 'all', label: 'All' },
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "rejected", label: "Rejected" },
+  { value: "all", label: "All" },
 ];
 
-const STATUS_LABEL: Record<'pending' | 'approved' | 'rejected', string> = {
-  pending: 'Pending',
-  approved: 'Approved',
-  rejected: 'Rejected',
+const STATUS_LABEL: Record<"pending" | "approved" | "rejected", string> = {
+  pending: "Pending",
+  approved: "Approved",
+  rejected: "Rejected",
 };
 
-const STATUS_PALETTE: Record<'pending' | 'approved' | 'rejected', string> = {
-  pending: 'bg-amber-100 text-amber-900',
-  approved: 'bg-[var(--color-success)] text-[var(--color-starbucks-accent)]',
-  rejected: 'bg-red-100 text-red-900',
+const STATUS_PALETTE: Record<"pending" | "approved" | "rejected", string> = {
+  pending: "bg-amber-100 text-amber-900",
+  approved: "bg-[var(--color-success)] text-[var(--color-starbucks-accent)]",
+  rejected: "bg-red-100 text-red-900",
 };
 
-function formatPeriod(periodStart: string, periodEnd: string, label: string | null): string {
+function formatPeriod(
+  periodStart: string,
+  periodEnd: string,
+  label: string | null,
+): string {
   const start = new Date(periodStart);
   const end = new Date(periodEnd);
   const fmt = (d: Date) =>
-    `${d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}`;
-  return label ? `${label} · ${fmt(start)}–${fmt(end)}` : `${fmt(start)}–${fmt(end)}`;
+    `${d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" })}`;
+  return label
+    ? `${label} · ${fmt(start)}–${fmt(end)}`
+    : `${fmt(start)}–${fmt(end)}`;
 }
 
 function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Date(iso).toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -59,10 +65,10 @@ function formatTimestamp(iso: string): string {
 export function ReopenTab() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<FilterStatus>('pending');
-  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<FilterStatus>("pending");
+  const [search, setSearch] = useState("");
   const [respondingId, setRespondingId] = useState<string | null>(null);
-  const [note, setNote] = useState('');
+  const [note, setNote] = useState("");
 
   const listQuery = useQuery(
     trpc.admin.listReopenRequests.queryOptions({ status: filter }),
@@ -72,12 +78,12 @@ export function ReopenTab() {
     trpc.admin.respondReopenRequest.mutationOptions({
       onSuccess: ({ decision }) => {
         toast.success(
-          decision === 'approved'
-            ? 'Request approved; section reopened.'
-            : 'Request rejected.',
+          decision === "approved"
+            ? "Request approved; section reopened."
+            : "Request rejected.",
         );
         setRespondingId(null);
-        setNote('');
+        setNote("");
         void queryClient.invalidateQueries({
           queryKey: trpc.admin.listReopenRequests.queryKey(),
         });
@@ -105,7 +111,7 @@ export function ReopenTab() {
         r.reviewNote,
       ]
         .filter(Boolean)
-        .join(' ')
+        .join(" ")
         .toLowerCase();
       return haystack.includes(q);
     });
@@ -134,8 +140,8 @@ export function ReopenTab() {
                 onClick={() => setFilter(f.value)}
                 className={`rounded-[var(--radius-pill)] px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                   filter === f.value
-                    ? 'bg-[var(--color-starbucks-accent)] text-white'
-                    : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)]'
+                    ? "bg-[var(--color-starbucks-accent)] text-white"
+                    : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)]"
                 }`}
                 aria-pressed={filter === f.value}
               >
@@ -154,23 +160,26 @@ export function ReopenTab() {
 
       {listQuery.isError && (
         <div className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800">
-          Failed to load requests: {String(listQuery.error?.message ?? 'unknown')}
+          Failed to load requests:{" "}
+          {String(listQuery.error?.message ?? "unknown")}
         </div>
       )}
 
       {!listQuery.isPending && !listQuery.isError && requests.length === 0 && (
         <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-          {filter === 'pending'
-            ? 'No pending reopen requests.'
-            : 'Nothing here yet.'}
+          {filter === "pending"
+            ? "No pending reopen requests."
+            : "Nothing here yet."}
         </div>
       )}
 
       <ul className="space-y-3">
         {filteredRequests.map((r) => {
           const isResponding = respondingId === r.id;
-          const palette = STATUS_PALETTE[r.status as keyof typeof STATUS_PALETTE];
-          const statusLabel = STATUS_LABEL[r.status as keyof typeof STATUS_LABEL];
+          const palette =
+            STATUS_PALETTE[r.status as keyof typeof STATUS_PALETTE];
+          const statusLabel =
+            STATUS_LABEL[r.status as keyof typeof STATUS_LABEL];
 
           return (
             <li
@@ -193,18 +202,22 @@ export function ReopenTab() {
                     </span>
                   </div>
                   <div className="text-xs text-[var(--color-muted-foreground)]">
-                    {formatPeriod(r.report.periodStart, r.report.periodEnd, r.report.weekLabel)}
-                    {' · submitted '}
+                    {formatPeriod(
+                      r.report.periodStart,
+                      r.report.periodEnd,
+                      r.report.weekLabel,
+                    )}
+                    {" · submitted "}
                     {formatTimestamp(r.createdAt)}
                   </div>
                 </div>
-                {r.status === 'pending' && !isResponding && (
+                {r.status === "pending" && !isResponding && (
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => {
                         setRespondingId(r.id);
-                        setNote('');
+                        setNote("");
                       }}
                       className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
                     >
@@ -223,7 +236,7 @@ export function ReopenTab() {
                 </div>
               )}
 
-              {r.status !== 'pending' && r.reviewNote && (
+              {r.status !== "pending" && r.reviewNote && (
                 <div className="mt-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 text-sm">
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
                     Head Comment
@@ -252,14 +265,14 @@ export function ReopenTab() {
                     maxLength={500}
                     placeholder="Example: approved, please move the deadline to Friday 15:00"
                     className="w-full resize-y rounded-md border border-[var(--color-border)] bg-white px-3 py-2 text-sm focus:border-[var(--color-starbucks-accent)] focus:outline-none"
-                    style={{ minHeight: '60px' }}
+                    style={{ minHeight: "60px" }}
                   />
                   <div className="flex flex-wrap justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => {
                         setRespondingId(null);
-                        setNote('');
+                        setNote("");
                       }}
                       disabled={respondMut.isPending}
                       className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
@@ -271,7 +284,7 @@ export function ReopenTab() {
                       onClick={() =>
                         respondMut.mutate({
                           id: r.id,
-                          decision: 'rejected',
+                          decision: "rejected",
                           note: note.trim() || undefined,
                         })
                       }
@@ -285,14 +298,14 @@ export function ReopenTab() {
                       onClick={() =>
                         respondMut.mutate({
                           id: r.id,
-                          decision: 'approved',
+                          decision: "approved",
                           note: note.trim() || undefined,
                         })
                       }
                       disabled={respondMut.isPending}
                       className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-primary)] disabled:opacity-50"
                     >
-                      {respondMut.isPending ? 'Saving…' : 'Approve'}
+                      {respondMut.isPending ? "Saving…" : "Approve"}
                     </button>
                   </div>
                 </div>

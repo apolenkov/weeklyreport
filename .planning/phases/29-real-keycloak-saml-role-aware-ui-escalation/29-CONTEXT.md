@@ -10,6 +10,7 @@
 Wave 3 of v6.0: production runs against real Keycloak IdP with 4-role JWT, UI hides what each role cannot reach, missed deadlines page the head exactly once per cycle.
 
 **In scope (8 REQ-IDs):**
+
 - AUTH-01 (full Keycloak SAML in production): SAML SSO is the only auth path; `AUTH_DEV_MODE` removed from non-test code; mock IdP container in `docker-compose.test.yml`
 - AUTH-02: JWT role claim from Keycloak SAML attribute mapper (lead/head/admin/viewer); ctx.user.role populated for every tRPC procedure
 - AUTH-06: navigation hides — app-shell.tsx hides `/admin` + `/head/*` for non-head; `/lead/*` for viewers via useSession()
@@ -20,6 +21,7 @@ Wave 3 of v6.0: production runs against real Keycloak IdP with 4-role JWT, UI hi
 - NOTIF-06: BullMQ `email-reminder` rate limit `{ max: 5, duration: 60_000 }`; DLQ + admin-visible UI badge
 
 **Out of scope (Phase 30/31):**
+
 - Mobile polish (Phase 30)
 - Trend analytics (Phase 30)
 - AI features (Phase 31)
@@ -32,15 +34,18 @@ Wave 3 of v6.0: production runs against real Keycloak IdP with 4-role JWT, UI hi
 ## Implementation Decisions
 
 ### Claude's Discretion
+
 All implementation choices at Claude's discretion — discuss skipped per workflow.skip_discuss=true. Use ROADMAP phase description, success criteria, v6.0 ARCHITECTURE.md, Phase 27/28 PHASE artifacts.
 
 ### Locked Decisions from Research
+
 - @node-saml/passport-saml ^4 + Keycloak 26 IdP (per StackResearch)
 - SAML attribute mapper config in Keycloak emits `role` attribute (config artefact, not code)
 - AppLoggerImpl already exists with nestjs-cls correlation IDs (Phase 26)
 - BullMQ rate limit: `Queue('email-reminder', { defaultJobOptions: { rateLimiterKey: 'email' }, ... })` + worker `concurrency` + `limiter: { max: 5, duration: 60_000 }`
 
 ### Phase Sequencing (suggested)
+
 - Plan 29-01 — AUTH-08 audit logging (small, no dependencies on auth changes)
 - Plan 29-02 — AUTH-02 JWT role claim from SAML attribute mapper (foundation for AUTH-07)
 - Plan 29-03 — AUTH-07 SSR layout-level role gates + 403 page
@@ -51,9 +56,11 @@ All implementation choices at Claude's discretion — discuss skipped per workfl
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 ### Reusable Assets
+
 - `apps/api/src/infrastructure/auth/` — existing SAML strategy from v2.0
 - `apps/api/src/infrastructure/logging/app-logger.impl.ts` — AppLoggerImpl with nestjs-cls
 - `apps/api/src/infrastructure/trpc/trpc.context.ts` — context shape, `session: UserSession | null`
@@ -63,12 +70,14 @@ All implementation choices at Claude's discretion — discuss skipped per workfl
 - `packages/shared/src/schemas/auth.ts` — sessionRoleSchema includes 'admin' (Phase 27 widening)
 
 ### Established Patterns
+
 - Idempotent dedupe: `${rule.id}:${kind}:${cycleDate}:${recipientEmail}`
-- @Cron('0 * * * *') hourly scheduler shape
+- @Cron('0 \* \* \* \*') hourly scheduler shape
 - BullMQ raw Worker pattern (NestJS 11 DI workaround)
 - 403 Next.js: `notFound()` is for 404; use custom 403 page or `redirect()` + flash error
 
 ### Integration Points
+
 - Phase 28 plans 28-01..28-04 are dependencies (role middleware factory, role filters, deadline reminders)
 - Phase 30 (analytics) consumes role data for head-only dashboards
 - Phase 31 (AI) consumes head-only summary procedures

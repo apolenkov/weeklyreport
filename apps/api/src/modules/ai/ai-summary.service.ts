@@ -9,14 +9,14 @@
 // has no real retrieval), but the shape is forward-compatible with a
 // real RAG pipeline that returns a subset of grounded sections.
 
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { type AiAdapter } from './ai.adapter.js';
-import { type AiSummaryCachePort } from './ai-summary.cache.js';
+import { type AiAdapter } from "./ai.adapter.js";
+import { type AiSummaryCachePort } from "./ai-summary.cache.js";
 
 export type AiSummaryResult = {
   summary: string;
-  source: 'mock' | 'ai';
+  source: "mock" | "ai";
   citationIds: string[];
 };
 
@@ -31,14 +31,11 @@ export interface AiSummaryRepository {
    * when the period itself does not exist, an empty array when the
    * period exists but has no readable sections.
    */
-  getSectionsForPeriod(periodId: string): Promise<
-    | null
-    | Array<{
-        sectionId: string;
-        authorName: string;
-        text: string;
-      }>
-  >;
+  getSectionsForPeriod(periodId: string): Promise<null | Array<{
+    sectionId: string;
+    authorName: string;
+    text: string;
+  }>>;
 }
 
 /**
@@ -47,7 +44,7 @@ export interface AiSummaryRepository {
  * sentinel string MockAiAdapter emits.
  */
 function isMockOutput(output: string): boolean {
-  return output.startsWith('[mock-summary]');
+  return output.startsWith("[mock-summary]");
 }
 
 @Injectable()
@@ -80,7 +77,7 @@ export class AiSummaryService {
    */
   async getSummary(periodId: string): Promise<AiSummaryResult> {
     if (!this.repository) {
-      throw new Error('AiSummaryService.repository not wired');
+      throw new Error("AiSummaryService.repository not wired");
     }
     const repo = this.repository;
 
@@ -91,14 +88,14 @@ export class AiSummaryService {
       }
       if (sections.length === 0) {
         return {
-          summary: '',
-          source: 'mock' as const,
+          summary: "",
+          source: "mock" as const,
           citationIds: [],
         };
       }
 
       const summary = await this.adapter.generate(
-        'Summarise the published sections of this period.',
+        "Summarise the published sections of this period.",
         {
           periodId,
           sections,
@@ -107,7 +104,7 @@ export class AiSummaryService {
 
       return {
         summary,
-        source: isMockOutput(summary) ? ('mock' as const) : ('ai' as const),
+        source: isMockOutput(summary) ? ("mock" as const) : ("ai" as const),
         citationIds: sections.map((s) => s.sectionId),
       };
     });

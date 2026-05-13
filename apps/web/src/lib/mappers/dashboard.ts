@@ -32,14 +32,14 @@ import type {
   Escalation,
   ReportSectionReadModel,
   PortfolioProductOverview,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { deriveLeadStatus, type LeadStatus } from './lead-status';
-import { trafficToStageStatus } from './traffic-light';
+import { deriveLeadStatus, type LeadStatus } from "./lead-status";
+import { trafficToStageStatus } from "./traffic-light";
 
 // ---- Self-contained re-declarations of presentation types ----
 
-export type ProductStatus = 'on-track' | 'at-risk' | 'blocked';
+export type ProductStatus = "on-track" | "at-risk" | "blocked";
 
 export type TrafficLight = {
   status: ProductStatus;
@@ -74,7 +74,7 @@ export type KpiData = {
 
 export type BlockedAtRiskItem = {
   id: string;
-  severity: 'blocked' | 'at-risk';
+  severity: "blocked" | "at-risk";
   product: string;
   stage: string;
   assignee: string;
@@ -85,7 +85,7 @@ export type ArchiveReport = {
   id: string;
   weekLabel: string;
   dateRange: string;
-  status: 'active' | 'published' | 'draft';
+  status: "active" | "published" | "draft";
   submissionLabel: string;
   productCount: number;
   riskCount: number;
@@ -95,15 +95,15 @@ export type ArchiveReport = {
 // ---- Helpers ----
 
 const TRAFFIC_ICON: Record<ProductStatus, string> = {
-  'on-track': '\u2713', // ✓
-  blocked: '\u2715', // ✕
-  'at-risk': '!',
+  "on-track": "\u2713", // ✓
+  blocked: "\u2715", // ✕
+  "at-risk": "!",
 };
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/);
   const first = parts[0];
-  if (!first) return '??';
+  if (!first) return "??";
   if (parts.length === 1) {
     return first.slice(0, 2).toUpperCase();
   }
@@ -116,15 +116,19 @@ function isoDateLabel(date: Date): string {
 }
 
 function shortDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function isoWeekLabel(date: Date): string {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const d = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  const week = Math.ceil(
+    ((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
+  );
   return `Week ${week}`;
 }
 
@@ -134,7 +138,7 @@ function isoWeekLabel(date: Date): string {
  */
 export function formatRelativeDeadline(deadline: Date, now: Date): string {
   const diffMs = deadline.getTime() - now.getTime();
-  if (diffMs <= 0) return 'Past';
+  if (diffMs <= 0) return "Past";
   const totalHours = Math.floor(diffMs / 3_600_000);
   const days = Math.floor(totalHours / 24);
   const hours = totalHours - days * 24;
@@ -162,30 +166,35 @@ function trafficLightsForLeadByName(
     .map((status) => {
       const presentation = trafficToStageStatus(status);
       const productStatus: ProductStatus =
-        presentation === 'on-track' || presentation === 'at-risk' || presentation === 'blocked'
+        presentation === "on-track" ||
+        presentation === "at-risk" ||
+        presentation === "blocked"
           ? presentation
-          : 'on-track';
+          : "on-track";
       return { status: productStatus, icon: TRAFFIC_ICON[productStatus] };
     });
 }
 
-function escalationToBlockedItem(escalation: Escalation, index: number): BlockedAtRiskItem | null {
-  if (escalation.type === 'blocked') {
+function escalationToBlockedItem(
+  escalation: Escalation,
+  index: number,
+): BlockedAtRiskItem | null {
+  if (escalation.type === "blocked") {
     return {
       id: `esc-${index}`,
-      severity: 'blocked',
+      severity: "blocked",
       product: escalation.productName,
-      stage: escalation.stageName ?? '\u2014',
+      stage: escalation.stageName ?? "\u2014",
       assignee: escalation.leadName,
       description: escalation.description,
     };
   }
-  if (escalation.type === 'at_risk') {
+  if (escalation.type === "at_risk") {
     return {
       id: `esc-${index}`,
-      severity: 'at-risk',
+      severity: "at-risk",
       product: escalation.productName,
-      stage: escalation.stageName ?? '\u2014',
+      stage: escalation.stageName ?? "\u2014",
       assignee: escalation.leadName,
       description: escalation.description,
     };
@@ -193,9 +202,9 @@ function escalationToBlockedItem(escalation: Escalation, index: number): Blocked
   // unresolved_risk: surface as at-risk in the dashboard.
   return {
     id: `esc-${index}`,
-    severity: 'at-risk',
+    severity: "at-risk",
     product: escalation.productName,
-    stage: escalation.stageName ?? '\u2014',
+    stage: escalation.stageName ?? "\u2014",
     assignee: escalation.leadName,
     description: escalation.description,
   };
@@ -213,9 +222,9 @@ export function mapArchiveSummary(
     id: summary.reportId,
     weekLabel: isoWeekLabel(summary.periodStart),
     dateRange: `${shortDate(summary.periodStart)}\u2013${shortDate(summary.periodEnd)}`,
-    status: 'published',
+    status: "published",
     // Submission counts aren't on ArchiveReportSummary at v5.0.
-    submissionLabel: '',
+    submissionLabel: "",
     productCount: 0,
     riskCount: 0,
     decisionCount: 0,
@@ -261,7 +270,7 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
           sectionStatus: section.status,
           contentCount: reportContentCount,
         })
-      : 'pending';
+      : "pending";
 
     // The portfolio overview only carries lead NAMES, so we name-match either way.
     const trafficLights = trafficLightsForLeadByName(
@@ -269,12 +278,11 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
       weeklyReport.portfolioOverview,
     );
 
-    const lastActivity =
-      section?.submittedAt
-        ? section.submittedAt.toISOString().slice(0, 10)
-        : status === 'pending'
-          ? 'Not started'
-          : 'In progress';
+    const lastActivity = section?.submittedAt
+      ? section.submittedAt.toISOString().slice(0, 10)
+      : status === "pending"
+        ? "Not started"
+        : "In progress";
 
     return {
       id: row.leadId,
@@ -285,23 +293,28 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
       status,
       trafficLights,
       lastActivity,
-      isCurrentUser: currentUserId !== undefined && row.leadId === currentUserId,
+      isCurrentUser:
+        currentUserId !== undefined && row.leadId === currentUserId,
       productCount: row.projectNames.length,
       reportContentCount,
     };
   });
 
   // -------- Pending leads (alert bar) --------
-  const pendingLeads = leads.filter((l) => l.status === 'pending').map((l) => l.name);
+  const pendingLeads = leads
+    .filter((l) => l.status === "pending")
+    .map((l) => l.name);
 
   // -------- KPI --------
   const submitted = weeklyReport.submissionCount;
   const total = weeklyReport.totalLeads;
   const pendingCount = pendingLeads.length;
 
-  const blockedCount = weeklyReport.escalations.filter((e) => e.type === 'blocked').length;
+  const blockedCount = weeklyReport.escalations.filter(
+    (e) => e.type === "blocked",
+  ).length;
   const atRiskCount = weeklyReport.escalations.filter(
-    (e) => e.type === 'at_risk' || e.type === 'unresolved_risk',
+    (e) => e.type === "at_risk" || e.type === "unresolved_risk",
   ).length;
   const decisionCount = weeklyReport.leadSections.reduce(
     (sum, section) => sum + section.decisions.length,
@@ -309,11 +322,11 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
   );
 
   const isEditablePeriod =
-    weeklyReport.periodStatus === 'open' ||
-    weeklyReport.periodStatus === 'reopened';
+    weeklyReport.periodStatus === "open" ||
+    weeklyReport.periodStatus === "reopened";
   const deadlineLabel = isEditablePeriod
     ? formatRelativeDeadline(weeklyReport.deadline, now)
-    : 'Closed';
+    : "Closed";
   const deadlineTime = isoDateLabel(weeklyReport.deadline);
 
   const kpi: KpiData = {

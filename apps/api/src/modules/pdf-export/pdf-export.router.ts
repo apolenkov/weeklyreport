@@ -1,6 +1,6 @@
-import { pdfExportJobSchema, type PdfExportJob } from '@customreport/shared';
+import { pdfExportJobSchema, type PdfExportJob } from "@customreport/shared";
 
-import { type PdfExportService } from './pdf-export.service';
+import { type PdfExportService } from "./pdf-export.service";
 
 export type PdfExportRouterRequestContext = {
   pdfExportService: PdfExportService;
@@ -20,12 +20,19 @@ export type PdfExportRouterStatusContext = {
 };
 
 export const pdfExportRouter = {
-  async requestPdfExport(ctx: PdfExportRouterRequestContext): Promise<PdfExportJob> {
+  async requestPdfExport(
+    ctx: PdfExportRouterRequestContext,
+  ): Promise<PdfExportJob> {
     return pdfExportJobSchema.parse(
-      await ctx.pdfExportService.requestPdfExport(ctx.reportId, ctx.requestedBy),
+      await ctx.pdfExportService.requestPdfExport(
+        ctx.reportId,
+        ctx.requestedBy,
+      ),
     );
   },
-  async getPdfExportStatus(ctx: PdfExportRouterStatusContext): Promise<PdfExportJob> {
+  async getPdfExportStatus(
+    ctx: PdfExportRouterStatusContext,
+  ): Promise<PdfExportJob> {
     return pdfExportJobSchema.parse(
       await ctx.pdfExportService.getPdfExportStatus(ctx.jobId, ctx.requestedBy),
     );

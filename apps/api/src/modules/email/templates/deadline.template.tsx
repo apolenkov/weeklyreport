@@ -1,4 +1,4 @@
-import * as React from 'react';
+import * as React from "react";
 import {
   Html,
   Head,
@@ -10,7 +10,7 @@ import {
   Text,
   Button,
   Section,
-} from '@react-email/components';
+} from "@react-email/components";
 
 /**
  * NOTIF-01/03 (Phase 28-03): T-24h deadline reminder email.
@@ -72,7 +72,7 @@ export function DeadlineEmail({
                 `organization` payload snapshotted at enqueue time. Subject
                 uses `shortName` (compact); footer uses `fullName` (long). */}
             <Text className="text-sm text-gray-500">
-              {organization.shortName} — Weekly status reporting for{' '}
+              {organization.shortName} — Weekly status reporting for{" "}
               {organization.fullName}.
             </Text>
           </Container>
@@ -85,11 +85,11 @@ export function DeadlineEmail({
 export function deadlineEmailPlaintext(props: DeadlineEmailProps): string {
   return [
     `Hi ${props.leadName},`,
-    '',
+    "",
     `This is a reminder that your section of the ${props.reportPeriod} weekly status report is due by ${props.deadlineIso}.`,
-    '',
+    "",
     `Open your section: ${props.sectionUrl}`,
-    '',
+    "",
     `— ${props.organization.shortName} (Weekly status reporting for ${props.organization.fullName})`,
-  ].join('\n');
+  ].join("\n");
 }

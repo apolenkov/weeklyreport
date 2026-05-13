@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Report archive list with real cursor pagination via TanStack Query's
@@ -14,10 +14,10 @@
  * not yet cursor-paginated at v5.0 — see SUMMARY.md.
  */
 
-import { useTRPC } from '../../lib/trpc-context';
-import { mapArchiveSummary } from '../../lib/mappers';
-import { useCursorPagination } from '../../lib/use-cursor-pagination';
-import type { ArchiveReportSummary } from '@customreport/shared';
+import { useTRPC } from "../../lib/trpc-context";
+import { mapArchiveSummary } from "../../lib/mappers";
+import { useCursorPagination } from "../../lib/use-cursor-pagination";
+import type { ArchiveReportSummary } from "@customreport/shared";
 
 type StatusConfig = { bg: string; text: string; label: string };
 
@@ -27,25 +27,27 @@ type ReportArchiveSectionProps = {
 
 const STATUS_CONFIG = {
   active: {
-    bg: 'var(--color-success)',
-    text: 'var(--color-primary)',
-    label: 'Active',
+    bg: "var(--color-success)",
+    text: "var(--color-primary)",
+    label: "Active",
   },
   published: {
-    bg: 'var(--color-primary)',
-    text: '#fff',
-    label: 'Published',
+    bg: "var(--color-primary)",
+    text: "#fff",
+    label: "Published",
   },
   draft: {
-    bg: '#fef3c7',
-    text: '#8a6d1b',
-    label: 'Draft',
+    bg: "#fef3c7",
+    text: "#8a6d1b",
+    label: "Draft",
   },
 } as const satisfies Record<string, StatusConfig>;
 
 const PAGE_SIZE = 12;
 
-export function ReportArchiveSection({ currentReportId }: ReportArchiveSectionProps = {}) {
+export function ReportArchiveSection({
+  currentReportId,
+}: ReportArchiveSectionProps = {}) {
   const trpc = useTRPC();
 
   const archive = useCursorPagination<ArchiveReportSummary>(
@@ -75,7 +77,9 @@ export function ReportArchiveSection({ currentReportId }: ReportArchiveSectionPr
           Report Archive
         </h2>
         <span className="text-xs text-[var(--color-muted-foreground)]">
-          {archive.isLoading ? 'Loading…' : `${totalLoaded} loaded${archive.hasNextPage ? '+' : ''}`}
+          {archive.isLoading
+            ? "Loading…"
+            : `${totalLoaded} loaded${archive.hasNextPage ? "+" : ""}`}
         </span>
       </div>
 
@@ -88,9 +92,7 @@ export function ReportArchiveSection({ currentReportId }: ReportArchiveSectionPr
           const config =
             (STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
             STATUS_CONFIG.draft;
-          const cardConfig = isActive
-            ? STATUS_CONFIG.active
-            : config;
+          const cardConfig = isActive ? STATUS_CONFIG.active : config;
 
           return (
             <a
@@ -99,17 +101,21 @@ export function ReportArchiveSection({ currentReportId }: ReportArchiveSectionPr
               className="group cursor-pointer rounded-[var(--radius)] border bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)] transition-[border-color,box-shadow] duration-150 hover:border-[var(--color-starbucks-accent)] hover:shadow-[0_10px_24px_-18px_rgba(0,0,0,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
               style={{
                 borderLeft: `3px solid ${
-                  isActive ? 'var(--color-starbucks-accent)' : 'var(--color-border)'
+                  isActive
+                    ? "var(--color-starbucks-accent)"
+                    : "var(--color-border)"
                 }`,
-                textDecoration: 'none',
-                color: 'inherit',
+                textDecoration: "none",
+                color: "inherit",
                 boxShadow: isActive
-                  ? '0 0 0 2px rgba(0,117,74,0.12), 0 8px 24px -16px rgba(0,0,0,0.2)'
+                  ? "0 0 0 2px rgba(0,117,74,0.12), 0 8px 24px -16px rgba(0,0,0,0.2)"
                   : undefined,
               }}
             >
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-sm font-semibold">{report.weekLabel}</span>
+                <span className="text-sm font-semibold">
+                  {report.weekLabel}
+                </span>
                 <span
                   className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
                   style={{ background: cardConfig.bg, color: cardConfig.text }}
@@ -135,7 +141,7 @@ export function ReportArchiveSection({ currentReportId }: ReportArchiveSectionPr
             disabled={archive.isFetchingNextPage}
             aria-label="Load more archived reports"
           >
-            {archive.isFetchingNextPage ? 'Loading…' : 'Load more'}
+            {archive.isFetchingNextPage ? "Loading…" : "Load more"}
           </button>
         </div>
       )}

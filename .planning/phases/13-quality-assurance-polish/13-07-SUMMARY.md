@@ -40,6 +40,7 @@ Expanded 5 Playwright E2E journey specs covering lead submission, head publicati
 ### Task 1: Shared E2E utils + lead and head journey specs (5156104)
 
 Created `apps/web/e2e/helpers/test-utils.ts` with 6 reusable functions:
+
 - `waitForAutosave` -- waits for autosave indicator "Saved" state
 - `expectToast` -- asserts Sonner toast notification appeared
 - `loginAs` -- navigates via dev-login endpoint for role switching
@@ -48,6 +49,7 @@ Created `apps/web/e2e/helpers/test-utils.ts` with 6 reusable functions:
 - `expectRuLocaleDate` -- asserts dates use ru-RU locale (Cyrillic months)
 
 Created `lead-report-entry.spec.ts` with 6 test cases:
+
 1. Complete section fill + submit with traffic lights, items, priorities
 2. Autosave indicator changes from Saving to Saved after typing
 3. Validation feedback when submitting incomplete section
@@ -56,6 +58,7 @@ Created `lead-report-entry.spec.ts` with 6 test cases:
 6. ru-RU formatted dates on report page (BUG-017 regression)
 
 Created `head-publication.spec.ts` with 5 test cases:
+
 1. Dashboard review showing all lead submissions with status
 2. Head publishes report and status changes to "published"
 3. Published report sections are read-only (no edit controls)
@@ -65,6 +68,7 @@ Created `head-publication.spec.ts` with 5 test cases:
 ### Task 2: Admin, carry-over, and archive journey specs (b4c5200)
 
 Created `admin-panel.spec.ts` with 6 test cases:
+
 1. Admin views user list with seeded users
 2. Admin adds new user via CrudSheet (fill form, submit, verify toast + table)
 3. Delete protection for users with report sections
@@ -73,12 +77,14 @@ Created `admin-panel.spec.ts` with 6 test cases:
 6. DataTable sort headers toggle sort order (BUG-019 verification)
 
 Created `carry-over.spec.ts` with 4 test cases:
+
 1. Carry-over creates new sections from previous report
 2. Carried-over items appear in lead form
 3. Lead can edit carried-over items and add new ones
 4. Carry-over is idempotent (running twice doesn't create duplicates)
 
 Created `archive-history.spec.ts` with 5 test cases:
+
 1. Published reports appear in archive list
 2. Archive reports sorted by date (newest first)
 3. Click archive report opens read-only view
@@ -91,14 +97,14 @@ None -- plan executed exactly as written.
 
 ## Test Count Summary
 
-| Spec File | Test Cases | Covers |
-|-----------|-----------|--------|
-| lead-report-entry.spec.ts | 6 | Lead submission, autosave, validation, persistence, lock, locale |
-| head-publication.spec.ts | 5 | Dashboard, publish flow, read-only, content, archive |
-| admin-panel.spec.ts | 6 | Users, add user, delete protection, bootstrap, reminders, sort |
-| carry-over.spec.ts | 4 | Creation, population, edit, idempotency |
-| archive-history.spec.ts | 5 | List, sort, detail view, sections, locale |
-| **Total new** | **26** | |
+| Spec File                 | Test Cases | Covers                                                           |
+| ------------------------- | ---------- | ---------------------------------------------------------------- |
+| lead-report-entry.spec.ts | 6          | Lead submission, autosave, validation, persistence, lock, locale |
+| head-publication.spec.ts  | 5          | Dashboard, publish flow, read-only, content, archive             |
+| admin-panel.spec.ts       | 6          | Users, add user, delete protection, bootstrap, reminders, sort   |
+| carry-over.spec.ts        | 4          | Creation, population, edit, idempotency                          |
+| archive-history.spec.ts   | 5          | List, sort, detail view, sections, locale                        |
+| **Total new**             | **26**     |                                                                  |
 
 Plus 4 existing journey specs (lead-journey, head-journey, admin-crud, pdf-export) with their own tests. Total journey specs: 9 files.
 

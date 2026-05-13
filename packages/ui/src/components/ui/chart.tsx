@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { ResponsiveContainer, Tooltip } from 'recharts';
+import * as React from "react";
+import { ResponsiveContainer, Tooltip } from "recharts";
 
-import { cn } from '@customreport/ui/lib/utils';
+import { cn } from "@customreport/ui/lib/utils";
 
 /**
  * Minimal chart wrapper around recharts — Tailwind-friendly height/width
@@ -16,11 +16,11 @@ export function ChartContainer({
   className,
   children,
   ...props
-}: Omit<React.ComponentProps<'div'>, 'children'> & {
+}: Omit<React.ComponentProps<"div">, "children"> & {
   readonly children: React.ReactElement;
 }) {
   return (
-    <div className={cn('h-64 w-full', className)} {...props}>
+    <div className={cn("h-64 w-full", className)} {...props}>
       <ResponsiveContainer width="100%" height="100%">
         {children}
       </ResponsiveContainer>
@@ -28,17 +28,15 @@ export function ChartContainer({
   );
 }
 
-export function ChartTooltip(
-  props: React.ComponentProps<typeof Tooltip>,
-) {
+export function ChartTooltip(props: React.ComponentProps<typeof Tooltip>) {
   return (
     <Tooltip
       {...props}
       contentStyle={{
         borderRadius: 6,
         fontSize: 12,
-        backgroundColor: 'var(--color-card)',
-        border: '1px solid var(--color-border)',
+        backgroundColor: "var(--color-card)",
+        border: "1px solid var(--color-border)",
       }}
     />
   );

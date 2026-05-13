@@ -27,6 +27,7 @@ Out of scope: visual regression baseline (Phase 35.5+ idea), full UI redesign (v
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 - 35-01 added `admin.listStageAssignmentCounts` tRPC procedure; products-tab fetches it once and replaces the broken `product.stages.filter(...)` (which always returned 0/7 because mock-data mapper hands every product an empty stages grid).

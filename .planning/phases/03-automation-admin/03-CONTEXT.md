@@ -9,6 +9,7 @@
 
 Phase 3 delivers the operational/admin layer on top of the already working
 capture → publication flow:
+
 - self-service admin CRUD for users, projects, report periods, and reminder schedules
 - reminder schedule definition and reminder execution
 - idempotent carry-over / rollover for next-period items and unresolved decisions
@@ -46,9 +47,10 @@ surfaces rather than introducing a separate reporting lifecycle.
   but repeated rollover execution must remain a no-op for already-carried entities.
 - **A-04:** History UX may start as a compact list/detail archive view if it fully
   satisfies browsing past published reports in sorted order.
-</decisions>
+  </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 ### Backend anchors
@@ -110,7 +112,7 @@ surfaces rather than introducing a separate reporting lifecycle.
   - `head-publication.spec.ts`
   - `published-report.spec.ts`
 - There are currently **no** dedicated admin/reminder/archive tests.
-</code_context>
+  </code_context>
 
 <specifics>
 ## Specific Ideas
@@ -124,7 +126,7 @@ surfaces rather than introducing a separate reporting lifecycle.
 - Use deterministic `jobId` / dedupe keys for reminder execution so duplicate enqueue attempts collapse safely.
 - Treat carry-over as a transaction that either creates next-period artifacts once or becomes a no-op on replay.
 - Persist history/archive as immutable published report references or snapshots, not as pointers to mutable draft state.
-</specifics>
+  </specifics>
 
 <deferred>
 ## Deferred Ideas
@@ -132,9 +134,9 @@ surfaces rather than introducing a separate reporting lifecycle.
 - Rich audit logs beyond what Phase 3 minimally needs for admin/history traceability
 - Advanced analytics over reminders, trends, and risk evolution
 - External integrations beyond SMTP reminder delivery
-</deferred>
+  </deferred>
 
 ---
 
-*Phase: 03-automation-admin*
-*Context gathered: 2026-04-09 after completed publication flow and Phase 3 discovery*
+_Phase: 03-automation-admin_
+_Context gathered: 2026-04-09 after completed publication flow and Phase 3 discovery_

@@ -1,27 +1,38 @@
-'use client';
+"use client";
+
+import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
 
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  XAxis,
-  YAxis,
-} from 'recharts';
+  ChartContainer,
+  ChartTooltip,
+} from "@customreport/ui/components/ui/chart";
 
-import { ChartContainer, ChartTooltip } from '@customreport/ui/components/ui/chart';
-
-import type { LeadVelocityOutput } from '@customreport/shared';
+import type { LeadVelocityOutput } from "@customreport/shared";
 
 /**
  * ANAL-04 (Phase 30-03): stacked-bar of submitted-section counts per lead per period.
  */
 
-const COLORS = ['#15803d', '#2563eb', '#9333ea', '#0891b2', '#c2410c', '#a21caf'];
+const COLORS = [
+  "#15803d",
+  "#2563eb",
+  "#9333ea",
+  "#0891b2",
+  "#c2410c",
+  "#a21caf",
+];
 
-export function LeadVelocityChart({ rows }: { readonly rows: LeadVelocityOutput }) {
+export function LeadVelocityChart({
+  rows,
+}: {
+  readonly rows: LeadVelocityOutput;
+}) {
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">No velocity data in range.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        No velocity data in range.
+      </p>
+    );
   }
 
   const leadIds = Array.from(

@@ -11,27 +11,27 @@
  * making, not on the click sequence to get there.
  */
 
-import { type Page, type Locator, expect } from '@playwright/test';
+import { type Page, type Locator, expect } from "@playwright/test";
 
 const STAGES = [
-  'Planning',
-  'Analysis',
-  'Design',
-  'Dev',
-  'Testing',
-  'DevOps',
-  'Support',
+  "Planning",
+  "Analysis",
+  "Design",
+  "Dev",
+  "Testing",
+  "DevOps",
+  "Support",
 ] as const;
 export type StageName = (typeof STAGES)[number];
 
-export type StatusOption = 'On Track' | 'At Risk' | 'Blocked' | 'Clear';
-export type ItemStatus = 'in-progress' | 'completed' | 'blocked' | 'planned';
+export type StatusOption = "On Track" | "At Risk" | "Blocked" | "Clear";
+export type ItemStatus = "in-progress" | "completed" | "blocked" | "planned";
 
 /** Default lead identity used by every spec unless overridden. */
 export const DEFAULT_LEAD = {
-  role: 'lead' as const,
-  email: 'lead1@customreport.local',
-  displayName: 'Lead 1',
+  role: "lead" as const,
+  email: "lead1@customreport.local",
+  displayName: "Lead 1",
 };
 
 /**
@@ -45,7 +45,7 @@ export const DEFAULT_LEAD = {
 export async function loginAs(
   page: Page,
   identity: {
-    role: 'lead' | 'head' | 'admin' | 'viewer';
+    role: "lead" | "head" | "admin" | "viewer";
     email: string;
     next?: string;
   },
@@ -53,7 +53,7 @@ export async function loginAs(
   const params = new URLSearchParams({
     role: identity.role,
     email: identity.email,
-    next: identity.next ?? '/',
+    next: identity.next ?? "/",
   });
   await page.goto(`/auth/dev-login?${params.toString()}`);
 }
@@ -67,12 +67,12 @@ export async function loginAs(
  */
 export async function reseedDatabase(
   page: Page,
-  variant: 'minimum' | 'advanced' | 'manual-uat' = 'minimum',
+  variant: "minimum" | "advanced" | "manual-uat" = "minimum",
 ) {
-  const body = JSON.stringify({ '0': { json: { variant } } });
-  const response = await page.request.post('/trpc/dev.wipeAndReseed?batch=1', {
+  const body = JSON.stringify({ "0": { json: { variant } } });
+  const response = await page.request.post("/trpc/dev.wipeAndReseed?batch=1", {
     data: body,
-    headers: { 'content-type': 'application/json' },
+    headers: { "content-type": "application/json" },
   });
   if (!response.ok()) {
     throw new Error(
@@ -97,24 +97,24 @@ export async function reseedDatabase(
  */
 export function waitForSave(page: Page) {
   return page.waitForResponse(
-    (r) => r.url().includes('reports.saveDraft') && r.status() === 200,
+    (r) => r.url().includes("reports.saveDraft") && r.status() === 200,
     { timeout: 10_000 },
   );
 }
 
 /** Navigate to /lead/report and wait for the form to hydrate. */
 export async function gotoLeadReport(page: Page) {
-  await page.goto('/lead/report');
-  await page.waitForSelector('#main-content', {
-    state: 'visible',
+  await page.goto("/lead/report");
+  await page.waitForSelector("#main-content", {
+    state: "visible",
     timeout: 15_000,
   });
   // Wait for the first accordion header — that means the byPeriod query resolved.
   await page
-    .getByRole('button', { name: /Product Status/i })
+    .getByRole("button", { name: /Product Status/i })
     .first()
     .waitFor({
-      state: 'visible',
+      state: "visible",
       timeout: 15_000,
     });
 }
@@ -133,20 +133,20 @@ export async function clickStageChip(
   page: Page,
   productIndex: number,
   stage: StageName,
-  status: 'on-track' | 'at-risk' | 'blocked' | 'empty',
+  status: "on-track" | "at-risk" | "blocked" | "empty",
 ): Promise<void> {
   const chips = page.locator(`button[aria-label="${stage}: ${status}"]`);
   await chips.nth(productIndex).click();
   await page
-    .getByRole('menu', { name: new RegExp(`Set status for ${stage}`) })
+    .getByRole("menu", { name: new RegExp(`Set status for ${stage}`) })
     .waitFor({
-      state: 'visible',
+      state: "visible",
       timeout: 5_000,
     });
 }
 
 export function stagePopover(page: Page): Locator {
-  return page.getByRole('menu', { name: /Set status for/ });
+  return page.getByRole("menu", { name: /Set status for/ });
 }
 
 /**
@@ -161,11 +161,11 @@ export async function selectStageOption(
   page: Page,
   option: StatusOption,
 ): Promise<void> {
-  const item = stagePopover(page).getByRole('menuitem', {
+  const item = stagePopover(page).getByRole("menuitem", {
     name: new RegExp(option),
   });
   await item.focus();
-  await page.keyboard.press('Enter');
+  await page.keyboard.press("Enter");
   // The popover dismounts on selection; give React a tick to apply the
   // optimistic update + onChange propagation before assertions run.
   await page.waitForTimeout(300);
@@ -186,18 +186,18 @@ export async function selectStageOption(
 export async function openItemAdd(
   page: Page,
   productName: string,
-  week: 'current' | 'next' = 'current',
+  week: "current" | "next" = "current",
 ): Promise<void> {
-  const sectionName = week === 'current' ? 'Current Week' : 'Next Week';
+  const sectionName = week === "current" ? "Current Week" : "Next Week";
   // The section "header" is the accordion <button>; the panel sits as the
   // header's NEXT sibling. We can't pierce the role tree with `:has()`,
   // so use a structural locator: "the panel whose preceding header reads
   // <sectionName>".
   await page
     .locator(`[aria-expanded="true"]:has-text("${sectionName}") + div`)
-    .getByRole('button', { name: `Add item to ${productName}` })
+    .getByRole("button", { name: `Add item to ${productName}` })
     .click();
-  await itemDialog(page).waitFor({ state: 'visible', timeout: 5_000 });
+  await itemDialog(page).waitFor({ state: "visible", timeout: 5_000 });
 }
 
 /**
@@ -214,14 +214,14 @@ export async function openItemEdit(
   cardText: string,
 ): Promise<void> {
   const card = page
-    .getByTestId('item-card')
+    .getByTestId("item-card")
     .filter({ hasText: cardText })
     .first();
   await card.hover();
   await card
-    .getByRole('button', { name: 'Edit', exact: true })
+    .getByRole("button", { name: "Edit", exact: true })
     .click({ force: true });
-  await itemDialog(page).waitFor({ state: 'visible', timeout: 5_000 });
+  await itemDialog(page).waitFor({ state: "visible", timeout: 5_000 });
 }
 
 /**
@@ -231,17 +231,17 @@ export async function openItemEdit(
  */
 export async function deleteItem(page: Page, cardText: string): Promise<void> {
   const card = page
-    .getByTestId('item-card')
+    .getByTestId("item-card")
     .filter({ hasText: cardText })
     .first();
   await card.hover();
   await card
-    .getByRole('button', { name: 'Delete', exact: true })
+    .getByRole("button", { name: "Delete", exact: true })
     .click({ force: true });
 }
 
 export function itemDialog(page: Page): Locator {
-  return page.getByRole('dialog', { name: /Item/i });
+  return page.getByRole("dialog", { name: /Item/i });
 }
 
 export async function fillItemDialog(
@@ -255,12 +255,12 @@ export async function fillItemDialog(
   }
   if (fields.status) {
     const label = {
-      'in-progress': 'In Progress',
-      completed: 'Completed',
-      blocked: 'Blocked',
-      planned: 'Planned',
+      "in-progress": "In Progress",
+      completed: "Completed",
+      blocked: "Blocked",
+      planned: "Planned",
     }[fields.status];
-    await itemDialog(page).getByRole('button', { name: label }).click();
+    await itemDialog(page).getByRole("button", { name: label }).click();
   }
   if (fields.productName) {
     await itemDialog(page)
@@ -274,8 +274,8 @@ export async function saveDialog(
   dialogName: RegExp = /dialog/i,
 ): Promise<void> {
   await page
-    .getByRole('dialog', { name: dialogName })
-    .getByRole('button', { name: 'Save' })
+    .getByRole("dialog", { name: dialogName })
+    .getByRole("button", { name: "Save" })
     .click();
 }
 
@@ -284,8 +284,8 @@ export async function cancelDialog(
   dialogName: RegExp = /dialog/i,
 ): Promise<void> {
   await page
-    .getByRole('dialog', { name: dialogName })
-    .getByRole('button', { name: /Cancel/ })
+    .getByRole("dialog", { name: dialogName })
+    .getByRole("button", { name: /Cancel/ })
     .click();
 }
 
@@ -294,12 +294,12 @@ export async function cancelDialog(
 // ---------------------------------------------------------------------------
 
 const SECTION_NAMES = [
-  'Product Status',
-  'Current Week',
-  'Next Week',
-  'Risks & Blockers',
-  'Decisions',
-  'Priorities',
+  "Product Status",
+  "Current Week",
+  "Next Week",
+  "Risks & Blockers",
+  "Decisions",
+  "Priorities",
 ] as const;
 export type SectionName = (typeof SECTION_NAMES)[number];
 
@@ -309,10 +309,10 @@ export async function expandSection(
   name: SectionName,
 ): Promise<void> {
   const header = page
-    .getByRole('button', { name: new RegExp(`^${name}`), exact: false })
+    .getByRole("button", { name: new RegExp(`^${name}`), exact: false })
     .first();
-  const expanded = await header.getAttribute('aria-expanded');
-  if (expanded !== 'true') {
+  const expanded = await header.getAttribute("aria-expanded");
+  if (expanded !== "true") {
     await header.click();
   }
 }
@@ -332,7 +332,7 @@ export async function expectAssignedProducts(
   count: number,
 ): Promise<void> {
   await expect(
-    page.getByRole('button', {
+    page.getByRole("button", {
       name: new RegExp(`${count} assigned products?`),
     }),
   ).toBeVisible();
@@ -343,7 +343,7 @@ export async function expectStageStatus(
   page: Page,
   productIndex: number,
   stage: StageName,
-  status: 'on-track' | 'at-risk' | 'blocked' | 'empty',
+  status: "on-track" | "at-risk" | "blocked" | "empty",
 ): Promise<void> {
   await expect(
     page.locator(`button[aria-label="${stage}: ${status}"]`).nth(productIndex),

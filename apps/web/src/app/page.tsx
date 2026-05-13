@@ -1,5 +1,5 @@
-import { getOrgPublic } from '../lib/server/get-org-public';
-import { LoginPageClient } from './login-page.client';
+import { getOrgPublic } from "../lib/server/get-org-public";
+import { LoginPageClient } from "./login-page.client";
 
 /**
  * UFB-070: thin RSC wrapper that server-fetches org identity and passes it

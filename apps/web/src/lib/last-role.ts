@@ -20,7 +20,7 @@
  * never crash the landing render.
  */
 
-export type LastRole = 'lead' | 'head' | 'admin' | 'viewer' | 'director';
+export type LastRole = "lead" | "head" | "admin" | "viewer" | "director";
 
 export type LastRoleRecord = {
   readonly role: LastRole;
@@ -28,25 +28,25 @@ export type LastRoleRecord = {
   readonly name: string;
 };
 
-export const LAST_ROLE_STORAGE_KEY = 'customreport:lastRole';
+export const LAST_ROLE_STORAGE_KEY = "customreport:lastRole";
 
 const VALID_ROLES: ReadonlySet<LastRole> = new Set<LastRole>([
-  'lead',
-  'head',
-  'admin',
-  'viewer',
-  'director',
+  "lead",
+  "head",
+  "admin",
+  "viewer",
+  "director",
 ]);
 
 function isLastRoleRecord(value: unknown): value is LastRoleRecord {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
   return (
-    typeof v.role === 'string' &&
+    typeof v.role === "string" &&
     VALID_ROLES.has(v.role as LastRole) &&
-    typeof v.email === 'string' &&
+    typeof v.email === "string" &&
     v.email.length > 0 &&
-    typeof v.name === 'string'
+    typeof v.name === "string"
   );
 }
 
@@ -55,7 +55,7 @@ function isLastRoleRecord(value: unknown): value is LastRoleRecord {
  * unavailable (SSR, private mode), empty, or malformed.
  */
 export function readLastRole(): LastRoleRecord | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(LAST_ROLE_STORAGE_KEY);
     if (!raw) return null;
@@ -74,7 +74,7 @@ export function readLastRole(): LastRoleRecord | null {
  * is silent (private mode, quota exceeded).
  */
 export function writeLastRole(record: LastRoleRecord): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   if (!isLastRoleRecord(record)) return;
   try {
     window.localStorage.setItem(LAST_ROLE_STORAGE_KEY, JSON.stringify(record));
@@ -89,7 +89,7 @@ export function writeLastRole(record: LastRoleRecord): void {
  * sign-in is one click.
  */
 export function clearLastRole(): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(LAST_ROLE_STORAGE_KEY);
   } catch {

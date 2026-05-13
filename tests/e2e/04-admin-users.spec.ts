@@ -2,28 +2,30 @@
 // Do not edit manually — update UAT-SCENARIO/04-admin-users.md.md instead.
 // Run: pnpm uat:generate
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test('ADM-USERS-01 — Users table renders all users', async ({ page }) => {
+test("ADM-USERS-01 — Users table renders all users", async ({ page }) => {
   // Steps:
   //   Navigate to `/admin?tab=users` and log in as admin.
   //   Observe the table header (Name, Email, Role, Group, Actions).
   //   Verify rows for all active and inactive users are visible.
   // Expected: Table displays all users with full name, email, role badge, and group assignment. Inactive users show "inactive" badge.
-  const el = page.getByTestId('users-table');
+  const el = page.getByTestId("users-table");
   await expect(el).toBeVisible();
 });
 
-test('ADM-USERS-02 — Add User dialog opens', async ({ page }) => {
+test("ADM-USERS-02 — Add User dialog opens", async ({ page }) => {
   // Steps:
   //   Click "Add User" button.
   //   Observe dialog with form fields.
   // Expected: Dialog with title "Add User", input fields for name, email, role select, group select, action buttons (Cancel, Add User). Escape closes without saving.
-  const el = page.getByTestId('crud-sheet');
+  const el = page.getByTestId("crud-sheet");
   await expect(el).toBeVisible();
 });
 
-test('ADM-USERS-03 — Add User form validates required fields', async ({ page }) => {
+test("ADM-USERS-03 — Add User form validates required fields", async ({
+  page,
+}) => {
   // Steps:
   //   Leave Name + Email empty.
   //   Click "Add User" (disabled until groupId is set).
@@ -31,7 +33,7 @@ test('ADM-USERS-03 — Add User form validates required fields', async ({ page }
   // TODO: add assertions for ADM-USERS-03
 });
 
-test('ADM-USERS-04 — Edit User dialog prefills form', async ({ page }) => {
+test("ADM-USERS-04 — Edit User dialog prefills form", async ({ page }) => {
   // Steps:
   //   Click Edit on a user row.
   //   Observe form prefilled with name, email, role, groupId.
@@ -40,7 +42,9 @@ test('ADM-USERS-04 — Edit User dialog prefills form', async ({ page }) => {
   // TODO: add assertions for ADM-USERS-04
 });
 
-test('ADM-USERS-05 — Role change persists via saveUser mutation', async ({ page }) => {
+test("ADM-USERS-05 — Role change persists via saveUser mutation", async ({
+  page,
+}) => {
   // Steps:
   //   Change Role from "lead" → "admin".
   //   Save Changes, reopen.
@@ -48,7 +52,9 @@ test('ADM-USERS-05 — Role change persists via saveUser mutation', async ({ pag
   // TODO: add assertions for ADM-USERS-05
 });
 
-test('ADM-USERS-06 — Deactivate User immediate session revocation (A2)', async ({ page }) => {
+test("ADM-USERS-06 — Deactivate User immediate session revocation (A2)", async ({
+  page,
+}) => {
   // Steps:
   //   Click Deactivate on active user.
   //   Confirm toast "User deactivated".
@@ -57,7 +63,7 @@ test('ADM-USERS-06 — Deactivate User immediate session revocation (A2)', async
   // TODO: add assertions for ADM-USERS-06
 });
 
-test('ADM-USERS-07 — Deactivated user cannot login', async ({ page }) => {
+test("ADM-USERS-07 — Deactivated user cannot login", async ({ page }) => {
   // Steps:
   //   As admin, deactivate user X.
   //   Log out.
@@ -66,7 +72,9 @@ test('ADM-USERS-07 — Deactivated user cannot login', async ({ page }) => {
   // TODO: add assertions for ADM-USERS-07
 });
 
-test('ADM-USERS-08 — Activate User restores session eligibility', async ({ page }) => {
+test("ADM-USERS-08 — Activate User restores session eligibility", async ({
+  page,
+}) => {
   // Steps:
   //   Click Activate on inactive user.
   //   Confirm toast "User activated".
@@ -75,7 +83,9 @@ test('ADM-USERS-08 — Activate User restores session eligibility', async ({ pag
   // TODO: add assertions for ADM-USERS-08
 });
 
-test('ADM-USERS-09 — Delete User shows confirmation dialog', async ({ page }) => {
+test("ADM-USERS-09 — Delete User shows confirmation dialog", async ({
+  page,
+}) => {
   // Steps:
   //   Click Delete on user row.
   //   Observe alertdialog "Delete User?" with user name.
@@ -83,7 +93,9 @@ test('ADM-USERS-09 — Delete User shows confirmation dialog', async ({ page }) 
   // TODO: add assertions for ADM-USERS-09
 });
 
-test('ADM-USERS-10 — Delete User confirms and removes record', async ({ page }) => {
+test("ADM-USERS-10 — Delete User confirms and removes record", async ({
+  page,
+}) => {
   // Steps:
   //   Click Delete in confirmation dialog.
   //   Wait, observe toast "User deleted".
@@ -91,24 +103,28 @@ test('ADM-USERS-10 — Delete User confirms and removes record', async ({ page }
   // TODO: add assertions for ADM-USERS-10
 });
 
-test('ADM-USERS-11 — Search filters users by name, email, role, department', async ({ page }) => {
+test("ADM-USERS-11 — Search filters users by name, email, role, department", async ({
+  page,
+}) => {
   // Steps:
   //   Type "alice" → filters to Alice.
   //   Clear, type "admin" → all admin-role users.
   //   Type "alice@example" → email substring match.
   // Expected: Real-time filtering via useMemo(filteredUsers). Case-insensitive. Matches across name/email/role/department.
-  const el = page.getByTestId('users-search');
+  const el = page.getByTestId("users-search");
   await expect(el).toBeVisible();
 });
 
-test('ADM-USERS-12 — Search with no matches displays empty state', async ({ page }) => {
+test("ADM-USERS-12 — Search with no matches displays empty state", async ({
+  page,
+}) => {
   // Steps:
   //   Type string matching no users ("zzzzz").
   // Expected: Table hidden, empty-state "No users match the search." with border-dashed, bg-surface-empty.
   // TODO: add assertions for ADM-USERS-12
 });
 
-test('ADM-USERS-13 — Search is case-insensitive', async ({ page }) => {
+test("ADM-USERS-13 — Search is case-insensitive", async ({ page }) => {
   // Steps:
   //   Type "ALICE" uppercase.
   //   Type "aLiCe" mixed case.
@@ -116,7 +132,9 @@ test('ADM-USERS-13 — Search is case-insensitive', async ({ page }) => {
   // TODO: add assertions for ADM-USERS-13
 });
 
-test('ADM-USERS-14 — Add User form disabled during save (isPending)', async ({ page }) => {
+test("ADM-USERS-14 — Add User form disabled during save (isPending)", async ({
+  page,
+}) => {
   // Steps:
   //   Click "Add User".
   //   Verify button disabled, text "Saving…".
@@ -124,7 +142,9 @@ test('ADM-USERS-14 — Add User form disabled during save (isPending)', async ({
   // TODO: add assertions for ADM-USERS-14
 });
 
-test('ADM-USERS-15 — Escape key closes Add/Edit dialog without saving', async ({ page }) => {
+test("ADM-USERS-15 — Escape key closes Add/Edit dialog without saving", async ({
+  page,
+}) => {
   // Steps:
   //   Type into Name field.
   //   Press Escape.
@@ -133,7 +153,9 @@ test('ADM-USERS-15 — Escape key closes Add/Edit dialog without saving', async 
   // TODO: add assertions for ADM-USERS-15
 });
 
-test('ADM-USERS-16 — Click outside Add/Edit dialog closes without saving', async ({ page }) => {
+test("ADM-USERS-16 — Click outside Add/Edit dialog closes without saving", async ({
+  page,
+}) => {
   // Steps:
   //   Fill form.
   //   Click overlay backdrop.
@@ -141,27 +163,33 @@ test('ADM-USERS-16 — Click outside Add/Edit dialog closes without saving', asy
   // TODO: add assertions for ADM-USERS-16
 });
 
-test('ADM-USERS-17 — Inactive user badge displays correctly', async ({ page }) => {
+test("ADM-USERS-17 — Inactive user badge displays correctly", async ({
+  page,
+}) => {
   // Expected: When isActive=false, "inactive" badge with gray-200 bg, gray-500 text. Row opacity-60.
   // TODO: add assertions for ADM-USERS-17
 });
 
-test('ADM-USERS-18 — Deactivate button styling reflects state', async ({ page }) => {
+test("ADM-USERS-18 — Deactivate button styling reflects state", async ({
+  page,
+}) => {
   // Expected: Active row Deactivate: amber-600 text, white bg. Inactive row Activate: starbucks-accent text, hover bg success.
   // TODO: add assertions for ADM-USERS-18
 });
 
-test('ADM-USERS-19 — Empty users list shows no table', async ({ page }) => {
+test("ADM-USERS-19 — Empty users list shows no table", async ({ page }) => {
   // Expected: When users=[], filteredUsers=[]. Table not rendered. Empty-state shown.
   // TODO: add assertions for ADM-USERS-19
 });
 
-test('ADM-USERS-20 — Tab header displays user count', async ({ page }) => {
+test("ADM-USERS-20 — Tab header displays user count", async ({ page }) => {
   // Expected: title="Users", description="Manage group members and their roles.", count="{users.length} users".
   // TODO: add assertions for ADM-USERS-20
 });
 
-test('ADM-USERS-21 — New user appears in table immediately after add', async ({ page }) => {
+test("ADM-USERS-21 — New user appears in table immediately after add", async ({
+  page,
+}) => {
   // Steps:
   //   Fill Add User form, submit.
   //   Wait for dialog close.
@@ -169,22 +197,28 @@ test('ADM-USERS-21 — New user appears in table immediately after add', async (
   // TODO: add assertions for ADM-USERS-21
 });
 
-test('ADM-USERS-22 — Edited user updates persist in table', async ({ page }) => {
+test("ADM-USERS-22 — Edited user updates persist in table", async ({
+  page,
+}) => {
   // Expected: After Save Changes, invalidateAdmin → refetch. Updated email visible.
   // TODO: add assertions for ADM-USERS-22
 });
 
-test('ADM-USERS-23 — Deleted user removed from table', async ({ page }) => {
+test("ADM-USERS-23 — Deleted user removed from table", async ({ page }) => {
   // Expected: deleteUserMut → trpc.admin.deleteUser. invalidateAdmin → refetch. Row removed.
   // TODO: add assertions for ADM-USERS-23
 });
 
-test('ADM-USERS-24 — Role change visible after mutation completes', async ({ page }) => {
+test("ADM-USERS-24 — Role change visible after mutation completes", async ({
+  page,
+}) => {
   // Expected: Role badge updates to new role with appropriate styling (admin: fef3c7 bg, amber-900; director: dbeafe bg, 1e3a8a text).
   // TODO: add assertions for ADM-USERS-24
 });
 
-test('ADM-USERS-25 — Non-admin user cannot access users tab', async ({ page }) => {
+test("ADM-USERS-25 — Non-admin user cannot access users tab", async ({
+  page,
+}) => {
   // Steps:
   //   Log in as lead.
   //   Navigate to `/admin?tab=users`.

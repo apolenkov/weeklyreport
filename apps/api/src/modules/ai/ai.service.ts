@@ -3,17 +3,17 @@
 // added in 31-04). Returns a discriminated-union sentinel so failure
 // modes (no key, outage, rate limit, budget exceeded) never bubble raw
 // exceptions into the tRPC error mapper.
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { computeContentHash, withCache } from './ai-cache.js';
+import { computeContentHash, withCache } from "./ai-cache.js";
 import {
   AiRateLimitError,
   AiUnavailableError,
   runStructured,
   type AnthropicClientFactory,
   type RunStructuredResult,
-} from './ai-client.js';
-import type { AiFacade } from './ai-facade.js';
+} from "./ai-client.js";
+import type { AiFacade } from "./ai-facade.js";
 import {
   SUMMARY_MODEL,
   SUMMARY_SYSTEM_PROMPT,
@@ -23,7 +23,7 @@ import {
   condenseReportForPrompt,
   summarySchema,
   type SummaryResult,
-} from './prompts/summary.js';
+} from "./prompts/summary.js";
 import {
   SENTIMENT_MODEL,
   SENTIMENT_SYSTEM_PROMPT,
@@ -32,7 +32,7 @@ import {
   buildSentimentUserPrompt,
   sentimentSchema,
   type SentimentResult,
-} from './prompts/sentiment.js';
+} from "./prompts/sentiment.js";
 import {
   ON_TRACK_MODEL,
   ON_TRACK_SYSTEM_PROMPT,
@@ -41,7 +41,7 @@ import {
   buildOnTrackUserPrompt,
   onTrackSchema,
   type OnTrackResult,
-} from './prompts/on-track.js';
+} from "./prompts/on-track.js";
 
 export type AiInsightAvailable<R> = {
   available: true;
@@ -51,7 +51,7 @@ export type AiInsightAvailable<R> = {
 
 export type AiInsightUnavailable = {
   available: false;
-  reason: 'unavailable' | 'rate_limit' | 'budget_exceeded' | 'not_found';
+  reason: "unavailable" | "rate_limit" | "budget_exceeded" | "not_found";
 };
 
 export type AiInsightResult<R> = AiInsightAvailable<R> | AiInsightUnavailable;
@@ -68,28 +68,28 @@ export const PER_REPORT_BUDGET_TOKENS = 50_000;
 // any cache read so the stubbed answer never poisons the AiInsight table
 // in production environments. Off by default; only the visual project sets
 // it via the Playwright webServer env block.
-const AI_VISUAL_STUB = (): boolean => process.env['AI_VISUAL_STUB'] === 'true';
+const AI_VISUAL_STUB = (): boolean => process.env["AI_VISUAL_STUB"] === "true";
 
 const STUB_SUMMARY: SummaryResult = {
   narrative:
-    'Портфель в целом в зелёной зоне с управляемыми рисками. Команда закрыла плановый объём задач, два проекта требуют внимания на следующей неделе.',
-  tone: 'neutral',
+    "Портфель в целом в зелёной зоне с управляемыми рисками. Команда закрыла плановый объём задач, два проекта требуют внимания на следующей неделе.",
+  tone: "neutral",
   highlights: [
-    '5 из 6 проектов на треке',
-    'Активная митигация двух рисков',
-    'Решение по бюджету ожидает руководителя',
+    "5 из 6 проектов на треке",
+    "Активная митигация двух рисков",
+    "Решение по бюджету ожидает руководителя",
   ],
 };
 
 const STUB_SENTIMENT: SentimentResult = {
-  level: 'medium',
-  rationale: 'Stubbed sentiment for visual regression baseline.',
+  level: "medium",
+  rationale: "Stubbed sentiment for visual regression baseline.",
 };
 
 const STUB_ON_TRACK: OnTrackResult = {
-  verdict: 'on-track',
-  confidence: 'medium',
-  rationale: 'Stubbed on-track verdict for visual regression baseline.',
+  verdict: "on-track",
+  confidence: "medium",
+  rationale: "Stubbed on-track verdict for visual regression baseline.",
 };
 
 @Injectable()
@@ -120,7 +120,9 @@ export class AiService {
     return this.runSummary(reportId, false);
   }
 
-  async regenerateSummary(reportId: string): Promise<AiInsightResult<SummaryResult>> {
+  async regenerateSummary(
+    reportId: string,
+  ): Promise<AiInsightResult<SummaryResult>> {
     return this.runSummary(reportId, true);
   }
 
@@ -136,33 +138,37 @@ export class AiService {
     }
     const report = await this.facade.getReportForSummary(reportId);
     if (!report) {
-      return { available: false, reason: 'not_found' };
+      return { available: false, reason: "not_found" };
     }
 
     const condensedContent = condenseReportForPrompt(report);
     const cacheInput = {
       reportId: report.reportId,
       sectionCount: report.sectionCount,
-      counts: { green: report.greenCount, yellow: report.yellowCount, red: report.redCount },
+      counts: {
+        green: report.greenCount,
+        yellow: report.yellowCount,
+        red: report.redCount,
+      },
       sections: report.sections,
     };
     const contentHash = computeContentHash(cacheInput);
 
     if (bustCache) {
-      await this.facade.deleteAiInsight('summary', contentHash);
+      await this.facade.deleteAiInsight("summary", contentHash);
     }
 
     // Phase 32-A1 (C-01): budget guard scoped per-report. Sums input+output
     // tokens across ALL kinds (summary/sentiment/on_track) for this report
     // in the last hour. Bail before SDK call if cap exceeded.
     if (await this.isOverBudget(report.reportId)) {
-      return { available: false, reason: 'budget_exceeded' };
+      return { available: false, reason: "budget_exceeded" };
     }
 
     try {
       const { row, cached } = await withCache<SummaryResult>({
         facade: this.facade,
-        kind: 'summary',
+        kind: "summary",
         contentHash,
         reportId: report.reportId,
         generate: async () => {
@@ -185,13 +191,13 @@ export class AiService {
       return { available: true, result: row.result, cached };
     } catch (err) {
       if (err instanceof AiRateLimitError) {
-        return { available: false, reason: 'rate_limit' };
+        return { available: false, reason: "rate_limit" };
       }
       if (err instanceof AiUnavailableError) {
-        return { available: false, reason: 'unavailable' };
+        return { available: false, reason: "unavailable" };
       }
       // Unknown error — also unavailable (no raw bubble).
-      return { available: false, reason: 'unavailable' };
+      return { available: false, reason: "unavailable" };
     }
   }
 
@@ -205,7 +211,7 @@ export class AiService {
     }
     const risk = await this.facade.getRiskForSentiment(riskId);
     if (!risk) {
-      return { available: false, reason: 'not_found' };
+      return { available: false, reason: "not_found" };
     }
     const contentHash = computeContentHash({
       risk: risk.risk,
@@ -217,13 +223,13 @@ export class AiService {
     // section. The cache row WILL still be shared across reports for the
     // same risk-text tuple, but the budget guard fires per-report-scope.
     if (await this.isOverBudget(risk.reportId)) {
-      return { available: false, reason: 'budget_exceeded' };
+      return { available: false, reason: "budget_exceeded" };
     }
 
     try {
       const { row, cached } = await withCache<SentimentResult>({
         facade: this.facade,
-        kind: 'sentiment',
+        kind: "sentiment",
         contentHash,
         reportId: risk.reportId,
         generate: async () => {
@@ -245,9 +251,9 @@ export class AiService {
       return { available: true, result: row.result, cached };
     } catch (err) {
       if (err instanceof AiRateLimitError) {
-        return { available: false, reason: 'rate_limit' };
+        return { available: false, reason: "rate_limit" };
       }
-      return { available: false, reason: 'unavailable' };
+      return { available: false, reason: "unavailable" };
     }
   }
 
@@ -265,7 +271,7 @@ export class AiService {
     }
     const cell = await this.facade.getCellForOnTrack(sectionId, projectId);
     if (!cell) {
-      return { available: false, reason: 'not_found' };
+      return { available: false, reason: "not_found" };
     }
     const cacheInput = {
       sectionId: cell.sectionId,
@@ -285,13 +291,13 @@ export class AiService {
     // Phase 32-A1 (C-01): budget guard scoped per-report. The reportId is
     // looked up via the cell's section.
     if (await this.isOverBudget(cell.reportId)) {
-      return { available: false, reason: 'budget_exceeded' };
+      return { available: false, reason: "budget_exceeded" };
     }
 
     try {
       const { row, cached } = await withCache<OnTrackResult>({
         facade: this.facade,
-        kind: 'on_track',
+        kind: "on_track",
         contentHash,
         reportId: cell.reportId,
         generate: async () => {
@@ -313,9 +319,9 @@ export class AiService {
       return { available: true, result: row.result, cached };
     } catch (err) {
       if (err instanceof AiRateLimitError) {
-        return { available: false, reason: 'rate_limit' };
+        return { available: false, reason: "rate_limit" };
       }
-      return { available: false, reason: 'unavailable' };
+      return { available: false, reason: "unavailable" };
     }
   }
 }

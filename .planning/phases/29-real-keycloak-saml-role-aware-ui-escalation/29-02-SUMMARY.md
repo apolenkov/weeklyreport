@@ -12,8 +12,8 @@ A typed, enforced JWT role claim end-to-end: Keycloak realm fixture defines a SA
 ## Final SamlProfileSchema shape
 
 ```typescript
-import { z } from 'zod';
-import { sessionRoleSchema, type Role } from '../schemas/auth';
+import { z } from "zod";
+import { sessionRoleSchema, type Role } from "../schemas/auth";
 
 export const SamlProfileSchema = z
   .object({
@@ -36,38 +36,38 @@ export type SamlProfile = z.infer<typeof SamlProfileSchema>;
 
 ## saml.strategy.ts dev vs non-dev branch
 
-| Branch | Behaviour | Mitigation |
-|--------|-----------|------------|
-| `devMode=true`, role missing | Defaults to `'viewer'` | Phase 26 / 28 ergonomics preserved (CC-2 staged removal). Retired in Phase 29-04. |
-| `devMode=true`, role present (any case) | Lowercased, validated against enum, fallback to `'viewer'` if unrecognised | Same staged-removal stance |
-| `devMode=false`, role missing | `Error('SAML profile missing required role attribute')` | A-2 mitigation: fails closed |
-| `devMode=false`, role present + recognised (case-insensitive) | Lowercased, validated, returned typed Role | T2 mitigation |
-| `devMode=false`, role unrecognised | `Error('SAML profile missing required role attribute')` | A-2 mitigation |
-| Both branches, profile null/missing | `Error('SAML profile is missing')` | Pre-existing guard |
+| Branch                                                        | Behaviour                                                                  | Mitigation                                                                        |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `devMode=true`, role missing                                  | Defaults to `'viewer'`                                                     | Phase 26 / 28 ergonomics preserved (CC-2 staged removal). Retired in Phase 29-04. |
+| `devMode=true`, role present (any case)                       | Lowercased, validated against enum, fallback to `'viewer'` if unrecognised | Same staged-removal stance                                                        |
+| `devMode=false`, role missing                                 | `Error('SAML profile missing required role attribute')`                    | A-2 mitigation: fails closed                                                      |
+| `devMode=false`, role present + recognised (case-insensitive) | Lowercased, validated, returned typed Role                                 | T2 mitigation                                                                     |
+| `devMode=false`, role unrecognised                            | `Error('SAML profile missing required role attribute')`                    | A-2 mitigation                                                                    |
+| Both branches, profile null/missing                           | `Error('SAML profile is missing')`                                         | Pre-existing guard                                                                |
 
 The verify callback was extracted into a pure `verifySamlProfile(options, rawProfile)` that returns a discriminated union `{ ok: true, profile }` or `{ ok: false, error }`. This makes the path testable without instantiating the passport-saml Strategy (which requires an idp cert at construction time).
 
 ## Files modified
 
-| File | LOC delta | Note |
-|------|-----------|------|
-| packages/shared/src/auth/saml-profile.ts (new) | +37 | SamlProfileSchema + Role re-export |
-| packages/shared/src/auth/saml-profile.test.ts (new) | +85 | 8 unit tests covering A-2 + T2 |
-| packages/shared/src/auth/index.ts (new) | +1 | barrel |
-| packages/shared/src/index.ts | +1 | adds `export * from './auth'` |
-| apps/api/src/modules/auth/saml.strategy.ts | +60/-5 | strict path via verifySamlProfile + dev fallback |
-| apps/api/src/modules/auth/saml.strategy.test.ts (new) | +110 | 8 unit tests on dev + production branches |
-| apps/api/src/infrastructure/trpc/__tests__/role-claim.contract.test.ts (new) | +110 | 5 contract tests on full SAML→JWT round-trip |
-| infra/keycloak/realm-export.json (new) | +159 | Realm fixture with saml-role-mapper + 4 test users |
+| File                                                                         | LOC delta | Note                                               |
+| ---------------------------------------------------------------------------- | --------- | -------------------------------------------------- |
+| packages/shared/src/auth/saml-profile.ts (new)                               | +37       | SamlProfileSchema + Role re-export                 |
+| packages/shared/src/auth/saml-profile.test.ts (new)                          | +85       | 8 unit tests covering A-2 + T2                     |
+| packages/shared/src/auth/index.ts (new)                                      | +1        | barrel                                             |
+| packages/shared/src/index.ts                                                 | +1        | adds `export * from './auth'`                      |
+| apps/api/src/modules/auth/saml.strategy.ts                                   | +60/-5    | strict path via verifySamlProfile + dev fallback   |
+| apps/api/src/modules/auth/saml.strategy.test.ts (new)                        | +110      | 8 unit tests on dev + production branches          |
+| apps/api/src/infrastructure/trpc/**tests**/role-claim.contract.test.ts (new) | +110      | 5 contract tests on full SAML→JWT round-trip       |
+| infra/keycloak/realm-export.json (new)                                       | +159      | Realm fixture with saml-role-mapper + 4 test users |
 
 ## Test counts
 
-| Suite | Before | After | Delta |
-|-------|--------|-------|-------|
-| api unit | 444 / 35 files | 457 / 37 files | +13 / +2 |
-| shared unit | 218 / 5 files | 226 / 6 files | +8 / +1 |
-| web unit | 168 (1 pre-existing fail) | 168 (same fail) | 0 |
-| typecheck (api + web) | green | green | — |
+| Suite                 | Before                    | After           | Delta    |
+| --------------------- | ------------------------- | --------------- | -------- |
+| api unit              | 444 / 35 files            | 457 / 37 files  | +13 / +2 |
+| shared unit           | 218 / 5 files             | 226 / 6 files   | +8 / +1  |
+| web unit              | 168 (1 pre-existing fail) | 168 (same fail) | 0        |
+| typecheck (api + web) | green                     | green           | —        |
 
 ## Key design choices / deviations
 

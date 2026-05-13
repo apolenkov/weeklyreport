@@ -1,6 +1,10 @@
-import { adminReminderExecutionSchema, type AdminReminderExecution, type PaginatedResult } from '@customreport/shared';
+import {
+  adminReminderExecutionSchema,
+  type AdminReminderExecution,
+  type PaginatedResult,
+} from "@customreport/shared";
 
-import { type RemindersService } from './reminders.service';
+import { type RemindersService } from "./reminders.service";
 
 export type RemindersRequestContext = {
   remindersService: RemindersService;
@@ -14,12 +18,19 @@ export type RemindersListContext = {
 };
 
 export const remindersRouter = {
-  async requestExecution(ctx: RemindersRequestContext): Promise<AdminReminderExecution> {
+  async requestExecution(
+    ctx: RemindersRequestContext,
+  ): Promise<AdminReminderExecution> {
     return adminReminderExecutionSchema.parse(
-      await ctx.remindersService.requestReminderExecution(ctx.ruleId, ctx.recipientEmail),
+      await ctx.remindersService.requestReminderExecution(
+        ctx.ruleId,
+        ctx.recipientEmail,
+      ),
     );
   },
-  async listExecutions(ctx: RemindersListContext): Promise<PaginatedResult<AdminReminderExecution>> {
+  async listExecutions(
+    ctx: RemindersListContext,
+  ): Promise<PaginatedResult<AdminReminderExecution>> {
     const result = await ctx.remindersService.listExecutions(ctx.ruleId);
 
     return {

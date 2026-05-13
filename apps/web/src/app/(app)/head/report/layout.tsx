@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
-import type { Role } from '@customreport/shared';
+import type { Role } from "@customreport/shared";
 
-import { ForbiddenPage } from '../../../../components/forbidden-page';
-import { getServerSession } from '../../../../lib/server/get-server-session';
+import { ForbiddenPage } from "../../../../components/forbidden-page";
+import { getServerSession } from "../../../../lib/server/get-server-session";
 
 /**
  * UFB-057 / Phase 57: nested role gate for the head weekly-report
@@ -21,7 +21,7 @@ import { getServerSession } from '../../../../lib/server/get-server-session';
  * than its parent. Keeps the broad-gate-at-top pattern intact for
  * /head/dashboard (the common case) while protecting the authoring path.
  */
-const REQUIRED: ReadonlyArray<Role> = ['head', 'admin'];
+const REQUIRED: ReadonlyArray<Role> = ["head", "admin"];
 
 type Props = Readonly<{ children: ReactNode }>;
 

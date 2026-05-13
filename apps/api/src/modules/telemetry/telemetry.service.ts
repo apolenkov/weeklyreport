@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import type { TelemetrySummary } from '@customreport/shared';
-import { telemetrySummarySchema } from '@customreport/shared';
+import { Injectable } from "@nestjs/common";
+import type { TelemetrySummary } from "@customreport/shared";
+import { telemetrySummarySchema } from "@customreport/shared";
 
 /**
  * Port shape consumed by TelemetryService — Prisma-agnostic so unit
@@ -61,7 +61,7 @@ export class TelemetryService {
    * cleanly via a bump.
    */
   async getSummary(): Promise<TelemetrySummary> {
-    return this.cache.getOrCompute<TelemetrySummary>('summary:v1', async () => {
+    return this.cache.getOrCompute<TelemetrySummary>("summary:v1", async () => {
       const sparkline = await this.repository.onTimeRatioPerPeriod(4);
       const onTimeRatio =
         sparkline.length === 0

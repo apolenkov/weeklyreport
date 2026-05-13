@@ -6,7 +6,7 @@ type: feedback
 
 User caught reopen-request black-hole: form had a working "Send Request" button, the mutation ran fine, the toast said success — but the row was never persisted (`console.log` only) and there was no admin UI to surface it. Functional tests + screenshot tests passed because they only check the immediate response, not the full lifecycle.
 
-**Rule:** for any mutation, verify the *consumer* exists. The DOM walker pattern below is the systematic way to find these gaps.
+**Rule:** for any mutation, verify the _consumer_ exists. The DOM walker pattern below is the systematic way to find these gaps.
 
 **Why:** UI tests verify "click → expected immediate effect" but miss "is the side-effect ever observable elsewhere in the app?". A button that writes to /dev/null still toasts "Success!".
 
@@ -30,6 +30,6 @@ Output: interaction-inventory.csv + side-effect-coverage.md.
 Run as part of pre-release sanity gate.
 ```
 
-**Avoid:** declaring "tests pass, ship it" when no test verifies the *observability* of mutations across the system. Toasts are not consumers; they're acknowledgments.
+**Avoid:** declaring "tests pass, ship it" when no test verifies the _observability_ of mutations across the system. Toasts are not consumers; they're acknowledgments.
 
 **Concrete next step:** task #92 in this repo's task tracker — build the DOM-walker tool. Should run as `pnpm uat:inventory` and emit a coverage matrix.

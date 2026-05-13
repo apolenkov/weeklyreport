@@ -9,20 +9,83 @@
     "yellowCount": 3,
     "redCount": 1,
     "sections": [
-      {"authorName": "Lead-A", "trafficLights": [{"projectName": "Acme", "status": "green"}, {"projectName": "Globex", "status": "yellow"}], "riskCount": 2, "decisionCount": 1, "itemCount": 5},
-      {"authorName": "Lead-B", "trafficLights": [{"projectName": "Initech", "status": "yellow"}, {"projectName": "Hooli", "status": "red"}], "riskCount": 3, "decisionCount": 1, "itemCount": 6},
-      {"authorName": "Lead-C", "trafficLights": [{"projectName": "Pied", "status": "green"}, {"projectName": "Vandelay", "status": "green"}], "riskCount": 1, "decisionCount": 0, "itemCount": 4},
-      {"authorName": "Lead-D", "trafficLights": [{"projectName": "Massive", "status": "green"}, {"projectName": "Sterling", "status": "yellow"}], "riskCount": 1, "decisionCount": 1, "itemCount": 4}
+      {
+        "authorName": "Lead-A",
+        "trafficLights": [
+          { "projectName": "Acme", "status": "green" },
+          { "projectName": "Globex", "status": "yellow" }
+        ],
+        "riskCount": 2,
+        "decisionCount": 1,
+        "itemCount": 5
+      },
+      {
+        "authorName": "Lead-B",
+        "trafficLights": [
+          { "projectName": "Initech", "status": "yellow" },
+          { "projectName": "Hooli", "status": "red" }
+        ],
+        "riskCount": 3,
+        "decisionCount": 1,
+        "itemCount": 6
+      },
+      {
+        "authorName": "Lead-C",
+        "trafficLights": [
+          { "projectName": "Pied", "status": "green" },
+          { "projectName": "Vandelay", "status": "green" }
+        ],
+        "riskCount": 1,
+        "decisionCount": 0,
+        "itemCount": 4
+      },
+      {
+        "authorName": "Lead-D",
+        "trafficLights": [
+          { "projectName": "Massive", "status": "green" },
+          { "projectName": "Sterling", "status": "yellow" }
+        ],
+        "riskCount": 1,
+        "decisionCount": 1,
+        "itemCount": 4
+      }
     ]
   },
   "risks": [
-    {"id": "r-002-1", "risk": "Third-party API rate-limit might bite at peak", "impact": "Customer-facing feature degrades", "mitigation": "Adding cache layer", "expectedLevel": "medium"},
-    {"id": "r-002-2", "risk": "Single engineer holds critical knowledge", "impact": "Key absence stalls progress", "mitigation": "Pair-programming weekly", "expectedLevel": "medium"}
+    {
+      "id": "r-002-1",
+      "risk": "Third-party API rate-limit might bite at peak",
+      "impact": "Customer-facing feature degrades",
+      "mitigation": "Adding cache layer",
+      "expectedLevel": "medium"
+    },
+    {
+      "id": "r-002-2",
+      "risk": "Single engineer holds critical knowledge",
+      "impact": "Key absence stalls progress",
+      "mitigation": "Pair-programming weekly",
+      "expectedLevel": "medium"
+    }
   ],
   "cells": [
-    {"sectionId": "s-002-b", "projectId": "p-hooli", "leadName": "Lead-B", "projectName": "Hooli", "leadColour": "red", "currentItemCount": 6, "completedCount": 1, "blockedCount": 2, "riskCount": 3, "decisionCount": 1, "currentWeekText": "Two items blocked on third-party API.", "nextWeekText": "Working around limits.", "riskHighlights": "- Rate-limit hit (impact: high)", "expectedVerdict": "off-track"}
+    {
+      "sectionId": "s-002-b",
+      "projectId": "p-hooli",
+      "leadName": "Lead-B",
+      "projectName": "Hooli",
+      "leadColour": "red",
+      "currentItemCount": 6,
+      "completedCount": 1,
+      "blockedCount": 2,
+      "riskCount": 3,
+      "decisionCount": 1,
+      "currentWeekText": "Two items blocked on third-party API.",
+      "nextWeekText": "Working around limits.",
+      "riskHighlights": "- Rate-limit hit (impact: high)",
+      "expectedVerdict": "off-track"
+    }
   ],
   "expected": {
-    "summary": {"tone": "neutral", "narrativeContains": []}
+    "summary": { "tone": "neutral", "narrativeContains": [] }
   }
 }

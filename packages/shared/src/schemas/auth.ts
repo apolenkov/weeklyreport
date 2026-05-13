@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Role of a User row in the database (Prisma `Role` enum).
@@ -14,7 +14,13 @@ import { z } from 'zod';
  * group). Viewer-equivalent in capability but lands on the head-dashboard
  * surface instead of the published archive.
  */
-export const roleSchema = z.enum(['lead', 'head', 'admin', 'viewer', 'director']);
+export const roleSchema = z.enum([
+  "lead",
+  "head",
+  "admin",
+  "viewer",
+  "director",
+]);
 
 /**
  * Role attached to an authenticated session (JWT / SAML claim).
@@ -26,7 +32,13 @@ export const roleSchema = z.enum(['lead', 'head', 'admin', 'viewer', 'director']
  *
  * UFB-057 / Phase 57: 'director' carried alongside the DB-bound set.
  */
-export const sessionRoleSchema = z.enum(['lead', 'head', 'admin', 'viewer', 'director']);
+export const sessionRoleSchema = z.enum([
+  "lead",
+  "head",
+  "admin",
+  "viewer",
+  "director",
+]);
 
 export const userSessionSchema = z.object({
   userId: z.string().uuid(),

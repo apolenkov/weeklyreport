@@ -73,24 +73,24 @@ End-to-end correlation IDs for the API: every tRPC request produces one entry lo
 
 ## Decisions made
 
-| Decision | Choice | Why |
-| --- | --- | --- |
-| Replace logger? | No — enhance | Per CONTEXT.md "Don't Replace Logger"; service-level loggers across the codebase already consume `AppLogger` |
-| Where to store correlationId | CLS store via `nestjs-cls` | D-01; avoids threading id through every service call |
-| Logger as NestJS provider? | No, keep as factory | Existing wiring pattern; ClsService is passed via `LoggerOptions.clsService` from `main.ts` |
-| Logging middleware order vs auth | Logging FIRST, auth second | Captures failed-auth attempts (security forensics > anonymous-noise risk); per D-02 trade-off |
-| Rotation strategy | Single `app.log` + size-based gzip | CONTEXT.md "File Rotation"; simpler than daily-prefix and gives predictable disk use |
-| maxBytes default | 50 MiB | CONTEXT.md default; balances rotation frequency vs archive count |
-| maxAgeDays default | 30 days | CONTEXT.md default; matches typical operational debugging window |
-| Serialization of file work | Per-logger promise queue | Prevents `appendFile` racing with the `pipeline` during rotation; documented in inline comment |
+| Decision                         | Choice                             | Why                                                                                                          |
+| -------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Replace logger?                  | No — enhance                       | Per CONTEXT.md "Don't Replace Logger"; service-level loggers across the codebase already consume `AppLogger` |
+| Where to store correlationId     | CLS store via `nestjs-cls`         | D-01; avoids threading id through every service call                                                         |
+| Logger as NestJS provider?       | No, keep as factory                | Existing wiring pattern; ClsService is passed via `LoggerOptions.clsService` from `main.ts`                  |
+| Logging middleware order vs auth | Logging FIRST, auth second         | Captures failed-auth attempts (security forensics > anonymous-noise risk); per D-02 trade-off                |
+| Rotation strategy                | Single `app.log` + size-based gzip | CONTEXT.md "File Rotation"; simpler than daily-prefix and gives predictable disk use                         |
+| maxBytes default                 | 50 MiB                             | CONTEXT.md default; balances rotation frequency vs archive count                                             |
+| maxAgeDays default               | 30 days                            | CONTEXT.md default; matches typical operational debugging window                                             |
+| Serialization of file work       | Per-logger promise queue           | Prevents `appendFile` racing with the `pipeline` during rotation; documented in inline comment               |
 
 ## Tests added/updated
 
-| Suite | Count | Notes |
-| --- | --- | --- |
-| `correlation-id.middleware.test.ts` | 3 (new file) | UUID generation, header preservation, per-request isolation |
-| `logger.test.ts` | 17 (rewritten) | async write, gzip rotation + magic-byte check, age-based pruning, CLS active/inactive/missing branches, child-logger CLS inheritance |
-| `trpc.middleware.test.ts` | 15 (4 new logging cases + 11 existing auth cases updated for `logger` ctx field) | success/error/authed-userId/anonymous-userId logging; all original auth assertions preserved |
+| Suite                               | Count                                                                            | Notes                                                                                                                                |
+| ----------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `correlation-id.middleware.test.ts` | 3 (new file)                                                                     | UUID generation, header preservation, per-request isolation                                                                          |
+| `logger.test.ts`                    | 17 (rewritten)                                                                   | async write, gzip rotation + magic-byte check, age-based pruning, CLS active/inactive/missing branches, child-logger CLS inheritance |
+| `trpc.middleware.test.ts`           | 15 (4 new logging cases + 11 existing auth cases updated for `logger` ctx field) | success/error/authed-userId/anonymous-userId logging; all original auth assertions preserved                                         |
 
 Full apps/api unit suite: **29 files / 398 tests passing**.
 
@@ -135,6 +135,7 @@ Then in `apps/api/logs/app.log` you should see two consecutive lines whose `corr
 ## Self-Check: PASSED
 
 Files claimed:
+
 - FOUND: `apps/api/src/infrastructure/middleware/correlation-id.middleware.test.ts`
 - FOUND: `apps/api/src/infrastructure/middleware/correlation-id.middleware.ts`
 - FOUND: `apps/api/src/app.module.ts`
@@ -146,10 +147,12 @@ Files claimed:
 - FOUND: `apps/api/src/infrastructure/trpc/trpc.context.ts`
 
 Commits claimed (verified via `git log`):
+
 - FOUND: `51d74be` feat(api): wire nestjs-cls and propagate correlationId into CLS store [LOG-01]
 - FOUND: `0883b1f` feat(api): async file logging with size-based gzip rotation and CLS correlationId [LOG-03,LOG-04,LOG-05]
 - FOUND: `f647247` feat(api): tRPC request/response logging middleware with duration and status [LOG-02]
 
 Test runs:
+
 - 3 target suites: 35/35 passing
 - Full apps/api unit suite: 398/398 passing

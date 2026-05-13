@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
-import type { KanbanItem } from './mock-data';
-import { splitStageNames } from './stage-tags';
+import type { KanbanItem } from "./mock-data";
+import { splitStageNames } from "./stage-tags";
 
 type ItemCardProps = {
   readonly item: KanbanItem;
@@ -29,15 +29,33 @@ type ItemCardProps = {
 type StatusBadge = { bg: string; text: string; label: string };
 
 const STATUS_BADGE = {
-  'in-progress': { bg: 'var(--color-success)', text: 'var(--color-primary)', label: 'In Progress' },
-  completed: { bg: 'var(--color-primary)', text: '#fff', label: 'Completed' },
-  blocked: { bg: '#fee2e2', text: 'var(--color-destructive)', label: 'Blocked' },
-  planned: { bg: 'var(--color-muted)', text: 'var(--color-muted-foreground)', label: 'Planned' },
+  "in-progress": {
+    bg: "var(--color-success)",
+    text: "var(--color-primary)",
+    label: "In Progress",
+  },
+  completed: { bg: "var(--color-primary)", text: "#fff", label: "Completed" },
+  blocked: {
+    bg: "#fee2e2",
+    text: "var(--color-destructive)",
+    label: "Blocked",
+  },
+  planned: {
+    bg: "var(--color-muted)",
+    text: "var(--color-muted-foreground)",
+    label: "Planned",
+  },
 } as const satisfies Record<string, StatusBadge>;
 
 function EditIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" stroke="currentColor" fill="none" strokeWidth={2}>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3 w-3"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+    >
       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
       <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
@@ -46,7 +64,13 @@ function EditIcon() {
 
 function DeleteIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" stroke="currentColor" fill="none" strokeWidth={2}>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3 w-3"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+    >
       <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
     </svg>
   );
@@ -62,10 +86,13 @@ export function ItemCard({
 }: ItemCardProps) {
   const badge =
     (STATUS_BADGE as Record<string, StatusBadge>)[item.status] ??
-    STATUS_BADGE['in-progress'];
-  const isBlocked = item.status === 'blocked';
-  const isPlanned = item.status === 'planned';
-  const stageTags = (item.stageIds && item.stageIds.length > 0) ? item.stageIds : splitStageNames(item.stageName);
+    STATUS_BADGE["in-progress"];
+  const isBlocked = item.status === "blocked";
+  const isPlanned = item.status === "planned";
+  const stageTags =
+    item.stageIds && item.stageIds.length > 0
+      ? item.stageIds
+      : splitStageNames(item.stageName);
 
   // Local draft for the inline textarea. Reset every time edit mode opens so
   // the field tracks the latest committed text.
@@ -88,10 +115,10 @@ export function ItemCard({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       commit(draft);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       e.preventDefault();
       // Cancel: re-emit original text, parent clears edit mode.
       commit(item.text);
@@ -111,16 +138,16 @@ export function ItemCard({
         // and a solid + colour-coded left strip on Current Week. We build
         // every side explicitly to avoid the shorthand-vs-longhand React
         // warning that borderLeft+borderStyle was producing.
-        borderTop: `1px ${isPlanned ? 'dashed' : 'solid'} ${isBlocked ? 'rgba(200,32,20,0.2)' : 'var(--color-muted)'}`,
-        borderRight: `1px ${isPlanned ? 'dashed' : 'solid'} ${isBlocked ? 'rgba(200,32,20,0.2)' : 'var(--color-muted)'}`,
-        borderBottom: `1px ${isPlanned ? 'dashed' : 'solid'} ${isBlocked ? 'rgba(200,32,20,0.2)' : 'var(--color-muted)'}`,
+        borderTop: `1px ${isPlanned ? "dashed" : "solid"} ${isBlocked ? "rgba(200,32,20,0.2)" : "var(--color-muted)"}`,
+        borderRight: `1px ${isPlanned ? "dashed" : "solid"} ${isBlocked ? "rgba(200,32,20,0.2)" : "var(--color-muted)"}`,
+        borderBottom: `1px ${isPlanned ? "dashed" : "solid"} ${isBlocked ? "rgba(200,32,20,0.2)" : "var(--color-muted)"}`,
         // KB-1 (Phase 33-04): planned cards keep a 3px dashed tealA left strip
         // so column alignment with current-week cards reads identically. The
         // earlier 1px gray dashed left turned planned columns visually narrower.
         borderLeft: isPlanned
           ? `3px dashed var(--color-starbucks-accent)`
-          : `3px solid ${isBlocked ? 'var(--color-destructive)' : 'var(--color-starbucks-accent)'}`,
-        background: isBlocked ? '#fee2e2' : 'var(--color-background)',
+          : `3px solid ${isBlocked ? "var(--color-destructive)" : "var(--color-starbucks-accent)"}`,
+        background: isBlocked ? "#fee2e2" : "var(--color-background)",
       }}
     >
       {/* Action buttons — KB-3 (Phase 33-04): mockup s2 baselines them at 30%
@@ -177,7 +204,7 @@ export function ItemCard({
         <textarea
           ref={textareaRef}
           className="w-full resize-y rounded-md border border-[var(--color-starbucks-accent)] bg-white px-2 py-1.5 text-sm text-[var(--color-foreground)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-          style={{ minHeight: '52px' }}
+          style={{ minHeight: "52px" }}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => commit(draft)}

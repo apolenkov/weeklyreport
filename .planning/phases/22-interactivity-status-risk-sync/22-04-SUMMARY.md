@@ -52,10 +52,10 @@ Wire every admin Save/Delete control across the six tabs (users, products, stage
 
 Two atomic commits, one per task block of the plan.
 
-| Task | Commit    | Files                                                              | Mutations wired                                                                                |
-| ---- | --------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Task | Commit    | Files                                                                                       | Mutations wired                                                                                          |
+| ---- | --------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | 1    | `4c051a6` | users-tab, products-tab, stage-assignment-editor, admin-panel, mappers/admin, mappers/index | `saveUser`, `deleteUser`, `saveProject`, `deleteProject`, `saveStageAssignment`, `deleteStageAssignment` |
-| 2    | `01fc909` | periods-tab, reminders-tab, settings-tab, mock-data, mappers/admin, mappers/index           | `savePeriod`, `saveReminderRule`, `deleteReminderRule`, `updateSettings`                       |
+| 2    | `01fc909` | periods-tab, reminders-tab, settings-tab, mock-data, mappers/admin, mappers/index           | `savePeriod`, `saveReminderRule`, `deleteReminderRule`, `updateSettings`                                 |
 
 Total: 10 distinct mutation endpoints across 6 tabs. `invalidateAdmin` is invoked from 14 onSuccess sites (every Save and Delete handler). Zero `TODO(Phase 22)` markers remain in `apps/web/src/components/admin/`.
 
@@ -64,6 +64,7 @@ Total: 10 distinct mutation endpoints across 6 tabs. `invalidateAdmin` is invoke
 **Controlled tabs.** Each tab now reads its data directly from the prop supplied by `AdminPanel` (`users`, `products`, `periods`, `reminders`, `settings`). The legacy `useState(initialX) + useEffect(setX)` pattern was removed — `invalidateAdmin` triggers a `snapshot` refetch and the parent re-runs `mapAdminSnapshot`, so children never own server data anymore. SettingsTab is the one exception: it keeps a local `draft` for the half-edited form, re-seeded on prop change.
 
 **Form -> Zod input mappers.** Four helpers landed in `apps/web/src/lib/mappers/admin.ts`:
+
 - `toAdminUserInput(form, existingId?)` -> `adminUserSchema`
 - `toAdminProjectInput(form, existingId?)` -> `adminProjectSchema`
 - `toReportPeriodInput(form, existingId?)` -> `reportPeriodSchema` (date strings -> `Date`)
@@ -80,6 +81,7 @@ Each helper mints a v4 UUID via `crypto.randomUUID()` when no `existingId` is su
 ### Auto-fixed Issues
 
 **1. [Rule 3 - Blocking] tRPC error type was `TRPCClientErrorLike`, not `Error`**
+
 - **Found during:** Task 1 typecheck
 - **Issue:** Initial `onError: (err: Error) => ...` annotation rejected by tRPC v11 — the runtime error shape lacks `name`, so explicit `Error` typing fails.
 - **Fix:** Removed the explicit annotation; the inferred `TRPCClientErrorLike` already carries `message`, which is all `toast.error` needs.
@@ -90,11 +92,11 @@ Each helper mints a v4 UUID via `crypto.randomUUID()` when no `existingId` is su
 
 These do not block plan completion; documented for the next plan / follow-up requirement.
 
-| Gap                            | Impact                                                                                                                                                                  | Suggested follow-up                                                                                                                                                         |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No `admin.deletePeriod`        | Periods tab supports add + edit only.                                                                                                                                   | Add `deletePeriod` to admin router + service.                                                                                                                                |
-| No `admin.listStages`          | Stage-assignment editor cannot create new stage rows from scratch — only reassign existing ones. Empty-stage projects show "stage seeding required".                    | Expose stage catalog (`listStages` returning `Stage[]`) so the editor can render a 7-stage grid with assignable selects even when the project has no assignments yet.       |
-| No `admin.sendReminderNow`     | The "Send Now" button still simulates a 1.5s spinner with no real backend call.                                                                                          | Add `sendReminderNow(ruleId)` mutation that enqueues an immediate execution.                                                                                                 |
+| Gap                        | Impact                                                                                                                                               | Suggested follow-up                                                                                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No `admin.deletePeriod`    | Periods tab supports add + edit only.                                                                                                                | Add `deletePeriod` to admin router + service.                                                                                                                         |
+| No `admin.listStages`      | Stage-assignment editor cannot create new stage rows from scratch — only reassign existing ones. Empty-stage projects show "stage seeding required". | Expose stage catalog (`listStages` returning `Stage[]`) so the editor can render a 7-stage grid with assignable selects even when the project has no assignments yet. |
+| No `admin.sendReminderNow` | The "Send Now" button still simulates a 1.5s spinner with no real backend call.                                                                      | Add `sendReminderNow(ruleId)` mutation that enqueues an immediate execution.                                                                                          |
 
 ## Verification
 

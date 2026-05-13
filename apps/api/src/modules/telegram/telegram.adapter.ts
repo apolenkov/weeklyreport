@@ -42,4 +42,4 @@ export interface TelegramAdapter {
  * pattern in `ai.adapter.ts` (Phase 54): consumers `@Inject(TELEGRAM_ADAPTER)`
  * to receive the concrete implementation selected by `TelegramModule`.
  */
-export const TELEGRAM_ADAPTER = 'TELEGRAM_ADAPTER' as const;
+export const TELEGRAM_ADAPTER = "TELEGRAM_ADAPTER" as const;

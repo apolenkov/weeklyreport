@@ -2,7 +2,7 @@ import {
   activityLiveResponseSchema,
   type ActivityLiveResponse,
   type ActivityLiveRow,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 export interface ActivityRepository {
   /**

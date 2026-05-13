@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
-import { Badge } from '@customreport/ui/components/ui/badge';
+import { Badge } from "@customreport/ui/components/ui/badge";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
 /**
  * NOTIF-06 (Phase 29-05): admin UI badge surfacing the BullMQ failed-jobs
@@ -26,7 +26,10 @@ export function DlqBadge() {
   const count = data?.count ?? 0;
   if (count === 0) return null;
   return (
-    <Badge variant="destructive" aria-label={`Email-reminder DLQ count: ${count}`}>
+    <Badge
+      variant="destructive"
+      aria-label={`Email-reminder DLQ count: ${count}`}
+    >
       DLQ: {count}
     </Badge>
   );

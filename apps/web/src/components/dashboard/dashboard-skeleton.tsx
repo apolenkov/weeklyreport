@@ -1,4 +1,4 @@
-import { Skeleton } from '@customreport/ui/components/ui/skeleton';
+import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
 /**
  * Loading-state skeleton for the head dashboard. Mirrors the dimensions of

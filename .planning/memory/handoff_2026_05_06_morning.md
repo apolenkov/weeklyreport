@@ -32,11 +32,13 @@ TOTAL                              14/30  47% shipped
 ## Why /gsd-autonomous didn't run end-to-end
 
 The autonomous workflow expects:
+
 1. All phases inline in `.planning/ROADMAP.md` — was missing for 34-39 (lived only in milestones/v8.0-ROADMAP.md). **Fixed** in `chore(planning): v8.0 phase scaffold`.
 2. Per-phase `NN-CONTEXT.md` + `NN-##-PLAN.md` + `NN-##-SUMMARY.md` artifacts. **Fixed** retroactively for the 11 shipped plans + freshly written for 39-02, 37-03, 37-04.
 3. `gsd-sdk query` CLI — **doesn't exist** in this environment. Workflow's bootstrap `INIT=$(gsd-sdk query init.milestone-op)` would have failed. The legacy CLI `node /home/user/.claude/get-shit-done/bin/gsd-tools.cjs roadmap analyze` works as a substitute and confirms the scaffold is parseable.
 
 After this morning's work, `gsd-tools roadmap analyze` reports:
+
 ```
 Phase 34: disk=complete plans=5/5 ctx=true   (Q-01..04, Q-07)
 Phase 35: disk=complete plans=1/1 ctx=true   (UX-13 partial)
@@ -47,6 +49,7 @@ Phase 39: disk=complete plans=1/1 ctx=true   (PERF-02) — was 0/0 this morning
 ```
 
 Plans NOT YET CREATED (no PLAN.md, no SUMMARY.md, no commits):
+
 - **34-05** TS error rollup (residual)
 - **34-06** ESLint warning sweep (residual; ~272→0)
 - **35-02..07** UX polish UI plans (need visual review)
@@ -62,10 +65,12 @@ Plans NOT YET CREATED (no PLAN.md, no SUMMARY.md, no commits):
 ## What's safe to autonomously continue
 
 Pure config / docs (no infra restart needed):
+
 - 38-02 Caddyfile + caddy compose service (config only; cert provisioning is org-side)
 - 39-01 PgBouncer compose service config (Prisma DATABASE_URL annotation)
 
 Need infra running to verify:
+
 - 37-01 OTel (needs OTLP collector or Jaeger to verify export)
 - 37-02 DLQ alert (needs running api + BullMQ to fire counter)
 - 38-03 SAML mock (samlify integration test — could write but verifying needs api boot)
@@ -73,9 +78,11 @@ Need infra running to verify:
 - 39-04 k6 (needs full stack up)
 
 UI work needs visual review:
+
 - 35-02..07 (HIST-2 Quick Filters, addressable URLs, role mapper, etc.)
 
 Sweep work risks merge conflicts overnight:
+
 - 34-05 TS rollup, 34-06 ESLint sweep
 
 ## Suggested next-session priorities

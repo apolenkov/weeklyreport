@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import type { KpiData } from './mock-data';
+import type { KpiData } from "./mock-data";
 
 type KpiCardsProps = {
   readonly data: KpiData;
@@ -14,7 +14,7 @@ export function KpiCards({ data }: KpiCardsProps) {
       {/* Submissions */}
       <div
         className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
-        style={{ borderLeft: '3px solid var(--color-starbucks-accent)' }}
+        style={{ borderLeft: "3px solid var(--color-starbucks-accent)" }}
         aria-label={`Submissions: ${data.submitted} of ${data.total}, ${data.pendingCount} pending`}
       >
         <p className="mb-2 text-sm font-medium text-[var(--color-muted-foreground)]">
@@ -53,7 +53,7 @@ export function KpiCards({ data }: KpiCardsProps) {
       {/* Deadline */}
       <div
         className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
-        style={{ borderLeft: '3px solid var(--color-warning)' }}
+        style={{ borderLeft: "3px solid var(--color-warning)" }}
         aria-label={`Deadline: ${data.deadlineLabel}, ${data.deadlineTime}`}
       >
         <p className="mb-2 text-sm font-medium text-[var(--color-muted-foreground)]">
@@ -70,7 +70,7 @@ export function KpiCards({ data }: KpiCardsProps) {
       {/* Risks & Blockers */}
       <div
         className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
-        style={{ borderLeft: '3px solid var(--color-destructive)' }}
+        style={{ borderLeft: "3px solid var(--color-destructive)" }}
         aria-label={`Risks: ${data.blockedCount} blocked, ${data.atRiskCount} at risk, ${data.decisionCount} decisions`}
       >
         <p className="mb-2 text-sm font-medium text-[var(--color-muted-foreground)]">
@@ -81,19 +81,25 @@ export function KpiCards({ data }: KpiCardsProps) {
             <span className="font-[family-name:var(--font-sans)] text-[28px] font-bold text-[var(--color-destructive)]">
               {data.blockedCount}
             </span>
-            <div className="text-[11px] text-[var(--color-muted-foreground)]">Blocked</div>
+            <div className="text-[11px] text-[var(--color-muted-foreground)]">
+              Blocked
+            </div>
           </div>
           <div>
             <span className="font-[family-name:var(--font-sans)] text-[28px] font-bold text-[var(--color-starbucks-gold)]">
               {data.atRiskCount}
             </span>
-            <div className="text-[11px] text-[var(--color-muted-foreground)]">At Risk</div>
+            <div className="text-[11px] text-[var(--color-muted-foreground)]">
+              At Risk
+            </div>
           </div>
           <div>
             <span className="font-[family-name:var(--font-sans)] text-[28px] font-bold text-[var(--color-primary)]">
               {data.decisionCount}
             </span>
-            <div className="text-[11px] text-[var(--color-muted-foreground)]">Decisions</div>
+            <div className="text-[11px] text-[var(--color-muted-foreground)]">
+              Decisions
+            </div>
           </div>
         </div>
       </div>

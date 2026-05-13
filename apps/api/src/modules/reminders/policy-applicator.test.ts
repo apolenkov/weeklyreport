@@ -1,67 +1,67 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import { PolicyApplicatorService } from './policy-applicator.service';
+import { PolicyApplicatorService } from "./policy-applicator.service";
 
 /* ------------------------------------------------------------------ */
 /*  Validity gate (pure)                                               */
 /* ------------------------------------------------------------------ */
 
-describe('PolicyApplicatorService.policyAppliesTo — validity gate', () => {
-  const validFrom = new Date('2026-05-01T00:00:00.000Z');
-  const validUntil = new Date('2026-08-01T00:00:00.000Z');
+describe("PolicyApplicatorService.policyAppliesTo — validity gate", () => {
+  const validFrom = new Date("2026-05-01T00:00:00.000Z");
+  const validUntil = new Date("2026-08-01T00:00:00.000Z");
 
-  it('returns true when active and deadline is inside [validFrom, validUntil]', () => {
+  it("returns true when active and deadline is inside [validFrom, validUntil]", () => {
     const result = PolicyApplicatorService.policyAppliesTo(
       { active: true, validFrom, validUntil },
-      { deadline: new Date('2026-06-15T18:00:00.000Z') },
+      { deadline: new Date("2026-06-15T18:00:00.000Z") },
     );
     expect(result).toBe(true);
   });
 
-  it('returns false when policy.active is false', () => {
+  it("returns false when policy.active is false", () => {
     const result = PolicyApplicatorService.policyAppliesTo(
       { active: false, validFrom, validUntil },
-      { deadline: new Date('2026-06-15T18:00:00.000Z') },
+      { deadline: new Date("2026-06-15T18:00:00.000Z") },
     );
     expect(result).toBe(false);
   });
 
-  it('returns false when deadline is before validFrom', () => {
+  it("returns false when deadline is before validFrom", () => {
     const result = PolicyApplicatorService.policyAppliesTo(
       { active: true, validFrom, validUntil },
-      { deadline: new Date('2026-04-15T18:00:00.000Z') },
+      { deadline: new Date("2026-04-15T18:00:00.000Z") },
     );
     expect(result).toBe(false);
   });
 
-  it('returns false when deadline is after validUntil', () => {
+  it("returns false when deadline is after validUntil", () => {
     const result = PolicyApplicatorService.policyAppliesTo(
       { active: true, validFrom, validUntil },
-      { deadline: new Date('2026-09-15T18:00:00.000Z') },
+      { deadline: new Date("2026-09-15T18:00:00.000Z") },
     );
     expect(result).toBe(false);
   });
 
-  it('returns true when validUntil is null (forever-policy)', () => {
+  it("returns true when validUntil is null (forever-policy)", () => {
     const result = PolicyApplicatorService.policyAppliesTo(
       { active: true, validFrom, validUntil: null },
-      { deadline: new Date('2030-01-01T00:00:00.000Z') },
+      { deadline: new Date("2030-01-01T00:00:00.000Z") },
     );
     expect(result).toBe(true);
   });
 
-  it('boundary: deadline === validFrom is INSIDE the window', () => {
+  it("boundary: deadline === validFrom is INSIDE the window", () => {
     const result = PolicyApplicatorService.policyAppliesTo(
       { active: true, validFrom, validUntil },
-      { deadline: new Date('2026-05-01T00:00:00.000Z') },
+      { deadline: new Date("2026-05-01T00:00:00.000Z") },
     );
     expect(result).toBe(true);
   });
 
-  it('boundary: deadline === validUntil is INSIDE the window', () => {
+  it("boundary: deadline === validUntil is INSIDE the window", () => {
     const result = PolicyApplicatorService.policyAppliesTo(
       { active: true, validFrom, validUntil },
-      { deadline: new Date('2026-08-01T00:00:00.000Z') },
+      { deadline: new Date("2026-08-01T00:00:00.000Z") },
     );
     expect(result).toBe(true);
   });
@@ -71,31 +71,27 @@ describe('PolicyApplicatorService.policyAppliesTo — validity gate', () => {
 /*  computeFireAt — DST-correct math                                   */
 /* ------------------------------------------------------------------ */
 
-describe('PolicyApplicatorService.computeFireAt — DST-correct math', () => {
+describe("PolicyApplicatorService.computeFireAt — DST-correct math", () => {
   const fakePrisma = {} as never;
 
-  it('subtracts 24h in Europe/Moscow (no DST — fixed UTC+3)', () => {
+  it("subtracts 24h in Europe/Moscow (no DST — fixed UTC+3)", () => {
     const svc = new PolicyApplicatorService(fakePrisma);
     // Deadline: 2026-06-01 21:00 MSK = 18:00 UTC
-    const deadline = new Date('2026-06-01T18:00:00.000Z');
-    const fireAt = svc.computeFireAt(deadline, -24 * 60, 'Europe/Moscow');
+    const deadline = new Date("2026-06-01T18:00:00.000Z");
+    const fireAt = svc.computeFireAt(deadline, -24 * 60, "Europe/Moscow");
     // T-24h: 2026-05-31 21:00 MSK = 18:00 UTC
-    expect(fireAt.toISOString()).toBe('2026-05-31T18:00:00.000Z');
+    expect(fireAt.toISOString()).toBe("2026-05-31T18:00:00.000Z");
   });
 
-  it('handles DST forward in America/New_York (clocks +1h)', () => {
+  it("handles DST forward in America/New_York (clocks +1h)", () => {
     const svc = new PolicyApplicatorService(fakePrisma);
     // Deadline: 2026-03-09 09:00 EDT = 13:00 UTC (after DST jump)
-    const deadline = new Date('2026-03-09T13:00:00.000Z');
+    const deadline = new Date("2026-03-09T13:00:00.000Z");
     // T-24h in wall-clock should be 2026-03-08 09:00 EST = 14:00 UTC
     // (because NY was still on EST then). Luxon's DateTime arithmetic
     // gives exact-24h elapsed, which means 2026-03-08 13:00 UTC.
-    const fireAt = svc.computeFireAt(
-      deadline,
-      -24 * 60,
-      'America/New_York',
-    );
-    expect(fireAt.toISOString()).toBe('2026-03-08T13:00:00.000Z');
+    const fireAt = svc.computeFireAt(deadline, -24 * 60, "America/New_York");
+    expect(fireAt.toISOString()).toBe("2026-03-08T13:00:00.000Z");
   });
 });
 
@@ -110,7 +106,7 @@ interface StubPolicy {
   validUntil: Date | null;
   offsetMinutes: number;
   timezone: string;
-  kind: 'deadline' | 'follow_up' | 'escalation';
+  kind: "deadline" | "follow_up" | "escalation";
 }
 
 function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
@@ -129,10 +125,12 @@ function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
       reminderRule: {
         findUnique: vi.fn(
           async (args: {
-            where: { reportId_policyId: { reportId: string; policyId: string } };
+            where: {
+              reportId_policyId: { reportId: string; policyId: string };
+            };
           }) => {
             const key = `${args.where.reportId_policyId.reportId}:${args.where.reportId_policyId.policyId}`;
-            return existingRules.has(key) ? { id: 'existing' } : null;
+            return existingRules.has(key) ? { id: "existing" } : null;
           },
         ),
         upsert: vi.fn(
@@ -142,7 +140,7 @@ function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
             update: Record<string, unknown>;
           }) => {
             upsertCalls.push(args);
-            return { id: 'rule-id' };
+            return { id: "rule-id" };
           },
         ),
       },
@@ -150,40 +148,40 @@ function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
   };
 }
 
-describe('PolicyApplicatorService.applyToPeriod', () => {
-  const validFrom = new Date('2026-01-01T00:00:00.000Z');
-  const validUntil = new Date('2026-12-31T00:00:00.000Z');
+describe("PolicyApplicatorService.applyToPeriod", () => {
+  const validFrom = new Date("2026-01-01T00:00:00.000Z");
+  const validUntil = new Date("2026-12-31T00:00:00.000Z");
 
   const policyA: StubPolicy = {
-    id: 'policy-a',
+    id: "policy-a",
     active: true,
     validFrom,
     validUntil,
     offsetMinutes: -1440,
-    timezone: 'Europe/Moscow',
-    kind: 'deadline',
+    timezone: "Europe/Moscow",
+    kind: "deadline",
   };
 
   const policyB: StubPolicy = {
-    id: 'policy-b',
+    id: "policy-b",
     active: true,
-    validFrom: new Date('2027-01-01T00:00:00.000Z'),
+    validFrom: new Date("2027-01-01T00:00:00.000Z"),
     validUntil: null,
     offsetMinutes: -1440,
-    timezone: 'Europe/Moscow',
-    kind: 'deadline',
+    timezone: "Europe/Moscow",
+    kind: "deadline",
   };
 
   const policyInactive: StubPolicy = {
     ...policyA,
-    id: 'policy-inactive',
+    id: "policy-inactive",
     active: false,
   };
 
-  it('creates one rule per applicable active policy', async () => {
+  it("creates one rule per applicable active policy", async () => {
     const period = {
-      id: 'report-1',
-      deadline: new Date('2026-06-01T18:00:00.000Z'),
+      id: "report-1",
+      deadline: new Date("2026-06-01T18:00:00.000Z"),
     };
     const stub = makeStubPrisma([policyA, policyB, policyInactive], new Set());
     const svc = new PolicyApplicatorService(stub.prisma);
@@ -198,20 +196,20 @@ describe('PolicyApplicatorService.applyToPeriod', () => {
     expect(result.skipped).toBe(1); // policyB
     expect(stub.upsertCalls).toHaveLength(1);
     expect(stub.upsertCalls[0]?.create).toMatchObject({
-      reportId: 'report-1',
-      policyId: 'policy-a',
-      kind: 'deadline',
-      timezone: 'Europe/Moscow',
-      status: 'active',
+      reportId: "report-1",
+      policyId: "policy-a",
+      kind: "deadline",
+      timezone: "Europe/Moscow",
+      status: "active",
     });
   });
 
-  it('is idempotent: second call updates instead of creating', async () => {
+  it("is idempotent: second call updates instead of creating", async () => {
     const period = {
-      id: 'report-1',
-      deadline: new Date('2026-06-01T18:00:00.000Z'),
+      id: "report-1",
+      deadline: new Date("2026-06-01T18:00:00.000Z"),
     };
-    const existing = new Set<string>(['report-1:policy-a']);
+    const existing = new Set<string>(["report-1:policy-a"]);
     const stub = makeStubPrisma([policyA], existing);
     const svc = new PolicyApplicatorService(stub.prisma);
 
@@ -222,10 +220,10 @@ describe('PolicyApplicatorService.applyToPeriod', () => {
     expect(stub.upsertCalls).toHaveLength(1);
   });
 
-  it('skips policy whose validUntil predates the deadline', async () => {
+  it("skips policy whose validUntil predates the deadline", async () => {
     const period = {
-      id: 'report-1',
-      deadline: new Date('2027-01-01T18:00:00.000Z'),
+      id: "report-1",
+      deadline: new Date("2027-01-01T18:00:00.000Z"),
     };
     const stub = makeStubPrisma([policyA], new Set());
     const svc = new PolicyApplicatorService(stub.prisma);
@@ -237,14 +235,14 @@ describe('PolicyApplicatorService.applyToPeriod', () => {
     expect(stub.upsertCalls).toHaveLength(0);
   });
 
-  it('catches P2002 race and continues with the rest of the policies', async () => {
+  it("catches P2002 race and continues with the rest of the policies", async () => {
     const period = {
-      id: 'report-1',
-      deadline: new Date('2026-06-01T18:00:00.000Z'),
+      id: "report-1",
+      deadline: new Date("2026-06-01T18:00:00.000Z"),
     };
     const policyC: StubPolicy = {
       ...policyA,
-      id: 'policy-c',
+      id: "policy-c",
       offsetMinutes: -120, // T-2h, distinct rule
     };
 
@@ -259,14 +257,14 @@ describe('PolicyApplicatorService.applyToPeriod', () => {
         upsert: vi.fn(async (args: unknown) => {
           if (firstCall) {
             firstCall = false;
-            const err = new Error('Unique constraint violation') as Error & {
+            const err = new Error("Unique constraint violation") as Error & {
               code?: string;
             };
-            err.code = 'P2002';
+            err.code = "P2002";
             throw err;
           }
           upsertCalls.push(args);
-          return { id: 'rule-id' };
+          return { id: "rule-id" };
         }),
       },
     } as never;

@@ -1,14 +1,20 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
+import Link from "next/link";
 
-import type { HistoryEntry } from '../../lib/mappers';
+import type { HistoryEntry } from "../../lib/mappers";
 
 type LeadHistoryListProps = {
   readonly entries: HistoryEntry[];
 };
 
-function TrafficDot({ color, count }: { readonly color: string; readonly count: number }) {
+function TrafficDot({
+  color,
+  count,
+}: {
+  readonly color: string;
+  readonly count: number;
+}) {
   if (count === 0) return null;
   return (
     <div className="flex items-center gap-1">
@@ -23,8 +29,8 @@ function TrafficDot({ color, count }: { readonly color: string; readonly count: 
   );
 }
 
-function StatusBadge({ status }: { readonly status: 'submitted' | 'draft' }) {
-  if (status === 'submitted') {
+function StatusBadge({ status }: { readonly status: "submitted" | "draft" }) {
+  if (status === "submitted") {
     return (
       <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-3 py-1 text-xs font-semibold text-[var(--color-primary)]">
         Submitted
@@ -62,7 +68,11 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
           // HIST-1 (Phase 33-04): 3px tealA left strip per mockup s9 — gives
           // submitted reports the same visual anchor as kanban current-week
           // cards, so the history page reads as a continuation of the form.
-          style={{ textDecoration: 'none', color: 'inherit', borderLeft: '3px solid var(--color-starbucks-accent)' }}
+          style={{
+            textDecoration: "none",
+            color: "inherit",
+            borderLeft: "3px solid var(--color-starbucks-accent)",
+          }}
         >
           {/* Header */}
           <div className="mb-3 flex items-center justify-between">
@@ -79,14 +89,20 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
 
           {/* Traffic lights */}
           <div className="mt-3 flex items-center gap-2">
-            <TrafficDot color="var(--color-starbucks-accent)" count={entry.trafficLights.green} />
+            <TrafficDot
+              color="var(--color-starbucks-accent)"
+              count={entry.trafficLights.green}
+            />
             <TrafficDot color="#d4a017" count={entry.trafficLights.yellow} />
-            <TrafficDot color="var(--color-destructive)" count={entry.trafficLights.red} />
+            <TrafficDot
+              color="var(--color-destructive)"
+              count={entry.trafficLights.red}
+            />
           </div>
 
           {/* Metrics — HIST-4: prefix with assigned-products count when present */}
           <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--color-muted-foreground)]">
-            {typeof entry.productCount === 'number' && (
+            {typeof entry.productCount === "number" && (
               <>
                 <span>{entry.productCount} assigned products</span>
                 <span>&middot;</span>
@@ -95,7 +111,7 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
             <span>{entry.itemCount} items</span>
             <span>&middot;</span>
             <span>
-              {entry.riskCount} risk{entry.riskCount === 1 ? '' : 's'}
+              {entry.riskCount} risk{entry.riskCount === 1 ? "" : "s"}
             </span>
             <span>&middot;</span>
             <span>{entry.decisionCount} decisions</span>

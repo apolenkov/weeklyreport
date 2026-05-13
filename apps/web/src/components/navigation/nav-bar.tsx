@@ -322,7 +322,10 @@ export function NavBar() {
           {sessionLoading ? (
             <>
               {/* xl+ skeleton: avatar circle + name pill */}
-              <div className="hidden items-center gap-2 xl:flex" aria-hidden="true">
+              <div
+                className="hidden items-center gap-2 xl:flex"
+                aria-hidden="true"
+              >
                 <div className="h-8 w-8 rounded-full bg-[var(--color-muted)]/40" />
                 <div className="h-4 w-24 rounded bg-[var(--color-muted)]/40" />
               </div>

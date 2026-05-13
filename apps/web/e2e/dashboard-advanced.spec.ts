@@ -278,15 +278,11 @@ test.describe("Dashboard Advanced", () => {
   // SC-179: Submission Activity empty-state accuracy
   // -----------------------------------------------------------------------
 
-  test("SC-179: Submission Activity is visible", async ({
-    headPage,
-  }) => {
+  test("SC-179: Submission Activity is visible", async ({ headPage }) => {
     await expect(headPage.getByText("Submission Activity")).toBeVisible();
   });
 
-  test("SC-179: Empty lead rows are non-clickable", async ({
-    headPage,
-  }) => {
+  test("SC-179: Empty lead rows are non-clickable", async ({ headPage }) => {
     await expect(
       headPage.locator(
         'section[aria-labelledby="activity-live-heading"] a[href*="authorId="]',

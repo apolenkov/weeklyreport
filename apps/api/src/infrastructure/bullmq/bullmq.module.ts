@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
+import { Module } from "@nestjs/common";
+import { BullModule } from "@nestjs/bullmq";
 
-import { DLQMonitorService } from './dlq-monitor.service.js';
-import { getBullMQOptions } from './bullmq-options';
+import { DLQMonitorService } from "./dlq-monitor.service.js";
+import { getBullMQOptions } from "./bullmq-options";
 
 /**
  * BullMQ infrastructure module.
@@ -19,14 +19,14 @@ import { getBullMQOptions } from './bullmq-options';
 @Module({
   imports: [
     BullModule.forRoot(getBullMQOptions()),
-    BullModule.registerQueue({ name: 'pdf-export' }),
-    BullModule.registerQueue({ name: 'email-reminder' }),
+    BullModule.registerQueue({ name: "pdf-export" }),
+    BullModule.registerQueue({ name: "email-reminder" }),
     // UFB-056 / Phase 55-3: Telegram outbound queue. Seeds-only — no
     // producer enqueues to it yet beyond the admin test-send tRPC
     // procedure. Default job options keep payload visible in dev (a
     // BullMQ `attempts: 3` is set per-job at enqueue time, not on the
     // queue itself, so the test surface can stay synchronous).
-    BullModule.registerQueue({ name: 'telegram-outbound' }),
+    BullModule.registerQueue({ name: "telegram-outbound" }),
   ],
   providers: [DLQMonitorService],
   exports: [BullModule],

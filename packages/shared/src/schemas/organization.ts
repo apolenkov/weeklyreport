@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * UFB-047 / Phase 48-A: organization identity singleton schema.
@@ -18,7 +18,7 @@ import { z } from 'zod';
  *     prevents pathological copy from breaking PDF headers).
  */
 export const organizationSchema = z.object({
-  id: z.literal('singleton'),
+  id: z.literal("singleton"),
   shortName: z.string().min(1).max(16),
   fullName: z.string().min(1).max(200),
   createdAt: z.coerce.date(),
@@ -71,6 +71,6 @@ export type OrganizationPublic = z.infer<typeof organizationPublicSchema>;
  * (terminal logs, fallback PDF chrome) without font fallback noise.
  */
 export const DEFAULT_ORGANIZATION_IDENTITY: OrganizationPublic = {
-  shortName: 'ORG',
-  fullName: 'Organization',
+  shortName: "ORG",
+  fullName: "Organization",
 };

@@ -84,23 +84,23 @@ Cookie-existence guard via Next.js 16 proxy.ts, SessionProvider exposing `useSes
 
 ## Test Coverage
 
-| File                                    | New Tests | Cases                                                                                                                                                                                          |
-| --------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/web/proxy.test.ts`                | 6         | redirect on missing cookie + non-stub; query string preserved; cookie passes through; AUTH_STUB=true bypasses; config matcher exists; matcher contains expected exclusions                     |
-| `apps/web/src/lib/session-provider.test.tsx` | 4    | loading state; authenticated state with mapped fields; unauthenticated (null data) state; throws when called outside provider                                                                   |
-| `apps/web/src/lib/trpc.test.ts`         | 6         | redirect on 401; query string preserved in next=; no redirect on / (login); no redirect on /auth/error; no redirect on 500; no redirect on plain Error objects                                  |
+| File                                         | New Tests | Cases                                                                                                                                                                      |
+| -------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/proxy.test.ts`                     | 6         | redirect on missing cookie + non-stub; query string preserved; cookie passes through; AUTH_STUB=true bypasses; config matcher exists; matcher contains expected exclusions |
+| `apps/web/src/lib/session-provider.test.tsx` | 4         | loading state; authenticated state with mapped fields; unauthenticated (null data) state; throws when called outside provider                                              |
+| `apps/web/src/lib/trpc.test.ts`              | 6         | redirect on 401; query string preserved in next=; no redirect on / (login); no redirect on /auth/error; no redirect on 500; no redirect on plain Error objects             |
 
 **Total new tests: 16, all passing.** No regressions in pre-existing passing test suites.
 
 ## Verification Status
 
-| Check                                                       | Result                                                                                                                  |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `pnpm --filter @customreport/api typecheck`                 | Clean (note: pre-existing TS6133 in period.contract.test.ts — see deferred-items.md, not caused by this plan)           |
-| `pnpm --filter @customreport/web typecheck`                 | Clean                                                                                                                   |
-| `pnpm --filter @customreport/api test`                      | 386/386 passed                                                                                                          |
-| `pnpm --filter @customreport/web vitest run` (new files)    | 16/16 passed                                                                                                            |
-| `pnpm --filter @customreport/web vitest run` (whole app)    | 167 passed, 5 pre-existing failures in `weekly-report-page.test.tsx` (mocks `pdfExport.request` — see deferred-items.md, reproduces on prior commit) |
+| Check                                                    | Result                                                                                                                                               |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter @customreport/api typecheck`              | Clean (note: pre-existing TS6133 in period.contract.test.ts — see deferred-items.md, not caused by this plan)                                        |
+| `pnpm --filter @customreport/web typecheck`              | Clean                                                                                                                                                |
+| `pnpm --filter @customreport/api test`                   | 386/386 passed                                                                                                                                       |
+| `pnpm --filter @customreport/web vitest run` (new files) | 16/16 passed                                                                                                                                         |
+| `pnpm --filter @customreport/web vitest run` (whole app) | 167 passed, 5 pre-existing failures in `weekly-report-page.test.tsx` (mocks `pdfExport.request` — see deferred-items.md, reproduces on prior commit) |
 
 ## Deviations from Plan
 
@@ -158,17 +158,18 @@ Logged in `deferred-items.md`:
 
 ## Commits
 
-| Task   | Commit    | Subject                                                                          |
-| ------ | --------- | -------------------------------------------------------------------------------- |
-| 1      | `c1fccd7` | `feat(24-01): add auth.me tRPC query for session source`                         |
-| 2 (T)  | `d6261ef` | `test(24-01): add failing test for proxy.ts auth guard`                          |
-| 2 (I)  | `25ddce4` | `feat(24-01): add Next.js 16 proxy.ts auth guard`                                |
-| 3      | `f454aaf` | `feat(24-01): add SessionProvider + useSession; wrap (app)/ layout`              |
-| 4      | `6da50fb` | `feat(24-01): add tRPC 401 interceptor + login page reads ?next=`                |
+| Task  | Commit    | Subject                                                             |
+| ----- | --------- | ------------------------------------------------------------------- |
+| 1     | `c1fccd7` | `feat(24-01): add auth.me tRPC query for session source`            |
+| 2 (T) | `d6261ef` | `test(24-01): add failing test for proxy.ts auth guard`             |
+| 2 (I) | `25ddce4` | `feat(24-01): add Next.js 16 proxy.ts auth guard`                   |
+| 3     | `f454aaf` | `feat(24-01): add SessionProvider + useSession; wrap (app)/ layout` |
+| 4     | `6da50fb` | `feat(24-01): add tRPC 401 interceptor + login page reads ?next=`   |
 
 ## Self-Check: PASSED
 
 All 10 tracked files verified present:
+
 - `apps/web/proxy.ts`, `apps/web/proxy.test.ts`
 - `apps/web/src/lib/session-provider.tsx`, `use-session.ts`, `session-provider.test.tsx`
 - `apps/web/src/lib/trpc.ts`, `trpc.test.ts`

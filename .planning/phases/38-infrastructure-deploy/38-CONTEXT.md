@@ -25,6 +25,7 @@ Out of scope: K8s / Helm chart (deferred until org demands; user confirmed "ло
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 - `Dockerfile.api` and `Dockerfile.web` already exist — multi-stage, non-root user, ~150MB web image. No changes needed for v8.0; they served migrate + api roles from one image.

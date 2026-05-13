@@ -11,24 +11,27 @@
 //   node apps/web/uat-suite/mutation-audit.mjs
 //   node apps/web/uat-suite/mutation-audit.mjs --update-allowlist
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { execSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, '../../..');
-const ROUTER_PATH = path.join(REPO_ROOT, 'apps/api/src/infrastructure/trpc/trpc.router.ts');
-const WEB_SRC = path.join(REPO_ROOT, 'apps/web/src');
-const OUTPUT_MD = path.join(__dirname, 'mutation-audit.md');
-const ALLOWLIST_PATH = path.join(__dirname, 'mutation-audit.allowlist.json');
+const REPO_ROOT = path.resolve(__dirname, "../../..");
+const ROUTER_PATH = path.join(
+  REPO_ROOT,
+  "apps/api/src/infrastructure/trpc/trpc.router.ts",
+);
+const WEB_SRC = path.join(REPO_ROOT, "apps/web/src");
+const OUTPUT_MD = path.join(__dirname, "mutation-audit.md");
+const ALLOWLIST_PATH = path.join(__dirname, "mutation-audit.allowlist.json");
 
-const router = readFileSync(ROUTER_PATH, 'utf8');
+const router = readFileSync(ROUTER_PATH, "utf8");
 
 function extractProcedures(src) {
   const procs = [];
-  const lines = src.split('\n');
+  const lines = src.split("\n");
   const stack = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -49,10 +52,10 @@ function extractProcedures(src) {
     }
     const procMatch = line.match(/^\s*(\w+):\s*\w*Procedure[\s\S]*$/);
     if (procMatch && stack.length > 0) {
-      const lookAhead = lines.slice(i, i + 10).join(' ');
+      const lookAhead = lines.slice(i, i + 10).join(" ");
       const kindMatch = lookAhead.match(/\.(query|mutation)\(/);
       if (kindMatch) {
-        const ns = stack.map((s) => s.name).join('.');
+        const ns = stack.map((s) => s.name).join(".");
         procs.push({ namespace: ns, name: procMatch[1], kind: kindMatch[1] });
       }
     }
@@ -61,15 +64,18 @@ function extractProcedures(src) {
 }
 
 const procedures = extractProcedures(router);
-const queries = procedures.filter((p) => p.kind === 'query');
-const mutations = procedures.filter((p) => p.kind === 'mutation');
+const queries = procedures.filter((p) => p.kind === "query");
+const mutations = procedures.filter((p) => p.kind === "mutation");
 
 function gripCount(needle) {
   try {
-    const out = execSync(`rg -c --no-heading -F '${needle}' '${WEB_SRC}' 2>/dev/null || true`, {
-      encoding: 'utf8',
-    });
-    return out.split('\n').filter(Boolean).length;
+    const out = execSync(
+      `rg -c --no-heading -F '${needle}' '${WEB_SRC}' 2>/dev/null || true`,
+      {
+        encoding: "utf8",
+      },
+    );
+    return out.split("\n").filter(Boolean).length;
   } catch {
     return 0;
   }
@@ -83,98 +89,111 @@ const audits = mutations.map((m) => {
       /^(by|active|pending)/i.test(q.name),
   );
   const stem = m.name
-    .replace(/^(save|create|update|delete|remove|upsert|respond|request|publish|revoke|toggle|wipe|reseed|execute)/, '')
+    .replace(
+      /^(save|create|update|delete|remove|upsert|respond|request|publish|revoke|toggle|wipe|reseed|execute)/,
+      "",
+    )
     .toLowerCase();
   const namedConsumer = sameNsQueries.find((q) =>
     q.name.toLowerCase().includes(stem.slice(0, 4)),
   );
-  const refCount = gripCount(`${m.namespace.split('.').pop()}.${m.name}`);
+  const refCount = gripCount(`${m.namespace.split(".").pop()}.${m.name}`);
 
   let status;
-  if (hasList || namedConsumer) status = 'VERIFIED';
-  else if (refCount > 0) status = 'PARTIAL';
-  else status = 'BLACK HOLE';
+  if (hasList || namedConsumer) status = "VERIFIED";
+  else if (refCount > 0) status = "PARTIAL";
+  else status = "BLACK HOLE";
 
   return {
     procedure: `${m.namespace}.${m.name}`,
     status,
     consumerQueries: sameNsQueries.map((q) => `${q.namespace}.${q.name}`),
-    namedConsumer: namedConsumer ? `${namedConsumer.namespace}.${namedConsumer.name}` : null,
+    namedConsumer: namedConsumer
+      ? `${namedConsumer.namespace}.${namedConsumer.name}`
+      : null,
     refCount,
   };
 });
 
-const blackHoles = audits.filter((a) => a.status === 'BLACK HOLE');
-const partial = audits.filter((a) => a.status === 'PARTIAL');
-const verified = audits.filter((a) => a.status === 'VERIFIED');
+const blackHoles = audits.filter((a) => a.status === "BLACK HOLE");
+const partial = audits.filter((a) => a.status === "PARTIAL");
+const verified = audits.filter((a) => a.status === "VERIFIED");
 
 let allowlist = {};
 if (existsSync(ALLOWLIST_PATH)) {
   try {
-    allowlist = JSON.parse(readFileSync(ALLOWLIST_PATH, 'utf8'));
+    allowlist = JSON.parse(readFileSync(ALLOWLIST_PATH, "utf8"));
   } catch {
     /* empty fallback */
   }
 }
 
-const updateMode = process.argv.includes('--update-allowlist');
+const updateMode = process.argv.includes("--update-allowlist");
 if (updateMode) {
   for (const a of blackHoles) {
     if (!allowlist[a.procedure]) {
-      allowlist[a.procedure] = '⚠ TODO: justify or wire a consumer';
+      allowlist[a.procedure] = "⚠ TODO: justify or wire a consumer";
     }
   }
-  writeFileSync(ALLOWLIST_PATH, JSON.stringify(allowlist, null, 2) + '\n');
+  writeFileSync(ALLOWLIST_PATH, JSON.stringify(allowlist, null, 2) + "\n");
   console.log(`[mutation-audit] allowlist updated: ${ALLOWLIST_PATH}`);
 }
 
 const unexpectedBlackHoles = blackHoles.filter((a) => !allowlist[a.procedure]);
 
-const lines = ['# Mutation Consumer Audit', ''];
+const lines = ["# Mutation Consumer Audit", ""];
 lines.push(`Mutations defined: ${mutations.length}`);
 lines.push(`Queries defined: ${queries.length}`);
-lines.push('');
+lines.push("");
 lines.push(`- VERIFIED: ${verified.length}`);
 lines.push(`- PARTIAL: ${partial.length}`);
-lines.push(`- BLACK HOLE: ${blackHoles.length} (${unexpectedBlackHoles.length} unexpected)`);
-lines.push('');
+lines.push(
+  `- BLACK HOLE: ${blackHoles.length} (${unexpectedBlackHoles.length} unexpected)`,
+);
+lines.push("");
 
 if (unexpectedBlackHoles.length > 0) {
-  lines.push('## ⚠ Unexpected black holes (CI fail)');
-  lines.push('');
-  lines.push('Mutations with no consumer + not in allowlist. Wire a consumer or add to mutation-audit.allowlist.json with justification.');
-  lines.push('');
-  lines.push('| Procedure | Same-NS queries | Web refs |');
-  lines.push('| --- | --- | --: |');
+  lines.push("## ⚠ Unexpected black holes (CI fail)");
+  lines.push("");
+  lines.push(
+    "Mutations with no consumer + not in allowlist. Wire a consumer or add to mutation-audit.allowlist.json with justification.",
+  );
+  lines.push("");
+  lines.push("| Procedure | Same-NS queries | Web refs |");
+  lines.push("| --- | --- | --: |");
   for (const a of unexpectedBlackHoles) {
-    lines.push(`| ${a.procedure} | ${a.consumerQueries.length || '—'} | ${a.refCount} |`);
+    lines.push(
+      `| ${a.procedure} | ${a.consumerQueries.length || "—"} | ${a.refCount} |`,
+    );
   }
-  lines.push('');
+  lines.push("");
 }
 
 if (Object.keys(allowlist).length > 0) {
-  lines.push('## ✓ Allowlisted (intentional)');
-  lines.push('');
-  lines.push('| Procedure | Reason |');
-  lines.push('| --- | --- |');
+  lines.push("## ✓ Allowlisted (intentional)");
+  lines.push("");
+  lines.push("| Procedure | Reason |");
+  lines.push("| --- | --- |");
   for (const [proc, reason] of Object.entries(allowlist)) {
     lines.push(`| ${proc} | ${reason} |`);
   }
-  lines.push('');
+  lines.push("");
 }
 
 if (partial.length > 0) {
-  lines.push('## ◐ Partial coverage (informational)');
-  lines.push('');
-  lines.push('| Procedure | Web refs | Same-NS queries |');
-  lines.push('| --- | --: | --: |');
+  lines.push("## ◐ Partial coverage (informational)");
+  lines.push("");
+  lines.push("| Procedure | Web refs | Same-NS queries |");
+  lines.push("| --- | --: | --: |");
   for (const a of partial) {
-    lines.push(`| ${a.procedure} | ${a.refCount} | ${a.consumerQueries.length || '—'} |`);
+    lines.push(
+      `| ${a.procedure} | ${a.refCount} | ${a.consumerQueries.length || "—"} |`,
+    );
   }
-  lines.push('');
+  lines.push("");
 }
 
-writeFileSync(OUTPUT_MD, lines.join('\n'));
+writeFileSync(OUTPUT_MD, lines.join("\n"));
 
 console.log(`mutations: ${mutations.length}, queries: ${queries.length}`);
 console.log(
@@ -182,12 +201,14 @@ console.log(
 );
 
 if (unexpectedBlackHoles.length > 0 && !updateMode) {
-  console.error(`\n[mutation-audit] FAIL: ${unexpectedBlackHoles.length} unexpected black hole(s):`);
+  console.error(
+    `\n[mutation-audit] FAIL: ${unexpectedBlackHoles.length} unexpected black hole(s):`,
+  );
   for (const a of unexpectedBlackHoles) {
     console.error(`  - ${a.procedure}`);
   }
   console.error(
-    '\nWire a consumer or add to apps/web/uat-suite/mutation-audit.allowlist.json with justification.',
+    "\nWire a consumer or add to apps/web/uat-suite/mutation-audit.allowlist.json with justification.",
   );
   process.exit(1);
 }

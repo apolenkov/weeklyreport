@@ -8,6 +8,7 @@
 ## Phase Boundary
 
 Phase 1 delivers the first usable workflow for weekly report capture:
+
 - SAML login through Keycloak
 - role-aware protected access for lead/head/viewer
 - lead report section entry for current period data
@@ -52,11 +53,13 @@ email reminders, report history, or admin CRUD.
 </decisions>
 
 <canonical_refs>
+
 ## Canonical References
 
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Product and phase scope
+
 - `.planning/PROJECT.md` — product goals, roles, monorepo shape, and data model
 - `.planning/ROADMAP.md` — Phase 1 goal, success criteria, and requirement IDs
 - `.planning/REQUIREMENTS.md` — requirement definitions for AUTH-01..04,
@@ -64,6 +67,7 @@ email reminders, report history, or admin CRUD.
 - `.planning/STATE.md` — confirmed decisions, risks, and current milestone
 
 ### Technical architecture
+
 - `.planning/research/SUMMARY.md` — recommended stack and roadmap implications
 - `.planning/research/ARCHITECTURE.md` — monorepo boundaries, shared-schema
   pattern, async-job architecture, and validation rules
@@ -96,5 +100,5 @@ email reminders, report history, or admin CRUD.
 
 ---
 
-*Phase: 01-core-report-capture*
-*Context gathered: 2026-04-06 via recovered discuss/session state*
+_Phase: 01-core-report-capture_
+_Context gathered: 2026-04-06 via recovered discuss/session state_

@@ -66,7 +66,8 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   const [form, setForm] = useState<GroupFormData>(EMPTY_FORM);
   const [search, setSearch] = useState("");
   // B4: archive quick-filter (default "active" — hides archived groups on load)
-  const [archiveFilter, setArchiveFilter] = useState<ArchiveFilterValue>("active");
+  const [archiveFilter, setArchiveFilter] =
+    useState<ArchiveFilterValue>("active");
 
   useEffect(() => {
     if (!showDialog) return;
@@ -355,7 +356,8 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
                 </select>
                 {headCandidates.length === 0 && (
                   <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-                    No users with role &lsquo;head&rsquo; or &lsquo;admin&rsquo; available.
+                    No users with role &lsquo;head&rsquo; or &lsquo;admin&rsquo;
+                    available.
                   </p>
                 )}
               </div>
@@ -427,8 +429,8 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
               Archive Group?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Archive {archiveTarget.name}? Existing users keep the group,
-              but new users cannot select it.
+              Archive {archiveTarget.name}? Existing users keep the group, but
+              new users cannot select it.
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button

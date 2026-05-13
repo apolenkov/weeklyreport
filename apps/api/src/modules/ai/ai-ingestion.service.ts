@@ -13,10 +13,10 @@
 //   - Idempotency is intentionally NOT enforced at this layer. The
 //     worker is the one that dedupes by content hash.
 
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import { createNullLogger, type AppLogger } from '../../lib/logger.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { createNullLogger, type AppLogger } from "../../lib/logger.js";
 
 /**
  * Port used by callers to push section ids without depending on the
@@ -67,15 +67,15 @@ export class AiIngestionService implements AiIngestionPort {
       await this.prisma.aiIngestionJob.createMany({
         data: sectionIds.map((reportSectionId) => ({
           reportSectionId,
-          status: 'pending',
+          status: "pending",
         })),
       });
-      this.logger.info('ai ingestion enqueued', {
+      this.logger.info("ai ingestion enqueued", {
         count: sectionIds.length,
       });
     } catch (err) {
       // Fire-and-forget: log and continue. Publication path keeps moving.
-      this.logger.warn('ai ingestion enqueue failed', {
+      this.logger.warn("ai ingestion enqueue failed", {
         count: sectionIds.length,
         error: err instanceof Error ? err.message : String(err),
       });

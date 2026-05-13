@@ -1,4 +1,4 @@
-import type { Role } from '@customreport/shared';
+import type { Role } from "@customreport/shared";
 
 /**
  * AUTH-06 (Phase 29-06): pure role-visibility helper for nav link filtering.
@@ -12,7 +12,7 @@ import type { Role } from '@customreport/shared';
  * roles by default — they have their own access semantics handled by the
  * proxy.ts cookie gate.
  */
-export type RoutePrefix = '/admin' | '/head' | '/lead' | '/reports';
+export type RoutePrefix = "/admin" | "/head" | "/lead" | "/reports";
 
 // UFB-057 / Phase 57: 'director' gets the same read-access shape as viewer
 // for `/reports` (published archive) and joins head+admin for `/head` —
@@ -20,11 +20,13 @@ export type RoutePrefix = '/admin' | '/head' | '/lead' | '/reports';
 // submission surface is gated separately by a nested layout (see
 // apps/web/src/app/(app)/head/report/layout.tsx) so director cannot author
 // a weekly report. `/lead` and `/admin` remain closed to director.
-export const ROUTE_ROLE_MAP: Readonly<Record<RoutePrefix, ReadonlyArray<Role>>> = {
-  '/admin': ['admin', 'head'],
-  '/head': ['head', 'admin', 'director'],
-  '/lead': ['lead', 'head', 'admin'],
-  '/reports': ['lead', 'head', 'admin', 'viewer', 'director'],
+export const ROUTE_ROLE_MAP: Readonly<
+  Record<RoutePrefix, ReadonlyArray<Role>>
+> = {
+  "/admin": ["admin", "head"],
+  "/head": ["head", "admin", "director"],
+  "/lead": ["lead", "head", "admin"],
+  "/reports": ["lead", "head", "admin", "viewer", "director"],
 };
 
 const ROUTE_PREFIXES = Object.keys(ROUTE_ROLE_MAP) as RoutePrefix[];
@@ -37,7 +39,7 @@ const ROUTE_PREFIXES = Object.keys(ROUTE_ROLE_MAP) as RoutePrefix[];
  */
 export function isRouteVisible(route: string, role: Role): boolean {
   for (const prefix of ROUTE_PREFIXES) {
-    if (route === prefix || route.startsWith(prefix + '/')) {
+    if (route === prefix || route.startsWith(prefix + "/")) {
       return ROUTE_ROLE_MAP[prefix].includes(role);
     }
   }

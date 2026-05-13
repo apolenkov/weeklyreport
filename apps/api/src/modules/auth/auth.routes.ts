@@ -126,9 +126,7 @@ async function ensureWeeklyReport(
     // The 18:00 hour is hardcoded until Phase 51 surfaces a setting for
     // deadline time-of-day (see plan 50-A AC).
     const deadline = new Date(periodStart);
-    deadline.setUTCDate(
-      deadline.getUTCDate() + settings.defaultDeadlineDays,
-    );
+    deadline.setUTCDate(deadline.getUTCDate() + settings.defaultDeadlineDays);
     deadline.setUTCHours(18, 0, 0, 0);
 
     const report = await prisma.report.create({
@@ -162,9 +160,24 @@ async function ensureWeeklyReport(
     const firstProjectId = firstProject?.id ?? "";
     await prisma.priority.createMany({
       data: [
-        { reportSectionId: section.id, productId: firstProjectId, rank: 1, text: "Priority 1" },
-        { reportSectionId: section.id, productId: firstProjectId, rank: 2, text: "Priority 2" },
-        { reportSectionId: section.id, productId: firstProjectId, rank: 3, text: "Priority 3" },
+        {
+          reportSectionId: section.id,
+          productId: firstProjectId,
+          rank: 1,
+          text: "Priority 1",
+        },
+        {
+          reportSectionId: section.id,
+          productId: firstProjectId,
+          rank: 2,
+          text: "Priority 2",
+        },
+        {
+          reportSectionId: section.id,
+          productId: firstProjectId,
+          rank: 3,
+          text: "Priority 3",
+        },
       ],
     });
     await prisma.projectStatus.createMany({

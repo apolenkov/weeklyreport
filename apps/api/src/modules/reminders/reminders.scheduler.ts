@@ -1,14 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
 
-import { OrganizationService } from '../organization/organization.service';
+import { OrganizationService } from "../organization/organization.service";
 
-import { RemindersService, type ReminderOrganization } from './reminders.service';
+import {
+  RemindersService,
+  type ReminderOrganization,
+} from "./reminders.service";
 import {
   RemindersPrismaRepository,
   type DueDeadlineRule,
   type DueEscalationRule,
-} from './reminders.prisma-repository';
+} from "./reminders.prisma-repository";
 
 /**
  * NOTIF-04 (Phase 28-03), NOTIF-02/05 (Phase 29-05): hourly tick that
@@ -53,7 +56,8 @@ export class RemindersScheduler {
    */
   async runOnce(now: Date): Promise<void> {
     const dueDeadlineRules = await this.repository.findDueDeadlineRules(now);
-    const dueEscalationRules = await this.repository.findDueEscalationRules(now);
+    const dueEscalationRules =
+      await this.repository.findDueEscalationRules(now);
 
     // Skip the org fetch entirely when nothing is due — keeps idle ticks
     // a no-op against the DB.
@@ -89,7 +93,7 @@ export class RemindersScheduler {
         continue;
       }
       await this.service.requestReminderExecution(rule.id, recipient.email, {
-        kind: 'deadline',
+        kind: "deadline",
         cycleDate,
         leadName: recipient.name,
         reportPeriod: rule.reportPeriodLabel,
@@ -108,7 +112,7 @@ export class RemindersScheduler {
     // Escalation IGNORES recipient.notificationOptOut (NOTIF-05 contract).
     const cycleDate = rule.fireAt.toISOString().slice(0, 10);
     await this.service.requestReminderExecution(rule.id, rule.head.email, {
-      kind: 'escalation',
+      kind: "escalation",
       cycleDate,
       headName: rule.head.name,
       reportPeriod: rule.reportPeriodLabel,
@@ -119,6 +123,6 @@ export class RemindersScheduler {
 }
 
 function buildSectionUrl(reportId: string): string {
-  const base = process.env['APP_BASE_URL'] ?? 'http://localhost:3000';
+  const base = process.env["APP_BASE_URL"] ?? "http://localhost:3000";
   return `${base}/lead/report?reportId=${reportId}`;
 }

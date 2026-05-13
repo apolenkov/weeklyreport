@@ -20,8 +20,14 @@
   "roles": {
     "realm": [
       { "name": "lead", "description": "Team lead — fills weekly section" },
-      { "name": "head", "description": "Department head — reviews + publishes" },
-      { "name": "admin", "description": "Administrator — manages users + reports" },
+      {
+        "name": "head",
+        "description": "Department head — reviews + publishes"
+      },
+      {
+        "name": "admin",
+        "description": "Administrator — manages users + reports"
+      },
       { "name": "viewer", "description": "Read-only viewer — directors, peers" }
     ]
   },
@@ -107,7 +113,9 @@
       "lastName": "Head",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [{ "type": "password", "value": "TestPassword123!", "temporary": false }],
+      "credentials": [
+        { "type": "password", "value": "TestPassword123!", "temporary": false }
+      ],
       "groups": ["heads"],
       "attributes": { "fullName": ["Department Head"] }
     },
@@ -118,7 +126,9 @@
       "lastName": "Lead",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [{ "type": "password", "value": "TestPassword123!", "temporary": false }],
+      "credentials": [
+        { "type": "password", "value": "TestPassword123!", "temporary": false }
+      ],
       "groups": ["leads"],
       "attributes": { "fullName": ["Team Lead"] }
     },
@@ -129,7 +139,9 @@
       "lastName": "Admin",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [{ "type": "password", "value": "TestPassword123!", "temporary": false }],
+      "credentials": [
+        { "type": "password", "value": "TestPassword123!", "temporary": false }
+      ],
       "groups": ["admins"],
       "attributes": { "fullName": ["System Admin"] }
     },
@@ -140,7 +152,9 @@
       "lastName": "Viewer",
       "enabled": true,
       "emailVerified": true,
-      "credentials": [{ "type": "password", "value": "TestPassword123!", "temporary": false }],
+      "credentials": [
+        { "type": "password", "value": "TestPassword123!", "temporary": false }
+      ],
       "groups": ["viewers"],
       "attributes": { "fullName": ["Report Viewer"] }
     }

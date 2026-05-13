@@ -6,13 +6,9 @@
  * Stateless and hook-free — safe to render server-side.
  */
 
-import { Skeleton } from '@customreport/ui/components/ui/skeleton';
+import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
-function PlaceholderAccordion({
-  rows,
-}: {
-  readonly rows: number;
-}) {
+function PlaceholderAccordion({ rows }: { readonly rows: number }) {
   return (
     <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
       <div className="mb-4 flex items-center justify-between">

@@ -17,6 +17,7 @@
 ## Verification (deferred)
 
 Manual smoke needs `docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d`. Then:
+
 1. Visit `http://localhost:9090/targets` — all api/postgres-exporter/redis-exporter targets UP
 2. Visit `http://localhost:3001` (Grafana) — log in admin/admin, see "CustomReport — Operational Dashboard"
 3. All 5 panels render data (some empty until cr_dlq_failed_total / cr_login_attempts_total counters fire)

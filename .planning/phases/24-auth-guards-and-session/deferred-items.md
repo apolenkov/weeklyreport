@@ -20,4 +20,3 @@ Issues discovered during execution but out of scope for the current plan.
 **Why deferred:** Verified pre-existing by stashing my changes and re-running — same 5 failures reproduce on the prior commit. The mock setup in this file does not stub `pdfExport.request.mutationOptions`, leading to undefined access. Out of scope per executor scope-boundary rule.
 
 **Recommended fix:** Update the trpc mock factory in `weekly-report-page.test.tsx` to include `pdfExport: { request: { mutationOptions: () => ({}) } }`, or import a shared mock helper.
-

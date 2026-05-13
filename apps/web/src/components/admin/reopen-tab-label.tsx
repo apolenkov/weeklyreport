@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
 type Props = {
   readonly active: boolean;
@@ -18,10 +18,12 @@ type Props = {
  */
 export function ReopenTabLabel({ active }: Props) {
   const trpc = useTRPC();
-  const countQuery = useQuery(trpc.admin.pendingReopenCount.queryOptions(undefined, {
-    refetchOnWindowFocus: true,
-    staleTime: 15_000,
-  }));
+  const countQuery = useQuery(
+    trpc.admin.pendingReopenCount.queryOptions(undefined, {
+      refetchOnWindowFocus: true,
+      staleTime: 15_000,
+    }),
+  );
 
   const count = countQuery.data?.count ?? 0;
 
@@ -32,8 +34,8 @@ export function ReopenTabLabel({ active }: Props) {
         <span
           className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
             active
-              ? 'bg-white/25 text-white'
-              : 'bg-[var(--color-destructive)] text-white'
+              ? "bg-white/25 text-white"
+              : "bg-[var(--color-destructive)] text-white"
           }`}
           aria-label={`${count} pending reopen requests`}
         >

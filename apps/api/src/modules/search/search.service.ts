@@ -5,7 +5,7 @@ import {
   type SearchHit,
   type SearchQueryInput,
   type SearchQueryOutput,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 /**
  * 39-05 (PERF-05): SearchRepository contract — Prisma-free at the service
@@ -21,7 +21,7 @@ export interface SearchRepository {
      * decision via reportSection.authorId; project via leadId). When 'all',
      * rows are unfiltered — the service layer enforces the role gate before
      * calling this. */
-    scope: 'mine' | 'all';
+    scope: "mine" | "all";
     userId: string;
     limit: number;
   }): Promise<SearchHit[]>;
@@ -30,7 +30,7 @@ export interface SearchRepository {
 export class SearchAuthorizationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'SearchAuthorizationError';
+    this.name = "SearchAuthorizationError";
   }
 }
 
@@ -60,7 +60,11 @@ export class SearchService {
   ): Promise<SearchQueryOutput> {
     const parsed = searchQueryInputSchema.parse(input);
 
-    if (parsed.scope === 'all' && session.role !== 'head' && session.role !== 'admin') {
+    if (
+      parsed.scope === "all" &&
+      session.role !== "head" &&
+      session.role !== "admin"
+    ) {
       throw new SearchAuthorizationError(
         'scope="all" is restricted to head and admin sessions',
       );

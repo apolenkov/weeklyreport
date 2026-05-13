@@ -4,9 +4,9 @@ packages:
 
 onlyBuiltDependencies:
   - prisma
-  - '@prisma/client'
-  - '@prisma/engines'
-  - '@nestjs/core'
+  - "@prisma/client"
+  - "@prisma/engines"
+  - "@nestjs/core"
   - playwright
   - esbuild
   - msgpackr-extract
