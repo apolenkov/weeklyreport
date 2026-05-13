@@ -15,7 +15,7 @@ services:
     # Run dev server directly (no --env-file; env comes from 'environment' below)
     command: >
       sh -c "cd apps/api &&
-      pnpm exec prisma generate &&
+      pnpm exec prisma generate --schema ../../prisma/schema.prisma &&
       exec node
       --import @swc-node/register/esm-register
       --watch src/main.ts"
