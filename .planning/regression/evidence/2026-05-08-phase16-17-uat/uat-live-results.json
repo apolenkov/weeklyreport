@@ -1,75 +1,54 @@
 {
-  "generatedAt": "2026-05-09T11:53:25.757Z",
+  "generatedAt": "2026-05-13T06:54:21.588Z",
   "web": "http://localhost:3000",
   "api": "http://localhost:3002",
   "evidenceDir": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat",
   "counts": {
-    "PASS": 10,
-    "FAIL": 0,
-    "BLOCKED": 2
+    "PASS": 1,
+    "FAIL": 11,
+    "BLOCKED": 0,
+    "SKIPPED": 0
   },
   "results": [
     {
       "name": "SC-17-01 login page",
-      "status": "PASS",
-      "detail": "verified in live browser",
-      "data": {
-        "hasSso": false,
-        "hasEnterApplication": true,
-        "hasDevRole": false
-      },
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-01-login.png"
+      "status": "FAIL",
+      "detail": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('CustomReport').first()\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByText('CustomReport').first()\u001b[22m\n"
     },
     {
       "name": "SC-17-02 lead form page",
-      "status": "PASS",
-      "detail": "verified in live browser",
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-02-lead-form.png"
+      "status": "FAIL",
+      "detail": "dev-login role mismatch for lead: expected lead, got head"
     },
     {
       "name": "SC-17-03 lead history surface",
-      "status": "PASS",
-      "detail": "verified canonical merged history surface at /reports?tab=drafts",
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-03-lead-history.png"
+      "status": "FAIL",
+      "detail": "dev-login role mismatch for lead: expected lead, got head"
     },
     {
       "name": "SC-17-04 dashboard page",
-      "status": "PASS",
-      "detail": "verified in live browser",
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-04-dashboard.png"
+      "status": "FAIL",
+      "detail": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('link', { name: 'View Weekly Report' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('link', { name: 'View Weekly Report' })\u001b[22m\n"
     },
     {
       "name": "SC-17-05 weekly report page",
-      "status": "PASS",
-      "detail": "verified in live browser",
-      "data": {
-        "disabledEmptyProductHeaders": 12
-      },
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-05-weekly-report.png"
+      "status": "FAIL",
+      "detail": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: 'Weekly Report' })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: 'Weekly Report' })\u001b[22m\n"
     },
     {
       "name": "SC-17-06 admin panel",
-      "status": "PASS",
-      "detail": "verified in live browser",
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-06-admin.png"
+      "status": "FAIL",
+      "detail": "dev-login role mismatch for admin: expected admin, got head"
     },
     {
       "name": "SC-17-07 print page",
-      "status": "PASS",
-      "detail": "verified in live browser",
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-07-print.png"
+      "status": "FAIL",
+      "detail": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: /Software Development.*Weekly Status Report/i })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: /Software Development.*Weekly Status Report/i })\u001b[22m\n"
     },
     {
       "name": "SC-17-08 navigation active state",
-      "status": "PASS",
-      "detail": "verified in live browser",
-      "data": {
-        "draftsActive": ["My History"],
-        "publishedActive": ["Archive"],
-        "dashboardActive": ["Dashboard"],
-        "reportActive": ["Weekly Report"]
-      },
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-08-nav-active.png"
+      "status": "FAIL",
+      "detail": "dev-login role mismatch for lead: expected lead, got head"
     },
     {
       "name": "SC-17-09 design system consistency",
@@ -87,27 +66,18 @@
     },
     {
       "name": "SC-17-10 URL routing + browser back",
-      "status": "PASS",
-      "detail": "verified in live browser",
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-10-url-routing.png"
+      "status": "FAIL",
+      "detail": "dev-login role mismatch for lead: expected lead, got head"
     },
     {
       "name": "SC-16-01 PDF export runtime",
-      "status": "BLOCKED",
-      "detail": "No published report exists in the live DB; PDF runtime UAT requires a published report or explicit reseed/publish.",
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-16-01-pdf-precondition.png",
-      "data": {
-        "publishedReportAvailable": false
-      }
+      "status": "FAIL",
+      "detail": "page.goto: Test ended.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/reports?tab=published\", waiting until \"domcontentloaded\"\u001b[22m\n"
     },
     {
       "name": "SC-16-02 theme toggle visual behavior",
-      "status": "BLOCKED",
-      "detail": "No theme toggle surface is present in the current product build; product decision required before human visual UAT can close.",
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-16-02-theme-toggle.png",
-      "data": {
-        "themeControls": 0
-      }
+      "status": "FAIL",
+      "detail": "browser.newContext: Target page, context or browser has been closed"
     }
   ],
   "browserLogs": []
