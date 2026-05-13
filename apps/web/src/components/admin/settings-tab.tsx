@@ -486,7 +486,7 @@ function PeriodsSubTab({
           <span className="block font-medium">Auto-publish after deadline</span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
             Scheduler publishes the period at <code>deadline + grace</code>;
-            missing sections render «Не сдал» placeholder. Scheduler logic is
+            missing sections render 'No submission' placeholder. Scheduler logic is
             deferred — toggle is persisted, the cron consumer arrives in a
             follow-up plan.
             {!draft.autoCreatePeriods && (
@@ -689,7 +689,7 @@ function PeriodsSubTab({
           </span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
             When on, the head cannot publish until every lead has submitted.
-            When off, missing sections render «Не сдал» placeholder. Enforcement
+            When off, missing sections render 'No submission' placeholder. Enforcement
             ships in Phase 51-C.
           </span>
         </span>
