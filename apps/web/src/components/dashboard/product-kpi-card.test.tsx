@@ -127,7 +127,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
     expect(screen.getByText(/Loading telemetry/i)).toBeInTheDocument();
   });
 
-  it("renders a Russian error message when the query errors", () => {
+  it("renders an error message when the query errors", () => {
     mockUseQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -138,7 +138,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
     render(<ProductKpiCard role="head" />);
 
     expect(
-      screen.getByText("Не удалось загрузить телеметрию."),
+      screen.getByText("Failed to load telemetry."),
     ).toBeInTheDocument();
   });
 });
