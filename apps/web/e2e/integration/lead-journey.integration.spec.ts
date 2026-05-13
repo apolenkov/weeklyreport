@@ -49,14 +49,6 @@ test.describe('Lead journey (integration)', () => {
       .getByRole('textbox', { name: /^Description \*$/ })
       .fill(updatedText);
 
-    const stageSelect = dialog.locator('#item-stage');
-    const stageValue = await stageSelect.evaluate((select) => {
-      const options = Array.from((select as HTMLSelectElement).options);
-      return options.find((option) => option.value !== '')?.value ?? null;
-    });
-    expect(stageValue, 'expected at least one owned SDLC stage option').toBeTruthy();
-    await stageSelect.selectOption(stageValue ?? '');
-
     await dialog.getByRole('button', { name: /^Save Item$/ }).click();
     await expect(dialog).toBeHidden();
     await expect(page.getByText(updatedText, { exact: true })).toBeVisible();

@@ -431,6 +431,17 @@ async function main() {
     ],
   });
 
+  // GroupProduct: one product per group (@@unique([groupId]) constraint).
+  // Required by weeklyReport.get projectScope (useExplicitGroupProducts:true)
+  // so heads can see portfolio products for their group.
+  await prisma.groupProduct.createMany({
+    data: [
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM },
+      { groupId: FINANCE_GROUP_ID, productId: PROD_PAYMENTS },
+    ],
+    skipDuplicates: true,
+  });
+
   console.log("[seed-simple] Creating stages...");
   await prisma.stage.createMany({
     data: [
