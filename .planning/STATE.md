@@ -4,8 +4,8 @@ milestone: v8.1
 milestone_name: Visual Identity & AI Maturity
 status: executing
 stopped_at: v6.0 roadmap drafted (Phases 27-31)
-last_updated: "2026-05-14T00:00:00.000Z"
-last_activity: 2026-05-08 -- phase 16/17 live UAT replay captured in .planning/regression/evidence/2026-05-08-phase16-17-uat/uat-live-results.json; phase 17 UAT now has 10 PASS / 0 FAIL, while phase 16 PDF/theme remain explicit blockers.
+last_updated: "2026-05-14T12:00:00.000Z"
+last_activity: 2026-05-14 -- Sprint post-marathon closed (Wave 1-4). CI baseline green (lint-md + quality + e2e + migrate-reset + visual-baseline + docker-build). markdownlint baseline established (0 errors on 572 files). .planning/ consolidated (root cleaned, UAT-SCENARIO + docs moved in). GSD format aligned (STATE.md percent fixed, phase 40/41/42 CONTEXT.md created). 260426-vxp resolved. phase 16/17 product-ready gates closed.
 progress:
   total_phases: 41
   completed_phases: 36
