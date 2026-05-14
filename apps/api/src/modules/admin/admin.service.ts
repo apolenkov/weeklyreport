@@ -35,6 +35,7 @@ import {
   type ReportPeriod,
   type StageAssignment,
 } from "@customreport/shared";
+import { ReportStatus } from "@prisma/client";
 
 import { computeDeadline } from "../../lib/business-date.js";
 import { createNullLogger, type AppLogger } from "../../lib/logger";
@@ -108,6 +109,15 @@ export interface AdminRepository {
   unarchivePeriod?(
     periodId: string,
   ): Promise<{ nextPeriodState: PeriodState; nextPeriodStatus: PeriodStatus }>;
+  // A27: delete a Report (period) and cascade-delete all child rows.
+  // Optional so in-memory test repos can opt out.
+  deleteReport?(reportId: string): Promise<void>;
+  // A27: read a Report for delete-guard checks (status, periodStatus to block published).
+  // Returns null if not found so the service can throw AdminAccessError.
+  readReportForDelete?(reportId: string): Promise<{
+    status: ReportStatus;
+    periodStatus: PeriodStatus;
+  } | null>;
   // UFB-063: detect any existing Report whose [periodStart, periodEnd]
   // overlaps the supplied half-open range. The service uses this BEFORE
   // calling createPeriodManual to surface a friendly error pointing at
@@ -201,6 +211,7 @@ export type PeriodRowFromRepo = {
   autoArchived: boolean;
   submittedCount: number;
   totalCount: number;
+  weekLabel: string | null;
 };
 
 function sortByName<T extends { name: string }>(rows: T[]): T[] {
@@ -505,8 +516,7 @@ export class AdminService {
       // Archive is allowed for any not-yet-archived published period;
       // the auto-archiver handles the deferred "weeks-after-publish"
       // path. Manual archive is the head's escape hatch.
-      const canArchive =
-        row.periodState === "published" && !row.archived;
+      const canArchive = row.periodState === "published" && !row.archived;
       return periodListItemSchema.parse({
         id: row.id,
         periodStart: row.periodStart,
@@ -520,6 +530,7 @@ export class AdminService {
         autoArchived: row.autoArchived,
         submittedCount: row.submittedCount,
         totalCount: row.totalCount,
+        weekLabel: row.weekLabel,
         canReopen,
         canArchive,
       });
@@ -690,9 +701,7 @@ export class AdminService {
    * router) because the service is the only layer that has both the
    * before and after envelopes in scope at the same time.
    */
-  async updatePeriodManual(
-    rawInput: AdminUpdatePeriodManualInput,
-  ): Promise<{
+  async updatePeriodManual(rawInput: AdminUpdatePeriodManualInput): Promise<{
     result: AdminUpdatePeriodManualResult;
     /**
      * Per-field `(before, after)` snapshots of changed columns. Empty
@@ -707,7 +716,10 @@ export class AdminService {
       weekLabel: { from: string | null; to: string | null };
     }>;
   }> {
-    if (!this.repository.updatePeriodManual || !this.repository.readPeriodById) {
+    if (
+      !this.repository.updatePeriodManual ||
+      !this.repository.readPeriodById
+    ) {
       throw new Error(
         "AdminRepository.updatePeriodManual / readPeriodById is not implemented for this repository.",
       );
@@ -717,9 +729,7 @@ export class AdminService {
     // -- Read existing -------------------------------------------------
     const existing = await this.repository.readPeriodById(input.reportId);
     if (!existing) {
-      throw new AdminPeriodNotFoundError(
-        `Period ${input.reportId} not found.`,
-      );
+      throw new AdminPeriodNotFoundError(`Period ${input.reportId} not found.`);
     }
 
     // -- Compute the actual diff ---------------------------------------
@@ -764,7 +774,10 @@ export class AdminService {
     // weekLabel: explicit `null` is an allowed value (clear). Compare on
     // structural equality (`null === null`, `'foo' === 'foo'`) so an
     // unchanged-label PATCH is dropped from the diff.
-    if (input.weekLabel !== undefined && input.weekLabel !== existing.weekLabel) {
+    if (
+      input.weekLabel !== undefined &&
+      input.weekLabel !== existing.weekLabel
+    ) {
       data.weekLabel = input.weekLabel;
       diff.weekLabel = { from: existing.weekLabel, to: input.weekLabel };
     }
@@ -856,6 +869,31 @@ export class AdminService {
     this.logger.info("unarchived period", { periodId });
     const result = await this.repository.unarchivePeriod(periodId);
     return { success: true, periodState: result.nextPeriodState };
+  }
+
+  /**
+   * A27: delete a period (Report row) and cascade-delete all child rows.
+   * Guard: cannot delete published periods. Throws `AdminAccessError` if the
+   * period is published; maps to FORBIDDEN via trpc.error-mapper.
+   */
+  async deleteReport(reportId: string): Promise<{ success: true }> {
+    if (!this.repository.deleteReport) {
+      throw new Error(
+        "AdminRepository.deleteReport is not implemented for this repository.",
+      );
+    }
+    const report = await this.repository.readReportForDelete?.(reportId);
+    if (!report) {
+      throw new AdminAccessError(`Report ${reportId} not found.`);
+    }
+    if (report.status === "published" || report.periodStatus === "published") {
+      throw new AdminAccessError(
+        "Cannot delete a published period. Reopen it first if needed.",
+      );
+    }
+    this.logger.info("deleted report", { reportId });
+    await this.repository.deleteReport(reportId);
+    return { success: true };
   }
 
   // -----------------------------------------------------------------

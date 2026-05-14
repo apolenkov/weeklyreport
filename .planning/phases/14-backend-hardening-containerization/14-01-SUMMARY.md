@@ -44,16 +44,17 @@ Added unit tests covering the three backend components that had zero test covera
 
 ## Tasks Completed
 
-| Task | Name | Commit | Files |
-|------|------|--------|-------|
-| 1 | BullMQ processor unit tests | 8da7ca0 | pdf-export.processor.test.ts, email-reminder.processor.test.ts |
-| 2 | tRPC auth middleware unit tests | 983db55 | trpc.middleware.test.ts |
+| Task | Name                            | Commit  | Files                                                          |
+| ---- | ------------------------------- | ------- | -------------------------------------------------------------- |
+| 1    | BullMQ processor unit tests     | 8da7ca0 | pdf-export.processor.test.ts, email-reminder.processor.test.ts |
+| 2    | tRPC auth middleware unit tests | 983db55 | trpc.middleware.test.ts                                        |
 
 ## What Was Built
 
 ### Task 1: BullMQ Processor Tests
 
 **pdf-export.processor.test.ts** (5 tests):
+
 - Launches Chromium with `headless: true`
 - Navigates to `http://localhost:3000/reports/:reportId/print` with `waitUntil: 'networkidle'`
 - Generates PDF with A4 format and `printBackground: true`
@@ -61,6 +62,7 @@ Added unit tests covering the three backend components that had zero test covera
 - Closes browser in `finally` block even when `page.goto()` throws
 
 **email-reminder.processor.test.ts** (3 tests):
+
 - Sends email with correct recipient and subject containing the report period
 - Calls `markReminderSent(executionId)` after successful email send
 - Does NOT call `markReminderSent` if `sendMail` throws (no partial state corruption)
@@ -68,6 +70,7 @@ Added unit tests covering the three backend components that had zero test covera
 ### Task 2: tRPC Auth Middleware Tests
 
 **trpc.middleware.test.ts** (7 tests):
+
 - `publicProcedure` allows null session
 - `protectedProcedure` rejects null session with `UNAUTHORIZED`
 - `protectedProcedure` allows lead session
@@ -102,10 +105,12 @@ None — plan executed exactly as written.
 ## Self-Check: PASSED
 
 Files verified:
+
 - FOUND: apps/api/src/infrastructure/bullmq/pdf-export.processor.test.ts
 - FOUND: apps/api/src/infrastructure/bullmq/email-reminder.processor.test.ts
 - FOUND: apps/api/src/infrastructure/trpc/trpc.middleware.test.ts
 
 Commits verified:
+
 - FOUND: 8da7ca0 feat(14-01): add BullMQ processor unit tests
 - FOUND: 983db55 test(14-01): add tRPC auth middleware unit tests

@@ -217,7 +217,9 @@ export function mapPrismaToReportSection(
       workflowStatus: i.workflowStatus,
       carriedOver: i.carriedOver,
       completed: i.completed,
-      stageIds: i.stageName ? i.stageName.split(', ').filter(Boolean) : undefined,
+      stageIds: i.stageName
+        ? i.stageName.split(", ").filter(Boolean)
+        : undefined,
     })),
     risks: row.risks.map((r) => ({
       id: r.id,
@@ -225,7 +227,9 @@ export function mapPrismaToReportSection(
       risk: r.risk,
       impact: r.impact,
       mitigation: r.mitigation,
-      stageIds: r.stageName ? r.stageName.split(', ').filter(Boolean) : undefined,
+      stageIds: r.stageName
+        ? r.stageName.split(", ").filter(Boolean)
+        : undefined,
     })),
     decisions: row.decisions.map((d) => ({
       id: d.id,
@@ -234,14 +238,18 @@ export function mapPrismaToReportSection(
       deadline: d.deadline,
       impact: d.impact,
       resolvedAt: d.resolvedAt,
-      stageIds: d.stageName ? d.stageName.split(', ').filter(Boolean) : undefined,
+      stageIds: d.stageName
+        ? d.stageName.split(", ").filter(Boolean)
+        : undefined,
       productId: d.productId ?? undefined,
     })),
     priorities: row.priorities.map((p) => ({
       id: p.id,
       rank: p.rank,
       text: p.text,
-      stageIds: p.stageName ? p.stageName.split(', ').filter(Boolean) : undefined,
+      stageIds: p.stageName
+        ? p.stageName.split(", ").filter(Boolean)
+        : undefined,
       productId: p.productId ?? undefined,
     })),
   });
@@ -361,7 +369,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               workflowStatus: i.workflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
-              stageName: i.stageIds?.join(', ') ?? null,
+              stageName: i.stageIds?.join(", ") ?? null,
             })),
           });
         }
@@ -375,7 +383,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
-              stageName: r.stageIds?.join(', ') ?? null,
+              stageName: r.stageIds?.join(", ") ?? null,
             })),
           });
         }
@@ -391,13 +399,15 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               deadline: d.deadline ?? null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
-              stageName: d.stageIds?.join(', ') ?? null,
+              stageName: d.stageIds?.join(", ") ?? null,
               productId: d.productId as string,
             })),
           });
         }
 
-        const prioritiesToSave = section.priorities.filter((p) => !!p.productId);
+        const prioritiesToSave = section.priorities.filter(
+          (p) => !!p.productId,
+        );
         if (prioritiesToSave.length > 0) {
           await tx.priority.createMany({
             data: prioritiesToSave.map((p) => ({
@@ -405,7 +415,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               reportSectionId: sectionId,
               rank: p.rank,
               text: p.text,
-              stageName: p.stageIds?.join(', ') ?? null,
+              stageName: p.stageIds?.join(", ") ?? null,
               productId: p.productId as string,
             })),
           });

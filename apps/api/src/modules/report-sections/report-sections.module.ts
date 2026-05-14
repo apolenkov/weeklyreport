@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module } from "@nestjs/common";
 
-import { ReportSectionsService } from './report-sections.service';
-import { ReportSectionsPrismaRepository } from './report-sections.prisma-repository';
-import { LeadFormService } from './lead-form.service';
-import { LeadFormPrismaRepository } from './lead-form.prisma-repository';
-import { AdminModule } from '../admin/admin.module';
-import { AdminService } from '../admin/admin.service';
+import { ReportSectionsService } from "./report-sections.service";
+import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
+import { LeadFormService } from "./lead-form.service";
+import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
+import { AdminModule } from "../admin/admin.module";
+import { AdminService } from "../admin/admin.service";
 
 @Module({
   // UFB-049 / Phase 50-B: AdminModule is imported so ReportSectionsService
@@ -19,10 +19,7 @@ import { AdminService } from '../admin/admin.service';
     LeadFormPrismaRepository,
     {
       provide: ReportSectionsService,
-      useFactory: (
-        repo: ReportSectionsPrismaRepository,
-        admin: AdminService,
-      ) =>
+      useFactory: (repo: ReportSectionsPrismaRepository, admin: AdminService) =>
         new ReportSectionsService(repo, async () => {
           const s = await admin.getSettings();
           return {
@@ -34,8 +31,7 @@ import { AdminService } from '../admin/admin.service';
     },
     {
       provide: LeadFormService,
-      useFactory: (repo: LeadFormPrismaRepository) =>
-        new LeadFormService(repo),
+      useFactory: (repo: LeadFormPrismaRepository) => new LeadFormService(repo),
       inject: [LeadFormPrismaRepository],
     },
   ],

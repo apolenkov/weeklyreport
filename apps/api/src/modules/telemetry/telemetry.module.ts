@@ -1,12 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module } from "@nestjs/common";
 
 import {
   TelemetryGauges,
   TelemetryGaugesPrismaRepository,
-} from './telemetry.gauges.js';
-import { TelemetryService } from './telemetry.service.js';
-import { TelemetryPrismaRepository } from './telemetry.prisma-repository.js';
-import { TelemetryCache } from './telemetry.cache.js';
+} from "./telemetry.gauges.js";
+import { TelemetryService } from "./telemetry.service.js";
+import { TelemetryPrismaRepository } from "./telemetry.prisma-repository.js";
+import { TelemetryCache } from "./telemetry.cache.js";
 
 /**
  * Phase 52 (UFB-054) — product-telemetry wiring.
@@ -34,10 +34,6 @@ import { TelemetryCache } from './telemetry.cache.js';
       inject: [TelemetryPrismaRepository, TelemetryCache],
     },
   ],
-  exports: [
-    TelemetryGauges,
-    TelemetryGaugesPrismaRepository,
-    TelemetryService,
-  ],
+  exports: [TelemetryGauges, TelemetryGaugesPrismaRepository, TelemetryService],
 })
 export class TelemetryModule {}

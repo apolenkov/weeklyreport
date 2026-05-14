@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
-import { QueryErrorBoundary } from '../components/error-boundary';
-import { TRPCProvider } from '../lib/trpc-provider';
-import { getOrgPublic } from '../lib/server/get-org-public';
-import '../styles/app.css';
+import { AgentationDevtools } from "../components/agentation-devtools";
+import { QueryErrorBoundary } from "../components/error-boundary";
+import { TRPCProvider } from "../lib/trpc-provider";
+import { getOrgPublic } from "../lib/server/get-org-public";
+import "../styles/app.css";
 
 type RootLayoutProps = Readonly<{
   children: ReactNode;
@@ -18,7 +19,11 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
           rel="stylesheet"
@@ -40,6 +45,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <TRPCProvider>
           <QueryErrorBoundary>{children}</QueryErrorBoundary>
         </TRPCProvider>
+        <AgentationDevtools />
       </body>
     </html>
   );

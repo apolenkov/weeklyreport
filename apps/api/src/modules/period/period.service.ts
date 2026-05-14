@@ -1,16 +1,14 @@
-import { type UserSession } from '@customreport/shared';
+import { type UserSession } from "@customreport/shared";
 
 export class PeriodAccessError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'PeriodAccessError';
+    this.name = "PeriodAccessError";
   }
 }
 
 export interface PeriodRepository {
-  getReportById(
-    reportId: string,
-  ): Promise<{
+  getReportById(reportId: string): Promise<{
     id: string;
     status: string;
     periodStatus: string;
@@ -64,7 +62,8 @@ export type AiIngestionPublishHook = (
 export class PeriodService {
   constructor(
     private readonly repository: PeriodRepository,
-    private readonly invalidateAnalyticsCache: AnalyticsCacheInvalidator = async () => undefined,
+    private readonly invalidateAnalyticsCache: AnalyticsCacheInvalidator = async () =>
+      undefined,
     /**
      * UFB-052 (Phase 51-B): reopen-policy gate. Defaults to a null
      * reader (no gating) so the 88+ unit/integration tests that pre-date
@@ -92,8 +91,8 @@ export class PeriodService {
       throw new Error(`Report ${reportId} not found.`);
     }
 
-    if (report.periodStatus === 'published') {
-      throw new PeriodAccessError('Period is already published.');
+    if (report.periodStatus === "published") {
+      throw new PeriodAccessError("Period is already published.");
     }
 
     await this.repository.publishPeriod(reportId, session.userId);
@@ -125,10 +124,8 @@ export class PeriodService {
       throw new Error(`Report ${reportId} not found.`);
     }
 
-    if (report.periodStatus !== 'published') {
-      throw new PeriodAccessError(
-        'Only published periods can be reopened.',
-      );
+    if (report.periodStatus !== "published") {
+      throw new PeriodAccessError("Only published periods can be reopened.");
     }
 
     // UFB-052 (Phase 51-B): reopen-policy enforcement. Two gates:
@@ -146,13 +143,12 @@ export class PeriodService {
     if (policy) {
       if (!policy.allowReopenAfterPublish) {
         throw new PeriodAccessError(
-          'Reopening published periods is disabled in Settings (allowReopenAfterPublish=false).',
+          "Reopening published periods is disabled in Settings (allowReopenAfterPublish=false).",
         );
       }
       if (policy.reopenWindowHours > 0 && report.publishedAt) {
         const windowEnd =
-          report.publishedAt.getTime() +
-          policy.reopenWindowHours * 3_600_000;
+          report.publishedAt.getTime() + policy.reopenWindowHours * 3_600_000;
         if (Date.now() > windowEnd) {
           throw new PeriodAccessError(
             `Reopen window expired (${policy.reopenWindowHours}h after publication).`,

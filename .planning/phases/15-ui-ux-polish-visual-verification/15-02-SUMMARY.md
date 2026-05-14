@@ -42,10 +42,10 @@ Four P3 deferred findings resolved:
 
 ## Commits
 
-| Task | Commit | Description |
-|------|--------|-------------|
+| Task   | Commit    | Description                                                                |
+| ------ | --------- | -------------------------------------------------------------------------- |
 | Task 1 | `dcc972b` | feat(15-02): nav grouping with SidebarGroupLabel and collapsed padding fix |
-| Task 2 | `40763ea` | feat(15-02): change logout from GET anchor to POST form (D-06) |
+| Task 2 | `40763ea` | feat(15-02): change logout from GET anchor to POST form (D-06)             |
 
 ## Verification
 

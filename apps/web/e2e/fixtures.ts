@@ -6,10 +6,10 @@
  * written by auth.setup.ts once real auth is wired.
  */
 
-import { test as base, expect, type Page } from '@playwright/test';
-import * as path from 'path';
+import { test as base, expect, type Page } from "@playwright/test";
+import * as path from "path";
 
-const AUTH_DIR = path.join(__dirname, '.auth');
+const AUTH_DIR = path.join(__dirname, ".auth");
 
 // ---------------------------------------------------------------------------
 // Helpers exposed as fixture methods
@@ -17,11 +17,14 @@ const AUTH_DIR = path.join(__dirname, '.auth');
 
 export async function waitForPageReady(page: Page) {
   // Wait for Next.js hydration -- the main content area must be present
-  await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
+  await page.waitForSelector("#main-content", {
+    state: "visible",
+    timeout: 15_000,
+  });
 }
 
 export async function expectHeading(page: Page, text: string) {
-  await expect(page.getByRole('heading', { name: text })).toBeVisible();
+  await expect(page.getByRole("heading", { name: text })).toBeVisible();
 }
 
 export async function navigateTo(page: Page, path: string) {
@@ -41,7 +44,7 @@ type Fixtures = {
 export const test = base.extend<Fixtures>({
   leadPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({
-      storageState: path.join(AUTH_DIR, 'lead.json'),
+      storageState: path.join(AUTH_DIR, "lead.json"),
     });
     const page = await ctx.newPage();
     await use(page);
@@ -50,7 +53,7 @@ export const test = base.extend<Fixtures>({
 
   headPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({
-      storageState: path.join(AUTH_DIR, 'head.json'),
+      storageState: path.join(AUTH_DIR, "head.json"),
     });
     const page = await ctx.newPage();
     await use(page);

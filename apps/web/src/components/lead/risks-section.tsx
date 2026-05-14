@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import { ConfirmDeleteDialog } from './confirm-delete-dialog';
-import { RiskEditDialog } from './risk-edit-dialog';
-import type { Product, RiskEntry } from './mock-data';
-import { splitStageNames } from './stage-tags';
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
+import { RiskEditDialog } from "./risk-edit-dialog";
+import type { Product, RiskEntry } from "./mock-data";
+import { splitStageNames } from "./stage-tags";
 
 type RisksSectionProps = {
   readonly risks: RiskEntry[];
@@ -30,7 +30,15 @@ type RisksSectionProps = {
 
 function EditIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
       <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
@@ -39,7 +47,15 @@ function EditIcon() {
 
 function DeleteIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
     </svg>
   );
@@ -54,7 +70,9 @@ export function RisksSection({
   stagesForProduct,
 }: RisksSectionProps) {
   const [dialogState, setDialogState] = useState<
-    { open: false } | { open: true; mode: 'create'; seedProductId?: string } | { open: true; mode: 'edit'; risk: RiskEntry }
+    | { open: false }
+    | { open: true; mode: "create"; seedProductId?: string }
+    | { open: true; mode: "edit"; risk: RiskEntry }
   >({ open: false });
   const [pendingDelete, setPendingDelete] = useState<RiskEntry | null>(null);
 
@@ -73,21 +91,28 @@ export function RisksSection({
 
   function handleAdd() {
     if (readOnly) return;
-    setDialogState({ open: true, mode: 'create', seedProductId: products?.[0]?.id });
+    setDialogState({
+      open: true,
+      mode: "create",
+      seedProductId: products?.[0]?.id,
+    });
   }
 
   function handleEdit(risk: RiskEntry) {
     if (readOnly) return;
-    setDialogState({ open: true, mode: 'edit', risk });
+    setDialogState({ open: true, mode: "edit", risk });
   }
 
-  function handleDialogSave(saved: RiskEntry & { impact: string; mitigation: string }) {
+  function handleDialogSave(
+    saved: RiskEntry & { impact: string; mitigation: string },
+  ) {
     if (readOnly) return;
-    const wasEmpty = dialogState.open && dialogState.mode === 'edit'
-      ? (dialogState.risk.text ?? '').trim().length === 0
-      : true;
+    const wasEmpty =
+      dialogState.open && dialogState.mode === "edit"
+        ? (dialogState.risk.text ?? "").trim().length === 0
+        : true;
 
-    if (dialogState.open && dialogState.mode === 'create') {
+    if (dialogState.open && dialogState.mode === "create") {
       onChange?.([...risks, saved]);
     } else {
       onChange?.(risks.map((r) => (r.id === saved.id ? saved : r)));
@@ -115,35 +140,47 @@ export function RisksSection({
 
       {risks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
-          {readOnly ? 'No risks reported.' : 'No risks reported. Use “+ Add Risk” when you spot one.'}
+          {readOnly
+            ? "No risks reported."
+            : "No risks reported. Use “+ Add Risk” when you spot one."}
         </div>
       ) : (
         risks.map((risk) => {
-          const isBlocked = risk.severity === 'blocked';
-          const stageTags = splitStageNames(risk.stageName);
+          const isBlocked = risk.severity === "blocked";
+          const stageTags =
+            risk.stageIds && risk.stageIds.length > 0
+              ? risk.stageIds
+              : splitStageNames(risk.stageName);
+          // D-15: treat as "all stages" only when no specific stages were
+          // selected (empty = applies to all owned stages) OR when every
+          // stage owned by the lead on this product is selected.
+          const ownedStages = stagesForProduct?.(risk.productId) ?? [];
+          const isAllStages =
+            stageTags.length === 0 ||
+            (ownedStages.length > 0 && stageTags.length === ownedStages.length);
           return (
             <div
               key={risk.id}
               className="rounded-xl p-4"
               style={{
-                background: isBlocked ? '#fdf8f8' : '#fffcf5',
-                border: `1px solid ${isBlocked ? 'rgba(200,32,20,0.15)' : 'rgba(212,160,23,0.15)'}`,
+                background: isBlocked ? "#fdf8f8" : "#fffcf5",
+                border: `1px solid ${isBlocked ? "rgba(200,32,20,0.15)" : "rgba(212,160,23,0.15)"}`,
               }}
             >
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span
                   className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
                   style={{
-                    background: isBlocked ? '#fee2e2' : '#fef3c7',
-                    color: isBlocked ? 'var(--color-destructive)' : '#8a6d1b',
+                    background: isBlocked ? "#fee2e2" : "#fef3c7",
+                    color: isBlocked ? "var(--color-destructive)" : "#8a6d1b",
                   }}
                 >
-                  {isBlocked ? 'Blocked' : 'At Risk'}
+                  {isBlocked ? "Blocked" : "At Risk"}
                 </span>
                 <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
                   {risk.productName}
                 </span>
-                {stageTags.length === 0 ? (
+                {isAllStages ? (
                   <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
                     All stages
                   </span>
@@ -183,17 +220,33 @@ export function RisksSection({
                   validate all three fields together. */}
               <div className="space-y-2 text-sm text-[var(--color-foreground)]">
                 <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">Risk</span>
-                  <div className="mt-0.5 break-words">{risk.text || <em className="text-[var(--color-muted-foreground)]">— pending</em>}</div>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                    Risk
+                  </span>
+                  <div className="mt-0.5 break-words">
+                    {risk.text || (
+                      <em className="text-[var(--color-muted-foreground)]">
+                        — pending
+                      </em>
+                    )}
+                  </div>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">Impact</span>
-                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">{risk.impact || '—'}</div>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                      Impact
+                    </span>
+                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
+                      {risk.impact || "—"}
+                    </div>
                   </div>
                   <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">Mitigation</span>
-                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">{risk.mitigation || '—'}</div>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                      Mitigation
+                    </span>
+                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
+                      {risk.mitigation || "—"}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -208,19 +261,38 @@ export function RisksSection({
           className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={handleAdd}
           disabled={!hasProducts}
-          title={hasProducts ? undefined : 'No products assigned — contact admin'}
+          title={
+            hasProducts ? undefined : "No products assigned — contact admin"
+          }
         >
           + Add Risk
         </button>
       )}
 
       <RiskEditDialog
+        key={`${dialogState.open}-${dialogState.open && dialogState.mode === "edit" ? dialogState.risk.id : "new"}`}
         open={dialogState.open}
-        risk={dialogState.open && dialogState.mode === 'edit' ? dialogState.risk : null}
+        risk={
+          dialogState.open && dialogState.mode === "edit"
+            ? dialogState.risk
+            : null
+        }
         products={products ?? []}
-        defaultProductId={dialogState.open && dialogState.mode === 'create' ? dialogState.seedProductId : undefined}
-        initialImpact={dialogState.open && dialogState.mode === 'edit' ? dialogState.risk.impact : ''}
-        initialMitigation={dialogState.open && dialogState.mode === 'edit' ? dialogState.risk.mitigation : ''}
+        defaultProductId={
+          dialogState.open && dialogState.mode === "create"
+            ? dialogState.seedProductId
+            : undefined
+        }
+        initialImpact={
+          dialogState.open && dialogState.mode === "edit"
+            ? dialogState.risk.impact
+            : ""
+        }
+        initialMitigation={
+          dialogState.open && dialogState.mode === "edit"
+            ? dialogState.risk.mitigation
+            : ""
+        }
         stagesForProduct={stagesForProduct}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
@@ -229,8 +301,12 @@ export function RisksSection({
       <ConfirmDeleteDialog
         open={pendingDelete !== null}
         title="Delete risk?"
-        preview={pendingDelete?.text || '(no description)'}
-        subtitle={pendingDelete ? `${pendingDelete.productName}${splitStageNames(pendingDelete.stageName).length > 0 ? ` · ${splitStageNames(pendingDelete.stageName).join(', ')}` : ' · all stages'}` : undefined}
+        preview={pendingDelete?.text || "(no description)"}
+        subtitle={
+          pendingDelete
+            ? `${pendingDelete.productName}${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? ` · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(", ")}` : " · all stages"}`
+            : undefined
+        }
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />

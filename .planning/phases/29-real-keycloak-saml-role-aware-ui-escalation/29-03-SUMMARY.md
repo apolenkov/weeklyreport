@@ -20,25 +20,25 @@ A server-side role gate that fires at the Next.js route-segment layout level: ea
 
 ## Required-role table per layout
 
-| Layout | REQUIRED roles | Rationale |
-|--------|----------------|-----------|
-| `apps/web/src/app/(app)/admin/layout.tsx`   | `['admin', 'head']`                 | D-AUTH-03 — admin === head for v6.0 |
-| `apps/web/src/app/(app)/head/layout.tsx`    | `['head', 'admin']`                 | head dashboards |
-| `apps/web/src/app/(app)/lead/layout.tsx`    | `['lead', 'head', 'admin']`         | lead reporting + supervisor visibility |
+| Layout                                      | REQUIRED roles                        | Rationale                                          |
+| ------------------------------------------- | ------------------------------------- | -------------------------------------------------- |
+| `apps/web/src/app/(app)/admin/layout.tsx`   | `['admin', 'head']`                   | D-AUTH-03 — admin === head for v6.0                |
+| `apps/web/src/app/(app)/head/layout.tsx`    | `['head', 'admin']`                   | head dashboards                                    |
+| `apps/web/src/app/(app)/lead/layout.tsx`    | `['lead', 'head', 'admin']`           | lead reporting + supervisor visibility             |
 | `apps/web/src/app/(app)/reports/layout.tsx` | `['lead', 'head', 'admin', 'viewer']` | published-reports surface — any authenticated role |
 
 ## Files modified
 
-| File | LOC delta | Note |
-|------|-----------|------|
-| apps/web/src/components/forbidden-page.tsx (new) | +47 | Reusable 403 component (Card + Button + Link); receives `requiredRoles` only — no actualRole leakage (T4) |
-| apps/web/src/components/forbidden-page.test.tsx (new) | +38 | Heading + roles label + return-to-home link assertions |
-| apps/web/src/lib/server/get-server-session.ts (new) | +95 | Server-only helper; reads cookie via `next/headers`, calls `/trpc/auth.me` with `cache: 'no-store'` |
-| apps/web/src/lib/server/get-server-session.test.ts (new) | +111 | 4 unit tests: missing cookie → null, valid cookie → session, 401 → null, throw → null |
-| apps/web/src/app/(app)/admin/layout.tsx (new) | +29 | Async server component; REQUIRED `['admin', 'head']` |
-| apps/web/src/app/(app)/head/layout.tsx (new) | +25 | Async server component; REQUIRED `['head', 'admin']` |
-| apps/web/src/app/(app)/lead/layout.tsx (new) | +25 | Async server component; REQUIRED `['lead', 'head', 'admin']` |
-| apps/web/src/app/(app)/reports/layout.tsx (new) | +27 | Async server component; REQUIRED `['lead', 'head', 'admin', 'viewer']` |
+| File                                                     | LOC delta | Note                                                                                                      |
+| -------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------- |
+| apps/web/src/components/forbidden-page.tsx (new)         | +47       | Reusable 403 component (Card + Button + Link); receives `requiredRoles` only — no actualRole leakage (T4) |
+| apps/web/src/components/forbidden-page.test.tsx (new)    | +38       | Heading + roles label + return-to-home link assertions                                                    |
+| apps/web/src/lib/server/get-server-session.ts (new)      | +95       | Server-only helper; reads cookie via `next/headers`, calls `/trpc/auth.me` with `cache: 'no-store'`       |
+| apps/web/src/lib/server/get-server-session.test.ts (new) | +111      | 4 unit tests: missing cookie → null, valid cookie → session, 401 → null, throw → null                     |
+| apps/web/src/app/(app)/admin/layout.tsx (new)            | +29       | Async server component; REQUIRED `['admin', 'head']`                                                      |
+| apps/web/src/app/(app)/head/layout.tsx (new)             | +25       | Async server component; REQUIRED `['head', 'admin']`                                                      |
+| apps/web/src/app/(app)/lead/layout.tsx (new)             | +25       | Async server component; REQUIRED `['lead', 'head', 'admin']`                                              |
+| apps/web/src/app/(app)/reports/layout.tsx (new)          | +27       | Async server component; REQUIRED `['lead', 'head', 'admin', 'viewer']`                                    |
 
 Total: 8 files, +397 LOC, 0 deletions.
 
@@ -47,6 +47,7 @@ Total: 8 files, +397 LOC, 0 deletions.
 The plan suggested a `createServerCaller` wrapper around the tRPC server-side caller. The implementation took a different route: a direct **HTTP fetch to the API's `/trpc/auth.me?batch=1` endpoint** with the session cookie forwarded in the request header.
 
 Rationale:
+
 - Building a server-side caller would require importing the api's tRPC router into the web app, which crosses the apps boundary and pulls api-only deps (Prisma, BullMQ) into the Next.js bundle — undesirable.
 - The fetch path is identical to what the browser would do post-rewrite, so the same JWT-verify + role-resolution pipeline runs server-side.
 - `cache: 'no-store'` is set explicitly to defeat Next.js data cache so role downgrades surface within the JWT TTL (1 h) rather than the cache TTL.
@@ -57,16 +58,17 @@ Rationale:
 
 ## Test counts
 
-| Suite | Before (29-02) | After (29-03) | Delta |
-|-------|----------------|---------------|-------|
-| api unit | 457 / 37 files | 457 / 37 files | 0 / 0 |
-| shared unit | 226 / 6 files | 226 / 6 files | 0 / 0 |
-| web unit | 168 (1 pre-existing fail) | 182 (1 same pre-existing fail) | +14 / +2 files |
-| typecheck (api + web) | green | green | — |
+| Suite                 | Before (29-02)            | After (29-03)                  | Delta          |
+| --------------------- | ------------------------- | ------------------------------ | -------------- |
+| api unit              | 457 / 37 files            | 457 / 37 files                 | 0 / 0          |
+| shared unit           | 226 / 6 files             | 226 / 6 files                  | 0 / 0          |
+| web unit              | 168 (1 pre-existing fail) | 182 (1 same pre-existing fail) | +14 / +2 files |
+| typecheck (api + web) | green                     | green                          | —              |
 
 The single web failure (`apps/web/proxy.test.ts`) is the same pre-existing failure documented in 29-01 and 29-02 — not touched by this plan, not introduced by it.
 
 New web tests:
+
 - `forbidden-page.test.tsx`: 2 tests
 - `get-server-session.test.ts`: 12 tests (cookie absence, valid session, error paths, decoder branches)
 

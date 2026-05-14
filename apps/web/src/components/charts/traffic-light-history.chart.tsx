@@ -1,16 +1,16 @@
-'use client';
+"use client";
+
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  XAxis,
-  YAxis,
-} from 'recharts';
+  ChartContainer,
+  ChartTooltip,
+} from "@customreport/ui/components/ui/chart";
 
-import { ChartContainer, ChartTooltip } from '@customreport/ui/components/ui/chart';
-
-import type { TrafficLightHistoryOutput, TrafficLightCell } from '@customreport/shared';
+import type {
+  TrafficLightHistoryOutput,
+  TrafficLightCell,
+} from "@customreport/shared";
 
 /**
  * ANAL-04 (Phase 30-03): traffic-light history sparkline.
@@ -26,12 +26,24 @@ const STATUS_TO_VALUE: Record<Exclude<TrafficLightCell, null>, number> = {
   red: 1,
 };
 
-const COLORS = ['#15803d', '#2563eb', '#9333ea', '#0891b2', '#c2410c', '#a21caf'];
+const COLORS = [
+  "#15803d",
+  "#2563eb",
+  "#9333ea",
+  "#0891b2",
+  "#c2410c",
+  "#a21caf",
+];
 
-export function TrafficLightHistoryChart({ periods, rows }: TrafficLightHistoryOutput) {
+export function TrafficLightHistoryChart({
+  periods,
+  rows,
+}: TrafficLightHistoryOutput) {
   if (periods.length === 0 || rows.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">No published periods in range.</p>
+      <p className="text-sm text-muted-foreground">
+        No published periods in range.
+      </p>
     );
   }
 

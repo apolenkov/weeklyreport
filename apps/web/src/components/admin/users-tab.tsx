@@ -8,7 +8,7 @@ import { invalidateAdmin } from "../../lib/cache-keys";
 import { toAdminUserInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
 
-import { TabHeader, TabSearch } from "./tab-header";
+import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
 import type { MockGroup, MockUser, UserRole } from "./mock-data";
 
@@ -28,6 +28,23 @@ function emptyForm(groups: readonly MockGroup[]): UserFormData {
   };
 }
 
+// A3: role quick-filter options — declared module-level so no per-render alloc
+const ROLE_OPTIONS = [
+  { value: "", label: "All roles" },
+  { value: "lead", label: "Lead" },
+  { value: "head", label: "Head" },
+  { value: "admin", label: "Admin" },
+  { value: "viewer", label: "Viewer" },
+] as const;
+
+// B3: status quick-filter — default "active" hides deactivated users on load
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "all", label: "All" },
+] as const;
+type StatusFilterValue = (typeof STATUS_OPTIONS)[number]["value"];
+
 type UsersTabProps = {
   readonly users: MockUser[];
   readonly groups: MockGroup[];
@@ -42,6 +59,11 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   const [deleteTarget, setDeleteTarget] = useState<MockUser | null>(null);
   const [form, setForm] = useState<UserFormData>(() => emptyForm(groups));
   const [search, setSearch] = useState("");
+  // A3: role quick-filter ("" = all roles)
+  const [roleFilter, setRoleFilter] = useState("");
+  const [groupFilter, setGroupFilter] = useState("");
+  // B3: status quick-filter (default "active" — hides deactivated on load)
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("active");
 
   const activeGroups = useMemo(
     () => groups.filter((group) => !group.archived),
@@ -61,6 +83,13 @@ export function UsersTab({ users, groups }: UsersTabProps) {
       ? [...activeGroups, assignedArchivedGroup]
       : activeGroups;
   }, [activeGroups, form.groupId, groups]);
+  const groupFilterOptions = useMemo(
+    () => [
+      { value: "", label: "All groups" },
+      ...groups.map((group) => ({ value: group.id, label: group.name })),
+    ],
+    [groups],
+  );
 
   // Escape closes the Add/Edit dialog. The dialog is rendered inline (not
   // through a Radix wrapper) so we wire the listener manually.
@@ -102,6 +131,32 @@ export function UsersTab({ users, groups }: UsersTabProps) {
     }),
   );
 
+  // A2 (UAT-v7 2026-05-12): deactivate/activate mutations with immediate
+  // Redis session revocation on the backend.
+  const deactivateUserMut = useMutation(
+    trpc.admin.deactivateUser.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success("User deactivated");
+      },
+      onError: (err) => {
+        toast.error(err.message ?? "Failed to deactivate user");
+      },
+    }),
+  );
+
+  const activateUserMut = useMutation(
+    trpc.admin.activateUser.mutationOptions({
+      onSuccess: () => {
+        invalidateAdmin(qc, trpc);
+        toast.success("User activated");
+      },
+      onError: (err) => {
+        toast.error(err.message ?? "Failed to activate user");
+      },
+    }),
+  );
+
   function openAdd() {
     setEditingUser(null);
     setForm(emptyForm(groups));
@@ -120,6 +175,15 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   }
 
   function handleSave() {
+    if (
+      editingUser &&
+      form.groupId !== editingUser.groupId &&
+      !window.confirm(
+        "Change this user's group? The change applies to future work only; archived report snapshots stay unchanged.",
+      )
+    ) {
+      return;
+    }
     saveUserMut.mutate(toAdminUserInput(form, editingUser?.id));
   }
 
@@ -131,17 +195,22 @@ export function UsersTab({ users, groups }: UsersTabProps) {
 
   const isSaving = saveUserMut.isPending;
   const isDeleting = deleteUserMut.isPending;
-  const canSave = form.groupId.length > 0 && !isSaving;
+  const canSave =
+    (form.role === "viewer" || form.groupId.length > 0) && !isSaving;
   const filteredUsers = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return users;
-    return users.filter((user) =>
-      [user.name, user.email, user.role, user.department]
+    return users.filter((user) => {
+      if (roleFilter && user.role !== roleFilter) return false;
+      if (groupFilter && user.groupId !== groupFilter) return false;
+      if (statusFilter === "active" && !user.isActive) return false;
+      if (statusFilter === "inactive" && user.isActive) return false;
+      if (!needle) return true;
+      return [user.name, user.email, user.role, user.department]
         .join(" ")
         .toLowerCase()
-        .includes(needle),
-    );
-  }, [search, users]);
+        .includes(needle);
+    });
+  }, [search, roleFilter, groupFilter, statusFilter, users]);
 
   return (
     <>
@@ -151,13 +220,36 @@ export function UsersTab({ users, groups }: UsersTabProps) {
           description="Manage group members and their roles."
           count={`${users.length} users`}
           search={
-            <TabSearch
-              value={search}
-              onChange={setSearch}
-              placeholder="Search users…"
-              testId="users-search"
-              ariaLabel="Search users"
-            />
+            <>
+              <TabFilter
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(v as StatusFilterValue)}
+                options={STATUS_OPTIONS}
+                testId="users-status-filter"
+                ariaLabel="Filter by status"
+              />
+              <TabFilter
+                value={roleFilter}
+                onChange={setRoleFilter}
+                options={ROLE_OPTIONS}
+                testId="users-role-filter"
+                ariaLabel="Filter by role"
+              />
+              <TabFilter
+                value={groupFilter}
+                onChange={setGroupFilter}
+                options={groupFilterOptions}
+                testId="users-group-filter"
+                ariaLabel="Filter by group"
+              />
+              <TabSearch
+                value={search}
+                onChange={setSearch}
+                placeholder="Search users…"
+                testId="users-search"
+                ariaLabel="Search users"
+              />
+            </>
           }
           actions={
             <button
@@ -198,10 +290,20 @@ export function UsersTab({ users, groups }: UsersTabProps) {
               {filteredUsers.map((user) => (
                 <tr
                   key={user.id}
-                  className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
+                  className={`border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]${!user.isActive ? " opacity-60" : ""}`}
                 >
                   <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
-                    {user.name}
+                    <span className="flex items-center gap-2">
+                      {user.name}
+                      {!user.isActive && (
+                        <span
+                          className="inline-flex items-center rounded-[var(--radius-pill)] bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-500"
+                          aria-label="Inactive user"
+                        >
+                          inactive
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
                     {user.email}
@@ -222,6 +324,31 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                       >
                         Edit
                       </button>
+                      {user.isActive ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            deactivateUserMut.mutate({ userId: user.id })
+                          }
+                          disabled={deactivateUserMut.isPending}
+                          className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-amber-600 transition-colors hover:border-[rgba(180,100,0,0.3)] hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label={`Deactivate ${user.name}`}
+                        >
+                          Deactivate
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            activateUserMut.mutate({ userId: user.id })
+                          }
+                          disabled={activateUserMut.isPending}
+                          className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:border-[rgba(0,117,74,0.3)] hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label={`Activate ${user.name}`}
+                        >
+                          Activate
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(user)}
@@ -303,9 +430,20 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                 <select
                   id="user-role"
                   value={form.role}
-                  onChange={(e) =>
-                    setForm({ ...form, role: e.target.value as UserRole })
-                  }
+                  onChange={(e) => {
+                    const role = e.target.value as UserRole;
+                    setForm({
+                      ...form,
+                      role,
+                      groupId:
+                        role === "viewer"
+                          ? ""
+                          : form.groupId ||
+                            activeGroups[0]?.id ||
+                            groups[0]?.id ||
+                            "",
+                    });
+                  }}
                   className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
                 >
                   <option value="lead">Lead</option>
@@ -319,7 +457,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                   htmlFor="user-group"
                   className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
                 >
-                  Group
+                  Owning group
                 </label>
                 <select
                   id="user-group"
@@ -328,8 +466,11 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                     setForm({ ...form, groupId: e.target.value })
                   }
                   className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-                  disabled={groupOptions.length === 0}
+                  disabled={form.role === "viewer" || groupOptions.length === 0}
                 >
+                  {form.role === "viewer" && (
+                    <option value="">No owning group</option>
+                  )}
                   {groupOptions.length === 0 && (
                     <option value="">No active groups configured</option>
                   )}
@@ -410,15 +551,11 @@ export function UsersTab({ users, groups }: UsersTabProps) {
 // ---- Helper components ----
 
 function RoleBadge({ role }: { readonly role: UserRole }) {
-  // UFB-057 / Phase 57: director badge uses a distinct steel-blue tone so
-  // it reads apart from admin (amber) and head (purple) while signalling
-  // leadership-audience read-only status.
   const styles: Record<UserRole, { bg: string; text: string }> = {
     lead: { bg: "var(--color-success)", text: "var(--color-primary)" },
     head: { bg: "#e8e0f0", text: "#6b21a8" },
     admin: { bg: "#fef3c7", text: "#92400e" },
     viewer: { bg: "var(--color-muted)", text: "var(--color-muted-foreground)" },
-    director: { bg: "#dbeafe", text: "#1e3a8a" },
   };
   const s = styles[role];
 

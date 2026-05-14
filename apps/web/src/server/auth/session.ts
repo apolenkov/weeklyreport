@@ -1,10 +1,12 @@
-import { parse } from 'cookie';
+import { parse } from "cookie";
 
-import { userSessionSchema, type UserSession } from '@customreport/shared';
+import { userSessionSchema, type UserSession } from "@customreport/shared";
 
-const AUTH_COOKIE_NAME = 'customreport_session';
+const AUTH_COOKIE_NAME = "customreport_session";
 
-export function extractSessionToken(cookieHeader: string | null | undefined): string | null {
+export function extractSessionToken(
+  cookieHeader: string | null | undefined,
+): string | null {
   if (!cookieHeader) {
     return null;
   }

@@ -3,13 +3,13 @@ import {
   httpBatchLink,
   TRPCClientError,
   type TRPCLink,
-} from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
-import type { QueryClient } from '@tanstack/react-query';
-import superjson from 'superjson';
+} from "@trpc/client";
+import { observable } from "@trpc/server/observable";
+import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
+import type { QueryClient } from "@tanstack/react-query";
+import superjson from "superjson";
 
-import type { AppRouter } from '@customreport/api/infrastructure/trpc/trpc.router';
+import type { AppRouter } from "@customreport/api/infrastructure/trpc/trpc.router";
 
 // ---------------------------------------------------------------------------
 // 401 interceptor — redirect logic
@@ -37,25 +37,25 @@ const AUTH_REDIRECT_EXEMPT = /^\/(?:$|auth(?:\/|$))/;
  */
 export function createAuthRedirectHandler(): (err: unknown) => boolean {
   return (err: unknown): boolean => {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === "undefined") return false;
     if (!(err instanceof TRPCClientError)) return false;
 
-    const data = err.data as
-      | { httpStatus?: number; code?: string }
-      | undefined;
+    const data = err.data as { httpStatus?: number; code?: string } | undefined;
     const httpStatus = data?.httpStatus;
     const code = data?.code;
-    const isUnauthorized = httpStatus === 401 || code === 'UNAUTHORIZED';
+    const isUnauthorized = httpStatus === 401 || code === "UNAUTHORIZED";
     if (!isUnauthorized) return false;
 
     const { pathname, search } = window.location;
     if (AUTH_REDIRECT_EXEMPT.test(pathname)) return false;
 
-    const target = new URL('/', window.location.href);
-    target.searchParams.set('next', pathname + (search ?? ''));
+    const target = new URL("/", window.location.href);
+    target.searchParams.set("next", pathname + (search ?? ""));
     // Use just pathname+search for assign — keeps the host and scheme
     // implicit (some tests stub window.location and don't include origin).
-    window.location.assign(`/?next=${encodeURIComponent(pathname + (search ?? ''))}`);
+    window.location.assign(
+      `/?next=${encodeURIComponent(pathname + (search ?? ""))}`,
+    );
     return true;
   };
 }
@@ -98,9 +98,9 @@ export function makeTRPCClient() {
       createAuthRedirectLink(),
       httpBatchLink({
         transformer: superjson,
-        url: '/trpc',
+        url: "/trpc",
         fetch: (url, options) =>
-          fetch(url, { ...options, credentials: 'include' }),
+          fetch(url, { ...options, credentials: "include" }),
       }),
     ],
   });

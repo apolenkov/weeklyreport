@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
 type ExportPdfButtonProps = {
   readonly reportId: string;
-  readonly periodStatus: 'open' | 'published' | 'reopened';
+  readonly periodStatus: "open" | "published" | "reopened";
 };
 
 /**
@@ -39,7 +39,7 @@ export function ExportPdfButton({
       },
       onError: (err: unknown) => {
         toast.error(
-          err instanceof Error ? err.message : 'Failed to start PDF export',
+          err instanceof Error ? err.message : "Failed to start PDF export",
         );
       },
     }),
@@ -47,12 +47,12 @@ export function ExportPdfButton({
 
   const statusQ = useQuery(
     trpc.pdfExport.status.queryOptions(
-      { jobId: jobId ?? '' },
+      { jobId: jobId ?? "" },
       {
         enabled: jobId !== null,
         refetchInterval: (q) => {
           const status = q.state.data?.status;
-          return status === 'queued' || status === 'processing' ? 2000 : false;
+          return status === "queued" || status === "processing" ? 2000 : false;
         },
       },
     ),
@@ -62,35 +62,36 @@ export function ExportPdfButton({
     const data = statusQ.data;
     if (!data || jobId === null) return;
 
-    if (data.status === 'completed' && data.artifactUrl) {
+    if (data.status === "completed" && data.artifactUrl) {
       if (lastDownloadedJobIdRef.current !== data.jobId) {
         lastDownloadedJobIdRef.current = data.jobId;
-        window.open(data.artifactUrl, '_blank');
-        toast.success('PDF ready');
+        window.open(data.artifactUrl, "_blank");
+        toast.success("PDF ready");
         setJobId(null);
       }
       return;
     }
 
-    if (data.status === 'failed') {
-      toast.error('PDF export failed. Please try again.');
+    if (data.status === "failed") {
+      toast.error("PDF export failed. Please try again.");
       setJobId(null);
     }
   }, [statusQ.data, jobId]);
 
-  const isExportable = periodStatus === 'published' || periodStatus === 'reopened';
+  const isExportable =
+    periodStatus === "published" || periodStatus === "reopened";
   const isGenerating = requestMut.isPending || jobId !== null;
   const disabled = !isExportable || isGenerating;
   const title = !isExportable
-    ? 'Publish the report first'
+    ? "Publish the report first"
     : isGenerating
-      ? 'Generating PDF…'
-      : 'Download a PDF copy of this report';
+      ? "Generating PDF…"
+      : "Download a PDF copy of this report";
   const label = isGenerating
-    ? 'Generating…'
+    ? "Generating…"
     : isExportable
-      ? 'Export PDF'
-      : 'Publish to export PDF';
+      ? "Export PDF"
+      : "Publish to export PDF";
   const disabledReasonId = `${reportId}-export-pdf-disabled-reason`;
 
   function handleExport() {

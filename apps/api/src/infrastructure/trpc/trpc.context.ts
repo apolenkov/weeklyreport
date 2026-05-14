@@ -1,13 +1,20 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { INestApplication } from "@nestjs/common";
-import { DEFAULT_ORGANIZATION_IDENTITY, type UserSession } from "@customreport/shared";
+import {
+  DEFAULT_ORGANIZATION_IDENTITY,
+  type UserSession,
+} from "@customreport/shared";
 
 import { createAuthController } from "../../modules/auth/auth.controller.js";
 import { verifyPdfExportToken } from "../../modules/pdf-export/pdf-export.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { createAuditLogger, type AuditLogger } from "../../lib/audit-logger.js";
 
+// D-32: DEV_SESSION must carry reportingGroupId so groupScopeFilter scopes
+// the activity panel to the head's group in dev / integration mode.
+// UUID matches DEFAULT_REPORTING_GROUP_ID in prisma/seed-constants.ts.
 const DEV_SESSION: UserSession = {
   userId: "a0000000-0000-4000-8000-000000000099",
   email: "head@customreport.local",
@@ -15,6 +22,7 @@ const DEV_SESSION: UserSession = {
   role: "head",
   activeReportId: "a0000000-0000-4000-8000-000000000001",
   activeReportSectionId: null,
+  reportingGroupId: "a0000000-0000-4000-8000-000000000301",
 };
 
 /**
@@ -30,6 +38,11 @@ let orgCache: {
   value: { shortName: string; fullName: string };
   expiresAt: number;
 } | null = null;
+
+/** Invalidates the org cache immediately; call after updateOrganization. */
+export function clearOrgCache(): void {
+  orgCache = null;
+}
 
 /**
  * Phase 32-B1 (H-04): synthetic session created when an inbound cookie is
@@ -108,6 +121,10 @@ export function createContextFactory(
   // Resolve PrismaService once (not per request) from the NestJS DI container.
   const prisma = _app.get(PrismaService);
   const auditLogger = createAuditLogger(logger);
+  // A2 (UAT-v7 2026-05-12): Redis-backed session revocation fast path.
+  // Constructed once; the underlying ioredis client uses lazyConnect so it
+  // does not block startup when Redis is unavailable.
+  const sessionRevocation = new SessionRevocationService();
 
   return async ({ req }: CreateExpressContextOptions): Promise<TrpcContext> => {
     const ip = req.ip ?? "unknown";
@@ -117,6 +134,25 @@ export function createContextFactory(
     if (token) {
       try {
         const session = authController.verifySessionToken(token);
+
+        // A2 (UAT-v7 2026-05-12): revocation check.
+        // 1. Fast path — Redis revoked set (sadd'd on deactivateUser).
+        //    fail-open: a Redis outage returns false and falls to Prisma.
+        // 2. Authoritative path — isActive column in Prisma User row.
+        //    Checked inline here so a stale JWT cannot bypass deactivation.
+        const revoked = await sessionRevocation.isRevoked(session.userId);
+        if (revoked) {
+          // Do NOT fall through to PDF path; treat as invalid token.
+          throw new Error("session revoked");
+        }
+        const userRow = await prisma.user.findUnique({
+          where: { id: session.userId },
+          select: { isActive: true },
+        });
+        if (userRow && !userRow.isActive) {
+          throw new Error("user deactivated");
+        }
+
         const resolved = await resolveSectionId(session, prisma);
         const hydrated = await hydrateViewerGroupAccess(resolved, prisma);
         const withOrg = await hydrateOrganization(hydrated, prisma);
@@ -131,8 +167,9 @@ export function createContextFactory(
           pdfReportId: null,
         };
       } catch {
-        // Regular session token invalid/expired -- try the PDF-export
-        // verifier path before falling through to dev-mode / null.
+        // Regular session token invalid/expired (or revoked/deactivated) --
+        // try the PDF-export verifier path before falling through to
+        // dev-mode / null.
       }
 
       // Phase 32-B1 (H-04): PDF worker authentication path. The Playwright

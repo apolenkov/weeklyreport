@@ -5,12 +5,12 @@ Step-by-step for handling a production incident on CustomReport. Pair with
 
 ## When to declare an incident
 
-| Severity | Trigger | Response |
-|---|---|---|
-| **SEV-1** | Service fully down (>3 min) OR data-loss risk | Page on-call. Status update every 15 min. |
-| **SEV-2** | Major feature broken for all users (e.g. SAML login, PDF export) | Page on-call. Status update every 30 min. |
-| **SEV-3** | Subset of users affected OR feature degraded but workaround exists | Page on-call within business hours. |
-| **SEV-4** | Cosmetic or single-user issue | Open issue; no page. |
+| Severity  | Trigger                                                            | Response                                  |
+| --------- | ------------------------------------------------------------------ | ----------------------------------------- |
+| **SEV-1** | Service fully down (>3 min) OR data-loss risk                      | Page on-call. Status update every 15 min. |
+| **SEV-2** | Major feature broken for all users (e.g. SAML login, PDF export)   | Page on-call. Status update every 30 min. |
+| **SEV-3** | Subset of users affected OR feature degraded but workaround exists | Page on-call within business hours.       |
+| **SEV-4** | Cosmetic or single-user issue                                      | Open issue; no page.                      |
 
 ## Response sequence
 
@@ -87,22 +87,25 @@ deploy a hot-fix that tolerates the new schema.
 > CustomReport is operated by a small core team — fill in actual names
 > when scaled.
 
-| Week | Primary | Secondary | Escalation |
-|---|---|---|---|
-| Week 19 (May 5–11) | _name_ | _name_ | _backend lead_ |
-| Week 20 (May 12–18) | _name_ | _name_ | _backend lead_ |
-| Week 21 (May 19–25) | _name_ | _name_ | _backend lead_ |
+| Week                | Primary | Secondary | Escalation     |
+| ------------------- | ------- | --------- | -------------- |
+| Week 19 (May 5–11)  | _name_  | _name_    | _backend lead_ |
+| Week 20 (May 12–18) | _name_  | _name_    | _backend lead_ |
+| Week 21 (May 19–25) | _name_  | _name_    | _backend lead_ |
 
 **Primary on-call duties:**
+
 - Acknowledge any page within 5 min, status-update within 15 min.
 - Run the playbook above; escalate to secondary if mitigation isn't clear in 30 min.
 - Author the postmortem (or assign it explicitly within 24h).
 
 **Secondary on-call duties:**
+
 - Cover when primary is unreachable.
 - Co-author postmortem on SEV-1.
 
 **Handoff at end of rotation:**
+
 - Walk the incoming primary through anything in-flight (open incidents,
   pending postmortems, watch items in dashboards).
 - Update this rotation table with the next 2 weeks.
@@ -121,9 +124,11 @@ Five sections, ~1 page each. File at `.planning/postmortems/YYYY-MM-DD-slug.md`.
 **Reviewers:** <names>
 
 ## Summary
+
 2-3 sentences. What happened, who saw it, how it ended.
 
 ## Timeline (UTC)
+
 - HH:MM — first signal (alert / user report)
 - HH:MM — engineer paged
 - HH:MM — root-cause hypothesis confirmed
@@ -131,18 +136,22 @@ Five sections, ~1 page each. File at `.planning/postmortems/YYYY-MM-DD-slug.md`.
 - HH:MM — service restored
 
 ## Root cause
+
 What broke, why. Be specific (commit hash, env var, dependency
 version). Avoid blame.
 
 ## Impact
+
 Who saw what. Quantified if possible: N users, M failed requests,
 "reports for week K weren't published until HH:MM".
 
 ## What went well / what didn't
+
 Two short bullet lists. Surface the bright spots — they teach as much
 as the failures.
 
 ## Action items
+
 - [ ] Owner: <name> — <action> — due YYYY-MM-DD
 - [ ] Owner: <name> — <action> — due YYYY-MM-DD
 

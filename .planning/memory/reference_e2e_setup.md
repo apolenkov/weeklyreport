@@ -4,6 +4,7 @@ description: How to run integration suite (Prisma consent + NEXT_DIST_DIR + .env
 type: reference
 originSessionId: 3069f89c-564f-44b5-9a43-9a887bbfa820
 ---
+
 # CustomReport E2E setup
 
 Two Playwright configs live in `apps/web/`:
@@ -22,6 +23,7 @@ The Prisma 7 AI-safety guard requires `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTI
 **Why NEXT_DIST_DIR=.next-e2e:** Next.js 16 turbopack fingerprints dev process by repo dir + .next. Without override, integration's `next dev` refuses to start when user's `pnpm dev` is running on :3000. Integration config DOES NOT set this internally — must pass via env.
 
 **Seed leads (in customreport_e2e + dev):**
+
 - `polenkov@customreport.local` — Dev Lead, **submitted** (form locked)
 - `olga@customreport.local` — Dev Lead, **draft with 2 items** (best for testing CRUD)
 - `sergey@customreport.local` — Dev Lead, draft empty

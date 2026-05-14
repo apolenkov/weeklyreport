@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import { ConfirmDeleteDialog } from './confirm-delete-dialog';
-import { ItemCard } from './item-card';
-import { ItemEditDialog } from './item-edit-dialog';
-import type { KanbanItem, Product } from './mock-data';
-import { splitStageNames } from './stage-tags';
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
+import { ItemCard } from "./item-card";
+import { ItemEditDialog } from "./item-edit-dialog";
+import type { KanbanItem, Product } from "./mock-data";
+import { splitStageNames } from "./stage-tags";
 
 type NextWeekSectionProps = {
   readonly items: KanbanItem[];
@@ -32,10 +32,14 @@ type NextWeekSectionProps = {
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
   const map = new Map<string, KanbanItem[]>();
   for (const item of items) {
-    const tags = splitStageNames(item.stageName);
-    const key = tags.length > 0
-      ? `${item.productName} · ${tags.join(', ')}`
-      : item.productName;
+    const tags =
+      item.stageIds && item.stageIds.length > 0
+        ? item.stageIds
+        : splitStageNames(item.stageName);
+    const key =
+      tags.length > 0
+        ? `${item.productName} · ${tags.join(", ")}`
+        : item.productName;
     const group = map.get(key) ?? [];
     group.push(item);
     map.set(key, group);
@@ -53,14 +57,20 @@ export function NextWeekSection({
 }: NextWeekSectionProps) {
   const grouped = groupByProduct(items);
   const [dialogState, setDialogState] = useState<
-    { open: false } | { open: true; mode: 'create'; seedProductId: string } | { open: true; mode: 'edit'; item: KanbanItem }
+    | { open: false }
+    | { open: true; mode: "create"; seedProductId: string }
+    | { open: true; mode: "edit"; item: KanbanItem }
   >({ open: false });
+  // D-13: monotonic counter so repeated opens of the same item get a fresh
+  // key even when item.id is unchanged (prevents stale stageIds in dialog).
+  const [openSeq, setOpenSeq] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<KanbanItem | null>(null);
   const isEmpty = grouped.size === 0 && (!products || products.length === 0);
 
   function handleAdd(seedProductId: string) {
     if (readOnly) return;
-    setDialogState({ open: true, mode: 'create', seedProductId });
+    setOpenSeq((n) => n + 1);
+    setDialogState({ open: true, mode: "create", seedProductId });
   }
 
   function handleDelete(id: string) {
@@ -80,12 +90,13 @@ export function NextWeekSection({
     if (readOnly) return;
     const item = items.find((i) => i.id === id);
     if (!item) return;
-    setDialogState({ open: true, mode: 'edit', item });
+    setOpenSeq((n) => n + 1);
+    setDialogState({ open: true, mode: "edit", item });
   }
 
   function handleDialogSave(next: KanbanItem) {
     if (readOnly) return;
-    if (dialogState.open && dialogState.mode === 'create') {
+    if (dialogState.open && dialogState.mode === "create") {
       onItemsChange?.([...items, next]);
     } else {
       onItemsChange?.(items.map((i) => (i.id === next.id ? next : i)));
@@ -120,7 +131,7 @@ export function NextWeekSection({
           onClick={() => product && handleAdd(product.id)}
           disabled={!product}
           aria-label="Add first next-week item"
-          title={product ? undefined : 'No products assigned — contact admin'}
+          title={product ? undefined : "No products assigned — contact admin"}
         >
           + Add Item
         </button>
@@ -131,7 +142,12 @@ export function NextWeekSection({
   // Render one column per assigned product so empty products still get a
   // "+ Add" CTA in their column. Falls back to grouped items when
   // `products` is not supplied.
-  const columns: { key: string; productId: string; productName: string; items: KanbanItem[] }[] =
+  const columns: {
+    key: string;
+    productId: string;
+    productName: string;
+    items: KanbanItem[];
+  }[] =
     products && products.length > 0
       ? products.map((p) => ({
           key: p.name,
@@ -153,8 +169,16 @@ export function NextWeekSection({
         });
 
   return (
-    <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(0, 1fr))` }}>
+    <div
+      className="max-h-[420px] overflow-y-auto"
+      style={{ scrollbarWidth: "thin" }}
+    >
+      <div
+        className="grid gap-4"
+        style={{
+          gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(0, 1fr))`,
+        }}
+      >
         {columns.map((col) => (
           <div key={col.key}>
             <div className="mb-3 flex items-center gap-2">
@@ -201,12 +225,21 @@ export function NextWeekSection({
       </div>
 
       <ItemEditDialog
+        key={`${openSeq}-${dialogState.open && dialogState.mode === "edit" ? dialogState.item.id : "new"}`}
         open={dialogState.open}
-        item={dialogState.open && dialogState.mode === 'edit' ? dialogState.item : null}
+        item={
+          dialogState.open && dialogState.mode === "edit"
+            ? dialogState.item
+            : null
+        }
         products={products ?? []}
         week="next"
         currentUserName={currentUserName}
-        defaultProductId={dialogState.open && dialogState.mode === 'create' ? dialogState.seedProductId : undefined}
+        defaultProductId={
+          dialogState.open && dialogState.mode === "create"
+            ? dialogState.seedProductId
+            : undefined
+        }
         stagesForProduct={stagesForProduct}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
@@ -215,8 +248,10 @@ export function NextWeekSection({
       <ConfirmDeleteDialog
         open={pendingDelete !== null}
         title="Delete next-week item?"
-        preview={pendingDelete?.text ?? ''}
-        subtitle={pendingDelete ? `From ${pendingDelete.productName}` : undefined}
+        preview={pendingDelete?.text ?? ""}
+        subtitle={
+          pendingDelete ? `From ${pendingDelete.productName}` : undefined
+        }
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />

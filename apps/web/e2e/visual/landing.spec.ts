@@ -12,15 +12,15 @@
  * This is the only way to baseline the landing surface without unwiring
  * the dev-mode auth fallback the rest of the suite depends on.
  */
-import { test as base, expect } from '@playwright/test';
-import { driftyMasks, freezeClock, waitForVisualStable } from './_helpers';
+import { test as base, expect } from "@playwright/test";
+import { driftyMasks, freezeClock, waitForVisualStable } from "./_helpers";
 
-base('landing — entry card with PEO brand panel', async ({ page }) => {
+base("landing — entry card with PEO brand panel", async ({ page }) => {
   await freezeClock(page);
-  await page.goto('/?stay=1');
+  await page.goto("/?stay=1");
   await waitForVisualStable(page);
 
-  await expect(page).toHaveScreenshot('landing.png', {
+  await expect(page).toHaveScreenshot("landing.png", {
     fullPage: true,
     mask: driftyMasks(page),
   });

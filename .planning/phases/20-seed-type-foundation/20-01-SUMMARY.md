@@ -33,11 +33,13 @@ Mockup-aligned database seed with idempotent upserts and dynamic DEV_SESSION res
 ## Verification status
 
 **Static (passed):**
+
 - TypeScript typecheck clean (`tsc --noEmit -p apps/api/tsconfig.json`)
 - All UUIDs match standard regex
 - Cross-file invariants verified (constants ↔ trpc.context)
 
 **Runtime (PASSED, 2026-04-25):**
+
 - 1st seed: `Seeded: 8 users, 12 products, 7 stages, 36 assignments, 2 reports, 12 sections, 35 items, 22 project statuses, 4 risks, 3 decisions, 20 priorities`
 - 2nd seed (idempotency): identical output, no errors
 - DEV_SESSION user `a0000000-0000-4000-8000-000000000099` exists with role=head

@@ -1,7 +1,10 @@
-import { TRPCError } from '@trpc/server';
-import type { TRPCMiddlewareBuilder, TRPCMiddlewareFunction } from '@trpc/server';
+import { TRPCError } from "@trpc/server";
+import type {
+  TRPCMiddlewareBuilder,
+  TRPCMiddlewareFunction,
+} from "@trpc/server";
 
-import type { Role, UserSession } from '../../schemas/auth';
+import type { Role, UserSession } from "../../schemas/auth";
 
 /**
  * AUTH-03 (Phase 27): pure role assertion — testable without tRPC.
@@ -19,15 +22,17 @@ export function assertRole(
   allowed: Role | Role[],
 ): UserSession {
   if (!session) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
   }
 
-  const allowedSet = new Set<Role>(Array.isArray(allowed) ? allowed : [allowed]);
+  const allowedSet = new Set<Role>(
+    Array.isArray(allowed) ? allowed : [allowed],
+  );
 
   if (!allowedSet.has(session.role)) {
     throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: `Role required: ${[...allowedSet].join(' | ')}`,
+      code: "FORBIDDEN",
+      message: `Role required: ${[...allowedSet].join(" | ")}`,
     });
   }
 
@@ -54,16 +59,29 @@ export function requireRole<
 >(
   t: {
     middleware: <$ContextOverrides>(
-      fn: TRPCMiddlewareFunction<TContext, TMeta, object, $ContextOverrides, unknown>,
+      fn: TRPCMiddlewareFunction<
+        TContext,
+        TMeta,
+        object,
+        $ContextOverrides,
+        unknown
+      >,
     ) => TRPCMiddlewareBuilder<TContext, TMeta, $ContextOverrides, unknown>;
   },
   allowed: Role | Role[],
 ): {
-  middleware: TRPCMiddlewareBuilder<TContext, TMeta, { session: UserSession }, unknown>;
+  middleware: TRPCMiddlewareBuilder<
+    TContext,
+    TMeta,
+    { session: UserSession },
+    unknown
+  >;
 } {
-  const middleware = t.middleware<{ session: UserSession }>(async ({ ctx, next }) => {
-    const session = assertRole(ctx.session, allowed);
-    return next({ ctx: { session } });
-  });
+  const middleware = t.middleware<{ session: UserSession }>(
+    async ({ ctx, next }) => {
+      const session = assertRole(ctx.session, allowed);
+      return next({ ctx: { session } });
+    },
+  );
   return { middleware };
 }

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 // Phase 54 (UFB-055): Period-level AI summary surface — seeds-only.
 //
@@ -12,17 +12,17 @@
 // (head + admin + viewer) — leads visiting `/reports/<id>` will get a
 // FORBIDDEN which we render as an empty state.
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
-import { Badge } from '@customreport/ui/components/ui/badge';
+import { Badge } from "@customreport/ui/components/ui/badge";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@customreport/ui/components/ui/tabs';
+} from "@customreport/ui/components/ui/tabs";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
 type Props = {
   readonly periodId: string;
@@ -34,9 +34,7 @@ type Props = {
  */
 function AiSummaryTabContent({ periodId }: Props) {
   const trpc = useTRPC();
-  const summaryQ = useQuery(
-    trpc.ai.periodSummary.queryOptions({ periodId }),
-  );
+  const summaryQ = useQuery(trpc.ai.periodSummary.queryOptions({ periodId }));
 
   if (summaryQ.isLoading) {
     return (
@@ -61,7 +59,7 @@ function AiSummaryTabContent({ periodId }: Props) {
   }
 
   const { summary, source, citationIds } = summaryQ.data;
-  const isMock = source === 'mock';
+  const isMock = source === "mock";
 
   if (!summary) {
     return (
@@ -101,8 +99,8 @@ function AiSummaryTabContent({ periodId }: Props) {
       </p>
       {citationIds.length > 0 ? (
         <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-          Цитаты по {citationIds.length}{' '}
-          {citationIds.length === 1 ? 'секции' : 'секциям'}.
+          Цитаты по {citationIds.length}{" "}
+          {citationIds.length === 1 ? "секции" : "секциям"}.
         </p>
       ) : null}
     </div>

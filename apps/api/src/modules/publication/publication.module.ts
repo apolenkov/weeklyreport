@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module } from "@nestjs/common";
 
-import { AiModule } from '../ai/ai.module.js';
-import { AiIngestionService } from '../ai/ai-ingestion.service.js';
-import { PublicationService } from './publication.service';
-import { PublicationPrismaRepository } from './publication.prisma-repository';
+import { AiModule } from "../ai/ai.module.js";
+import { AiIngestionService } from "../ai/ai-ingestion.service.js";
+import { PublicationService } from "./publication.service";
+import { PublicationPrismaRepository } from "./publication.prisma-repository";
 
 @Module({
   // Phase 54 (UFB-055): AiModule provides AiIngestionService; the

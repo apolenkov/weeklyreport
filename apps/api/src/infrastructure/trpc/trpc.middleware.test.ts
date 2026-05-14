@@ -1,27 +1,27 @@
-import { describe, expect, it, vi } from 'vitest';
-import { TRPCError } from '@trpc/server';
+import { describe, expect, it, vi } from "vitest";
+import { TRPCError } from "@trpc/server";
 
 import {
   router,
   publicProcedure,
   protectedProcedure,
   headProcedure,
-} from './trpc.middleware.js';
-import { createNullLogger, type AppLogger } from '../../lib/logger.js';
-import { createNullAuditLogger } from '../../lib/audit-logger.js';
-import { expectDefined } from '../../test-utils/expect-defined.js';
+} from "./trpc.middleware.js";
+import { createNullLogger, type AppLogger } from "../../lib/logger.js";
+import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 const nullAuditLogger = createNullAuditLogger();
-const TEST_IP = 'test-ip';
+const TEST_IP = "test-ip";
 
 // ---------------------------------------------------------------------------
 // Test router
 // ---------------------------------------------------------------------------
 
 const testRouter = router({
-  publicRoute: publicProcedure.query(() => 'public-ok'),
-  protectedRoute: protectedProcedure.query(() => 'auth-ok'),
-  headRoute: headProcedure.query(() => 'head-ok'),
+  publicRoute: publicProcedure.query(() => "public-ok"),
+  protectedRoute: protectedProcedure.query(() => "auth-ok"),
+  headRoute: headProcedure.query(() => "head-ok"),
 });
 
 // ---------------------------------------------------------------------------
@@ -41,12 +41,12 @@ const nullCaller = testRouter.createCaller({
 
 const leadCaller = testRouter.createCaller({
   session: {
-    userId: 'u1',
-    email: 'lead@test.com',
-    name: 'Lead User',
-    role: 'lead' as const,
-    activeReportId: 'r1',
-    activeReportSectionId: 's1',
+    userId: "u1",
+    email: "lead@test.com",
+    name: "Lead User",
+    role: "lead" as const,
+    activeReportId: "r1",
+    activeReportSectionId: "s1",
   },
   logger: nullLogger,
   auditLogger: nullAuditLogger,
@@ -57,11 +57,11 @@ const leadCaller = testRouter.createCaller({
 
 const headCaller = testRouter.createCaller({
   session: {
-    userId: 'u2',
-    email: 'head@test.com',
-    name: 'Head User',
-    role: 'head' as const,
-    activeReportId: 'r1',
+    userId: "u2",
+    email: "head@test.com",
+    name: "Head User",
+    role: "head" as const,
+    activeReportId: "r1",
     activeReportSectionId: null,
   },
   logger: nullLogger,
@@ -100,44 +100,44 @@ function makeFakeLogger(): AppLogger & {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('tRPC auth middleware', () => {
-  it('publicProcedure allows null session', async () => {
+describe("tRPC auth middleware", () => {
+  it("publicProcedure allows null session", async () => {
     const result = await nullCaller.publicRoute();
-    expect(result).toBe('public-ok');
+    expect(result).toBe("public-ok");
   });
 
-  it('protectedProcedure rejects null session with UNAUTHORIZED', async () => {
+  it("protectedProcedure rejects null session with UNAUTHORIZED", async () => {
     await expect(nullCaller.protectedRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: 'UNAUTHORIZED' }),
+      expect.objectContaining({ code: "UNAUTHORIZED" }),
     );
   });
 
-  it('protectedProcedure allows lead session', async () => {
+  it("protectedProcedure allows lead session", async () => {
     const result = await leadCaller.protectedRoute();
-    expect(result).toBe('auth-ok');
+    expect(result).toBe("auth-ok");
   });
 
-  it('headProcedure rejects lead session with FORBIDDEN', async () => {
+  it("headProcedure rejects lead session with FORBIDDEN", async () => {
     await expect(leadCaller.headRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: 'FORBIDDEN' }),
+      expect.objectContaining({ code: "FORBIDDEN" }),
     );
   });
 
-  it('headProcedure allows head session', async () => {
+  it("headProcedure allows head session", async () => {
     const result = await headCaller.headRoute();
-    expect(result).toBe('head-ok');
+    expect(result).toBe("head-ok");
   });
 
-  it('headProcedure rejects null session with UNAUTHORIZED', async () => {
+  it("headProcedure rejects null session with UNAUTHORIZED", async () => {
     await expect(nullCaller.headRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: 'UNAUTHORIZED' }),
+      expect.objectContaining({ code: "UNAUTHORIZED" }),
     );
   });
 
-  it('thrown errors are TRPCError instances', async () => {
+  it("thrown errors are TRPCError instances", async () => {
     try {
       await nullCaller.protectedRoute();
-      expect.fail('Should have thrown');
+      expect.fail("Should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(TRPCError);
     }
@@ -147,19 +147,19 @@ describe('tRPC auth middleware', () => {
   // P0 Regression — AUTH tRPC middleware scenarios
   // -----------------------------------------------------------------------
 
-  it('protectedProcedure with null session throws UNAUTHORIZED (AUTH-038 P0)', async () => {
+  it("protectedProcedure with null session throws UNAUTHORIZED (AUTH-038 P0)", async () => {
     await expect(nullCaller.protectedRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: 'UNAUTHORIZED' }),
+      expect.objectContaining({ code: "UNAUTHORIZED" }),
     );
   });
 
-  it('headProcedure with viewer session throws FORBIDDEN', async () => {
+  it("headProcedure with viewer session throws FORBIDDEN", async () => {
     const viewerCaller = testRouter.createCaller({
       session: {
-        userId: 'u3',
-        email: 'viewer@test.com',
-        name: 'Viewer User',
-        role: 'viewer' as const,
+        userId: "u3",
+        email: "viewer@test.com",
+        name: "Viewer User",
+        role: "viewer" as const,
         activeReportId: null,
         activeReportSectionId: null,
       },
@@ -171,23 +171,23 @@ describe('tRPC auth middleware', () => {
     });
 
     await expect(viewerCaller.headRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: 'FORBIDDEN' }),
+      expect.objectContaining({ code: "FORBIDDEN" }),
     );
   });
 
-  it('protectedProcedure allows head session', async () => {
+  it("protectedProcedure allows head session", async () => {
     const result = await headCaller.protectedRoute();
-    expect(result).toBe('auth-ok');
+    expect(result).toBe("auth-ok");
   });
 
-  it('publicProcedure allows any session type', async () => {
+  it("publicProcedure allows any session type", async () => {
     const result1 = await nullCaller.publicRoute();
     const result2 = await leadCaller.publicRoute();
     const result3 = await headCaller.publicRoute();
 
-    expect(result1).toBe('public-ok');
-    expect(result2).toBe('public-ok');
-    expect(result3).toBe('public-ok');
+    expect(result1).toBe("public-ok");
+    expect(result2).toBe("public-ok");
+    expect(result3).toBe("public-ok");
   });
 });
 
@@ -195,8 +195,8 @@ describe('tRPC auth middleware', () => {
 // Logging middleware tests
 // ---------------------------------------------------------------------------
 
-describe('tRPC logging middleware', () => {
-  it('logs entry and exit on a successful query', async () => {
+describe("tRPC logging middleware", () => {
+  it("logs entry and exit on a successful query", async () => {
     const logger = makeFakeLogger();
     const caller = testRouter.createCaller({
       session: null,
@@ -208,31 +208,31 @@ describe('tRPC logging middleware', () => {
     });
 
     const result = await caller.publicRoute();
-    expect(result).toBe('public-ok');
+    expect(result).toBe("public-ok");
 
     expect(logger.info).toHaveBeenCalledTimes(2);
 
     const [startMsg, startMeta] = expectDefined(logger.info.mock.calls[0]);
-    expect(startMsg).toBe('trpc request start');
+    expect(startMsg).toBe("trpc request start");
     expect(startMeta).toMatchObject({
-      phase: 'trpc.request',
-      stage: 'start',
-      procedure: 'publicRoute',
-      type: 'query',
+      phase: "trpc.request",
+      stage: "start",
+      procedure: "publicRoute",
+      type: "query",
       userId: null,
     });
 
     const [endMsg, endMeta] = expectDefined(logger.info.mock.calls[1]);
-    expect(endMsg).toBe('trpc request end');
+    expect(endMsg).toBe("trpc request end");
     expect(endMeta).toMatchObject({
-      phase: 'trpc.request',
-      stage: 'end',
-      procedure: 'publicRoute',
-      type: 'query',
+      phase: "trpc.request",
+      stage: "end",
+      procedure: "publicRoute",
+      type: "query",
       userId: null,
-      status: 'success',
+      status: "success",
     });
-    expect(typeof (endMeta as { duration: number }).duration).toBe('number');
+    expect(typeof (endMeta as { duration: number }).duration).toBe("number");
     expect(logger.error).not.toHaveBeenCalled();
   });
 
@@ -253,34 +253,37 @@ describe('tRPC logging middleware', () => {
     await expect(caller.protectedRoute()).rejects.toBeInstanceOf(TRPCError);
 
     expect(logger.info).toHaveBeenCalledTimes(1);
-    expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({ stage: 'start', userId: null });
+    expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({
+      stage: "start",
+      userId: null,
+    });
 
     expect(logger.error).toHaveBeenCalledTimes(1);
     const [endMsg, endMeta] = expectDefined(logger.error.mock.calls[0]);
-    expect(endMsg).toBe('trpc request end');
+    expect(endMsg).toBe("trpc request end");
     expect(endMeta).toMatchObject({
-      phase: 'trpc.request',
-      stage: 'end',
-      procedure: 'protectedRoute',
-      type: 'query',
+      phase: "trpc.request",
+      stage: "end",
+      procedure: "protectedRoute",
+      type: "query",
       userId: null,
-      status: 'error',
-      error: { code: 'UNAUTHORIZED' },
+      status: "error",
+      error: { code: "UNAUTHORIZED" },
     });
     // No stack trace leaks into logs.
-    expect(endMeta).not.toHaveProperty('error.stack');
+    expect(endMeta).not.toHaveProperty("error.stack");
   });
 
-  it('records userId from the session on both entry and exit logs (authed)', async () => {
+  it("records userId from the session on both entry and exit logs (authed)", async () => {
     const logger = makeFakeLogger();
     const caller = testRouter.createCaller({
       session: {
-        userId: 'authed-42',
-        email: 'a@b.c',
-        name: 'A',
-        role: 'lead' as const,
-        activeReportId: 'r1',
-        activeReportSectionId: 's1',
+        userId: "authed-42",
+        email: "a@b.c",
+        name: "A",
+        role: "lead" as const,
+        activeReportId: "r1",
+        activeReportSectionId: "s1",
       },
       logger,
       auditLogger: nullAuditLogger,
@@ -292,11 +295,17 @@ describe('tRPC logging middleware', () => {
     await caller.protectedRoute();
 
     expect(logger.info).toHaveBeenCalledTimes(2);
-    expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({ userId: 'authed-42', stage: 'start' });
-    expect(expectDefined(logger.info.mock.calls[1])[1]).toMatchObject({ userId: 'authed-42', stage: 'end' });
+    expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({
+      userId: "authed-42",
+      stage: "start",
+    });
+    expect(expectDefined(logger.info.mock.calls[1])[1]).toMatchObject({
+      userId: "authed-42",
+      stage: "end",
+    });
   });
 
-  it('records userId:null for an anonymous public procedure', async () => {
+  it("records userId:null for an anonymous public procedure", async () => {
     const logger = makeFakeLogger();
     const caller = testRouter.createCaller({
       session: null,
@@ -309,7 +318,11 @@ describe('tRPC logging middleware', () => {
 
     await caller.publicRoute();
 
-    expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({ userId: null });
-    expect(expectDefined(logger.info.mock.calls[1])[1]).toMatchObject({ userId: null });
+    expect(expectDefined(logger.info.mock.calls[0])[1]).toMatchObject({
+      userId: null,
+    });
+    expect(expectDefined(logger.info.mock.calls[1])[1]).toMatchObject({
+      userId: null,
+    });
   });
 });

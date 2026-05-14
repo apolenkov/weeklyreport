@@ -5,14 +5,14 @@ import {
   type CarryOverExecution,
   type CarryOverRecord,
   type ReportSectionReadModel,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { createNullLogger, type AppLogger } from '../../lib/logger';
+import { createNullLogger, type AppLogger } from "../../lib/logger";
 
 export class CarryOverDomainError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'CarryOverDomainError';
+    this.name = "CarryOverDomainError";
   }
 }
 
@@ -23,7 +23,9 @@ export type CarryOverResult = {
 };
 
 export interface CarryOverRepository {
-  findExecutionByDedupeKey(dedupeKey: string): Promise<CarryOverExecution | null>;
+  findExecutionByDedupeKey(
+    dedupeKey: string,
+  ): Promise<CarryOverExecution | null>;
   getSourceSections(sourceReportId: string): Promise<ReportSectionReadModel[]>;
   getTargetSections(targetReportId: string): Promise<ReportSectionReadModel[]>;
   saveCarryOver(
@@ -36,9 +38,9 @@ export interface CarryOverRepository {
 function cloneCarriedItem(
   sourceReportId: string,
   targetReportId: string,
-  item: ReportSectionReadModel['items'][number],
+  item: ReportSectionReadModel["items"][number],
 ): {
-  item: ReportSectionReadModel['items'][number];
+  item: ReportSectionReadModel["items"][number];
   record: CarryOverRecord;
 } {
   const targetItemId = crypto.randomUUID();
@@ -47,7 +49,7 @@ function cloneCarriedItem(
     item: {
       ...item,
       id: targetItemId,
-      type: 'current',
+      type: "current",
       carriedOver: true,
       completed: null,
     },
@@ -59,7 +61,7 @@ function cloneCarriedItem(
       targetItemId,
       sourceDecisionId: null,
       targetDecisionId: null,
-      status: 'completed',
+      status: "completed",
       carriedAt: new Date(),
     }),
   };
@@ -68,9 +70,9 @@ function cloneCarriedItem(
 function cloneUnresolvedDecision(
   sourceReportId: string,
   targetReportId: string,
-  decision: ReportSectionReadModel['decisions'][number],
+  decision: ReportSectionReadModel["decisions"][number],
 ): {
-  decision: ReportSectionReadModel['decisions'][number];
+  decision: ReportSectionReadModel["decisions"][number];
   record: CarryOverRecord;
 } {
   const targetDecisionId = crypto.randomUUID();
@@ -89,7 +91,7 @@ function cloneUnresolvedDecision(
       targetItemId: null,
       sourceDecisionId: decision.id ?? null,
       targetDecisionId,
-      status: 'completed',
+      status: "completed",
       carriedAt: new Date(),
     }),
   };
@@ -110,28 +112,43 @@ export class CarryOverService {
     targetReportId: string,
   ): Promise<CarryOverResult> {
     if (sourceReportId === targetReportId) {
-      throw new CarryOverDomainError('Carry-over requires different source and target reports.');
+      throw new CarryOverDomainError(
+        "Carry-over requires different source and target reports.",
+      );
     }
 
     const dedupeKey = `${sourceReportId}:${targetReportId}`;
-    const existingExecution = await this.repository.findExecutionByDedupeKey(dedupeKey);
-    const sourceSections = await this.repository.getSourceSections(sourceReportId);
-    const targetSections = await this.repository.getTargetSections(targetReportId);
+    const existingExecution =
+      await this.repository.findExecutionByDedupeKey(dedupeKey);
+    const sourceSections =
+      await this.repository.getSourceSections(sourceReportId);
+    const targetSections =
+      await this.repository.getTargetSections(targetReportId);
 
     if (sourceSections.length === 0 || targetSections.length === 0) {
-      throw new CarryOverDomainError('Carry-over requires both source and target sections.');
+      throw new CarryOverDomainError(
+        "Carry-over requires both source and target sections.",
+      );
     }
 
-    const allCarriedItems: Array<{ item: ReportSectionReadModel['items'][number]; record: CarryOverRecord }> = [];
-    const allCarriedDecisions: Array<{ decision: ReportSectionReadModel['decisions'][number]; record: CarryOverRecord }> = [];
+    const allCarriedItems: Array<{
+      item: ReportSectionReadModel["items"][number];
+      record: CarryOverRecord;
+    }> = [];
+    const allCarriedDecisions: Array<{
+      decision: ReportSectionReadModel["decisions"][number];
+      record: CarryOverRecord;
+    }> = [];
 
     for (const sourceSection of sourceSections) {
       const sectionItems = sourceSection.items
-        .filter((item) => item.type === 'next' && !item.carriedOver)
+        .filter((item) => item.type === "next" && !item.carriedOver)
         .map((item) => cloneCarriedItem(sourceReportId, targetReportId, item));
       const sectionDecisions = sourceSection.decisions
         .filter((decision) => !decision.resolvedAt)
-        .map((decision) => cloneUnresolvedDecision(sourceReportId, targetReportId, decision));
+        .map((decision) =>
+          cloneUnresolvedDecision(sourceReportId, targetReportId, decision),
+        );
 
       allCarriedItems.push(...sectionItems);
       allCarriedDecisions.push(...sectionDecisions);
@@ -139,7 +156,9 @@ export class CarryOverService {
 
     // Match carried items/decisions to target sections by authorId
     const nextTargetSections = targetSections.map((targetSection) => {
-      const sourceSection = sourceSections.find((s) => s.authorId === targetSection.authorId);
+      const sourceSection = sourceSections.find(
+        (s) => s.authorId === targetSection.authorId,
+      );
       if (!sourceSection) {
         return targetSection;
       }
@@ -148,36 +167,49 @@ export class CarryOverService {
         sourceSection.items.some((i) => i.id === entry.record.sourceItemId),
       );
       const sectionCarriedDecisions = allCarriedDecisions.filter((entry) =>
-        sourceSection.decisions.some((d) => d.id === entry.record.sourceDecisionId),
+        sourceSection.decisions.some(
+          (d) => d.id === entry.record.sourceDecisionId,
+        ),
       );
 
       return reportSectionReadModelSchema.parse({
         ...targetSection,
         items: existingExecution
           ? targetSection.items
-          : [...targetSection.items, ...sectionCarriedItems.map((entry) => entry.item)],
+          : [
+              ...targetSection.items,
+              ...sectionCarriedItems.map((entry) => entry.item),
+            ],
         decisions: existingExecution
           ? targetSection.decisions
-          : [...targetSection.decisions, ...sectionCarriedDecisions.map((entry) => entry.decision)],
+          : [
+              ...targetSection.decisions,
+              ...sectionCarriedDecisions.map((entry) => entry.decision),
+            ],
       });
     });
 
-    const execution = existingExecution ?? carryOverExecutionSchema.parse({
-      id: crypto.randomUUID(),
-      sourceReportId,
-      targetReportId,
-      dedupeKey,
-      status: 'completed',
-      startedAt: new Date(),
-      completedAt: new Date(),
-      carriedItemCount: allCarriedItems.length,
-      carriedDecisionCount: allCarriedDecisions.length,
-    });
+    const execution =
+      existingExecution ??
+      carryOverExecutionSchema.parse({
+        id: crypto.randomUUID(),
+        sourceReportId,
+        targetReportId,
+        dedupeKey,
+        status: "completed",
+        startedAt: new Date(),
+        completedAt: new Date(),
+        carriedItemCount: allCarriedItems.length,
+        carriedDecisionCount: allCarriedDecisions.length,
+      });
     const records = existingExecution
       ? []
-      : [...allCarriedItems.map((entry) => entry.record), ...allCarriedDecisions.map((entry) => entry.record)];
+      : [
+          ...allCarriedItems.map((entry) => entry.record),
+          ...allCarriedDecisions.map((entry) => entry.record),
+        ];
 
-    this.logger.info('executing carry-over', {
+    this.logger.info("executing carry-over", {
       sourceReportId,
       targetReportId,
       sourceSections: sourceSections.length,
@@ -187,10 +219,11 @@ export class CarryOverService {
     // `targetSections.length === 0` was rejected above, so targetSections[0]
     // is always defined; nextTargetSections is mapped from targetSections so
     // its first element is also defined when its length > 0.
-    const targetSection =
-      nextTargetSections[0] ?? targetSections[0];
+    const targetSection = nextTargetSections[0] ?? targetSections[0];
     if (!targetSection) {
-      throw new CarryOverDomainError('Carry-over requires both source and target sections.');
+      throw new CarryOverDomainError(
+        "Carry-over requires both source and target sections.",
+      );
     }
     return this.repository.saveCarryOver(execution, records, targetSection);
   }

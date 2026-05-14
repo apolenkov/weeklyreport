@@ -1,10 +1,14 @@
-import type { Page } from '@playwright/test';
+import type { Page } from "@playwright/test";
 
-type Role = 'lead' | 'head' | 'admin' | 'viewer';
+type Role = "lead" | "head" | "admin" | "viewer";
 
-const API_DEV_LOGIN_URL = 'http://localhost:3002/auth/dev-login';
-const WEB_URL = 'http://localhost:3000';
-const COOKIE_NAME = 'customreport_session';
+// Use relative URL so the request goes through the Playwright baseURL
+// (http://127.0.0.1:3100 in E2E mode) instead of hardcoded localhost:3000.
+// Cookies set via localhost domain are not sent to 127.0.0.1 and the tRPC
+// context DEV_SESSION fallback would return role=head for any unauthenticated
+// request, causing false "role mismatch" failures.
+const DEV_LOGIN_PATH = "/auth/dev-login";
+const COOKIE_NAME = "customreport_session";
 
 type DevAuthIdentity = {
   role: Role;
@@ -19,7 +23,7 @@ type AuthMeEntry = {
   error?: unknown;
   message?: unknown;
 };
-type SessionRoleResult = 'rate_limited' | Role | null;
+type SessionRoleResult = "rate_limited" | Role | null;
 
 function parseAuthMeRole(payload: unknown): SessionRoleResult {
   const entry = (Array.isArray(payload) ? payload[0] : payload) as
@@ -29,8 +33,8 @@ function parseAuthMeRole(payload: unknown): SessionRoleResult {
     return null;
   }
 
-  if (typeof entry === 'object' && entry.error === 'rate_limit_exceeded') {
-    return 'rate_limited';
+  if (typeof entry === "object" && entry.error === "rate_limit_exceeded") {
+    return "rate_limited";
   }
 
   if (entry.error) {
@@ -45,7 +49,7 @@ function parseAuthMeRole(payload: unknown): SessionRoleResult {
   const rawSession = resultData?.json ?? resultData;
   const session = rawSession as { role?: string } | null;
 
-  if (!session || typeof session !== 'object') {
+  if (!session || typeof session !== "object") {
     return null;
   }
 
@@ -53,12 +57,12 @@ function parseAuthMeRole(payload: unknown): SessionRoleResult {
 }
 
 async function getSessionRole(page: Page): Promise<SessionRoleResult> {
-  const response = await page.request.get('/trpc/auth.me', {
+  const response = await page.request.get("/trpc/auth.me", {
     maxRedirects: 0,
   });
 
   if (response.status() === 429) {
-    return 'rate_limited';
+    return "rate_limited";
   }
 
   if (!response.ok()) {
@@ -95,34 +99,34 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const email = roleFromEmail(identity.role, identity.email, attempt);
     const params = new URLSearchParams({ role: identity.role });
-    if (email) params.set('email', email);
-    if (identity.redirect) params.set('redirect', identity.redirect);
+    if (email) params.set("email", email);
+    if (identity.redirect) params.set("redirect", identity.redirect);
 
     const response = await page
       .context()
-      .request.get(`${WEB_URL}/auth/dev-login?${params.toString()}`, {
+      .request.get(`${DEV_LOGIN_PATH}?${params.toString()}`, {
         maxRedirects: 0,
       });
 
     if (response.status() < 300 || response.status() >= 400) {
-      const body = await response.text().catch(() => '');
+      const body = await response.text().catch(() => "");
       throw new Error(
         `dev-login failed for role=${identity.role} attempt=${attempt}: HTTP ${response.status()} ${body.slice(0, 300)}`,
       );
     }
 
-    const cookies = await page.context().cookies(WEB_URL);
+    const cookies = await page.context().cookies();
     const hasSession = cookies.some(
       (cookie) => cookie.name === COOKIE_NAME && cookie.value.length > 20,
     );
     if (!hasSession) {
       throw new Error(
-        `dev-login did not establish ${COOKIE_NAME} via ${API_DEV_LOGIN_URL}`,
+        `dev-login did not establish ${COOKIE_NAME} via ${DEV_LOGIN_PATH}`,
       );
     }
 
     const actualRole = await getSessionRole(page);
-    if (actualRole === 'rate_limited') {
+    if (actualRole === "rate_limited") {
       if (attempt >= attempts) {
         // If role check endpoint is rate-limited, assume login succeeded and
         // defer session correctness to route-level guards (which are exercised
@@ -137,15 +141,15 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
     if (!expectedRole || actualRole === expectedRole) {
       if (identity.redirect) {
         await page
-          .goto(`${WEB_URL}${identity.redirect}`, {
-            waitUntil: 'domcontentloaded',
+          .goto(identity.redirect, {
+            waitUntil: "domcontentloaded",
           })
           .catch((error: unknown) => {
-            if (!String(error).includes('net::ERR_ABORTED')) throw error;
+            if (!String(error).includes("net::ERR_ABORTED")) throw error;
           });
       } else {
         await page
-          .goto(`${WEB_URL}/`, { waitUntil: 'domcontentloaded' })
+          .goto("/", { waitUntil: "domcontentloaded" })
           .catch(() => null);
       }
       return;
@@ -154,7 +158,7 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
     if (attempt >= attempts) {
       if (expectedRole) {
         throw new Error(
-          `dev-login role mismatch for ${identity.role}: expected ${expectedRole}, got ${actualRole ?? 'null'}`,
+          `dev-login role mismatch for ${identity.role}: expected ${expectedRole}, got ${actualRole ?? "null"}`,
         );
       }
       return;
@@ -166,16 +170,14 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
   if (assumeRoleFromAuthMe) {
     if (identity.redirect) {
       await page
-        .goto(`${WEB_URL}${identity.redirect}`, {
-          waitUntil: 'domcontentloaded',
+        .goto(identity.redirect, {
+          waitUntil: "domcontentloaded",
         })
         .catch((error: unknown) => {
-          if (!String(error).includes('net::ERR_ABORTED')) throw error;
+          if (!String(error).includes("net::ERR_ABORTED")) throw error;
         });
     } else {
-      await page
-        .goto(`${WEB_URL}/`, { waitUntil: 'domcontentloaded' })
-        .catch(() => null);
+      await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => null);
     }
     return;
   }
@@ -183,15 +185,15 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
 
 export async function wipeAndReseed(
   page: Page,
-  variant: 'minimum' | 'advanced' | 'manual-uat' = 'advanced',
+  variant: "minimum" | "advanced" | "manual-uat" = "advanced",
 ) {
-  const body = JSON.stringify({ '0': { json: { variant } } });
+  const body = JSON.stringify({ "0": { json: { variant } } });
   for (let attempt = 1; attempt <= 4; attempt++) {
     const response = await page.request.post(
-      '/trpc/dev.wipeAndReseed?batch=1',
+      "/trpc/dev.wipeAndReseed?batch=1",
       {
         data: body,
-        headers: { 'content-type': 'application/json' },
+        headers: { "content-type": "application/json" },
       },
     );
 
@@ -202,10 +204,10 @@ export async function wipeAndReseed(
 
     if (
       response.status() === 429 &&
-      responseBody.includes('rate_limit_exceeded') &&
+      responseBody.includes("rate_limit_exceeded") &&
       attempt === 1
     ) {
-      const retryAfterHeader = response.headers()['retry-after'];
+      const retryAfterHeader = response.headers()["retry-after"];
       const retryAfterPayload = Number(
         /"retryAfter":(\d+)/.exec(responseBody)?.[1] ?? NaN,
       );

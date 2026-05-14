@@ -1,16 +1,20 @@
-'use client';
-
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+"use client";
 
 import {
-  ConfirmationDialog,
-} from '../ui/confirmation-dialog';
-import { useStatusRiskSync } from '../../hooks/use-status-risk-sync';
-import type { Product, RiskEntry, StageStatus } from './mock-data';
-import { RisksSection } from './risks-section';
-import { SdlcPipeline } from './sdlc-pipeline';
-import { splitStageNames, stageNameMatches } from './stage-tags';
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
+import type { ReactNode } from "react";
+
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
+import { useStatusRiskSync } from "../../hooks/use-status-risk-sync";
+import type { Product, RiskEntry, StageStatus } from "./mock-data";
+import { RisksSection } from "./risks-section";
+import { SdlcPipeline } from "./sdlc-pipeline";
+import { splitStageNames, stageNameMatches } from "./stage-tags";
 
 /**
  * LeadFormSyncBridge — composes useStatusRiskSync with SdlcPipeline + RisksSection.
@@ -35,7 +39,7 @@ type SuggestionParams = {
   productId: string;
   productName: string;
   stageName: string;
-  suggestedStatus: 'at-risk' | 'blocked';
+  suggestedStatus: "at-risk" | "blocked";
 };
 
 type BridgeContextValue = {
@@ -117,9 +121,8 @@ function Provider({
   stagesForProduct,
   children,
 }: LeadFormSyncBridgeProviderProps) {
-  const [pendingSuggestion, setPendingSuggestion] = useState<SuggestionParams | null>(
-    null,
-  );
+  const [pendingSuggestion, setPendingSuggestion] =
+    useState<SuggestionParams | null>(null);
 
   const requestStatusUpdateConfirmation = useCallback(
     (params: SuggestionParams) => setPendingSuggestion(params),
@@ -131,14 +134,14 @@ function Provider({
     risks,
     onProductsChange: (updater) => {
       const next =
-        typeof updater === 'function'
+        typeof updater === "function"
           ? (updater as (p: Product[]) => Product[])(products)
           : updater;
       onProductsChange(next);
     },
     onRisksChange: (updater) => {
       const next =
-        typeof updater === 'function'
+        typeof updater === "function"
           ? (updater as (r: RiskEntry[]) => RiskEntry[])(risks)
           : updater;
       onRisksChange(next);
@@ -149,7 +152,7 @@ function Provider({
   const handleStageStatusChange = useCallback(
     (productId: string, stageName: string, newStatus: StageStatus) => {
       if (readOnly) return;
-      sync.handleStageStatusChange(productId, stageName, newStatus, 'user');
+      sync.handleStageStatusChange(productId, stageName, newStatus, "user");
     },
     [readOnly, sync],
   );
@@ -175,7 +178,7 @@ function Provider({
           if (seen.has(key)) continue;
           seen.add(key);
           if ((nextCounts.get(key) ?? 0) === 0) {
-            const [productId, stageName] = key.split('::');
+            const [productId, stageName] = key.split("::");
             if (productId && stageName) {
               stagesToClear.push({ productId, stageName });
             }
@@ -191,15 +194,19 @@ function Provider({
         // are currently flagged at-risk/blocked — leave on-track / empty
         // alone so we don't overwrite an already-clean state.
         const cleared = products.map((p) => {
-          const productClears = stagesToClear.filter((s) => s.productId === p.id);
+          const productClears = stagesToClear.filter(
+            (s) => s.productId === p.id,
+          );
           if (productClears.length === 0) return p;
           return {
             ...p,
             stages: p.stages.map((s) => {
-              const hit = productClears.find((c) => c.stageName === s.stageName);
+              const hit = productClears.find(
+                (c) => c.stageName === s.stageName,
+              );
               if (!hit) return s;
-              if (s.status === 'at-risk' || s.status === 'blocked') {
-                return { ...s, status: 'on-track' as const };
+              if (s.status === "at-risk" || s.status === "blocked") {
+                return { ...s, status: "on-track" as const };
               }
               return s;
             }),
@@ -214,7 +221,7 @@ function Provider({
   const handleRiskFilled = useCallback(
     (riskId: string) => {
       if (readOnly) return;
-      sync.handleRiskFilled(riskId, 'user');
+      sync.handleRiskFilled(riskId, "user");
     },
     [readOnly, sync],
   );
@@ -249,7 +256,7 @@ function Provider({
         <ConfirmationDialog
           open
           title="Update stage status?"
-          description={`A risk was added for ${pendingSuggestion.productName} / ${pendingSuggestion.stageName} stage. Mark this stage as ${pendingSuggestion.suggestedStatus === 'blocked' ? 'Blocked' : 'At Risk'}?`}
+          description={`A risk was added for ${pendingSuggestion.productName} / ${pendingSuggestion.stageName} stage. Mark this stage as ${pendingSuggestion.suggestedStatus === "blocked" ? "Blocked" : "At Risk"}?`}
           confirmLabel="Update Stage"
           cancelLabel="Skip"
           onConfirm={() => {
@@ -276,16 +283,21 @@ function Provider({
  * → effect link.
  */
 function computeUnbackedStages(ctx: ReturnType<typeof useBridgeContext>) {
-  const out: { productId: string; productName: string; stageName: string; severity: 'at-risk' | 'blocked' }[] = [];
+  const out: {
+    productId: string;
+    productName: string;
+    stageName: string;
+    severity: "at-risk" | "blocked";
+  }[] = [];
   for (const product of ctx.products) {
     for (const stage of product.stages) {
-      if (stage.ownership !== 'mine') continue;
-      if (stage.status !== 'at-risk' && stage.status !== 'blocked') continue;
+      if (stage.ownership !== "mine") continue;
+      if (stage.status !== "at-risk" && stage.status !== "blocked") continue;
       const hasRisk = ctx.risks.some(
         (r) =>
           r.productId === product.id &&
           stageNameMatches(r.stageName, stage.stageName) &&
-          (r.text ?? '').trim().length > 0,
+          (r.text ?? "").trim().length > 0,
       );
       if (!hasRisk) {
         out.push({
@@ -301,7 +313,7 @@ function computeUnbackedStages(ctx: ReturnType<typeof useBridgeContext>) {
 }
 
 function Pipeline() {
-  const ctx = useBridgeContext('LeadFormSyncBridge.Pipeline');
+  const ctx = useBridgeContext("LeadFormSyncBridge.Pipeline");
   const unbackedStages = computeUnbackedStages(ctx);
   return (
     <SdlcPipeline
@@ -316,7 +328,7 @@ function Pipeline() {
 }
 
 function Risks() {
-  const ctx = useBridgeContext('LeadFormSyncBridge.Risks');
+  const ctx = useBridgeContext("LeadFormSyncBridge.Risks");
   return (
     <RisksSection
       risks={ctx.risks}
@@ -324,7 +336,9 @@ function Risks() {
       onChange={ctx.handleRisksChange}
       onRiskFilled={ctx.handleRiskFilled}
       products={ctx.products}
-      {...(ctx.stagesForProduct ? { stagesForProduct: ctx.stagesForProduct } : {})}
+      {...(ctx.stagesForProduct
+        ? { stagesForProduct: ctx.stagesForProduct }
+        : {})}
     />
   );
 }

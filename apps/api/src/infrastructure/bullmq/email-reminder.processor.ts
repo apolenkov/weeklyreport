@@ -1,11 +1,15 @@
-import { Injectable, type OnModuleInit, type OnModuleDestroy } from '@nestjs/common';
-import { Worker, type Job } from 'bullmq';
+import {
+  Injectable,
+  type OnModuleInit,
+  type OnModuleDestroy,
+} from "@nestjs/common";
+import { Worker, type Job } from "bullmq";
 
-import { RemindersService } from '../../modules/reminders/reminders.service';
-import { AdminService } from '../../modules/admin/admin.service';
-import { EmailService } from '../email/email.service';
-import { renderEmail } from '../../modules/email/render-template';
-import { getBullMQOptions } from './bullmq-options';
+import { RemindersService } from "../../modules/reminders/reminders.service";
+import { AdminService } from "../../modules/admin/admin.service";
+import { EmailService } from "../email/email.service";
+import { renderEmail } from "../../modules/email/render-template";
+import { getBullMQOptions } from "./bullmq-options";
 
 /**
  * NOTIF-01 (Phase 28-03): job-data shape for the email-reminder queue.
@@ -37,7 +41,7 @@ type EmailReminderJobData =
   | {
       executionId: string;
       recipientEmail: string;
-      kind: 'deadline';
+      kind: "deadline";
       leadName: string;
       reportPeriod: string;
       deadlineIso: string;
@@ -47,7 +51,7 @@ type EmailReminderJobData =
   | {
       executionId: string;
       recipientEmail: string;
-      kind: 'escalation';
+      kind: "escalation";
       headName: string;
       cycleDate: string;
       reportPeriod: string;
@@ -84,7 +88,7 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     this.worker = new Worker<EmailReminderJobData>(
-      'email-reminder',
+      "email-reminder",
       async (job: Job<EmailReminderJobData>) => {
         await this.processJob(job);
       },
@@ -101,17 +105,17 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
       },
     );
 
-    this.worker.on('failed', (job, error) => {
+    this.worker.on("failed", (job, error) => {
       process.stderr.write(
         JSON.stringify({
           timestamp: new Date().toISOString(),
-          level: 'error',
-          message: 'email-reminder job failed',
+          level: "error",
+          message: "email-reminder job failed",
           executionId: job?.data.executionId,
           recipientEmail: job?.data.recipientEmail,
           attempt: job?.attemptsMade,
           error: error.message,
-        }) + '\n',
+        }) + "\n",
       );
     });
   }
@@ -130,11 +134,11 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
       ? (await this.adminService.getSettings()).notificationFromEmail
       : null;
 
-    if ('kind' in data && data.kind === 'deadline') {
+    if ("kind" in data && data.kind === "deadline") {
       // NOTIF-01 (Phase 28-03): render react-email + Tailwind template +
       // matching plaintext, send multipart.
       const rendered = await renderEmail({
-        kind: 'deadline',
+        kind: "deadline",
         props: {
           leadName: data.leadName,
           reportPeriod: data.reportPeriod,
@@ -151,11 +155,11 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
         rendered.text,
         fromOverride,
       );
-    } else if ('kind' in data && data.kind === 'escalation') {
+    } else if ("kind" in data && data.kind === "escalation") {
       // NOTIF-02 (Phase 29-05): T+2h escalation digest — one email per
       // (rule, head) per cycle, body aggregates ALL late leads.
       const rendered = await renderEmail({
-        kind: 'escalation',
+        kind: "escalation",
         props: {
           headName: data.headName,
           cycleDate: data.cycleDate,
@@ -175,16 +179,16 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
       // Legacy v2.0 path — preserved verbatim for follow-up reminders that
       // pre-date the Phase 28 template renderer. Brand stays hardcoded on
       // this branch; once the legacy queue drains we drop this code path.
-      const subject = 'Reminder: Weekly Status Report Due';
+      const subject = "Reminder: Weekly Status Report Due";
       const body = [
-        'Hello,',
-        '',
+        "Hello,",
+        "",
         `This is a reminder to fill in your section for the status report period: ${data.reportPeriod}.`,
-        '',
-        'Please log in and submit your section before the deadline.',
-        '',
-        'Thank you.',
-      ].join('\n');
+        "",
+        "Please log in and submit your section before the deadline.",
+        "",
+        "Thank you.",
+      ].join("\n");
       await this.emailService.sendMail(
         data.recipientEmail,
         subject,

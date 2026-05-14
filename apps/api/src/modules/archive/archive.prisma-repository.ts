@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   archiveReportSummarySchema,
   archiveReportDetailSchema,
@@ -7,18 +7,18 @@ import {
   type ArchiveReportDetail,
   type AssembledReport,
   type PortfolioOverview,
-} from '@customreport/shared';
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import { groupScopeFilter } from '../../lib/group-scope.js';
+} from "@customreport/shared";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { groupScopeFilter } from "../../lib/group-scope.js";
 import type {
   ArchiveReadFilter,
   ArchiveRepository,
   ArchiveScopeSession,
-} from './archive.service.js';
+} from "./archive.service.js";
 import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
-} from '../report-sections/report-sections.prisma-repository.js';
+} from "../report-sections/report-sections.prisma-repository.js";
 
 /**
  * AUTH-04 (Phase 28-01): defense-in-depth status floor.
@@ -29,8 +29,12 @@ import {
  * NARROW further (e.g. an explicit `status: 'published'` from a viewer role
  * is identical to the floor and a no-op) but cannot widen — the repo will
  * never return non-published rows even if a caller mis-built the filter.
+ *
+ * A22: `archived: true` added so the Archive tab only shows reports the head
+ * has explicitly archived. Published-but-not-yet-archived reports remain on
+ * the head dashboard until the head moves them to the archive.
  */
-const PUBLISHED_FLOOR = { status: 'published' as const };
+const PUBLISHED_FLOOR = { status: "published" as const, archived: true };
 
 @Injectable()
 export class ArchivePrismaRepository implements ArchiveRepository {
@@ -52,7 +56,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
           },
         },
       },
-      orderBy: { publishedAt: 'desc' },
+      orderBy: { publishedAt: "desc" },
     });
 
     return reports.map((report) => toArchiveSummary(report));
@@ -100,7 +104,7 @@ function sectionScopeWhere(
   if (!session) return undefined;
   const scope = groupScopeFilter(
     session as Parameters<typeof groupScopeFilter>[0],
-    'reportSection',
+    "reportSection",
   );
   if (Object.keys(scope).length === 0) return undefined;
   return scope;
@@ -123,8 +127,8 @@ function computePortfolioOverview(
     }
   }
 
-  const overallStatus: PortfolioOverview['status'] =
-    totals.red > 0 ? 'red' : totals.yellow > 0 ? 'yellow' : 'green';
+  const overallStatus: PortfolioOverview["status"] =
+    totals.red > 0 ? "red" : totals.yellow > 0 ? "yellow" : "green";
 
   return { status: overallStatus, totals };
 }
@@ -152,7 +156,7 @@ function toArchiveSummary(report: {
     periodStart: report.periodStart,
     periodEnd: report.periodEnd,
     publishedAt: report.publishedAt,
-    publishedByName: report.publishedBy?.name ?? 'Unknown',
+    publishedByName: report.publishedBy?.name ?? "Unknown",
     portfolioStatus: portfolio.status,
   });
 }

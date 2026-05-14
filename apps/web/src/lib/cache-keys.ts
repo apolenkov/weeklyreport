@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import type { QueryClient } from '@tanstack/react-query';
-import type { TRPCProxy } from './trpc';
+import type { QueryClient } from "@tanstack/react-query";
+import type { TRPCProxy } from "./trpc";
 
 // invalidateQueries returns a Promise we don't await intentionally — these
 // helpers are fire-and-forget cache busters used inside event handlers.

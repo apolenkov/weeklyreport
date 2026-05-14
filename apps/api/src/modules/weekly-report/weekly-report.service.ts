@@ -3,12 +3,12 @@ import type {
   UserSession,
   WeeklyReportGetResponse,
   WeeklyReportReadModel,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 export class WeeklyReportDomainError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'WeeklyReportDomainError';
+    this.name = "WeeklyReportDomainError";
   }
 }
 
@@ -19,7 +19,7 @@ export class WeeklyReportDomainError extends Error {
  */
 export type WeeklyReportScopeSession = Pick<
   UserSession,
-  'role' | 'reportingGroupId' | 'viewerGroupAccess'
+  "role" | "reportingGroupId" | "viewerGroupAccess"
 >;
 
 export interface WeeklyReportRepository {
@@ -67,7 +67,7 @@ export class WeeklyReportService {
 
     if (!resolvedId) {
       // R3a: no active period — return sentinel instead of throwing NOT_FOUND.
-      return { status: 'no-period', report: null };
+      return { status: "no-period", report: null };
     }
 
     const report = await this.repository.getWeeklyReport(resolvedId, session);
@@ -76,10 +76,10 @@ export class WeeklyReportService {
       throw new WeeklyReportDomainError(`Report ${resolvedId} not found.`);
     }
 
-    if (role === 'viewer' && report.periodStatus !== 'published') {
+    if (role === "viewer" && report.periodStatus !== "published") {
       throw new WeeklyReportDomainError(`Report ${resolvedId} not found.`);
     }
 
-    return { status: 'active', ...report };
+    return { status: "active", ...report };
   }
 }

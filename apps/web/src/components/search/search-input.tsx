@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
-import type { SearchHit } from '@customreport/shared';
+import type { SearchHit } from "@customreport/shared";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
 /**
  * 39-05 (PERF-05): full-text search input.
@@ -30,7 +30,7 @@ import { useTRPC } from '../../lib/trpc-context';
  * <mark> element. We split on the literal markers (not regex) because the
  * markers are server-controlled and can't be confused with user text.
  */
-type Scope = 'mine' | 'all';
+type Scope = "mine" | "all";
 
 type SearchInputProps = {
   readonly scope: Scope;
@@ -60,21 +60,21 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
  * a filter query param.
  */
 function targetUrlFor(hit: SearchHit): string {
-  if (hit.type === 'project') {
+  if (hit.type === "project") {
     return `/admin?tab=products&filter=${hit.id}`;
   }
   if (hit.reportId) {
-    const anchor = hit.reportSectionId ? `#section-${hit.reportSectionId}` : '';
+    const anchor = hit.reportSectionId ? `#section-${hit.reportSectionId}` : "";
     return `/lead/report/${hit.reportId}${anchor}`;
   }
-  return '#';
+  return "#";
 }
 
-const TYPE_BADGE: Record<SearchHit['type'], { label: string; aria: string }> = {
-  item: { label: 'Task', aria: 'Task match' },
-  risk: { label: 'Risk', aria: 'Risk match' },
-  decision: { label: 'Decision', aria: 'Decision match' },
-  project: { label: 'Product', aria: 'Product match' },
+const TYPE_BADGE: Record<SearchHit["type"], { label: string; aria: string }> = {
+  item: { label: "Task", aria: "Task match" },
+  risk: { label: "Risk", aria: "Risk match" },
+  decision: { label: "Decision", aria: "Decision match" },
+  project: { label: "Product", aria: "Product match" },
 };
 
 /**
@@ -86,7 +86,7 @@ function renderSnippet(snippet: string): React.ReactNode {
   if (!snippet) return null;
   const parts = snippet.split(/(<<[^>]*?>>)/g);
   return parts.map((part, idx) => {
-    if (part.startsWith('<<') && part.endsWith('>>')) {
+    if (part.startsWith("<<") && part.endsWith(">>")) {
       const inner = part.slice(2, -2);
       return (
         <mark
@@ -101,14 +101,18 @@ function renderSnippet(snippet: string): React.ReactNode {
   });
 }
 
-export function SearchInput({ scope, placeholder, className }: SearchInputProps) {
+export function SearchInput({
+  scope,
+  placeholder,
+  className,
+}: SearchInputProps) {
   const router = useRouter();
   const trpc = useTRPC();
-  const reactId = useId().replace(/:/g, '');
+  const reactId = useId().replace(/:/g, "");
   const inputId = `${reactId}-search-input`;
   const resultsId = `${reactId}-search-results`;
 
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const debouncedQ = useDebouncedValue(q.trim(), DEBOUNCE_MS);
@@ -137,25 +141,25 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
       if (!containerRef.current) return;
       if (!containerRef.current.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener('mousedown', handle);
-    return () => document.removeEventListener('mousedown', handle);
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       e.preventDefault();
-      setQ('');
+      setQ("");
       setOpen(false);
       return;
     }
     if (!open || hits.length === 0) return;
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setActiveIndex((idx) => Math.min(idx + 1, hits.length - 1));
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIndex((idx) => Math.max(idx - 1, 0));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       const hit = hits[activeIndex];
       if (hit) {
         e.preventDefault();
@@ -169,10 +173,12 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
   const showError = showResults && isError;
   const showEmpty = showResults && !isError && !isFetching && hits.length === 0;
   const activeOptionId =
-    showResults && hits[activeIndex] ? `${resultsId}-option-${activeIndex}` : undefined;
+    showResults && hits[activeIndex]
+      ? `${resultsId}-option-${activeIndex}`
+      : undefined;
 
   return (
-    <div ref={containerRef} className={`relative ${className ?? ''}`}>
+    <div ref={containerRef} className={`relative ${className ?? ""}`}>
       <label className="sr-only" htmlFor={inputId}>
         Search Reports
       </label>
@@ -186,7 +192,7 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
         aria-autocomplete="list"
         autoComplete="off"
         value={q}
-        placeholder={placeholder ?? 'Search…'}
+        placeholder={placeholder ?? "Search…"}
         onFocus={() => setOpen(true)}
         onChange={(e) => {
           setQ(e.target.value);
@@ -250,7 +256,9 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
                   router.push(url);
                 }}
                 className={`flex w-full flex-col gap-1 border-b border-[var(--color-border)] px-3 py-2 text-left transition-colors last:border-b-0 ${
-                  isActive ? 'bg-[var(--color-success)]' : 'bg-white hover:bg-[var(--color-success)]'
+                  isActive
+                    ? "bg-[var(--color-success)]"
+                    : "bg-white hover:bg-[var(--color-success)]"
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -260,7 +268,9 @@ export function SearchInput({ scope, placeholder, className }: SearchInputProps)
                   >
                     {badge.label}
                   </span>
-                  <span className="text-[11px] text-[var(--color-muted-foreground)]">{date}</span>
+                  <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                    {date}
+                  </span>
                 </div>
                 <div className="truncate text-sm font-semibold text-[var(--color-foreground)]">
                   {hit.title}

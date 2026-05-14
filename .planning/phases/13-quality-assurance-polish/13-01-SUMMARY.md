@@ -65,6 +65,7 @@ completed: 2026-04-12
 - **Files modified:** 14 (10 source + 4 test)
 
 ## Accomplishments
+
 - Fixed 6 backend service bugs: saveDraft guards published reports, carry-over processes all sections idempotently, reminder kind reads from DB, admin deletes user from DB, logout uses env cookie name
 - Fixed 4 remaining bugs: PDF export markExportFailed + auth cookie builder, reminder dedupeKey extracts recipientEmail, head item edit guards empty items array
 - All 12 related unit tests pass (carry-over 4/4, report-sections 4/4, pdf-export 4/4)
@@ -77,6 +78,7 @@ Each task was committed atomically:
 2. **Task 2: Fix PDF export and reminder bugs** - `d6a0dd6` (fix)
 
 ## Files Created/Modified
+
 - `apps/api/src/modules/report-sections/report-sections.service.ts` - Added getReportStatus to repo interface, published-report guard in saveDraft
 - `apps/api/src/modules/report-sections/report-sections.prisma-repository.ts` - Implemented getReportStatus method
 - `apps/api/src/modules/carry-over/carry-over.service.ts` - Changed to getSourceSections/getTargetSections (findMany), multi-section carry-over logic
@@ -89,6 +91,7 @@ Each task was committed atomically:
 - `apps/web/src/components/head/assembled-report-review.tsx` - Added empty items guard in handleFirstItemChange
 
 ## Decisions Made
+
 - Carry-over interface changed from single-section to multi-section approach to process all leads' sections for a report, not just the first one found
 - recipientEmail is extracted from the dedupeKey string format rather than adding a new DB column
 - PDF auth cookies are built via a service method (buildAuthCookies) rather than inline in the BullMQ processor for testability
@@ -98,6 +101,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Fixed hardcoded kind:'deadline' in admin.prisma-repository.ts**
+
 - **Found during:** Task 1 (BUG-007 fix)
 - **Issue:** admin.prisma-repository.ts had the same hardcoded `kind: 'deadline'` as reminders.prisma-repository.ts
 - **Fix:** Changed to `kind: rule.name` to read actual DB value
@@ -105,6 +109,7 @@ Each task was committed atomically:
 - **Committed in:** 0b9f614
 
 **2. [Rule 3 - Blocking] Updated test repositories for new interface methods**
+
 - **Found during:** Task 1 and Task 2
 - **Issue:** Test mock repositories needed getReportStatus, getSourceSections/getTargetSections, and markExportFailed methods
 - **Fix:** Added missing methods to test repositories in 3 test files
@@ -117,19 +122,24 @@ Each task was committed atomically:
 **Impact on plan:** All auto-fixes necessary for correctness. No scope creep.
 
 ## Issues Encountered
+
 - Worktree had no node_modules initially; ran pnpm install to resolve module resolution errors in tests
 - Pre-existing TypeScript compilation errors (TS2307, TS7006) across the monorepo due to missing type declarations; these are not caused by this plan's changes
 
 ## Known Stubs
+
 None -- all methods are fully implemented with real logic.
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 - All 10 API-layer bugs fixed and verified
 - Ready for Plan 02 (schema/frontend bugs) and Plan 03+ (test coverage)
 
 ---
-*Phase: 13-quality-assurance-polish*
-*Completed: 2026-04-12*
+
+_Phase: 13-quality-assurance-polish_
+_Completed: 2026-04-12_

@@ -36,28 +36,6 @@ describe("groupScopeFilter", () => {
     });
   });
 
-  // UFB-057 / Phase 57: director is god-mode-READ — empty filter on every
-  // target, identical to admin. Mutation gating happens upstream
-  // (adminProcedure), so writes are still blocked even when this helper
-  // returns `{}`.
-  describe("director (UFB-057)", () => {
-    const s = session("director", { reportingGroupId: undefined });
-    it("returns {} for user", () => {
-      expect(groupScopeFilter(s, "user")).toEqual({});
-    });
-    it("returns {} for reportSection", () => {
-      expect(groupScopeFilter(s, "reportSection")).toEqual({});
-    });
-    it("returns {} for project", () => {
-      expect(groupScopeFilter(s, "project")).toEqual({});
-    });
-    it("returns {} for project even with useExplicitGroupProducts flag", () => {
-      expect(
-        groupScopeFilter(s, "project", { useExplicitGroupProducts: true }),
-      ).toEqual({});
-    });
-  });
-
   describe("head", () => {
     const s = session("head");
     it("scopes user by own reportingGroupId", () => {

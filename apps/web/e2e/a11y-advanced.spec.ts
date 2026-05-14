@@ -9,8 +9,8 @@
  * Covers: SC-280..SC-288
  */
 
-import { test, expect } from './fixtures';
-import { test as base } from '@playwright/test';
+import { test, expect } from "./fixtures";
+import { test as base } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -26,7 +26,9 @@ function relativeLuminance(rgb: string): number {
 
   const [r, g, b] = [match[1], match[2], match[3]].map((c) => {
     const sRGB = parseInt(c, 10) / 255;
-    return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+    return sRGB <= 0.03928
+      ? sRGB / 12.92
+      : Math.pow((sRGB + 0.055) / 1.055, 2.4);
   });
 
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -46,35 +48,50 @@ function contrastRatio(l1: number, l2: number): number {
 // SC-280: Screen reader reads page title
 // ---------------------------------------------------------------------------
 
-test.describe('SC-280: Screen reader reads page title', () => {
-  test.fixme('lead report page has descriptive document title', async ({ leadPage }) => {
+test.describe("SC-280: Screen reader reads page title", () => {
+  test.fixme("lead report page has descriptive document title", async ({
+    leadPage,
+  }) => {
     // TODO: No <title> or metadata export in page layouts yet
-    await leadPage.goto('/lead/report');
-    await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
+    await leadPage.goto("/lead/report");
+    await leadPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
 
     const title = await leadPage.title();
     // Title should be non-empty and descriptive
     expect(title.length).toBeGreaterThan(0);
   });
 
-  test.fixme('dashboard page has descriptive document title', async ({ headPage }) => {
+  test.fixme("dashboard page has descriptive document title", async ({
+    headPage,
+  }) => {
     // TODO: No <title> or metadata export in page layouts yet
-    await headPage.goto('/head/dashboard');
-    await headPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
+    await headPage.goto("/head/dashboard");
+    await headPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
 
     const title = await headPage.title();
     expect(title.length).toBeGreaterThan(0);
   });
 
-  test('lead report page has exactly one h1', async ({ leadPage }) => {
-    await leadPage.goto('/lead/report');
-    await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
-    await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
+  test("lead report page has exactly one h1", async ({ leadPage }) => {
+    await leadPage.goto("/lead/report");
+    await leadPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await leadPage
+      .getByText("Product Status")
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await leadPage.waitForLoadState("networkidle", { timeout: 15_000 });
 
-    const h1Count = await leadPage.locator('h1').count();
+    const h1Count = await leadPage.locator("h1").count();
     expect(h1Count).toBe(1);
-    await expect(leadPage.locator('h1')).toHaveText('My Report');
+    await expect(leadPage.locator("h1")).toHaveText("My Report");
   });
 });
 
@@ -82,38 +99,50 @@ test.describe('SC-280: Screen reader reads page title', () => {
 // SC-281: Screen reader reads KPI values
 // ---------------------------------------------------------------------------
 
-test.describe('SC-281: Screen reader reads KPI values', () => {
-  test('KPI cards have meaningful text content for screen readers', async ({ headPage }) => {
-    await headPage.goto('/head/dashboard');
-    await headPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await headPage.getByRole('heading', { name: 'Dashboard' }).waitFor({ state: 'visible', timeout: 15_000 });
-    await headPage.waitForLoadState('networkidle', { timeout: 15_000 });
+test.describe("SC-281: Screen reader reads KPI values", () => {
+  test("KPI cards have meaningful text content for screen readers", async ({
+    headPage,
+  }) => {
+    await headPage.goto("/head/dashboard");
+    await headPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await headPage
+      .getByRole("heading", { name: "Dashboard" })
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await headPage.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // KPI values should be accessible as text content
     // "Submissions" card with "4/6" value
-    await expect(headPage.getByText('Submissions')).toBeVisible();
-    await expect(headPage.getByText('4/6').first()).toBeVisible();
+    await expect(headPage.getByText("Submissions")).toBeVisible();
+    await expect(headPage.getByText("4/6").first()).toBeVisible();
 
     // "Deadline" card with countdown
-    await expect(headPage.getByText('Deadline')).toBeVisible();
-    await expect(headPage.getByText('2d 5h')).toBeVisible();
+    await expect(headPage.getByText("Deadline")).toBeVisible();
+    await expect(headPage.getByText("2d 5h")).toBeVisible();
 
     // "Risks & Blockers" card with separate counts
-    await expect(headPage.getByText('Risks & Blockers')).toBeVisible();
-    await expect(headPage.getByText('Blocked').first()).toBeVisible();
-    await expect(headPage.getByText('At Risk').first()).toBeVisible();
+    await expect(headPage.getByText("Risks & Blockers")).toBeVisible();
+    await expect(headPage.getByText("Blocked").first()).toBeVisible();
+    await expect(headPage.getByText("At Risk").first()).toBeVisible();
   });
 
-  test('badge counts in lead form have text content', async ({ leadPage }) => {
-    await leadPage.goto('/lead/report');
-    await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
-    await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
+  test("badge counts in lead form have text content", async ({ leadPage }) => {
+    await leadPage.goto("/lead/report");
+    await leadPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await leadPage
+      .getByText("Product Status")
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await leadPage.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // Accordion badges are readable text, not hidden images
-    await expect(leadPage.getByText('11 items')).toBeVisible();
-    await expect(leadPage.getByText('6 items')).toBeVisible();
-    await expect(leadPage.getByText('3/3')).toBeVisible();
+    await expect(leadPage.getByText("11 items")).toBeVisible();
+    await expect(leadPage.getByText("6 items")).toBeVisible();
+    await expect(leadPage.getByText("3/3")).toBeVisible();
   });
 });
 
@@ -121,23 +150,30 @@ test.describe('SC-281: Screen reader reads KPI values', () => {
 // SC-282: Keyboard Tab order matches visual order
 // ---------------------------------------------------------------------------
 
-test.describe('SC-282: Keyboard Tab order matches visual order', () => {
-  test('Tab navigates through lead form controls in top-to-bottom order', async ({ leadPage }) => {
-    await leadPage.goto('/lead/report');
-    await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
-    await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
+test.describe("SC-282: Keyboard Tab order matches visual order", () => {
+  test("Tab navigates through lead form controls in top-to-bottom order", async ({
+    leadPage,
+  }) => {
+    await leadPage.goto("/lead/report");
+    await leadPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await leadPage
+      .getByText("Product Status")
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await leadPage.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // Collect the order of focused elements by pressing Tab repeatedly
     const focusOrder: string[] = [];
 
     for (let i = 0; i < 15; i++) {
-      await leadPage.keyboard.press('Tab');
+      await leadPage.keyboard.press("Tab");
       const focused = await leadPage.evaluate(() => {
         const el = document.activeElement;
-        if (!el) return 'none';
+        if (!el) return "none";
         return (
-          el.getAttribute('aria-label') ??
+          el.getAttribute("aria-label") ??
           el.textContent?.trim().slice(0, 40) ??
           el.tagName
         );
@@ -151,27 +187,34 @@ test.describe('SC-282: Keyboard Tab order matches visual order', () => {
     // At least some buttons/links should be in the focus chain
     const hasInteractiveElements = focusOrder.some(
       (label) =>
-        label.includes('Submit') ||
-        label.includes('Toggle') ||
-        label.includes('Fill') ||
-        label.includes('period') ||
-        label.includes('Previous'),
+        label.includes("Submit") ||
+        label.includes("Toggle") ||
+        label.includes("Fill") ||
+        label.includes("period") ||
+        label.includes("Previous"),
     );
     expect(hasInteractiveElements).toBe(true);
   });
 
-  test('focused elements y-coordinates are monotonically non-decreasing', async ({ leadPage }) => {
-    await leadPage.goto('/lead/report');
-    await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
-    await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
+  test("focused elements y-coordinates are monotonically non-decreasing", async ({
+    leadPage,
+  }) => {
+    await leadPage.goto("/lead/report");
+    await leadPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await leadPage
+      .getByText("Product Status")
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await leadPage.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // Press Tab several times and check that y-position generally increases
     // (within header row, elements can be at same y-level -- that is fine)
     const yPositions: number[] = [];
 
     for (let i = 0; i < 10; i++) {
-      await leadPage.keyboard.press('Tab');
+      await leadPage.keyboard.press("Tab");
       const y = await leadPage.evaluate(() => {
         const el = document.activeElement;
         if (!el) return 0;
@@ -197,22 +240,31 @@ test.describe('SC-282: Keyboard Tab order matches visual order', () => {
 // SC-283: Escape closes modals
 // ---------------------------------------------------------------------------
 
-test.describe('SC-283: Escape closes modals', () => {
-  test.fixme('pressing Escape closes the submit confirmation dialog', async ({ leadPage }) => {
+test.describe("SC-283: Escape closes modals", () => {
+  test.fixme("pressing Escape closes the submit confirmation dialog", async ({
+    leadPage,
+  }) => {
     // TODO: Inline submit dialog in lead-form.tsx lacks Escape key handler (not using ConfirmationDialog)
-    await leadPage.goto('/lead/report');
-    await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
-    await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
+    await leadPage.goto("/lead/report");
+    await leadPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await leadPage
+      .getByText("Product Status")
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await leadPage.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // Open submit dialog
-    const submitBtn = leadPage.getByRole('button', { name: 'Submit Report' }).first();
-    const dialogTitle = leadPage.getByText('Submit Report?');
+    const submitBtn = leadPage
+      .getByRole("button", { name: "Submit Report" })
+      .first();
+    const dialogTitle = leadPage.getByText("Submit Report?");
 
     for (let i = 0; i < 10; i++) {
       await submitBtn.click();
       try {
-        await dialogTitle.waitFor({ state: 'visible', timeout: 1_000 });
+        await dialogTitle.waitFor({ state: "visible", timeout: 1_000 });
         break;
       } catch {
         // Retry
@@ -221,30 +273,39 @@ test.describe('SC-283: Escape closes modals', () => {
     await expect(dialogTitle).toBeVisible({ timeout: 5_000 });
 
     // Press Escape
-    await leadPage.keyboard.press('Escape');
+    await leadPage.keyboard.press("Escape");
 
     // Dialog should close
     await expect(dialogTitle).not.toBeVisible({ timeout: 5_000 });
 
     // Page content should still be visible (no side effects)
-    await expect(leadPage.getByRole('heading', { name: 'My Report' })).toBeVisible();
+    await expect(
+      leadPage.getByRole("heading", { name: "My Report" }),
+    ).toBeVisible();
   });
 
-  test.fixme('pressing Escape closes the publish confirmation dialog', async ({ headPage }) => {
+  test.fixme("pressing Escape closes the publish confirmation dialog", async ({
+    headPage,
+  }) => {
     // TODO: Inline publish dialog in publish-lock-button.tsx lacks Escape key handler
-    await headPage.goto('/head/report');
-    await headPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await headPage.getByRole('heading', { name: 'Weekly Report' }).waitFor({ state: 'visible', timeout: 15_000 });
-    await headPage.waitForLoadState('networkidle', { timeout: 15_000 });
+    await headPage.goto("/head/report");
+    await headPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await headPage
+      .getByRole("heading", { name: "Weekly Report" })
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await headPage.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // Open publish dialog
-    const publishBtn = headPage.getByRole('button', { name: 'Publish & Lock' });
-    const dialogTitle = headPage.getByText('Publish & Lock Report?');
+    const publishBtn = headPage.getByRole("button", { name: "Publish & Lock" });
+    const dialogTitle = headPage.getByText("Publish & Lock Report?");
 
     for (let i = 0; i < 10; i++) {
       await publishBtn.click();
       try {
-        await dialogTitle.waitFor({ state: 'visible', timeout: 1_000 });
+        await dialogTitle.waitFor({ state: "visible", timeout: 1_000 });
         break;
       } catch {
         // Retry
@@ -253,13 +314,15 @@ test.describe('SC-283: Escape closes modals', () => {
     await expect(dialogTitle).toBeVisible({ timeout: 5_000 });
 
     // Press Escape
-    await headPage.keyboard.press('Escape');
+    await headPage.keyboard.press("Escape");
 
     // Dialog should close
     await expect(dialogTitle).not.toBeVisible({ timeout: 5_000 });
 
     // "Publish & Lock" button should still be available (no state change)
-    await expect(headPage.getByRole('button', { name: 'Publish & Lock' })).toBeVisible();
+    await expect(
+      headPage.getByRole("button", { name: "Publish & Lock" }),
+    ).toBeVisible();
   });
 });
 
@@ -267,22 +330,31 @@ test.describe('SC-283: Escape closes modals', () => {
 // SC-284: Focus trap in modals
 // ---------------------------------------------------------------------------
 
-test.describe('SC-284: Focus trap in modals', () => {
-  test.fixme('Tab cycles focus within the submit dialog without escaping', async ({ leadPage }) => {
+test.describe("SC-284: Focus trap in modals", () => {
+  test.fixme("Tab cycles focus within the submit dialog without escaping", async ({
+    leadPage,
+  }) => {
     // TODO: Inline submit dialog in lead-form.tsx lacks focus trap implementation
-    await leadPage.goto('/lead/report');
-    await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
-    await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
+    await leadPage.goto("/lead/report");
+    await leadPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await leadPage
+      .getByText("Product Status")
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await leadPage.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // Open submit dialog
-    const submitBtn = leadPage.getByRole('button', { name: 'Submit Report' }).first();
-    const dialogTitle = leadPage.getByText('Submit Report?');
+    const submitBtn = leadPage
+      .getByRole("button", { name: "Submit Report" })
+      .first();
+    const dialogTitle = leadPage.getByText("Submit Report?");
 
     for (let i = 0; i < 10; i++) {
       await submitBtn.click();
       try {
-        await dialogTitle.waitFor({ state: 'visible', timeout: 1_000 });
+        await dialogTitle.waitFor({ state: "visible", timeout: 1_000 });
         break;
       } catch {
         // Retry
@@ -292,22 +364,28 @@ test.describe('SC-284: Focus trap in modals', () => {
 
     // The dialog has two buttons: Cancel and Submit Report
     // Tab through them multiple times -- focus should stay within dialog
-    const dialogContainer = leadPage.locator('[role="dialog"], [role="alertdialog"]');
+    const dialogContainer = leadPage.locator(
+      '[role="dialog"], [role="alertdialog"]',
+    );
     await expect(dialogContainer).toBeVisible();
 
     // Tab several times and check that focus stays in the dialog
     for (let i = 0; i < 6; i++) {
-      await leadPage.keyboard.press('Tab');
+      await leadPage.keyboard.press("Tab");
 
       const isFocusInDialog = await leadPage.evaluate(() => {
         const active = document.activeElement;
         if (!active) return false;
-        const dialog = document.querySelector('[role="dialog"], [role="alertdialog"]');
+        const dialog = document.querySelector(
+          '[role="dialog"], [role="alertdialog"]',
+        );
         if (!dialog) return false;
         return dialog.contains(active);
       });
 
-      expect(isFocusInDialog, `Tab ${i + 1}: focus should stay in dialog`).toBe(true);
+      expect(isFocusInDialog, `Tab ${i + 1}: focus should stay in dialog`).toBe(
+        true,
+      );
     }
   });
 });
@@ -316,35 +394,41 @@ test.describe('SC-284: Focus trap in modals', () => {
 // SC-285: Skip link works
 // ---------------------------------------------------------------------------
 
-base.describe('SC-285: Skip link navigates to main content', () => {
-  base('skip link click moves focus to #main-content', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await page.waitForLoadState('networkidle', { timeout: 15_000 });
+base.describe("SC-285: Skip link navigates to main content", () => {
+  base("skip link click moves focus to #main-content", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await page.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // Tab to the skip link
-    await page.keyboard.press('Tab');
+    await page.keyboard.press("Tab");
     const skipLink = page.locator('a[href="#main-content"]');
     await expect(skipLink).toBeFocused();
 
     // Activate the skip link
-    await page.keyboard.press('Enter');
+    await page.keyboard.press("Enter");
 
     // Focus or scroll target should be the #main-content element
     const mainContentId = await page.evaluate(() => {
       // Check if focus moved to main-content or its scroll position
-      const main = document.querySelector('#main-content');
+      const main = document.querySelector("#main-content");
       if (!main) return null;
       return main.id;
     });
-    expect(mainContentId).toBe('main-content');
+    expect(mainContentId).toBe("main-content");
   });
 
-  base('skip link is present on every page', async ({ page }) => {
-    const pages = ['/', '/auth/error'];
+  base("skip link is present on every page", async ({ page }) => {
+    const pages = ["/", "/auth/error"];
     for (const path of pages) {
       await page.goto(path);
-      await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
+      await page.waitForSelector("#main-content", {
+        state: "visible",
+        timeout: 15_000,
+      });
 
       const skipLink = page.locator('a[href="#main-content"]');
       await expect(skipLink).toHaveCount(1);
@@ -356,25 +440,41 @@ base.describe('SC-285: Skip link navigates to main content', () => {
 // SC-286: SDLC stages have correct aria-labels
 // ---------------------------------------------------------------------------
 
-test.describe('SC-286: SDLC stages have correct aria-labels', () => {
-  test('each stage chip has an aria-label with stage name and status', async ({ leadPage }) => {
-    await leadPage.goto('/lead/report');
-    await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
-    await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
+test.describe("SC-286: SDLC stages have correct aria-labels", () => {
+  test("each stage chip has an aria-label with stage name and status", async ({
+    leadPage,
+  }) => {
+    await leadPage.goto("/lead/report");
+    await leadPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await leadPage
+      .getByText("Product Status")
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await leadPage.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // Stage chips have aria-label in format "StageName: status"
     // Check known stages from mock data
-    await expect(leadPage.getByLabel('Dev: at-risk').first()).toBeVisible();
-    await expect(leadPage.getByLabel('Testing: blocked').first()).toBeVisible();
-    await expect(leadPage.getByLabel('Planning: on-track').first()).toBeVisible();
+    await expect(leadPage.getByLabel("Dev: at-risk").first()).toBeVisible();
+    await expect(leadPage.getByLabel("Testing: blocked").first()).toBeVisible();
+    await expect(
+      leadPage.getByLabel("Planning: on-track").first(),
+    ).toBeVisible();
   });
 
-  test('all stage buttons have non-empty aria-label attributes', async ({ leadPage }) => {
-    await leadPage.goto('/lead/report');
-    await leadPage.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await leadPage.getByText('Product Status').waitFor({ state: 'visible', timeout: 15_000 });
-    await leadPage.waitForLoadState('networkidle', { timeout: 15_000 });
+  test("all stage buttons have non-empty aria-label attributes", async ({
+    leadPage,
+  }) => {
+    await leadPage.goto("/lead/report");
+    await leadPage.waitForSelector("#main-content", {
+      state: "visible",
+      timeout: 15_000,
+    });
+    await leadPage
+      .getByText("Product Status")
+      .waitFor({ state: "visible", timeout: 15_000 });
+    await leadPage.waitForLoadState("networkidle", { timeout: 15_000 });
 
     // Find all buttons with aria-labels matching the "Stage: status" pattern
     const stageButtons = leadPage.locator('button[aria-label*=":"]');
@@ -386,7 +486,7 @@ test.describe('SC-286: SDLC stages have correct aria-labels', () => {
 
     // Every aria-label should follow the "StageName: status" pattern
     for (let i = 0; i < count; i++) {
-      const label = await stageButtons.nth(i).getAttribute('aria-label');
+      const label = await stageButtons.nth(i).getAttribute("aria-label");
       expect(label).toBeTruthy();
       expect(label).toMatch(/\w+: \w[\w-]*/);
     }
@@ -397,141 +497,181 @@ test.describe('SC-286: SDLC stages have correct aria-labels', () => {
 // SC-287: Color contrast meets 4.5:1
 // ---------------------------------------------------------------------------
 
-base.describe('SC-287: Color contrast meets WCAG AA 4.5:1', () => {
-  base('heading text has sufficient contrast against background', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await page.waitForLoadState('networkidle', { timeout: 15_000 });
+base.describe("SC-287: Color contrast meets WCAG AA 4.5:1", () => {
+  base(
+    "heading text has sufficient contrast against background",
+    async ({ page }) => {
+      await page.goto("/");
+      await page.waitForSelector("#main-content", {
+        state: "visible",
+        timeout: 15_000,
+      });
+      await page.waitForLoadState("networkidle", { timeout: 15_000 });
 
-    // Get the computed colors of the heading and its background
-    const colors = await page.evaluate(() => {
-      const heading = document.querySelector('h1, h2');
-      if (!heading) return null;
+      // Get the computed colors of the heading and its background
+      const colors = await page.evaluate(() => {
+        const heading = document.querySelector("h1, h2");
+        if (!heading) return null;
 
-      const style = window.getComputedStyle(heading);
-      const textColor = style.color;
+        const style = window.getComputedStyle(heading);
+        const textColor = style.color;
 
-      // Walk up the DOM to find the effective background color
-      let bg = 'rgb(255, 255, 255)';
-      let el: Element | null = heading;
-      while (el) {
-        const elStyle = window.getComputedStyle(el);
-        const bgColor = elStyle.backgroundColor;
-        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-          bg = bgColor;
-          break;
+        // Walk up the DOM to find the effective background color
+        let bg = "rgb(255, 255, 255)";
+        let el: Element | null = heading;
+        while (el) {
+          const elStyle = window.getComputedStyle(el);
+          const bgColor = elStyle.backgroundColor;
+          if (
+            bgColor &&
+            bgColor !== "rgba(0, 0, 0, 0)" &&
+            bgColor !== "transparent"
+          ) {
+            bg = bgColor;
+            break;
+          }
+          el = el.parentElement;
         }
-        el = el.parentElement;
+
+        return { textColor, bgColor: bg };
+      });
+
+      expect(colors).toBeTruthy();
+      if (colors) {
+        const textLum = relativeLuminance(colors.textColor);
+        const bgLum = relativeLuminance(colors.bgColor);
+        const ratio = contrastRatio(textLum, bgLum);
+
+        // WCAG AA requires 4.5:1 for normal text, 3:1 for large text
+        // Headings are typically large text (3:1 minimum)
+        expect(ratio).toBeGreaterThanOrEqual(3);
       }
+    },
+  );
 
-      return { textColor, bgColor: bg };
-    });
+  base(
+    "body text has sufficient contrast against background",
+    async ({ page }) => {
+      await page.goto("/");
+      await page.waitForSelector("#main-content", {
+        state: "visible",
+        timeout: 15_000,
+      });
+      await page.waitForLoadState("networkidle", { timeout: 15_000 });
 
-    expect(colors).toBeTruthy();
-    if (colors) {
-      const textLum = relativeLuminance(colors.textColor);
-      const bgLum = relativeLuminance(colors.bgColor);
-      const ratio = contrastRatio(textLum, bgLum);
+      const colors = await page.evaluate(() => {
+        // Find a paragraph or span with body text
+        const textEl = document.querySelector("p, span");
+        if (!textEl) return null;
 
-      // WCAG AA requires 4.5:1 for normal text, 3:1 for large text
-      // Headings are typically large text (3:1 minimum)
-      expect(ratio).toBeGreaterThanOrEqual(3);
-    }
-  });
+        const style = window.getComputedStyle(textEl);
+        const textColor = style.color;
 
-  base('body text has sufficient contrast against background', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await page.waitForLoadState('networkidle', { timeout: 15_000 });
-
-    const colors = await page.evaluate(() => {
-      // Find a paragraph or span with body text
-      const textEl = document.querySelector('p, span');
-      if (!textEl) return null;
-
-      const style = window.getComputedStyle(textEl);
-      const textColor = style.color;
-
-      let bg = 'rgb(255, 255, 255)';
-      let el: Element | null = textEl;
-      while (el) {
-        const elStyle = window.getComputedStyle(el);
-        const bgColor = elStyle.backgroundColor;
-        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-          bg = bgColor;
-          break;
+        let bg = "rgb(255, 255, 255)";
+        let el: Element | null = textEl;
+        while (el) {
+          const elStyle = window.getComputedStyle(el);
+          const bgColor = elStyle.backgroundColor;
+          if (
+            bgColor &&
+            bgColor !== "rgba(0, 0, 0, 0)" &&
+            bgColor !== "transparent"
+          ) {
+            bg = bgColor;
+            break;
+          }
+          el = el.parentElement;
         }
-        el = el.parentElement;
+
+        return { textColor, bgColor: bg };
+      });
+
+      expect(colors).toBeTruthy();
+      if (colors) {
+        const textLum = relativeLuminance(colors.textColor);
+        const bgLum = relativeLuminance(colors.bgColor);
+        const ratio = contrastRatio(textLum, bgLum);
+
+        // WCAG AA: 4.5:1 for normal text
+        expect(ratio).toBeGreaterThanOrEqual(4.5);
       }
-
-      return { textColor, bgColor: bg };
-    });
-
-    expect(colors).toBeTruthy();
-    if (colors) {
-      const textLum = relativeLuminance(colors.textColor);
-      const bgLum = relativeLuminance(colors.bgColor);
-      const ratio = contrastRatio(textLum, bgLum);
-
-      // WCAG AA: 4.5:1 for normal text
-      expect(ratio).toBeGreaterThanOrEqual(4.5);
-    }
-  });
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------
 // SC-288: Reduced motion disables animations
 // ---------------------------------------------------------------------------
 
-base.describe('SC-288: Reduced motion disables animations', () => {
-  base.fixme('animations are suppressed with prefers-reduced-motion', async ({ page }) => {
-    // TODO: base test context does not inherit reducedMotion config from project settings
-    // Playwright config already sets reducedMotion: 'reduce'
-    // This test verifies the effect
-    await page.goto('/lead/report');
-    await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await page.waitForLoadState('networkidle', { timeout: 15_000 });
+base.describe("SC-288: Reduced motion disables animations", () => {
+  base.fixme(
+    "animations are suppressed with prefers-reduced-motion",
+    async ({ page }) => {
+      // TODO: base test context does not inherit reducedMotion config from project settings
+      // Playwright config already sets reducedMotion: 'reduce'
+      // This test verifies the effect
+      await page.goto("/lead/report");
+      await page.waitForSelector("#main-content", {
+        state: "visible",
+        timeout: 15_000,
+      });
+      await page.waitForLoadState("networkidle", { timeout: 15_000 });
 
-    // Check that the reduced-motion media query is active
-    const prefersReducedMotion = await page.evaluate(() => {
-      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    });
-    expect(prefersReducedMotion).toBe(true);
-  });
+      // Check that the reduced-motion media query is active
+      const prefersReducedMotion = await page.evaluate(() => {
+        return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      });
+      expect(prefersReducedMotion).toBe(true);
+    },
+  );
 
-  base.fixme('transition durations are zero or near-zero with reduced motion', async ({ page }) => {
-    // TODO: base test context does not inherit reducedMotion config; SVG className is SVGAnimatedString not string
-    await page.goto('/lead/report');
-    await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
-    await page.waitForLoadState('networkidle', { timeout: 15_000 });
+  base.fixme(
+    "transition durations are zero or near-zero with reduced motion",
+    async ({ page }) => {
+      // TODO: base test context does not inherit reducedMotion config; SVG className is SVGAnimatedString not string
+      await page.goto("/lead/report");
+      await page.waitForSelector("#main-content", {
+        state: "visible",
+        timeout: 15_000,
+      });
+      await page.waitForLoadState("networkidle", { timeout: 15_000 });
 
-    // Verify that animated elements either have no animation or short transitions
-    const animationStatus = await page.evaluate(() => {
-      const animated = document.querySelectorAll('[class*="animate-"], [class*="transition-"]');
-      const results: { element: string; duration: string; animation: string }[] = [];
+      // Verify that animated elements either have no animation or short transitions
+      const animationStatus = await page.evaluate(() => {
+        const animated = document.querySelectorAll(
+          '[class*="animate-"], [class*="transition-"]',
+        );
+        const results: {
+          element: string;
+          duration: string;
+          animation: string;
+        }[] = [];
 
-      animated.forEach((el) => {
-        const style = window.getComputedStyle(el);
-        results.push({
-          element: el.tagName + (el.className ? '.' + el.className.split(' ')[0] : ''),
-          duration: style.transitionDuration,
-          animation: style.animationDuration,
+        animated.forEach((el) => {
+          const style = window.getComputedStyle(el);
+          results.push({
+            element:
+              el.tagName +
+              (el.className ? "." + el.className.split(" ")[0] : ""),
+            duration: style.transitionDuration,
+            animation: style.animationDuration,
+          });
         });
+
+        return results;
       });
 
-      return results;
-    });
+      // With reduced motion active, Tailwind and custom CSS should respect
+      // the prefers-reduced-motion media query. Check that the preference is active.
+      const prefersReducedMotion = await page.evaluate(() => {
+        return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      });
+      expect(prefersReducedMotion).toBe(true);
 
-    // With reduced motion active, Tailwind and custom CSS should respect
-    // the prefers-reduced-motion media query. Check that the preference is active.
-    const prefersReducedMotion = await page.evaluate(() => {
-      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    });
-    expect(prefersReducedMotion).toBe(true);
-
-    // The key assertion: the page rendered successfully with reduced motion
-    // and no JavaScript errors occurred
-    const hasMainContent = await page.locator('#main-content').isVisible();
-    expect(hasMainContent).toBe(true);
-  });
+      // The key assertion: the page rendered successfully with reduced motion
+      // and no JavaScript errors occurred
+      const hasMainContent = await page.locator("#main-content").isVisible();
+      expect(hasMainContent).toBe(true);
+    },
+  );
 });

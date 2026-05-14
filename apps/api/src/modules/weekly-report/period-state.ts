@@ -1,4 +1,4 @@
-import type { PeriodState } from '@customreport/shared';
+import type { PeriodState } from "@customreport/shared";
 
 /**
  * UFB-053 / Phase 51-C: Period state-machine adapter.
@@ -32,29 +32,29 @@ import type { PeriodState } from '@customreport/shared';
  * legacy side.
  */
 export type LegacyPeriodTuple = {
-  readonly status: 'draft' | 'published';
+  readonly status: "draft" | "published";
   readonly archived: boolean;
 };
 
 export function legacyTupleToState(tuple: LegacyPeriodTuple): PeriodState {
   if (tuple.archived) {
-    return 'archived';
+    return "archived";
   }
-  if (tuple.status === 'published') {
-    return 'published';
+  if (tuple.status === "published") {
+    return "published";
   }
-  return 'open';
+  return "open";
 }
 
 export function stateToLegacyTuple(state: PeriodState): LegacyPeriodTuple {
   switch (state) {
-    case 'archived':
-      return { status: 'published', archived: true };
-    case 'published':
-      return { status: 'published', archived: false };
-    case 'scheduled':
-    case 'open':
-      return { status: 'draft', archived: false };
+    case "archived":
+      return { status: "published", archived: true };
+    case "published":
+      return { status: "published", archived: false };
+    case "scheduled":
+    case "open":
+      return { status: "draft", archived: false };
   }
 }
 
@@ -68,6 +68,6 @@ export function stateToLegacyTuple(state: PeriodState): LegacyPeriodTuple {
 export function initialPeriodState(
   periodStart: Date,
   now: Date,
-): Extract<PeriodState, 'scheduled' | 'open'> {
-  return periodStart.getTime() > now.getTime() ? 'scheduled' : 'open';
+): Extract<PeriodState, "scheduled" | "open"> {
+  return periodStart.getTime() > now.getTime() ? "scheduled" : "open";
 }

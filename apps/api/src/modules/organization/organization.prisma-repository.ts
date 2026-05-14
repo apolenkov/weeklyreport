@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   organizationSchema,
   DEFAULT_ORGANIZATION_IDENTITY,
   type Organization,
   type OrganizationUpdate,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { OrganizationRepository } from './organization.service.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { OrganizationRepository } from "./organization.service.js";
 
 /**
  * UFB-047 / Phase 48-A: Prisma implementation of OrganizationRepository.
@@ -28,9 +28,9 @@ export class OrganizationPrismaRepository implements OrganizationRepository {
 
   async getOrganization(): Promise<Organization> {
     const row = await this.prisma.organization.upsert({
-      where: { id: 'singleton' },
+      where: { id: "singleton" },
       create: {
-        id: 'singleton',
+        id: "singleton",
         shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
         fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
       },
@@ -45,17 +45,15 @@ export class OrganizationPrismaRepository implements OrganizationRepository {
     });
   }
 
-  async updateOrganization(
-    input: OrganizationUpdate,
-  ): Promise<Organization> {
+  async updateOrganization(input: OrganizationUpdate): Promise<Organization> {
     // Singleton invariant: `id='singleton'` is the only writable row.
     // The `update` path matches; we use upsert in case the row was
     // somehow purged out-of-band (defense in depth — production should
     // never hit the create branch).
     const row = await this.prisma.organization.upsert({
-      where: { id: 'singleton' },
+      where: { id: "singleton" },
       create: {
-        id: 'singleton',
+        id: "singleton",
         shortName: input.shortName,
         fullName: input.fullName,
       },

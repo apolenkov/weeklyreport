@@ -15,42 +15,45 @@
  * failure is the SIGNAL 30-05 must fix.
  */
 
-import { test, expect } from '@playwright/test';
-import { loginAs } from './fixtures';
+import { test, expect } from "@playwright/test";
+import { loginAs } from "./fixtures";
 
 type PageEntry = {
   readonly path: string;
-  readonly auth: 'public' | 'lead' | 'head';
+  readonly auth: "public" | "lead" | "head";
 };
 
 const PAGES: ReadonlyArray<PageEntry> = [
   // Public surfaces — no DB / no session required.
-  { path: '/', auth: 'public' },
-  { path: '/auth/error', auth: 'public' },
+  { path: "/", auth: "public" },
+  { path: "/auth/error", auth: "public" },
   // Lead-authenticated GET pages (waitUntil: domcontentloaded — no form interaction).
-  { path: '/lead/report', auth: 'lead' },
-  { path: '/lead/history', auth: 'lead' },
+  { path: "/lead/report", auth: "lead" },
+  { path: "/lead/history", auth: "lead" },
   // Head-authenticated GET pages.
-  { path: '/head/dashboard', auth: 'head' },
-  { path: '/head/report', auth: 'head' },
-  { path: '/admin', auth: 'head' },
+  { path: "/head/dashboard", auth: "head" },
+  { path: "/head/report", auth: "head" },
+  { path: "/admin", auth: "head" },
 ];
 
-test.describe('Mobile — no horizontal scroll @MOB-01', () => {
+test.describe("Mobile — no horizontal scroll @MOB-01", () => {
   for (const entry of PAGES) {
-    test(`${entry.path} fits the viewport`, async ({ page, context }, testInfo) => {
+    test(`${entry.path} fits the viewport`, async ({
+      page,
+      context,
+    }, testInfo) => {
       // Skip on the desktop project — only mobile-ios / mobile-android run this.
-      expect(testInfo.project.name).not.toBe('chromium-integration');
+      expect(testInfo.project.name).not.toBe("chromium-integration");
 
-      if (entry.auth !== 'public') {
+      if (entry.auth !== "public") {
         await loginAs(context, { role: entry.auth });
       }
 
-      await page.goto(entry.path, { waitUntil: 'domcontentloaded' });
+      await page.goto(entry.path, { waitUntil: "domcontentloaded" });
 
       // 1. CSS-level: html overflow-x must NOT be 'scroll' / 'auto'.
-      await expect(page.locator('html')).toHaveCSS(
-        'overflow-x',
+      await expect(page.locator("html")).toHaveCSS(
+        "overflow-x",
         /(hidden|clip|visible)/,
       );
 

@@ -6,7 +6,7 @@
  * (no hooks, no `'use client'`).
  */
 
-import { Skeleton } from '@customreport/ui/components/ui/skeleton';
+import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
 type LeadHistorySkeletonProps = {
   readonly count?: number;

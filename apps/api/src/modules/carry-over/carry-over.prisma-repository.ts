@@ -1,44 +1,45 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   carryOverExecutionSchema,
   carryOverRecordSchema,
   type CarryOverExecution,
   type CarryOverRecord,
   type ReportSectionReadModel,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import type { CarryOverRepository, CarryOverResult } from './carry-over.service';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type {
+  CarryOverRepository,
+  CarryOverResult,
+} from "./carry-over.service";
 import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
-} from '../report-sections/report-sections.prisma-repository';
+} from "../report-sections/report-sections.prisma-repository";
 
 /**
  * Maps a Prisma CarryOverExecution row (+ records) to the domain CarryOverExecution shape.
  * Bridges Prisma model fields to Zod schema fields (REPO-09).
  */
-function mapPrismaToExecution(
-  row: {
+function mapPrismaToExecution(row: {
+  id: string;
+  sourceReportId: string;
+  targetReportId: string;
+  dedupeKey: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  records: Array<{
     id: string;
-    sourceReportId: string;
-    targetReportId: string;
-    dedupeKey: string;
-    status: string;
+    executionId: string;
+    sourceItemId: string | null;
+    sourceDecisionId: string | null;
+    targetItemId: string | null;
+    targetDecisionId: string | null;
+    recordType: string;
     createdAt: Date;
-    updatedAt: Date;
-    records: Array<{
-      id: string;
-      executionId: string;
-      sourceItemId: string | null;
-      sourceDecisionId: string | null;
-      targetItemId: string | null;
-      targetDecisionId: string | null;
-      recordType: string;
-      createdAt: Date;
-    }>;
-  },
-): { execution: CarryOverExecution; records: CarryOverRecord[] } {
+  }>;
+}): { execution: CarryOverExecution; records: CarryOverRecord[] } {
   const execution = carryOverExecutionSchema.parse({
     id: row.id,
     sourceReportId: row.sourceReportId,
@@ -47,12 +48,9 @@ function mapPrismaToExecution(
     status: row.status,
     startedAt: row.createdAt,
     completedAt: row.updatedAt,
-    carriedItemCount: row.records.filter(
-      (r) => r.recordType === 'item',
-    ).length,
-    carriedDecisionCount: row.records.filter(
-      (r) => r.recordType === 'decision',
-    ).length,
+    carriedItemCount: row.records.filter((r) => r.recordType === "item").length,
+    carriedDecisionCount: row.records.filter((r) => r.recordType === "decision")
+      .length,
   });
 
   const records = row.records.map((r) =>
@@ -64,7 +62,7 @@ function mapPrismaToExecution(
       targetItemId: r.targetItemId,
       sourceDecisionId: r.sourceDecisionId,
       targetDecisionId: r.targetDecisionId,
-      status: 'completed',
+      status: "completed",
       carriedAt: r.createdAt,
     }),
   );
@@ -76,7 +74,9 @@ function mapPrismaToExecution(
 export class CarryOverPrismaRepository implements CarryOverRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findExecutionByDedupeKey(dedupeKey: string): Promise<CarryOverExecution | null> {
+  async findExecutionByDedupeKey(
+    dedupeKey: string,
+  ): Promise<CarryOverExecution | null> {
     const row = await this.prisma.carryOverExecution.findUnique({
       where: { dedupeKey },
       include: { records: true },
@@ -90,7 +90,9 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
     return execution;
   }
 
-  async getSourceSections(sourceReportId: string): Promise<ReportSectionReadModel[]> {
+  async getSourceSections(
+    sourceReportId: string,
+  ): Promise<ReportSectionReadModel[]> {
     const rows = await this.prisma.reportSection.findMany({
       where: { reportId: sourceReportId },
       include: reportSectionFullInclude,
@@ -100,7 +102,9 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
     return rows.map((row) => mapPrismaToReportSection(row as any));
   }
 
-  async getTargetSections(targetReportId: string): Promise<ReportSectionReadModel[]> {
+  async getTargetSections(
+    targetReportId: string,
+  ): Promise<ReportSectionReadModel[]> {
     const rows = await this.prisma.reportSection.findMany({
       where: { reportId: targetReportId },
       include: reportSectionFullInclude,
@@ -146,7 +150,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
               sourceDecisionId: r.sourceDecisionId,
               targetItemId: r.targetItemId,
               targetDecisionId: r.targetDecisionId,
-              recordType: r.sourceItemId ? 'item' : 'decision',
+              recordType: r.sourceItemId ? "item" : "decision",
             })),
           });
         }
@@ -196,7 +200,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
               deadline: d.deadline ?? null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
-              stageName: d.stageIds?.join(', ') ?? null,
+              stageName: d.stageIds?.join(", ") ?? null,
               productId: d.productId as string,
             })),
           });

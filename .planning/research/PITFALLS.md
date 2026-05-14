@@ -39,11 +39,11 @@ These are not unique to one feature area. Anyone touching v6.0 must keep them in
 
 ### CC-3 — Type divergence is now compounding (P1)
 
-**What goes wrong:** Pitfall #4 from `STATE.md`: "Type divergence is semantic — on-track vs green, computed states (pending/planned) need mapper logic." v5.0 added a mapper layer with 27 unit tests. v6.0 features C (AI summary input) and D (analytics aggregations) want to consume *historical* data — but the mapper layer was designed for a single report's read/write path, not for cross-period aggregation. If the AI prompt or the chart aggregator imports raw Prisma types directly, the canonical-vs-presentation divergence reappears: `green` vs `on-track`, `null` (no data) vs `'empty'` (computed), etc.
+**What goes wrong:** Pitfall #4 from `STATE.md`: "Type divergence is semantic — on-track vs green, computed states (pending/planned) need mapper logic." v5.0 added a mapper layer with 27 unit tests. v6.0 features C (AI summary input) and D (analytics aggregations) want to consume _historical_ data — but the mapper layer was designed for a single report's read/write path, not for cross-period aggregation. If the AI prompt or the chart aggregator imports raw Prisma types directly, the canonical-vs-presentation divergence reappears: `green` vs `on-track`, `null` (no data) vs `'empty'` (computed), etc.
 
 **Detection signal:** New code in `apps/web/src/lib/analytics/*` or `apps/api/src/modules/ai/*` imports from `@prisma/client` or `@customreport/shared` directly without going through a mapper. ESLint can be taught to ban this — see Guard.
 
-**Prevention:** Phase D and Phase C plans must each include "extend `packages/shared/src/mappers/` with `toAnalyticsRow()` / `toAiSummaryInput()` mappers" as the *first* sub-task, before any feature code. Do not let chart code or prompt-builder code touch raw Prisma types.
+**Prevention:** Phase D and Phase C plans must each include "extend `packages/shared/src/mappers/` with `toAnalyticsRow()` / `toAiSummaryInput()` mappers" as the _first_ sub-task, before any feature code. Do not let chart code or prompt-builder code touch raw Prisma types.
 
 **Guard:** ESLint rule `no-restricted-imports` for `apps/web/src/lib/analytics/**` and `apps/api/src/modules/ai/**` blocking direct imports of `@prisma/client` types — must funnel through `packages/shared/src/mappers/`. Lint must fail in CI if violated.
 
@@ -55,7 +55,7 @@ These are not unique to one feature area. Anyone touching v6.0 must keep them in
 
 **Detection signal:** AI summary job IDs appear in `pdf-export` Bull Board panel. Or: PDF export count drops because email worker steals jobs (would only happen on naming collision).
 
-**Prevention:** Plan E and C each must add their queue name to a central `packages/shared/src/queue-names.ts` enum *first task*. All processors must import from there. Connection config extracted to `apps/api/src/infrastructure/bullmq/redis-connection.ts` and reused.
+**Prevention:** Plan E and C each must add their queue name to a central `packages/shared/src/queue-names.ts` enum _first task_. All processors must import from there. Connection config extracted to `apps/api/src/infrastructure/bullmq/redis-connection.ts` and reused.
 
 **Guard:** Static check — `grep -r "new Worker<" apps/api/src` returns ≤ 3 hits, all importing from `redis-connection.ts` and `queue-names.ts`. Add a `Bash` check in CI.
 
@@ -93,7 +93,7 @@ These are not unique to one feature area. Anyone touching v6.0 must keep them in
 
 **Detection signal:** A `viewer` user can call `weeklyReport.publish.mutate()` and it succeeds. Test: write a test that boots a session with role=viewer and expects UNAUTHORIZED on a head-only mutation.
 
-**Prevention:** A-plan must define `roleProcedure(...allowedRoles: Role[])` factory in `apps/api/src/infrastructure/trpc/role-procedure.ts`, and every existing `headProcedure` callsite is migrated to `roleProcedure('head', 'admin')`. Compile-time enforcement: existing `headProcedure` is *removed* from exports so old code can't call it.
+**Prevention:** A-plan must define `roleProcedure(...allowedRoles: Role[])` factory in `apps/api/src/infrastructure/trpc/role-procedure.ts`, and every existing `headProcedure` callsite is migrated to `roleProcedure('head', 'admin')`. Compile-time enforcement: existing `headProcedure` is _removed_ from exports so old code can't call it.
 
 **Guard:** Vitest contract suite — for every mutation in the router, exactly one allowed-role assertion test (e.g. `weeklyReport.publish` allows head/admin, denies lead/viewer with UNAUTHORIZED). Add a router-coverage test that lists all procedures and fails if any lacks role assertions.
 
@@ -101,11 +101,11 @@ These are not unique to one feature area. Anyone touching v6.0 must keep them in
 
 ### A-2 — Role missing from JWT payload → silent over-grant or over-block (P0)
 
-**What goes wrong:** Keycloak SAML attribute mappings are configured in Keycloak admin UI. If the role attribute name is `roles` but the @node-saml profile reads `role`, `req.user.role` is `undefined`. Then either: (a) `roleProcedure` throws and *every* user is blocked (over-block), or (b) someone defensively coded `if (!user.role || allowedRoles.includes(user.role))` and now `undefined` users are allowed (over-grant — silent privilege escalation).
+**What goes wrong:** Keycloak SAML attribute mappings are configured in Keycloak admin UI. If the role attribute name is `roles` but the @node-saml profile reads `role`, `req.user.role` is `undefined`. Then either: (a) `roleProcedure` throws and _every_ user is blocked (over-block), or (b) someone defensively coded `if (!user.role || allowedRoles.includes(user.role))` and now `undefined` users are allowed (over-grant — silent privilege escalation).
 
 **Detection signal:** Production log line `loggingMiddleware` shows `userId: 'xyz', role: undefined`. Or: a freshly-onboarded user can suddenly access admin tabs.
 
-**Prevention:** A-plan adds Zod schema `SamlProfileSchema` in `packages/shared/src/auth/saml.ts` with `role: z.enum(['lead', 'head', 'admin', 'viewer'])` (NOT optional, NOT default). The SAML strategy parses the profile through this schema and *rejects login* if role is missing or unrecognized. No fallback to a "default role".
+**Prevention:** A-plan adds Zod schema `SamlProfileSchema` in `packages/shared/src/auth/saml.ts` with `role: z.enum(['lead', 'head', 'admin', 'viewer'])` (NOT optional, NOT default). The SAML strategy parses the profile through this schema and _rejects login_ if role is missing or unrecognized. No fallback to a "default role".
 
 **Guard:** Integration test in Phase A: stub IdP returns SAML response without role attribute → login endpoint returns 500 with `SAML profile missing required role attribute`. Add a metric/alarm on this error.
 
@@ -115,7 +115,7 @@ These are not unique to one feature area. Anyone touching v6.0 must keep them in
 
 **What goes wrong:** Once CC-1 is wired, `page.context().addCookies([{name: 'session', value: token, domain: 'localhost', ...}])` works in dev but breaks in prod where the cookie domain is `customreport.internal` and `secure: true` is required. The PDF worker fetches from `PDF_BASE_URL`, which is `localhost:3000` in dev but `https://customreport.internal:3000` in prod. Mismatched cookie domain → cookie not sent → tRPC 401.
 
-**Detection signal:** PDF worker fetches `/reports/{id}/print` and the page renders the *login* page (or empty data because tRPC returned `null` from `auth.me`). The PDF generates but contains no report content.
+**Detection signal:** PDF worker fetches `/reports/{id}/print` and the page renders the _login_ page (or empty data because tRPC returned `null` from `auth.me`). The PDF generates but contains no report content.
 
 **Prevention:** A-plan adds `PdfExportService.buildAuthCookies(token, baseUrl)` that derives cookie domain/secure from `baseUrl` URL parsing. Unit-test with both dev and prod URL shapes.
 
@@ -143,7 +143,7 @@ These are not unique to one feature area. Anyone touching v6.0 must keep them in
 
 **Detection signal:** First fix touches the test file, not a shared component or proxy.ts. Second fix touches a different test file but applies a similar workaround.
 
-**Prevention:** B-plan task #1 is "Diagnose root cause of all 5 failures *before* writing any fix." Spend a plan budget on triage. Hypothesis: all 5 are autosave debounce (3 s) racing the test's submit-then-assert-saved loop. If hypothesis confirmed, single fix is a `waitForAutosave()` test-helper or extending the autosave indicator's "Saved" lifecycle.
+**Prevention:** B-plan task #1 is "Diagnose root cause of all 5 failures _before_ writing any fix." Spend a plan budget on triage. Hypothesis: all 5 are autosave debounce (3 s) racing the test's submit-then-assert-saved loop. If hypothesis confirmed, single fix is a `waitForAutosave()` test-helper or extending the autosave indicator's "Saved" lifecycle.
 
 **Guard:** After B is done, fixes touch ≤ 2 source files (one shared helper, one test config) — NOT 5 separate test files. If the diff has 5 separate test-file edits, the root cause was missed.
 
@@ -191,7 +191,7 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 **Detection signal:** Anthropic console shows requests/day count climbing linearly with team activity, not with new-report submissions. Bull Board shows `ai-summary` job count > daily-submission count.
 
-**Prevention:** C-plan creates `ai_summary` table with `(reportId, contentHash, summary, sentiment, generatedAt)` keyed on `contentHash = sha256(JSON.stringify(reportContent))`. Summary is generated *only* when `contentHash` changes, not when read. tRPC `ai.summarize.query` is `cacheable: true` and returns cached row; only `ai.summarize.mutate` (head-only, BullMQ-queued) recomputes.
+**Prevention:** C-plan creates `ai_summary` table with `(reportId, contentHash, summary, sentiment, generatedAt)` keyed on `contentHash = sha256(JSON.stringify(reportContent))`. Summary is generated _only_ when `contentHash` changes, not when read. tRPC `ai.summarize.query` is `cacheable: true` and returns cached row; only `ai.summarize.mutate` (head-only, BullMQ-queued) recomputes.
 
 **Guard:** Integration test: load a report's dashboard 10 times → Anthropic mock is called exactly 1 time (or 0 if cached). Assert `ai_summary.generatedAt` does not advance on read.
 
@@ -203,7 +203,7 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 **Detection signal:** LLM output contains digits that don't match `count(projectStatuses where status='green')`. Manual smoke would catch but can be tested too.
 
-**Prevention:** C-plan structures the prompt to pass *pre-computed numbers* in the system prompt: "There are 7 on-track, 1 at-risk, 0 blocked projects. Write a 2-paragraph narrative explaining the trends — DO NOT change these numbers." Use Anthropic's structured output or a Zod-parsed response shape: `{ narrative: string, riskTone: 'positive'|'neutral'|'negative' }` — narrative is free-text, but tone and numbers are not LLM-decided.
+**Prevention:** C-plan structures the prompt to pass _pre-computed numbers_ in the system prompt: "There are 7 on-track, 1 at-risk, 0 blocked projects. Write a 2-paragraph narrative explaining the trends — DO NOT change these numbers." Use Anthropic's structured output or a Zod-parsed response shape: `{ narrative: string, riskTone: 'positive'|'neutral'|'negative' }` — narrative is free-text, but tone and numbers are not LLM-decided.
 
 **Guard:** Vitest contract — fixture report with 7G/1Y/0R, run summarizer, assert output narrative contains "7" if it contains any green-count digit, OR contains no digits referring to status counts (regex). Run on 5 golden fixtures (see C-5).
 
@@ -227,7 +227,7 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 **Detection signal:** Lighthouse / dev-tools: long-task warnings on AI mutation. User-perceived: button shows spinner > 3 seconds.
 
-**Prevention:** C-plan mandates BullMQ queue `ai-summary` mirroring `pdf-export` shape: `request → returns jobId immediately → poll status → render when ready`. Reuse `ExportPdfButton` polling pattern. *Streaming* (Anthropic supports SSE) is a *progressive enhancement* on top — initial release ships polling.
+**Prevention:** C-plan mandates BullMQ queue `ai-summary` mirroring `pdf-export` shape: `request → returns jobId immediately → poll status → render when ready`. Reuse `ExportPdfButton` polling pattern. _Streaming_ (Anthropic supports SSE) is a _progressive enhancement_ on top — initial release ships polling.
 
 **Guard:** Network tab shows request → 200 in <500 ms with `{jobId}` body, then 2-second polling until completion. No request takes >1 s in the synchronous path.
 
@@ -265,7 +265,7 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 **Detection signal:** `pnpm --filter api test:perf:analytics` (or manual benchmark) shows `>500ms` for the analytics query. PostgreSQL `pg_stat_statements` shows the analytics query in top 5 by total time.
 
-**Prevention:** D-plan adds composite indexes on `(reportId, projectId)` for ProjectStatus, and a server-side aggregate procedure: `analytics.projectHistory.query({ projectId, from, to })` that does the rollup in SQL using `GROUP BY period_id`. Mapper layer (CC-3) handles the row-to-presentation translation. *No materialized view in MVP* — premature; just ensure indexes + server-side aggregation.
+**Prevention:** D-plan adds composite indexes on `(reportId, projectId)` for ProjectStatus, and a server-side aggregate procedure: `analytics.projectHistory.query({ projectId, from, to })` that does the rollup in SQL using `GROUP BY period_id`. Mapper layer (CC-3) handles the row-to-presentation translation. _No materialized view in MVP_ — premature; just ensure indexes + server-side aggregation.
 
 **Guard:** Vitest perf test: 2 years of seeded data (use a fixture loader), `analytics.projectHistory.query` returns in <200ms p95. Run in CI on an isolated postgres instance.
 
@@ -289,7 +289,7 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 **Detection signal:** `pnpm --filter web build` fails with "ReferenceError: window is not defined" or "document is not defined". Or: page renders blank chart on first paint, then chart appears after hydration.
 
-**Prevention:** D-plan picks chart lib *first* (recharts is current 2026 default for shadcn ecosystems — verify via shadcn-charts which uses recharts). Pin import: `import { LineChart } from 'recharts'` inside a `'use client'` component, NEVER from a server component. Provide a server-safe skeleton.
+**Prevention:** D-plan picks chart lib _first_ (recharts is current 2026 default for shadcn ecosystems — verify via shadcn-charts which uses recharts). Pin import: `import { LineChart } from 'recharts'` inside a `'use client'` component, NEVER from a server component. Provide a server-safe skeleton.
 
 **Guard:** Build smoke test: `pnpm --filter web build` succeeds. Production build serves chart page → first paint is skeleton, hydration → chart appears, no console error. Add to integration spec.
 
@@ -297,9 +297,9 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 ### D-4 — Missing-data semantics: zeros vs gaps mislead viewer (P1 correctness)
 
-**What goes wrong:** Lead Sergei skipped weeks 12 and 14 (sick). Naïve query LEFT JOINs and fills missing with 0. Chart shows traffic-light-count "0" for those weeks → looks like all projects went *neutral*, which is meaningless. Viewer infers "everything cleared up those weeks!" — wrong.
+**What goes wrong:** Lead Sergei skipped weeks 12 and 14 (sick). Naïve query LEFT JOINs and fills missing with 0. Chart shows traffic-light-count "0" for those weeks → looks like all projects went _neutral_, which is meaningless. Viewer infers "everything cleared up those weeks!" — wrong.
 
-**Detection signal:** Chart renders a flat-line of zeros for periods where ProjectStatus rows don't exist. Period dropdown shows the period but ProjectStatus.count(*) is 0.
+**Detection signal:** Chart renders a flat-line of zeros for periods where ProjectStatus rows don't exist. Period dropdown shows the period but ProjectStatus.count(\*) is 0.
 
 **Prevention:** D-plan: aggregator returns `{ period, value: number | null }`. Chart lib's `connectNulls={false}` and renders gaps. Add a "missing data" legend entry. Distinguish "0 risks reported" (zero data) from "lead didn't submit" (no data) at the SQL level — `LEFT JOIN report_section ON ... WHERE status='submitted'` so the absence is detectable.
 
@@ -339,7 +339,7 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 **Detection signal:** SMTP error code 421 / 451 / 4.7.0 in worker logs. Bull Board failed-job count rising during cron tick windows.
 
-**Prevention:** E-plan configures BullMQ limiter on `email-reminder` queue: `limiter: { max: 20, duration: 60000 }`. Rate is *below* SMTP quota by 30%. SMTP transport reuses connection (nodemailer pool) instead of opening per-message. Monitor SMTP timing.
+**Prevention:** E-plan configures BullMQ limiter on `email-reminder` queue: `limiter: { max: 20, duration: 60000 }`. Rate is _below_ SMTP quota by 30%. SMTP transport reuses connection (nodemailer pool) instead of opening per-message. Monitor SMTP timing.
 
 **Guard:** Load test: queue 100 reminders → all delivered without 4xx errors, total time ≥ 5 minutes due to throttle. Mock SMTP that rejects > 25/min — verify our limiter never hits this.
 
@@ -403,7 +403,7 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 **Detection signal:** v5.0 audit showed status: `tech_debt — runtime verification deferred per user`. That's the canonical example.
 
-**Prevention:** G-plan ties at least 3 checklist items to *machine* gates (CI checks, test commands), not human checkboxes. E.g. "Phase 26 integration suite green" must be `pnpm test:e2e:integration` exit 0, not a checkbox. "Audit gaps closed" must be `gsd:audit` showing 0 gaps_found, not a checkbox.
+**Prevention:** G-plan ties at least 3 checklist items to _machine_ gates (CI checks, test commands), not human checkboxes. E.g. "Phase 26 integration suite green" must be `pnpm test:e2e:integration` exit 0, not a checkbox. "Audit gaps closed" must be `gsd:audit` showing 0 gaps_found, not a checkbox.
 
 **Guard:** Tag-creation script `gsd:complete-milestone` refuses to tag if any machine-gated item is unconfirmed. Human-checked items are clearly marked `[manual]` to disambiguate from `[CI-gated]`.
 
@@ -411,40 +411,40 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 ## 8. Severity & Phase-Plan Map
 
-| ID | Severity | Theme | Plan task that addresses it |
-|----|----------|-------|------------------------------|
-| CC-1 | P0 | A (also C, E) | A-plan: cookie injection sub-task in same plan as AUTH_DEV_MODE removal |
-| CC-2 | P0 | A | A-plan: AUTH_DEV_MODE_ALLOW_TEST switch + staged migration |
-| CC-3 | P1 | C, D | C and D plans: extend mappers as first sub-task |
-| CC-4 | P1 | C, E | E-plan and C-plan: add queue name + connection extract first |
-| CC-5 | P1 | C, D | C-plan and D-plan: react-compiler smoke before adopting |
-| CC-6 | P0 | B | B-plan: explicit path for proxy.ts deletion |
-| A-1 | P0 | A | A-plan: `roleProcedure` factory replaces `headProcedure` |
-| A-2 | P0 | A | A-plan: `SamlProfileSchema` requires role |
-| A-3 | P1 | A | A-plan: `buildAuthCookies(token, baseUrl)` |
-| A-4 | P0 | A | A-plan: preserve auth.me publicProcedure semantics |
-| B-1 | P1 | B | B-plan: triage before fix |
-| B-2 | P1 | B | B-plan: postinstall in apps/api only, not root |
-| B-3 | P0 | B | B-plan: explicit `apps/web/src/proxy.ts` path |
-| B-4 | P2 | B | B-plan: derive mock from router types |
-| C-1 | P0 | C | C-plan: `ai_summary` cache table on contentHash |
-| C-2 | P0 | C | C-plan: pre-compute numbers in prompt |
-| C-3 | P0 | C | C-plan: redactForLogs + Anthropic data setting |
-| C-4 | P1 | C | C-plan: BullMQ `ai-summary` queue with polling |
-| C-5 | P1 | C | C-plan: `golden-set/` + `test:ai-eval` |
-| C-6 | P1 | C | C-plan: BullMQ limiter + Anthropic backoff |
-| D-1 | P0 | D | D-plan: server-side aggregate + indexes |
-| D-2 | P0 | D | D-plan: ISO date strings via mapper |
-| D-3 | P1 | D | D-plan: chart lib smoke against React Compiler |
-| D-4 | P1 | D | D-plan: null vs zero in aggregator |
-| E-1 | P0 | E | E-plan: read existing reminder code first; extend dedup key |
-| E-2 | P1 | E | E-plan: User.timezone + per-TZ slot |
-| E-3 | P1 | E | E-plan: BullMQ limiter < SMTP quota |
-| F-1 | P1 | F | F-plan: audit-first systematic fix |
-| F-2 | P1 | F | F-plan: `min-h-11 md:min-h-9` + axe |
-| F-3 | P2 | F | F-plan: download-only on mobile |
-| G-1 | P1 | G | G-plan: generated checklist |
-| G-2 | P1 | G | G-plan: machine-gated items |
+| ID   | Severity | Theme         | Plan task that addresses it                                             |
+| ---- | -------- | ------------- | ----------------------------------------------------------------------- |
+| CC-1 | P0       | A (also C, E) | A-plan: cookie injection sub-task in same plan as AUTH_DEV_MODE removal |
+| CC-2 | P0       | A             | A-plan: AUTH_DEV_MODE_ALLOW_TEST switch + staged migration              |
+| CC-3 | P1       | C, D          | C and D plans: extend mappers as first sub-task                         |
+| CC-4 | P1       | C, E          | E-plan and C-plan: add queue name + connection extract first            |
+| CC-5 | P1       | C, D          | C-plan and D-plan: react-compiler smoke before adopting                 |
+| CC-6 | P0       | B             | B-plan: explicit path for proxy.ts deletion                             |
+| A-1  | P0       | A             | A-plan: `roleProcedure` factory replaces `headProcedure`                |
+| A-2  | P0       | A             | A-plan: `SamlProfileSchema` requires role                               |
+| A-3  | P1       | A             | A-plan: `buildAuthCookies(token, baseUrl)`                              |
+| A-4  | P0       | A             | A-plan: preserve auth.me publicProcedure semantics                      |
+| B-1  | P1       | B             | B-plan: triage before fix                                               |
+| B-2  | P1       | B             | B-plan: postinstall in apps/api only, not root                          |
+| B-3  | P0       | B             | B-plan: explicit `apps/web/src/proxy.ts` path                           |
+| B-4  | P2       | B             | B-plan: derive mock from router types                                   |
+| C-1  | P0       | C             | C-plan: `ai_summary` cache table on contentHash                         |
+| C-2  | P0       | C             | C-plan: pre-compute numbers in prompt                                   |
+| C-3  | P0       | C             | C-plan: redactForLogs + Anthropic data setting                          |
+| C-4  | P1       | C             | C-plan: BullMQ `ai-summary` queue with polling                          |
+| C-5  | P1       | C             | C-plan: `golden-set/` + `test:ai-eval`                                  |
+| C-6  | P1       | C             | C-plan: BullMQ limiter + Anthropic backoff                              |
+| D-1  | P0       | D             | D-plan: server-side aggregate + indexes                                 |
+| D-2  | P0       | D             | D-plan: ISO date strings via mapper                                     |
+| D-3  | P1       | D             | D-plan: chart lib smoke against React Compiler                          |
+| D-4  | P1       | D             | D-plan: null vs zero in aggregator                                      |
+| E-1  | P0       | E             | E-plan: read existing reminder code first; extend dedup key             |
+| E-2  | P1       | E             | E-plan: User.timezone + per-TZ slot                                     |
+| E-3  | P1       | E             | E-plan: BullMQ limiter < SMTP quota                                     |
+| F-1  | P1       | F             | F-plan: audit-first systematic fix                                      |
+| F-2  | P1       | F             | F-plan: `min-h-11 md:min-h-9` + axe                                     |
+| F-3  | P2       | F             | F-plan: download-only on mobile                                         |
+| G-1  | P1       | G             | G-plan: generated checklist                                             |
+| G-2  | P1       | G             | G-plan: machine-gated items                                             |
 
 **P0 count:** 11 (5 cross-cutting, 4 A-specific, 1 B, 3 C, 2 D, 1 E)
 **P1 count:** 17
@@ -466,15 +466,15 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 **Confidence levels:**
 
-| Area | Level | Reason |
-|------|-------|--------|
-| CC-1, CC-2, CC-6, A-1..4 | HIGH | Direct quotes from audit + grep-confirmed file states |
-| B-1..4 | HIGH | Audit lists exact failure modes; codebase grep confirms file paths |
-| C-1..6 | MEDIUM | Anthropic API behaviour from training data + 2026 best practices; BullMQ pattern verified against existing pdf-export processor |
-| D-1..4 | MEDIUM | PostgreSQL/Prisma performance characteristics standard; chart lib SSR is well-known Next.js issue |
-| E-1..3 | MEDIUM | "Email reminders shipped v1.0-v2.0" per PROJECT.md — exact existing dedup key shape needs to be read in plan-time, not research-time |
-| F-1..3 | MEDIUM-HIGH | a11y/touch-target standards are stable; mobile audit pattern is mainstream |
-| G-1..2 | HIGH | v5.0 itself shipped with `tech_debt` status — direct evidence of G-2 happening |
+| Area                     | Level       | Reason                                                                                                                               |
+| ------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| CC-1, CC-2, CC-6, A-1..4 | HIGH        | Direct quotes from audit + grep-confirmed file states                                                                                |
+| B-1..4                   | HIGH        | Audit lists exact failure modes; codebase grep confirms file paths                                                                   |
+| C-1..6                   | MEDIUM      | Anthropic API behaviour from training data + 2026 best practices; BullMQ pattern verified against existing pdf-export processor      |
+| D-1..4                   | MEDIUM      | PostgreSQL/Prisma performance characteristics standard; chart lib SSR is well-known Next.js issue                                    |
+| E-1..3                   | MEDIUM      | "Email reminders shipped v1.0-v2.0" per PROJECT.md — exact existing dedup key shape needs to be read in plan-time, not research-time |
+| F-1..3                   | MEDIUM-HIGH | a11y/touch-target standards are stable; mobile audit pattern is mainstream                                                           |
+| G-1..2                   | HIGH        | v5.0 itself shipped with `tech_debt` status — direct evidence of G-2 happening                                                       |
 
 **Gaps to address in plan-time, not research-time:**
 

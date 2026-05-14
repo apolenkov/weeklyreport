@@ -5,9 +5,12 @@ import {
   type ArchiveReportSummary,
   type PaginatedResult,
   type Role,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { type ArchiveScopeSession, type ArchiveService } from './archive.service';
+import {
+  type ArchiveScopeSession,
+  type ArchiveService,
+} from "./archive.service";
 
 export type ArchiveListContext = {
   archiveService: ArchiveService;
@@ -23,7 +26,9 @@ export type ArchiveDetailContext = {
 };
 
 export const archiveRouter = {
-  async listArchiveReports(ctx: ArchiveListContext): Promise<PaginatedResult<ArchiveReportSummary>> {
+  async listArchiveReports(
+    ctx: ArchiveListContext,
+  ): Promise<PaginatedResult<ArchiveReportSummary>> {
     const result = await ctx.archiveService.listArchiveReports(
       undefined,
       ctx.role,
@@ -35,9 +40,15 @@ export const archiveRouter = {
       nextCursor: result.nextCursor,
     };
   },
-  async getArchiveReport(ctx: ArchiveDetailContext): Promise<ArchiveReportDetail> {
+  async getArchiveReport(
+    ctx: ArchiveDetailContext,
+  ): Promise<ArchiveReportDetail> {
     return archiveReportDetailSchema.parse(
-      await ctx.archiveService.getArchiveReport(ctx.reportId, ctx.role, ctx.session),
+      await ctx.archiveService.getArchiveReport(
+        ctx.reportId,
+        ctx.role,
+        ctx.session,
+      ),
     );
   },
 };

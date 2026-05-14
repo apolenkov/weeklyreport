@@ -16,7 +16,7 @@ Each item ID (e.g. `AUTH-LOGIN-001`) has a 1:1 row in `.planning/REGRESSION-TEST
 
 - [ ] AUTH-LOGIN-001 [manual] — Login as lead via Keycloak (Phase 29 active gate)
 - [ ] AUTH-LOGIN-002 [manual] — Login as head; head-only routes accessible
-- [ ] AUTH-VIEWER-001 [manual] — Viewer cannot access /admin or /head/* (proxy.ts + SSR layout)
+- [ ] AUTH-VIEWER-001 [manual] — Viewer cannot access /admin or /head/\* (proxy.ts + SSR layout)
 - [ ] AUTH-FILTERS-001 [CI] — Service-layer role filter unit tests: `pnpm --filter @customreport/api test apps/api/src/modules/archive apps/api/src/modules/weekly-report`
 - [ ] AUTH-DEFAULT-DENY-001 [CI] — Default-deny coverage gate: `pnpm --filter @customreport/api test apps/api/src/infrastructure/trpc/__tests__/role-coverage.test.ts`
 
@@ -51,7 +51,7 @@ Each item ID (e.g. `AUTH-LOGIN-001`) has a 1:1 row in `.planning/REGRESSION-TEST
 
 ## Signoff
 
-- Milestone: ____
-- Date: ____
-- Released by: ____
-- Sign-off: ____
+- Milestone: \_\_\_\_
+- Date: \_\_\_\_
+- Released by: \_\_\_\_
+- Sign-off: \_\_\_\_

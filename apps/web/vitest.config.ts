@@ -1,33 +1,33 @@
-import { createRequire } from 'module';
-import path from 'path';
-import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vitest/config';
+import { createRequire } from "module";
+import path from "path";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vitest/config";
 
 const require = createRequire(
-  path.resolve(__dirname, '../../packages/shared/package.json'),
+  path.resolve(__dirname, "../../packages/shared/package.json"),
 );
 
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts'],
+    environment: "jsdom",
+    setupFiles: ["./vitest.setup.ts"],
     globals: false,
-    exclude: ['e2e/**', 'node_modules/**'],
+    exclude: ["e2e/**", "node_modules/**"],
     // 34-02: coverage floors. Web has more UI code than tests can drive
     // without a full E2E layer, so the bar is lower than api. Threshold
     // raised over time as Phase 35 plans add component-level tests.
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'lcov', 'html'],
-      reportsDirectory: './coverage',
-      include: ['src/**/*.{ts,tsx}'],
+      provider: "v8",
+      reporter: ["text", "lcov", "html"],
+      reportsDirectory: "./coverage",
+      include: ["src/**/*.{ts,tsx}"],
       exclude: [
-        'src/**/*.test.{ts,tsx}',
-        'src/**/__tests__/**',
-        'src/**/types.ts',
-        'src/app/**/layout.tsx',
-        'src/app/**/page.tsx', // RSC pages exercised via E2E, not unit
+        "src/**/*.test.{ts,tsx}",
+        "src/**/__tests__/**",
+        "src/**/types.ts",
+        "src/app/**/layout.tsx",
+        "src/app/**/page.tsx", // RSC pages exercised via E2E, not unit
       ],
       thresholds: {
         statements: 70,
@@ -39,15 +39,15 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@customreport/shared': path.resolve(
+      "@customreport/shared": path.resolve(
         __dirname,
-        '../../packages/shared/src',
+        "../../packages/shared/src",
       ),
-      '@customreport/api': path.resolve(__dirname, '../../apps/api/src'),
-      zod: path.dirname(require.resolve('zod/package.json')),
+      "@customreport/api": path.resolve(__dirname, "../../apps/api/src"),
+      zod: path.dirname(require.resolve("zod/package.json")),
       // Replace the `server-only` guard with an empty stub so RSC helper
       // modules can be imported in jsdom tests without throwing.
-      'server-only': path.resolve(__dirname, 'src/test/server-only-mock.ts'),
+      "server-only": path.resolve(__dirname, "src/test/server-only-mock.ts"),
     },
   },
 });

@@ -15,10 +15,10 @@ Idempotent no-op as anticipated by plan. Both QA-04 targets were already in thei
 
 ## Targets Verified
 
-| Target | State | Action |
-|---|---|---|
-| `apps/api/src/modules/period/period.contract.test.ts:65` | `async publishPeriod(id: string, _userId: string)` — underscore-prefix already applied | None |
-| `.planning/phases/22-interactivity-status-risk-sync/22-VERIFICATION.md` frontmatter | `status: passed` (closed by `69f6527`) | None |
+| Target                                                                              | State                                                                                  | Action |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------ |
+| `apps/api/src/modules/period/period.contract.test.ts:65`                            | `async publishPeriod(id: string, _userId: string)` — underscore-prefix already applied | None   |
+| `.planning/phases/22-interactivity-status-risk-sync/22-VERIFICATION.md` frontmatter | `status: passed` (closed by `69f6527`)                                                 | None   |
 
 ## Verification
 

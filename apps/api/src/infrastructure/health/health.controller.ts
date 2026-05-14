@@ -1,10 +1,14 @@
-import { Controller, Get } from '@nestjs/common';
-import { HealthCheck, HealthCheckService, MemoryHealthIndicator } from '@nestjs/terminus';
-import { PrismaHealthIndicator } from './prisma.health.js';
-import { RedisHealthIndicator } from './redis.health.js';
-import { BullMQHealthIndicator } from './bullmq.health.js';
+import { Controller, Get } from "@nestjs/common";
+import {
+  HealthCheck,
+  HealthCheckService,
+  MemoryHealthIndicator,
+} from "@nestjs/terminus";
+import { PrismaHealthIndicator } from "./prisma.health.js";
+import { RedisHealthIndicator } from "./redis.health.js";
+import { BullMQHealthIndicator } from "./bullmq.health.js";
 
-@Controller('health')
+@Controller("health")
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
@@ -14,22 +18,22 @@ export class HealthController {
     private readonly bullmqHealth: BullMQHealthIndicator,
   ) {}
 
-  @Get('live')
+  @Get("live")
   @HealthCheck()
   liveness() {
     return this.health.check([
-      () => this.memory.checkHeap('memory_heap', 200 * 1024 * 1024),
+      () => this.memory.checkHeap("memory_heap", 200 * 1024 * 1024),
     ]);
   }
 
-  @Get('ready')
+  @Get("ready")
   @HealthCheck()
   readiness() {
     return this.health.check([
-      () => this.prismaHealth.isHealthy('database'),
-      () => this.redisHealth.isHealthy('redis'),
-      () => this.bullmqHealth.isHealthy('bullmq'),
-      () => this.memory.checkHeap('memory_heap', 200 * 1024 * 1024),
+      () => this.prismaHealth.isHealthy("database"),
+      () => this.redisHealth.isHealthy("redis"),
+      () => this.bullmqHealth.isHealthy("bullmq"),
+      () => this.memory.checkHeap("memory_heap", 200 * 1024 * 1024),
     ]);
   }
 }

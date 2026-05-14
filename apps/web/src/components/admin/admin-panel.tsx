@@ -117,32 +117,36 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
                 (admin.listPeriodsByState) so it pulls richer rows than
                 the shared admin snapshot can carry — no props needed. */}
             {activeTab === "periods" && <PeriodsTab />}
-            {activeTab === "reminders" && (() => {
-              // UFB-036 (Phase 44-04): group rules by their owning policy
-              // for the read-only expander on each policy row. Rules whose
-              // `policyId` is `null` (legacy, pre-44-01) are skipped — the
-              // policy editor has no row to attach them to.
-              const derivedRulesByPolicyId: Record<string, typeof data.reminders> = {};
-              for (const rule of data.reminders) {
-                if (rule.policyId === null) continue;
-                const bucket = derivedRulesByPolicyId[rule.policyId] ?? [];
-                bucket.push(rule);
-                derivedRulesByPolicyId[rule.policyId] = bucket;
-              }
-              return (
-                <RemindersTab
-                  policies={data.policies}
-                  derivedRulesByPolicyId={derivedRulesByPolicyId}
-                  periods={data.periods}
-                  // UFB-048 (Phase 48-B): seed the «New Policy» form with
-                  // org-wide defaults from AppSettings. Falls back to
-                  // hardcoded Europe/Moscow + lead-with-draft when settings
-                  // haven't loaded yet (handled inside emptyPolicyForm).
-                  defaultTimezone={settings?.defaultTimezone}
-                  defaultAudience={settings?.defaultReminderAudience}
-                />
-              );
-            })()}
+            {activeTab === "reminders" &&
+              (() => {
+                // UFB-036 (Phase 44-04): group rules by their owning policy
+                // for the read-only expander on each policy row. Rules whose
+                // `policyId` is `null` (legacy, pre-44-01) are skipped — the
+                // policy editor has no row to attach them to.
+                const derivedRulesByPolicyId: Record<
+                  string,
+                  typeof data.reminders
+                > = {};
+                for (const rule of data.reminders) {
+                  if (rule.policyId === null) continue;
+                  const bucket = derivedRulesByPolicyId[rule.policyId] ?? [];
+                  bucket.push(rule);
+                  derivedRulesByPolicyId[rule.policyId] = bucket;
+                }
+                return (
+                  <RemindersTab
+                    policies={data.policies}
+                    derivedRulesByPolicyId={derivedRulesByPolicyId}
+                    periods={data.periods}
+                    // UFB-048 (Phase 48-B): seed the «New Policy» form with
+                    // org-wide defaults from AppSettings. Falls back to
+                    // hardcoded Europe/Moscow + lead-with-draft when settings
+                    // haven't loaded yet (handled inside emptyPolicyForm).
+                    defaultTimezone={settings?.defaultTimezone}
+                    defaultAudience={settings?.defaultReminderAudience}
+                  />
+                );
+              })()}
             {!["users", "groups", "products", "periods", "reminders"].includes(
               activeTab,
             ) && <UsersTab users={data.users} groups={data.groups} />}

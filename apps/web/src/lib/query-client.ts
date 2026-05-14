@@ -1,5 +1,9 @@
-import { QueryClient, defaultShouldDehydrateQuery } from '@tanstack/react-query';
-import superjson from 'superjson';
+import {
+  QueryClient,
+  defaultShouldDehydrateQuery,
+  keepPreviousData,
+} from "@tanstack/react-query";
+import superjson from "superjson";
 
 export function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -7,11 +11,15 @@ export function makeQueryClient(): QueryClient {
       queries: {
         staleTime: 30 * 1000,
         refetchOnWindowFocus: true,
+        // A20: prevent blank flash during refetch (autosave → invalidate cycle).
+        // Shows previous data while new data loads instead of unmounting UI.
+        placeholderData: keepPreviousData,
       },
       dehydrate: {
         serializeData: superjson.serialize,
         shouldDehydrateQuery: (query) =>
-          defaultShouldDehydrateQuery(query) || query.state.status === 'pending',
+          defaultShouldDehydrateQuery(query) ||
+          query.state.status === "pending",
       },
       hydrate: {
         deserializeData: superjson.deserialize,

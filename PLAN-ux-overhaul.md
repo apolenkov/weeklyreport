@@ -30,6 +30,7 @@
 ### Erase = delete
 
 Когда пользователь стирает `text` в priority/decision/item:
+
 - Локальное state сохраняет row с пустым `text`.
 - `sectionToDraftPayload` НЕ дропает, а превращает в payload `delete`-intent: row помечается `_intent: 'delete'` либо id остаётся, text='' и тогда сервер должен удалить.
 - Поскольку server.saveDraft делает `deleteMany` + `createMany`, проще всего на клиенте просто исключить пустую row из массива `next` (то есть удалить её из локального state), а UI нарисует placeholder/empty-state.
@@ -42,12 +43,14 @@
 **Файл:** `apps/web/tests/e2e/lead-form-crud.spec.ts`
 
 **Pre-conditions (beforeEach):**
+
 - Reset DB через `pnpm db:seed:simple`
 - `await page.goto('/auth/dev-login?role=lead&email=polenkov@customreport.local&redirect=/lead/report')`
 
 **Сценарии (каждый — отдельный `test()`):**
 
 ### S1. Items — current week
+
 1. **S1.1 Add** — нет items в seed (пред-условие: удалить все 3 через UI), клик `+ Add` → диалог открывается → text="X" tag=feature workflow=in_progress → Save → reload → row виден, `Current Week 1 items`.
 2. **S1.2 Edit** — клик карандаш на существующем → диалог содержит все поля → меняю text → Save → reload → новый text.
 3. **S1.3 Delete** — корзина → confirm → reload → нет row.
@@ -55,9 +58,11 @@
 5. **S1.5 Empty + Add** — после удаления всех items, секция показывает заглушку «No current-week items yet» + большая кнопка `+ Add`.
 
 ### S2. Items — next week
+
 Зеркало S1 для next week.
 
 ### S3. Risks
+
 1. **S3.1 Add** — `+ Add Risk` → диалог: risk + impact + mitigation + projectId(select) + severity(at-risk/blocked) → Save → reload → row.
 2. **S3.2 Edit** — клик на row → диалог со всеми 5 полями.
 3. **S3.3 Delete** — корзина → reload.
@@ -66,6 +71,7 @@
 6. **S3.6 Stage sync** — добавляю risk на stage X → подтверждение → SDLC chip stage X = at-risk. Удаляю risk → chip = on-track.
 
 ### S4. Decisions
+
 1. **S4.1 Add** — `+ Add Decision` → диалог: text + owner + impact + deadline(date picker) → Save → reload.
 2. **S4.2 Edit** — карандаш → все 4 поля.
 3. **S4.3 Delete** — корзина → reload.
@@ -74,26 +80,32 @@
 6. **S4.6 Deadline** — выбираю дату 7 дней вперёд → reload → отображается human-friendly «in 7 days».
 
 ### S5. Priorities
+
 1. **S5.1 Edit slot 2** — клик на placeholder slot 2 → диалог: text + rank(disabled, =2) → Save → reload → slot 2 заполнен.
 2. **S5.2 Erase slot 2** — Edit slot 2 → text="" → Save → диалог удаляет (или validation), reload → slot 2 снова placeholder, badge `1/3`.
 3. **S5.3 Все 3 заполнены** — badge `3/3`.
 
 ### S6. Stage chip popover
+
 1. **S6.1 Не клипается** — клик `Dev (mine)` chip → popover виден целиком, 4 опции (`On Track`, `At Risk`, `Blocked`, `Clear`) полностью в viewport.
 2. **S6.2 Status update** — выбираю `On Track` → chip обновляется, traffic-light зелёный.
 
 ### S7. Fill from Previous
+
 1. **S7.1 Confirm** — клик `Fill from Previous` → диалог `Fill from Week 15?` → `Replace & Fill` → reload → data из Week 15.
 2. **S7.2 Cancel** — `Cancel` → данные не изменились.
 
 ### S8. Submit
+
 1. **S8.1 Confirm** — клик `Submit Report` → modal с stats → `Submit Report` button → reload → форма read-only.
 2. **S8.2 Cancel** — `Cancel` → форма editable.
 
 ### S9. Restore version
+
 1. **S9.1 Restore v1** — версии `v1` и `v2` в seed → выбираю v1 → confirm → reload → data из v1.
 
 ### S10. Permissions
+
 1. **S10.1 Past period read-only** — переключаю на Week 15 → form readonly, кнопок нет.
 2. **S10.2 Submitted lock** — после S8.1 — все CRUD-кнопки скрыты.
 
@@ -104,11 +116,17 @@
 ## Фаза 2 — Empty-state + Add buttons
 
 **Файлы:**
+
 - `current-week-section.tsx` — после `{[...grouped.entries()].map(...)}` добавить fallback:
   ```tsx
-  {grouped.size === 0 && !readOnly && (
-    <EmptyState onAdd={() => handleAdd(seedFromProducts())} disabled={!products.length} />
-  )}
+  {
+    grouped.size === 0 && !readOnly && (
+      <EmptyState
+        onAdd={() => handleAdd(seedFromProducts())}
+        disabled={!products.length}
+      />
+    );
+  }
   ```
   где `seedFromProducts()` = первый product из props.
 - `next-week-section.tsx` — то же.
@@ -127,10 +145,13 @@
 **Файл:** `apps/web/src/components/lead/lead-form.tsx`
 
 ### handleCurrentWeekItemsChange / handleNextWeekItemsChange
+
 Already correct: filter `!== id` removes row from local state. Server `saveDraft` deleteMany+createMany гарантирует синхронность. Empty `text` row сейчас попадает в state с text='' и потом дропается фильтром в payload — фикс: при text='' автоматически удалять row из state. **Менять не нужно** — UI всё равно открывает диалог для нового row, и пользователь жмёт «Cancel» → row не вставляется.
 
 ### handlePrioritiesChange
+
 Сейчас:
+
 ```ts
 const presentRanks = new Set(merged.map((p) => p.rank));
 const preserved = prev.priorities.filter((p) => !presentRanks.has(p.rank));
@@ -140,6 +161,7 @@ const all = [...preserved, ...merged].sort(...);
 `priorities-section` всегда отправляет `next` со всеми 3 ranks, так что preserved = []. Но: если пользователь стирает text в slot 2, `handleTextChange` отправляет `[{rank:1,text:'A'}, {rank:2,text:''}, {rank:3,text:'C'}]` → merged содержит rank 2 с text='' → в state остаётся. `sectionToDraftPayload.filter(hasText)` дропает rank 2 → server deleteMany+createMany сохраняет только 1 и 3 → reload приходит без rank 2 → UI рендерит placeholder. ✅ должно работать. Если не работает — bug в другом месте, найти через console.log в handleTextChange + проверка autosave payload в Network tab.
 
 ### handleRisksChange / handleDecisionsChange
+
 Аналогично — фильтр в payload корректен, server delete-and-recreate. Менять не нужно.
 
 **Что менять:** диалог-режим эту проблему решает архитектурно. В диалоге Save кнопка disabled пока поля не валидны. Пустой текст — `Save` → `Delete row instead?` confirmation.
@@ -149,6 +171,7 @@ const all = [...preserved, ...merged].sort(...);
 ## Фаза 4 — Modal editing everywhere
 
 ### Общая инфраструктура
+
 **Файл:** `apps/web/src/components/lead/edit-dialogs/` — новая директория.
 
 **Базовый компонент:** `apps/web/src/components/lead/edit-dialogs/base-dialog.tsx` — `<Dialog>` shell с `Save`/`Cancel`/`Delete`-в-edit-режиме кнопками, validation banner.
@@ -156,7 +179,9 @@ const all = [...preserved, ...merged].sort(...);
 **Hook:** `useEditDialog<T>()` — возвращает `{open, openFor(initial), close, draft, setDraft, errors}`.
 
 ### ItemEditDialog
+
 **Поля:**
+
 - `text` — `<Textarea>` required
 - `tag` — `<Select>`: `feature` / `bugfix` / `infra` / `ops` / `general`. Default `general`.
 - `workflowStatus` — `<RadioGroup>`: `in_progress` / `done` / `blocked`. Default `in_progress`. Visible только для current-week items.
@@ -164,7 +189,9 @@ const all = [...preserved, ...merged].sort(...);
 - `carriedOver` — `<Checkbox>`. Default false.
 
 ### RiskEditDialog
+
 **Поля:**
+
 - `risk` — `<Textarea>` required, max 500
 - `impact` — `<Textarea>` required, max 500
 - `mitigation` — `<Textarea>` required, max 500
@@ -172,32 +199,40 @@ const all = [...preserved, ...merged].sort(...);
 - `severity` — `<RadioGroup>` `at-risk` / `blocked`
 
 ### DecisionEditDialog
+
 **Поля:**
+
 - `text` — `<Textarea>` required
 - `owner` — `<Input>` required
 - `impact` — `<Textarea>` required
 - `deadline` — `<DatePicker>` optional (shadcn calendar)
 
 ### PriorityEditDialog
+
 **Поля:**
+
 - `text` — `<Textarea>` required
 - `rank` — disabled `<Input>` showing slot number
 
 ### Триггеры
+
 - `+ Add` button → `openFor(emptyDefault)`.
 - Pencil icon на row → `openFor(row)`.
 - Inline-edit на ItemCard сохранять как fast path для опытных пользователей.
 
 ### Save flow
+
 1. `Save` → validate (Zod schema локально).
 2. Если valid → `onChange(merged array with new/updated row)`.
 3. Close dialog.
 4. Autosave debounce 3s срабатывает.
 
 ### Delete flow в режиме edit
+
 - Кнопка `Delete` (красная) → confirm → `onChange(filter !== id)` → close.
 
 ### Удаление inline-Edit textarea
+
 Inline-edit textarea в ItemCard (Phase 21) удалить — теперь pencil → диалог. Опция оставить через `?fastEdit=true` query — отложить.
 
 ---
@@ -213,6 +248,7 @@ Inline-edit textarea в ItemCard (Phase 21) удалить — теперь penc
 ## Файлы
 
 ### Новые
+
 - `apps/web/src/components/lead/edit-dialogs/base-dialog.tsx`
 - `apps/web/src/components/lead/edit-dialogs/item-edit-dialog.tsx`
 - `apps/web/src/components/lead/edit-dialogs/risk-edit-dialog.tsx`
@@ -224,6 +260,7 @@ Inline-edit textarea в ItemCard (Phase 21) удалить — теперь penc
 - `apps/web/tests/e2e/helpers/lead-form.ts`
 
 ### Меняем
+
 - `apps/web/src/components/lead/lead-form.tsx` — убрать "TBD" hacks, диалоги становятся источником значений всех полей.
 - `apps/web/src/components/lead/current-week-section.tsx` — empty-state + dialog wiring.
 - `apps/web/src/components/lead/next-week-section.tsx` — то же.
@@ -252,30 +289,31 @@ Inline-edit textarea в ItemCard (Phase 21) удалить — теперь penc
 
 ## Карта макетов (mockups/cutom_report_maket_mockup-v17-v14.html) vs текущая реализация
 
-| # | Что в макете | Файл/линия | Текущее состояние | Дельта |
-|---|---|---|---|---|
-| M1 | **Add/Edit Item Modal** — header с продуктом, поля: Description (input), Status chip-row (`✓ Completed` / `! In Progress` / `✕ Blocked` / `○ Planned`), Assignee select, Cancel/Save | mockup:900-909 | inline-edit textarea в ItemCard (только text) | СОЗДАТЬ диалог. Поле `Status` соответствует `workflowStatus`. `Assignee` пока не в schema — отложить либо добавить как metadata |
-| M2 | **SDLC Stage Popover (Save-only)** — header с названием стадии и продукта, Assignee select, Status chip-row (`✓ On Track` / `! At Risk` / `✕ Blocked`), **отдельная Save-кнопка** (не auto-apply на клике) | mockup:911-920 | сейчас выбор статуса = клик по опции в dropdown → apply мгновенно (через portal — починено) | МЕНЯТЬ: popover показывает форму с Save/Cancel, без auto-apply. Добавить `Assignee` select |
-| M3 | **Submit Report Confirmation** — stats line ("6 products · 11 items · 1 risk · 2 decisions") + Cancel/Submit | mockup:922-927 | реализовано в `<SubmitConfirmDialog>` ✓ | ПРОВЕРИТЬ соответствие |
-| M4 | **Publish & Lock Report** — stats banner + warning "⚠ N leads не submitted: имена" + Cancel/Publish | mockup:929-935 | head/report имеет Publish & Lock — есть ли warning? | СВЕРИТЬ |
-| M5 | **Reopen Report (Head/Admin)** — stats banner + Cancel/Reopen | mockup:937-942 | возможно отсутствует | ДОБАВИТЬ если нет |
-| M6 | **Request Reopen (Lead)** — read-only banner + кнопка "Request Reopen" | mockup:944-949 | нет | ДОБАВИТЬ |
-| M7 | **Past Period Banner (Read-Only)** — clock-icon + "Viewing past period · Week 15" + дата + бейдж Read-Only | mockup:951-954 | у нас есть простой banner | ОБНОВИТЬ дизайн |
-| M8 | **Fill From Dialog (with search)** — search input + radio-list прошлых reports со stats + Cancel/Fill | mockup:956-967 | есть простой dialog без search и radio | ПЕРЕДЕЛАТЬ под search+radio |
-| M9 | **Copy Warning (overwrite)** — Yellow alert + stats existing data + "Replace will overwrite" + Cancel/Replace & Fill | mockup:969-978 | у нас сразу один диалог совмещает Fill + warning | РАЗДЕЛИТЬ |
-| M10 | **Revoke Submission** — avatar+lead info + Cancel/Revoke | mockup:980-985 | нет (head нужно revoke) | ДОБАВИТЬ |
-| M11 | **Version History (rollback)** — список версий с Active highlight, Restore-кнопка, **diff preview** между версиями (`+ added`, `~ edited`, `− removed`) + warning "discard newer" | mockup:987-1007 | у нас простой dropdown с Restore | ДОБАВИТЬ diff preview, расширить дизайн |
-| M12 | **Send Reminder** — список лидов которые не сдали, Cancel/Send Email | mockup:1009-1017 | возможно есть | СВЕРИТЬ |
-| M13 | **Add/Edit User (Admin)** — Full Name + Email + Role select + Department + Assigned Products chips + Cancel/Save | mockup:1019-1036 | у нас Add User кнопка работает, но диалог не сверял | СВЕРИТЬ |
-| M14 | **Add/Edit Product (Admin)** — Name + Status (Active/Archived) + SDLC Stages list (per stage assignee select + delete + Add Stage) | mockup:1038-1057 | возможно частично есть | СВЕРИТЬ |
-| M15 | **Add Period (Admin)** — Start/End дата + Deadline datetime + Week Label | mockup:1059-1071 | возможно есть | СВЕРИТЬ |
-| M16 | **Reminder Settings (Admin)** — toggles: auto-reminder on deadline / 24h before / weekly summary | mockup:1073-1082 | возможно частично | СВЕРИТЬ |
-| M17 | **Locked Form** banner | mockup:895 | есть submitted-banner | СВЕРИТЬ дизайн |
-| M18 | **Notifications** (toast variants — success/error/warning) | mockup:896 | toast есть, варианты не сверял | СВЕРИТЬ |
-| M19 | **Validation Error** (input border red + error message) | mockup:897 | shadcn form support, но в формах? | ДОБАВИТЬ inline validation в диалоги |
-| M20 | **Delete Confirmation** — header + body preview ("Интеграция OAuth2") + Cancel/Delete | mockup:898 | у нас Delete срабатывает мгновенно без confirmation | ДОБАВИТЬ confirm-dialog |
+| #   | Что в макете                                                                                                                                                                                               | Файл/линия       | Текущее состояние                                                                           | Дельта                                                                                                                          |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| M1  | **Add/Edit Item Modal** — header с продуктом, поля: Description (input), Status chip-row (`✓ Completed` / `! In Progress` / `✕ Blocked` / `○ Planned`), Assignee select, Cancel/Save                       | mockup:900-909   | inline-edit textarea в ItemCard (только text)                                               | СОЗДАТЬ диалог. Поле `Status` соответствует `workflowStatus`. `Assignee` пока не в schema — отложить либо добавить как metadata |
+| M2  | **SDLC Stage Popover (Save-only)** — header с названием стадии и продукта, Assignee select, Status chip-row (`✓ On Track` / `! At Risk` / `✕ Blocked`), **отдельная Save-кнопка** (не auto-apply на клике) | mockup:911-920   | сейчас выбор статуса = клик по опции в dropdown → apply мгновенно (через portal — починено) | МЕНЯТЬ: popover показывает форму с Save/Cancel, без auto-apply. Добавить `Assignee` select                                      |
+| M3  | **Submit Report Confirmation** — stats line ("6 products · 11 items · 1 risk · 2 decisions") + Cancel/Submit                                                                                               | mockup:922-927   | реализовано в `<SubmitConfirmDialog>` ✓                                                     | ПРОВЕРИТЬ соответствие                                                                                                          |
+| M4  | **Publish & Lock Report** — stats banner + warning "⚠ N leads не submitted: имена" + Cancel/Publish                                                                                                        | mockup:929-935   | head/report имеет Publish & Lock — есть ли warning?                                         | СВЕРИТЬ                                                                                                                         |
+| M5  | **Reopen Report (Head/Admin)** — stats banner + Cancel/Reopen                                                                                                                                              | mockup:937-942   | возможно отсутствует                                                                        | ДОБАВИТЬ если нет                                                                                                               |
+| M6  | **Request Reopen (Lead)** — read-only banner + кнопка "Request Reopen"                                                                                                                                     | mockup:944-949   | нет                                                                                         | ДОБАВИТЬ                                                                                                                        |
+| M7  | **Past Period Banner (Read-Only)** — clock-icon + "Viewing past period · Week 15" + дата + бейдж Read-Only                                                                                                 | mockup:951-954   | у нас есть простой banner                                                                   | ОБНОВИТЬ дизайн                                                                                                                 |
+| M8  | **Fill From Dialog (with search)** — search input + radio-list прошлых reports со stats + Cancel/Fill                                                                                                      | mockup:956-967   | есть простой dialog без search и radio                                                      | ПЕРЕДЕЛАТЬ под search+radio                                                                                                     |
+| M9  | **Copy Warning (overwrite)** — Yellow alert + stats existing data + "Replace will overwrite" + Cancel/Replace & Fill                                                                                       | mockup:969-978   | у нас сразу один диалог совмещает Fill + warning                                            | РАЗДЕЛИТЬ                                                                                                                       |
+| M10 | **Revoke Submission** — avatar+lead info + Cancel/Revoke                                                                                                                                                   | mockup:980-985   | нет (head нужно revoke)                                                                     | ДОБАВИТЬ                                                                                                                        |
+| M11 | **Version History (rollback)** — список версий с Active highlight, Restore-кнопка, **diff preview** между версиями (`+ added`, `~ edited`, `− removed`) + warning "discard newer"                          | mockup:987-1007  | у нас простой dropdown с Restore                                                            | ДОБАВИТЬ diff preview, расширить дизайн                                                                                         |
+| M12 | **Send Reminder** — список лидов которые не сдали, Cancel/Send Email                                                                                                                                       | mockup:1009-1017 | возможно есть                                                                               | СВЕРИТЬ                                                                                                                         |
+| M13 | **Add/Edit User (Admin)** — Full Name + Email + Role select + Department + Assigned Products chips + Cancel/Save                                                                                           | mockup:1019-1036 | у нас Add User кнопка работает, но диалог не сверял                                         | СВЕРИТЬ                                                                                                                         |
+| M14 | **Add/Edit Product (Admin)** — Name + Status (Active/Archived) + SDLC Stages list (per stage assignee select + delete + Add Stage)                                                                         | mockup:1038-1057 | возможно частично есть                                                                      | СВЕРИТЬ                                                                                                                         |
+| M15 | **Add Period (Admin)** — Start/End дата + Deadline datetime + Week Label                                                                                                                                   | mockup:1059-1071 | возможно есть                                                                               | СВЕРИТЬ                                                                                                                         |
+| M16 | **Reminder Settings (Admin)** — toggles: auto-reminder on deadline / 24h before / weekly summary                                                                                                           | mockup:1073-1082 | возможно частично                                                                           | СВЕРИТЬ                                                                                                                         |
+| M17 | **Locked Form** banner                                                                                                                                                                                     | mockup:895       | есть submitted-banner                                                                       | СВЕРИТЬ дизайн                                                                                                                  |
+| M18 | **Notifications** (toast variants — success/error/warning)                                                                                                                                                 | mockup:896       | toast есть, варианты не сверял                                                              | СВЕРИТЬ                                                                                                                         |
+| M19 | **Validation Error** (input border red + error message)                                                                                                                                                    | mockup:897       | shadcn form support, но в формах?                                                           | ДОБАВИТЬ inline validation в диалоги                                                                                            |
+| M20 | **Delete Confirmation** — header + body preview ("Интеграция OAuth2") + Cancel/Delete                                                                                                                      | mockup:898       | у нас Delete срабатывает мгновенно без confirmation                                         | ДОБАВИТЬ confirm-dialog                                                                                                         |
 
 **Замеченные пробелы (не в плане выше):**
+
 - M2 — popover с Save (а не auto-apply) — это меняет UX-контракт chip-popover. Влияет на S6.
 - M9 + M8 — Fill flow двух-шаговый: первый диалог выбор + второй Copy Warning. Сейчас один.
 - M19 — inline validation отсутствует в формах, нужна везде.
@@ -289,6 +327,7 @@ Inline-edit textarea в ItemCard (Phase 21) удалить — теперь penc
 **Зачем:** во время разработки часто нужно стереть всё и переналить full/minimum seed без `pnpm db:seed:simple` из терминала.
 
 **Файлы:**
+
 - `apps/api/src/modules/dev/dev.router.ts` (новый) — tRPC mutations:
   - `dev.wipe()` — `prisma.priority/decision/risk/item/projectStatus/reportSection.deleteMany`
   - `dev.reseedMinimum()` — runs current `seed-simple.ts` content
@@ -298,6 +337,7 @@ Inline-edit textarea в ItemCard (Phase 21) удалить — теперь penc
 - `apps/api/src/main.ts` — wire dev router только в `AUTH_DEV_MODE`.
 
 **Acceptance:**
+
 - кнопки видны только в dev (флаг `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` И `AUTH_DEV_MODE=true`).
 - после Wipe пользователь видит empty-state.
 - после Reseed minimum возвращает текущий seed-simple.

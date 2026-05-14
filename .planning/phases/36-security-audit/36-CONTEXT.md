@@ -8,8 +8,9 @@
 ## Phase Boundary
 
 Make the production attack surface defensible:
+
 1. Rate-limit the auth + tRPC planes (express-rate-limit, three tiers).
-2. Extend audit-logger from auth-events-only to every mutation across the system (admin.* + leadForm.* + period.* + reports.* + reminders.*).
+2. Extend audit-logger from auth-events-only to every mutation across the system (admin._ + leadForm._ + period._ + reports._ + reminders.\*).
 3. Add production fences in env.schema (boot abort on misconfiguration).
 4. Multi-origin CORS via FRONTEND_URLS CSV; wildcards rejected in production.
 
@@ -29,6 +30,7 @@ Out of scope: CSRF middleware (assessed not needed — tRPC over fetch with same
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 - `apps/api/src/lib/audit-logger.ts` exists from Phase 29-01: type-safe envelope, PII-redacted, drives via AppLogger. Currently called by auth.routes.ts only (login-success, login-fail, logout, role-denied). 36-02 extends this surface to every mutation via tRPC middleware.

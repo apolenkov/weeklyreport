@@ -19,7 +19,8 @@ affects: [17-ui-redesign, 18-e2e-tests]
 # Tech tracking
 tech-stack:
   added: [next-themes (direct dep in apps/web)]
-  patterns: [ThemeProvider wrapping at layout root, useTheme hook in client components]
+  patterns:
+    [ThemeProvider wrapping at layout root, useTheme hook in client components]
 
 key-files:
   created: []
@@ -56,6 +57,7 @@ completed: 2026-04-21
 - **Files modified:** 3
 
 ## Accomplishments
+
 - ThemeProvider wraps all layout children with `attribute="class"`, `defaultTheme="system"`, `enableSystem`, and `disableTransitionOnChange`
 - Theme toggle (Moon/Sun icons) added to nav-user dropdown menu between role badge and logout
 - Sonner Toaster now receives theme context from ThemeProvider (was already wired via useTheme)
@@ -70,11 +72,13 @@ Each task was committed atomically:
 2. **Task 2: Verify MSW handlers and web test stability** - verification only, no code changes needed
 
 ## Files Created/Modified
+
 - `apps/web/src/app/layout.tsx` - Added ThemeProvider import and wrapper around all body children
 - `apps/web/src/components/navigation/nav-user.tsx` - Added useTheme hook, Moon/Sun imports, theme toggle DropdownMenuItem
 - `apps/web/package.json` - Added next-themes as direct dependency (pnpm strict mode requires this)
 
 ## Decisions Made
+
 - **next-themes as direct dependency:** pnpm strict mode does not hoist transitive dependencies. Even though next-themes was already installed via @customreport/ui, apps/web could not import it without a direct dependency declaration.
 - **Pre-existing test failures accepted:** 10/29 web tests fail both before and after changes. These failures exist on main branch and are unrelated to ThemeProvider wiring. No regression introduced.
 
@@ -83,6 +87,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 3 - Blocking] Added next-themes as direct dependency of @customreport/web**
+
 - **Found during:** Task 1 (ThemeProvider wiring)
 - **Issue:** pnpm strict mode prevents importing transitive dependencies; next-themes only listed in packages/ui, not apps/web
 - **Fix:** Added `"next-themes": "^0.4.6"` to apps/web/package.json dependencies
@@ -96,17 +101,21 @@ Each task was committed atomically:
 **Impact on plan:** Essential fix for pnpm strict dependency resolution. No scope creep.
 
 ## Issues Encountered
+
 - Plan stated "29/29 tests pass" but current reality shows 19/29. The 10 failures are pre-existing on main branch (confirmed by running tests before and after changes). ThemeProvider addition causes zero test regressions.
 - Typecheck in packages/shared has 3 pre-existing errors in test files (unused variables, missing property). These are unrelated to this plan and do not affect web or api typechecking.
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 - Dark theme infrastructure is complete; CSS tokens in globals.css already define dark mode values
 - Theme toggle is functional in nav-user dropdown
 - Future UI redesign (Phase 17) can build on theme infrastructure
 
 ---
-*Phase: 16-backend-hardening*
-*Completed: 2026-04-21*
+
+_Phase: 16-backend-hardening_
+_Completed: 2026-04-21_

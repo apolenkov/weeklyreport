@@ -16,11 +16,7 @@ import { DerivedRulesPanel } from "./derived-rules-panel";
 // Reminders sub-tab (UFB-048 / Phase 48-B) can reuse the same curated list.
 import { TIMEZONE_OPTIONS } from "./timezone-options";
 
-import type {
-  MockPeriod,
-  MockReminder,
-  MockReminderPolicy,
-} from "./mock-data";
+import type { MockPeriod, MockReminder, MockReminderPolicy } from "./mock-data";
 
 const KIND_OPTIONS: ReadonlyArray<{
   value: MockReminderPolicy["kind"];
@@ -167,8 +163,9 @@ export function RemindersTab({
     }),
   );
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const [pendingDelete, setPendingDelete] =
-    useState<MockReminderPolicy | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<MockReminderPolicy | null>(
+    null,
+  );
 
   const periodById = useMemo(
     () => new Map(periods.map((p) => [p.id, p] as const)),
@@ -179,9 +176,7 @@ export function RemindersTab({
     trpc.admin.savePolicy.mutationOptions({
       onSuccess: () => {
         invalidateAdmin(qc, trpc);
-        toast.success(
-          editingId ? "Policy updated" : "Policy created",
-        );
+        toast.success(editingId ? "Policy updated" : "Policy created");
         setShowForm(false);
         setEditingId(null);
         setForm(
@@ -348,11 +343,47 @@ export function RemindersTab({
         {filteredPolicies.length === 0 && (
           <div
             data-testid="reminders-empty-state"
-            className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
+            className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center"
           >
-            {policies.length === 0
-              ? "No active reminder policies. Create one to start sending reminders."
-              : "No reminder policies match the search."}
+            {policies.length === 0 ? (
+              <>
+                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-border)]">
+                  {/* Bell icon */}
+                  <svg
+                    className="h-5 w-5 text-[var(--color-muted-foreground)]"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+                    />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-[var(--color-foreground)]">
+                  No reminder policies yet
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                  Policies fire automatically before each deadline — for all
+                  periods that fall inside the validity window.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleNewPolicy}
+                  className="btn-press mt-4 inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-2 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)]"
+                >
+                  <PlusIcon />
+                  Create first policy
+                </button>
+              </>
+            ) : (
+              <p className="text-sm text-[var(--color-muted-foreground)]">
+                No reminder policies match the search.
+              </p>
+            )}
           </div>
         )}
 
@@ -372,8 +403,7 @@ export function RemindersTab({
               </thead>
               <tbody>
                 {filteredPolicies.map((policy) => {
-                  const derivedRules =
-                    derivedRulesByPolicyId[policy.id] ?? [];
+                  const derivedRules = derivedRulesByPolicyId[policy.id] ?? [];
                   const isExpanded = expanded.has(policy.id);
                   return (
                     <PolicyRow
@@ -401,9 +431,7 @@ export function RemindersTab({
         title="Remove reminder policy?"
         preview={pendingDelete ? formatPolicyHeadline(pendingDelete) : ""}
         subtitle={
-          pendingDelete
-            ? formatValidityWindow(pendingDelete)
-            : undefined
+          pendingDelete ? formatValidityWindow(pendingDelete) : undefined
         }
         consequence={
           pendingDelete
@@ -480,15 +508,25 @@ function PolicyRow({
         </td>
         <td className="px-4 py-3 text-right">
           <div className="inline-flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onToggle}
-              data-testid={`expand-${policy.id}`}
-              aria-expanded={isExpanded}
-              className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)]"
-            >
-              {isExpanded ? "Hide" : "Show"} rules ({derivedCount})
-            </button>
+            <span className="inline-flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={onToggle}
+                data-testid={`expand-${policy.id}`}
+                aria-expanded={isExpanded}
+                className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)]"
+              >
+                {isExpanded ? "Hide" : "Show"} rules ({derivedCount})
+              </button>
+              {derivedCount === 0 && (
+                <span
+                  className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-gold)]"
+                  title="Derived rules are generated automatically once the policy is applied to a period. No rules yet — this policy has not been applied."
+                >
+                  Coming Soon
+                </span>
+              )}
+            </span>
             <button
               type="button"
               onClick={onEdit}

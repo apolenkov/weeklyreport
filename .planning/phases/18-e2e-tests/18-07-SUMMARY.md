@@ -35,11 +35,11 @@ metrics:
 
 ## Commits
 
-| # | Hash | Message | Files |
-|---|------|---------|-------|
-| 1 | 39a0203 | test(18-07): add visual regression screenshot baselines for 10 pages | screenshots.spec.ts |
-| 2 | 8fe8cba | test(18-07): add responsive breakpoint tests for 4 viewport sizes | breakpoints.spec.ts |
-| 3 | 315d218 | test(18-07): add accessibility E2E tests for WCAG AA compliance | accessibility.spec.ts |
+| #   | Hash    | Message                                                              | Files                 |
+| --- | ------- | -------------------------------------------------------------------- | --------------------- |
+| 1   | 39a0203 | test(18-07): add visual regression screenshot baselines for 10 pages | screenshots.spec.ts   |
+| 2   | 8fe8cba | test(18-07): add responsive breakpoint tests for 4 viewport sizes    | breakpoints.spec.ts   |
+| 3   | 315d218 | test(18-07): add accessibility E2E tests for WCAG AA compliance      | accessibility.spec.ts |
 
 ## Task Details
 
@@ -82,12 +82,14 @@ All use `toHaveScreenshot` with `fullPage: true` and `maxDiffPixelRatio: 0.01`. 
 ### Auto-fixed Issues
 
 **1. [Rule 3 - Blocking] Print page lacks #main-content id**
+
 - **Found during:** Task 1 (screenshot baselines)
 - **Issue:** The print page (`/reports/[reportId]/print/page.tsx`) renders `<main>` without `id="main-content"`, so the standard `waitForPageReady` helper would hang
 - **Fix:** Used `page.waitForSelector('main')` instead of `#main-content` for the print page test
 - **Files modified:** screenshots.spec.ts
 
 **2. [Rule 2 - Missing] Skipped @axe-core/playwright dependency**
+
 - **Found during:** Task 3 planning
 - **Issue:** Installing a new npm dependency in a parallel executor risks merge conflicts with other agents
 - **Fix:** Used native Playwright locators (getByRole, getAttribute, evaluate/getComputedStyle) for all accessibility assertions

@@ -11,22 +11,22 @@ commit: f33bb6608aaa801daac0b7c21902d2406f9c9ba9
 
 ## File-by-file
 
-| File | Created / Modified | Note |
-| --- | --- | --- |
-| `apps/api/src/modules/email/templates/deadline.template.tsx` | created | react-email + `<Tailwind>` component + plaintext fallback function |
-| `apps/api/src/modules/email/render-template.ts` | created | central renderer; switches on discriminated union `EmailKind` |
-| `apps/api/src/modules/email/render-template.test.ts` | created | 4 unit tests covering html/text/subject |
-| `apps/api/src/modules/reminders/reminders.scheduler.ts` | created | `@Cron(EVERY_HOUR)` dispatcher + `runOnce(now)` testable seam |
-| `apps/api/src/modules/reminders/reminders.scheduler.test.ts` | created | 5 unit tests including "exactly one email per cycle" |
-| `apps/api/src/modules/reminders/reminders.module.ts` | modified | registers `RemindersScheduler` provider |
-| `apps/api/src/modules/reminders/reminders.service.ts` | modified | `requestReminderExecution(ruleId, email, payload?)` overload; new dedupe-key path for kind='deadline' |
-| `apps/api/src/modules/reminders/reminders.service.test.ts` | modified | adds 4 tests for the deadline payload + dedupe key shape |
-| `apps/api/src/modules/reminders/reminders.prisma-repository.ts` | modified | adds `findDueDeadlineRules(now)` returning `DueDeadlineRule[]` |
-| `apps/api/src/infrastructure/bullmq/email-reminder.processor.ts` | modified | dispatches on `kind`; multipart send via `sendMailMultipart` |
-| `apps/api/src/infrastructure/email/email.service.ts` | modified | new `sendMailMultipart(to, subject, html, text)` method |
-| `apps/api/src/app.module.ts` | modified | `ScheduleModule.forRoot()` registered |
-| `apps/api/tsconfig.json` | modified | enables `jsx: react-jsx` and includes `*.tsx` for the email template |
-| `apps/api/package.json` | modified | new deps: `@nestjs/schedule`, `@react-email/components`, `@react-email/render`, `react` |
+| File                                                             | Created / Modified | Note                                                                                                  |
+| ---------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------- |
+| `apps/api/src/modules/email/templates/deadline.template.tsx`     | created            | react-email + `<Tailwind>` component + plaintext fallback function                                    |
+| `apps/api/src/modules/email/render-template.ts`                  | created            | central renderer; switches on discriminated union `EmailKind`                                         |
+| `apps/api/src/modules/email/render-template.test.ts`             | created            | 4 unit tests covering html/text/subject                                                               |
+| `apps/api/src/modules/reminders/reminders.scheduler.ts`          | created            | `@Cron(EVERY_HOUR)` dispatcher + `runOnce(now)` testable seam                                         |
+| `apps/api/src/modules/reminders/reminders.scheduler.test.ts`     | created            | 5 unit tests including "exactly one email per cycle"                                                  |
+| `apps/api/src/modules/reminders/reminders.module.ts`             | modified           | registers `RemindersScheduler` provider                                                               |
+| `apps/api/src/modules/reminders/reminders.service.ts`            | modified           | `requestReminderExecution(ruleId, email, payload?)` overload; new dedupe-key path for kind='deadline' |
+| `apps/api/src/modules/reminders/reminders.service.test.ts`       | modified           | adds 4 tests for the deadline payload + dedupe key shape                                              |
+| `apps/api/src/modules/reminders/reminders.prisma-repository.ts`  | modified           | adds `findDueDeadlineRules(now)` returning `DueDeadlineRule[]`                                        |
+| `apps/api/src/infrastructure/bullmq/email-reminder.processor.ts` | modified           | dispatches on `kind`; multipart send via `sendMailMultipart`                                          |
+| `apps/api/src/infrastructure/email/email.service.ts`             | modified           | new `sendMailMultipart(to, subject, html, text)` method                                               |
+| `apps/api/src/app.module.ts`                                     | modified           | `ScheduleModule.forRoot()` registered                                                                 |
+| `apps/api/tsconfig.json`                                         | modified           | enables `jsx: react-jsx` and includes `*.tsx` for the email template                                  |
+| `apps/api/package.json`                                          | modified           | new deps: `@nestjs/schedule`, `@react-email/components`, `@react-email/render`, `react`               |
 
 ## Prisma `deadline` enum status
 
@@ -42,7 +42,7 @@ commit: f33bb6608aaa801daac0b7c21902d2406f9c9ba9
 
 // Legacy (Phase 28-02 and earlier — preserved for follow-up reminders that
 // don't carry a payload):
-`${rule.id}:${rule.fireAt.toISOString()}:${recipientEmail}`
+`${rule.id}:${rule.fireAt.toISOString()}:${recipientEmail}`;
 ```
 
 The two namespaces are intentionally non-overlapping so a follow-up rule's existing executions don't collide with a deadline rule's fresh executions.

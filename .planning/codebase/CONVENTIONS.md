@@ -5,34 +5,40 @@
 ## Naming Patterns
 
 **Files:**
+
 - Use kebab-case for all file names: `admin.service.ts`, `trpc.error-mapper.ts`, `email-reminder.processor.ts`
 - Suffix files by role: `.service.ts`, `.router.ts`, `.module.ts`, `.prisma-repository.ts`, `.controller.ts`, `.guard.ts`, `.strategy.ts`, `.middleware.ts`
 - Test files co-located with source: `admin.service.test.ts` (unit), `admin.integration.test.ts`, `archive.contract.test.ts`
 - React components: kebab-case files, PascalCase exports: `api-readiness-placeholder.tsx` exports `ApiReadinessPlaceholder`
 
 **Functions:**
+
 - camelCase: `createAppLogger()`, `mapDomainError()`, `validateSubmitInput()`
 - Factory functions prefixed with `create`: `createRepository()`, `createTestPrisma()`, `createAppRouter()`, `createContextFactory()`
 - Boolean helpers: `shouldRedirectToLogin()`, `noInvisibleOnly()`, `noNullBytes()`
 
 **Variables:**
+
 - camelCase for locals and parameters: `currentSection`, `headSession`, `logDir`
 - UPPER_SNAKE_CASE for constants: `TEST_IDS`, `LEVEL_PRIORITY`, `API_URL`, `AUTH_DIR`
 - UUID test fixtures use recognizable patterns: `'11111111-1111-4111-8111-111111111111'`
 
 **Types:**
+
 - PascalCase for types and interfaces: `AdminSnapshot`, `UserSession`, `AppLogger`
 - Interface names describe the contract (no `I` prefix): `AdminRepository`, `ReportSectionsRepository`
 - Zod schema names use camelCase + `Schema` suffix: `adminSnapshotSchema`, `draftSaveSchema`
 - Inferred types exported as: `export type AdminSnapshot = z.infer<typeof adminSnapshotSchema>`
 
 **Enums:**
+
 - Prisma enums in PascalCase: `Role`, `ReportStatus`, `TrafficLightStatus`
 - Zod enum values in snake_case: `'in_progress'`, `'follow_up'`, `'at_risk'`
 
 ## TypeScript Strict Mode
 
 **Base config** (`tsconfig.base.json`):
+
 ```json
 {
   "strict": true,
@@ -49,18 +55,22 @@
 ```
 
 **API overrides** (`apps/api/tsconfig.json`):
+
 - `experimentalDecorators: true` and `emitDecoratorMetadata: true` for NestJS decorators
 - `outDir: "dist"` for build output
 
 **Web overrides** (`apps/web/tsconfig.json`):
+
 - `jsx: "preserve"` for Next.js
 - `incremental: true`
 - Adds `@customreport/api/*` path alias (API does not have this)
 
 **Shared package** (`packages/shared/tsconfig.json`):
+
 - `declaration: true` and `declarationMap: true` for package consumption
 
 **Rules:**
+
 - Never use `any` -- ESLint enforces `@typescript-eslint/no-explicit-any: 'error'`
 - Prefix unused parameters with `_`: `argsIgnorePattern: '^_'`
 - No floating promises: `@typescript-eslint/no-floating-promises: 'error'`
@@ -69,11 +79,13 @@
 ## Code Style
 
 **Formatting:**
+
 - No Prettier configuration file detected. Code formatting is not enforced by automated tooling.
 - The CLAUDE.md aspirational stack references Prettier 4.x, but no `.prettierrc` or `prettier.config.*` exists.
 - Observed style: single quotes, trailing commas, 2-space indentation, ~100-char line width.
 
 **Linting:**
+
 - ESLint 10.x with flat config: `eslint.config.ts`
 - Uses `typescript-eslint` strict preset: `tseslint.configs.strict`
 - React-specific plugins: `eslint-plugin-react-hooks` (rules-of-hooks error, exhaustive-deps warn) and `eslint-plugin-react-compiler` (error)
@@ -81,6 +93,7 @@
 - Global ignores: `node_modules`, `dist`, `.next`, `coverage`, `.turbo`, `prisma/generated`, `e2e`
 
 **Lint + typecheck command:**
+
 ```bash
 pnpm run lint        # Runs turbo lint across all packages
 # Per-app: tsc --noEmit + eslint .
@@ -89,12 +102,14 @@ pnpm run lint        # Runs turbo lint across all packages
 ## Import Organization
 
 **Order (observed pattern):**
+
 1. Node built-ins: `import { appendFileSync } from 'node:fs'`
 2. External packages: `import { z } from 'zod'`, `import { Injectable } from '@nestjs/common'`
 3. Monorepo packages: `import { adminSnapshotSchema } from '@customreport/shared'`
 4. Relative imports: `import { PrismaService } from '../../infrastructure/prisma/prisma.service'`
 
 **Path Aliases:**
+
 - `@customreport/shared` -> `packages/shared/src/index.ts`
 - `@customreport/shared/*` -> `packages/shared/src/*`
 - `@customreport/ui` -> `packages/ui/src/index.ts`
@@ -102,11 +117,13 @@ pnpm run lint        # Runs turbo lint across all packages
 - `@customreport/api/*` -> `apps/api/src/*` (web tsconfig only)
 
 **API import style:**
+
 - Use `.js` extension for relative imports in API source: `import { mapDomainError } from './trpc.error-mapper.js'`
 - This is required by ESM module resolution with `"type": "module"` in `apps/api/package.json`
 - Test files do NOT use `.js` extensions (vitest handles resolution)
 
 **Type-only imports:**
+
 - Use `import type { ... }` for types: `import type { AdminSnapshot } from '@customreport/shared'`
 - Enforced by `verbatimModuleSyntax: true` in tsconfig
 
@@ -114,17 +131,19 @@ pnpm run lint        # Runs turbo lint across all packages
 
 **Domain Error Pattern:**
 Each service module defines its own domain error class extending `Error`:
+
 ```typescript
 // In {module}.service.ts
 export class AdminAccessError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'AdminAccessError';
+    this.name = "AdminAccessError";
   }
 }
 ```
 
 Existing domain errors:
+
 - `ReportSectionDomainError` (`apps/api/src/modules/report-sections/report-sections.service.ts`) -- includes error `code` field
 - `ReviewAccessError` (`apps/api/src/modules/review/review.service.ts`)
 - `PublicationAccessError` (`apps/api/src/modules/publication/publication.service.ts`)
@@ -136,19 +155,32 @@ Existing domain errors:
 
 **Error Mapping (tRPC layer):**
 All domain errors are mapped to tRPC errors in `apps/api/src/infrastructure/trpc/trpc.error-mapper.ts`:
+
 ```typescript
 export function mapDomainError(error: unknown): TRPCError {
   if (error instanceof TRPCError) return error;
   if (error instanceof ReportSectionDomainError)
-    return new TRPCError({ code: 'BAD_REQUEST', message: error.message, cause: error });
+    return new TRPCError({
+      code: "BAD_REQUEST",
+      message: error.message,
+      cause: error,
+    });
   if (error instanceof ReviewAccessError || error instanceof AdminAccessError)
-    return new TRPCError({ code: 'FORBIDDEN', message: error.message, cause: error });
+    return new TRPCError({
+      code: "FORBIDDEN",
+      message: error.message,
+      cause: error,
+    });
   // ... etc
-  return new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unexpected error' });
+  return new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Unexpected error",
+  });
 }
 ```
 
 **Rules:**
+
 - Never expose internal error details to clients (the fallback is always `'Unexpected error'`)
 - Always wrap tRPC procedure bodies in `try { ... } catch (error) { throw mapDomainError(error); }`
 - Preserve `cause` reference for debugging
@@ -164,19 +196,25 @@ export function mapDomainError(error: unknown): TRPCError {
 - **Shared schemas:** Single source of truth in `packages/shared/src/schemas/`
 
 **Safe text validation:**
+
 ```typescript
 const safeText = (opts: { min?: number; max?: number } = {}) =>
-  z.string()
+  z
+    .string()
     .min(opts.min ?? 1)
     .max(opts.max ?? 500)
-    .refine(noNullBytes, { message: 'Text must not contain null bytes' })
-    .refine(noInvisibleOnly, { message: 'Text must contain visible characters' });
+    .refine(noNullBytes, { message: "Text must not contain null bytes" })
+    .refine(noInvisibleOnly, {
+      message: "Text must contain visible characters",
+    });
 ```
+
 Use `safeText()` for all user-facing text fields. It rejects null bytes (PostgreSQL incompatible) and zero-width-space-only strings.
 
 ## Repository Interface Pattern
 
 **Every API module follows this structure:**
+
 1. Define `XxxRepository` interface in the service file (`*.service.ts`)
 2. Implement as `XxxPrismaRepository` in `*.prisma-repository.ts` with `@Injectable()` decorator
 3. Wire via NestJS module (`*.module.ts`) using `useFactory`
@@ -224,6 +262,7 @@ export class AdminModule {}
 **Framework:** Custom `AppLogger` in `apps/api/src/lib/logger.ts`
 
 **Patterns:**
+
 - Structured JSON logs to stdout (info/debug/warn) and stderr (error)
 - Daily rotating log files when `logDir` is configured
 - Configurable `minLevel`: debug | info | warn | error
@@ -231,6 +270,7 @@ export class AdminModule {}
 - `createNullLogger()` for tests (no-op)
 
 **Usage:**
+
 ```typescript
 // In service constructors (optional logger):
 constructor(
@@ -247,6 +287,7 @@ this.logger.info('upserted user', { userId: parsedUser.id });
 ## Comments
 
 **When to Comment:**
+
 - JSDoc on public methods: `/** API-11: Get application settings singleton. */`
 - Section dividers in test files using ASCII comment blocks:
   ```typescript
@@ -262,11 +303,13 @@ this.logger.info('upserted user', { userId: parsedUser.id });
 ## Module Design
 
 **Exports:**
+
 - Shared package uses barrel file: `packages/shared/src/index.ts` re-exports all schemas and types
 - UI package uses barrel file: `packages/ui/src/index.ts` with named exports for every component
 - API modules do NOT use barrel files -- import directly from specific files
 
 **Module boundaries:**
+
 - `packages/shared` -- Zod schemas, TypeScript types, shared validation functions. Zero runtime dependencies (only `zod`).
 - `packages/ui` -- shadcn/ui components, composition components (DataTable, ConfirmDialog, CrudSheet, TrafficLightBadge). Depends on Radix UI primitives, Tailwind, clsx, tailwind-merge.
 - `apps/api` -- NestJS + tRPC + Prisma. Domain logic in `src/modules/`, infrastructure in `src/infrastructure/`.
@@ -275,6 +318,7 @@ this.logger.info('upserted user', { userId: parsedUser.id });
 ## React Component Patterns
 
 **Props typing:**
+
 ```typescript
 type ApiReadinessPlaceholderProps = {
   readonly pageTitle: string;
@@ -282,9 +326,11 @@ type ApiReadinessPlaceholderProps = {
   readonly currentPath: string;
 };
 ```
+
 Use `type` (not `interface`) for component props. Mark all props as `readonly`.
 
 **Layout props:**
+
 ```typescript
 type RootLayoutProps = Readonly<{
   children: ReactNode;
@@ -292,6 +338,7 @@ type RootLayoutProps = Readonly<{
 ```
 
 **Component style:** Function declarations (not arrow functions) for page components and exported components:
+
 ```typescript
 export function ApiReadinessPlaceholder({ ... }: Props) { ... }
 export default function RootLayout({ children }: RootLayoutProps) { ... }
@@ -301,4 +348,4 @@ export default function RootLayout({ children }: RootLayoutProps) { ... }
 
 ---
 
-*Convention analysis: 2026-04-24*
+_Convention analysis: 2026-04-24_

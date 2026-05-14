@@ -671,7 +671,11 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function counterValue(
-  counter: { get(): Promise<{ values: Array<{ value: number; labels: Record<string, any> }> }> },
+  counter: {
+    get(): Promise<{
+      values: Array<{ value: number; labels: Record<string, any> }>;
+    }>;
+  },
   labels: Record<string, string>,
 ): Promise<number> {
   const snapshot = await counter.get();
@@ -681,9 +685,9 @@ async function counterValue(
   return match?.value ?? 0;
 }
 
-async function histogramSum(
-  hist: { get(): Promise<{ values: Array<{ value: number; metricName?: string }> }> },
-): Promise<number> {
+async function histogramSum(hist: {
+  get(): Promise<{ values: Array<{ value: number; metricName?: string }> }>;
+}): Promise<number> {
   const snapshot = await hist.get();
   const sum = snapshot.values.find((e) => e.metricName?.endsWith("_sum"));
   return sum?.value ?? 0;

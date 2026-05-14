@@ -37,7 +37,7 @@ const INJECTION_PATTERNS: ReadonlyArray<RegExp> = [
 ];
 
 export function sanitizeUserContent(text: string): string {
-  if (text == null) return '';
+  if (text == null) return "";
   let out = String(text);
 
   // 1. Length cap before regex work to bound CPU on adversarial input.
@@ -47,7 +47,7 @@ export function sanitizeUserContent(text: string): string {
 
   // 2. Replace each adversarial pattern with the [redacted] sentinel.
   for (const pattern of INJECTION_PATTERNS) {
-    out = out.replace(pattern, '[redacted]');
+    out = out.replace(pattern, "[redacted]");
   }
 
   return out;

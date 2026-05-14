@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from "react";
 
-import type { ReportPeriod } from './mock-data';
+import type { ReportPeriod } from "./mock-data";
 
 type FillFromButtonProps = {
   readonly periods: ReportPeriod[];
@@ -16,7 +16,13 @@ type FillFromButtonProps = {
 
 function CopyIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" stroke="currentColor" fill="none" strokeWidth={2}>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+    >
       <rect x="9" y="9" width="13" height="13" rx="2" />
       <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
     </svg>
@@ -25,17 +31,29 @@ function CopyIcon() {
 
 function ChevronDown() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3" stroke="currentColor" fill="none" strokeWidth={2}>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3 w-3"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+    >
       <path d="M6 9l6 6 6-6" />
     </svg>
   );
 }
 
-export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFromButtonProps) {
+export function FillFromButton({
+  periods,
+  onFillFrom,
+  disabled = false,
+}: FillFromButtonProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod | null>(null);
-  const [search, setSearch] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod | null>(
+    null,
+  );
+  const [search, setSearch] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const pastPeriods = periods.filter((p) => !p.isCurrent && p.isSubmitted);
@@ -53,8 +71,9 @@ export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFr
         setShowDropdown(false);
       }
     }
-    if (showDropdown) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    if (showDropdown)
+      document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showDropdown]);
 
   function handleFillPrevious() {
@@ -120,8 +139,8 @@ export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFr
               onChange={(e) => setSearch(e.target.value)}
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: '10px center',
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "10px center",
               }}
             />
             <div className="max-h-[200px] space-y-1 overflow-y-auto">
@@ -132,8 +151,14 @@ export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFr
                   className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-[var(--color-surface-hover)]"
                   style={
                     idx === 0
-                      ? { background: 'var(--color-success)', border: '1.5px solid var(--color-starbucks-accent)' }
-                      : { background: 'var(--color-background)', border: '1.5px solid transparent' }
+                      ? {
+                          background: "var(--color-success)",
+                          border: "1.5px solid var(--color-starbucks-accent)",
+                        }
+                      : {
+                          background: "var(--color-background)",
+                          border: "1.5px solid transparent",
+                        }
                   }
                   onClick={() => handleFillFromPeriod(p)}
                 >
@@ -142,7 +167,8 @@ export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFr
                       {p.weekLabel} &middot; {p.dateRange}
                     </div>
                     <div className="text-[11px] text-[var(--color-muted-foreground)]">
-                      {p.productCount ?? 0} products &middot; {p.itemCount ?? 0} items &middot; {p.riskCount ?? 0} risks
+                      {p.productCount ?? 0} products &middot; {p.itemCount ?? 0}{" "}
+                      items &middot; {p.riskCount ?? 0} risks
                     </div>
                   </div>
                   {idx === 0 && (
@@ -170,9 +196,11 @@ export function FillFromButton({ periods, onFillFrom, disabled = false }: FillFr
               Fill from {selectedPeriod?.weekLabel}?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              This will overwrite your current draft with data from{' '}
-              <strong>{selectedPeriod?.weekLabel} ({selectedPeriod?.dateRange})</strong>.
-              Current Week items, Risks, and Decisions will be replaced.
+              This will overwrite your current draft with data from{" "}
+              <strong>
+                {selectedPeriod?.weekLabel} ({selectedPeriod?.dateRange})
+              </strong>
+              . Current Week items, Risks, and Decisions will be replaced.
               Priorities will NOT be filled.
             </p>
             <div className="mt-6 flex justify-end gap-3">

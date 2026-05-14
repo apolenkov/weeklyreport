@@ -60,10 +60,11 @@ completed: 2026-04-21
 - **Files modified:** 7
 
 ## Accomplishments
+
 - BullMQModule imported in AppModule so queues connect to Redis on startup
 - PdfExportService and RemindersService receive real Queue instances via getQueueToken DI (no longer silently skipping enqueue)
 - BullMQHealthIndicator added to readiness endpoint checking both pdf-export and email-reminder queue connectivity
-- .dockerignore extended to exclude .claude/, .graphifyignore, and *.png artifacts
+- .dockerignore extended to exclude .claude/, .graphifyignore, and \*.png artifacts
 
 ## Task Commits
 
@@ -73,15 +74,17 @@ Each task was committed atomically:
 2. **Task 2: Add BullMQ health indicator and fix Docker Compose port mismatch** - `2349e71` (feat)
 
 ## Files Created/Modified
+
 - `apps/api/src/app.module.ts` - Added BullMQModule import to AppModule
 - `apps/api/src/modules/pdf-export/pdf-export.module.ts` - Imports BullMQModule, injects pdf-export queue via getQueueToken
 - `apps/api/src/modules/reminders/reminders.module.ts` - Imports BullMQModule, injects email-reminder queue via getQueueToken
 - `apps/api/src/infrastructure/health/bullmq.health.ts` - New BullMQHealthIndicator with @InjectQueue for both queues
 - `apps/api/src/infrastructure/health/health.module.ts` - Added BullMQModule import and BullMQHealthIndicator provider
 - `apps/api/src/infrastructure/health/health.controller.ts` - Added bullmq health check to readiness endpoint
-- `.dockerignore` - Added .claude/, .graphifyignore, *.png exclusions
+- `.dockerignore` - Added .claude/, .graphifyignore, \*.png exclusions
 
 ## Decisions Made
+
 - Each module imports BullMQModule directly because NestJS DI is module-scoped -- a queue token registered in AppModule is not automatically available in child modules
 - Docker Compose ports were already correct at 3001 (plan was based on stale snapshot) -- skipped redundant edits to avoid introducing errors
 - Used .js extension in health module imports to match existing convention in that directory
@@ -91,6 +94,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Docker Compose port edits skipped -- already correct**
+
 - **Found during:** Task 2 (Docker Compose port mismatch fix)
 - **Issue:** Plan specified changing 3002 to 3001, but docker-compose.yml already has 3001:3001 and localhost:3001
 - **Fix:** Verified current state is correct, skipped redundant edits
@@ -103,17 +107,21 @@ Each task was committed atomically:
 **Impact on plan:** No impact -- the intended end state was already in place.
 
 ## Issues Encountered
+
 - Pre-existing typecheck errors in test files (admin.integration.test.ts, reminders.integration.test.ts) -- unrelated to this plan's changes, no action taken
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 - BullMQ queues are fully wired and will connect to Redis on startup
 - Health readiness endpoint now validates queue connectivity
 - Ready for remaining backend hardening tasks (plans 03-04)
 - BullMQ re-enablement unblocks PDF/email E2E testing in Phase 18
 
 ---
-*Phase: 16-backend-hardening*
-*Completed: 2026-04-21*
+
+_Phase: 16-backend-hardening_
+_Completed: 2026-04-21_

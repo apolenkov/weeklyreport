@@ -146,9 +146,7 @@ on conflict (id) do update set
 }
 
 function cleanupPdfUatPublishedReport(): void {
-  runFixtureSql(
-    `delete from "Report" where id = '${PDF_UAT_REPORT_ID}';`,
-  );
+  runFixtureSql(`delete from "Report" where id = '${PDF_UAT_REPORT_ID}';`);
 }
 
 async function newLoggedPage(
@@ -224,9 +222,9 @@ async function maybeRequestPdfExport(
     waitUntil: "domcontentloaded",
   });
   const reportLink = page.locator('main a[href^="/reports/"]').first();
-  const hasPublished = await reportLink.isVisible({ timeout: 3_000 }).catch(
-    () => false,
-  );
+  const hasPublished = await reportLink
+    .isVisible({ timeout: 3_000 })
+    .catch(() => false);
   result.screenshot = await take(page, "sc-16-01-pdf-precondition.png");
 
   if (!hasPublished) {
@@ -238,9 +236,7 @@ async function maybeRequestPdfExport(
   }
 
   const href = await reportLink.getAttribute("href");
-  const reportId = href?.match(
-    /\/reports\/([0-9a-fA-F-]{36})(?:$|[/?#])/,
-  )?.[1];
+  const reportId = href?.match(/\/reports\/([0-9a-fA-F-]{36})(?:$|[/?#])/)?.[1];
   expect(reportId, "published report id from archive link").toBeTruthy();
 
   const cookieHeader = await getCookieHeader(page);
@@ -254,7 +250,9 @@ async function maybeRequestPdfExport(
   expect(requestRes.status()).toBe(200);
   const requestBody = (await requestRes.json()) as unknown;
   const job = (
-    requestBody as Array<{ result?: { data?: { json?: { id?: string; jobId?: string } } } }>
+    requestBody as Array<{
+      result?: { data?: { json?: { id?: string; jobId?: string } } };
+    }>
   )[0]?.result?.data?.json;
   const jobId = job?.id ?? job?.jobId;
   expect(jobId).toMatch(/^[0-9a-f-]{36}$/);
@@ -272,7 +270,9 @@ async function maybeRequestPdfExport(
     expect(statusRes.status()).toBe(200);
     const statusBody = (await statusRes.json()) as unknown;
     const data = (
-      statusBody as Array<{ result?: { data?: { json?: { status?: string } } } }>
+      statusBody as Array<{
+        result?: { data?: { json?: { status?: string } } };
+      }>
     )[0]?.result?.data?.json;
     if (data?.status === "completed" || data?.status === "failed") {
       terminal = data.status;
@@ -288,7 +288,9 @@ async function maybeRequestPdfExport(
 }
 
 test.describe.serial("Phase 16/17 live UAT closure", () => {
-  test("phase 16/17 scenarios against live Docker stack", async ({ browser }) => {
+  test("phase 16/17 scenarios against live Docker stack", async ({
+    browser,
+  }) => {
     ensureEvidenceDir();
 
     await runScenario("SC-17-01 login page", async (result) => {
@@ -350,10 +352,9 @@ test.describe.serial("Phase 16/17 live UAT closure", () => {
       await expect(
         page.getByRole("heading", { name: /^Reports$/ }),
       ).toBeVisible();
-      await expect(page.getByRole("button", { name: "My Drafts" })).toHaveAttribute(
-        "aria-current",
-        "page",
-      );
+      await expect(
+        page.getByRole("button", { name: "My Drafts" }),
+      ).toHaveAttribute("aria-current", "page");
       result.detail =
         "verified canonical merged history surface at /reports?tab=drafts";
       result.screenshot = await take(page, "sc-17-03-lead-history.png");
@@ -393,9 +394,9 @@ test.describe.serial("Phase 16/17 live UAT closure", () => {
       await expect(
         page.getByRole("button", { name: /Export PDF|Publish to export PDF/i }),
       ).toBeVisible();
-      const emptyHeaders = await page.locator(
-        '[id^="report-product-"] button:disabled',
-      ).count();
+      const emptyHeaders = await page
+        .locator('[id^="report-product-"] button:disabled')
+        .count();
       result.data = { disabledEmptyProductHeaders: emptyHeaders };
       result.screenshot = await take(page, "sc-17-05-weekly-report.png");
       await page.context().close();
@@ -512,10 +513,9 @@ test.describe.serial("Phase 16/17 live UAT closure", () => {
       await expect(page).toHaveURL(/\/reports\?tab=published/);
       await page.goBack({ waitUntil: "domcontentloaded" });
       await expect(page).toHaveURL(/\/reports\?tab=drafts/);
-      await expect(page.getByRole("button", { name: "My Drafts" })).toHaveAttribute(
-        "aria-current",
-        "page",
-      );
+      await expect(
+        page.getByRole("button", { name: "My Drafts" }),
+      ).toHaveAttribute("aria-current", "page");
       result.screenshot = await take(page, "sc-17-10-url-routing.png");
       await page.context().close();
     });
@@ -530,30 +530,34 @@ test.describe.serial("Phase 16/17 live UAT closure", () => {
       await page.context().close();
     });
 
-    await runScenario("SC-16-02 theme toggle visual behavior", async (result) => {
-      const page = await newLoggedPage(browser, {
-        role: "head",
-        email: "head@customreport.local",
-        redirect: "/head/dashboard",
-      });
-      const themeControls = await page.locator(
-        'button[aria-label*="theme" i], button[title*="theme" i], button[aria-label*="dark" i], button[aria-label*="light" i]',
-      ).count();
-      result.screenshot = await take(page, "sc-16-02-theme-toggle.png");
-      if (themeControls === 0) {
-        result.status = "SKIPPED";
-        result.detail =
-          "Product decision: theme toggle is not part of the product. Scenario intentionally skipped, not a coverage gap.";
-      }
-      result.data = { themeControls };
-      await page.context().close();
-    });
+    await runScenario(
+      "SC-16-02 theme toggle visual behavior",
+      async (result) => {
+        const page = await newLoggedPage(browser, {
+          role: "head",
+          email: "head@customreport.local",
+          redirect: "/head/dashboard",
+        });
+        const themeControls = await page
+          .locator(
+            'button[aria-label*="theme" i], button[title*="theme" i], button[aria-label*="dark" i], button[aria-label*="light" i]',
+          )
+          .count();
+        result.screenshot = await take(page, "sc-16-02-theme-toggle.png");
+        if (themeControls === 0) {
+          result.status = "SKIPPED";
+          result.detail =
+            "Product decision: theme toggle is not part of the product. Scenario intentionally skipped, not a coverage gap.";
+        }
+        result.data = { themeControls };
+        await page.context().close();
+      },
+    );
 
     const normalizedLogs = browserLogs.filter(
       (entry) =>
         !(
-          entry.type === "requestfailed" &&
-          entry.message === "net::ERR_ABORTED"
+          entry.type === "requestfailed" && entry.message === "net::ERR_ABORTED"
         ),
     );
     const summary = {
@@ -577,8 +581,7 @@ test.describe.serial("Phase 16/17 live UAT closure", () => {
     );
 
     const phase17Failures = results.filter(
-      (result) =>
-        result.name.startsWith("SC-17") && result.status === "FAIL",
+      (result) => result.name.startsWith("SC-17") && result.status === "FAIL",
     );
     expect(phase17Failures).toEqual([]);
     expect(

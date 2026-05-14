@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
-import type { Role } from '@customreport/shared';
+import type { Role } from "@customreport/shared";
 
-import { ForbiddenPage } from '../../../components/forbidden-page';
-import { getServerSession } from '../../../lib/server/get-server-session';
+import { ForbiddenPage } from "../../../components/forbidden-page";
+import { getServerSession } from "../../../lib/server/get-server-session";
 
 /**
  * AUTH-07 (Phase 29-03): SSR role gate for /admin/* routes.
@@ -17,7 +17,7 @@ import { getServerSession } from '../../../lib/server/get-server-session';
  * Heads have /head/dashboard; the admin panel is not theirs. Both the
  * tRPC adminProcedure middleware and this layout enforce the same gate.
  */
-const REQUIRED: ReadonlyArray<Role> = ['admin'];
+const REQUIRED: ReadonlyArray<Role> = ["admin"];
 
 type Props = Readonly<{ children: ReactNode }>;
 

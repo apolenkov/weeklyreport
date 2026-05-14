@@ -14,6 +14,7 @@ re-locking via the discuss-phase workflow.
 ## 1. Framework Selection
 
 ### Locked
+
 - **Anthropic SDK direct** (no LangChain, no Vercel AI SDK) — per StackResearch
   and `31-CONTEXT.md`.
 - **Package:** `@anthropic-ai/sdk@^0.91.1` (installed via
@@ -23,6 +24,7 @@ re-locking via the discuss-phase workflow.
   sites.
 
 ### Verified APIs in installed package
+
 - `Anthropic` class (default export) with `client.messages.create({...})`.
 - `helpers/beta/zod` exports `betaZodTool({name, inputSchema, description, run})`
   for the toolRunner pattern (auto Zod → JSON Schema conversion).
@@ -31,6 +33,7 @@ re-locking via the discuss-phase workflow.
   driven structured output.
 
 ### Pattern picked for Phase 31
+
 - AI-01/02/03 use the **standard `messages.create` + `tools` array + forced
   `tool_choice: {type: 'tool', name}`** path, with `input_schema` produced
   by `z.toJSONSchema(zodSchema)` (Zod 4 native).
@@ -42,6 +45,7 @@ re-locking via the discuss-phase workflow.
   cleanly into tRPC procedure handlers, and avoids the beta surface.
 
 ### Not used in Phase 31
+
 - Streaming (`messages.stream()`) — deferred per CONTEXT (full-render UI).
 - Batch API — out of scope (per-report calls are fast enough).
 - `toolRunner()` — not needed for single forced-tool single-turn flows.
@@ -52,16 +56,19 @@ re-locking via the discuss-phase workflow.
 ## 2. Model Assignment
 
 ### Locked
-| Feature | Model ID | Rationale |
-|---|---|---|
-| AI-01 executive summary | `claude-haiku-4-5-20251001` | User-locked: cheapest. Quality OK for narrative ≤3 sentences with rubric + injected counts. |
-| AI-02 risk sentiment | `claude-haiku-4-5-20251001` | User-locked: structured 3-class output is easy for Haiku. |
-| AI-03 on-track icon | `claude-haiku-4-5-20251001` | **DEVIATION from ROADMAP** which suggested Sonnet 4.6. User-locked Haiku for cost ($0.001 vs $0.01/render). Quality trade-off mitigated by eval gate (Section 6) — golden-set rubric catches regressions before they ship. |
+
+| Feature                 | Model ID                    | Rationale                                                                                                                                                                                                                  |
+| ----------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AI-01 executive summary | `claude-haiku-4-5-20251001` | User-locked: cheapest. Quality OK for narrative ≤3 sentences with rubric + injected counts.                                                                                                                                |
+| AI-02 risk sentiment    | `claude-haiku-4-5-20251001` | User-locked: structured 3-class output is easy for Haiku.                                                                                                                                                                  |
+| AI-03 on-track icon     | `claude-haiku-4-5-20251001` | **DEVIATION from ROADMAP** which suggested Sonnet 4.6. User-locked Haiku for cost ($0.001 vs $0.01/render). Quality trade-off mitigated by eval gate (Section 6) — golden-set rubric catches regressions before they ship. |
 
 ### Deviation note (AI-03)
+
 ROADMAP success criterion 3 originally suggested Sonnet 4.6 for AI-03. User
 explicitly picked Haiku 4.5 across all three features for cost. This spec
 formalises the trade-off:
+
 - Cost projection (per Section 7) confirms ≈ $0.0005/report effective,
   vs Sonnet would cost ≈ $0.01/report — 20× difference.
 - Quality compensation: eval-gate threshold (≥80% on-track classification
@@ -71,6 +78,7 @@ formalises the trade-off:
   visually inspect the verdict, traffic light remains lead-owned.
 
 ### Pricing assumptions (used for §7 cost guard)
+
 - Haiku 4.5 input: ~$0.0008 / 1K tokens (uncached)
 - Haiku 4.5 output: ~$0.004 / 1K tokens
 - Cache-write: 1.25× input rate, one-time for 5-minute TTL
@@ -84,15 +92,15 @@ All three features share the same skeleton:
 
 ```ts
 // apps/api/src/modules/ai/ai-client.ts (sketched — 31-02 implements)
-import Anthropic from '@anthropic-ai/sdk';
-import type { ZodType } from 'zod';
-import { z } from 'zod';
+import Anthropic from "@anthropic-ai/sdk";
+import type { ZodType } from "zod";
+import { z } from "zod";
 
 let _client: Anthropic | null = null;
 function getClient(): Anthropic {
   if (!_client) {
-    const key = process.env['ANTHROPIC_API_KEY'];
-    if (!key) throw new Error('ANTHROPIC_API_KEY missing');
+    const key = process.env["ANTHROPIC_API_KEY"];
+    if (!key) throw new Error("ANTHROPIC_API_KEY missing");
     _client = new Anthropic({ apiKey: key });
   }
   return _client;
@@ -100,7 +108,7 @@ function getClient(): Anthropic {
 
 export type RunStructuredOptions<S extends ZodType> = {
   model: string;
-  system: string;          // ≥1024 tokens for cache breakpoint
+  system: string; // ≥1024 tokens for cache breakpoint
   user: string;
   toolName: string;
   toolDescription: string;
@@ -115,14 +123,22 @@ export async function runStructured<S extends ZodType>(
   const response = await client.messages.create({
     model: opts.model,
     max_tokens: 1024,
-    system: [{ type: 'text', text: opts.system, cache_control: { type: 'ephemeral' } }],
-    messages: [{ role: 'user', content: opts.user }],
-    tools: [{ name: opts.toolName, description: opts.toolDescription, input_schema: inputSchema }],
-    tool_choice: { type: 'tool', name: opts.toolName },
+    system: [
+      { type: "text", text: opts.system, cache_control: { type: "ephemeral" } },
+    ],
+    messages: [{ role: "user", content: opts.user }],
+    tools: [
+      {
+        name: opts.toolName,
+        description: opts.toolDescription,
+        input_schema: inputSchema,
+      },
+    ],
+    tool_choice: { type: "tool", name: opts.toolName },
   });
   // Extract tool_use block; parse with Zod for runtime safety.
-  const block = response.content.find((c) => c.type === 'tool_use');
-  if (!block || block.type !== 'tool_use') throw new Error('no tool_use block');
+  const block = response.content.find((c) => c.type === "tool_use");
+  if (!block || block.type !== "tool_use") throw new Error("no tool_use block");
   const result = opts.schema.parse(block.input);
   return { result, usage: extractUsage(response.usage) };
 }
@@ -132,14 +148,17 @@ export async function runStructured<S extends ZodType>(
 
 **Tool name:** `record_executive_summary`
 **Zod schema:**
+
 ```ts
 const summarySchema = z.object({
   narrative: z.string().min(20).max(500), // 2-3 sentences enforced via rubric, char-bounded
-  tone: z.enum(['positive', 'neutral', 'negative']),
+  tone: z.enum(["positive", "neutral", "negative"]),
   highlights: z.array(z.string().min(1).max(120)).max(3), // for accessibility / hover
 });
 ```
+
 **System prompt (≥1024 tokens):** rubric covers
+
 - Role: senior-engineering-manager assistant.
 - Output rules: 2-3 sentences, no bullet points, no greetings.
 - DO NOT change pre-computed numbers (see §3.4).
@@ -149,6 +168,7 @@ const summarySchema = z.object({
   the prompt over the 1024-token cache breakpoint.
 
 **User prompt template:**
+
 ```
 [REPORT METADATA]
 Period: {periodLabel}
@@ -158,11 +178,13 @@ Pre-computed traffic-light counts: {greenCount} green, {yellowCount} yellow, {re
 [REPORT CONTENT]
 {leadSectionsCondensed}
 ```
+
 **Cache key:** `contentHash = sha256(JSON.stringify({reportId, sections: condensedView}))`
 where `condensedView` excludes head-narrative (we don't summarize what
 the head wrote — see CONTEXT.md `<deferred>`: "AI changing head's narrative is anti-feature").
 
 **Cost estimate per call:**
+
 - Input: ~5,000 tokens (rubric + condensed report) → $0.004
 - Output: ~150 tokens (3-sentence narrative + tone + highlights) → $0.0006
 - Per uncached call: ≈ $0.0046
@@ -173,28 +195,34 @@ the head wrote — see CONTEXT.md `<deferred>`: "AI changing head's narrative is
 
 **Tool name:** `record_risk_sentiment`
 **Zod schema:**
+
 ```ts
 const sentimentSchema = z.object({
-  level: z.enum(['low', 'medium', 'high']),
+  level: z.enum(["low", "medium", "high"]),
   rationale: z.string().min(5).max(120),
 });
 ```
+
 **System prompt (≥1024 tokens):** rubric covers
+
 - Role: risk-classification assistant.
 - 3-class definition with examples (low: "supplier has 1d delay risk", high: "client may cancel contract").
 - DO NOT escalate based on speculation; rate visible severity only.
 - Anchor examples (≥6) for each class — pads to ≥1024 tokens.
 
 **User prompt template:**
+
 ```
 Risk: {risk}
 Impact: {impact}
 Mitigation: {mitigation}
 ```
+
 **Cache key:** `contentHash = sha256(JSON.stringify({risk, impact, mitigation}))`
 — per-risk granularity (not per-report). Same risk text → same cached row.
 
 **Cost estimate per call:**
+
 - Input: ~1,500 tokens (rubric + 1 risk row) → $0.0012
 - Output: ~50 tokens → $0.0002
 - Per uncached call: ≈ $0.0014
@@ -205,14 +233,17 @@ Mitigation: {mitigation}
 
 **Tool name:** `record_on_track_verdict`
 **Zod schema:**
+
 ```ts
 const onTrackSchema = z.object({
-  verdict: z.enum(['on-track', 'attention', 'off-track']),  // ✓ ⚠ ✗
-  confidence: z.enum(['low', 'medium', 'high']),
+  verdict: z.enum(["on-track", "attention", "off-track"]), // ✓ ⚠ ✗
+  confidence: z.enum(["low", "medium", "high"]),
   rationale: z.string().min(5).max(120),
 });
 ```
+
 **System prompt (≥1024 tokens):** rubric covers
+
 - Role: project-health classifier.
 - DEFINITIVE rule: verdict reflects MODEL OPINION, NOT lead's chosen colour.
   Lead owns the traffic-light colour; this verdict is advisory.
@@ -222,6 +253,7 @@ const onTrackSchema = z.object({
 - Worked examples (≥4) — pads to ≥1024 tokens.
 
 **User prompt template:**
+
 ```
 [CELL CONTEXT]
 Lead: {leadName}
@@ -245,6 +277,7 @@ this lead-project cell). The lead's chosen colour is included in the hash
 so a colour change recomputes (it's a signal to the model, not output).
 
 **Cost estimate per call:**
+
 - Input: ~1,200 tokens (rubric + cell snapshot) → $0.001
 - Output: ~80 tokens → $0.0003
 - Per uncached call: ≈ $0.0013
@@ -307,6 +340,7 @@ never warm correctly.
 ## 5. Module Isolation (Success Criterion 4)
 
 ### 5.1 Filesystem layout (locked by CONTEXT.md)
+
 ```
 apps/api/src/modules/ai/
 ├── ai.module.ts                    # NestJS module (registers service + facade)
@@ -366,7 +400,7 @@ It re-exports only the narrow methods needed (e.g.
 gets a path-prefix early-return at the top:
 
 ```ts
-if (path.startsWith('ai.')) {
+if (path.startsWith("ai.")) {
   // PITFALLS C-3: AI prompts and responses must never reach the
   // structured log stream. The procedure-level metrics (tokens,
   // duration) are recorded in AiInsight rows instead.
@@ -375,6 +409,7 @@ if (path.startsWith('ai.')) {
 ```
 
 This is preferred over creating new `aiHeadProcedure` helpers because:
+
 - One change point keeps the rule in one place.
 - `ai.*` is a namespace prefix, easy to grep/audit.
 - New AI procedures inherit the exclusion automatically.
@@ -384,18 +419,19 @@ This is preferred over creating new `aiHeadProcedure` helpers because:
 ## 6. Eval Strategy (AI-03 CI Gate)
 
 ### 6.1 Golden-set fixtures
+
 - Path: `apps/api/src/modules/ai/__fixtures__/golden-set/`
 - 8-12 fixture reports as JSON, each shape:
   ```json
   {
     "id": "fx-001",
     "description": "all-green stable team",
-    "report": { /* assembledReport-shaped */ },
+    "report": {
+      /* assembledReport-shaped */
+    },
     "expected": {
       "summary": { "tone": "positive", "narrativeContains": ["7", "stable"] },
-      "sentiment": [
-        { "riskId": "...", "level": "low" }
-      ],
+      "sentiment": [{ "riskId": "...", "level": "low" }],
       "onTrack": [
         { "sectionId": "...", "projectId": "...", "verdict": "on-track" }
       ]
@@ -406,6 +442,7 @@ This is preferred over creating new `aiHeadProcedure` helpers because:
   threshold is loose (≥80%); after head review, threshold can tighten.
 
 ### 6.2 Eval test
+
 - Path: `apps/api/src/modules/ai/__tests__/golden-set.eval.test.ts`
 - Skipped by default (`describe.skipIf(!process.env['ANTHROPIC_API_KEY'])`).
 - Runs via `pnpm test:ai-eval` (alias to
@@ -423,6 +460,7 @@ This is preferred over creating new `aiHeadProcedure` helpers because:
   - **Summary length ≤3 sentences** (regex: `^[^.!?]*[.!?][^.!?]*[.!?]?[^.!?]*[.!?]?$`).
 
 ### 6.3 Package.json wiring (31-04)
+
 ```json
 "scripts": {
   "test:ai-eval": "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY pnpm --filter @customreport/api exec vitest run src/modules/ai/__tests__/golden-set.eval.test.ts --reporter=verbose"
@@ -430,6 +468,7 @@ This is preferred over creating new `aiHeadProcedure` helpers because:
 ```
 
 ### 6.4 CI gate
+
 - Triggered only on PRs touching `apps/api/src/modules/ai/**` or
   `apps/api/src/modules/ai/__fixtures__/**` (path-filter in workflow).
 - Fails the PR if any threshold above is breached.
@@ -437,10 +476,12 @@ This is preferred over creating new `aiHeadProcedure` helpers because:
 - Skip on docs-only PRs.
 
 ### 6.5 Unit-test boundary
+
 **Unit tests** (`ai-client.test.ts`, `ai-cache.test.ts`,
 `ai.service.test.ts`): mock `@anthropic-ai/sdk` via
 `vi.mock('@anthropic-ai/sdk', ...)`. NEVER call live API.
 Assertions verify:
+
 - Tool name and `input_schema` matches Zod schema.
 - System prompt contains pre-computed counts string.
 - Output is parsed through Zod (rejects malformed tool results).
@@ -450,23 +491,28 @@ Assertions verify:
 
 ## 7. Failure Modes & Guardrails
 
-| Failure | Detection | Mitigation | Test |
-|---|---|---|---|
-| **API outage** (5xx, network) | SDK throws after retries | tRPC procedure returns `{available: false, reason: 'unavailable'}` sentinel; UI renders "AI unavailable" placeholder. | Unit test: SDK throws → procedure returns sentinel, no exception bubbles. |
-| **ANTHROPIC_API_KEY missing** | Lazy-init `getClient()` throws on first call | Procedure catches and returns the same sentinel (treats as outage). | Unit test: env unset → procedure returns sentinel. |
-| **Rate limit (429)** | SDK throws `RateLimitError` | SDK auto-retries with exponential backoff. After max retries, return sentinel; head can hit Regenerate later. | Unit test: mocked SDK throws RateLimitError → procedure catches, returns sentinel. |
-| **Hallucinated count** | Eval test (digit-string check, §6.2) | Eval gate blocks PR. Runtime defense: pre-computed counts in system prompt (§3.4). | Eval test asserts no foreign digits. |
-| **Cost runaway** | Per-call usage logged in AiInsight rows | Per-report budget guard: AI-01 procedure aborts (returns sentinel) if cumulative `inputTokens + outputTokens` for this `reportId` in last 1h exceeds 50K (≈ $0.05). | Unit test: stub usage 60K → procedure aborts. |
-| **Cache miss flood** | AiInsight rows show `cacheReadTokens=0` repeatedly | Production monitor (§8): alert if cache-read rate < 50% over 1h. | n/a (production observation). |
-| **Malformed tool output** | Zod parse fails | Procedure catches, returns sentinel, logs WARN with `{kind, hashPrefix, model}` (no content). | Unit test: stubbed bad tool input → Zod rejects → sentinel returned. |
-| **PII in logs** | Lint rule + middleware exclusion (§5) | Both layers must pass; CI fails if lint rule trips. | Lint rule fires on test fixture trying to log a `prompt` variable. |
+| Failure                       | Detection                                          | Mitigation                                                                                                                                                          | Test                                                                               |
+| ----------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **API outage** (5xx, network) | SDK throws after retries                           | tRPC procedure returns `{available: false, reason: 'unavailable'}` sentinel; UI renders "AI unavailable" placeholder.                                               | Unit test: SDK throws → procedure returns sentinel, no exception bubbles.          |
+| **ANTHROPIC_API_KEY missing** | Lazy-init `getClient()` throws on first call       | Procedure catches and returns the same sentinel (treats as outage).                                                                                                 | Unit test: env unset → procedure returns sentinel.                                 |
+| **Rate limit (429)**          | SDK throws `RateLimitError`                        | SDK auto-retries with exponential backoff. After max retries, return sentinel; head can hit Regenerate later.                                                       | Unit test: mocked SDK throws RateLimitError → procedure catches, returns sentinel. |
+| **Hallucinated count**        | Eval test (digit-string check, §6.2)               | Eval gate blocks PR. Runtime defense: pre-computed counts in system prompt (§3.4).                                                                                  | Eval test asserts no foreign digits.                                               |
+| **Cost runaway**              | Per-call usage logged in AiInsight rows            | Per-report budget guard: AI-01 procedure aborts (returns sentinel) if cumulative `inputTokens + outputTokens` for this `reportId` in last 1h exceeds 50K (≈ $0.05). | Unit test: stub usage 60K → procedure aborts.                                      |
+| **Cache miss flood**          | AiInsight rows show `cacheReadTokens=0` repeatedly | Production monitor (§8): alert if cache-read rate < 50% over 1h.                                                                                                    | n/a (production observation).                                                      |
+| **Malformed tool output**     | Zod parse fails                                    | Procedure catches, returns sentinel, logs WARN with `{kind, hashPrefix, model}` (no content).                                                                       | Unit test: stubbed bad tool input → Zod rejects → sentinel returned.               |
+| **PII in logs**               | Lint rule + middleware exclusion (§5)              | Both layers must pass; CI fails if lint rule trips.                                                                                                                 | Lint rule fires on test fixture trying to log a `prompt` variable.                 |
 
 ### Sentinel shape (locked)
+
 ```ts
 type AiInsightResult<R> =
   | { available: true; result: R; cached: boolean }
-  | { available: false; reason: 'unavailable' | 'rate_limit' | 'budget_exceeded' };
+  | {
+      available: false;
+      reason: "unavailable" | "rate_limit" | "budget_exceeded";
+    };
 ```
+
 All three procedures return this discriminated union.
 
 ---
@@ -474,15 +520,17 @@ All three procedures return this discriminated union.
 ## 8. Production Monitoring
 
 ### 8.1 Cache-hit telemetry
+
 - Each call upserts an AiInsight row; on cache hit, no new row is written
   (the read returns the existing row's result).
-- Daily metric: count(AiInsight rows created in last 24h) ÷ count(ai.*
+- Daily metric: count(AiInsight rows created in last 24h) ÷ count(ai.\*
   procedure invocations in last 24h) = cache-creation rate.
 - Threshold: cache-creation rate > 50% for 1h triggers an alert (cache
   is not warming). 31-04 ships the SQL aggregation; PagerDuty wiring
   is deferred to operator runbook (out of phase scope).
 
 ### 8.2 Token usage report
+
 - Daily roll-up via SQL on AiInsight:
   ```sql
   SELECT date_trunc('day', "createdAt") AS day,
@@ -498,6 +546,7 @@ All three procedures return this discriminated union.
 - Owner runs ad-hoc; no automated dashboard in v6.0.
 
 ### 8.3 Anthropic data-retention
+
 - Workspace-level setting: **data retention OFF** (verified manually by
   owner before phase exit; documented in Section 1 of CONTEXT.md as
   success criterion 4).
@@ -508,6 +557,7 @@ All three procedures return this discriminated union.
 ## 9. Open Items (deferred)
 
 Per CONTEXT.md `<deferred>`:
+
 - Head sign-off on golden-set rubric (C-5 in v6.0 STATE.md). Eval gate
   ships with loose thresholds; head-tightened thresholds land in v6.1.
 - Multi-language summaries (RU + EN) — v6.0 EN-only.

@@ -1,9 +1,11 @@
-'use client';
+"use client";
 
 const STAGE_SPLIT_RE = /[,;]+/;
 
-export function splitStageNames(stageName: string | null | undefined): string[] {
-  if (!stageName || stageName.trim() === '' || stageName.trim() === '—') {
+export function splitStageNames(
+  stageName: string | null | undefined,
+): string[] {
+  if (!stageName || stageName.trim() === "" || stageName.trim() === "—") {
     return [];
   }
 
@@ -27,7 +29,7 @@ export function joinStageNames(stages: readonly string[]): string | null {
     seen.add(value);
     out.push(value);
   }
-  return out.length > 0 ? out.join(', ') : null;
+  return out.length > 0 ? out.join(", ") : null;
 }
 
 export function stageNameMatches(

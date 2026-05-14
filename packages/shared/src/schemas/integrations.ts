@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Phase 55 (UFB-056) — payload shape for `admin.integrationsStatus`.

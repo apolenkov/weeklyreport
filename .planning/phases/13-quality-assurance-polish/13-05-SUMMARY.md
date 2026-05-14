@@ -39,12 +39,14 @@ metrics:
 ### Task 1: Tests for report-sections, carry-over, and reminders (14 tests)
 
 **report-sections.service.test.ts** (4 new tests):
+
 - saveDraft rejects when report is published (FORBIDDEN guard)
 - saveDraft succeeds when report is draft
 - saveDraft calls getReportStatus with correct reportId
 - saveDraft rejects when section is already submitted
 
 **carry-over.service.test.ts** (5 new tests):
+
 - Processes ALL source sections (3 sections, verifies 4 records and correct item/decision counts)
 - Returns existing execution without new records (idempotency)
 - Creates new execution when none exists
@@ -52,6 +54,7 @@ metrics:
 - Throws when target sections are empty
 
 **reminders.service.test.ts** (5 new tests):
+
 - Reads kind from DB field (deadline rule mapping)
 - Reads kind from DB field (weekly rule mapping)
 - Different recipient emails generate different dedupeKeys
@@ -63,6 +66,7 @@ metrics:
 ### Task 2: Tests for admin, PDF export, and auth (15 tests)
 
 **admin.service.test.ts** (4 new tests):
+
 - removeUser removes user from snapshot
 - removeUser preserves other users
 - removeUser handles non-existent user gracefully
@@ -70,6 +74,7 @@ metrics:
 - removeReminderRule deletes from snapshot
 
 **pdf-export.service.test.ts** (6 new tests):
+
 - markExportFailed updates job status to failed
 - markExportFailed calls repository with correct parameters
 - buildAuthCookies uses AUTH_JWT_COOKIE_NAME from env
@@ -78,6 +83,7 @@ metrics:
 - buildAuthCookies extracts domain from PDF_BASE_URL
 
 **auth.e2e.spec.ts** (4 new tests):
+
 - createSessionCookie uses AUTH_JWT_COOKIE_NAME from env
 - Custom cookie name produces correct Set-Cookie header
 - Falls back to customreport_session when env not set
@@ -88,6 +94,7 @@ metrics:
 ## Verification
 
 All 68 tests pass (39 original + 29 new):
+
 ```
 Test Files  9 passed (9)
 Tests       68 passed (68)
@@ -99,6 +106,7 @@ Duration    418ms
 ### Auto-fixed Issues
 
 **1. [Rule 3 - Blocking] Fixed parse errors from orphaned closing brackets**
+
 - **Found during:** Task 1 and Task 2
 - **Issue:** New describe blocks inserted before `describe('router')` blocks created orphaned `});` closing brackets that broke the TypeScript parser
 - **Fix:** Removed extra `});` closings in reminders, admin, and pdf-export test files

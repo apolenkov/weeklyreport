@@ -21,7 +21,7 @@ affects: [phase-24-auth-guards, phase-25-logging, phase-30-pdf-watermarks]
 
 # Tech tracking
 tech-stack:
-  added: []  # No new dependencies; reused express, playwright, bullmq, @tanstack/react-query already present
+  added: [] # No new dependencies; reused express, playwright, bullmq, @tanstack/react-query already present
   patterns:
     - "express.static with fallthrough:false + Content-Disposition for binary artifact serving (matches mountBullBoard pattern)"
     - "tanstack-react-query refetchInterval as a callback that returns false to stop polling — replaces manual setInterval/clearInterval"
@@ -100,11 +100,13 @@ All commits used `--no-verify` per CLAUDE.md and are atomic per task.
 ## Files Created/Modified
 
 ### Created
+
 None (no new dependencies, no new files — surgical extension of existing surfaces).
 
 ### Modified
 
 **Backend (apps/api)**
+
 - `src/infrastructure/config/env.schema.ts` — `PDF_OUTPUT_DIR` (default `./apps/api/storage/pdfs`).
 - `src/main.ts` — `express.static('/pdfs')` mount with `fallthrough:false`, Content-Disposition headers, mkdirSync at boot. Mounted before `/trpc` so misses 404 cleanly.
 - `src/modules/pdf-export/pdf-export.service.ts` — `requestPdfExport(reportId, requestedBy?)` accepts session userId; passes through to repo. Interface widened with optional 2nd arg.
@@ -115,6 +117,7 @@ None (no new dependencies, no new files — surgical extension of existing surfa
 - `src/infrastructure/bullmq/pdf-export.processor.ts` — `resolve(process.env['PDF_OUTPUT_DIR'] ?? './apps/api/storage/pdfs')` (was unresolved + `/app/data/pdfs` non-existent fallback). Added `TODO(Phase 24)` above `page.goto` for future cookie injection.
 
 **Frontend (apps/web)**
+
 - `src/components/weekly-report/export-pdf-button.tsx` — full rewrite. Accepts `{reportId, periodStatus}`, uses `useTRPC()`, `useMutation`, `useQuery`, `useRef` one-shot, `useEffect` for download trigger. Tailwind class string preserved. Disabled with explanatory `title` when not published or while generating.
 - `src/components/weekly-report/weekly-report-page.tsx` — `<ExportPdfButton>` now receives `reportId` and `periodStatus`; the `TODO(Phase 23)` comment is gone.
 
@@ -132,6 +135,7 @@ See frontmatter `key-decisions:` for the authoritative list. Highlights:
 ### Auto-fixed Issues
 
 **1. [Rule 1 - Bug] Path-resolution drift between worker and static mount**
+
 - **Found during:** Task 1 (processor surgical change)
 - **Issue:** Plan said use `process.env['PDF_OUTPUT_DIR'] ?? resolve('./apps/api/storage/pdfs')` in the processor, but `resolve()` was applied only to the fallback. If a user sets `PDF_OUTPUT_DIR=./somewhere`, the env branch stays unresolved while `main.ts`'s `resolve(env.PDF_OUTPUT_DIR)` uses the absolute form — they could diverge if cwd changed.
 - **Fix:** Applied `resolve()` to the entire expression in `processor.ts`: `resolve(process.env['PDF_OUTPUT_DIR'] ?? './apps/api/storage/pdfs')`. Mirrors `main.ts`. Worker and static mount now agree on an absolute path regardless of cwd.
@@ -140,6 +144,7 @@ See frontmatter `key-decisions:` for the authoritative list. Highlights:
 - **Committed in:** `35b1128` (Task 1 plumbing commit)
 
 **2. [Rule 1 - Bug] Pre-existing TS6133 in same test file I edited**
+
 - **Found during:** Task 1 typecheck
 - **Issue:** `pdf-export.service.test.ts:63` had `error: string` parameter never used (pre-existing issue, verified via `git stash` baseline). Same project disables noUnusedParameters except via underscore prefix. Other test files in the same module already use `_error`.
 - **Fix:** Renamed to `_error: string` (one char). No behavior change.
@@ -148,6 +153,7 @@ See frontmatter `key-decisions:` for the authoritative list. Highlights:
 - **Committed in:** `6c2619c` (folded into Task 1 GREEN commit)
 
 **3. [Rule 2 - Missing Critical] aria-busy attribute on the generating button**
+
 - **Found during:** Task 2 (component rewrite)
 - **Issue:** Plan didn't mention accessibility. A button that visually disables but doesn't expose the busy state is invisible to screen readers — and the plan's must_haves explicitly list "user sees progress" as a truth.
 - **Fix:** Added `aria-busy={isGenerating}`. Cheap, non-invasive, semantically correct.
@@ -158,7 +164,7 @@ See frontmatter `key-decisions:` for the authoritative list. Highlights:
 ### Deferred Items (out of scope per scope-boundary rule)
 
 - `apps/api/src/modules/period/period.contract.test.ts:65` — pre-existing TS6133 unused-param warning. Not introduced by this plan, lives in an unrelated module. Logged in `.planning/phases/23-pdf-and-jobs/deferred-items.md`.
-- `apps/web` repo-wide ESLint warnings (cache-keys.ts, weekly-report-page.test.tsx, lead-form.tsx, mappers/*) — pre-existing across many files. Not in scope. Surgically lint-clean on the two files this plan touched.
+- `apps/web` repo-wide ESLint warnings (cache-keys.ts, weekly-report-page.test.tsx, lead-form.tsx, mappers/\*) — pre-existing across many files. Not in scope. Surgically lint-clean on the two files this plan touched.
 
 ---
 
@@ -191,6 +197,7 @@ If the PDF shows a login page in production-shaped environments, that's the Phas
 ## Next Phase Readiness
 
 **Phase 24 (auth guards) inherits a clean seam:**
+
 1. `PdfExportService.buildAuthCookies(authToken)` already exists and is fully tested (4 contract tests).
 2. The `TODO(Phase 24)` marker is placed exactly above `page.goto` so the next plan's grep pattern is unambiguous.
 3. Once tRPC procedures require auth in production, the worker should:
@@ -217,6 +224,7 @@ Verified before declaring done:
 - Unit tests: 37 pdf-export tests pass.
 
 ---
-*Phase: 23-pdf-and-jobs*
-*Plan: 01*
-*Completed: 2026-04-25*
+
+_Phase: 23-pdf-and-jobs_
+_Plan: 01_
+_Completed: 2026-04-25_

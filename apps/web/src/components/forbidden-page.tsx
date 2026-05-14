@@ -1,14 +1,14 @@
-import Link from 'next/link';
+import Link from "next/link";
 
-import { Button } from '@customreport/ui/components/ui/button';
+import { Button } from "@customreport/ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from '@customreport/ui/components/ui/card';
+} from "@customreport/ui/components/ui/card";
 
-import type { Role } from '@customreport/shared';
+import type { Role } from "@customreport/shared";
 
 /**
  * AUTH-07 (Phase 29-03): shared 403 page composed into each (app)/route-group
@@ -23,7 +23,7 @@ export type ForbiddenPageProps = {
 };
 
 export function ForbiddenPage({ requiredRoles }: ForbiddenPageProps) {
-  const rolesLabel = requiredRoles.join(' or ');
+  const rolesLabel = requiredRoles.join(" or ");
   return (
     <main
       role="main"
@@ -36,7 +36,7 @@ export function ForbiddenPage({ requiredRoles }: ForbiddenPageProps) {
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
             This page is reserved for the {rolesLabel} role. Switch role from
-            the floating role-switcher (bottom-right) to continue, or head back
+            the floating role-switcher (bottom-left) to continue, or head back
             to the dashboard.
           </p>
           <Button asChild>

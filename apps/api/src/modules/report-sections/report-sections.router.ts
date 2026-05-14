@@ -2,16 +2,16 @@ import {
   draftSaveSchema,
   reportSectionReadModelSchema,
   submitSectionSchema,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
 import type {
   DraftSavePayload,
   ReportSectionReadModel,
   SubmitSectionPayload,
   UserSession,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import type { ReportSectionsService } from './report-sections.service';
+import type { ReportSectionsService } from "./report-sections.service";
 
 export type ReportSectionsRouterContext = {
   reportSectionsService: ReportSectionsService;
@@ -19,10 +19,12 @@ export type ReportSectionsRouterContext = {
 };
 
 export const reportSectionsRouter = {
-  async getActiveSection(ctx: ReportSectionsRouterContext): Promise<ReportSectionReadModel> {
+  async getActiveSection(
+    ctx: ReportSectionsRouterContext,
+  ): Promise<ReportSectionReadModel> {
     return reportSectionReadModelSchema.parse(
       await ctx.reportSectionsService.getActiveSection(
-        ctx.session.activeReportSectionId ?? '',
+        ctx.session.activeReportSectionId ?? "",
       ),
     );
   },

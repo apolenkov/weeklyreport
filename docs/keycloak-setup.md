@@ -60,42 +60,42 @@ In the Keycloak admin UI:
 
 On the new client's settings tab:
 
-| Field                                    | Value                                                              |
-| ---------------------------------------- | ------------------------------------------------------------------ |
-| **Valid Redirect URIs**                  | `https://customreport.example.com/auth/saml/callback`              |
-| **Master SAML Processing URL**           | `https://customreport.example.com/auth/saml/callback`              |
-| **Valid Post Logout Redirect URIs**      | `https://customreport.example.com/`                                |
-| **Sign Documents**                       | ON  (signs the entire SAML response — `wantAuthnResponseSigned`)   |
-| **Sign Assertions**                      | ON  (`wantAssertionsSigned`)                                       |
-| **Signature Algorithm**                  | RSA_SHA256                                                         |
-| **Canonicalization Method**              | EXCLUSIVE (default)                                                |
-| **Force POST Binding**                   | ON                                                                 |
-| **Front Channel Logout**                 | OFF                                                                |
-| **Encrypt Assertions**                   | OFF (CustomReport SP does not run encryption — see deferred below) |
-| **Client Signature Required**            | OFF (SP-side AuthnRequest signing not configured)                  |
-| **Allow ECP Flow**                       | OFF                                                                |
-| **Name ID Format**                       | email                                                              |
+| Field                               | Value                                                              |
+| ----------------------------------- | ------------------------------------------------------------------ |
+| **Valid Redirect URIs**             | `https://customreport.example.com/auth/saml/callback`              |
+| **Master SAML Processing URL**      | `https://customreport.example.com/auth/saml/callback`              |
+| **Valid Post Logout Redirect URIs** | `https://customreport.example.com/`                                |
+| **Sign Documents**                  | ON (signs the entire SAML response — `wantAuthnResponseSigned`)    |
+| **Sign Assertions**                 | ON (`wantAssertionsSigned`)                                        |
+| **Signature Algorithm**             | RSA_SHA256                                                         |
+| **Canonicalization Method**         | EXCLUSIVE (default)                                                |
+| **Force POST Binding**              | ON                                                                 |
+| **Front Channel Logout**            | OFF                                                                |
+| **Encrypt Assertions**              | OFF (CustomReport SP does not run encryption — see deferred below) |
+| **Client Signature Required**       | OFF (SP-side AuthnRequest signing not configured)                  |
+| **Allow ECP Flow**                  | OFF                                                                |
+| **Name ID Format**                  | email                                                              |
 
 ### 3. Attribute mapping
 
 CustomReport's verifier (`apps/api/src/modules/auth/saml.strategy.ts` →
 `verifySamlProfile`) reads four claims:
 
-| CustomReport field     | Keycloak attribute name | Notes                                             |
-| ---------------------- | ----------------------- | ------------------------------------------------- |
-| `samlId` (`nameID`)    | NameID                  | Used as the unique persistent ID for the User row |
-| `email`                | `email`                 | Required; mapped to User.email on first login     |
-| `displayName`          | `displayName` or `cn`   | Optional; falls back to "Unknown User"            |
-| `role`                 | `role`                  | Required; one of `lead`, `head`, `admin`, `viewer` |
+| CustomReport field  | Keycloak attribute name | Notes                                              |
+| ------------------- | ----------------------- | -------------------------------------------------- |
+| `samlId` (`nameID`) | NameID                  | Used as the unique persistent ID for the User row  |
+| `email`             | `email`                 | Required; mapped to User.email on first login      |
+| `displayName`       | `displayName` or `cn`   | Optional; falls back to "Unknown User"             |
+| `role`              | `role`                  | Required; one of `lead`, `head`, `admin`, `viewer` |
 
 In Keycloak, add these via **Client → Mappers** (or **Client Scopes →
 saml → Mappers**):
 
-| Mapper type                | Mapper name        | User attribute / role attribute       | SAML attribute name |
-| -------------------------- | ------------------ | ------------------------------------- | ------------------- |
-| User Property              | email              | email                                 | email               |
-| User Property              | full name          | firstName + lastName                  | displayName         |
-| User Realm Role / Hardcoded | role               | (mapped from realm role / group)      | role                |
+| Mapper type                 | Mapper name | User attribute / role attribute  | SAML attribute name |
+| --------------------------- | ----------- | -------------------------------- | ------------------- |
+| User Property               | email       | email                            | email               |
+| User Property               | full name   | firstName + lastName             | displayName         |
+| User Realm Role / Hardcoded | role        | (mapped from realm role / group) | role                |
 
 The `role` attribute MUST resolve to one of the four enum values. Mapping
 realm roles → CustomReport roles is up to the org; a typical pattern:

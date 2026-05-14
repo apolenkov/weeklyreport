@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 type ConfirmDeleteDialogProps = {
   /** Open/close state — caller owns this. */
@@ -61,7 +61,7 @@ export function ConfirmDeleteDialog({
   preview,
   subtitle,
   consequence,
-  confirmLabel = 'Delete',
+  confirmLabel = "Delete",
   reversible = false,
   onConfirm,
   onCancel,
@@ -82,10 +82,13 @@ export function ConfirmDeleteDialog({
   useEffect(() => {
     if (!open) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         onCancel();
-      } else if (e.key === 'Enter' && document.activeElement === confirmRef.current) {
+      } else if (
+        e.key === "Enter" &&
+        document.activeElement === confirmRef.current
+      ) {
         // Only fire on Enter when the destructive button is focused —
         // otherwise the same key in the underlying form would also
         // confirm a delete the user didn't mean.
@@ -93,11 +96,11 @@ export function ConfirmDeleteDialog({
         onConfirm();
       }
     }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
   }, [open, onCancel, onConfirm]);
 
-  if (!open || typeof document === 'undefined') return null;
+  if (!open || typeof document === "undefined") return null;
 
   return createPortal(
     <div
@@ -129,15 +132,21 @@ export function ConfirmDeleteDialog({
         </p>
 
         {subtitle && (
-          <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">{subtitle}</p>
+          <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">
+            {subtitle}
+          </p>
         )}
 
         {consequence && (
-          <p className="mt-3 text-[12px] text-[var(--color-destructive)]">{consequence}</p>
+          <p className="mt-3 text-[12px] text-[var(--color-destructive)]">
+            {consequence}
+          </p>
         )}
 
         <p className="mt-4 text-[11px] text-[var(--color-muted-foreground)]">
-          {reversible ? 'This can be reversed later.' : 'This action cannot be undone.'}
+          {reversible
+            ? "This can be reversed later."
+            : "This action cannot be undone."}
         </p>
 
         <div className="mt-5 flex justify-end gap-2">

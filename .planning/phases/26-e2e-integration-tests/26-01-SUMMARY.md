@@ -82,15 +82,15 @@ metrics:
 
 ### 7 spec files, 21 tests
 
-| Spec file | Tests | Coverage |
-|-----------|-------|----------|
-| `lead-journey.integration.spec.ts` | 4 | autosave persistence, submit-locks-form, fill-from-previous, lead sees only own data |
-| `head-journey.integration.spec.ts` | 4 | dashboard renders 4-submitted/2-draft, publish flips report.status, revoke reverts, portfolio lights aggregate |
-| `cross-role-lifecycle.integration.spec.ts` | 3 | submit→publish→locked, head publishes→lead UI updates, revoke→lead can re-edit |
-| `admin-crud.integration.spec.ts` | 3 | create product persists, AppSettings update persists, product list reflects DB |
-| `status-risk-sync.integration.spec.ts` | 2 | at_risk auto-creates Risk row, edit doesn't double-write (SyncSource flag) |
-| `pdf-export.integration.spec.ts` | 2 | enqueue mutation fires, download link appears (gated by E2E_PDF_ENABLED) |
-| `auth-guards.integration.spec.ts` | 3 | unauthed→redirect with ?next=, cleared cookie→redirect, invalid role→400 |
+| Spec file                                  | Tests | Coverage                                                                                                       |
+| ------------------------------------------ | ----- | -------------------------------------------------------------------------------------------------------------- |
+| `lead-journey.integration.spec.ts`         | 4     | autosave persistence, submit-locks-form, fill-from-previous, lead sees only own data                           |
+| `head-journey.integration.spec.ts`         | 4     | dashboard renders 4-submitted/2-draft, publish flips report.status, revoke reverts, portfolio lights aggregate |
+| `cross-role-lifecycle.integration.spec.ts` | 3     | submit→publish→locked, head publishes→lead UI updates, revoke→lead can re-edit                                 |
+| `admin-crud.integration.spec.ts`           | 3     | create product persists, AppSettings update persists, product list reflects DB                                 |
+| `status-risk-sync.integration.spec.ts`     | 2     | at_risk auto-creates Risk row, edit doesn't double-write (SyncSource flag)                                     |
+| `pdf-export.integration.spec.ts`           | 2     | enqueue mutation fires, download link appears (gated by E2E_PDF_ENABLED)                                       |
+| `auth-guards.integration.spec.ts`          | 3     | unauthed→redirect with ?next=, cleared cookie→redirect, invalid role→400                                       |
 
 ### `package.json` scripts
 
@@ -112,6 +112,7 @@ metrics:
 Per user instruction, the human-verify checkpoint was auto-approved. The following must be performed manually before marking the suite production-ready:
 
 1. **Set up dedicated test DB:**
+
    ```bash
    createdb customreport_e2e
    cp .env.test.example .env.test
@@ -121,15 +122,19 @@ Per user instruction, the human-verify checkpoint was auto-approved. The followi
    ```
 
 2. **Run the integration suite:**
+
    ```bash
    pnpm --filter @customreport/web test:e2e:integration
    ```
+
    Expected: both webServers boot (API on :3002, Web on :3005), `[e2e] Database ready.` logs, 21 tests run serially. Initial run will likely have failures — that's the point of this checkpoint. Triage per categories below.
 
 3. **Re-verify mock suite is unbroken:**
+
    ```bash
    pnpm --filter @customreport/web test:e2e
    ```
+
    Expected: 339 tests discovered and run as before this phase.
 
 4. **DB-isolation spot-check:**
@@ -141,19 +146,19 @@ Per user instruction, the human-verify checkpoint was auto-approved. The followi
 
 If a spec fails, classify:
 
-| Symptom | Likely cause | Fix |
-|---------|--------------|-----|
-| All specs 401 | Cookie not landing on browser context | Fixtures.loginAs already verifies cookie present; if it now fails, check FRONTEND_URL vs WEB_URL match (SameSite=Lax + cross-origin would drop cookie) |
-| `webServer timed out` | API/Web not exposing health URL, or port collision | `lsof -i :3002 -i :3005`; ensure `/health` endpoint still mounted (Phase 24) |
-| `test.skip` everywhere | Form selectors not matching | Open the failing test, fix `getByRole`/`getByLabel` against actual DOM, remove the `test.skip(...)` line |
-| Spec mutates and next spec fails | resetMutations not called, or seed not idempotent for the table touched | Add `test.afterEach(async () => { await resetMutations(); })`; verify seed handles upsert for new fields |
-| `tRPC 404 on `/trpc/period.publish`` | Procedure name guessed wrong | Open `apps/api/src/infrastructure/trpc/router.ts`, find actual procedure name, update spec's `waitForResponse` URL filter |
+| Symptom                              | Likely cause                                                            | Fix                                                                                                                                                    |
+| ------------------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| All specs 401                        | Cookie not landing on browser context                                   | Fixtures.loginAs already verifies cookie present; if it now fails, check FRONTEND_URL vs WEB_URL match (SameSite=Lax + cross-origin would drop cookie) |
+| `webServer timed out`                | API/Web not exposing health URL, or port collision                      | `lsof -i :3002 -i :3005`; ensure `/health` endpoint still mounted (Phase 24)                                                                           |
+| `test.skip` everywhere               | Form selectors not matching                                             | Open the failing test, fix `getByRole`/`getByLabel` against actual DOM, remove the `test.skip(...)` line                                               |
+| Spec mutates and next spec fails     | resetMutations not called, or seed not idempotent for the table touched | Add `test.afterEach(async () => { await resetMutations(); })`; verify seed handles upsert for new fields                                               |
+| `tRPC 404 on `/trpc/period.publish`` | Procedure name guessed wrong                                            | Open `apps/api/src/infrastructure/trpc/router.ts`, find actual procedure name, update spec's `waitForResponse` URL filter                              |
 
 ## Deviations from Plan
 
 ### Auto-fixed Issues
 
-**1. [Rule 1 - Bug] Top-level `testIgnore: ['integration/**']` in mock config did NOT exclude integration specs**
+**1. [Rule 1 - Bug] Top-level `testIgnore: ['integration/**']` in mock config did NOT exclude integration specs\*\*
 
 - **Found during:** Task 3 verification — `playwright test --config=playwright.config.ts --list` after spec files were created loaded the integration files and crashed on `helpers/db.ts`'s `E2E_DATABASE_URL` guard.
 - **Issue:** Playwright 1.59 with project-level `testIgnore` on the `chromium` project overrides top-level `testIgnore` (project-level replaces, doesn't merge). So the integration glob was being ignored at the project level.

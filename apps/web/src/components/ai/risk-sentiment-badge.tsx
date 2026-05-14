@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
 // Phase 31 (AI-02) — per-Risk sentiment badge. Hidden when AI is
 // unavailable (does NOT block the row). Sized 24×24 max to avoid layout
 // shift on mobile.
-import { useQuery } from '@tanstack/react-query';
-import { useTRPC } from '../../lib/trpc-context';
+import { useQuery } from "@tanstack/react-query";
+import { useTRPC } from "../../lib/trpc-context";
 
 type Props = {
   readonly riskId: string;
 };
 
-const LEVEL_STYLES: Record<'low' | 'medium' | 'high', string> = {
-  low: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  medium: 'bg-amber-100 text-amber-800 border-amber-200',
-  high: 'bg-red-100 text-red-800 border-red-200',
+const LEVEL_STYLES: Record<"low" | "medium" | "high", string> = {
+  low: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  medium: "bg-amber-100 text-amber-800 border-amber-200",
+  high: "bg-red-100 text-red-800 border-red-200",
 };
 
 export function RiskSentimentBadge({ riskId }: Props) {

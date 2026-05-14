@@ -2,9 +2,9 @@ import type {
   PeriodState,
   ReminderPolicyKind,
   Role,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import type { AppLogger } from './logger.js';
+import type { AppLogger } from "./logger.js";
 
 /**
  * AUTH-08 — structured audit envelope for security-relevant events.
@@ -28,19 +28,19 @@ import type { AppLogger } from './logger.js';
  *    never from raw X-Forwarded-For; this module is a pure consumer.
  */
 export type AuditEvent =
-  | 'login-success'
-  | 'login-fail'
-  | 'logout'
-  | 'role-denied'
-  | 'scope-denied'
-  | 'mutation'
-  | 'admin.policy.save'
-  | 'admin.policy.remove'
-  | 'admin.organization.update'
-  | 'period.auto-create'
-  | 'period.auto-publish'
-  | 'period.auto-archive'
-  | 'period.manual-create';
+  | "login-success"
+  | "login-fail"
+  | "logout"
+  | "role-denied"
+  | "scope-denied"
+  | "mutation"
+  | "admin.policy.save"
+  | "admin.policy.remove"
+  | "admin.organization.update"
+  | "period.auto-create"
+  | "period.auto-publish"
+  | "period.auto-archive"
+  | "period.manual-create";
 
 export type AuditEnvelope = {
   readonly event: AuditEvent;
@@ -50,12 +50,12 @@ export type AuditEnvelope = {
   readonly ip: string;
 };
 
-type LoginSuccessInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'>;
-type LoginFailInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+type LoginSuccessInput = Omit<AuditEnvelope, "event" | "attemptedRole">;
+type LoginFailInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
   readonly reason: string;
 };
-type LogoutInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'>;
-type RoleDeniedInput = Omit<AuditEnvelope, 'event'>;
+type LogoutInput = Omit<AuditEnvelope, "event" | "attemptedRole">;
+type RoleDeniedInput = Omit<AuditEnvelope, "event">;
 
 /**
  * UFB-040 / Phase 46-05: emitted when a head/viewer (anyone non-admin)
@@ -64,7 +64,7 @@ type RoleDeniedInput = Omit<AuditEnvelope, 'event'>;
  * description (e.g. "reportSection", "report") and the offending
  * `resourceId` so SIEM rules can detect probing patterns.
  */
-type ScopeDeniedInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+type ScopeDeniedInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
   readonly attemptedScope: string;
   readonly resourceId: string;
 };
@@ -85,10 +85,10 @@ type ScopeDeniedInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
  * `status` distinguishes success from any thrown TRPCError (validation,
  * authz, internal). For failures, `reason` carries the error message.
  */
-type MutationInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+type MutationInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
   readonly procedure: string;
   readonly target?: string;
-  readonly status: 'success' | 'fail';
+  readonly status: "success" | "fail";
   readonly duration: number;
   readonly reason?: string;
 };
@@ -102,13 +102,13 @@ type MutationInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
  * policy `kind` + create/update `action` so dashboards can split create
  * vs update without parsing the procedure string.
  */
-type PolicySaveInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+type PolicySaveInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
   readonly policyId: string;
   readonly kind: ReminderPolicyKind;
-  readonly action: 'create' | 'update';
+  readonly action: "create" | "update";
 };
 
-type PolicyRemoveInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+type PolicyRemoveInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
   readonly policyId: string;
 };
 
@@ -119,7 +119,10 @@ type PolicyRemoveInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
  * tampering — relevant because the same row drives the landing hero,
  * nav-bar, and PDF/email headers.
  */
-type OrganizationUpdateInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+type OrganizationUpdateInput = Omit<
+  AuditEnvelope,
+  "event" | "attemptedRole"
+> & {
   readonly previousShortName: string;
   readonly previousFullName: string;
   readonly nextShortName: string;
@@ -186,7 +189,10 @@ type PeriodAutoArchiveInput = {
  * (`from=null`, `to=<initial state>`) so SIEM rules that filter on
  * `(from, to)` work uniformly across both creation paths.
  */
-type PeriodManualCreateInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+type PeriodManualCreateInput = Omit<
+  AuditEnvelope,
+  "event" | "attemptedRole"
+> & {
   readonly periodId: string;
   readonly periodStart: string;
   readonly periodEnd: string;
@@ -203,7 +209,7 @@ type PeriodManualCreateInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & 
  * audit "what dates moved" key on `changes.<field>` presence; no-op edits
  * never reach this event (the router skips emission when diff is empty).
  */
-type PeriodManualEditInput = Omit<AuditEnvelope, 'event' | 'attemptedRole'> & {
+type PeriodManualEditInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
   readonly periodId: string;
   readonly changes: Partial<{
     periodStart: { from: string; to: string };
@@ -230,7 +236,7 @@ export interface AuditLogger {
   periodManualEdit(input: PeriodManualEditInput): void;
 }
 
-const AUDIT_MESSAGE = 'audit';
+const AUDIT_MESSAGE = "audit";
 
 /**
  * Build an AuditLogger that writes through the supplied AppLogger.
@@ -243,7 +249,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
   return {
     loginSuccess(input) {
       logger.info(AUDIT_MESSAGE, {
-        event: 'login-success',
+        event: "login-success",
         userId: input.userId,
         role: input.role,
         ip: input.ip,
@@ -251,7 +257,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     loginFail(input) {
       logger.warn(AUDIT_MESSAGE, {
-        event: 'login-fail',
+        event: "login-fail",
         userId: input.userId,
         role: input.role,
         ip: input.ip,
@@ -260,7 +266,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     logout(input) {
       logger.info(AUDIT_MESSAGE, {
-        event: 'logout',
+        event: "logout",
         userId: input.userId,
         role: input.role,
         ip: input.ip,
@@ -268,7 +274,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     roleDenied(input) {
       logger.warn(AUDIT_MESSAGE, {
-        event: 'role-denied',
+        event: "role-denied",
         userId: input.userId,
         role: input.role,
         attemptedRole: input.attemptedRole,
@@ -277,7 +283,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     scopeDenied(input) {
       logger.warn(AUDIT_MESSAGE, {
-        event: 'scope-denied',
+        event: "scope-denied",
         userId: input.userId,
         role: input.role,
         ip: input.ip,
@@ -288,9 +294,9 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     mutation(input) {
       // Successes flow at info; failures flow at warn so the default logger
       // surface escalates appropriately without extra config.
-      const level = input.status === 'success' ? 'info' : 'warn';
+      const level = input.status === "success" ? "info" : "warn";
       logger[level](AUDIT_MESSAGE, {
-        event: 'mutation',
+        event: "mutation",
         userId: input.userId,
         role: input.role,
         ip: input.ip,
@@ -303,7 +309,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     policySave(input) {
       logger.info(AUDIT_MESSAGE, {
-        event: 'admin.policy.save',
+        event: "admin.policy.save",
         userId: input.userId,
         role: input.role,
         ip: input.ip,
@@ -314,7 +320,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     policyRemove(input) {
       logger.info(AUDIT_MESSAGE, {
-        event: 'admin.policy.remove',
+        event: "admin.policy.remove",
         userId: input.userId,
         role: input.role,
         ip: input.ip,
@@ -323,7 +329,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     organizationUpdate(input) {
       logger.info(AUDIT_MESSAGE, {
-        event: 'admin.organization.update',
+        event: "admin.organization.update",
         userId: input.userId,
         role: input.role,
         ip: input.ip,
@@ -335,10 +341,10 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     periodAutoCreate(input) {
       logger.info(AUDIT_MESSAGE, {
-        event: 'period.auto-create',
-        userId: 'system',
+        event: "period.auto-create",
+        userId: "system",
         role: null,
-        ip: 'cron',
+        ip: "cron",
         periodId: input.periodId,
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
@@ -349,10 +355,10 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     periodAutoPublish(input) {
       logger.info(AUDIT_MESSAGE, {
-        event: 'period.auto-publish',
-        userId: 'system',
+        event: "period.auto-publish",
+        userId: "system",
         role: null,
-        ip: 'cron',
+        ip: "cron",
         periodId: input.periodId,
         missingSectionsCount: input.missingSectionsCount,
         from: input.from,
@@ -361,10 +367,10 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     periodAutoArchive(input) {
       logger.info(AUDIT_MESSAGE, {
-        event: 'period.auto-archive',
-        userId: 'system',
+        event: "period.auto-archive",
+        userId: "system",
         role: null,
-        ip: 'cron',
+        ip: "cron",
         periodId: input.periodId,
         from: input.from,
         to: input.to,
@@ -372,7 +378,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     periodManualCreate(input) {
       logger.info(AUDIT_MESSAGE, {
-        event: 'period.manual-create',
+        event: "period.manual-create",
         userId: input.userId,
         role: input.role,
         ip: input.ip,
@@ -386,7 +392,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     },
     periodManualEdit(input) {
       logger.info(AUDIT_MESSAGE, {
-        event: 'period.manual-edit',
+        event: "period.manual-edit",
         userId: input.userId,
         role: input.role,
         ip: input.ip,

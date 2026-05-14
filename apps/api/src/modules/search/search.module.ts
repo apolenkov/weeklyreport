@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { SearchService } from './search.service.js';
-import { SearchPrismaRepository } from './search.prisma-repository.js';
+import { Module } from "@nestjs/common";
+import { SearchService } from "./search.service.js";
+import { SearchPrismaRepository } from "./search.prisma-repository.js";
 
 /**
  * 39-05 (PERF-05): full-text search wired through the same repository

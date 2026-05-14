@@ -1,16 +1,16 @@
 // Phase 31 (AI-02) — Risk sentiment classification prompt module.
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { RiskForSentiment } from '../ai-facade.js';
-import { sanitizeUserContent } from './sanitize.js';
+import type { RiskForSentiment } from "../ai-facade.js";
+import { sanitizeUserContent } from "./sanitize.js";
 
-export const SENTIMENT_MODEL = 'claude-haiku-4-5-20251001';
-export const SENTIMENT_TOOL_NAME = 'record_risk_sentiment';
+export const SENTIMENT_MODEL = "claude-haiku-4-5-20251001";
+export const SENTIMENT_TOOL_NAME = "record_risk_sentiment";
 export const SENTIMENT_TOOL_DESCRIPTION =
-  'Record the sentiment level (low / medium / high) and a short rationale for a single project risk.';
+  "Record the sentiment level (low / medium / high) and a short rationale for a single project risk.";
 
 export const sentimentSchema = z.object({
-  level: z.enum(['low', 'medium', 'high']),
+  level: z.enum(["low", "medium", "high"]),
   rationale: z.string().min(5).max(120),
 });
 

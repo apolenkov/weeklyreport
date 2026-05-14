@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useEffect, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-import { useTRPC } from '../lib/trpc-context';
-import { invalidateLeadForm } from '../lib/cache-keys';
+import { useTRPC } from "../lib/trpc-context";
+import { invalidateLeadForm } from "../lib/cache-keys";
 
-import type { DraftSavePayload } from '@customreport/shared';
+import type { DraftSavePayload } from "@customreport/shared";
 
-export type AutosaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
+export type AutosaveState = "idle" | "pending" | "saving" | "saved" | "error";
 
 export type AutosaveSnapshot = {
   readonly state: AutosaveState;
@@ -48,18 +48,18 @@ const DEFAULT_DEBOUNCE_MS = 3000;
  * the same baseline key when priming `initialSavedKey`.
  */
 export function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) {
-    return '[' + value.map(stableStringify).join(',') + ']';
+    return "[" + value.map(stableStringify).join(",") + "]";
   }
   const obj = value as Record<string, unknown>;
   const keys = Object.keys(obj).sort();
   return (
-    '{' +
+    "{" +
     keys
-      .map((k) => JSON.stringify(k) + ':' + stableStringify(obj[k]))
-      .join(',') +
-    '}'
+      .map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k]))
+      .join(",") +
+    "}"
   );
 }
 
@@ -82,11 +82,11 @@ export function useLeadFormAutosave(
   const trpc = useTRPC();
   const qc = useQueryClient();
 
-  const [state, setState] = useState<AutosaveState>('idle');
+  const [state, setState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
-  const lastSavedRef = useRef<string>('');
-  const inFlightRef = useRef<string>('');
+  const lastSavedRef = useRef<string>("");
+  const inFlightRef = useRef<string>("");
   // Hold the latest onSaveSuccess in a ref so changing the callback identity
   // never re-runs the debounce effect. The mutation closure reads through
   // the ref at fire time.
@@ -107,27 +107,25 @@ export function useLeadFormAutosave(
       onSuccess: () => {
         // The payload that was sent (captured at mutate time) is now persisted.
         lastSavedRef.current = inFlightRef.current;
-        setState('saved');
+        setState("saved");
         setLastSavedAt(new Date());
         invalidateLeadForm(qc, trpc);
         onSaveSuccessRef.current?.();
       },
       onError: (err: unknown) => {
-        setState('error');
+        setState("error");
         const msg =
-          err instanceof Error && err.message
-            ? err.message
-            : 'Autosave failed';
+          err instanceof Error && err.message ? err.message : "Autosave failed";
         toast.error(msg);
       },
     }),
   );
 
-  const payloadKey = payload === null ? '' : stableStringify(payload);
+  const payloadKey = payload === null ? "" : stableStringify(payload);
   const dirty =
     enabled &&
     payload !== null &&
-    payloadKey !== '' &&
+    payloadKey !== "" &&
     payloadKey !== lastSavedRef.current;
 
   // Stash the latest payload + mutate fn in refs so the debounce effect can
@@ -146,11 +144,11 @@ export function useLeadFormAutosave(
       return;
     }
 
-    setState('pending');
+    setState("pending");
     const timer = setTimeout(() => {
       const current = payloadRef.current;
       if (current === null) return;
-      setState('saving');
+      setState("saving");
       inFlightRef.current = payloadKey;
       mutateRef.current({ ...current, reportSectionId });
     }, debounceMs);
@@ -164,10 +162,10 @@ export function useLeadFormAutosave(
     function handler(e: BeforeUnloadEvent) {
       e.preventDefault();
       // Setting returnValue is required for legacy browsers.
-      e.returnValue = '';
+      e.returnValue = "";
     }
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
   return { state, lastSavedAt, dirty };

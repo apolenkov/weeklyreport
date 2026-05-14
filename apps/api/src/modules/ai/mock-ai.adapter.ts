@@ -8,13 +8,13 @@
 // the Redis cache layer and any future snapshot tests behave
 // predictably. No network calls, no clocks, no rng.
 
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
 import {
   aiSummaryDurationSeconds,
   aiSummaryGeneratedTotal,
-} from '../../infrastructure/metrics/metrics.registry.js';
-import type { AiAdapter, AiAdapterContext } from './ai.adapter.js';
+} from "../../infrastructure/metrics/metrics.registry.js";
+import type { AiAdapter, AiAdapterContext } from "./ai.adapter.js";
 
 @Injectable()
 export class MockAiAdapter implements AiAdapter {
@@ -32,8 +32,11 @@ export class MockAiAdapter implements AiAdapter {
     const t0 = Date.now();
     const count = context.sections.length;
     const result = `[mock-summary] ${count} sections, period ${context.periodId}`;
-    aiSummaryGeneratedTotal.inc({ provider: 'mock', status: 'ok' });
-    aiSummaryDurationSeconds.observe({ provider: 'mock' }, (Date.now() - t0) / 1000);
+    aiSummaryGeneratedTotal.inc({ provider: "mock", status: "ok" });
+    aiSummaryDurationSeconds.observe(
+      { provider: "mock" },
+      (Date.now() - t0) / 1000,
+    );
     return result;
   }
 }

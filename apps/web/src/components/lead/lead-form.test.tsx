@@ -4,77 +4,87 @@
  * myHistory) are mocked at the tRPC-proxy boundary, mirroring the autosave
  * hook test harness.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import type { ReactNode } from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { toast } from "sonner";
+import type { ReactNode } from "react";
 
-import { LeadForm } from './lead-form';
-import { TRPCProxyContext } from '../../lib/trpc-context';
-import { expectDefined } from '../../test/expect-defined.js';
+import { LeadForm } from "./lead-form";
+import { TRPCProxyContext } from "../../lib/trpc-context";
+import { expectDefined } from "../../test/expect-defined.js";
 
-vi.mock('sonner', () => ({
+vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
-vi.mock('next/navigation', () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/lead/report',
+  usePathname: () => "/lead/report",
 }));
 
-const SECTION_ID = '11111111-1111-1111-1111-111111111111';
-const REPORT_ID = '33333333-3333-3333-3333-333333333333';
-const PROJECT_ID = '22222222-2222-2222-2222-222222222222';
-const AUTHOR_ID = '44444444-4444-4444-4444-444444444444';
+const SECTION_ID = "11111111-1111-1111-1111-111111111111";
+const REPORT_ID = "33333333-3333-3333-3333-333333333333";
+const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
+const AUTHOR_ID = "44444444-4444-4444-4444-444444444444";
 
-function makeSection(overrides: { status?: 'draft' | 'submitted' } = {}) {
+function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
   return {
     reportSectionId: SECTION_ID,
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
-    authorName: 'Test Lead',
+    authorName: "Test Lead",
     // 35-03: 'lead' is the gate for "Request Reopen" vs "Revoke"; default
     // matches the harness's pre-35-03 behaviour of routing through the
     // Lead branch.
-    authorRole: 'lead' as const,
-    status: overrides.status ?? ('draft' as const),
+    authorRole: "lead" as const,
+    status: overrides.status ?? ("draft" as const),
     submittedAt: null,
     projects: [
       {
         projectId: PROJECT_ID,
-        projectName: 'Test Product',
-        trafficLight: 'green' as const,
+        projectName: "Test Product",
+        trafficLight: "green" as const,
         // 35-04: at least one owned stage so the SDLC pipeline renders
         // an editable chip — the dirty-flag test clicks it to fire
         // handleProductsChange.
         ownedStages: [
-          { stageId: '88888888-8888-4888-8888-888888888888', stageName: 'Development', sortOrder: 3 },
+          {
+            stageId: "88888888-8888-4888-8888-888888888888",
+            stageName: "Development",
+            sortOrder: 3,
+          },
         ],
       },
     ],
     items: [
       {
-        id: '55555555-5555-5555-5555-555555555555',
+        id: "55555555-5555-5555-5555-555555555555",
         projectId: PROJECT_ID,
-        type: 'current' as const,
-        text: 'Existing item',
-        tag: 'tag',
-        workflowStatus: 'in_progress' as const,
+        type: "current" as const,
+        text: "Existing item",
+        tag: "tag",
+        workflowStatus: "in_progress" as const,
         carriedOver: false,
       },
     ],
     risks: [],
     decisions: [
       {
-        id: '66666666-6666-6666-6666-666666666666',
-        text: 'Existing decision',
-        owner: 'Owner',
-        impact: 'Impact',
+        id: "66666666-6666-6666-6666-666666666666",
+        text: "Existing decision",
+        owner: "Owner",
+        impact: "Impact",
       },
     ],
-    priorities: [{ id: '77777777-7777-7777-7777-777777777777', rank: 1, text: 'Priority text' }],
+    priorities: [
+      {
+        id: "77777777-7777-7777-7777-777777777777",
+        rank: 1,
+        text: "Priority text",
+      },
+    ],
   };
 }
 
@@ -98,12 +108,19 @@ async function flushAll() {
   for (let i = 0; i < 30; i++) await Promise.resolve();
 }
 
-function buildHarness(opts: {
-  sectionStatus?: 'draft' | 'submitted';
-  submitFn?: () => Promise<unknown>;
-  revokeFn?: () => Promise<unknown>;
-  versions?: Array<{ id: string; reportSectionId: string; version: number; createdAt: Date }>;
-} = {}) {
+function buildHarness(
+  opts: {
+    sectionStatus?: "draft" | "submitted";
+    submitFn?: () => Promise<unknown>;
+    revokeFn?: () => Promise<unknown>;
+    versions?: Array<{
+      id: string;
+      reportSectionId: string;
+      version: number;
+      createdAt: Date;
+    }>;
+  } = {},
+) {
   const cap: Capture = {};
   const calls: { type: string; vars: unknown }[] = [];
 
@@ -111,100 +128,107 @@ function buildHarness(opts: {
     reports: {
       getActive: {
         queryOptions: () => ({
-          queryKey: ['reports.getActive'],
-          queryFn: async () => ({ reportId: REPORT_ID, reportSectionId: SECTION_ID, authorName: 'Test Lead' }),
+          queryKey: ["reports.getActive"],
+          queryFn: async () => ({
+            reportId: REPORT_ID,
+            reportSectionId: SECTION_ID,
+            authorName: "Test Lead",
+          }),
         }),
-        pathFilter: () => ({ queryKey: ['reports.getActive'] }),
+        pathFilter: () => ({ queryKey: ["reports.getActive"] }),
       },
       myHistory: {
         queryOptions: () => ({
-          queryKey: ['reports.myHistory'],
+          queryKey: ["reports.myHistory"],
           queryFn: async () => [],
         }),
-        pathFilter: () => ({ queryKey: ['reports.myHistory'] }),
+        pathFilter: () => ({ queryKey: ["reports.myHistory"] }),
       },
       saveDraft: {
-        mutationOptions: (passed: NonNullable<Capture['saveDraftOpts']>) => {
+        mutationOptions: (passed: NonNullable<Capture["saveDraftOpts"]>) => {
           cap.saveDraftOpts = passed;
           return {
             ...passed,
             mutationFn: async (vars: unknown) => {
-              calls.push({ type: 'saveDraft', vars });
+              calls.push({ type: "saveDraft", vars });
               return { ok: true };
             },
           };
         },
-        pathFilter: () => ({ queryKey: ['reports.saveDraft'] }),
+        pathFilter: () => ({ queryKey: ["reports.saveDraft"] }),
       },
       submit: {
-        mutationOptions: (passed: NonNullable<Capture['submitOpts']>) => {
+        mutationOptions: (passed: NonNullable<Capture["submitOpts"]>) => {
           cap.submitOpts = passed;
           return {
             ...passed,
             mutationFn: async (vars: unknown) => {
-              calls.push({ type: 'submit', vars });
+              calls.push({ type: "submit", vars });
               if (opts.submitFn) return opts.submitFn();
               return { ok: true };
             },
           };
         },
-        pathFilter: () => ({ queryKey: ['reports.submit'] }),
+        pathFilter: () => ({ queryKey: ["reports.submit"] }),
       },
     },
     leadForm: {
       byPeriod: {
         queryOptions: () => ({
-          queryKey: ['leadForm.byPeriod'],
-          queryFn: async () => ({ section: makeSection({ status: opts.sectionStatus }), readOnly: false }),
+          queryKey: ["leadForm.byPeriod"],
+          queryFn: async () => ({
+            section: makeSection({ status: opts.sectionStatus }),
+            readOnly: false,
+          }),
         }),
-        pathFilter: () => ({ queryKey: ['leadForm.byPeriod'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
       },
       versions: {
         queryOptions: () => ({
-          queryKey: ['leadForm.versions'],
+          queryKey: ["leadForm.versions"],
           queryFn: async () => opts.versions ?? [],
         }),
-        pathFilter: () => ({ queryKey: ['leadForm.versions'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.versions"] }),
       },
       revoke: {
-        mutationOptions: (passed: NonNullable<Capture['revokeOpts']>) => {
+        mutationOptions: (passed: NonNullable<Capture["revokeOpts"]>) => {
           cap.revokeOpts = passed;
           return {
             ...passed,
             mutationFn: async (vars: unknown) => {
-              calls.push({ type: 'revoke', vars });
+              calls.push({ type: "revoke", vars });
               if (opts.revokeFn) return opts.revokeFn();
               return { ok: true };
             },
           };
         },
-        pathFilter: () => ({ queryKey: ['leadForm.revoke'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.revoke"] }),
       },
       fillFrom: {
-        mutationOptions: (passed: NonNullable<Capture['fillFromOpts']>) => {
+        mutationOptions: (passed: NonNullable<Capture["fillFromOpts"]>) => {
           cap.fillFromOpts = passed;
           return {
             ...passed,
             mutationFn: async (vars: unknown) => {
-              calls.push({ type: 'fillFrom', vars });
+              calls.push({ type: "fillFrom", vars });
               return { ok: true };
             },
           };
         },
-        pathFilter: () => ({ queryKey: ['leadForm.fillFrom'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.fillFrom"] }),
       },
       restoreVersion: {
-        mutationOptions: (passed: NonNullable<Capture['restoreOpts']>) => {
+        mutationOptions: (passed: NonNullable<Capture["restoreOpts"]>) => {
           cap.restoreOpts = passed;
           return {
             ...passed,
             mutationFn: async (vars: unknown) => {
-              calls.push({ type: 'restoreVersion', vars });
+              calls.push({ type: "restoreVersion", vars });
               return { ok: true };
             },
           };
         },
-        pathFilter: () => ({ queryKey: ['leadForm.restoreVersion'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.restoreVersion"] }),
       },
       // M6 Lead-side reopen request — added after the original mock
       // shape was set. The component reads
@@ -212,32 +236,42 @@ function buildHarness(opts: {
       // even when the dialog is never opened, so the mock has to
       // expose the mutation factory.
       requestReopen: {
-        mutationOptions: (passed: { onSuccess?: () => void; onError?: (e: unknown) => void } = {}) => {
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => {
           return {
             ...passed,
             mutationFn: async (vars: unknown) => {
-              calls.push({ type: 'requestReopen', vars });
+              calls.push({ type: "requestReopen", vars });
               return { ok: true };
             },
           };
         },
-        pathFilter: () => ({ queryKey: ['leadForm.requestReopen'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
       },
       // Save Version (Block 2): manual snapshot button + every-N-autosave
       // hybrid policy. The component reads this mutation factory
       // unconditionally, so the mock has to expose it even when no test
       // exercises the path.
       createSnapshot: {
-        mutationOptions: (passed: { onSuccess?: () => void; onError?: (e: unknown) => void } = {}) => {
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => {
           return {
             ...passed,
             mutationFn: async (vars: unknown) => {
-              calls.push({ type: 'createSnapshot', vars });
+              calls.push({ type: "createSnapshot", vars });
               return { ok: true };
             },
           };
         },
-        pathFilter: () => ({ queryKey: ['leadForm.createSnapshot'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
       },
     },
     ai: {
@@ -245,18 +279,22 @@ function buildHarness(opts: {
       // stub so the lead-form test mock satisfies its useQuery call.
       onTrack: {
         queryOptions: () => ({
-          queryKey: ['ai.onTrack'],
-          queryFn: async () => ({ available: false } as const),
+          queryKey: ["ai.onTrack"],
+          queryFn: async () => ({ available: false }) as const,
         }),
-        pathFilter: () => ({ queryKey: ['ai.onTrack'] }),
+        pathFilter: () => ({ queryKey: ["ai.onTrack"] }),
       },
     },
-    review: { dashboard: { pathFilter: () => ({ queryKey: ['review.dashboard'] }) } },
-    archive: { list: { pathFilter: () => ({ queryKey: ['archive.list'] }) } },
-    weeklyReport: { get: { pathFilter: () => ({ queryKey: ['weeklyReport.get'] }) } },
+    review: {
+      dashboard: { pathFilter: () => ({ queryKey: ["review.dashboard"] }) },
+    },
+    archive: { list: { pathFilter: () => ({ queryKey: ["archive.list"] }) } },
+    weeklyReport: {
+      get: { pathFilter: () => ({ queryKey: ["weeklyReport.get"] }) },
+    },
     admin: {
-      snapshot: { pathFilter: () => ({ queryKey: ['admin.snapshot'] }) },
-      getSettings: { pathFilter: () => ({ queryKey: ['admin.getSettings'] }) },
+      snapshot: { pathFilter: () => ({ queryKey: ["admin.snapshot"] }) },
+      getSettings: { pathFilter: () => ({ queryKey: ["admin.getSettings"] }) },
     },
   };
 
@@ -285,10 +323,10 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('LeadForm mutation wiring', () => {
-  it('submit success: invalidates caches, fires toast.success, locks form', async () => {
+describe("LeadForm mutation wiring", () => {
+  it("submit success: invalidates caches, fires toast.success, locks form", async () => {
     const { Wrapper, cap, queryClient } = buildHarness();
-    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     render(
       <Wrapper>
@@ -308,12 +346,12 @@ describe('LeadForm mutation wiring', () => {
     act(() => {
       expectDefined(cap.submitOpts).onSuccess?.();
     });
-    expect(toast.success).toHaveBeenCalledWith('Report submitted');
+    expect(toast.success).toHaveBeenCalledWith("Report submitted");
     // invalidateLeadForm + invalidateLeadHistory each call invalidateQueries.
     expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('submit error: fires toast.error with the error message', async () => {
+  it("submit error: fires toast.error with the error message", async () => {
     const { Wrapper, cap } = buildHarness();
     render(
       <Wrapper>
@@ -326,11 +364,11 @@ describe('LeadForm mutation wiring', () => {
 
     expect(cap.submitOpts).toBeDefined();
     // Simulate error path.
-    expectDefined(cap.submitOpts).onError?.(new Error('Submit blew up'));
-    expect(toast.error).toHaveBeenCalledWith('Submit blew up');
+    expectDefined(cap.submitOpts).onError?.(new Error("Submit blew up"));
+    expect(toast.error).toHaveBeenCalledWith("Submit blew up");
   });
 
-  it('changing a stage status marks the form dirty (autosave indicator changes from Autosaved)', async () => {
+  it("changing a stage status marks the form dirty (autosave indicator changes from Autosaved)", async () => {
     // Originally this test edited a decision row's inline input. After the
     // modal-driven CRUD refactor, decisions are read-only cards opened via
     // a pencil — there's no longer a textbox in the section to drive
@@ -348,12 +386,15 @@ describe('LeadForm mutation wiring', () => {
       await flushAll();
     });
 
-    expect(await screen.findByText('Autosaved')).toBeInTheDocument();
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     // Click an editable stage chip to open the popover menu.
-    const editableChip = screen.getAllByRole('button').find((b) => {
-      const label = b.getAttribute('aria-label') ?? '';
-      return /^(Planning|Analysis|Design|Dev|Testing|DevOps|Support):/.test(label) && !(b as HTMLButtonElement).disabled;
+    const editableChip = screen.getAllByRole("button").find((b) => {
+      const label = b.getAttribute("aria-label") ?? "";
+      return (
+        /^(Planning|Analysis|Design|Dev|Testing|DevOps|Support):/.test(label) &&
+        !(b as HTMLButtonElement).disabled
+      );
     }) as HTMLButtonElement | undefined;
     expect(editableChip).toBeDefined();
     act(() => {
@@ -365,9 +406,12 @@ describe('LeadForm mutation wiring', () => {
 
     // Pick a different status from the menu — fires onStatusChange and
     // dirties the draft.
-    const menuitem = screen.getAllByRole('menuitem').find((m) => {
-      const label = m.textContent ?? '';
-      return /On Track|At Risk|Blocked|Clear/i.test(label) && !label.includes('current');
+    const menuitem = screen.getAllByRole("menuitem").find((m) => {
+      const label = m.textContent ?? "";
+      return (
+        /On Track|At Risk|Blocked|Clear/i.test(label) &&
+        !label.includes("current")
+      );
     }) as HTMLElement | undefined;
     expect(menuitem).toBeDefined();
     act(() => {
@@ -378,11 +422,11 @@ describe('LeadForm mutation wiring', () => {
       await flushAll();
     });
 
-    expect(screen.queryByText('Autosaved')).toBeNull();
+    expect(screen.queryByText("Autosaved")).toBeNull();
     expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull();
   });
 
-  it('submitted-section action: Lead sees Request Reopen, not Revoke', async () => {
+  it("submitted-section action: Lead sees Request Reopen, not Revoke", async () => {
     // The mapper hard-codes currentUser.role to 'Dev Lead' for now (the
     // read model doesn't yet carry display role), so every harness-driven
     // render takes the Lead branch of lead-form.tsx — Request Reopen,
@@ -391,7 +435,7 @@ describe('LeadForm mutation wiring', () => {
     // renders when role doesn't end in "Lead". Until the harness gains a
     // role-override (or the mapper stops hard-coding), we assert the
     // Lead-visible path: submitted section → Request Reopen surfaces.
-    const { Wrapper } = buildHarness({ sectionStatus: 'submitted' });
+    const { Wrapper } = buildHarness({ sectionStatus: "submitted" });
     render(
       <Wrapper>
         <LeadForm />
@@ -403,13 +447,15 @@ describe('LeadForm mutation wiring', () => {
 
     // Request Reopen renders for Leads on submitted sections — Revoke is
     // the Head/Admin-side variant.
-    expect(await screen.findByRole('button', { name: /Request Reopen/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Revoke$/i })).toBeNull();
+    expect(
+      await screen.findByRole("button", { name: /Request Reopen/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Revoke$/i })).toBeNull();
   });
 
-  it('fillFrom success: invalidates leadForm, fires toast.success', async () => {
+  it("fillFrom success: invalidates leadForm, fires toast.success", async () => {
     const { Wrapper, cap, queryClient } = buildHarness();
-    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     render(
       <Wrapper>
         <LeadForm />
@@ -423,11 +469,13 @@ describe('LeadForm mutation wiring', () => {
     act(() => {
       expectDefined(cap.fillFromOpts).onSuccess?.();
     });
-    expect(toast.success).toHaveBeenCalledWith('Form filled from selected period');
+    expect(toast.success).toHaveBeenCalledWith(
+      "Form filled from selected period",
+    );
     expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('restoreVersion error: fires toast.error with the error message', async () => {
+  it("restoreVersion error: fires toast.error with the error message", async () => {
     const { Wrapper, cap } = buildHarness();
     render(
       <Wrapper>
@@ -439,20 +487,32 @@ describe('LeadForm mutation wiring', () => {
     });
 
     expect(cap.restoreOpts).toBeDefined();
-    expectDefined(cap.restoreOpts).onError?.(new Error('Version not found'));
-    expect(toast.error).toHaveBeenCalledWith('Version not found');
+    expectDefined(cap.restoreOpts).onError?.(new Error("Version not found"));
+    expect(toast.error).toHaveBeenCalledWith("Version not found");
   });
 
-  it('restoreVersion: window.confirm guards dirty state and cancels mutation', async () => {
+  it("restoreVersion: window.confirm guards dirty state and cancels mutation", async () => {
     // Provide a version snapshot so the Version History modal renders a
     // Restore button that we can click.
-    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => false);
-    const versionId = '88888888-8888-8888-8888-888888888888';
+    const confirmSpy = vi
+      .spyOn(window, "confirm")
+      .mockImplementation(() => false);
+    const versionId = "88888888-8888-8888-8888-888888888888";
 
     const { Wrapper, calls } = buildHarness({
       versions: [
-        { id: versionId, reportSectionId: SECTION_ID, version: 2, createdAt: new Date('2026-04-20T10:00:00Z') },
-        { id: '99999999-9999-9999-9999-999999999999', reportSectionId: SECTION_ID, version: 1, createdAt: new Date('2026-04-19T10:00:00Z') },
+        {
+          id: versionId,
+          reportSectionId: SECTION_ID,
+          version: 2,
+          createdAt: new Date("2026-04-20T10:00:00Z"),
+        },
+        {
+          id: "99999999-9999-9999-9999-999999999999",
+          reportSectionId: SECTION_ID,
+          version: 1,
+          createdAt: new Date("2026-04-19T10:00:00Z"),
+        },
       ],
     });
     render(
@@ -468,9 +528,12 @@ describe('LeadForm mutation wiring', () => {
     // status. This is the path that survives the modal-driven CRUD
     // refactor — inline decision/risk inputs no longer exist on the
     // page so we can't drive them directly.
-    const editableChip = screen.getAllByRole('button').find((b) => {
-      const label = b.getAttribute('aria-label') ?? '';
-      return /^(Planning|Analysis|Design|Dev|Testing|DevOps|Support):/.test(label) && !(b as HTMLButtonElement).disabled;
+    const editableChip = screen.getAllByRole("button").find((b) => {
+      const label = b.getAttribute("aria-label") ?? "";
+      return (
+        /^(Planning|Analysis|Design|Dev|Testing|DevOps|Support):/.test(label) &&
+        !(b as HTMLButtonElement).disabled
+      );
     }) as HTMLButtonElement | undefined;
     expect(editableChip).toBeDefined();
     act(() => {
@@ -479,9 +542,12 @@ describe('LeadForm mutation wiring', () => {
     await act(async () => {
       await flushAll();
     });
-    const menuitem = screen.getAllByRole('menuitem').find((m) => {
-      const label = m.textContent ?? '';
-      return /On Track|At Risk|Blocked|Clear/i.test(label) && !label.includes('current');
+    const menuitem = screen.getAllByRole("menuitem").find((m) => {
+      const label = m.textContent ?? "";
+      return (
+        /On Track|At Risk|Blocked|Clear/i.test(label) &&
+        !label.includes("current")
+      );
     }) as HTMLElement | undefined;
     expect(menuitem).toBeDefined();
     act(() => {
@@ -498,22 +564,27 @@ describe('LeadForm mutation wiring', () => {
     });
 
     // Click "Restore" on the older (non-latest) version.
-    const restoreBtn = screen.getByRole('button', { name: /^Restore$/ });
+    const restoreBtn = screen.getByRole("button", { name: /^Restore$/ });
     act(() => {
       restoreBtn.click();
     });
 
     // The dirty guard fired (confirm returned false) so the mutation never ran.
     expect(confirmSpy).toHaveBeenCalled();
-    expect(calls.filter((c) => c.type === 'restoreVersion')).toHaveLength(0);
+    expect(calls.filter((c) => c.type === "restoreVersion")).toHaveLength(0);
 
     confirmSpy.mockRestore();
   });
 
-  it('Save Version button: clicking fires leadForm.createSnapshot with the active sectionId', async () => {
+  it("Save Version button: clicking fires leadForm.createSnapshot with the active sectionId", async () => {
     const { Wrapper, calls } = buildHarness({
       versions: [
-        { id: 'v1', reportSectionId: SECTION_ID, version: 1, createdAt: new Date('2026-04-19T10:00:00Z') },
+        {
+          id: "v1",
+          reportSectionId: SECTION_ID,
+          version: 1,
+          createdAt: new Date("2026-04-19T10:00:00Z"),
+        },
       ],
     });
     render(
@@ -525,7 +596,7 @@ describe('LeadForm mutation wiring', () => {
       await flushAll();
     });
 
-    const saveBtn = screen.getByRole('button', { name: /^Save Version$/ });
+    const saveBtn = screen.getByRole("button", { name: /^Save Version$/ });
     act(() => {
       saveBtn.click();
     });
@@ -533,8 +604,10 @@ describe('LeadForm mutation wiring', () => {
       await flushAll();
     });
 
-    const snapshotCalls = calls.filter((c) => c.type === 'createSnapshot');
+    const snapshotCalls = calls.filter((c) => c.type === "createSnapshot");
     expect(snapshotCalls).toHaveLength(1);
-    expect(snapshotCalls[0]?.vars).toMatchObject({ reportSectionId: SECTION_ID });
+    expect(snapshotCalls[0]?.vars).toMatchObject({
+      reportSectionId: SECTION_ID,
+    });
   });
 });

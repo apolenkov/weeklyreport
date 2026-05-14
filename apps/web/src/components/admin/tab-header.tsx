@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
 /**
  * UFB-026 / UFB-029: shared header for every admin tab so users / groups /
@@ -34,7 +34,7 @@ export function TabHeader({
   testId,
 }: TabHeaderProps) {
   const resolvedTestId =
-    testId ?? `${title.toLowerCase().replace(/\s+/g, '-')}-tab-header`;
+    testId ?? `${title.toLowerCase().replace(/\s+/g, "-")}-tab-header`;
   return (
     <header
       data-testid={resolvedTestId}
@@ -92,10 +92,52 @@ export function TabSearch({
       type="search"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder ?? 'Search…'}
+      placeholder={placeholder ?? "Search…"}
       data-testid={testId}
-      aria-label={ariaLabel ?? placeholder ?? 'Search'}
+      aria-label={ariaLabel ?? placeholder ?? "Search"}
       className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] sm:w-64"
     />
+  );
+}
+
+/**
+ * A3: Quick-filter select — drop-in complement to TabSearch for admin tabs
+ * that need a categorical dimension filter (e.g. role, status, group).
+ * Options include a sentinel "All" entry with value "".
+ */
+export type TabFilterOption = {
+  readonly value: string;
+  readonly label: string;
+};
+
+export type TabFilterProps = {
+  readonly value: string;
+  readonly onChange: (next: string) => void;
+  readonly options: readonly TabFilterOption[];
+  readonly testId?: string;
+  readonly ariaLabel?: string;
+};
+
+export function TabFilter({
+  value,
+  onChange,
+  options,
+  testId,
+  ariaLabel,
+}: TabFilterProps) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      data-testid={testId}
+      aria-label={ariaLabel ?? "Filter"}
+      className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+    >
+      {options.map((opt) => (
+        <option key={opt.value} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
   );
 }

@@ -43,22 +43,22 @@ Migration: `prisma/migrations/20260430074920_notification_optout_and_escalation_
 
 ## Dedupe key shape table
 
-| Kind | Dedupe key shape | Cycle granularity |
-|------|------------------|-------------------|
-| `deadline` | `${rule.id}:deadline:${cycleDate}:${recipientEmail}` | YYYY-MM-DD UTC of fireAt |
-| `escalation` | `${rule.id}:escalation:${cycleDate}:${head.email}` | YYYY-MM-DD UTC of fireAt |
-| (legacy, no payload) | `${rule.id}:${fireAt.toISOString()}:${recipientEmail}` | per-fireAt timestamp |
+| Kind                 | Dedupe key shape                                       | Cycle granularity        |
+| -------------------- | ------------------------------------------------------ | ------------------------ |
+| `deadline`           | `${rule.id}:deadline:${cycleDate}:${recipientEmail}`   | YYYY-MM-DD UTC of fireAt |
+| `escalation`         | `${rule.id}:escalation:${cycleDate}:${head.email}`     | YYYY-MM-DD UTC of fireAt |
+| (legacy, no payload) | `${rule.id}:${fireAt.toISOString()}:${recipientEmail}` | per-fireAt timestamp     |
 
 Both new kinds use the same shape, so two scheduler ticks within one UTC day collapse to a single execution per (rule, recipient, day). The legacy follow-up shape is preserved for backward compatibility with v2.0 callers.
 
 ## Opt-out branch table
 
-| `kind` | `recipient.notificationOptOut` | Behaviour |
-|--------|--------------------------------|-----------|
-| `deadline` | `false` | enqueue email |
-| `deadline` | `true` | **skip** (logged, no enqueue) |
-| `escalation` | `false` (head) | enqueue digest |
-| `escalation` | `true` (head) | enqueue digest — opt-out **bypassed** (NOTIF-05 contract: heads always notified) |
+| `kind`       | `recipient.notificationOptOut` | Behaviour                                                                        |
+| ------------ | ------------------------------ | -------------------------------------------------------------------------------- |
+| `deadline`   | `false`                        | enqueue email                                                                    |
+| `deadline`   | `true`                         | **skip** (logged, no enqueue)                                                    |
+| `escalation` | `false` (head)                 | enqueue digest                                                                   |
+| `escalation` | `true` (head)                  | enqueue digest — opt-out **bypassed** (NOTIF-05 contract: heads always notified) |
 
 The escalation rule's `DueEscalationRule.head` shape does NOT carry `notificationOptOut` — by design. The scheduler's `dispatchEscalation` never reads the head's flag because the contract is "escalation always fires".
 
@@ -83,37 +83,37 @@ The escalation rule's `DueEscalationRule.head` shape does NOT carry `notificatio
 
 ## Files modified
 
-| File | LOC delta | Note |
-|------|-----------|------|
-| prisma/schema.prisma | +5/-1 | User.notificationOptOut + ReminderRuleKind escalation |
-| prisma/migrations/20260430074920_notification_optout_and_escalation_kind/migration.sql (new) | +5 | ALTER TYPE + ALTER TABLE |
-| packages/shared/src/schemas/report.ts | +3/-1 | adminReminderRuleKindSchema enum extended |
-| apps/api/src/modules/email/templates/escalation.template.tsx (new) | +95 | react-email digest + plaintext mirror |
-| apps/api/src/modules/email/render-template.ts | +30/-3 | EmailRenderInput discriminated union; subject formatting |
-| apps/api/src/modules/email/render-template.test.ts | +60/0 | 4 new escalation snapshot tests |
-| apps/api/src/modules/reminders/reminders.scheduler.ts | +35/-15 | dispatchEscalation; opt-out gate at dispatchRule |
-| apps/api/src/modules/reminders/reminders.scheduler.test.ts | +160/-5 | 4 new tests (escalation × 2 + opt-out × 2) |
-| apps/api/src/modules/reminders/reminders.service.ts | +25/-15 | ReminderExecutionPayload union; queue payload routing |
-| apps/api/src/modules/reminders/reminders.prisma-repository.ts | +75/-2 | findDueEscalationRules; recipient.notificationOptOut select |
-| apps/api/src/infrastructure/bullmq/email-reminder.processor.ts | +30/-1 | escalation branch in processJob; limiter + concurrency |
-| apps/api/src/infrastructure/trpc/trpc.router.ts | +20/0 | admin.dlqCount headProcedure |
-| apps/api/src/main.ts | +12/-0 | Queue handle wired into RouterDeps |
-| apps/web/src/components/admin/dlq-badge.tsx (new) | +30 | tanstack useQuery + Badge variant=destructive |
-| apps/web/src/components/admin/dlq-badge.test.tsx (new) | +50 | 5 unit tests |
-| apps/web/src/app/(app)/admin/page.tsx | +5/-1 | DlqBadge mounted in header |
-| apps/web/src/lib/mappers/admin.ts | +20/-7 | reminderName/Description switch on escalation |
-| apps/web/src/components/admin/mock-data.ts | +1/-1 | MockReminder.kind extended |
+| File                                                                                         | LOC delta | Note                                                        |
+| -------------------------------------------------------------------------------------------- | --------- | ----------------------------------------------------------- |
+| prisma/schema.prisma                                                                         | +5/-1     | User.notificationOptOut + ReminderRuleKind escalation       |
+| prisma/migrations/20260430074920_notification_optout_and_escalation_kind/migration.sql (new) | +5        | ALTER TYPE + ALTER TABLE                                    |
+| packages/shared/src/schemas/report.ts                                                        | +3/-1     | adminReminderRuleKindSchema enum extended                   |
+| apps/api/src/modules/email/templates/escalation.template.tsx (new)                           | +95       | react-email digest + plaintext mirror                       |
+| apps/api/src/modules/email/render-template.ts                                                | +30/-3    | EmailRenderInput discriminated union; subject formatting    |
+| apps/api/src/modules/email/render-template.test.ts                                           | +60/0     | 4 new escalation snapshot tests                             |
+| apps/api/src/modules/reminders/reminders.scheduler.ts                                        | +35/-15   | dispatchEscalation; opt-out gate at dispatchRule            |
+| apps/api/src/modules/reminders/reminders.scheduler.test.ts                                   | +160/-5   | 4 new tests (escalation × 2 + opt-out × 2)                  |
+| apps/api/src/modules/reminders/reminders.service.ts                                          | +25/-15   | ReminderExecutionPayload union; queue payload routing       |
+| apps/api/src/modules/reminders/reminders.prisma-repository.ts                                | +75/-2    | findDueEscalationRules; recipient.notificationOptOut select |
+| apps/api/src/infrastructure/bullmq/email-reminder.processor.ts                               | +30/-1    | escalation branch in processJob; limiter + concurrency      |
+| apps/api/src/infrastructure/trpc/trpc.router.ts                                              | +20/0     | admin.dlqCount headProcedure                                |
+| apps/api/src/main.ts                                                                         | +12/-0    | Queue handle wired into RouterDeps                          |
+| apps/web/src/components/admin/dlq-badge.tsx (new)                                            | +30       | tanstack useQuery + Badge variant=destructive               |
+| apps/web/src/components/admin/dlq-badge.test.tsx (new)                                       | +50       | 5 unit tests                                                |
+| apps/web/src/app/(app)/admin/page.tsx                                                        | +5/-1     | DlqBadge mounted in header                                  |
+| apps/web/src/lib/mappers/admin.ts                                                            | +20/-7    | reminderName/Description switch on escalation               |
+| apps/web/src/components/admin/mock-data.ts                                                   | +1/-1     | MockReminder.kind extended                                  |
 
 Total: 18 files, +942 / -184.
 
 ## Test counts
 
-| Suite | Before (29-04) | After (29-05) | Delta |
-|-------|----------------|---------------|-------|
-| api unit | 465 / 38 files | 473 / 38 files | +8 / 0 |
-| shared unit | 226 / 6 files | 452 / 12 files | +226 / +6 |
-| web unit | 182 (1 pre-existing fail) | 187 (1 same pre-existing fail) | +5 / 0 |
-| typecheck (api + web) | green | green | — |
+| Suite                 | Before (29-04)            | After (29-05)                  | Delta     |
+| --------------------- | ------------------------- | ------------------------------ | --------- |
+| api unit              | 465 / 38 files            | 473 / 38 files                 | +8 / 0    |
+| shared unit           | 226 / 6 files             | 452 / 12 files                 | +226 / +6 |
+| web unit              | 182 (1 pre-existing fail) | 187 (1 same pre-existing fail) | +5 / 0    |
+| typecheck (api + web) | green                     | green                          | —         |
 
 Notes on the +226 shared delta: the prior 226 figure was from the unbuilt shared package; rebuilding the shared package after the new enum value caused a re-discovery of test files. The single web failure remains the pre-existing `proxy.test.ts` documented since 29-01.
 

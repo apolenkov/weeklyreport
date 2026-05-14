@@ -1,6 +1,9 @@
-'use client';
+"use client";
 
-import type { PeriodComparisonOutput, TrafficLightCell } from '@customreport/shared';
+import type {
+  PeriodComparisonOutput,
+  TrafficLightCell,
+} from "@customreport/shared";
 
 /**
  * ANAL-04 (Phase 30-03): period-vs-period delta table.
@@ -10,21 +13,21 @@ import type { PeriodComparisonOutput, TrafficLightCell } from '@customreport/sha
  */
 
 function statusLabel(cell: TrafficLightCell): string {
-  if (cell === null) return '–';
+  if (cell === null) return "–";
   return cell;
 }
 
 function statusColor(cell: TrafficLightCell): string {
-  if (cell === 'green') return 'text-green-600';
-  if (cell === 'yellow') return 'text-amber-500';
-  if (cell === 'red') return 'text-red-600';
-  return 'text-muted-foreground';
+  if (cell === "green") return "text-green-600";
+  if (cell === "yellow") return "text-amber-500";
+  if (cell === "red") return "text-red-600";
+  return "text-muted-foreground";
 }
 
 function deltaClass(delta: number): string {
-  if (delta > 0) return 'text-red-600';
-  if (delta < 0) return 'text-green-600';
-  return 'text-muted-foreground';
+  if (delta > 0) return "text-red-600";
+  if (delta < 0) return "text-green-600";
+  return "text-muted-foreground";
 }
 
 export function PeriodComparisonChart({ rows }: PeriodComparisonOutput) {
@@ -49,8 +52,12 @@ export function PeriodComparisonChart({ rows }: PeriodComparisonOutput) {
           {rows.map((r) => (
             <tr key={r.projectId} className="border-b last:border-0">
               <td className="px-3 py-2 font-medium">{r.projectName}</td>
-              <td className={`px-3 py-2 font-mono ${statusColor(r.statusA)}`}>{statusLabel(r.statusA)}</td>
-              <td className={`px-3 py-2 font-mono ${statusColor(r.statusB)}`}>{statusLabel(r.statusB)}</td>
+              <td className={`px-3 py-2 font-mono ${statusColor(r.statusA)}`}>
+                {statusLabel(r.statusA)}
+              </td>
+              <td className={`px-3 py-2 font-mono ${statusColor(r.statusB)}`}>
+                {statusLabel(r.statusB)}
+              </td>
               <td className="px-3 py-2 font-mono">{r.riskCountA}</td>
               <td className="px-3 py-2 font-mono">{r.riskCountB}</td>
               <td className={`px-3 py-2 font-mono ${deltaClass(r.riskDelta)}`}>

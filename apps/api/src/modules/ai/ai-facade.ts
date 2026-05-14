@@ -2,18 +2,18 @@
 // added in 31-04 forbid raw @prisma/client imports anywhere else in
 // modules/ai/**. This file (and ai-cache.ts) are the whitelisted facade
 // boundary.
-import { Injectable } from '@nestjs/common';
-import { Prisma, type PrismaClient, type AiInsightKind } from '@prisma/client';
+import { Injectable } from "@nestjs/common";
+import { Prisma, type PrismaClient, type AiInsightKind } from "@prisma/client";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
-import type { AnthropicUsage } from './ai-client.js';
+import type { AnthropicUsage } from "./ai-client.js";
 
 export type CondensedSection = {
   authorName: string;
   trafficLights: ReadonlyArray<{
     projectName: string;
-    status: 'green' | 'yellow' | 'red';
+    status: "green" | "yellow" | "red";
   }>;
   riskCount: number;
   decisionCount: number;
@@ -48,7 +48,7 @@ export type CellForOnTrack = {
   projectId: string;
   leadName: string;
   projectName: string;
-  leadColour: 'green' | 'yellow' | 'red';
+  leadColour: "green" | "yellow" | "red";
   currentItemCount: number;
   completedCount: number;
   blockedCount: number;
@@ -93,7 +93,10 @@ export type AiInsightRow<R> = {
 export interface AiFacade {
   getReportForSummary(reportId: string): Promise<ReportForSummary | null>;
   getRiskForSentiment(riskId: string): Promise<RiskForSentiment | null>;
-  getCellForOnTrack(sectionId: string, projectId: string): Promise<CellForOnTrack | null>;
+  getCellForOnTrack(
+    sectionId: string,
+    projectId: string,
+  ): Promise<CellForOnTrack | null>;
   getAiInsight<R>(
     kind: AiInsightKind,
     contentHash: string,
@@ -116,7 +119,9 @@ export class AiPrismaFacade implements AiFacade {
     this.prisma = prismaService;
   }
 
-  async getReportForSummary(reportId: string): Promise<ReportForSummary | null> {
+  async getReportForSummary(
+    reportId: string,
+  ): Promise<ReportForSummary | null> {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
       include: {
@@ -140,14 +145,16 @@ export class AiPrismaFacade implements AiFacade {
     let r = 0;
     const sections: CondensedSection[] = [];
     for (const s of report.sections) {
-      const lights: CondensedSection['trafficLights'] = s.projectStatuses.map((ps) => ({
-        projectName: ps.project.name,
-        status: ps.status as 'green' | 'yellow' | 'red',
-      }));
+      const lights: CondensedSection["trafficLights"] = s.projectStatuses.map(
+        (ps) => ({
+          projectName: ps.project.name,
+          status: ps.status as "green" | "yellow" | "red",
+        }),
+      );
       for (const l of lights) {
-        if (l.status === 'green') g += 1;
-        else if (l.status === 'yellow') y += 1;
-        else if (l.status === 'red') r += 1;
+        if (l.status === "green") g += 1;
+        else if (l.status === "yellow") y += 1;
+        else if (l.status === "red") r += 1;
       }
       sections.push({
         authorName: s.author.name,
@@ -158,7 +165,8 @@ export class AiPrismaFacade implements AiFacade {
       });
     }
 
-    const periodLabel = report.weekLabel ?? `${report.periodStart.toISOString().slice(0, 10)}`;
+    const periodLabel =
+      report.weekLabel ?? `${report.periodStart.toISOString().slice(0, 10)}`;
     return {
       reportId: report.id,
       periodLabel,
@@ -196,7 +204,10 @@ export class AiPrismaFacade implements AiFacade {
       where: { id: sectionId },
       include: {
         author: { select: { name: true } },
-        projectStatuses: { where: { projectId }, include: { project: { select: { name: true } } } },
+        projectStatuses: {
+          where: { projectId },
+          include: { project: { select: { name: true } } },
+        },
         items: { where: { projectId } },
         risks: { where: { projectId } },
         decisions: { select: { id: true } },
@@ -205,17 +216,17 @@ export class AiPrismaFacade implements AiFacade {
     if (!section) return null;
     const ps = section.projectStatuses[0];
     if (!ps) return null;
-    const currentItems = section.items.filter((i) => i.type === 'current');
+    const currentItems = section.items.filter((i) => i.type === "current");
     const completed = currentItems.filter((i) => i.completed === true);
-    const blocked = currentItems.filter((i) => i.workflowStatus === 'blocked');
-    const currentWeekText = currentItems.map((i) => i.text).join('\n');
+    const blocked = currentItems.filter((i) => i.workflowStatus === "blocked");
+    const currentWeekText = currentItems.map((i) => i.text).join("\n");
     const nextWeekText = section.items
-      .filter((i) => i.type === 'next')
+      .filter((i) => i.type === "next")
       .map((i) => i.text)
-      .join('\n');
+      .join("\n");
     const riskHighlights = section.risks
       .map((rk) => `- ${rk.risk} (impact: ${rk.impact})`)
-      .join('\n');
+      .join("\n");
 
     return {
       sectionId: section.id,
@@ -223,7 +234,7 @@ export class AiPrismaFacade implements AiFacade {
       projectId,
       leadName: section.author.name,
       projectName: ps.project.name,
-      leadColour: ps.status as 'green' | 'yellow' | 'red',
+      leadColour: ps.status as "green" | "yellow" | "red",
       currentItemCount: currentItems.length,
       completedCount: completed.length,
       blockedCount: blocked.length,
@@ -246,10 +257,14 @@ export class AiPrismaFacade implements AiFacade {
     return row as unknown as AiInsightRow<R>;
   }
 
-  async upsertAiInsight<R>(input: AiInsightUpsertInput<R>): Promise<AiInsightRow<R>> {
+  async upsertAiInsight<R>(
+    input: AiInsightUpsertInput<R>,
+  ): Promise<AiInsightRow<R>> {
     const reportId = input.reportId ?? null;
     const row = await this.prisma.aiInsight.upsert({
-      where: { kind_contentHash: { kind: input.kind, contentHash: input.contentHash } },
+      where: {
+        kind_contentHash: { kind: input.kind, contentHash: input.contentHash },
+      },
       update: {
         reportId,
         result: input.result as Prisma.InputJsonValue,
@@ -274,7 +289,10 @@ export class AiPrismaFacade implements AiFacade {
     return row as unknown as AiInsightRow<R>;
   }
 
-  async deleteAiInsight(kind: AiInsightKind, contentHash: string): Promise<void> {
+  async deleteAiInsight(
+    kind: AiInsightKind,
+    contentHash: string,
+  ): Promise<void> {
     await this.prisma.aiInsight
       .delete({ where: { kind_contentHash: { kind, contentHash } } })
       .catch(() => undefined);

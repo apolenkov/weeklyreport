@@ -66,6 +66,7 @@ completed: 2026-04-25
 - **Files modified:** 7 (all created)
 
 ## Accomplishments
+
 - Three mapper modules cover the three semantic mismatches identified in PITFALLS.md (Pitfall 1): traffic-light enum, item-workflow enum, section-status enum
 - Six pure functions exported through a barrel index.ts, ready for container components in subsequent plans to import via `@/lib/mappers`
 - Computed presentation states ('planned' for next-week items, 'pending' for empty draft sections, 'empty' for null traffic light) implemented and tested — these have no DB equivalent and must live in the mapper layer
@@ -98,6 +99,7 @@ _Note: Both tasks combined RED+GREEN into a single commit per task (no refactor 
 ## Deviations from Plan
 
 **1. [Rule 3 — Blocking] Verify command rewritten**
+
 - **Found during:** Task 1 verification
 - **Issue:** Plan's verify command `pnpm vitest run --project web ...` references a vitest projects config that does not exist in this monorepo (root `package.json` has no `--project` config; `apps/web/vitest.config.ts` defines a single project).
 - **Fix:** Used `pnpm exec vitest run <files>` from inside `apps/web` instead — equivalent test target, works against the existing config.
@@ -136,5 +138,6 @@ None — pure mapper functions, no external services or environment configuratio
 - Typecheck: clean
 
 ---
-*Phase: 20-seed-type-foundation*
-*Completed: 2026-04-25*
+
+_Phase: 20-seed-type-foundation_
+_Completed: 2026-04-25_

@@ -106,8 +106,10 @@ function IdentitySubTab() {
 
   const updateOrgMut = useMutation(
     trpc.admin.updateOrganization.mutationOptions({
-      onSuccess: () => {
+      onSuccess: async () => {
         invalidateAdmin(qc, trpc);
+        // A9: invalidate landing page cache after org name change
+        await fetch("/api/revalidate-org", { method: "POST" });
         toast.success("Organization identity saved");
       },
       onError: (err) => {
@@ -243,8 +245,10 @@ function useUpdateSettingsMut(label: string) {
   const qc = useQueryClient();
   return useMutation(
     trpc.admin.updateSettings.mutationOptions({
-      onSuccess: () => {
+      onSuccess: async () => {
         invalidateAdmin(qc, trpc);
+        // A9: invalidate landing page cache on any settings change
+        await fetch("/api/revalidate-org", { method: "POST" });
         toast.success(`${label} saved`);
       },
       onError: (err) => {
@@ -482,8 +486,8 @@ function PeriodsSubTab({
           <span className="block font-medium">Auto-publish after deadline</span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
             Scheduler publishes the period at <code>deadline + grace</code>;
-            missing sections render «Не сдал» placeholder. Scheduler logic is
-            deferred — toggle is persisted, the cron consumer arrives in a
+            missing sections render 'No submission' placeholder. Scheduler logic
+            is deferred — toggle is persisted, the cron consumer arrives in a
             follow-up plan.
             {!draft.autoCreatePeriods && (
               <>
@@ -685,8 +689,8 @@ function PeriodsSubTab({
           </span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
             When on, the head cannot publish until every lead has submitted.
-            When off, missing sections render «Не сдал» placeholder. Enforcement
-            ships in Phase 51-C.
+            When off, missing sections render 'No submission' placeholder.
+            Enforcement ships in Phase 51-C.
           </span>
         </span>
       </label>
@@ -996,7 +1000,6 @@ function IntegrationsSubTab() {
   }
 
   const { telegram, ci } = statusQ.data;
-  const isTelegramActive = telegram.configured && telegram.bindings > 0;
   const isCiConfigured = ci?.configured ?? false;
 
   return (
@@ -1006,6 +1009,8 @@ function IntegrationsSubTab() {
         admin-issued credentials and a follow-on rollout phase.
       </p>
 
+      {/* Telegram — Phase 55 seeds-only; always shows Coming Soon until the
+          full activation phase ships (user binding + real outbound bot). */}
       <div
         className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4"
         data-testid="integration-row-telegram"
@@ -1016,27 +1021,17 @@ function IntegrationsSubTab() {
               Telegram
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Привязка пользователей и реальный бот будут добавлены в отдельной
-              фазе.
+              Notifications via Telegram bot — user binding and outbound
+              delivery will be enabled in a follow-on phase.
             </p>
           </div>
-          {isTelegramActive ? (
-            <span
-              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-primary)]"
-              data-testid="integration-badge-telegram"
-              data-state="active"
-            >
-              Подключён
-            </span>
-          ) : (
-            <span
-              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]"
-              data-testid="integration-badge-telegram"
-              data-state="inactive"
-            >
-              Не активно
-            </span>
-          )}
+          <span
+            className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)]"
+            data-testid="integration-badge-telegram"
+            data-state="coming-soon"
+          >
+            Coming Soon
+          </span>
         </div>
 
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
@@ -1060,11 +1055,18 @@ function IntegrationsSubTab() {
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
               CI Integration
+              <span
+                className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-gold)]"
+                data-testid="integration-badge-ci-coming-soon"
+              >
+                Coming Soon
+              </span>
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
               Connect your CI/CD pipeline for automated report triggers.
+              Configuration fields will be available in a follow-on phase.
             </p>
           </div>
           {isCiConfigured ? (
@@ -1085,6 +1087,68 @@ function IntegrationsSubTab() {
             </span>
           )}
         </div>
+      </div>
+
+      {/* Slack — third provider, Coming Soon until Phase 56 (A11). */}
+      <div
+        className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
+        data-testid="integration-row-slack"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+              Slack
+            </h3>
+            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+              Channel notifications and digest delivery via Slack incoming
+              webhooks — planned for a future phase.
+            </p>
+          </div>
+          <span
+            className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)]"
+            data-testid="integration-badge-slack"
+            data-state="coming-soon"
+          >
+            Coming Soon
+          </span>
+        </div>
+      </div>
+
+      {/* AI Integration — Phase 54 seeds-only; placeholder until provider
+          is selected (Anthropic / Yandex / Llama). TODO(Phase-54-activation) */}
+      <div
+        className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
+        data-testid="integration-row-ai"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
+              AI Integration
+            </h3>
+            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+              Automatic report summarization, risk extraction and decision
+              drafts via LLM. Provider will be selected in a follow-on phase.
+            </p>
+          </div>
+          <span
+            className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)]"
+            data-testid="integration-badge-ai"
+            data-state="coming-soon"
+          >
+            Coming Soon
+          </span>
+        </div>
+
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
+          <dt>Provider</dt>
+          <dd className="font-mono" data-testid="integration-ai-provider">
+            not configured
+          </dd>
+          <dt>RAG corpus</dt>
+          <dd className="font-mono" data-testid="integration-ai-rag">
+            empty
+          </dd>
+        </dl>
       </div>
     </div>
   );

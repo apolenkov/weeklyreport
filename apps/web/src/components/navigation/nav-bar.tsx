@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { DEFAULT_ORGANIZATION_IDENTITY, type Role } from "@customreport/shared";
@@ -33,14 +33,11 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   // exists in the nav but now drops into the "My Drafts" tab; the
   // role-shared "Archive" link uses the same URL with the published tab.
   { href: "/reports?tab=drafts", label: "My History", roles: ["lead"] },
-  // UFB-057 / Phase 57: 'director' shares the head dashboard surface but
-  // NOT the weekly-report submission surface (director is read-only).
-  { href: "/head/dashboard", label: "Dashboard", roles: ["head", "director"] },
+  { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
   { href: "/head/report", label: "Status Report", roles: ["head"] },
-  // UFB-058 / Phase 60: Status Presentation surface — slide deck view.
-  // Lead → own section as one slide; Head → all group slides;
-  // Viewer/Director → all slides in scope. Slide rendering itself is
-  // stub today; the route shows a «coming soon» until Phase 60 ships.
+  // UFB-058 / Phase 60: Status Presentation surface — draft authoring
+  // slides remain lead/head-only. Viewer presentation access is
+  // exposed from the published report page under /reports/[reportId]/present.
   {
     href: "/lead/slides",
     label: "Status Presentation",
@@ -49,15 +46,14 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   {
     href: "/head/slides",
     label: "Status Presentation",
-    roles: ["head", "viewer", "director"],
+    roles: ["head"],
   },
   {
     // UFB-022: admin role sees only the Admin section, not the
     // department dashboard/report/archive surfaces.
-    // UFB-057: director joins the Archive consumers.
     href: "/reports?tab=published",
     label: "Archive",
-    roles: ["lead", "head", "viewer", "director"],
+    roles: ["lead", "head", "viewer"],
   },
   // UFB-038: admin tab is admin-only. heads have a dashboard, not an admin
   // panel. The /admin/layout.tsx role gate enforces the same on the route.
@@ -74,11 +70,6 @@ function getRoleLabel(role: Role): string {
       return "Lead";
     case "viewer":
       return "Viewer";
-    // UFB-057 / Phase 57: director label sits between Admin and Viewer
-    // semantically — it's a leadership consumer that sees everything but
-    // owns nothing. Distinct label so the nav-bar pill is unambiguous.
-    case "director":
-      return "Director";
   }
 }
 
@@ -90,7 +81,7 @@ function reportsTabFromHref(href: string): string | null {
 function isPublishedReportPath(pathname: string): boolean {
   return (
     pathname === "/reports/history" ||
-    /^\/reports\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+    /^\/reports\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:\/present)?$/.test(
       pathname,
     )
   );
@@ -117,6 +108,18 @@ function isActiveLink(
 // both pointed at `/head/dashboard`, which sent admin sessions into the
 // head dashboard — see UFB-044 backlog entry for the user-reported flow.
 const getLogoHref = roleHomePath;
+
+function subscribeHydrationStore() {
+  return () => undefined;
+}
+
+function useHydratedClient(): boolean {
+  return useSyncExternalStore(
+    subscribeHydrationStore,
+    () => true,
+    () => false,
+  );
+}
 
 // Initials helper — first char of first word + first char of last word;
 // single-word names fall back to the first 2 chars.
@@ -206,26 +209,31 @@ export function NavBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user, organization, isLoading: sessionLoading } = useSession();
+  const hydrated = useHydratedClient();
   const activeReportsTab = searchParams.get("tab") ?? null;
 
-  const role: Role | null = user?.role ?? null;
+  const visibleUser = hydrated ? user : null;
+  const visibleOrganization = hydrated ? organization : null;
+  const visibleSessionLoading = sessionLoading || !hydrated;
+
+  const role: Role | null = visibleUser?.role ?? null;
   const visibleLinks: ReadonlyArray<NavLink> =
     role === null ? [] : NAV_LINKS.filter((link) => link.roles.includes(role));
 
-  const initials = user ? initialsFromName(user.name) : "?";
+  const initials = visibleUser ? initialsFromName(visibleUser.name) : "?";
   const roleLabel = role ? getRoleLabel(role) : "";
   // Defensive: if a name happens to match the role label verbatim
   // (legacy seed quirk), show only the name to avoid "X · X".
-  const nameRoleSame = user ? user.name === roleLabel : false;
+  const nameRoleSame = visibleUser ? visibleUser.name === roleLabel : false;
 
   // UFB-066 (2026-05-11): show a skeleton placeholder for the brand pill
   // while the session query is in-flight, instead of flashing the
   // DEFAULT_ORGANIZATION_IDENTITY fallback ('ORG') and then swapping to the
   // real tenant brand ('PEO'). The flash was the «ORG → PEO» pop user saw
   // on every cold reload.
-  const orgResolved = !sessionLoading && organization !== null;
+  const orgResolved = !visibleSessionLoading && visibleOrganization !== null;
   const orgShortName = orgResolved
-    ? organization.shortName
+    ? visibleOrganization.shortName
     : DEFAULT_ORGANIZATION_IDENTITY.shortName;
   // First letter of each word in shortName (up to 2 chars) for the round
   // monogram badge. For a 2-3-letter shortName like 'PEO' the monogram is
@@ -314,71 +322,99 @@ export function NavBar() {
             Was previously lg+ (1024px) but at 1024 with 6 nav-link pills + a
             longer role label ("Department Head") the row overflowed
             ~110px. Bumping the threshold up keeps the chrome tidy while
-            preserving the identity signal at every width via the avatar. */}
+            preserving the identity signal at every width via the avatar.
+            UFB-NEW-A1: show skeleton placeholders while session is loading so
+            the right-rail width is stable from first paint → zero CLS on
+            reload. Skeleton dimensions match the resolved identity chrome. */}
         <div className="flex items-center gap-2.5">
-          {user && (
-            <div className="hidden items-center gap-2 xl:flex">
+          {visibleSessionLoading ? (
+            <>
+              {/* xl+ skeleton: avatar circle + name pill */}
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)]"
+                className="hidden items-center gap-2 xl:flex"
                 aria-hidden="true"
               >
-                {initials}
+                <div className="h-8 w-8 rounded-full bg-[var(--color-muted)]/40" />
+                <div className="h-4 w-24 rounded bg-[var(--color-muted)]/40" />
               </div>
-              <span className="whitespace-nowrap text-[13px] text-[var(--color-foreground)]">
-                <span className="font-semibold">{user.name}</span>
-                {!nameRoleSame && (
-                  <span className="text-[var(--color-muted-foreground)]">
-                    {" "}
-                    · {roleLabel}
-                  </span>
-                )}
-              </span>
-            </div>
-          )}
-          {user && (
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] xl:hidden"
-              aria-label={`${user.name} (${roleLabel})`}
-              title={`${user.name} · ${roleLabel}`}
-            >
-              {initials}
-            </div>
-          )}
-          {user && (
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await fetch("/auth/logout", {
-                    method: "POST",
-                    credentials: "include",
-                  });
-                } finally {
-                  window.location.href = "/";
-                }
-              }}
-              data-testid="nav-logout"
-              aria-label="Sign out"
-              title="Sign out"
-              className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              {/* sm-xl skeleton: avatar circle only */}
+              <div
+                className="h-8 w-8 rounded-full bg-[var(--color-muted)]/40 xl:hidden"
                 aria-hidden="true"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-              <span className="hidden xl:inline">Logout</span>
-            </button>
+              />
+              {/* logout button skeleton */}
+              <div
+                className="h-8 w-20 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
+                aria-hidden="true"
+              />
+            </>
+          ) : (
+            <>
+              {visibleUser && (
+                <div className="hidden items-center gap-2 xl:flex">
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)]"
+                    aria-hidden="true"
+                  >
+                    {initials}
+                  </div>
+                  <span className="whitespace-nowrap text-[13px] text-[var(--color-foreground)]">
+                    <span className="font-semibold">{visibleUser.name}</span>
+                    {!nameRoleSame && (
+                      <span className="text-[var(--color-muted-foreground)]">
+                        {" "}
+                        · {roleLabel}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+              {visibleUser && (
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] xl:hidden"
+                  aria-label={`${visibleUser.name} (${roleLabel})`}
+                  title={`${visibleUser.name} · ${roleLabel}`}
+                >
+                  {initials}
+                </div>
+              )}
+              {visibleUser && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await fetch("/auth/logout", {
+                        method: "POST",
+                        credentials: "include",
+                      });
+                    } finally {
+                      window.location.href = "/";
+                    }
+                  }}
+                  data-testid="nav-logout"
+                  aria-label="Sign out"
+                  title="Sign out"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  <span className="hidden xl:inline">Logout</span>
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

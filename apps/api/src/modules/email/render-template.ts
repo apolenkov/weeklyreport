@@ -1,16 +1,16 @@
-import * as React from 'react';
-import { render } from '@react-email/render';
+import * as React from "react";
+import { render } from "@react-email/render";
 
 import {
   DeadlineEmail,
   deadlineEmailPlaintext,
   type DeadlineEmailProps,
-} from './templates/deadline.template.js';
+} from "./templates/deadline.template.js";
 import {
   EscalationEmail,
   escalationEmailPlaintext,
   type EscalationEmailProps,
-} from './templates/escalation.template.js';
+} from "./templates/escalation.template.js";
 
 /**
  * NOTIF-01 (Phase 28-03), NOTIF-02 (Phase 29-05): central renderer for the
@@ -20,11 +20,11 @@ import {
  * nodemailer so the email is multipart (HTML + plaintext) — corporate
  * spam filters score multipart higher than HTML-only.
  */
-export type EmailKind = 'deadline' | 'escalation';
+export type EmailKind = "deadline" | "escalation";
 
 export type EmailRenderInput =
-  | { kind: 'deadline'; props: DeadlineEmailProps }
-  | { kind: 'escalation'; props: EscalationEmailProps };
+  | { kind: "deadline"; props: DeadlineEmailProps }
+  | { kind: "escalation"; props: EscalationEmailProps };
 
 export interface RenderedEmail {
   subject: string;
@@ -32,10 +32,14 @@ export interface RenderedEmail {
   text: string;
 }
 
-export async function renderEmail(input: EmailRenderInput): Promise<RenderedEmail> {
+export async function renderEmail(
+  input: EmailRenderInput,
+): Promise<RenderedEmail> {
   switch (input.kind) {
-    case 'deadline': {
-      const html = await render(React.createElement(DeadlineEmail, input.props));
+    case "deadline": {
+      const html = await render(
+        React.createElement(DeadlineEmail, input.props),
+      );
       const text = deadlineEmailPlaintext(input.props);
       // UFB-047 / Phase 49-01: subject prefixes the org `shortName` so the
       // recipient's inbox folder rules can grep on the brand without
@@ -43,11 +47,13 @@ export async function renderEmail(input: EmailRenderInput): Promise<RenderedEmai
       const subject = `[${input.props.organization.shortName}] Reminder: ${input.props.reportPeriod} report section due in 24h`;
       return { subject, html, text };
     }
-    case 'escalation': {
-      const html = await render(React.createElement(EscalationEmail, input.props));
+    case "escalation": {
+      const html = await render(
+        React.createElement(EscalationEmail, input.props),
+      );
       const text = escalationEmailPlaintext(input.props);
       const lateCount = input.props.lateLeads.length;
-      const subject = `[${input.props.organization.shortName}] Action required: ${lateCount} late report section${lateCount === 1 ? '' : 's'} (${input.props.cycleDate})`;
+      const subject = `[${input.props.organization.shortName}] Action required: ${lateCount} late report section${lateCount === 1 ? "" : "s"} (${input.props.cycleDate})`;
       return { subject, html, text };
     }
   }

@@ -9,6 +9,7 @@
 
 Phase 2 delivers the first stakeholder-facing publication loop on top of the
 completed Phase 1 capture flow:
+
 - portfolio overview auto-assembles from all submitted lead traffic lights
 - head can review the assembled report before publication
 - head can publish a report into immutable, read-only form
@@ -54,9 +55,10 @@ report-period creation UX, or history browsing. Those remain in Phase 3.
 - **A-04:** Risks and decisions may be shown in the web review/published report if
   needed for internal readership, but PDF output must stay on an explicit field
   whitelist so export scope is deliberate rather than implicit.
-</decisions>
+  </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 ### Backend anchors
@@ -124,7 +126,7 @@ These should be extended, not bypassed.
   they inherit the current middleware/auth shape.
 - Use print CSS with explicit page sizing, font readiness, and deterministic asset
   loading for PDF output.
-</specifics>
+  </specifics>
 
 <deferred>
 ## Deferred Ideas
@@ -134,9 +136,9 @@ These should be extended, not bypassed.
 - Carry-over automation and idempotent rollover jobs (Phase 3)
 - Full production worker/runtime orchestration beyond what is needed to prove the
   async PDF contract locally (later infrastructure hardening)
-</deferred>
+  </deferred>
 
 ---
 
-*Phase: 02-report-assembly-publication*
-*Context gathered: 2026-04-09 after Phase 1 completion and autonomous Phase 2 discovery*
+_Phase: 02-report-assembly-publication_
+_Context gathered: 2026-04-09 after Phase 1 completion and autonomous Phase 2 discovery_

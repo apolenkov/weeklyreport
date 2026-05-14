@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from "vitest";
 
 import {
   metricsRegistry,
@@ -6,9 +6,9 @@ import {
   rateLimitHitsTotal,
   loginAttemptsTotal,
   httpRequestDurationSeconds,
-} from './metrics.registry.js';
+} from "./metrics.registry.js";
 
-describe('37-02 metrics registry', () => {
+describe("37-02 metrics registry", () => {
   beforeEach(async () => {
     // prom-client counters are global. Reset per-test so assertions don't
     // bleed across them. resetMetrics() zeros sample state without
@@ -16,10 +16,10 @@ describe('37-02 metrics registry', () => {
     metricsRegistry.resetMetrics();
   });
 
-  it('exposes /metrics output with the three custom counters', async () => {
-    dlqFailedTotal.inc({ queue: 'pdf-export' });
-    rateLimitHitsTotal.inc({ bucket: 'auth' });
-    loginAttemptsTotal.inc({ method: 'saml', outcome: 'success' });
+  it("exposes /metrics output with the three custom counters", async () => {
+    dlqFailedTotal.inc({ queue: "pdf-export" });
+    rateLimitHitsTotal.inc({ bucket: "auth" });
+    loginAttemptsTotal.inc({ method: "saml", outcome: "success" });
 
     const text = await metricsRegistry.metrics();
 
@@ -30,20 +30,20 @@ describe('37-02 metrics registry', () => {
     );
   });
 
-  it('separates labels into independent series', async () => {
-    rateLimitHitsTotal.inc({ bucket: 'auth' });
-    rateLimitHitsTotal.inc({ bucket: 'auth' });
-    rateLimitHitsTotal.inc({ bucket: 'trpc' });
+  it("separates labels into independent series", async () => {
+    rateLimitHitsTotal.inc({ bucket: "auth" });
+    rateLimitHitsTotal.inc({ bucket: "auth" });
+    rateLimitHitsTotal.inc({ bucket: "trpc" });
 
     const text = await metricsRegistry.metrics();
     expect(text).toContain('cr_rate_limit_hits_total{bucket="auth"} 2');
     expect(text).toContain('cr_rate_limit_hits_total{bucket="trpc"} 1');
   });
 
-  it('counts both login outcomes per method', async () => {
-    loginAttemptsTotal.inc({ method: 'saml', outcome: 'success' });
-    loginAttemptsTotal.inc({ method: 'saml', outcome: 'fail' });
-    loginAttemptsTotal.inc({ method: 'dev-login', outcome: 'success' });
+  it("counts both login outcomes per method", async () => {
+    loginAttemptsTotal.inc({ method: "saml", outcome: "success" });
+    loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
+    loginAttemptsTotal.inc({ method: "dev-login", outcome: "success" });
 
     const text = await metricsRegistry.metrics();
     expect(text).toContain(
@@ -57,16 +57,16 @@ describe('37-02 metrics registry', () => {
     );
   });
 
-  it('includes Node.js default metrics (process_cpu_user_seconds_total etc.)', async () => {
+  it("includes Node.js default metrics (process_cpu_user_seconds_total etc.)", async () => {
     const text = await metricsRegistry.metrics();
     // collectDefaultMetrics() is idempotent per registry; one of the
     // standard heap counters should be present.
     expect(text).toMatch(/^# (HELP|TYPE) nodejs_/m);
   });
 
-  it('records HTTP latency buckets for Prometheus dashboards', async () => {
+  it("records HTTP latency buckets for Prometheus dashboards", async () => {
     httpRequestDurationSeconds.observe(
-      { method: 'GET', route: '/health/ready', status_code: '200' },
+      { method: "GET", route: "/health/ready", status_code: "200" },
       0.042,
     );
 

@@ -1,16 +1,16 @@
 :root {
   /* Green */
   --color-traffic-green: oklch(0.925 0.084 155);
-  --color-traffic-green-foreground: oklch(0.365 0.110 152);
-  --color-traffic-green-border: oklch(0.723 0.150 152);
+  --color-traffic-green-foreground: oklch(0.365 0.11 152);
+  --color-traffic-green-border: oklch(0.723 0.15 152);
   /* Yellow */
-  --color-traffic-yellow: oklch(0.945 0.080 85);
+  --color-traffic-yellow: oklch(0.945 0.08 85);
   --color-traffic-yellow-foreground: oklch(0.475 0.115 65);
-  --color-traffic-yellow-border: oklch(0.785 0.150 75);
+  --color-traffic-yellow-border: oklch(0.785 0.15 75);
   /* Red */
-  --color-traffic-red: oklch(0.936 0.060 25);
+  --color-traffic-red: oklch(0.936 0.06 25);
   --color-traffic-red-foreground: oklch(0.505 0.195 25);
-  --color-traffic-red-border: oklch(0.715 0.210 25);
+  --color-traffic-red-border: oklch(0.715 0.21 25);
   /* Unset */
   --color-traffic-unset: oklch(0.97 0 0);
   --color-traffic-unset-foreground: oklch(0.556 0 0);

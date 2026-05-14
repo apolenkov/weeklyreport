@@ -8,11 +8,11 @@
 //     every facade lookup now sets reportId on the input
 //
 // Mocks @anthropic-ai/sdk so no live API calls are made.
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const messagesCreateMock = vi.fn();
 
-vi.mock('@anthropic-ai/sdk', () => {
+vi.mock("@anthropic-ai/sdk", () => {
   class MockAnthropic {
     public messages = { create: messagesCreateMock };
     constructor(public readonly opts: { apiKey: string }) {}
@@ -20,8 +20,8 @@ vi.mock('@anthropic-ai/sdk', () => {
   return { default: MockAnthropic };
 });
 
-import { _resetAiClientForTests } from '../ai-client.js';
-import { AiService, PER_REPORT_BUDGET_TOKENS } from '../ai.service.js';
+import { _resetAiClientForTests } from "../ai-client.js";
+import { AiService, PER_REPORT_BUDGET_TOKENS } from "../ai.service.js";
 import type {
   AiFacade,
   AiInsightRow,
@@ -29,8 +29,8 @@ import type {
   CellForOnTrack,
   ReportForSummary,
   RiskForSentiment,
-} from '../ai-facade.js';
-import type { AiInsightKind } from '@prisma/client';
+} from "../ai-facade.js";
+import type { AiInsightKind } from "@prisma/client";
 
 class InMemoryFacade implements AiFacade {
   public reports = new Map<string, ReportForSummary>();
@@ -43,7 +43,9 @@ class InMemoryFacade implements AiFacade {
     return `${kind}:${hash}`;
   }
 
-  async getReportForSummary(reportId: string): Promise<ReportForSummary | null> {
+  async getReportForSummary(
+    reportId: string,
+  ): Promise<ReportForSummary | null> {
     return this.reports.get(reportId) ?? null;
   }
 
@@ -51,15 +53,27 @@ class InMemoryFacade implements AiFacade {
     return this.risks.get(riskId) ?? null;
   }
 
-  async getCellForOnTrack(sectionId: string, projectId: string): Promise<CellForOnTrack | null> {
+  async getCellForOnTrack(
+    sectionId: string,
+    projectId: string,
+  ): Promise<CellForOnTrack | null> {
     return this.cells.get(`${sectionId}:${projectId}`) ?? null;
   }
 
-  async getAiInsight<R>(kind: AiInsightKind, hash: string): Promise<AiInsightRow<R> | null> {
-    return (this.insights.get(this.key(kind, hash)) as AiInsightRow<R> | undefined) ?? null;
+  async getAiInsight<R>(
+    kind: AiInsightKind,
+    hash: string,
+  ): Promise<AiInsightRow<R> | null> {
+    return (
+      (this.insights.get(this.key(kind, hash)) as
+        | AiInsightRow<R>
+        | undefined) ?? null
+    );
   }
 
-  async upsertAiInsight<R>(input: AiInsightUpsertInput<R>): Promise<AiInsightRow<R>> {
+  async upsertAiInsight<R>(
+    input: AiInsightUpsertInput<R>,
+  ): Promise<AiInsightRow<R>> {
     const row: AiInsightRow<R> = {
       id: `${input.kind}-${input.contentHash}`,
       kind: input.kind,
@@ -73,7 +87,10 @@ class InMemoryFacade implements AiFacade {
       cacheReadTokens: input.usage.cacheReadTokens,
       createdAt: new Date(),
     };
-    this.insights.set(this.key(input.kind, input.contentHash), row as AiInsightRow<unknown>);
+    this.insights.set(
+      this.key(input.kind, input.contentHash),
+      row as AiInsightRow<unknown>,
+    );
     return row;
   }
 
@@ -86,23 +103,23 @@ class InMemoryFacade implements AiFacade {
   }
 }
 
-const REPORT_ID = '00000000-0000-4000-8000-000000000010';
-const OTHER_REPORT_ID = '00000000-0000-4000-8000-0000000000ff';
-const RISK_ID = '11111111-1111-4111-8111-111111111111';
-const SECTION_ID = '22222222-2222-4222-8222-222222222222';
-const PROJECT_ID = '33333333-3333-4333-8333-333333333333';
+const REPORT_ID = "00000000-0000-4000-8000-000000000010";
+const OTHER_REPORT_ID = "00000000-0000-4000-8000-0000000000ff";
+const RISK_ID = "11111111-1111-4111-8111-111111111111";
+const SECTION_ID = "22222222-2222-4222-8222-222222222222";
+const PROJECT_ID = "33333333-3333-4333-8333-333333333333";
 
 const sampleReport: ReportForSummary = {
   reportId: REPORT_ID,
-  periodLabel: '2026-W18',
+  periodLabel: "2026-W18",
   sectionCount: 1,
   greenCount: 1,
   yellowCount: 0,
   redCount: 0,
   sections: [
     {
-      authorName: 'Alice',
-      trafficLights: [{ projectName: 'Acme', status: 'green' }],
+      authorName: "Alice",
+      trafficLights: [{ projectName: "Acme", status: "green" }],
       riskCount: 0,
       decisionCount: 0,
       itemCount: 1,
@@ -113,55 +130,55 @@ const sampleReport: ReportForSummary = {
 const sampleRisk: RiskForSentiment = {
   riskId: RISK_ID,
   reportId: REPORT_ID,
-  risk: 'Vendor renewal pending',
-  impact: 'Could delay launch',
-  mitigation: 'Legal review scheduled',
+  risk: "Vendor renewal pending",
+  impact: "Could delay launch",
+  mitigation: "Legal review scheduled",
 };
 
 const sampleCell: CellForOnTrack = {
   sectionId: SECTION_ID,
   reportId: REPORT_ID,
   projectId: PROJECT_ID,
-  leadName: 'Alice',
-  projectName: 'Acme',
-  leadColour: 'green',
+  leadName: "Alice",
+  projectName: "Acme",
+  leadColour: "green",
   currentItemCount: 1,
   completedCount: 1,
   blockedCount: 0,
   riskCount: 0,
   decisionCount: 0,
-  currentWeekText: 'Shipped login.',
-  nextWeekText: 'Begin RBAC.',
-  riskHighlights: '',
+  currentWeekText: "Shipped login.",
+  nextWeekText: "Begin RBAC.",
+  riskHighlights: "",
 };
 
 beforeEach(() => {
   _resetAiClientForTests();
   messagesCreateMock.mockReset();
-  process.env['ANTHROPIC_API_KEY'] = 'test-key';
+  process.env["ANTHROPIC_API_KEY"] = "test-key";
 });
 
 afterEach(() => {
-  delete process.env['ANTHROPIC_API_KEY'];
+  delete process.env["ANTHROPIC_API_KEY"];
 });
 
-describe('AiService budget guard (Phase 32-A1 / C-01)', () => {
-  it('PER_REPORT_BUDGET_TOKENS is 50_000 (≈ $0.05 at Haiku 4.5)', () => {
+describe("AiService budget guard (Phase 32-A1 / C-01)", () => {
+  it("PER_REPORT_BUDGET_TOKENS is 50_000 (≈ $0.05 at Haiku 4.5)", () => {
     expect(PER_REPORT_BUDGET_TOKENS).toBe(50_000);
   });
 
-  describe('summary', () => {
-    it('under budget → allows the SDK call', async () => {
+  describe("summary", () => {
+    it("under budget → allows the SDK call", async () => {
       const facade = new InMemoryFacade();
       facade.reports.set(REPORT_ID, sampleReport);
       facade.recentTokenSumByReport.set(REPORT_ID, 1_000);
       messagesCreateMock.mockResolvedValueOnce({
         content: [
           {
-            type: 'tool_use',
+            type: "tool_use",
             input: {
-              narrative: 'Single green report. No issues. Steady.',
-              tone: 'positive',
+              narrative: "Single green report. No issues. Steady.",
+              tone: "positive",
               highlights: [],
             },
           },
@@ -174,27 +191,33 @@ describe('AiService budget guard (Phase 32-A1 / C-01)', () => {
       expect(messagesCreateMock).toHaveBeenCalledTimes(1);
     });
 
-    it('over budget → returns budget_exceeded sentinel without calling SDK', async () => {
+    it("over budget → returns budget_exceeded sentinel without calling SDK", async () => {
       const facade = new InMemoryFacade();
       facade.reports.set(REPORT_ID, sampleReport);
-      facade.recentTokenSumByReport.set(REPORT_ID, PER_REPORT_BUDGET_TOKENS + 1);
+      facade.recentTokenSumByReport.set(
+        REPORT_ID,
+        PER_REPORT_BUDGET_TOKENS + 1,
+      );
       const service = new AiService(facade);
       const r = await service.summary(REPORT_ID);
-      expect(r).toEqual({ available: false, reason: 'budget_exceeded' });
+      expect(r).toEqual({ available: false, reason: "budget_exceeded" });
       expect(messagesCreateMock).not.toHaveBeenCalled();
     });
 
-    it('budget on a different report does NOT block this one', async () => {
+    it("budget on a different report does NOT block this one", async () => {
       const facade = new InMemoryFacade();
       facade.reports.set(REPORT_ID, sampleReport);
-      facade.recentTokenSumByReport.set(OTHER_REPORT_ID, PER_REPORT_BUDGET_TOKENS * 10);
+      facade.recentTokenSumByReport.set(
+        OTHER_REPORT_ID,
+        PER_REPORT_BUDGET_TOKENS * 10,
+      );
       messagesCreateMock.mockResolvedValueOnce({
         content: [
           {
-            type: 'tool_use',
+            type: "tool_use",
             input: {
-              narrative: 'Single green report. No issues. Steady.',
-              tone: 'positive',
+              narrative: "Single green report. No issues. Steady.",
+              tone: "positive",
               highlights: [],
             },
           },
@@ -208,26 +231,29 @@ describe('AiService budget guard (Phase 32-A1 / C-01)', () => {
     });
   });
 
-  describe('sentiment', () => {
-    it('over budget → returns budget_exceeded without calling SDK', async () => {
+  describe("sentiment", () => {
+    it("over budget → returns budget_exceeded without calling SDK", async () => {
       const facade = new InMemoryFacade();
       facade.risks.set(RISK_ID, sampleRisk);
-      facade.recentTokenSumByReport.set(REPORT_ID, PER_REPORT_BUDGET_TOKENS + 1);
+      facade.recentTokenSumByReport.set(
+        REPORT_ID,
+        PER_REPORT_BUDGET_TOKENS + 1,
+      );
       const service = new AiService(facade);
       const r = await service.sentiment(RISK_ID);
-      expect(r).toEqual({ available: false, reason: 'budget_exceeded' });
+      expect(r).toEqual({ available: false, reason: "budget_exceeded" });
       expect(messagesCreateMock).not.toHaveBeenCalled();
     });
 
-    it('under budget → calls SDK and returns result', async () => {
+    it("under budget → calls SDK and returns result", async () => {
       const facade = new InMemoryFacade();
       facade.risks.set(RISK_ID, sampleRisk);
       facade.recentTokenSumByReport.set(REPORT_ID, 1_000);
       messagesCreateMock.mockResolvedValueOnce({
         content: [
           {
-            type: 'tool_use',
-            input: { level: 'low', rationale: 'Vendor renewal scheduled' },
+            type: "tool_use",
+            input: { level: "low", rationale: "Vendor renewal scheduled" },
           },
         ],
         usage: { input_tokens: 1000, output_tokens: 30 },
@@ -238,26 +264,33 @@ describe('AiService budget guard (Phase 32-A1 / C-01)', () => {
     });
   });
 
-  describe('on-track', () => {
-    it('over budget → returns budget_exceeded without calling SDK', async () => {
+  describe("on-track", () => {
+    it("over budget → returns budget_exceeded without calling SDK", async () => {
       const facade = new InMemoryFacade();
       facade.cells.set(`${SECTION_ID}:${PROJECT_ID}`, sampleCell);
-      facade.recentTokenSumByReport.set(REPORT_ID, PER_REPORT_BUDGET_TOKENS + 1);
+      facade.recentTokenSumByReport.set(
+        REPORT_ID,
+        PER_REPORT_BUDGET_TOKENS + 1,
+      );
       const service = new AiService(facade);
       const r = await service.onTrack(SECTION_ID, PROJECT_ID);
-      expect(r).toEqual({ available: false, reason: 'budget_exceeded' });
+      expect(r).toEqual({ available: false, reason: "budget_exceeded" });
       expect(messagesCreateMock).not.toHaveBeenCalled();
     });
 
-    it('under budget → calls SDK and returns result', async () => {
+    it("under budget → calls SDK and returns result", async () => {
       const facade = new InMemoryFacade();
       facade.cells.set(`${SECTION_ID}:${PROJECT_ID}`, sampleCell);
       facade.recentTokenSumByReport.set(REPORT_ID, 1_000);
       messagesCreateMock.mockResolvedValueOnce({
         content: [
           {
-            type: 'tool_use',
-            input: { verdict: 'on-track', confidence: 'high', rationale: 'Steady velocity' },
+            type: "tool_use",
+            input: {
+              verdict: "on-track",
+              confidence: "high",
+              rationale: "Steady velocity",
+            },
           },
         ],
         usage: { input_tokens: 1200, output_tokens: 60 },
@@ -268,22 +301,25 @@ describe('AiService budget guard (Phase 32-A1 / C-01)', () => {
     });
   });
 
-  describe('unscoped calls (no reportId)', () => {
-    it('sentiment with empty reportId on the risk → budget_exceeded', async () => {
+  describe("unscoped calls (no reportId)", () => {
+    it("sentiment with empty reportId on the risk → budget_exceeded", async () => {
       const facade = new InMemoryFacade();
-      facade.risks.set(RISK_ID, { ...sampleRisk, reportId: '' });
+      facade.risks.set(RISK_ID, { ...sampleRisk, reportId: "" });
       const service = new AiService(facade);
       const r = await service.sentiment(RISK_ID);
-      expect(r).toEqual({ available: false, reason: 'budget_exceeded' });
+      expect(r).toEqual({ available: false, reason: "budget_exceeded" });
       expect(messagesCreateMock).not.toHaveBeenCalled();
     });
 
-    it('on-track with empty reportId on the cell → budget_exceeded', async () => {
+    it("on-track with empty reportId on the cell → budget_exceeded", async () => {
       const facade = new InMemoryFacade();
-      facade.cells.set(`${SECTION_ID}:${PROJECT_ID}`, { ...sampleCell, reportId: '' });
+      facade.cells.set(`${SECTION_ID}:${PROJECT_ID}`, {
+        ...sampleCell,
+        reportId: "",
+      });
       const service = new AiService(facade);
       const r = await service.onTrack(SECTION_ID, PROJECT_ID);
-      expect(r).toEqual({ available: false, reason: 'budget_exceeded' });
+      expect(r).toEqual({ available: false, reason: "budget_exceeded" });
       expect(messagesCreateMock).not.toHaveBeenCalled();
     });
   });

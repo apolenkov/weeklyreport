@@ -66,6 +66,7 @@ completed: 2026-04-12
 - **Files modified:** 9 (1 created, 8 modified)
 
 ## Accomplishments
+
 - Print CSS now preserves colored backgrounds (traffic lights, badges) in PDF output
 - Autosave and submit handlers wrapped in try/catch -- no more stuck "Saving..." state on network errors
 - All date formatting consolidated to shared utility with ru-RU locale and UTC timezone for period dates
@@ -81,6 +82,7 @@ Each task was committed atomically:
 2. **Task 2: Fix locale dates, keyboard a11y, and navigation (BUG-017,018,019,025)** - `00d5f81` (fix)
 
 ## Files Created/Modified
+
 - `apps/web/src/lib/format-date.ts` - Shared date formatting utility (formatDate, formatDateTime, formatPeriodDate)
 - `packages/ui/src/styles/globals.css` - Added print-color-adjust CSS for PDF colored backgrounds
 - `packages/ui/src/components/data-table.tsx` - Added tabIndex, onKeyDown, aria-sort for keyboard a11y
@@ -92,6 +94,7 @@ Each task was committed atomically:
 - `apps/web/src/components/report/archive-report-list.tsx` - Switched to shared formatDate/formatPeriodDate
 
 ## Decisions Made
+
 - Created shared `format-date.ts` utility instead of fixing locales in-place -- eliminates 4 duplicate local formatDate/formatDateTime functions across components
 - Period dates (periodStart, periodEnd) use `formatPeriodDate` with `timeZone: 'UTC'` to prevent off-by-one day shifts in UTC+N timezones; non-period dates use `formatDate` without timezone override
 - Removed traffic light default to 'red' entirely in `toSubmitInput` -- the `collectValidationMessages` function already requires all projects to have a traffic light status before submit, and Zod schema validation catches null values
@@ -101,6 +104,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 2 - Missing Critical] Consolidated duplicate date formatting into shared utility**
+
 - **Found during:** Task 2 (date formatting standardization)
 - **Issue:** Plan suggested fixing locales in-place, but 5 components had their own local formatDate functions with inconsistent signatures
 - **Fix:** Created `apps/web/src/lib/format-date.ts` with 3 functions and replaced all local copies
@@ -114,19 +118,24 @@ Each task was committed atomically:
 **Impact on plan:** Shared utility approach is better than in-place fixes -- prevents future drift when new components need date formatting.
 
 ## Issues Encountered
+
 - Pre-existing TypeScript compilation errors (missing node_modules for radix-ui, lucide-react, next, sonner, testing-library) -- these are dependency installation issues, not code errors. All errors existed before this plan's changes.
 
 ## Known Stubs
+
 None -- all functionality is fully wired.
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 - All 8 frontend bugs fixed and verified
 - Shared date formatting utility ready for use by any new components
 - DataTable keyboard accessibility ready for E2E accessibility testing (Phase 13 Plan 07)
 
 ---
-*Phase: 13-quality-assurance-polish*
-*Completed: 2026-04-12*
+
+_Phase: 13-quality-assurance-polish_
+_Completed: 2026-04-12_

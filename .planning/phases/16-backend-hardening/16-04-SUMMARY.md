@@ -17,7 +17,10 @@ affects: [17-ui-redesign, 18-e2e-tests]
 
 tech-stack:
   added: []
-  patterns: ["regression test IDs mapped to describe blocks via scenario codes (AUTH-034, LEAD-060, etc.)"]
+  patterns:
+    [
+      "regression test IDs mapped to describe blocks via scenario codes (AUTH-034, LEAD-060, etc.)",
+    ]
 
 key-files:
   created:
@@ -61,6 +64,7 @@ completed: 2026-04-21
 - **Files modified:** 11
 
 ## Accomplishments
+
 - Added 74 net-new passing contract tests across all backend modules
 - Test count increased from 250 to 324 passing (29.6% increase)
 - All tests use in-memory mocks (no DB dependency) per D-09/D-10
@@ -75,6 +79,7 @@ Each task was committed atomically:
 2. **Task 2: Write regression contract tests** - `d3c21ce` (test)
 
 ## Files Created/Modified
+
 - `apps/api/src/modules/auth/auth.controller.test.ts` - NEW: JWT sign/verify contract tests (8 tests)
 - `apps/api/src/modules/report-sections/report-sections.contract.test.ts` - Traffic lights, tag combos, double-submit, Zod validation (+28 tests)
 - `apps/api/src/modules/publication/publication.contract.test.ts` - Publish immutability, re-publish rejection (+3 tests)
@@ -88,6 +93,7 @@ Each task was committed atomically:
 - `apps/api/src/infrastructure/trpc/trpc.middleware.test.ts` - Viewer FORBIDDEN, head protected, publicProcedure all sessions (+4 tests)
 
 ## Decisions Made
+
 - Added admin regression tests to existing `admin.service.test.ts` instead of creating a duplicate `admin.contract.test.ts` -- the existing file already uses the in-memory `createRepository` pattern per D-10, making a second file pure duplication
 - Created new `auth.controller.test.ts` for JWT sign/verify tests because `createJwtSigner` is independently testable and these scenarios (AUTH-034 expired JWT, AUTH-035 bad signature) test the session extraction layer
 - Used Vitest parameterized `for` loops for 18 tag/workflowStatus combinations to avoid 18 manually-written near-identical test blocks
@@ -97,6 +103,7 @@ Each task was committed atomically:
 ### Auto-fixed Issues
 
 **1. [Rule 2 - Missing Critical] admin.contract.test.ts -> admin.service.test.ts**
+
 - **Found during:** Task 1 (coverage audit)
 - **Issue:** Plan specified creating `admin.contract.test.ts` but `admin.service.test.ts` already existed with the exact same in-memory mock pattern
 - **Fix:** Extended existing `admin.service.test.ts` instead of creating a duplicate file
@@ -110,15 +117,19 @@ Each task was committed atomically:
 **Impact on plan:** No scope change. Plan intent fully satisfied -- admin has comprehensive contract tests.
 
 ## Issues Encountered
+
 None
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Known Stubs
+
 None - all tests are fully wired with in-memory mocks and produce real assertions.
 
 ## Next Phase Readiness
+
 - Backend test suite at 324 passing, covering all P0 and high-value P1 regression scenarios
 - Ready for Phase 17 (UI redesign) or Phase 18 (E2E tests)
 - 19 integration test failures remain (pre-existing DB-connectivity issue, not regressions)
@@ -131,5 +142,6 @@ None - all tests are fully wired with in-memory mocks and produce real assertion
 - TypeScript: No errors
 
 ---
-*Phase: 16-backend-hardening*
-*Completed: 2026-04-21*
+
+_Phase: 16-backend-hardening_
+_Completed: 2026-04-21_

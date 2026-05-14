@@ -3,30 +3,30 @@
  * (done/in_progress/blocked) with the UI ItemStatus enum
  * (completed/in-progress/blocked/planned).
  *
- * 'planned' is a computed presentation-only state with no DB enum value:
- * it represents next-week items that have not yet been assigned an
- * explicit workflow status.
+ * 'planned' is a presentation-only state with no DB enum value:
+ * next-week in-progress rows use completed=null for planned and
+ * completed=false for explicit in-progress.
  */
 
-export type ItemWorkflowStatus = 'done' | 'in_progress' | 'blocked';
-export type ItemType = 'current' | 'next';
-export type ItemStatus = 'in-progress' | 'completed' | 'blocked' | 'planned';
+export type ItemWorkflowStatus = "done" | "in_progress" | "blocked";
+export type ItemType = "current" | "next";
+export type ItemStatus = "in-progress" | "completed" | "blocked" | "planned";
 
 /**
  * Converts a stored ItemWorkflowStatus to its presentation ItemStatus.
  * Note: 'planned' is never produced by this function -- it is only
- * derivable from {@link deriveItemStatus} when no workflow status exists.
+ * derivable from {@link deriveItemStatus} for next-week rows.
  */
 export function workflowToItemStatus(
   ws: ItemWorkflowStatus,
-): Exclude<ItemStatus, 'planned'> {
+): Exclude<ItemStatus, "planned"> {
   switch (ws) {
-    case 'done':
-      return 'completed';
-    case 'in_progress':
-      return 'in-progress';
-    case 'blocked':
-      return 'blocked';
+    case "done":
+      return "completed";
+    case "in_progress":
+      return "in-progress";
+    case "blocked":
+      return "blocked";
   }
 }
 
@@ -35,38 +35,45 @@ export function workflowToItemStatus(
  * 'planned' has no API equivalent and is excluded at the type level.
  */
 export function itemStatusToWorkflow(
-  status: Exclude<ItemStatus, 'planned'>,
+  status: Exclude<ItemStatus, "planned">,
 ): ItemWorkflowStatus {
   switch (status) {
-    case 'completed':
-      return 'done';
-    case 'in-progress':
-      return 'in_progress';
-    case 'blocked':
-      return 'blocked';
+    case "completed":
+      return "done";
+    case "in-progress":
+      return "in_progress";
+    case "blocked":
+      return "blocked";
   }
 }
 
 /**
  * Derives the display ItemStatus from an item's stored fields.
  *
- * Rules (per mockup v14 — "next week" cards are visually planned regardless
- * of any backend workflow tag):
- * - type === 'next'    -> 'planned' (always, dashed border in UI)
+ * Rules:
+ * - type === 'next' + workflowStatus='in_progress' + completed=false
+ *   -> 'in-progress'
+ * - type === 'next' + workflowStatus='in_progress' + completed null/undefined
+ *   -> 'planned'
+ * - explicit done/blocked next-week status is preserved
  * - explicit workflowStatus on a current-week item wins
  * - default for current-week with no workflowStatus -> 'in-progress'
- *
- * Phase 33-04: previously `workflowStatus` overrode `type`, so any next-week
- * item that had ever been touched (and thus carried `in_progress`) lost its
- * dashed border. Next-week IS planning state by definition; surface that.
  */
 export function deriveItemStatus(item: {
   workflowStatus: ItemWorkflowStatus | null;
   type: ItemType;
+  completed?: boolean | null;
 }): ItemStatus {
-  if (item.type === 'next') return 'planned';
+  if (item.type === "next") {
+    if (item.workflowStatus === "done") return "completed";
+    if (item.workflowStatus === "blocked") return "blocked";
+    if (item.workflowStatus === "in_progress" && item.completed === false) {
+      return "in-progress";
+    }
+    return "planned";
+  }
   if (item.workflowStatus) {
     return workflowToItemStatus(item.workflowStatus);
   }
-  return 'in-progress';
+  return "in-progress";
 }
