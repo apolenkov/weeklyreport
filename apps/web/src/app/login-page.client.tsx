@@ -107,6 +107,30 @@ type LoginPageClientProps = {
   initialOrg: OrganizationPublic;
 };
 
+function isOrganizationPublic(value: unknown): value is OrganizationPublic {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { shortName?: unknown }).shortName === "string" &&
+    typeof (value as { fullName?: unknown }).fullName === "string"
+  );
+}
+
+function isRole(value: unknown): value is Role {
+  return (
+    value === "lead" ||
+    value === "head" ||
+    value === "admin" ||
+    value === "viewer"
+  );
+}
+
+function getSessionRole(value: unknown): Role | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const role = (value as { role?: unknown }).role;
+  return isRole(role) ? role : undefined;
+}
+
 export function LoginPageClient({ initialOrg }: LoginPageClientProps) {
   // Next 16 strict prerender: useSearchParams must run inside a Suspense
   // boundary or the / page bails out of static export. Wrap the body so
@@ -125,7 +149,8 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   // auth.me is publicProcedure — returns null when no session, never
   // throws. Safe to fire on the public landing page.
   const sessionQ = useQuery(trpc.auth.me.queryOptions());
-  const session = sessionQ.data ?? null;
+  const sessionRole = getSessionRole(sessionQ.data);
+  const hasSession = sessionRole !== undefined;
   const sessionLoading = sessionQ.isLoading;
 
   // UFB-047 / Phase 48-A: organization identity for the landing hero.
@@ -151,15 +176,16 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   });
   // UFB-060: fall back to generic DEFAULT_ORGANIZATION_IDENTITY, not a
   // hard-coded brand. Real brand strings live in the Organization row.
-  const orgShortName =
-    orgQ.data?.shortName ?? DEFAULT_ORGANIZATION_IDENTITY.shortName;
-  const orgFullName =
-    orgQ.data?.fullName ?? DEFAULT_ORGANIZATION_IDENTITY.fullName;
+  const org = isOrganizationPublic(orgQ.data)
+    ? orgQ.data
+    : DEFAULT_ORGANIZATION_IDENTITY;
+  const orgShortName = org.shortName;
+  const orgFullName = org.fullName;
 
   const stayOnLanding = searchParams?.get("stay") === "1";
   const safeNext = sanitizeNext(
     searchParams?.get("next") ?? null,
-    defaultRedirectFor(session?.role as Role | undefined),
+    defaultRedirectFor(sessionRole),
   );
 
   // UFB-071 (2026-05-11): «Last session» resume hint. Read from
@@ -186,9 +212,9 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   useEffect(() => {
     if (AUTH_STUB) return;
     if (sessionLoading || stayOnLanding) return;
-    if (!session) return;
+    if (!hasSession) return;
     window.location.replace(safeNext);
-  }, [session, sessionLoading, safeNext, stayOnLanding]);
+  }, [hasSession, sessionLoading, safeNext, stayOnLanding]);
 
   const ssoHref =
     safeNext === FALLBACK_REDIRECT

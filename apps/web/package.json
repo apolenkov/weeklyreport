@@ -37,6 +37,7 @@
     "superjson": "^2.2.6"
   },
   "devDependencies": {
+    "@customreport/api": "workspace:*",
     "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.55.0",
     "@tailwindcss/postcss": "^4.2.2",

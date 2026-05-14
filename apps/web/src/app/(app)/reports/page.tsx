@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
+import type { MyHistoryEntry } from "@customreport/shared";
+
 import { LeadHistoryList } from "../../../components/lead/lead-history-list";
 import { LeadHistorySidebar } from "../../../components/lead/lead-history-sidebar";
 import { LeadHistorySkeleton } from "../../../components/lead/lead-history-skeleton";
@@ -187,7 +189,12 @@ function LeadDraftsPanel() {
     }
   }, [isError, error]);
 
-  const entries = useMemo(() => (data ? mapHistoryEntries(data) : []), [data]);
+  const entries = useMemo(() => {
+    const history = Array.isArray(data)
+      ? (data as readonly MyHistoryEntry[])
+      : [];
+    return mapHistoryEntries(history);
+  }, [data]);
   const visibleEntries = showAll
     ? entries
     : entries.slice(0, HISTORY_INITIAL_VISIBLE);
