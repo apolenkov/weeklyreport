@@ -5,6 +5,34 @@
 > темы / gradient-копипаста, а **визуальное исследование на основе скриншотов**
 > от прохода Playwright. Решения о реализации принимаются ПОСЛЕ исследования.
 
+## Текущее состояние (2026-05-14, после Wave 1-4 closure)
+
+Все 4 волны спринта закрыты, 8 коммитов на ветке `fix/PRJ-2/uat-v7-2026-05-12`,
+рабочее дерево чистое. Осталось только операционное закрытие: push → PR → CI.
+
+**Выбранный путь — A (закрыть текущий спринт):**
+
+```text
+[push origin]  →  [gh pr create]  →  [CI green 6 jobs]  →  [merge main]
+   ↑ AGENT          ↑ AGENT             ↑ wait                ↑ HUMAN merge
+```
+
+**Следующие шаги (AGENT executes):**
+
+1. `git push origin fix/PRJ-2/uat-v7-2026-05-12`
+2. `gh pr create --title "feat(sprint): Wave 1-4 post-marathon — CI baseline + markdownlint + .planning/ consolidation"`
+   с body, описывающим каждую волну и ссылающимся на
+   `.planning/memory/2026-05-14-post-marathon-sprint.md`
+3. `gh pr checks` / `gh run watch` до зелёного CI (6 jobs: lint-md, quality,
+   e2e, migrate-reset, visual-baseline, docker-build)
+4. Отчитаться пользователю о состоянии PR + CI
+
+**HUMAN потом (после merge, отдельная сессия):**
+
+- Выбрать следующий milestone (Phase 44 / 46 / 47 / 50 / 54)
+- Решение по Phase 40 (ребренд) после чтения
+  `.planning/memory/2026-05-14-background-research.md`
+
 ## Context
 
 После merge PR #4 в main (ночной марафон) и сверки с `v8.1-ROADMAP.md`
