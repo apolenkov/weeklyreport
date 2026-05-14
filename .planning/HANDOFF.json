@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-14T12:51:22Z",
+  "timestamp": "2026-05-14T14:23:53Z",
   "phase": "43",
   "phase_name": "tooling-leaf-fix",
   "phase_dir": ".planning/phases/43-tooling-leaf-fix",
@@ -26,29 +26,32 @@
     {
       "id": 3,
       "name": "Merge PR #5 after CI green",
-      "status": "blocked_ci"
+      "status": "blocked_ci_queued"
     },
     {
       "id": 4,
       "name": "STATE.md update — close phases 44/46/47/48/49, recalculate percent",
-      "status": "not_started"
+      "status": "done",
+      "commit": "local-uncommitted"
     },
     {
       "id": 5,
-      "name": "Add 3 regression tests from COVERAGE-GAP: E-04, E-08, UFB-024",
-      "status": "not_started"
+      "name": "Reconcile coverage gaps E-04, E-08, UFB-024",
+      "status": "done",
+      "commit": "45e1cac",
+      "note": "E-04 covered by alert-bar.test.tsx; E-08 and UFB-024 were already covered."
     }
   ],
   "blockers": [
     {
-      "description": "CI PR #5 all [pending] x8 runs",
+      "description": "CI PR #5 previous runs were completed/startup_failure with jobs=[] and no logs; latest run 277104 is queued after workflow fixes and still needs a real green check before merge",
       "type": "external",
-      "workaround": "gh run rerun <run-id> after 1 hour if still pending"
+      "workaround": "Watch run 277104. If it stays queued, fix GitHub Actions runner availability or repository Actions policy; merge only after green."
     },
     {
       "description": "D-12 item-dialog status pill — react-compiler conflict",
       "type": "technical",
-      "workaround": "Needs product/architectural decision before re-implementation"
+      "workaround": "Needs react-compiler-safe technical design before re-implementation"
     }
   ],
   "human_actions_pending": [
@@ -75,7 +78,17 @@
       "phase": "43"
     }
   ],
-  "uncommitted_files": [],
-  "next_action": "rtk gh run list --limit 5 → check CI status. If green: gh pr merge 5 --merge. Then update STATE.md.",
-  "context_notes": "Post-marathon sprint continuation. TOOL-01 took 2 iterations — first fix was incomplete (still referenced gitignored path). Second fix removed the import entirely since typedRoutes is not enabled. Regression is clean. Coverage gap report ready at .planning/regression/COVERAGE-GAP-2026-05-14.md."
+  "uncommitted_files": [
+    ".planning/regression/evidence/2026-05-08-phase16-17-uat/uat-live-results.json",
+    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-002.json",
+    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-003.json",
+    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-004.json",
+    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-005.json",
+    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-007.json",
+    ".planning/regression/evidence/product-ready-matrix/UI-GEO-001.json",
+    ".planning/regression/evidence/product-ready-matrix/UI-GEO-002-003.json",
+    ".planning/regression/COVERAGE-GAP-2026-05-14.md"
+  ],
+  "next_action": "Watch gh run view 277104 --json status,conclusion,jobs. If green: gh pr merge 5 --merge. If queued/startup_failure persists: record runner/policy blocker evidence. Repo-only remaining work is in .planning/session-retros/CUSTOMREPORT-REPO-REMAINING-2026-05-14.md.",
+  "context_notes": "Post-marathon sprint continuation. TOOL-01 took 2 iterations — first fix was incomplete (still referenced gitignored path). Second fix removed the import entirely since typedRoutes is not enabled. CI action versions were restored in e4a6bfd and pnpm/action-setup was replaced by Corepack in ffb3a15. E-04 is covered by alert-bar.test.tsx in 45e1cac; E-08 and UFB-024 were already covered. Regression is clean. Coverage gap report ready at .planning/regression/COVERAGE-GAP-2026-05-14.md."
 }
