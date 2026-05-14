@@ -40,7 +40,7 @@ describe("formatWeekRange", () => {
         new Date("2026-04-14T00:00:00Z"),
         new Date("2026-04-20T00:00:00Z"),
       ),
-    ).toBe("Apr 14\u201320");
+    ).toBe("Apr 14–20, 2026");
   });
 
   it("formats a cross-month range with en-dash and second month name", () => {
@@ -49,7 +49,7 @@ describe("formatWeekRange", () => {
         new Date("2026-04-28T00:00:00Z"),
         new Date("2026-05-04T00:00:00Z"),
       ),
-    ).toBe("Apr 28\u2013May 4");
+    ).toBe("Apr 28–May 4, 2026");
   });
 });
 
@@ -387,7 +387,7 @@ describe("mapWeeklyReport", () => {
   it("preserves period info from the API", () => {
     const result = mapWeeklyReport(baseReport({ periodStatus: "published" }));
     expect(result.period.id).toBe(REPORT_ID);
-    expect(result.period.dateRange).toBe("Apr 14\u201320");
+    expect(result.period.dateRange).toBe("Apr 14–20, 2026");
     expect(result.period.isCurrent).toBe(false); // published periods aren't "current"
   });
 });

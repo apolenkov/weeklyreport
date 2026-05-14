@@ -2,6 +2,26 @@
 
 **Analysis Date:** 2026-04-24
 
+## 2026-05-14 Refresh
+
+The original 2026-04-24 concerns below are preserved, but several are stale.
+Current active concerns for v8.1 closure are:
+
+- PR #5 is mergeable but blocked by GitHub Actions queue/runner state, not by a
+  known code failure.
+- D-12 item-edit-dialog reset-on-reopen remains unresolved after a previous
+  react-compiler-incompatible fix was reverted.
+- UFB-011 needs a bounding-box regression for head/lead top spacing; fix only
+  if overlap reproduces.
+- UFB-014 is now a reconciliation item: current code has StageMultiSelect and
+  stageIds, but round-trip coverage must prove items/risks/decisions and
+  priorities.
+- Product semantics gaps D-6, D-8, D-16, D-17, D-29, D-34, and A35 are
+  implementation-eligible after the ADR in
+  .planning/tickets/session-leftovers-2026-05-14/ADR.md.
+- .planning/graphs was stale before Phase 62; graphify must be rebuilt before
+  final audit if runtime permits.
+
 ## Tech Debt
 
 ### Frontend-API Disconnect (Critical)

@@ -1,6 +1,11 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import {
+  buildAssembledReportFromPrismaRow,
+  reportFullIncludeForSnapshot,
+  toPublishedSnapshotJson,
+} from "../published-report-snapshot.js";
 import type { PeriodRepository } from "./period.service.js";
 
 @Injectable()
@@ -28,7 +33,8 @@ export class PeriodPrismaRepository implements PeriodRepository {
 
   async publishPeriod(reportId: string, userId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      await tx.report.update({
+      const publishedAt = new Date();
+      const published = await tx.report.update({
         where: { id: reportId },
         data: {
           status: "published",
@@ -38,8 +44,17 @@ export class PeriodPrismaRepository implements PeriodRepository {
           // separate state machines — both move together on a head-driven
           // publish (open → published on both).
           periodState: "published",
-          publishedAt: new Date(),
+          publishedAt,
           publishedById: userId,
+        },
+        include: reportFullIncludeForSnapshot,
+      });
+
+      const snapshot = buildAssembledReportFromPrismaRow(published);
+      await tx.report.update({
+        where: { id: reportId },
+        data: {
+          publishedSnapshot: toPublishedSnapshotJson(snapshot),
         },
       });
     });

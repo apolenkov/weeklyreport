@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { joinPeriodLabel } from "../../lib/format-date";
 import type { HistoryEntry } from "../../lib/mappers";
 
 type LeadHistoryListProps = {
@@ -77,15 +78,10 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
           {/* Header */}
           <div className="mb-3 flex items-center justify-between">
             <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-foreground)]">
-              {entry.weekLabel}
+              {joinPeriodLabel(entry.weekLabel, entry.dateRange)}
             </span>
             <StatusBadge status={entry.status} />
           </div>
-
-          {/* Date range */}
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            {entry.dateRange}
-          </p>
 
           {/* Traffic lights */}
           <div className="mt-3 flex items-center gap-2">

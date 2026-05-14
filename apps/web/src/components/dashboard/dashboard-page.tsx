@@ -20,6 +20,7 @@ import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import { ReportArchiveSection } from "./report-archive-section";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { ActivityLivePanel } from "./activity-live-panel";
+import { LeadSummaryTable } from "./lead-summary-table";
 
 export const DASHBOARD_LOAD_STALL_MS = 8_000;
 
@@ -262,7 +263,7 @@ export function DashboardPage() {
     archive: archiveQ.data,
     weeklyReport: weeklyQ.data,
   });
-  const { kpi, blockedAtRisk, pendingLeads } = dashboard;
+  const { kpi, leads, blockedAtRisk, pendingLeads } = dashboard;
   // UFB-047 / Phase 49-01: see `orgFullName` above.
   const departmentLabel = orgFullName ?? "CustomReport";
   const canSendReminder =
@@ -299,6 +300,10 @@ export function DashboardPage() {
 
       {/* KPI Cards */}
       <KpiCards data={kpi} />
+
+      {/* D-29: head/admin need the per-lead submission table on the dashboard,
+          not only the aggregate cards and alert row. */}
+      <LeadSummaryTable leads={leads} />
 
       {/* Phase 52 (UFB-054): product-KPI card — leadership-readable
           numbers backed by telemetry.summary. Pulls its own data and

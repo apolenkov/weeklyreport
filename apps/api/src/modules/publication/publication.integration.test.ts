@@ -102,5 +102,11 @@ describe("PublicationPrismaRepository (integration)", () => {
     });
     expect(expectDefined(reloaded).status).toBe("published");
     expect(expectDefined(reloaded).publishedById).toBe(testData.head.id);
+    expect(expectDefined(reloaded).publishedSnapshot).not.toBeNull();
+    expect(expectDefined(reloaded).publishedSnapshot).toMatchObject({
+      reportId: testData.report.id,
+      status: "published",
+      publishedById: testData.head.id,
+    });
   });
 });

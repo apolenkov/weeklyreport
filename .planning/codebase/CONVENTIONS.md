@@ -2,6 +2,23 @@
 
 **Analysis Date:** 2026-04-24
 
+## 2026-05-14 Refresh
+
+Current closure conventions:
+
+- Chat/docs for the user stay Russian where appropriate; code, paths, commands,
+  config keys, UI strings, and static product UI copy stay English.
+- Static UI strings in source remain English until an i18n phase exists.
+- Deferred features require code-visible TODO markers, loud stubs, and metrics
+  when the touched surface is an activation path.
+- Planning edits must pass pnpm lint:md.
+- Do not stage or revert pre-existing dirty regression evidence JSON unless a
+  phase explicitly owns those files.
+- For v8.1, do not add a runtime director role; director-facing UAT goes
+  through the viewer read-only path.
+- Phase 40 background/dark-theme work remains research-only unless explicitly
+  reopened.
+
 ## Naming Patterns
 
 **Files:**

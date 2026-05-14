@@ -7,6 +7,8 @@
  * history one week at a time. The legacy `?period=` query continues to
  * read selection state when the page is rendered under the bare route.
  */
+import "@testing-library/jest-dom/vitest";
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import * as React from "react";
@@ -30,7 +32,7 @@ const PERIODS: ReportPeriod[] = [
     id: "2026-W17",
     sourceSectionId: "sec-W17",
     weekLabel: "Week 17",
-    dateRange: "Apr 21–27",
+    dateRange: "Apr 21–27, 2026",
     isCurrent: true,
     isSubmitted: false,
   },
@@ -38,7 +40,7 @@ const PERIODS: ReportPeriod[] = [
     id: "2026-W16",
     sourceSectionId: "sec-W16",
     weekLabel: "Week 16",
-    dateRange: "Apr 14–20",
+    dateRange: "Apr 14–20, 2026",
     isCurrent: false,
     isSubmitted: true,
   },
@@ -46,7 +48,7 @@ const PERIODS: ReportPeriod[] = [
     id: "2026-W15",
     sourceSectionId: "sec-W15",
     weekLabel: "Week 15",
-    dateRange: "Apr 7–13",
+    dateRange: "Apr 7–13, 2026",
     isCurrent: false,
     isSubmitted: true,
   },
@@ -98,5 +100,26 @@ describe("PeriodNavigator (lead)", () => {
       "Select reporting period",
     ) as HTMLSelectElement;
     expect(select.value).toBe("2026-W15");
+  });
+
+  it("D-17: renders the period label without embedding state in the option text", () => {
+    render(<PeriodNavigator periods={PERIODS} />);
+    const select = screen.getByLabelText(
+      "Select reporting period",
+    ) as HTMLSelectElement;
+
+    expect(select.selectedOptions[0]?.textContent).toBe(
+      "Week 17, Apr 21–27, 2026",
+    );
+    expect(select.selectedOptions[0]?.textContent).not.toContain("(current)");
+    expect(select.selectedOptions[0]?.textContent).not.toContain("✓");
+    expect(screen.getByText("Current")).toBeVisible();
+  });
+
+  it("D-17: shows submitted state as a separate badge for past periods", () => {
+    mockPathname = "/lead/report/2026-W15";
+    render(<PeriodNavigator periods={PERIODS} />);
+
+    expect(screen.getByText("Submitted")).toBeVisible();
   });
 });

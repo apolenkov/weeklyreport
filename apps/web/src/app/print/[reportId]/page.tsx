@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { useTRPC } from "../../../lib/trpc-context";
 import { mapWeeklyReport } from "../../../lib/mappers";
+import { joinPeriodLabel } from "../../../lib/format-date";
 import type {
   PortfolioProduct,
   ProductReport,
@@ -499,6 +500,10 @@ export default function PrintReportPage({ params }: Props) {
     0,
   );
   const submissionSummary = `${submitted}/${total} leads submitted`;
+  const periodLabel = joinPeriodLabel(
+    view.period.weekLabel,
+    view.period.dateRange,
+  );
   const now = new Date().toISOString();
 
   return (
@@ -563,8 +568,7 @@ export default function PrintReportPage({ params }: Props) {
               color: "rgba(0,0,0,0.58)",
             }}
           >
-            {view.period.weekLabel} &middot; {view.period.dateRange} &middot;{" "}
-            {submissionSummary}
+            {periodLabel} &middot; {submissionSummary}
           </p>
         </header>
 

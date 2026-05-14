@@ -28,7 +28,7 @@
  *   honor it for blocked entries by checking item workflowStatus = 'blocked').
  *   `badge` is synthesized as `${productName} · Dev`.
  * - `currentWeek[i].stageLead` synthesized as `'Dev · ${initials}'`.
- * - `period.dateRange` formatted as `Apr 14–20` (en-dash).
+ * - `period.dateRange` formatted as `Apr 14–20, 2026` (en-dash).
  */
 
 import type {
@@ -39,6 +39,7 @@ import type {
 
 import { deriveItemStatus, type ItemStatus } from "./item-status";
 import { trafficToStageStatus } from "./traffic-light";
+import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
 
 // ---- Self-contained presentation types ----
 
@@ -127,21 +128,6 @@ export type WeeklyReportPeriod = {
 
 // ---- Helpers ----
 
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/);
   const first = parts[0];
@@ -154,28 +140,12 @@ function initialsFromName(name: string): string {
 }
 
 function isoWeekLabel(date: Date): string {
-  const d = new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(
-    ((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
-  );
-  return `Week ${week}`;
+  return formatWeekLabel(date);
 }
 
-/** Format an inclusive week range as `Apr 14\u201320` (en-dash). */
+/** Format an inclusive period range as `Apr 14–20, 2026`. */
 export function formatWeekRange(start: Date, end: Date): string {
-  const sMonth = MONTHS[start.getUTCMonth()];
-  const sDay = start.getUTCDate();
-  const eMonth = MONTHS[end.getUTCMonth()];
-  const eDay = end.getUTCDate();
-  if (start.getUTCMonth() === end.getUTCMonth()) {
-    return `${sMonth} ${sDay}\u2013${eDay}`;
-  }
-  return `${sMonth} ${sDay}\u2013${eMonth} ${eDay}`;
+  return formatPeriodRangeWithYear(start, end);
 }
 
 function trafficToProductStatus(

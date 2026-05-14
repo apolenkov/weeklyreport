@@ -18,6 +18,12 @@ import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
 } from "../report-sections/report-sections.prisma-repository.js";
+import {
+  buildEscalationsFromSnapshotSections,
+  buildPortfolioProductsFromSnapshotSections,
+  filterSnapshotSections,
+  parsePublishedSnapshot,
+} from "../published-report-snapshot.js";
 
 @Injectable()
 export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
@@ -122,6 +128,36 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
         OR: [{ validUntil: null }, { validUntil: { gte: report.deadline } }],
       },
     });
+
+    const snapshot = parsePublishedSnapshot(report.publishedSnapshot);
+    if (snapshot && report.periodStatus === "published") {
+      const scopedSnapshot = filterSnapshotSections(
+        snapshot,
+        sectionScope
+          ? new Set(report.sections.map((section) => section.id))
+          : undefined,
+      );
+      const leadSections = scopedSnapshot.sections;
+      const submissionCount = leadSections.filter(
+        (section) => section.status === "submitted",
+      ).length;
+
+      return weeklyReportReadModelSchema.parse({
+        reportId: report.id,
+        periodStart: scopedSnapshot.periodStart,
+        periodEnd: scopedSnapshot.periodEnd,
+        deadline: scopedSnapshot.deadline,
+        periodStatus: report.periodStatus,
+        weekLabel: report.weekLabel,
+        submissionCount,
+        totalLeads,
+        hasActiveReminderRule: activePolicyCount > 0,
+        portfolioOverview:
+          buildPortfolioProductsFromSnapshotSections(leadSections),
+        leadSections,
+        escalations: buildEscalationsFromSnapshotSections(leadSections),
+      });
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const leadSections = (report.sections as any[]).map(

@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import {
   archiveReportSummarySchema,
   archiveReportDetailSchema,
-  assembledReportSchema,
   type ArchiveReportSummary,
   type ArchiveReportDetail,
   type AssembledReport,
@@ -15,10 +15,12 @@ import type {
   ArchiveRepository,
   ArchiveScopeSession,
 } from "./archive.service.js";
+import { reportSectionFullInclude } from "../report-sections/report-sections.prisma-repository.js";
 import {
-  reportSectionFullInclude,
-  mapPrismaToReportSection,
-} from "../report-sections/report-sections.prisma-repository.js";
+  buildAssembledReportFromPrismaRow,
+  filterSnapshotSections,
+  parsePublishedSnapshot,
+} from "../published-report-snapshot.js";
 
 /**
  * AUTH-04 (Phase 28-01): defense-in-depth status floor.
@@ -59,7 +61,12 @@ export class ArchivePrismaRepository implements ArchiveRepository {
       orderBy: { publishedAt: "desc" },
     });
 
-    return reports.map((report) => toArchiveSummary(report));
+    return reports.map((report) => {
+      const snapshot = readScopedSnapshot(report, sectionScope);
+      return snapshot
+        ? toArchiveSummaryFromSnapshot(snapshot, report)
+        : toArchiveSummary(report);
+    });
   }
 
   async getArchiveReport(
@@ -86,8 +93,11 @@ export class ArchivePrismaRepository implements ArchiveRepository {
       return null;
     }
 
-    const assembled = toAssembledReport(report);
-    const summary = toArchiveSummary(report);
+    const snapshot = readScopedSnapshot(report, sectionScope);
+    const assembled = snapshot ?? buildAssembledReportFromPrismaRow(report);
+    const summary = snapshot
+      ? toArchiveSummaryFromSnapshot(snapshot, report)
+      : toArchiveSummary(report);
 
     return archiveReportDetailSchema.parse({ summary, report: assembled });
   }
@@ -161,22 +171,41 @@ function toArchiveSummary(report: {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toAssembledReport(report: any): AssembledReport {
-  const portfolio = computePortfolioOverview(report.sections);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sections = (report.sections as any[]).map(mapPrismaToReportSection);
+function toArchiveSummaryFromSnapshot(
+  snapshot: AssembledReport,
+  report: { id: string; publishedBy: { name: string } | null },
+): ArchiveReportSummary {
+  if (snapshot.publishedAt === null) {
+    throw new Error(
+      `Archive report ${report.id} has publishedSnapshot but publishedAt is null`,
+    );
+  }
 
-  return assembledReportSchema.parse({
-    reportId: report.id,
-    periodStart: report.periodStart,
-    periodEnd: report.periodEnd,
-    deadline: report.deadline,
-    status: report.status,
-    publishedAt: report.publishedAt,
-    publishedById: report.publishedById,
-    publishedByName: report.publishedBy?.name ?? null,
-    portfolioOverview: portfolio,
-    sections,
+  return archiveReportSummarySchema.parse({
+    reportId: snapshot.reportId,
+    periodStart: snapshot.periodStart,
+    periodEnd: snapshot.periodEnd,
+    publishedAt: snapshot.publishedAt,
+    publishedByName:
+      snapshot.publishedByName ?? report.publishedBy?.name ?? "Unknown",
+    portfolioStatus: snapshot.portfolioOverview.status,
   });
+}
+
+function readScopedSnapshot(
+  report: {
+    publishedSnapshot?: Prisma.JsonValue | null;
+    sections: Array<{ id: string }>;
+  },
+  sectionScope: Record<string, unknown> | undefined,
+): AssembledReport | null {
+  const snapshot = parsePublishedSnapshot(report.publishedSnapshot);
+  if (!snapshot) return null;
+
+  if (!sectionScope) return snapshot;
+
+  return filterSnapshotSections(
+    snapshot,
+    new Set(report.sections.map((section) => section.id)),
+  );
 }

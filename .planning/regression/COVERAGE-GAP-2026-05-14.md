@@ -10,50 +10,50 @@ Existing coverage sources: `apps/web/e2e/regression/*`, `apps/web/e2e/integratio
 
 ### Area: Admin
 
-| ID      | Bug description                                               | Status                           |
-| ------- | ------------------------------------------------------------- | -------------------------------- |
-| B1      | GroupProduct constraint — product belonged to multiple groups | fixed (4a444be)                  |
-| B2      | attachProductToGroup — not atomic, cache not invalidated      | fixed (4a444be)                  |
-| B3      | Users tab — no Active/Inactive/All status filter              | fixed (4a444be)                  |
-| B4      | Groups tab — no archive filter                                | fixed (4a444be)                  |
-| B5      | Products tab — no local search                                | fixed (4a444be)                  |
-| B9      | Products leads picker — deactivated users shown               | fixed (4a444be)                  |
-| A3      | Admin filters — no unified quick-filter                       | fixed (00dabff)                  |
-| UFB-011 | Head/lead layout top spacing missing                          | **open**                         |
-| UFB-024 | SC-16-02 still reports BLOCKED instead of SKIPPED             | fixed (`phase16-17-uat.spec.ts`) |
-| UFB-032 | Background/surface tokens — flat colors                       | **open**                         |
+| ID      | Bug description                                               | Status                            |
+| ------- | ------------------------------------------------------------- | --------------------------------- |
+| B1      | GroupProduct constraint — product belonged to multiple groups | fixed (4a444be)                   |
+| B2      | attachProductToGroup — not atomic, cache not invalidated      | fixed (4a444be)                   |
+| B3      | Users tab — no Active/Inactive/All status filter              | fixed (4a444be)                   |
+| B4      | Groups tab — no archive filter                                | fixed (4a444be)                   |
+| B5      | Products tab — no local search                                | fixed (4a444be)                   |
+| B9      | Products leads picker — deactivated users shown               | fixed (4a444be)                   |
+| A3      | Admin filters — no unified quick-filter                       | fixed (00dabff)                   |
+| UFB-011 | Head/lead layout top spacing missing                          | fixed (regression-uat-v7.spec.ts) |
+| UFB-024 | SC-16-02 still reports BLOCKED instead of SKIPPED             | fixed (`phase16-17-uat.spec.ts`)  |
+| UFB-032 | Background/surface tokens — flat colors                       | **open**                          |
 
 ### Area: Lead form
 
-| ID         | Bug description                                          | Status                                        |
-| ---------- | -------------------------------------------------------- | --------------------------------------------- |
-| A13/A15    | form-race useEffect reset + stale deps                   | fixed (c60ccc2)                               |
-| A17        | Decision modal FAB overlap on mobile                     | fixed (f433d0a)                               |
-| A20        | Global flicker/re-mount without skeleton                 | partial (f433d0a)                             |
-| D-11       | Lead report page: no green gradient background           | fixed (0371223)                               |
-| D-12       | Item-edit-dialog: status pill state reset on open        | **open** (reverted — react-compiler conflict) |
-| D-13       | StageMultiSelect: chips reset incorrectly on edit        | fixed (e537866)                               |
-| D-14       | DecisionEditDialog: label alignment off                  | fixed (e537866)                               |
-| D-15       | Risks: "All stages" pill shown even when stages filtered | fixed (e537866)                               |
-| D-20       | VersionHistoryNav prev/next — no callback fired          | fixed (9fc8a50)                               |
-| D-21       | Submit with no priorities: raw Zod error, no toast       | fixed (9fc8a50)                               |
-| UFB-014    | SDLC stage multi-select on items/risks/decisions         | **open**                                      |
-| LEAD-W1-02 | No Toggle All button                                     | fixed                                         |
-| LEAD-W1-09 | No "Add item to …" buttons                               | fixed                                         |
-| LEAD-W1-15 | No + Add Priority button                                 | fixed                                         |
-| LEAD-W1-18 | Horizontal overflow 392/390                              | fixed (D-18)                                  |
+| ID         | Bug description                                          | Status                              |
+| ---------- | -------------------------------------------------------- | ----------------------------------- |
+| A13/A15    | form-race useEffect reset + stale deps                   | fixed (c60ccc2)                     |
+| A17        | Decision modal FAB overlap on mobile                     | fixed (f433d0a)                     |
+| A20        | Global flicker/re-mount without skeleton                 | partial (f433d0a)                   |
+| D-11       | Lead report page: no green gradient background           | fixed (0371223)                     |
+| D-12       | Item-edit-dialog: status pill state reset on open        | fixed (item-edit-dialog.test.tsx)   |
+| D-13       | StageMultiSelect: chips reset incorrectly on edit        | fixed (e537866)                     |
+| D-14       | DecisionEditDialog: label alignment off                  | fixed (e537866)                     |
+| D-15       | Risks: "All stages" pill shown even when stages filtered | fixed (e537866)                     |
+| D-20       | VersionHistoryNav prev/next — no callback fired          | fixed (9fc8a50)                     |
+| D-21       | Submit with no priorities: raw Zod error, no toast       | fixed (9fc8a50)                     |
+| UFB-014    | SDLC stage multi-select on items/risks/decisions         | fixed / reconciled (stageIds tests) |
+| LEAD-W1-02 | No Toggle All button                                     | fixed                               |
+| LEAD-W1-09 | No "Add item to …" buttons                               | fixed                               |
+| LEAD-W1-15 | No + Add Priority button                                 | fixed                               |
+| LEAD-W1-18 | Horizontal overflow 392/390                              | fixed (D-18)                        |
 
 ### Area: Head / Dashboard
 
-| ID    | Bug description                                             | Status                               |
-| ----- | ----------------------------------------------------------- | ------------------------------------ |
-| UAT-2 | Dashboard: missing Submissions 4/6, Blocked & At Risk panel | fixed                                |
-| UAT-8 | /reports/trends returns 404                                 | fixed                                |
-| A12   | Head scope leak — sees ALL leads, not own group             | fixed (A36 seed)                     |
-| A33   | Head dashboard cross-role data confusion                    | fixed (A36)                          |
-| D-32  | ActivityLivePanel — DEV_SESSION missing reportingGroupId    | fixed (9fc8a50)                      |
-| D-29  | Head KPI metrics — not designed yet                         | **open** (Wave F research memo only) |
-| D-34  | Viewer vs Head semantics — not defined yet                  | **open** (Wave F research memo only) |
+| ID    | Bug description                                             | Status                              |
+| ----- | ----------------------------------------------------------- | ----------------------------------- |
+| UAT-2 | Dashboard: missing Submissions 4/6, Blocked & At Risk panel | fixed                               |
+| UAT-8 | /reports/trends returns 404                                 | fixed                               |
+| A12   | Head scope leak — sees ALL leads, not own group             | fixed (A36 seed)                    |
+| A33   | Head dashboard cross-role data confusion                    | fixed (A36)                         |
+| D-32  | ActivityLivePanel — DEV_SESSION missing reportingGroupId    | fixed (9fc8a50)                     |
+| D-29  | Head KPI metrics — not designed yet                         | fixed (lead summary table + tests)  |
+| D-34  | Viewer vs Head semantics — not defined yet                  | fixed (viewer read-only regression) |
 
 ### Area: Auth / Navigation
 
@@ -76,9 +76,9 @@ Existing coverage sources: `apps/web/e2e/regression/*`, `apps/web/e2e/integratio
 | UAT-5              | Send Reminder: MailHog empty after click, no error toast | fixed (`alert-bar.test.tsx` E-04)           |
 | E-08               | Report archive: Prev arrow still enabled on first page   | fixed (`dashboard-advanced.spec.ts` SC-176) |
 | UAT-7 / LEAD-W1-18 | Horizontal scroll on mobile 390px viewport               | fixed                                       |
-| D-6                | Archive snapshots policy — behavior undefined            | **open** (research memo only)               |
-| D-8                | Period any-day UX — not implemented                      | **open** (research memo only)               |
-| D-17               | Period navigator display improvement                     | **open** (research memo only)               |
+| D-6                | Archive snapshots policy — behavior undefined            | fixed (publish-time snapshot + integration) |
+| D-8                | Period any-day UX — not implemented                      | fixed (non-Monday period service coverage)  |
+| D-17               | Period navigator display improvement                     | fixed (unified labels + component coverage) |
 
 ### Area: PDF / Jobs
 
@@ -117,7 +117,7 @@ apps/web/e2e/regression/
   admin-stage-reassignment.spec.ts product/stage assignee replace
 
 apps/web/e2e/
-  regression-uat-v7.spec.ts     D-7/9/11/13/18/20/21/25/27/30/32/35/36 (12 specs)
+  regression-uat-v7.spec.ts     UFB-011 + D-7/9/11/13/18/20/21/25/27/30/32/35/36
   lead-form-crud.spec.ts        S1..S8 (stage popover, items, risks, decisions, priorities)
   integration/lead-journey.integration.spec.ts  lead submit + head publish lifecycle
   integration/head-journey.integration.spec.ts  head publish/reopen/portfolio
@@ -129,25 +129,38 @@ apps/web/e2e/
 
 apps/web/src/components/dashboard/
   alert-bar.test.tsx            E-04 dispatch failure -> visible error toast
+
+apps/web/src/components/lead/
+  item-edit-dialog.test.tsx      D-12 reopen reset + UFB-014 item stageIds
+  risk-edit-dialog.test.tsx      UFB-014 risk stageIds
+  decision-edit-dialog.test.tsx  UFB-014 decision stageIds
+  priority-edit-dialog.test.tsx  UFB-014 priority stageIds
 ```
 
 ---
 
 ## 3. GAP: reported bugs with no corresponding regression test
 
-| Priority | Bug ID  | Description                                                           | Missing test                        | Recommended file                                                            |
-| -------- | ------- | --------------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------- |
-| **P0**   | D-12    | Item-edit-dialog: status pill does not reset on re-open               | Test reverted; bug unresolved       | `apps/web/e2e/regression/agent-b-lead-items.spec.ts` — add re-open scenario |
-| **P1**   | UFB-011 | Head/lead layout: content overlaps header (top spacing)               | No bounding-box assertion           | `apps/web/e2e/regression-uat-v7.spec.ts` — add getBoundingClientRect check  |
-| **P1**   | UFB-014 | Stage multi-select on items/risks/decisions not implemented           | No test (feature not built)         | Blocked — feature needed first                                              |
-| **P1**   | D-6     | Archive snapshots: policy undefined (snapshot on submit? on publish?) | No test; behavior not spec'd        | Blocked — design decision needed                                            |
-| **P1**   | D-8     | Period any-day UX                                                     | No test; feature not built          | Blocked — design decision needed                                            |
-| **P1**   | D-16    | Priority chip: stage color + first-letter (research done, not built)  | No test                             | Blocked — implementation needed first                                       |
-| **P1**   | D-17    | Period navigator display improvement                                  | No test                             | Blocked — implementation needed first                                       |
-| **P2**   | UFB-032 | Surface/background token regression                                   | No visual regression for background | `apps/web/e2e/visual/` — visual diff after design pass                      |
-| **P2**   | D-29    | Head dashboard KPI metrics (research done, not built)                 | No test                             | Blocked — feature needed first                                              |
-| **P2**   | D-34    | Viewer vs head role semantics                                         | No test                             | Blocked — spec decision needed                                              |
-| **P2**   | A35     | Director role UAT                                                     | Explicitly deferred                 | Next UAT cycle                                                              |
+Phase 64 update:
+
+| Priority | Bug ID  | Closure evidence                                                                                                                                            |
+| -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P0**   | D-12    | `item-edit-dialog.test.tsx` now asserts reopen resets text, status, stageIds, and validation errors without reintroducing unstable `stagesForProduct` deps. |
+| **P1**   | UFB-011 | `regression-uat-v7.spec.ts` now asserts lead/head `#main-content` starts below `data-testid="nav-bar"` on desktop and mobile.                               |
+| **P1**   | UFB-014 | Current code already uses canonical `stageIds`; component/API tests now cover item, risk, decision, and priority `stageIds` payloads.                       |
+
+Phase 65 update:
+
+| Priority | Bug ID  | Closure evidence                                                                                                                                                               |
+| -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **P1**   | D-6     | `Report.publishedSnapshot` stores publish-time JSON; publication/period publish paths write it; archive integration proves published archive detail ignores later draft edits. |
+| **P1**   | D-8     | `admin.service.test.ts` accepts a custom Tuesday period and verifies computed period end.                                                                                      |
+| **P1**   | D-16    | `priorities-section.test.tsx` covers compact stage chips, overflow `+N`, and explicit all-stage display.                                                                       |
+| **P1**   | D-17    | Lead/weekly/admin/history/archive/print labels now use shared period label helpers; component and mapper tests cover year-inclusive labels and separate state badges.          |
+| **P2**   | D-29    | `LeadSummaryTable` adds per-lead status/product/item/activity summary on the dashboard with component coverage.                                                                |
+| **P2**   | D-34    | `regression-uat-v7.spec.ts` covers viewer published archive as read-only with mutation controls absent.                                                                        |
+| **P2**   | A35     | Director-facing UAT is covered through existing `viewer` semantics; no runtime `director` role was added.                                                                      |
+| **P2**   | UFB-032 | Deferred research-only unless Phase 40 is explicitly reopened.                                                                                                                 |
 
 ---
 
@@ -161,6 +174,12 @@ Resume update 2026-05-14:
 
 3. **UFB-024 SC-16-02 status fix** — already covered by `apps/web/e2e/regression/phase16-17-uat.spec.ts`: no theme controls produces `SKIPPED`, not `BLOCKED`.
 
-Seven gaps are blocked on feature/design decisions (UFB-014, D-6, D-8, D-16, D-17, D-29, D-34) — defer to the phase where the feature lands.
+4. **D-12 item dialog reopen reset** — covered by `apps/web/src/components/lead/item-edit-dialog.test.tsx`. Existing `open`-driven reset is valid with parent key-reset; no component code change was needed.
 
-One gap (D-12 item-edit-dialog status pill reset) needs a different implementation approach before a test can be written — the react-compiler-safe fix is not yet designed.
+5. **UFB-011 top spacing** — covered by `apps/web/e2e/regression-uat-v7.spec.ts` across lead/head desktop/mobile.
+
+6. **UFB-014 stageIds** — reconciled against current code. `stageIds` is canonical across item/risk/decision/priority UI and the API persistence path.
+
+7. **D-6/D-8/D-16/D-17/D-29/D-34/A35** — closed in Phase 65 with targeted
+   unit, integration, and Playwright coverage. `UFB-032` remains deferred
+   because Phase 40 UI/theme implementation was not reopened.

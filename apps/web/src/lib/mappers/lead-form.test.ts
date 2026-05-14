@@ -366,7 +366,7 @@ describe("mapLeadPeriods", () => {
     expect(expectDefined(periods[0]).isSubmitted).toBe(false);
     expect(expectDefined(periods[1]).isCurrent).toBe(false);
     expect(expectDefined(periods[1]).isSubmitted).toBe(true);
-    expect(expectDefined(periods[0]).dateRange).toBe("Apr 14-20");
+    expect(expectDefined(periods[0]).dateRange).toBe("Apr 14–20, 2026");
   });
 });
 
