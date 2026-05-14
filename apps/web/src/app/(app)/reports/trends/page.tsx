@@ -3,6 +3,12 @@
 import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 
+import type {
+  LeadVelocityOutput,
+  PeriodComparisonOutput,
+  TrafficLightHistoryOutput,
+} from "@customreport/shared";
+
 import { useTRPC } from "../../../../lib/trpc-context";
 
 /**
@@ -48,6 +54,31 @@ const PERIOD_TO = "2026-12-31";
 const PERIOD_A = "2026-04-21";
 const PERIOD_B = "2026-04-28";
 
+function isTrafficLightHistoryOutput(
+  value: unknown,
+): value is TrafficLightHistoryOutput {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { periods?: unknown }).periods) &&
+    Array.isArray((value as { rows?: unknown }).rows)
+  );
+}
+
+function isLeadVelocityOutput(value: unknown): value is LeadVelocityOutput {
+  return Array.isArray(value);
+}
+
+function isPeriodComparisonOutput(
+  value: unknown,
+): value is PeriodComparisonOutput {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { rows?: unknown }).rows)
+  );
+}
+
 export default function TrendsPage() {
   const trpc = useTRPC();
   const history = useQuery(
@@ -82,7 +113,7 @@ export default function TrendsPage() {
         </h2>
         {history.isLoading ? (
           <ChartSkeleton />
-        ) : history.data ? (
+        ) : isTrafficLightHistoryOutput(history.data) ? (
           <TrafficLightHistoryChart {...history.data} />
         ) : null}
       </section>
@@ -93,7 +124,7 @@ export default function TrendsPage() {
         </h2>
         {velocity.isLoading ? (
           <ChartSkeleton />
-        ) : velocity.data ? (
+        ) : isLeadVelocityOutput(velocity.data) ? (
           <LeadVelocityChart rows={velocity.data} />
         ) : null}
       </section>
@@ -104,7 +135,7 @@ export default function TrendsPage() {
         </h2>
         {comparison.isLoading ? (
           <ChartSkeleton />
-        ) : comparison.data ? (
+        ) : isPeriodComparisonOutput(comparison.data) ? (
           <PeriodComparisonChart {...comparison.data} />
         ) : null}
       </section>

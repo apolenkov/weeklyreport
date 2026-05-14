@@ -16,8 +16,10 @@ WORKDIR /app
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
+COPY prisma ./prisma
 RUN pnpm install --no-frozen-lockfile
 COPY --from=pruner /app/out/full/ .
+COPY tsconfig.base.json ./tsconfig.base.json
 
 # Stage 4: Build for production
 FROM installer AS builder
