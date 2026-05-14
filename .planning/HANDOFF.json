@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-14T12:51:22Z",
+  "phase": "43",
+  "phase_name": "tooling-leaf-fix",
+  "phase_dir": ".planning/phases/43-tooling-leaf-fix",
+  "plan": 1,
+  "task": 1,
+  "total_tasks": 7,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "TOOL-01: next-env.d.ts clean-checkout fix",
+      "status": "done",
+      "commit": "d19a1b9"
+    },
+    {
+      "id": 2,
+      "name": "TOOL-02: regression baseline measurement",
+      "status": "done",
+      "commit": "not applicable — 179/179 already passing"
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 3,
+      "name": "Merge PR #5 after CI green",
+      "status": "blocked_ci"
+    },
+    {
+      "id": 4,
+      "name": "STATE.md update — close phases 44/46/47/48/49, recalculate percent",
+      "status": "not_started"
+    },
+    {
+      "id": 5,
+      "name": "Add 3 regression tests from COVERAGE-GAP: E-04, E-08, UFB-024",
+      "status": "not_started"
+    }
+  ],
+  "blockers": [
+    {
+      "description": "CI PR #5 all [pending] x8 runs",
+      "type": "external",
+      "workaround": "gh run rerun <run-id> after 1 hour if still pending"
+    },
+    {
+      "description": "D-12 item-dialog status pill — react-compiler conflict",
+      "type": "technical",
+      "workaround": "Needs product/architectural decision before re-implementation"
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Decide approach for D-12 item-dialog status pill reset",
+      "context": "Reverted due to react-compiler hook-call-order conflict",
+      "blocking": false
+    },
+    {
+      "action": "Choose next milestone after PR #5 merge",
+      "context": "Options: Phase 43 formal closure, Phase 50/53/59/60",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Remove typedRoutes import from next-env.d.ts",
+      "rationale": "typedRoutes not enabled in next.config.ts; .next/ is gitignored; import was stale artifact",
+      "phase": "43"
+    },
+    {
+      "decision": "TOOL-02 chunk plans not needed",
+      "rationale": "Regression suite already 179/179 PASS — no regression fix wave required",
+      "phase": "43"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "rtk gh run list --limit 5 → check CI status. If green: gh pr merge 5 --merge. Then update STATE.md.",
+  "context_notes": "Post-marathon sprint continuation. TOOL-01 took 2 iterations — first fix was incomplete (still referenced gitignored path). Second fix removed the import entirely since typedRoutes is not enabled. Regression is clean. Coverage gap report ready at .planning/regression/COVERAGE-GAP-2026-05-14.md."
+}
