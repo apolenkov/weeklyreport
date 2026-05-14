@@ -8,7 +8,7 @@ updated: 2026-05-14T14:23:53Z source: live Codex verification
        проверен live.
 2. [x] Старые runs были не очередь: `277097` on `e4a6bfd` =
        `completed/startup_failure`, jobs/logs empty.
-3. [x] После `ffb3a15` + `45e1cac` новый run `277104` уже создал checks
+3. [x] После `ffb3a15` + later commits новый CI run уже создал checks
        и сейчас `queued`.
 4. [ ] Merge PR #5 заблокирован до реального green check:
        `gh pr merge 5 --merge` делать только после реального green check.
@@ -34,7 +34,7 @@ updated: 2026-05-14T14:23:53Z source: live Codex verification
 
 ## BLOCKED
 
-- CI PR #5: latest run `277104` is queued after workflow fixes. If it stays
+- CI PR #5: latest run is queued after workflow fixes. If it stays
   queued, runner/policy remains the likely blocker; repo runners API currently
   returns `total_count: 0`.
 
@@ -42,7 +42,7 @@ updated: 2026-05-14T14:23:53Z source: live Codex verification
 
 ```bash
 gh run list --limit 5 --json databaseId,status,conclusion,headSha
-gh run view 277104 --json status,conclusion,jobs
+gh pr view 5 --json statusCheckRollup
 gh api repos/apolenkov/customreport/actions/runners \
   --hostname ghe.example.org | jq '.total_count'
 grep "percent:" .planning/STATE.md
@@ -55,7 +55,7 @@ pnpm --filter @customreport/web test -- alert-bar.test.tsx
 
 - TOOL-01 commits: `1bca336`, `d19a1b9`
 - CI fixes: `e4a6bfd` restored GitHub-owned `actions/*@v4`; `ffb3a15`
-  replaced `pnpm/action-setup` with Corepack. New run `277104` reached
+  replaced `pnpm/action-setup` with Corepack. Post-fix runs reached
   queued checks.
 - E-04 coverage: `45e1cac`
 - Regression: 179/179 PASS — `results.json` in `.planning/regression/agent-b-test-results/`
