@@ -39,6 +39,11 @@ AGENTS.md
 .planning/regression/evidence/docker-compose-local/cookies.txt
 .planning/regression/evidence/docker-compose-local/failure-diagnostics.log
 apps/web/.planning/
+# Local archive: keep docs but not binary evidence from old regression runs
+.planning/local-archive/**/*.png
+.planning/local-archive/**/*.jpg
+.planning/local-archive/**/*.json
+.planning/local-archive/apps-web-planning-2026-05-08/
 # Performance trace artifacts from chrome-devtools MCP UAT sessions
 .planning/quick/**/*-dashboard.json
 .planning/quick/**/screenshots/
