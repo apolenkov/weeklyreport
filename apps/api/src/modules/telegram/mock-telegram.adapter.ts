@@ -7,10 +7,13 @@
 // state. Tests inject this adapter through the DI token and assert against
 // the recorded `lastPayload` rather than parsing stderr.
 
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { telegramMessageSentTotal } from '../../infrastructure/metrics/metrics.registry.js';
-import type { TelegramAdapter, TelegramSendResult } from './telegram.adapter.js';
+import { telegramMessageSentTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import type {
+  TelegramAdapter,
+  TelegramSendResult,
+} from "./telegram.adapter.js";
 
 @Injectable()
 export class MockTelegramAdapter implements TelegramAdapter {
@@ -34,13 +37,13 @@ export class MockTelegramAdapter implements TelegramAdapter {
     process.stderr.write(
       JSON.stringify({
         timestamp: new Date().toISOString(),
-        level: 'info',
-        message: 'telegram-outbound mock send',
+        level: "info",
+        message: "telegram-outbound mock send",
         chatId,
         textLength: text.length,
-      }) + '\n',
+      }) + "\n",
     );
-    telegramMessageSentTotal.inc({ status: 'ok' });
+    telegramMessageSentTotal.inc({ status: "ok" });
     return { ok: true };
   }
 }

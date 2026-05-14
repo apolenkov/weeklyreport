@@ -53,6 +53,7 @@ const initialSnapshot: AdminSnapshot = {
       role: "head",
       reportingGroupId: GROUP_ID,
       reportingGroupName: defaultGroup.name,
+      isActive: true,
     },
   ],
   groups: [defaultGroup],

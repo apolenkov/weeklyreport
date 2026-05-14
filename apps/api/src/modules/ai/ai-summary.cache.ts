@@ -6,8 +6,8 @@
 // but the cache abstraction stays so the cutover to a real provider
 // does not have to introduce caching plumbing under load.
 
-import { Injectable, type OnModuleDestroy } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Injectable, type OnModuleDestroy } from "@nestjs/common";
+import Redis from "ioredis";
 
 /**
  * Pluggable cache port consumed by AiSummaryService — keeps the
@@ -30,7 +30,7 @@ export class NullAiSummaryCache implements AiSummaryCachePort {
 }
 
 const TTL_SECONDS = 60;
-const PREFIX = 'customreport:ai:summary:';
+const PREFIX = "customreport:ai:summary:";
 
 @Injectable()
 export class AiSummaryCache implements AiSummaryCachePort, OnModuleDestroy {
@@ -38,15 +38,15 @@ export class AiSummaryCache implements AiSummaryCachePort, OnModuleDestroy {
 
   constructor() {
     this.redis = new Redis({
-      host: process.env['REDIS_HOST'] ?? 'localhost',
-      port: Number(process.env['REDIS_PORT'] ?? 6379),
+      host: process.env["REDIS_HOST"] ?? "localhost",
+      port: Number(process.env["REDIS_PORT"] ?? 6379),
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
     });
     // Suppress transient Redis errors — the consumer is designed to
     // degrade gracefully to direct adapter calls.
-    this.redis.on('error', () => undefined);
+    this.redis.on("error", () => undefined);
   }
 
   async getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T> {

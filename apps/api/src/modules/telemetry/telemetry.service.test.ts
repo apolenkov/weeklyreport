@@ -1,13 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   NullTelemetryCache,
   TelemetryService,
   type TelemetryCachePort,
   type TelemetryRepository,
-} from './telemetry.service.js';
+} from "./telemetry.service.js";
 
-function buildRepo(overrides: Partial<TelemetryRepository> = {}): TelemetryRepository {
+function buildRepo(
+  overrides: Partial<TelemetryRepository> = {},
+): TelemetryRepository {
   return {
     async reportsThisPeriodCount() {
       return 6;
@@ -31,8 +33,8 @@ function buildRepo(overrides: Partial<TelemetryRepository> = {}): TelemetryRepos
   };
 }
 
-describe('TelemetryService — Phase 52-C (UFB-054)', () => {
-  it('composes the canonical summary shape from the repository ports', async () => {
+describe("TelemetryService — Phase 52-C (UFB-054)", () => {
+  it("composes the canonical summary shape from the repository ports", async () => {
     const service = new TelemetryService(buildRepo());
     const summary = await service.getSummary();
 
@@ -47,16 +49,20 @@ describe('TelemetryService — Phase 52-C (UFB-054)', () => {
     });
   });
 
-  it('returns null onTimeRatio when there are no published periods yet', async () => {
+  it("returns null onTimeRatio when there are no published periods yet", async () => {
     const service = new TelemetryService(
-      buildRepo({ async onTimeRatioPerPeriod() { return []; } }),
+      buildRepo({
+        async onTimeRatioPerPeriod() {
+          return [];
+        },
+      }),
     );
     const summary = await service.getSummary();
     expect(summary.onTimeRatio).toBeNull();
     expect(summary.sparkline).toEqual([]);
   });
 
-  it('runs through the cache port and only computes once for the same key', async () => {
+  it("runs through the cache port and only computes once for the same key", async () => {
     let computeCount = 0;
     const repo = buildRepo({
       async reportsThisPeriodCount() {
@@ -89,7 +95,7 @@ describe('TelemetryService — Phase 52-C (UFB-054)', () => {
     expect(computeCount).toBe(1);
   });
 
-  it('NullTelemetryCache delegates straight to compute (no caching)', async () => {
+  it("NullTelemetryCache delegates straight to compute (no caching)", async () => {
     let computeCount = 0;
     const service = new TelemetryService(
       buildRepo({
@@ -107,9 +113,13 @@ describe('TelemetryService — Phase 52-C (UFB-054)', () => {
     expect(computeCount).toBe(2);
   });
 
-  it('passes the schema validator — rejects out-of-range repo data', async () => {
+  it("passes the schema validator — rejects out-of-range repo data", async () => {
     const service = new TelemetryService(
-      buildRepo({ async onTimeRatioPerPeriod() { return [1.5, 0.5]; } }),
+      buildRepo({
+        async onTimeRatioPerPeriod() {
+          return [1.5, 0.5];
+        },
+      }),
     );
 
     await expect(service.getSummary()).rejects.toThrow();

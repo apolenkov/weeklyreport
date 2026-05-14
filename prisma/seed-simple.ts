@@ -46,6 +46,7 @@ import {
   ReminderRuleKind,
   ReminderRuleStatus,
 } from "@prisma/client";
+import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -54,8 +55,6 @@ const prisma = new PrismaClient({ adapter });
 const HEAD_ID = "a0000000-0000-4000-8000-000000000099";
 const VIEWER_ID = "a0000000-0000-4000-8000-000000000098";
 const ADMIN_ID = "a0000000-0000-4000-8000-000000000097";
-// UFB-057 / Phase 57: dev/demo seed user with role=director.
-const DIRECTOR_ID = "a0000000-0000-4000-8000-000000000096";
 const LEAD_1 = "a0000000-0000-4000-8000-000000000011";
 const LEAD_MARIA = "a0000000-0000-4000-8000-000000000012";
 const LEAD_IGOR = "a0000000-0000-4000-8000-000000000013";
@@ -81,6 +80,8 @@ const STAGE_SUPPORT = "a0000000-0000-4000-8000-000000000707";
 const REPORT_ACTIVE = "a0000000-0000-4000-8000-000000000001";
 const REPORT_PUBLISHED = "a0000000-0000-4000-8000-000000000002";
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
+// A36: second group so head scoping can be tested (head only sees own group's leads)
+const FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
 
 // ---- Date helpers (FIX-01, Phase 35-08) ----
 // Compute the current ISO week in UTC so the active period always covers
@@ -244,6 +245,9 @@ const ACTIVE_REMINDER_ESCALATION_FIRE = (() => {
 })();
 
 async function main() {
+  // C7 destructive-guard (UAT plan v7): refuse on prod-looking DATABASE_URL.
+  assertNonProdDestructive("seed-simple");
+
   console.log("[seed-simple] Wiping existing data...");
   // Delete in FK-safe order. ReopenRequest references ReportSection → must
   // go before ReportSection deletes. Other CASCADE FKs (ProjectStatus →
@@ -283,6 +287,15 @@ async function main() {
       description: "Default reporting group for CustomReport demo users",
     },
   });
+  // A36: Finance group — LEAD_OLGA + LEAD_SERGEY assigned here so head (in
+  // Software Development) only sees 4 leads, proving group-scope isolation.
+  await prisma.reportingGroup.create({
+    data: {
+      id: FINANCE_GROUP_ID,
+      name: "Finance",
+      description: "Finance and HR reporting group",
+    },
+  });
 
   console.log("[seed-simple] Creating users (RU names)...");
   await prisma.user.createMany({
@@ -301,7 +314,7 @@ async function main() {
         name: "Дарья В.",
         role: Role.viewer,
         samlId: "viewer-1",
-        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+        reportingGroupId: null,
       },
       {
         id: ADMIN_ID,
@@ -309,20 +322,6 @@ async function main() {
         name: "Михаил Б.",
         role: Role.admin,
         samlId: "admin-1",
-        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
-      },
-      {
-        // UFB-057 / Phase 57: seed director user. Director is god-mode-READ
-        // across all groups, so reportingGroupId is irrelevant for scope
-        // purposes (groupScopeFilter returns {} for director). We still
-        // attach the default group so listings that JOIN the group display
-        // the user in the default group's roster — the read-only badge in
-        // the UI is what signals the role to the operator.
-        id: DIRECTOR_ID,
-        email: "director@customreport.local",
-        name: "Елена Р.",
-        role: Role.director,
-        samlId: "director-1",
         reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
       },
       {
@@ -358,12 +357,15 @@ async function main() {
         reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
       },
       {
+        // A36: Finance group lead — Olga and Sergey are in Finance so the
+        // Software Development head (Антон К.) does NOT see them in their
+        // dashboard. This proves group-scope isolation end-to-end.
         id: LEAD_OLGA,
         email: "olga@customreport.local",
         name: "Ольга Н.",
         role: Role.lead,
         samlId: "lead-olga",
-        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+        reportingGroupId: FINANCE_GROUP_ID,
       },
       {
         id: LEAD_SERGEY,
@@ -371,7 +373,7 @@ async function main() {
         name: "Сергей Т.",
         role: Role.lead,
         samlId: "lead-sergey",
-        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+        reportingGroupId: FINANCE_GROUP_ID,
       },
     ],
   });
@@ -411,6 +413,21 @@ async function main() {
       },
       { id: PROD_HR, name: "HR-система", leadId: LEAD_SERGEY, archived: false },
     ],
+  });
+
+  // GroupProduct: one owning group per product (@@unique([productId])).
+  // Product group is the report grouping source of truth, so every product
+  // gets an explicit edge that matches its lead's reporting group.
+  await prisma.groupProduct.createMany({
+    data: [
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM },
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_MOBILE },
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CLOUD },
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_DEVOPS },
+      { groupId: FINANCE_GROUP_ID, productId: PROD_PAYMENTS },
+      { groupId: FINANCE_GROUP_ID, productId: PROD_HR },
+    ],
+    skipDuplicates: true,
   });
 
   console.log("[seed-simple] Creating stages...");
@@ -1143,7 +1160,9 @@ async function main() {
   // UFB-039: backfill the seed group's headUserId to the seeded head user
   // and grant the viewer access to it. Lets the dashboard render with a
   // configured leader and a viewer who already sees the group's reports.
-  console.log("[seed-simple] Setting group leader + viewer access (UFB-039)...");
+  console.log(
+    "[seed-simple] Setting group leader + viewer access (UFB-039)...",
+  );
   await prisma.reportingGroup.update({
     where: { id: DEFAULT_REPORTING_GROUP_ID },
     data: { headUserId: HEAD_ID },

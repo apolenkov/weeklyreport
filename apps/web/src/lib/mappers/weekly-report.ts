@@ -35,14 +35,14 @@ import type {
   WeeklyReportReadModel,
   PortfolioProductOverview,
   ReportSectionReadModel,
-} from '@customreport/shared';
+} from "@customreport/shared";
 
-import { deriveItemStatus, type ItemStatus } from './item-status';
-import { trafficToStageStatus } from './traffic-light';
+import { deriveItemStatus, type ItemStatus } from "./item-status";
+import { trafficToStageStatus } from "./traffic-light";
 
 // ---- Self-contained presentation types ----
 
-export type WeeklyProductStatus = 'on-track' | 'at-risk' | 'blocked';
+export type WeeklyProductStatus = "on-track" | "at-risk" | "blocked";
 
 export type WeeklyPortfolioProduct = {
   id: string;
@@ -66,7 +66,7 @@ export type WeeklyReportItem = {
 export type WeeklyReportRisk = {
   id: string;
   badge: string;
-  severity: 'blocked' | 'at-risk';
+  severity: "blocked" | "at-risk";
   text: string;
 };
 
@@ -97,7 +97,7 @@ export type WeeklyProductReport = {
    */
   sectionId?: string;
   needsAttention?: string;
-  needsAttentionSeverity?: 'blocked' | 'at-risk';
+  needsAttentionSeverity?: "blocked" | "at-risk";
   currentWeek: WeeklyReportItem[];
   nextWeek: WeeklyReportItem[];
   risks: WeeklyReportRisk[];
@@ -119,7 +119,7 @@ export type WeeklyReportPeriod = {
    * Publish & Lock / Reopen toggle to decide which action to render.
    * Phase 22 (plan 22-05).
    */
-  periodStatus: 'open' | 'published' | 'reopened';
+  periodStatus: "open" | "published" | "reopened";
   weekLabel: string;
   dateRange: string;
   isCurrent: boolean;
@@ -128,24 +128,24 @@ export type WeeklyReportPeriod = {
 // ---- Helpers ----
 
 const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ] as const;
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/);
   const first = parts[0];
-  if (!first) return '??';
+  if (!first) return "??";
   if (parts.length === 1) {
     return first.slice(0, 2).toUpperCase();
   }
@@ -179,24 +179,31 @@ export function formatWeekRange(start: Date, end: Date): string {
 }
 
 function trafficToProductStatus(
-  traffic: PortfolioProductOverview['worstStatus'],
+  traffic: PortfolioProductOverview["worstStatus"],
 ): WeeklyProductStatus {
   const presentation = trafficToStageStatus(traffic);
-  if (presentation === 'on-track' || presentation === 'at-risk' || presentation === 'blocked') {
+  if (
+    presentation === "on-track" ||
+    presentation === "at-risk" ||
+    presentation === "blocked"
+  ) {
     return presentation;
   }
   // 'empty' (worstStatus === null) collapses to 'on-track' for portfolio display.
-  return 'on-track';
+  return "on-track";
 }
 
-function statusLabelFor(status: WeeklyProductStatus, leadNames: string[]): string {
-  const leads = leadNames.length > 0 ? leadNames.join(', ') : 'unassigned';
+function statusLabelFor(
+  status: WeeklyProductStatus,
+  leadNames: string[],
+): string {
+  const leads = leadNames.length > 0 ? leadNames.join(", ") : "unassigned";
   switch (status) {
-    case 'on-track':
+    case "on-track":
       return `On Track \u00b7 ${leads}`;
-    case 'at-risk':
+    case "at-risk":
       return `At Risk \u00b7 ${leads}`;
-    case 'blocked':
+    case "blocked":
       return `Blocked \u00b7 ${leads}`;
   }
 }
@@ -217,12 +224,15 @@ function groupItemsByProject(
     for (const item of section.items) {
       const bucket = map.get(item.projectId) ?? { current: [], next: [] };
       const mapped: WeeklyReportItem = {
-        id: item.id ?? `${item.projectId}-${item.type}-${bucket[item.type].length}`,
-        stageLead: item.type === 'next' ? 'Planned' : stageLead,
+        id:
+          item.id ??
+          `${item.projectId}-${item.type}-${bucket[item.type].length}`,
+        stageLead: item.type === "next" ? "Planned" : stageLead,
         text: item.text,
         status: deriveItemStatus({
           workflowStatus: item.workflowStatus,
           type: item.type,
+          completed: item.completed ?? null,
         }),
       };
       bucket[item.type].push(mapped);
@@ -249,14 +259,16 @@ function groupRisksByProject(
     // Detect blocked items per project for severity inference.
     const blockedProjects = new Set(
       section.items
-        .filter((item) => item.workflowStatus === 'blocked')
+        .filter((item) => item.workflowStatus === "blocked")
         .map((item) => item.projectId),
     );
     for (const risk of section.risks) {
-      const productName = projectNames.get(risk.projectId) ?? 'Unknown';
-      const severity: 'blocked' | 'at-risk' = blockedProjects.has(risk.projectId)
-        ? 'blocked'
-        : 'at-risk';
+      const productName = projectNames.get(risk.projectId) ?? "Unknown";
+      const severity: "blocked" | "at-risk" = blockedProjects.has(
+        risk.projectId,
+      )
+        ? "blocked"
+        : "at-risk";
       const text = `${risk.risk} \u2014 Impact: ${risk.impact} \u2014 Mitigation: ${risk.mitigation}`;
       const list = map.get(risk.projectId) ?? [];
       list.push({
@@ -355,11 +367,11 @@ function buildProductToAuthorMap(
 function findNeedsAttention(
   api: WeeklyReportReadModel,
   productName: string,
-): { needsAttention?: string; needsAttentionSeverity?: 'blocked' | 'at-risk' } {
+): { needsAttention?: string; needsAttentionSeverity?: "blocked" | "at-risk" } {
   for (const escalation of api.escalations) {
     if (escalation.productName !== productName) continue;
-    const severity: 'blocked' | 'at-risk' =
-      escalation.type === 'blocked' ? 'blocked' : 'at-risk';
+    const severity: "blocked" | "at-risk" =
+      escalation.type === "blocked" ? "blocked" : "at-risk";
     return {
       needsAttention: escalation.description,
       needsAttentionSeverity: severity,
@@ -377,7 +389,7 @@ export type MapWeeklyReportResult = {
   /** Header summary string ("4/6 leads submitted"). */
   submissionLabel: string;
   /** raw period state for header/banner UX. */
-  periodStatus: WeeklyReportReadModel['periodStatus'];
+  periodStatus: WeeklyReportReadModel["periodStatus"];
   /** Submission count (for top-of-page badge). */
   submissionCount: number;
   /** Total leads (for top-of-page badge). */
@@ -412,7 +424,9 @@ export function mapWeeklyReport(
     const decisions = decisionsByProject.get(overview.productId) ?? [];
     const priorities = prioritiesByProject.get(overview.productId) ?? [];
     const leadsLabel =
-      overview.leadNames.length > 0 ? overview.leadNames.join(' \u00b7 ') : 'unassigned';
+      overview.leadNames.length > 0
+        ? overview.leadNames.join(" \u00b7 ")
+        : "unassigned";
     const initials = initialsFromName(overview.productName);
 
     portfolio.push({
@@ -438,7 +452,11 @@ export function mapWeeklyReport(
       name: overview.productName,
       status,
       statusLabel:
-        status === 'on-track' ? 'On Track' : status === 'at-risk' ? 'At Risk' : 'Blocked',
+        status === "on-track"
+          ? "On Track"
+          : status === "at-risk"
+            ? "At Risk"
+            : "Blocked",
       leads: leadsLabel,
       ...(sectionId !== undefined ? { sectionId } : {}),
       ...(attention.needsAttention !== undefined
@@ -461,7 +479,7 @@ export function mapWeeklyReport(
     periodStatus: api.periodStatus,
     weekLabel: api.weekLabel ?? isoWeekLabel(api.periodStart),
     dateRange: formatWeekRange(api.periodStart, api.periodEnd),
-    isCurrent: api.periodStatus !== 'published',
+    isCurrent: api.periodStatus !== "published",
   };
 
   return {

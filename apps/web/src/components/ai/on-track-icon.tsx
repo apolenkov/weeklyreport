@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
 // Phase 31 (AI-03) — On-track advisory icon. Renders alongside (NEVER
 // replaces) the lead's chosen traffic-light. Sized 16px to match small
 // status indicators; hidden when AI is unavailable.
-import { useQuery } from '@tanstack/react-query';
-import { Check, AlertTriangle, X } from 'lucide-react';
-import { useTRPC } from '../../lib/trpc-context';
+import { useQuery } from "@tanstack/react-query";
+import { Check, AlertTriangle, X } from "lucide-react";
+import { useTRPC } from "../../lib/trpc-context";
 
 type Props = {
   readonly sectionId: string;
@@ -30,7 +30,7 @@ export function OnTrackIcon({ sectionId, projectId }: Props) {
   const verdict = data.result.verdict;
   const tooltip = `${data.result.confidence} confidence — ${data.result.rationale}`;
 
-  if (verdict === 'on-track') {
+  if (verdict === "on-track") {
     return (
       <Check
         size={16}
@@ -41,7 +41,7 @@ export function OnTrackIcon({ sectionId, projectId }: Props) {
       </Check>
     );
   }
-  if (verdict === 'attention') {
+  if (verdict === "attention") {
     return (
       <AlertTriangle
         size={16}

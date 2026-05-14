@@ -1,18 +1,18 @@
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 import {
   pdfExportJobSchema,
   type AssembledReport,
   type PdfExportJob,
-} from '@customreport/shared';
-import type { Queue } from 'bullmq';
+} from "@customreport/shared";
+import type { Queue } from "bullmq";
 
-import { createNullLogger, type AppLogger } from '../../lib/logger';
-import { customreportPdfExportRequestsTotal } from '../../infrastructure/metrics/metrics.registry.js';
+import { createNullLogger, type AppLogger } from "../../lib/logger";
+import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 
 export class PdfExportDomainError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'PdfExportDomainError';
+    this.name = "PdfExportDomainError";
   }
 }
 
@@ -28,7 +28,10 @@ export interface PdfExportRepository {
    *                     Optional for non-tRPC callers (workers, scripts) where
    *                     the prisma repository falls back to `'system'`.
    */
-  createExportJob(job: PdfExportJob, requestedBy?: string): Promise<PdfExportJob>;
+  createExportJob(
+    job: PdfExportJob,
+    requestedBy?: string,
+  ): Promise<PdfExportJob>;
   getExportJob(jobId: string): Promise<PdfExportJobRecord | null>;
   saveExportJob(job: PdfExportJob): Promise<PdfExportJob>;
   markExportFailed(jobId: string, error: string): Promise<void>;
@@ -51,11 +54,11 @@ export interface PdfExportRepository {
  */
 export interface PdfExportTokenClaims {
   reportId: string;
-  kind: 'pdf-export';
+  kind: "pdf-export";
 }
 
-const PDF_EXPORT_JWT_TTL = '5m';
-const PDF_EXPORT_KIND = 'pdf-export' as const;
+const PDF_EXPORT_JWT_TTL = "5m";
+const PDF_EXPORT_KIND = "pdf-export" as const;
 
 /**
  * AUTH-05 / Phase 32-B1 (H-04): verify a token signed by `signPdfExportToken`
@@ -65,24 +68,24 @@ const PDF_EXPORT_KIND = 'pdf-export' as const;
  * `trpc.context.ts` after `verifySessionToken` fails.
  */
 export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
-  const secret = process.env['PDF_EXPORT_JWT_SECRET'];
+  const secret = process.env["PDF_EXPORT_JWT_SECRET"];
   if (!secret || secret.length < 16) {
     throw new Error(
-      'PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).',
+      "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).",
     );
   }
   const decoded = jwt.verify(token, secret);
-  if (typeof decoded !== 'object' || decoded === null) {
-    throw new Error('Invalid PDF export token payload');
+  if (typeof decoded !== "object" || decoded === null) {
+    throw new Error("Invalid PDF export token payload");
   }
   const claims = decoded as Record<string, unknown>;
-  if (claims['kind'] !== PDF_EXPORT_KIND) {
-    throw new Error('Token is not a PDF export token (kind mismatch)');
+  if (claims["kind"] !== PDF_EXPORT_KIND) {
+    throw new Error("Token is not a PDF export token (kind mismatch)");
   }
-  if (typeof claims['reportId'] !== 'string' || !claims['reportId']) {
-    throw new Error('PDF export token missing reportId claim');
+  if (typeof claims["reportId"] !== "string" || !claims["reportId"]) {
+    throw new Error("PDF export token missing reportId claim");
   }
-  return { reportId: claims['reportId'], kind: PDF_EXPORT_KIND };
+  return { reportId: claims["reportId"], kind: PDF_EXPORT_KIND };
 }
 
 export class PdfExportService {
@@ -106,10 +109,10 @@ export class PdfExportService {
    * time instead of silently producing a token nobody can verify.
    */
   signPdfExportToken(reportId: string): string {
-    const secret = process.env['PDF_EXPORT_JWT_SECRET'];
+    const secret = process.env["PDF_EXPORT_JWT_SECRET"];
     if (!secret || secret.length < 16) {
       throw new PdfExportDomainError(
-        'PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).',
+        "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).",
       );
     }
     const claims: PdfExportTokenClaims = { reportId, kind: PDF_EXPORT_KIND };
@@ -130,27 +133,27 @@ export class PdfExportService {
   ): Promise<PdfExportJob> {
     const report = await this.repository.getPublishedReport(reportId);
 
-    if (!report || report.status !== 'published') {
-      throw new PdfExportDomainError('PDF export requires a published report.');
+    if (!report || report.status !== "published") {
+      throw new PdfExportDomainError("PDF export requires a published report.");
     }
 
-    this.logger.info('requesting PDF export', { reportId, requestedBy });
+    this.logger.info("requesting PDF export", { reportId, requestedBy });
     // Phase 52-A (UFB-054): bump role-labelled counter before the queue
     // enqueue. We're past the validation gate, so a successful enqueue
     // (or queue-less test scenario) maps 1:1 to a customer-facing
     // "export requested" event.
     customreportPdfExportRequestsTotal.inc({
-      role: requestedByRole ?? 'system',
+      role: requestedByRole ?? "system",
     });
     const job = await this.repository.createExportJob(
       pdfExportJobSchema.parse({
         jobId: crypto.randomUUID(),
         reportId,
-        status: 'queued',
+        status: "queued",
         requestedAt: new Date(),
         completedAt: null,
         checksum: null,
-        templateVersion: 'phase-2-pdf-v1',
+        templateVersion: "phase-2-pdf-v1",
         artifactUrl: null,
       }),
       requestedBy,
@@ -163,14 +166,14 @@ export class PdfExportService {
       // a queue (and thus without a real worker) don't require the secret.
       const cookieToken = authToken ?? this.signPdfExportToken(reportId);
       await this.pdfQueue.add(
-        'generate',
+        "generate",
         { reportId, jobId: job.jobId, authToken: cookieToken },
         {
           attempts: 3,
-          backoff: { type: 'exponential', delay: 5000 },
+          backoff: { type: "exponential", delay: 5000 },
         },
       );
-      this.logger.info('enqueued pdf-export job', {
+      this.logger.info("enqueued pdf-export job", {
         jobId: job.jobId,
         reportId,
       });
@@ -199,11 +202,11 @@ export class PdfExportService {
   ): Promise<PdfExportJob> {
     const job = await this.getPdfExportStatus(jobId);
 
-    this.logger.info('marking PDF export completed', { jobId });
+    this.logger.info("marking PDF export completed", { jobId });
     return this.repository.saveExportJob(
       pdfExportJobSchema.parse({
         ...job,
-        status: 'completed',
+        status: "completed",
         completedAt: new Date(),
         artifactUrl,
         checksum,
@@ -213,7 +216,7 @@ export class PdfExportService {
 
   /** Called by BullMQ onFailed event handler when PDF generation fails. */
   async markExportFailed(jobId: string, error: string): Promise<void> {
-    this.logger.error('PDF export job failed', { jobId, error });
+    this.logger.error("PDF export job failed", { jobId, error });
     await this.repository.markExportFailed(jobId, error);
   }
 
@@ -235,17 +238,20 @@ export class PdfExportService {
     value: string;
     url: string;
     httpOnly: boolean;
-    sameSite: 'Lax' | 'Strict' | 'None';
+    sameSite: "Lax" | "Strict" | "None";
   }> {
-    const cookieName = process.env.AUTH_JWT_COOKIE_NAME ?? 'customreport_session';
-    const baseUrl = process.env.PDF_BASE_URL ?? 'http://localhost:3000';
+    const cookieName =
+      process.env.AUTH_JWT_COOKIE_NAME ?? "customreport_session";
+    const baseUrl = process.env.PDF_BASE_URL ?? "http://localhost:3000";
 
-    return [{
-      name: cookieName,
-      value: authToken,
-      url: baseUrl,
-      httpOnly: true,
-      sameSite: 'Lax',
-    }];
+    return [
+      {
+        name: cookieName,
+        value: authToken,
+        url: baseUrl,
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ];
   }
 }

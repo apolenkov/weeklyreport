@@ -8,6 +8,7 @@
 ## Phase Boundary
 
 Surface the operational signal we already collect:
+
 - DLQ metrics live in BullMQ but no alert rule fires on growth.
 - /metrics endpoint exists (prom-client default metrics) but Prometheus scrape config doesn't.
 - Audit logger writes structured JSON to file (rotated, compressed) but no log-sink doc explains how to ship to Loki/Splunk/Datadog.
@@ -30,6 +31,7 @@ Out of scope: live Loki/Datadog provisioning (org-side); fancy dashboards beyond
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 - `apps/api/src/infrastructure/metrics/metrics.controller.ts` mounts `/metrics` via `prom-client`. 37-02 extends with custom counters.

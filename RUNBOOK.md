@@ -30,6 +30,7 @@ to confirm the cause and restore service.
 ```
 
 **Key endpoints:**
+
 - `/health/live` — memory/heap; should always be 200 unless API itself is dead.
 - `/health/ready` — DB + Redis + BullMQ + memory all-or-nothing.
 - `/metrics` — Prometheus scrape (HTTP histogram, custom counters once Phase 37 lands).
@@ -43,6 +44,7 @@ to confirm the cause and restore service.
 log pattern `PrismaClientKnownRequestError ... Can't reach database server`.
 
 **Detect:**
+
 ```bash
 docker compose ps postgres            # is the container up?
 docker compose logs postgres --tail=80
@@ -50,11 +52,13 @@ docker compose exec postgres pg_isready -U customreport
 ```
 
 **Triage:**
+
 - Container exited / OOM — `docker compose logs postgres | tail -200` for the crash signal.
 - Disk full — `docker exec postgres df -h /var/lib/postgresql/data`.
 - Connection storm — `SELECT count(*), state FROM pg_stat_activity GROUP BY state;`.
 
 **Resolve:**
+
 ```bash
 # Quick restart (data persists in named volume):
 docker compose restart postgres
@@ -79,6 +83,7 @@ if implemented; otherwise stop API).
 middleware errors (Phase 36-01 once landed).
 
 **Detect:**
+
 ```bash
 docker compose exec redis redis-cli ping     # expects PONG
 docker compose logs redis --tail=80
@@ -88,6 +93,7 @@ docker compose logs redis --tail=80
 container exited.
 
 **Resolve:**
+
 ```bash
 docker compose restart redis
 # After restart, BullMQ workers reconnect within ~30s. Pending jobs in the
@@ -109,6 +115,7 @@ docker compose rm -f redis && docker volume rm customreport_redis_data && docker
 no processed jobs; reminder cron fires but recipients don't receive.
 
 **Detect:**
+
 ```bash
 # Check failed jobs:
 curl -s http://localhost:3002/admin/queues  # (head session needed)
@@ -116,11 +123,13 @@ docker compose logs api --tail=200 | grep -i 'email\|smtp'
 ```
 
 **Triage:**
+
 - SMTP creds wrong → "535 authentication failed" in logs.
 - Network blocked → "Connection timeout to smtp.example.com:587".
 - Rate limit (BullMQ has 5/60s by design) → expected, not a fault.
 
 **Resolve:**
+
 ```bash
 # Verify env:
 docker compose exec api env | grep ^SMTP_
@@ -152,6 +161,7 @@ docker compose exec api node -e "
 `docker compose logs migrate` shows Prisma error (drift, constraint, etc).
 
 **Detect:**
+
 ```bash
 docker compose logs migrate
 docker compose exec postgres psql -U customreport -c \
@@ -159,6 +169,7 @@ docker compose exec postgres psql -U customreport -c \
 ```
 
 **Triage:**
+
 - Drift between schema.prisma and applied state — `prisma migrate status`.
 - Failed mid-migration leaves partial state — `_prisma_migrations.applied_steps_count` < expected.
 
@@ -194,6 +205,7 @@ backend lead. Don't try Option C without coordination.
 Bull Board shows >10 failed jobs in any queue; admin DLQ badge red.
 
 **Detect:**
+
 ```bash
 # Bull Board has the readable view; CLI fallback:
 docker compose exec api node -e "
@@ -206,12 +218,14 @@ docker compose exec api node -e "
 ```
 
 **Triage:** open one failed job in Bull Board, read `failedReason`. Common patterns:
+
 - `pdf-export` failing on `Error: Page closed` → Playwright Chromium OOM.
 - `email-reminder` failing on `EAUTH` → SMTP creds rotated.
 - `carry-over` failing on `P2003 Foreign key constraint failed` → schema drift.
 
 **Resolve:** fix root cause first, then bulk-retry from Bull Board (Retry all)
 or:
+
 ```bash
 docker compose exec api node -e "
   const { Queue } = require('bullmq');
@@ -231,11 +245,13 @@ bug. Capture the job data + error, file an issue, page the on-call dev.
 a generic error. Logs: `SamlError: Invalid signature` / `Element ... not signed`.
 
 **Detect:**
+
 ```bash
 docker compose logs api --tail=200 | grep -i 'saml\|signature\|assertion'
 ```
 
 **Triage:**
+
 - IdP cert rotated upstream → our pinned cert is now invalid.
 - Clock drift between SP (us) and IdP (Keycloak) > 5min → assertion expired.
 - IdP misconfigured `<Audience>` → assertion not for us.
@@ -268,6 +284,7 @@ SP metadata.
 Board shows job in `active` state for >5 min.
 
 **Detect:**
+
 ```bash
 # Worker still alive?
 docker compose exec api ps aux | grep -i playwright
@@ -277,11 +294,13 @@ docker compose exec api ls /ms-playwright/
 ```
 
 **Triage:**
+
 - Chromium browser process died → worker stuck waiting on it.
 - Disk full in PDF_OUTPUT_DIR → write fails.
 - Source HTML route 500-ing → Playwright timeout.
 
 **Resolve:**
+
 ```bash
 # Kill stuck job from Bull Board, OR:
 docker compose exec api node -e "
@@ -308,6 +327,7 @@ Page on-call dev with a sample failing reportId.
 fails; PDF export fails on write.
 
 **Detect:**
+
 ```bash
 df -h
 du -sh /var/lib/docker /var/customreport/pdfs ./apps/api/.logs
@@ -315,11 +335,13 @@ docker system df
 ```
 
 **Triage:**
+
 - Log files filled `LOG_DIR` (rotate misconfigured).
 - Old PDF exports never cleaned up (no retention policy yet).
 - Docker image cache + dangling volumes.
 
 **Resolve:**
+
 ```bash
 # Quick wins:
 docker system prune -af --volumes        # deletes UNUSED only; safe
@@ -339,6 +361,7 @@ policy needs tuning. File an issue.
 errors broadly across the app.
 
 **Detect:**
+
 ```bash
 # Recent error logs:
 docker compose logs api --since 15m | grep -E '"level":"error"|" 5\d\d "'
@@ -347,11 +370,13 @@ docker compose logs api --since 15m | grep ' 5\d\d ' | awk '{print $7}' | sort |
 ```
 
 **Triage:**
+
 - Single endpoint hot — probably a recent deploy regression.
 - Spread across endpoints — DB / Redis underlying issue (see 1 + 2).
 - Memory creep — `docker stats` shows api near limit.
 
 **Resolve:**
+
 ```bash
 # Quickest restoration: rollback last deploy
 git tag --sort=-creatordate | head     # find previous tag
@@ -372,6 +397,7 @@ investigate offline. Do not let a 5xx spike linger past 15 min.
 ACME renewal failures.
 
 **Detect:**
+
 ```bash
 # Cert validity:
 echo | openssl s_client -connect customreport.example.com:443 2>/dev/null \
@@ -380,11 +406,13 @@ docker compose logs caddy --tail=100 | grep -i acme
 ```
 
 **Triage:**
+
 - Let's Encrypt rate limit hit (5 dupes/week) — too many failed renewals.
 - DNS challenge failing — TXT record not propagated.
 - HTTP-01 challenge failing — caddy not on :80, or :80 not exposed.
 
 **Resolve:**
+
 ```bash
 # Force renewal via caddy admin API:
 docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile

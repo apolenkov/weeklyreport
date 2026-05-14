@@ -27,7 +27,7 @@ export {
   SEED_REPORTS,
   ACTIVE_REPORT_ID,
   PUBLISHED_REPORT_ID,
-} from '../../../../../prisma/seed-constants.js';
+} from "../../../../../prisma/seed-constants.js";
 
 /**
  * Email map verified against prisma/seed-constants.ts SEED_USERS at this
@@ -35,14 +35,14 @@ export {
  * query strings — buildUserSession looks the user up by email.
  */
 export const SEED_EMAILS = {
-  head: 'head@customreport.local',
-  viewer: 'viewer@customreport.local',
-  lead1: 'lead1@customreport.local',
-  maria: 'maria@customreport.local',
-  igor: 'igor@customreport.local',
-  dmitry: 'dmitry@customreport.local',
-  olga: 'olga@customreport.local',
-  sergey: 'sergey@customreport.local',
+  head: "head@customreport.local",
+  viewer: "viewer@customreport.local",
+  lead1: "lead1@customreport.local",
+  maria: "maria@customreport.local",
+  igor: "igor@customreport.local",
+  dmitry: "dmitry@customreport.local",
+  olga: "olga@customreport.local",
+  sergey: "sergey@customreport.local",
 } as const;
 
 export type SeedEmailKey = keyof typeof SEED_EMAILS;

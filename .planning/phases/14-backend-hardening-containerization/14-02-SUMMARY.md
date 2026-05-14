@@ -105,6 +105,7 @@ The `docker compose config --quiet` without required vars set exits with code 1 
 ## User Setup Required
 
 For production deployment, operators must set:
+
 - `DB_PASSWORD` — PostgreSQL password (required, no default)
 - `AUTH_JWT_SECRET` — JWT signing secret, minimum 32 characters (required, no default)
 - `FRONTEND_URL` — public URL of the web frontend (optional, defaults to localhost:3000)
@@ -118,5 +119,6 @@ For production deployment, operators must set:
 - Both images build successfully; web meets 200MB target, API size documented as constraint
 
 ---
-*Phase: 14-backend-hardening-containerization*
-*Completed: 2026-04-13*
+
+_Phase: 14-backend-hardening-containerization_
+_Completed: 2026-04-13_

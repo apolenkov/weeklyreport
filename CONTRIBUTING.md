@@ -25,11 +25,11 @@ Subject ≤ 100 chars. Body is free-form (multi-line line length unrestricted).
 
 ## Local quality gate (husky hooks)
 
-| Hook | Runs | Bypass |
-|---|---|---|
-| `pre-commit` | `lint-staged` → `eslint --fix --max-warnings=0` on staged TS/JS, `prettier --write` on staged JSON/MD/YAML | `git commit --no-verify` |
-| `commit-msg` | `commitlint` on subject line | `git commit --no-verify` |
-| `pre-push` | `pnpm test` (full unit suite) | `SKIP_PREPUSH=1 git push` (or set `CI=true`) |
+| Hook         | Runs                                                                                                       | Bypass                                       |
+| ------------ | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `pre-commit` | `lint-staged` → `eslint --fix --max-warnings=0` on staged TS/JS, `prettier --write` on staged JSON/MD/YAML | `git commit --no-verify`                     |
+| `commit-msg` | `commitlint` on subject line                                                                               | `git commit --no-verify`                     |
+| `pre-push`   | `pnpm test` (full unit suite)                                                                              | `SKIP_PREPUSH=1 git push` (or set `CI=true`) |
 
 If you see `lint-staged` failing on a file you didn't touch, it's because
 the warning floor is currently above zero (REQ Q-06 will close this). Fix
@@ -86,6 +86,6 @@ pnpm uat:audit:update    # adds the new black-hole entry with a TODO reason
 - **`pnpm dev` starts both web (3000) + api (3002) in parallel** — if a
   port collides, kill both: `pkill -f 'turbo run dev'`.
 - **Prisma migrations on a fresh dev DB:** `pnpm exec prisma migrate deploy`
-  + `pnpm db:seed:advanced` (or `pnpm db:seed:simple` for a minimal seed).
+  - `pnpm db:seed:advanced` (or `pnpm db:seed:simple` for a minimal seed).
 - **Reset the dev DB:** the in-app DEV switcher has a "Wipe + Reseed
   (advanced)" menu item — it calls `dev.wipeAndReseed` and reloads.

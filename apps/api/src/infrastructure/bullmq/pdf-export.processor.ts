@@ -1,12 +1,16 @@
-import { Injectable, type OnModuleInit, type OnModuleDestroy } from '@nestjs/common';
-import { Worker, type Job } from 'bullmq';
-import { chromium } from 'playwright';
-import { createHash } from 'node:crypto';
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import {
+  Injectable,
+  type OnModuleInit,
+  type OnModuleDestroy,
+} from "@nestjs/common";
+import { Worker, type Job } from "bullmq";
+import { chromium } from "playwright";
+import { createHash } from "node:crypto";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { join, resolve } from "node:path";
 
-import { PdfExportService } from '../../modules/pdf-export/pdf-export.service';
-import { getBullMQOptions } from './bullmq-options';
+import { PdfExportService } from "../../modules/pdf-export/pdf-export.service";
+import { getBullMQOptions } from "./bullmq-options";
 
 type PdfExportJobData = {
   reportId: string;
@@ -32,14 +36,14 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     this.worker = new Worker<PdfExportJobData>(
-      'pdf-export',
+      "pdf-export",
       async (job: Job<PdfExportJobData>) => {
         await this.processJob(job);
       },
       getBullMQOptions(),
     );
 
-    this.worker.on('failed', (job, error) => {
+    this.worker.on("failed", (job, error) => {
       if (job?.data.jobId) {
         void this.pdfExportService
           .markExportFailed(job.data.jobId, error.message)
@@ -47,14 +51,14 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
             process.stderr.write(
               JSON.stringify({
                 timestamp: new Date().toISOString(),
-                level: 'error',
-                message: 'pdf-export failed-state update failed',
+                level: "error",
+                message: "pdf-export failed-state update failed",
                 jobId: job.data.jobId,
                 error:
                   markError instanceof Error
                     ? markError.message
                     : String(markError),
-              }) + '\n',
+              }) + "\n",
             );
           });
       }
@@ -62,15 +66,15 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
       process.stderr.write(
         JSON.stringify({
           timestamp: new Date().toISOString(),
-          level: 'error',
-          message: 'pdf-export job failed',
+          level: "error",
+          message: "pdf-export job failed",
           jobId: job?.data.jobId,
           reportId: job?.data.reportId,
           attempt: job?.attemptsMade,
           // AUTH-05: never log the actual token; only its presence.
-          authToken: job?.data.authToken ? '<redacted>' : 'MISSING',
+          authToken: job?.data.authToken ? "<redacted>" : "MISSING",
           error: error.message,
-        }) + '\n',
+        }) + "\n",
       );
     });
   }
@@ -81,7 +85,7 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
 
   private async processJob(job: Job<PdfExportJobData>): Promise<void> {
     const { reportId, jobId, authToken } = job.data;
-    const baseUrl = process.env['PDF_BASE_URL'] ?? 'http://localhost:3000';
+    const baseUrl = process.env["PDF_BASE_URL"] ?? "http://localhost:3000";
     const reportUrl = `${baseUrl}/print/${reportId}`;
 
     const browser = await chromium.launch({ headless: true });
@@ -94,9 +98,9 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
       const cookies = this.pdfExportService.buildAuthCookies(authToken);
       await context.addCookies(cookies);
       const page = await context.newPage();
-      await page.goto(reportUrl, { waitUntil: 'networkidle' });
+      await page.goto(reportUrl, { waitUntil: "networkidle" });
       const pdfBuffer = await page.pdf({
-        format: 'A4',
+        format: "A4",
         printBackground: true,
       });
 
@@ -105,16 +109,22 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
       // same directory regardless of the process cwd. Default is relative to
       // the API package cwd (apps/api/) — see env.schema.ts for the same
       // anti-double-path rationale.
-      const outputDir = resolve(process.env['PDF_OUTPUT_DIR'] ?? './storage/pdfs');
+      const outputDir = resolve(
+        process.env["PDF_OUTPUT_DIR"] ?? "./storage/pdfs",
+      );
       mkdirSync(outputDir, { recursive: true });
 
       const filePath = join(outputDir, `${jobId}.pdf`);
       writeFileSync(filePath, pdfBuffer);
 
-      const checksum = createHash('sha256').update(pdfBuffer).digest('hex');
+      const checksum = createHash("sha256").update(pdfBuffer).digest("hex");
       const artifactUrl = `/pdfs/${jobId}.pdf`;
 
-      await this.pdfExportService.markExportCompleted(jobId, artifactUrl, checksum);
+      await this.pdfExportService.markExportCompleted(
+        jobId,
+        artifactUrl,
+        checksum,
+      );
     } finally {
       await browser.close();
     }

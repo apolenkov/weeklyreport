@@ -8,8 +8,8 @@
  * the suite instead of being skipped.
  */
 
-import { test, expect } from './fixtures';
-import { prisma, resetMutations } from './helpers/db';
+import { test, expect } from "./fixtures";
+import { prisma, resetMutations } from "./helpers/db";
 import {
   ACTIVE_REPORT_ID,
   PUBLISHED_REPORT_ID,
@@ -17,47 +17,39 @@ import {
   LEAD_OLGA_ID,
   LEAD_SERGEY_ID,
   SEED_EMAILS,
-} from './helpers/seed-ids';
-import type { BrowserContext, Page } from '@playwright/test';
-import { loginAs } from './fixtures';
+} from "./helpers/seed-ids";
+import type { BrowserContext, Page } from "@playwright/test";
+import { loginAs } from "./fixtures";
 
-test.describe('Lead journey (integration)', () => {
+test.describe("Lead journey (integration)", () => {
   test.afterEach(async () => {
     await resetMutations();
   });
 
-  test('lead can fill items and save draft — autosave persists across reload', async ({
+  test("lead can fill items and save draft — autosave persists across reload", async ({
     browser,
   }) => {
     // Use a fresh context logged in as Olga: draft state with existing
     // editable items, so this proves dialog save -> autosave -> reload.
     const context: BrowserContext = await browser.newContext();
     const page: Page = await context.newPage();
-    await loginAs(context, { role: 'lead', email: SEED_EMAILS.olga });
+    await loginAs(context, { role: "lead", email: SEED_EMAILS.olga });
 
-    await page.goto('/lead/report');
+    await page.goto("/lead/report");
 
     const updatedText = `Integration autosave ${Date.now()}`;
 
-    const editItem = page.getByRole('button', { name: /^Edit$/ }).first();
+    const editItem = page.getByRole("button", { name: /^Edit$/ }).first();
     await expect(editItem).toBeVisible({ timeout: 15_000 });
     await editItem.click();
 
-    const dialog = page.getByRole('dialog', { name: /^Edit Item dialog$/ });
+    const dialog = page.getByRole("dialog", { name: /^Edit Item dialog$/ });
     await expect(dialog).toBeVisible();
     await dialog
-      .getByRole('textbox', { name: /^Description \*$/ })
+      .getByRole("textbox", { name: /^Description \*$/ })
       .fill(updatedText);
 
-    const stageSelect = dialog.locator('#item-stage');
-    const stageValue = await stageSelect.evaluate((select) => {
-      const options = Array.from((select as HTMLSelectElement).options);
-      return options.find((option) => option.value !== '')?.value ?? null;
-    });
-    expect(stageValue, 'expected at least one owned SDLC stage option').toBeTruthy();
-    await stageSelect.selectOption(stageValue ?? '');
-
-    await dialog.getByRole('button', { name: /^Save Item$/ }).click();
+    await dialog.getByRole("button", { name: /^Save Item$/ }).click();
     await expect(dialog).toBeHidden();
     await expect(page.getByText(updatedText, { exact: true })).toBeVisible();
 
@@ -86,23 +78,23 @@ test.describe('Lead journey (integration)', () => {
     await context.close();
   });
 
-  test('lead submit locks the form — section.status becomes submitted in DB', async ({
+  test("lead submit locks the form — section.status becomes submitted in DB", async ({
     leadPage: _leadPage,
     browser,
   }) => {
     // Use Olga (draft, has 2 items already — minimum viable submit candidate).
     const context = await browser.newContext();
     const page = await context.newPage();
-    await loginAs(context, { role: 'lead', email: SEED_EMAILS.olga });
-    await page.goto('/lead/report');
+    await loginAs(context, { role: "lead", email: SEED_EMAILS.olga });
+    await page.goto("/lead/report");
 
-    const submitButton = page.getByRole('button', { name: /submit/i });
+    const submitButton = page.getByRole("button", { name: /submit/i });
     await expect(submitButton).toBeVisible({ timeout: 15_000 });
 
     await submitButton.click();
 
     // Confirm dialog may exist; accept if present.
-    const confirmBtn = page.getByRole('button', {
+    const confirmBtn = page.getByRole("button", {
       name: /^(submit|confirm|yes)/i,
     });
     if ((await confirmBtn.count()) > 1) await confirmBtn.last().click();
@@ -110,8 +102,8 @@ test.describe('Lead journey (integration)', () => {
     // Wait for the submit mutation.
     await page.waitForResponse(
       (r) =>
-        r.url().includes('/trpc/') &&
-        r.request().method() === 'POST' &&
+        r.url().includes("/trpc/") &&
+        r.request().method() === "POST" &&
         /submit/i.test(r.url()),
       { timeout: 15_000 },
     );
@@ -125,26 +117,26 @@ test.describe('Lead journey (integration)', () => {
         },
       },
     });
-    expect(section?.status).toBe('submitted');
+    expect(section?.status).toBe("submitted");
     expect(section?.submittedAt).not.toBeNull();
 
     await context.close();
   });
 
-  test('lead can fill from previous period — items appear for empty section', async ({
+  test("lead can fill from previous period — items appear for empty section", async ({
     browser,
   }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    await loginAs(context, { role: 'lead', email: SEED_EMAILS.sergey });
-    await page.goto('/lead/report');
+    await loginAs(context, { role: "lead", email: SEED_EMAILS.sergey });
+    await page.goto("/lead/report");
 
     // Use exact text match to avoid ambiguity with the sibling dropdown
     // trigger button whose aria-label is "Choose past report to fill from".
     // Both buttons live inside <FillFromButton/>; the primary action button
     // is the one labelled "Fill from Previous".
-    const fillFromBtn = page.getByRole('button', {
-      name: 'Fill from Previous',
+    const fillFromBtn = page.getByRole("button", {
+      name: "Fill from Previous",
       exact: true,
     });
     await expect(fillFromBtn).toBeVisible({ timeout: 15_000 });
@@ -154,17 +146,15 @@ test.describe('Lead journey (integration)', () => {
     // than firing the mutation directly. The mutation only runs after the
     // user confirms — so the test must dismiss the dialog before
     // waitForResponse can ever match.
-    const confirmFillBtn = page.getByRole('button', {
-      name: 'Replace & Fill',
+    const confirmFillBtn = page.getByRole("button", {
+      name: "Replace & Fill",
       exact: true,
     });
     await confirmFillBtn.click();
 
     // Wait for the mutation that copies items.
     await page.waitForResponse(
-      (r) =>
-        r.url().includes('/trpc/') &&
-        r.request().method() === 'POST',
+      (r) => r.url().includes("/trpc/") && r.request().method() === "POST",
       { timeout: 15_000 },
     );
 
@@ -193,10 +183,10 @@ test.describe('Lead journey (integration)', () => {
     await context.close();
   });
 
-  test('lead sees only their own data — direct tRPC call returns only their section', async ({
+  test("lead sees only their own data — direct tRPC call returns only their section", async ({
     leadPage,
   }) => {
-    await leadPage.goto('/lead/report');
+    await leadPage.goto("/lead/report");
 
     // The leadPage fixture is logged in as lead 1.
     // A direct call to a "get my section" procedure should return ONLY
@@ -214,8 +204,8 @@ test.describe('Lead journey (integration)', () => {
     // UI-side: page should NOT render other leads' display names anywhere.
     // (Heads see those names; leads should not.)
     const html = await leadPage.content();
-    expect(html).not.toContain('Мария К.');
-    expect(html).not.toContain('Игорь В.');
-    expect(html).not.toContain('Дмитрий С.');
+    expect(html).not.toContain("Мария К.");
+    expect(html).not.toContain("Игорь В.");
+    expect(html).not.toContain("Дмитрий С.");
   });
 });

@@ -28,7 +28,6 @@
 import "dotenv/config";
 
 import net from "node:net";
-import { randomUUID } from "node:crypto";
 
 import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -57,6 +56,7 @@ import {
   SEED_REPORTS,
   VIEWER_USER_ID,
 } from "./seed-constants.js";
+import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -66,10 +66,9 @@ type CountMap = Record<string, number>;
 
 // --- Extra preset IDs (UFB-069) -----------------------------------------
 // Beyond the 8 canonical IDs in seed-constants (head, viewer, 6 leads), we
-// add: 1 admin, 1 director, 1 finance head, 1 finance lead, and the Finance
+// add: 1 admin, 1 finance head, 1 finance lead, and the Finance
 // reporting group so wipe lands with two real groups instead of one.
 const ADMIN_USER_ID = "a0000000-0000-4000-8000-000000000097";
-const DIRECTOR_USER_ID = "a0000000-0000-4000-8000-000000000096";
 const FINANCE_HEAD_USER_ID = "a0000000-0000-4000-8000-000000000095";
 const FINANCE_LEAD_USER_ID = "a0000000-0000-4000-8000-000000000094";
 const FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
@@ -156,9 +155,9 @@ async function flushRedisDb(): Promise<
 // --- Main --------------------------------------------------------------
 
 async function main() {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Manual UAT wipe is forbidden when NODE_ENV=production.");
-  }
+  // C7 destructive-guard (UAT plan v7): refuse on prod-looking DATABASE_URL.
+  // Supersedes earlier NODE_ENV-only check — also catches misconfigured envs.
+  assertNonProdDestructive("wipe-manual-uat");
 
   const result = await prisma.$transaction(
     async (tx) => {
@@ -247,7 +246,7 @@ async function main() {
             name: "Дарья В.",
             role: Role.viewer,
             samlId: "viewer-1",
-            reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+            reportingGroupId: null,
           },
           {
             id: ADMIN_USER_ID,
@@ -255,14 +254,6 @@ async function main() {
             name: "Михаил Б.",
             role: Role.admin,
             samlId: "admin-1",
-            reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
-          },
-          {
-            id: DIRECTOR_USER_ID,
-            email: "director@customreport.local",
-            name: "Елена Р.",
-            role: Role.director,
-            samlId: "director-1",
             reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
           },
           {
@@ -397,23 +388,11 @@ async function main() {
       });
 
       // ---------- 5. RESEED: GroupProduct M:M edges (UFB-054 / Phase 56) ----------
-      // One row per project, mapping to the lead's reporting group. Every
-      // primary lead lives in Software Development → all 6 products attach
-      // there. Finance has no products in v1 (room for admin to add).
-      await tx.groupProduct.createMany({
-        data: [
-          PROD_CRM,
-          PROD_MOBILE,
-          PROD_CLOUD,
-          PROD_DEVOPS,
-          PROD_PAYMENTS,
-          PROD_HR,
-        ].map((productId) => ({
-          id: randomUUID(),
-          groupId: DEFAULT_REPORTING_GROUP_ID,
-          productId,
-        })),
-      });
+      // A4 added @@unique([groupId]) — each reporting group may only own ONE
+      // product. Assigning all 6 products to DEFAULT_REPORTING_GROUP_ID
+      // violates that constraint. seed-simple.ts intentionally leaves
+      // groupProduct empty, so we do the same here: the wipe step already
+      // cleaned groupProduct rows (line 201); no re-creation needed.
 
       // ---------- 6. RESEED: Stages + StageAssignments ----------
       await tx.stage.createMany({

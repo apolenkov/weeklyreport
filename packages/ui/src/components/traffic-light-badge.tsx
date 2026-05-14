@@ -14,8 +14,7 @@ const colorMap: Record<TrafficLightStatus, string> = {
     "bg-[var(--color-traffic-green)] text-[var(--color-traffic-green-foreground)] border-[var(--color-traffic-green-border)]",
   yellow:
     "bg-[var(--color-traffic-yellow)] text-[var(--color-traffic-yellow-foreground)] border-[var(--color-traffic-yellow-border)]",
-  red:
-    "bg-[var(--color-traffic-red)] text-[var(--color-traffic-red-foreground)] border-[var(--color-traffic-red-border)]",
+  red: "bg-[var(--color-traffic-red)] text-[var(--color-traffic-red-foreground)] border-[var(--color-traffic-red-border)]",
   unset:
     "bg-[var(--color-traffic-unset)] text-[var(--color-traffic-unset-foreground)] border-[var(--color-traffic-unset-border)]",
 };
@@ -42,15 +41,9 @@ export function TrafficLightBadge({
   const displayLabel = label ?? defaultLabels[status];
 
   return (
-    <Badge
-      variant="outline"
-      className={cn(colorMap[status], className)}
-    >
+    <Badge variant="outline" className={cn(colorMap[status], className)}>
       <span
-        className={cn(
-          "inline-block h-2 w-2 rounded-full",
-          dotColorMap[status],
-        )}
+        className={cn("inline-block h-2 w-2 rounded-full", dotColorMap[status])}
         aria-hidden="true"
       />
       {displayLabel}

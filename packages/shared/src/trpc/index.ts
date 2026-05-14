@@ -1,1 +1,1 @@
-export { requireRole, assertRole } from './middleware/role';
+export { requireRole, assertRole } from "./middleware/role";

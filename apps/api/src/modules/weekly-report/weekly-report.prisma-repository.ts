@@ -1,23 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   weeklyReportReadModelSchema,
   type WeeklyReportReadModel,
   type PortfolioProductOverview,
   type Escalation,
-} from '@customreport/shared';
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
+} from "@customreport/shared";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
   groupScopeFilter,
   type GroupScopeOptions,
-} from '../../lib/group-scope.js';
+} from "../../lib/group-scope.js";
 import type {
   WeeklyReportRepository,
   WeeklyReportScopeSession,
-} from './weekly-report.service.js';
+} from "./weekly-report.service.js";
 import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
-} from '../report-sections/report-sections.prisma-repository.js';
+} from "../report-sections/report-sections.prisma-repository.js";
 
 @Injectable()
 export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
@@ -25,8 +25,8 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
 
   async getActiveReportId(): Promise<string | null> {
     const editableReport = await this.prisma.report.findFirst({
-      where: { periodStatus: { in: ['open', 'reopened'] } },
-      orderBy: { periodStart: 'desc' },
+      where: { periodStatus: { in: ["open", "reopened"] } },
+      orderBy: { periodStart: "desc" },
       select: { id: true },
     });
 
@@ -35,8 +35,8 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     }
 
     const publishedReport = await this.prisma.report.findFirst({
-      where: { periodStatus: 'published' },
-      orderBy: { periodStart: 'desc' },
+      where: { periodStatus: "published" },
+      orderBy: { periodStart: "desc" },
       select: { id: true },
     });
 
@@ -47,8 +47,8 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     reportId: string,
     session?: WeeklyReportScopeSession,
   ): Promise<WeeklyReportReadModel | null> {
-    const sectionScope = scopeWhere(session, 'reportSection');
-    const userScope = scopeWhere(session, 'user');
+    const sectionScope = scopeWhere(session, "reportSection");
+    const userScope = scopeWhere(session, "user");
     // UFB-054 / Phase 56-D consumer migration: the weekly-report portfolio
     // is the only `'project'`-target scope-filter consumer in the api. Its
     // semantics are "what products does this group currently own?" — that
@@ -67,7 +67,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     // cross-group product is surfaced. That envelope does not yet exist
     // on `AuditLogger` (only `scopeDenied` does); high-cardinality logging
     // design is deferred to a follow-up. See SUMMARY for context.
-    const projectScope = scopeWhere(session, 'project', {
+    const projectScope = scopeWhere(session, "project", {
       useExplicitGroupProducts: true,
     });
 
@@ -86,7 +86,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     }
 
     const leadUsers = await this.prisma.user.findMany({
-      where: { role: 'lead', ...(userScope ?? {}) },
+      where: { role: "lead", ...(userScope ?? {}) },
       select: { id: true },
     });
 
@@ -98,7 +98,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     });
 
     const submissionCount = report.sections.filter(
-      (s) => s.status === 'submitted',
+      (s) => s.status === "submitted",
     ).length;
 
     const totalLeads = leadUsers.length;
@@ -124,7 +124,9 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const leadSections = (report.sections as any[]).map(mapPrismaToReportSection);
+    const leadSections = (report.sections as any[]).map(
+      mapPrismaToReportSection,
+    );
 
     const portfolioOverview = buildPortfolioOverview(projects, report.sections);
 
@@ -188,7 +190,7 @@ function buildPortfolioOverview(
       productName: project.name,
       worstStatus,
       stageCount: project.stageAssignments.length,
-      leadNames: [...leadNameSet].sort((a, b) => a.localeCompare(b, 'ru')),
+      leadNames: [...leadNameSet].sort((a, b) => a.localeCompare(b, "ru")),
     };
   });
 }
@@ -201,12 +203,12 @@ const statusSeverity: Record<string, number> = {
 
 function computeWorstStatus(
   statuses: string[],
-): 'green' | 'yellow' | 'red' | null {
+): "green" | "yellow" | "red" | null {
   if (statuses.length === 0) {
     return null;
   }
 
-  let worst = 'green';
+  let worst = "green";
 
   for (const s of statuses) {
     if ((statusSeverity[s] ?? 0) > (statusSeverity[worst] ?? 0)) {
@@ -214,7 +216,7 @@ function computeWorstStatus(
     }
   }
 
-  return worst as 'green' | 'yellow' | 'red';
+  return worst as "green" | "yellow" | "red";
 }
 
 // ---------------------------------------------------------------------------
@@ -249,10 +251,10 @@ function buildEscalations(
   for (const section of sections) {
     // Blocked items
     for (const item of section.items) {
-      if (item.workflowStatus === 'blocked') {
+      if (item.workflowStatus === "blocked") {
         escalations.push({
-          type: 'blocked',
-          productName: projectNameMap.get(item.projectId) ?? 'Unknown',
+          type: "blocked",
+          productName: projectNameMap.get(item.projectId) ?? "Unknown",
           stageName: null,
           leadName: section.author.name,
           description: item.text,
@@ -262,9 +264,9 @@ function buildEscalations(
 
     // At-risk projects (red traffic light)
     for (const ps of section.projectStatuses) {
-      if (ps.status === 'red') {
+      if (ps.status === "red") {
         escalations.push({
-          type: 'at_risk',
+          type: "at_risk",
           productName: ps.project.name,
           stageName: null,
           leadName: section.author.name,
@@ -276,8 +278,8 @@ function buildEscalations(
     // Unresolved risks
     for (const risk of section.risks) {
       escalations.push({
-        type: 'unresolved_risk',
-        productName: projectNameMap.get(risk.projectId) ?? 'Unknown',
+        type: "unresolved_risk",
+        productName: projectNameMap.get(risk.projectId) ?? "Unknown",
         stageName: null,
         leadName: section.author.name,
         description: risk.risk,
@@ -295,7 +297,7 @@ function buildEscalations(
  */
 function scopeWhere(
   session: WeeklyReportScopeSession | undefined,
-  target: 'user' | 'reportSection' | 'project',
+  target: "user" | "reportSection" | "project",
   options: GroupScopeOptions = {},
 ): Record<string, unknown> | undefined {
   if (!session) return undefined;

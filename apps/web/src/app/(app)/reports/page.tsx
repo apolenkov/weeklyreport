@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
-import { LeadHistoryList } from '../../../components/lead/lead-history-list';
-import { LeadHistorySidebar } from '../../../components/lead/lead-history-sidebar';
-import { LeadHistorySkeleton } from '../../../components/lead/lead-history-skeleton';
-import { ReportArchiveSection } from '../../../components/dashboard/report-archive-section';
-import { SearchInput } from '../../../components/search/search-input';
-import { useSession } from '../../../lib/session-provider';
-import { mapHistoryEntries } from '../../../lib/mappers';
-import { useTRPC } from '../../../lib/trpc-context';
+import { LeadHistoryList } from "../../../components/lead/lead-history-list";
+import { LeadHistorySidebar } from "../../../components/lead/lead-history-sidebar";
+import { LeadHistorySkeleton } from "../../../components/lead/lead-history-skeleton";
+import { ReportArchiveSection } from "../../../components/dashboard/report-archive-section";
+import { SearchInput } from "../../../components/search/search-input";
+import { useSession } from "../../../lib/session-provider";
+import { mapHistoryEntries } from "../../../lib/mappers";
+import { useTRPC } from "../../../lib/trpc-context";
 
 /**
  * UX-17 (Phase 35-08): merged Reports page.
@@ -29,7 +29,7 @@ import { useTRPC } from '../../../lib/trpc-context';
  * The legacy `/lead/history` and `/reports/history` routes 307-redirect
  * here with the appropriate tab pre-selected.
  */
-type TabId = 'drafts' | 'published';
+type TabId = "drafts" | "published";
 
 const HISTORY_INITIAL_VISIBLE = 10;
 
@@ -39,41 +39,44 @@ export default function ReportsPage() {
   const searchParams = useSearchParams();
 
   const role = user?.role ?? null;
-  const isLead = role === 'lead';
+  const isLead = role === "lead";
   const searchScope = isLead
-    ? 'mine'
-    : role === 'head' || role === 'admin'
-      ? 'all'
+    ? "mine"
+    : role === "head" || role === "admin"
+      ? "all"
       : null;
 
   // Default tab logic mirrors the spec: lead → drafts; everyone else → published.
-  const tabFromUrl = searchParams?.get('tab');
+  const tabFromUrl = searchParams?.get("tab");
   const initialTab: TabId =
-    tabFromUrl === 'drafts' || tabFromUrl === 'published'
+    tabFromUrl === "drafts" || tabFromUrl === "published"
       ? tabFromUrl
       : isLead
-        ? 'drafts'
-        : 'published';
+        ? "drafts"
+        : "published";
 
   const [tab, setTab] = useState<TabId>(initialTab);
 
   function selectTab(nextTab: TabId) {
     setTab(nextTab);
     const params = new URLSearchParams(searchParams?.toString());
-    params.set('tab', nextTab);
+    params.set("tab", nextTab);
     router.push(`/reports?${params.toString()}`, { scroll: false });
   }
 
   // Keep state in sync if the URL param changes after mount (e.g. user
   // navigates from /lead/history → 307 → /reports?tab=drafts).
   useEffect(() => {
-    if (tabFromUrl === 'drafts' || tabFromUrl === 'published') {
+    if (tabFromUrl === "drafts" || tabFromUrl === "published") {
       setTab(tabFromUrl);
     }
   }, [tabFromUrl]);
 
   return (
-    <main id="main-content" className="min-h-screen bg-[var(--color-background)]">
+    <main
+      id="main-content"
+      className="min-h-screen bg-[var(--color-background)]"
+    >
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="space-y-6">
           <header>
@@ -82,37 +85,39 @@ export default function ReportsPage() {
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
               {isLead
-                ? 'Your drafts and published group reports in one place.'
-                : 'Published group report archive.'}
+                ? "Your drafts and published group reports in one place."
+                : "Published group report archive."}
             </p>
           </header>
 
           <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)]">
             <TabButton
               label="My Drafts"
-              active={tab === 'drafts'}
+              active={tab === "drafts"}
               disabled={!isLead}
-              onClick={() => selectTab('drafts')}
+              onClick={() => selectTab("drafts")}
             />
             <TabButton
               label="Published"
-              active={tab === 'published'}
-              onClick={() => selectTab('published')}
+              active={tab === "published"}
+              onClick={() => selectTab("published")}
             />
           </div>
 
-          {searchScope && (
+          {searchScope ? (
             <div>
               <SearchInput
                 scope={searchScope}
                 placeholder={
-                  isLead ? 'Search my reports…' : 'Search reports and products…'
+                  isLead ? "Search my reports…" : "Search reports and products…"
                 }
               />
             </div>
+          ) : (
+            <div className="min-h-[44px]" aria-hidden="true" />
           )}
 
-          {tab === 'drafts' ? (
+          {tab === "drafts" ? (
             isLead ? (
               <LeadDraftsPanel />
             ) : (
@@ -143,11 +148,11 @@ function TabButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-current={active ? 'page' : undefined}
+      aria-current={active ? "page" : undefined}
       className={`relative -mb-px inline-flex min-h-[44px] items-center px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
         active
-          ? 'border-b-2 border-[var(--color-starbucks-accent)] text-[var(--color-starbucks-accent)]'
-          : 'border-b-2 border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'
+          ? "border-b-2 border-[var(--color-starbucks-accent)] text-[var(--color-starbucks-accent)]"
+          : "border-b-2 border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
       }`}
     >
       {label}
@@ -178,7 +183,7 @@ function LeadDraftsPanel() {
 
   useEffect(() => {
     if (isError) {
-      toast.error(error?.message ?? 'Failed to load report history.');
+      toast.error(error?.message ?? "Failed to load report history.");
     }
   }, [isError, error]);
 

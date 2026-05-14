@@ -1,23 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   adminReminderRuleSchema,
   adminReminderExecutionSchema,
   type AdminReminderRule,
   type AdminReminderExecution,
-} from '@customreport/shared';
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { RemindersRepository } from './reminders.service.js';
+} from "@customreport/shared";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { RemindersRepository } from "./reminders.service.js";
 
 const execStatusToDb: Record<string, string> = {
-  queued: 'pending',
-  sent: 'sent',
-  failed: 'failed',
+  queued: "pending",
+  sent: "sent",
+  failed: "failed",
 };
 
-const dbExecStatusToDomain: Record<string, AdminReminderExecution['status']> = {
-  pending: 'queued',
-  sent: 'sent',
-  failed: 'failed',
+const dbExecStatusToDomain: Record<string, AdminReminderExecution["status"]> = {
+  pending: "queued",
+  sent: "sent",
+  failed: "failed",
 };
 
 /**
@@ -60,7 +60,11 @@ export interface DueEscalationRule {
   fireAt: Date;
   reportPeriodLabel: string;
   head: { userId: string; email: string; name: string };
-  lateLeads: Array<{ leadName: string; sectionTitle: string; deadlineIso: string }>;
+  lateLeads: Array<{
+    leadName: string;
+    sectionTitle: string;
+    deadlineIso: string;
+  }>;
 }
 
 @Injectable()
@@ -76,8 +80,8 @@ export class RemindersPrismaRepository implements RemindersRepository {
   async findDueDeadlineRules(now: Date): Promise<DueDeadlineRule[]> {
     const rules = await this.prisma.reminderRule.findMany({
       where: {
-        status: 'active',
-        kind: 'deadline',
+        status: "active",
+        kind: "deadline",
         fireAt: { lte: now },
         reportId: { not: null },
       },
@@ -88,7 +92,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
             periodStart: true,
             periodEnd: true,
             sections: {
-              where: { status: 'draft' },
+              where: { status: "draft" },
               select: {
                 authorId: true,
                 author: {
@@ -150,8 +154,8 @@ export class RemindersPrismaRepository implements RemindersRepository {
   async findDueEscalationRules(now: Date): Promise<DueEscalationRule[]> {
     const rules = await this.prisma.reminderRule.findMany({
       where: {
-        status: 'active',
-        kind: 'escalation',
+        status: "active",
+        kind: "escalation",
         fireAt: { lte: now },
         reportId: { not: null },
       },
@@ -166,7 +170,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
               select: { id: true, email: true, name: true },
             },
             sections: {
-              where: { status: 'draft' },
+              where: { status: "draft" },
               select: {
                 author: {
                   select: { id: true, email: true, name: true },
@@ -222,7 +226,9 @@ export class RemindersPrismaRepository implements RemindersRepository {
     return toRuleDomain(rule);
   }
 
-  async findExecutionByDedupeKey(dedupeKey: string): Promise<AdminReminderExecution | null> {
+  async findExecutionByDedupeKey(
+    dedupeKey: string,
+  ): Promise<AdminReminderExecution | null> {
     const execution = await this.prisma.reminderExecution.findUnique({
       where: { dedupeKey },
       include: { rule: true },
@@ -235,19 +241,21 @@ export class RemindersPrismaRepository implements RemindersRepository {
     return toExecutionDomain(execution);
   }
 
-  async saveExecution(execution: AdminReminderExecution): Promise<AdminReminderExecution> {
+  async saveExecution(
+    execution: AdminReminderExecution,
+  ): Promise<AdminReminderExecution> {
     const saved = await this.prisma.reminderExecution.upsert({
       where: { dedupeKey: execution.dedupeKey },
       create: {
         id: execution.id,
         ruleId: execution.ruleId,
         dedupeKey: execution.dedupeKey,
-        status: (execStatusToDb[execution.status] ?? 'pending') as 'pending',
+        status: (execStatusToDb[execution.status] ?? "pending") as "pending",
         sentAt: execution.sentAt,
         error: execution.errorMessage,
       },
       update: {
-        status: (execStatusToDb[execution.status] ?? 'pending') as 'pending',
+        status: (execStatusToDb[execution.status] ?? "pending") as "pending",
         sentAt: execution.sentAt,
         error: execution.errorMessage,
       },
@@ -257,7 +265,9 @@ export class RemindersPrismaRepository implements RemindersRepository {
     return toExecutionDomain(saved);
   }
 
-  async getExecution(executionId: string): Promise<AdminReminderExecution | null> {
+  async getExecution(
+    executionId: string,
+  ): Promise<AdminReminderExecution | null> {
     const execution = await this.prisma.reminderExecution.findUnique({
       where: { id: executionId },
       include: { rule: true },
@@ -281,7 +291,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
     const executions = await this.prisma.reminderExecution.findMany({
       where: { ruleId },
       include: { rule: true },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 100,
     });
 
@@ -335,9 +345,9 @@ function toRuleDomain(rule: {
  */
 const EMAIL_RE = /^[^@\s:]+@[^@\s:]+\.[^@\s:]+$/;
 export function extractRecipientEmail(dedupeKey: string): string {
-  const last = dedupeKey.split(':').pop();
+  const last = dedupeKey.split(":").pop();
   if (last && EMAIL_RE.test(last)) return last;
-  return '';
+  return "";
 }
 
 function toExecutionDomain(execution: {
@@ -356,7 +366,7 @@ function toExecutionDomain(execution: {
     ruleId: execution.ruleId,
     reportId: execution.rule.reportId,
     dedupeKey: execution.dedupeKey,
-    status: dbExecStatusToDomain[execution.status] ?? 'queued',
+    status: dbExecStatusToDomain[execution.status] ?? "queued",
     scheduledFor: execution.createdAt,
     sentAt: execution.sentAt,
     recipientEmail: extractRecipientEmail(execution.dedupeKey),

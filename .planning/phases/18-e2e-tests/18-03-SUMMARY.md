@@ -14,7 +14,12 @@ affects: [18-07]
 
 tech-stack:
   added: []
-  patterns: [tab-via-url-param testing, role-switch aria-checked assertions, expandable section testing]
+  patterns:
+    [
+      tab-via-url-param testing,
+      role-switch aria-checked assertions,
+      expandable section testing,
+    ]
 
 key-files:
   created:
@@ -91,5 +96,6 @@ None - all tests verify real rendered mock data, no placeholder assertions.
 - Ready for remaining journey tests (18-04 head dashboard, 18-05 report view, etc.)
 
 ---
-*Phase: 18-e2e-tests*
-*Completed: 2026-04-24*
+
+_Phase: 18-e2e-tests_
+_Completed: 2026-04-24_

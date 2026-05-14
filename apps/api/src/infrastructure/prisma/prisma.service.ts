@@ -1,8 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
-import type { OnModuleInit, OnModuleDestroy, BeforeApplicationShutdown } from '@nestjs/common';
-import pg from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
+import { Injectable, Logger } from "@nestjs/common";
+import type {
+  OnModuleInit,
+  OnModuleDestroy,
+  BeforeApplicationShutdown,
+} from "@nestjs/common";
+import pg from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 
 const SLOW_QUERY_MS = 100;
 
@@ -25,9 +29,9 @@ export class PrismaService
     super({
       adapter,
       log: [
-        { level: 'query', emit: 'event' },
-        { level: 'warn', emit: 'event' },
-        { level: 'error', emit: 'event' },
+        { level: "query", emit: "event" },
+        { level: "warn", emit: "event" },
+        { level: "error", emit: "event" },
       ],
     });
     this.pool = pool;
@@ -38,40 +42,48 @@ export class PrismaService
     // Prisma 7's typing for $on with structured log levels — the Client type
     // narrows differently depending on the constructor's `log` shape and
     // TypeScript can't always reconcile the two.
-    const debugEnabled = (process.env.LOG_LEVEL ?? 'info') === 'debug';
+    const debugEnabled = (process.env.LOG_LEVEL ?? "info") === "debug";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const self = this as any;
 
-    self.$on?.('query', (e: { query: string; params: string; duration: number; target?: string }) => {
-      if (e.duration >= SLOW_QUERY_MS) {
-        // Slow query — always log at warn-level so it shows up even in
-        // production logs without flipping the global LOG_LEVEL.
-        this.logger.warn(`slow query (${e.duration}ms): ${e.query}`);
-      } else if (debugEnabled) {
-        // Verbose per-query trace — only when explicitly debugging.
-        this.logger.debug(`query (${e.duration}ms): ${e.query}`);
-      }
-    });
+    self.$on?.(
+      "query",
+      (e: {
+        query: string;
+        params: string;
+        duration: number;
+        target?: string;
+      }) => {
+        if (e.duration >= SLOW_QUERY_MS) {
+          // Slow query — always log at warn-level so it shows up even in
+          // production logs without flipping the global LOG_LEVEL.
+          this.logger.warn(`slow query (${e.duration}ms): ${e.query}`);
+        } else if (debugEnabled) {
+          // Verbose per-query trace — only when explicitly debugging.
+          this.logger.debug(`query (${e.duration}ms): ${e.query}`);
+        }
+      },
+    );
 
-    self.$on?.('warn', (e: { message: string }) => {
+    self.$on?.("warn", (e: { message: string }) => {
       this.logger.warn(`prisma: ${e.message}`);
     });
 
-    self.$on?.('error', (e: { message: string }) => {
+    self.$on?.("error", (e: { message: string }) => {
       this.logger.error(`prisma: ${e.message}`);
     });
 
     await this.$connect();
-    this.logger.log('Database connection established');
+    this.logger.log("Database connection established");
   }
 
   async beforeApplicationShutdown(): Promise<void> {
-    this.logger.log('Shutting down Prisma...');
+    this.logger.log("Shutting down Prisma...");
   }
 
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
     await this.pool.end();
-    this.logger.log('Database connection closed');
+    this.logger.log("Database connection closed");
   }
 }

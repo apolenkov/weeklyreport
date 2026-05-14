@@ -10,11 +10,11 @@ Technical specification for the weekly status reporting system of a software dep
 
 Three roles with distinct access patterns:
 
-| Role | Description | Sees | Can Do |
-|------|-------------|------|--------|
-| **Admin** | Superuser | Everything | Configure products, SDLC stages, stage assignees, users, periods, reminder rules. Full CRUD on all entities. Enter any lead's form to edit/submit. Revoke lead submissions. Publish & Lock / Reopen periods. |
-| **Head** | Department Director | Dashboard, Weekly Report, Admin Panel (limited) | Review auto-generated report, Publish & Lock, Reopen period, send reminders, export PDF, revoke lead submissions. View all lead forms from Dashboard. |
-| **Lead** | Team Lead | My Report (lead form), History | Fill weekly report for assigned stages only. See only products where they own at least 1 stage. Edit only their own stages and kanban items. Request Reopen on locked forms. |
+| Role      | Description         | Sees                                            | Can Do                                                                                                                                                                                                       |
+| --------- | ------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Admin** | Superuser           | Everything                                      | Configure products, SDLC stages, stage assignees, users, periods, reminder rules. Full CRUD on all entities. Enter any lead's form to edit/submit. Revoke lead submissions. Publish & Lock / Reopen periods. |
+| **Head**  | Department Director | Dashboard, Weekly Report, Admin Panel (limited) | Review auto-generated report, Publish & Lock, Reopen period, send reminders, export PDF, revoke lead submissions. View all lead forms from Dashboard.                                                        |
+| **Lead**  | Team Lead           | My Report (lead form), History                  | Fill weekly report for assigned stages only. See only products where they own at least 1 stage. Edit only their own stages and kanban items. Request Reopen on locked forms.                                 |
 
 Role assignment is managed by Admin in the Admin Panel (Users tab).
 
@@ -35,12 +35,12 @@ A Lead sees a product in their form **if and only if** they are assigned to at l
 
 Within a product the Lead can see, each SDLC stage falls into one of these categories:
 
-| Category | Condition | Visual | Interaction |
-|----------|-----------|--------|-------------|
-| **Your stage (filled)** | Assigned to you, status set this period | Solid border, colored background | Editable — click to change status |
-| **Your stage (empty)** | Assigned to you, no status set yet | Pulsing dashed border | Editable — click to fill |
-| **Locked stage** | Assigned to another person | `opacity: .35`, `grayscale(.5)`, `cursor: not-allowed` | Read-only, no hover effects |
-| **Unassigned stage** | Stage exists but no assignee set | Dashed border, muted colors | Read-only for everyone, tooltip says "Contact admin" |
+| Category                | Condition                               | Visual                                                 | Interaction                                          |
+| ----------------------- | --------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------- |
+| **Your stage (filled)** | Assigned to you, status set this period | Solid border, colored background                       | Editable — click to change status                    |
+| **Your stage (empty)**  | Assigned to you, no status set yet      | Pulsing dashed border                                  | Editable — click to fill                             |
+| **Locked stage**        | Assigned to another person              | `opacity: .35`, `grayscale(.5)`, `cursor: not-allowed` | Read-only, no hover effects                          |
+| **Unassigned stage**    | Stage exists but no assignee set        | Dashed border, muted colors                            | Read-only for everyone, tooltip says "Contact admin" |
 
 Key rule: a Lead can **see** all stages of a product they have access to, but can **edit** only stages assigned to them.
 
@@ -59,6 +59,7 @@ These are the maximum possible stages. Each product can have 1 to 7 stages, conf
 ### Stage Configuration (Admin)
 
 For each product, Admin defines:
+
 - Which stages are active (subset of the 7 canonical stages)
 - Who is assigned to each stage (one person per stage, or unassigned)
 
@@ -66,13 +67,13 @@ For each product, Admin defines:
 
 Each stage in a product has a status for the current reporting period:
 
-| State | Icon | Background | Meaning |
-|-------|------|------------|---------|
-| **On Track** | `✓` | Green (`#d4e9e2`) | Proceeding normally |
-| **At Risk** | `!` | Yellow (`#fef3c7`) | Potential problems, may need attention |
-| **Blocked** | `✕` | Red (`#fee2e2`) | Cannot proceed, needs escalation |
-| **Empty** | `○` | Neutral (`#f9f9f9`) | Not yet filled for this period |
-| **Unassigned** | `○` | Neutral, dashed | No assignee — cannot be filled by anyone |
+| State          | Icon | Background          | Meaning                                  |
+| -------------- | ---- | ------------------- | ---------------------------------------- |
+| **On Track**   | `✓`  | Green (`#d4e9e2`)   | Proceeding normally                      |
+| **At Risk**    | `!`  | Yellow (`#fef3c7`)  | Potential problems, may need attention   |
+| **Blocked**    | `✕`  | Red (`#fee2e2`)     | Cannot proceed, needs escalation         |
+| **Empty**      | `○`  | Neutral (`#f9f9f9`) | Not yet filled for this period           |
+| **Unassigned** | `○`  | Neutral, dashed     | No assignee — cannot be filled by anyone |
 
 Stage status is set by the assigned Lead when filling their weekly report. The status resets to Empty each new reporting period.
 
@@ -84,11 +85,11 @@ Stage status is set by the assigned Lead when filling their weekly report. The s
 
 Three lead-level states:
 
-| State | Meaning | Form State |
-|-------|---------|------------|
-| **Pending** | Lead has not started the report | Form empty, not visited |
-| **Draft** | Lead has started filling, autosave active | Form editable, badge "Autosaved" |
-| **Submitted** | Lead clicked "Submit Report" | Form locked, read-only, badge "Submitted" |
+| State         | Meaning                                   | Form State                                |
+| ------------- | ----------------------------------------- | ----------------------------------------- |
+| **Pending**   | Lead has not started the report           | Form empty, not visited                   |
+| **Draft**     | Lead has started filling, autosave active | Form editable, badge "Autosaved"          |
+| **Submitted** | Lead clicked "Submit Report"              | Form locked, read-only, badge "Submitted" |
 
 After submission, the Lead's form is locked for the current period. The submit action is confirmed via a modal showing item/risk/decision counts.
 
@@ -96,11 +97,11 @@ After submission, the Lead's form is locked for the current period. The submit a
 
 Three period-level states:
 
-| State | Meaning | Lead Form | Weekly Report |
-|-------|---------|-----------|---------------|
-| **Open** | Accepting lead submissions | Editable (until lead submits) | Auto-generated, badge "Live · 4/6 Submitted" |
-| **Published (Locked)** | Head clicked "Publish & Lock" | Read-only for all leads | Frozen, badge "Published · Week 16" |
-| **Reopened** | Head/Admin clicked "Reopen" | Editable again (lead can resume) | Returns to "Live" state |
+| State                  | Meaning                       | Lead Form                        | Weekly Report                                |
+| ---------------------- | ----------------------------- | -------------------------------- | -------------------------------------------- |
+| **Open**               | Accepting lead submissions    | Editable (until lead submits)    | Auto-generated, badge "Live · 4/6 Submitted" |
+| **Published (Locked)** | Head clicked "Publish & Lock" | Read-only for all leads          | Frozen, badge "Published · Week 16"          |
+| **Reopened**           | Head/Admin clicked "Reopen"   | Editable again (lead can resume) | Returns to "Live" state                      |
 
 The Weekly Report is **auto-generated** from submitted lead data — there is no manual "create report" step. The report compiles automatically as leads submit their forms. The only Head actions on the report are: **Export PDF** and **Publish & Lock**.
 
@@ -128,13 +129,13 @@ Admin or Head can revoke a specific lead's submission from the Dashboard:
 
 The Lead Form is period-aware — a Lead can navigate between periods:
 
-| Period State | Lead Form Behavior |
-|-------------|-------------------|
-| **Open (current)** | Editable — Lead fills and submits |
-| **Open (not yet started)** | Admin created the period but deadline hasn't passed — Lead can fill |
-| **Published** | Read-only — banner "Report published by [Head] on [Date]" with "Request Reopen" |
-| **Past (not created by admin)** | No form available — period doesn't exist in the system |
-| **Past (submitted)** | Read-only — banner "Viewing past period · Week 15" with submission timestamp |
+| Period State                    | Lead Form Behavior                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------- |
+| **Open (current)**              | Editable — Lead fills and submits                                               |
+| **Open (not yet started)**      | Admin created the period but deadline hasn't passed — Lead can fill             |
+| **Published**                   | Read-only — banner "Report published by [Head] on [Date]" with "Request Reopen" |
+| **Past (not created by admin)** | No form available — period doesn't exist in the system                          |
+| **Past (submitted)**            | Read-only — banner "Viewing past period · Week 15" with submission timestamp    |
 
 Navigation: Lead Form has a **period navigator** (← combobox →) to switch between periods. Past periods show a "Read-Only" badge. Only the current open period allows editing.
 
@@ -164,16 +165,19 @@ Each Lead Form autosave creates a version snapshot. The Lead can navigate and ro
 **UI:** Version navigator (← v3 →) in the period line of the Lead Form header, next to "Development Department · Platanov A."
 
 **Navigation:**
+
 1. **← / →** arrows step through versions (like an undo/redo stack).
 2. Clicking **"v3"** opens the Version History modal with all snapshots.
 3. Right arrow (→) is disabled on the latest version.
 
 **Version History modal:**
+
 1. Lists all autosave snapshots: version number, timestamp, item/risk/decision counts.
 2. **Diff preview** — clicking a version expands a summary of changes vs the current version: items added/removed/edited, risks added, decisions changed.
 3. **"Restore"** button per version.
 
 **Branching behavior (linear, not tree):**
+
 - If the Lead navigates back to v1 and starts editing, **all newer versions (v2, v3) are discarded**.
 - The next autosave creates v2 (a new timeline).
 - This is linear history (like `git reset`), not branching.
@@ -198,20 +202,21 @@ For initial development, the Login page bypasses SSO and shows role selection bu
 
 All application state is derived from the URL, not client-side state. This is NOT a SPA — it uses Next.js App Router file-based routing:
 
-| URL Pattern | Page | Role |
-|-------------|------|------|
-| `/login` | Login (role selector in dev, SSO in prod) | Public |
-| `/report` | Lead Form (My Report) — current period | Lead |
-| `/report?period=2026-W15` | Lead Form — specific period (read-only if past) | Lead |
-| `/history` | Lead History | Lead |
-| `/dashboard` | Dashboard (central hub) | Head, Admin |
-| `/report/weekly` | Weekly Report — current period | Head, Admin |
-| `/report/weekly?period=2026-W15` | Weekly Report — specific past period | Head, Admin |
-| `/admin` | Admin Panel | Admin |
-| `/admin?tab=products` | Admin Panel — specific tab | Admin |
-| `/report/lead/:userId` | View/edit specific lead's form (Admin only) | Admin |
+| URL Pattern                      | Page                                            | Role        |
+| -------------------------------- | ----------------------------------------------- | ----------- |
+| `/login`                         | Login (role selector in dev, SSO in prod)       | Public      |
+| `/report`                        | Lead Form (My Report) — current period          | Lead        |
+| `/report?period=2026-W15`        | Lead Form — specific period (read-only if past) | Lead        |
+| `/history`                       | Lead History                                    | Lead        |
+| `/dashboard`                     | Dashboard (central hub)                         | Head, Admin |
+| `/report/weekly`                 | Weekly Report — current period                  | Head, Admin |
+| `/report/weekly?period=2026-W15` | Weekly Report — specific past period            | Head, Admin |
+| `/admin`                         | Admin Panel                                     | Admin       |
+| `/admin?tab=products`            | Admin Panel — specific tab                      | Admin       |
+| `/report/lead/:userId`           | View/edit specific lead's form (Admin only)     | Admin       |
 
 **Principles:**
+
 - Every page is bookmarkable and shareable via URL.
 - Browser back/forward works naturally (no client-side history manipulation).
 - Period selection updates `?period=` query param, not React state.
@@ -254,12 +259,12 @@ Items (Current Week / Next Week) are scoped to a specific **product + stage**:
 
 ### Item Workflow Statuses
 
-| Status | Used In | Visual |
-|--------|---------|--------|
-| **Completed** | Current Week | Green badge "Completed" |
-| **In Progress** | Current Week | Teal badge "In Progress" |
-| **Blocked** | Current Week | Red badge "Blocked", red card background |
-| **Planned** | Next Week | Gray badge "Planned", dashed card border |
+| Status          | Used In      | Visual                                   |
+| --------------- | ------------ | ---------------------------------------- |
+| **Completed**   | Current Week | Green badge "Completed"                  |
+| **In Progress** | Current Week | Teal badge "In Progress"                 |
+| **Blocked**     | Current Week | Red badge "Blocked", red card background |
+| **Planned**     | Next Week    | Gray badge "Planned", dashed card border |
 
 ### Access Rules
 
@@ -314,6 +319,7 @@ A single consolidated section at the bottom of the Assembled/Published Report th
 - All risk entries from all leads
 
 This is NOT duplicated per-lead. Each escalation entry shows:
+
 - Severity badge (Blocked / At Risk)
 - Product + Stage tag
 - Risk description text
@@ -322,12 +328,12 @@ This is NOT duplicated per-lead. Each escalation entry shows:
 
 Summary KPIs displayed on the Dashboard:
 
-| Metric | Computation |
-|--------|-------------|
-| **Submissions** | Count of leads with status "Submitted" out of total leads |
-| **Deadline** | Countdown to period deadline (e.g., "2d 5h") |
+| Metric               | Computation                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| **Submissions**      | Count of leads with status "Submitted" out of total leads                                       |
+| **Deadline**         | Countdown to period deadline (e.g., "2d 5h")                                                    |
 | **Portfolio Health** | Count of On Track / At Risk / Blocked stages across all products, with delta from previous week |
-| **Escalations** | Count of risks + count of decisions requiring action |
+| **Escalations**      | Count of risks + count of decisions requiring action                                            |
 
 ---
 
@@ -337,18 +343,20 @@ Summary KPIs displayed on the Dashboard:
 
 For **editable stages** (your stage, filled):
 
-| Current Status | Hover Behavior | Rationale |
-|----------------|---------------|-----------|
+| Current Status       | Hover Behavior                                                 | Rationale                                        |
+| -------------------- | -------------------------------------------------------------- | ------------------------------------------------ |
 | **On Track (green)** | Desaturate + dim (`opacity: .8`, `saturate(.5)`) + subtle ring | Hint: "this is OK, click to change away from OK" |
-| **At Risk (yellow)** | Ring only (`box-shadow`), no desaturation | Already flagged — hover means "click to update" |
-| **Blocked (red)** | Ring only (`box-shadow`), no desaturation | Already flagged — hover means "click to update" |
+| **At Risk (yellow)** | Ring only (`box-shadow`), no desaturation                      | Already flagged — hover means "click to update"  |
+| **Blocked (red)**    | Ring only (`box-shadow`), no desaturation                      | Already flagged — hover means "click to update"  |
 
 For **empty stages** (your stage, unfilled):
+
 - Pulsing dashed border animation (3s infinite cycle)
 - On hover: animation stops, solid ring appears
 - Click opens the stage status popover
 
 For **locked stages** (other person's stage):
+
 - `opacity: .35`
 - `filter: grayscale(.5)`
 - `cursor: not-allowed`
@@ -356,38 +364,39 @@ For **locked stages** (other person's stage):
 - Tooltip shows assignee name + "No edit permissions"
 
 For **unassigned stages**:
+
 - Dashed border, muted colors
 - `cursor: not-allowed`
 - Tooltip: "Unassigned -- Contact admin"
 
 ### Other UI States
 
-| State | Trigger | Visual |
-|-------|---------|--------|
-| **Skeleton loading** | Data fetching | Pulsing gray rectangles |
-| **Error + Retry** | API failure | Red warning icon, "Retry" button |
-| **Empty state** | No submissions yet | Dashed border card, explanatory text |
-| **Locked form** | After submission | Green info card with lock icon, submission timestamp |
-| **Validation error** | Required field empty | Red border on input, error message below |
-| **Delete confirmation** | Delete action | Modal with item preview, Cancel / Delete buttons |
-| **Toast: success** | Submit/save success | Left green border card, auto-dismiss |
-| **Toast: error** | Save failure | Left red border card, retry prompt |
-| **Toast: warning** | Approaching deadline | Left yellow border card |
+| State                   | Trigger              | Visual                                               |
+| ----------------------- | -------------------- | ---------------------------------------------------- |
+| **Skeleton loading**    | Data fetching        | Pulsing gray rectangles                              |
+| **Error + Retry**       | API failure          | Red warning icon, "Retry" button                     |
+| **Empty state**         | No submissions yet   | Dashed border card, explanatory text                 |
+| **Locked form**         | After submission     | Green info card with lock icon, submission timestamp |
+| **Validation error**    | Required field empty | Red border on input, error message below             |
+| **Delete confirmation** | Delete action        | Modal with item preview, Cancel / Delete buttons     |
+| **Toast: success**      | Submit/save success  | Left green border card, auto-dismiss                 |
+| **Toast: error**        | Save failure         | Left red border card, retry prompt                   |
+| **Toast: warning**      | Approaching deadline | Left yellow border card                              |
 
 ---
 
 ## 8. Language Policy
 
-| Content Type | Language | Examples |
-|-------------|----------|----------|
-| **UI labels, nav, headings, buttons** | English | "Submit Report", "Current Week", "Risks & Blockers", "Dashboard" |
-| **Status values and badges** | English | "On Track", "At Risk", "Blocked", "In Progress", "Completed", "Planned", "Draft", "Submitted", "Published" |
-| **SDLC stage names** | English | "Planning", "Analysis", "Design", "Dev", "Testing", "DevOps", "Support" |
-| **Product names** | English | "CRM Platform", "Data Analytics Suite", "Integration Gateway" |
-| **Person names** | English (transliterated) | "Platanov A.", "Ivanov A.", "Petrova M." |
-| **Content text (user-entered)** | Russian | Task descriptions, risk descriptions, priority text, decision text |
-| **System messages / notifications** | Russian | Confirmation dialogs, validation errors, empty states |
-| **Login page** | English | "Example Software Department", "CustomReport", "Sign in with SSO", "Keycloak -- SAML 2.0 -- Corporate SSO" |
+| Content Type                          | Language                 | Examples                                                                                                        |
+| ------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **UI labels, nav, headings, buttons** | English                  | "Submit Report", "Current Week", "Risks & Blockers", "Dashboard"                                                |
+| **Status values and badges**          | English                  | "On Track", "At Risk", "Blocked", "In Progress", "Completed", "Planned", "Draft", "Submitted", "Published"      |
+| **SDLC stage names**                  | English                  | "Planning", "Analysis", "Design", "Dev", "Testing", "DevOps", "Support"                                         |
+| **Product names**                     | English                  | "CRM Platform", "Data Analytics Suite", "Integration Gateway"                                                   |
+| **Person names**                      | English (transliterated) | "Platanov A.", "Ivanov A.", "Petrova M."                                                                        |
+| **Content text (user-entered)**       | Russian                  | Task descriptions, risk descriptions, priority text, decision text                                              |
+| **System messages / notifications**   | Russian                  | Confirmation dialogs, validation errors, empty states                                                           |
+| **Login page**                        | English                  | "Example Software Department", "CustomReport", "Sign in with SSO", "Keycloak -- SAML 2.0 -- Corporate SSO" |
 
 ---
 
@@ -396,11 +405,13 @@ For **unassigned stages**:
 Four tabs managed by Admin/Head:
 
 ### Users Tab
+
 - CRUD for users (name, email, role, department)
 - Role picker: Lead / Head / Admin
 - Assigned products list (tags with remove)
 
 ### Products Tab
+
 - CRUD for products (name, status: Active/Archived)
 - Per product: list of active SDLC stages with assignee dropdowns
 - Add/remove stages from the canonical 7
@@ -408,10 +419,12 @@ Four tabs managed by Admin/Head:
 - **Stage Assignment Validation (D-63):** System must prevent assigning the same user to the same stage on the same product twice. When editing stage assignments, validate no two identical user+stage+product combinations exist. This prevents race conditions and priority conflicts.
 
 ### Periods Tab
+
 - Create reporting periods with start date, end date, deadline, week label
 - Week label auto-generated (e.g., "Week 17") but overridable
 
 ### Reminders Tab
+
 - Toggle-based reminder rules:
   - Auto-reminder on deadline day (10:00, to non-submitted leads)
   - Remind 24h before deadline (to leads who haven't started)
@@ -437,20 +450,21 @@ This schema migration is a separate engineering task that should reference this 
 
 ## 11. Page Map (D-59, D-60)
 
-| Page | URL Pattern | Role Access | Purpose |
-|------|-------------|-------------|---------|
-| **Login** | `/login` | All (unauthenticated) | Split-screen SSO entry: Demo brand left, SSO form right (D-61) |
-| **Lead Form** (My Report) | `/report` | Lead | Fill weekly report for assigned stages |
-| **Lead History** | `/history` | Lead | View own past submissions |
-| **Dashboard** | `/dashboard` | Head, Admin | Central hub: KPIs, Lead Reports, Blocked & At Risk, Report Archive |
-| **Weekly Report** | `/report/weekly` | Head, Admin | Auto-compiled report from all leads, Export PDF, Publish & Lock |
-| **Admin Panel** | `/admin` | Admin (Head: read-only subset) | Users, Products, Periods, Reminders, General Settings |
+| Page                      | URL Pattern      | Role Access                    | Purpose                                                            |
+| ------------------------- | ---------------- | ------------------------------ | ------------------------------------------------------------------ |
+| **Login**                 | `/login`         | All (unauthenticated)          | Split-screen SSO entry: Demo brand left, SSO form right (D-61)      |
+| **Lead Form** (My Report) | `/report`        | Lead                           | Fill weekly report for assigned stages                             |
+| **Lead History**          | `/history`       | Lead                           | View own past submissions                                          |
+| **Dashboard**             | `/dashboard`     | Head, Admin                    | Central hub: KPIs, Lead Reports, Blocked & At Risk, Report Archive |
+| **Weekly Report**         | `/report/weekly` | Head, Admin                    | Auto-compiled report from all leads, Export PDF, Publish & Lock    |
+| **Admin Panel**           | `/admin`         | Admin (Head: read-only subset) | Users, Products, Periods, Reminders, General Settings              |
 
 ### 11.1. Dashboard as Central Hub (D-59)
 
 Login → Dashboard is the **first page** after SSO for Head and Admin roles (Lead goes to My Report).
 
 Dashboard sections:
+
 1. **KPI Cards** (3): Submissions (4/6 + progress bar), Deadline (countdown), Escalations (count)
 2. **Alert Bar**: Yellow banner listing pending leads with "Send Reminder" button
 3. **My Report Hero Card**: Quick link to current period's Weekly Report

@@ -11,11 +11,11 @@ This guide covers workflows for each role: **Lead**, **Head**, and **Admin**.
 
 ## Roles Overview
 
-| Role | Primary Action | Entry Point |
-|------|---------------|-------------|
-| **Lead** | Fill and submit weekly report | `/report` (My Report) |
-| **Head** | Review submissions, publish report | `/dashboard` |
-| **Admin** | Manage users, products, periods | `/dashboard` then `/admin` |
+| Role      | Primary Action                     | Entry Point                |
+| --------- | ---------------------------------- | -------------------------- |
+| **Lead**  | Fill and submit weekly report      | `/report` (My Report)      |
+| **Head**  | Review submissions, publish report | `/dashboard`               |
+| **Admin** | Manage users, products, periods    | `/dashboard` then `/admin` |
 
 ---
 
@@ -315,31 +315,31 @@ In the **Settings** tab:
 
 ![UI states](../mockups/screenshots/s7-ui-states.png)
 
-| State | Visual | Meaning |
-|-------|--------|---------|
-| Skeleton loading | Pulsing gray rectangles | Data is being fetched |
-| Empty state | Dashed border card | No submissions yet |
-| Locked form | Green info card with lock icon | Form submitted, read-only |
-| Validation error | Red border on input | Required field is empty or invalid |
-| Toast: success | Green left-border card | Action completed |
-| Toast: error | Red left-border card | Action failed, retry available |
-| Toast: warning | Yellow left-border card | Approaching deadline |
+| State            | Visual                         | Meaning                            |
+| ---------------- | ------------------------------ | ---------------------------------- |
+| Skeleton loading | Pulsing gray rectangles        | Data is being fetched              |
+| Empty state      | Dashed border card             | No submissions yet                 |
+| Locked form      | Green info card with lock icon | Form submitted, read-only          |
+| Validation error | Red border on input            | Required field is empty or invalid |
+| Toast: success   | Green left-border card         | Action completed                   |
+| Toast: error     | Red left-border card           | Action failed, retry available     |
+| Toast: warning   | Yellow left-border card        | Approaching deadline               |
 
 ---
 
 ## Page Map
 
-| Page | URL | Who Uses It |
-|------|-----|-------------|
-| Login | `/login` | Everyone (unauthenticated) |
-| My Report (Lead Form) | `/report` | Lead |
-| My Report (specific period) | `/report?period=2026-W15` | Lead |
-| Lead History | `/history` | Lead |
-| Dashboard | `/dashboard` | Head, Admin |
-| Weekly Report | `/report/weekly` | Head, Admin |
-| Weekly Report (past) | `/report/weekly?period=2026-W15` | Head, Admin |
-| Admin Panel | `/admin` | Admin |
-| Admin Panel (specific tab) | `/admin?tab=products` | Admin |
+| Page                        | URL                              | Who Uses It                |
+| --------------------------- | -------------------------------- | -------------------------- |
+| Login                       | `/login`                         | Everyone (unauthenticated) |
+| My Report (Lead Form)       | `/report`                        | Lead                       |
+| My Report (specific period) | `/report?period=2026-W15`        | Lead                       |
+| Lead History                | `/history`                       | Lead                       |
+| Dashboard                   | `/dashboard`                     | Head, Admin                |
+| Weekly Report               | `/report/weekly`                 | Head, Admin                |
+| Weekly Report (past)        | `/report/weekly?period=2026-W15` | Head, Admin                |
+| Admin Panel                 | `/admin`                         | Admin                      |
+| Admin Panel (specific tab)  | `/admin?tab=products`            | Admin                      |
 
 All pages are bookmarkable — period selection and tab state are stored in URL
 query parameters, not client-side state.

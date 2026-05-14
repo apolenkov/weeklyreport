@@ -1,14 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { HealthCheckError, HealthIndicator } from '@nestjs/terminus';
-import type { HealthIndicatorResult } from '@nestjs/terminus';
-import type { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
+import { Injectable } from "@nestjs/common";
+import { HealthCheckError, HealthIndicator } from "@nestjs/terminus";
+import type { HealthIndicatorResult } from "@nestjs/terminus";
+import type { Queue } from "bullmq";
+import { InjectQueue } from "@nestjs/bullmq";
 
 @Injectable()
 export class BullMQHealthIndicator extends HealthIndicator {
   constructor(
-    @InjectQueue('pdf-export') private readonly pdfQueue: Queue,
-    @InjectQueue('email-reminder') private readonly emailQueue: Queue,
+    @InjectQueue("pdf-export") private readonly pdfQueue: Queue,
+    @InjectQueue("email-reminder") private readonly emailQueue: Queue,
   ) {
     super();
   }
@@ -22,7 +22,10 @@ export class BullMQHealthIndicator extends HealthIndicator {
 
       return this.getStatus(key, true, {
         pdf_export: { waiting: pdfCounts.waiting, active: pdfCounts.active },
-        email_reminder: { waiting: emailCounts.waiting, active: emailCounts.active },
+        email_reminder: {
+          waiting: emailCounts.waiting,
+          active: emailCounts.active,
+        },
       });
     } catch (error) {
       throw new HealthCheckError(

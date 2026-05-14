@@ -5,21 +5,20 @@
 // having it on the read shape keeps the cutover to a real provider a
 // pure adapter swap.
 
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { AiSummaryRepository } from './ai-summary.service.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { AiSummaryRepository } from "./ai-summary.service.js";
 
 @Injectable()
 export class AiSummaryPrismaRepository implements AiSummaryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getSectionsForPeriod(
-    periodId: string,
-  ): Promise<
-    | null
-    | Array<{ sectionId: string; authorName: string; text: string }>
-  > {
+  async getSectionsForPeriod(periodId: string): Promise<null | Array<{
+    sectionId: string;
+    authorName: string;
+    text: string;
+  }>> {
     const report = await this.prisma.report.findUnique({
       where: { id: periodId },
       select: {
@@ -36,7 +35,7 @@ export class AiSummaryPrismaRepository implements AiSummaryRepository {
             risks: { select: { risk: true } },
             decisions: { select: { text: true } },
           },
-          orderBy: { author: { name: 'asc' } },
+          orderBy: { author: { name: "asc" } },
         },
       },
     });
@@ -44,14 +43,14 @@ export class AiSummaryPrismaRepository implements AiSummaryRepository {
     if (!report) return null;
     return report.sections.map((s) => ({
       sectionId: s.id,
-      authorName: s.author?.name ?? 'Unknown',
+      authorName: s.author?.name ?? "Unknown",
       text: [
         ...s.items.map((i) => i.text),
         ...s.risks.map((r) => r.risk),
         ...s.decisions.map((d) => d.text),
       ]
         .filter((line) => line && line.trim().length > 0)
-        .join('\n'),
+        .join("\n"),
     }));
   }
 }

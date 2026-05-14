@@ -27,14 +27,12 @@ import {
 import {
   ReminderAudience as PrismaReminderAudience,
   WorkingDays as PrismaWorkingDays,
+  ReportStatus,
 } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
-import type {
-  AdminRepository,
-  PeriodRowFromRepo,
-} from "./admin.service";
+import type { AdminRepository, PeriodRowFromRepo } from "./admin.service";
 
 /**
  * UFB-036 (Phase 44-02): wire format ↔ Prisma enum mappers for
@@ -439,8 +437,10 @@ export class AdminPrismaRepository implements AdminRepository {
           email: u.email,
           name: u.name,
           role: u.role,
-          reportingGroupId: u.reportingGroupId,
-          reportingGroupName: u.reportingGroup.name,
+          reportingGroupId: u.reportingGroupId ?? null,
+          reportingGroupName: u.reportingGroup?.name ?? null,
+          // A2 (UAT-v7 2026-05-12): surface the soft-deactivation flag.
+          isActive: u.isActive,
         }),
       ),
       projects: projects.map((p) =>
@@ -546,6 +546,10 @@ export class AdminPrismaRepository implements AdminRepository {
     const snapshotUserIds = new Set(snapshot.users.map((u) => u.id));
 
     for (const user of snapshot.users) {
+      const reportingGroupId =
+        user.role === "viewer"
+          ? null
+          : (user.reportingGroupId ?? fallbackReportingGroupId);
       if (currentUserIds.has(user.id)) {
         await this.prisma.user.update({
           where: { id: user.id },
@@ -553,7 +557,7 @@ export class AdminPrismaRepository implements AdminRepository {
             email: user.email,
             name: user.name,
             role: user.role,
-            reportingGroupId: user.reportingGroupId ?? fallbackReportingGroupId,
+            reportingGroupId,
           },
         });
       } else {
@@ -564,7 +568,7 @@ export class AdminPrismaRepository implements AdminRepository {
             name: user.name,
             role: user.role,
             samlId: user.email,
-            reportingGroupId: user.reportingGroupId ?? fallbackReportingGroupId,
+            reportingGroupId,
           },
         });
       }
@@ -751,6 +755,7 @@ export class AdminPrismaRepository implements AdminRepository {
         archived: true,
         autoPublished: true,
         autoArchived: true,
+        weekLabel: true,
       },
     });
 
@@ -797,6 +802,7 @@ export class AdminPrismaRepository implements AdminRepository {
       autoArchived: r.autoArchived,
       submittedCount: submittedById.get(r.id) ?? 0,
       totalCount: totalsById.get(r.id) ?? 0,
+      weekLabel: r.weekLabel,
     }));
   }
 
@@ -1020,32 +1026,62 @@ export class AdminPrismaRepository implements AdminRepository {
     return { nextPeriodState, nextPeriodStatus };
   }
 
+  /**
+   * A27: read a Report's status fields for delete-guard checks.
+   * Returns null if not found.
+   */
+  async readReportForDelete(
+    reportId: string,
+  ): Promise<{ status: ReportStatus; periodStatus: PeriodStatus } | null> {
+    const row = await this.prisma.report.findUnique({
+      where: { id: reportId },
+      select: { status: true, periodStatus: true },
+    });
+    if (!row) return null;
+    return {
+      status: row.status,
+      periodStatus: row.periodStatus as PeriodStatus,
+    };
+  }
+
+  /**
+   * A27: delete a Report and cascade-delete all child rows via Prisma relations
+   * (onDelete: Cascade on ReportSection, Item, Risk, Decision, Priority, etc.).
+   */
+  async deleteReport(reportId: string): Promise<void> {
+    await this.prisma.report.delete({ where: { id: reportId } });
+  }
+
   // -----------------------------------------------------------------
   // UFB-054 (Phase 56-B): Group ↔ Product M:M edge mutations + reads
   // -----------------------------------------------------------------
 
   /**
-   * Idempotent attach via Prisma upsert on the (groupId, productId)
-   * unique tuple. The `update: {}` branch is a no-op write so re-calls
-   * return the existing row instead of throwing P2002. Returns the
-   * canonical row (with server-assigned id + createdAt) so the service
-   * can echo the createdAt into the audit envelope.
+   * Strict one-group-per-product attach. If the product already belongs
+   * to the target group the call is idempotent. If it belongs to a
+   * different group we reject instead of silently moving ownership; the
+   * admin UI must detach from the current group first.
    */
   async attachProductToGroup(
     input: GroupProductEdgeInput,
   ): Promise<GroupProduct> {
-    const row = await this.prisma.groupProduct.upsert({
-      where: {
-        groupId_productId: {
-          groupId: input.groupId,
-          productId: input.productId,
-        },
-      },
-      create: {
-        groupId: input.groupId,
-        productId: input.productId,
-      },
-      update: {},
+    const row = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.groupProduct.findUnique({
+        where: { productId: input.productId },
+      });
+      if (existing && existing.groupId === input.groupId) return existing;
+      if (existing) {
+        const currentGroup = await tx.reportingGroup.findUnique({
+          where: { id: existing.groupId },
+          select: { name: true },
+        });
+        throw new Error(
+          `Product is already attached to ${currentGroup?.name ?? "another group"}. Detach it there before attaching it to another group.`,
+        );
+      }
+      return tx.groupProduct.create({
+        data: { groupId: input.groupId, productId: input.productId },
+      });
     });
     return groupProductSchema.parse(row);
   }

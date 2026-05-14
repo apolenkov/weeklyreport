@@ -50,6 +50,7 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
+import { SessionContext, type SessionUser } from "../../lib/session-provider";
 import { WeeklyReportPage } from "./weekly-report-page";
 import { expectDefined } from "../../test/expect-defined.js";
 
@@ -226,6 +227,17 @@ function makeMockTRPC(
     },
     archive: {
       list: { pathFilter: () => ({ queryKey: ["archive", "list"] }) },
+      archiveReport: {
+        mutationOptions: (
+          opts:
+            | { onSuccess?: () => void; onError?: (err: Error) => void }
+            | undefined,
+        ) => ({
+          mutationFn: vi.fn(),
+          onSuccess: opts?.onSuccess,
+          onError: opts?.onError,
+        }),
+      },
     },
     reports: {
       myHistory: { pathFilter: () => ({ queryKey: ["reports", "myHistory"] }) },
@@ -282,6 +294,7 @@ function renderPage(
   data: ReturnType<typeof makeWeeklyReportData>,
   captured: Captured,
   authorId?: string,
+  role: SessionUser["role"] = "head",
 ) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -290,9 +303,23 @@ function renderPage(
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>
-          {children}
-        </TRPCProxyContext.Provider>
+        <SessionContext.Provider
+          value={{
+            user: {
+              id: "head-user-id",
+              name: "Test User",
+              email: "test.user@example.com",
+              role,
+            },
+            organization: null,
+            isLoading: false,
+            isAuthenticated: true,
+          }}
+        >
+          <TRPCProxyContext.Provider value={trpc}>
+            {children}
+          </TRPCProxyContext.Provider>
+        </SessionContext.Provider>
       </QueryClientProvider>
     );
   }
@@ -365,6 +392,85 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
       screen.queryByRole("dialog", { name: /confirm publish/i }),
     ).not.toBeInTheDocument();
     expect(captured.publishMutationFn).not.toHaveBeenCalled();
+  });
+
+  it("A32: shows empty-state with archive link when submissionCount === 0 and period is open", async () => {
+    const captured: Captured = {
+      publishMutationFn: vi.fn().mockResolvedValue(undefined),
+      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
+      pdfExportRequestMutationFn: vi.fn(),
+    };
+    const emptyData = {
+      ...makeWeeklyReportData("open", {
+        portfolioOverview: [],
+        leadSections: [],
+      }),
+      submissionCount: 0,
+    };
+
+    renderPage(emptyData, captured);
+
+    // Empty-state card must be present.
+    const emptyState = await screen.findByTestId("empty-submissions-state");
+    expect(emptyState).toBeInTheDocument();
+
+    // Message must mention the period week label.
+    expect(emptyState).toHaveTextContent(/no submissions yet for week 16/i);
+
+    // Archive link must point to the published tab.
+    const archiveLink = screen.getByRole("link", {
+      name: /view last published report in archive/i,
+    });
+    expect(archiveLink).toHaveAttribute("href", "/reports?tab=published");
+
+    // Portfolio table and accordion must NOT be rendered.
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("A32: shows normal report (no empty-state) when submissionCount === 0 but period is published", async () => {
+    const captured: Captured = {
+      publishMutationFn: vi.fn().mockResolvedValue(undefined),
+      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
+      pdfExportRequestMutationFn: vi.fn(),
+    };
+    // published + 0 submissions: edge case (head published empty period).
+    // Empty-state must NOT appear — show the normal layout instead.
+    const publishedEmpty = {
+      ...makeWeeklyReportData("published", {
+        portfolioOverview: [],
+        leadSections: [],
+      }),
+      submissionCount: 0,
+    };
+
+    renderPage(publishedEmpty, captured);
+
+    // Wait for render to settle.
+    await screen.findByRole("button", { name: /reopen period/i });
+
+    expect(
+      screen.queryByTestId("empty-submissions-state"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("viewer can read a published report without period mutation actions", async () => {
+    const captured: Captured = {
+      publishMutationFn: vi.fn(),
+      reopenMutationFn: vi.fn(),
+      pdfExportRequestMutationFn: vi.fn(),
+    };
+    const published = makeWeeklyReportData("published");
+
+    renderPage(published, captured, undefined, "viewer");
+
+    await screen.findByRole("button", { name: /export pdf/i });
+
+    expect(
+      screen.queryByRole("button", { name: /^archive$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /reopen period/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("on publish success: invalidateDashboard + invalidateLeadHistory fire and a success toast appears", async () => {

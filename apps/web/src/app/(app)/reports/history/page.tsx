@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
 
 /**
  * UX-17 (Phase 35-08): the legacy `/reports/history` archive page is now
@@ -6,5 +6,5 @@ import { redirect } from 'next/navigation';
  * 307-redirects to it.
  */
 export default function ReportsHistoryRedirect() {
-  redirect('/reports?tab=published');
+  redirect("/reports?tab=published");
 }

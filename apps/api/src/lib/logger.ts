@@ -1,12 +1,12 @@
-import { existsSync, mkdirSync } from 'node:fs';
-import { promises as fs, createReadStream, createWriteStream } from 'node:fs';
-import { join } from 'node:path';
-import { createGzip } from 'node:zlib';
-import { pipeline } from 'node:stream/promises';
+import { existsSync, mkdirSync } from "node:fs";
+import { promises as fs, createReadStream, createWriteStream } from "node:fs";
+import { join } from "node:path";
+import { createGzip } from "node:zlib";
+import { pipeline } from "node:stream/promises";
 
-import type { ClsService } from 'nestjs-cls';
+import type { ClsService } from "nestjs-cls";
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export interface AppLogger {
   debug(message: string, context?: Record<string, unknown>): void;
@@ -33,9 +33,9 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
 
 const DEFAULT_MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 const DEFAULT_MAX_AGE_DAYS = 30;
-const ACTIVE_LOG_FILENAME = 'app.log';
-const ARCHIVE_PREFIX = 'app.log.';
-const ARCHIVE_SUFFIX = '.gz';
+const ACTIVE_LOG_FILENAME = "app.log";
+const ARCHIVE_PREFIX = "app.log.";
+const ARCHIVE_SUFFIX = ".gz";
 
 export type LoggerOptions = {
   /** Minimum log level to emit. Default: 'info'. */
@@ -75,7 +75,10 @@ type FileSink = {
   queue: Promise<void>;
 };
 
-async function pruneOldArchives(logDir: string, maxAgeDays: number): Promise<void> {
+async function pruneOldArchives(
+  logDir: string,
+  maxAgeDays: number,
+): Promise<void> {
   if (maxAgeDays < 0) return;
   const cutoff = Date.now() - maxAgeDays * 86_400_000;
   const entries = await fs.readdir(logDir).catch(() => [] as string[]);
@@ -107,10 +110,17 @@ async function rotateIfNeeded(
     return;
   }
 
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const archivePath = join(logDir, `${ARCHIVE_PREFIX}${stamp}${ARCHIVE_SUFFIX}`);
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const archivePath = join(
+    logDir,
+    `${ARCHIVE_PREFIX}${stamp}${ARCHIVE_SUFFIX}`,
+  );
 
-  await pipeline(createReadStream(activePath), createGzip(), createWriteStream(archivePath));
+  await pipeline(
+    createReadStream(activePath),
+    createGzip(),
+    createWriteStream(archivePath),
+  );
   // truncate keeps the inode/handle valid for any open writers and is faster
   // than unlink + recreate.
   await fs.truncate(activePath, 0);
@@ -122,7 +132,7 @@ function enqueueWrite(sink: FileSink, entry: LogEntry): void {
   const activePath = join(sink.logDir, ACTIVE_LOG_FILENAME);
   sink.queue = sink.queue
     .then(() => rotateIfNeeded(activePath, sink.logDir, sink.opts))
-    .then(() => fs.appendFile(activePath, JSON.stringify(entry) + '\n'))
+    .then(() => fs.appendFile(activePath, JSON.stringify(entry) + "\n"))
     .catch((err) => {
       process.stderr.write(`[logger] file write failed: ${String(err)}\n`);
     });
@@ -143,7 +153,7 @@ class AppLoggerImpl implements AppLogger {
     baseContext: Record<string, unknown> = {},
     inheritedSink?: FileSink,
   ) {
-    this.minLevel = options.minLevel ?? 'info';
+    this.minLevel = options.minLevel ?? "info";
     this.minPriority = LEVEL_PRIORITY[this.minLevel];
     this.logDir = options.logDir;
     this.clsService = options.clsService;
@@ -171,19 +181,19 @@ class AppLoggerImpl implements AppLogger {
   }
 
   debug(message: string, context?: Record<string, unknown>): void {
-    this.emit('debug', message, context);
+    this.emit("debug", message, context);
   }
 
   info(message: string, context?: Record<string, unknown>): void {
-    this.emit('info', message, context);
+    this.emit("info", message, context);
   }
 
   warn(message: string, context?: Record<string, unknown>): void {
-    this.emit('warn', message, context);
+    this.emit("warn", message, context);
   }
 
   error(message: string, context?: Record<string, unknown>): void {
-    this.emit('error', message, context);
+    this.emit("error", message, context);
   }
 
   child(context: Record<string, unknown>): AppLogger {
@@ -203,12 +213,16 @@ class AppLoggerImpl implements AppLogger {
   private resolveCorrelationId(): string {
     const cls = this.clsService;
     if (cls && cls.isActive()) {
-      return cls.get<string>('correlationId') ?? 'no-context';
+      return cls.get<string>("correlationId") ?? "no-context";
     }
-    return 'no-context';
+    return "no-context";
   }
 
-  private emit(level: LogLevel, message: string, context?: Record<string, unknown>): void {
+  private emit(
+    level: LogLevel,
+    message: string,
+    context?: Record<string, unknown>,
+  ): void {
     if (LEVEL_PRIORITY[level] < this.minPriority) {
       return;
     }
@@ -224,10 +238,10 @@ class AppLoggerImpl implements AppLogger {
 
     const formatted = JSON.stringify(entry);
 
-    if (level === 'error') {
-      process.stderr.write(formatted + '\n');
+    if (level === "error") {
+      process.stderr.write(formatted + "\n");
     } else {
-      process.stdout.write(formatted + '\n');
+      process.stdout.write(formatted + "\n");
     }
 
     if (this.fileSink) {

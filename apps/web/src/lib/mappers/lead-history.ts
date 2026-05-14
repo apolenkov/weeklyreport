@@ -16,7 +16,7 @@
  * follow-up plan (out of scope for the smallest-container proof-of-life).
  */
 
-import type { MyHistoryEntry } from '@customreport/shared';
+import type { MyHistoryEntry } from "@customreport/shared";
 
 // ---------------------------------------------------------------------------
 // Self-contained presentation type (mirrors the mock's `HistoryEntry` shape).
@@ -29,7 +29,7 @@ export type HistoryEntry = {
   periodId: string;
   weekLabel: string;
   dateRange: string;
-  status: 'submitted' | 'draft';
+  status: "submitted" | "draft";
   submittedAt: string | null;
   trafficLights: { green: number; yellow: number; red: number };
   itemCount: number;
@@ -46,18 +46,18 @@ export type HistoryEntry = {
 // ---------------------------------------------------------------------------
 
 const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ] as const;
 
 /**
@@ -94,13 +94,14 @@ export function formatSubmittedAt(
   const diffMs = now.getTime() - submittedAt.getTime();
   const diffSec = Math.floor(diffMs / 1000);
 
-  if (diffSec < 60) return 'just now';
+  if (diffSec < 60) return "just now";
 
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) return `${diffMin} min ago`;
 
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return diffHour === 1 ? '1 hour ago' : `${diffHour} hours ago`;
+  if (diffHour < 24)
+    return diffHour === 1 ? "1 hour ago" : `${diffHour} hours ago`;
 
   // Older than a day: short month/day in UTC.
   const month = MONTHS[submittedAt.getUTCMonth()];
@@ -121,7 +122,9 @@ export function isoWeekNumber(d: Date): number {
   target.setUTCDate(target.getUTCDate() - dayNum + 3);
   const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
   const firstThursdayDayNum = (firstThursday.getUTCDay() + 6) % 7;
-  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstThursdayDayNum + 3);
+  firstThursday.setUTCDate(
+    firstThursday.getUTCDate() - firstThursdayDayNum + 3,
+  );
   const diffMs = target.getTime() - firstThursday.getTime();
   return 1 + Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
 }

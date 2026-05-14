@@ -14,11 +14,16 @@
 // Retries are configured at job-enqueue time (`attempts: 3`) so the queue
 // itself stays generic.
 
-import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { Worker, type Job } from 'bullmq';
+import {
+  Inject,
+  Injectable,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from "@nestjs/common";
+import { Worker, type Job } from "bullmq";
 
-import { getBullMQOptions } from '../../infrastructure/bullmq/bullmq-options';
-import { TELEGRAM_ADAPTER, type TelegramAdapter } from './telegram.adapter.js';
+import { getBullMQOptions } from "../../infrastructure/bullmq/bullmq-options";
+import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
 
 /**
  * Job-data shape for `telegram-outbound`. Kept intentionally minimal — the
@@ -30,7 +35,7 @@ export type TelegramOutboundJobData = {
   text: string;
 };
 
-export const TELEGRAM_OUTBOUND_QUEUE_NAME = 'telegram-outbound' as const;
+export const TELEGRAM_OUTBOUND_QUEUE_NAME = "telegram-outbound" as const;
 
 /**
  * Default BullMQ job options used by every enqueue path. Centralised here
@@ -40,7 +45,7 @@ export const TELEGRAM_OUTBOUND_QUEUE_NAME = 'telegram-outbound' as const;
  */
 export const TELEGRAM_OUTBOUND_JOB_OPTS = {
   attempts: 3,
-  backoff: { type: 'exponential' as const, delay: 5_000 },
+  backoff: { type: "exponential" as const, delay: 5_000 },
   removeOnComplete: { count: 100 },
   removeOnFail: { count: 500 },
 };
@@ -68,16 +73,16 @@ export class TelegramProcessor implements OnModuleInit, OnModuleDestroy {
       },
     );
 
-    this.worker.on('failed', (job, error) => {
+    this.worker.on("failed", (job, error) => {
       process.stderr.write(
         JSON.stringify({
           timestamp: new Date().toISOString(),
-          level: 'error',
-          message: 'telegram-outbound job failed',
+          level: "error",
+          message: "telegram-outbound job failed",
           chatId: job?.data.chatId,
           attempt: job?.attemptsMade,
           error: error.message,
-        }) + '\n',
+        }) + "\n",
       );
     });
   }

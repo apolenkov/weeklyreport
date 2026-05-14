@@ -52,6 +52,7 @@ const initialSnapshot: AdminSnapshot = {
       role: "head",
       reportingGroupId: GROUP_ID,
       reportingGroupName: defaultGroup.name,
+      isActive: true,
     },
   ],
   groups: [defaultGroup],
@@ -176,6 +177,7 @@ describe("AdminService", () => {
       name: leadSession.name,
       role: "lead",
       reportingGroupId: GROUP_ID,
+      isActive: true,
     });
 
     expect(withLead.users).toHaveLength(2);
@@ -289,6 +291,7 @@ describe("AdminService", () => {
             role: "head",
             reportingGroupId: GROUP_ID,
             reportingGroupName: defaultGroup.name,
+            isActive: true,
           },
         ],
         groups: [defaultGroup],
@@ -367,6 +370,7 @@ describe("AdminService", () => {
         name: "New Lead",
         role: "lead",
         reportingGroupId: GROUP_ID,
+        isActive: true,
       });
 
       expect(result.users).toHaveLength(2);
@@ -385,6 +389,7 @@ describe("AdminService", () => {
         name: "Old Name",
         role: "lead",
         reportingGroupId: GROUP_ID,
+        isActive: true,
       });
 
       // Update the same user by ID
@@ -394,6 +399,7 @@ describe("AdminService", () => {
         name: "Updated Name",
         role: "lead",
         reportingGroupId: GROUP_ID,
+        isActive: true,
       });
 
       expect(result.users).toHaveLength(2); // not 3 — updated, not duplicated
@@ -411,6 +417,7 @@ describe("AdminService", () => {
         name: "Alpha",
         role: "lead",
         reportingGroupId: GROUP_ID,
+        isActive: true,
       });
       const result = await service.upsertUser({
         id: "88888888-8888-4888-8888-888888888888",
@@ -418,6 +425,7 @@ describe("AdminService", () => {
         name: "Zulu",
         role: "lead",
         reportingGroupId: GROUP_ID,
+        isActive: true,
       });
 
       const names = result.users.map((u) => u.name);
@@ -575,6 +583,7 @@ describe("removeUser — DB deletion via repository", () => {
           role: "lead",
           reportingGroupId: GROUP_ID,
           reportingGroupName: defaultGroup.name,
+          isActive: true,
         },
       ],
     };
@@ -600,6 +609,7 @@ describe("removeUser — DB deletion via repository", () => {
           role: "lead",
           reportingGroupId: GROUP_ID,
           reportingGroupName: defaultGroup.name,
+          isActive: true,
         },
         {
           id: "44444444-4444-4444-8444-444444444444",
@@ -608,6 +618,7 @@ describe("removeUser — DB deletion via repository", () => {
           role: "lead",
           reportingGroupId: GROUP_ID,
           reportingGroupName: defaultGroup.name,
+          isActive: true,
         },
       ],
     };
@@ -863,6 +874,7 @@ function periodFixture(
     autoArchived: state === "archived",
     submittedCount: 0,
     totalCount: 6,
+    weekLabel: null,
     ...overrides,
   };
 }
@@ -889,9 +901,7 @@ function makePeriodAwareRepository(
       row.archived = true;
       row.periodState = "archived";
     },
-    async unarchivePeriod(
-      periodId,
-    ): Promise<{
+    async unarchivePeriod(periodId): Promise<{
       nextPeriodState: PeriodState;
       nextPeriodStatus: PeriodStatus;
     }> {
@@ -914,14 +924,10 @@ describe("AdminService — listPeriodsByState (UFB-052)", () => {
   });
 
   it("active bucket fans out to scheduled+open+published", async () => {
-    const fresh = periodFixture(
-      PERIOD_ID_PUBLISHED_FRESH,
-      "published",
-      {
-        publishedAt: new Date(Date.now() - 2 * 3_600_000), // 2h ago
-        periodStart: new Date("2026-05-04T00:00:00Z"),
-      },
-    );
+    const fresh = periodFixture(PERIOD_ID_PUBLISHED_FRESH, "published", {
+      publishedAt: new Date(Date.now() - 2 * 3_600_000), // 2h ago
+      periodStart: new Date("2026-05-04T00:00:00Z"),
+    });
     const open = periodFixture(PERIOD_ID_OPEN, "open", {
       periodStart: new Date("2026-05-11T00:00:00Z"),
     });
@@ -1069,19 +1075,31 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
     snapshot: AdminSnapshot,
   ): AdminRepository {
     const base = createRepository(snapshot);
-    const edges = new Map<string, { id: string; createdAt: Date }>();
-    const key = (gid: string, pid: string) => `${gid}::${pid}`;
+    // B1 invariant: keyed by productId alone — one product, one group.
+    const edges = new Map<
+      string,
+      { id: string; groupId: string; createdAt: Date }
+    >();
     return {
       ...base,
       async attachProductToGroup({ groupId, productId }) {
-        const existing = edges.get(key(groupId, productId));
+        const existing = edges.get(productId);
         if (existing) {
-          return {
-            id: existing.id,
-            groupId,
-            productId,
-            createdAt: existing.createdAt,
-          };
+          if (existing.groupId === groupId) {
+            // Idempotent: same group, return canonical row.
+            return {
+              id: existing.id,
+              groupId,
+              productId,
+              createdAt: existing.createdAt,
+            };
+          }
+          const currentGroup = snapshot.groups.find(
+            (g) => g.id === existing.groupId,
+          );
+          throw new Error(
+            `Product is already attached to ${currentGroup?.name ?? "another group"}. Detach it there before attaching it to another group.`,
+          );
         }
         const row = {
           id: crypto.randomUUID(),
@@ -1089,35 +1107,26 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
           productId,
           createdAt: new Date("2026-05-11T00:00:00.000Z"),
         };
-        edges.set(key(groupId, productId), {
-          id: row.id,
-          createdAt: row.createdAt,
-        });
+        edges.set(productId, { id: row.id, groupId, createdAt: row.createdAt });
         return row;
       },
-      async detachProductFromGroup({ groupId, productId }) {
-        edges.delete(key(groupId, productId));
+      async detachProductFromGroup({ productId }) {
+        edges.delete(productId);
       },
       async listGroupProducts(groupId) {
-        const projectIds = [...edges.entries()]
-          .filter(([k]) => k.startsWith(`${groupId}::`))
-          .map(([, v]) => v.id);
-        // Return any matching projects from the snapshot's projects list.
-        // The in-memory implementation doesn't bother joining by edge id
-        // since the tests inject the snapshot's project rows directly.
-        return projectIds.length > 0
-          ? snapshot.projects.filter((p) =>
-              [...edges.keys()].some((k) => k.endsWith(`::${p.id}`)),
-            )
+        const productIds = [...edges.entries()]
+          .filter(([, v]) => v.groupId === groupId)
+          .map(([pid]) => pid);
+        return productIds.length > 0
+          ? snapshot.projects.filter((p) => productIds.includes(p.id))
           : [];
       },
       async listProductGroups(productId) {
-        return [...edges.keys()]
-          .filter((k) => k.endsWith(`::${productId}`))
-          .map((k) => k.split("::")[0])
-          .map((gid) =>
-            expectDefined(snapshot.groups.find((g) => g.id === gid)),
-          );
+        const entry = edges.get(productId);
+        if (!entry) return [];
+        return [
+          expectDefined(snapshot.groups.find((g) => g.id === entry.groupId)),
+        ];
       },
     };
   }
@@ -1161,7 +1170,7 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
     expect(row.createdAt).toBeInstanceOf(Date);
   });
 
-  it("attachProductToGroup is idempotent on the (groupId, productId) tuple", async () => {
+  it("attachProductToGroup is idempotent when same group is re-attached (B1)", async () => {
     const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
     const first = await service.attachProductToGroup({
       groupId: GROUP_A,
@@ -1172,6 +1181,27 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
       productId: PRODUCT_X,
     });
     expect(second.id).toBe(first.id);
+  });
+
+  it("attachProductToGroup rejects attaching a product owned by another group (B1 invariant)", async () => {
+    const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
+    await service.attachProductToGroup({
+      groupId: GROUP_A,
+      productId: PRODUCT_X,
+    });
+
+    await expect(
+      service.attachProductToGroup({
+        groupId: GROUP_B,
+        productId: PRODUCT_X,
+      }),
+    ).rejects.toThrow(/already attached to Platform/);
+
+    const groups = await service.listProductGroups(PRODUCT_X);
+    expect(groups.map((g) => g.id)).toEqual([GROUP_A]);
+
+    const groupAProducts = await service.listGroupProducts(GROUP_A);
+    expect(groupAProducts.map((p) => p.id)).toContain(PRODUCT_X);
   });
 
   it("detachProductFromGroup returns {success: true} and removes the edge", async () => {
@@ -1199,22 +1229,18 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
     ).resolves.toEqual({ success: true });
   });
 
-  it("listGroupProducts and listProductGroups reflect attached edges", async () => {
+  it("listGroupProducts and listProductGroups reflect attached edge (B1: one group per product)", async () => {
     const service = new AdminService(makeRepoWithGroupProductSurface(snapshot));
     await service.attachProductToGroup({
       groupId: GROUP_A,
       productId: PRODUCT_X,
     });
-    await service.attachProductToGroup({
-      groupId: GROUP_B,
-      productId: PRODUCT_X,
-    });
+
     const groupsForProduct = await service.listProductGroups(PRODUCT_X);
-    expect(groupsForProduct.map((g) => g.id).sort()).toEqual(
-      [GROUP_A, GROUP_B].sort(),
-    );
+    expect(groupsForProduct.map((g) => g.id)).toEqual([GROUP_A]);
+
     const productsForGroupA = await service.listGroupProducts(GROUP_A);
-    expect(productsForGroupA.map((p) => p.id)).toEqual([PRODUCT_X]);
+    expect(productsForGroupA.map((p) => p.id)).toContain(PRODUCT_X);
   });
 
   it("returns empty arrays when repository does not implement the surface", async () => {
@@ -1259,7 +1285,10 @@ function makeCreatePeriodRepository(opts: {
     periodState: string;
   } | null;
 } {
-  const base = createRepository(initialSnapshot, opts.settings ?? defaultSettings);
+  const base = createRepository(
+    initialSnapshot,
+    opts.settings ?? defaultSettings,
+  );
   const seed = [...(opts.seedPeriods ?? [])];
   let lastCreated: ReturnType<
     ReturnType<typeof makeCreatePeriodRepository>["readLastCreated"]
@@ -1443,11 +1472,7 @@ type EditableRow = {
   periodEnd: Date;
   deadline: Date;
   weekLabel: string | null;
-  periodState:
-    | "scheduled"
-    | "open"
-    | "published"
-    | "archived";
+  periodState: "scheduled" | "open" | "published" | "archived";
 };
 
 function makeUpdatePeriodRepository(opts: {
@@ -1465,7 +1490,10 @@ function makeUpdatePeriodRepository(opts: {
     };
   } | null;
 } {
-  const base = createRepository(initialSnapshot, opts.settings ?? defaultSettings);
+  const base = createRepository(
+    initialSnapshot,
+    opts.settings ?? defaultSettings,
+  );
   const rows = new Map<string, EditableRow>(
     opts.seedPeriods.map((row) => [row.id, { ...row }]),
   );
@@ -1477,9 +1505,7 @@ function makeUpdatePeriodRepository(opts: {
     async findOverlappingPeriod(input) {
       // Half-open intersect + optional self-exclusion (UFB-067).
       const hit = [...rows.values()]
-        .filter((row) =>
-          input.excludeId ? row.id !== input.excludeId : true,
-        )
+        .filter((row) => (input.excludeId ? row.id !== input.excludeId : true))
         .filter(
           (row) =>
             row.periodStart.getTime() <= input.periodEnd.getTime() &&
@@ -1565,7 +1591,10 @@ describe("AdminService — updatePeriodManual (UFB-067)", () => {
     // Repository write only carries the changed keys.
     const last = repo.readLastUpdated();
     expect(last?.reportId).toBe(SEED_ROW_ID);
-    expect(Object.keys(last?.data ?? {}).sort()).toEqual(["deadline", "weekLabel"]);
+    expect(Object.keys(last?.data ?? {}).sort()).toEqual([
+      "deadline",
+      "weekLabel",
+    ]);
   });
 
   it("allows clearing weekLabel via explicit null", async () => {

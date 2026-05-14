@@ -6,6 +6,7 @@ These 8 synthetic fixture reports are the input to `pnpm test:ai-eval`,
 the live-API regression harness for AI-01/02/03 (Phase 31).
 
 ## Constraints
+
 - All content is SYNTHETIC. No real client names, no real deal sizes,
   no real financials. Placeholders: Acme, Globex, ProjectAlpha, etc.
 - Each fixture provides:
@@ -16,6 +17,7 @@ the live-API regression harness for AI-01/02/03 (Phase 31).
 - `expected.*` fields define the rubric the eval test scores against.
 
 ## Pass thresholds (loose, will tighten after head review)
+
 - ≥80% sentiment-classification match across all golden risks
 - ≥80% on-track-classification match across all golden cells
 - 0 hallucinated counts (no foreign digit-strings in narrative or rationale)

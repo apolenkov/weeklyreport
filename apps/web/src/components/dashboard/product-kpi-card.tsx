@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { Line, LineChart, ResponsiveContainer, Tooltip, YAxis } from 'recharts';
+import { useQuery } from "@tanstack/react-query";
+import { Line, LineChart, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 
-import { useTRPC } from '../../lib/trpc-context';
+import { useTRPC } from "../../lib/trpc-context";
 
 /**
  * Phase 52 (UFB-054) — in-app KPI card backed by `telemetry.summary`.
@@ -21,7 +21,7 @@ import { useTRPC } from '../../lib/trpc-context';
  * accessibility labelling.
  */
 type ProductKpiCardProps = {
-  readonly role?: 'lead' | 'head' | 'admin' | 'viewer' | 'director' | null;
+  readonly role?: "lead" | "head" | "admin" | "viewer" | null;
 };
 
 export function ProductKpiCard({ role }: ProductKpiCardProps) {
@@ -30,10 +30,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
   // the empty result is meaningless to a lead anyway. `enabled` gates
   // the call cleanly; React Query won't fire the request until the role
   // is in the leadership set.
-  // UFB-057 / Phase 57: director joins the leadership audience that sees
-  // the product-KPI card — matches the leadershipProcedure server gate.
-  const isLeadership =
-    role === 'head' || role === 'admin' || role === 'viewer' || role === 'director';
+  const isLeadership = role === "head" || role === "admin" || role === "viewer";
   const summaryQ = useQuery({
     ...trpc.telemetry.summary.queryOptions(),
     enabled: isLeadership,
@@ -69,7 +66,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
           Product KPIs
         </h2>
         <p className="text-sm text-[var(--color-muted-foreground)]">
-          Не удалось загрузить телеметрию.
+          Failed to load telemetry.
         </p>
       </section>
     );
@@ -77,7 +74,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
 
   const s = summaryQ.data;
   const onTimePct =
-    s.onTimeRatio === null ? '—' : `${Math.round(s.onTimeRatio * 100)}%`;
+    s.onTimeRatio === null ? "—" : `${Math.round(s.onTimeRatio * 100)}%`;
   // Recharts wants `{x,y}` rows; map sparkline → indexed points.
   const sparklineRows = s.sparkline.map((value, idx) => ({
     period: idx + 1,
@@ -106,6 +103,10 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
           className="mt-4 h-16 w-full"
           aria-label="On-time ratio sparkline over the last 4 periods"
         >
+          {/* aria-hidden + tabIndex={-1} suppresses the SVG tabindex=0/focusable="true"
+              that Recharts injects by default — the chart has no interactive value
+              for keyboard users so we remove it from the focus order entirely (D-35). */}
+          <div aria-hidden="true" tabIndex={-1} className="h-full w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={sparklineRows}
@@ -113,7 +114,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
             >
               <YAxis hide domain={[0, 100]} />
               <Tooltip
-                formatter={(value) => [`${value}%`, 'on-time']}
+                formatter={(value) => [`${value}%`, "on-time"]}
                 labelFormatter={(label) => `Period ${String(label)}`}
               />
               <Line
@@ -126,6 +127,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
               />
             </LineChart>
           </ResponsiveContainer>
+          </div>
         </div>
       )}
     </section>

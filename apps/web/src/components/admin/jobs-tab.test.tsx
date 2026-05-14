@@ -6,18 +6,18 @@
  * .mutationOptions`. We don't drive a real network — we drive
  * captured.retryMutationFn directly and assert it received the right input.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 
-import { TRPCProxyContext } from '../../lib/trpc-context';
+import { TRPCProxyContext } from "../../lib/trpc-context";
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
 const toastInfo = vi.fn();
-vi.mock('sonner', () => ({
+vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccess(...args),
     error: (...args: unknown[]) => toastError(...args),
@@ -25,7 +25,7 @@ vi.mock('sonner', () => ({
   },
 }));
 
-import { JobsTab } from './jobs-tab';
+import { JobsTab } from "./jobs-tab";
 
 type FailedJob = {
   id: string;
@@ -51,13 +51,13 @@ function makeMockTRPC(jobs: FailedJob[], captured: Captured) {
       jobs: {
         listFailed: {
           queryOptions: () => ({
-            queryKey: ['admin', 'jobs', 'listFailed'],
+            queryKey: ["admin", "jobs", "listFailed"],
             queryFn: async () => ({ jobs, nextCursor: null }),
           }),
-          queryKey: () => ['admin', 'jobs', 'listFailed'],
+          queryKey: () => ["admin", "jobs", "listFailed"],
         },
         retryFailed: {
-          mutationOptions: (opts: Captured['retryOptions']) => {
+          mutationOptions: (opts: Captured["retryOptions"]) => {
             captured.retryOptions = opts;
             return {
               mutationFn: captured.retryMutationFn,
@@ -68,7 +68,7 @@ function makeMockTRPC(jobs: FailedJob[], captured: Captured) {
         },
       },
       dlqCount: {
-        queryKey: () => ['admin', 'dlqCount'],
+        queryKey: () => ["admin", "dlqCount"],
       },
     },
   } as never;
@@ -77,12 +77,12 @@ function makeMockTRPC(jobs: FailedJob[], captured: Captured) {
 function makeJob(id: string, overrides: Partial<FailedJob> = {}): FailedJob {
   return {
     id,
-    name: 'send-reminder-email',
-    failedReason: 'SMTP timeout connecting to mailhog:1025',
-    stacktrace: ['at smtpClient.send (smtp.ts:42)'],
+    name: "send-reminder-email",
+    failedReason: "SMTP timeout connecting to mailhog:1025",
+    stacktrace: ["at smtpClient.send (smtp.ts:42)"],
     attemptsMade: 3,
     timestamp: Date.UTC(2026, 4, 1, 9, 0, 0),
-    data: { recipient: 'lead@example.com' },
+    data: { recipient: "lead@example.com" },
     ...overrides,
   };
 }
@@ -95,43 +95,49 @@ function renderTab(jobs: FailedJob[], captured: Captured) {
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>{children}</TRPCProxyContext.Provider>
+        <TRPCProxyContext.Provider value={trpc}>
+          {children}
+        </TRPCProxyContext.Provider>
       </QueryClientProvider>
     );
   }
   return render(<JobsTab />, { wrapper: Wrapper });
 }
 
-describe('JobsTab — Phase 35-06 BullMQ DLQ admin UI', () => {
+describe("JobsTab — Phase 35-06 BullMQ DLQ admin UI", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders the empty state when there are no failed jobs', async () => {
+  it("renders the empty state when there are no failed jobs", async () => {
     const captured: Captured = { retryMutationFn: vi.fn() };
     renderTab([], captured);
 
     expect(
-      await screen.findByText(/No failed email reminder jobs\. Queue is clean\./),
+      await screen.findByText(
+        /No failed email reminder jobs\. Queue is clean\./,
+      ),
     ).toBeInTheDocument();
   });
 
-  it('renders 2 mock jobs and clicking Retry on job-1 fires the mutation with that jobId', async () => {
+  it("renders 2 mock jobs and clicking Retry on job-1 fires the mutation with that jobId", async () => {
     const captured: Captured = {
-      retryMutationFn: vi.fn().mockResolvedValue({ retried: true, jobId: 'job-1' }),
+      retryMutationFn: vi
+        .fn()
+        .mockResolvedValue({ retried: true, jobId: "job-1" }),
     };
     const jobs = [
-      makeJob('job-1', { name: 'send-reminder-email', attemptsMade: 3 }),
-      makeJob('job-2', { name: 'send-escalation-email', attemptsMade: 5 }),
+      makeJob("job-1", { name: "send-reminder-email", attemptsMade: 3 }),
+      makeJob("job-2", { name: "send-escalation-email", attemptsMade: 5 }),
     ];
     renderTab(jobs, captured);
 
     // Wait for both rows to render.
-    await screen.findByText('job-1');
-    expect(screen.getByText('job-2')).toBeInTheDocument();
+    await screen.findByText("job-1");
+    expect(screen.getByText("job-2")).toBeInTheDocument();
 
     // Two retry buttons exist; click the one for job-1.
-    const retryJob1 = screen.getByRole('button', { name: /Retry job job-1/i });
+    const retryJob1 = screen.getByRole("button", { name: /Retry job job-1/i });
     await userEvent.click(retryJob1);
 
     await waitFor(() => {
@@ -140,19 +146,23 @@ describe('JobsTab — Phase 35-06 BullMQ DLQ admin UI', () => {
 
     // TanStack Query forwards (variables, context) → assert the first arg.
     expect(captured.retryMutationFn.mock.calls[0]?.[0]).toEqual({
-      queue: 'email-reminder',
-      jobId: 'job-1',
+      queue: "email-reminder",
+      jobId: "job-1",
     });
   });
 
-  it('on retry success: success toast fires when retried=true', async () => {
+  it("on retry success: success toast fires when retried=true", async () => {
     const captured: Captured = {
-      retryMutationFn: vi.fn().mockResolvedValue({ retried: true, jobId: 'job-1' }),
+      retryMutationFn: vi
+        .fn()
+        .mockResolvedValue({ retried: true, jobId: "job-1" }),
     };
-    renderTab([makeJob('job-1')], captured);
+    renderTab([makeJob("job-1")], captured);
 
-    await screen.findByText('job-1');
-    await userEvent.click(screen.getByRole('button', { name: /Retry job job-1/i }));
+    await screen.findByText("job-1");
+    await userEvent.click(
+      screen.getByRole("button", { name: /Retry job job-1/i }),
+    );
 
     await waitFor(() => {
       expect(toastSuccess).toHaveBeenCalled();
@@ -161,25 +171,29 @@ describe('JobsTab — Phase 35-06 BullMQ DLQ admin UI', () => {
     expect(String(message)).toMatch(/job-1/);
   });
 
-  it('on retry result {retried: false}: info toast (job no longer exists)', async () => {
+  it("on retry result {retried: false}: info toast (job no longer exists)", async () => {
     const captured: Captured = {
-      retryMutationFn: vi.fn().mockResolvedValue({ retried: false, jobId: 'job-9' }),
+      retryMutationFn: vi
+        .fn()
+        .mockResolvedValue({ retried: false, jobId: "job-9" }),
     };
-    renderTab([makeJob('job-9')], captured);
+    renderTab([makeJob("job-9")], captured);
 
-    await screen.findByText('job-9');
-    await userEvent.click(screen.getByRole('button', { name: /Retry job job-9/i }));
+    await screen.findByText("job-9");
+    await userEvent.click(
+      screen.getByRole("button", { name: /Retry job job-9/i }),
+    );
 
     await waitFor(() => {
       expect(toastInfo).toHaveBeenCalled();
     });
   });
 
-  it('renders the queue header so the head knows which queue is shown', async () => {
+  it("renders the queue header so the head knows which queue is shown", async () => {
     const captured: Captured = { retryMutationFn: vi.fn() };
     renderTab([], captured);
     expect(
-      await screen.findByRole('heading', { name: /Failed Jobs/i }),
+      await screen.findByRole("heading", { name: /Failed Jobs/i }),
     ).toBeInTheDocument();
   });
 });

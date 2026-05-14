@@ -3,7 +3,8 @@ phase: 28-role-filters-pdf-cookie-seam-deadline-reminders-release-chec
 plan: 02
 type: summary
 status: complete
-requirements: [AUTH-05, "AUTH-01 (PDF-only enable via AUTH_DEV_MODE_ALLOW_TEST)"]
+requirements:
+  [AUTH-05, "AUTH-01 (PDF-only enable via AUTH_DEV_MODE_ALLOW_TEST)"]
 commit: 42672a9c3187a7c8289a4c92d37142db5986f78e
 cc1_coupled: true
 ---
@@ -18,24 +19,24 @@ Single atomic commit ships AUTH-05 + AUTH-01-PDF. `git log -1` includes literal 
 
 ## File-by-file diff
 
-| File | What changed |
-| --- | --- |
-| `apps/api/src/modules/pdf-export/pdf-export.service.ts` | New `signPdfExportToken(reportId)` method using `jsonwebtoken`; `requestPdfExport(reportId, requestedBy?, authToken?)` extended; queue payload now carries `authToken`. Lazy signing — only runs when `pdfQueue` is wired (preserves existing test paths that use no queue). |
-| `apps/api/src/infrastructure/bullmq/pdf-export.processor.ts` | `PdfExportJobData` extended with `authToken: string`. `processJob` now creates a browser context, calls `pdfExportService.buildAuthCookies(authToken)` and `context.addCookies(cookies)` BEFORE `page.goto`. Failure-handler logs `<redacted>` for the token, never the value. |
-| `apps/api/src/infrastructure/trpc/trpc.context.ts` | Dev-fallback branch broadened: `AUTH_DEV_MODE === 'true' OR AUTH_DEV_MODE_ALLOW_TEST === 'true'` → DEV_SESSION. Legacy AUTH_DEV_MODE preserved verbatim. |
-| `apps/api/src/infrastructure/trpc/trpc.context.test.ts` | NEW. Five tests cover the four dev-mode flag combinations + invalid-cookie fallthrough. |
-| `apps/api/src/modules/pdf-export/pdf-export.service.test.ts` | NEW "AUTH-05 PDF export JWT signing" describe block (5 tests): missing-secret throw, short-secret throw, claim shape, queue payload contains JWT-shaped authToken, pre-signed authToken pass-through. |
-| `apps/api/src/modules/pdf-export/pdf-export.contract.test.ts` | Existing "enqueues a BullMQ job" test updated to assert `authToken: expect.stringMatching(/^eyJ/)` in the queue payload (Zod-shaped JWT regex), with `PDF_EXPORT_JWT_SECRET` env-stubbed for deterministic signing. |
-| `apps/api/src/modules/pdf-export/pdf-export.integration.test.ts` | NEW "AUTH-05 cookie seam (CC-1)" describe block: integration-shaped guard against the real Prisma repo + fake queue with `AUTH_DEV_MODE=false / AUTH_DEV_MODE_ALLOW_TEST=true`. Verifies the JWT decodes to `{reportId}` claim. Full e2e (BullMQ + Playwright) is out of scope for the harness — the unit-layer floor in `pdf-export.service.test.ts` is the canonical guard. |
-| `apps/api/src/infrastructure/bullmq/pdf-export.processor.test.ts` | Mocks updated for the new `browser.newContext().addCookies().newPage()` shape; `buildAuthCookies` mock added to the service stub; jobs carry `authToken: 'fake-jwt'`. |
-| `.env.example` | Two new variables documented: `PDF_EXPORT_JWT_SECRET` (5-min JWT signing key), `AUTH_DEV_MODE_ALLOW_TEST` (staging path for the integration suite + PDF worker). |
-| `apps/web/src/components/navigation/app-shell.tsx` | Drive-by fix: `getRoleLabel`'s `Record<Role, string>` now includes `'admin'` (Phase 27 widened `Role` to include admin). |
-| `apps/web/src/lib/session-provider.tsx` | Drive-by fix: `SessionUser.role` widened to include `'admin'` so it accepts the wider `sessionRoleSchema`. |
+| File                                                              | What changed                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/modules/pdf-export/pdf-export.service.ts`           | New `signPdfExportToken(reportId)` method using `jsonwebtoken`; `requestPdfExport(reportId, requestedBy?, authToken?)` extended; queue payload now carries `authToken`. Lazy signing — only runs when `pdfQueue` is wired (preserves existing test paths that use no queue).                                                                                                  |
+| `apps/api/src/infrastructure/bullmq/pdf-export.processor.ts`      | `PdfExportJobData` extended with `authToken: string`. `processJob` now creates a browser context, calls `pdfExportService.buildAuthCookies(authToken)` and `context.addCookies(cookies)` BEFORE `page.goto`. Failure-handler logs `<redacted>` for the token, never the value.                                                                                                |
+| `apps/api/src/infrastructure/trpc/trpc.context.ts`                | Dev-fallback branch broadened: `AUTH_DEV_MODE === 'true' OR AUTH_DEV_MODE_ALLOW_TEST === 'true'` → DEV_SESSION. Legacy AUTH_DEV_MODE preserved verbatim.                                                                                                                                                                                                                      |
+| `apps/api/src/infrastructure/trpc/trpc.context.test.ts`           | NEW. Five tests cover the four dev-mode flag combinations + invalid-cookie fallthrough.                                                                                                                                                                                                                                                                                       |
+| `apps/api/src/modules/pdf-export/pdf-export.service.test.ts`      | NEW "AUTH-05 PDF export JWT signing" describe block (5 tests): missing-secret throw, short-secret throw, claim shape, queue payload contains JWT-shaped authToken, pre-signed authToken pass-through.                                                                                                                                                                         |
+| `apps/api/src/modules/pdf-export/pdf-export.contract.test.ts`     | Existing "enqueues a BullMQ job" test updated to assert `authToken: expect.stringMatching(/^eyJ/)` in the queue payload (Zod-shaped JWT regex), with `PDF_EXPORT_JWT_SECRET` env-stubbed for deterministic signing.                                                                                                                                                           |
+| `apps/api/src/modules/pdf-export/pdf-export.integration.test.ts`  | NEW "AUTH-05 cookie seam (CC-1)" describe block: integration-shaped guard against the real Prisma repo + fake queue with `AUTH_DEV_MODE=false / AUTH_DEV_MODE_ALLOW_TEST=true`. Verifies the JWT decodes to `{reportId}` claim. Full e2e (BullMQ + Playwright) is out of scope for the harness — the unit-layer floor in `pdf-export.service.test.ts` is the canonical guard. |
+| `apps/api/src/infrastructure/bullmq/pdf-export.processor.test.ts` | Mocks updated for the new `browser.newContext().addCookies().newPage()` shape; `buildAuthCookies` mock added to the service stub; jobs carry `authToken: 'fake-jwt'`.                                                                                                                                                                                                         |
+| `.env.example`                                                    | Two new variables documented: `PDF_EXPORT_JWT_SECRET` (5-min JWT signing key), `AUTH_DEV_MODE_ALLOW_TEST` (staging path for the integration suite + PDF worker).                                                                                                                                                                                                              |
+| `apps/web/src/components/navigation/app-shell.tsx`                | Drive-by fix: `getRoleLabel`'s `Record<Role, string>` now includes `'admin'` (Phase 27 widened `Role` to include admin).                                                                                                                                                                                                                                                      |
+| `apps/web/src/lib/session-provider.tsx`                           | Drive-by fix: `SessionUser.role` widened to include `'admin'` so it accepts the wider `sessionRoleSchema`.                                                                                                                                                                                                                                                                    |
 
 ## JWT claim shape
 
 ```ts
-jwt.sign({ reportId }, process.env.PDF_EXPORT_JWT_SECRET, { expiresIn: '5m' })
+jwt.sign({ reportId }, process.env.PDF_EXPORT_JWT_SECRET, { expiresIn: "5m" });
 // decoded → { reportId: <uuid>, iat: <number>, exp: <iat + 300> }
 ```
 

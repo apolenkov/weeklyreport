@@ -1,13 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { MockTelegramAdapter } from '../mock-telegram.adapter';
+import { MockTelegramAdapter } from "../mock-telegram.adapter";
 import {
   TELEGRAM_OUTBOUND_JOB_OPTS,
   TELEGRAM_OUTBOUND_QUEUE_NAME,
   TelegramProcessor,
   type TelegramOutboundJobData,
-} from '../telegram.queue';
-import type { TelegramAdapter, TelegramSendResult } from '../telegram.adapter';
+} from "../telegram.queue";
+import type { TelegramAdapter, TelegramSendResult } from "../telegram.adapter";
 
 // Verifies the processor's pure dispatch logic without instantiating a real
 // BullMQ Worker — we invoke the private `processJob` through a thin shim so
@@ -25,15 +25,15 @@ class TestProcessor extends TelegramProcessor {
   }
 }
 
-describe('TelegramProcessor (Phase 55 / UFB-056)', () => {
-  it('forwards chatId + text to the injected adapter', async () => {
+describe("TelegramProcessor (Phase 55 / UFB-056)", () => {
+  it("forwards chatId + text to the injected adapter", async () => {
     const adapter = new MockTelegramAdapter();
     const proc = new TestProcessor(adapter);
-    await proc.invoke({ chatId: 'chat-1', text: 'hello' });
-    expect(adapter.lastPayload).toEqual({ chatId: 'chat-1', text: 'hello' });
+    await proc.invoke({ chatId: "chat-1", text: "hello" });
+    expect(adapter.lastPayload).toEqual({ chatId: "chat-1", text: "hello" });
   });
 
-  it('throws when the adapter returns { ok: false } so BullMQ retries', async () => {
+  it("throws when the adapter returns { ok: false } so BullMQ retries", async () => {
     const failingAdapter: TelegramAdapter = {
       async send(): Promise<TelegramSendResult> {
         return { ok: false };
@@ -41,31 +41,31 @@ describe('TelegramProcessor (Phase 55 / UFB-056)', () => {
     };
     const proc = new TestProcessor(failingAdapter);
     await expect(
-      proc.invoke({ chatId: 'chat-x', text: 'body' }),
+      proc.invoke({ chatId: "chat-x", text: "body" }),
     ).rejects.toThrow(/telegram adapter rejected send/i);
   });
 
-  it('propagates adapter exceptions (network errors fail the job)', async () => {
+  it("propagates adapter exceptions (network errors fail the job)", async () => {
     const throwingAdapter: TelegramAdapter = {
       async send(): Promise<TelegramSendResult> {
-        throw new Error('ENETDOWN');
+        throw new Error("ENETDOWN");
       },
     };
     const proc = new TestProcessor(throwingAdapter);
     await expect(
-      proc.invoke({ chatId: 'chat-y', text: 'body' }),
-    ).rejects.toThrow('ENETDOWN');
+      proc.invoke({ chatId: "chat-y", text: "body" }),
+    ).rejects.toThrow("ENETDOWN");
   });
 });
 
-describe('telegram.queue constants', () => {
-  it('exposes the canonical queue name used by BullMQ registration', () => {
-    expect(TELEGRAM_OUTBOUND_QUEUE_NAME).toBe('telegram-outbound');
+describe("telegram.queue constants", () => {
+  it("exposes the canonical queue name used by BullMQ registration", () => {
+    expect(TELEGRAM_OUTBOUND_QUEUE_NAME).toBe("telegram-outbound");
   });
 
-  it('default job opts request 3 attempts with exponential backoff', () => {
+  it("default job opts request 3 attempts with exponential backoff", () => {
     expect(TELEGRAM_OUTBOUND_JOB_OPTS.attempts).toBe(3);
-    expect(TELEGRAM_OUTBOUND_JOB_OPTS.backoff.type).toBe('exponential');
+    expect(TELEGRAM_OUTBOUND_JOB_OPTS.backoff.type).toBe("exponential");
     expect(TELEGRAM_OUTBOUND_JOB_OPTS.backoff.delay).toBeGreaterThanOrEqual(
       1_000,
     );

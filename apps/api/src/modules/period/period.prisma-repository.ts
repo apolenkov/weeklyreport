@@ -1,15 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { PeriodRepository } from './period.service.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { PeriodRepository } from "./period.service.js";
 
 @Injectable()
 export class PeriodPrismaRepository implements PeriodRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getReportById(
-    reportId: string,
-  ): Promise<{
+  async getReportById(reportId: string): Promise<{
     id: string;
     status: string;
     periodStatus: string;
@@ -33,13 +31,13 @@ export class PeriodPrismaRepository implements PeriodRepository {
       await tx.report.update({
         where: { id: reportId },
         data: {
-          status: 'published',
-          periodStatus: 'published',
+          status: "published",
+          periodStatus: "published",
           // UFB-053 / Phase 51-C: write the new state column atomically
           // with the legacy fields. `periodState` and `periodStatus` are
           // separate state machines — both move together on a head-driven
           // publish (open → published on both).
-          periodState: 'published',
+          periodState: "published",
           publishedAt: new Date(),
           publishedById: userId,
         },
@@ -67,14 +65,14 @@ export class PeriodPrismaRepository implements PeriodRepository {
       await tx.report.update({
         where: { id: reportId },
         data: {
-          periodStatus: 'reopened',
+          periodStatus: "reopened",
           // UFB-053 / Phase 51-C: on reopen, revert `periodState` to
           // 'open' (the closest of the four states to "editable again").
           // `periodStatus` stays distinct with the 'reopened' marker so
           // consumers that care about reopen-flavour can still discriminate.
           // See "Open Questions" in the 51-C SUMMARY for the asymmetry
           // rationale.
-          periodState: 'open',
+          periodState: "open",
           reopenedAt: new Date(),
         },
       });
@@ -82,10 +80,10 @@ export class PeriodPrismaRepository implements PeriodRepository {
       await tx.reportSection.updateMany({
         where: {
           reportId,
-          status: 'submitted',
+          status: "submitted",
         },
         data: {
-          status: 'draft',
+          status: "draft",
           submittedAt: null,
         },
       });

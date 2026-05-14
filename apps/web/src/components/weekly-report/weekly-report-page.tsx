@@ -3,6 +3,7 @@
 import { useContext, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
@@ -77,6 +78,8 @@ export function WeeklyReportPage({
   // `weeklyReport.get.departmentName` was removed when the column dropped.
   const sessionState = useContext(SessionContext);
   const orgFullName = sessionState?.organization?.fullName ?? null;
+  const currentRole = sessionState?.user?.role ?? null;
+  const canMutatePeriod = currentRole === "head" || currentRole === "admin";
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
@@ -114,6 +117,22 @@ export function WeeklyReportPage({
       onError: (err: unknown) => {
         toast.error(
           err instanceof Error ? err.message : "Failed to reopen period",
+        );
+      },
+    }),
+  );
+
+  // A22: archive mutation — head moves a published report into the archive so
+  // it appears in archive.list. Only visible when periodStatus==='published'.
+  const archiveMut = useMutation(
+    trpc.archive.archiveReport.mutationOptions({
+      onSuccess: () => {
+        invalidateDashboard(qc, trpc);
+        toast.success("Report archived");
+      },
+      onError: (err: unknown) => {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to archive report",
         );
       },
     }),
@@ -262,20 +281,39 @@ export function WeeklyReportPage({
             reportId={view.period.reportId}
             periodStatus={view.period.periodStatus}
           />
-          <PublishLockButton
-            pendingCount={pendingCount}
-            totalLeads={total}
-            periodStatus={view.period.periodStatus}
-            onPublish={() =>
-              publishMut.mutate({ reportId: view.period.reportId })
-            }
-            onReopen={() =>
-              reopenMut.mutate({ reportId: view.period.reportId })
-            }
-            isPending={publishMut.isPending || reopenMut.isPending}
-            canPublish={canPublishReport}
-            publishDisabledReason="No submitted report content yet."
-          />
+          {/* A22: "Archive" button — shown to head once the period is published.
+              Moves the report into the archive (sets archived=true) so it
+              appears in the Archive tab. The button is hidden after archiving
+              because this page only navigates to current/active periods. */}
+          {canMutatePeriod && view.period.periodStatus === "published" && (
+            <button
+              type="button"
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() =>
+                archiveMut.mutate({ reportId: view.period.reportId })
+              }
+              disabled={archiveMut.isPending}
+              aria-label="Move this report to the archive"
+            >
+              {archiveMut.isPending ? "Archiving…" : "Archive"}
+            </button>
+          )}
+          {canMutatePeriod && (
+            <PublishLockButton
+              pendingCount={pendingCount}
+              totalLeads={total}
+              periodStatus={view.period.periodStatus}
+              onPublish={() =>
+                publishMut.mutate({ reportId: view.period.reportId })
+              }
+              onReopen={() =>
+                reopenMut.mutate({ reportId: view.period.reportId })
+              }
+              isPending={publishMut.isPending || reopenMut.isPending}
+              canPublish={canPublishReport}
+              publishDisabledReason="No submitted report content yet."
+            />
+          )}
         </div>
       </div>
 
@@ -299,21 +337,47 @@ export function WeeklyReportPage({
           Dismissible per session via local useState; head-only Regenerate. */}
       <AiSummaryCard reportId={view.period.reportId} />
 
-      {/* Portfolio Overview */}
-      <PortfolioOverviewTable products={portfolio} />
+      {/* A32: empty-state — no submissions in current open/reopened period.
+          When submissionCount === 0 and the period is not yet published,
+          replace the (blank) portfolio table and accordion with a helpful
+          nudge. Keeps header + period nav intact so the head retains context. */}
+      {submitted === 0 && view.period.periodStatus !== "published" ? (
+        <div
+          className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center"
+          data-testid="empty-submissions-state"
+        >
+          <p className="text-base font-semibold text-[var(--color-foreground)]">
+            No submissions yet for {view.period.weekLabel}
+          </p>
+          <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)]">
+            Leads have not filed their sections for this period.
+          </p>
+          <Link
+            href="/reports?tab=published"
+            className="mt-4 text-sm font-medium text-[var(--color-primary)] underline-offset-4 hover:underline"
+          >
+            View last published report in Archive &rarr;
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* Portfolio Overview */}
+          <PortfolioOverviewTable products={portfolio} />
 
-      {/* Per-product accordion sections */}
-      <div className="space-y-3">
-        {products.map((report) => (
-          <ProductAccordion
-            key={report.id}
-            report={report}
-            defaultOpen={focusedProductId === report.id}
-            highlighted={focusedProductId === report.id}
-            scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
-          />
-        ))}
-      </div>
+          {/* Per-product accordion sections */}
+          <div className="space-y-3">
+            {products.map((report) => (
+              <ProductAccordion
+                key={report.id}
+                report={report}
+                defaultOpen={focusedProductId === report.id}
+                highlighted={focusedProductId === report.id}
+                scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

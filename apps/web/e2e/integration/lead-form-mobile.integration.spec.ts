@@ -19,10 +19,10 @@
  * mobile-android.
  */
 
-import { test, expect } from './fixtures';
-import { loginAs } from './fixtures';
-import { SEED_EMAILS } from './helpers/seed-ids';
-import type { BrowserContext, Page } from '@playwright/test';
+import { test, expect } from "./fixtures";
+import { loginAs } from "./fixtures";
+import { SEED_EMAILS } from "./helpers/seed-ids";
+import type { BrowserContext, Page } from "@playwright/test";
 
 const VIEWPORT_TOLERANCE_PX = 1; // sub-pixel rounding
 
@@ -31,19 +31,24 @@ const VIEWPORT_TOLERANCE_PX = 1; // sub-pixel rounding
  * is "submitted" in the seed, which hides all "+ Add" buttons (the form
  * is locked once submitted), making him useless for this audit.
  */
-async function openLeadForm(browser: import('@playwright/test').Browser): Promise<{
+async function openLeadForm(
+  browser: import("@playwright/test").Browser,
+): Promise<{
   context: BrowserContext;
   page: Page;
 }> {
   const context = await browser.newContext();
   const page = await context.newPage();
-  await loginAs(context, { role: 'lead', email: SEED_EMAILS.olga });
-  await page.goto('/lead/report', { waitUntil: 'domcontentloaded' });
+  await loginAs(context, { role: "lead", email: SEED_EMAILS.olga });
+  await page.goto("/lead/report", { waitUntil: "domcontentloaded" });
   return { context, page };
 }
 
-async function expectDialogFitsViewport(page: Page, dialogLabelRegex: RegExp): Promise<void> {
-  const dialog = page.getByRole('dialog', { name: dialogLabelRegex }).first();
+async function expectDialogFitsViewport(
+  page: Page,
+  dialogLabelRegex: RegExp,
+): Promise<void> {
+  const dialog = page.getByRole("dialog", { name: dialogLabelRegex }).first();
   await expect(dialog).toBeVisible({ timeout: 5_000 });
 
   const overflow = await dialog.evaluate((el, tol) => {
@@ -62,10 +67,9 @@ async function expectDialogFitsViewport(page: Page, dialogLabelRegex: RegExp): P
     overflow.overflowsRight,
     `dialog right=${overflow.right} > viewport=${overflow.vw}`,
   ).toBe(false);
-  expect(
-    overflow.overflowsLeft,
-    `dialog left=${overflow.left} < 0`,
-  ).toBe(false);
+  expect(overflow.overflowsLeft, `dialog left=${overflow.left} < 0`).toBe(
+    false,
+  );
 }
 
 async function expectButtonHasMinTouchTarget(
@@ -73,18 +77,23 @@ async function expectButtonHasMinTouchTarget(
   nameRegex: RegExp,
   minHeight: number,
 ): Promise<void> {
-  const btn = page.getByRole('button', { name: nameRegex }).last();
+  const btn = page.getByRole("button", { name: nameRegex }).last();
   await expect(btn).toBeVisible();
-  const h = await btn.evaluate((el) => (el as HTMLElement).getBoundingClientRect().height);
-  expect(h, `button "${nameRegex}" height=${h} < ${minHeight}`).toBeGreaterThanOrEqual(minHeight);
+  const h = await btn.evaluate(
+    (el) => (el as HTMLElement).getBoundingClientRect().height,
+  );
+  expect(
+    h,
+    `button "${nameRegex}" height=${h} < ${minHeight}`,
+  ).toBeGreaterThanOrEqual(minHeight);
 }
 
-test.describe('Mobile — /lead/report modal flow @MOB-AUDIT', () => {
+test.describe("Mobile — /lead/report modal flow @MOB-AUDIT", () => {
   test.beforeEach(async ({}, testInfo) => {
-    expect(testInfo.project.name).not.toBe('chromium-integration');
+    expect(testInfo.project.name).not.toBe("chromium-integration");
   });
 
-  test('Item dialog fits the viewport and primary action is a 40px target', async ({
+  test("Item dialog fits the viewport and primary action is a 40px target", async ({
     browser,
   }) => {
     const { context, page } = await openLeadForm(browser);
@@ -95,7 +104,9 @@ test.describe('Mobile — /lead/report modal flow @MOB-AUDIT', () => {
     // both via aria-label so this test works whether the lead has items
     // already or starts from empty.
     const addItem = page
-      .getByRole('button', { name: /(Add item to |Add first current-week item)/i })
+      .getByRole("button", {
+        name: /(Add item to |Add first current-week item)/i,
+      })
       .first();
     await expect(addItem).toBeVisible({ timeout: 15_000 });
     await addItem.click();
@@ -106,12 +117,14 @@ test.describe('Mobile — /lead/report modal flow @MOB-AUDIT', () => {
     await context.close();
   });
 
-  test('Risk dialog fits the viewport (3 textareas — tightest layout)', async ({
+  test("Risk dialog fits the viewport (3 textareas — tightest layout)", async ({
     browser,
   }) => {
     const { context, page } = await openLeadForm(browser);
 
-    const addRisk = page.getByRole('button', { name: /\+\s*Add Risk/i }).first();
+    const addRisk = page
+      .getByRole("button", { name: /\+\s*Add Risk/i })
+      .first();
     await expect(addRisk).toBeVisible();
     await addRisk.click();
 
@@ -121,35 +134,47 @@ test.describe('Mobile — /lead/report modal flow @MOB-AUDIT', () => {
     await context.close();
   });
 
-  test('Decision dialog fits the viewport (sm:grid-cols-2 stack)', async ({
+  test("Decision dialog fits the viewport (sm:grid-cols-2 stack)", async ({
     browser,
   }) => {
     const { context, page } = await openLeadForm(browser);
 
-    const addDec = page.getByRole('button', { name: /\+\s*Add Decision/i }).first();
+    const addDec = page
+      .getByRole("button", { name: /\+\s*Add Decision/i })
+      .first();
     await expect(addDec).toBeVisible();
     await addDec.click();
 
-    await expectDialogFitsViewport(page, /Add Decision dialog|Decision dialog/i);
+    await expectDialogFitsViewport(
+      page,
+      /Add Decision dialog|Decision dialog/i,
+    );
     await expectButtonHasMinTouchTarget(page, /^Save Decision$/i, 40);
 
     await context.close();
   });
 
-  test('Priority dialog fits the viewport (single field)', async ({ browser }) => {
+  test("Priority dialog fits the viewport (single field)", async ({
+    browser,
+  }) => {
     const { context, page } = await openLeadForm(browser);
 
-    const addPri = page.getByRole('button', { name: /\+\s*Add Priority/i }).first();
+    const addPri = page
+      .getByRole("button", { name: /\+\s*Add Priority/i })
+      .first();
     await expect(addPri).toBeVisible();
     await addPri.click();
 
-    await expectDialogFitsViewport(page, /Add Priority dialog|Priority dialog/i);
+    await expectDialogFitsViewport(
+      page,
+      /Add Priority dialog|Priority dialog/i,
+    );
     await expectButtonHasMinTouchTarget(page, /^Save Priority$/i, 40);
 
     await context.close();
   });
 
-  test('Stage popover does not overflow the right edge of the viewport', async ({
+  test("Stage popover does not overflow the right edge of the viewport", async ({
     browser,
   }) => {
     const { context, page } = await openLeadForm(browser);
@@ -185,7 +210,7 @@ test.describe('Mobile — /lead/report modal flow @MOB-AUDIT', () => {
       const chip = allChips.nth(c.idx);
       await chip.scrollIntoViewIfNeeded();
       await chip.click();
-      const popover = page.getByRole('menu').first();
+      const popover = page.getByRole("menu").first();
       try {
         await expect(popover).toBeVisible({ timeout: 1_500 });
         popoverRect = await popover.evaluate((el) => {
@@ -200,16 +225,20 @@ test.describe('Mobile — /lead/report modal flow @MOB-AUDIT', () => {
       }
     }
 
-    expect(popoverOpened, 'Could not open any stage popover for this lead').toBe(true);
-    if (!popoverRect) throw new Error('unreachable');
+    expect(
+      popoverOpened,
+      "Could not open any stage popover for this lead",
+    ).toBe(true);
+    if (!popoverRect) throw new Error("unreachable");
 
     expect(
       popoverRect.right,
       `popover right=${popoverRect.right} > viewport=${popoverRect.vw}`,
     ).toBeLessThanOrEqual(popoverRect.vw + VIEWPORT_TOLERANCE_PX);
-    expect(popoverRect.left, `popover left=${popoverRect.left} < 0`).toBeGreaterThanOrEqual(
-      -VIEWPORT_TOLERANCE_PX,
-    );
+    expect(
+      popoverRect.left,
+      `popover left=${popoverRect.left} < 0`,
+    ).toBeGreaterThanOrEqual(-VIEWPORT_TOLERANCE_PX);
 
     await context.close();
   });

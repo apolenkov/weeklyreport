@@ -10,6 +10,7 @@
 Playwright E2E tests run against real API (not mock). Dual webServer config (API + Web). Database seeded before tests, cleaned after. Existing 339 mock-based tests preserved (separate directory).
 
 **Key deliverables:**
+
 1. Playwright config with dual webServer: API on :3002 + Web on :3005
 2. Global setup: seed DB → run tests → cleanup
 3. New `e2e/integration/` directory with 20-30 core tests
@@ -24,6 +25,7 @@ Playwright E2E tests run against real API (not mock). Dual webServer config (API
 ## Implementation Decisions
 
 ### Playwright Config
+
 - Two configs: existing `playwright.config.ts` (mock UI) + new `playwright.integration.config.ts` (real API)
 - Dual webServer in integration config:
   - API: `pnpm --filter @customreport/api dev` on :3002
@@ -33,13 +35,15 @@ Playwright E2E tests run against real API (not mock). Dual webServer config (API
 - workers: 1 (shared DB state)
 
 ### Database Strategy
+
 - Global setup runs `prisma/seed.ts` before tests
 - Each test relies on seeded baseline (no per-test seeding)
 - Cleanup: TRUNCATE + reseed between test runs (not per test — fast)
 
 ### Test Categories (20-30 tests)
+
 - 4-5 lead journey scenarios
-- 4-5 head journey scenarios  
+- 4-5 head journey scenarios
 - 3-4 cross-role lifecycle scenarios
 - 2-3 admin CRUD scenarios
 - 2-3 Status↔Risk sync scenarios
@@ -47,12 +51,14 @@ Playwright E2E tests run against real API (not mock). Dual webServer config (API
 - 2-3 auth guard scenarios
 
 ### Existing Tests
+
 - e2e/ directory KEEPS its 339 mock-based tests
 - run via `pnpm --filter @customreport/web test:e2e` (existing script)
 - New script: `pnpm --filter @customreport/web test:e2e:integration` for real-API tests
 - CI runs both — mock tests fast, integration tests slow
 
 ### Claude's Discretion
+
 - Exact test scenarios (must cover happy path + 1-2 errors per area)
 - Use existing fixtures/helpers from e2e/ where applicable
 - Auth via AUTH_STUB=true — direct navigation to role pages
@@ -60,9 +66,11 @@ Playwright E2E tests run against real API (not mock). Dual webServer config (API
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 ### Already Built
+
 - apps/web/playwright.config.ts — existing config for mock-based tests
 - apps/web/e2e/ — 22 spec files, 339 tests
 - apps/web/e2e/fixtures.ts — auth setup (leadPage, headPage helpers)
@@ -70,11 +78,13 @@ Playwright E2E tests run against real API (not mock). Dual webServer config (API
 - prisma/seed.ts — idempotent seed (Phase 20)
 
 ### Established Patterns
+
 - Playwright test structure: describe → test → page assertions
 - Fixtures via @playwright/test
 - Auth via NEXT_PUBLIC_AUTH_STUB direct navigation (no SAML in dev)
 
 ### Integration Points
+
 - Create: apps/web/playwright.integration.config.ts
 - Create: apps/web/e2e/integration/ directory + 8-10 spec files
 - Modify: apps/web/package.json — new test:e2e:integration script

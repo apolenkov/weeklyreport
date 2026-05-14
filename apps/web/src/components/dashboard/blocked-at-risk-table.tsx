@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import type { BlockedAtRiskItem } from './mock-data';
+import type { BlockedAtRiskItem } from "./mock-data";
 
 type BlockedAtRiskTableProps = {
   readonly items: BlockedAtRiskItem[];
@@ -13,7 +13,7 @@ function AlertIcon() {
     <svg
       viewBox="0 0 24 24"
       className="h-5 w-5 flex-shrink-0"
-      style={{ color: 'var(--color-destructive)' }}
+      style={{ color: "var(--color-destructive)" }}
       stroke="currentColor"
       fill="none"
       strokeWidth={2}
@@ -35,7 +35,7 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
       stroke="currentColor"
       fill="none"
       strokeWidth={2}
-      style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+      style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
     >
       <path d="M6 9l6 6 6-6" />
     </svg>
@@ -51,16 +51,16 @@ export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
     <div
       className={`overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] ${
         hasItems
-          ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)]'
-          : 'bg-[rgba(0,0,0,0.035)]'
+          ? "bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)]"
+          : "bg-[rgba(0,0,0,0.035)]"
       }`}
     >
       <button
         type="button"
         className={`flex w-full items-center justify-between p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
           hasItems
-            ? 'cursor-pointer hover:bg-[var(--color-surface-hover)]'
-            : 'cursor-default opacity-65'
+            ? "cursor-pointer hover:bg-[var(--color-surface-hover)]"
+            : "cursor-default opacity-65"
         }`}
         onClick={() => {
           if (hasItems) setExpanded(!expanded);
@@ -74,8 +74,8 @@ export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
           <span
             className={`font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] ${
               hasItems
-                ? 'text-[var(--color-destructive)]'
-                : 'text-[var(--color-muted-foreground)]'
+                ? "text-[var(--color-destructive)]"
+                : "text-[var(--color-muted-foreground)]"
             }`}
           >
             Blocked & At Risk
@@ -83,14 +83,14 @@ export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
           <span
             className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums ${
               hasItems
-                ? 'bg-[#fee2e2] text-[var(--color-destructive)]'
-                : 'bg-[var(--color-muted)] text-[var(--color-muted-foreground)]'
+                ? "bg-[#fee2e2] text-[var(--color-destructive)]"
+                : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]"
             }`}
           >
             {items.length} issues
           </span>
         </div>
-        <span className={hasItems ? undefined : 'opacity-45'}>
+        <span className={hasItems ? undefined : "opacity-45"}>
           <ChevronDown expanded={isExpanded} />
         </span>
       </button>
@@ -98,36 +98,38 @@ export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
       {hasItems ? (
         <div
           className="grid transition-[grid-template-rows] duration-300"
-          style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
+          style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
         >
           <div className="min-h-0 overflow-hidden">
             <div className="space-y-2 px-4 pb-4 pt-4">
               {items.map((item) => {
-                const isBlocked = item.severity === 'blocked';
+                const isBlocked = item.severity === "blocked";
                 return (
                   <div
                     key={item.id}
                     className="flex items-center gap-3 rounded-lg p-3"
                     style={{
-                      background: isBlocked ? '#fdf8f8' : '#fffcf5',
+                      background: isBlocked ? "#fdf8f8" : "#fffcf5",
                       border: isBlocked
-                        ? '1px solid rgba(200,32,20,0.1)'
-                        : '1px solid rgba(212,160,23,0.1)',
+                        ? "1px solid rgba(200,32,20,0.1)"
+                        : "1px solid rgba(212,160,23,0.1)",
                     }}
                   >
                     <span
                       className="inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
                       style={{
-                        background: isBlocked ? '#fee2e2' : '#fef3c7',
-                        color: isBlocked ? 'var(--color-destructive)' : '#8a6d1b',
+                        background: isBlocked ? "#fee2e2" : "#fef3c7",
+                        color: isBlocked
+                          ? "var(--color-destructive)"
+                          : "#8a6d1b",
                       }}
                     >
-                      {isBlocked ? 'Blocked' : 'At Risk'}
+                      {isBlocked ? "Blocked" : "At Risk"}
                     </span>
                     <div className="flex-1">
                       <strong className="text-sm">
                         {item.product} &middot; {item.stage}
-                      </strong>{' '}
+                      </strong>{" "}
                       <span className="text-xs text-[var(--color-muted-foreground)]">
                         &middot; {item.assignee}
                       </span>

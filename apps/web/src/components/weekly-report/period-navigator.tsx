@@ -1,9 +1,14 @@
-'use client';
+"use client";
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useMemo, useRef, type TouchEvent as ReactTouchEvent } from 'react';
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 
-import type { ReportPeriod } from '../dashboard/mock-data';
+import type { ReportPeriod } from "../dashboard/mock-data";
 
 // Threshold for treating a horizontal touch drag as a swipe. 50px matches the
 // iOS "swipe to navigate" feel — enough to ignore accidental finger drift on
@@ -17,7 +22,15 @@ type PeriodNavigatorProps = {
 
 function ChevronLeft() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M15 18l-6-6 6-6" />
     </svg>
   );
@@ -25,17 +38,28 @@ function ChevronLeft() {
 
 function ChevronRight() {
   return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" stroke="currentColor" fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3.5 w-3.5"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M9 18l6-6-6-6" />
     </svg>
   );
 }
 
-export function HeadPeriodNavigator({ periods, basePath = '/head/report' }: PeriodNavigatorProps) {
+export function HeadPeriodNavigator({
+  periods,
+  basePath = "/head/report",
+}: PeriodNavigatorProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentPeriodParam = searchParams.get('period');
+  const currentPeriodParam = searchParams.get("period");
 
   // 35-07: read the path-segment reportId so the dropdown reflects the
   // addressed week even before the period dropdown carries query state.
@@ -127,18 +151,18 @@ export function HeadPeriodNavigator({ periods, basePath = '/head/report' }: Peri
       <select
         aria-label="Select reporting period"
         className="cursor-pointer appearance-none rounded-lg border border-[var(--color-muted)] bg-[var(--color-background)] px-2.5 py-1.5 pr-7 font-[family-name:var(--font-sans)] text-[13px] font-medium focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-        value={selectedPeriod?.id ?? ''}
+        value={selectedPeriod?.id ?? ""}
         onChange={handleSelect}
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'right 8px center',
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 8px center",
         }}
       >
         {periods.map((p) => (
           <option key={p.id} value={p.id}>
             {p.weekLabel} &middot; {p.dateRange}
-            {p.isCurrent ? ' (current)' : ''}
+            {p.isCurrent ? " (current)" : ""}
           </option>
         ))}
       </select>
@@ -148,7 +172,7 @@ export function HeadPeriodNavigator({ periods, basePath = '/head/report' }: Peri
         className="flex min-h-[var(--touch-target-min)] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
         onClick={handleNext}
         disabled={!hasNext}
-        title={hasNext ? 'Next week' : 'Latest week'}
+        title={hasNext ? "Next week" : "Latest week"}
         aria-label="Next week"
       >
         <ChevronRight />

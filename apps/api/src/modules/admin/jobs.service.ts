@@ -1,6 +1,6 @@
-import type { Queue } from 'bullmq';
+import type { Queue } from "bullmq";
 
-import { createNullLogger, type AppLogger } from '../../lib/logger';
+import { createNullLogger, type AppLogger } from "../../lib/logger";
 
 /**
  * Phase 35-06 — admin BullMQ DLQ surface.
@@ -58,7 +58,7 @@ export class JobsService {
   }
 
   async listFailed(input: {
-    queue: 'email-reminder';
+    queue: "email-reminder";
     cursor?: number;
     limit?: number;
   }): Promise<ListFailedResult> {
@@ -73,9 +73,9 @@ export class JobsService {
     const rawJobs = await this.emailReminderQueue.getFailed(start, end);
 
     const jobs: FailedJob[] = rawJobs.map((job) => ({
-      id: String(job.id ?? ''),
+      id: String(job.id ?? ""),
       name: job.name,
-      failedReason: job.failedReason ?? '',
+      failedReason: job.failedReason ?? "",
       stacktrace: Array.isArray(job.stacktrace) ? [...job.stacktrace] : [],
       attemptsMade: job.attemptsMade ?? 0,
       timestamp: job.timestamp,
@@ -93,7 +93,7 @@ export class JobsService {
   }
 
   async retryFailed(input: {
-    queue: 'email-reminder';
+    queue: "email-reminder";
     jobId: string;
   }): Promise<RetryFailedResult> {
     if (!this.emailReminderQueue) {
@@ -109,8 +109,8 @@ export class JobsService {
     }
 
     await job.retry();
-    this.logger.info('admin.jobs.retry — job requeued', {
-      phase: 'admin.jobs.retry',
+    this.logger.info("admin.jobs.retry — job requeued", {
+      phase: "admin.jobs.retry",
       queue: input.queue,
       jobId: input.jobId,
     });

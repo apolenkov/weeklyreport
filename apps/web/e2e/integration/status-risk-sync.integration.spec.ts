@@ -46,7 +46,11 @@ test.describe("Status<->Risk sync (integration)", () => {
         },
       },
     });
-    const beforeRed = await prisma.projectStatus.count({
+    // Seed creates projectStatus rows (some may already be "red") but never
+    // creates stageStatus rows, so beforeStageRed is always 0. Checking
+    // stageStatus avoids a false-negative when the project's aggregate
+    // status was already "red" before the test ran.
+    const beforeStageRed = await prisma.stageStatus.count({
       where: {
         status: "red",
         reportSection: {
@@ -66,8 +70,8 @@ test.describe("Status<->Risk sync (integration)", () => {
     await expect
       .poll(
         async () => {
-          const [redCount, riskCount] = await Promise.all([
-            prisma.projectStatus.count({
+          const [stageRedCount, riskCount] = await Promise.all([
+            prisma.stageStatus.count({
               where: {
                 status: "red",
                 reportSection: {
@@ -85,7 +89,7 @@ test.describe("Status<->Risk sync (integration)", () => {
               },
             }),
           ]);
-          return redCount > beforeRed && riskCount === before;
+          return stageRedCount > beforeStageRed && riskCount === before;
         },
         { timeout: 15_000 },
       )
@@ -112,7 +116,6 @@ test.describe("Status<->Risk sync (integration)", () => {
     await page.locator("#risk-text").fill("Integration risk text");
     await page.locator("#risk-impact").fill("Integration impact text");
     await page.locator("#risk-mitigation").fill("Integration mitigation text");
-    await page.locator("#risk-stage").selectOption({ index: 1 });
     await page.getByRole("button", { name: /^Save Risk$/ }).click();
 
     await expect

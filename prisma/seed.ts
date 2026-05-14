@@ -28,6 +28,7 @@ import {
   LEAD_DMITRY_ID,
   LEAD_OLGA_ID,
   LEAD_SERGEY_ID,
+  DEFAULT_REPORTING_GROUP_ID,
 } from "./seed-constants.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -164,6 +165,27 @@ async function main() {
         id: product.id,
         name: product.name,
         leadId: product.leadId,
+      },
+    });
+  }
+
+  // --- 2b. GroupProduct: every product has exactly one owning group.
+  // Product group is the report grouping source of truth; derive it from the
+  // seeded lead's reporting group so seed data satisfies the UAT invariant.
+  const groupByLeadId = new Map(
+    SEED_USERS.map((user) => [user.id, user.reportingGroupId] as const),
+  );
+  for (const product of SEED_PRODUCTS) {
+    await prisma.groupProduct.upsert({
+      where: { productId: product.id },
+      update: {
+        groupId:
+          groupByLeadId.get(product.leadId) ?? DEFAULT_REPORTING_GROUP_ID,
+      },
+      create: {
+        groupId:
+          groupByLeadId.get(product.leadId) ?? DEFAULT_REPORTING_GROUP_ID,
+        productId: product.id,
       },
     });
   }

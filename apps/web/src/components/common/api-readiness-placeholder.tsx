@@ -4,7 +4,7 @@ type ApiReadinessPlaceholderProps = {
   readonly currentPath: string;
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3002';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002";
 
 export function ApiReadinessPlaceholder({
   pageTitle,
@@ -19,8 +19,8 @@ export function ApiReadinessPlaceholder({
         </p>
         <h1 className="text-4xl font-semibold tracking-tight">Hello world</h1>
         <p className="max-w-xl text-sm text-muted-foreground">
-          The approved mockups are ahead of the backend. The active Next.js UI is
-          intentionally reduced to a simple shell while we complete the API
+          The approved mockups are ahead of the backend. The active Next.js UI
+          is intentionally reduced to a simple shell while we complete the API
           contracts, lifecycle states, history, and publication flow.
         </p>
       </div>
@@ -40,13 +40,28 @@ export function ApiReadinessPlaceholder({
             API endpoints
           </p>
           <div className="mt-2 space-y-2 text-sm">
-            <a className="block text-primary underline-offset-4 hover:underline" href={`${API_BASE_URL}/health/live`} rel="noreferrer" target="_blank">
+            <a
+              className="block text-primary underline-offset-4 hover:underline"
+              href={`${API_BASE_URL}/health/live`}
+              rel="noreferrer"
+              target="_blank"
+            >
               {API_BASE_URL}/health/live
             </a>
-            <a className="block text-primary underline-offset-4 hover:underline" href={`${API_BASE_URL}/health/ready`} rel="noreferrer" target="_blank">
+            <a
+              className="block text-primary underline-offset-4 hover:underline"
+              href={`${API_BASE_URL}/health/ready`}
+              rel="noreferrer"
+              target="_blank"
+            >
               {API_BASE_URL}/health/ready
             </a>
-            <a className="block text-primary underline-offset-4 hover:underline" href={`${API_BASE_URL}/metrics`} rel="noreferrer" target="_blank">
+            <a
+              className="block text-primary underline-offset-4 hover:underline"
+              href={`${API_BASE_URL}/metrics`}
+              rel="noreferrer"
+              target="_blank"
+            >
               {API_BASE_URL}/metrics
             </a>
           </div>

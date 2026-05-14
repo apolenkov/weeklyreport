@@ -11,14 +11,14 @@ commit: c3881378c582744d4379be3790f2636772cfbbd0
 
 ## Procedure migration table
 
-| Surface | Before | After |
-| --- | --- | --- |
-| `archive.list` | `protectedProcedure` | `anyRoleProcedure` |
-| `archive.detail` | `protectedProcedure` | `anyRoleProcedure` |
-| `review.dashboard` | `protectedProcedure` | `headProcedure` |
-| `weeklyReport.get` | `protectedProcedure` | `anyRoleProcedure` |
-| `review.assembledReport` | `headProcedure` | unchanged |
-| `review.publish` | `headProcedure` | unchanged |
+| Surface                  | Before               | After              |
+| ------------------------ | -------------------- | ------------------ |
+| `archive.list`           | `protectedProcedure` | `anyRoleProcedure` |
+| `archive.detail`         | `protectedProcedure` | `anyRoleProcedure` |
+| `review.dashboard`       | `protectedProcedure` | `headProcedure`    |
+| `weeklyReport.get`       | `protectedProcedure` | `anyRoleProcedure` |
+| `review.assembledReport` | `headProcedure`      | unchanged          |
+| `review.publish`         | `headProcedure`      | unchanged          |
 
 ## anyRoleProcedure addition
 
@@ -47,7 +47,7 @@ Repository's hardcoded `status: 'published'` floor preserved in `archive.prisma-
 ## Files changed
 
 - `apps/api/src/infrastructure/trpc/trpc.middleware.ts` — exports `anyRoleProcedure`.
-- `apps/api/src/infrastructure/trpc/trpc.router.ts` — migrates archive.* → anyRoleProcedure, review.dashboard → headProcedure, weeklyReport.get → anyRoleProcedure; threads `ctx.session.role`.
+- `apps/api/src/infrastructure/trpc/trpc.router.ts` — migrates archive.\* → anyRoleProcedure, review.dashboard → headProcedure, weeklyReport.get → anyRoleProcedure; threads `ctx.session.role`.
 - `apps/api/src/infrastructure/trpc/__tests__/role-coverage.test.ts` — adds `ANY_ROLE_CHAIN` to allowed prefixes.
 - `apps/api/src/modules/archive/archive.service.ts` — `Role`-aware service signature, `buildArchiveReadFilter` helper, `ArchiveReadFilter` type.
 - `apps/api/src/modules/archive/archive.prisma-repository.ts` — repository accepts optional `ArchiveReadFilter`, merges on top of `PUBLISHED_FLOOR`. `findUnique` → `findFirst`.

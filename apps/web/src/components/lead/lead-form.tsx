@@ -415,9 +415,7 @@ export function LeadForm({
   const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
   const shouldRouteHeadLikeAwayFromLeadForm =
     isHeadLikeSession && !requestedAuthorIdNormalized;
-  const shouldDeferForSession = Boolean(
-    sessionState && sessionState.isLoading,
-  );
+  const shouldDeferForSession = Boolean(sessionState && sessionState.isLoading);
   const isPinnedAuthorOwnView = Boolean(
     pinnedReportId &&
     requestedAuthorIdNormalized &&
@@ -580,6 +578,11 @@ export function LeadForm({
   // ---- Local UI + draft state ----
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitFieldError, setSubmitFieldError] = useState<{
+    field: "priorities";
+    message: string;
+  } | null>(null);
+  const prioritiesRef = useRef<HTMLDivElement>(null);
 
   // Draft mirror of the raw API section. Saving + submitting use this; child
   // edits merge field-level changes back by id while preserving every required
@@ -616,8 +619,46 @@ export function LeadForm({
         toast.success("Report submitted");
       },
       onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : "Submit failed";
-        toast.error(msg);
+        // Intercept Zod validation errors from the server and surface
+        // human-readable messages instead of raw JSON.
+        if (err instanceof Error) {
+          const raw = err.message;
+          // Server may return serialized Zod issues as a JSON array string.
+          // Detect priorities.too_small specifically and guide the user.
+          try {
+            const parsed: unknown = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const hasPrioritiesMin = parsed.some(
+                (issue) =>
+                  typeof issue === "object" &&
+                  issue !== null &&
+                  "path" in issue &&
+                  Array.isArray((issue as { path: unknown[] }).path) &&
+                  (issue as { path: unknown[] }).path.includes("priorities") &&
+                  "code" in issue &&
+                  (issue as { code: string }).code === "too_small",
+              );
+              if (hasPrioritiesMin) {
+                toast.error("Please add at least one priority before submitting.");
+                setShowSubmitConfirm(false);
+                setSubmitFieldError({
+                  field: "priorities",
+                  message: "Add at least one priority before submitting.",
+                });
+                prioritiesRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+                return;
+              }
+            }
+          } catch {
+            // Not JSON — fall through to the generic message.
+          }
+          toast.error(raw);
+        } else {
+          toast.error("Submit failed");
+        }
       },
     }),
   );
@@ -713,12 +754,9 @@ export function LeadForm({
     }),
   );
 
-  // Counter for "every Nth autosave snapshots a version" — purely
-  // client-side. Resets on manual snapshots and on page reload (the
-  // user paid for the manual checkpoint, no need to immediately
-  // double-snapshot 10 saves later).
+  // A16: auto-versioning — track saves; snapshot once per minute if new saves occurred.
   const autosaveCountRef = useRef(0);
-  const AUTO_SNAPSHOT_EVERY = 10;
+  const lastSnapshotCountRef = useRef(0);
 
   // ---- Build draft payload ----
   const draftPayload = useMemo(
@@ -761,11 +799,6 @@ export function LeadForm({
   }, [byPeriodQ.data]);
 
   // Autosave wiring — runs unconditionally to keep hook order stable.
-  // The onSaveSuccess hook drives the silent auto-snapshot path: every
-  // AUTO_SNAPSHOT_EVERY successful saves we checkpoint a version. This
-  // is a safety net for long editing sessions (10 saves ≈ 30s+ of active
-  // work at a 3s debounce floor); the user can still hit "Save Version"
-  // any time for an explicit checkpoint.
   const autosave = useLeadFormAutosave({
     reportSectionId: sectionIdForActions || null,
     payload: draftPayload,
@@ -773,14 +806,25 @@ export function LeadForm({
     initialSavedKey,
     onSaveSuccess: () => {
       autosaveCountRef.current += 1;
-      if (
-        autosaveCountRef.current % AUTO_SNAPSHOT_EVERY === 0 &&
-        sectionIdForActions
-      ) {
-        createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
-      }
     },
   });
+
+  // A16: snapshot once per minute when there are new autosaves since the
+  // last snapshot. Uses a stable ref for mutate so the interval is not
+  // reset on every mutation-state change (isPending, isSuccess, etc.).
+  const snapshotMutateRef = useRef(createSnapshotMut.mutate);
+  snapshotMutateRef.current = createSnapshotMut.mutate;
+
+  useEffect(() => {
+    if (!sectionIdForActions || isReadOnlyEarly || isSubmitted) return;
+    const id = setInterval(() => {
+      if (autosaveCountRef.current > lastSnapshotCountRef.current) {
+        lastSnapshotCountRef.current = autosaveCountRef.current;
+        snapshotMutateRef.current({ reportSectionId: sectionIdForActions });
+      }
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [sectionIdForActions, isReadOnlyEarly, isSubmitted]);
 
   // 35-07: set document.title to surface the addressed week in the browser
   // tab. Format: "Week 19, May 4-10 - CustomReport". Resolved from the
@@ -955,6 +999,7 @@ export function LeadForm({
             impact: r.impact,
             mitigation: r.mitigation,
             stageName,
+            stageIds: r.stageIds,
           };
         }
         return {
@@ -964,6 +1009,7 @@ export function LeadForm({
           impact: r.impact,
           mitigation: r.mitigation,
           stageName,
+          stageIds: r.stageIds,
         };
       });
       return { ...prev, risks: merged };
@@ -971,6 +1017,9 @@ export function LeadForm({
   }
 
   function handlePrioritiesChange(next: PriorityEntry[]) {
+    if (next.some((p) => p.text.trim().length > 0)) {
+      setSubmitFieldError(null);
+    }
     setDraftSection((prev) => {
       if (!prev) return prev;
       // The UI now owns the full priority list (variable length, ranks
@@ -986,9 +1035,21 @@ export function LeadForm({
         const stageName =
           p.stageName && p.stageName !== "—" ? p.stageName : null;
         if (existing) {
-          return { ...existing, text: p.text, stageName, stageIds: p.stageIds, productId: p.productId || null };
+          return {
+            ...existing,
+            text: p.text,
+            stageName,
+            stageIds: p.stageIds,
+            productId: p.productId || null,
+          };
         }
-        return { rank: p.rank, text: p.text, stageName, stageIds: p.stageIds, productId: p.productId || null };
+        return {
+          rank: p.rank,
+          text: p.text,
+          stageName,
+          stageIds: p.stageIds,
+          productId: p.productId || null,
+        };
       });
       return { ...prev, priorities: merged };
     });
@@ -1012,10 +1073,10 @@ export function LeadForm({
       case "blocked":
         return { workflowStatus: "blocked", completed: false };
       case "planned":
-        // 'planned' is computed-only — there's no DB enum for it. Next-week
-        // items default to in_progress workflow status; the type='next' bit
-        // alone makes them render as planned in the UI.
-        return { workflowStatus: "in_progress", completed: false };
+        // 'planned' has no DB enum value. Next-week rows use
+        // completed=null as the explicit presentation marker so reopening the
+        // form can distinguish Planned from In Progress.
+        return { workflowStatus: "in_progress", completed: null };
       case "in-progress":
       default:
         return { workflowStatus: "in_progress", completed: false };
@@ -1046,6 +1107,7 @@ export function LeadForm({
               workflowStatus: raw.workflowStatus,
               completed: raw.completed,
               stageName,
+              stageIds: kb.stageIds,
             };
           }
           return {
@@ -1060,6 +1122,7 @@ export function LeadForm({
             carriedOver: false,
             completed: raw.completed,
             stageName,
+            stageIds: kb.stageIds,
           };
         });
         // Keep all items of the OTHER type unchanged; replace this type with
@@ -1075,11 +1138,29 @@ export function LeadForm({
 
   // ---- Action handlers ----
   function handleSubmit() {
+    if (!draftPayload?.priorities.some((p) => p.text.trim().length > 0)) {
+      setSubmitFieldError({
+        field: "priorities",
+        message: "Add at least one priority before submitting.",
+      });
+      prioritiesRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      prioritiesRef.current?.focus();
+      return;
+    }
+    setSubmitFieldError(null);
     setShowSubmitConfirm(true);
   }
 
   function handleConfirmSubmit() {
     if (!draftPayload) return;
+    if (!draftPayload.priorities.some((p) => p.text.trim().length > 0)) {
+      setShowSubmitConfirm(false);
+      handleSubmit();
+      return;
+    }
     // submitSectionSchema requires every projectStatus to have a non-null
     // status. Coerce undefined -> green optimistically; the server will
     // reject if any are still invalid and toast the error.
@@ -1140,9 +1221,8 @@ export function LeadForm({
   function handleSaveVersion() {
     if (!sectionIdForActions) return;
     isManualSaveRef.current = true;
-    // Reset the auto-snapshot counter — the user just paid for an explicit
-    // checkpoint, no need to spawn a silent one 10 saves later.
-    autosaveCountRef.current = 0;
+    // Sync lastSnapshotCount so the 1-min interval doesn't double-snapshot.
+    lastSnapshotCountRef.current = autosaveCountRef.current;
     createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
   }
 
@@ -1256,7 +1336,7 @@ export function LeadForm({
         <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">
           <PeriodNavigator periods={periods} />
 
-          <div className="flex min-w-[220px] flex-1 items-center justify-center gap-2">
+          <div className="hidden min-w-[220px] flex-1 items-center justify-center gap-2 sm:flex">
             <span className="text-sm text-[var(--color-muted-foreground)]">
               {sessionState?.organization?.shortName ?? "Development"}
             </span>
@@ -1272,6 +1352,7 @@ export function LeadForm({
             <VersionHistoryNav
               versions={versions}
               onRestore={handleRestoreVersion}
+              onVersionChange={handleRestoreVersion}
               onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
               canSaveVersion={!createSnapshotMut.isPending}
             />
@@ -1413,23 +1494,37 @@ export function LeadForm({
         </AccordionSection>
 
         {/* Priorities — variable-length list */}
-        <AccordionSection
-          groupSyncKey={groupSyncKey}
-          groupExpanded={groupExpanded}
-          icon={<StarIcon />}
-          title="Priorities"
-          titleColor="var(--color-starbucks-gold)"
-          badge={`${priorities.length}`}
+        <div
+          ref={prioritiesRef}
+          tabIndex={-1}
+          className="scroll-mt-24 outline-none"
         >
-          <PrioritiesSection
-            priorities={priorities}
-            readOnly={isReadOnly}
-            onChange={handlePrioritiesChange}
-            availableStages={availableStages}
-            products={products}
-            defaultProductId={products[0]?.id}
-          />
-        </AccordionSection>
+          <AccordionSection
+            groupSyncKey={groupSyncKey}
+            groupExpanded={groupExpanded}
+            icon={<StarIcon />}
+            title="Priorities"
+            titleColor="var(--color-starbucks-gold)"
+            badge={`${priorities.length}`}
+          >
+            <PrioritiesSection
+              priorities={priorities}
+              readOnly={isReadOnly}
+              onChange={handlePrioritiesChange}
+              availableStages={availableStages}
+              products={products}
+              defaultProductId={products[0]?.id}
+            />
+            {submitFieldError?.field === "priorities" && (
+              <p
+                role="alert"
+                className="mt-3 text-sm font-medium text-[var(--color-destructive)]"
+              >
+                {submitFieldError.message}
+              </p>
+            )}
+          </AccordionSection>
+        </div>
       </form>
 
       {/* Submit Confirmation Dialog */}
@@ -1445,8 +1540,8 @@ export function LeadForm({
               Submit Report?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              Your report will be locked and visible to the group head. You
-              will not be able to make changes after submission.
+              Your report will be locked and visible to the group head. You will
+              not be able to make changes after submission.
             </p>
             <div className="mt-3 space-y-1 text-sm">
               <div className="flex items-center gap-2">

@@ -1,10 +1,14 @@
-import { Injectable, type OnModuleInit, type OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  type OnModuleInit,
+  type OnModuleDestroy,
+} from "@nestjs/common";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
   customreportActiveLeadsTotal,
   customreportReportsOnTimeRatio,
-} from '../../infrastructure/metrics/metrics.registry.js';
+} from "../../infrastructure/metrics/metrics.registry.js";
 
 /**
  * Port shape used by the gauges service. Declared as an interface so unit
@@ -39,8 +43,8 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
 
   async onTimeRatioLastNPeriods(n: number): Promise<number | null> {
     const reports = await this.prisma.report.findMany({
-      where: { status: 'published' },
-      orderBy: { periodStart: 'desc' },
+      where: { status: "published" },
+      orderBy: { periodStart: "desc" },
       take: n,
       select: { id: true },
     });
@@ -49,12 +53,12 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
     const reportIds = reports.map((r) => r.id);
     const [total, onTime] = await Promise.all([
       this.prisma.reportSection.count({
-        where: { reportId: { in: reportIds }, status: 'submitted' },
+        where: { reportId: { in: reportIds }, status: "submitted" },
       }),
       this.prisma.reportSection.count({
         where: {
           reportId: { in: reportIds },
-          status: 'submitted',
+          status: "submitted",
           late: false,
         },
       }),
@@ -65,14 +69,14 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
 
   async activeLeadsLastPublishedPeriod(): Promise<number> {
     const report = await this.prisma.report.findFirst({
-      where: { status: 'published' },
-      orderBy: { periodStart: 'desc' },
+      where: { status: "published" },
+      orderBy: { periodStart: "desc" },
       select: { id: true },
     });
     if (!report) return 0;
     const distinct = await this.prisma.reportSection.findMany({
-      where: { reportId: report.id, status: 'submitted' },
-      distinct: ['authorId'],
+      where: { reportId: report.id, status: "submitted" },
+      distinct: ["authorId"],
       select: { authorId: true },
     });
     return distinct.length;

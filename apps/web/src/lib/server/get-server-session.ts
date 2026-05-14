@@ -1,8 +1,8 @@
-import 'server-only';
+import "server-only";
 
-import { cookies } from 'next/headers';
+import { cookies } from "next/headers";
 
-import type { UserSession } from '@customreport/shared';
+import type { UserSession } from "@customreport/shared";
 
 /**
  * AUTH-07 (Phase 29-03): server-only helper that reads the session cookie
@@ -27,13 +27,17 @@ import type { UserSession } from '@customreport/shared';
  * fresh, otherwise role downgrades would be invisible until the Next.js
  * data cache invalidates.
  */
-const COOKIE_NAME = 'customreport_session';
+const COOKIE_NAME = "customreport_session";
 
 function resolveApiUrl(): string {
   // In production, NEXT_PUBLIC_API_URL points at the API hostname inside
   // the docker network or behind the corporate proxy. In the local regression
   // stack, the Nest API listens on :3002.
-  return process.env['API_URL'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3002';
+  return (
+    process.env["API_URL"] ??
+    process.env["NEXT_PUBLIC_API_URL"] ??
+    "http://localhost:3002"
+  );
 }
 
 type TrpcBatchEntry = {
@@ -54,7 +58,7 @@ function decodeAuthMeResponse(body: unknown): UserSession | null {
   if (!entry || entry.error) return null;
   const data = entry.result?.data;
   if (data === null || data === undefined) return null;
-  if (typeof data === 'object' && 'json' in (data as Record<string, unknown>)) {
+  if (typeof data === "object" && "json" in (data as Record<string, unknown>)) {
     const inner = (data as { json: unknown }).json;
     return inner === null ? null : (inner as UserSession);
   }
@@ -65,9 +69,9 @@ export async function getServerSession(): Promise<UserSession | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   const shouldUseDevFallback =
-    process.env['NODE_ENV'] !== 'production' &&
-    (process.env['AUTH_DEV_MODE'] === 'true' ||
-      process.env['AUTH_DEV_MODE_ALLOW_TEST'] === 'true');
+    process.env["NODE_ENV"] !== "production" &&
+    (process.env["AUTH_DEV_MODE"] === "true" ||
+      process.env["AUTH_DEV_MODE_ALLOW_TEST"] === "true");
   if (!token && !shouldUseDevFallback) return null;
 
   const apiUrl = resolveApiUrl();
@@ -79,9 +83,9 @@ export async function getServerSession(): Promise<UserSession | null> {
 
   try {
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: token ? { cookie: `${COOKIE_NAME}=${token}` } : undefined,
-      cache: 'no-store',
+      cache: "no-store",
     });
     if (!response.ok) return null;
     const body = (await response.json()) as unknown;

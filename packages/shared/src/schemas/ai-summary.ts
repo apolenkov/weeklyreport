@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Phase 54 (UFB-055) — payload shape for the `ai.periodSummary` tRPC
@@ -24,7 +24,7 @@ import { z } from 'zod';
  */
 export const aiSummarySchema = z.object({
   summary: z.string(),
-  source: z.enum(['mock', 'ai']),
+  source: z.enum(["mock", "ai"]),
   citationIds: z.array(z.string().uuid()),
 });
 

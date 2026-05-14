@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
-import type { PriorityEntry, Product } from './mock-data';
-import { StageMultiSelect } from './stage-multi-select';
+import type { PriorityEntry, Product } from "./mock-data";
+import { StageMultiSelect } from "./stage-multi-select";
 
 type PriorityEditDialogProps = {
   readonly open: boolean;
@@ -44,39 +44,57 @@ export function PriorityEditDialog({
   onSave,
   onCancel,
 }: PriorityEditDialogProps) {
+  "use no memo";
   const isCreate = priority === null;
 
-  const [text, setText] = useState(priority?.text ?? '');
+  const [text, setText] = useState(priority?.text ?? "");
   const [productId, setProductId] = useState(
-    priority?.productId || defaultProductId || products?.[0]?.id || '',
+    priority?.productId || defaultProductId || products?.[0]?.id || "",
   );
   // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
   const [stageIds, setStageIds] = useState<string[]>(
-    priority?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
+    priority?.stageIds ??
+      (isCreate ? (availableStages ? [...availableStages] : []) : []),
   );
   const [errors, setErrors] = useState<{ text?: string }>({});
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // A13 fix: products and availableStages excluded from deps — unstable parent refs
+  // (new array/fn each render) cause form-race on autosave → React Query invalidate cycle.
+  // Dialog is key-reset by parent on open-transition instead.
   useEffect(() => {
     if (!open) return;
-    setText(priority?.text ?? '');
-    setProductId(priority?.productId || defaultProductId || products?.[0]?.id || '');
+    setText(priority?.text ?? "");
+    setProductId(
+      priority?.productId || defaultProductId || products?.[0]?.id || "",
+    );
     setStageIds(
-      priority?.stageIds ?? (isCreate ? (availableStages ? [...availableStages] : []) : []),
+      priority?.stageIds ??
+        (isCreate ? (availableStages ? [...availableStages] : []) : []),
     );
     setErrors({});
     // Focus the input on open. requestAnimationFrame so the portal mount
     // has settled before we steal focus from the underlying overlay.
     const id = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(id);
-  }, [open, priority?.rank, priority?.text, priority?.stageIds, priority?.productId, defaultProductId, products, availableStages, isCreate]);
+    // eslint-disable-next-line react-compiler/react-compiler
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    open,
+    priority?.rank,
+    priority?.text,
+    priority?.stageIds,
+    priority?.productId,
+    defaultProductId,
+    isCreate,
+  ]);
 
   if (!open) return null;
 
   function handleSave() {
     const trimmed = text.trim();
     const next: typeof errors = {};
-    if (trimmed.length === 0) next.text = 'Priority text is required';
+    if (trimmed.length === 0) next.text = "Priority text is required";
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -92,18 +110,20 @@ export function PriorityEditDialog({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       e.preventDefault();
       onCancel();
     }
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSave();
     }
   }
 
-  const headerVerb = isCreate ? 'Add Priority' : 'Edit Priority';
-  const slotLabel = isCreate ? `Priority ${nextRank}` : `Priority ${priority.rank}`;
+  const headerVerb = isCreate ? "Add Priority" : "Edit Priority";
+  const slotLabel = isCreate
+    ? `Priority ${nextRank}`
+    : `Priority ${priority.rank}`;
 
   return (
     <div
@@ -120,14 +140,19 @@ export function PriorityEditDialog({
         aria-label={`${headerVerb} dialog`}
       >
         <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {headerVerb}{' '}
-          <span className="text-[var(--color-muted-foreground)]">— {slotLabel}</span>
+          {headerVerb}{" "}
+          <span className="text-[var(--color-muted-foreground)]">
+            — {slotLabel}
+          </span>
         </h2>
 
         {/* R4-B: product picker — only when the lead owns more than one product */}
         {products && products.length > 1 && (
           <div className="mb-4">
-            <label className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]" htmlFor="priority-product">
+            <label
+              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+              htmlFor="priority-product"
+            >
               Product
             </label>
             <select
@@ -137,7 +162,9 @@ export function PriorityEditDialog({
               onChange={(e) => setProductId(e.target.value)}
             >
               {products.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
               ))}
             </select>
           </div>
@@ -153,14 +180,14 @@ export function PriorityEditDialog({
           <textarea
             id="priority-text"
             ref={inputRef}
-            aria-invalid={errors.text ? 'true' : 'false'}
-            aria-describedby={errors.text ? 'priority-text-error' : undefined}
+            aria-invalid={errors.text ? "true" : "false"}
+            aria-describedby={errors.text ? "priority-text-error" : undefined}
             className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
               errors.text
-                ? 'border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]'
-                : 'border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]'
+                ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
             }`}
-            style={{ minHeight: '70px' }}
+            style={{ minHeight: "70px" }}
             value={text}
             onChange={(e) => {
               setText(e.target.value);
@@ -169,7 +196,10 @@ export function PriorityEditDialog({
             placeholder="What matters most to ship this week?"
           />
           {errors.text && (
-            <p id="priority-text-error" className="mt-1 text-xs text-[var(--color-destructive)]">
+            <p
+              id="priority-text-error"
+              className="mt-1 text-xs text-[var(--color-destructive)]"
+            >
               {errors.text}
             </p>
           )}

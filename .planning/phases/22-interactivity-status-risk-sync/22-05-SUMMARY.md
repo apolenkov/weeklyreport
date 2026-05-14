@@ -2,7 +2,16 @@
 phase: 22-interactivity-status-risk-sync
 plan: 05
 subsystem: ui
-tags: [trpc, react-query, mutation, cache-invalidation, weekly-report, publish, reopen]
+tags:
+  [
+    trpc,
+    react-query,
+    mutation,
+    cache-invalidation,
+    weekly-report,
+    publish,
+    reopen,
+  ]
 
 # Dependency graph
 requires:
@@ -91,7 +100,7 @@ completed: 2026-04-25
 
 ### Modified
 
-- `apps/web/src/components/weekly-report/weekly-report-page.tsx` — Imports useMutation/useQueryClient + invalidate* helpers; constructs publishMut + reopenMut with onSuccess cascade and onError toast; passes onPublish/onReopen/periodStatus/isPending to PublishLockButton; rewrites the ExportPdfButton TODO from Phase 22 → Phase 23.
+- `apps/web/src/components/weekly-report/weekly-report-page.tsx` — Imports useMutation/useQueryClient + invalidate\* helpers; constructs publishMut + reopenMut with onSuccess cascade and onError toast; passes onPublish/onReopen/periodStatus/isPending to PublishLockButton; rewrites the ExportPdfButton TODO from Phase 22 → Phase 23.
 - `apps/web/src/components/weekly-report/publish-lock-button.tsx` — Removes useState(isPublished); adds onPublish, onReopen, periodStatus, isPending props; renders Reopen Period button when periodStatus === 'published', otherwise Publish & Lock with confirmation dialog. Cancel never invokes a callback.
 - `apps/web/src/components/weekly-report/export-pdf-button.tsx` — Replaces setTimeout-based fake export with toast.info('PDF export will be available in v5.0 Phase 23'); adds title attr + TODO(Phase 23) docblock.
 - `apps/web/src/lib/mappers/weekly-report.ts` — Additively surfaces `period.reportId` and `period.periodStatus`; keeps `period.id` (= reportId) and top-level `periodStatus` for backwards compatibility with Phase 21 consumers.
@@ -140,29 +149,29 @@ The repo-wide `tsc --noEmit -p tsconfig.json` reports several pre-existing error
 
 ### Plan acceptance criteria (Task 1)
 
-| Check                                                                          | Expected | Result |
-| ------------------------------------------------------------------------------ | -------- | ------ |
-| `grep -F trpc.period.publish.mutationOptions` in weekly-report-page.tsx        | ≥ 1      | 1      |
-| `grep -F trpc.period.reopen.mutationOptions` in weekly-report-page.tsx         | ≥ 1      | 1      |
-| `grep -F invalidateLeadHistory` in weekly-report-page.tsx                      | ≥ 1      | 3      |
-| `grep -E (onPublish|onReopen|periodStatus)\??:` in publish-lock-button.tsx     | ≥ 3      | 3      |
-| `grep -E reportId\|periodStatus` in mappers/weekly-report.ts                   | ≥ 2      | 12     |
-| No `TODO(Phase 22)` for PublishLockButton in weekly-report-page.tsx            | true     | true   |
+| Check                                                                   | Expected | Result                                        |
+| ----------------------------------------------------------------------- | -------- | --------------------------------------------- | --- | --- |
+| `grep -F trpc.period.publish.mutationOptions` in weekly-report-page.tsx | ≥ 1      | 1                                             |
+| `grep -F trpc.period.reopen.mutationOptions` in weekly-report-page.tsx  | ≥ 1      | 1                                             |
+| `grep -F invalidateLeadHistory` in weekly-report-page.tsx               | ≥ 1      | 3                                             |
+| `grep -E (onPublish                                                     | onReopen | periodStatus)\??:` in publish-lock-button.tsx | ≥ 3 | 3   |
+| `grep -E reportId\|periodStatus` in mappers/weekly-report.ts            | ≥ 2      | 12                                            |
+| No `TODO(Phase 22)` for PublishLockButton in weekly-report-page.tsx     | true     | true                                          |
 
 ### Plan acceptance criteria (Task 2)
 
-| Check                                                                            | Expected | Result |
-| -------------------------------------------------------------------------------- | -------- | ------ |
-| Phase 23 markers across export-pdf-button.tsx + weekly-report-page.tsx           | ≥ 1      | 3      |
-| `grep -c TODO(Phase 22)` in weekly-report-page.tsx                               | 0        | 0      |
-| `grep -F trpc.review.dashboard` in dashboard-page.tsx                            | ≥ 1      | 1      |
-| Integration smoke test exists at weekly-report-page.test.tsx                     | true     | true   |
+| Check                                                                  | Expected | Result |
+| ---------------------------------------------------------------------- | -------- | ------ |
+| Phase 23 markers across export-pdf-button.tsx + weekly-report-page.tsx | ≥ 1      | 3      |
+| `grep -c TODO(Phase 22)` in weekly-report-page.tsx                     | 0        | 0      |
+| `grep -F trpc.review.dashboard` in dashboard-page.tsx                  | ≥ 1      | 1      |
+| Integration smoke test exists at weekly-report-page.test.tsx           | true     | true   |
 
 ### Test runs
 
 - `pnpm exec vitest run src/components/weekly-report/ src/components/dashboard/ src/lib/cache-keys src/lib/mappers/weekly-report` — 35 tests, all green.
 - Full web suite: `pnpm exec vitest run` — 153 tests across 20 files, all green.
-- `pnpm exec tsc --noEmit -p tsconfig.json` — zero errors in this plan's files (weekly-report-*, mappers/weekly-report*, cache-keys*, export-pdf-button*).
+- `pnpm exec tsc --noEmit -p tsconfig.json` — zero errors in this plan's files (weekly-report-_, mappers/weekly-report_, cache-keys*, export-pdf-button*).
 
 ## Self-Check
 

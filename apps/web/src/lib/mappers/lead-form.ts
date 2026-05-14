@@ -186,7 +186,7 @@ export type LeadCurrentUser = {
    * head/admin-only UI like "Revoke" vs "Request Reopen". Driven by the
    * read model's `authorRole`.
    */
-  authorRole: "lead" | "head" | "admin" | "viewer" | "director";
+  authorRole: "lead" | "head" | "admin" | "viewer";
 };
 
 // ---- Helpers ----
@@ -274,9 +274,7 @@ function initialsFromName(name: string): string {
   return (first.charAt(0) + last.charAt(0)).toUpperCase();
 }
 
-function buildProjectIndex(
-  section: ReportSectionReadModel,
-): Map<
+function buildProjectIndex(section: ReportSectionReadModel): Map<
   string,
   {
     name: string;
@@ -423,6 +421,7 @@ export function mapLeadItems(
       const status = deriveItemStatus({
         workflowStatus: item.workflowStatus,
         type: item.type,
+        completed: item.completed ?? null,
       });
       return {
         id: item.id ?? `${itemType}-${item.projectId}-${item.text.slice(0, 8)}`,
@@ -473,8 +472,10 @@ export function mapLeadDecisions(
   const projectIndex = buildProjectIndex(section);
   return section.decisions.map((d, idx) => ({
     id: d.id ?? `decision-${idx}`,
-    productId: d.productId ?? '',
-    productName: (d.productId ? projectIndex.get(d.productId)?.name : undefined) ?? 'Group',
+    productId: d.productId ?? "",
+    productName:
+      (d.productId ? projectIndex.get(d.productId)?.name : undefined) ??
+      "Group",
     text: d.text,
     owner: d.owner ?? "",
     impact: d.impact ?? "",
@@ -494,7 +495,9 @@ export function mapLeadPriorities(
     text: p.text,
     stageIds: p.stageIds,
     productId: p.productId ?? undefined,
-    productName: (p.productId ? projectIndex.get(p.productId)?.name : undefined) ?? undefined,
+    productName:
+      (p.productId ? projectIndex.get(p.productId)?.name : undefined) ??
+      undefined,
   }));
 }
 
@@ -591,7 +594,7 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   // token (`authorRole`) is exposed so role-based UI gating doesn't have
   // to reverse-engineer the label string. Defaults to 'lead' when the
   // read model omits it (legacy fixtures, harness-driven tests).
-  const authorRole: "lead" | "head" | "admin" | "viewer" | "director" =
+  const authorRole: "lead" | "head" | "admin" | "viewer" =
     args.active.authorRole ?? "lead";
   const roleLabel =
     authorRole === "head"
@@ -600,9 +603,7 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
         ? "Admin"
         : authorRole === "viewer"
           ? "Viewer"
-          : authorRole === "director"
-            ? "Director"
-            : "Lead";
+          : "Lead";
 
   return {
     products: mapLeadProducts(section),

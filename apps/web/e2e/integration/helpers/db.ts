@@ -15,15 +15,15 @@
  * means one shared pool for the whole run.
  */
 
-import { PrismaClient } from '@prisma/client';
-import pg from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from "@prisma/client";
+import pg from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const e2eUrl = process.env.E2E_DATABASE_URL;
 if (!e2eUrl) {
   throw new Error(
-    'helpers/db.ts: E2E_DATABASE_URL must be set (this should have been ' +
-      'guaranteed by playwright.integration.config.ts).',
+    "helpers/db.ts: E2E_DATABASE_URL must be set (this should have been " +
+      "guaranteed by playwright.integration.config.ts).",
   );
 }
 
@@ -45,12 +45,12 @@ export const prisma = new PrismaClient({ adapter });
  * specs that mutate seed entities.
  */
 export async function resetMutations(): Promise<void> {
-  const { execSync } = await import('node:child_process');
-  const path = await import('node:path');
-  const repoRoot = path.resolve(__dirname, '../../../../..');
-  execSync('pnpm exec tsx prisma/seed.ts', {
+  const { execSync } = await import("node:child_process");
+  const path = await import("node:path");
+  const repoRoot = path.resolve(__dirname, "../../../../..");
+  execSync("pnpm exec prisma db seed", {
     cwd: repoRoot,
     env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL! },
-    stdio: 'pipe',
+    stdio: "pipe",
   });
 }

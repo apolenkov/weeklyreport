@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { redirect } from "next/navigation";
 
 /**
  * UX-17 (Phase 35-08): the legacy `/lead/history` and `/reports/history`
@@ -11,5 +11,5 @@ import { redirect } from 'next/navigation';
  * for this server-component path.
  */
 export default function LeadHistoryRedirect() {
-  redirect('/reports?tab=drafts');
+  redirect("/reports?tab=drafts");
 }

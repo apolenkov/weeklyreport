@@ -57,6 +57,7 @@ customreport/
 ## Directory Purposes
 
 **`apps/api/src/infrastructure/`:**
+
 - Purpose: Cross-cutting infrastructure concerns shared across domain modules
 - Contains:
   - `trpc/` - tRPC router, middleware, context factory, error mapper (4 source files)
@@ -69,6 +70,7 @@ customreport/
   - `middleware/` - Correlation ID middleware (x-request-id)
 
 **`apps/api/src/modules/`:**
+
 - Purpose: Domain modules encapsulating business logic per capability
 - Contains: 10 domain modules, each with consistent internal structure
 - Key files per module:
@@ -81,6 +83,7 @@ customreport/
   - `{name}.integration.test.ts` - Integration tests with Prisma
 
 **`apps/api/src/modules/auth/`:**
+
 - Purpose: Authentication (SAML SSO, JWT, role guard)
 - Key files:
   - `auth.routes.ts` - Express route handlers for SAML login/callback/logout/dev-login + `buildUserSession()` + `ensureWeeklyReport()`
@@ -89,6 +92,7 @@ customreport/
   - `roles.guard.ts` - Simple role guard factory (`createRoleGuard()`)
 
 **`apps/web/src/app/`:**
+
 - Purpose: Next.js App Router page definitions
 - Structure:
   - `layout.tsx` - Root layout (HTML shell, fonts, skip-to-content link)
@@ -105,6 +109,7 @@ customreport/
   - `(app)/reports/[reportId]/print/page.tsx` - Print-optimized report layout (PDF source)
 
 **`apps/web/src/components/`:**
+
 - Purpose: React components organized by domain
 - Subdirectories:
   - `lead/` - Lead form components: `lead-form.tsx`, `sdlc-pipeline.tsx`, `period-navigator.tsx`, `fill-from-button.tsx`, `version-history-nav.tsx`, `current-week-section.tsx`, `next-week-section.tsx`, `risks-section.tsx`, `decisions-section.tsx`, `priorities-section.tsx`, `item-card.tsx`, `stage-chip.tsx`, `lead-history-list.tsx`, `mock-data.ts`
@@ -120,23 +125,27 @@ customreport/
   - `head/` - (empty, reserved)
 
 **`apps/web/src/lib/`:**
+
 - Purpose: Client-side utility functions
 - Key files:
   - `trpc.ts` - tRPC React client creation (`createTRPCReact<AppRouter>()` + `httpBatchLink` with superjson)
   - `format-date.ts` - Date formatting utilities
 
 **`apps/web/src/server/`:**
+
 - Purpose: Server-side helpers for Next.js server components
 - Key files:
   - `auth/session.ts` - JWT cookie extraction and session parsing
 
 **`packages/shared/src/schemas/`:**
+
 - Purpose: All Zod schemas and derived TypeScript types
 - Key files:
   - `auth.ts` - `roleSchema`, `userSessionSchema`, `Role`, `UserSession`
   - `report.ts` - All domain schemas: report, sections, items, risks, decisions, priorities, PDF export, admin, reminders, carry-over, archive, periods, stages, settings, pagination (~494 lines)
 
 **`packages/ui/src/components/`:**
+
 - Purpose: shadcn/ui component library
 - Structure:
   - `ui/` - Base primitives: alert, avatar, badge, button, card, collapsible, dialog, dropdown-menu, input, label, progress, select, separator, sheet, sidebar, skeleton, sonner, table, tabs, textarea, tooltip
@@ -145,20 +154,23 @@ customreport/
 ## Key File Locations
 
 **Entry Points:**
+
 - `apps/api/src/main.ts`: API server bootstrap (NestJS + tRPC + auth + BullBoard)
 - `apps/web/src/app/layout.tsx`: Root HTML layout
 - `apps/web/src/app/page.tsx`: Login page (application entry for users)
 - `apps/web/src/proxy.ts`: Next.js 16 proxy (replaces middleware.ts) - auth redirect logic
 
 **Configuration:**
+
 - `turbo.json`: Turborepo task definitions (build, dev, lint, typecheck, test)
-- `pnpm-workspace.yaml`: Workspace packages (apps/*, packages/*)
+- `pnpm-workspace.yaml`: Workspace packages (apps/_, packages/_)
 - `package.json`: Root scripts, shared devDependencies, pnpm config
 - `prisma/schema.prisma`: Database schema (at monorepo root)
 - `apps/api/src/infrastructure/config/env.schema.ts`: Environment variable validation
 - `apps/web/src/styles/app.css`: Tailwind CSS entry point + utility safelist
 
 **Core Logic:**
+
 - `apps/api/src/infrastructure/trpc/trpc.router.ts`: Central API router (all procedures)
 - `apps/api/src/infrastructure/trpc/trpc.middleware.ts`: Auth middleware (public/protected/head)
 - `apps/api/src/modules/report-sections/report-sections.service.ts`: Lead report editing logic
@@ -166,6 +178,7 @@ customreport/
 - `packages/shared/src/schemas/report.ts`: All domain data schemas
 
 **Testing:**
+
 - `apps/api/src/modules/*/*.test.ts`: Unit tests (service logic)
 - `apps/api/src/modules/*/*.contract.test.ts`: Contract tests (Zod schema validation)
 - `apps/api/src/modules/*/*.integration.test.ts`: Integration tests (Prisma)
@@ -177,6 +190,7 @@ customreport/
 ## Naming Conventions
 
 **Files:**
+
 - Domain modules: `{module-name}.{layer}.ts` (e.g., `review.service.ts`, `review.prisma-repository.ts`, `review.module.ts`, `review.router.ts`)
 - Tests: `{module-name}.{layer}.test.ts` or `{module-name}.contract.test.ts` or `{module-name}.integration.test.ts`
 - React components: `kebab-case.tsx` (e.g., `lead-form.tsx`, `dashboard-page.tsx`)
@@ -184,6 +198,7 @@ customreport/
 - UI components: `kebab-case.tsx` matching shadcn/ui convention
 
 **Directories:**
+
 - API modules: `kebab-case` (e.g., `report-sections/`, `carry-over/`, `pdf-export/`)
 - Web components: `kebab-case` by domain (e.g., `lead/`, `dashboard/`, `weekly-report/`)
 - Infrastructure: `kebab-case` by concern (e.g., `bullmq/`, `prisma/`, `trpc/`)
@@ -191,6 +206,7 @@ customreport/
 ## Where to Add New Code
 
 **New API Domain Module:**
+
 1. Create directory: `apps/api/src/modules/{name}/`
 2. Create `{name}.service.ts`:
    - Define `{Name}DomainError extends Error`
@@ -213,32 +229,38 @@ customreport/
 10. Export new types from `packages/shared/src/index.ts`
 
 **New Zod Schema:**
+
 - Add to `packages/shared/src/schemas/report.ts` (if report-domain) or create new file in `packages/shared/src/schemas/`
 - Export from `packages/shared/src/index.ts`
 - Derive TypeScript types with `z.infer<typeof schema>`
 
 **New Frontend Page:**
+
 - Create route file in `apps/web/src/app/(app)/{role}/{page-name}/page.tsx`
 - Create component directory in `apps/web/src/components/{domain}/`
 - Page component is a thin wrapper that imports the main component
 - Use `<main id="main-content">` with `max-w-6xl` container pattern
 
 **New Frontend Component:**
+
 - Place in `apps/web/src/components/{domain}/{component-name}.tsx`
 - Use kebab-case filename
 - Import UI primitives from `@customreport/ui` (not local copies)
 - Use `'use client'` directive for interactive components
 
 **New UI Primitive (shadcn/ui):**
+
 - Add to `packages/ui/src/components/ui/{name}.tsx`
 - Export from `packages/ui/src/index.ts`
 - If Tailwind v4 scanner misses classes, add to `apps/web/src/styles/app.css` safelist
 
 **New Shared Utility:**
+
 - API-side: `apps/api/src/lib/` (e.g., new logger, helpers)
 - Web-side: `apps/web/src/lib/` (client utils) or `apps/web/src/server/` (server-only)
 
 **New Test:**
+
 - Unit test: co-located as `{name}.test.ts` next to source file
 - Contract test: `{name}.contract.test.ts` in module directory
 - Integration test: `{name}.integration.test.ts` in module directory
@@ -247,41 +269,48 @@ customreport/
 ## Special Directories
 
 **`prisma/`:**
+
 - Purpose: Database schema and migrations
 - Generated: Prisma Client is generated from this schema
 - Committed: Yes (schema.prisma is committed; generated client is not)
 - Note: Lives at monorepo root, NOT inside apps/api
 
 **`.planning/`:**
+
 - Purpose: GSD workflow planning artifacts, phases, state tracking
 - Generated: By GSD commands
 - Committed: Yes
 
 **`graphify-out/`:**
+
 - Purpose: Knowledge graph analysis output
 - Generated: By `graphify update .` command
 - Committed: Yes
 
 **`mockups/`:**
+
 - Purpose: HTML mockup files for UI/UX design reference
 - Generated: No (hand-crafted)
 - Committed: Yes
 
 **`design-system/`:**
+
 - Purpose: Design system reference and token definitions
 - Generated: No
 - Committed: Yes
 
 **`.turbo/`:**
+
 - Purpose: Turborepo cache
 - Generated: Yes
 - Committed: No (gitignored)
 
 **`node_modules/`:**
+
 - Purpose: pnpm dependency store
 - Generated: Yes
 - Committed: No (gitignored)
 
 ---
 
-*Structure analysis: 2026-04-24*
+_Structure analysis: 2026-04-24_

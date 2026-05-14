@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Role of a User row in the database (Prisma `Role` enum).
@@ -7,14 +7,8 @@ import { z } from 'zod';
  * Phase 32-C / H-01: widened to include 'admin' so the SAML callback can
  * persist admin-roled Keycloak users without crashing on Prisma's enum
  * validation. Stays in lockstep with `enum Role` in `prisma/schema.prisma`.
- *
- * UFB-057 / Phase 57: 'director' added. Director is a leadership-audience
- * consumer (read-only view across ALL groups) — distinct from 'admin'
- * (god-mode, manages users/groups/settings) and from 'head' (owns one
- * group). Viewer-equivalent in capability but lands on the head-dashboard
- * surface instead of the published archive.
  */
-export const roleSchema = z.enum(['lead', 'head', 'admin', 'viewer', 'director']);
+export const roleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
 /**
  * Role attached to an authenticated session (JWT / SAML claim).
@@ -23,10 +17,8 @@ export const roleSchema = z.enum(['lead', 'head', 'admin', 'viewer', 'director']
  * the requireRole middleware factory (D-AUTH-03). adminProcedure ===
  * headProcedure for v6.0; the alias is preserved so Phase 29 can split them
  * without breaking call sites.
- *
- * UFB-057 / Phase 57: 'director' carried alongside the DB-bound set.
  */
-export const sessionRoleSchema = z.enum(['lead', 'head', 'admin', 'viewer', 'director']);
+export const sessionRoleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
 export const userSessionSchema = z.object({
   userId: z.string().uuid(),

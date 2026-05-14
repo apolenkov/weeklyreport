@@ -33,6 +33,7 @@ Regenerate button busts the cache and re-runs the Haiku 4.5 call.
 ## Cache evidence
 
 Unit test `apps/api/src/modules/ai/__tests__/ai.service.test.ts`:
+
 - `cache miss → SDK called → AiInsight upserted`: SDK invoked once;
   `facade.insights.size === 1`.
 - `cache hit on second call → SDK NOT called`: SDK invoked exactly once
@@ -57,21 +58,21 @@ export const loggingMiddleware = t.middleware(async ({ ctx, next, path, type }) 
 
 ## Failure-mode coverage
 
-| Path | Sentinel returned |
-|---|---|
-| Report not found | `{available: false, reason: 'not_found'}` |
-| ANTHROPIC_API_KEY missing | `{available: false, reason: 'unavailable'}` |
-| SDK throws generic error | `{available: false, reason: 'unavailable'}` |
-| RateLimitError | `{available: false, reason: 'rate_limit'}` |
+| Path                                           | Sentinel returned                               |
+| ---------------------------------------------- | ----------------------------------------------- |
+| Report not found                               | `{available: false, reason: 'not_found'}`       |
+| ANTHROPIC_API_KEY missing                      | `{available: false, reason: 'unavailable'}`     |
+| SDK throws generic error                       | `{available: false, reason: 'unavailable'}`     |
+| RateLimitError                                 | `{available: false, reason: 'rate_limit'}`      |
 | Budget exceeded (>50K tokens/h on this report) | `{available: false, reason: 'budget_exceeded'}` |
 
 All five paths covered by unit tests.
 
 ## Test counts
 
-| Suite | Before | After | Delta |
-|---|---|---|---|
-| api unit | 489 / 41 files | 504 / 43 files | +15 / +2 |
+| Suite    | Before                                               | After                                | Delta     |
+| -------- | ---------------------------------------------------- | ------------------------------------ | --------- |
+| api unit | 489 / 41 files                                       | 504 / 43 files                       | +15 / +2  |
 | web unit | 228 passing (1 pre-existing fail in `proxy.test.ts`) | 228 passing (same pre-existing fail) | unchanged |
 
 The pre-existing `proxy.test.ts` failure is unrelated — stale assertion
@@ -80,6 +81,7 @@ referencing an old proxy.ts shape. Tracked outside this phase.
 ## Files modified
 
 19 files:
+
 - 8 new: ai-client/cache/facade/service/module + summary prompt + 2 tests
 - 1 new: AiSummaryCard
 - 1 new: migration SQL

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { createJwtSigner } from './auth.controller';
-import { createJwtStrategyOptions } from './jwt.strategy';
-import { createRoleGuard } from './roles.guard';
-import { createSamlStrategy, createSamlStrategyOptions } from './saml.strategy';
+import { createJwtSigner } from "./auth.controller";
+import { createJwtStrategyOptions } from "./jwt.strategy";
+import { createRoleGuard } from "./roles.guard";
+import { createSamlStrategy, createSamlStrategyOptions } from "./saml.strategy";
 
 @Injectable()
 export class AuthModule {

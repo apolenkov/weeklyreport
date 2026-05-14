@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 const isoDateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -8,9 +8,13 @@ export const trafficLightHistoryInputSchema = z.object({
   periodFrom: isoDateOnly,
   periodTo: isoDateOnly,
 });
-export type TrafficLightHistoryInput = z.infer<typeof trafficLightHistoryInputSchema>;
+export type TrafficLightHistoryInput = z.infer<
+  typeof trafficLightHistoryInputSchema
+>;
 
-export const trafficLightCellSchema = z.enum(['green', 'yellow', 'red']).nullable();
+export const trafficLightCellSchema = z
+  .enum(["green", "yellow", "red"])
+  .nullable();
 export type TrafficLightCell = z.infer<typeof trafficLightCellSchema>;
 
 export const trafficLightRowSchema = z.object({
@@ -24,7 +28,9 @@ export const trafficLightHistoryOutputSchema = z.object({
   periods: z.array(isoDateOnly),
   rows: z.array(trafficLightRowSchema),
 });
-export type TrafficLightHistoryOutput = z.infer<typeof trafficLightHistoryOutputSchema>;
+export type TrafficLightHistoryOutput = z.infer<
+  typeof trafficLightHistoryOutputSchema
+>;
 
 export const leadVelocityInputSchema = z.object({
   periodFrom: isoDateOnly,
@@ -63,4 +69,6 @@ export const periodComparisonRowSchema = z.object({
 export const periodComparisonOutputSchema = z.object({
   rows: z.array(periodComparisonRowSchema),
 });
-export type PeriodComparisonOutput = z.infer<typeof periodComparisonOutputSchema>;
+export type PeriodComparisonOutput = z.infer<
+  typeof periodComparisonOutputSchema
+>;

@@ -1,12 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
 import type {
   ActivityLiveResponse,
   ActivityLiveRow,
-} from '@customreport/shared';
+  UserSession,
+} from "@customreport/shared";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { ActivityRepository } from './activity.service.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { groupScopeFilter } from "../../lib/group-scope.js";
+import type { ActivityRepository } from "./activity.service.js";
 
 @Injectable()
 export class ActivityPrismaRepository implements ActivityRepository {
@@ -23,10 +25,10 @@ export class ActivityPrismaRepository implements ActivityRepository {
    * 4. Map leads → rows (some may have no section yet → status=draft,
    *    counts=0, lastEditAt=null).
    */
-  async getLiveActivity(): Promise<ActivityLiveResponse> {
+  async getLiveActivity(session: UserSession): Promise<ActivityLiveResponse> {
     const report = await this.prisma.report.findFirst({
-      where: { periodStatus: 'open' },
-      orderBy: { periodStart: 'desc' },
+      where: { periodStatus: { in: ["open", "reopened"] } },
+      orderBy: { periodStart: "desc" },
       select: {
         id: true,
         periodStart: true,
@@ -46,13 +48,16 @@ export class ActivityPrismaRepository implements ActivityRepository {
     }
 
     const leads = await this.prisma.user.findMany({
-      where: { role: 'lead' },
+      where: { role: "lead", ...groupScopeFilter(session, "user") },
       select: { id: true, name: true, email: true },
-      orderBy: { name: 'asc' },
+      orderBy: { name: "asc" },
     });
 
     const sections = await this.prisma.reportSection.findMany({
-      where: { reportId: report.id },
+      where: {
+        reportId: report.id,
+        ...groupScopeFilter(session, "reportSection"),
+      },
       include: {
         items: { select: { id: true, updatedAt: true } },
         risks: { select: { id: true, updatedAt: true } },
@@ -61,7 +66,9 @@ export class ActivityPrismaRepository implements ActivityRepository {
       },
     });
 
-    const sectionByAuthor = new Map(sections.map((s) => [s.authorId, s] as const));
+    const sectionByAuthor = new Map(
+      sections.map((s) => [s.authorId, s] as const),
+    );
 
     const rows: ActivityLiveRow[] = leads.map((lead) => {
       const section = sectionByAuthor.get(lead.id);
@@ -72,7 +79,7 @@ export class ActivityPrismaRepository implements ActivityRepository {
           leadId: lead.id,
           leadName: lead.name,
           email: lead.email,
-          status: 'draft',
+          status: "draft",
           itemCount: 0,
           riskCount: 0,
           decisionCount: 0,
@@ -115,9 +122,10 @@ export class ActivityPrismaRepository implements ActivityRepository {
     // Order: drafts first (need attention), then submitted; alpha within
     // each group. Mirrors review.dashboard sort.
     rows.sort((a, b) => {
-      const statusDiff = (a.status === 'submitted' ? 1 : 0) - (b.status === 'submitted' ? 1 : 0);
+      const statusDiff =
+        (a.status === "submitted" ? 1 : 0) - (b.status === "submitted" ? 1 : 0);
       if (statusDiff !== 0) return statusDiff;
-      return a.leadName.localeCompare(b.leadName, 'ru');
+      return a.leadName.localeCompare(b.leadName, "ru");
     });
 
     return {

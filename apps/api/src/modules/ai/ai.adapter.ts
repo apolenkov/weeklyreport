@@ -65,4 +65,4 @@ export interface AiAdapter {
  * AiModule. Consumers (AiSummaryService) `@Inject(AI_ADAPTER)` to
  * receive the concrete implementation chosen by env.
  */
-export const AI_ADAPTER = 'AI_ADAPTER' as const;
+export const AI_ADAPTER = "AI_ADAPTER" as const;

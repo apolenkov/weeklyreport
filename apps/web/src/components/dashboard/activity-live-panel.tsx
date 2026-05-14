@@ -127,6 +127,7 @@ function ActivityRow({
   const contentCount =
     row.itemCount + row.riskCount + row.decisionCount + row.priorityCount;
   const hasContent = contentCount > 0;
+  const isDraft = row.status === "draft";
   const lastEdit = row.lastEditAt
     ? formatRelative(new Date(row.lastEditAt))
     : "not started";
@@ -135,6 +136,8 @@ function ActivityRow({
   const interactiveClassName =
     rowClassName +
     " cursor-pointer border-transparent hover:border-[rgba(0,117,74,0.14)] hover:bg-[var(--color-success)] hover:shadow-[inset_3px_0_0_var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2";
+  const draftClassName =
+    rowClassName + " cursor-default border-transparent";
   const emptyClassName =
     rowClassName +
     " cursor-default border-transparent bg-[rgba(0,0,0,0.025)] opacity-65";
@@ -167,7 +170,7 @@ function ActivityRow({
 
   return (
     <li>
-      {hasContent ? (
+      {hasContent && !isDraft ? (
         <a
           href={href}
           className={interactiveClassName}
@@ -175,6 +178,14 @@ function ActivityRow({
         >
           {content}
         </a>
+      ) : hasContent && isDraft ? (
+        <div
+          className={draftClassName}
+          title="Lead is still working, report not submitted"
+          aria-label={`${row.leadName} report is in draft — not yet submitted`}
+        >
+          {content}
+        </div>
       ) : (
         <div
           className={emptyClassName}

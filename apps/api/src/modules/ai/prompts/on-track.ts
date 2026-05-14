@@ -1,19 +1,19 @@
 // Phase 31 (AI-03) — On-track advisory verdict prompt module.
 // IMPORTANT: pre-computed counts MUST be injected into the user prompt
 // under "DO NOT change these numbers" — PITFALLS C-2 mitigation.
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { CellForOnTrack } from '../ai-facade.js';
-import { sanitizeUserContent } from './sanitize.js';
+import type { CellForOnTrack } from "../ai-facade.js";
+import { sanitizeUserContent } from "./sanitize.js";
 
-export const ON_TRACK_MODEL = 'claude-haiku-4-5-20251001';
-export const ON_TRACK_TOOL_NAME = 'record_on_track_verdict';
+export const ON_TRACK_MODEL = "claude-haiku-4-5-20251001";
+export const ON_TRACK_TOOL_NAME = "record_on_track_verdict";
 export const ON_TRACK_TOOL_DESCRIPTION =
-  'Record an on-track advisory verdict (on-track / attention / off-track) plus confidence and a one-line rationale.';
+  "Record an on-track advisory verdict (on-track / attention / off-track) plus confidence and a one-line rationale.";
 
 export const onTrackSchema = z.object({
-  verdict: z.enum(['on-track', 'attention', 'off-track']),
-  confidence: z.enum(['low', 'medium', 'high']),
+  verdict: z.enum(["on-track", "attention", "off-track"]),
+  confidence: z.enum(["low", "medium", "high"]),
   rationale: z.string().min(5).max(120),
 });
 
@@ -99,13 +99,13 @@ function capField(text: string): string {
 export function buildOnTrackUserPrompt(cell: CellForOnTrack): string {
   const currentWeek = cell.currentWeekText
     ? sanitizeUserContent(capField(cell.currentWeekText))
-    : '(empty)';
+    : "(empty)";
   const nextWeek = cell.nextWeekText
     ? sanitizeUserContent(capField(cell.nextWeekText))
-    : '(empty)';
+    : "(empty)";
   const riskHighlights = cell.riskHighlights
     ? sanitizeUserContent(capField(cell.riskHighlights))
-    : '(none)';
+    : "(none)";
 
   return `[CELL CONTEXT]
 Lead: ${cell.leadName}

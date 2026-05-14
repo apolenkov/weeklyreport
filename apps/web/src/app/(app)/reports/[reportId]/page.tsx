@@ -36,14 +36,22 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
               Report ID: {reportId}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <a
-              href="/head/dashboard"
+              href="/reports?tab=published"
               className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
               style={{ minHeight: "44px" }}
-              aria-label="Back to Dashboard"
+              aria-label="Back to Archive"
             >
-              Back to Dashboard
+              Back to Archive
+            </a>
+            <a
+              href={`/reports/${reportId}/present`}
+              className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+              style={{ minHeight: "44px" }}
+              aria-label="Open presentation"
+            >
+              Presentation
             </a>
             <a
               href={`/print/${reportId}`}

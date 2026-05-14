@@ -37,6 +37,7 @@ import {
   leadershipProcedure,
 } from "./trpc.middleware.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
+import { clearOrgCache } from "./trpc.context.js";
 import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 
 import type { PrismaClient } from "@prisma/client";
@@ -64,6 +65,7 @@ import {
 } from "../../modules/search/search.service.js";
 import type { ActivityService } from "../../modules/activity/activity.service.js";
 import type { TelemetryService } from "../../modules/telemetry/telemetry.service.js";
+import type { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
 import {
   assertCanReadReport,
   assertCanReadRisk,
@@ -158,6 +160,14 @@ type RouterDeps = {
    * procedure is hidden from the surface, not 500-ed.
    */
   telemetryService?: TelemetryService;
+  /**
+   * A2 (UAT-v7 2026-05-12): Redis-backed session revocation for
+   * deactivate/activate user. Optional so existing role-coverage test
+   * fixtures that build the router with `{}` deps keep compiling —
+   * when undefined the mutations still flip isActive in Prisma but skip
+   * the Redis fast-path (sessions expire naturally via JWT TTL).
+   */
+  sessionRevocationService?: SessionRevocationService;
 };
 
 export function createAppRouter(deps: RouterDeps) {
@@ -373,14 +383,22 @@ export function createAppRouter(deps: RouterDeps) {
       // headProcedure.
       dashboard: headProcedure.query(async ({ ctx }) => {
         try {
-          const activeReportId = ctx.session.activeReportId;
+          // A28 (UAT-v7 2026-05-12): resolve the current open/reopened period
+          // from DB instead of ctx.session.activeReportId (which is baked into
+          // the JWT at login and can be stale). This aligns the dashboard with
+          // activity.live, which also queries DB for periodStatus 'open'.
+          const openReport = await ctx.prisma?.report.findFirst({
+            where: { periodStatus: { in: ["open", "reopened"] } },
+            orderBy: { periodStart: "desc" },
+            select: { id: true },
+          });
 
-          if (!activeReportId) {
+          if (!openReport) {
             return [];
           }
 
           return await deps.reviewService.getSubmissionDashboard(
-            activeReportId,
+            openReport.id,
             ctx.session,
           );
         } catch (error) {
@@ -607,6 +625,7 @@ export function createAppRouter(deps: RouterDeps) {
             const previous = await deps.organizationService.getOrganization();
             const next =
               await deps.organizationService.updateOrganization(input);
+            clearOrgCache();
             ctx.auditLogger.organizationUpdate({
               userId: ctx.session?.userId ?? "anonymous",
               role: ctx.session?.role ?? null,
@@ -909,11 +928,65 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      /**
+       * A27: delete a period (Report) and cascade-delete all child rows.
+       * Guard: cannot delete published periods.
+       */
+      deleteReport: adminProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await deps.adminService.deleteReport(input.reportId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
       deleteUser: adminProcedure
         .input(z.object({ userId: z.string().uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.removeUser(input.userId);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * A2 (UAT-v7 2026-05-12): deactivate a user — sets isActive=false in
+       * Prisma and adds the userId to the Redis revoked set so any in-flight
+       * JWT session is rejected immediately by the context factory.
+       */
+      deactivateUser: adminProcedure
+        .input(z.object({ userId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            await deps.prisma.user.update({
+              where: { id: input.userId },
+              data: { isActive: false },
+            });
+            await deps.sessionRevocationService?.revokeSession(input.userId);
+            return { success: true as const };
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * A2 (UAT-v7 2026-05-12): re-activate a user — sets isActive=true in
+       * Prisma and removes the userId from the Redis revoked set so new logins
+       * can proceed normally.
+       */
+      activateUser: adminProcedure
+        .input(z.object({ userId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            await deps.prisma.user.update({
+              where: { id: input.userId },
+              data: { isActive: true },
+            });
+            await deps.sessionRevocationService?.restoreSession(input.userId);
+            return { success: true as const };
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -1329,6 +1402,40 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+
+      /**
+       * A22: head-only mutation to move a published report into the archive.
+       * Sets `archived=true` on the Report row via adminService.archivePeriod
+       * (which uses Report.id — "period" and "report" are the same table).
+       * After this call the report appears in archive.list and is no longer
+       * shown in the "recently published" surface.
+       */
+      archiveReport: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            await deps.adminService.archivePeriod(input.reportId);
+            return { success: true as const };
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      /**
+       * A22: head-only mutation to un-archive a report (move back to
+       * "published but not archived"). Sets `archived=false` via
+       * adminService.unarchivePeriod and removes it from archive.list.
+       */
+      unarchiveReport: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input }) => {
+          try {
+            await deps.adminService.unarchivePeriod(input.reportId);
+            return { success: true as const };
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
 
     // === Reminders namespace ===
@@ -1511,7 +1618,7 @@ export function createAppRouter(deps: RouterDeps) {
               ctx.session,
             );
             // R3a: no-period is a normal 200 response, not an error path.
-            if (result.status === 'no-period') {
+            if (result.status === "no-period") {
               ctx.logger.info("weekly report: no active period", {
                 phase: "weekly-report.load",
                 procedure: "weeklyReport.get",
@@ -1773,9 +1880,9 @@ export function createAppRouter(deps: RouterDeps) {
     // текущий период" panel. headProcedure — only heads (and admins,
     // aliased) consume the per-lead status snapshot.
     activity: router({
-      live: headProcedure.query(async () => {
+      live: headProcedure.query(async ({ ctx }) => {
         try {
-          return await deps.activityService.getLiveActivity();
+          return await deps.activityService.getLiveActivity(ctx.session);
         } catch (error) {
           throw mapDomainError(error);
         }

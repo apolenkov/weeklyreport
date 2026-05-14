@@ -4,13 +4,13 @@ Shared Zod schemas, TypeScript types, and tRPC router definition used by both `@
 
 ## Schemas
 
-| Schema | File | Description |
-|--------|------|-------------|
-| `reportSectionSchema` | `schemas/report.ts` | Full report section with projects, items, risks, decisions, priorities |
-| `draftSavePayloadSchema` | `schemas/report.ts` | Draft save input with `safeText()` sanitization |
-| `submitSectionPayloadSchema` | `schemas/report.ts` | Submit input with `confirmed: true` and project statuses |
-| `userSessionSchema` | `schemas/auth.ts` | JWT payload: userId, email, name, role, active report/section |
-| `roleSchema` | `schemas/auth.ts` | Role enum: lead, head, viewer |
+| Schema                       | File                | Description                                                            |
+| ---------------------------- | ------------------- | ---------------------------------------------------------------------- |
+| `reportSectionSchema`        | `schemas/report.ts` | Full report section with projects, items, risks, decisions, priorities |
+| `draftSavePayloadSchema`     | `schemas/report.ts` | Draft save input with `safeText()` sanitization                        |
+| `submitSectionPayloadSchema` | `schemas/report.ts` | Submit input with `confirmed: true` and project statuses               |
+| `userSessionSchema`          | `schemas/auth.ts`   | JWT payload: userId, email, name, role, active report/section          |
+| `roleSchema`                 | `schemas/auth.ts`   | Role enum: lead, head, viewer                                          |
 
 ## Key Utilities
 

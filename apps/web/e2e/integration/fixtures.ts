@@ -17,13 +17,13 @@ import {
   expect,
   type Page,
   type BrowserContext,
-} from '@playwright/test';
+} from "@playwright/test";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   `http://127.0.0.1:${process.env.E2E_API_PORT ?? 3002}`;
 
-export type Role = 'lead' | 'head' | 'viewer';
+export type Role = "lead" | "head" | "admin" | "viewer";
 
 /**
  * Mints a real session JWT cookie via the dev-login endpoint and installs it
@@ -45,24 +45,24 @@ export async function loginAs(
   opts: { role: Role; email?: string },
 ): Promise<void> {
   const url = new URL(`${API_URL}/auth/dev-login`);
-  url.searchParams.set('role', opts.role);
-  if (opts.email) url.searchParams.set('email', opts.email);
+  url.searchParams.set("role", opts.role);
+  if (opts.email) url.searchParams.set("email", opts.email);
 
   const res = await context.request.get(url.toString(), { maxRedirects: 0 });
   const status = res.status();
   // Express `res.redirect` defaults to 302; accept 303/307 defensively.
   if (status !== 302 && status !== 303 && status !== 307) {
     throw new Error(
-      `dev-login failed: HTTP ${status} - ${await res.text().catch(() => '<no body>')}`,
+      `dev-login failed: HTTP ${status} - ${await res.text().catch(() => "<no body>")}`,
     );
   }
 
   const cookies = await context.cookies();
-  if (!cookies.find((c) => c.name === 'customreport_session')) {
+  if (!cookies.find((c) => c.name === "customreport_session")) {
     throw new Error(
-      'customreport_session cookie was not set after /auth/dev-login. ' +
-        'Check AUTH_DEV_MODE=true on the API and that FRONTEND_URL matches the ' +
-        'browser baseURL (cookie SameSite/Domain rules).',
+      "customreport_session cookie was not set after /auth/dev-login. " +
+        "Check AUTH_DEV_MODE=true on the API and that FRONTEND_URL matches the " +
+        "browser baseURL (cookie SameSite/Domain rules).",
     );
   }
 }
@@ -72,6 +72,8 @@ type Fixtures = {
   leadPage: Page;
   /** Logged in as the seeded department head. */
   headPage: Page;
+  /** Logged in as the seeded admin user — use for /admin/* routes. */
+  adminPage: Page;
   /** Logged in as the seeded read-only viewer. */
   viewerPage: Page;
   /** Fresh context with NO cookie — for auth-guard tests. */
@@ -83,8 +85,8 @@ export const test = base.extend<Fixtures>({
     const context = await browser.newContext();
     const page = await context.newPage();
     await loginAs(context, {
-      role: 'lead',
-      email: 'lead1@customreport.local',
+      role: "lead",
+      email: "lead1@customreport.local",
     });
     await use(page);
     await context.close();
@@ -92,14 +94,21 @@ export const test = base.extend<Fixtures>({
   headPage: async ({ browser }, use) => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    await loginAs(context, { role: 'head' });
+    await loginAs(context, { role: "head" });
+    await use(page);
+    await context.close();
+  },
+  adminPage: async ({ browser }, use) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await loginAs(context, { role: "admin" });
     await use(page);
     await context.close();
   },
   viewerPage: async ({ browser }, use) => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    await loginAs(context, { role: 'viewer' });
+    await loginAs(context, { role: "viewer" });
     await use(page);
     await context.close();
   },

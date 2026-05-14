@@ -1,23 +1,31 @@
 // Shared helpers for UAT suite — headless playwright + screenshots + db queries
-import { execSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { execSync } from "node:child_process";
+import { mkdirSync } from "node:fs";
 
-export const BASE = 'http://localhost:3000';
-export const API = 'http://localhost:3002';
-export const MAILHOG = 'http://localhost:8025';
-export const SCREENSHOTS_DIR = '/home/user/work/customreport/apps/web/.tmp/uat-screenshots';
+export const BASE = "http://localhost:3000";
+export const API = "http://localhost:3002";
+export const MAILHOG = "http://localhost:8025";
+export const SCREENSHOTS_DIR =
+  "/home/user/work/customreport/apps/web/.tmp/uat-screenshots";
 
 mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 
 // Stream protocol — one line per outcome → Monitor surfaces in chat
-export function emit(id, status, msg, detail = '') {
-  const icon = status === 'PASS' ? '✓' : status === 'FAIL' ? '✗' : status === 'WARN' ? '⚠' : '·';
-  const line = `${icon} ${id} [${status}] ${msg}${detail ? ` — ${detail.slice(0, 200)}` : ''}`;
-  process.stdout.write(line + '\n');
+export function emit(id, status, msg, detail = "") {
+  const icon =
+    status === "PASS"
+      ? "✓"
+      : status === "FAIL"
+        ? "✗"
+        : status === "WARN"
+          ? "⚠"
+          : "·";
+  const line = `${icon} ${id} [${status}] ${msg}${detail ? ` — ${detail.slice(0, 200)}` : ""}`;
+  process.stdout.write(line + "\n");
 }
-export const pass = (id, msg, detail = '') => emit(id, 'PASS', msg, detail);
-export const fail = (id, msg, detail = '') => emit(id, 'FAIL', msg, detail);
-export const warn = (id, msg, detail = '') => emit(id, 'WARN', msg, detail);
+export const pass = (id, msg, detail = "") => emit(id, "PASS", msg, detail);
+export const fail = (id, msg, detail = "") => emit(id, "FAIL", msg, detail);
+export const warn = (id, msg, detail = "") => emit(id, "WARN", msg, detail);
 export const note = (msg) => process.stdout.write(`· ${msg}\n`);
 
 // Wait for the React app to hydrate AND finish first-data render.
@@ -38,66 +46,71 @@ export const note = (msg) => process.stdout.write(`· ${msg}\n`);
 // All variants fall through silently on timeout — caller still sees whatever
 // rendered, but assertions become much less flaky.
 export async function waitForAppReady(page, timeoutOrKind = 15000, kindArg) {
-  const kind = typeof timeoutOrKind === 'string' ? timeoutOrKind : (kindArg ?? 'auto');
-  const timeout = typeof timeoutOrKind === 'number' ? timeoutOrKind : 15000;
-  await page.waitForLoadState('networkidle', { timeout }).catch(() => {});
+  const kind =
+    typeof timeoutOrKind === "string" ? timeoutOrKind : (kindArg ?? "auto");
+  const timeout = typeof timeoutOrKind === "number" ? timeoutOrKind : 15000;
+  await page.waitForLoadState("networkidle", { timeout }).catch(() => {});
   const checker = (() => {
     switch (kind) {
-      case 'lead-form':
+      case "lead-form":
         return () =>
-          document.querySelector('h1') !== null &&
-          (document.body.innerText.includes('Editing version') ||
-            document.body.innerText.includes('Page unavailable'));
-      case 'dashboard':
+          document.querySelector("h1") !== null &&
+          (document.body.innerText.includes("Editing version") ||
+            document.body.innerText.includes("Page unavailable"));
+      case "dashboard":
         return () =>
-          document.body.innerText.includes('Dashboard') &&
-          (document.body.innerText.includes('Submissions') ||
-            document.body.innerText.includes('Last week') ||
-            document.body.innerText.includes('Page unavailable'));
-      case 'weekly':
+          document.body.innerText.includes("Dashboard") &&
+          (document.body.innerText.includes("Submissions") ||
+            document.body.innerText.includes("Last week") ||
+            document.body.innerText.includes("Page unavailable"));
+      case "weekly":
         return () =>
-          document.body.innerText.includes('Weekly Report') &&
-          (document.body.innerText.includes('Toggle All') ||
-            document.body.innerText.includes('Page unavailable'));
-      case 'admin':
+          document.body.innerText.includes("Weekly Report") &&
+          (document.body.innerText.includes("Toggle All") ||
+            document.body.innerText.includes("Page unavailable"));
+      case "admin":
         return () =>
-          document.body.innerText.includes('Admin Panel') ||
-          document.body.innerText.includes('Page unavailable');
-      case 'history':
+          document.body.innerText.includes("Admin Panel") ||
+          document.body.innerText.includes("Page unavailable");
+      case "history":
         return () =>
           /(My History|Published reports)/.test(document.body.innerText) &&
           (document.querySelectorAll('a[href*="/lead/report"]').length > 0 ||
             document.querySelectorAll('a[href*="/reports/"]').length > 0 ||
-            document.body.innerText.includes('No past submissions') ||
-            document.body.innerText.includes('Page unavailable'));
-      case 'archive':
+            document.body.innerText.includes("No past submissions") ||
+            document.body.innerText.includes("Page unavailable"));
+      case "archive":
         return () =>
           /(Published reports|Archive)/i.test(document.body.innerText);
-      case 'trends':
+      case "trends":
         return () =>
-          document.body.innerText.includes('Trends') &&
-          (document.body.innerText.includes('history') ||
-            document.body.innerText.includes('velocity') ||
-            document.body.innerText.includes('Page unavailable'));
-      case 'forbidden':
-        return () => document.body.innerText.includes('Page unavailable');
-      case 'auto':
+          document.body.innerText.includes("Trends") &&
+          (document.body.innerText.includes("history") ||
+            document.body.innerText.includes("velocity") ||
+            document.body.innerText.includes("Page unavailable"));
+      case "forbidden":
+        return () => document.body.innerText.includes("Page unavailable");
+      case "auto":
       default:
         return () =>
-          document.querySelectorAll('[aria-expanded]').length > 0 ||
+          document.querySelectorAll("[aria-expanded]").length > 0 ||
           document.querySelectorAll('[data-testid="hydrated"]').length > 0 ||
-          document.querySelectorAll('main#main-content').length > 0 ||
-          document.body.innerText.includes('DEV: switch role') ||
-          document.body.innerText.includes('Page unavailable') ||
-          document.body.innerText.includes('Access denied');
+          document.querySelectorAll("main#main-content").length > 0 ||
+          document.body.innerText.includes("DEV: switch role") ||
+          document.body.innerText.includes("Page unavailable") ||
+          document.body.innerText.includes("Access denied");
     }
   })();
-  await page.waitForFunction(checker, undefined, { timeout, polling: 200 }).catch(() => {});
+  await page
+    .waitForFunction(checker, undefined, { timeout, polling: 200 })
+    .catch(() => {});
 }
 
 export async function loginAs(page, role, email) {
-  const url = email ? `${BASE}/auth/dev-login?role=${role}&email=${email}` : `${BASE}/auth/dev-login?role=${role}`;
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+  const url = email
+    ? `${BASE}/auth/dev-login?role=${role}&email=${email}`
+    : `${BASE}/auth/dev-login?role=${role}`;
+  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
   // dev-login redirects to a role-appropriate landing page; wait for that
   // landing page to fully hydrate so subsequent assertions don't race the
   // first compile in dev mode.
@@ -106,7 +119,11 @@ export async function loginAs(page, role, email) {
 
 // Capture a page screenshot. Always waits for hydration first so dev-mode
 // lazy compile doesn't produce blank captures.
-export async function shot(page, id, opts = { waitFor: true, fullPage: false }) {
+export async function shot(
+  page,
+  id,
+  opts = { waitFor: true, fullPage: false },
+) {
   if (opts.waitFor !== false) {
     await waitForAppReady(page, 8000);
   }
@@ -161,7 +178,7 @@ export function pgQuery(sql) {
   try {
     return execSync(
       `docker exec customreport-postgres-1 psql -U customreport -d customreport -tAc "${sql.replace(/"/g, '\\"')}"`,
-      { encoding: 'utf8' },
+      { encoding: "utf8" },
     ).trim();
   } catch (e) {
     return `ERROR: ${e.message.slice(0, 200)}`;
@@ -170,7 +187,7 @@ export function pgQuery(sql) {
 
 export function pgInt(sql) {
   const v = pgQuery(sql);
-  if (v.startsWith('ERROR')) return -1;
+  if (v.startsWith("ERROR")) return -1;
   return parseInt(v, 10) || 0;
 }
 
@@ -180,25 +197,29 @@ export async function runTest(id, fn) {
   try {
     await fn();
   } catch (e) {
-    if (e !== 0) fail(id, 'Exception: ' + (e?.message ?? String(e)).slice(0, 200));
+    if (e !== 0)
+      fail(id, "Exception: " + (e?.message ?? String(e)).slice(0, 200));
   }
 }
 
 export function attachConsoleErrors(page) {
   const errs = [];
-  page.on('pageerror', (e) => errs.push(`pageerror: ${e.message.slice(0, 150)}`));
-  page.on('console', (m) => {
-    if (m.type() === 'error') errs.push(`console.error: ${m.text().slice(0, 150)}`);
+  page.on("pageerror", (e) =>
+    errs.push(`pageerror: ${e.message.slice(0, 150)}`),
+  );
+  page.on("console", (m) => {
+    if (m.type() === "error")
+      errs.push(`console.error: ${m.text().slice(0, 150)}`);
   });
   return errs;
 }
 
 // Seed accounts (per CLAUDE.md memory + .planning/memory/)
 export const ACCOUNTS = {
-  head: { role: 'head', email: 'head@customreport.local' },
-  admin: { role: 'admin', email: undefined }, // dev-login synthesizes admin@customreport.local
-  viewer: { role: 'viewer', email: undefined },
-  olga: { role: 'lead', email: 'olga@customreport.local' }, // Week 16 draft
-  platanov: { role: 'lead', email: 'platanov@customreport.local' }, // Week 16 submitted
-  sergey: { role: 'lead', email: 'sergey@customreport.local' }, // Week 16 draft
+  head: { role: "head", email: "head@customreport.local" },
+  admin: { role: "admin", email: undefined }, // dev-login synthesizes admin@customreport.local
+  viewer: { role: "viewer", email: undefined },
+  olga: { role: "lead", email: "olga@customreport.local" }, // Week 16 draft
+  platanov: { role: "lead", email: "platanov@customreport.local" }, // Week 16 submitted
+  sergey: { role: "lead", email: "sergey@customreport.local" }, // Week 16 draft
 };

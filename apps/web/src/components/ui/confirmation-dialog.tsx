@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 type ConfirmationDialogVariant =
-  | 'submit'
-  | 'publish'
-  | 'reopen'
-  | 'revoke'
-  | 'fill-from'
-  | 'version-restore'
-  | 'delete'
-  | 'default';
+  | "submit"
+  | "publish"
+  | "reopen"
+  | "revoke"
+  | "fill-from"
+  | "version-restore"
+  | "delete"
+  | "default";
 
 type ConfirmationDialogProps = {
   /** Whether the dialog is visible */
@@ -33,7 +33,7 @@ type ConfirmationDialogProps = {
   readonly children?: React.ReactNode;
 };
 
-const DESTRUCTIVE_VARIANTS: ConfirmationDialogVariant[] = ['delete', 'revoke'];
+const DESTRUCTIVE_VARIANTS: ConfirmationDialogVariant[] = ["delete", "revoke"];
 
 /**
  * Reusable confirmation dialog for all confirmation actions:
@@ -50,9 +50,9 @@ export function ConfirmationDialog({
   onConfirm,
   title,
   description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
-  variant = 'default',
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  variant = "default",
   children,
 }: ConfirmationDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -62,7 +62,7 @@ export function ConfirmationDialog({
   // Focus trap: focus the dialog when opened
   useEffect(() => {
     if (open && dialogRef.current) {
-      const firstButton = dialogRef.current.querySelector('button');
+      const firstButton = dialogRef.current.querySelector("button");
       firstButton?.focus();
     }
   }, [open]);
@@ -72,13 +72,13 @@ export function ConfirmationDialog({
     if (!open) return;
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
   if (!open) return null;
@@ -120,8 +120,8 @@ export function ConfirmationDialog({
             onClick={onConfirm}
             className={`btn-press rounded-[var(--radius-pill)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors ${
               isDestructive
-                ? 'bg-[var(--color-destructive)] hover:bg-red-700'
-                : 'bg-[var(--color-starbucks-accent)] hover:bg-[var(--color-primary)]'
+                ? "bg-[var(--color-destructive)] hover:bg-red-700"
+                : "bg-[var(--color-starbucks-accent)] hover:bg-[var(--color-primary)]"
             }`}
           >
             {confirmLabel}
@@ -151,61 +151,64 @@ export function getDialogPreset(
   context?: string,
 ): PresetConfig {
   switch (type) {
-    case 'submit':
+    case "submit":
       return {
-        title: 'Submit Report?',
-        description: 'Submit your report? This cannot be undone. Your form will be locked.',
-        confirmLabel: 'Submit Report',
-        variant: 'submit',
+        title: "Submit Report?",
+        description:
+          "Submit your report? This cannot be undone. Your form will be locked.",
+        confirmLabel: "Submit Report",
+        variant: "submit",
       };
-    case 'publish':
+    case "publish":
       return {
-        title: 'Publish & Lock?',
-        description: 'Publish & Lock this period? All lead forms will be locked and the report becomes visible to viewers.',
-        confirmLabel: 'Publish & Lock',
-        variant: 'publish',
+        title: "Publish & Lock?",
+        description:
+          "Publish & Lock this period? All lead forms will be locked and the report becomes visible to viewers.",
+        confirmLabel: "Publish & Lock",
+        variant: "publish",
       };
-    case 'reopen':
+    case "reopen":
       return {
-        title: 'Reopen Period?',
-        description: 'Reopen this period? Leads will be able to edit their submissions again.',
-        confirmLabel: 'Reopen',
-        variant: 'reopen',
+        title: "Reopen Period?",
+        description:
+          "Reopen this period? Leads will be able to edit their submissions again.",
+        confirmLabel: "Reopen",
+        variant: "reopen",
       };
-    case 'revoke':
+    case "revoke":
       return {
-        title: 'Revoke Submission?',
+        title: "Revoke Submission?",
         description: `Revoke ${context ?? "this lead"}'s submission? Their form returns to Draft status.`,
-        confirmLabel: 'Revoke',
-        variant: 'revoke',
+        confirmLabel: "Revoke",
+        variant: "revoke",
       };
-    case 'fill-from':
+    case "fill-from":
       return {
-        title: 'Fill From Previous?',
-        description: `Fill from ${context ?? 'previous period'}? This will overwrite your current draft.`,
-        confirmLabel: 'Fill From',
-        variant: 'fill-from',
+        title: "Fill From Previous?",
+        description: `Fill from ${context ?? "previous period"}? This will overwrite your current draft.`,
+        confirmLabel: "Fill From",
+        variant: "fill-from",
       };
-    case 'version-restore':
+    case "version-restore":
       return {
-        title: 'Restore Version?',
-        description: `Restore to version ${context ?? 'selected'}? Current changes will be lost.`,
-        confirmLabel: 'Restore',
-        variant: 'version-restore',
+        title: "Restore Version?",
+        description: `Restore to version ${context ?? "selected"}? Current changes will be lost.`,
+        confirmLabel: "Restore",
+        variant: "version-restore",
       };
-    case 'delete':
+    case "delete":
       return {
-        title: 'Delete Item?',
-        description: `Delete ${context ?? 'this item'}? This action cannot be undone.`,
-        confirmLabel: 'Delete',
-        variant: 'delete',
+        title: "Delete Item?",
+        description: `Delete ${context ?? "this item"}? This action cannot be undone.`,
+        confirmLabel: "Delete",
+        variant: "delete",
       };
     default:
       return {
-        title: 'Confirm Action?',
-        description: 'Are you sure you want to proceed?',
-        confirmLabel: 'Confirm',
-        variant: 'default',
+        title: "Confirm Action?",
+        description: "Are you sure you want to proceed?",
+        confirmLabel: "Confirm",
+        variant: "default",
       };
   }
 }

@@ -1,18 +1,22 @@
-import type { ReportSectionReadModel, Role, VersionSnapshot } from '@customreport/shared';
+import type {
+  ReportSectionReadModel,
+  Role,
+  VersionSnapshot,
+} from "@customreport/shared";
 
-import { customreportReopenRequestsTotal } from '../../infrastructure/metrics/metrics.registry.js';
+import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 
 export class LeadFormDomainError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'LeadFormDomainError';
+    this.name = "LeadFormDomainError";
   }
 }
 
 export class LeadFormAccessError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'LeadFormAccessError';
+    this.name = "LeadFormAccessError";
   }
 }
 
@@ -23,11 +27,18 @@ export interface LeadFormRepository {
     userId: string,
   ): Promise<{ section: ReportSectionReadModel; readOnly: boolean } | null>;
   revokeSectionSubmission(sectionId: string, revokedBy: string): Promise<void>;
-  fillFromSection(targetSectionId: string, sourceSectionId: string): Promise<number>;
+  fillFromSection(
+    targetSectionId: string,
+    sourceSectionId: string,
+  ): Promise<number>;
   listVersions(sectionId: string): Promise<VersionSnapshot[]>;
   restoreVersion(sectionId: string, version: number): Promise<number>;
   createVersionSnapshot(sectionId: string): Promise<void>;
-  createReopenRequest(sectionId: string, userId: string, reason?: string): Promise<void>;
+  createReopenRequest(
+    sectionId: string,
+    userId: string,
+    reason?: string,
+  ): Promise<void>;
 }
 
 export class LeadFormService {
@@ -44,8 +55,8 @@ export class LeadFormService {
       throw new Error(`Section ${sectionId} not found.`);
     }
 
-    if (section.status !== 'submitted') {
-      throw new Error('Only submitted sections can be revoked.');
+    if (section.status !== "submitted") {
+      throw new Error("Only submitted sections can be revoked.");
     }
 
     await this.repository.revokeSectionSubmission(sectionId, revokedByUserId);
@@ -65,11 +76,11 @@ export class LeadFormService {
     }
 
     if (target.authorId !== userId) {
-      throw new Error('Can only fill your own section.');
+      throw new Error("Can only fill your own section.");
     }
 
-    if (target.status === 'submitted') {
-      throw new Error('Cannot fill a submitted section.');
+    if (target.status === "submitted") {
+      throw new Error("Cannot fill a submitted section.");
     }
 
     // Create a version snapshot before overwriting
@@ -94,7 +105,9 @@ export class LeadFormService {
     }
 
     if (section.authorId !== userId) {
-      throw new LeadFormAccessError('Can only list versions for your own section.');
+      throw new LeadFormAccessError(
+        "Can only list versions for your own section.",
+      );
     }
 
     return this.repository.listVersions(sectionId);
@@ -113,16 +126,19 @@ export class LeadFormService {
     }
 
     if (section.authorId !== userId) {
-      throw new Error('Can only restore your own section.');
+      throw new Error("Can only restore your own section.");
     }
 
-    if (section.status === 'submitted') {
-      throw new Error('Cannot restore a submitted section.');
+    if (section.status === "submitted") {
+      throw new Error("Cannot restore a submitted section.");
     }
 
     // Create snapshot of current state before restoring
     await this.repository.createVersionSnapshot(sectionId);
-    const restoredVersion = await this.repository.restoreVersion(sectionId, version);
+    const restoredVersion = await this.repository.restoreVersion(
+      sectionId,
+      version,
+    );
 
     return { success: true, restoredVersion };
   }
@@ -149,11 +165,11 @@ export class LeadFormService {
     }
 
     if (section.authorId !== userId) {
-      throw new Error('Can only snapshot your own section.');
+      throw new Error("Can only snapshot your own section.");
     }
 
-    if (section.status === 'submitted') {
-      throw new Error('Cannot snapshot a submitted section.');
+    if (section.status === "submitted") {
+      throw new Error("Cannot snapshot a submitted section.");
     }
 
     await this.repository.createVersionSnapshot(sectionId);
@@ -173,18 +189,18 @@ export class LeadFormService {
     }
 
     if (section.authorId !== userId) {
-      throw new Error('Can only request reopen for your own section.');
+      throw new Error("Can only request reopen for your own section.");
     }
 
-    if (section.status !== 'submitted') {
-      throw new Error('Only submitted sections can request reopen.');
+    if (section.status !== "submitted") {
+      throw new Error("Only submitted sections can request reopen.");
     }
 
     await this.repository.createReopenRequest(sectionId, userId, reason);
     // Phase 52-A (UFB-054): product telemetry. `state='requested'` is the
     // funnel's entry — paired with `approved` / `rejected` from the admin
     // mutation it gives leadership the full demand-vs-policy picture.
-    customreportReopenRequestsTotal.inc({ state: 'requested' });
+    customreportReopenRequestsTotal.inc({ state: "requested" });
     return { success: true };
   }
 
@@ -195,10 +211,13 @@ export class LeadFormService {
     role?: Role,
     requestedAuthorId?: string,
   ): Promise<{ section: ReportSectionReadModel; readOnly: boolean }> {
-    const canViewOtherAuthor = role === 'head' || role === 'admin';
+    const canViewOtherAuthor = role === "head" || role === "admin";
     const sectionAuthorId =
       requestedAuthorId && canViewOtherAuthor ? requestedAuthorId : userId;
-    const result = await this.repository.getSectionForPeriod(reportId, sectionAuthorId);
+    const result = await this.repository.getSectionForPeriod(
+      reportId,
+      sectionAuthorId,
+    );
 
     if (!result) {
       throw new LeadFormDomainError(

@@ -13,10 +13,10 @@
 //
 // Throws TRPCError({code: 'FORBIDDEN'}) when the caller cannot read the
 // requested resource. Returns void on success.
-import { TRPCError } from '@trpc/server';
-import type { PrismaClient } from '@prisma/client';
+import { TRPCError } from "@trpc/server";
+import type { PrismaClient } from "@prisma/client";
 
-import type { UserSession } from '@customreport/shared';
+import type { UserSession } from "@customreport/shared";
 
 /**
  * Build a Prisma `where` clause that returns ≤ 1 Report row only when the
@@ -30,12 +30,12 @@ import type { UserSession } from '@customreport/shared';
 export function reportVisibilityWhere(
   session: UserSession,
 ): Record<string, unknown> {
-  if (session.role === 'head' || session.role === 'admin') return {};
-  if (session.role === 'viewer') return { status: 'published' };
+  if (session.role === "head" || session.role === "admin") return {};
+  if (session.role === "viewer") return { status: "published" };
   // lead — published reports OR reports where they authored a section.
   return {
     OR: [
-      { status: 'published' },
+      { status: "published" },
       { sections: { some: { authorId: session.userId } } },
     ],
   };
@@ -53,8 +53,8 @@ export async function assertCanReadReport(
   });
   if (!found) {
     throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Cannot read this report',
+      code: "FORBIDDEN",
+      message: "Cannot read this report",
     });
   }
 }
@@ -76,8 +76,8 @@ export async function assertCanReadRisk(
   });
   if (!found) {
     throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Cannot read this risk',
+      code: "FORBIDDEN",
+      message: "Cannot read this risk",
     });
   }
 }
@@ -97,8 +97,8 @@ export async function assertCanReadSection(
   });
   if (!found) {
     throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Cannot read this section',
+      code: "FORBIDDEN",
+      message: "Cannot read this section",
     });
   }
 }

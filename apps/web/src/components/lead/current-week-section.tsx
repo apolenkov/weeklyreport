@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
-import { ConfirmDeleteDialog } from './confirm-delete-dialog';
-import { ItemCard } from './item-card';
-import { ItemEditDialog } from './item-edit-dialog';
-import type { KanbanItem, Product } from './mock-data';
-import { splitStageNames } from './stage-tags';
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
+import { ItemCard } from "./item-card";
+import { ItemEditDialog } from "./item-edit-dialog";
+import type { KanbanItem, Product } from "./mock-data";
+import { splitStageNames } from "./stage-tags";
 
 type CurrentWeekSectionProps = {
   readonly items: KanbanItem[];
@@ -39,10 +39,14 @@ type CurrentWeekSectionProps = {
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
   const map = new Map<string, KanbanItem[]>();
   for (const item of items) {
-    const tags = splitStageNames(item.stageName);
-    const key = tags.length > 0
-      ? `${item.productName} · ${tags.join(', ')}`
-      : item.productName;
+    const tags =
+      item.stageIds && item.stageIds.length > 0
+        ? item.stageIds
+        : splitStageNames(item.stageName);
+    const key =
+      tags.length > 0
+        ? `${item.productName} · ${tags.join(", ")}`
+        : item.productName;
     const group = map.get(key) ?? [];
     group.push(item);
     map.set(key, group);
@@ -59,10 +63,37 @@ export function CurrentWeekSection({
   stagesForProduct,
 }: CurrentWeekSectionProps) {
   const grouped = groupByProduct(items);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    function check() {
+      if (!el) return;
+      setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+    }
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+    // ResizeObserver may be absent in SSR / test (jsdom) environments.
+    const ro =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(check) : null;
+    ro?.observe(el);
+    return () => {
+      el.removeEventListener("scroll", check);
+      ro?.disconnect();
+    };
+  }, []);
+
   // null = create mode (Add); KanbanItem = edit mode for that row.
   const [dialogState, setDialogState] = useState<
-    { open: false } | { open: true; mode: 'create'; seedProductId: string } | { open: true; mode: 'edit'; item: KanbanItem }
+    | { open: false }
+    | { open: true; mode: "create"; seedProductId: string }
+    | { open: true; mode: "edit"; item: KanbanItem }
   >({ open: false });
+  // D-13: monotonic counter so repeated opens of the same item get a fresh
+  // key even when item.id is unchanged (prevents stale stageIds in dialog).
+  const [openSeq, setOpenSeq] = useState(0);
   // Pending-delete state for the M20 confirmation modal — prevents
   // accidental data loss on a stray click. The actual filter+emit
   // happens only after the user confirms.
@@ -73,7 +104,8 @@ export function CurrentWeekSection({
 
   function handleAdd(seedProductId: string) {
     if (readOnly) return;
-    setDialogState({ open: true, mode: 'create', seedProductId });
+    setOpenSeq((n) => n + 1);
+    setDialogState({ open: true, mode: "create", seedProductId });
   }
 
   function handleDelete(id: string) {
@@ -93,12 +125,13 @@ export function CurrentWeekSection({
     if (readOnly) return;
     const item = items.find((i) => i.id === id);
     if (!item) return;
-    setDialogState({ open: true, mode: 'edit', item });
+    setOpenSeq((n) => n + 1);
+    setDialogState({ open: true, mode: "edit", item });
   }
 
   function handleDialogSave(next: KanbanItem) {
     if (readOnly) return;
-    if (dialogState.open && dialogState.mode === 'create') {
+    if (dialogState.open && dialogState.mode === "create") {
       onItemsChange?.([...items, next]);
     } else {
       onItemsChange?.(items.map((i) => (i.id === next.id ? next : i)));
@@ -133,7 +166,7 @@ export function CurrentWeekSection({
           onClick={() => product && handleAdd(product.id)}
           disabled={!product}
           aria-label="Add first current-week item"
-          title={product ? undefined : 'No products assigned — contact admin'}
+          title={product ? undefined : "No products assigned — contact admin"}
         >
           + Add Item
         </button>
@@ -146,7 +179,12 @@ export function CurrentWeekSection({
   // column. Falls back to non-empty groups when `products` isn't passed
   // (defensive — the prop became required de-facto in May 2026 but
   // existing callers may still omit it).
-  const columns: { key: string; productId: string; productName: string; items: KanbanItem[] }[] =
+  const columns: {
+    key: string;
+    productId: string;
+    productName: string;
+    items: KanbanItem[];
+  }[] =
     products && products.length > 0
       ? products.map((p) => ({
           key: p.name,
@@ -168,74 +206,106 @@ export function CurrentWeekSection({
         });
 
   return (
-    <div className="max-h-[420px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(0, 1fr))` }}>
-        {columns.map((col) => (
-          <div key={col.key} className="min-w-0">
-            {/* gap-2 (not justify-between) keeps the `+ Add` button glued
+    <div className="relative">
+      <div
+        ref={scrollRef}
+        className="max-h-[420px] overflow-y-auto"
+        style={{ scrollbarWidth: "thin" }}
+      >
+        <div
+          className="grid gap-4"
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(0, 1fr))`,
+          }}
+        >
+          {columns.map((col) => (
+            <div key={col.key} className="min-w-0">
+              {/* gap-2 (not justify-between) keeps the `+ Add` button glued
                 next to the product label so the header reads as a tight
                 unit even when the column is wide. */}
-            <div className="mb-3 flex min-w-0 items-center gap-2">
-              <div className="min-w-0 flex-1 truncate font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                {col.productName}
+              <div className="mb-3 flex min-w-0 items-center gap-2">
+                <div className="min-w-0 flex-1 truncate font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
+                  {col.productName}
+                </div>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    className="btn-press inline-flex min-h-[28px] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[rgba(0,117,74,0.28)] hover:bg-[var(--color-success)]"
+                    onClick={() => handleAdd(col.productId)}
+                    aria-label={`Add item to ${col.productName}`}
+                  >
+                    + Add
+                  </button>
+                )}
               </div>
-              {!readOnly && (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-[28px] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[rgba(0,117,74,0.28)] hover:bg-[var(--color-success)]"
-                  onClick={() => handleAdd(col.productId)}
-                  aria-label={`Add item to ${col.productName}`}
+              {col.items.length === 0 ? (
+                <div
+                  className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
+                  style={{ minHeight: 110 }}
                 >
-                  + Add
-                </button>
+                  No items yet
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {col.items.map((item) => (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      readOnly={readOnly}
+                      isEditing={false}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
               )}
             </div>
-            {col.items.length === 0 ? (
-              <div
-                className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
-                style={{ minHeight: 110 }}
-              >
-                No items yet
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {col.items.map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    readOnly={readOnly}
-                    isEditing={false}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* Edit / Add modal — single instance shared across all columns. */}
+        <ItemEditDialog
+          key={`${openSeq}-${dialogState.open && dialogState.mode === "edit" ? dialogState.item.id : "new"}`}
+          open={dialogState.open}
+          item={
+            dialogState.open && dialogState.mode === "edit"
+              ? dialogState.item
+              : null
+          }
+          products={products ?? []}
+          week="current"
+          currentUserName={currentUserName}
+          defaultProductId={
+            dialogState.open && dialogState.mode === "create"
+              ? dialogState.seedProductId
+              : undefined
+          }
+          stagesForProduct={stagesForProduct}
+          onSave={handleDialogSave}
+          onCancel={handleDialogCancel}
+        />
+
+        <ConfirmDeleteDialog
+          open={pendingDelete !== null}
+          title="Delete item?"
+          preview={pendingDelete?.text ?? ""}
+          subtitle={
+            pendingDelete ? `From ${pendingDelete.productName}` : undefined
+          }
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
       </div>
-
-      {/* Edit / Add modal — single instance shared across all columns. */}
-      <ItemEditDialog
-        open={dialogState.open}
-        item={dialogState.open && dialogState.mode === 'edit' ? dialogState.item : null}
-        products={products ?? []}
-        week="current"
-        currentUserName={currentUserName}
-        defaultProductId={dialogState.open && dialogState.mode === 'create' ? dialogState.seedProductId : undefined}
-        stagesForProduct={stagesForProduct}
-        onSave={handleDialogSave}
-        onCancel={handleDialogCancel}
-      />
-
-      <ConfirmDeleteDialog
-        open={pendingDelete !== null}
-        title="Delete item?"
-        preview={pendingDelete?.text ?? ''}
-        subtitle={pendingDelete ? `From ${pendingDelete.productName}` : undefined}
-        onConfirm={confirmDelete}
-        onCancel={() => setPendingDelete(null)}
-      />
+      {canScrollDown && (
+        <div
+          className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 rounded-b-lg"
+          style={{
+            background:
+              "linear-gradient(to bottom, transparent, var(--color-card))",
+          }}
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 }

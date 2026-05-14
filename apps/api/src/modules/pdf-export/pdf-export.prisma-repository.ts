@@ -1,33 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   pdfExportJobSchema,
   assembledReportSchema,
   type PdfExportJob,
   type AssembledReport,
   type PortfolioOverview,
-} from '@customreport/shared';
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
+} from "@customreport/shared";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type {
   PdfExportJobRecord,
   PdfExportRepository,
-} from './pdf-export.service.js';
+} from "./pdf-export.service.js";
 import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
-} from '../report-sections/report-sections.prisma-repository.js';
+} from "../report-sections/report-sections.prisma-repository.js";
 
 const pdfStatusToDb: Record<string, string> = {
-  queued: 'pending',
-  processing: 'processing',
-  completed: 'completed',
-  failed: 'failed',
+  queued: "pending",
+  processing: "processing",
+  completed: "completed",
+  failed: "failed",
 };
 
-const dbStatusToDomain: Record<string, PdfExportJob['status']> = {
-  pending: 'queued',
-  processing: 'processing',
-  completed: 'completed',
-  failed: 'failed',
+const dbStatusToDomain: Record<string, PdfExportJob["status"]> = {
+  pending: "queued",
+  processing: "processing",
+  completed: "completed",
+  failed: "failed",
 };
 
 const reportFullInclude = {
@@ -41,7 +41,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
 
   async getPublishedReport(reportId: string): Promise<AssembledReport | null> {
     const report = await this.prisma.report.findUnique({
-      where: { id: reportId, status: 'published' },
+      where: { id: reportId, status: "published" },
       include: reportFullInclude,
     });
 
@@ -52,15 +52,18 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     return toAssembledReport(report);
   }
 
-  async createExportJob(job: PdfExportJob, requestedBy?: string): Promise<PdfExportJob> {
+  async createExportJob(
+    job: PdfExportJob,
+    requestedBy?: string,
+  ): Promise<PdfExportJob> {
     const created = await this.prisma.pdfExportJob.create({
       data: {
         id: job.jobId,
         reportId: job.reportId,
-        status: (pdfStatusToDb[job.status] ?? 'pending') as 'pending',
+        status: (pdfStatusToDb[job.status] ?? "pending") as "pending",
         // Phase 23-01: thread session userId for audit; fall back to 'system'
         // for non-tRPC callers (workers, scripts) so the column stays NOT NULL.
-        requestedBy: requestedBy ?? 'system',
+        requestedBy: requestedBy ?? "system",
         filePath: job.artifactUrl,
         error: null,
       },
@@ -85,7 +88,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     const updated = await this.prisma.pdfExportJob.update({
       where: { id: job.jobId },
       data: {
-        status: (pdfStatusToDb[job.status] ?? 'pending') as 'pending',
+        status: (pdfStatusToDb[job.status] ?? "pending") as "pending",
         filePath: job.artifactUrl,
         error: null,
       },
@@ -98,7 +101,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
   async markExportFailed(jobId: string, error: string): Promise<void> {
     await this.prisma.pdfExportJob.update({
       where: { id: jobId },
-      data: { status: 'failed', error },
+      data: { status: "failed", error },
     });
   }
 }
@@ -117,11 +120,11 @@ function toExportJob(row: {
     ...pdfExportJobSchema.parse({
       jobId: row.id,
       reportId: row.reportId,
-      status: dbStatusToDomain[row.status] ?? 'queued',
+      status: dbStatusToDomain[row.status] ?? "queued",
       requestedAt: row.createdAt,
-      completedAt: row.status === 'completed' ? row.updatedAt : null,
+      completedAt: row.status === "completed" ? row.updatedAt : null,
       checksum: null,
-      templateVersion: 'phase-2-pdf-v1',
+      templateVersion: "phase-2-pdf-v1",
       artifactUrl: row.filePath,
     }),
     requestedBy: row.requestedBy,
@@ -143,8 +146,8 @@ function computePortfolioOverview(
     }
   }
 
-  const overallStatus: PortfolioOverview['status'] =
-    totals.red > 0 ? 'red' : totals.yellow > 0 ? 'yellow' : 'green';
+  const overallStatus: PortfolioOverview["status"] =
+    totals.red > 0 ? "red" : totals.yellow > 0 ? "yellow" : "green";
 
   return { status: overallStatus, totals };
 }

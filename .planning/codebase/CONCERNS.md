@@ -11,9 +11,9 @@
   - `apps/web/src/components/lead/mock-data.ts` (257 lines of mock data)
   - `apps/web/src/components/dashboard/mock-data.ts` (493 lines of mock data)
   - `apps/web/src/components/admin/mock-data.ts` (312 lines of mock data)
-  - `apps/web/src/components/lead/lead-form.tsx` (imports 8 MOCK_* constants)
-  - `apps/web/src/components/dashboard/dashboard-page.tsx` (imports 5 MOCK_* constants)
-  - `apps/web/src/components/weekly-report/weekly-report-page.tsx` (imports 4 MOCK_* constants)
+  - `apps/web/src/components/lead/lead-form.tsx` (imports 8 MOCK\_\* constants)
+  - `apps/web/src/components/dashboard/dashboard-page.tsx` (imports 5 MOCK\_\* constants)
+  - `apps/web/src/components/weekly-report/weekly-report-page.tsx` (imports 4 MOCK\_\* constants)
   - `apps/web/src/components/admin/users-tab.tsx` (state initialized from MOCK_USERS)
   - `apps/web/src/components/admin/products-tab.tsx` (state initialized from MOCK_PRODUCTS)
   - `apps/web/src/components/admin/periods-tab.tsx` (state initialized from MOCK_PERIODS)
@@ -282,4 +282,4 @@
 
 ---
 
-*Concerns audit: 2026-04-24*
+_Concerns audit: 2026-04-24_

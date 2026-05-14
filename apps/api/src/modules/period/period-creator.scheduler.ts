@@ -1,13 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron } from "@nestjs/schedule";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { AdminService } from '../admin/admin.service';
-import type { AuditLogger } from '../../lib/audit-logger.js';
-import { createNullAuditLogger } from '../../lib/audit-logger.js';
-import { computeDeadline } from '../../lib/business-date.js';
-import { getCurrentWeekBounds } from '../auth/auth.routes.js';
-import { initialPeriodState } from '../weekly-report/period-state.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { AdminService } from "../admin/admin.service";
+import type { AuditLogger } from "../../lib/audit-logger.js";
+import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { computeDeadline } from "../../lib/business-date.js";
+import { getCurrentWeekBounds } from "../auth/auth.routes.js";
+import { initialPeriodState } from "../weekly-report/period-state.js";
 
 /**
  * UFB-049 / Phase 50-B: daily scheduler that creates the next Period when
@@ -44,7 +44,7 @@ export class PeriodCreatorScheduler {
 
   // Every day at 00:05 UTC. The 5-minute offset keeps the tick out of the
   // 00:00 backup window most ops shops run on.
-  @Cron('5 0 * * *')
+  @Cron("5 0 * * *")
   async runDaily(): Promise<void> {
     await this.runOnce(new Date());
   }
@@ -54,22 +54,20 @@ export class PeriodCreatorScheduler {
    * the tick deterministically with a stubbed `now`. Returns a small
    * outcome object so tests don't have to scrape audit calls.
    */
-  async runOnce(
-    now: Date,
-  ): Promise<
-    | { created: false; reason: 'disabled' | 'future-period-exists' }
+  async runOnce(now: Date): Promise<
+    | { created: false; reason: "disabled" | "future-period-exists" }
     | {
         created: true;
         periodId: string;
         periodStart: Date;
         periodEnd: Date;
         deadline: Date;
-        periodState: 'scheduled' | 'open';
+        periodState: "scheduled" | "open";
       }
   > {
     const settings = await this.adminService.getSettings();
     if (!settings.autoCreatePeriods) {
-      return { created: false, reason: 'disabled' };
+      return { created: false, reason: "disabled" };
     }
 
     // UFB-053 / Phase 51-C: before creating, flip any 'scheduled' rows
@@ -79,19 +77,19 @@ export class PeriodCreatorScheduler {
     // legacy `status` tuple was already (`draft`, `archived=false`) at
     // SCHEDULED-time and stays that way at OPEN-time.
     await this.prisma.report.updateMany({
-      where: { periodState: 'scheduled', periodStart: { lte: now } },
-      data: { periodState: 'open' },
+      where: { periodState: "scheduled", periodStart: { lte: now } },
+      data: { periodState: "open" },
     });
 
     // Most recent period across the whole table. If it ends in the future
     // (or right now), nothing to do — the current cycle is still open.
     const mostRecent = await this.prisma.report.findFirst({
-      orderBy: { periodStart: 'desc' },
+      orderBy: { periodStart: "desc" },
       select: { id: true, periodEnd: true },
     });
 
     if (mostRecent && mostRecent.periodEnd.getTime() > now.getTime()) {
-      return { created: false, reason: 'future-period-exists' };
+      return { created: false, reason: "future-period-exists" };
     }
 
     // Anchor the next period to "next Monday" (or current week's Monday if

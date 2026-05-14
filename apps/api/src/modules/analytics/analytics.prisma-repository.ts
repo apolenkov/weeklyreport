@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import type {
   TrafficLightHistoryInput,
   TrafficLightHistoryOutput,
@@ -7,15 +7,15 @@ import type {
   PeriodComparisonInput,
   PeriodComparisonOutput,
   TrafficLightCell,
-} from '@customreport/shared';
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { AnalyticsRepository } from './analytics.service.js';
+} from "@customreport/shared";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { AnalyticsRepository } from "./analytics.service.js";
 
 /**
  * AUTH-04 (Phase 28-01) parity: only published reports are visible to the
  * analytics surface, identical to ArchivePrismaRepository.PUBLISHED_FLOOR.
  */
-const PUBLISHED_FLOOR = { status: 'published' as const };
+const PUBLISHED_FLOOR = { status: "published" as const };
 
 /**
  * Format a Date as the UTC date-only ISO string (YYYY-MM-DD). This is
@@ -29,13 +29,17 @@ function isoDateOnly(d: Date): string {
 export class AnalyticsPrismaRepository implements AnalyticsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async trafficLightHistory(input: TrafficLightHistoryInput): Promise<TrafficLightHistoryOutput> {
+  async trafficLightHistory(
+    input: TrafficLightHistoryInput,
+  ): Promise<TrafficLightHistoryOutput> {
     const reports = await this.prisma.report.findMany({
       where: {
         ...PUBLISHED_FLOOR,
         periodStart: { gte: new Date(input.periodFrom) },
         periodEnd: { lte: new Date(input.periodTo) },
-        ...(input.leadId ? { sections: { some: { authorId: input.leadId } } } : {}),
+        ...(input.leadId
+          ? { sections: { some: { authorId: input.leadId } } }
+          : {}),
       },
       include: {
         sections: {
@@ -44,10 +48,12 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
           },
         },
       },
-      orderBy: { periodEnd: 'asc' },
+      orderBy: { periodEnd: "asc" },
     });
 
-    const periods = Array.from(new Set(reports.map((r) => isoDateOnly(r.periodEnd))));
+    const periods = Array.from(
+      new Set(reports.map((r) => isoDateOnly(r.periodEnd))),
+    );
 
     const projectMap = new Map<string, string>();
     for (const r of reports) {
@@ -55,24 +61,28 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
         for (const ps of s.projectStatuses) {
           if (input.projectId && ps.projectId !== input.projectId) continue;
           if (!projectMap.has(ps.projectId)) {
-            projectMap.set(ps.projectId, ps.project?.name ?? 'Unknown');
+            projectMap.set(ps.projectId, ps.project?.name ?? "Unknown");
           }
         }
       }
     }
 
-    const rows = Array.from(projectMap.entries()).map(([projectId, projectName]) => {
-      const statuses: TrafficLightCell[] = periods.map((label) => {
-        const r = reports.find((rr) => isoDateOnly(rr.periodEnd) === label);
-        if (!r) return null;
-        for (const s of r.sections) {
-          const hit = s.projectStatuses.find((ps) => ps.projectId === projectId);
-          if (hit) return hit.status as TrafficLightCell;
-        }
-        return null;
-      });
-      return { projectId, projectName, statuses };
-    });
+    const rows = Array.from(projectMap.entries()).map(
+      ([projectId, projectName]) => {
+        const statuses: TrafficLightCell[] = periods.map((label) => {
+          const r = reports.find((rr) => isoDateOnly(rr.periodEnd) === label);
+          if (!r) return null;
+          for (const s of r.sections) {
+            const hit = s.projectStatuses.find(
+              (ps) => ps.projectId === projectId,
+            );
+            if (hit) return hit.status as TrafficLightCell;
+          }
+          return null;
+        });
+        return { projectId, projectName, statuses };
+      },
+    );
 
     return { periods, rows };
   }
@@ -86,24 +96,26 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       },
       include: {
         sections: {
-          where: { status: 'submitted' },
+          where: { status: "submitted" },
           include: { author: true },
         },
       },
-      orderBy: { periodEnd: 'asc' },
+      orderBy: { periodEnd: "asc" },
     });
 
     return reports.map((r) => ({
       periodLabel: isoDateOnly(r.periodEnd),
       leads: r.sections.map((s) => ({
         leadId: s.authorId,
-        leadName: s.author?.name ?? 'Unknown',
+        leadName: s.author?.name ?? "Unknown",
         submittedSections: 1,
       })),
     }));
   }
 
-  async periodComparison(input: PeriodComparisonInput): Promise<PeriodComparisonOutput> {
+  async periodComparison(
+    input: PeriodComparisonInput,
+  ): Promise<PeriodComparisonOutput> {
     const fetchOne = (periodEnd: string) =>
       this.prisma.report.findFirst({
         where: { ...PUBLISHED_FLOOR, periodEnd: new Date(periodEnd) },
@@ -117,7 +129,10 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
         },
       });
 
-    const [a, b] = await Promise.all([fetchOne(input.periodA), fetchOne(input.periodB)]);
+    const [a, b] = await Promise.all([
+      fetchOne(input.periodA),
+      fetchOne(input.periodB),
+    ]);
 
     type Cell = { status: TrafficLightCell; risks: number; name: string };
     const collect = (
@@ -131,11 +146,15 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
           map.set(ps.projectId, {
             status: ps.status as TrafficLightCell,
             risks: existing?.risks ?? 0,
-            name: ps.project?.name ?? existing?.name ?? 'Unknown',
+            name: ps.project?.name ?? existing?.name ?? "Unknown",
           });
         }
         for (const risk of section.risks) {
-          const existing = map.get(risk.projectId) ?? { status: null, risks: 0, name: 'Unknown' };
+          const existing = map.get(risk.projectId) ?? {
+            status: null,
+            risks: 0,
+            name: "Unknown",
+          };
           map.set(risk.projectId, { ...existing, risks: existing.risks + 1 });
         }
       }
@@ -148,11 +167,19 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
     const allProjectIds = new Set<string>([...cellsA.keys(), ...cellsB.keys()]);
 
     const rows = Array.from(allProjectIds).map((projectId) => {
-      const ca = cellsA.get(projectId) ?? { status: null, risks: 0, name: 'Unknown' };
-      const cb = cellsB.get(projectId) ?? { status: null, risks: 0, name: 'Unknown' };
+      const ca = cellsA.get(projectId) ?? {
+        status: null,
+        risks: 0,
+        name: "Unknown",
+      };
+      const cb = cellsB.get(projectId) ?? {
+        status: null,
+        risks: 0,
+        name: "Unknown",
+      };
       return {
         projectId,
-        projectName: ca.name !== 'Unknown' ? ca.name : cb.name,
+        projectName: ca.name !== "Unknown" ? ca.name : cb.name,
         statusA: ca.status,
         statusB: cb.status,
         riskCountA: ca.risks,

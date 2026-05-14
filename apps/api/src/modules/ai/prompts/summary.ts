@@ -7,26 +7,28 @@
 //
 // Pre-computed counts are appended to the user prompt with a "DO NOT
 // change these numbers" directive — PITFALLS C-2 mitigation.
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { ReportForSummary } from '../ai-facade.js';
+import type { ReportForSummary } from "../ai-facade.js";
 
-export const SUMMARY_MODEL = 'claude-haiku-4-5-20251001';
-export const SUMMARY_TOOL_NAME = 'record_executive_summary';
+export const SUMMARY_MODEL = "claude-haiku-4-5-20251001";
+export const SUMMARY_TOOL_NAME = "record_executive_summary";
 export const SUMMARY_TOOL_DESCRIPTION =
-  'Record the executive summary, tone, and up to three highlights for the assembled weekly report.';
+  "Record the executive summary, tone, and up to three highlights for the assembled weekly report.";
 
 export const summarySchema = z.object({
   narrative: z
     .string()
     .min(20)
     .max(500)
-    .describe('Two to three sentences. No bullet points, no greetings.'),
-  tone: z.enum(['positive', 'neutral', 'negative']),
+    .describe("Two to three sentences. No bullet points, no greetings."),
+  tone: z.enum(["positive", "neutral", "negative"]),
   highlights: z
     .array(z.string().min(1).max(120))
     .max(3)
-    .describe('Up to three short highlights — one phrase each, for hover tooltips.'),
+    .describe(
+      "Up to three short highlights — one phrase each, for hover tooltips.",
+    ),
 });
 
 export type SummaryResult = z.infer<typeof summarySchema>;
@@ -115,8 +117,8 @@ export function condenseReportForPrompt(report: ReportForSummary): string {
     .map((s) => {
       const lights = s.trafficLights
         .map((t) => `${t.projectName}=${t.status}`)
-        .join(', ');
+        .join(", ");
       return `[Section ${s.authorName}] traffic: ${lights}; risks: ${s.riskCount}; decisions: ${s.decisionCount}; items: ${s.itemCount}`;
     })
-    .join('\n');
+    .join("\n");
 }

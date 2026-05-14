@@ -2,18 +2,26 @@
  * Reusable E2E test utilities for CustomReport.
  */
 
-import { type Page, expect } from '@playwright/test';
+import { type Page, expect } from "@playwright/test";
 
 /**
  * Navigate to dev-login endpoint. Currently a no-op since pages
  * render mock data; kept for future auth wiring.
  */
-export async function loginAs(page: Page, role: 'lead' | 'head' | 'admin') {
-  const redirect = role === 'lead' ? '/lead/report' : role === 'head' ? '/head/dashboard' : '/admin';
+export async function loginAs(page: Page, role: "lead" | "head" | "admin") {
+  const redirect =
+    role === "lead"
+      ? "/lead/report"
+      : role === "head"
+        ? "/head/dashboard"
+        : "/admin";
   try {
-    await page.goto(`http://localhost:3102/auth/dev-login?role=${role}&redirect=${redirect}`, {
-      timeout: 5_000,
-    });
+    await page.goto(
+      `http://localhost:3102/auth/dev-login?role=${role}&redirect=${redirect}`,
+      {
+        timeout: 5_000,
+      },
+    );
   } catch {
     // API not running -- navigate directly (mock data renders without auth)
     await page.goto(redirect);
@@ -24,14 +32,19 @@ export async function loginAs(page: Page, role: 'lead' | 'head' | 'admin') {
  * Wait until the page's network is idle and main content is visible.
  */
 export async function waitForPageLoad(page: Page) {
-  await page.waitForSelector('#main-content', { state: 'visible', timeout: 15_000 });
+  await page.waitForSelector("#main-content", {
+    state: "visible",
+    timeout: 15_000,
+  });
 }
 
 /**
  * Assert that the page has an h1 with the given text.
  */
 export async function expectHeading(page: Page, text: string) {
-  await expect(page.getByRole('heading', { name: text, level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: text, level: 1 }),
+  ).toBeVisible();
 }
 
 /**
@@ -44,6 +57,9 @@ export async function expectVisible(page: Page, text: string) {
 /**
  * Count elements matching a locator.
  */
-export async function countElements(page: Page, selector: string): Promise<number> {
+export async function countElements(
+  page: Page,
+  selector: string,
+): Promise<number> {
   return page.locator(selector).count();
 }

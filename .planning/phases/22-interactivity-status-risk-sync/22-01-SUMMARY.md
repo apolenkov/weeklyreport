@@ -2,7 +2,8 @@
 phase: 22-interactivity-status-risk-sync
 plan: 01
 subsystem: ui
-tags: [tRPC, react-query, autosave, mutations, lead-form, debounce, beforeunload]
+tags:
+  [tRPC, react-query, autosave, mutations, lead-form, debounce, beforeunload]
 
 # Dependency graph
 requires:
@@ -16,7 +17,14 @@ provides:
   - LeadForm wired to leadForm.fillFrom + leadForm.restoreVersion with dirty guard
   - DecisionsSection + PrioritiesSection are now controlled (no internal useState)
   - mapLeadPeriods exposes sourceSectionId for fillFrom routing
-affects: [22-02-status-risk-sync, 22-03-period-nav, 22-04-admin, 22-05-head-dashboard, 23-pdf-export]
+affects:
+  [
+    22-02-status-risk-sync,
+    22-03-period-nav,
+    22-04-admin,
+    22-05-head-dashboard,
+    23-pdf-export,
+  ]
 
 tech-stack:
   added: []
@@ -111,7 +119,7 @@ completed: 2026-04-25
 
 ## Decisions Made
 
-1. **Raw section as draft source-of-truth.** The Lead* mapper is intentionally lossy (drops decision.owner/impact, item.tag/workflowStatus, collapses risk fields into a single text). Building the saveDraft payload from the raw `byPeriod.section` overlaid with edits guarantees Zod validation passes on every save / submit. The mapper output continues to feed children for display.
+1. **Raw section as draft source-of-truth.** The Lead\* mapper is intentionally lossy (drops decision.owner/impact, item.tag/workflowStatus, collapses risk fields into a single text). Building the saveDraft payload from the raw `byPeriod.section` overlaid with edits guarantees Zod validation passes on every save / submit. The mapper output continues to feed children for display.
 2. **Submit validation deferred to server.** No client-side `validateSubmitInput` preflight; the server's submitSectionSchema rejection surfaces via toast.error. Single source of truth, fewer drift risks.
 3. **Initial baseline priming.** `useLeadFormAutosave` gained `initialSavedKey` (computed from server section via the exported `stableStringify`) so initial render does not flag the form dirty. Without this, the autosave indicator would jitter from "Autosaved" → "Pending" on every mount.
 4. **window.confirm for dirty guard.** Native dialog is sufficient for v5.0; a custom modal is a future polish item.
@@ -121,20 +129,23 @@ completed: 2026-04-25
 ### Auto-fixed Issues
 
 **1. [Rule 1 — Bug] draftSaveSchema field name in plan's `<interfaces>` was wrong**
+
 - **Found during:** Task 1 (writing the autosave payload type)
 - **Issue:** The plan said `draftSaveSchema = { ... projects: ProjectStatusInput[] (with field trafficLight) }` but the actual schema is `projectStatuses: z.array(projectStatusInputSchema)` and the inner field is `status`, not `trafficLight`. Status is `.optional()` on draftSave but required on submit.
 - **Fix:** All payload construction uses `projectStatuses` and `status`. Implementation matches `packages/shared/src/schemas/report.ts` rather than the plan's (incorrect) summary.
 - **Verification:** All 7 autosave hook tests pass; submit happy-path test passes.
 - **Committed in:** `4f1acd9`, `f3bb5c8`
 
-**2. [Rule 1 — Bug] Lossy Lead* mappers would have broken saveDraft Zod validation**
+**2. [Rule 1 — Bug] Lossy Lead\* mappers would have broken saveDraft Zod validation**
+
 - **Found during:** Task 2 (planning the draft state shape)
-- **Issue:** Building draftPayload from Lead*-mapped state would have stripped required schema fields (decision.owner / decision.impact / item.tag / item.workflowStatus) — Zod would reject every save.
-- **Fix:** Keep `draftSection` as `ReportSectionReadModel` (raw API shape); merge child onChange edits back by id, preserving every dropped field. Lead* shapes are derived for display only.
+- **Issue:** Building draftPayload from Lead\*-mapped state would have stripped required schema fields (decision.owner / decision.impact / item.tag / item.workflowStatus) — Zod would reject every save.
+- **Fix:** Keep `draftSection` as `ReportSectionReadModel` (raw API shape); merge child onChange edits back by id, preserving every dropped field. Lead\* shapes are derived for display only.
 - **Verification:** All vitest pass; typecheck clean for new files.
 - **Committed in:** `f3bb5c8`
 
 **3. [Rule 2 — Missing critical functionality] sourceSectionId missing from LeadReportPeriod / mapLeadPeriods**
+
 - **Found during:** Task 3 (wiring fillFrom)
 - **Issue:** `leadForm.fillFrom` requires `sourceSectionId`, but `mapLeadPeriods` only exposed `reportId` (as `id`). Without the section id, the mutation could not be wired correctly.
 - **Fix:** Added `sourceSectionId: string` to LeadReportPeriod and ReportPeriod (mock-data, kept in sync to preserve cast-through compatibility). `mapLeadPeriods` sources it from `MyHistoryEntry.sectionId`. MOCK_PERIODS literal + lead/period-navigator.test.tsx fixtures updated structurally.
@@ -142,6 +153,7 @@ completed: 2026-04-25
 - **Committed in:** `ba87cd5`
 
 **4. [Rule 1 — UX bug] First-render dirty flicker on form load**
+
 - **Found during:** Task 3 (testing dirty guard)
 - **Issue:** The autosave hook had no notion of "freshly loaded data", so on every mount the initial payload differed from the empty `lastSavedRef`, immediately flagging dirty=true. The autosave indicator jittered from "Autosaved" → "Pending" with no user action.
 - **Fix:** Added optional `initialSavedKey` arg to `useLeadFormAutosave`; LeadForm primes it from byPeriod.section using the exported `stableStringify`. Hook now treats freshly-loaded server payload as already-saved.

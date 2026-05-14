@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Generic cursor pagination hook for tRPC endpoints that follow the
@@ -31,8 +31,12 @@
  * names. No request side-effects beyond what `useInfiniteQuery` performs.
  */
 
-import { useMemo } from 'react';
-import { useInfiniteQuery, type InfiniteData, type UseInfiniteQueryOptions } from '@tanstack/react-query';
+import { useMemo } from "react";
+import {
+  useInfiniteQuery,
+  type InfiniteData,
+  type UseInfiniteQueryOptions,
+} from "@tanstack/react-query";
 
 export type CursorPaginationInput = {
   cursor?: string;
@@ -68,7 +72,9 @@ export type CursorPaginationResult<T> = {
 export type CursorQueryOptionsFactory<
   TInput extends CursorPaginationInput,
   TItem,
-> = (input: TInput) => UseInfiniteQueryOptions<
+> = (
+  input: TInput,
+) => UseInfiniteQueryOptions<
   CursorPage<TItem>,
   unknown,
   CursorPage<TItem>,
@@ -80,8 +86,10 @@ export function useCursorPagination<
   TItem,
   TInput extends CursorPaginationInput = CursorPaginationInput,
 >(
-  factory: CursorQueryOptionsFactory<TInput, TItem> | ((input: TInput) => unknown),
-  input: Omit<TInput, 'cursor'>,
+  factory:
+    | CursorQueryOptionsFactory<TInput, TItem>
+    | ((input: TInput) => unknown),
+  input: Omit<TInput, "cursor">,
   options: CursorPaginationOptions = {},
 ): CursorPaginationResult<TItem> {
   // Build the query options from the provided factory. We keep the cast

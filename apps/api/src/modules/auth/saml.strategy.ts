@@ -1,6 +1,10 @@
-import { Strategy as SamlStrategy, type PassportSamlConfig, type VerifyWithoutRequest } from '@node-saml/passport-saml';
+import {
+  Strategy as SamlStrategy,
+  type PassportSamlConfig,
+  type VerifyWithoutRequest,
+} from "@node-saml/passport-saml";
 
-import { SamlProfileSchema, type Role } from '@customreport/shared';
+import { SamlProfileSchema, type Role } from "@customreport/shared";
 
 export type SamlStrategyOptions = PassportSamlConfig & {
   devMode: boolean;
@@ -14,8 +18,12 @@ export type VerifiedSamlProfile = {
   role: Role;
 };
 
-const validateNever = 'never' as NonNullable<PassportSamlConfig['validateInResponseTo']>;
-const validateAlways = 'always' as NonNullable<PassportSamlConfig['validateInResponseTo']>;
+const validateNever = "never" as NonNullable<
+  PassportSamlConfig["validateInResponseTo"]
+>;
+const validateAlways = "always" as NonNullable<
+  PassportSamlConfig["validateInResponseTo"]
+>;
 
 function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
   const value = env[key];
@@ -27,24 +35,30 @@ function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
   return value;
 }
 
-export function createSamlStrategyOptions(env: NodeJS.ProcessEnv): SamlStrategyOptions {
+export function createSamlStrategyOptions(
+  env: NodeJS.ProcessEnv,
+): SamlStrategyOptions {
   // AUTH-01 (Phase 29-04): narrow `devMode` to non-production. Production
   // ignores `AUTH_DEV_MODE` entirely; the boot-time fence in
   // `lib/dev-auth-fence.ts` refuses to start at all if either dev-auth flag
   // is set under `NODE_ENV=production`.
-  const devMode = env.NODE_ENV !== 'production' && env.AUTH_DEV_MODE === 'true';
+  const devMode = env.NODE_ENV !== "production" && env.AUTH_DEV_MODE === "true";
 
   if (devMode) {
     return {
       devMode,
-      callbackUrl: env.KEYCLOAK_SAML_CALLBACK_URL ?? 'http://localhost:3001/auth/saml/callback',
-      entryPoint: env.KEYCLOAK_SAML_ENTRY_POINT ?? 'http://localhost:8080/realms/dev/protocol/saml',
-      issuer: env.KEYCLOAK_SAML_ISSUER ?? 'customreport-dev',
-      idpCert: env.KEYCLOAK_SAML_CERT ?? 'DEV_MODE_CERT',
+      callbackUrl:
+        env.KEYCLOAK_SAML_CALLBACK_URL ??
+        "http://localhost:3001/auth/saml/callback",
+      entryPoint:
+        env.KEYCLOAK_SAML_ENTRY_POINT ??
+        "http://localhost:8080/realms/dev/protocol/saml",
+      issuer: env.KEYCLOAK_SAML_ISSUER ?? "customreport-dev",
+      idpCert: env.KEYCLOAK_SAML_CERT ?? "DEV_MODE_CERT",
       validateInResponseTo: validateNever,
       disableRequestedAuthnContext: true,
-      signatureAlgorithm: 'sha256',
-      digestAlgorithm: 'sha256',
+      signatureAlgorithm: "sha256",
+      digestAlgorithm: "sha256",
       wantAssertionsSigned: true,
       wantAuthnResponseSigned: true,
       acceptedClockSkewMs: 5_000,
@@ -53,14 +67,14 @@ export function createSamlStrategyOptions(env: NodeJS.ProcessEnv): SamlStrategyO
 
   return {
     devMode,
-    callbackUrl: requireEnv(env, 'KEYCLOAK_SAML_CALLBACK_URL'),
-    entryPoint: requireEnv(env, 'KEYCLOAK_SAML_ENTRY_POINT'),
-    issuer: requireEnv(env, 'KEYCLOAK_SAML_ISSUER'),
-    idpCert: requireEnv(env, 'KEYCLOAK_SAML_CERT'),
+    callbackUrl: requireEnv(env, "KEYCLOAK_SAML_CALLBACK_URL"),
+    entryPoint: requireEnv(env, "KEYCLOAK_SAML_ENTRY_POINT"),
+    issuer: requireEnv(env, "KEYCLOAK_SAML_ISSUER"),
+    idpCert: requireEnv(env, "KEYCLOAK_SAML_CERT"),
     validateInResponseTo: validateAlways,
     disableRequestedAuthnContext: true,
-    signatureAlgorithm: 'sha256',
-    digestAlgorithm: 'sha256',
+    signatureAlgorithm: "sha256",
+    digestAlgorithm: "sha256",
     wantAssertionsSigned: true,
     wantAuthnResponseSigned: true,
     acceptedClockSkewMs: 5_000,
@@ -82,36 +96,37 @@ export function verifySamlProfile(
   rawProfile: Record<string, unknown> | null | undefined,
 ): { ok: true; profile: VerifiedSamlProfile } | { ok: false; error: Error } {
   if (!rawProfile) {
-    return { ok: false, error: new Error('SAML profile is missing') };
+    return { ok: false, error: new Error("SAML profile is missing") };
   }
 
   if (options.devMode) {
     const samlId = String(
-      rawProfile['nameID'] ?? rawProfile['email'] ?? 'unknown-saml-id',
+      rawProfile["nameID"] ?? rawProfile["email"] ?? "unknown-saml-id",
     );
-    const email = String(rawProfile['email'] ?? 'unknown@example.com');
+    const email = String(rawProfile["email"] ?? "unknown@example.com");
     const displayName = String(
-      rawProfile['displayName'] ?? rawProfile['cn'] ?? 'Unknown User',
+      rawProfile["displayName"] ?? rawProfile["cn"] ?? "Unknown User",
     );
-    const rawRole = rawProfile['role'];
+    const rawRole = rawProfile["role"];
     const role: Role =
-      typeof rawRole === 'string' && ['lead', 'head', 'admin', 'viewer', 'director'].includes(rawRole.toLowerCase())
+      typeof rawRole === "string" &&
+      ["lead", "head", "admin", "viewer"].includes(rawRole.toLowerCase())
         ? (rawRole.toLowerCase() as Role)
-        : 'viewer';
+        : "viewer";
     return { ok: true, profile: { samlId, email, displayName, role } };
   }
 
   const parsed = SamlProfileSchema.safeParse({
-    nameID: rawProfile['nameID'],
-    email: rawProfile['email'],
-    displayName: rawProfile['displayName'] ?? rawProfile['cn'],
-    role: rawProfile['role'],
+    nameID: rawProfile["nameID"],
+    email: rawProfile["email"],
+    displayName: rawProfile["displayName"] ?? rawProfile["cn"],
+    role: rawProfile["role"],
   });
 
   if (!parsed.success) {
     return {
       ok: false,
-      error: new Error('SAML profile missing required role attribute'),
+      error: new Error("SAML profile missing required role attribute"),
     };
   }
 
@@ -120,7 +135,7 @@ export function verifySamlProfile(
     profile: {
       samlId: parsed.data.nameID,
       email: parsed.data.email,
-      displayName: parsed.data.displayName ?? 'Unknown User',
+      displayName: parsed.data.displayName ?? "Unknown User",
       role: parsed.data.role,
     },
   };

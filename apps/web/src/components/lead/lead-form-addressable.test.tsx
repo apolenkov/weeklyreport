@@ -18,16 +18,16 @@
  * The tRPC proxy is mocked at the boundary; we don't exercise the network
  * stack. This mirrors the harness used by lead-form.test.tsx.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 
-import { LeadForm } from './lead-form';
-import { TRPCProxyContext } from '../../lib/trpc-context';
-import { SessionContext } from '../../lib/session-provider';
+import { LeadForm } from "./lead-form";
+import { TRPCProxyContext } from "../../lib/trpc-context";
+import { SessionContext } from "../../lib/session-provider";
 
-vi.mock('sonner', () => ({
+vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
@@ -35,41 +35,43 @@ const replace = vi.fn();
 const push = vi.fn();
 let mockSearchParams = new URLSearchParams();
 
-vi.mock('next/navigation', () => ({
+vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace, push }),
   useSearchParams: () => mockSearchParams,
-  usePathname: () => '/lead/report',
+  usePathname: () => "/lead/report",
 }));
 
-const ACTIVE_REPORT_ID = '11111111-1111-4111-8111-111111111111';
-const ACTIVE_SECTION_ID = '22222222-2222-4222-8222-222222222222';
-const PAST_REPORT_ID = '33333333-3333-4333-8333-333333333333';
-const PAST_SECTION_ID = '44444444-4444-4444-8444-444444444444';
-const PROJECT_ID = '55555555-5555-4555-8555-555555555555';
-const AUTHOR_ID = '66666666-6666-4666-8666-666666666666';
+const ACTIVE_REPORT_ID = "11111111-1111-4111-8111-111111111111";
+const ACTIVE_SECTION_ID = "22222222-2222-4222-8222-222222222222";
+const PAST_REPORT_ID = "33333333-3333-4333-8333-333333333333";
+const PAST_SECTION_ID = "44444444-4444-4444-8444-444444444444";
+const PROJECT_ID = "55555555-5555-4555-8555-555555555555";
+const AUTHOR_ID = "66666666-6666-4666-8666-666666666666";
 
-function makeSection(opts: {
-  reportSectionId?: string;
-  reportId?: string;
-  status?: 'draft' | 'submitted';
-} = {}) {
+function makeSection(
+  opts: {
+    reportSectionId?: string;
+    reportId?: string;
+    status?: "draft" | "submitted";
+  } = {},
+) {
   return {
     reportSectionId: opts.reportSectionId ?? ACTIVE_SECTION_ID,
     reportId: opts.reportId ?? ACTIVE_REPORT_ID,
     authorId: AUTHOR_ID,
-    authorName: 'Test Lead',
-    authorRole: 'lead' as const,
-    status: opts.status ?? ('draft' as const),
+    authorName: "Test Lead",
+    authorRole: "lead" as const,
+    status: opts.status ?? ("draft" as const),
     submittedAt: null,
     projects: [
       {
         projectId: PROJECT_ID,
-        projectName: 'Test Product',
-        trafficLight: 'green' as const,
+        projectName: "Test Product",
+        trafficLight: "green" as const,
         ownedStages: [
           {
-            stageId: '88888888-8888-4888-8888-888888888888',
-            stageName: 'Development',
+            stageId: "88888888-8888-4888-8888-888888888888",
+            stageName: "Development",
             sortOrder: 3,
           },
         ],
@@ -101,62 +103,72 @@ function buildHarness(opts: {
     reports: {
       getActive: {
         queryOptions: () => ({
-          queryKey: ['reports.getActive'],
+          queryKey: ["reports.getActive"],
           queryFn: async () => ({
             reportId: ACTIVE_REPORT_ID,
             reportSectionId: ACTIVE_SECTION_ID,
-            authorName: 'Test Lead',
+            authorName: "Test Lead",
           }),
         }),
-        pathFilter: () => ({ queryKey: ['reports.getActive'] }),
+        pathFilter: () => ({ queryKey: ["reports.getActive"] }),
       },
       myHistory: {
         queryOptions: () => ({
-          queryKey: ['reports.myHistory'],
+          queryKey: ["reports.myHistory"],
           queryFn: async () => [
             {
               sectionId: ACTIVE_SECTION_ID,
               reportId: ACTIVE_REPORT_ID,
-              periodStart: new Date('2026-04-14T00:00:00Z'),
-              periodEnd: new Date('2026-04-20T00:00:00Z'),
-              reportStatus: 'open',
-              sectionStatus: 'draft',
+              periodStart: new Date("2026-04-14T00:00:00Z"),
+              periodEnd: new Date("2026-04-20T00:00:00Z"),
+              reportStatus: "open",
+              sectionStatus: "draft",
               submittedAt: null,
               publishedAt: null,
             },
             {
               sectionId: PAST_SECTION_ID,
               reportId: PAST_REPORT_ID,
-              periodStart: new Date('2026-04-07T00:00:00Z'),
-              periodEnd: new Date('2026-04-13T00:00:00Z'),
-              reportStatus: 'published',
-              sectionStatus: 'submitted',
-              submittedAt: new Date('2026-04-13T20:00:00Z'),
-              publishedAt: new Date('2026-04-14T08:00:00Z'),
+              periodStart: new Date("2026-04-07T00:00:00Z"),
+              periodEnd: new Date("2026-04-13T00:00:00Z"),
+              reportStatus: "published",
+              sectionStatus: "submitted",
+              submittedAt: new Date("2026-04-13T20:00:00Z"),
+              publishedAt: new Date("2026-04-14T08:00:00Z"),
             },
           ],
         }),
-        pathFilter: () => ({ queryKey: ['reports.myHistory'] }),
+        pathFilter: () => ({ queryKey: ["reports.myHistory"] }),
       },
       saveDraft: {
-        mutationOptions: (passed: { onSuccess?: () => void; onError?: (e: unknown) => void } = {}) => ({
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => ({
           ...passed,
           mutationFn: async () => ({ ok: true }),
         }),
-        pathFilter: () => ({ queryKey: ['reports.saveDraft'] }),
+        pathFilter: () => ({ queryKey: ["reports.saveDraft"] }),
       },
       submit: {
-        mutationOptions: (passed: { onSuccess?: () => void; onError?: (e: unknown) => void } = {}) => ({
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => ({
           ...passed,
           mutationFn: async () => ({ ok: true }),
         }),
-        pathFilter: () => ({ queryKey: ['reports.submit'] }),
+        pathFilter: () => ({ queryKey: ["reports.submit"] }),
       },
     },
     leadForm: {
       byPeriod: {
         queryOptions: () => ({
-          queryKey: ['leadForm.byPeriod'],
+          queryKey: ["leadForm.byPeriod"],
           queryFn: async () => {
             opts.onByPeriodQuery?.();
             return {
@@ -165,58 +177,83 @@ function buildHarness(opts: {
             };
           },
         }),
-        pathFilter: () => ({ queryKey: ['leadForm.byPeriod'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
       },
       versions: {
         queryOptions: () => ({
-          queryKey: ['leadForm.versions'],
+          queryKey: ["leadForm.versions"],
           queryFn: async () => [],
         }),
-        pathFilter: () => ({ queryKey: ['leadForm.versions'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.versions"] }),
       },
       revoke: {
-        mutationOptions: (passed: { onSuccess?: () => void; onError?: (e: unknown) => void } = {}) => ({
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => ({
           ...passed,
           mutationFn: async () => ({ ok: true }),
         }),
-        pathFilter: () => ({ queryKey: ['leadForm.revoke'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.revoke"] }),
       },
       fillFrom: {
-        mutationOptions: (passed: { onSuccess?: () => void; onError?: (e: unknown) => void } = {}) => ({
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => ({
           ...passed,
           mutationFn: async () => ({ ok: true }),
         }),
-        pathFilter: () => ({ queryKey: ['leadForm.fillFrom'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.fillFrom"] }),
       },
       restoreVersion: {
-        mutationOptions: (passed: { onSuccess?: () => void; onError?: (e: unknown) => void } = {}) => ({
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => ({
           ...passed,
           mutationFn: async () => ({ ok: true }),
         }),
-        pathFilter: () => ({ queryKey: ['leadForm.restoreVersion'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.restoreVersion"] }),
       },
       requestReopen: {
-        mutationOptions: (passed: { onSuccess?: () => void; onError?: (e: unknown) => void } = {}) => ({
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => ({
           ...passed,
           mutationFn: async () => ({ ok: true }),
         }),
-        pathFilter: () => ({ queryKey: ['leadForm.requestReopen'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
       },
       createSnapshot: {
-        mutationOptions: (passed: { onSuccess?: () => void; onError?: (e: unknown) => void } = {}) => ({
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => ({
           ...passed,
           mutationFn: async () => ({ ok: true }),
         }),
-        pathFilter: () => ({ queryKey: ['leadForm.createSnapshot'] }),
+        pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
       },
     },
     ai: {
       onTrack: {
         queryOptions: () => ({
-          queryKey: ['ai.onTrack'],
-          queryFn: async () => ({ available: false } as const),
+          queryKey: ["ai.onTrack"],
+          queryFn: async () => ({ available: false }) as const,
         }),
-        pathFilter: () => ({ queryKey: ['ai.onTrack'] }),
+        pathFilter: () => ({ queryKey: ["ai.onTrack"] }),
       },
     },
   };
@@ -228,12 +265,10 @@ function Wrapper({ children }: { readonly children: ReactNode }) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return (
-    <QueryClientProvider client={qc}>{children}</QueryClientProvider>
-  );
+  return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-describe('LeadForm — Phase 35-07 addressable URLs', () => {
+describe("LeadForm — Phase 35-07 addressable URLs", () => {
   beforeEach(() => {
     replace.mockReset();
     push.mockReset();
@@ -241,10 +276,10 @@ describe('LeadForm — Phase 35-07 addressable URLs', () => {
   });
 
   afterEach(() => {
-    document.title = '';
+    document.title = "";
   });
 
-  it('bare route + redirectToCanonical → router.replace(/lead/report/<activeReportId>)', async () => {
+  it("bare route + redirectToCanonical → router.replace(/lead/report/<activeReportId>)", async () => {
     const trpcMock = buildHarness({});
     render(
       <Wrapper>
@@ -260,8 +295,8 @@ describe('LeadForm — Phase 35-07 addressable URLs', () => {
     expect(replace).toHaveBeenCalledWith(`/lead/report/${ACTIVE_REPORT_ID}`);
   });
 
-  it('bare route with ?period= → no redirect (legacy back-compat)', async () => {
-    mockSearchParams = new URLSearchParams('period=2026-W15');
+  it("bare route with ?period= → no redirect (legacy back-compat)", async () => {
+    mockSearchParams = new URLSearchParams("period=2026-W15");
     const trpcMock = buildHarness({});
     render(
       <Wrapper>
@@ -277,13 +312,13 @@ describe('LeadForm — Phase 35-07 addressable URLs', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('addressed route (reportId prop set) → no redirect, just renders the form', async () => {
+  it("addressed route (reportId prop set) → no redirect, just renders the form", async () => {
     const trpcMock = buildHarness({
       pinnedReportId: PAST_REPORT_ID,
       byPeriodSection: makeSection({
         reportSectionId: PAST_SECTION_ID,
         reportId: PAST_REPORT_ID,
-        status: 'submitted',
+        status: "submitted",
       }),
       byPeriodReadOnly: true,
     });
@@ -302,7 +337,7 @@ describe('LeadForm — Phase 35-07 addressable URLs', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('head session on /lead/report/<reportId> without authorId redirects to head report and does not load lead form', async () => {
+  it("head session on /lead/report/<reportId> without authorId redirects to head report and does not load lead form", async () => {
     const byPeriodQuery = vi.fn();
     const trpcMock = buildHarness({
       pinnedReportId: PAST_REPORT_ID,
@@ -314,10 +349,10 @@ describe('LeadForm — Phase 35-07 addressable URLs', () => {
           <SessionContext.Provider
             value={{
               user: {
-                id: 'head-id',
-                name: 'Head User',
-                email: 'head@example.test',
-                role: 'head',
+                id: "head-id",
+                name: "Head User",
+                email: "head@example.test",
+                role: "head",
               },
               // UFB-047 / Phase 48-A: SessionState now carries an
               // organization slot. Tests that don't exercise the brand
@@ -341,13 +376,13 @@ describe('LeadForm — Phase 35-07 addressable URLs', () => {
     expect(byPeriodQuery).not.toHaveBeenCalled();
   });
 
-  it('addressed route → sets document.title to the addressed week', async () => {
+  it("addressed route → sets document.title to the addressed week", async () => {
     const trpcMock = buildHarness({
       pinnedReportId: PAST_REPORT_ID,
       byPeriodSection: makeSection({
         reportSectionId: PAST_SECTION_ID,
         reportId: PAST_REPORT_ID,
-        status: 'submitted',
+        status: "submitted",
       }),
       byPeriodReadOnly: true,
     });
@@ -363,8 +398,8 @@ describe('LeadForm — Phase 35-07 addressable URLs', () => {
     });
 
     // History entry for PAST_REPORT_ID → Apr 7-13, ISO Week 15.
-    expect(document.title).toContain('Week 15');
-    expect(document.title).toContain('Apr 7-13');
-    expect(document.title).toContain('CustomReport');
+    expect(document.title).toContain("Week 15");
+    expect(document.title).toContain("Apr 7-13");
+    expect(document.title).toContain("CustomReport");
   });
 });

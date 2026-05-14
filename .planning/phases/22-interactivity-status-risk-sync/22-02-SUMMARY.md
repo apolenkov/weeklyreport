@@ -2,7 +2,8 @@
 phase: 22-interactivity-status-risk-sync
 plan: 02
 subsystem: ui
-tags: [react, hooks, status-risk-sync, sync-source-ref, pitfall-5, lead-form, tdd]
+tags:
+  [react, hooks, status-risk-sync, sync-source-ref, pitfall-5, lead-form, tdd]
 
 requires:
   - phase: 21-trpc-provider-and-client-wiring
@@ -93,6 +94,7 @@ Each task was committed atomically (TDD cadence for Task 1):
 ## Files Created/Modified
 
 ### Created
+
 - `apps/web/src/hooks/use-status-risk-sync.ts` — pure-state coordination hook with SyncSource ref guard.
 - `apps/web/src/hooks/use-status-risk-sync.test.tsx` — 7 unit tests covering SYNC-01..04 + Pitfall 5 loop guard.
 - `apps/web/src/components/lead/lead-form-sync-bridge.tsx` — Provider + Pipeline + Risks compound; owns confirmation dialog state.
@@ -100,12 +102,14 @@ Each task was committed atomically (TDD cadence for Task 1):
 - `.planning/phases/22-interactivity-status-risk-sync/deferred-items.md` — pre-existing out-of-scope issues observed during verification.
 
 ### Modified
+
 - `apps/web/src/components/lead/sdlc-pipeline.tsx` — removed local `useState(localProducts)`; now controlled via `onStatusChange` prop.
 - `apps/web/src/components/lead/risks-section.tsx` — removed local `useState(risks)`; now controlled via `onChange` + `onRiskFilled` props.
 
 ## Decisions Made
 
 See `key-decisions` in frontmatter. Highlights:
+
 - **Provider + sub-components** shape was selected over inline-children or hook-only because lead-form.tsx places SDLC and Risks in separate accordion bodies. Documented in `lead-form-sync-bridge.tsx` top-level comment.
 - **No auto-delete** of risks when stage reverts to On Track (AF-4 in FEATURES.md). Test 7 guards this behavior.
 - **Reused** existing `ConfirmationDialog` component — Skip cancels (`onClose`), Update Stage confirms (`onConfirm`).
@@ -132,6 +136,7 @@ See `key-decisions` in frontmatter. Highlights:
 ## Acceptance Criteria
 
 ### Task 1
+
 - [x] `apps/web/src/hooks/use-status-risk-sync.ts` exists.
 - [x] `apps/web/src/hooks/use-status-risk-sync.test.tsx` exists.
 - [x] `export type SyncSource` (1 occurrence).
@@ -143,6 +148,7 @@ See `key-decisions` in frontmatter. Highlights:
 - [x] All 7 tests pass.
 
 ### Task 2
+
 - [x] `apps/web/src/components/lead/lead-form-sync-bridge.tsx` exists.
 - [x] Bridge imports useStatusRiskSync (3 references).
 - [x] sdlc-pipeline.tsx has 0 useState for products.
@@ -153,6 +159,7 @@ See `key-decisions` in frontmatter. Highlights:
 - [x] All 4 bridge tests pass.
 
 ### Verification (plan-level)
+
 - [x] `pnpm --filter @customreport/web exec vitest run src/hooks/use-status-risk-sync src/components/lead/lead-form-sync-bridge src/components/lead/sdlc-pipeline src/components/lead/risks-section` -> 11/11 pass.
 - [x] Pitfall 5 loop prevention proven by Test 6 (real auto-create -> auto-sync sequence with confirmation count = 0).
 - [ ] `pnpm --filter @customreport/web typecheck` -> 2 pre-existing errors in `apps/web/src/lib/use-cursor-pagination.ts` (logged in `deferred-items.md`, owned by 22-03). 22-02 owned files all type-check clean.
@@ -165,6 +172,7 @@ None. The hook is pure state coordination with no placeholder data or mock fallb
 ## Self-Check: PASSED
 
 Files exist:
+
 - `apps/web/src/hooks/use-status-risk-sync.ts` — FOUND
 - `apps/web/src/hooks/use-status-risk-sync.test.tsx` — FOUND
 - `apps/web/src/components/lead/lead-form-sync-bridge.tsx` — FOUND
@@ -173,6 +181,7 @@ Files exist:
 - `apps/web/src/components/lead/risks-section.tsx` (modified) — FOUND
 
 Commits exist:
+
 - `d7c57f9` (test red) — FOUND
 - `d8a655e` (feat green) — FOUND
 - `58b9c85` (Task 2 bridge) — FOUND

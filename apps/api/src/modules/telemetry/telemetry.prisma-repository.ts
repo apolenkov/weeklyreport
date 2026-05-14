@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
-import type { TelemetryRepository } from './telemetry.service.js';
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { TelemetryRepository } from "./telemetry.service.js";
 
 /**
  * Phase 52 (UFB-054) — Prisma-backed implementation of the
@@ -19,7 +19,7 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     // to zero at the deadline boundary when a period transitions from
     // draft to published.
     const latest = await this.prisma.report.findFirst({
-      orderBy: { periodStart: 'desc' },
+      orderBy: { periodStart: "desc" },
       select: { periodStart: true },
     });
     if (!latest) return 0;
@@ -30,14 +30,14 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
 
   async activeLeadsLastPublishedPeriod(): Promise<number> {
     const report = await this.prisma.report.findFirst({
-      where: { status: 'published' },
-      orderBy: { periodStart: 'desc' },
+      where: { status: "published" },
+      orderBy: { periodStart: "desc" },
       select: { id: true },
     });
     if (!report) return 0;
     const rows = await this.prisma.reportSection.findMany({
-      where: { reportId: report.id, status: 'submitted' },
-      distinct: ['authorId'],
+      where: { reportId: report.id, status: "submitted" },
+      distinct: ["authorId"],
       select: { authorId: true },
     });
     return rows.length;
@@ -45,19 +45,19 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
 
   async lateSectionsLastPublishedPeriod(): Promise<number> {
     const report = await this.prisma.report.findFirst({
-      where: { status: 'published' },
-      orderBy: { periodStart: 'desc' },
+      where: { status: "published" },
+      orderBy: { periodStart: "desc" },
       select: { id: true },
     });
     if (!report) return 0;
     return this.prisma.reportSection.count({
-      where: { reportId: report.id, status: 'submitted', late: true },
+      where: { reportId: report.id, status: "submitted", late: true },
     });
   }
 
   async pendingReopenCount(): Promise<number> {
     return this.prisma.reopenRequest.count({
-      where: { status: 'pending' },
+      where: { status: "pending" },
     });
   }
 
@@ -76,8 +76,8 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     // Walk the last `n` published periods oldest → newest (we fetch DESC
     // and reverse so we don't have to push an ORDER BY clause downstream).
     const reports = await this.prisma.report.findMany({
-      where: { status: 'published' },
-      orderBy: { periodStart: 'desc' },
+      where: { status: "published" },
+      orderBy: { periodStart: "desc" },
       take: n,
       select: { id: true },
     });
@@ -90,10 +90,10 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     for (const report of reports.reverse()) {
       const [total, onTime] = await Promise.all([
         this.prisma.reportSection.count({
-          where: { reportId: report.id, status: 'submitted' },
+          where: { reportId: report.id, status: "submitted" },
         }),
         this.prisma.reportSection.count({
-          where: { reportId: report.id, status: 'submitted', late: false },
+          where: { reportId: report.id, status: "submitted", late: false },
         }),
       ]);
       if (total > 0) ratios.push(onTime / total);

@@ -1,11 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import type { OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { QueueEvents, Queue } from 'bullmq';
+import { Injectable, Logger } from "@nestjs/common";
+import type { OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import { QueueEvents, Queue } from "bullmq";
 
-import { dlqFailedTotal } from '../metrics/metrics.registry.js';
-import { getBullMQOptions } from './bullmq-options';
+import { dlqFailedTotal } from "../metrics/metrics.registry.js";
+import { getBullMQOptions } from "./bullmq-options";
 
-const QUEUE_NAMES = ['email-reminder', 'pdf-export'] as const;
+const QUEUE_NAMES = ["email-reminder", "pdf-export"] as const;
 type QueueName = (typeof QUEUE_NAMES)[number];
 
 const DEFAULT_THRESHOLD = 5;
@@ -42,7 +42,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
       const events = new QueueEvents(name, bullOptions);
       const queue = new Queue(name, bullOptions);
 
-      events.on('failed', async ({ jobId, failedReason, prev }) => {
+      events.on("failed", async ({ jobId, failedReason, prev }) => {
         // BullMQ emits 'failed' for every retry too. Only count terminal
         // failures (the job has moved into the failed-set, i.e. attemptsMade
         // has reached the configured `attempts` limit). The cleanest signal:
@@ -54,13 +54,13 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
           if ((job.attemptsMade ?? 0) >= attemptsConfigured) {
             dlqFailedTotal.inc({ queue: name });
             this.logger.error(
-              `[dlq] job ${jobId} on ${name} exhausted ${attemptsConfigured} attempts: ${failedReason ?? 'unknown'}`,
+              `[dlq] job ${jobId} on ${name} exhausted ${attemptsConfigured} attempts: ${failedReason ?? "unknown"}`,
             );
           }
         } catch (err) {
           // Don't let metrics-side bookkeeping crash the queue listener.
           this.logger.warn(
-            `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${err instanceof Error ? err.message : String(err)} (prev=${prev ?? 'n/a'})`,
+            `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${err instanceof Error ? err.message : String(err)} (prev=${prev ?? "n/a"})`,
           );
         }
       });
@@ -69,7 +69,9 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
       this.queues.set(name, queue);
     }
 
-    const threshold = Number(process.env['DLQ_ALERT_THRESHOLD'] ?? DEFAULT_THRESHOLD);
+    const threshold = Number(
+      process.env["DLQ_ALERT_THRESHOLD"] ?? DEFAULT_THRESHOLD,
+    );
     this.pollTimer = setInterval(() => {
       void this.checkThresholds(threshold);
     }, POLL_INTERVAL_MS);
@@ -77,7 +79,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     this.pollTimer.unref?.();
 
     this.logger.log(
-      `DLQ monitor active for queues=[${QUEUE_NAMES.join(',')}], alert threshold=${threshold}, poll=${POLL_INTERVAL_MS}ms`,
+      `DLQ monitor active for queues=[${QUEUE_NAMES.join(",")}], alert threshold=${threshold}, poll=${POLL_INTERVAL_MS}ms`,
     );
   }
 

@@ -11,6 +11,7 @@
 ## Current State: v5.0 SHIPPED (2026-04-25)
 
 **What was delivered (Phases 20-26, 15 plans, 50 commits, +23,646/-2,443 LOC across 170 files):**
+
 - Mockup-aligned seed: 12 products, 6 leads, 7 SDLC stages, 2 report periods (idempotent)
 - Mapper layer translating Zod/Prisma enums to UI presentation states (27 unit tests)
 - tRPC client end-to-end: TRPCProvider + tanstack-react-query + superjson, 7 container migrations
@@ -23,6 +24,7 @@
 - 48/48 requirements satisfied (code-complete)
 
 **Tech debt (carried into v6.0):**
+
 - Phase 26 integration suite was only `--list` verified — never executed end-to-end against running services
 - 4 Phase 22 human-verify items (SYNC-01/03 DOM-level, INT-01 submit refresh, INT-04/06 autosave timing) remain unobserved
 - Phase 23 PDF E2E smoke (Export PDF click → download) auto-approved at human-verify checkpoint
@@ -38,6 +40,7 @@
 **Goal:** Закрыть auth-долг v5.0, стабилизировать integration-тесты, добавить AI-инсайты + аналитику тренда + email-напоминания + mobile polish, формализовать release-day checklist.
 
 **Target features:**
+
 - **A — Auth & roles:** real Keycloak SAML + role separation (lead/head/admin/viewer) + cookie injection в pdf-export
 - **B — Quality polish:** 5 integration test fails (один root cause likely) + `prisma generate` postinstall + удаление dead `apps/web/src/proxy.ts`
 - **C — AI features:** auto-summarization отчётов / sentiment по risks / smart "on track" суждение по traffic lights (требует AI-SPEC)
@@ -47,6 +50,7 @@
 - **G — Release checklist:** формализовать HANDOFF #2/#3 как commit-able CHECKLIST.md
 
 **Key context:**
+
 - Phase numbering продолжается с **Phase 27** (без `--reset-phase-numbers`)
 - AI-фазы (тема C) подлежат `/gsd-ai-integration-phase` для AI-SPEC.md перед planning
 - Research нужен только для C и D (новые feature areas); A/B/E/F/G — skip research
@@ -56,6 +60,7 @@
 ### Validated
 
 Shipped in v1.0-v3.0:
+
 - ✓ Domain services with repository interfaces — v1.0
 - ✓ Zod schemas (shared types) — v1.0
 - ✓ Prisma schema (14 models, all enums) — v2.0
@@ -126,15 +131,15 @@ _No active milestone — run `/gsd:new-milestone` to start the next cycle._
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| shadcn/ui вместо Ant Design | Лучше для AI-генерации кода, composable, Tailwind-native | — Pending |
-| tRPC вместо REST + Swagger | Type-safe API без кодогенерации, идеально для монорепо Next.js + NestJS | — Pending |
-| Структурированные айтемы (Вариант A) | Позволяет фильтрацию, группировку, аналитику в будущем | — Pending |
-| BullMQ для очередей | На Redis (уже в стеке), нативная интеграция с NestJS (@nestjs/bullmq) | — Pending |
-| Prisma ORM | Type-safe, отличные миграции, хорошо с PostgreSQL | — Pending |
-| Docker Compose → Kubernetes | Начинаем просто, мигрируем на K8s когда появится потребность | — Pending |
-| Item вместо WeekItem | Универсальная модель — период отчёта может быть не только неделя | — Pending |
+| Decision                             | Rationale                                                               | Outcome   |
+| ------------------------------------ | ----------------------------------------------------------------------- | --------- |
+| shadcn/ui вместо Ant Design          | Лучше для AI-генерации кода, composable, Tailwind-native                | — Pending |
+| tRPC вместо REST + Swagger           | Type-safe API без кодогенерации, идеально для монорепо Next.js + NestJS | — Pending |
+| Структурированные айтемы (Вариант A) | Позволяет фильтрацию, группировку, аналитику в будущем                  | — Pending |
+| BullMQ для очередей                  | На Redis (уже в стеке), нативная интеграция с NestJS (@nestjs/bullmq)   | — Pending |
+| Prisma ORM                           | Type-safe, отличные миграции, хорошо с PostgreSQL                       | — Pending |
+| Docker Compose → Kubernetes          | Начинаем просто, мигрируем на K8s когда появится потребность            | — Pending |
+| Item вместо WeekItem                 | Универсальная модель — период отчёта может быть не только неделя        | — Pending |
 
 ## Data Model
 
@@ -206,17 +211,18 @@ packages/
 
 ## Roles
 
-| Role | Capabilities |
-|------|-------------|
-| `lead` | Заполняет свою секцию, ставит светофоры, добавляет риски/решения, top priorities |
-| `head` | Всё что lead + админка + ревью + публикация финального отчёта |
-| `viewer` | Только чтение опубликованных отчётов, PDF скачивание |
+| Role     | Capabilities                                                                     |
+| -------- | -------------------------------------------------------------------------------- |
+| `lead`   | Заполняет свою секцию, ставит светофоры, добавляет риски/решения, top priorities |
+| `head`   | Всё что lead + админка + ревью + публикация финального отчёта                    |
+| `viewer` | Только чтение опубликованных отчётов, PDF скачивание                             |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 **After each phase transition** (via `/gsd:transition`):
+
 1. Requirements invalidated? → Move to Out of Scope with reason
 2. Requirements validated? → Move to Validated with phase reference
 3. New requirements emerged? → Add to Active
@@ -224,10 +230,12 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? → Update if drifted
 
 **After each milestone** (via `/gsd:complete-milestone`):
+
 1. Full review of all sections
 2. Core Value check — still the right priority?
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-25 after milestone v5.0 SHIPPED*
+
+_Last updated: 2026-04-25 after milestone v5.0 SHIPPED_

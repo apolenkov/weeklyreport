@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { ReviewService } from './review.service.js';
-import { ReviewPrismaRepository } from './review.prisma-repository.js';
+import { Module } from "@nestjs/common";
+import { ReviewService } from "./review.service.js";
+import { ReviewPrismaRepository } from "./review.prisma-repository.js";
 
 @Module({
   providers: [

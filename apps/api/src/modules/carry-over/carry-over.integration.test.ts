@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import {
   createTestPrisma,
   cleanDatabase,
   seedTestData,
   disconnectTestPrisma,
   TEST_IDS,
-} from '../../test-utils/prisma-test-helper';
-import { CarryOverPrismaRepository } from './carry-over.prisma-repository';
-import { expectDefined } from '../../test-utils/expect-defined.js';
+} from "../../test-utils/prisma-test-helper";
+import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
-describe('CarryOverPrismaRepository (integration)', () => {
+describe("CarryOverPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
   let repo: CarryOverPrismaRepository;
   let testData: Awaited<ReturnType<typeof seedTestData>>;
@@ -28,20 +28,20 @@ describe('CarryOverPrismaRepository (integration)', () => {
     await disconnectTestPrisma();
   });
 
-  it('findExecutionByDedupeKey returns null when not found', async () => {
-    const result = await repo.findExecutionByDedupeKey('nonexistent-key');
+  it("findExecutionByDedupeKey returns null when not found", async () => {
+    const result = await repo.findExecutionByDedupeKey("nonexistent-key");
     expect(result).toBeNull();
   });
 
-  it('saveCarryOver creates execution and records atomically', async () => {
+  it("saveCarryOver creates execution and records atomically", async () => {
     // Create a target report and section for carry-over
     const targetReport = await prisma.report.create({
       data: {
         id: TEST_IDS.targetReport,
-        periodStart: new Date('2026-04-14'),
-        periodEnd: new Date('2026-04-20'),
-        deadline: new Date('2026-04-18'),
-        status: 'draft',
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
       },
     });
 
@@ -49,7 +49,7 @@ describe('CarryOverPrismaRepository (integration)', () => {
       data: {
         reportId: targetReport.id,
         authorId: testData.lead.id,
-        status: 'draft',
+        status: "draft",
       },
     });
 
@@ -58,10 +58,10 @@ describe('CarryOverPrismaRepository (integration)', () => {
       data: {
         reportSectionId: testData.section.id,
         projectId: testData.project.id,
-        type: 'next',
-        text: 'Carry this over',
-        tag: 'feature',
-        workflowStatus: 'in_progress',
+        type: "next",
+        text: "Carry this over",
+        tag: "feature",
+        workflowStatus: "in_progress",
         carriedOver: false,
       },
     });
@@ -73,7 +73,7 @@ describe('CarryOverPrismaRepository (integration)', () => {
       sourceReportId: testData.report.id,
       targetReportId: targetReport.id,
       dedupeKey,
-      status: 'completed' as const,
+      status: "completed" as const,
       startedAt: new Date(),
       completedAt: new Date(),
       carriedItemCount: 1,
@@ -89,7 +89,7 @@ describe('CarryOverPrismaRepository (integration)', () => {
         targetItemId: TEST_IDS.carryTargetItem,
         sourceDecisionId: null,
         targetDecisionId: null,
-        status: 'completed' as const,
+        status: "completed" as const,
         carriedAt: new Date(),
       },
     ];
@@ -98,18 +98,18 @@ describe('CarryOverPrismaRepository (integration)', () => {
       reportSectionId: targetSection.id,
       reportId: targetReport.id,
       authorId: testData.lead.id,
-      authorName: 'Test Lead 1',
-      status: 'draft' as const,
+      authorName: "Test Lead 1",
+      status: "draft" as const,
       submittedAt: null,
       projects: [],
       items: [
         {
           id: TEST_IDS.carryTargetItem,
           projectId: testData.project.id,
-          type: 'current' as const,
-          text: 'Carry this over',
-          tag: 'feature',
-          workflowStatus: 'in_progress' as const,
+          type: "current" as const,
+          text: "Carry this over",
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
           carriedOver: true,
           completed: null,
         },
@@ -119,7 +119,11 @@ describe('CarryOverPrismaRepository (integration)', () => {
       priorities: [],
     };
 
-    const result = await repo.saveCarryOver(execution, records, targetSectionReadModel);
+    const result = await repo.saveCarryOver(
+      execution,
+      records,
+      targetSectionReadModel,
+    );
 
     expect(result.execution.id).toBe(TEST_IDS.carryExec);
     expect(result.records).toHaveLength(1);
@@ -128,7 +132,7 @@ describe('CarryOverPrismaRepository (integration)', () => {
     const found = await repo.findExecutionByDedupeKey(dedupeKey);
     expect(found).not.toBeNull();
     expect(expectDefined(found).id).toBe(TEST_IDS.carryExec);
-    expect(expectDefined(found).status).toBe('completed');
+    expect(expectDefined(found).status).toBe("completed");
     expect(expectDefined(found).carriedItemCount).toBe(1);
 
     // Verify item was created in target section
@@ -137,6 +141,6 @@ describe('CarryOverPrismaRepository (integration)', () => {
     });
     expect(targetItems).toHaveLength(1);
     expect(expectDefined(targetItems[0]).carriedOver).toBe(true);
-    expect(expectDefined(targetItems[0]).text).toBe('Carry this over');
+    expect(expectDefined(targetItems[0]).text).toBe("Carry this over");
   });
 });

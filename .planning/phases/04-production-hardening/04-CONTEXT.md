@@ -20,6 +20,7 @@ The core roadmap milestone is implemented, but real-browser/manual validation su
 ## Known concrete seams
 
 ### Hydration risk files
+
 - `apps/web/src/app/(app)/lead/report/page.tsx`
 - `apps/web/src/app/(app)/head/dashboard/page.tsx`
 - `apps/web/src/app/(app)/head/report/page.tsx`
@@ -33,6 +34,7 @@ The core roadmap milestone is implemented, but real-browser/manual validation su
 - `apps/web/src/components/head/submission-dashboard.tsx`
 
 ### Logging insertion points
+
 - `apps/api/src/main.ts`
 - `apps/api/src/modules/auth/auth.controller.ts`
 - `apps/api/src/modules/auth/saml.strategy.ts`

@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import {
   AnalyticsService,
   type AnalyticsRepository,
   type AnalyticsCachePort,
-} from './analytics.service.js';
+} from "./analytics.service.js";
 
 /**
  * ANAL-02/03 (Phase 30-02) TZ-stability gate.
@@ -23,19 +23,19 @@ import {
  */
 
 const fixedHistory = {
-  periods: ['2026-04-21', '2026-04-28'],
+  periods: ["2026-04-21", "2026-04-28"],
   rows: [
     {
-      projectId: '11111111-1111-4111-8111-111111111111',
-      projectName: 'P',
-      statuses: ['green' as const, 'red' as const],
+      projectId: "11111111-1111-4111-8111-111111111111",
+      projectName: "P",
+      statuses: ["green" as const, "red" as const],
     },
   ],
 };
 
 const fixedVelocity = [
-  { periodLabel: '2026-04-21', leads: [] },
-  { periodLabel: '2026-04-28', leads: [] },
+  { periodLabel: "2026-04-21", leads: [] },
+  { periodLabel: "2026-04-28", leads: [] },
 ];
 
 const fixedComparison = { rows: [] };
@@ -62,52 +62,52 @@ function noopCache(): AnalyticsCachePort {
   };
 }
 
-describe('Analytics labels are TZ-stable @ANAL-02 @ANAL-03', () => {
+describe("Analytics labels are TZ-stable @ANAL-02 @ANAL-03", () => {
   let originalTZ: string | undefined;
 
   beforeEach(() => {
-    originalTZ = process.env['TZ'];
+    originalTZ = process.env["TZ"];
   });
 
   afterEach(() => {
     if (originalTZ === undefined) {
-      delete process.env['TZ'];
+      delete process.env["TZ"];
     } else {
-      process.env['TZ'] = originalTZ;
+      process.env["TZ"] = originalTZ;
     }
   });
 
-  it('produces identical labels under Europe/Moscow and UTC', async () => {
+  it("produces identical labels under Europe/Moscow and UTC", async () => {
     const svc = new AnalyticsService(fakeRepo(), noopCache());
-    const inputs = { periodFrom: '2026-04-01', periodTo: '2026-04-30' };
+    const inputs = { periodFrom: "2026-04-01", periodTo: "2026-04-30" };
 
-    process.env['TZ'] = 'Europe/Moscow';
+    process.env["TZ"] = "Europe/Moscow";
     const moscowHistory = await svc.trafficLightHistory(inputs);
     const moscowVelocity = await svc.leadVelocity(inputs);
 
-    process.env['TZ'] = 'UTC';
+    process.env["TZ"] = "UTC";
     const utcHistory = await svc.trafficLightHistory(inputs);
     const utcVelocity = await svc.leadVelocity(inputs);
 
-    expect(moscowHistory.periods.join('|')).toBe(utcHistory.periods.join('|'));
+    expect(moscowHistory.periods.join("|")).toBe(utcHistory.periods.join("|"));
     expect(moscowVelocity.map((r) => r.periodLabel)).toEqual(
       utcVelocity.map((r) => r.periodLabel),
     );
   });
 
-  it('Date.toISOString().slice(0,10) is itself TZ-stable', () => {
+  it("Date.toISOString().slice(0,10) is itself TZ-stable", () => {
     // Belt-and-suspenders sanity check on the underlying primitive used by
     // analytics.prisma-repository.ts. If this assertion ever fails, the
     // Node runtime semantics changed — escalate.
-    const sample = new Date('2026-04-28T23:30:00.000Z');
+    const sample = new Date("2026-04-28T23:30:00.000Z");
 
-    process.env['TZ'] = 'Europe/Moscow';
+    process.env["TZ"] = "Europe/Moscow";
     const moscowLabel = sample.toISOString().slice(0, 10);
 
-    process.env['TZ'] = 'UTC';
+    process.env["TZ"] = "UTC";
     const utcLabel = sample.toISOString().slice(0, 10);
 
     expect(moscowLabel).toBe(utcLabel);
-    expect(moscowLabel).toBe('2026-04-28');
+    expect(moscowLabel).toBe("2026-04-28");
   });
 });

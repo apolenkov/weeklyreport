@@ -1,5 +1,5 @@
-import type { WorkingDays } from '@customreport/shared';
-import { DateTime } from 'luxon';
+import type { WorkingDays } from "@customreport/shared";
+import { DateTime } from "luxon";
 
 /**
  * Phase 50-C (UFB-050): Luxon-based business-day arithmetic.
@@ -29,11 +29,11 @@ const MAX_ITER = 366 * 10;
  */
 export function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
   switch (wd) {
-    case 'mon-fri':
+    case "mon-fri":
       return new Set([1, 2, 3, 4, 5]);
-    case 'mon-sat':
+    case "mon-sat":
       return new Set([1, 2, 3, 4, 5, 6]);
-    case 'mon-sun':
+    case "mon-sun":
       return new Set([1, 2, 3, 4, 5, 6, 7]);
   }
 }
@@ -60,11 +60,7 @@ export function isBusinessDay(
  * even if `date` itself is a business day). Equivalent to
  * `addBusinessDays(date, 1, wd, tz)`.
  */
-export function nextBusinessDay(
-  date: Date,
-  wd: WorkingDays,
-  tz: string,
-): Date {
+export function nextBusinessDay(date: Date, wd: WorkingDays, tz: string): Date {
   return addBusinessDays(date, 1, wd, tz);
 }
 
@@ -138,7 +134,11 @@ export function computeDeadline(
   tz: string,
   deadlineHour = 18,
 ): Date {
-  if (!Number.isInteger(deadlineHour) || deadlineHour < 0 || deadlineHour > 23) {
+  if (
+    !Number.isInteger(deadlineHour) ||
+    deadlineHour < 0 ||
+    deadlineHour > 23
+  ) {
     throw new Error(
       `business-date: deadlineHour must be integer 0..23 (got ${deadlineHour})`,
     );

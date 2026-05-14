@@ -1,7 +1,7 @@
-import { Skeleton } from '@customreport/ui/components/ui/skeleton';
+import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
 type AdminTabSkeletonProps = {
-  readonly variant: 'table' | 'form';
+  readonly variant: "table" | "form";
 };
 
 /**
@@ -13,7 +13,7 @@ type AdminTabSkeletonProps = {
  * - 'form' renders 4 stacked label+input skeletons matching SettingsTab.
  */
 export function AdminTabSkeleton({ variant }: AdminTabSkeletonProps) {
-  if (variant === 'form') {
+  if (variant === "form") {
     return (
       <div className="max-w-lg space-y-5">
         {[0, 1, 2, 3].map((row) => (

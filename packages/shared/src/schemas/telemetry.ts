@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Phase 52 (UFB-054) — `telemetry.summary` payload shape.

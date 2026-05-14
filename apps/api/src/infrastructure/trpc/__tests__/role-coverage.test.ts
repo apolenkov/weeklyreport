@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   publicProcedure,
@@ -8,8 +8,8 @@ import {
   leadProcedure,
   viewerProcedure,
   anyRoleProcedure,
-} from '../trpc.middleware.js';
-import { createAppRouter } from '../trpc.router.js';
+} from "../trpc.middleware.js";
+import { createAppRouter } from "../trpc.router.js";
 
 // ---------------------------------------------------------------------------
 // AUTH-03 default-deny coverage gate (Phase 27 / Plan 04).
@@ -37,36 +37,50 @@ import { createAppRouter } from '../trpc.router.js';
 // Build dummy resolvers off each base so we can read its middleware-chain
 // identities at module init. The resolver function is appended as the last
 // middleware, so we slice it off.
-const PUBLIC_CHAIN = (publicProcedure.query(() => undefined) as unknown as {
-  _def: { middlewares: unknown[] };
-})._def.middlewares.slice(0, -1);
-const PROTECTED_CHAIN = (protectedProcedure.query(() => undefined) as unknown as {
-  _def: { middlewares: unknown[] };
-})._def.middlewares.slice(0, -1);
-const HEAD_CHAIN = (headProcedure.query(() => undefined) as unknown as {
-  _def: { middlewares: unknown[] };
-})._def.middlewares.slice(0, -1);
-const ADMIN_CHAIN = (adminProcedure.query(() => undefined) as unknown as {
-  _def: { middlewares: unknown[] };
-})._def.middlewares.slice(0, -1);
-const LEAD_CHAIN = (leadProcedure.query(() => undefined) as unknown as {
-  _def: { middlewares: unknown[] };
-})._def.middlewares.slice(0, -1);
-const VIEWER_CHAIN = (viewerProcedure.query(() => undefined) as unknown as {
-  _def: { middlewares: unknown[] };
-})._def.middlewares.slice(0, -1);
-const ANY_ROLE_CHAIN = (anyRoleProcedure.query(() => undefined) as unknown as {
-  _def: { middlewares: unknown[] };
-})._def.middlewares.slice(0, -1);
+const PUBLIC_CHAIN = (
+  publicProcedure.query(() => undefined) as unknown as {
+    _def: { middlewares: unknown[] };
+  }
+)._def.middlewares.slice(0, -1);
+const PROTECTED_CHAIN = (
+  protectedProcedure.query(() => undefined) as unknown as {
+    _def: { middlewares: unknown[] };
+  }
+)._def.middlewares.slice(0, -1);
+const HEAD_CHAIN = (
+  headProcedure.query(() => undefined) as unknown as {
+    _def: { middlewares: unknown[] };
+  }
+)._def.middlewares.slice(0, -1);
+const ADMIN_CHAIN = (
+  adminProcedure.query(() => undefined) as unknown as {
+    _def: { middlewares: unknown[] };
+  }
+)._def.middlewares.slice(0, -1);
+const LEAD_CHAIN = (
+  leadProcedure.query(() => undefined) as unknown as {
+    _def: { middlewares: unknown[] };
+  }
+)._def.middlewares.slice(0, -1);
+const VIEWER_CHAIN = (
+  viewerProcedure.query(() => undefined) as unknown as {
+    _def: { middlewares: unknown[] };
+  }
+)._def.middlewares.slice(0, -1);
+const ANY_ROLE_CHAIN = (
+  anyRoleProcedure.query(() => undefined) as unknown as {
+    _def: { middlewares: unknown[] };
+  }
+)._def.middlewares.slice(0, -1);
 
 const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
-  { name: 'publicProcedure', chain: PUBLIC_CHAIN },
-  { name: 'protectedProcedure', chain: PROTECTED_CHAIN },
-  { name: 'headProcedure', chain: HEAD_CHAIN },
-  { name: 'adminProcedure', chain: ADMIN_CHAIN },
-  { name: 'leadProcedure', chain: LEAD_CHAIN },
-  { name: 'viewerProcedure', chain: VIEWER_CHAIN },
-  { name: 'anyRoleProcedure', chain: ANY_ROLE_CHAIN },
+  { name: "publicProcedure", chain: PUBLIC_CHAIN },
+  { name: "protectedProcedure", chain: PROTECTED_CHAIN },
+  { name: "headProcedure", chain: HEAD_CHAIN },
+  { name: "adminProcedure", chain: ADMIN_CHAIN },
+  { name: "leadProcedure", chain: LEAD_CHAIN },
+  { name: "viewerProcedure", chain: VIEWER_CHAIN },
+  { name: "anyRoleProcedure", chain: ANY_ROLE_CHAIN },
 ];
 
 /**
@@ -96,11 +110,12 @@ interface RouterShape {
 function isLeafProcedure(node: unknown): node is LeafProcedure {
   // tRPC procedures are callable functions that also carry a `_def` property.
   return (
-    (typeof node === 'object' || typeof node === 'function') &&
+    (typeof node === "object" || typeof node === "function") &&
     node !== null &&
-    '_def' in node &&
-    typeof (node as { _def: unknown })._def === 'object' &&
-    (node as { _def: { middlewares?: unknown } })._def.middlewares !== undefined &&
+    "_def" in node &&
+    typeof (node as { _def: unknown })._def === "object" &&
+    (node as { _def: { middlewares?: unknown } })._def.middlewares !==
+      undefined &&
     Array.isArray((node as { _def: { middlewares: unknown } })._def.middlewares)
   );
 }
@@ -110,9 +125,12 @@ function isLeafProcedure(node: unknown): node is LeafProcedure {
  * dot-paths) and the recursive nested-router shape. Returns a list of
  * `[path, leafProcedure]` tuples.
  */
-function collectLeafProcedures(
-  router: { _def: { procedures: Record<string, unknown>; record?: Record<string, unknown> } },
-): Array<[string, LeafProcedure]> {
+function collectLeafProcedures(router: {
+  _def: {
+    procedures: Record<string, unknown>;
+    record?: Record<string, unknown>;
+  };
+}): Array<[string, LeafProcedure]> {
   const leaves: Array<[string, LeafProcedure]> = [];
 
   // tRPC v11: `_def.procedures` is a flat record where keys are dot-separated
@@ -132,9 +150,12 @@ function collectLeafProcedures(
  * paths. Empty result means full coverage. Used both for the real AppRouter
  * (must be empty) and the synthetic mutation test (must be non-empty).
  */
-export function findUncoveredProcedures(
-  router: { _def: { procedures: Record<string, unknown>; record?: Record<string, unknown> } },
-): string[] {
+export function findUncoveredProcedures(router: {
+  _def: {
+    procedures: Record<string, unknown>;
+    record?: Record<string, unknown>;
+  };
+}): string[] {
   const leaves = collectLeafProcedures(router);
   const offending: string[] = [];
 
@@ -147,8 +168,8 @@ export function findUncoveredProcedures(
   return offending;
 }
 
-describe('AUTH-03 default-deny coverage gate', () => {
-  it('every AppRouter leaf procedure uses one of the five recognised role bases', () => {
+describe("AUTH-03 default-deny coverage gate", () => {
+  it("every AppRouter leaf procedure uses one of the five recognised role bases", () => {
     // Build the AppRouter with stub deps — we never invoke any procedure here,
     // we only inspect _def.middlewares identity. The deps shape is satisfied
     // by `{}` casts because nothing reads them at construction time.
@@ -162,52 +183,52 @@ describe('AUTH-03 default-deny coverage gate', () => {
     if (offending.length > 0) {
       // Diagnostic surface for CI failures; the assertion below fails the test.
       console.error(
-        '[AUTH-03] Procedures lacking recognised role declaration:\n' +
-          offending.map((p) => `  - ${p}`).join('\n') +
-          '\nFix: rebuild on publicProcedure / protectedProcedure / leadProcedure / headProcedure / viewerProcedure.',
+        "[AUTH-03] Procedures lacking recognised role declaration:\n" +
+          offending.map((p) => `  - ${p}`).join("\n") +
+          "\nFix: rebuild on publicProcedure / protectedProcedure / leadProcedure / headProcedure / viewerProcedure.",
       );
     }
 
     expect(offending).toEqual([]);
   });
 
-  it('mutation test: a procedure built on bare t.procedure triggers the gate', async () => {
+  it("mutation test: a procedure built on bare t.procedure triggers the gate", async () => {
     // Construct a synthetic router with one bare procedure to prove the gate
     // fires when role declaration is missing. We import `initTRPC` directly
     // and build a t.procedure unwrapped — no logging, no auth, no role.
-    const { initTRPC } = await import('@trpc/server');
+    const { initTRPC } = await import("@trpc/server");
     const t = initTRPC.create();
 
     const bareRouter = t.router({
-      naked: t.procedure.query(() => 'no role declared'),
+      naked: t.procedure.query(() => "no role declared"),
     });
 
     const offending = findUncoveredProcedures(
       bareRouter as unknown as Parameters<typeof findUncoveredProcedures>[0],
     );
 
-    expect(offending).toContain('naked');
+    expect(offending).toContain("naked");
   });
 
-  it('mutation test: an alternate logging-only chain (different instance) also triggers the gate', async () => {
+  it("mutation test: an alternate logging-only chain (different instance) also triggers the gate", async () => {
     // Even a procedure that uses a DIFFERENT loggingMiddleware reference
     // must fail — the gate compares middleware-function identity, not
     // shape. This guards against a contributor copy-pasting the logging
     // middleware locally instead of importing the shared base procedures.
-    const { initTRPC } = await import('@trpc/server');
+    const { initTRPC } = await import("@trpc/server");
     const t = initTRPC.create();
 
     const fakeLogging = t.middleware(async ({ next }) => next());
     const altPublic = t.procedure.use(fakeLogging);
 
     const altRouter = t.router({
-      lookalike: altPublic.query(() => 'masquerading as public'),
+      lookalike: altPublic.query(() => "masquerading as public"),
     });
 
     const offending = findUncoveredProcedures(
       altRouter as unknown as Parameters<typeof findUncoveredProcedures>[0],
     );
 
-    expect(offending).toContain('lookalike');
+    expect(offending).toContain("lookalike");
   });
 });

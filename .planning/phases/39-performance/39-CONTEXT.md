@@ -8,6 +8,7 @@
 ## Phase Boundary
 
 Performance baseline before production scale-up:
+
 - PgBouncer in prod compose (transaction mode, pool=20) so the API can scale horizontally without thundering-herd on Postgres.
 - Turbopack experiment to drop the `--webpack` pin (the runaway bug that pinned us is now closed).
 - pg_stat_statements enabled for an index audit; CREATE INDEX migration covers the top 10 slow queries.
@@ -30,6 +31,7 @@ Out of scope: caching layer for tRPC responses (Phase 30 added Redis cache for a
 </decisions>
 
 <code_context>
+
 ## Existing Code Insights
 
 - `prisma/schema.prisma` datasource block — needs annotation in 39-01.

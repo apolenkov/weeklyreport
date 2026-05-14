@@ -6,10 +6,22 @@ tags: [empty-state, vitest, testing, ux-polish]
 dependency_graph:
   requires: []
   provides: [EmptyState component, vitest React plugin fix]
-  affects: [head/report, head/dashboard, lead/report, admin, reports/history, archive-report-list]
+  affects:
+    [
+      head/report,
+      head/dashboard,
+      lead/report,
+      admin,
+      reports/history,
+      archive-report-list,
+    ]
 tech_stack:
   added: ["@vitejs/plugin-react ^5.2.0 (devDep)"]
-  patterns: [EmptyState pattern with LucideIcon + semantic tokens, Loading->Error->Empty->Content rendering chain]
+  patterns:
+    [
+      EmptyState pattern with LucideIcon + semantic tokens,
+      Loading->Error->Empty->Content rendering chain,
+    ]
 key_files:
   created:
     - apps/web/src/components/common/empty-state.tsx
@@ -48,6 +60,7 @@ The `@vitejs/plugin-react` package was installed and added to `apps/web/vitest.c
 **Note:** This fix was pre-committed at `905d5f3` before this plan executed (via checkpoint during Phase 15 planning). No re-work needed — documented as deviation below.
 
 Test results after fix:
+
 - 19/27 tests passing (was 3/27)
 - 8 remaining failures are pre-existing component-test mismatches (not caused by the plugin fix)
 - Details in `.planning/phases/15-ui-ux-polish-visual-verification/deferred-items.md`
@@ -60,13 +73,13 @@ New reusable component at `apps/web/src/components/common/empty-state.tsx`:
 - **Design:** 64px icon with strokeWidth 1.5 in rounded-2xl bg-muted container, py-16 vertical padding, semantic color tokens only (no hardcoded OKLCH), optional large CTA button
 - **Wired into 5 locations:**
 
-| Location | Icon | CTA |
-|---|---|---|
-| `apps/web/src/app/(app)/head/report/page.tsx` | FileStack | "View Dashboard" → /head/dashboard |
-| `apps/web/src/app/(app)/head/dashboard/page.tsx` | Users | "Open Admin" → /admin |
-| `apps/web/src/app/(app)/lead/report/page.tsx` | FileText | none |
-| `apps/web/src/app/(app)/admin/page.tsx` | Settings | none |
-| `apps/web/src/components/report/archive-report-list.tsx` | BookOpen | none |
+| Location                                                 | Icon      | CTA                                |
+| -------------------------------------------------------- | --------- | ---------------------------------- |
+| `apps/web/src/app/(app)/head/report/page.tsx`            | FileStack | "View Dashboard" → /head/dashboard |
+| `apps/web/src/app/(app)/head/dashboard/page.tsx`         | Users     | "Open Admin" → /admin              |
+| `apps/web/src/app/(app)/lead/report/page.tsx`            | FileText  | none                               |
+| `apps/web/src/app/(app)/admin/page.tsx`                  | Settings  | none                               |
+| `apps/web/src/components/report/archive-report-list.tsx` | BookOpen  | none                               |
 
 All pages: removed unused `Alert`, `AlertTitle`, `AlertDescription`, `AlertCircle` imports where applicable.
 
@@ -74,10 +87,10 @@ All pages: removed unused `Alert`, `AlertTitle`, `AlertDescription`, `AlertCircl
 
 ## Commits
 
-| Hash | Task | Description |
-|---|---|---|
+| Hash      | Task                   | Description                                                                 |
+| --------- | ---------------------- | --------------------------------------------------------------------------- |
 | `905d5f3` | Task 1 (pre-committed) | chore(15): checkpoint — vitest React fix + test updates + 15-02 nav summary |
-| `1e66838` | Task 2 | feat(15-01): create EmptyState component and wire into all data pages |
+| `1e66838` | Task 2                 | feat(15-01): create EmptyState component and wire into all data pages       |
 
 ---
 

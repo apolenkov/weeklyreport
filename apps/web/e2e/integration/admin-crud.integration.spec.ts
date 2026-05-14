@@ -18,24 +18,24 @@ function escapeRegExp(value: string): string {
 
 test.describe("Admin CRUD (integration)", () => {
   test("admin can create a new product and it appears in DB", async ({
-    headPage,
+    adminPage,
   }) => {
-    await headPage.goto("/admin/products");
+    await adminPage.goto("/admin/products");
 
-    const addBtn = headPage.getByRole("button", { name: /add|new|create/i });
+    const addBtn = adminPage.getByRole("button", { name: /add|new|create/i });
     await expect(addBtn.first()).toBeVisible({ timeout: 15_000 });
     await addBtn.first().click();
 
-    const nameField = headPage.getByLabel(/name/i).first();
+    const nameField = adminPage.getByLabel(/name/i).first();
     const uniqueName = `IntegrationTest Product ${Date.now()}`;
     await nameField.fill(uniqueName);
 
-    const saveBtn = headPage.getByRole("button", {
+    const saveBtn = adminPage.getByRole("button", {
       name: /^(save|create|add)/i,
     });
     await saveBtn.last().click();
 
-    await headPage.waitForResponse(
+    await adminPage.waitForResponse(
       (r) => r.url().includes("/trpc/") && r.request().method() === "POST",
       { timeout: 15_000 },
     );
@@ -52,68 +52,57 @@ test.describe("Admin CRUD (integration)", () => {
     }
   });
 
-  test("admin AppSettings update persists across page reload", async ({
-    headPage,
+  test("admin Organization identity update persists across page reload", async ({
+    adminPage,
   }) => {
-    await headPage.goto("/admin/settings");
+    await adminPage.goto("/admin/settings");
 
-    const deptField = headPage.getByRole("textbox", {
-      name: /^Department Name$/,
+    const shortNameField = adminPage.getByRole("textbox", {
+      name: /^Short name$/i,
     });
-    await expect(deptField).toBeVisible({ timeout: 15_000 });
+    await expect(shortNameField).toBeVisible({ timeout: 15_000 });
 
-    const newName = `Software Development ${Date.now()}`;
-    await deptField.fill(newName);
+    // shortName is max 16 chars; keep the value short enough to fit.
+    const newShortName = `Tst${Date.now() % 10000}`;
+    await shortNameField.fill(newShortName);
 
-    const saveBtn = headPage.getByRole("button", { name: /^Save Settings$/i });
+    const saveBtn = adminPage.getByRole("button", {
+      name: /save organization identity/i,
+    });
     await saveBtn.last().click();
 
-    await headPage.waitForResponse(
+    await adminPage.waitForResponse(
       (r) => r.url().includes("/trpc/") && r.request().method() === "POST",
       { timeout: 15_000 },
     );
 
     try {
-      const settings = await prisma.appSettings.findUnique({
+      const org = await prisma.organization.findUnique({
         where: { id: "singleton" },
       });
-      expect(settings?.departmentName).toBe(newName);
-      const departmentNamePattern = new RegExp(escapeRegExp(newName));
-      const duplicateDepartmentPattern = new RegExp(
-        `${escapeRegExp(newName)} Department`,
-      );
+      expect(org?.shortName).toBe(newShortName);
+      const shortNamePattern = new RegExp(escapeRegExp(newShortName));
 
-      await headPage.goto("/head/dashboard");
-      await expect(
-        headPage.getByText(departmentNamePattern).first(),
-      ).toBeVisible();
-      await expect(headPage.getByText(duplicateDepartmentPattern)).toHaveCount(
-        0,
-      );
+      await adminPage.goto("/head/dashboard");
+      await expect(adminPage.getByText(shortNamePattern).first()).toBeVisible();
 
-      await headPage.goto(
+      await adminPage.goto(
         `/lead/report/${ACTIVE_REPORT_ID}?authorId=${LEAD_OLGA_ID}`,
       );
-      await expect(
-        headPage.getByText(departmentNamePattern).first(),
-      ).toBeVisible();
-      await expect(headPage.getByText(duplicateDepartmentPattern)).toHaveCount(
-        0,
-      );
+      await expect(adminPage.getByText(shortNamePattern).first()).toBeVisible();
     } finally {
-      // Restore seed value to avoid cross-test pollution; resetMutations would
-      // also restore but is heavier than a single update.
-      await prisma.appSettings.update({
+      // Restore seed value to avoid cross-test pollution.
+      await prisma.organization.update({
         where: { id: "singleton" },
-        data: { departmentName: "Software Development" },
+        data: { shortName: "Demo" },
       });
     }
   });
 
   test("admin product list reflects DB state for a known seed product", async ({
-    headPage,
+    adminPage,
   }) => {
-    await headPage.goto("/admin/products");
+    await adminPage.goto("/admin/products");
 
     const lead1ProductCount = await prisma.project.count({
       where: { leadId: LEAD_1_ID },
@@ -133,9 +122,9 @@ test.describe("Admin CRUD (integration)", () => {
     // the seeded product name to appear in the rendered DOM before
     // snapshotting HTML — Playwright will retry the locator until it
     // resolves or hits the default expect timeout.
-    await expect(headPage.getByText(firstSeededProduct).first()).toBeVisible();
+    await expect(adminPage.getByText(firstSeededProduct).first()).toBeVisible();
 
-    const html = await headPage.content();
+    const html = await adminPage.content();
     expect(html).toContain(firstSeededProduct);
   });
 });

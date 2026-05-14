@@ -1,0 +1,539 @@
+{
+  "generatedAt": "2026-05-13T06:20:52.728Z",
+  "summary": {
+    "total": 88,
+    "covered": 30,
+    "uncovered": 58,
+    "coveragePercent": 34
+  },
+  "elements": [
+    {
+      "testId": "head-present-page",
+      "file": "apps/web/src/app/(app)/head/report/[reportId]/present/page.tsx",
+      "line": 25,
+      "covered": true
+    },
+    {
+      "testId": "primary-cta",
+      "file": "apps/web/src/app/login-page.client.tsx",
+      "line": 257,
+      "covered": true
+    },
+    {
+      "testId": "last-role-hint",
+      "file": "apps/web/src/app/login-page.client.tsx",
+      "line": 307,
+      "covered": true
+    },
+    {
+      "testId": "last-role-change",
+      "file": "apps/web/src/app/login-page.client.tsx",
+      "line": 322,
+      "covered": true
+    },
+    {
+      "testId": "last-role-switcher",
+      "file": "apps/web/src/app/login-page.client.tsx",
+      "line": 330,
+      "covered": true
+    },
+    {
+      "testId": "action-log-tab",
+      "file": "apps/web/src/components/admin/action-log-tab.tsx",
+      "line": 119,
+      "covered": false
+    },
+    {
+      "testId": "admin-panel",
+      "file": "apps/web/src/components/admin/admin-panel.tsx",
+      "line": 65,
+      "covered": false
+    },
+    {
+      "testId": "group-products-editor",
+      "file": "apps/web/src/components/admin/group-products-editor.tsx",
+      "line": 91,
+      "covered": false
+    },
+    {
+      "testId": "group-products-loading",
+      "file": "apps/web/src/components/admin/group-products-editor.tsx",
+      "line": 104,
+      "covered": false
+    },
+    {
+      "testId": "group-products-list",
+      "file": "apps/web/src/components/admin/group-products-editor.tsx",
+      "line": 115,
+      "covered": false
+    },
+    {
+      "testId": "groups-tab",
+      "file": "apps/web/src/components/admin/groups-tab.tsx",
+      "line": 150,
+      "covered": false
+    },
+    {
+      "testId": "groups-table",
+      "file": "apps/web/src/components/admin/groups-tab.tsx",
+      "line": 183,
+      "covered": false
+    },
+    {
+      "testId": "crud-sheet",
+      "file": "apps/web/src/components/admin/groups-tab.tsx",
+      "line": 272,
+      "covered": true
+    },
+    {
+      "testId": "jobs-tab",
+      "file": "apps/web/src/components/admin/jobs-tab.tsx",
+      "line": 108,
+      "covered": false
+    },
+    {
+      "testId": "jobs-error-state",
+      "file": "apps/web/src/components/admin/jobs-tab.tsx",
+      "line": 129,
+      "covered": false
+    },
+    {
+      "testId": "jobs-empty-state",
+      "file": "apps/web/src/components/admin/jobs-tab.tsx",
+      "line": 140,
+      "covered": false
+    },
+    {
+      "testId": "jobs-table",
+      "file": "apps/web/src/components/admin/jobs-tab.tsx",
+      "line": 151,
+      "covered": false
+    },
+    {
+      "testId": "jobs-loading-state",
+      "file": "apps/web/src/components/admin/jobs-tab.tsx",
+      "line": 251,
+      "covered": false
+    },
+    {
+      "testId": "periods-new-button",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 202,
+      "covered": false
+    },
+    {
+      "testId": "periods-active-loading",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 227,
+      "covered": false
+    },
+    {
+      "testId": "periods-active-empty",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 234,
+      "covered": false
+    },
+    {
+      "testId": "periods-archive-toggle",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 261,
+      "covered": false
+    },
+    {
+      "testId": "periods-archive-body",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 272,
+      "covered": false
+    },
+    {
+      "testId": "periods-archive-loading",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 276,
+      "covered": false
+    },
+    {
+      "testId": "periods-archive-empty",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 283,
+      "covered": false
+    },
+    {
+      "testId": "periods-delete-dialog",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 346,
+      "covered": true
+    },
+    {
+      "testId": "testId",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 727,
+      "covered": false
+    },
+    {
+      "testId": "periods-create-dialog",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 1065,
+      "covered": true
+    },
+    {
+      "testId": "periods-create-start",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 1095,
+      "covered": false
+    },
+    {
+      "testId": "periods-create-end",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 1114,
+      "covered": false
+    },
+    {
+      "testId": "periods-create-deadline",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 1133,
+      "covered": false
+    },
+    {
+      "testId": "periods-deadline-error",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 1138,
+      "covered": true
+    },
+    {
+      "testId": "periods-create-label",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 1162,
+      "covered": true
+    },
+    {
+      "testId": "periods-create-cancel",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 1172,
+      "covered": false
+    },
+    {
+      "testId": "periods-create-submit",
+      "file": "apps/web/src/components/admin/periods-tab.tsx",
+      "line": 1181,
+      "covered": false
+    },
+    {
+      "testId": "product-group-chips-loading",
+      "file": "apps/web/src/components/admin/product-group-chips.tsx",
+      "line": 30,
+      "covered": false
+    },
+    {
+      "testId": "product-group-chips-empty",
+      "file": "apps/web/src/components/admin/product-group-chips.tsx",
+      "line": 42,
+      "covered": false
+    },
+    {
+      "testId": "product-group-chips",
+      "file": "apps/web/src/components/admin/product-group-chips.tsx",
+      "line": 52,
+      "covered": false
+    },
+    {
+      "testId": "products-table",
+      "file": "apps/web/src/components/admin/products-tab.tsx",
+      "line": 208,
+      "covered": false
+    },
+    {
+      "testId": "new-policy-button",
+      "file": "apps/web/src/components/admin/reminders-tab.tsx",
+      "line": 317,
+      "covered": true
+    },
+    {
+      "testId": "reminders-empty-state",
+      "file": "apps/web/src/components/admin/reminders-tab.tsx",
+      "line": 350,
+      "covered": true
+    },
+    {
+      "testId": "policy-form",
+      "file": "apps/web/src/components/admin/reminders-tab.tsx",
+      "line": 585,
+      "covered": false
+    },
+    {
+      "testId": "policy-validity-hint",
+      "file": "apps/web/src/components/admin/reminders-tab.tsx",
+      "line": 785,
+      "covered": true
+    },
+    {
+      "testId": "policy-save-button",
+      "file": "apps/web/src/components/admin/reminders-tab.tsx",
+      "line": 803,
+      "covered": false
+    },
+    {
+      "testId": "integration-row-telegram",
+      "file": "apps/web/src/components/admin/settings-tab.tsx",
+      "line": 1016,
+      "covered": true
+    },
+    {
+      "testId": "integration-badge-telegram",
+      "file": "apps/web/src/components/admin/settings-tab.tsx",
+      "line": 1030,
+      "covered": true
+    },
+    {
+      "testId": "integration-telegram-configured",
+      "file": "apps/web/src/components/admin/settings-tab.tsx",
+      "line": 1041,
+      "covered": false
+    },
+    {
+      "testId": "integration-telegram-bindings",
+      "file": "apps/web/src/components/admin/settings-tab.tsx",
+      "line": 1046,
+      "covered": false
+    },
+    {
+      "testId": "integration-row-ci",
+      "file": "apps/web/src/components/admin/settings-tab.tsx",
+      "line": 1054,
+      "covered": false
+    },
+    {
+      "testId": "integration-badge-ci",
+      "file": "apps/web/src/components/admin/settings-tab.tsx",
+      "line": 1068,
+      "covered": false
+    },
+    {
+      "testId": "integration-badge-ci",
+      "file": "apps/web/src/components/admin/settings-tab.tsx",
+      "line": 1076,
+      "covered": false
+    },
+    {
+      "testId": "integration-row-slack",
+      "file": "apps/web/src/components/admin/settings-tab.tsx",
+      "line": 1088,
+      "covered": false
+    },
+    {
+      "testId": "integration-badge-slack",
+      "file": "apps/web/src/components/admin/settings-tab.tsx",
+      "line": 1102,
+      "covered": true
+    },
+    {
+      "testId": "resolvedTestId",
+      "file": "apps/web/src/components/admin/tab-header.tsx",
+      "line": 40,
+      "covered": false
+    },
+    {
+      "testId": "testId",
+      "file": "apps/web/src/components/admin/tab-header.tsx",
+      "line": 96,
+      "covered": false
+    },
+    {
+      "testId": "users-table",
+      "file": "apps/web/src/components/admin/users-tab.tsx",
+      "line": 203,
+      "covered": true
+    },
+    {
+      "testId": "crud-sheet",
+      "file": "apps/web/src/components/admin/users-tab.tsx",
+      "line": 314,
+      "covered": true
+    },
+    {
+      "testId": "report-tab-body",
+      "file": "apps/web/src/components/ai/period-summary-tabs.test.tsx",
+      "line": 32,
+      "covered": false
+    },
+    {
+      "testId": "ai-summary-text",
+      "file": "apps/web/src/components/ai/period-summary-tabs.tsx",
+      "line": 98,
+      "covered": false
+    },
+    {
+      "testId": "gated",
+      "file": "apps/web/src/components/auth/if-role.test.tsx",
+      "line": 51,
+      "covered": false
+    },
+    {
+      "testId": "gated",
+      "file": "apps/web/src/components/auth/if-role.test.tsx",
+      "line": 63,
+      "covered": false
+    },
+    {
+      "testId": "gated",
+      "file": "apps/web/src/components/auth/if-role.test.tsx",
+      "line": 75,
+      "covered": false
+    },
+    {
+      "testId": "gated",
+      "file": "apps/web/src/components/auth/if-role.test.tsx",
+      "line": 87,
+      "covered": false
+    },
+    {
+      "testId": "gated",
+      "file": "apps/web/src/components/auth/if-role.test.tsx",
+      "line": 99,
+      "covered": false
+    },
+    {
+      "testId": "gated",
+      "file": "apps/web/src/components/auth/if-role.test.tsx",
+      "line": 111,
+      "covered": false
+    },
+    {
+      "testId": "product-kpi-card",
+      "file": "apps/web/src/components/dashboard/product-kpi-card.tsx",
+      "line": 48,
+      "covered": true
+    },
+    {
+      "testId": "product-kpi-card",
+      "file": "apps/web/src/components/dashboard/product-kpi-card.tsx",
+      "line": 65,
+      "covered": true
+    },
+    {
+      "testId": "product-kpi-card",
+      "file": "apps/web/src/components/dashboard/product-kpi-card.tsx",
+      "line": 90,
+      "covered": true
+    },
+    {
+      "testId": "dev-role-switcher-trigger",
+      "file": "apps/web/src/components/dev/role-switcher.tsx",
+      "line": 110,
+      "covered": true
+    },
+    {
+      "testId": "dev-role-switcher-reseed-min",
+      "file": "apps/web/src/components/dev/role-switcher.tsx",
+      "line": 159,
+      "covered": true
+    },
+    {
+      "testId": "dev-role-switcher-reseed-full",
+      "file": "apps/web/src/components/dev/role-switcher.tsx",
+      "line": 165,
+      "covered": true
+    },
+    {
+      "testId": "dev-role-switcher-wipe-manual-uat",
+      "file": "apps/web/src/components/dev/role-switcher.tsx",
+      "line": 171,
+      "covered": true
+    },
+    {
+      "testId": "dev-role-switcher-logout",
+      "file": "apps/web/src/components/dev/role-switcher.tsx",
+      "line": 178,
+      "covered": true
+    },
+    {
+      "testId": "head-present-wrapper",
+      "file": "apps/web/src/components/head/head-present-client.tsx",
+      "line": 102,
+      "covered": false
+    },
+    {
+      "testId": "present-prev",
+      "file": "apps/web/src/components/head/head-present-client.tsx",
+      "line": 112,
+      "covered": true
+    },
+    {
+      "testId": "present-counter",
+      "file": "apps/web/src/components/head/head-present-client.tsx",
+      "line": 117,
+      "covered": true
+    },
+    {
+      "testId": "present-next",
+      "file": "apps/web/src/components/head/head-present-client.tsx",
+      "line": 125,
+      "covered": true
+    },
+    {
+      "testId": "present-fullscreen",
+      "file": "apps/web/src/components/head/head-present-client.tsx",
+      "line": 134,
+      "covered": true
+    },
+    {
+      "testId": "item-card",
+      "file": "apps/web/src/components/lead/item-card.tsx",
+      "line": 103,
+      "covered": false
+    },
+    {
+      "testId": "lead-report-form",
+      "file": "apps/web/src/components/lead/lead-form.tsx",
+      "line": 1170,
+      "covered": false
+    },
+    {
+      "testId": "priority-row",
+      "file": "apps/web/src/components/lead/priorities-section.tsx",
+      "line": 174,
+      "covered": false
+    },
+    {
+      "testId": "nav-bar-skeleton",
+      "file": "apps/web/src/components/navigation/nav-bar-skeleton.tsx",
+      "line": 26,
+      "covered": false
+    },
+    {
+      "testId": "nav-bar",
+      "file": "apps/web/src/components/navigation/nav-bar.tsx",
+      "line": 244,
+      "covered": false
+    },
+    {
+      "testId": "nav-logout",
+      "file": "apps/web/src/components/navigation/nav-bar.tsx",
+      "line": 383,
+      "covered": false
+    },
+    {
+      "testId": "sdlc-tooltip",
+      "file": "apps/web/src/components/ui/sdlc-tooltip.tsx",
+      "line": 80,
+      "covered": false
+    },
+    {
+      "testId": "empty-submissions-state",
+      "file": "apps/web/src/components/weekly-report/weekly-report-page.tsx",
+      "line": 343,
+      "covered": false
+    },
+    {
+      "testId": "weekly-report-skeleton",
+      "file": "apps/web/src/components/weekly-report/weekly-report-skeleton.test.tsx",
+      "line": 29,
+      "covered": false
+    },
+    {
+      "testId": "weekly-report-skeleton",
+      "file": "apps/web/src/components/weekly-report/weekly-report-skeleton.tsx",
+      "line": 127,
+      "covered": false
+    }
+  ]
+}
