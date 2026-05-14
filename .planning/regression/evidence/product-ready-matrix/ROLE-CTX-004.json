@@ -23,6 +23,12 @@
     {
       "type": "requestfailed",
       "method": "GET",
+      "url": "http://localhost:4747/health",
+      "message": "net::ERR_ABORTED"
+    },
+    {
+      "type": "requestfailed",
+      "method": "GET",
       "url": "https://fonts.gstatic.com/s/lexend/v26/wlpwgwvFAVdoq2_v-6QU.woff2",
       "message": "net::ERR_ABORTED"
     },

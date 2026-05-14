@@ -14,6 +14,12 @@ Current closure conventions:
 - Planning edits must pass pnpm lint:md.
 - Do not stage or revert pre-existing dirty regression evidence JSON unless a
   phase explicitly owns those files.
+- Non-prod Docker/env database wiring must suffix both `POSTGRES_DB` and the
+  database name inside `DATABASE_URL` with `_uat`, `_dev`, or `_test`
+  whenever the host is not truly local; `prisma/_destructive-guard.ts` parses
+  `DATABASE_URL` for wipe/reset safety.
+- Database names must match the environment purpose; do not use a UAT suffix for
+  ordinary dev wiring or a dev suffix for dedicated UAT/staging.
 - For v8.1, do not add a runtime director role; director-facing UAT goes
   through the viewer read-only path.
 - Phase 40 background/dark-theme work remains research-only unless explicitly

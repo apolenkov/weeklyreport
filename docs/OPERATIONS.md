@@ -142,6 +142,17 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml down
 
 ## 4. Wipe And Reseed
 
+`prisma/_destructive-guard.ts` parses the target database from
+`DATABASE_URL`. For any non-prod Docker or non-local host wiring, keep both
+`POSTGRES_DB` and the database name inside `DATABASE_URL` explicitly suffixed
+with `_uat`, `_dev`, or `_test`. If `DIRECT_URL` is present, keep it on the
+same suffixed database.
+
+Current naming split: local development, including the Docker verifier, uses
+`customreport_dev`; API integration uses `customreport_test`; web integration
+uses `customreport_e2e`; a dedicated manual UAT/staging environment should use
+`customreport_uat`; production remains `customreport`.
+
 Destructive local reset from the host:
 
 ```bash
