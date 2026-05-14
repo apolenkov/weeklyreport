@@ -498,7 +498,7 @@ describe("PeriodsTab — «New period» dialog (UFB-063)", () => {
 
     await user.click(newBtn);
     expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
-    // Start input pre-fills with a YYYY-MM-DD value (the next Monday) —
+    // Start input pre-fills with a YYYY-MM-DD value —
     // we don't pin the exact date to keep the test stable across runs;
     // just assert the format is what the server expects.
     const startInput = screen.getByTestId(
@@ -507,7 +507,7 @@ describe("PeriodsTab — «New period» dialog (UFB-063)", () => {
     expect(startInput.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it("submits createPeriodManual with the periodStart value and dismisses on success", async () => {
+  it("submits createPeriodManual with a non-Monday periodStart value and dismisses on success", async () => {
     const user = userEvent.setup();
     const { captured } = renderTab();
 
@@ -518,7 +518,7 @@ describe("PeriodsTab — «New period» dialog (UFB-063)", () => {
       "periods-create-start",
     ) as HTMLInputElement;
     await user.clear(startInput);
-    await user.type(startInput, "2026-05-18");
+    await user.type(startInput, "2026-05-20");
 
     const labelInput = screen.getByTestId("periods-create-label");
     await user.type(labelInput, "Sprint 12");
@@ -534,7 +534,7 @@ describe("PeriodsTab — «New period» dialog (UFB-063)", () => {
       weekLabel?: string;
     };
     // Submitted as UTC midnight (matches the server's date frame).
-    expect(payload.periodStart.toISOString()).toBe("2026-05-18T00:00:00.000Z");
+    expect(payload.periodStart.toISOString()).toBe("2026-05-20T00:00:00.000Z");
     expect(payload.weekLabel).toBe("Sprint 12");
     // Dialog closes after success.
     await waitFor(() => {

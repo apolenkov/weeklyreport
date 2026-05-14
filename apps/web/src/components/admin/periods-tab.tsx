@@ -6,7 +6,13 @@ import { toast } from "sonner";
 
 import type { PeriodListItem, PeriodState } from "@customreport/shared";
 
-import { formatPeriodRange } from "../../lib/format-date";
+import {
+  formatPeriodLabel,
+  formatPeriodRange,
+  formatPeriodRangeWithYear,
+  formatWeekLabel,
+  joinPeriodLabel,
+} from "../../lib/format-date";
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { useTRPC } from "../../lib/trpc-context";
 
@@ -202,7 +208,11 @@ export function PeriodsTab() {
     const needle = search.trim().toLowerCase();
     if (!needle) return allActiveRows;
     return allActiveRows.filter((row) =>
-      [row.weekLabel, formatPeriodRange(row.periodStart, row.periodEnd)]
+      [
+        row.weekLabel,
+        formatPeriodLabel(row.periodStart, row.periodEnd),
+        formatPeriodRange(row.periodStart, row.periodEnd),
+      ]
         .join(" ")
         .toLowerCase()
         .includes(needle),
@@ -504,6 +514,11 @@ function PeriodRow({
   readonly row: PeriodListItem;
   readonly testIdPrefix: "active" | "archive";
 } & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
+  const periodLabel = joinPeriodLabel(
+    row.weekLabel ?? formatWeekLabel(row.periodStart),
+    formatPeriodRangeWithYear(row.periodStart, row.periodEnd),
+  );
+
   return (
     <tr
       data-testid={`periods-${testIdPrefix}-row-${row.id}`}
@@ -511,12 +526,10 @@ function PeriodRow({
       className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-hover)]"
     >
       <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
-        {formatPeriodRange(row.periodStart, row.periodEnd)}
+        {periodLabel}
       </td>
       <td className="px-4 py-3">
-        {row.periodStatus !== "reopened" && (
-          <StateBadge state={row.periodState} />
-        )}
+        <StateBadge state={row.periodState} />
         {row.periodStatus === "reopened" && (
           <span
             className="ml-2 inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold uppercase text-[#92400e]"
@@ -944,10 +957,9 @@ function PlusIcon() {
 // ---------------------------------------------------------------------
 
 /**
- * Compute the next Monday after `from` (inclusive: if `from` is already
- * Monday, return `from` at 00:00 UTC). Used as the sensible default
- * pre-fill so the typical admin click → submit flow lands on a clean
- * week boundary that matches the cron's "next Monday" anchoring.
+ * Compute the scheduler-aligned default start date. Manual periods are not
+ * restricted to Mondays; this only keeps the untouched create dialog aligned
+ * with the automatic weekly cadence.
  */
 function nextMonday(from: Date): string {
   const d = new Date(from.getTime());
@@ -1004,7 +1016,7 @@ function CreatePeriodDialog({
 }: {
   /**
    * UFB-067: `mode === 'create'` opens the dialog as «New period» with
-   * a next-Monday default; `mode === 'edit'` opens it as «Edit period»
+   * a scheduler-aligned default; `mode === 'edit'` opens it as «Edit period»
    * prefilled from `initialValues` (the row being edited).
    */
   readonly mode: "create" | "edit";
@@ -1015,7 +1027,7 @@ function CreatePeriodDialog({
 }) {
   const isEdit = mode === "edit" && initialValues !== undefined;
 
-  // Initialise from the row in edit-mode; from nextMonday() otherwise.
+  // Initialise from the row in edit-mode; from the scheduler default otherwise.
   // The lazy-init form (`useState(() => …)`) keeps both branches cheap.
   const [periodStart, setPeriodStart] = useState(() =>
     isEdit ? dateInputValue(initialValues.periodStart) : nextMonday(new Date()),
@@ -1089,7 +1101,7 @@ function CreatePeriodDialog({
   const title = isEdit ? "Edit period" : "New period";
   const description = isEdit
     ? "Adjust the date envelope or label for this reporting period."
-    : "Mints a reporting period without waiting for the daily auto-creator. End date and deadline default from AppSettings when left blank.";
+    : "Mints a reporting period without waiting for the daily auto-creator. Any start date is allowed; end date and deadline default from AppSettings when left blank.";
   const submitCopy = isEdit
     ? isPending
       ? "Saving…"

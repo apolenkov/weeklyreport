@@ -8,6 +8,7 @@ import {
   type TouchEvent as ReactTouchEvent,
 } from "react";
 
+import { joinPeriodLabel } from "../../lib/format-date";
 import type { ReportPeriod } from "../dashboard/mock-data";
 
 // Threshold for treating a horizontal touch drag as a swipe. 50px matches the
@@ -161,11 +162,16 @@ export function HeadPeriodNavigator({
       >
         {periods.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.weekLabel} &middot; {p.dateRange}
-            {p.isCurrent ? " (current)" : ""}
+            {joinPeriodLabel(p.weekLabel, p.dateRange)}
           </option>
         ))}
       </select>
+
+      {selectedPeriod?.isCurrent && (
+        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]">
+          Current
+        </span>
+      )}
 
       <button
         type="button"

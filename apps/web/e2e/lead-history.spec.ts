@@ -34,9 +34,9 @@ test.describe("Lead History Page", () => {
   });
 
   test("each card shows period dates and status", async ({ leadPage }) => {
-    // First card: Week 15, Apr 7-13
+    // First card: Week 15, Apr 7–13, 2026
     await expect(leadPage.getByText("Week 15")).toBeVisible();
-    await expect(leadPage.getByText("Apr 7-13")).toBeVisible();
+    await expect(leadPage.getByText("Apr 7–13, 2026")).toBeVisible();
 
     // All cards show Submitted badge
     const submittedBadges = leadPage.getByText("Submitted", { exact: true });

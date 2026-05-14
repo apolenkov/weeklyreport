@@ -1,21 +1,13 @@
 import { Injectable } from "@nestjs/common";
-import {
-  assembledReportSchema,
-  type AssembledReport,
-} from "@customreport/shared";
+import { type AssembledReport } from "@customreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PublicationRepository } from "./publication.service";
 import {
-  reportSectionFullInclude,
-  mapPrismaToReportSection,
-} from "../report-sections/report-sections.prisma-repository";
-
-/** Prisma include for a full report with all sections and their nested relations. */
-const reportFullInclude = {
-  sections: { include: reportSectionFullInclude },
-  publishedBy: true,
-} as const;
+  buildAssembledReportFromPrismaRow,
+  reportFullIncludeForSnapshot,
+  toPublishedSnapshotJson,
+} from "../published-report-snapshot";
 
 @Injectable()
 export class PublicationPrismaRepository implements PublicationRepository {
@@ -26,31 +18,14 @@ export class PublicationPrismaRepository implements PublicationRepository {
   ): Promise<AssembledReport | null> {
     const row = await this.prisma.report.findUnique({
       where: { id: activeReportId },
-      include: reportFullInclude,
+      include: reportFullIncludeForSnapshot,
     });
 
     if (!row) {
       return null;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sections = (row.sections as any[]).map(mapPrismaToReportSection);
-
-    return assembledReportSchema.parse({
-      reportId: row.id,
-      periodStart: row.periodStart,
-      periodEnd: row.periodEnd,
-      deadline: row.deadline,
-      status: row.status,
-      publishedAt: row.publishedAt,
-      publishedById: row.publishedById,
-      publishedByName: row.publishedBy?.name ?? null,
-      portfolioOverview: {
-        status: "green",
-        totals: { green: 0, yellow: 0, red: 0 },
-      },
-      sections,
-    });
+    return buildAssembledReportFromPrismaRow(row);
   }
 
   async saveAssembledReport(report: AssembledReport): Promise<AssembledReport> {
@@ -71,32 +46,21 @@ export class PublicationPrismaRepository implements PublicationRepository {
         publishedAt: report.publishedAt,
         publishedById: report.publishedById,
         periodState: nextPeriodState,
+        ...(report.status === "published"
+          ? { publishedSnapshot: toPublishedSnapshotJson(report) }
+          : {}),
       },
     });
 
     const saved = await this.prisma.report.findUnique({
       where: { id: report.reportId },
-      include: reportFullInclude,
+      include: reportFullIncludeForSnapshot,
     });
 
     if (!saved) {
       throw new Error(`Report ${report.reportId} was not found after save.`);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sections = (saved.sections as any[]).map(mapPrismaToReportSection);
-
-    return assembledReportSchema.parse({
-      reportId: saved.id,
-      periodStart: saved.periodStart,
-      periodEnd: saved.periodEnd,
-      deadline: saved.deadline,
-      status: saved.status,
-      publishedAt: saved.publishedAt,
-      publishedById: saved.publishedById,
-      publishedByName: saved.publishedBy?.name ?? null,
-      portfolioOverview: report.portfolioOverview,
-      sections,
-    });
+    return buildAssembledReportFromPrismaRow(saved);
   }
 }

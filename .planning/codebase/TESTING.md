@@ -2,6 +2,26 @@
 
 **Analysis Date:** 2026-04-24
 
+## 2026-05-14 Refresh
+
+Current test inventory:
+
+- Web unit/component tests: 49 files under apps/web/src.
+- API unit/integration tests: 99 files under apps/api/src.
+- Web E2E/Playwright specs: 56 files under apps/web/e2e.
+- Shared package tests: 9 files under packages/shared/src.
+
+Current closure commands:
+
+- pnpm lint:md
+- pnpm turbo typecheck
+- pnpm turbo test
+- pnpm --filter @customreport/web exec playwright test
+- pnpm --filter @customreport/web exec playwright test --config=e2e/regression/playwright.regression.config.ts
+
+Regression note: standalone regression config targets an already-running dev
+stack and is the canonical runner for v8.1 browser regression closure.
+
 ## Test Framework
 
 **Runner:**

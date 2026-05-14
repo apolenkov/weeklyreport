@@ -1,24 +1,24 @@
 ---
 gsd_state_version: 1.0
 milestone: v8.1
-milestone_name: Visual Identity & AI Maturity
-status: executing
+milestone_name: Closure & Recovery
+status: blocked_by_ci
 stopped_at: v6.0 roadmap drafted (Phases 27-31)
-last_updated: "2026-05-14T14:23:53.000Z"
-last_activity: 2026-05-14 -- Post-marathon PR #5 remains open. TOOL-01/TOOL-02 are closed locally. CI startup failures were addressed by workflow fixes; current post-fix runs now create queued jobs and merge waits for real green. Phase 44/46/47/48/49/52/54/55/56/57 evidence exists; STATE progress updated from stale 36/41 snapshot. Coverage-gap report reconciles E-04/E-08/UFB-024 as covered, with remaining repo work split into CUSTOMREPORT-REPO-REMAINING-2026-05-14.md.
+last_updated: "2026-05-14T17:49:13.000Z"
+last_activity: 2026-05-14 -- v8.1 Phase 61-66 closure work completed and routed to BLOCKED-BY-CI: source/session intake, GSD codebase map and graphify refresh, Git/metrics repair, regression coverage gaps, product semantics gaps, and final audit are complete. PR #5 remains mergeable but CI is queued, so merge/tag stay blocked until a real green run.
 progress:
-  total_phases: 41
-  completed_phases: 40
-  total_plans: 134
-  completed_plans: 136
-  percent: 98
+  total_phases: 24
+  completed_phases: 18
+  total_plans: 31
+  completed_plans: 31
+  percent: 75
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** v8.1 IN PROGRESS (v8.0 shipped)
-**Last Updated:** 2026-05-08
+**Status:** v8.1 CLOSURE & RECOVERY BLOCKED BY CI (v8.0 shipped)
+**Last Updated:** 2026-05-14
 
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md
 
 **Core Value:** Leads fill their sections independently via structured forms; system auto-assembles a unified report -- no editing conflicts, with history and analytics.
 
-**Current Focus:** v8.1 product-ready hardening: domain-model regression, role matrix, auth redirect, action logs, and UI polish
+**Current Focus:** v8.1 closure and recovery: consolidate all repo-local Claude/Codex/OpenCode/Plannotator requests into one milestone, repair Git/GSD metrics, close regression and product semantics gaps, then finish through GSD.
 
 **Resume context:** Per-project Claude memory at `.planning/memory/`. v8.1 promote flow: `git mv .planning/backlog/v8.1-*.md .planning/milestones/` then `/gsd-new-milestone v8.1` and plan the first promoted v8.1 phase.
 
@@ -36,17 +36,18 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Milestone: v8.1 (IN PROGRESS, tag parent v8.0.0)
-Phases: 40/41 complete by current state counter; Phase 43 formal closure and
-PR #5 merge remain blocked by CI infrastructure.
-Plans: 136/134 complete (historical counter overflow preserved until GSD cleanup)
-Status: product-ready closure is mostly done, but PR #5 cannot be merged under
-the "CI green first" rule until the latest CI run completes green.
-Last activity: 2026-05-14 -- PR #5 live check: runs before `ffb3a15`
-startup-failed with empty jobs/logs; post-fix runs now create queued checks.
-TOOL-01 clean-checkout fix and TOOL-02 179/179 regression
-baseline are done. `E-04`, `E-08`, and `UFB-024` coverage has been
-reconciled in `.planning/regression/COVERAGE-GAP-2026-05-14.md`.
+Milestone: v8.1 Closure & Recovery (IN PROGRESS, tag parent v8.0.0)
+Active v8.1 phases: 18/24 complete by gsd-sdk query init.milestone-op after
+Phase 66 summary creation. This is lower than the stale 98% snapshot because v8.1
+now includes parked historical tracks plus closure phases 61-66.
+Active v8.1 plan artifacts: 31/31 complete by capped plan-summary count for
+the closure scaffold.
+Filesystem inventory: 53 phase directories and 142 plan files still exist
+project-wide; this is not the active milestone denominator.
+Status: source/session intake, codebase map refresh, Git audit, metrics repair,
+regression gaps, product semantics gaps, and final audit are complete. PR #5
+cannot merge under the "CI green first" rule until GitHub Actions completes
+green for the pushed closure commit.
 
 ### 2026-05-14 phase evidence correction
 

@@ -8,6 +8,8 @@
  * archive path (`/reports/[reportId]`) is still reachable from the
  * Reports page but no longer the in-page nav target.
  */
+import "@testing-library/jest-dom/vitest";
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import * as React from "react";
@@ -30,13 +32,13 @@ const PERIODS: ReportPeriod[] = [
   {
     id: "11111111-1111-1111-1111-111111111111",
     weekLabel: "Week 17",
-    dateRange: "Apr 21–27",
+    dateRange: "Apr 21–27, 2026",
     isCurrent: true,
   },
   {
     id: "22222222-2222-2222-2222-222222222222",
     weekLabel: "Week 16",
-    dateRange: "Apr 14–20",
+    dateRange: "Apr 14–20, 2026",
     isCurrent: false,
   },
 ];
@@ -96,5 +98,18 @@ describe("HeadPeriodNavigator", () => {
       "Select reporting period",
     ) as HTMLSelectElement;
     expect(select.value).toBe("22222222-2222-2222-2222-222222222222");
+  });
+
+  it("D-17: renders the period label without embedding current state in the option text", () => {
+    render(<HeadPeriodNavigator periods={PERIODS} />);
+    const select = screen.getByLabelText(
+      "Select reporting period",
+    ) as HTMLSelectElement;
+
+    expect(select.selectedOptions[0]?.textContent).toBe(
+      "Week 17, Apr 21–27, 2026",
+    );
+    expect(select.selectedOptions[0]?.textContent).not.toContain("(current)");
+    expect(screen.getByText("Current")).toBeVisible();
   });
 });

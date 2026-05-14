@@ -2,6 +2,23 @@
 
 **Analysis Date:** 2026-04-24
 
+## 2026-05-14 Refresh
+
+Current integration surface:
+
+- GitHub Enterprise: PR #5 and Actions CI are active; current run 277113 is
+  queued with Markdown Lint and Lint, Typecheck & Unit Tests checks.
+- tRPC is the primary frontend/backend API contract; Next.js proxies /trpc
+  requests to the API service.
+- Auth uses SAML/JWT plus dev-login/dev role switching for local UAT.
+- PDF export uses BullMQ plus Playwright and persists PdfExportJob state.
+- Reminders use BullMQ, SMTP/nodemailer, reminder policies, derived rules, and
+  execution dedupe.
+- Observability includes Prometheus metrics, Grafana dashboard JSON, OTel, and
+  log-sink docs.
+- AI and Telegram are seed-mode/deferred activation surfaces; no real provider
+  or token activation is part of v8.1 closure.
+
 ## APIs & External Services
 
 **tRPC API (internal):**

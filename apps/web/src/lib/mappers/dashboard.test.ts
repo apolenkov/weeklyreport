@@ -285,6 +285,15 @@ describe("mapDashboardData", () => {
     expect(alice?.status).toBe("submitted");
     expect(bob?.status).toBe("draft");
     expect(cara?.status).toBe("pending");
+    expect(alice?.currentItemCount).toBe(1);
+    expect(alice?.nextItemCount).toBe(0);
+    expect(alice?.riskCount).toBe(0);
+    expect(alice?.decisionCount).toBe(1);
+    expect(alice?.priorityCount).toBe(0);
+    expect(alice?.submittedAtLabel).toBe("2026-04-20");
+    expect(bob?.currentItemCount).toBe(1);
+    expect(bob?.nextItemCount).toBe(0);
+    expect(bob?.submittedAtLabel).toBeNull();
   });
 
   it("produces pendingLeads as a string[] of pending lead names", () => {
@@ -355,7 +364,7 @@ describe("mapDashboardData", () => {
     expect(result.archive).toHaveLength(2);
     expect(result.archive[0]?.weekLabel).toMatch(/^Week \d+$/);
     expect(result.archive[0]?.dateRange).toMatch(
-      /[A-Z][a-z]{2} \d+\u2013[A-Z][a-z]{2} \d+/,
+      /^[A-Z][a-z]{2} \d+\u2013(?:[A-Z][a-z]{2} )?\d+, \d{4}$/,
     );
   });
 

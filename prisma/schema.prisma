@@ -157,24 +157,24 @@ model GroupProduct {
 }
 
 model Report {
-  id               String               @id @default(uuid())
-  periodStart      DateTime
-  periodEnd        DateTime
-  deadline         DateTime
-  status           ReportStatus         @default(draft)
-  publishedAt      DateTime?
-  publishedById    String?
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-  periodStatus     PeriodStatus         @default(open)
-  reopenedAt       DateTime?
-  weekLabel        String?
+  id                String               @id @default(uuid())
+  periodStart       DateTime
+  periodEnd         DateTime
+  deadline          DateTime
+  status            ReportStatus         @default(draft)
+  publishedAt       DateTime?
+  publishedById     String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  periodStatus      PeriodStatus         @default(open)
+  reopenedAt        DateTime?
+  weekLabel         String?
   // UFB-049 / Phase 50-B: lifecycle flag set by the auto-archiver scheduler
   // when `AppSettings.autoArchiveWeeksAfterPublish > 0` AND
   // `publishedAt + weeks * 7d < now`. Existing rows backfill to false via
   // the migration default. Indexed alongside periodStart so the archive
   // dashboard's "last N un-archived" query stays cheap.
-  archived         Boolean              @default(false)
+  archived          Boolean              @default(false)
   // UFB-051 / Phase 51-A: lifecycle audit flags surfaced by the period
   // state-machine. `autoPublished` is set true when AutoPublisher (50-B
   // cron) flips status=draft→published at deadline+grace (vs an explicit
@@ -182,8 +182,8 @@ model Report {
   // ship as nullable-friendly defaults (`false`) so existing rows
   // backfill cleanly via the migration default. Consumers (state-machine
   // dashboard, admin audit feed) arrive in 51-B / 51-C.
-  autoPublished    Boolean              @default(false)
-  autoArchived     Boolean              @default(false)
+  autoPublished     Boolean              @default(false)
+  autoArchived      Boolean              @default(false)
   // UFB-053 / Phase 51-C: explicit lifecycle state column. The legacy
   // `status` + `archived` + `periodStatus` tuple is preserved (one-release
   // compatibility window) and writers update both the new column and the
@@ -198,13 +198,18 @@ model Report {
   // archive lifecycle (scheduled/open/published/archived, no reopened).
   // On reopen we revert `periodState` to `open` while flipping
   // `periodStatus` to `reopened` (Open Question — documented in SUMMARY).
-  periodState      PeriodState          @default(open)
-  carryOverSources CarryOverExecution[] @relation("CarryOverSource")
-  carryOverTargets CarryOverExecution[] @relation("CarryOverTarget")
-  pdfExportJobs    PdfExportJob[]
-  reminderRules    ReminderRule[]
-  publishedBy      User?                @relation("PublishedBy", fields: [publishedById], references: [id])
-  sections         ReportSection[]
+  periodState       PeriodState          @default(open)
+  // Phase 65 / D-6: immutable publish-time read model for archive and
+  // director-facing published views. Reopen/draft edits after publication
+  // must not mutate the published output until the next publish writes a
+  // replacement snapshot.
+  publishedSnapshot Json?
+  carryOverSources  CarryOverExecution[] @relation("CarryOverSource")
+  carryOverTargets  CarryOverExecution[] @relation("CarryOverTarget")
+  pdfExportJobs     PdfExportJob[]
+  reminderRules     ReminderRule[]
+  publishedBy       User?                @relation("PublishedBy", fields: [publishedById], references: [id])
+  sections          ReportSection[]
   // C2 (A24/A21): PARTIAL UNIQUE INDEX "Report_one_open_per_boundary"
   // ON ("periodStart","periodEnd") WHERE "periodState"='open' — defined via raw migration
   // (Prisma schema DSL does not support WHERE-clause partial indexes natively).
