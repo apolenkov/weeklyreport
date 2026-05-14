@@ -10,9 +10,13 @@
 ## Session Summary
 
 **Duration:** Full day session (Waves 1-4 post-marathon + Phase 43 tooling)
-**Phase Progress:** v8.1 in progress — Phase 43 TOOL-01 closed; STATE.md needs update
+**Phase Progress:** v8.1 in progress — Phase 43 TOOL-01/TOOL-02 closed;
+STATE.md updated to 40/41 = 98%; repo-only remaining backlog added
 **Plans Executed:** TOOL-01 (2 iterations) + regression baseline measurement
 **Commits Made:** 9 (last 24h on this branch)
+**CI Update:** old PR #5 runs were `completed/startup_failure`; after
+`ffb3a15` + `45e1cac`, run `277104` has queued checks and needs green
+before merge.
 
 ## Work Performed
 
@@ -51,7 +55,8 @@
 
 - `next-env.d.ts` clean-checkout fix landed and pushed to PR #5
 - 179/179 regression passing — Phase 43 TOOL-02 baseline met
-- Coverage gap report produced — 3 actionable new tests identified (E-04, E-08, UFB-024)
+- Coverage gap report reconciled — E-04 covered in `45e1cac`; E-08/UFB-024 already covered
+- Repo-only remaining work split into `.planning/session-retros/CUSTOMREPORT-REPO-REMAINING-2026-05-14.md`
 - `NEXT-ACTIONS.md` and auto-memory handoff files written
 
 ### Decisions Made
@@ -70,13 +75,13 @@ Total: 18 files changed, 2987 insertions(+), 1 deletion(-)
 
 ## Blockers & Open Items
 
-| Item                             | Status                             | Owner                               |
-| -------------------------------- | ---------------------------------- | ----------------------------------- |
-| CI PR #5 all `[pending]` × 8     | GitHub Actions queue issue         | AGENT: monitor + rerun if needed    |
-| D-12 item-dialog status pill     | Reverted — react-compiler conflict | HUMAN: product decision on approach |
-| UFB-011 head/lead layout spacing | Design decision needed             | HUMAN                               |
-| D-29/D-34 Head KPI + viewer role | Feature design not defined         | HUMAN                               |
-| STATE.md outdated (36/41 = 88%)  | Needs manual update                | AGENT                               |
+| Item                             | Status                               | Owner                                |
+| -------------------------------- | ------------------------------------ | ------------------------------------ |
+| CI PR #5 latest run              | `277104` queued after workflow fixes | AGENT: watch; merge only after green |
+| D-12 item-dialog status pill     | Reverted — react-compiler conflict   | AGENT: technical design + test       |
+| UFB-011 head/lead layout spacing | Open; no bounding-box regression     | AGENT                                |
+| D-29/D-34 Head KPI + viewer role | Feature design not defined           | HUMAN                                |
+| STATE.md stale percent           | Updated to 40/41 = 98                | Done                                 |
 
 ## Estimated Resource Usage
 

@@ -4,14 +4,14 @@ milestone: v8.1
 milestone_name: Visual Identity & AI Maturity
 status: executing
 stopped_at: v6.0 roadmap drafted (Phases 27-31)
-last_updated: "2026-05-14T12:00:00.000Z"
-last_activity: 2026-05-14 -- Sprint post-marathon closed (Wave 1-4). CI baseline green (lint-md + quality + e2e + migrate-reset + visual-baseline + docker-build). markdownlint baseline established (0 errors on 572 files). .planning/ consolidated (root cleaned, UAT-SCENARIO + docs moved in). GSD format aligned (STATE.md percent fixed, phase 40/41/42 CONTEXT.md created). 260426-vxp resolved. phase 16/17 product-ready gates closed.
+last_updated: "2026-05-14T14:23:53.000Z"
+last_activity: 2026-05-14 -- Post-marathon PR #5 remains open. TOOL-01/TOOL-02 are closed locally. CI startup failures were addressed by workflow fixes; latest run 277104 is queued and merge waits for real green. Phase 44/46/47/48/49/52/54/55/56/57 evidence exists; STATE progress updated from stale 36/41 snapshot. Coverage-gap report reconciles E-04/E-08/UFB-024 as covered, with remaining repo work split into CUSTOMREPORT-REPO-REMAINING-2026-05-14.md.
 progress:
   total_phases: 41
-  completed_phases: 36
+  completed_phases: 40
   total_plans: 134
   completed_plans: 136
-  percent: 88
+  percent: 98
 ---
 
 # Project State: CustomReport
@@ -37,10 +37,31 @@ See: .planning/PROJECT.md
 ## Current Position
 
 Milestone: v8.1 (IN PROGRESS, tag parent v8.0.0)
-Phases: 0/3 complete (40..42)
-Plans: 0/12 complete
-Status: active polish wave started, v8.0 is production baseline. Product-ready gate is reopened after manual UAT found domain-model and UI regressions.
-Last activity: 2026-05-08 -- phase 16/17 live UAT replay captured in .planning/regression/evidence/2026-05-08-phase16-17-uat/uat-live-results.json; phase 17 UAT now has 10 PASS / 0 FAIL, while phase 16 PDF/theme remain explicit blockers.
+Phases: 40/41 complete by current state counter; Phase 43 formal closure and
+PR #5 merge remain blocked by CI infrastructure.
+Plans: 136/134 complete (historical counter overflow preserved until GSD cleanup)
+Status: product-ready closure is mostly done, but PR #5 cannot be merged under
+the "CI green first" rule until the latest CI run completes green.
+Last activity: 2026-05-14 -- PR #5 live check: runs before `ffb3a15`
+startup-failed with empty jobs/logs; latest run `277104` on `45e1cac`
+has queued checks. TOOL-01 clean-checkout fix and TOOL-02 179/179 regression
+baseline are done. `E-04`, `E-08`, and `UFB-024` coverage has been
+reconciled in `.planning/regression/COVERAGE-GAP-2026-05-14.md`.
+
+### 2026-05-14 phase evidence correction
+
+| Phase                      | Evidence                              | State                                  |
+| -------------------------- | ------------------------------------- | -------------------------------------- |
+| 44 Reminder Policies       | `44-*-SUMMARY.md`, `PHASE-SUMMARY.md` | closed                                 |
+| 46 Group Scope Visibility  | `46-01..05-SUMMARY.md`                | closed by summaries                    |
+| 47 Developer Experience    | `47-01..03-SUMMARY.md`                | closed by summaries                    |
+| 48 Identity Settings Roles | `48-*-SUMMARY.md`, `PHASE-SUMMARY.md` | closed                                 |
+| 49 Settings Consumers      | `49-01-SUMMARY.md`                    | closed for delivered scope             |
+| 52 Product Telemetry       | `52-PHASE-SUMMARY.md`                 | closed                                 |
+| 54 AI/RAG                  | `54-PHASE-SUMMARY.md`                 | seeds-only closed; activation deferred |
+| 55 Telegram                | `55-PHASE-SUMMARY.md`                 | seeds-only closed; activation deferred |
+| 56 Group Products Model    | `56-PHASE-SUMMARY.md`                 | closed                                 |
+| 57 Director Role           | `57-PHASE-SUMMARY.md`                 | closed for planned scope               |
 
 ### v8.0 phase progress
 
