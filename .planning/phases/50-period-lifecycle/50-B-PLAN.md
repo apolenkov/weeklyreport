@@ -76,16 +76,20 @@ publishedAt + (weeks * 7 days) < now`
    ```
 
 2. Generate + apply migration:
+
    ```bash
    pnpm exec prisma migrate dev --name report_archived_section_late
    ```
+
 3. Add audit-logger event types (mirror `scope-denied` pattern from
    Phase 46-05):
+
    ```ts
    periodAutoCreate({ periodId, periodStart, periodEnd, deadline }): void
    periodAutoPublish({ periodId, missingSectionsCount }): void
    periodAutoArchive({ periodId }): void
    ```
+
 4. Create the three processors. Each gets:
    - `@Processor('queue-name')` class
    - `process()` method reading settings + executing the rule
@@ -95,6 +99,7 @@ publishedAt + (weeks * 7 days) < now`
    are registered.
 6. Submit-section middleware. Likely in
    `apps/api/src/modules/report-sections/`. Pattern:
+
    ```ts
    const settings = await orgService.getSettings();
    const now = Date.now();
@@ -109,14 +114,17 @@ publishedAt + (weeks * 7 days) < now`
      data: { ...input, late },
    });
    ```
+
 7. UI: add `<LateBadge />` component, render conditionally on
    `section.late` in head dashboard + lead form.
 8. Tests as specified above.
 9. Verify locally + Docker post-conditions:
+
    ```bash
    docker exec customreport-api-1 sh -c "cd /app && pnpm exec prisma generate"
    docker compose restart api
    ```
+
 10. Manual smoke (compressed time for cron):
     - force-trigger PeriodCreator via `scripts/run-period-creator.ts`
       (write a small CLI wrapper)

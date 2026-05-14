@@ -65,10 +65,13 @@ Report. Backfill migration converts current `defaultDeadlineDays` to
 
 1. Schema edits per acceptance.
 2. Generate migration:
+
    ```bash
    pnpm exec prisma migrate dev --name period_model_expansion
    ```
+
 3. Hand-edit migration to append the deadlineDayOfWeek backfill:
+
    ```sql
    UPDATE "AppSettings"
    SET "deadlineDayOfWeek" = (
@@ -78,6 +81,7 @@ Report. Backfill migration converts current `defaultDeadlineDays` to
    )
    WHERE id = 'singleton';
    ```
+
 4. Apply + regenerate Prisma client (host + container).
 5. Shared zod additions in `packages/shared/src/schemas/report.ts`.
 6. Backend service additions:

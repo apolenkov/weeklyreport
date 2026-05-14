@@ -17,7 +17,7 @@ Single-line wrapper: `set -eu; echo log; exec npx prisma migrate deploy`. Same e
 ### docker-compose.prod.yml (existing → hardened)
 
 - migrate service `command: ["sh", "apps/api/scripts/migrate.sh"]` (was inline npx).
-- api env fences: every prod env declared with `${VAR:?msg}` — compose refuses to start without DB*PASSWORD, AUTH_JWT_SECRET, PDF_EXPORT_JWT_SECRET, FRONTEND_URL, NEXT_PUBLIC_API_URL, all five SMTP*_, all four KEYCLOAK*SAML*_.
+- api env fences: every prod env declared with `${VAR:?msg}` — compose refuses to start without DB*PASSWORD, AUTH_JWT_SECRET, PDF_EXPORT_JWT_SECRET, FRONTEND_URL, NEXT_PUBLIC_API_URL, all five SMTP\*\*, all four KEYCLOAK*SAML\*\*.
 - api `FRONTEND_URLS` (Phase 36-04 multi-origin) wired through.
 - api healthcheck: `/health/ready` instead of `/health/live`; start_period 30→60s for first migration + tRPC bootstrap.
 - New `apilogs:/app/logs` volume; api env LOG_DIR=/app/logs.

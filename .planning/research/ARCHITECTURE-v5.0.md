@@ -424,29 +424,29 @@ setup("authenticate as lead", async ({ request }) => {
 
 ### Phase 2: Page-by-page wiring (incremental, testable after each)
 
-4. **Lead History page** -- Simplest migration target (single endpoint `reports.myHistory`, flat data shape). Validate E2E.
-5. **Admin Panel** -- `admin.snapshot` returns everything in one call. Wire all 6 tabs (queries first, then mutations for save/delete).
-6. **LeadForm** -- Most complex. Wire `reports.getActive`, `leadForm.byPeriod`, `leadForm.versions`. Add mutations for saveDraft, submit, fillFrom, restoreVersion.
-7. **Dashboard** -- Requires multiple endpoints. Wire `review.dashboard`, `archive.list`. Compute KPI from real data.
-8. **Weekly Report + archive pages** -- Wire `weeklyReport.get`. Shape mapping from `WeeklyReportReadModel`.
+1. **Lead History page** -- Simplest migration target (single endpoint `reports.myHistory`, flat data shape). Validate E2E.
+2. **Admin Panel** -- `admin.snapshot` returns everything in one call. Wire all 6 tabs (queries first, then mutations for save/delete).
+3. **LeadForm** -- Most complex. Wire `reports.getActive`, `leadForm.byPeriod`, `leadForm.versions`. Add mutations for saveDraft, submit, fillFrom, restoreVersion.
+4. **Dashboard** -- Requires multiple endpoints. Wire `review.dashboard`, `archive.list`. Compute KPI from real data.
+5. **Weekly Report + archive pages** -- Wire `weeklyReport.get`. Shape mapping from `WeeklyReportReadModel`.
 
 ### Phase 3: Interactivity (mutations wired to real API)
 
-9. **Submit/Publish/Revoke buttons** -- Wire `reports.submit`, `review.publish`, `leadForm.revoke`, `period.publish`, `period.reopen`.
-10. **Status<->Risk auto-sync** -- When stage set to at-risk/blocked, auto-create risk entry; when risk filled, update stage status.
-11. **Fill From + Version Restore** -- Wire `leadForm.fillFrom`, `leadForm.restoreVersion`.
-12. **PDF Export** -- Wire `pdfExport.request`, `pdfExport.status` with polling.
+1. **Submit/Publish/Revoke buttons** -- Wire `reports.submit`, `review.publish`, `leadForm.revoke`, `period.publish`, `period.reopen`.
+2. **Status<->Risk auto-sync** -- When stage set to at-risk/blocked, auto-create risk entry; when risk filled, update stage status.
+3. **Fill From + Version Restore** -- Wire `leadForm.fillFrom`, `leadForm.restoreVersion`.
+4. **PDF Export** -- Wire `pdfExport.request`, `pdfExport.status` with polling.
 
 ### Phase 4: Infrastructure (parallel with Phases 2-3)
 
-13. **Auth session in layout** -- Read cookie in `(app)/layout.tsx`, provide user context to NavBar and role-conditional UI.
-14. **Logging** -- Connect correlation ID to logger, add tRPC request/response logging middleware, frontend error forwarding.
+1. **Auth session in layout** -- Read cookie in `(app)/layout.tsx`, provide user context to NavBar and role-conditional UI.
+2. **Logging** -- Connect correlation ID to logger, add tRPC request/response logging middleware, frontend error forwarding.
 
 ### Phase 5: E2E Integration
 
-15. **Playwright config update** -- Add API server + DB to webServer, add global setup with seed.
-16. **Auth setup rewrite** -- Replace empty storage states with dev-login flow.
-17. **E2E assertion updates** -- Migrate tests to work with real API responses (most should pass if seed is test-backward correct).
+1. **Playwright config update** -- Add API server + DB to webServer, add global setup with seed.
+2. **Auth setup rewrite** -- Replace empty storage states with dev-login flow.
+3. **E2E assertion updates** -- Migrate tests to work with real API responses (most should pass if seed is test-backward correct).
 
 ---
 

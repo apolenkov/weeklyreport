@@ -39,6 +39,8 @@
     "uat:parse-dom": "pnpm --filter @customreport/api exec tsx ../../tools/uat-extractor/parse-dom.ts",
     "uat:generate": "pnpm --filter @customreport/api exec tsx ../../tools/uat-extractor/generate-playwright.ts",
     "uat:coverage": "pnpm --filter @customreport/api exec tsx ../../tools/uat-extractor/coverage.ts",
+    "lint:md": "markdownlint-cli2 \".planning/**/*.md\" \"!.planning/local-archive/**\" \"README.md\"",
+    "lint:md:fix": "markdownlint-cli2 --fix \".planning/**/*.md\" \"!.planning/local-archive/**\" \"README.md\"",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -58,6 +60,7 @@
     "prisma": "^7.0.0",
     "turbo": "^2.5.6",
     "typescript": "^5.8.3",
+    "markdownlint-cli2": "^0.22.1",
     "typescript-eslint": "^8.58.1",
     "vitest": "^4.1.4"
   },
@@ -76,6 +79,10 @@
   },
   "lint-staged": {
     "*.{ts,tsx,mjs,js,jsx}": "eslint --fix --max-warnings=0 --no-warn-ignored",
-    "*.{json,md,yml,yaml}": "prettier --write"
+    "*.{json,yml,yaml}": "prettier --write",
+    "*.md": [
+      "prettier --write",
+      "markdownlint-cli2 --fix"
+    ]
   }
 }

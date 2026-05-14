@@ -315,7 +315,7 @@ See **CC-6** above — same trap. Repeated here because it's specifically B's sc
 
 **Detection signal:** Same lead receives N>1 reminder emails for one period. Bull Board shows multiple jobs with `jobId=reminder:{periodId}:{userId}` (or whatever the existing key shape is).
 
-**Prevention:** E-plan first task: read existing reminder code (`apps/api/src/modules/reminder/*` or `apps/api/src/infrastructure/bullmq/*`), document the existing idempotency key shape, extend it. New job names `email-reminder-deadline` and `email-reminder-escalation` with `jobId: \`${kind}:${periodId}:${userId}\`` to use BullMQ's built-in dedup (`removeOnComplete`/`removeOnFail` + named jobId).
+**Prevention:** E-plan first task: read existing reminder code (`apps/api/src/modules/reminder/*` or `apps/api/src/infrastructure/bullmq/*`), document the existing idempotency key shape, extend it. New job names `email-reminder-deadline` and `email-reminder-escalation` with `jobId: \`${kind}:${periodId}:${userId}\``to use BullMQ's built-in dedup (`removeOnComplete`/`removeOnFail` + named jobId).
 
 **Guard:** Integration test: trigger reminder for a period, simulate SMTP transient failure (wrong port, retry), assert exactly 1 email captured by mock SMTP. Test idempotency by triggering the cron twice in 1 second — still 1 email.
 

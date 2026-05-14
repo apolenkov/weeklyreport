@@ -216,5 +216,5 @@ human_verification:
 
 ---
 
-_Verified: 2026-04-11T01:25:00Z_
-_Verifier: Claude (gsd-verifier)_
+*Verified: 2026-04-11T01:25:00Z*
+*Verifier: Claude (gsd-verifier)*

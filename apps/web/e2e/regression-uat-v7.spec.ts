@@ -415,3 +415,53 @@ test.describe("D-32 — ActivityLivePanel scope", () => {
     await ctx.close();
   });
 });
+
+// ---------------------------------------------------------------------------
+// D-0 / H-1 — DevRoleSwitcher wipe-manual-uat works without H-1 guard refusal
+// (replaces the manual click that was left as "human action" after the night marathon)
+// ---------------------------------------------------------------------------
+
+test.describe("D-0/H-1 — DevRoleSwitcher wipe-manual-uat", () => {
+  test("wipe button triggers reseed without guard error", async ({ browser }) => {
+    const ctx = await browser.newContext(withRole("admin"));
+    const page = await ctx.newPage();
+
+    // DevRoleSwitcher is mounted in the (app) layout — any app page works.
+    // It only renders when NEXT_PUBLIC_DEV_ROLE_SWITCHER=true (local env only).
+    await page.goto("/admin");
+    await waitReady(page);
+
+    const trigger = page.getByTestId("dev-role-switcher-trigger");
+    if ((await trigger.count()) === 0) {
+      // DevRoleSwitcher not enabled in this env (CI default) — skip gracefully
+      await ctx.close();
+      return;
+    }
+
+    // Open the dropdown
+    await trigger.click();
+
+    // Click the wipe-manual-uat item
+    const wipeBtn = page.getByTestId("dev-role-switcher-wipe-manual-uat");
+    await expect(wipeBtn).toBeVisible({ timeout: 5_000 });
+    await wipeBtn.click();
+
+    // On success the component calls window.location.reload() — page navigates.
+    // On guard refusal the mutation rejects and alert() fires.
+    const outcome = await Promise.race([
+      page.waitForEvent("framenavigated", { timeout: 60_000 }).then(() => "reload" as const),
+      page.waitForEvent("dialog", { timeout: 60_000 }).then((d) => {
+        const msg = d.message();
+        d.dismiss();
+        return msg;
+      }),
+    ]);
+
+    // Guard refusal strings must NOT appear (H-1 correctness)
+    if (typeof outcome === "string" && outcome !== "reload") {
+      expect(outcome).not.toMatch(/refus|guard.*forbid|prod.*destructive/i);
+    }
+
+    await ctx.close();
+  });
+});

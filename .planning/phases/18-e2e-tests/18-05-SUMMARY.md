@@ -49,18 +49,18 @@ E2E tests for period navigation, fill-from-previous, and autosave version histor
 
 ### Fill From (E2E-07) -- 4 tests
 
-6. Fill from Previous button visible on lead form
-7. Fill from dropdown opens on click and shows period list with search
-8. Fill from dropdown has searchable input (filters by text)
-9. Clicking a period option shows confirmation dialog with Cancel and Replace & Fill
+1. Fill from Previous button visible on lead form
+2. Fill from dropdown opens on click and shows period list with search
+3. Fill from dropdown has searchable input (filters by text)
+4. Clicking a period option shows confirmation dialog with Cancel and Replace & Fill
 
 ### Version History (E2E-08) -- 5 tests
 
-10. Version history navigator visible with arrow buttons
-11. Autosaved indicator visible
-12. Version navigation arrows functional (v3 to v2 transition)
-13. Version number/label displayed (v3, "Editing version")
-14. Restore accessible via version history modal (3 versions, 2 restore buttons)
+1. Version history navigator visible with arrow buttons
+2. Autosaved indicator visible
+3. Version navigation arrows functional (v3 to v2 transition)
+4. Version number/label displayed (v3, "Editing version")
+5. Restore accessible via version history modal (3 versions, 2 restore buttons)
 
 ## Deviations from Plan
 
