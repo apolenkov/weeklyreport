@@ -18,7 +18,7 @@ Repo-only remaining work is split out in `CUSTOMREPORT-REPO-REMAINING-2026-05-14
 | DONE-DOC   | Phase 44/46/47/48/49 evidence exists                            | Phase summary files under `.planning/phases/`                               |
 | DONE-DOC   | Phase 52/54/55/56/57 evidence exists                            | `*-PHASE-SUMMARY.md` files under `.planning/phases/`                        |
 | OPEN       | PR #5 merge                                                     | PR is mergeable, but CI must finish green first.                            |
-| OPEN       | CI current state                                                | Run `277104` is queued after fixes; previous runs were `startup_failure`.   |
+| OPEN       | CI current state                                                | Latest run is queued after fixes; previous runs were `startup_failure`.       |
 | DEFERRED   | `D-12`, `UFB-014`, `D-6`, `D-8`, `D-16`, `D-17`, `D-29`, `D-34` | Product/design/architecture decisions required.                             |
 | SUPERSEDED | Old PR #3/#4 closure tasks                                      | PR #4 merged; PR #5 is the active closure surface.                          |
 

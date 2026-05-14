@@ -44,9 +44,9 @@
   ],
   "blockers": [
     {
-      "description": "CI PR #5 previous runs were completed/startup_failure with jobs=[] and no logs; latest run 277104 is queued after workflow fixes and still needs a real green check before merge",
+      "description": "CI PR #5 previous runs were completed/startup_failure with jobs=[] and no logs; current post-fix runs now create queued jobs and still need a real green check before merge",
       "type": "external",
-      "workaround": "Watch run 277104. If it stays queued, fix GitHub Actions runner availability or repository Actions policy; merge only after green."
+      "workaround": "Watch the latest PR run. If it stays queued, fix GitHub Actions runner availability or repository Actions policy; merge only after green."
     },
     {
       "description": "D-12 item-dialog status pill — react-compiler conflict",
@@ -89,6 +89,6 @@
     ".planning/regression/evidence/product-ready-matrix/UI-GEO-002-003.json",
     ".planning/regression/COVERAGE-GAP-2026-05-14.md"
   ],
-  "next_action": "Watch gh run view 277104 --json status,conclusion,jobs. If green: gh pr merge 5 --merge. If queued/startup_failure persists: record runner/policy blocker evidence. Repo-only remaining work is in .planning/session-retros/CUSTOMREPORT-REPO-REMAINING-2026-05-14.md.",
+  "next_action": "Watch the latest PR #5 run via gh run list --limit 5 and gh pr view 5 --json statusCheckRollup. If green: gh pr merge 5 --merge. If queued/startup_failure persists: record runner/policy blocker evidence. Repo-only remaining work is in .planning/session-retros/CUSTOMREPORT-REPO-REMAINING-2026-05-14.md.",
   "context_notes": "Post-marathon sprint continuation. TOOL-01 took 2 iterations — first fix was incomplete (still referenced gitignored path). Second fix removed the import entirely since typedRoutes is not enabled. CI action versions were restored in e4a6bfd and pnpm/action-setup was replaced by Corepack in ffb3a15. E-04 is covered by alert-bar.test.tsx in 45e1cac; E-08 and UFB-024 were already covered. Regression is clean. Coverage gap report ready at .planning/regression/COVERAGE-GAP-2026-05-14.md."
 }

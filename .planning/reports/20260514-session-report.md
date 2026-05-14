@@ -15,7 +15,7 @@ STATE.md updated to 40/41 = 98%; repo-only remaining backlog added
 **Plans Executed:** TOOL-01 (2 iterations) + regression baseline measurement
 **Commits Made:** 9 (last 24h on this branch)
 **CI Update:** old PR #5 runs were `completed/startup_failure`; after
-`ffb3a15` + `45e1cac`, run `277104` has queued checks and needs green
+`ffb3a15` + later commits, post-fix runs create queued checks and need green
 before merge.
 
 ## Work Performed
@@ -77,7 +77,7 @@ Total: 18 files changed, 2987 insertions(+), 1 deletion(-)
 
 | Item                             | Status                               | Owner                                |
 | -------------------------------- | ------------------------------------ | ------------------------------------ |
-| CI PR #5 latest run              | `277104` queued after workflow fixes | AGENT: watch; merge only after green |
+| CI PR #5 latest run              | queued after workflow fixes | AGENT: watch; merge only after green |
 | D-12 item-dialog status pill     | Reverted — react-compiler conflict   | AGENT: technical design + test       |
 | UFB-011 head/lead layout spacing | Open; no bounding-box regression     | AGENT                                |
 | D-29/D-34 Head KPI + viewer role | Feature design not defined           | HUMAN                                |

@@ -10,7 +10,7 @@ process improvements.
 
 | Priority | Item                              | Repo action                                                                                                             | Evidence / file surface                                                                                                                                                      |
 | -------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ▲ P0     | PR #5 CI and merge                | Watch run `277104`; merge PR #5 only after green. If queued stays stuck, record runner/policy blocker.                  | `gh run view 277104`, PR #5                                                                                                                                                  |
+| ▲ P0     | PR #5 CI and merge                | Watch the latest PR run; merge PR #5 only after green. If queued stays stuck, record runner/policy blocker.               | `gh run list --limit 5`, `gh pr view 5 --json statusCheckRollup`                                                                                                           |
 | ▲ P0     | Commit current repo recovery docs | Commit ledgers, memory mirror files, and corrected handoff/state docs without reverting existing evidence JSON changes. | `.planning/session-retros/*2026-05-14.md`, `.planning/memory/*`, `.planning/STATE.md`                                                                                        |
 | ▲ P0     | `D-12` item dialog status pill    | Design and implement react-compiler-safe reset-on-reopen fix, then add regression test.                                 | `apps/web/src/components/lead/item-edit-dialog.tsx`, `apps/web/src/components/lead/item-edit-dialog.test.tsx`, optional `apps/web/e2e/regression/agent-b-lead-items.spec.ts` |
 | ▲ P1     | `UFB-011` head/lead top spacing   | Add Playwright bounding-box regression; fix layout only if test proves overlap.                                         | `apps/web/e2e/regression-uat-v7.spec.ts`, dashboard/lead page layout components                                                                                              |
@@ -39,7 +39,7 @@ process improvements.
 ## Repo Closeout Path
 
 ```
-[commit recovery docs] -> [verify markdown/tests] -> [push] -> [watch CI 277104]
+[commit recovery docs] -> [verify markdown/tests] -> [push] -> [watch latest CI]
                                                        ├── green -> [merge PR #5]
                                                        └── stuck -> [record blocker]
 ```
