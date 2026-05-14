@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { Moon } from "lucide-react";
 
 import { DEFAULT_ORGANIZATION_IDENTITY, type Role } from "@customreport/shared";
 
@@ -130,6 +131,28 @@ function initialsFromName(name: string): string {
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
   const last = parts[parts.length - 1] ?? first;
   return (first.charAt(0) + last.charAt(0)).toUpperCase();
+}
+
+function ThemeComingSoonControl() {
+  // TODO(UFB-074): replace this inert control with a real theme switch only
+  // after .planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md
+  // is promoted into a new milestone.
+  return (
+    <button
+      type="button"
+      aria-disabled="true"
+      aria-label="Theme selection is coming soon"
+      title="Theme selection is coming soon"
+      data-testid="theme-coming-soon"
+      className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] cursor-default"
+    >
+      <Moon size={14} strokeWidth={2} aria-hidden="true" />
+      <span className="hidden xl:inline">Theme</span>
+      <span className="rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-1.5 py-0.5 text-[10px] uppercase tracking-normal text-[var(--color-muted-foreground)]">
+        Soon
+      </span>
+    </button>
+  );
 }
 
 // Per-link SVG icons matching mockup s1-s9. 14×14 monoline, currentColor.
@@ -327,6 +350,7 @@ export function NavBar() {
             the right-rail width is stable from first paint → zero CLS on
             reload. Skeleton dimensions match the resolved identity chrome. */}
         <div className="flex items-center gap-2.5">
+          <ThemeComingSoonControl />
           {visibleSessionLoading ? (
             <>
               {/* xl+ skeleton: avatar circle + name pill */}

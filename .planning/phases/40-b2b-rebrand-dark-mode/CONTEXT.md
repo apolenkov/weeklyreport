@@ -1,19 +1,19 @@
 ---
 phase: 40
-status: planned
+status: parked
 parent_milestone: v8.1
 title: "B2B Rebrand & Dark Mode"
 ---
 
 # Phase 40: B2B Rebrand & Dark Mode
 
-**Goal:** Light B2B palette + dark theme baseline + theme toggle live, every component reads in both themes, screenshot evidence at 1280×800 + 375×667 + 768×1024.
+**Goal:** Park full dark mode/theme switching/background work out of v8.1 and keep only a top-menu Theme Coming Soon signal.
 
 **Depends on:** none
 
-**Requirements:** BRAND-01..06
+**Requirements:** BRAND-PARKED
 
-**Plans:** 5 (provisional)
+**Plans:** 1 (parked scope decision)
 
 - 40-01: PRD — rebrand goals, palette, typography, motion. Output: `docs/REBRAND-PRD.md` + design tokens spec.
 - 40-02: Design tokens — `[data-theme="dark"]` block in `packages/ui/src/styles/globals.css` + light B2B refresh.
@@ -21,7 +21,7 @@ title: "B2B Rebrand & Dark Mode"
 - 40-04: Component audit pass — every page, every dialog, every chart in both themes.
 - 40-05: Screenshot evidence — 5 routes × 2 themes × 3 viewports = 30 screenshots.
 
-**Status:** planned — awaiting Phase 40 planning (research memo from W2-C informs this phase).
+**Status:** parked — moved to the future-work todo; not a v8.1 release gate.
 
 **Cross-refs:**
 

@@ -1,24 +1,24 @@
 ---
 phase: 42
-status: planned
+status: parked
 parent_milestone: v8.1
 title: "iOS Safari Sign-off"
 ---
 
 # Phase 42: iOS Safari Sign-off
 
-**Goal:** RUNBOOK addendum complete, manual sign-off round done on real iPhone + iPad, screenshot evidence committed.
+**Goal:** Park real-device iOS Safari sign-off out of v8.1; keep current UAT repeatability on Dockerized local stack plus Playwright/log evidence.
 
-**Depends on:** Phase 40 (test in final B2B theme, not v8.0 green palette)
+**Depends on:** none
 
-**Requirements:** MOB-01..03
+**Requirements:** MOB-PARKED
 
-**Plans:** 2 (provisional)
+**Plans:** 1 (parked scope decision)
 
 - 42-01: RUNBOOK addendum + checklist — 25-item checklist covering PDF download, tap-target audit, dialog scroll lock, sticky-header collisions, viewport zoom, share sheet, copy-link, period nav.
 - 42-02: Manual sign-off + screenshot evidence — real iPhone SE, iPhone 14, iPad portrait, iPad landscape. Screenshots committed to `docs/ios-signoff-evidence/`.
 
-**Status:** planned — blocked on Phase 40 completion and real device availability.
+**Status:** parked — moved to future UI/UAT backlog; not a v8.1 release gate.
 
 **Cross-refs:**
 

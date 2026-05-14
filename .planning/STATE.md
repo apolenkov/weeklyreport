@@ -4,14 +4,14 @@ milestone: v8.1
 milestone_name: Closure & Recovery
 status: blocked_by_ci
 stopped_at: v6.0 roadmap drafted (Phases 27-31)
-last_updated: "2026-05-14T17:49:13.000Z"
-last_activity: 2026-05-14 -- v8.1 Phase 61-66 closure work completed and routed to BLOCKED-BY-CI: source/session intake, GSD codebase map and graphify refresh, Git/metrics repair, regression coverage gaps, product semantics gaps, and final audit are complete. PR #5 remains mergeable but CI is queued, so merge/tag stay blocked until a real green run.
+last_updated: "2026-05-14T18:20:00.000Z"
+last_activity: 2026-05-14 -- v8.1 scope repaired: dark mode/theme switching, Safari real-device sign-off, Telegram activation, and AI/telemetry/eval work are parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`; active GSD phases are 24/24 complete, while PR #5 merge/tag remain blocked until a real green CI run.
 progress:
   total_phases: 24
-  completed_phases: 18
-  total_plans: 31
-  completed_plans: 31
-  percent: 75
+  completed_phases: 24
+  total_plans: 37
+  completed_plans: 37
+  percent: 100
 ---
 
 # Project State: CustomReport
@@ -36,12 +36,14 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Milestone: v8.1 Closure & Recovery (IN PROGRESS, tag parent v8.0.0)
-Active v8.1 phases: 18/24 complete by gsd-sdk query init.milestone-op after
-Phase 66 summary creation. This is lower than the stale 98% snapshot because v8.1
-now includes parked historical tracks plus closure phases 61-66.
-Active v8.1 plan artifacts: 31/31 complete by capped plan-summary count for
-the closure scaffold.
+Milestone: v8.1 Closure & Recovery (BLOCKED-BY-CI, tag parent v8.0.0)
+Active v8.1 phases: 24/24 complete by `gsd-sdk query init.milestone-op` after
+the 2026-05-14 scope repair. Phase 40/41/42 and deferred future tracks are
+closed for current scope as PARKED/DEFERRED, not as implemented features.
+Future dark mode, theme switching, UI screenshot review, Safari real-device
+sign-off, Telegram activation, and AI/telemetry/eval work are captured in
+`.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
+Active v8.1 plan artifacts: 37/37 complete after parked/deferred closure plans.
 Filesystem inventory: 53 phase directories and 142 plan files still exist
 project-wide; this is not the active milestone denominator.
 Status: source/session intake, codebase map refresh, Git audit, metrics repair,
@@ -53,16 +55,22 @@ green for the pushed closure commit.
 
 | Phase                      | Evidence                              | State                                  |
 | -------------------------- | ------------------------------------- | -------------------------------------- |
+| 40 Theme/Rebrand           | `40-SUMMARY.md`                       | parked; future todo                    |
+| 41 AI Eval/Monitoring      | `41-SUMMARY.md`                       | parked; future todo                    |
+| 42 iOS Safari Sign-off     | `42-SUMMARY.md`                       | parked; future todo                    |
 | 44 Reminder Policies       | `44-*-SUMMARY.md`, `PHASE-SUMMARY.md` | closed                                 |
 | 46 Group Scope Visibility  | `46-01..05-SUMMARY.md`                | closed by summaries                    |
 | 47 Developer Experience    | `47-01..03-SUMMARY.md`                | closed by summaries                    |
 | 48 Identity Settings Roles | `48-*-SUMMARY.md`, `PHASE-SUMMARY.md` | closed                                 |
 | 49 Settings Consumers      | `49-01-SUMMARY.md`                    | closed for delivered scope             |
 | 52 Product Telemetry       | `52-PHASE-SUMMARY.md`                 | closed                                 |
+| 53 Cloud Deploy            | `53-SUMMARY.md`                       | deferred                               |
 | 54 AI/RAG                  | `54-PHASE-SUMMARY.md`                 | seeds-only closed; activation deferred |
 | 55 Telegram                | `55-PHASE-SUMMARY.md`                 | seeds-only closed; activation deferred |
 | 56 Group Products Model    | `56-PHASE-SUMMARY.md`                 | closed                                 |
 | 57 Director Role           | `57-PHASE-SUMMARY.md`                 | closed for planned scope               |
+| 59 Multi Org Hierarchy     | `59-SUMMARY.md`                       | deferred                               |
+| 60 Presentation Mode       | `60-SUMMARY.md`                       | deferred                               |
 
 ### v8.0 phase progress
 
