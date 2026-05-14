@@ -39,7 +39,6 @@ AGENTS.md
 .planning/regression/evidence/docker-compose-local/cookies.txt
 .planning/regression/evidence/docker-compose-local/failure-diagnostics.log
 apps/web/.planning/
-.planning/local-archive/
 # Performance trace artifacts from chrome-devtools MCP UAT sessions
 .planning/quick/**/*-dashboard.json
 .planning/quick/**/screenshots/
