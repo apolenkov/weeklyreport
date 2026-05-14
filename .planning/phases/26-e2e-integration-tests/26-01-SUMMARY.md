@@ -146,13 +146,13 @@ Per user instruction, the human-verify checkpoint was auto-approved. The followi
 
 If a spec fails, classify:
 
-| Symptom                              | Likely cause                                                            | Fix                                                                                                                                                    |
-| ------------------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| All specs 401                        | Cookie not landing on browser context                                   | Fixtures.loginAs already verifies cookie present; if it now fails, check FRONTEND_URL vs WEB_URL match (SameSite=Lax + cross-origin would drop cookie) |
-| `webServer timed out`                | API/Web not exposing health URL, or port collision                      | `lsof -i :3002 -i :3005`; ensure `/health` endpoint still mounted (Phase 24)                                                                           |
-| `test.skip` everywhere               | Form selectors not matching                                             | Open the failing test, fix `getByRole`/`getByLabel` against actual DOM, remove the `test.skip(...)` line                                               |
-| Spec mutates and next spec fails     | resetMutations not called, or seed not idempotent for the table touched | Add `test.afterEach(async () => { await resetMutations(); })`; verify seed handles upsert for new fields                                               |
-| `tRPC 404 on `/trpc/period.publish`` | Procedure name guessed wrong                                            | Open `apps/api/src/infrastructure/trpc/router.ts`, find actual procedure name, update spec's `waitForResponse` URL filter                              |
+| Symptom                             | Likely cause                                                            | Fix                                                                                                                                                    |
+| ----------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| All specs 401                       | Cookie not landing on browser context                                   | Fixtures.loginAs already verifies cookie present; if it now fails, check FRONTEND_URL vs WEB_URL match (SameSite=Lax + cross-origin would drop cookie) |
+| `webServer timed out`               | API/Web not exposing health URL, or port collision                      | `lsof -i :3002 -i :3005`; ensure `/health` endpoint still mounted (Phase 24)                                                                           |
+| `test.skip` everywhere              | Form selectors not matching                                             | Open the failing test, fix `getByRole`/`getByLabel` against actual DOM, remove the `test.skip(...)` line                                               |
+| Spec mutates and next spec fails    | resetMutations not called, or seed not idempotent for the table touched | Add `test.afterEach(async () => { await resetMutations(); })`; verify seed handles upsert for new fields                                               |
+| `tRPC 404 on`/trpc/period.publish`` | Procedure name guessed wrong                                            | Open `apps/api/src/infrastructure/trpc/router.ts`, find actual procedure name, update spec's `waitForResponse` URL filter                              |
 
 ## Deviations from Plan
 

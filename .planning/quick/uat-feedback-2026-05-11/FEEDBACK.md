@@ -54,6 +54,7 @@ User accumulating items; not implementing yet. Each item → ticket on close.
   - TTFB: 363ms (dev mode Turbopack, acceptable)
   - CLS: 0.00 (excellent)
 - **Actual root cause — 4 endpoints fail:**
+
   ```
   GET /trpc/review.dashboard,archive.list,weeklyReport.get,dev.listUsers,auth.me  → 207 Multi-Status
   GET /trpc/weeklyReport.get          → 404 ✗ (retry 1)
@@ -61,6 +62,7 @@ User accumulating items; not implementing yet. Each item → ticket on close.
   GET /trpc/weeklyReport.get          → 404 ✗ (retry 3)
   POST /api/client-logs                → 404 ✗
   ```
+
 - **Why it feels slow:** React Query default `retry: 3` on failed tRPC procedure → 3 sequential retries with exponential backoff → 3-5 seconds of loading state UI before final failure rendered.
 - **Real bug:** `weeklyReport.get({})` returns 404 when no current Period row exists. Phase 50-B `PeriodCreatorScheduler` is cron-daily (00:05) and hasn't run on this dev DB yet, so no period for «current week» exists.
 - **Compounded by:** UAT feedback item #1 (no manual period create) — there's no admin escape hatch to seed a period on a fresh DB without waiting for the cron.

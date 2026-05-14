@@ -290,11 +290,13 @@ this.logger.info('upserted user', { userId: parsedUser.id });
 
 - JSDoc on public methods: `/** API-11: Get application settings singleton. */`
 - Section dividers in test files using ASCII comment blocks:
+
   ```typescript
   // ---------------------------------------------------------------------------
   // P0/P1 Regression -- ADM scenarios
   // ---------------------------------------------------------------------------
   ```
+
 - Reference regression scenario IDs in test names: `'getSnapshot -- regression (ADM-010)'`
 - Reference design document IDs in schema sections: `// v4.0: Stage & Assignment schemas (D-63)`
 

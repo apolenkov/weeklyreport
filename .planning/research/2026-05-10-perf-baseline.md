@@ -55,21 +55,21 @@ User table read 15K rows total over 30 min from 9-row dataset — typical N+1 on
 
 ### P1 — Schema indexes (low cost, future-proof)
 
-3. **`Report (status, periodStart DESC)`** compound — archive list filters
+1. **`Report (status, periodStart DESC)`** compound — archive list filters
    `status='published'` and orders by `periodStart` desc. Today seq-scans
    the 0-row table; fine. At 200+ reports will start scanning.
-4. **`ReminderRule (status, fireAt)`** compound — scheduler queries
+2. **`ReminderRule (status, fireAt)`** compound — scheduler queries
    `status='active' AND fireAt <= now()`. Two single-column indexes today,
    composite is strictly better.
-5. **`User (role, reportingGroupId)`** compound — group-scope filter (UFB-040)
+3. **`User (role, reportingGroupId)`** compound — group-scope filter (UFB-040)
    always combines these two. Today FK index only.
 
 ### P2 — Observability before deeper tuning
 
-6. **Enable `pg_stat_statements`** in `docker-compose.yml` postgres command
+1. **Enable `pg_stat_statements`** in `docker-compose.yml` postgres command
    (`shared_preload_libraries=pg_stat_statements`, `pg_stat_statements.track=all`).
    Gives a real slow-query log keyed by normalized SQL fingerprint.
-7. **Prisma `log: ['query']` already wired** but unfiltered — pipe to
+2. **Prisma `log: ['query']` already wired** but unfiltered — pipe to
    Grafana / Loki for offline review (postgres-exporter already in compose).
 
 ### P3 — Things explicitly NOT to do now

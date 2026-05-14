@@ -48,10 +48,10 @@ Cross-role lifecycle E2E tests verifying multi-role UI interactions between lead
 
 ### Revoke/Publish Flow (4 tests)
 
-7. Head weekly report has "Publish & Lock" button
-8. Publish confirmation dialog mentions pending leads with "Publish Anyway" option
-9. Publishing transforms button to "Published" state (locks the report)
-10. Lead history shows consistent submission statuses across 6 periods
+1. Head weekly report has "Publish & Lock" button
+2. Publish confirmation dialog mentions pending leads with "Publish Anyway" option
+3. Publishing transforms button to "Published" state (locks the report)
+4. Lead history shows consistent submission statuses across 6 periods
 
 ## Deviations from Plan
 

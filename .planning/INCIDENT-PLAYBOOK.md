@@ -14,7 +14,7 @@ Step-by-step for handling a production incident on CustomReport. Pair with
 
 ## Response sequence
 
-```
+```text
 DETECT      Alert / user report / monitoring page
    ↓
 TRIAGE      Confirm the symptoms; decide severity
@@ -69,11 +69,13 @@ If the bad deploy contained a migration that DROPPED columns/tables:
 1. **Stop**. Don't `git checkout` — the previous tag's schema.prisma will
    reject startup.
 2. Restore Postgres from backup (most recent pre-migration dump):
+
    ```bash
    docker compose stop api
    docker compose exec postgres pg_restore -U customreport \
      --clean --if-exists -d customreport /backup/<DATE>.dump
    ```
+
 3. THEN `git checkout $PREV` and `docker compose up -d`.
 4. Communicate the data-loss window in the incident channel.
 

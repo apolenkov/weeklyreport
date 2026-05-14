@@ -136,7 +136,7 @@ Backend fully conforms to all API contracts; BullMQ queues functional with monit
 - BullMQModule → AppModule imports array
 - ThemeProvider → layout.tsx wrapping children
 - Theme toggle → nav-user.tsx dropdown menu
-- Regression tests → existing _.contract.test.ts and _.integration.test.ts files
+- Regression tests → existing _.contract.test.ts and_.integration.test.ts files
 - Docker fixes → Dockerfile.api EXPOSE port, compose resource limits
 
 </code_context>

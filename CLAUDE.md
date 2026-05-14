@@ -140,7 +140,7 @@
 
 ### Core Dependencies (NPM/pnpm)
 
-# From monorepo root, in each package:
+# From monorepo root, in each package
 
 # apps/web (Next.js frontend)
 
@@ -322,7 +322,7 @@
 
 # Copy .env.example to .env (for local dev)
 
-# .env should have:
+# .env should have
 
 # DATABASE_URL=postgresql://user:pass@localhost:5432/customreport_dev
 
@@ -334,7 +334,7 @@
 
 # Start dev servers (Next.js + NestJS in parallel, HMR enabled)
 
-# Access:
+# Access
 
 # - Frontend: http://localhost:3000
 
@@ -469,6 +469,35 @@
 Architecture not yet mapped. Follow existing patterns found in the codebase.
 
 <!-- GSD:architecture-end -->
+
+### UI/визуал — research before implementation (2026-05-14)
+
+Визуальные изменения (фоны, акценты, градиенты, тёмная тема, ребренд) реализуются
+**ТОЛЬКО** после того, как пользователь прочитал research memo и явно указал
+«делаем вот это».
+
+**Запрещено:**
+
+- «Давай попробуем X на странице Y» без явного user sign-off
+- Применять gradient / CSS переменные фона / design tokens по собственной инициативе
+- Интерпретировать скриншоты как «задание на реализацию»
+
+**Разрешено:**
+
+- Снимать скриншоты через `apps/web/e2e/screenshots.spec.ts`
+- Добавлять идеи в research memo
+- Реализовывать только после «делаем вот это» от пользователя
+
+**Cross-refs:**
+
+- Research memo: `.planning/memory/2026-05-14-background-research.md`
+- Auto-memory: `~/.claude/projects/-Users-ap-work-customreport/memory/feedback_ui_visual_research_first.md`
+- Screenshot spec: `apps/web/e2e/screenshots.spec.ts`
+
+**Цитата пользователя 2026-05-14 (ground truth):**
+«Вообще вот этот весь ребрендинг, тёмная тема — это просто исследование пока.
+Да, которые будет основываться на скриншотах. Максимум всё. Не надо больше
+ничего делать, потому что на основе исследования будем уже принимать решение.»
 
 <!-- GSD:workflow-start source:GSD defaults -->
 

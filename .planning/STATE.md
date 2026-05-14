@@ -4,14 +4,14 @@ milestone: v8.1
 milestone_name: Visual Identity & AI Maturity
 status: executing
 stopped_at: v6.0 roadmap drafted (Phases 27-31)
-last_updated: "2026-05-10T22:38:58.291Z"
+last_updated: "2026-05-14T00:00:00.000Z"
 last_activity: 2026-05-08 -- phase 16/17 live UAT replay captured in .planning/regression/evidence/2026-05-08-phase16-17-uat/uat-live-results.json; phase 17 UAT now has 10 PASS / 0 FAIL, while phase 16 PDF/theme remain explicit blockers.
 progress:
   total_phases: 41
   completed_phases: 36
   total_plans: 134
   completed_plans: 136
-  percent: 100
+  percent: 88
 ---
 
 # Project State: CustomReport
@@ -137,9 +137,21 @@ Last activity: 2026-05-08 -- phase 16/17 live UAT replay captured in .planning/r
 
 ### Active Blockers
 
-- **Product-ready gate reopened** — manual UAT found unresolved domain-model issues: reporting scope must use StageAssignment instead of Project.leadId, stage status must be per stage, and content records need optional multi-stage tagging.
-- **Phase 16 human gate remains open** — PDF export runtime needs a published report or explicit reseed/publish approval; theme toggle needs product decision because current UI has no toggle surface.
-- **Regression gate partially incomplete** — phase 17 live role/route UAT now has scenario-correlated screenshots/log capture, but action-log evidence, correlation-id UX, and background/surface token batch remain planned work.
+- **Phase 16 PDF/theme deferred to backlog** — PDF export gate and theme toggle are product
+  decisions, not sprint blockers. Moved to v8.1 backlog phase as explicit ADR items.
+  Phase 17 UAT: 10 PASS / 0 FAIL — closed 2026-05-14.
+- **Regression gate partially incomplete** — phase 17 live role/route UAT now has
+  scenario-correlated screenshots/log capture, but action-log evidence, correlation-id UX,
+  and background/surface token batch remain planned work.
+
+### Resolved (2026-05-14)
+
+- **Product-ready gate** — domain-model regressions (StageAssignment, per-stage status,
+  multi-stage tagging) were addressed in v8.0 polish waves. Phase 17 UAT confirms 10/0.
+  Gate closed.
+- **260426-vxp** — Integration suite first-run completed (8/21 pass, 5 classified for
+  v6.0 backlog). Vitest mock fix green (172/0). Phase 24 proxy matcher closed.
+  See `.planning/quick/260426-vxp-*/RESOLUTION.md`.
 
 ### v6.1 Backlog (deferred, NOT blocking v6.0 deploy)
 

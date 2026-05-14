@@ -422,6 +422,7 @@ This is preferred over creating new `aiHeadProcedure` helpers because:
 
 - Path: `apps/api/src/modules/ai/__fixtures__/golden-set/`
 - 8-12 fixture reports as JSON, each shape:
+
   ```json
   {
     "id": "fx-001",
@@ -438,6 +439,7 @@ This is preferred over creating new `aiHeadProcedure` helpers because:
     }
   }
   ```
+
 - **Status:** `draft, awaiting head sign-off` (CONTEXT.md C-5). Initial
   threshold is loose (≥80%); after head review, threshold can tighten.
 
@@ -532,6 +534,7 @@ All three procedures return this discriminated union.
 ### 8.2 Token usage report
 
 - Daily roll-up via SQL on AiInsight:
+
   ```sql
   SELECT date_trunc('day', "createdAt") AS day,
          "kind",
@@ -542,6 +545,7 @@ All three procedures return this discriminated union.
   GROUP BY 1, 2
   ORDER BY 1 DESC;
   ```
+
 - Used to validate cost projections in §3 against reality.
 - Owner runs ad-hoc; no automated dashboard in v6.0.
 

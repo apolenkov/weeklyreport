@@ -10,7 +10,7 @@
 Make the production attack surface defensible:
 
 1. Rate-limit the auth + tRPC planes (express-rate-limit, three tiers).
-2. Extend audit-logger from auth-events-only to every mutation across the system (admin._ + leadForm._ + period._ + reports._ + reminders.\*).
+2. Extend audit-logger from auth-events-only to every mutation across the system (admin._+ leadForm._ + period._+ reports._ + reminders.\*).
 3. Add production fences in env.schema (boot abort on misconfiguration).
 4. Multi-origin CORS via FRONTEND_URLS CSV; wildcards rejected in production.
 

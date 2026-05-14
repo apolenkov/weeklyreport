@@ -50,7 +50,7 @@ Key rule: a Lead can **see** all stages of a product they have access to, but ca
 
 ### 7 Canonical Stages
 
-```
+```text
 Planning → Analysis → Design → Dev → Testing → DevOps → Support
 ```
 
@@ -239,7 +239,7 @@ Each Lead fills the following sections, scoped to their assigned stages:
 
 The Weekly Report is **auto-compiled** from all submitted lead data. There is no separate "Assembled" or "Draft" report page — a single **Weekly Report** page shows the current state:
 
-```
+```text
 Lead Forms (6 leads) → [auto-compile] → Weekly Report (live view) → Publish & Lock (frozen)
 ```
 

@@ -1,29 +1,75 @@
-# Night marathon — UAT v7.4 wipe-unblock + 36 page-feedback fixes + hardening commit
+# v8.1 Sprint Plan — после ночного марафона (revised 2026-05-14)
+
+> Заменяет план ночного марафона (выполнен, PR #4 в main, commit bb98aca0).
+> Версия 3: исправлен scope бэкграунда — это не реализация ребренда / тёмной
+> темы / gradient-копипаста, а **визуальное исследование на основе скриншотов**
+> от прохода Playwright. Решения о реализации принимаются ПОСЛЕ исследования.
 
 ## Context
 
-**Зачем эта правка.** Вечером 2026-05-13 пользователь проводил браузерный UAT по
-ветке `fix/PRJ-2/uat-v7-2026-05-12` через Codex-сессию `019e22e7`. Накопилось
-**~36 point-feedback'ов** по страницам (лендинг → admin → lead form → reports →
-head dashboard → slides), **3 hardening-фикса** (H-1/H-2/H-3, untracked) и
-**1 свежий блокер** из последнего скриншота: попытка вайпа БД через DevRoleSwitcher
-падает на моём же H-1 guard, потому что docker-compose использует host=`postgres`
+После merge PR #4 в main (ночной марафон) и сверки с `v8.1-ROADMAP.md`
+картина такая:
 
-- db=`customreport` (без `_uat` суффикса).
+**Что реально хочет пользователь сейчас (по feedback от 2026-05-14):**
 
-**Что хотим получить к утру.**
+1. **Заменить ручной клик на Playwright** — то, что в плане ночи было помечено
+   как `D-0` (DevRoleSwitcher wipe-manual-uat) и осталось «требует ручного
+   клика», должно стать обычным regression spec в `regression-uat-v7.spec.ts`.
+   Это правильный best practice — не plan для human-in-the-loop когда
+   автоматизация дешёвая.
+2. **Мониторинг — да, через локальный Grafana** — Phase 37 (observability) уже
+   shipped в v8.0, контейнеризация локально поднимается, можем проверить
+   metrics + dashboards без полноценного Phase 41 AI Eval.
+3. **Turbopack эксперимент** — хочется измерить и решить.
+4. **AI Eval (Phase 41)** — отложить «в закладки» (прямая цитата пользователя
+   2026-05-14: «AI пока будешь в закладках»). Активируем когда появится боевой
+   API-ключ; до тех пор seed-режим с TODO-маркерами достаточно.
+5. **Визуальное исследование бэкграундов (research, не реализация).**
+   Дословно от пользователя 2026-05-14: «бэкграунд помо подумать, как можно
+   бэкграунд изображения сделать более не просто фоном, а какими-то, не
+   знаю, линиями, ну, что-нибудь поинтереснее сделать… при проходе Playrit,
+   который по идее должен пройти всё, делать скриншоты одновременно, да, и
+   посмотреть, что можно улучшить. Это просто исследовательское. Вообще вот
+   этот весь ребрендинг, тёмная тема — это просто исследование пока. Да,
+   которые будет основываться на скриншотах. Максимум всё. Не надо больше
+   ничего делать, потому что на основе исследования будем уже принимать
+   решение». Перевод в задачу:
+   - Playwright spec по ходу регрессии **снимает скриншоты** ключевых
+     страниц всех 4 ролей (lead/head/admin/viewer).
+   - Артефакт: каталог скриншотов + research-memo с идеями (линии,
+     паттерны, asymmetric tints, иллюстративные accent-зоны и т. п.) +
+     список «вот это можно улучшить».
+   - **Никакого кода UI в этом спринте.** Никаких новых gradient-классов,
+     никаких new design tokens, никакого dark theme toggle.
+   - На основе memo + скриншотов пользователь позже решит — делать
+     ребренд/тёмную тему или нет.
+6. **Wave closure** — нужен.
 
-1. Ручной UAT снова работает — `Wipe & manual-UAT seed` проходит, БД пересоздаётся.
-2. H-1/H-2/H-3 закоммичены и запушены.
-3. Все 36 feedback-точек либо починены, либо явно помечены `coming soon` с tooltip
-   (для виджетов, которые мы намеренно не достраиваем до v7.4).
-4. Playwright self-UAT прогоняется автоматически по ключевым ролям/страницам и
-   валится с понятным репортом, а не молча.
-5. chrome-devtools MCP подключён и проверен на критичных URL.
-6. Pillars (Boris Cherny 11) и rules/_ соблюдены — никаких bypass-`--no-verify`,
-   никаких русских литералов в `apps/web/src/\*\*/_.tsx`, никаких прямых edit'ов
-`~/.claude/\*` без catalog-source-first.
-7. PR #3 обновлён, готов к финальному approve на утреннем стендапе.
+**Откуда брался «Phase 40 B2B Rebrand» в обсуждении — пояснение.**
+Этот ярлык существует только в `.planning/milestones/v8.1-ROADMAP.md` как
+заголовок roadmap-фазы (5 планов 40-01..40-05: PRD, design tokens, theme
+toggle, component audit, screenshots). Пользователь его НЕ запрашивал.
+Когда пользователь говорил «подумать над бэкграундом», он имел в виду
+**визуальное исследование**: посмотреть на скриншоты Playwright и набросать
+идеи, как сделать бэкграунд интереснее (линии, паттерны), а не реализовать
+Phase 40. Решение «делать ли ребренд / тёмную тему вообще» откладывается
+до прочтения research-memo.
+
+**Что НЕ берём в этот спринт (parked, явно):**
+
+- Phase 40 целиком (BRAND-01..05) — roadmap-фаза, продуктовое решение по
+  ней принимается ПОСЛЕ research-memo W2-C.
+- Любая UI-реализация бэкграунда (gradient-классы, design tokens, theme
+  toggle) — только после того, как пользователь прочитает memo и скажет
+  «делаем вот это».
+- Phase 41 AI Eval — отложить пока AI features не активированы боевым ключом.
+- Phase 43/44/46/47 — backlog v8.1, не для этого спринта.
+
+**Закрытые долги от ночного марафона, которые остаются:**
+
+- `HOT-A`: H-1 wipe-manual-uat — ручной клик не сделан → заменим Playwright.
+- `HOT-B`: product-ready closure phase 16/17 + 260426-vxp — повисло с 2026-05-08.
+- `CI-gap`: PR #4 merged без CI gate (нет `.github/workflows/ci.yml`).
 
 ---
 
@@ -32,346 +78,692 @@ head dashboard → slides), **3 hardening-фикса** (H-1/H-2/H-3, untracked) 
 ### Было / Стало
 
 ```text
-┌─ БЫЛО (вечер 13.05) ───────────────────────────────┐
-│ • H-1/H-2/H-3 написаны, не коммитнуты              │
-│ • UAT-wipe ломается на _destructive-guard          │
-│ • 36 feedback-точек не разобраны                   │
-│ • Recharts SVG tabindex=0 — accessibility шум      │
-│ • Activity panel у Натальи (finance) показывает 6  │
-│   лидов вместо 2 — scope leak                      │
-│ • Audit log в UI отсутствует у всех ролей          │
-│ • Agentation devtools оверлей перекрывает футер    │
-│ • Стрелки версий в VersionHistoryNav не работают   │
-│ • Submit Report падает: priorities array=0         │
-│ • StageMultiSelect не подсвечивает выбранные при   │
-│   edit (хотя при создании были выбраны)            │
-│ • LeadDraftsPanel — непонятно что это, логика      │
-│ • Recharts focusable=true на head dashboard        │
-│ • Lead form decisions dialog: метки выше полей     │
-│ • viewer /head/slides — нет аудита, мало смысла    │
+┌─ БЫЛО (после merge PR #4, 2026-05-14 утро) ────────┐
+│ • H-1 wipe — не проверено в браузере               │
+│ • Phase 16/17 product-ready — повисло              │
+│ • 260426-vxp — open                                │
+│ • CI workflow — отсутствует                        │
+│ • Grafana/Prometheus — задеплоено, не проверено    │
+│ • Turbopack — не измерено                          │
+│ • Бэкграунды: subtle gradient только на /lead/report│
+│   (D-11). Как сделать «не просто фон» — не изучено │
 └────────────────────────────────────────────────────┘
 
-┌─ СТАЛО (цель к утру 14.05) ────────────────────────┐
-│ ✓ docker-compose db переименована customreport_uat │
-│ ✓ H-1/H-2/H-3 коммит fix(hardening): pushed        │
-│ ✓ UAT wipe + reseed работает без override-флага    │
-│ ✓ T1 (быстрые, ≤30мин/штука): 14 фиксов в коде     │
-│ ✓ T2 (средние, исследование + код): 12 фиксов      │
-│ ✓ T3 (большие, ресерч + memo): 6 решений документы │
-│ ✓ T4 (Playwright + MCP): self-UAT в make scripts   │
-│ ✓ Agentation overlay переехал top-right            │
-│ ✓ Recharts focusable=false, tabindex=-1            │
-│ ✓ Memory: 2026-05-14-night-marathon.md             │
-│ ✓ PR #3 + ~80 свежих коммитов pushed               │
+┌─ СТАЛО (цель через 1-2 сессии, ~4-6 часов работы) ─┐
+│ ✓ Playwright spec D-0/H-1 wipe — green             │
+│ ✓ Phase 16/17 classified, 260426-vxp resolved      │
+│ ✓ CI green on main (lint+typecheck+test+e2e)       │
+│ ✓ Grafana audit: dashboards loaded, metrics flow   │
+│ ✓ Turbopack decision документировано               │
+│ ✓ Каталог скриншотов всех ключевых страниц 4 ролей │
+│ ✓ Background research-memo с идеями (линии,        │
+│   паттерны, accents) + список «что улучшить»       │
+│ ✗ НЕТ реализации UI бэкграунда — только research,  │
+│   ЗАФИКСИРОВАНО в 3 местах (CLAUDE.md + MEMORY.md  │
+│   + research memo с frozen-contract callout)       │
+│ ✓ Markdownlint + .planning/ консолидация:          │
+│   • .markdownlint.json + lint:md скрипт            │
+│   • husky pre-commit hook для *.md                 │
+│   • архивные audit'ы → .planning/local-archive/    │
+│   • STATE/ROADMAP/PHASE format → GSD canonical     │
+│ ✓ STATE.md: phase 16/17 closed + frontmatter clean │
+│ ✓ Memory + retro 2026-05-1X-sprint.md              │
 └────────────────────────────────────────────────────┘
 ```
 
-### Поток исполнения (волнами, параллельно где возможно)
+### Поток исполнения
 
 ```text
-[wave-A unblock] [wave-B commit hardening] [wave-C Playwright skeleton]
-       │                  │                          │
-       └──────► [wave-D T1 quick fixes: 14 точек, параллельно где независимо]
-                                  │
-                       [wave-E T2 medium fixes: 12 точек]
-                                  │
-                       [wave-F T3 research memos: 6 решений]
-                                  │
-                       [wave-G MCP chrome-devtools sweep + Playwright run]
-                                  │
-                       [wave-H commit + push + PR update + retro]
+[Wave 1: HOT + CI] ─────── parallel, ~1 час
+   │
+   ▼
+[Wave 2: Monitoring audit + Turbopack + Screenshot research] ── parallel, ~2-3 часа
+   │
+   ▼
+[Wave 3: Planning hygiene + GSD alignment + markdownlint] ── ~1-1.5 часа
+   │
+   ▼
+[Wave 4: closure + retro] ─── ~30 мин
 ```
 
-### Spec-updates
-
-```text
-┌─ Документы, которые обновятся за ночь ─────────────┐
-│ • .planning/memory/2026-05-14-night-marathon.md    │
-│ • .planning/session-retros/NEXT-ACTIONS.md         │
-│ • CLAUDE.md: Conventions — add audit-log пункт     │
-│ • CLAUDE.md: Conventions — add docker-db _uat      │
-│   suffix как обязательный                          │
-│ • apps/web/playwright.config.ts: добавить sweep    │
-│ • PR #3 description: список 36 feedback statuses   │
-└────────────────────────────────────────────────────┘
-```
-
-«От человека одной строкой»: утром approve PR #3 в GitLab UI после прогона
-Playwright и просмотра NEXT-ACTIONS.md. Всё остальное — автономно за ночь.
+«От человека»: ничего активного по ходу спринта (Playwright заменяет ручной
+клик). В конце — выбрать следующий milestone из backlog.
 
 ---
 
 ## Architecture context
 
-```text
-[Browser /admin?tab=… page] ──tRPC mutation──▶ [tRPC.dev.wipe / reseed]
-                                                    │
-                                                    ▼
-                              [child_process: pnpm exec tsx prisma/wipe-manual-uat.ts]
-                                                    │
-                                                    ▼
-                                       [prisma/_destructive-guard.ts]
-                                                    │
-                              checks host + db-name vs ALLOW_PROD_DESTRUCTIVE
-                                                    │
-                              ✗ FAIL: host=postgres, db=customreport (no _uat)
-                              ✓ FIX: rename docker db → customreport_uat
-                                                    │
-                                                    ▼
-                                       [prisma migrate reset --force]
-                                                    │
-                                                    ▼
-                                       [prisma/seed.ts (manual-uat variant)]
-```
+Что меняем по слоям:
 
 ```text
-[Lead form /lead/report/<id>] ──useReportForm──▶ [trpc.report.update]
-       │                                              │
-       │                                              ▼
-       │                                       [zod schema validate]
-       │                                              │
-       ▼                                  fail: priorities.min(1) at submit
-[StageMultiSelect]                          while user has 0 priorities
-   bug: chips not                                     │
-   highlighted in edit                                ▼
-   mode (D-13)                              [400 + toast.error]
-```
+[Playwright e2e layer]
+   apps/web/e2e/regression-uat-v7.spec.ts
+       └── ДОПИСАТЬ test для D-0/H-1
+           заменяет manual click "Wipe & manual-UAT seed"
 
-```text
-[Head dashboard] ──trpc.dashboard.current──▶ [DashboardService.list]
-       │                                              │
-       ▼                                              ▼
-[ActivityLivePanel]                          where: groupId IN (
-   showing 6 entries                            user.groupAccess[].groupId)
-   for Natalya (D-32)                                │
-       │                                              ▼
-       └─ scope leak: includes leads               returns wider set than
-          outside her group                         viewer's groupAccess
+[CI layer]
+   .github/workflows/ci.yml (NEW)
+       ├── lint job (pnpm prettier --check + eslint)
+       ├── typecheck job (web + api)
+       ├── unit job (vitest @ web)
+       └── e2e job (Playwright regression-uat-v7.spec.ts)
+
+[Observability layer — уже задеплоено в v8.0 Phase 37]
+   docker-compose.observability.yml
+       ├── Prometheus (scraping :3002/metrics)
+       ├── Grafana (deploy/grafana-dashboard-*.json)
+       └── OTel collector
+   audit: docker compose up, hit /metrics, открыть Grafana 3000,
+   проверить что dashboards рендерятся с реальными данными
+
+[Next.js build layer]
+   apps/web/next.config.ts
+       └── ВКЛЮЧИТЬ turbopack experiment, измерить:
+           cold start, hot reload, bundle size
+
+[Screenshot research layer — read-only, NO UI code changes]
+   apps/web/e2e/screenshots.spec.ts (NEW)
+       └── проходит ключевые страницы 4 ролей, сохраняет
+           PNG в apps/web/playwright-report/screenshots/.
+           Памятник research, не изменяет код страниц.
+   .planning/memory/2026-05-1X-background-research.md (NEW)
+       └── идеи (линии / паттерны / accents) + список
+           «что улучшить» со ссылками на скриншоты.
 ```
 
 ---
 
-## Review state (current branch)
+## Best practices, применяемые в спринте
 
-```text
-┌─ Untracked / uncommitted ──────────────────────────┐
-│ M  apps/web/src/app/api/revalidate-org/route.ts    │ H-2
-│ M  prisma/_destructive-guard.ts                    │ H-1
-│ ?? prisma/migrations/                              │
-│      20260514140000_h3_report_open_dedup_safe/     │ H-3
-│ ?? .planning/memory/                               │
-│      2026-05-13-plan-formation-verbatim-…md        │
-│      2026-05-14-0105-uat-v7-repair-handoff.md      │
-└────────────────────────────────────────────────────┘
+> Это явный раздел чтобы не было «по best practice» в воздухе —
+> вот конкретные правила, которым следуем.
 
-┌─ Open feedback points (36 total, classified) ─────┐
-│ T1 quick (≤30мин)         14                       │
-│ T2 medium (research+code) 12                       │
-│ T3 large (research memo)   6                       │
-│ T4 infra (Playwright/MCP)  4                       │
-└────────────────────────────────────────────────────┘
-```
+### Тестирование
 
-PR #3 (`fix/PRJ-2/uat-v7-2026-05-12` → main) уже существует, +152 коммита; новые
-ночные коммиты лягут поверх, описание PR обновим после wave-H.
+1. **Playwright over manual UAT** — если сценарий воспроизводим в headless
+   браузере, он становится spec'ом. Ручной UAT остаётся только для:
+   реального iOS/Android устройства, копирования в буфер обмена системы,
+   PDF-печати с физического принтера. Wipe-flow не из этих категорий →
+   автоматизируется.
+2. **TDD-first для bug fix** — fix landing с failing spec, который перед
+   fix красный, после fix зелёный. Не «спека после фикса по памяти».
+3. **regression-uat-v7.spec.ts grows, не fragments** — все D-_/ H-_
+   проверки в один файл, чтобы grep по `D-XX` находил владельца за 1 шаг.
+4. **storageState reuse** — auth.setup.ts уже выпускает 4 роли (lead/head/
+   admin/viewer). Новые specs используют существующие, не пере-логинятся.
+
+### CI
+
+1. **GitHub Actions matrix-free для старта** — отдельные jobs (lint,
+   typecheck, test, e2e), но без matrix node-version пока. Сначала
+   простой baseline, потом расширение.
+2. **pnpm cache + Turborepo cache** — `actions/cache` на `~/.pnpm-store`
+   и `node_modules/.cache/turbo`. Без этого первый прогон ~5 мин,
+   с кешем ~1 мин.
+3. **Playwright browsers cache** — `actions/cache` на `~/.cache/ms-playwright`,
+   иначе 200MB chromium качается каждый раз.
+4. **fail-fast: false на test/e2e jobs** — чтобы один flaky spec не
+   маскировал реальные баги в других jobs.
+5. **No --no-verify, no force push** — это в `~/.claude/rules/behavior.md`
+   и `bash-defaults.md`. Pre-commit hooks обязаны быть green.
+
+### Observability
+
+1. **Docker compose split** — `docker-compose.yml` для app stack,
+   `docker-compose.observability.yml` для metrics stack. Уже есть в репо.
+   Не мерджить — иначе local dev не запустится без Prometheus.
+2. **Dashboard JSON в `deploy/grafana-dashboard-*.json`** — версионируется
+   в git, не «настроил руками и забыл». Изменения через JSON diff.
+3. **Audit > add** — Phase 37 уже задеплоен. Сначала audit что работает
+   и что нет. Только потом — fixes. Не «давай добавим ещё панель».
+
+### Performance
+
+1. **Turbopack как опыт, не commitment** — включить, замерить, написать
+   memo с цифрами, принять решение. Если adopt → отдельный PR.
+   Если reject → memo остаётся как «мы это проверяли, вот причина».
+2. **Measure before optimize** — cold start, hot reload, bundle size —
+   через CLI таймеры, не «кажется быстрее».
+
+### Документация
+
+1. **TODO discipline (CLAUDE.md convention 2026-05-11)** — каждое
+   deferred-решение в коде сопровождается `TODO(<ref>)` + заглушка +
+   метрика. Никаких silent stubs.
+2. **UI strings English (CLAUDE.md 2026-05-11)** — все новые UI-литералы
+   в коде на английском. Русские строки только если data из БД.
+3. **memory + retro** — каждый закрытый wave пишется в
+   `.planning/memory/2026-05-1X-<name>.md`. STATE.md обновляется после
+   каждой волны, не в конце.
 
 ---
 
 ## Стратегия выполнения
 
-### Wave-A — wipe-unblock (10–15 мин, КРИТИЧНО, делается ПЕРВЫМ)
+### Wave 1 — HOT closure + Playwright wipe + CI (~1 час, parallel где независимо)
 
-**Цель:** разблокировать ручной UAT через `DevRoleSwitcher → Wipe & manual-UAT seed`.
+Три задачи без общих файлов, выполнение параллельно:
 
-**Решение:** переименовать docker БД `customreport` → `customreport_uat`. Это
-explicit non-prod suffix → `_destructive-guard.ts` (H-1) разрешает destructive op.
-H-1 откатывать **нельзя** — он защищает prod от docker-compose-name-collision.
+#### W1-A: Playwright spec для D-0/H-1 wipe-manual-uat (~20 мин)
 
-Шаги (агент делает сам, Haiku разведка → Sonnet edit):
+**Файл:** `apps/web/e2e/regression-uat-v7.spec.ts` (дописать в существующий
+файл, не плодить новый)
 
-```text
-[1] docker-compose.yml:
-       POSTGRES_DB: customreport         → customreport_uat
-       DATABASE_URL: …/customreport      → …/customreport_uat (2 места)
-[2] .env, .env.test, .env.example, apps/web/.env, apps/web/.env.local,
-    apps/web/.env.example, apps/api/.env* — grep "customreport" и
-    заменить только URL-path-segment (без затрагивания user='customreport')
-[3] docker compose down -v   (удаляет старый volume customreport)
-    docker compose up -d postgres redis
-    sleep 5; docker compose exec postgres pg_isready -U customreport
-[4] PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=yes \
-        pnpm exec prisma migrate dev
-[5] docker compose restart api web
-[6] curl localhost:3000/api/health    → 200
-[7] open localhost:3000/dev/role-switcher → wipe & reseed manual-uat → 200
+**Что добавить:**
+
+```typescript
+// ---------------------------------------------------------------------------
+// D-0 / H-1 — DevRoleSwitcher wipe-manual-uat works without guard refusal
+// (заменяет ручной клик из ночного марафона)
+// ---------------------------------------------------------------------------
+
+test.describe("D-0/H-1 — DevRoleSwitcher wipe-manual-uat", () => {
+  test("wipe button triggers reseed without guard error", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext(withRole("admin"));
+    const page = await ctx.newPage();
+
+    await page.goto("/dev/role-switcher");
+    await waitReady(page);
+
+    // Find wipe button by data-testid (или по тексту fallback)
+    const wipeBtn = page
+      .getByTestId("dev-role-switcher-wipe-manual-uat")
+      .or(page.getByRole("button", { name: /wipe.*manual.*uat/i }))
+      .first();
+    await expect(wipeBtn).toBeVisible({ timeout: 5_000 });
+
+    await wipeBtn.click();
+
+    // Toast appears (success or error)
+    const toast = page.locator('[data-sonner-toast], [role="status"]');
+    await expect(toast.first()).toBeVisible({ timeout: 60_000 });
+
+    const text = ((await toast.first().textContent()) ?? "").toLowerCase();
+    // Must NOT be guard refusal (H-1 logic)
+    expect(text).not.toMatch(/refus|guard.*forbid|prod.*destructive/i);
+    // Must be success-like
+    expect(text).toMatch(/success|seed|complete|done/i);
+
+    await ctx.close();
+  });
+});
 ```
 
-**Acceptance:** UI-вызов `Wipe & manual-UAT seed` возвращает success-toast, не
-ошибку. Проверяем prisma studio: 4 lead'а Core Development + 2 lead'а Finance.
+**Pre-conditions:**
 
-### Wave-B — commit H-1/H-2/H-3 (5 мин)
+- `docker compose up -d postgres redis api web` — стек поднят
+- POSTGRES_DB = `customreport_uat` (H-1 guard passes)
+- `data-testid="dev-role-switcher-wipe-manual-uat"` существует на button —
+  если нет, добавить в `apps/web/src/components/dev/role-switcher.tsx`
 
-```text
-git add prisma/_destructive-guard.ts \
-        apps/web/src/app/api/revalidate-org/route.ts \
-        prisma/migrations/20260514140000_h3_report_open_dedup_safe/
+**Acceptance:** spec зелёный в локальном прогоне + в CI workflow Wave-1-C.
 
-git commit -m "fix(hardening): H-1 docker-guard + H-2 CSRF origin + H-3 dedup"
+#### W1-B: product-ready closure phase 16/17 + 260426-vxp (~20 мин)
 
-git push origin fix/PRJ-2/uat-v7-2026-05-12
+**Шаги:**
+
+1. `peo-session-scan` на phase 16 + 17 → `.planning/phases/16-INTAKE-2026-05-14.md`
+   и `17-INTAKE-2026-05-14.md`.
+2. Прочитать `.planning/regression/GSD-CLOSURE-PATH-2026-05-08.md` — он
+   уже трекает closure status.
+3. Для каждого item: filed / unfiled / drop. UAT 10/0 уже PASS (см. STATE.md)
+   → закрыть. PDF/theme blocker phase 16 → перевести в backlog как явный
+   ADR.
+4. 260426-vxp: прочитать `.planning/quick/260426-vxp-*` → resolution memo.
+5. STATE.md update: phase 16/17 → «product-ready closed» в Active Blockers.
+
+**Acceptance:** `Active Blockers` секция STATE.md теряет первые два bullet'а
+(product-ready gate + phase 16 human gate). 260426-vxp получает явный
+RESOLUTION.md.
+
+#### W1-C: CI workflow .github/workflows/ci.yml (~20 мин)
+
+**Файл:** `.github/workflows/ci.yml` (NEW)
+
+**Структура:**
+
+```yaml
+name: CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm prettier --check .
+      - run: pnpm lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps: [... pnpm install ...]
+      - run: pnpm --filter @customreport/web exec tsc --noEmit
+      - run: pnpm --filter @customreport/api exec tsc --noEmit
+
+  unit:
+    runs-on: ubuntu-latest
+    steps: [... pnpm install ...]
+      - run: pnpm --filter @customreport/web test --run
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env: { POSTGRES_DB: customreport_uat, POSTGRES_USER: customreport, ... }
+        ports: [5432:5432]
+      redis:
+        image: redis:7-alpine
+        ports: [6379:6379]
+    steps:
+      - ... pnpm install ...
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm --filter @customreport/web exec playwright install --with-deps chromium
+      - run: pnpm prisma migrate deploy
+      - run: pnpm prisma db seed
+      - run: pnpm --filter @customreport/web exec playwright test e2e/regression-uat-v7.spec.ts
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-report, path: apps/web/playwright-report/ }
 ```
 
-Pre-commit hooks (prettier, ESLint, typecheck, lint:md) должны пройти без
-`--no-verify` (Pillar 8). Любой fail — fix root cause, не bypass.
+**Тест перед merge:**
 
-### Wave-C — Playwright + MCP skeleton (20 мин)
+1. Создать feature branch `chore/ci-baseline`
+2. Push, открыть PR
+3. Дождаться 4 зелёных jobs
+4. Merge через `gh pr merge --merge`
 
-**Pillars Playwright:**
+**Acceptance:** `gh run list --limit 5 --branch main` показывает все
+4 jobs green, future PRs не могут влиться без прохождения CI.
 
-```text
-[apps/web/playwright.config.ts]
-   ├── projects:
-   │     ├── lead-form-uat       baseURL=:3000 storageState=lead.json
-   │     ├── admin-uat           storageState=admin.json
-   │     ├── head-dashboard      storageState=head.json
-   │     └── viewer-slides       storageState=viewer.json
-   └── reporter: line + html
+---
 
-[apps/web/tests/e2e/night-marathon-sweep.spec.ts]   (NEW)
-   ├── lead saves draft → reload → chips still selected (D-13/D-15)
-   ├── lead submits with 0 priorities → friendly error (D-21)
-   ├── admin attaches product to group → other group shows lock (D-2)
-   ├── head dashboard activity scoped to user.groupAccess (D-32)
-   ├── viewer /head/slides has no edit/draft UI (D-33)
-   └── recharts SVG tabindex=-1, focusable=false (D-35)
+### Wave 2 — Monitoring audit + Turbopack + Screenshot research (~2-3 часа, parallel)
+
+#### W2-A: Grafana/Prometheus audit (~45 мин)
+
+**Шаги:**
+
+1. `docker compose -f docker-compose.observability.yml up -d`
+2. `curl -sf http://localhost:9090/-/healthy` (Prometheus)
+3. `curl -sf http://localhost:3000/api/health` (Grafana)
+4. Открыть Grafana UI (admin/admin) — проверить:
+   - `deploy/grafana-dashboard-*.json` загружены?
+   - Datasource Prometheus подключён?
+   - Метрики api живые (`up{job="customreport-api"} == 1`)?
+5. Hit endpoints чтобы сгенерить трафик:
+   - `curl localhost:3001/health/live`
+   - login → /head/dashboard в браузере
+6. Проверить в Grafana — графики реагируют?
+
+**Что может быть сломано (типовые места):**
+
+- Dashboard JSON ссылается на старые метрики (`http_requests_total` vs
+  `cr_http_requests_total`)
+- Prometheus scrape target указывает на `localhost:3001` вместо `api:3001`
+  в docker-compose сетке
+- OTel collector не настроен на отправку в Prometheus
+
+**Output:** `.planning/memory/2026-05-1X-grafana-audit.md` —
+{работает / частично / сломано} + список findings + список TODO для отдельной
+фазы (если что-то крупное).
+
+#### W2-B: Turbopack эксперимент (~45 мин)
+
+**Шаги:**
+
+1. Прочитать `.planning/phases/39-performance/` — Turbopack уже был в Phase 39
+   как plan, посмотреть что осталось.
+2. Включить в `apps/web/next.config.ts`:
+
+   ```ts
+   const nextConfig = {
+     // ... existing
+     turbopack: { root: __dirname }, // Next 16 native
+   };
+   ```
+
+3. Измерить с **Webpack** (baseline):
+   - cold start: `time pnpm --filter web dev` до «ready»
+   - hot reload: edit `apps/web/src/app/page.tsx`, замерить ms до refresh
+   - bundle size: `pnpm --filter web build` → `.next/build-manifest.json`
+4. Измерить с **Turbopack**:
+   - `TURBOPACK=true pnpm --filter web dev` (или nextConfig флаг)
+   - те же 3 метрики
+5. Решение:
+   - **adopt** если cold start ≥30% быстрее И hot reload не хуже И build green
+   - **reject** иначе, с явной причиной
+6. Memo: `.planning/memory/2026-05-1X-turbopack-decision.md` с таблицей цифр.
+
+**Если adopt → отдельный PR `chore(perf): enable Turbopack dev mode`.**
+**Если reject → memo как evidence на будущее.**
+
+#### W2-C: Скриншот-проход + research-memo «бэкграунд» (~45-60 мин)
+
+**Контекст:** пользователь явно сказал — это **исследование, не реализация**.
+Текущий бэкграунд (subtle gradient на `/lead/report`) — просто фон, без
+характера. Нужно собрать визуальные данные (скриншоты со всех ключевых
+страниц всех 4 ролей) и набросать идеи, как сделать бэкграунд «не просто
+фоном, а какими-то линиями, чем-то поинтереснее». Решение «делать ли
+ребренд, тёмную тему, и какой конкретно стиль бэкграунда» принимается
+пользователем ПОСЛЕ прочтения memo.
+
+**Шаг 1 — Playwright screenshot spec (NEW file).**
+
+Файл: `apps/web/e2e/screenshots.spec.ts`
+
+Идея: отдельный spec, переиспользует `withRole()` / `waitReady()` из
+`regression-uat-v7.spec.ts`. Для каждой роли проходит набор страниц,
+для каждой делает `page.screenshot({ path, fullPage: true })`.
+
+```typescript
+import * as path from "path";
+import { test, type Page } from "@playwright/test";
+
+const AUTH_DIR = path.join(__dirname, ".auth");
+const OUT_DIR = path.join(__dirname, "..", "playwright-report", "screenshots");
+
+function withRole(role: "lead" | "head" | "admin" | "viewer") {
+  return { storageState: path.join(AUTH_DIR, `${role}.json`) };
+}
+
+async function waitReady(page: Page) {
+  await page.waitForSelector("#main-content", {
+    state: "visible",
+    timeout: 15_000,
+  });
+  await page.waitForLoadState("domcontentloaded", { timeout: 15_000 });
+}
+
+const PAGES_BY_ROLE: Record<string, { path: string; name: string }[]> = {
+  lead: [
+    { path: "/lead/report", name: "lead-report" },
+    { path: "/reports?tab=drafts", name: "lead-drafts" },
+  ],
+  head: [
+    { path: "/head/dashboard", name: "head-dashboard" },
+    { path: "/reports", name: "head-reports" },
+  ],
+  admin: [
+    { path: "/admin", name: "admin-home" },
+    { path: "/admin?tab=reminders", name: "admin-reminders" },
+    { path: "/admin?tab=settings", name: "admin-settings" },
+  ],
+  viewer: [{ path: "/head/dashboard", name: "viewer-dashboard" }],
+};
+
+for (const [role, pages] of Object.entries(PAGES_BY_ROLE)) {
+  test.describe(`screenshots — ${role}`, () => {
+    for (const p of pages) {
+      test(`${role}/${p.name}`, async ({ browser }) => {
+        const ctx = await browser.newContext({
+          ...withRole(role as "lead"),
+          viewport: { width: 1440, height: 900 },
+        });
+        const page = await ctx.newPage();
+        await page.goto(p.path);
+        if (p.path.includes("/lead/report")) {
+          await page.waitForURL((url) =>
+            url.pathname.includes("/lead/report/"),
+          );
+        }
+        await waitReady(page);
+        await page.screenshot({
+          path: path.join(OUT_DIR, `${role}-${p.name}.png`),
+          fullPage: true,
+        });
+        await ctx.close();
+      });
+    }
+  });
+}
 ```
 
-**chrome-devtools MCP (`mcp__plugin_chrome-devtools-mcp_chrome-devtools__*`)** —
-доступен из system reminders. Используется на wave-G для визуальной верификации:
-скриншоты до/после, network throttle, console errors == 0.
+**Acceptance шага 1:** запуск `playwright test e2e/screenshots.spec.ts`
+кладёт ≥8 PNG в `apps/web/playwright-report/screenshots/`. Spec
+гарантированно зелёный (только goto + screenshot, никаких assertions).
 
-### Wave-D — T1 quick fixes (14 точек, 3 часа, параллельно по 4)
+**Шаг 2 — Research-memo `.planning/memory/2026-05-1X-background-research.md`.**
 
-Параллельные подсводы для Haiku:
+Структура memo:
 
 ```text
-agent A (Haiku) — Recharts a11y + lead form micro:
-   D-35 product-kpi-card.tsx:22 ResponsiveContainer
-        → wrap with <div aria-hidden role="img" aria-label="trend">
-          ResponsiveContainer cannot tabIndex itself; mute the SVG via
-          svgProps={{ tabIndex: -1, focusable: false }} on LineChart
-   D-12 item-edit-dialog.tsx state pill "In Progress" не обновляется
-        → setState внутри onClick + re-render проверка
-   D-14 decision-edit-dialog.tsx grid sm:grid-cols-2 — labels выше полей
-        → grid auto-flow row на mobile, labelы стак, поля стак
+1. Текущее состояние (per-page заметки + ссылки на скриншоты)
+   - lead/report          → screenshots/lead-lead-report.png
+     текущий фон: subtle green gradient. Замечание: …
+   - head/dashboard       → screenshots/head-head-dashboard.png
+     текущий фон: чистый белый. Замечание: …
+   - …
 
-agent B (Haiku) — StageMultiSelect:
-   D-13 / D-15 stage-multi-select.tsx
-        → при edit, начальные value пробрасываются из item.stages
-        → check defaultValues init in form.reset(item) call site
-   D-15 risks-section.tsx "All stages" pill
-        → если stages.length === ALL_STAGES.length показать "All stages",
-          иначе перечислить выбранные через запятую
+2. Идеи направлений (research, не commitment)
+   - Линии:  тонкие диагональные / blueprint-grid / topographic
+   - Паттерны: subtle dots, noise-texture, gradient-mesh
+   - Accents: per-role tint (lead = green, head = blue), per-section
+     accent-bars
+   - Тёмная тема: оценка готовности design tokens
 
-agent C (Haiku) — Reports & Activity:
-   D-23/D-24 reports/page.tsx + search-input
-        → wrap with <Suspense fallback={<SearchSkeleton/>}>
-        → list rendered via skeleton until query ready
-   D-27/D-36 Agentation overlay позиция
-        → агентация это external package; expose mountPosition prop
-          или position: fixed top-4 right-4 (CSS override через layer)
-   D-30 activity-live-panel.tsx link target
-        → если report.state=draft, не делать href — показать tooltip
-          "Lead ещё дописывает, отчёт не отправлен"
+3. «Что можно улучшить» (per-страница, не более 1-2 пунктов)
+   - lead/report: фон ровный, можно добавить subtle line-art сверху
+   - head/dashboard: KPI cards теряются на белом, бэкграунд мог бы
+     рамить их accent-зоной
+   - …
 
-agent D (Haiku) — Coming soon badges:
-   D-7  reminders-tab PolicyRow — Coming Soon badge + tooltip
-   D-9  settings-tab AI/CI integrations стилизация под slack
-   D-25 lead-history-sidebar.tsx → Coming Soon + tooltip
-   D-29 head dashboard «где метрики» — добавить «Period KPIs» секцию-заглушку
-   D-1  login-page.client.tsx уже фикснут в prev session — verify only
+4. Открытые вопросы для пользователя
+   - Какое направление развивать (линии/паттерны/accents)?
+   - Делать ли тёмную тему вообще?
+   - Per-role tinting — ок или избыточно?
 ```
 
-### Wave-E — T2 medium fixes (12 точек, 4 часа)
+**Acceptance шага 2:** memo существует, ссылается на каждый PNG, содержит
+≥3 идеи направлений и ≥5 «что улучшить» наблюдений. **Никаких UI-правок.**
+
+**Жёсткие границы scope:**
+
+- НЕ менять `*.tsx` страниц / компонентов.
+- НЕ добавлять CSS variables или Tailwind utility-классы для бэкграунда.
+- НЕ трогать `packages/ui/src/styles/globals.css`.
+- НЕ генерировать новые Tailwind / shadcn компоненты под идеи.
+- Memo пишется в `.planning/memory/`, не в `apps/web/`.
+
+**Шаг 3 — Frozen-contract fixation (обязательный).**
+
+Контракт «research only — никакой реализации без явного решения пользователя»
+должен быть зафиксирован в **трёх местах**, чтобы будущие сессии не
+интерпретировали скриншоты как «давай начнём делать gradient»:
+
+1. **Project-level CLAUDE.md** (`/Users/ap/work/customreport/CLAUDE.md`) —
+   новая секция `### UI/визуал — research before implementation
+(2026-05-1X)`:
+   - правило: визуальные изменения (бэкграунды, акценты, темы, ребренд)
+     реализуются ТОЛЬКО после прочтения research memo пользователем и
+     явного указания «делаем вот это»
+   - cross-ref на `.planning/memory/2026-05-1X-background-research.md`
+   - запрещены: «давай попробуем X», «применим gradient на Y страницы»,
+     любые upstream-эвристики без user sign-off
+
+2. **Auto-memory** (`/Users/ap/.claude/projects/-Users-ap-work-customreport/memory/`):
+   - новый файл `feedback_ui_visual_research_first.md` (тип: feedback)
+   - запись в `MEMORY.md` index с описанием правила
+   - содержит цитату пользователя 2026-05-14 как ground truth
+
+3. **Sам research memo** (`.planning/memory/2026-05-1X-background-research.md`):
+   - в начале большой блок `> FROZEN CONTRACT — research-only`
+   - перечисление того, что НЕ должно произойти из этого memo
+   - инструкция: «следующий agent, читающий это, не должен начинать
+     реализацию без явного решения пользователя»
+
+**Acceptance шага 3:** все три файла существуют, содержат cross-references
+друг на друга, и `grep -rn "research before implementation" .planning/
+CLAUDE.md` находит ≥3 совпадения.
+
+**Парковка:** если время Wave 2 заканчивается — оставить только Шаг 1
+(скриншоты) + Шаг 3 (fixation в CLAUDE.md + auto-memory). Шаг 2 (memo
+с идеями) можно дописать позже — но fixation должна быть всегда, иначе
+теряем контекст между сессиями.
+
+---
+
+### Wave 3 — Planning hygiene + GSD alignment + markdownlint (~1-1.5 часа)
+
+**Контекст пользователя 2026-05-14:** «Также посмотри Markdownlint файлы…
+сконсолидировали всё в пленинге и вообще выправили метрики GSD, чтобы…
+по его документации всё было. Поresearчи контекстным сем, как GSD всё
+правильно выправить».
+
+Wave разделена на три потока (могут идти параллельно):
+
+#### W3-A: Markdownlint baseline (~25 мин)
+
+**Текущее состояние:** в `package.json` нет `markdownlint-cli2`, нет
+`.markdownlint.json`, husky `pre-commit` не валидирует `.md`. Накопилось
+много `.planning/*.md` с разнородным стилем (H1-дубли, висячие списки,
+trailing whitespace).
+
+**Шаги:**
+
+1. Добавить devDep: `markdownlint-cli2` (актуальная major — проверить через
+   Context7 / `mcp__plugin_context7_context7__resolve-library-id`).
+2. Создать `.markdownlint.json` (root):
+
+   ```json
+   {
+     "default": true,
+     "MD013": { "line_length": 120, "code_blocks": false, "tables": false },
+     "MD024": { "siblings_only": true },
+     "MD033": false,
+     "MD041": false,
+     "MD034": false
+   }
+   ```
+
+   Mотивация порогов:
+   - `MD013` line_length 120 — реалистично для ASCII frames в planning
+   - `MD024` siblings_only — позволяет повторяющиеся `### Шаги` в разных
+     секциях
+   - `MD033` off — мы используем raw HTML local для блоков `<details>`
+   - `MD041` off — fragments в `.planning/memory/` могут начинаться с
+     frontmatter, не с H1
+   - `MD034` off — bare URL'ы в session-retros это нормально
+
+3. Скрипты в root `package.json`:
+
+   ```json
+   "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#dist\" \"#.next\" \"#playwright-report\"",
+   "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#dist\" \"#.next\" \"#playwright-report\""
+   ```
+
+4. Husky `pre-commit` (через lint-staged): добавить
+   `"*.md": "markdownlint-cli2 --fix"`.
+5. Прогнать `pnpm lint:md:fix`, оценить residual ошибки, при необходимости
+   расширить ignore-list или скорректировать пороги. Атомарный коммит
+   `chore(lint): markdownlint baseline + auto-fixes`.
+
+**Acceptance:** `pnpm lint:md` зелёный на main. CI workflow (W1-C)
+расширен новым job `lint-md`.
+
+#### W3-B: `.planning/` консолидация (~30 мин)
+
+**Текущее состояние (см. `ls .planning/`):** в корне накопилось ~15
+audit/handoff файлов разной свежести (`v2.0-MILESTONE-AUDIT.md`,
+`v4.0-MILESTONE-AUDIT.md`, ... `v6.0-REVIEW-CLOSEOUT.md`,
+`HANDOFF-2026-05-04.md`, `PERF-AUDIT-2026-05.md`). Они засоряют корень и
+ломают навигацию.
+
+**Шаги:**
+
+1. Каталог `.planning/local-archive/` уже существует — переместить туда
+   все милстон-аудиты v2-v6 и handoff-ы старше 2026-05-08.
+2. Сохранить в корне ТОЛЬКО актуальные документы:
+   - `STATE.md`, `ROADMAP.md`, `PROJECT.md`, `REQUIREMENTS.md`
+   - `INTAKE-2026-05-11.md` (свежий), `NEXT-SESSION-PLAN.md` (живой)
+   - `config.json`, `.continue-here.md`
+   - регрессионные / interaction-inventory остаются, если последняя
+     модификация ≤ 14 дней.
+3. Создать `.planning/local-archive/INDEX.md` со списком архивных файлов
+   и причинами (один-строчник на файл).
+4. Атомарный коммит `chore(planning): archive stale audits to local-archive`.
+
+**Acceptance:** `ls .planning/*.md | wc -l` → ≤8 файлов (вместо текущих ~15).
+Каждый перемещённый файл есть в `local-archive/INDEX.md`.
+
+#### W3-C: GSD format alignment (~30-40 мин)
+
+**Цель:** выправить `STATE.md` / `ROADMAP.md` / phase-документы под
+canonical GSD format так, чтобы `gsd-sdk query state` (если он работает)
+и `/gsd-progress` корректно парсили metadata.
+
+**Шаги:**
+
+1. **Research canonical format через Context7:**
+   - `resolve-library-id` → ищем `get-shit-done`
+   - либо `microsoft-docs` / `WebSearch "gsd-sdk STATE.md format 2026"`
+   - читаем `~/.claude/get-shit-done/workflows/settings.md`,
+     `~/.claude/skills/gsd-manager/SKILL.md` (уже частично прочитано)
+   - выписываем required-fields для frontmatter: `gsd_state_version`,
+     `milestone`, `status`, `last_updated`, `progress.{total,completed,percent}`.
+2. **STATE.md frontmatter audit:** текущий `progress.percent: 100` при
+   `0/3 phases complete` для v8.1 — внутренний конфликт. Исправить на
+   честные цифры (v8.1 ещё в работе, percent ≠ 100 пока phases не закрыты).
+3. **ROADMAP.md/REQUIREMENTS.md** — проверить, что frontmatter содержит
+   `milestone:` поле, заголовки H1/H2 уникальны (под MD024 siblings-only).
+4. **Phase folders** — пройти по `phases/40-*`, `phases/41-*`, `phases/42-*`:
+   у каждого должен быть `CONTEXT.md` + `PLAN.md` (если фаза начата) с
+   GSD-frontmatter (`phase`, `status`, `parent_milestone`).
+5. **GSD checklist sync:** запустить `pnpm gsd:checklist:sync` (есть в
+   scripts) — он должен пройти без ошибок.
+
+**Acceptance:**
+
+- `pnpm gsd:checklist:sync` → exit 0
+- STATE.md `progress.percent` отражает реальное состояние v8.1 (не 100)
+- В каждом активном phase folder есть CONTEXT.md с canonical frontmatter
+
+**Note про Context7:** если `context7` MCP не отвечает или library-id для
+`get-shit-done` не находится — fallback на чтение
+`~/.claude/get-shit-done/workflows/*.md` напрямую (read-only) и
+`~/.claude/skills/gsd-*/SKILL.md`. Это и есть source-of-truth GSD format
+на этой машине.
+
+---
+
+### Wave 4 — closure + retro (~30 мин)
 
 ```text
-E-1  D-2  GroupProductsEditor: disable products уже в других группах
-          → fetch listProductGroups в editor; products с existing groupId
-            !== currentGroupId → disabled + badge "В группе X"
-E-2  D-32 ActivityLivePanel scope leak (finance shows 6)
-          → audit DashboardService.listActivity; убедиться что фильтр по
-            user.viewerGroupAccess[].groupId применяется
-E-3  D-31 head dashboard "коллизии данных" — research memo + SQL audit
-          → write .planning/memory/2026-05-14-data-collision-audit.md
-            запустить запрос: select user.id, count(distinct product.groupId)
-            from ProductLead join…
-E-4  D-19 VersionHistoryNav diff preview
-          → новый компонент <VersionDiffPreview from=A to=B> показывает
-            changed sections counts; используем jsondiffpatch
-E-5  D-20 VersionHistoryNav arrows broken
-          → debug currentVersionIndex увеличение/уменьшение
-            написать E2E spec до фикса
-E-6  D-22 Save Version conflict при rollback
-          → выбрать политику: optimistic copy-forward (рекомендую)
-            VS hard block while in old version
-E-7  D-21 Submit Report priorities array empty error
-          → либо разрешить empty при draft, либо явный UI message
-            "Добавь хотя бы одну приоритетную задачу"
-            рекомендую: разрешить empty на draft, требовать на submit
-E-8  D-5  settings users-tab: warning при смене group
-          → AlertDialog с предпросмотром: «у пользователя N draft'ов в
-            старой группе — они сохранятся как историческая привязка»
-E-9  D-3/D-26/D-34 Audit log surface для всех ролей
-          → новая страница /audit?scope=mine|group|all
-          → role gating: lead = mine, head = group, admin = all
-          → backend: уже есть `ActivityEvent` модель?
-E-10 D-33 viewer /head/slides — push reminder + highlight slide
-          → "remind lead X" mutation, в slide-viewer добавить badge "needs update"
-E-11 D-11 lead form background — design tokens
-          → линейный градиент под header, subtle pattern
-            заимствовать из landing-page.client.tsx
-E-12 D-18 LeadForm "DTP1·Артём З.·Lead" — убрать или collapse mobile
-```
+1. STATE.md финальный update:
+   - phase 16/17 → closed
+   - 260426-vxp → resolved
+   - milestone v8.1 → still IN PROGRESS (3 фазы parked)
+   - new: «Sprint 2026-05-14: HOT closure + monitoring + turbopack done»
 
-### Wave-F — T3 research memos (6 точек, 2 часа)
+2. .planning/memory/2026-05-1X-post-marathon-sprint.md
+   - Что закрыто, что parked, какие findings из Grafana
+   - Turbopack решение
+   - Next: какой milestone дальше?
 
-```text
-F-1  D-6   Period archive snapshots — что сохраняется и зачем
-F-2  D-8   PeriodsSubTab "любой день периода" — продуктовая логика
-F-3  D-17  Period navigator "период написать наглядно"
-F-4  D-16  Priorities chip styling — первая буква + цвет стадии
-F-5  D-29  Head dashboard метрики Артёма — спец КПИ ассемблер
-F-6  D-34  Viewer dashboard semantics — vs head, audit, send-message
-```
+3. .planning/memory/MEMORY.md — добавить запись с указателем
 
-Каждый F-\* — отдельный markdown в `.planning/memory/`, ровно 1 экран, с
-рекомендацией и trade-off. Не код, только направление.
+4. peo-retro full на ru → итоговое summary
 
-### Wave-G — MCP sweep + Playwright run (45 мин)
-
-```text
-[mcp chrome-devtools list_pages]            → ensure dev server reachable
-[take_screenshot /admin?tab=users]          → before vs after diff
-[list_console_messages /head/dashboard]     → assert errors == 0
-[take_snapshot /reports?tab=drafts]         → a11y tree, role hierarchy
-[playwright self-uat run]                   → all 6 specs green
-```
-
-### Wave-H — commit + push + PR update + retro (30 мин)
-
-```text
-[git add -p]      по 1 thematic коммит за раз:
-                  fix(admin): D-2 lock multi-group products
-                  fix(lead-form): D-12..D-22 stage / version / decisions
-                  fix(dashboard): D-29/D-32 scope + metrics
-                  feat(audit): D-3 audit log surface
-                  feat(playwright): D-pw self-uat sweep
-                  chore(docker): rename db customreport_uat for guard
-                  docs(memory): night-marathon retro
-
-[git push]        pre-push hook = unit tests → must pass
-[gh pr view 3]    update body with feedback resolution table
-[peo-retro full]  short closing retro to chat
+5. PR `feat/post-marathon-sprint` → main
+   - Описание со списком закрытого
+   - Ссылка на memo
+   - Approve после CI green
 ```
 
 ---
@@ -380,161 +772,187 @@ F-6  D-34  Viewer dashboard semantics — vs head, audit, send-message
 
 ```text
 ┌─ ▲ ОТ ТЕБЯ ────────────────────────────────────────┐
-│  (ничего на этой ночи — иди занимайся своим)       │
 │                                                    │
-│  Утром:                                            │
-│   • просмотр .planning/memory/2026-05-14-night-… │
-│   • approve PR #3 в GitLab UI (если pipeline ✓)    │
-│   • прогон ручного UAT 10–15 мин по чек-листу из   │
-│     NEXT-ACTIONS.md (любая точка из D-* должна     │
-│     работать или быть Coming Soon)                 │
+│ В Wave 1: ничего (Playwright заменил ручной клик)  │
+│                                                    │
+│ В Wave 2: ничего (всё автономно)                   │
+│   Опционально: если хочешь визуально посмотреть    │
+│   Grafana дашборд после моего audit — открой       │
+│   http://localhost:3000 (admin/admin)              │
+│                                                    │
+│ В Wave 3: ничего (markdownlint + planning hygiene  │
+│   + GSD format alignment — всё автономно)          │
+│                                                    │
+│ В Wave 4: выбрать следующий milestone из backlog:  │
+│   • Phase 44 Reminder Policies (UFB-036) — admin   │
+│     полировка                                      │
+│   • Phase 46 Group-Scope Visibility (UFB-040) —    │
+│     security полировка                             │
+│   • Phase 47 Head Presentation (UFB-041) — UI      │
+│   • Phase 50 period-lifecycle                      │
+│   • Phase 54 ai-rag activation                     │
+│                                                    │
 └────────────────────────────────────────────────────┘
 ```
 
-Всё остальное — Я делаю сам.
+Всё остальное — Я делаю сам (planning, code, tests, push, PR, retro).
 
 ---
 
 ## Open questions
 
-| #   | вопрос                                             | как решу автономно                                                                                   | когда эскалирую                                                                                 |
-| --- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| 1   | D-22 Save Version conflict policy                  | Реализую optimistic copy-forward (старая версия становится новой текущей), помечу `policy:v1` в memo | если pre-existing E2E зависит на hard-block — оставлю TODO                                      |
-| 2   | D-21 priorities empty at submit                    | Разрешу empty в draft, потребую >=1 в submit; toast «добавь хотя бы один приоритет»                  | если product owner просил наоборот — TODO + memo                                                |
-| 3   | D-3 audit log scope (mine/group/all)               | Lead=mine, Head=group, Admin=all (по правилу least-privilege)                                        | если в PRD написано иначе — оставлю как stub + Coming Soon                                      |
-| 4   | D-11 lead form background — какой стиль            | Скопирую gradient из landing-page (он одобрен ранее)                                                 | если в landing нет — оставлю текущий + Coming Soon                                              |
-| 5   | docker DB rename — миграция данных текущей dev БД? | Volume сносится `docker compose down -v` — данные dev'а **dropped**, восстанавливаются seed'ом       | если пользователь хочет сохранить ручные тестовые данные — приостановлюсь после wave-A и спрошу |
+| #   | вопрос                                                                           | как решу автономно                                                                                                                                | когда эскалирую                                                          |
+| --- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 1   | W1-A: на wipe-кнопке нет `data-testid`?                                          | Добавлю `data-testid="dev-role-switcher-wipe-manual-uat"` в `apps/web/src/components/dev/role-switcher.tsx`                                       | не эскалирую — это 1-line edit                                           |
+| 2   | W1-C: какой Node version в CI?                                                   | 22 LTS (соответствует tech-stack.md «Node.js 22.x LTS»)                                                                                           | если в репо есть `.nvmrc` с другой версией → возьму её                   |
+| 3   | W2-A: что если Grafana вообще не запускается?                                    | Отдельный плановый item «Phase 37 observability re-verify», memo с findings, не делаю в этом спринте                                              | если блокирует Wave 3 → спрошу                                           |
+| 4   | W2-B: Turbopack adopt criterion 30% — это hard threshold?                        | Soft: если 25-30% и hot reload ≤ baseline → adopt с note. Если <25% → reject                                                                      | если adopt всё равно ломает что-то невидимое — memo + reject             |
+| 5   | W2-C: сколько страниц снимать в screenshot-spec'е?                               | Стартовый набор: 8 (см. `PAGES_BY_ROLE` в spec). Это покрывает 4 роли и ключевые экраны. Никакой UI-имплементации                                 | если пользователь захочет идею «делать ребренд» — отдельный план         |
+| 6   | W3-A: какой `markdownlint-cli2` ставить — major 0.x или 1.x?                     | Через Context7 / `mcp__plugin_context7_context7__resolve-library-id` найду актуальный major на 2026-05. Fallback — npm registry latest            | если major-bump ломает уже принятые рантаймом MD-файлы → memo с decision |
+| 7   | W3-B: куда переносить `INTERACTION-INVENTORY-2026-05-05.md`?                     | Если ≤14 дней — оставляю в корне; если старше — в `local-archive/`. Сейчас 2026-05-05 + 14 = 2026-05-19 → пока в корне, проверю по реальной mtime | не эскалирую                                                             |
+| 8   | W3-C: STATE.md `progress.percent: 100` при `0/3 phases` v8.1 — баг или фича GSD? | Пересчитаю по правилу `completed_phases / total_phases * 100` для текущего milestone. 0/3 = 0% (а не overall 36/41 = 88%)                         | если поломает gsd-progress парсер — фиксирую через memo                  |
+| 9   | Wave 4: какой milestone дальше?                                                  | Не выбираю автономно — это продуктовое решение. Подготовлю краткое сравнение 5 опций к концу Wave 4                                               | эскалирую всегда                                                         |
 
 ---
 
 ## Files to modify
 
-### Wave-A (wipe-unblock)
+### Wave 1
 
-- `docker-compose.yml` — `POSTGRES_DB`, 2× `DATABASE_URL`
-- `.env`, `.env.test`, `.env.example`
-- `apps/web/.env`, `apps/web/.env.local`, `apps/web/.env.example`
+```text
+- apps/web/e2e/regression-uat-v7.spec.ts            UPDATE (+D-0/H-1 spec)
+- apps/web/src/components/dev/role-switcher.tsx     UPDATE (data-testid)
+- .planning/STATE.md                                UPDATE (phase 16/17 closure)
+- .planning/phases/16-INTAKE-2026-05-14.md          NEW
+- .planning/phases/17-INTAKE-2026-05-14.md          NEW
+- .planning/quick/260426-vxp-*/RESOLUTION.md        NEW
+- .github/workflows/ci.yml                          NEW
+```
 
-### Wave-B (hardening commit)
+### Wave 2
 
-- (только git add + commit, файлы уже изменены)
+```text
+- .planning/memory/2026-05-1X-grafana-audit.md           NEW
+- apps/web/next.config.ts                                UPDATE (turbopack flag, conditional)
+- .planning/memory/2026-05-1X-turbopack-decision.md      NEW
+- apps/web/e2e/screenshots.spec.ts                       NEW (no-assertion screenshot pass)
+- .planning/memory/2026-05-1X-background-research.md     NEW (research memo + frozen-contract)
+- CLAUDE.md (project root)                               UPDATE (+«UI/визуал — research first» convention)
+- ~/.claude/projects/-Users-ap-work-customreport/memory/feedback_ui_visual_research_first.md  NEW (auto-memory feedback)
+- ~/.claude/projects/-Users-ap-work-customreport/memory/MEMORY.md  UPDATE (index entry)
+# NB: НЕТ изменений UI-кода в W2-C. Никаких *.tsx / *.css правок.
+```
 
-### Wave-C (Playwright + MCP)
+### Wave 3
 
-- `apps/web/playwright.config.ts` — добавить `night-marathon-sweep` project
-- `apps/web/tests/e2e/night-marathon-sweep.spec.ts` (NEW)
-- `apps/web/tests/e2e/fixtures/lead.json|admin.json|head.json|viewer.json` (NEW)
+```text
+- package.json (root)                              UPDATE (devDep markdownlint-cli2 + scripts)
+- .markdownlint.json                               NEW (lint config, see W3-A)
+- .husky/pre-commit                                UPDATE (lint-staged для *.md)
+- package.json (root) lint-staged                  UPDATE (add "*.md": markdownlint-cli2 --fix)
+- .github/workflows/ci.yml                         UPDATE (+lint-md job)
+- .planning/local-archive/                         POPULATE (move stale audits in)
+- .planning/local-archive/INDEX.md                 NEW (one-line entry per moved file)
+- .planning/STATE.md                               UPDATE (progress.percent recalculated)
+- .planning/ROADMAP.md                             UPDATE (frontmatter normalization if needed)
+- .planning/phases/4{0,1,2}-*/CONTEXT.md           CREATE if missing (canonical frontmatter)
+- .planning/*.md (all)                             AUTO-FIX through markdownlint-cli2 --fix
+```
 
-### Wave-D (T1 quick fixes)
+### Wave 4
 
-- `apps/web/src/components/dashboard/product-kpi-card.tsx:22` — Recharts a11y
-- `apps/web/src/components/lead/item-edit-dialog.tsx:68` — in-progress state
-- `apps/web/src/components/lead/decision-edit-dialog.tsx:17` — grid layout
-- `apps/web/src/components/lead/stage-multi-select.tsx:10` — defaultValue plumbing
-- `apps/web/src/components/lead/risks-section.tsx:104` — "All stages" label
-- `apps/web/src/app/(app)/reports/page.tsx:38` — Suspense + skeletons
-- `apps/web/src/components/agentation/devtools-overlay.tsx` — position prop
-- `apps/web/src/components/dashboard/activity-live-panel.tsx:204` — draft link guard
-- `apps/web/src/components/admin/settings-tab.tsx:2990` — AI/CI integrations style
-- `apps/web/src/components/admin/reminders-tab.tsx` — coming soon badge
-- `apps/web/src/components/lead/lead-history-sidebar.tsx:19` — coming soon
-
-### Wave-E (T2 medium fixes)
-
-- `apps/web/src/components/admin/group-products-editor.tsx` — multi-group lock
-- `apps/api/src/modules/dashboard/dashboard.prisma-repository.ts` — scope filter
-- `apps/web/src/components/lead/version-history-nav.tsx:224` — diff preview + arrows
-- `apps/web/src/components/lead/weekly-report-page.tsx` — priorities submit policy
-- `apps/web/src/components/admin/users-tab.tsx` — group-change warning dialog
-- `apps/web/src/app/(app)/audit/page.tsx` (NEW) — audit log surface
-- `apps/api/src/modules/audit/audit.router.ts` (NEW)
-- `apps/web/src/app/(app)/head/slides/page.tsx` — push reminder + highlight
-- `apps/web/src/app/(app)/lead/report/[reportId]/page.tsx` — background gradient
-
-### Wave-F (T3 memos)
-
-- `.planning/memory/2026-05-14-D6-archive-snapshots.md` (NEW)
-- `.planning/memory/2026-05-14-D8-period-any-day.md` (NEW)
-- `.planning/memory/2026-05-14-D17-period-navigator.md` (NEW)
-- `.planning/memory/2026-05-14-D16-priorities-chip-style.md` (NEW)
-- `.planning/memory/2026-05-14-D29-head-metrics.md` (NEW)
-- `.planning/memory/2026-05-14-D34-viewer-semantics.md` (NEW)
-
-### Wave-H (close)
-
-- `.planning/memory/2026-05-14-night-marathon.md` (NEW)
-- `.planning/session-retros/NEXT-ACTIONS.md` (update)
-- `CLAUDE.md` — Conventions: docker-db `_uat` suffix mandatory
-- `CLAUDE.md` — Conventions: audit-log surface coverage rule
+```text
+- .planning/STATE.md                                UPDATE (final)
+- .planning/memory/2026-05-1X-post-marathon-sprint.md  NEW
+- .planning/memory/MEMORY.md                        UPDATE
+- .planning/session-retros/NEXT-ACTIONS.md          UPDATE
+```
 
 ---
 
 ## Verification
 
 ```bash
-# wave-A
-docker compose down -v
-docker compose up -d postgres redis
-sleep 5 && docker compose exec postgres pg_isready -U customreport
-PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=yes pnpm exec prisma migrate dev
-docker compose restart api web
-curl -sf http://localhost:3000/api/health        # → 200
-# (a) UI dev/role-switcher → Wipe & manual-UAT seed → success toast
-# (b) prisma studio → 4 CD leads + 2 Finance leads
+# Wave 1 — Playwright wipe spec
+rtk pnpm --filter @customreport/web exec playwright test \
+    e2e/regression-uat-v7.spec.ts -g "D-0/H-1"           # → 1 passed
 
-# wave-B
-rtk pnpm --filter @customreport/web exec tsc --noEmit
-rtk pnpm --filter @customreport/api exec tsc --noEmit
-rtk pnpm exec prisma validate
-git diff --check
-git commit && git push       # hooks must pass without --no-verify
+# Wave 1 — STATE.md closure
+rtk grep -n "Phase 16 human gate" .planning/STATE.md     # → должно исчезнуть
 
-# wave-C
-rtk pnpm --filter @customreport/web exec playwright install --with-deps chromium
-rtk pnpm --filter @customreport/web exec playwright test --project=night-marathon-sweep
+# Wave 1 — CI workflow
+rtk gh run list --branch chore/ci-baseline --limit 1     # → success
+rtk gh pr view <ci-PR>                                   # → MERGED
 
-# wave-D/E unit-level
-rtk pnpm --filter @customreport/web test -- product-kpi-card stage-multi-select
-rtk pnpm --filter @customreport/api test -- dashboard.service audit.router
+# Wave 2 — Grafana audit
+docker compose -f docker-compose.observability.yml ps    # → 3 services Up
+curl -sf http://localhost:9090/-/healthy                 # → ok
+curl -sf http://localhost:3000/api/health                # → ok
+# Manually: http://localhost:3000 → dashboards рендерятся
 
-# wave-G MCP sweep
-#   (a) mcp chrome-devtools take_screenshot /admin?tab=users (before/after diff)
-#   (b) list_console_messages — errors == 0 на 4 ключевых URL
-#   (c) playwright test --reporter=html — report зеленый
+# Wave 2 — Turbopack
+time pnpm --filter @customreport/web dev                 # baseline
+TURBOPACK=true time pnpm --filter @customreport/web dev  # measured
+cat .planning/memory/2026-05-1X-turbopack-decision.md    # → adopt|reject + numbers
 
-# wave-H closeout
-rtk git log --oneline -20
-rtk gh pr view 3
+# Wave 2 — Screenshot research
+rtk pnpm --filter @customreport/web exec playwright test \
+    e2e/screenshots.spec.ts                              # все screenshots passed
+ls apps/web/playwright-report/screenshots/*.png | wc -l  # → ≥8
+cat .planning/memory/2026-05-1X-background-research.md   # → memo с идеями + frozen-contract
+grep -rn "research before implementation" .planning/ CLAUDE.md  # ≥3 совпадения
+
+# Wave 3 — markdownlint baseline
+pnpm lint:md                                             # → 0 errors на main
+grep -n "lint-md" .github/workflows/ci.yml               # → CI job exists
+
+# Wave 3 — planning consolidation
+ls .planning/*.md | wc -l                                # → ≤8 файлов
+test -f .planning/local-archive/INDEX.md && cat $_ | head # → archive index есть
+
+# Wave 3 — GSD format alignment
+pnpm gsd:checklist:sync                                  # → exit 0
+grep "percent:" .planning/STATE.md                       # → реалистичное число (не 100 при 0/3)
+ls .planning/phases/40-*/CONTEXT.md .planning/phases/41-*/CONTEXT.md  # → файлы есть
+
+# Wave 4 — closure
+rtk git log --oneline origin/main..HEAD                  # коммиты спринта
+rtk gh pr view <sprint-PR>                               # MERGED
+rtk grep -n "Sprint 2026-05-14" .planning/STATE.md       # запись есть
 ```
 
 ---
 
-## Side deliverables (после approve плана)
+## Side deliverables
 
 ```text
-[1] CLAUDE.md Conventions:
-      • docker-compose DB name MUST carry _uat/_dev/_test suffix
-        (защищает H-1 guard от docker-compose-name-collision)
-      • Audit-log presence — обязательно для каждой роли по правилу
-        least-privilege (lead=mine, head=group, admin=all)
+[1] CLAUDE.md Conventions (project):
+      • CI workflow требование для всех PR в main (после Wave 1)
+      • UI/визуал-решения принимаются ПОСЛЕ research-memo + скриншотов,
+        не до. Никаких «давай добавим gradient» без memo (после W2-C)
 
 [2] .planning/session-retros/NEXT-ACTIONS.md:
-      • очистить устаревшие записи UAT v7.2
-      • добавить новую секцию NIGHT-MARATHON-14-05 со всеми D-* статусами
+      • Обновить под результат спринта
 
 [3] .planning/memory/MEMORY.md:
-      • запись «night marathon 2026-05-14 + D-* статусы»
-      • запись «docker db _uat suffix mandatory after H-1»
-      • запись «audit log surface scope rule lead/head/admin»
+      • Запись «post-marathon sprint done» с указателями на 3 memo
+        (grafana-audit, turbopack-decision, background-research)
 
-[4] PR #3 description:
-      • таблица «feedback point → status (fixed | coming-soon | research-memo)»
-      • ссылка на playwright html report
-      • ссылка на .planning/memory/2026-05-14-night-marathon.md
+[4] PR(s) описания:
+      • W1: chore(ci): baseline CI gate (lint+typecheck+unit+e2e)
+      • W1: test(e2e): replace manual wipe UAT with Playwright spec
+      • W1: docs(state): close phase 16/17 product-ready gate
+      • W2: chore(perf): turbopack adopt/reject decision
+      • W2: test(e2e): add screenshots spec + background research memo
+        (research-only PR; никаких UI-правок)
+      • W3: chore(lint): markdownlint baseline + CI lint-md job
+      • W3: chore(planning): archive stale audits to local-archive
+      • W3: docs(state): GSD format alignment (progress.percent + CONTEXT.md)
+      • W4: docs(memory): post-marathon sprint retro
 
-[5] rules/* (если нет):
-      • уже есть behavior.md и planning.md; ничего не добавляю кроме
-        конкретики в CLAUDE.md Conventions
+[5] CI gate как best practice для будущего:
+      • Все следующие фазы (40-43, 44, 46, 47) merge'атся через PR с green CI
+      • Это закрывает дыру, через которую PR #4 проскочил
 ```
 
 ---
@@ -542,157 +960,20 @@ rtk gh pr view 3
 ## Pillars / rules self-verify
 
 ```text
-┌─ Pillars compliance ───────────────────────────────┐
-│ 1 TDD-first          ✓ playwright spec пишется до E2 │
-│ 2 Always Ask         ✓ 5 open questions в плане    │
-│ 3 Socratic Review    ✓ wave-H retro = self-check   │
-│ 4 Surgical Changes   ✓ каждая D-* — изолированный  │
-│                        commit                       │
-│ 5 Task Tracking      ✓ waves A-H = todo phases     │
-│ 6 Memory             ✓ wave-H пишет memory         │
-│ 7 Plan Before Code   ✓ этот файл = плана           │
-│ 8 Rule Evolution     ✓ CLAUDE.md обновится после   │
-│ 9 Config-First       ✓ .env/.docker-compose только │
-│ 10 Depersonalized    ✓ роли (lead/head/viewer/admin) │
-│ 11 Subagent Parallel ✓ wave-D = 4 Haiku параллельно │
-└────────────────────────────────────────────────────┘
-
-┌─ rules/* compliance ───────────────────────────────┐
-│ language.md         ✓ план RU, термины в `…`       │
-│ visuals.md          ✓ ASCII frames, no wide tables │
-│ planning.md         ✓ все 9 mandatory секций есть  │
-│ behavior.md         ✓ pre-propose self-check (D-0  │
-│                       блокер выявлен до coding)    │
-│ bash-defaults.md    ✓ rtk-префиксы в verification  │
-│ tools.md            ✓ Playwright + MCP скоординированы │
-│ pillars.md          ✓ см выше                      │
-└────────────────────────────────────────────────────┘
-```
-
----
-
-## Regression Scenarios (DOM-level, на каждую D-\* точку)
-
-**Goal:** каждый feedback-пункт превращается в **один воспроизводимый
-регресс-сценарий**: URL → DOM селектор → user action → expected → previous
-failure mode. Сценарии лягут в `apps/web/tests/e2e/regression/D-XX-*.spec.ts`,
-по одному файлу на точку (или сгруппированному, если 2-3 точки в одном flow).
-По ходу wave-D/E мы пишем сценарий **до** фикса (red), фиксим (green),
-закрепляем (refactor). TDD-first (Pillar 1).
-
-### Scenario template (применяется к каждому D-\*)
-
-```text
-┌─ D-XX: <Component> <action> <symptom> ─────────────┐
-│ Route      /admin?tab=…                            │
-│ Role       lead | head | viewer | admin            │
-│ Selector   data-testid="…" или role+name           │
-│ Setup      navigate → login as <role> → wait list  │
-│ Action     click, fill, submit, navigate           │
-│ Expect     toLocator(…).toBeVisible / .toHaveText  │
-│ Was Broken прежнее наблюдение (что не работало)    │
-│ Screenshot before-/after-D-XX.png                  │
-│ Console    expect: zero errors / warnings          │
-│ A11y       snapshot tree must have role label      │
-└────────────────────────────────────────────────────┘
-```
-
-### Регресс-каталог (полный, 36 D-_ + 1 D-0 + 3 H-_)
-
-| ID   | Route                              | Selector / pivot                                  | Что проверяем                               | Wave |
-| ---- | ---------------------------------- | ------------------------------------------------- | ------------------------------------------- | ---- |
-| D-0  | /admin (DevRoleSwitcher)           | `data-testid=dev-role-switcher-wipe-manual-uat`   | wipe → toast success, no guard refuse       | A    |
-| H-1  | (script-level)                     | `pnpm exec tsx prisma/_destructive-guard.test.ts` | docker-name `customreport_uat` passes       | B    |
-| H-2  | POST /api/revalidate-org           | curl `-H "Origin: https://evil.example"`          | 403 Forbidden                               | B    |
-| H-3  | (migration)                        | `prisma migrate status`                           | unique constraint, no checksum drift        | B    |
-| D-1  | /?next=…                           | `LoginPageClient .rounded-md`                     | last-session hint reserves height (no jump) | D-A  |
-| D-2  | /admin?tab=groups                  | `GroupProductsEditor li[data-product-id=X]`       | продукт в др. группе → disabled + lock      | E-1  |
-| D-3  | /audit                             | `data-testid=audit-log-table`                     | lead видит свои, head — группу, admin — все | E-9  |
-| D-4  | /admin?tab=settings                | (no console ChunkLoadError)                       | reload без 404 на `app/layout.js`           | G    |
-| D-5  | /admin?tab=users user-group select | `select#user-group` change                        | warning dialog появляется при смене группы  | E-8  |
-| D-6  | (research memo)                    | docs                                              | archive snapshot policy                     | F-1  |
-| D-7  | /admin?tab=settings reminders      | `PolicyRow .btn-press "Hide rules"`               | Coming Soon badge виден                     | D-D  |
-| D-8  | (research memo)                    | docs                                              | period any-day choose UX                    | F-2  |
-| D-9  | /admin?tab=settings integrations   | `IntegrationsSubTab` AI vs Slack                  | стиль cards идентичен                       | D-D  |
-| D-10 | /lead/report/[id] risks section    | `RiskEditDialog` label group                      | "Risk" + "Blocked" pair-badge               | E-7  |
-| D-11 | /lead/report/[id] background       | `#main-content` body bg                           | gradient pattern, не plain                  | E-11 |
-| D-12 | /lead/report/[id] item dialog      | `ItemEditDialog button[data-state=in-progress]`   | click → highlight active, persists          | D-A  |
-| D-13 | /lead/report/[id] stage chips      | `StageMultiSelect fieldset[data-mode=edit]`       | reload → chips highlighted из item.stages   | D-B  |
-| D-14 | /lead/report/[id] decision dialog  | `DecisionEditDialog .grid`                        | labels above fields, mobile-friendly        | D-A  |
-| D-15 | /lead/report/[id] "All stages"     | `RisksSection [aria-label=stages-summary]`        | если ≠ all → list of selected names         | D-B  |
-| D-16 | /lead/report/[id] priorities       | `PrioritiesSection chip`                          | first letter + colour (см. ProductsTab)     | F-4  |
-| D-17 | /lead/report/[id] period nav       | `PeriodNavigator [data-testid=period-label]`      | "Week 20 · May 11–15" — наглядно            | F-3  |
-| D-18 | /lead/report/[id] context line     | `LeadForm .sdlc-tooltip`                          | mobile → collapse / убрать дубль из top nav | E-12 |
-| D-19 | /lead/report/[id] version restore  | `VersionHistoryNav button "Restore"`              | diff preview viz перед confirm              | E-4  |
-| D-20 | /lead/report/[id] version arrows   | `VersionHistoryNav button[aria-label=Previous]`   | click → state.version index--               | E-5  |
-| D-21 | /lead/report/[id] submit           | `button "Submit Report"` + empty priorities       | friendly toast, не raw Zod error            | E-7  |
-| D-22 | /lead/report/[id] save on old ver  | `button "Save Version"` после rollback            | confirm dialog "перезаписать N версий?"     | E-6  |
-| D-23 | /reports?tab=drafts search         | `input#_r_2_-search-input`                        | skeleton до hydrate, не layout jump         | D-C  |
-| D-24 | /reports?tab=drafts list           | `[data-testid=reports-list-skeleton]`             | skeleton elements per DOM-row               | D-C  |
-| D-25 | /reports?tab=drafts sidebar        | `LeadDraftsPanel aside`                           | Coming Soon badge + tooltip                 | D-D  |
-| D-26 | /audit (lead-scope)                | `data-testid=audit-log-empty`                     | если пусто — explanatory empty state        | E-9  |
-| D-27 | (any page) Agentation overlay      | `[data-agentation-overlay]`                       | position: fixed, top-4, right-4             | D-C  |
-| D-28 | /admin?tab=users TabHeader         | `[data-testid=user-group-filter]`                 | dropdown "All / CD / Finance"               | D-D  |
-| D-29 | /head/dashboard metrics            | `[data-testid=period-kpi-row]`                    | KPI section не пустая для Артёма            | F-5  |
-| D-30 | /head/dashboard activity row       | `ActivityRow[data-state=draft]`                   | click не делает navigate, показывает tip    | D-C  |
-| D-31 | /head/dashboard data audit         | (SQL audit memo)                                  | report.md о коллизиях lead-group            | E-3  |
-| D-32 | /head/dashboard activity scope     | `ActivityLivePanel ul li`                         | Natalya (Finance) видит 2, не 6             | E-2  |
-| D-33 | /head/slides viewer Dasha          | `data-testid=viewer-slide-remind-btn`             | reminder mutation, slide highlight badge    | E-10 |
-| D-34 | (research memo)                    | docs                                              | viewer-vs-head dashboard semantics          | F-6  |
-| D-35 | /head/dashboard kpi sparkline      | `ResponsiveContainer > svg`                       | `tabindex=-1`, `focusable=false`            | D-A  |
-| D-36 | /reports?tab=published Agentation  | (same as D-27)                                    | overlay top-right                           | D-C  |
-
-### Regress runner
-
-```text
-apps/web/tests/e2e/regression/index.spec.ts
-   ├── глобальный fixture: 4 storageState (lead/head/viewer/admin)
-   ├── before each: console.error counter == 0
-   ├── before each: screenshot fullPage → ./screenshots/<D-XX>-before.png
-   ├── after  each: screenshot fullPage → ./screenshots/<D-XX>-after.png
-   ├── after  each: записать pass/fail в ./test-results/D-XX.json
-   └── after  all: aggregate → .planning/memory/2026-05-14-regression-report.md
-```
-
----
-
-## UX/UI Skills Sweep (после фиксов, перед закрытием)
-
-**Goal:** прогнать `peo-design` / `peo-review` / `skill-quality-reviewer`
-параллельно на затронутые компоненты, собрать список рекомендаций / улучшений
-в один файл, чтобы утром глянуть и принять/отклонить.
-
-```text
-[parallel agents — single tool-use block]
-
-agent A (peo-design, sonnet)
-   → input: список компонентов из wave-D/E (admin, lead-form, reports,
-            dashboard, slides)
-   → output: UI/UX рекомендации (consistency, density, hover/focus,
-            empty states, error states)
-
-agent B (peo-review, sonnet)
-   → input: full diff wave-D/E
-   → output: code-quality review (anti-patterns, leaky scope,
-            mock-vs-real, dead code)
-
-agent C (gsd-ui-auditor, haiku)
-   → input: 6-pillar UI audit на /admin /lead /reports /head/dashboard
-            /head/slides
-   → output: BLOCK/FLAG/PASS verdict per pillar
-
-agent D (security-reviewer, haiku)
-   → input: новые routes (/api/revalidate-org, /audit, /api/admin/wipe)
-   → output: list of secrets/auth/CSRF concerns
-
-[consolidator — sonnet, главный поток]
-   → собирает 4 отчёта → .planning/memory/2026-05-14-uxui-skills-sweep.md
-   → структура файла:
-        ## Critical (must fix before merge)
-        ## High (fix this round)
-        ## Medium (next iteration)
-        ## Low (backlog, nice-to-have)
-   → утром пользователь читает 1 файл и принимает решения
+┌─ Pillars compliance ─────────────────────────────────────────┐
+│ 1 TDD-first       ✓ Playwright spec пишется до W1-A fix       │
+│ 2 Always Ask      ✓ 9 open questions с автономной колонкой    │
+│ 3 Socratic Review ✓ Wave 4 retro = self-check                 │
+│ 4 Surgical        ✓ Phase 40 рендр parked, scope = только     │
+│                     закрытие долгов + research + hygiene      │
+│ 5 Task Tracking   ✓ 4 waves, явные acceptance per task        │
+│ 6 Memory          ✓ Wave 2 + Wave 4 пишут 4 memo + frozen-cnt │
+│ 7 Plan Before     ✓ этот файл = плана; ExitPlanMode = gate    │
+│ 8 Rule Evolution  ✓ CLAUDE.md UI-research convention в W2-C   │
+│ 9 Config-First    ✓ .markdownlint.json + workflows/.env       │
+│ 10 Depersonalized ✓ роли (lead/head/admin/viewer), не имена   │
+│ 11 Subagent Para  ✓ W1 = 3 parallel, W2 = 3 parallel, W3 = 3  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -700,18 +981,33 @@ agent D (security-reviewer, haiku)
 ## DONE WHEN
 
 ```text
-✓ docker compose up + wipe-manual-uat работает без override
-✓ H-1/H-2/H-3 закоммитчен и запушен
-✓ 14 T1-точек закрыты, 12 T2 закрыты, 6 T3 — memos записаны
-✓ apps/web/tests/e2e/regression/D-XX-*.spec.ts — 36 файлов (+ H-*, D-0)
-✓ Playwright regression suite зелёный (или skipped с reason)
-✓ MCP chrome-devtools sweep: before/after скриншоты для каждого D-*
-✓ Console errors counter = 0 на всех 4 ключевых ролях/URL
-✓ A11y snapshots в test-results/ для каждой страницы
-✓ UX/UI skills sweep: 4 параллельных агента → 1 консолидированный отчёт
-✓ Все ✓ агрегированы в .planning/memory/2026-05-14-regression-report.md
-✓ UX рекомендации в .planning/memory/2026-05-14-uxui-skills-sweep.md
-✓ PR #3 описание обновлено + push
-✓ retro в .planning/memory/2026-05-14-night-marathon.md
-✓ NEXT-ACTIONS.md содержит executable continuation для утра
+Wave 1 — HOT closure + CI:
+  ✓ Playwright spec D-0/H-1 wipe-manual-uat зелёный локально и в CI
+  ✓ STATE.md: phase 16/17 → product-ready closed
+  ✓ 260426-vxp: RESOLUTION.md написан
+  ✓ .github/workflows/ci.yml на main, gate'ит будущие PR
+
+Wave 2 — Monitoring + Turbopack + Research:
+  ✓ Grafana audit memo (что работает / что сломано / TODO)
+  ✓ Turbopack decision документировано (adopt | reject + цифры)
+  ✓ Screenshot research (W2-C): ≥8 PNG в playwright-report/screenshots/
+     + research-memo с идеями (линии/паттерны/accents) + «что улучшить».
+     НИКАКОГО UI-кода — решение по реализации остаётся за пользователем
+  ✓ Frozen-contract зафиксирован в 3 местах:
+     CLAUDE.md project + auto-memory feedback + research memo callout.
+     grep -rn "research before implementation" → ≥3 совпадения
+
+Wave 3 — Hygiene + GSD:
+  ✓ pnpm lint:md зелёный на main; CI имеет job `lint-md`
+  ✓ ls .planning/*.md | wc -l ≤ 8 (вместо текущих ~15);
+    .planning/local-archive/INDEX.md заполнен
+  ✓ pnpm gsd:checklist:sync → exit 0
+  ✓ STATE.md `progress.percent` отражает реальное состояние v8.1 (не 100)
+  ✓ phases/40-*, 41-*, 42-* содержат CONTEXT.md с canonical frontmatter
+
+Wave 4 — Closure:
+  ✓ Memory + retro 2026-05-14-post-marathon-sprint.md
+  ✓ MEMORY.md index обновлён
+  ✓ NEXT-ACTIONS.md обновлён под результат спринта
+  ✓ Пользователь выбрал следующий milestone (Phase 44/46/47/50/54)
 ```

@@ -283,7 +283,7 @@ Component uses `<ReopenTabLabel>` (`aria-label={`${count} pending reopen request
 
 No explicit hooks; reuses `<ReportArchiveSection>` and `<NavBar>`.
 
-### 1.21 `/print/[reportId]` — server-rendered, no interactive hooks. Used by PDF pipeline.
+### 1.21 `/print/[reportId]` — server-rendered, no interactive hooks. Used by PDF pipeline
 
 ### 1.22 Cross-cutting: navigation & dev tools
 
@@ -522,28 +522,28 @@ Long form — split by route. Status legend: `✓` covered (literal or regex mat
 
 ▼ **Medium (state read / KPIs / dashboards)**
 
-16. `aria-label="Submissions: …"`, `aria-label="Risks: …"` (KPI cards 2 of 3).
-17. `<ProductKpiCard>` cluster (`product-kpi-card`, `Product KPIs`, sparkline aria).
-18. `<ActivityLivePanel>`: `activity-live-heading`, `Lead section statuses`, `${lead} has no report content yet`.
-19. `Load more archived reports` (head dashboard archive paginator).
-20. `Show all ${N} submissions` (reports/page list).
-21. `/reports/[reportId]`: `Back to Dashboard`, `Export PDF` (the reports route counterpart — distinct from head publish button).
-22. `/reports/trends` three sections aria-labelledby.
-23. `<AiSummaryCard>`: `Regenerate summary`, `Dismiss summary`, tone aria.
-24. `<PeriodSummaryTabs>` `ai-summary-text` + `Mock summary stub`.
-25. `aria-label="Open navigation menu"` + Mobile navigation panel.
-26. `aria-label="Period navigation (swipe…)"` (both lead and head variants — only inner buttons asserted).
-27. `<RiskSentimentBadge>`, `<OnTrackIcon>` aria variants — purely visual but documented hooks.
-28. `<DlqBadge>` and `<ReopenTabLabel>` count aria — observability badges.
+1. `aria-label="Submissions: …"`, `aria-label="Risks: …"` (KPI cards 2 of 3).
+2. `<ProductKpiCard>` cluster (`product-kpi-card`, `Product KPIs`, sparkline aria).
+3. `<ActivityLivePanel>`: `activity-live-heading`, `Lead section statuses`, `${lead} has no report content yet`.
+4. `Load more archived reports` (head dashboard archive paginator).
+5. `Show all ${N} submissions` (reports/page list).
+6. `/reports/[reportId]`: `Back to Dashboard`, `Export PDF` (the reports route counterpart — distinct from head publish button).
+7. `/reports/trends` three sections aria-labelledby.
+8. `<AiSummaryCard>`: `Regenerate summary`, `Dismiss summary`, tone aria.
+9. `<PeriodSummaryTabs>` `ai-summary-text` + `Mock summary stub`.
+10. `aria-label="Open navigation menu"` + Mobile navigation panel.
+11. `aria-label="Period navigation (swipe…)"` (both lead and head variants — only inner buttons asserted).
+12. `<RiskSentimentBadge>`, `<OnTrackIcon>` aria variants — purely visual but documented hooks.
+13. `<DlqBadge>` and `<ReopenTabLabel>` count aria — observability badges.
 
 ▽ **Low (loading / decorative)**
 
-29. All five `Loading …` arias (`Loading failed jobs`, `Loading history`, `Loading report form`, `Loading status report`, `Loading failed jobs`) — covered indirectly by waitFor of the loaded state.
-30. `aria-label="Your PULSE"` (landing logo).
-31. `Mock summary stub` badge.
-32. `aria-label="Reporting overview"` (history sidebar wrapper).
-33. `aria-label="Copy reference id ${value}"` (action-log row copy button).
-34. `<DevRoleSwitcher>` 5 testids — dev-only switcher; intentionally out of regression set.
+1. All five `Loading …` arias (`Loading failed jobs`, `Loading history`, `Loading report form`, `Loading status report`, `Loading failed jobs`) — covered indirectly by waitFor of the loaded state.
+2. `aria-label="Your PULSE"` (landing logo).
+3. `Mock summary stub` badge.
+4. `aria-label="Reporting overview"` (history sidebar wrapper).
+5. `aria-label="Copy reference id ${value}"` (action-log row copy button).
+6. `<DevRoleSwitcher>` 5 testids — dev-only switcher; intentionally out of regression set.
 
 ---
 

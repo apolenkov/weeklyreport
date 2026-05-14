@@ -118,6 +118,7 @@
 **Файлы:**
 
 - `current-week-section.tsx` — после `{[...grouped.entries()].map(...)}` добавить fallback:
+
   ```tsx
   {
     grouped.size === 0 && !readOnly && (
@@ -128,6 +129,7 @@
     );
   }
   ```
+
   где `seedFromProducts()` = первый product из props.
 - `next-week-section.tsx` — то же.
 - `risks-section.tsx` — кнопка `+ Add Risk` всегда видна (если `!readOnly`); если products пуст — `disabled` с tooltip.

@@ -46,10 +46,12 @@ tuple. Reads route through the new column; writes update both old
    filter by `periodState`.
 7. Adapter pattern documented in
    `apps/api/src/modules/weekly-report/period-state.ts`:
+
    ```ts
    export function legacyTupleToState(report: { status, archived }): PeriodState { … }
    export function stateToLegacyTuple(state: PeriodState): { status, archived } { … }
    ```
+
 8. Tests + verify.
 
 ## Commit
