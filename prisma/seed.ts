@@ -66,30 +66,6 @@ function publishedOffset(days: number, hours = 10, minutes = 0): Date {
   return d;
 }
 
-function demoPublishedSnapshot(input: {
-  reportId: string;
-  periodStart: Date;
-  periodEnd: Date;
-  deadline: Date;
-  publishedAt: Date;
-}) {
-  return {
-    reportId: input.reportId,
-    periodStart: input.periodStart.toISOString(),
-    periodEnd: input.periodEnd.toISOString(),
-    deadline: input.deadline.toISOString(),
-    status: ReportStatus.published,
-    publishedAt: input.publishedAt.toISOString(),
-    publishedById: HEAD_USER_ID,
-    publishedByName: "Елена Р.",
-    portfolioOverview: {
-      status: TrafficLightStatus.green,
-      totals: { green: 2, yellow: 0, red: 0 },
-    },
-    sections: [],
-  };
-}
-
 // Deterministic UUIDs for child rows so re-running stays idempotent.
 // Last UUID segment is exactly 12 hex chars: 8-4-4-4-12 = 36 char UUID.
 //
@@ -357,13 +333,10 @@ async function main() {
       weekLabel: publishedReport.weekLabel,
       publishedAt: new Date(publishedReport.publishedAt),
       publishedById: HEAD_USER_ID,
-      publishedSnapshot: demoPublishedSnapshot({
-        reportId: publishedReport.id,
-        periodStart: new Date(publishedReport.periodStart),
-        periodEnd: new Date(publishedReport.periodEnd),
-        deadline: new Date(publishedReport.deadline),
-        publishedAt: new Date(publishedReport.publishedAt),
-      }),
+      // Keep advanced seed content source-of-truth in the section rows. A
+      // stale empty snapshot makes /reports/<id> render 0 products even when
+      // the seeded published report has submitted sections.
+      publishedSnapshot: null,
     },
     create: {
       id: publishedReport.id,
@@ -377,13 +350,7 @@ async function main() {
       weekLabel: publishedReport.weekLabel,
       publishedAt: new Date(publishedReport.publishedAt),
       publishedById: HEAD_USER_ID,
-      publishedSnapshot: demoPublishedSnapshot({
-        reportId: publishedReport.id,
-        periodStart: new Date(publishedReport.periodStart),
-        periodEnd: new Date(publishedReport.periodEnd),
-        deadline: new Date(publishedReport.deadline),
-        publishedAt: new Date(publishedReport.publishedAt),
-      }),
+      publishedSnapshot: null,
     },
   });
 
