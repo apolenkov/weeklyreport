@@ -68,19 +68,19 @@ export function LeadFormSkeleton() {
       <PlaceholderAccordion rows={3} minHeight={244} />
 
       {/* Current Week */}
-      <PlaceholderAccordion rows={3} minHeight={256} />
+      <PlaceholderAccordion rows={3} minHeight={404} />
 
       {/* Next Week */}
-      <PlaceholderAccordion rows={3} minHeight={272} />
+      <PlaceholderAccordion rows={3} minHeight={292} />
 
       {/* Risks & Blockers */}
-      <PlaceholderAccordion rows={2} minHeight={322} />
+      <PlaceholderAccordion rows={2} minHeight={342} />
 
       {/* Decisions */}
-      <PlaceholderAccordion rows={7} minHeight={490} />
+      <PlaceholderAccordion rows={7} minHeight={510} />
 
       {/* Top 3 Priorities */}
-      <PlaceholderAccordion rows={6} minHeight={404} />
+      <PlaceholderAccordion rows={6} minHeight={412} />
     </div>
   );
 }

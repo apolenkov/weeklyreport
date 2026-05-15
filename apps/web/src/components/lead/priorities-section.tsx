@@ -68,51 +68,12 @@ const RANK_TEXT: Record<1 | 2 | 3 | "rest", string> = {
   rest: "var(--color-muted-foreground)",
 };
 
-const MAX_VISIBLE_PRIORITY_STAGE_CHIPS = 2;
-const STAGE_CHIP_PALETTE = [
-  { background: "#e8f0ee", color: "#0f5132" },
-  { background: "#edf2ff", color: "#24428f" },
-  { background: "#fff3cd", color: "#7a5a00" },
-  { background: "#fdebd3", color: "#8a4b00" },
-  { background: "#f8d7da", color: "#842029" },
-  { background: "#eee7ff", color: "#4c2a85" },
-] as const;
-
-function stageAbbreviation(stage: string): string {
-  const words = stage
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .split(/[^A-Za-z0-9]+/)
-    .filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return (words[0] ?? "?").slice(0, 3).toUpperCase();
-  return words
-    .map((word) => word.charAt(0))
-    .join("")
-    .slice(0, 3)
-    .toUpperCase();
-}
-
-function stageChipStyle(
-  stage: string,
-  fallbackIndex: number,
-  availableStages: readonly string[] | undefined,
-) {
-  const stageIndex = availableStages?.findIndex(
-    (candidate) => candidate === stage,
-  );
-  const paletteIndex =
-    stageIndex !== undefined && stageIndex >= 0 ? stageIndex : fallbackIndex;
-  return STAGE_CHIP_PALETTE[paletteIndex % STAGE_CHIP_PALETTE.length];
-}
-
 function PriorityStageScope({
   rank,
   stageTags,
-  availableStages,
 }: {
   readonly rank: number;
   readonly stageTags: readonly string[];
-  readonly availableStages?: readonly string[];
 }) {
   if (stageTags.length === 0) {
     return (
@@ -125,8 +86,6 @@ function PriorityStageScope({
     );
   }
 
-  const visibleTags = stageTags.slice(0, MAX_VISIBLE_PRIORITY_STAGE_CHIPS);
-  const hiddenCount = stageTags.length - visibleTags.length;
   const allStagesLabel = stageTags.join(", ");
 
   return (
@@ -135,24 +94,14 @@ function PriorityStageScope({
       aria-label={`Priority ${rank} stages: ${allStagesLabel}`}
       title={allStagesLabel}
     >
-      {visibleTags.map((stage, stageIndex) => {
-        const style = stageChipStyle(stage, stageIndex, availableStages);
-        return (
-          <span
-            key={stage}
-            aria-label={"Stage " + stage}
-            className="inline-flex h-6 min-w-6 items-center justify-center rounded-[var(--radius-pill)] px-2 text-[10px] font-bold tabular-nums"
-            style={style}
-          >
-            {stageAbbreviation(stage)}
-          </span>
-        );
-      })}
-      {hiddenCount > 0 && (
-        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-          +{hiddenCount}
+      {stageTags.map((stage) => (
+        <span
+          key={stage}
+          className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+        >
+          {stage}
         </span>
-      )}
+      ))}
     </span>
   );
 }
@@ -312,12 +261,11 @@ export function PrioritiesSection({
                     {entry.productName}
                   </span>
                 )}
-                {/* 35-04 / D-16: keep scoped priority stages readable even
-                    when a priority spans many SDLC stages. */}
+                {/* Keep scoped stages readable and consistent with Decisions:
+                    full labels beat colored abbreviations for SDLC names. */}
                 <PriorityStageScope
                   rank={entry.rank}
                   stageTags={stageTags}
-                  availableStages={availableStages}
                 />
                 {entry.text.trim().length > 0 ? (
                   <span className="break-words text-[var(--color-foreground)]">

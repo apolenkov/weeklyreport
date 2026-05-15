@@ -1423,6 +1423,7 @@ export function LeadForm({
             icon={<CalendarIcon />}
             title="Current Week"
             badge={`${currentWeekItems.length} items`}
+            subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
           >
             <CurrentWeekSection
               items={currentWeekItems}
@@ -1442,6 +1443,7 @@ export function LeadForm({
             icon={<NextWeekIcon />}
             title="Next Week"
             badge={`${nextWeekItems.length} items`}
+            subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
           >
             <NextWeekSection
               items={nextWeekItems}
@@ -1466,6 +1468,7 @@ export function LeadForm({
               background: "#fee2e2",
               color: "var(--color-destructive)",
             }}
+            subtitle="Risks and blockers that need attention, with impact, mitigation, and affected stages."
           >
             <LeadFormSyncBridge.Risks />
           </AccordionSection>
@@ -1484,6 +1487,7 @@ export function LeadForm({
             background: "var(--color-success)",
             color: "var(--color-starbucks-accent)",
           }}
+          subtitle="Decisions that need leadership attention, with owner, impact, and affected stages."
         >
           <DecisionsSection
             decisions={decisions}
@@ -1510,6 +1514,7 @@ export function LeadForm({
             title="Priorities"
             titleColor="var(--color-starbucks-gold)"
             badge={`${priorities.length}`}
+            subtitle="Top priorities for the week, tied back to product and SDLC stage where relevant."
           >
             <PrioritiesSection
               priorities={priorities}
