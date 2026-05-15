@@ -11,8 +11,12 @@ import {
   ItemType,
   ItemWorkflowStatus,
   PeriodStatus,
+  PeriodState,
+  ReminderAudience,
   ReminderRuleKind,
   ReminderRuleStatus,
+  ReopenRequestStatus,
+  UserActionStatus,
 } from "@prisma/client";
 
 import {
@@ -28,15 +32,18 @@ import {
   LEAD_DMITRY_ID,
   LEAD_OLGA_ID,
   LEAD_SERGEY_ID,
+  VIEWER_USER_ID,
+  ADMIN_USER_ID,
   DEFAULT_REPORTING_GROUP_ID,
 } from "./seed-constants.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
+const ADVANCED_FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
 
 // Map seed user role string to Prisma Role enum
-function toRole(role: "head" | "viewer" | "lead"): Role {
+function toRole(role: "head" | "viewer" | "admin" | "lead"): Role {
   return Role[role];
 }
 
@@ -131,8 +138,28 @@ async function main() {
     });
   }
 
-  // --- 1. Users (1 head, 1 viewer, 6 leads) ---
+  await prisma.reportingGroup.upsert({
+    where: { id: ADVANCED_FINANCE_GROUP_ID },
+    update: {
+      name: "Finance Platforms",
+      description: "Payments, HR, and compliance-heavy delivery stream",
+      archived: false,
+    },
+    create: {
+      id: ADVANCED_FINANCE_GROUP_ID,
+      name: "Finance Platforms",
+      description: "Payments, HR, and compliance-heavy delivery stream",
+      archived: false,
+    },
+  });
+
+  // --- 1. Users (1 head, 1 admin, 1 viewer, 6 leads) ---
   for (const user of SEED_USERS) {
+    const reportingGroupId =
+      user.id === LEAD_OLGA_ID || user.id === LEAD_SERGEY_ID
+        ? ADVANCED_FINANCE_GROUP_ID
+        : user.reportingGroupId;
+
     await prisma.user.upsert({
       where: { email: user.email },
       update: {
@@ -140,7 +167,7 @@ async function main() {
         name: user.name,
         role: toRole(user.role),
         samlId: user.samlId,
-        reportingGroupId: user.reportingGroupId,
+        reportingGroupId,
       },
       create: {
         id: user.id,
@@ -148,7 +175,35 @@ async function main() {
         name: user.name,
         role: toRole(user.role),
         samlId: user.samlId,
-        reportingGroupId: user.reportingGroupId,
+        reportingGroupId,
+      },
+    });
+  }
+
+  await prisma.reportingGroup.update({
+    where: { id: DEFAULT_REPORTING_GROUP_ID },
+    data: { headUserId: HEAD_USER_ID },
+  });
+  await prisma.reportingGroup.update({
+    where: { id: ADVANCED_FINANCE_GROUP_ID },
+    data: { headUserId: ADMIN_USER_ID },
+  });
+
+  for (const groupId of [
+    DEFAULT_REPORTING_GROUP_ID,
+    ADVANCED_FINANCE_GROUP_ID,
+  ]) {
+    await prisma.viewerGroupAccess.upsert({
+      where: {
+        viewerUserId_groupId: {
+          viewerUserId: VIEWER_USER_ID,
+          groupId,
+        },
+      },
+      update: {},
+      create: {
+        viewerUserId: VIEWER_USER_ID,
+        groupId,
       },
     });
   }
@@ -175,6 +230,8 @@ async function main() {
   const groupByLeadId = new Map(
     SEED_USERS.map((user) => [user.id, user.reportingGroupId] as const),
   );
+  groupByLeadId.set(LEAD_OLGA_ID, ADVANCED_FINANCE_GROUP_ID);
+  groupByLeadId.set(LEAD_SERGEY_ID, ADVANCED_FINANCE_GROUP_ID);
   for (const product of SEED_PRODUCTS) {
     await prisma.groupProduct.upsert({
       where: { productId: product.id },
@@ -244,6 +301,8 @@ async function main() {
       deadline: new Date(activeReport.deadline),
       status: ReportStatus[activeReport.status],
       periodStatus: PeriodStatus[activeReport.periodStatus],
+      periodState: PeriodState.open,
+      archived: false,
       weekLabel: activeReport.weekLabel,
     },
     create: {
@@ -253,6 +312,8 @@ async function main() {
       deadline: new Date(activeReport.deadline),
       status: ReportStatus[activeReport.status],
       periodStatus: PeriodStatus[activeReport.periodStatus],
+      periodState: PeriodState.open,
+      archived: false,
       weekLabel: activeReport.weekLabel,
     },
   });
@@ -267,9 +328,15 @@ async function main() {
       deadline: new Date(publishedReport.deadline),
       status: ReportStatus[publishedReport.status],
       periodStatus: PeriodStatus[publishedReport.periodStatus],
+      periodState: PeriodState.published,
+      archived: false,
       weekLabel: publishedReport.weekLabel,
       publishedAt: new Date(publishedReport.publishedAt),
       publishedById: HEAD_USER_ID,
+      // Keep advanced seed content source-of-truth in the section rows. A
+      // stale empty snapshot makes /reports/<id> render 0 products even when
+      // the seeded published report has submitted sections.
+      publishedSnapshot: null,
     },
     create: {
       id: publishedReport.id,
@@ -278,9 +345,12 @@ async function main() {
       deadline: new Date(publishedReport.deadline),
       status: ReportStatus[publishedReport.status],
       periodStatus: PeriodStatus[publishedReport.periodStatus],
+      periodState: PeriodState.published,
+      archived: false,
       weekLabel: publishedReport.weekLabel,
       publishedAt: new Date(publishedReport.publishedAt),
       publishedById: HEAD_USER_ID,
+      publishedSnapshot: null,
     },
   });
 
@@ -440,10 +510,13 @@ async function main() {
     ItemWorkflowStatus.blocked,
   ];
   const tagCycle = ["feature", "bugfix", "infra", "ops"];
+  const stageNameFor = (seed: number) =>
+    SEED_STAGES[seed % SEED_STAGES.length]?.name ?? "Development";
 
   let totalSections = 0;
   let totalItems = 0;
   let totalProjectStatuses = 0;
+  let totalStageStatuses = 0;
   let totalPriorities = 0;
 
   for (const cfg of activeLeadConfigs) {
@@ -495,6 +568,43 @@ async function main() {
           },
         });
         totalProjectStatuses++;
+
+        const productGlobalIdx = SEED_PRODUCTS.findIndex(
+          (seedProduct) => seedProduct.id === product.id,
+        );
+        const startStageIdx =
+          (productGlobalIdx >= 0 ? productGlobalIdx : pIdx) %
+          SEED_STAGES.length;
+        for (let offset = 0; offset < 3; offset++) {
+          const stage =
+            SEED_STAGES[(startStageIdx + offset) % SEED_STAGES.length]!;
+          await prisma.stageStatus.upsert({
+            where: {
+              reportSectionId_projectId_stageId: {
+                reportSectionId: secId,
+                projectId: product.id,
+                stageId: stage.id,
+              },
+            },
+            update: {
+              status:
+                trafficCycle[
+                  (cfg.leadIndex + pIdx + offset) % trafficCycle.length
+                ]!,
+            },
+            create: {
+              id: `a0000000-0000-4000-8000-0000000f0${cfg.leadIndex}${pIdx + 1}${offset + 1}`,
+              reportSectionId: secId,
+              projectId: product.id,
+              stageId: stage.id,
+              status:
+                trafficCycle[
+                  (cfg.leadIndex + pIdx + offset) % trafficCycle.length
+                ]!,
+            },
+          });
+          totalStageStatuses++;
+        }
       }
     }
 
@@ -515,6 +625,7 @@ async function main() {
           text: texts.current[i]!,
           tag: tagCycle[i % tagCycle.length]!,
           workflowStatus: workflowCycle[i % workflowCycle.length]!,
+          stageName: stageNameFor(cfg.leadIndex + i),
         },
         create: {
           id,
@@ -524,6 +635,7 @@ async function main() {
           text: texts.current[i]!,
           tag: tagCycle[i % tagCycle.length]!,
           workflowStatus: workflowCycle[i % workflowCycle.length]!,
+          stageName: stageNameFor(cfg.leadIndex + i),
         },
       });
       totalItems++;
@@ -541,6 +653,7 @@ async function main() {
           text: texts.next[i]!,
           tag: tagCycle[i % tagCycle.length]!,
           workflowStatus: ItemWorkflowStatus.in_progress,
+          stageName: stageNameFor(cfg.leadIndex + i + 3),
         },
         create: {
           id,
@@ -550,6 +663,7 @@ async function main() {
           text: texts.next[i]!,
           tag: tagCycle[i % tagCycle.length]!,
           workflowStatus: ItemWorkflowStatus.in_progress,
+          stageName: stageNameFor(cfg.leadIndex + i + 3),
         },
       });
       totalItems++;
@@ -609,24 +723,75 @@ async function main() {
             rank,
           },
         },
-        update: { id, productId: firstProductId, text: priorityTexts[r]! },
+        update: {
+          id,
+          productId: firstProductId,
+          text: priorityTexts[r]!,
+          stageName: stageNameFor(cfg.leadIndex + r),
+        },
         create: {
           id,
           reportSectionId: secId,
           productId: firstProductId,
           rank,
           text: priorityTexts[r]!,
+          stageName: stageNameFor(cfg.leadIndex + r),
         },
       });
       totalPriorities++;
     }
   }
 
-  // ----- Risks (3-4 across active sections) -----
   const primaryLeadSec = sectionId("1", 1);
   const mariaSec = sectionId("1", 2);
   const igorSec = sectionId("1", 3);
   const dmitrySec = sectionId("1", 4);
+
+  const versionSnapshots = [
+    {
+      id: "a0000000-0000-4000-8000-00000000e001",
+      reportSectionId: primaryLeadSec,
+      version: 1,
+      data: {
+        status: "draft",
+        summary: "Initial lead draft before head review",
+        currentItems: 3,
+        nextItems: 1,
+        priorities: 2,
+      },
+    },
+    {
+      id: "a0000000-0000-4000-8000-00000000e002",
+      reportSectionId: primaryLeadSec,
+      version: 2,
+      data: {
+        status: "submitted",
+        summary: "Submitted lead section with risks and decisions linked",
+        currentItems: 4,
+        nextItems: 2,
+        risks: 2,
+        decisions: 2,
+      },
+    },
+  ];
+
+  for (const snapshot of versionSnapshots) {
+    await prisma.versionSnapshot.upsert({
+      where: {
+        reportSectionId_version: {
+          reportSectionId: snapshot.reportSectionId,
+          version: snapshot.version,
+        },
+      },
+      update: {
+        id: snapshot.id,
+        data: snapshot.data,
+      },
+      create: snapshot,
+    });
+  }
+
+  // ----- Risks (3-4 across active sections) -----
 
   // Russian-language risks mirroring the items above. Each risk ties to a
   // specific project so the form's per-product chip + risk-card pair stays
@@ -640,6 +805,7 @@ async function main() {
       impact: "Сдвигает milestone SSO на 1 неделю, блокирует смежную команду",
       mitigation:
         "Эскалирована заявка на расширение квоты, параллельно готовим batch-fallback",
+      stageName: "Development",
     },
     {
       id: riskId(2),
@@ -649,6 +815,7 @@ async function main() {
       impact: "Блокирует релиз до получения патча от вендора",
       mitigation:
         "Патч ETA 8 мая, временно перешли на chunked extraction по 500K",
+      stageName: "Testing",
     },
     {
       id: riskId(3),
@@ -659,6 +826,7 @@ async function main() {
         "Окно обслуживания затрагивает зависимые сервисы (auth, payments)",
       mitigation:
         "Окно запланировано в субботу 02:00 МСК, rollback-план провалидирован",
+      stageName: "DevOps",
     },
     {
       id: riskId(4),
@@ -667,6 +835,7 @@ async function main() {
       risk: "Тюнинг WAF может выдавать false positives на пиковой нагрузке",
       impact: "Часть клиентских запросов может блокироваться без причины",
       mitigation: "Раскатка через shadow-mode + кнопка мгновенного rollback",
+      stageName: "Support",
     },
   ];
 
@@ -679,6 +848,7 @@ async function main() {
         risk: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
+        stageName: r.stageName,
       },
       create: r,
     });
@@ -698,6 +868,7 @@ async function main() {
       owner: "Глава департамента",
       deadline: activeOffset(8, 15),
       impact: "Разблокирует выкатку SSO portal на 100% трафика",
+      stageName: "Development",
     },
     {
       id: decisionId(2),
@@ -707,6 +878,7 @@ async function main() {
       owner: "Глава департамента",
       deadline: activeOffset(9, 18),
       impact: "Закрывает tech-debt по пулу соединений, разгружает p99",
+      stageName: "DevOps",
     },
     {
       id: decisionId(3),
@@ -716,6 +888,7 @@ async function main() {
       owner: "Глава департамента",
       deadline: activeOffset(10, 12),
       impact: "Снижает риск инцидентов на проде, безопасный rollback",
+      stageName: "Support",
     },
   ];
 
@@ -724,10 +897,12 @@ async function main() {
       where: { id: d.id },
       update: {
         reportSectionId: d.reportSectionId,
+        productId: d.productId,
         text: d.text,
         owner: d.owner,
         deadline: d.deadline,
         impact: d.impact,
+        stageName: d.stageName,
       },
       create: d,
     });
@@ -795,6 +970,7 @@ async function main() {
           text: prevWeekText,
           tag: "feature",
           workflowStatus: ItemWorkflowStatus.done,
+          stageName: stageNameFor(cfg.leadIndex + pIdx),
         },
         create: {
           id,
@@ -804,6 +980,7 @@ async function main() {
           text: prevWeekText,
           tag: "feature",
           workflowStatus: ItemWorkflowStatus.done,
+          stageName: stageNameFor(cfg.leadIndex + pIdx),
         },
       });
       totalItems++;
@@ -823,6 +1000,7 @@ async function main() {
         id,
         productId: firstProdId,
         text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}`,
+        stageName: stageNameFor(cfg.leadIndex),
       },
       create: {
         id,
@@ -830,16 +1008,108 @@ async function main() {
         productId: firstProdId,
         rank: 1,
         text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}`,
+        stageName: stageNameFor(cfg.leadIndex),
       },
     });
     totalPriorities++;
   }
+
+  // ----- Admin review/action examples -----
+  // Keep the big seed useful for Admin → Reopen and Admin → Actions instead
+  // of landing those tabs empty after a reset.
+  await prisma.reopenRequest.upsert({
+    where: { id: "a0000000-0000-4000-8000-000000000d01" },
+    update: {
+      reportSectionId: sectionId("2", 1),
+      requestedById: LEAD_1_ID,
+      reason:
+        "Нужно уточнить перенос работ по авторизации после комментариев head review.",
+      status: ReopenRequestStatus.pending,
+      reviewedById: null,
+      reviewedAt: null,
+      reviewNote: null,
+    },
+    create: {
+      id: "a0000000-0000-4000-8000-000000000d01",
+      reportSectionId: sectionId("2", 1),
+      requestedById: LEAD_1_ID,
+      reason:
+        "Нужно уточнить перенос работ по авторизации после комментариев head review.",
+      status: ReopenRequestStatus.pending,
+    },
+  });
+
+  await prisma.userActionLog.upsert({
+    where: { id: "a0000000-0000-4000-8000-000000000e01" },
+    update: {
+      userId: HEAD_USER_ID,
+      role: Role.head,
+      procedure: "review.publish",
+      targetId: publishedReport.id,
+      status: UserActionStatus.success,
+      reason: "Seeded demo action: previous weekly report published.",
+      ip: "127.0.0.1",
+      correlationId: "seed-advanced-publish",
+      durationMs: 91,
+    },
+    create: {
+      id: "a0000000-0000-4000-8000-000000000e01",
+      userId: HEAD_USER_ID,
+      role: Role.head,
+      procedure: "review.publish",
+      targetId: publishedReport.id,
+      status: UserActionStatus.success,
+      reason: "Seeded demo action: previous weekly report published.",
+      ip: "127.0.0.1",
+      correlationId: "seed-advanced-publish",
+      durationMs: 91,
+    },
+  });
 
   // --- 7. Reminder rules for the active report ---
   const deadlineReminderAt = new Date(activeReport.deadline);
   deadlineReminderAt.setUTCHours(deadlineReminderAt.getUTCHours() - 24);
   const escalationReminderAt = new Date(activeReport.deadline);
   escalationReminderAt.setUTCHours(escalationReminderAt.getUTCHours() + 2);
+  const reminderPolicies = [
+    {
+      id: "a0000000-0000-4000-8000-000000000a01",
+      kind: ReminderRuleKind.deadline,
+      offsetMinutes: -1440,
+      timezone: "Europe/Moscow",
+      audience: ReminderAudience.LEAD_WITH_DRAFT,
+      active: true,
+      validFrom: ACTIVE_PERIOD_START,
+      validUntil: null,
+    },
+    {
+      id: "a0000000-0000-4000-8000-000000000a02",
+      kind: ReminderRuleKind.escalation,
+      offsetMinutes: 120,
+      timezone: "Europe/Moscow",
+      audience: ReminderAudience.HEAD_OF_LATE,
+      active: true,
+      validFrom: ACTIVE_PERIOD_START,
+      validUntil: null,
+    },
+  ];
+
+  for (const policy of reminderPolicies) {
+    await prisma.reminderPolicy.upsert({
+      where: { id: policy.id },
+      update: {
+        kind: policy.kind,
+        offsetMinutes: policy.offsetMinutes,
+        timezone: policy.timezone,
+        audience: policy.audience,
+        active: policy.active,
+        validFrom: policy.validFrom,
+        validUntil: policy.validUntil,
+      },
+      create: policy,
+    });
+  }
+
   const reminderRules = [
     {
       id: "a0000000-0000-4000-8000-00000000c001",
@@ -849,6 +1119,7 @@ async function main() {
       status: ReminderRuleStatus.active,
       version: 1,
       reportId: activeReport.id,
+      policyId: reminderPolicies[0]!.id,
     },
     {
       id: "a0000000-0000-4000-8000-00000000c002",
@@ -858,6 +1129,7 @@ async function main() {
       status: ReminderRuleStatus.active,
       version: 1,
       reportId: activeReport.id,
+      policyId: reminderPolicies[1]!.id,
     },
   ];
 
@@ -871,6 +1143,7 @@ async function main() {
         status: rule.status,
         version: rule.version,
         reportId: rule.reportId,
+        policyId: rule.policyId,
       },
       create: rule,
     });
@@ -885,11 +1158,39 @@ async function main() {
     update: {
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
+      periodLengthDays: 7,
+      gracePeriodHours: 24,
+      defaultTimezone: "Europe/Moscow",
+      defaultReminderAudience: ReminderAudience.LEAD_WITH_DRAFT,
+      allowLateSubmissions: true,
+      autoPublishAfterDeadline: false,
+      autoArchiveWeeksAfterPublish: 0,
+      firstDayOfWeek: 1,
+      deadlineDayOfWeek: 5,
+      deadlineTime: "18:00",
+      maxOpenPeriods: 1,
+      requireAllSectionsToPublish: true,
+      allowReopenAfterPublish: true,
+      reopenWindowHours: 72,
     },
     create: {
       id: "singleton",
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
+      periodLengthDays: 7,
+      gracePeriodHours: 24,
+      defaultTimezone: "Europe/Moscow",
+      defaultReminderAudience: ReminderAudience.LEAD_WITH_DRAFT,
+      allowLateSubmissions: true,
+      autoPublishAfterDeadline: false,
+      autoArchiveWeeksAfterPublish: 0,
+      firstDayOfWeek: 1,
+      deadlineDayOfWeek: 5,
+      deadlineTime: "18:00",
+      maxOpenPeriods: 1,
+      requireAllSectionsToPublish: true,
+      allowReopenAfterPublish: true,
+      reopenWindowHours: 72,
     },
   });
 
@@ -902,7 +1203,10 @@ async function main() {
   // dev environment always lands with a sensible brand.
   await prisma.organization.upsert({
     where: { id: "singleton" },
-    update: {},
+    update: {
+      shortName: "Demo",
+      fullName: "Example Software Department",
+    },
     create: {
       id: "singleton",
       shortName: "Demo",
@@ -911,12 +1215,14 @@ async function main() {
   });
 
   console.log(
-    `Seeded: ${SEED_REPORTING_GROUPS.length} groups, ${SEED_USERS.length} users, ${SEED_PRODUCTS.length} products, ` +
+    `Seeded: ${SEED_REPORTING_GROUPS.length + 1} groups, ${SEED_USERS.length} users, ${SEED_PRODUCTS.length} products, ` +
       `${SEED_STAGES.length} stages, ${stageAssignmentCount} assignments, ` +
       `2 reports, ${totalSections} sections, ${totalItems} items, ` +
-      `${totalProjectStatuses} project statuses, ${risks.length} risks, ` +
+      `${totalProjectStatuses} project statuses, ${totalStageStatuses} stage statuses, ${risks.length} risks, ` +
       `${decisions.length} decisions, ${totalPriorities} priorities, ` +
-      `${reminderRules.length} reminder rules`,
+      `${reminderPolicies.length} reminder policies, ` +
+      `${reminderRules.length} reminder rules, ${versionSnapshots.length} version snapshots, ` +
+      `2 viewer group accesses, 1 reopen request, 1 action log`,
   );
 }
 

@@ -8,6 +8,7 @@ import {
   type TouchEvent as ReactTouchEvent,
 } from "react";
 
+import { joinPeriodLabel } from "../../lib/format-date";
 import type { ReportPeriod } from "./mock-data";
 
 const SWIPE_THRESHOLD_PX = 50;
@@ -183,12 +184,21 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
       >
         {periods.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.weekLabel} &middot; {p.dateRange}
-            {p.isCurrent ? " (current)" : ""}
-            {p.isSubmitted ? " \u2713" : ""}
+            {joinPeriodLabel(p.weekLabel, p.dateRange)}
           </option>
         ))}
       </select>
+
+      {selectedPeriod?.isCurrent && (
+        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]">
+          Current
+        </span>
+      )}
+      {selectedPeriod?.isSubmitted && (
+        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+          Submitted
+        </span>
+      )}
 
       <button
         type="button"

@@ -4,7 +4,7 @@ Weekly status report automation for a software department. Six team leads fill i
 
 ## Architecture
 
-```
+```text
 customreport/
 ├── apps/
 │   ├── web/          Next.js 16 frontend (App Router, React 19)
@@ -127,7 +127,11 @@ Without `&email=...` the `lead` role uses the primary seeded lead,
 ### Dev-only tools
 
 - **Role switcher** — `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` in `apps/web/.env.local` reveals a yellow "DEV: switch role" button at bottom-right of every authenticated page. Drops a dropdown to swap identity, wipe & reseed, or log out without retyping URLs.
-- **Manual UAT wipe** — the role switcher action `Wipe reports (manual UAT)` deletes report history/content/PDF jobs/reminder executions/carry-over/AI insights, SDLC stage assignments, and local Redis queue state; keeps users/roles/products/stages/app settings; and creates one empty open report with lead sections. Products appear in a lead report only after SDLC stage assignments are configured. Terminal equivalent: `pnpm db:wipe:manual-uat`; inside Docker: `docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts`.
+- **Manual UAT wipe** — the role switcher action `Wipe reports (manual UAT)` deletes report history/content/PDF jobs/reminder executions/carry-over/AI insights,
+  SDLC stage assignments, and local Redis queue state; keeps users/roles/products/stages/app settings; and creates one empty open report with lead sections.
+  Products appear in a lead report only after SDLC stage assignments are configured.
+  Terminal: `pnpm db:wipe:manual-uat`; inside Docker:
+  `docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts`.
 - **Mailpit** — outbound email goes to a local catch-all SMTP. UI at http://localhost:8025 shows every reminder/escalation rendered as HTML. The Compose service is still named `mailhog` for backward-compatible env wiring.
 - **Observability** — `pnpm observability:up` starts Prometheus (http://localhost:9090), Grafana (http://localhost:3003, `admin`/`admin`), Postgres exporter, and Redis exporter against the running local stack.
 
@@ -264,22 +268,22 @@ Kubernetes migration mapping.
 
 Single source of truth: root `.env` (loaded by api via `--env-file=../../.env`) and `apps/web/.env.local` (read by Next.js for `NEXT_PUBLIC_*`). See `.env.example` and `apps/web/.env.example` for the full list.
 
-| Variable                                | Required   | Default                                                       | Description                                                                                             |
-| --------------------------------------- | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                          | Yes        | —                                                             | PostgreSQL connection string                                                                            |
-| `REDIS_HOST`                            | Yes        | localhost                                                     | Redis host                                                                                              |
-| `REDIS_PORT`                            | Yes        | 6379                                                          | Redis port                                                                                              |
-| `AUTH_DEV_MODE`                         | No         | false                                                         | Enable `/auth/dev-login` endpoint                                                                       |
-| `AUTH_JWT_SECRET`                       | Yes (prod) | —                                                             | Session JWT signing secret (min 32 chars)                                                               |
-| `PDF_EXPORT_JWT_SECRET`                 | No         | dev default                                                   | Short-lived JWT signed at PDF export entry, injected as cookie into the headless browser. Min 16 chars. |
-| `FRONTEND_URL`                          | Yes        | http://localhost:3000                                         | Web app URL (CORS allowlist + post-auth redirects)                                                      |
-| `PORT`                                  | No         | 3002 in local `.env.example`; 3001 if unset by the API schema | API server port                                                                                         |
-| `LOG_LEVEL`                             | No         | info                                                          | `debug`/`info`/`warn`/`error` (debug enables tRPC envelope shape breadcrumbs)                           |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_FROM` | No         | —                                                             | When set, real SMTP send. With MailHog: `localhost:1025`.                                               |
-| `NEXT_PUBLIC_API_URL`                   | Yes (web)  | http://localhost:3002                                         | tRPC client base URL                                                                                    |
-| `API_URL`                               | No         | —                                                             | Server-side API URL for Next.js SSR/session calls. In Docker use `http://api:3002` for dev.             |
-| `NEXT_PUBLIC_AUTH_STUB`                 | No         | false                                                         | Show the local dev-login picker on the landing page.                                                    |
-| `NEXT_PUBLIC_DEV_ROLE_SWITCHER`         | No         | false                                                         | Show the bottom-right DEV identity dropdown                                                             |
+| Variable                                | Required   | Default                                                       | Description                                                                                                        |
+| --------------------------------------- | ---------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                          | Yes        | —                                                             | PostgreSQL connection string; non-prod DB names must be suffixed `_uat`, `_dev`, or `_test` for destructive guards |
+| `REDIS_HOST`                            | Yes        | localhost                                                     | Redis host                                                                                                         |
+| `REDIS_PORT`                            | Yes        | 6379                                                          | Redis port                                                                                                         |
+| `AUTH_DEV_MODE`                         | No         | false                                                         | Enable `/auth/dev-login` endpoint                                                                                  |
+| `AUTH_JWT_SECRET`                       | Yes (prod) | —                                                             | Session JWT signing secret (min 32 chars)                                                                          |
+| `PDF_EXPORT_JWT_SECRET`                 | No         | dev default                                                   | Short-lived JWT signed at PDF export entry, injected as cookie into the headless browser. Min 16 chars.            |
+| `FRONTEND_URL`                          | Yes        | http://localhost:3000                                         | Web app URL (CORS allowlist + post-auth redirects)                                                                 |
+| `PORT`                                  | No         | 3002 in local `.env.example`; 3001 if unset by the API schema | API server port                                                                                                    |
+| `LOG_LEVEL`                             | No         | info                                                          | `debug`/`info`/`warn`/`error` (debug enables tRPC envelope shape breadcrumbs)                                      |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_FROM` | No         | —                                                             | When set, real SMTP send. With MailHog: `localhost:1025`.                                                          |
+| `NEXT_PUBLIC_API_URL`                   | Yes (web)  | http://localhost:3002                                         | tRPC client base URL                                                                                               |
+| `API_URL`                               | No         | —                                                             | Server-side API URL for Next.js SSR/session calls. In Docker use `http://api:3002` for dev.                        |
+| `NEXT_PUBLIC_AUTH_STUB`                 | No         | false                                                         | Show the local dev-login picker on the landing page.                                                               |
+| `NEXT_PUBLIC_DEV_ROLE_SWITCHER`         | No         | false                                                         | Show the bottom-right DEV identity dropdown                                                                        |
 
 ## Local development with mock Keycloak
 

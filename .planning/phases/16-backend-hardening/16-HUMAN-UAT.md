@@ -7,6 +7,9 @@ updated: 2026-05-08T16:23:00+03:00
 evidence:
   - .planning/regression/evidence/2026-05-08-phase16-17-uat/uat-live-results.json
   - apps/web/e2e/regression/phase16-17-uat.spec.ts
+owners:
+  pdf_export_runtime: product/UAT operator approval to publish or reseed a report
+  theme_toggle_visual: product decision to restore/build or retire the theme toggle scenario
 ---
 
 ## Current Test

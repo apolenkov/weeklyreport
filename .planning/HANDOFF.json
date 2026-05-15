@@ -1,0 +1,94 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-14T14:23:53Z",
+  "phase": "43",
+  "phase_name": "tooling-leaf-fix",
+  "phase_dir": ".planning/phases/43-tooling-leaf-fix",
+  "plan": 1,
+  "task": 1,
+  "total_tasks": 7,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "TOOL-01: next-env.d.ts clean-checkout fix",
+      "status": "done",
+      "commit": "d19a1b9"
+    },
+    {
+      "id": 2,
+      "name": "TOOL-02: regression baseline measurement",
+      "status": "done",
+      "commit": "not applicable — 179/179 already passing"
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 3,
+      "name": "Merge PR #5 after CI green",
+      "status": "blocked_ci_queued"
+    },
+    {
+      "id": 4,
+      "name": "STATE.md update — close phases 44/46/47/48/49, recalculate percent",
+      "status": "done",
+      "commit": "local-uncommitted"
+    },
+    {
+      "id": 5,
+      "name": "Reconcile coverage gaps E-04, E-08, UFB-024",
+      "status": "done",
+      "commit": "45e1cac",
+      "note": "E-04 covered by alert-bar.test.tsx; E-08 and UFB-024 were already covered."
+    }
+  ],
+  "blockers": [
+    {
+      "description": "CI PR #5 previous runs were completed/startup_failure with jobs=[] and no logs; current post-fix runs now create queued jobs and still need a real green check before merge",
+      "type": "external",
+      "workaround": "Watch the latest PR run. If it stays queued, fix GitHub Actions runner availability or repository Actions policy; merge only after green."
+    },
+    {
+      "description": "D-12 item-dialog status pill — react-compiler conflict",
+      "type": "technical",
+      "workaround": "Needs react-compiler-safe technical design before re-implementation"
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Decide approach for D-12 item-dialog status pill reset",
+      "context": "Reverted due to react-compiler hook-call-order conflict",
+      "blocking": false
+    },
+    {
+      "action": "Choose next milestone after PR #5 merge",
+      "context": "Options: Phase 43 formal closure, Phase 50/53/59/60",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Remove typedRoutes import from next-env.d.ts",
+      "rationale": "typedRoutes not enabled in next.config.ts; .next/ is gitignored; import was stale artifact",
+      "phase": "43"
+    },
+    {
+      "decision": "TOOL-02 chunk plans not needed",
+      "rationale": "Regression suite already 179/179 PASS — no regression fix wave required",
+      "phase": "43"
+    }
+  ],
+  "uncommitted_files": [
+    ".planning/regression/evidence/2026-05-08-phase16-17-uat/uat-live-results.json",
+    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-002.json",
+    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-003.json",
+    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-004.json",
+    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-005.json",
+    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-007.json",
+    ".planning/regression/evidence/product-ready-matrix/UI-GEO-001.json",
+    ".planning/regression/evidence/product-ready-matrix/UI-GEO-002-003.json",
+    ".planning/regression/COVERAGE-GAP-2026-05-14.md"
+  ],
+  "next_action": "Watch the latest PR #5 run via gh run list --limit 5 and gh pr view 5 --json statusCheckRollup. If green: gh pr merge 5 --merge. If queued/startup_failure persists: record runner/policy blocker evidence. Repo-only remaining work is in .planning/session-retros/CUSTOMREPORT-REPO-REMAINING-2026-05-14.md.",
+  "context_notes": "Post-marathon sprint continuation. TOOL-01 took 2 iterations — first fix was incomplete (still referenced gitignored path). Second fix removed the import entirely since typedRoutes is not enabled. CI action versions were restored in e4a6bfd and pnpm/action-setup was replaced by Corepack in ffb3a15. E-04 is covered by alert-bar.test.tsx in 45e1cac; E-08 and UFB-024 were already covered. Regression is clean. Coverage gap report ready at .planning/regression/COVERAGE-GAP-2026-05-14.md."
+}

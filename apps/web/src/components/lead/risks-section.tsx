@@ -7,6 +7,8 @@ import { RiskEditDialog } from "./risk-edit-dialog";
 import type { Product, RiskEntry } from "./mock-data";
 import { splitStageNames } from "./stage-tags";
 
+const MAX_VISIBLE_RISK_STAGE_CHIPS = 3;
+
 type RisksSectionProps = {
   readonly risks: RiskEntry[];
   readonly readOnly?: boolean;
@@ -151,16 +153,18 @@ export function RisksSection({
             risk.stageIds && risk.stageIds.length > 0
               ? risk.stageIds
               : splitStageNames(risk.stageName);
-          // D-15: treat as "all stages" only when no specific stages were
-          // selected (empty = applies to all owned stages) OR when every
-          // stage owned by the lead on this product is selected.
-          const ownedStages = stagesForProduct?.(risk.productId) ?? [];
-          const isAllStages =
-            stageTags.length === 0 ||
-            (ownedStages.length > 0 && stageTags.length === ownedStages.length);
+          // Empty means implicit all assigned stages. A non-empty stageIds
+          // array is explicit user scope, even when it contains every stage.
+          const visibleStageTags = stageTags.slice(
+            0,
+            MAX_VISIBLE_RISK_STAGE_CHIPS,
+          );
+          const hiddenStageCount = stageTags.length - visibleStageTags.length;
+          const stageTagsLabel = stageTags.join(", ");
           return (
             <div
               key={risk.id}
+              data-testid="risk-card"
               className="rounded-xl p-4"
               style={{
                 background: isBlocked ? "#fdf8f8" : "#fffcf5",
@@ -180,19 +184,30 @@ export function RisksSection({
                 <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
                   {risk.productName}
                 </span>
-                {isAllStages ? (
+                {stageTags.length === 0 ? (
                   <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
                     All stages
                   </span>
                 ) : (
-                  stageTags.map((stage) => (
-                    <span
-                      key={stage}
-                      className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
-                    >
-                      {stage}
-                    </span>
-                  ))
+                  <span
+                    className="inline-flex flex-wrap items-center gap-1"
+                    aria-label={`Risk stages: ${stageTagsLabel}`}
+                    title={stageTagsLabel}
+                  >
+                    {visibleStageTags.map((stage) => (
+                      <span
+                        key={stage}
+                        className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+                      >
+                        {stage}
+                      </span>
+                    ))}
+                    {hiddenStageCount > 0 && (
+                      <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+                        +{hiddenStageCount}
+                      </span>
+                    )}
+                  </span>
                 )}
                 {!readOnly && (
                   <div className="ml-auto flex gap-1">

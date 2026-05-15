@@ -2,6 +2,21 @@
 
 **Analysis Date:** 2026-04-24
 
+## 2026-05-14 Refresh
+
+Live stack facts from package manifests:
+
+- Root package manager: pnpm 10.11.0, Node >=20.19.0.
+- Frontend: Next.js 16.2.3, React 19.2.5, Tailwind 4, shadcn/ui via
+  @customreport/ui, React Query 5, tRPC 11.
+- Backend: NestJS 11, Express 5, tRPC 11, Prisma 7, BullMQ 5, Redis,
+  PostgreSQL, OpenTelemetry, Prometheus prom-client, SAML via
+  @node-saml/passport-saml.
+- Testing: Vitest 4, Testing Library, Playwright 1.55+ in web and Playwright
+  1.59.1 available to API PDF code.
+- Current web scripts still use next dev --webpack and next build --webpack;
+  Turbopack remains a documented experiment, not the active default.
+
 ## Languages
 
 **Primary:**

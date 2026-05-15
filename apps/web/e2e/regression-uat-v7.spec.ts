@@ -23,17 +23,150 @@ function withRole(role: "lead" | "head" | "admin" | "viewer") {
 }
 
 async function waitReady(page: Page) {
-  await page.waitForSelector("#main-content", { state: "visible", timeout: 15_000 });
+  await page.waitForSelector("#main-content", {
+    state: "visible",
+    timeout: 15_000,
+  });
   // tRPC subscriptions keep the network active; domcontentloaded is sufficient
   await page.waitForLoadState("domcontentloaded", { timeout: 15_000 });
 }
+
+async function waitForUatRoute(page: Page, route: string) {
+  await page.goto(route);
+  if (route === "/lead/report") {
+    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), {
+      timeout: 10_000,
+    });
+  }
+  await waitReady(page);
+}
+
+async function expectMainContentBelowNav(page: Page) {
+  const nav = page.getByTestId("nav-bar");
+  const main = page.locator("#main-content");
+
+  await expect(nav).toBeVisible({ timeout: 15_000 });
+  await expect(main).toBeVisible({ timeout: 15_000 });
+
+  const navBox = await nav.boundingBox();
+  const mainBox = await main.boundingBox();
+
+  expect(navBox).not.toBeNull();
+  expect(mainBox).not.toBeNull();
+  expect(mainBox!.y).toBeGreaterThanOrEqual(navBox!.y + navBox!.height - 1);
+}
+
+async function expectNoReportMutationControls(page: Page) {
+  await expect(
+    page.getByRole("button", {
+      name: /^(send reminder|submit report|publish|reopen)$/i,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", {
+      name: /^(\+ )?add (item|risk|decision|priority)$/i,
+    }),
+  ).toHaveCount(0);
+  await expect(page.locator('button[aria-label^="Edit"]')).toHaveCount(0);
+  await expect(page.locator('button[aria-label^="Delete"]')).toHaveCount(0);
+}
+
+// ---------------------------------------------------------------------------
+// UFB-011 — Lead/head content must not overlap the top navigation
+// ---------------------------------------------------------------------------
+
+test.describe("UFB-011 — App top spacing", () => {
+  const cases = [
+    {
+      name: "lead report desktop",
+      role: "lead" as const,
+      route: "/lead/report",
+      viewport: { width: 1280, height: 900 },
+    },
+    {
+      name: "lead report mobile",
+      role: "lead" as const,
+      route: "/lead/report",
+      viewport: { width: 390, height: 844 },
+    },
+    {
+      name: "head dashboard desktop",
+      role: "head" as const,
+      route: "/head/dashboard",
+      viewport: { width: 1280, height: 900 },
+    },
+    {
+      name: "head dashboard mobile",
+      role: "head" as const,
+      route: "/head/dashboard",
+      viewport: { width: 390, height: 844 },
+    },
+  ];
+
+  for (const scenario of cases) {
+    test(
+      scenario.name + ": main content starts below nav",
+      async ({ browser }) => {
+        const ctx = await browser.newContext({
+          ...withRole(scenario.role),
+          viewport: scenario.viewport,
+        });
+        const page = await ctx.newPage();
+
+        await waitForUatRoute(page, scenario.route);
+        await expectMainContentBelowNav(page);
+
+        await ctx.close();
+      },
+    );
+  }
+});
+
+// ---------------------------------------------------------------------------
+// D-34 / A35 — Viewer is director-facing read-only archive access
+// ---------------------------------------------------------------------------
+
+test.describe("D-34/A35 — Viewer published archive is read-only", () => {
+  test("viewer sees published reports without draft/edit/reminder controls", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext(withRole("viewer"));
+    const page = await ctx.newPage();
+
+    await waitForUatRoute(page, "/reports?tab=published");
+
+    await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "My Drafts" }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Published" }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(page.getByPlaceholder(/search/i)).toHaveCount(0);
+    await expectNoReportMutationControls(page);
+
+    const firstReport = page.locator('a[href^="/reports/"]').first();
+    if ((await firstReport.count()) > 0) {
+      await firstReport.click();
+      await waitReady(page);
+      await expect(
+        page.getByRole("link", { name: "Export PDF" }),
+      ).toBeVisible();
+      await expectNoReportMutationControls(page);
+    }
+
+    await ctx.close();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // D-35 — Recharts SVG focusable + tabIndex on head dashboard KPI cards
 // ---------------------------------------------------------------------------
 
 test.describe("D-35 — KPI sparkline a11y", () => {
-  test("ResponsiveContainer SVG is aria-hidden and not tabbable", async ({ browser }) => {
+  test("ResponsiveContainer SVG is aria-hidden and not tabbable", async ({
+    browser,
+  }) => {
     const ctx = await browser.newContext(withRole("head"));
     const page = await ctx.newPage();
 
@@ -41,7 +174,9 @@ test.describe("D-35 — KPI sparkline a11y", () => {
     await waitReady(page);
 
     // The wrapper div must carry aria-hidden="true"
-    const wrappers = page.locator('[aria-hidden="true"] svg, [data-recharts-wrapper] svg');
+    const wrappers = page.locator(
+      '[aria-hidden="true"] svg, [data-recharts-wrapper] svg',
+    );
     const count = await wrappers.count();
 
     // If no Recharts on this page, skip gracefully
@@ -76,7 +211,10 @@ test.describe("D-27/D-36 — Agentation overlay position", () => {
     await waitReady(page);
 
     // Look for the agentation toolbar by its CSS class
-    const toolbar = page.locator('[class*="toolbar"]').filter({ hasText: /./ }).first();
+    const toolbar = page
+      .locator('[class*="toolbar"]')
+      .filter({ hasText: /./ })
+      .first();
     const toolbarCount = await toolbar.count();
 
     if (toolbarCount === 0) {
@@ -100,7 +238,9 @@ test.describe("D-27/D-36 — Agentation overlay position", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("D-7 — Admin reminders Coming Soon badge", () => {
-  test("reminders tab shows coming soon badge when no policies visible", async ({ browser }) => {
+  test("reminders tab shows coming soon badge when no policies visible", async ({
+    browser,
+  }) => {
     const ctx = await browser.newContext(withRole("admin"));
     const page = await ctx.newPage();
 
@@ -128,7 +268,9 @@ test.describe("D-7 — Admin reminders Coming Soon badge", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("D-9 — Admin settings integrations", () => {
-  test("integrations section shows coming soon label for CI", async ({ browser }) => {
+  test("integrations section shows coming soon label for CI", async ({
+    browser,
+  }) => {
     const ctx = await browser.newContext(withRole("admin"));
     const page = await ctx.newPage();
 
@@ -137,7 +279,7 @@ test.describe("D-9 — Admin settings integrations", () => {
 
     // CI Integration should have a Coming Soon label
     const ciLabel = page.getByText(/ci.*integration|integration.*ci/i).first();
-    if (await ciLabel.count() > 0) {
+    if ((await ciLabel.count()) > 0) {
       const comingSoonEl = page.getByText(/coming soon/i);
       await expect(comingSoonEl.first()).toBeVisible({ timeout: 5_000 });
     }
@@ -151,7 +293,9 @@ test.describe("D-9 — Admin settings integrations", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("D-25 — Lead history sidebar Coming Soon badge", () => {
-  test("reports page drafts area shows coming soon in history sidebar", async ({ browser }) => {
+  test("reports page drafts area shows coming soon in history sidebar", async ({
+    browser,
+  }) => {
     const ctx = await browser.newContext(withRole("lead"));
     const page = await ctx.newPage();
 
@@ -212,13 +356,17 @@ test.describe("D-30 — Activity panel draft rows", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("D-13 — StageMultiSelect chips on edit", () => {
-  test("editing an item preserves stage chip selection", async ({ browser }) => {
+  test("editing an item preserves stage chip selection", async ({
+    browser,
+  }) => {
     const ctx = await browser.newContext(withRole("lead"));
     const page = await ctx.newPage();
 
     // Navigate to lead form — use the active report URL
     await page.goto("/lead/report");
-    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), { timeout: 10_000 });
+    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), {
+      timeout: 10_000,
+    });
     await waitReady(page);
 
     // Find an item with stages already assigned and click its edit button
@@ -226,7 +374,7 @@ test.describe("D-13 — StageMultiSelect chips on edit", () => {
       .locator('[aria-label="Edit item"], button[title*="Edit"]')
       .first();
 
-    if (await editBtn.count() === 0) {
+    if ((await editBtn.count()) === 0) {
       // No editable items visible yet — skip
       await ctx.close();
       return;
@@ -255,13 +403,19 @@ test.describe("D-20 — VersionHistoryNav arrows", () => {
     const page = await ctx.newPage();
 
     await page.goto("/lead/report");
-    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), { timeout: 10_000 });
+    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), {
+      timeout: 10_000,
+    });
     await waitReady(page);
 
     // Version pill shows vN; grab current text
-    const versionPill = page.locator('button[title*="version histor"], button[title*="Version histor"]').first();
+    const versionPill = page
+      .locator(
+        'button[title*="version histor"], button[title*="Version histor"]',
+      )
+      .first();
 
-    if (await versionPill.count() === 0) {
+    if ((await versionPill.count()) === 0) {
       await ctx.close();
       return;
     }
@@ -270,7 +424,7 @@ test.describe("D-20 — VersionHistoryNav arrows", () => {
 
     // Previous (older) button
     const prevBtn = page.getByRole("button", { name: /previous version/i });
-    if (!await prevBtn.isEnabled()) {
+    if (!(await prevBtn.isEnabled())) {
       // Only one version — skip
       await ctx.close();
       return;
@@ -291,17 +445,21 @@ test.describe("D-20 — VersionHistoryNav arrows", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("D-21 — Submit priorities validation", () => {
-  test("submitting with no priorities shows human-readable error", async ({ browser }) => {
+  test("submitting with no priorities shows human-readable error", async ({
+    browser,
+  }) => {
     const ctx = await browser.newContext(withRole("lead"));
     const page = await ctx.newPage();
 
     await page.goto("/lead/report");
-    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), { timeout: 10_000 });
+    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), {
+      timeout: 10_000,
+    });
     await waitReady(page);
 
     // Click submit button
     const submitBtn = page.getByRole("button", { name: /submit report/i });
-    if (await submitBtn.count() === 0 || !await submitBtn.isVisible()) {
+    if ((await submitBtn.count()) === 0 || !(await submitBtn.isVisible())) {
       await ctx.close();
       return;
     }
@@ -309,7 +467,9 @@ test.describe("D-21 — Submit priorities validation", () => {
     await submitBtn.click();
 
     // Confirm dialog if it appears
-    const confirmBtn = page.getByRole("button", { name: /^confirm|^submit$/i }).first();
+    const confirmBtn = page
+      .getByRole("button", { name: /^confirm|^submit$/i })
+      .first();
     if (await confirmBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
       await confirmBtn.click();
     }
@@ -345,7 +505,9 @@ test.describe("D-11 — Lead report page background gradient", () => {
     const page = await ctx.newPage();
 
     await page.goto("/lead/report");
-    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), { timeout: 10_000 });
+    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), {
+      timeout: 10_000,
+    });
     await waitReady(page);
 
     const main = page.locator("#main-content");
@@ -361,7 +523,9 @@ test.describe("D-11 — Lead report page background gradient", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("D-18 — Context strip mobile visibility", () => {
-  test("org/name/role context strip is hidden at 375px width", async ({ browser }) => {
+  test("org/name/role context strip is hidden at 375px width", async ({
+    browser,
+  }) => {
     const ctx = await browser.newContext({
       ...withRole("lead"),
       viewport: { width: 375, height: 812 },
@@ -369,13 +533,15 @@ test.describe("D-18 — Context strip mobile visibility", () => {
     const page = await ctx.newPage();
 
     await page.goto("/lead/report");
-    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), { timeout: 10_000 });
+    await page.waitForURL((url) => url.pathname.includes("/lead/report/"), {
+      timeout: 10_000,
+    });
     await waitReady(page);
 
     // The middle context strip should be hidden (hidden sm:flex means invisible at 375px)
     // Find divs that contain the org name text
     const contextStrip = page.locator("text=Development").first();
-    if (await contextStrip.count() > 0) {
+    if ((await contextStrip.count()) > 0) {
       await expect(contextStrip).toBeHidden();
     }
 
@@ -388,7 +554,9 @@ test.describe("D-18 — Context strip mobile visibility", () => {
 // ---------------------------------------------------------------------------
 
 test.describe("D-32 — ActivityLivePanel scope", () => {
-  test("head sees activity entries from their group only", async ({ browser }) => {
+  test("head sees activity entries from their group only", async ({
+    browser,
+  }) => {
     const ctx = await browser.newContext(withRole("head"));
     const page = await ctx.newPage();
 
@@ -396,8 +564,12 @@ test.describe("D-32 — ActivityLivePanel scope", () => {
     await waitReady(page);
 
     // Activity panel should exist and show items
-    const activityPanel = page.locator('[data-testid="activity-panel"], [aria-label*="activity"], h2:has-text("Activity")').first();
-    if (await activityPanel.count() === 0) {
+    const activityPanel = page
+      .locator(
+        '[data-testid="activity-panel"], [aria-label*="activity"], h2:has-text("Activity")',
+      )
+      .first();
+    if ((await activityPanel.count()) === 0) {
       await ctx.close();
       return;
     }
@@ -407,10 +579,66 @@ test.describe("D-32 — ActivityLivePanel scope", () => {
 
     // The panel should NOT show items from Finance group when head role is CD head
     // We can't assert exact count from seed, but we can assert it's finite and visible
-    const activityItems = page.locator('[data-testid="activity-row"], [data-testid="activity-item"]');
+    const activityItems = page.locator(
+      '[data-testid="activity-row"], [data-testid="activity-item"]',
+    );
     const count = await activityItems.count();
     // Activity count should be reasonable (not showing all 6 leads at once)
     expect(count).toBeLessThanOrEqual(10);
+
+    await ctx.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-0 / H-1 — DevRoleSwitcher wipe-manual-uat works without H-1 guard refusal
+// (replaces the manual click that was left as "human action" after the night marathon)
+// ---------------------------------------------------------------------------
+
+test.describe("D-0/H-1 — DevRoleSwitcher wipe-manual-uat", () => {
+  test("wipe button triggers reseed without guard error", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext(withRole("admin"));
+    const page = await ctx.newPage();
+
+    // DevRoleSwitcher is mounted in the (app) layout — any app page works.
+    // It only renders when NEXT_PUBLIC_DEV_ROLE_SWITCHER=true (local env only).
+    await page.goto("/admin");
+    await waitReady(page);
+
+    const trigger = page.getByTestId("dev-role-switcher-trigger");
+    if ((await trigger.count()) === 0) {
+      // DevRoleSwitcher not enabled in this env (CI default) — skip gracefully
+      await ctx.close();
+      return;
+    }
+
+    // Open the dropdown
+    await trigger.click();
+
+    // Click the wipe-manual-uat item
+    const wipeBtn = page.getByTestId("dev-role-switcher-wipe-manual-uat");
+    await expect(wipeBtn).toBeVisible({ timeout: 5_000 });
+    await wipeBtn.click();
+
+    // On success the component calls window.location.reload() — page navigates.
+    // On guard refusal the mutation rejects and alert() fires.
+    const outcome = await Promise.race([
+      page
+        .waitForEvent("framenavigated", { timeout: 60_000 })
+        .then(() => "reload" as const),
+      page.waitForEvent("dialog", { timeout: 60_000 }).then((d) => {
+        const msg = d.message();
+        d.dismiss();
+        return msg;
+      }),
+    ]);
+
+    // Guard refusal strings must NOT appear (H-1 correctness)
+    if (typeof outcome === "string" && outcome !== "reload") {
+      expect(outcome).not.toMatch(/refus|guard.*forbid|prod.*destructive/i);
+    }
 
     await ctx.close();
   });

@@ -38,6 +38,8 @@ import type {
   ReminderAudience,
 } from "@customreport/shared";
 
+import { formatPeriodLabel } from "../format-date";
+
 // ---- Form-state -> API-input mappers (Phase 22 / Plan 22-04) ----
 //
 // These helpers translate the mock-shaped form state stored in each admin tab
@@ -249,7 +251,7 @@ function mapPeriod(api: ReportPeriod): MockPeriod {
     api.status === "published" ? "published" : "open";
   return {
     id: api.id,
-    weekLabel: isoWeekLabel(api.periodStart),
+    weekLabel: formatPeriodLabel(api.periodStart, api.periodEnd),
     startDate: toIsoDateString(api.periodStart),
     endDate: toIsoDateString(api.periodEnd),
     deadline: toIsoDateString(api.deadline),

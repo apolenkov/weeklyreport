@@ -2,6 +2,26 @@
 
 **Analysis Date:** 2026-04-24
 
+## 2026-05-14 Refresh
+
+This file was originally mapped on 2026-04-24 and is now kept as historical
+context plus this live overlay. The stale claim that the frontend is fully
+mock-driven is no longer true.
+
+Current architecture:
+
+- Monorepo remains Next.js 16 + NestJS 11 + tRPC 11 + Prisma 7 +
+  PostgreSQL/Redis/BullMQ.
+- Frontend uses TRPCProvider, useTRPC, React Query hooks, cache invalidation
+  helpers, and server-side tRPC fetch helpers in apps/web/src/lib/server/.
+- API modules are broad and active: admin, archive, auth, publication,
+  reminders, period, review, report-sections, weekly-report, analytics,
+  activity, telemetry, AI seed-mode, Telegram seed-mode, and PDF export.
+- stageIds is the canonical multi-stage field across lead form items, risks,
+  decisions, and priorities.
+- Viewer/head/admin/lead semantics are enforced across shared auth contracts,
+  tRPC middleware, server layouts, and UI role gating.
+
 ## Pattern Overview
 
 **Overall:** Monorepo with NestJS (DI container) + tRPC (API surface) + Next.js (frontend), using a Repository pattern with Zod-validated domain services.

@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-05-13T06:54:21.588Z",
+  "generatedAt": "2026-05-14T12:43:49.935Z",
   "web": "http://localhost:3000",
   "api": "http://localhost:3002",
   "evidenceDir": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat",
   "counts": {
-    "PASS": 1,
-    "FAIL": 11,
+    "PASS": 3,
+    "FAIL": 9,
     "BLOCKED": 0,
     "SKIPPED": 0
   },
@@ -17,13 +17,15 @@
     },
     {
       "name": "SC-17-02 lead form page",
-      "status": "FAIL",
-      "detail": "dev-login role mismatch for lead: expected lead, got head"
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-02-lead-form.png"
     },
     {
       "name": "SC-17-03 lead history surface",
-      "status": "FAIL",
-      "detail": "dev-login role mismatch for lead: expected lead, got head"
+      "status": "PASS",
+      "detail": "verified canonical merged history surface at /reports?tab=drafts",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-03-lead-history.png"
     },
     {
       "name": "SC-17-04 dashboard page",
@@ -37,8 +39,9 @@
     },
     {
       "name": "SC-17-06 admin panel",
-      "status": "FAIL",
-      "detail": "dev-login role mismatch for admin: expected admin, got head"
+      "status": "PASS",
+      "detail": "verified in live browser",
+      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-06-admin.png"
     },
     {
       "name": "SC-17-07 print page",
@@ -48,31 +51,22 @@
     {
       "name": "SC-17-08 navigation active state",
       "status": "FAIL",
-      "detail": "dev-login role mismatch for lead: expected lead, got head"
+      "detail": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('nav[aria-label=\"Main navigation\"] a[aria-current=\"page\"]').first()\nExpected: visible\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('nav[aria-label=\"Main navigation\"] a[aria-current=\"page\"]').first()\u001b[22m\n"
     },
     {
       "name": "SC-17-09 design system consistency",
-      "status": "PASS",
-      "detail": "verified in live browser",
-      "data": {
-        "bodyBg": "rgb(238, 241, 236)",
-        "tokenBackground": "#eef1ec",
-        "tokenCard": "#fffefb",
-        "radius": "0.75rem",
-        "touchTarget": "44px",
-        "font": "Lexend, \"Source Sans 3\", ui-sans-serif, system-ui, sans-serif"
-      },
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-09-design-system.png"
+      "status": "FAIL",
+      "detail": "browser.newContext: Target page, context or browser has been closed"
     },
     {
       "name": "SC-17-10 URL routing + browser back",
       "status": "FAIL",
-      "detail": "dev-login role mismatch for lead: expected lead, got head"
+      "detail": "browser.newContext: Target page, context or browser has been closed"
     },
     {
       "name": "SC-16-01 PDF export runtime",
       "status": "FAIL",
-      "detail": "page.goto: Test ended.\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/reports?tab=published\", waiting until \"domcontentloaded\"\u001b[22m\n"
+      "detail": "browser.newContext: Target page, context or browser has been closed"
     },
     {
       "name": "SC-16-02 theme toggle visual behavior",

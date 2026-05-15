@@ -36,6 +36,7 @@ import type {
 
 import { deriveLeadStatus, type LeadStatus } from "./lead-status";
 import { trafficToStageStatus } from "./traffic-light";
+import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
 
 // ---- Self-contained re-declarations of presentation types ----
 
@@ -57,6 +58,12 @@ export type LeadInfo = {
   isCurrentUser: boolean;
   productCount?: number;
   reportContentCount?: number;
+  currentItemCount?: number;
+  nextItemCount?: number;
+  riskCount?: number;
+  decisionCount?: number;
+  priorityCount?: number;
+  submittedAtLabel?: string | null;
 };
 
 export type KpiData = {
@@ -115,23 +122,6 @@ function isoDateLabel(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function shortDate(date: Date): string {
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function isoWeekLabel(date: Date): string {
-  const d = new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(
-    ((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
-  );
-  return `Week ${week}`;
-}
-
 /**
  * Format a deadline as a human-relative label like "2d 5h" or "5h" or "Past".
  * Mirrors the shape used in the mock dashboard.
@@ -153,6 +143,10 @@ function countSectionContent(section: ReportSectionReadModel): number {
     section.decisions.length +
     section.priorities.length
   );
+}
+
+function isoSubmittedLabel(date: Date | null): string | null {
+  return date ? date.toISOString().slice(0, 10) : null;
 }
 
 function trafficLightsForLeadByName(
@@ -220,8 +214,11 @@ export function mapArchiveSummary(
 ): ArchiveReport {
   return {
     id: summary.reportId,
-    weekLabel: isoWeekLabel(summary.periodStart),
-    dateRange: `${shortDate(summary.periodStart)}\u2013${shortDate(summary.periodEnd)}`,
+    weekLabel: formatWeekLabel(summary.periodStart),
+    dateRange: formatPeriodRangeWithYear(
+      summary.periodStart,
+      summary.periodEnd,
+    ),
     status: "published",
     // Submission counts aren't on ArchiveReportSummary at v5.0.
     submissionLabel: "",
@@ -297,6 +294,14 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
         currentUserId !== undefined && row.leadId === currentUserId,
       productCount: row.projectNames.length,
       reportContentCount,
+      currentItemCount:
+        section?.items.filter((item) => item.type === "current").length ?? 0,
+      nextItemCount:
+        section?.items.filter((item) => item.type === "next").length ?? 0,
+      riskCount: section?.risks.length ?? 0,
+      decisionCount: section?.decisions.length ?? 0,
+      priorityCount: section?.priorities.length ?? 0,
+      submittedAtLabel: isoSubmittedLabel(section?.submittedAt ?? null),
     };
   });
 
@@ -364,5 +369,4 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
 export const __testing = {
   initialsFromName,
   formatRelativeDeadline,
-  isoWeekLabel,
 };

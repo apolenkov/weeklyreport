@@ -137,7 +137,7 @@ model ReportSummary {
 - `ai.regenerate` (`headProcedure`) — bust cache, enqueue.
 - `ai.judgeOnTrack` (`headProcedure`) — sync.
 
-### C6. Requires AI-SPEC.md per project rules.
+### C6. Requires AI-SPEC.md per project rules
 
 ---
 

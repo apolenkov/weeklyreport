@@ -94,7 +94,7 @@ _Affects every authenticated screen._
 - **Mockup** (line 248): `title="PM · No edit permissions"`, etc., with assignee name.
 - **Impl** (`stage-chip.tsx:156-160`): builds `title` from `assignee` if present — appears OK, but check that `unassigned` shows `— unassigned` correctly. The label below the chip is `"— unassigned"` in both places — match.
 
-### SDLC-4 — Empty stage assignee label color is teal accent in impl, but mockup also styles it teal — _no diff_ (verified line 454 `color:var(--tealA)`).
+### SDLC-4 — Empty stage assignee label color is teal accent in impl, but mockup also styles it teal — _no diff_ (verified line 454 `color:var(--tealA)`)
 
 ---
 
@@ -191,7 +191,7 @@ _Affects every authenticated screen._
 - **Impl** (`kpi-cards.tsx:20-22`): `text-xs font-medium uppercase tracking-wider`.
 - **Fix:** drop `uppercase tracking-wider`, keep size `text-sm` (14px) and muted color.
 
-### DASH-2 — KPI "Last week" shown as just text; mockup does too — match [verified].
+### DASH-2 — KPI "Last week" shown as just text; mockup does too — match [verified]
 
 ### DASH-3 — Lead Reports card traffic-light dot for at-risk uses pastel bg [HIGH]
 
@@ -232,11 +232,11 @@ _Affects every authenticated screen._
 - **Impl** (`product-accordion.tsx:129,161`): `text-[var(--color-foreground)]` (near-black).
 - **Fix:** swap to `text-[var(--color-muted-foreground)]`.
 
-### WR-3 — "Needs Attention" + "Risks & Blockers" headers in mockup are red; impl matches ✓.
+### WR-3 — "Needs Attention" + "Risks & Blockers" headers in mockup are red; impl matches ✓
 
-### WR-4 — Decision header in mockup is `var(--tealA)`; impl uses `text-[var(--color-starbucks-accent)]` ✓.
+### WR-4 — Decision header in mockup is `var(--tealA)`; impl uses `text-[var(--color-starbucks-accent)]` ✓
 
-### WR-5 — Priorities header in mockup is `var(--gold)`; impl uses `text-[var(--color-starbucks-gold)]` ✓ assuming alias maps to `#8a6d1b`.
+### WR-5 — Priorities header in mockup is `var(--gold)`; impl uses `text-[var(--color-starbucks-gold)]` ✓ assuming alias maps to `#8a6d1b`
 
 ### WR-6 — Weekly report Risks-text colors miss the dark variant on at-risk [LOW]
 

@@ -179,6 +179,28 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkExists(container, "/admin");
   });
 
+  it("renders the parked Theme control with Coming Soon in metadata", () => {
+    setRole("lead");
+    const { container } = render(<NavBar />);
+
+    const themeControl = container.querySelector(
+      '[data-testid="theme-coming-soon"]',
+    );
+
+    expect(themeControl).not.toBeNull();
+    expect(themeControl?.textContent).toMatch(/Theme/i);
+    expect(themeControl?.textContent).not.toMatch(/Soon/i);
+    expect(themeControl).toHaveAttribute(
+      "aria-label",
+      "Theme selection is coming soon",
+    );
+    expect(themeControl).toHaveAttribute(
+      "title",
+      "Theme selection is coming soon",
+    );
+    expect(themeControl).toHaveAttribute("aria-disabled", "true");
+  });
+
   it("null session (still loading) renders NO role-gated links", () => {
     setRole(null);
     const { container } = render(<NavBar />);

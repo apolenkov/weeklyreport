@@ -398,7 +398,7 @@ ROADMAP success criterion #5 states: "docker-compose.prod.yml starts full stack 
 
 ### Primary (HIGH confidence)
 
-- Codebase direct inspection: Dockerfile.api, Dockerfile.web, docker-compose.yml, ci.yml, all _.test.ts and _.integration.test.ts files, processor files, middleware files
+- Codebase direct inspection: Dockerfile.api, Dockerfile.web, docker-compose.yml, ci.yml, all _.test.ts and_.integration.test.ts files, processor files, middleware files
 - apps/api/package.json: test and test:integration scripts confirmed
 - Phase 7 VERIFICATION.md: PgBouncer descope confirmed
 

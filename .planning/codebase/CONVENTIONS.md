@@ -2,6 +2,33 @@
 
 **Analysis Date:** 2026-04-24
 
+## 2026-05-14 Refresh
+
+Current closure conventions:
+
+- Chat/docs for the user stay Russian where appropriate; code, paths, commands,
+  config keys, UI strings, and static product UI copy stay English.
+- Static UI strings in source remain English until an i18n phase exists.
+- I18N-PARKED is tracked in
+  `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`;
+  do not add translation dictionaries, locale routing, or language switching in
+  the current v8.1 closure.
+- Deferred features require code-visible TODO markers, loud stubs, and metrics
+  when the touched surface is an activation path.
+- Planning edits must pass pnpm lint:md.
+- Do not stage or revert pre-existing dirty regression evidence JSON unless a
+  phase explicitly owns those files.
+- Non-prod Docker/env database wiring must suffix both `POSTGRES_DB` and the
+  database name inside `DATABASE_URL` with `_uat`, `_dev`, or `_test`
+  whenever the host is not truly local; `prisma/_destructive-guard.ts` parses
+  `DATABASE_URL` for wipe/reset safety.
+- Database names must match the environment purpose; do not use a UAT suffix for
+  ordinary dev wiring or a dev suffix for dedicated UAT/staging.
+- For v8.1, do not add a runtime director role; director-facing UAT goes
+  through the viewer read-only path.
+- Phase 40 background/dark-theme work remains research-only unless explicitly
+  reopened.
+
 ## Naming Patterns
 
 **Files:**
@@ -290,11 +317,13 @@ this.logger.info('upserted user', { userId: parsedUser.id });
 
 - JSDoc on public methods: `/** API-11: Get application settings singleton. */`
 - Section dividers in test files using ASCII comment blocks:
+
   ```typescript
   // ---------------------------------------------------------------------------
   // P0/P1 Regression -- ADM scenarios
   // ---------------------------------------------------------------------------
   ```
+
 - Reference regression scenario IDs in test names: `'getSnapshot -- regression (ADM-010)'`
 - Reference design document IDs in schema sections: `// v4.0: Stage & Assignment schemas (D-63)`
 

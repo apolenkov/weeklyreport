@@ -206,8 +206,8 @@ The shared delta is mostly from the widened test runner picking up four co-locat
 ## trpc.router.ts unchanged
 
 ```bash
-$ git diff apps/api/src/infrastructure/trpc/trpc.router.ts
-$  # (empty)
+git diff apps/api/src/infrastructure/trpc/trpc.router.ts
+# (empty)
 ```
 
 Phase 28 (AUTH-04) owns the consumer migration to `leadProcedure`/`viewerProcedure`.

@@ -182,7 +182,7 @@ describe("mapAdminSnapshot", () => {
   it("synthesizes weekLabel and ISO date strings from period dates", () => {
     const mapped = mapAdminSnapshot(makeSnapshot());
     const period = mapped.periods.find((p) => p.id === UUID_A);
-    expect(period?.weekLabel).toMatch(/^Week \d{1,2}$/);
+    expect(period?.weekLabel).toBe("Week 16, Apr 13–19, 2026");
     expect(period?.startDate).toBe("2026-04-13");
     expect(period?.endDate).toBe("2026-04-19");
     expect(period?.deadline).toBe("2026-04-18");

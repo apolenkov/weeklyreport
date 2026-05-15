@@ -2,9 +2,8 @@
  * Translate API `reports.myHistory` entries to the `HistoryEntry` shape the
  * existing `LeadHistoryList` component expects.
  *
- * Per CONTEXT.md D-08, date formatting matches the mock display strings
- * exactly so existing E2E tests (`Apr 14-20`, `2 min ago`, ...) keep
- * passing once Phase 20 seed populates the DB with mock-equivalent data.
+ * D17: date formatting includes the year and uses an en dash so period labels
+ * stay unambiguous around year boundaries.
  *
  * NOTE: The current `myHistory` router output (see
  * `packages/shared/src/schemas/report.ts -> myHistoryEntrySchema`) does
@@ -17,6 +16,10 @@
  */
 
 import type { MyHistoryEntry } from "@customreport/shared";
+import {
+  formatPeriodRangeWithYear,
+  isoWeekNumber as sharedIsoWeekNumber,
+} from "../format-date";
 
 // ---------------------------------------------------------------------------
 // Self-contained presentation type (mirrors the mock's `HistoryEntry` shape).
@@ -60,21 +63,8 @@ const MONTHS = [
   "Dec",
 ] as const;
 
-/**
- * Format a same-month range as `Apr 14-20` and a cross-month range as
- * `Apr 28-May 4`. Uses UTC components so a server-rendered string and a
- * client-rerendered string never disagree on the day of the month.
- */
 export function formatDateRange(start: Date, end: Date): string {
-  const sMonth = MONTHS[start.getUTCMonth()];
-  const sDay = start.getUTCDate();
-  const eMonth = MONTHS[end.getUTCMonth()];
-  const eDay = end.getUTCDate();
-
-  if (start.getUTCMonth() === end.getUTCMonth()) {
-    return `${sMonth} ${sDay}-${eDay}`;
-  }
-  return `${sMonth} ${sDay}-${eMonth} ${eDay}`;
+  return formatPeriodRangeWithYear(start, end);
 }
 
 /**
@@ -114,19 +104,7 @@ export function formatSubmittedAt(
  * so the result is timezone-stable.
  */
 export function isoWeekNumber(d: Date): number {
-  // Copy in UTC and shift to the nearest Thursday (ISO anchor).
-  const target = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
-  );
-  const dayNum = (target.getUTCDay() + 6) % 7; // Mon = 0, Sun = 6
-  target.setUTCDate(target.getUTCDate() - dayNum + 3);
-  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
-  const firstThursdayDayNum = (firstThursday.getUTCDay() + 6) % 7;
-  firstThursday.setUTCDate(
-    firstThursday.getUTCDate() - firstThursdayDayNum + 3,
-  );
-  const diffMs = target.getTime() - firstThursday.getTime();
-  return 1 + Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+  return sharedIsoWeekNumber(d);
 }
 
 // ---------------------------------------------------------------------------

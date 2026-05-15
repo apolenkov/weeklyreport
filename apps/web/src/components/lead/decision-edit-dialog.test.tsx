@@ -89,4 +89,64 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
       owner: "Test Lead",
     });
   });
+
+  it("saves selected stageIds with the decision payload (UFB-014)", () => {
+    const onSave = vi.fn();
+    render(
+      <DecisionEditDialog
+        open={true}
+        decision={null}
+        defaultOwner="Test Lead"
+        availableStages={["Planning", "Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
+      target: { value: "Approve Q3 hiring plan" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Unblocks team expansion" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
+    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      text: "Approve Q3 hiring plan",
+      stageIds: ["Dev"],
+    });
+  });
+
+  it("restores existing stageIds when editing a decision (UFB-014)", () => {
+    render(
+      <DecisionEditDialog
+        open={true}
+        decision={{
+          id: "decision-1",
+          productId: "p1",
+          productName: "CRM",
+          text: "Approve release gate",
+          owner: "Test Lead",
+          impact: "Unblocks production rollout",
+          deadline: null,
+          stageIds: ["Dev"],
+        }}
+        defaultOwner="Test Lead"
+        availableStages={["Planning", "Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByRole("checkbox", { name: "Planning" }),
+    ).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Dev" })).toBeChecked();
+  });
 });

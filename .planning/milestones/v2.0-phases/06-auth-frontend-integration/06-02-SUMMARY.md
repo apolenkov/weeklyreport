@@ -104,7 +104,7 @@ Each task was committed atomically:
 **1. [Rule 3 - Blocking] TypeScript paths resolution failure**
 
 - **Found during:** Task 2 (tRPC client creation)
-- **Issue:** Child tsconfig paths override base paths entirely (TS does not merge). Adding only @customreport/api/_ caused @customreport/shared and @customreport/ui paths to be lost. Also, paths were incorrectly set as ../../apps/api/src/_ (relative to config file) instead of apps/api/src/\* (relative to baseUrl at monorepo root)
+- **Issue:** Child tsconfig paths override base paths entirely (TS does not merge). Adding only @customreport/api/_caused @customreport/shared and @customreport/ui paths to be lost. Also, paths were incorrectly set as ../../apps/api/src/_ (relative to config file) instead of apps/api/src/\* (relative to baseUrl at monorepo root)
 - **Fix:** Duplicated all base tsconfig paths into child tsconfig with correct relative paths from monorepo root baseUrl
 - **Files modified:** apps/web/tsconfig.json
 - **Verification:** pnpm -F @customreport/web exec tsc --noEmit exits 0

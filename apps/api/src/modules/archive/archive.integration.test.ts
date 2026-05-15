@@ -7,14 +7,17 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { ArchivePrismaRepository } from "./archive.prisma-repository";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { PeriodPrismaRepository } from "../period/period.prisma-repository.js";
 
 describe("ArchivePrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
   let repo: ArchivePrismaRepository;
+  let periodRepo: PeriodPrismaRepository;
   let testData: Awaited<ReturnType<typeof seedTestData>>;
 
   beforeAll(() => {
     repo = new ArchivePrismaRepository(prisma as never);
+    periodRepo = new PeriodPrismaRepository(prisma as never);
   });
 
   beforeEach(async () => {
@@ -155,5 +158,60 @@ describe("ArchivePrismaRepository (integration)", () => {
         expectDefined(expectDefined(detail).report.sections[0]).items[0],
       ).text,
     ).toBe("Archive item");
+  });
+
+  it("D-6: archive detail reads the publish-time snapshot after draft edits", async () => {
+    const stage = await prisma.stage.create({
+      data: {
+        id: "a0000000-0000-4000-a000-000000000aa3",
+        name: "Development",
+        sortOrder: 3,
+      },
+    });
+    await prisma.stageAssignment.create({
+      data: {
+        userId: testData.lead.id,
+        projectId: testData.project.id,
+        stageId: stage.id,
+      },
+    });
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        status: "yellow",
+      },
+    });
+    const item = await prisma.item.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        type: "current",
+        text: "Published snapshot item",
+        tag: "feature",
+        workflowStatus: "done",
+        carriedOver: false,
+      },
+    });
+
+    await periodRepo.publishPeriod(testData.report.id, testData.head.id);
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true, periodState: "archived" },
+    });
+    await prisma.item.update({
+      where: { id: item.id },
+      data: { text: "Draft edit after publish" },
+    });
+
+    const detail = await repo.getArchiveReport(testData.report.id);
+
+    expect(detail).not.toBeNull();
+    expect(expectDefined(detail).summary.portfolioStatus).toBe("yellow");
+    expect(
+      expectDefined(
+        expectDefined(expectDefined(detail).report.sections[0]).items[0],
+      ).text,
+    ).toBe("Published snapshot item");
   });
 });

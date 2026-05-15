@@ -1346,13 +1346,13 @@ function makeCreatePeriodRepository(opts: {
 }
 
 describe("AdminService — createPeriodManual (UFB-063)", () => {
-  it("happy path: mints a period with the supplied periodStart and returns the created row", async () => {
+  it("happy path: mints a period with the supplied non-Monday periodStart", async () => {
     const repo = makeCreatePeriodRepository({});
     const service = new AdminService(repo);
 
     const result = await service.createPeriodManual(
       {
-        periodStart: new Date("2026-05-18T00:00:00.000Z"),
+        periodStart: new Date("2026-05-20T00:00:00.000Z"),
       },
       // Pin `now` to BEFORE periodStart so the initial state is
       // deterministic ('scheduled').
@@ -1360,10 +1360,10 @@ describe("AdminService — createPeriodManual (UFB-063)", () => {
     );
 
     expect(result.periodId).toMatch(/^[0-9a-f-]+$/);
-    expect(result.periodStart.toISOString()).toBe("2026-05-18T00:00:00.000Z");
+    expect(result.periodStart.toISOString()).toBe("2026-05-20T00:00:00.000Z");
     // periodEnd defaults to start + (periodLengthDays - 1) days + 23:59:59.999
     // for the configured 7-day periodLength.
-    expect(result.periodEnd.toISOString()).toBe("2026-05-24T23:59:59.999Z");
+    expect(result.periodEnd.toISOString()).toBe("2026-05-26T23:59:59.999Z");
     // Initial state derives from now-vs-start; periodStart is in the
     // future → 'scheduled'.
     expect(result.periodState).toBe("scheduled");
@@ -1380,6 +1380,26 @@ describe("AdminService — createPeriodManual (UFB-063)", () => {
       { now: new Date("2026-05-11T12:00:00.000Z") },
     );
     expect(result.periodState).toBe("open");
+  });
+
+  it("D-8: accepts a custom period that starts on a non-Monday", async () => {
+    const repo = makeCreatePeriodRepository({});
+    const service = new AdminService(repo);
+
+    const result = await service.createPeriodManual(
+      {
+        periodStart: new Date("2026-05-19T00:00:00.000Z"),
+      },
+      { now: new Date("2026-05-11T12:00:00.000Z") },
+    );
+
+    expect(result.periodStart.toISOString()).toBe("2026-05-19T00:00:00.000Z");
+    expect(result.periodEnd.toISOString()).toBe("2026-05-25T23:59:59.999Z");
+
+    const last = repo.readLastCreated();
+    expect(last?.periodStart.toISOString()).toBe(
+      "2026-05-19T00:00:00.000Z",
+    );
   });
 
   it("computes default deadline from AppSettings (defaultDeadlineDays + workingDays + deadlineTime)", async () => {

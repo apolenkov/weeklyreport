@@ -264,6 +264,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
           risk: "Risk",
           impact: "Impact",
           mitigation: "Mitigation",
+          severity: "blocked" as const,
           stageIds: ["Testing"],
         },
       ],
@@ -291,6 +292,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     const saved = await repo.saveSection(modified);
     expect(expectDefined(saved.items[0]).stageIds).toEqual(["Development"]);
     expect(expectDefined(saved.risks[0]).stageIds).toEqual(["Testing"]);
+    expect(expectDefined(saved.risks[0]).severity).toBe("blocked");
     expect(expectDefined(saved.decisions[0]).stageIds).toEqual(["Design"]);
     expect(expectDefined(saved.priorities[0]).stageIds).toEqual(["DevOps"]);
   });
