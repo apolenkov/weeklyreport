@@ -344,20 +344,86 @@ export function createAppRouter(deps: RouterDeps) {
                 publishedAt: true,
               },
             },
+            items: {
+              select: { projectId: true, updatedAt: true },
+            },
+            risks: {
+              select: { projectId: true, updatedAt: true },
+            },
+            decisions: {
+              select: { productId: true, updatedAt: true },
+            },
+            priorities: {
+              select: { productId: true, updatedAt: true },
+            },
+            projectStatuses: {
+              select: { projectId: true, status: true, updatedAt: true },
+            },
+            stageStatuses: {
+              select: { projectId: true, updatedAt: true },
+            },
+            versionSnapshots: {
+              orderBy: { version: "desc" },
+              select: { version: true, createdAt: true },
+            },
           },
         });
 
         return myHistoryEntrySchema.array().parse(
-          sections.map((s) => ({
-            sectionId: s.id,
-            reportId: s.report.id,
-            periodStart: s.report.periodStart,
-            periodEnd: s.report.periodEnd,
-            reportStatus: s.report.status,
-            sectionStatus: s.status,
-            submittedAt: s.submittedAt,
-            publishedAt: s.report.publishedAt,
-          })),
+          sections.map((s) => {
+            const trafficLights = { green: 0, yellow: 0, red: 0 };
+            for (const row of s.projectStatuses) {
+              if (row.status === "green") trafficLights.green += 1;
+              if (row.status === "yellow") trafficLights.yellow += 1;
+              if (row.status === "red") trafficLights.red += 1;
+            }
+
+            const productIds = new Set<string>();
+            for (const row of s.projectStatuses) productIds.add(row.projectId);
+            for (const row of s.stageStatuses) productIds.add(row.projectId);
+            for (const row of s.items) productIds.add(row.projectId);
+            for (const row of s.risks) productIds.add(row.projectId);
+            for (const row of s.decisions) productIds.add(row.productId);
+            for (const row of s.priorities) productIds.add(row.productId);
+
+            const editDates = [
+              s.updatedAt,
+              ...s.items.map((row) => row.updatedAt),
+              ...s.risks.map((row) => row.updatedAt),
+              ...s.decisions.map((row) => row.updatedAt),
+              ...s.priorities.map((row) => row.updatedAt),
+              ...s.projectStatuses.map((row) => row.updatedAt),
+              ...s.stageStatuses.map((row) => row.updatedAt),
+              ...s.versionSnapshots.map((row) => row.createdAt),
+            ];
+            const lastEditAt = editDates.reduce((latest, date) =>
+              date > latest ? date : latest,
+            );
+            const latestVersion = s.versionSnapshots[0] ?? null;
+
+            return {
+              sectionId: s.id,
+              reportId: s.report.id,
+              periodStart: s.report.periodStart,
+              periodEnd: s.report.periodEnd,
+              reportStatus: s.report.status,
+              sectionStatus: s.status,
+              submittedAt: s.submittedAt,
+              publishedAt: s.report.publishedAt,
+              createdAt: s.createdAt,
+              updatedAt: s.updatedAt,
+              lastEditAt,
+              itemCount: s.items.length,
+              riskCount: s.risks.length,
+              decisionCount: s.decisions.length,
+              priorityCount: s.priorities.length,
+              productCount: productIds.size,
+              versionCount: s.versionSnapshots.length,
+              latestVersion: latestVersion?.version ?? null,
+              latestVersionAt: latestVersion?.createdAt ?? null,
+              trafficLights,
+            };
+          }),
         );
       }),
 

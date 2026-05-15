@@ -162,11 +162,53 @@ describe("mapHistoryEntries", () => {
     expect(result[0]?.periodId).toBe("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
   });
 
-  it("zero-stubs counts and trafficLights (router does not yet project them)", () => {
+  it("defaults missing aggregate fields to zeros", () => {
     const result = mapHistoryEntries([baseEntry()], now);
     expect(result[0]?.itemCount).toBe(0);
     expect(result[0]?.riskCount).toBe(0);
     expect(result[0]?.decisionCount).toBe(0);
+    expect(result[0]?.priorityCount).toBe(0);
+    expect(result[0]?.versionCount).toBe(0);
+    expect(result[0]?.latestVersion).toBeNull();
+    expect(result[0]?.latestVersionAt).toBeNull();
+    expect(result[0]?.createdAt).toBeNull();
+    expect(result[0]?.lastEditAt).toBeNull();
     expect(result[0]?.trafficLights).toEqual({ green: 0, yellow: 0, red: 0 });
+  });
+
+  it("maps projected counts, traffic lights, and activity timestamps", () => {
+    const result = mapHistoryEntries(
+      [
+        baseEntry({
+          createdAt: new Date("2026-04-18T15:30:00.000Z"),
+          updatedAt: new Date("2026-04-20T10:30:00.000Z"),
+          lastEditAt: new Date("2026-04-20T11:00:00.000Z"),
+          itemCount: 5,
+          riskCount: 1,
+          decisionCount: 2,
+          priorityCount: 3,
+          productCount: 3,
+          versionCount: 2,
+          latestVersion: 2,
+          latestVersionAt: new Date("2026-04-20T10:00:00.000Z"),
+          trafficLights: { green: 2, yellow: 0, red: 1 },
+        }),
+      ],
+      now,
+    );
+
+    expect(result[0]).toMatchObject({
+      itemCount: 5,
+      riskCount: 1,
+      decisionCount: 2,
+      priorityCount: 3,
+      productCount: 3,
+      versionCount: 2,
+      latestVersion: 2,
+      createdAt: "Apr 18",
+      lastEditAt: "1 hour ago",
+      latestVersionAt: "2 hours ago",
+      trafficLights: { green: 2, yellow: 0, red: 1 },
+    });
   });
 });

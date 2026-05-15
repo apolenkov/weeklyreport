@@ -31,6 +31,7 @@ import {
   appSettingsUpdateSchema,
   weeklyReportReadModelSchema,
   escalationSchema,
+  myHistoryEntrySchema,
   portfolioProductOverviewSchema,
   validateSubmitInput,
   groupProductSchema,
@@ -1794,5 +1795,39 @@ describe("groupProductEdgeInputSchema (UFB-054)", () => {
         productId: uuid(),
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("myHistoryEntrySchema", () => {
+  it("accepts projected aggregates and coerces timestamp strings", () => {
+    const parsed = myHistoryEntrySchema.parse({
+      sectionId: uuid(),
+      reportId: uuid(),
+      periodStart: "2026-05-11T00:00:00.000Z",
+      periodEnd: "2026-05-17T23:59:59.000Z",
+      reportStatus: "draft",
+      sectionStatus: "draft",
+      submittedAt: null,
+      publishedAt: null,
+      createdAt: "2026-05-15T17:33:11.159Z",
+      updatedAt: "2026-05-15T17:35:11.159Z",
+      lastEditAt: "2026-05-15T17:36:11.159Z",
+      itemCount: 5,
+      riskCount: 1,
+      decisionCount: 2,
+      priorityCount: 3,
+      productCount: 3,
+      versionCount: 2,
+      latestVersion: 2,
+      latestVersionAt: "2026-05-15T17:33:11.222Z",
+      trafficLights: { green: 2, yellow: 0, red: 1 },
+    });
+
+    expect(parsed.createdAt).toBeInstanceOf(Date);
+    expect(parsed.lastEditAt).toBeInstanceOf(Date);
+    expect(parsed.latestVersionAt).toBeInstanceOf(Date);
+    expect(parsed.itemCount).toBe(5);
+    expect(parsed.riskCount).toBe(1);
+    expect(parsed.trafficLights).toEqual({ green: 2, yellow: 0, red: 1 });
   });
 });

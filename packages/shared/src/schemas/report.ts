@@ -914,6 +914,24 @@ export const myHistoryEntrySchema = z.object({
   sectionStatus: reportSectionStatusSchema,
   submittedAt: z.coerce.date().nullable(),
   publishedAt: z.coerce.date().nullable(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date().optional(),
+  lastEditAt: z.coerce.date().nullable().optional(),
+  itemCount: z.number().int().min(0).optional(),
+  riskCount: z.number().int().min(0).optional(),
+  decisionCount: z.number().int().min(0).optional(),
+  priorityCount: z.number().int().min(0).optional(),
+  productCount: z.number().int().min(0).optional(),
+  versionCount: z.number().int().min(0).optional(),
+  latestVersion: z.number().int().min(1).nullable().optional(),
+  latestVersionAt: z.coerce.date().nullable().optional(),
+  trafficLights: z
+    .object({
+      green: z.number().int().min(0),
+      yellow: z.number().int().min(0),
+      red: z.number().int().min(0),
+    })
+    .optional(),
 });
 
 export type MyHistoryEntry = z.infer<typeof myHistoryEntrySchema>;

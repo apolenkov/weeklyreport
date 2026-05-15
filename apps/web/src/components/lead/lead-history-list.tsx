@@ -10,23 +10,22 @@ type LeadHistoryListProps = {
 };
 
 function TrafficDot({
-  color,
+  label,
   count,
+  className,
 }: {
-  readonly color: string;
+  readonly label: string;
   readonly count: number;
+  readonly className: string;
 }) {
-  if (count === 0) return null;
   return (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: count }, (_, i) => (
-        <span
-          key={i}
-          className="inline-flex h-[14px] w-[14px] flex-shrink-0 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
-          style={{ background: color }}
-        />
-      ))}
-    </div>
+    <span
+      className="inline-flex h-7 min-w-12 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.08)] bg-white/70 px-2 text-[12px] font-semibold text-[var(--color-foreground)]"
+      aria-label={label + ": " + count}
+    >
+      <span className={"h-2 w-2 rounded-full " + className} />
+      {count}
+    </span>
   );
 }
 
@@ -45,6 +44,60 @@ function StatusBadge({ status }: { readonly status: "submitted" | "draft" }) {
   );
 }
 
+function Metric({
+  label,
+  value,
+  tone = "default",
+}: {
+  readonly label: string;
+  readonly value: string | number;
+  readonly tone?: "default" | "risk";
+}) {
+  return (
+    <span className="min-w-0 rounded-[var(--radius)] border border-[rgba(0,0,0,0.06)] bg-[rgba(255,255,255,0.64)] px-2.5 py-2">
+      <span className="block truncate text-[11px] uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+        {label}
+      </span>
+      <span
+        className={
+          tone === "risk"
+            ? "mt-0.5 block text-sm font-bold text-[var(--color-destructive)]"
+            : "mt-0.5 block text-sm font-bold text-[var(--color-foreground)]"
+        }
+      >
+        {value}
+      </span>
+    </span>
+  );
+}
+
+function TimelineRow({
+  label,
+  value,
+  muted = false,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly muted?: boolean;
+}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-3 text-[12px]">
+      <span className="shrink-0 text-[var(--color-muted-foreground)]">
+        {label}
+      </span>
+      <span
+        className={
+          muted
+            ? "min-w-0 truncate text-right text-[var(--color-muted-foreground)]"
+            : "min-w-0 truncate text-right font-medium text-[var(--color-foreground)]"
+        }
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 export function LeadHistoryList({ entries }: LeadHistoryListProps) {
   if (entries.length === 0) {
     return (
@@ -57,7 +110,7 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2">
       {entries.map((entry) => (
         <Link
           key={entry.id}
@@ -75,7 +128,6 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
             borderLeft: "3px solid var(--color-starbucks-accent)",
           }}
         >
-          {/* Header */}
           <div className="mb-3 flex items-center justify-between">
             <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-foreground)]">
               {joinPeriodLabel(entry.weekLabel, entry.dateRange)}
@@ -83,42 +135,75 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
             <StatusBadge status={entry.status} />
           </div>
 
-          {/* Traffic lights */}
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <TrafficDot
-              color="var(--color-starbucks-accent)"
+              label="Green statuses"
               count={entry.trafficLights.green}
+              className="bg-[var(--color-starbucks-accent)]"
             />
-            <TrafficDot color="#d4a017" count={entry.trafficLights.yellow} />
             <TrafficDot
-              color="var(--color-destructive)"
+              label="Yellow statuses"
+              count={entry.trafficLights.yellow}
+              className="bg-[#d4a017]"
+            />
+            <TrafficDot
+              label="Red statuses"
               count={entry.trafficLights.red}
+              className="bg-[var(--color-destructive)]"
             />
           </div>
 
-          {/* Metrics — HIST-4: prefix with assigned-products count when present */}
-          <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--color-muted-foreground)]">
+          <div className="mt-4 grid grid-cols-2 gap-2">
             {typeof entry.productCount === "number" && (
-              <>
-                <span>{entry.productCount} assigned products</span>
-                <span>&middot;</span>
-              </>
+              <Metric label="Products" value={entry.productCount} />
             )}
-            <span>{entry.itemCount} items</span>
-            <span>&middot;</span>
-            <span>
-              {entry.riskCount} risk{entry.riskCount === 1 ? "" : "s"}
-            </span>
-            <span>&middot;</span>
-            <span>{entry.decisionCount} decisions</span>
+            <Metric label="Items" value={entry.itemCount} />
+            <Metric
+              label="Risks"
+              value={entry.riskCount}
+              tone={entry.riskCount > 0 ? "risk" : "default"}
+            />
+            <Metric label="Decisions" value={entry.decisionCount} />
+            <Metric label="Priorities" value={entry.priorityCount} />
+            <Metric
+              label="Versions"
+              value={
+                entry.latestVersion
+                  ? entry.versionCount + " / v" + entry.latestVersion
+                  : entry.versionCount
+              }
+            />
           </div>
 
-          {/* HIST-5: drop ClockIcon — mockup uses plain text. */}
-          {entry.submittedAt && (
-            <div className="mt-3 text-[13px] text-[var(--color-muted-foreground)]">
-              Submitted {entry.submittedAt}
-            </div>
-          )}
+          <div className="mt-4 space-y-1.5 border-t border-[rgba(0,0,0,0.07)] pt-3">
+            {entry.createdAt && (
+              <TimelineRow label="Created" value={entry.createdAt} />
+            )}
+            {entry.lastEditAt && (
+              <TimelineRow label="Last edit" value={entry.lastEditAt} />
+            )}
+            {entry.submittedAt ? (
+              <TimelineRow label="Submitted" value={entry.submittedAt} />
+            ) : (
+              <TimelineRow label="Submitted" value="Not submitted" muted />
+            )}
+            {entry.latestVersion ? (
+              <TimelineRow
+                label="Latest version"
+                value={
+                  "v" +
+                  entry.latestVersion +
+                  (entry.latestVersionAt ? " · " + entry.latestVersionAt : "")
+                }
+              />
+            ) : (
+              <TimelineRow
+                label="Latest version"
+                value="No versions yet"
+                muted
+              />
+            )}
+          </div>
         </Link>
       ))}
     </div>
