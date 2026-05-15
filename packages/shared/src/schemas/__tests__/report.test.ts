@@ -1807,6 +1807,7 @@ describe("myHistoryEntrySchema", () => {
       periodEnd: "2026-05-17T23:59:59.000Z",
       reportStatus: "draft",
       sectionStatus: "draft",
+      archived: false,
       submittedAt: null,
       publishedAt: null,
       createdAt: "2026-05-15T17:33:11.159Z",
@@ -1828,6 +1829,7 @@ describe("myHistoryEntrySchema", () => {
     expect(parsed.latestVersionAt).toBeInstanceOf(Date);
     expect(parsed.itemCount).toBe(5);
     expect(parsed.riskCount).toBe(1);
+    expect(parsed.archived).toBe(false);
     expect(parsed.trafficLights).toEqual({ green: 2, yellow: 0, red: 1 });
   });
 });

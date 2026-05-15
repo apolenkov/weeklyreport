@@ -24,6 +24,7 @@ export type HistoryEntry = {
   weekLabel: string;
   dateRange: string;
   status: "submitted" | "draft";
+  archived?: boolean;
   submittedAt: string | null;
   createdAt: string | null;
   lastEditAt: string | null;
@@ -130,6 +131,7 @@ export function mapHistoryEntries(
     weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
     dateRange: formatDateRange(e.periodStart, e.periodEnd),
     status: e.sectionStatus,
+    archived: e.archived ?? false,
     submittedAt: formatSubmittedAt(e.submittedAt, now),
     createdAt: formatHistoryTimestamp(e.createdAt, now),
     lastEditAt: formatHistoryTimestamp(e.lastEditAt ?? e.updatedAt, now),

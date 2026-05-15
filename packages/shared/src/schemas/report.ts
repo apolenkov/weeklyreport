@@ -912,6 +912,7 @@ export const myHistoryEntrySchema = z.object({
   periodEnd: z.coerce.date(),
   reportStatus: reportStatusSchema,
   sectionStatus: reportSectionStatusSchema,
+  archived: z.boolean().optional(),
   submittedAt: z.coerce.date().nullable(),
   publishedAt: z.coerce.date().nullable(),
   createdAt: z.coerce.date().optional(),

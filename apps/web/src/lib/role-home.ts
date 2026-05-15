@@ -13,7 +13,7 @@ import type { Role } from "@customreport/shared";
  *   - admin    → `/admin`                  admin panel is admin-only post UFB-038
  *   - head     → `/head/dashboard`         submission dashboard is the head's main surface
  *   - lead     → `/lead/report`            active section editor for the open period
- *   - viewer   → `/reports?tab=published`  published archive list, no edit affordances
+ *   - viewer   → `/reports?tab=published`  archive history, no edit affordances
  *
  * Anonymous (no role) callers should fall back to `/` and let the proxy /
  * landing redirect logic decide.

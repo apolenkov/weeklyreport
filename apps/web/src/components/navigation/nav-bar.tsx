@@ -2,7 +2,15 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Moon } from "lucide-react";
+import {
+  BarChart3,
+  Clock,
+  FileText,
+  LayoutDashboard,
+  Moon,
+  Presentation,
+  Settings,
+} from "lucide-react";
 
 import { DEFAULT_ORGANIZATION_IDENTITY, type Role } from "@customreport/shared";
 
@@ -29,33 +37,32 @@ type NavLink = {
 };
 
 const NAV_LINKS: ReadonlyArray<NavLink> = [
-  { href: "/lead/report", label: "My Report", roles: ["lead"] },
-  // UX-17 (Phase 35-08): "My History" + legacy "Archive" merged into a single
-  // /reports page with role-default tabs. The lead-specific link still
-  // exists in the nav but now drops into the "My Drafts" tab; the
-  // role-shared "Archive" link uses the same URL with the published tab.
-  { href: "/reports?tab=drafts", label: "My History", roles: ["lead"] },
+  { href: "/lead/report", label: "Report", roles: ["lead"] },
+  // UX-17 (Phase 35-08): personal history and the archived report list live on
+  // one /reports page. The lead-specific link opens personal history; the
+  // shared link opens archived compiled reports.
+  { href: "/reports?tab=drafts", label: "History", roles: ["lead"] },
   { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
-  { href: "/head/report", label: "Status Report", roles: ["head"] },
+  { href: "/head/report", label: "Status", roles: ["head"] },
   // UFB-058 / Phase 60: Status Presentation surface — draft authoring
   // slides remain lead/head-only. Viewer presentation access is
   // exposed from the published report page under /reports/[reportId]/present.
   {
     href: "/lead/slides",
-    label: "Status Presentation",
+    label: "Slides",
     roles: ["lead"],
   },
   {
     href: "/head/slides",
-    label: "Status Presentation",
+    label: "Slides",
     roles: ["head"],
   },
   {
     // UFB-022: admin role sees only the Admin section, not the
     // department dashboard/report/archive surfaces.
     href: "/reports?tab=published",
-    label: "Archive",
-    roles: ["lead", "head", "viewer"],
+    label: "History",
+    roles: ["head", "viewer"],
   },
   // UFB-038: admin tab is admin-only. heads have a dashboard, not an admin
   // panel. The /admin/layout.tsx role gate enforces the same on the route.
@@ -107,8 +114,16 @@ function isActiveLink(
   if (href === "/head/dashboard") return pathname === "/head/dashboard";
   if (href.startsWith("/reports?")) {
     const hrefTab = reportsTabFromHref(href);
-    if (pathname === "/reports") return activeReportsTab === hrefTab;
-    return hrefTab === "published" && isPublishedReportPath(pathname);
+    if (pathname === "/reports") {
+      return (
+        activeReportsTab === hrefTab ||
+        (hrefTab === "drafts" && activeReportsTab === "published")
+      );
+    }
+    return (
+      isPublishedReportPath(pathname) &&
+      (hrefTab === "published" || hrefTab === "drafts")
+    );
   }
   return pathname.startsWith(href);
 }
@@ -168,74 +183,26 @@ function shouldRenderDevRoleSwitcher() {
   );
 }
 
-// Per-link SVG icons matching mockup s1-s9. 14×14 monoline, currentColor.
 function NavIcon({ href }: { readonly href: string }) {
-  const common = {
-    width: 14,
-    height: 14,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 2,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-  };
+  const common = { size: 14, strokeWidth: 2, "aria-hidden": true };
   switch (href) {
     case "/lead/report":
-      // file with edit pencil — "My Report"
-      return (
-        <svg {...common}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-        </svg>
-      );
+      return <FileText {...common} />;
     case "/lead/history":
     case "/reports?tab=drafts":
-      // clock — "My History"
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-      );
-    case "/head/dashboard":
-      // grid — "Dashboard"
-      return (
-        <svg {...common}>
-          <rect x="3" y="3" width="7" height="7" />
-          <rect x="14" y="3" width="7" height="7" />
-          <rect x="14" y="14" width="7" height="7" />
-          <rect x="3" y="14" width="7" height="7" />
-        </svg>
-      );
-    case "/head/report":
-      // document with chart bars — "Weekly Report"
-      return (
-        <svg {...common}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="9" y1="13" x2="9" y2="17" />
-          <line x1="13" y1="11" x2="13" y2="17" />
-          <line x1="17" y1="14" x2="17" y2="17" />
-        </svg>
-      );
+      return <Clock {...common} />;
     case "/reports/history":
     case "/reports?tab=published":
-      // folder/archive — "Archive"
-      return (
-        <svg {...common}>
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        </svg>
-      );
+      return <Clock {...common} />;
+    case "/head/dashboard":
+      return <LayoutDashboard {...common} />;
+    case "/head/report":
+      return <BarChart3 {...common} />;
+    case "/lead/slides":
+    case "/head/slides":
+      return <Presentation {...common} />;
     case "/admin":
-      // gear — "Admin"
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
-      );
+      return <Settings {...common} />;
     default:
       return null;
   }

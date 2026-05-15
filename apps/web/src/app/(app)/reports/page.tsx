@@ -19,13 +19,12 @@ import { useTRPC } from "../../../lib/trpc-context";
 /**
  * UX-17 (Phase 35-08): merged Reports page.
  *
- * Two tabs: "My Drafts" (lead-only, the lead's authored sections —
- * includes drafts and submitted) and "Published" (the archive of
- * published periods, visible to every role).
+ * Two tabs: "My History" (lead-only, the lead's authored sections) and
+ * "Archive" (archived compiled reports, visible to every role).
  *
  * Tab default by role:
- *   - lead              → "My Drafts"
- *   - head/admin/viewer → "Published"
+ *   - lead              → "My History"
+ *   - head/admin/viewer → "Archive"
  * Override via `?tab=drafts|published`.
  *
  * The legacy `/lead/history` and `/reports/history` routes 307-redirect
@@ -83,24 +82,24 @@ export default function ReportsPage() {
         <div className="space-y-6">
           <header>
             <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-              Reports
+              History
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
               {isLead
-                ? "Your drafts and published group reports in one place."
-                : "Published group report archive."}
+                ? "Your report history and archived reports in one place."
+                : "Archived report history."}
             </p>
           </header>
 
           <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)]">
             <TabButton
-              label="My Drafts"
+              label="My History"
               active={tab === "drafts"}
               disabled={!isLead}
               onClick={() => selectTab("drafts")}
             />
             <TabButton
-              label="Published"
+              label="Archive"
               active={tab === "published"}
               onClick={() => selectTab("published")}
             />
@@ -121,10 +120,12 @@ export default function ReportsPage() {
 
           {tab === "drafts" ? (
             isLead ? (
-              <LeadDraftsPanel />
+              <LeadHistoryPanel archived={false} />
             ) : (
               <EmptyDraftsForNonLead />
             )
+          ) : isLead ? (
+            <LeadHistoryPanel archived />
           ) : (
             <ReportArchiveSection />
           )}
@@ -169,14 +170,14 @@ function EmptyDraftsForNonLead() {
         This tab is available to leads only.
       </p>
       <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-        Leads see their drafts and submitted reports here. Open Published to
-        view the group archive.
+        Leads see their drafts and submitted reports here. Open Archive to view
+        archived compiled reports.
       </p>
     </div>
   );
 }
 
-function LeadDraftsPanel() {
+function LeadHistoryPanel({ archived }: { readonly archived: boolean }) {
   const trpc = useTRPC();
   const { data, isLoading, isError, error } = useQuery(
     trpc.reports.myHistory.queryOptions(),
@@ -193,8 +194,10 @@ function LeadDraftsPanel() {
     const history = Array.isArray(data)
       ? (data as readonly MyHistoryEntry[])
       : [];
-    return mapHistoryEntries(history);
-  }, [data]);
+    return mapHistoryEntries(history).filter((entry) =>
+      archived ? entry.archived : !entry.archived,
+    );
+  }, [data, archived]);
   const visibleEntries = showAll
     ? entries
     : entries.slice(0, HISTORY_INITIAL_VISIBLE);
@@ -207,27 +210,38 @@ function LeadDraftsPanel() {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="space-y-6">
-        <LeadHistoryList entries={visibleEntries} />
+        {entries.length > 0 ? (
+          <LeadHistoryList entries={visibleEntries} />
+        ) : (
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center">
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              {archived
+                ? "No archived reports yet."
+                : "You have no report history yet."}
+            </p>
+          </div>
+        )}
         {hasMore && (
           <div className="flex items-center justify-center">
             <button
               type="button"
               className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
               onClick={() => setShowAll(true)}
-              aria-label={`Show all ${entries.length} submissions`}
+              aria-label={`Show all ${entries.length} ${
+                archived ? "archived reports" : "reports"
+              }`}
             >
               Show all ({entries.length})
             </button>
           </div>
         )}
-        {entries.length === 0 && (
-          <p className="text-center text-sm text-[var(--color-muted-foreground)]">
-            You have no submitted reports yet.
-          </p>
-        )}
       </div>
       <div className="space-y-4">
-        <LeadHistorySidebar entries={entries} />
+        <LeadHistorySidebar
+          entries={entries}
+          summaryTitle={archived ? "Archive Summary" : "My History Summary"}
+          showStatus={!archived}
+        />
       </div>
     </div>
   );
