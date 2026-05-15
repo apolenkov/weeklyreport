@@ -7,8 +7,8 @@ Status: Clean after commits; Docker MVP running
 
 Closed the v8.1 recovery thread into a repo-local state that can be resumed
 without rediscovery. All active tails for this repository are consolidated into
-v8.1 Closure & Recovery; future UI/theme/MOB-PARKED/Telegram/AI telemetry/perf
-work is parked as Coming Soon scope, not an active blocker.
+v8.1 Closure & Recovery; future UI/theme/i18n/MOB-PARKED/Telegram/AI
+telemetry/perf work is parked as Coming Soon scope, not an active blocker.
 
 ## Completed Work
 
