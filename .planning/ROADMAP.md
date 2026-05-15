@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: shipped 2026-05-06 (26 plan files, 27 summaries; 35-02 subsumed by 35-08) | v8.1: Closure & Recovery active; current release gate is UAT/recovery + PR #5 CI, with theme/Safari/AI/telemetry work parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: shipped 2026-05-06 (26 plan files, 27 summaries; 35-02 subsumed by 35-08) | v8.1: Closure & Recovery active; current release gate is UAT/recovery + PR #5 CI, with theme/MOB-PARKED/AI/telemetry work parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
 
 ---
 
@@ -17,7 +17,7 @@
 - [x] **v6.0 Roles, Quality, AI & Analytics** - Phases 27-31 (shipped 2026-04-29) + post-v6.0 UX-overhaul wave 2026-04-30..2026-05-04
 - [ ] ~~**v7.0 Stabilisation & Hardening**~~ — ABSORBED into v8.0 (Phases 32-33 became sub-plans of 34-35); see [v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md) for historical context
 - [x] **v8.0 Production Readiness** - Phases 34-39 (shipped 2026-05-06, 26 plan files, 27 summaries) — [details](milestones/v8.0-ROADMAP.md)
-- [ ] **v8.1 Closure & Recovery** - consolidated UAT/recovery milestone; original Visual Identity, AI Maturity, Safari sign-off, Telegram activation, and telemetry scope is parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`, while final completion waits on PR #5 CI — [details](milestones/v8.1-ROADMAP.md)
+- [ ] **v8.1 Closure & Recovery** - consolidated UAT/recovery milestone; original Visual Identity, AI Maturity, MOB-PARKED mobile sign-off, Telegram activation, and telemetry scope is parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`, while final completion waits on PR #5 CI — [details](milestones/v8.1-ROADMAP.md)
 
 ## Phases
 
@@ -530,10 +530,10 @@ of v8.1; keep Phase 54 seeds-only artifacts as the current safe boundary.
 **Plans**: parked complete for current scope; future work is captured in
 `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
 
-### Phase 42: iOS Safari Sign-off
+### Phase 42: MOB-PARKED Mobile Sign-off
 
-**Goal**: Park real-device Safari sign-off out of v8.1; current UAT repeats on
-Dockerized local stack plus Playwright/log evidence.
+**Goal**: Park mobile PDF/open-report sign-off out of v8.1; current UAT repeats
+on Dockerized local stack plus Playwright/log evidence.
 **Plans**: parked complete for current scope; future UI/UAT work is captured
 in `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
 
