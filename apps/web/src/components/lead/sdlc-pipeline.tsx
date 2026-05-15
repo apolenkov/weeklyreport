@@ -43,31 +43,6 @@ type SdlcPipelineProps = {
   }[];
 };
 
-function ProductStatusBadge({ status }: { readonly status: StageStatus }) {
-  if (status === "on-track") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[11px] font-semibold text-[var(--color-primary)]">
-        On Track
-      </span>
-    );
-  }
-  if (status === "at-risk") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fef3c7] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[11px] font-semibold text-[#8a6d1b]">
-        ! At Risk
-      </span>
-    );
-  }
-  if (status === "blocked") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fee2e2] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[11px] font-semibold text-[var(--color-destructive)]">
-        &times; Blocked
-      </span>
-    );
-  }
-  return null;
-}
-
 function getProductBackground(status: StageStatus): string {
   if (status === "blocked") return "#fdf8f8";
   if (status === "at-risk") return "#fffcf5";
@@ -186,9 +161,7 @@ export function SdlcPipeline({
               text with an inline-flex pill featuring a *pulsing* red dot
               (`@keyframes risk-pulse` defined in globals.css). Mockup s2
               uses this to draw the eye to active blockers without users
-              having to read the label. SDLC-2: per-stage error chips listed
-              alongside the product status give the head a one-glance read of
-              which stages are problematic without expanding. */}
+              having to read the label. */}
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
@@ -210,43 +183,14 @@ export function SdlcPipeline({
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {/* SDLC-2: each at-risk / blocked stage on this product gets a
-                  small badge so the row reads "✕ Dev · ✕ Testing · ! At Risk"
-                  even when the SDLC chip row is collapsed. */}
-              {product.stages
-                .filter((s) => s.status === "at-risk" || s.status === "blocked")
-                .map((s) => (
-                  <span
-                    key={`stage-badge-${s.stageName}`}
-                    className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-1.5 py-0.5 text-[10px] font-semibold"
-                    style={
-                      s.status === "blocked"
-                        ? {
-                            background: "rgba(200,32,20,0.12)",
-                            color: "var(--color-destructive)",
-                          }
-                        : {
-                            background: "rgba(212,160,23,0.15)",
-                            color: "#8a6d1b",
-                          }
-                    }
-                    title={`${s.stageName} · ${s.status}`}
-                  >
-                    <span aria-hidden="true">
-                      {s.status === "blocked" ? "✕" : "!"}
-                    </span>
-                    {s.stageName}
-                  </span>
-                ))}
-              <ProductStatusBadge status={product.overallStatus} />
-              {/* Phase 31 (AI-03): on-track advisory icon next to the
-                  human-authored status. Renders ALONGSIDE — never replaces.
-                  Skipped when sectionId is unavailable (mock data, pre-load). */}
-              {sectionId ? (
+            {sectionId ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {/* Phase 31 (AI-03): on-track advisory icon next to the
+                    product header. Renders ALONGSIDE — never replaces.
+                    Skipped when sectionId is unavailable (mock data, pre-load). */}
                 <OnTrackIcon sectionId={sectionId} projectId={product.id} />
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Stages row */}

@@ -38,7 +38,7 @@ describe("RisksSection stage scope", () => {
     expect(screen.getByText("All stages")).toBeInTheDocument();
   });
 
-  it("compacts long explicit stage selections", () => {
+  it("renders every explicit stage without compacting", () => {
     render(
       <RisksSection
         risks={[
@@ -53,6 +53,7 @@ describe("RisksSection stage scope", () => {
     expect(screen.getByText("Planning")).toBeInTheDocument();
     expect(screen.getByText("Analysis")).toBeInTheDocument();
     expect(screen.getByText("Design")).toBeInTheDocument();
-    expect(screen.getByText("+1")).toBeInTheDocument();
+    expect(screen.getByText("Dev")).toBeInTheDocument();
+    expect(screen.queryByText("+1")).not.toBeInTheDocument();
   });
 });

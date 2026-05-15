@@ -250,29 +250,28 @@ export function PrioritiesSection({
             </span>
             <button
               type="button"
-              className="flex-1 cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
+              className="min-h-[68px] flex-1 cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-3 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
               onClick={() => handleEdit(idx)}
               disabled={readOnly}
               aria-label={`Edit priority ${entry.rank}`}
             >
-              <div className="flex flex-wrap items-center gap-2">
-                {entry.productName && (
-                  <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
-                    {entry.productName}
-                  </span>
-                )}
-                {/* Keep scoped stages readable and consistent with Decisions:
-                    full labels beat colored abbreviations for SDLC names. */}
-                <PriorityStageScope
-                  rank={entry.rank}
-                  stageTags={stageTags}
-                />
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  {entry.productName && (
+                    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
+                      {entry.productName}
+                    </span>
+                  )}
+                  {/* Keep scoped stages readable and consistent with Decisions:
+                      full labels beat colored abbreviations for SDLC names. */}
+                  <PriorityStageScope rank={entry.rank} stageTags={stageTags} />
+                </div>
                 {entry.text.trim().length > 0 ? (
-                  <span className="break-words text-[var(--color-foreground)]">
+                  <span className="block break-words text-[var(--color-foreground)]">
                     {entry.text}
                   </span>
                 ) : (
-                  <span className="text-[var(--color-muted-foreground)]">
+                  <span className="block text-[var(--color-muted-foreground)]">
                     — pending
                   </span>
                 )}
