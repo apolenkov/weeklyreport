@@ -189,7 +189,7 @@ export function RiskEditDialog({
       role="presentation"
     >
       <div
-        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius)] bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
