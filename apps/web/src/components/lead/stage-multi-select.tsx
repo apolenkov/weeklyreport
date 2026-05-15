@@ -31,6 +31,7 @@ export function StageMultiSelect({
   const visibleSelected = selected.slice(0, MAX_VISIBLE);
   const hiddenCount =
     selected.length > MAX_VISIBLE ? selected.length - MAX_VISIBLE : 0;
+  const singleStage = stages.length === 1 ? stages[0] : undefined;
 
   return (
     <fieldset
@@ -49,6 +50,13 @@ export function StageMultiSelect({
       {stages.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[rgba(0,0,0,0.18)] bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-muted-foreground)]">
           No assigned stages available.
+        </div>
+      ) : singleStage ? (
+        <div className="inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]">
+          {singleStage}
+          <span className="ml-2 text-[10px] font-medium">
+            Applied automatically
+          </span>
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
