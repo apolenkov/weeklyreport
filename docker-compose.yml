@@ -129,16 +129,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
+      target: installer
       args:
         API_URL: http://api:3002
         NEXT_PUBLIC_API_URL: http://localhost:3002
         NEXT_PUBLIC_AUTH_STUB: "true"
         NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
+    command: pnpm --filter @customreport/web exec next dev --webpack -H 0.0.0.0 -p 3000
     environment:
+      NODE_ENV: development
       API_URL: http://api:3002
       NEXT_PUBLIC_API_URL: http://localhost:3002
       NEXT_PUBLIC_AUTH_STUB: "true"
       NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
+      NEXT_DIST_DIR: .next-docker-dev
     depends_on:
       api:
         condition: service_healthy
