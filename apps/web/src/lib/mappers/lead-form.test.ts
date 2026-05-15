@@ -348,6 +348,9 @@ describe("mapLeadPeriods", () => {
         sectionStatus: "draft",
         submittedAt: null,
         publishedAt: null,
+        itemCount: 7,
+        riskCount: 2,
+        productCount: 4,
       },
       {
         sectionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -368,6 +371,9 @@ describe("mapLeadPeriods", () => {
     expect(expectDefined(periods[1]).isCurrent).toBe(false);
     expect(expectDefined(periods[1]).isSubmitted).toBe(true);
     expect(expectDefined(periods[0]).dateRange).toBe("Apr 14–20, 2026");
+    expect(expectDefined(periods[0]).itemCount).toBe(7);
+    expect(expectDefined(periods[0]).riskCount).toBe(2);
+    expect(expectDefined(periods[0]).productCount).toBe(4);
   });
 });
 

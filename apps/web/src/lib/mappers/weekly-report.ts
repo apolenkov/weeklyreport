@@ -17,16 +17,12 @@
  *   `worstStatus` + `leadNames`; we use it directly rather than re-deriving.
  *   Counts (`currentWeekCount`, `nextWeekCount`, `riskCount`) are derived from
  *   the re-sliced items.
- * - Decisions have no `projectId` in `decisionInputSchema`; we attach each
- *   decision to the section author's first project (matches mock behavior of
- *   showing decisions under a single product per lead). Decisions for sections
- *   with no projects are dropped.
- * - Priorities are per-section with rank 1..N; we group them into the section
- *   author's first project's priorities list (mock behavior).
- * - `riskInputSchema` has no `severity`/`stageName`; severity defaults to
- *   `'at-risk'` (only `escalations` distinguishes blocked vs at-risk and we
- *   honor it for blocked entries by checking item workflowStatus = 'blocked').
- *   `badge` is synthesized as `${productName} · Dev`.
+ * - Decisions and priorities carry optional productId. We group by that
+ *   explicit product when present, with a first-project fallback only for
+ *   legacy records that predate product-scoped decisions/priorities.
+ * - `riskInputSchema.severity` is optional. When older rows omit it, severity
+ *   falls back to a blocked-item check for the same product, then to
+ *   `'at-risk'`. `badge` is synthesized as `${productName} · Dev`.
  * - `currentWeek[i].stageLead` synthesized as `'Dev · ${initials}'`.
  * - `period.dateRange` formatted as `Apr 14–20, 2026` (en-dash).
  */
@@ -252,8 +248,9 @@ function groupRisksByProject(
 }
 
 /**
- * Group decisions and priorities by the section author's first project. If the
- * section has no projects, the entries are dropped (no place to render them).
+ * Group decisions and priorities by their explicit productId when present.
+ * Legacy entries without productId fall back to the section author's first
+ * project. If neither exists, the entry is dropped (no place to render it).
  */
 function groupDecisionsAndPrioritiesByProject(
   sections: readonly ReportSectionReadModel[],
@@ -266,28 +263,39 @@ function groupDecisionsAndPrioritiesByProject(
 
   for (const section of sections) {
     const firstProject = section.projects[0];
-    if (!firstProject) continue;
-    const productName = firstProject.projectName;
+    const projectsById = new Map(
+      section.projects.map((project) => [project.projectId, project] as const),
+    );
 
-    const decisionList = decisions.get(firstProject.projectId) ?? [];
+    const resolveProduct = (productId: string | null | undefined) => {
+      if (productId) {
+        return {
+          projectId: productId,
+          projectName: projectsById.get(productId)?.projectName ?? "Unknown",
+        };
+      }
+      return firstProject;
+    };
+
     section.decisions.forEach((d, idx) => {
+      const targetProduct = resolveProduct(d.productId);
+      if (!targetProduct) return;
+      const decisionList = decisions.get(targetProduct.projectId) ?? [];
       decisionList.push({
         id: d.id ?? `decision-${section.reportSectionId}-${idx}`,
-        badge: productName,
+        badge: targetProduct.projectName,
         text: d.text,
       });
+      decisions.set(targetProduct.projectId, decisionList);
     });
-    if (decisionList.length > 0) {
-      decisions.set(firstProject.projectId, decisionList);
-    }
 
-    const priorityList = priorities.get(firstProject.projectId) ?? [];
     section.priorities.forEach((p) => {
+      const targetProduct = resolveProduct(p.productId);
+      if (!targetProduct) return;
+      const priorityList = priorities.get(targetProduct.projectId) ?? [];
       priorityList.push({ rank: p.rank, text: p.text });
+      priorities.set(targetProduct.projectId, priorityList);
     });
-    if (priorityList.length > 0) {
-      priorities.set(firstProject.projectId, priorityList);
-    }
   }
 
   return { decisions, priorities };
