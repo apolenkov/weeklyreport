@@ -5,9 +5,9 @@
  *   - 1 head, 1 viewer, 1 admin, 6 leads (RU names — Phase 35-08)
  *   - 6 products (one per lead)
  *   - 7 SDLC stages
- *   - 2 reports (current week active + previous week published — dynamic dates)
- *   - Per-lead: 1 ProjectStatus + 5 items + 1 risk + 2 decisions + 3 priorities
- *   - 2 reminder rules (deadline T-24h, escalation T+2h)
+ *   - 8 reports (active, published, archived history, scheduled future)
+ *   - Per-lead: project + stage status, items, risk, decisions, priorities
+ *   - 2 reminder policies + derived rules (deadline T-24h, escalation T+2h)
  *
  * Differs from seed.ts (advanced, 12 products / 6 leads / dozens of items)
  * which is the canonical fixture for tests. This simple seed is for
@@ -43,8 +43,12 @@ import {
   ItemType,
   ItemWorkflowStatus,
   PeriodStatus,
+  PeriodState,
+  ReminderAudience,
   ReminderRuleKind,
   ReminderRuleStatus,
+  ReopenRequestStatus,
+  UserActionStatus,
 } from "@prisma/client";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 
@@ -82,6 +86,8 @@ const REPORT_PUBLISHED = "a0000000-0000-4000-8000-000000000002";
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 // A36: second group so head scoping can be tested (head only sees own group's leads)
 const FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
+const POLICY_DEADLINE = "a0000000-0000-4000-8000-000000000a01";
+const POLICY_ESCALATION = "a0000000-0000-4000-8000-000000000a02";
 
 // ---- Date helpers (FIX-01, Phase 35-08) ----
 // Compute the current ISO week in UTC so the active period always covers
@@ -244,6 +250,30 @@ const ACTIVE_REMINDER_ESCALATION_FIRE = (() => {
   return r;
 })();
 
+function demoPublishedSnapshot(input: {
+  reportId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  deadline: Date;
+  publishedAt: Date;
+}) {
+  return {
+    reportId: input.reportId,
+    periodStart: input.periodStart.toISOString(),
+    periodEnd: input.periodEnd.toISOString(),
+    deadline: input.deadline.toISOString(),
+    status: ReportStatus.published,
+    publishedAt: input.publishedAt.toISOString(),
+    publishedById: HEAD_ID,
+    publishedByName: "Елена Р.",
+    portfolioOverview: {
+      status: TrafficLightStatus.green,
+      totals: { green: 1, yellow: 0, red: 0 },
+    },
+    sections: [],
+  };
+}
+
 async function main() {
   // C7 destructive-guard (UAT plan v7): refuse on prod-looking DATABASE_URL.
   assertNonProdDestructive("seed-simple");
@@ -259,6 +289,7 @@ async function main() {
   await prisma.aiIngestionJob.deleteMany({});
   await prisma.reminderExecution.deleteMany({});
   await prisma.reminderRule.deleteMany({});
+  await prisma.reminderPolicy.deleteMany({});
   await prisma.aiInsight.deleteMany({});
   await prisma.priority.deleteMany({});
   await prisma.decision.deleteMany({});
@@ -270,12 +301,15 @@ async function main() {
   await prisma.reopenRequest.deleteMany({});
   await prisma.reportSection.deleteMany({});
   await prisma.pdfExportJob.deleteMany({});
+  await prisma.carryOverRecord.deleteMany({});
+  await prisma.carryOverExecution.deleteMany({});
   await prisma.report.deleteMany({});
   await prisma.stageAssignment.deleteMany({});
   await prisma.groupProduct.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.stage.deleteMany({});
   await prisma.telegramBinding.deleteMany({});
+  await prisma.userActionLog.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.reportingGroup.deleteMany({});
 
@@ -294,6 +328,60 @@ async function main() {
       id: FINANCE_GROUP_ID,
       name: "Finance",
       description: "Finance and HR reporting group",
+    },
+  });
+
+  console.log("[seed-simple] Creating organization + app settings...");
+  await prisma.organization.upsert({
+    where: { id: "singleton" },
+    update: {
+      shortName: "Demo",
+      fullName: "Example Software Department",
+    },
+    create: {
+      id: "singleton",
+      shortName: "Demo",
+      fullName: "Example Software Department",
+    },
+  });
+  await prisma.appSettings.upsert({
+    where: { id: "singleton" },
+    update: {
+      autoCreatePeriods: false,
+      defaultDeadlineDays: 5,
+      periodLengthDays: 7,
+      gracePeriodHours: 24,
+      defaultTimezone: "Europe/Moscow",
+      defaultReminderAudience: ReminderAudience.LEAD_WITH_DRAFT,
+      allowLateSubmissions: true,
+      autoPublishAfterDeadline: false,
+      autoArchiveWeeksAfterPublish: 0,
+      firstDayOfWeek: 1,
+      deadlineDayOfWeek: 5,
+      deadlineTime: "18:00",
+      maxOpenPeriods: 1,
+      requireAllSectionsToPublish: true,
+      allowReopenAfterPublish: true,
+      reopenWindowHours: 72,
+    },
+    create: {
+      id: "singleton",
+      autoCreatePeriods: false,
+      defaultDeadlineDays: 5,
+      periodLengthDays: 7,
+      gracePeriodHours: 24,
+      defaultTimezone: "Europe/Moscow",
+      defaultReminderAudience: ReminderAudience.LEAD_WITH_DRAFT,
+      allowLateSubmissions: true,
+      autoPublishAfterDeadline: false,
+      autoArchiveWeeksAfterPublish: 0,
+      firstDayOfWeek: 1,
+      deadlineDayOfWeek: 5,
+      deadlineTime: "18:00",
+      maxOpenPeriods: 1,
+      requireAllSectionsToPublish: true,
+      allowReopenAfterPublish: true,
+      reopenWindowHours: 72,
     },
   });
 
@@ -515,6 +603,7 @@ async function main() {
         weekLabel: `Week ${isoWeekNumber(ACTIVE_MONDAY)}`,
         periodStatus: PeriodStatus.open,
         status: ReportStatus.draft,
+        periodState: PeriodState.open,
       },
       {
         id: REPORT_PUBLISHED,
@@ -526,18 +615,47 @@ async function main() {
         status: ReportStatus.published,
         publishedAt: PREV_SUNDAY,
         publishedById: HEAD_ID,
+        periodState: PeriodState.published,
+        publishedSnapshot: demoPublishedSnapshot({
+          reportId: REPORT_PUBLISHED,
+          periodStart: PREV_MONDAY,
+          periodEnd: PREV_SUNDAY,
+          deadline: PREV_FRIDAY_DEADLINE,
+          publishedAt: PREV_SUNDAY,
+        }),
       },
-      ...EXTRA_REPORTS.map((r) => ({
-        id: r.id,
-        periodStart: r.monday,
-        periodEnd: endOfDayUTC(plusDaysUTC(r.monday, 6)),
-        deadline: fridayDeadlineFor(r.monday),
-        weekLabel: `Week ${isoWeekNumber(r.monday)}`,
-        periodStatus: r.periodStatus,
-        status: r.status,
-        publishedAt: r.publishedAt,
-        publishedById: r.publishedAt ? HEAD_ID : null,
-      })),
+      ...EXTRA_REPORTS.map((r) => {
+        const periodEnd = endOfDayUTC(plusDaysUTC(r.monday, 6));
+        const deadline = fridayDeadlineFor(r.monday);
+        const isPublished = r.status === ReportStatus.published;
+
+        return {
+          id: r.id,
+          periodStart: r.monday,
+          periodEnd,
+          deadline,
+          weekLabel: `Week ${isoWeekNumber(r.monday)}`,
+          periodStatus: r.periodStatus,
+          status: r.status,
+          archived: isPublished,
+          periodState: isPublished
+            ? PeriodState.archived
+            : PeriodState.scheduled,
+          publishedAt: r.publishedAt,
+          publishedById: r.publishedAt ? HEAD_ID : null,
+          ...(isPublished && r.publishedAt
+            ? {
+                publishedSnapshot: demoPublishedSnapshot({
+                  reportId: r.id,
+                  periodStart: r.monday,
+                  periodEnd,
+                  deadline,
+                  publishedAt: r.publishedAt,
+                }),
+              }
+            : {}),
+        };
+      }),
     ],
   });
 
@@ -968,6 +1086,18 @@ async function main() {
       });
     }
 
+    const ownedStageIds =
+      lead.id === LEAD_1 ? [STAGE_PLAN, STAGE_DEV, STAGE_TEST] : [STAGE_DEV];
+    await prisma.stageStatus.createMany({
+      data: ownedStageIds.map((stageId, sIdx) => ({
+        id: `a0000000-0000-4000-8000-0000000f0${i + 1}1${sIdx + 1}`,
+        reportSectionId: sectionId,
+        projectId: lead.productId,
+        stageId,
+        status: sIdx === 0 ? lead.lightStatus : TrafficLightStatus.green,
+      })),
+    });
+
     // 35-04: pick a default stage to seed on every Item / Risk / Decision /
     // Priority row so the post-seed UI doesn't show every entry as the '—'
     // legacy placeholder. "Development" matches the seeded Stage.name and
@@ -1176,13 +1306,78 @@ async function main() {
   });
 
   console.log(
-    "[seed-simple] Creating reminder rules (deadline + escalation)...",
+    "[seed-simple] Creating one reopen request for Admin → Reopen...",
   );
+  await prisma.reopenRequest.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000000d01",
+      reportSectionId: "a0000000-0000-4000-8000-000000000411",
+      requestedById: LEAD_1,
+      reason:
+        "Нужно уточнить перенос работ по авторизации после комментариев head review.",
+      status: ReopenRequestStatus.pending,
+    },
+  });
+
+  console.log("[seed-simple] Creating action-log examples...");
+  await prisma.userActionLog.createMany({
+    data: [
+      {
+        id: "a0000000-0000-4000-8000-000000000e01",
+        userId: ADMIN_ID,
+        role: Role.admin,
+        procedure: "admin.updateSettings",
+        targetId: "singleton",
+        status: UserActionStatus.success,
+        reason: "Seeded demo action: settings viewed during MVP UAT.",
+        ip: "127.0.0.1",
+        correlationId: "seed-simple-settings",
+        durationMs: 42,
+      },
+      {
+        id: "a0000000-0000-4000-8000-000000000e02",
+        userId: HEAD_ID,
+        role: Role.head,
+        procedure: "review.publish",
+        targetId: REPORT_PUBLISHED,
+        status: UserActionStatus.success,
+        reason: "Seeded demo action: previous weekly report published.",
+        ip: "127.0.0.1",
+        correlationId: "seed-simple-publish",
+        durationMs: 86,
+      },
+    ],
+  });
+
+  console.log("[seed-simple] Creating reminder policies + derived rules...");
+  await prisma.reminderPolicy.createMany({
+    data: [
+      {
+        id: POLICY_DEADLINE,
+        kind: ReminderRuleKind.deadline,
+        offsetMinutes: -1440,
+        timezone: "Europe/Moscow",
+        audience: ReminderAudience.LEAD_WITH_DRAFT,
+        active: true,
+        validFrom: ACTIVE_MONDAY,
+      },
+      {
+        id: POLICY_ESCALATION,
+        kind: ReminderRuleKind.escalation,
+        offsetMinutes: 120,
+        timezone: "Europe/Moscow",
+        audience: ReminderAudience.HEAD_OF_LATE,
+        active: true,
+        validFrom: ACTIVE_MONDAY,
+      },
+    ],
+  });
   await prisma.reminderRule.createMany({
     data: [
       {
         id: "a0000000-0000-4000-8000-000000000801",
         reportId: REPORT_ACTIVE,
+        policyId: POLICY_DEADLINE,
         kind: ReminderRuleKind.deadline,
         fireAt: ACTIVE_REMINDER_DEADLINE_FIRE,
         timezone: "Europe/Moscow",
@@ -1192,6 +1387,7 @@ async function main() {
       {
         id: "a0000000-0000-4000-8000-000000000802",
         reportId: REPORT_ACTIVE,
+        policyId: POLICY_ESCALATION,
         kind: ReminderRuleKind.escalation,
         fireAt: ACTIVE_REMINDER_ESCALATION_FIRE,
         timezone: "Europe/Moscow",
@@ -1205,6 +1401,7 @@ async function main() {
     users: await prisma.user.count(),
     projects: await prisma.project.count({ where: { archived: false } }),
     stages: await prisma.stage.count(),
+    stageStatuses: await prisma.stageStatus.count(),
     reports: await prisma.report.count(),
     sections: await prisma.reportSection.count(),
     items: await prisma.item.count(),
@@ -1213,7 +1410,12 @@ async function main() {
     decisions: await prisma.decision.count(),
     priorities: await prisma.priority.count(),
     versionSnapshots: await prisma.versionSnapshot.count(),
+    reminderPolicies: await prisma.reminderPolicy.count(),
     reminders: await prisma.reminderRule.count(),
+    reopenRequests: await prisma.reopenRequest.count(),
+    actionLogs: await prisma.userActionLog.count(),
+    organization: await prisma.organization.count(),
+    appSettings: await prisma.appSettings.count(),
   };
   console.log(`[seed-simple] Done: ${JSON.stringify(counts)}`);
   console.log(

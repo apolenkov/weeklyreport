@@ -294,7 +294,7 @@ async function main() {
             name: "Ольга Н.",
             role: Role.lead,
             samlId: "lead-olga",
-            reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+            reportingGroupId: FINANCE_GROUP_ID,
           },
           {
             id: LEAD_SERGEY_ID,
@@ -302,7 +302,7 @@ async function main() {
             name: "Сергей Т.",
             role: Role.lead,
             samlId: "lead-sergey",
-            reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+            reportingGroupId: FINANCE_GROUP_ID,
           },
           // Finance group — own head + one lead so the second group is not
           // a ghost.
@@ -387,12 +387,20 @@ async function main() {
         ],
       });
 
-      // ---------- 5. RESEED: GroupProduct M:M edges (UFB-054 / Phase 56) ----------
-      // A4 added @@unique([groupId]) — each reporting group may only own ONE
-      // product. Assigning all 6 products to DEFAULT_REPORTING_GROUP_ID
-      // violates that constraint. seed-simple.ts intentionally leaves
-      // groupProduct empty, so we do the same here: the wipe step already
-      // cleaned groupProduct rows (line 201); no re-creation needed.
+      // ---------- 5. RESEED: GroupProduct ownership edges (UFB-054 / Phase 56) ----------
+      // Current invariant is one owning group per product. Keep the demo
+      // split aligned with the seeded lead's reporting group so Products,
+      // Groups, dashboard scoping, and viewer access all tell the same story.
+      await tx.groupProduct.createMany({
+        data: [
+          { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM },
+          { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_MOBILE },
+          { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CLOUD },
+          { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_DEVOPS },
+          { groupId: FINANCE_GROUP_ID, productId: PROD_PAYMENTS },
+          { groupId: FINANCE_GROUP_ID, productId: PROD_HR },
+        ],
+      });
 
       // ---------- 6. RESEED: Stages + StageAssignments ----------
       await tx.stage.createMany({
@@ -515,16 +523,38 @@ async function main() {
         sections.push(section);
       }
 
-      // ---------- 10. RESEED: ReminderRules (deadline + escalation) ----------
-      // Mirrors seed-simple.ts so the reminder dashboard has visible state.
+      // ---------- 10. RESEED: ReminderPolicy templates + derived rules ----------
+      // Mirrors seed-simple.ts so the reminder dashboard has visible policy
+      // rows AND concrete derived rules under each policy.
       const deadlineFire = new Date(SEED_REPORTS.active.deadline);
       const escalationFire = new Date(deadlineFire);
       escalationFire.setUTCHours(escalationFire.getUTCHours() + 2);
+      await tx.reminderPolicy.createMany({
+        data: [
+          {
+            id: "a0000000-0000-4000-8000-000000000a01",
+            kind: ReminderRuleKind.deadline,
+            offsetMinutes: -1440,
+            timezone: "Europe/Moscow",
+            audience: ReminderAudience.LEAD_WITH_DRAFT,
+            active: true,
+          },
+          {
+            id: "a0000000-0000-4000-8000-000000000a02",
+            kind: ReminderRuleKind.escalation,
+            timezone: "Europe/Moscow",
+            offsetMinutes: 120,
+            audience: ReminderAudience.HEAD_OF_LATE,
+            active: true,
+          },
+        ],
+      });
       await tx.reminderRule.createMany({
         data: [
           {
             id: "a0000000-0000-4000-8000-000000000801",
             reportId: ACTIVE_REPORT_ID,
+            policyId: "a0000000-0000-4000-8000-000000000a01",
             kind: ReminderRuleKind.deadline,
             fireAt: deadlineFire,
             timezone: "Europe/Moscow",
@@ -534,6 +564,7 @@ async function main() {
           {
             id: "a0000000-0000-4000-8000-000000000802",
             reportId: ACTIVE_REPORT_ID,
+            policyId: "a0000000-0000-4000-8000-000000000a02",
             kind: ReminderRuleKind.escalation,
             fireAt: escalationFire,
             timezone: "Europe/Moscow",
@@ -543,32 +574,7 @@ async function main() {
         ],
       });
 
-      // ---------- 11. RESEED: ReminderPolicy templates ----------
-      // Two default policies (deadline T-0 LEAD_WITH_DRAFT, escalation T+2h
-      // HEAD_OF_LATE) — concrete rules above are policy-detached for the
-      // first run; Phase 44-02+ wires Period.create to use these.
-      await tx.reminderPolicy.createMany({
-        data: [
-          {
-            id: "a0000000-0000-4000-8000-000000000a01",
-            kind: ReminderRuleKind.deadline,
-            offsetMinutes: 0,
-            timezone: "Europe/Moscow",
-            audience: ReminderAudience.LEAD_WITH_DRAFT,
-            active: true,
-          },
-          {
-            id: "a0000000-0000-4000-8000-000000000a02",
-            kind: ReminderRuleKind.escalation,
-            offsetMinutes: 120,
-            timezone: "Europe/Moscow",
-            audience: ReminderAudience.HEAD_OF_LATE,
-            active: true,
-          },
-        ],
-      });
-
-      // ---------- 12. Post-wipe counts (verification) ----------
+      // ---------- 11. Post-wipe counts (verification) ----------
       const after = {
         users: await tx.user.count(),
         leads: await tx.user.count({ where: { role: Role.lead } }),

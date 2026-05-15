@@ -97,7 +97,7 @@ export function DevRoleSwitcher() {
   };
 
   return (
-    <div className="fixed bottom-4 left-4 z-50">
+    <div className="contents">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -112,7 +112,7 @@ export function DevRoleSwitcher() {
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          side="top"
+          side="bottom"
           className="max-h-[80vh] w-72 overflow-y-auto"
         >
           <DropdownMenuLabel>Login as…</DropdownMenuLabel>
@@ -156,13 +156,13 @@ export function DevRoleSwitcher() {
             onSelect={() => reseed("minimum")}
             data-testid="dev-role-switcher-reseed-min"
           >
-            Wipe + Reseed (minimum)
+            Wipe + Reseed (small MVP)
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => reseed("advanced")}
             data-testid="dev-role-switcher-reseed-full"
           >
-            Wipe + Reseed (full)
+            Wipe + Reseed (large demo)
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => reseed("manual-uat")}

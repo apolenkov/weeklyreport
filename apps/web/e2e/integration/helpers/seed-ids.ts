@@ -14,6 +14,7 @@
 export {
   HEAD_USER_ID,
   VIEWER_USER_ID,
+  ADMIN_USER_ID,
   LEAD_1_ID,
   LEAD_MARIA_ID,
   LEAD_IGOR_ID,
@@ -37,6 +38,7 @@ export {
 export const SEED_EMAILS = {
   head: "head@customreport.local",
   viewer: "viewer@customreport.local",
+  admin: "admin@customreport.local",
   lead1: "lead1@customreport.local",
   maria: "maria@customreport.local",
   igor: "igor@customreport.local",
