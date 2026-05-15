@@ -33,11 +33,41 @@ const DATABASE_URL: string = (() => {
   if (!url) throw new Error("DATABASE_URL must be set in .env");
   return url;
 })();
-const REDIS_URL = process.env["REDIS_URL"];
+type RedisEndpoint = {
+  readonly host: string;
+  readonly port: number;
+  readonly source: "REDIS_URL" | "REDIS_HOST/REDIS_PORT";
+};
 
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
+
+function getRedisEndpoint(): RedisEndpoint {
+  const redisUrl = process.env["REDIS_URL"];
+  if (redisUrl) {
+    const url = new URL(redisUrl);
+    const port = Number(url.port || 6379);
+    if (!Number.isInteger(port) || port <= 0) {
+      throw new Error(`Invalid Redis port in REDIS_URL: ${url.port}`);
+    }
+    return {
+      host: url.hostname || "localhost",
+      port,
+      source: "REDIS_URL",
+    };
+  }
+
+  const port = Number(process.env["REDIS_PORT"] ?? 6379);
+  if (!Number.isInteger(port) || port <= 0) {
+    throw new Error(`Invalid REDIS_PORT: ${process.env["REDIS_PORT"]}`);
+  }
+  return {
+    host: process.env["REDIS_HOST"] ?? "localhost",
+    port,
+    source: "REDIS_HOST/REDIS_PORT",
+  };
+}
 
 function writeRedisCommand(command: string, ...args: string[]): Buffer {
   const parts = [command, ...args];
@@ -47,37 +77,45 @@ function writeRedisCommand(command: string, ...args: string[]): Buffer {
       "\r\n" +
       parts
         .map((part) => "$" + Buffer.byteLength(part) + "\r\n" + part)
-        .join("") +
-      parts.map(() => "\r\n").join(""),
+        .join("\r\n") +
+      "\r\n",
+    "utf8",
   );
 }
 
 async function flushRedis(): Promise<void> {
-  if (!REDIS_URL) {
-    console.warn("[reset-hard] REDIS_URL not set, skipping Redis flush");
-    return;
-  }
-  const url = new URL(REDIS_URL);
-  const host = url.hostname || "localhost";
-  const port = Number(url.port || 6379);
+  const { host, port, source } = getRedisEndpoint();
+  console.log(`[reset-hard] Redis target: ${host}:${port} (${source})`);
 
   await new Promise<void>((resolve, reject) => {
     const sock = net.createConnection({ host, port }, () => {
       sock.write(writeRedisCommand("FLUSHALL"));
     });
+    const timer = setTimeout(() => {
+      sock.destroy();
+      reject(new Error(`Redis FLUSHALL timed out at ${host}:${port}`));
+    }, 5_000);
     let buf = "";
     sock.on("data", (chunk) => {
       buf += chunk.toString("utf8");
       if (buf.startsWith("+OK")) {
+        clearTimeout(timer);
         sock.end();
         resolve();
       } else if (buf.startsWith("-")) {
+        clearTimeout(timer);
         sock.end();
         reject(new Error(`Redis FLUSHALL failed: ${buf.trim()}`));
       }
     });
-    sock.on("error", reject);
-    sock.on("end", () => resolve());
+    sock.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    sock.on("end", () => {
+      clearTimeout(timer);
+      resolve();
+    });
   });
 
   console.log("[reset-hard] Redis FLUSHALL: OK");
