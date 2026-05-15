@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Report archive list with real cursor pagination via TanStack Query's
+ * Archived report list with real cursor pagination via TanStack Query's
  * useInfiniteQuery (wrapped by `useCursorPagination`).
  *
  * Self-contained: the section owns its own data fetching against
@@ -15,36 +15,68 @@
  */
 
 import { useTRPC } from "../../lib/trpc-context";
-import { mapArchiveSummary } from "../../lib/mappers";
 import { useCursorPagination } from "../../lib/use-cursor-pagination";
-import { joinPeriodLabel } from "../../lib/format-date";
+import { formatDate, formatPeriodLabel } from "../../lib/format-date";
 import type { ArchiveReportSummary } from "@customreport/shared";
-
-type StatusConfig = { bg: string; text: string; label: string };
 
 type ReportArchiveSectionProps = {
   readonly currentReportId?: string | null;
 };
 
-const STATUS_CONFIG = {
-  active: {
-    bg: "var(--color-success)",
-    text: "var(--color-primary)",
-    label: "Active",
-  },
-  published: {
-    bg: "var(--color-primary)",
-    text: "#fff",
-    label: "Published",
-  },
-  draft: {
-    bg: "#fef3c7",
-    text: "#8a6d1b",
-    label: "Draft",
-  },
-} as const satisfies Record<string, StatusConfig>;
-
 const PAGE_SIZE = 12;
+
+function TrafficDot({
+  label,
+  count,
+  className,
+}: {
+  readonly label: string;
+  readonly count: number;
+  readonly className: string;
+}) {
+  return (
+    <span
+      className="inline-flex h-7 min-w-12 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.08)] bg-white/70 px-2 text-[12px] font-semibold text-[var(--color-foreground)]"
+      aria-label={label + ": " + count}
+    >
+      <span className={"h-2 w-2 rounded-full " + className} />
+      {count}
+    </span>
+  );
+}
+
+function TimelineRow({
+  label,
+  value,
+}: {
+  readonly label: string;
+  readonly value: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-3 text-[12px]">
+      <span className="shrink-0 text-[var(--color-muted-foreground)]">
+        {label}
+      </span>
+      <span className="min-w-0 truncate text-right font-medium text-[var(--color-foreground)]">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function portfolioCounts(status: ArchiveReportSummary["portfolioStatus"]) {
+  return {
+    green: status === "green" ? 1 : 0,
+    yellow: status === "yellow" ? 1 : 0,
+    red: status === "red" ? 1 : 0,
+  };
+}
+
+function portfolioSummary(status: ArchiveReportSummary["portfolioStatus"]) {
+  if (status === "green") return "All green | Compiled report";
+  if (status === "yellow") return "Yellow portfolio status | Compiled report";
+  return "Red portfolio status | Compiled report";
+}
 
 export function ReportArchiveSection({
   currentReportId,
@@ -68,14 +100,14 @@ export function ReportArchiveSection({
     { limit: PAGE_SIZE },
   );
 
-  const reports = archive.items.map(mapArchiveSummary);
+  const reports = archive.items;
   const totalLoaded = reports.length;
 
   return (
     <div>
       <div className="mt-6 flex items-center justify-between">
         <h2 className="font-[family-name:var(--font-sans)] text-xl font-semibold text-[var(--color-foreground)]">
-          Report Archive
+          Archive
         </h2>
         <span className="text-xs text-[var(--color-muted-foreground)]">
           {archive.isLoading
@@ -84,29 +116,26 @@ export function ReportArchiveSection({
         </span>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {archive.isLoading ? (
           <ArchiveSkeletonGrid />
         ) : (
           reports.map((report) => {
-            const isActive = report.id === currentReportId;
+            const isActive = report.reportId === currentReportId;
             const href = isActive
-              ? `/head/report/${encodeURIComponent(report.id)}`
-              : `/reports/${report.id}`;
-            const config =
-              (STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
-              STATUS_CONFIG.draft;
-            const cardConfig = isActive ? STATUS_CONFIG.active : config;
-            const periodLabel = joinPeriodLabel(
-              report.weekLabel,
-              report.dateRange,
+              ? `/head/report/${encodeURIComponent(report.reportId)}`
+              : `/reports/${report.reportId}`;
+            const periodLabel = formatPeriodLabel(
+              report.periodStart,
+              report.periodEnd,
             );
+            const traffic = portfolioCounts(report.portfolioStatus);
 
             return (
               <a
-                key={report.id}
+                key={report.reportId}
                 href={href}
-                className="group cursor-pointer rounded-[var(--radius)] border bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)] transition-[border-color,box-shadow] duration-150 hover:border-[var(--color-starbucks-accent)] hover:shadow-[0_10px_24px_-18px_rgba(0,0,0,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
+                className="group block overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-[box-shadow,border-color,background-color] hover:shadow-[0_0_0.5px_0_rgba(0,0,0,0.12),0_12px_26px_-18px_rgba(0,0,0,0.22),0_2px_4px_rgba(0,0,0,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
                 style={{
                   borderLeft: `3px solid ${
                     isActive
@@ -120,19 +149,43 @@ export function ReportArchiveSection({
                     : undefined,
                 }}
               >
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-sm font-semibold">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-foreground)]">
                     {periodLabel}
                   </span>
-                  <span
-                    className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
-                    style={{
-                      background: cardConfig.bg,
-                      color: cardConfig.text,
-                    }}
-                  >
-                    {cardConfig.label}
+                  <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-white">
+                    Archived
                   </span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <TrafficDot
+                    label="Green statuses"
+                    count={traffic.green}
+                    className="bg-[var(--color-starbucks-accent)]"
+                  />
+                  <TrafficDot
+                    label="Yellow statuses"
+                    count={traffic.yellow}
+                    className="bg-[#d4a017]"
+                  />
+                  <TrafficDot
+                    label="Red statuses"
+                    count={traffic.red}
+                    className="bg-[var(--color-destructive)]"
+                  />
+                </div>
+
+                <p className="mt-3 line-clamp-2 text-[13px] leading-5 text-[var(--color-muted-foreground)]">
+                  {portfolioSummary(report.portfolioStatus)}
+                </p>
+
+                <div className="mt-4 space-y-1.5 border-t border-[rgba(0,0,0,0.07)] pt-3">
+                  <TimelineRow
+                    label="Published"
+                    value={formatDate(report.publishedAt)}
+                  />
+                  <TimelineRow label="Owner" value={report.publishedByName} />
                 </div>
               </a>
             );
@@ -169,14 +222,23 @@ function ArchiveSkeletonGrid() {
     <div
       key={idx}
       aria-hidden="true"
-      className="min-h-[88px] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4"
+      className="min-h-[201px] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5"
       style={{ borderLeft: "3px solid var(--color-border)" }}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="h-4 w-24 rounded bg-[var(--color-muted)]" />
-        <div className="h-5 w-16 rounded-[var(--radius-pill)] bg-[var(--color-muted)]" />
+        <div className="h-5 w-32 rounded bg-[var(--color-muted)]" />
+        <div className="h-6 w-24 rounded-[var(--radius-pill)] bg-[var(--color-muted)]" />
       </div>
-      <div className="h-3 w-32 rounded bg-[var(--color-muted)]" />
+      <div className="mt-3 flex gap-2">
+        <div className="h-7 w-12 rounded-[var(--radius-pill)] bg-[var(--color-muted)]" />
+        <div className="h-7 w-12 rounded-[var(--radius-pill)] bg-[var(--color-muted)]" />
+        <div className="h-7 w-12 rounded-[var(--radius-pill)] bg-[var(--color-muted)]" />
+      </div>
+      <div className="mt-3 h-5 w-full rounded bg-[var(--color-muted)]" />
+      <div className="mt-4 space-y-2 border-t border-[rgba(0,0,0,0.07)] pt-3">
+        <div className="h-3 w-full rounded bg-[var(--color-muted)]" />
+        <div className="h-3 w-11/12 rounded bg-[var(--color-muted)]" />
+      </div>
     </div>
   ));
 }

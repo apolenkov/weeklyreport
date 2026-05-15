@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import "@testing-library/jest-dom/vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { HistoryEntry } from "../../lib/mappers";
@@ -14,6 +14,7 @@ const entry: HistoryEntry = {
   weekLabel: "Week 20",
   dateRange: "May 11-17, 2026",
   status: "draft",
+  archived: false,
   submittedAt: null,
   createdAt: "May 15",
   lastEditAt: "2 hours ago",
@@ -29,7 +30,7 @@ const entry: HistoryEntry = {
 };
 
 describe("LeadHistoryList", () => {
-  it("renders real aggregate and version metadata on each history card", () => {
+  it("renders a compact history card with dates and traffic-light counts", () => {
     render(<LeadHistoryList entries={[entry]} />);
 
     expect(screen.getByRole("link")).toHaveAttribute(
@@ -40,18 +41,14 @@ describe("LeadHistoryList", () => {
     expect(screen.getByLabelText("Green statuses: 2")).toBeInTheDocument();
     expect(screen.getByLabelText("Yellow statuses: 0")).toBeInTheDocument();
     expect(screen.getByLabelText("Red statuses: 1")).toBeInTheDocument();
-    expect(screen.getByText("Products")).toBeInTheDocument();
-    expect(screen.getByText("Risks")).toBeInTheDocument();
     expect(
-      within(screen.getByText("Risks").parentElement as HTMLElement).getByText(
-        "1",
+      screen.getByText(
+        "2 green statuses, 1 red status | 5 items | 1 risk | 2 decisions",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Versions")).toBeInTheDocument();
-    expect(screen.getByText("2 / v2")).toBeInTheDocument();
     expect(screen.getByText("Last edit")).toBeInTheDocument();
     expect(screen.getByText("2 hours ago")).toBeInTheDocument();
-    expect(screen.getByText("Latest version")).toBeInTheDocument();
-    expect(screen.getByText("v2 · May 15")).toBeInTheDocument();
+    expect(screen.queryByText("Products")).not.toBeInTheDocument();
+    expect(screen.queryByText("Versions")).not.toBeInTheDocument();
   });
 });

@@ -361,7 +361,7 @@ export function WeeklyReportPage({
             href="/reports?tab=published"
             className="mt-4 text-sm font-medium text-[var(--color-primary)] underline-offset-4 hover:underline"
           >
-            View last published report in Archive &rarr;
+            View archived reports in Archive &rarr;
           </Link>
         </div>
       ) : (

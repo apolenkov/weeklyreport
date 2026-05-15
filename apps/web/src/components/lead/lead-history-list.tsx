@@ -44,31 +44,45 @@ function StatusBadge({ status }: { readonly status: "submitted" | "draft" }) {
   );
 }
 
-function Metric({
-  label,
-  value,
-  tone = "default",
-}: {
-  readonly label: string;
-  readonly value: string | number;
-  readonly tone?: "default" | "risk";
-}) {
-  return (
-    <span className="min-w-0 rounded-[var(--radius)] border border-[rgba(0,0,0,0.06)] bg-[rgba(255,255,255,0.64)] px-2.5 py-2">
-      <span className="block truncate text-[11px] uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-        {label}
-      </span>
-      <span
-        className={
-          tone === "risk"
-            ? "mt-0.5 block text-sm font-bold text-[var(--color-destructive)]"
-            : "mt-0.5 block text-sm font-bold text-[var(--color-foreground)]"
-        }
-      >
-        {value}
-      </span>
-    </span>
-  );
+function formatCount(count: number, singular: string, plural = singular + "s") {
+  return count + " " + (count === 1 ? singular : plural);
+}
+
+function buildHistorySummary(entry: HistoryEntry) {
+  const statusParts = [
+    entry.trafficLights.green > 0
+      ? formatCount(entry.trafficLights.green, "green status", "green statuses")
+      : null,
+    entry.trafficLights.yellow > 0
+      ? formatCount(
+          entry.trafficLights.yellow,
+          "yellow status",
+          "yellow statuses",
+        )
+      : null,
+    entry.trafficLights.red > 0
+      ? formatCount(entry.trafficLights.red, "red status", "red statuses")
+      : null,
+  ].filter(Boolean);
+
+  const scopeParts = [
+    entry.itemCount > 0 ? formatCount(entry.itemCount, "item") : null,
+    entry.riskCount > 0 ? formatCount(entry.riskCount, "risk") : null,
+    entry.decisionCount > 0
+      ? formatCount(entry.decisionCount, "decision")
+      : null,
+  ].filter(Boolean);
+
+  const health =
+    entry.trafficLights.green > 0 &&
+    entry.trafficLights.yellow === 0 &&
+    entry.trafficLights.red === 0
+      ? "All green"
+      : statusParts.length > 0
+        ? statusParts.join(", ")
+        : "No statuses";
+
+  return [health, ...scopeParts].join(" | ");
 }
 
 function TimelineRow({
@@ -153,27 +167,9 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
             />
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {typeof entry.productCount === "number" && (
-              <Metric label="Products" value={entry.productCount} />
-            )}
-            <Metric label="Items" value={entry.itemCount} />
-            <Metric
-              label="Risks"
-              value={entry.riskCount}
-              tone={entry.riskCount > 0 ? "risk" : "default"}
-            />
-            <Metric label="Decisions" value={entry.decisionCount} />
-            <Metric label="Priorities" value={entry.priorityCount} />
-            <Metric
-              label="Versions"
-              value={
-                entry.latestVersion
-                  ? entry.versionCount + " / v" + entry.latestVersion
-                  : entry.versionCount
-              }
-            />
-          </div>
+          <p className="mt-3 line-clamp-2 text-[13px] leading-5 text-[var(--color-muted-foreground)]">
+            {buildHistorySummary(entry)}
+          </p>
 
           <div className="mt-4 space-y-1.5 border-t border-[rgba(0,0,0,0.07)] pt-3">
             {entry.createdAt && (
@@ -186,22 +182,6 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
               <TimelineRow label="Submitted" value={entry.submittedAt} />
             ) : (
               <TimelineRow label="Submitted" value="Not submitted" muted />
-            )}
-            {entry.latestVersion ? (
-              <TimelineRow
-                label="Latest version"
-                value={
-                  "v" +
-                  entry.latestVersion +
-                  (entry.latestVersionAt ? " · " + entry.latestVersionAt : "")
-                }
-              />
-            ) : (
-              <TimelineRow
-                label="Latest version"
-                value="No versions yet"
-                muted
-              />
             )}
           </div>
         </Link>
