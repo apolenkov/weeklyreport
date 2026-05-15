@@ -19,18 +19,10 @@ import { useTRPC } from "../../../lib/trpc-context";
 /**
  * UX-17 (Phase 35-08): merged Reports page.
  *
- * Two tabs: "My History" (lead-only, the lead's authored sections) and
- * "Archive" (archived compiled reports, visible to every role).
- *
- * Tab default by role:
- *   - lead              → "My History"
- *   - head/admin/viewer → "Archive"
- * Override via `?tab=drafts|published`.
- *
- * The legacy `/lead/history` and `/reports/history` routes 307-redirect
- * here with the appropriate tab pre-selected.
+ * Lead users get a single History list. The legacy `?tab=published` URL is
+ * treated as "include archive" so old links still reveal archived periods.
+ * Non-lead roles keep the compiled archived report list on the same route.
  */
-type TabId = "drafts" | "published";
 
 const HISTORY_INITIAL_VISIBLE = 10;
 
@@ -47,30 +39,22 @@ export default function ReportsPage() {
       ? "all"
       : null;
 
-  // Default tab logic mirrors the spec: lead → drafts; everyone else → published.
   const tabFromUrl = searchParams?.get("tab");
-  const initialTab: TabId =
-    tabFromUrl === "drafts" || tabFromUrl === "published"
-      ? tabFromUrl
-      : isLead
-        ? "drafts"
-        : "published";
+  const [includeArchive, setIncludeArchive] = useState(
+    tabFromUrl === "published",
+  );
 
-  const [tab, setTab] = useState<TabId>(initialTab);
-
-  function selectTab(nextTab: TabId) {
-    setTab(nextTab);
+  function toggleArchive(nextValue: boolean) {
+    setIncludeArchive(nextValue);
     const params = new URLSearchParams(searchParams?.toString());
-    params.set("tab", nextTab);
+    params.set("tab", nextValue ? "published" : "drafts");
     router.push(`/reports?${params.toString()}`, { scroll: false });
   }
 
   // Keep state in sync if the URL param changes after mount (e.g. user
-  // navigates from /lead/history → 307 → /reports?tab=drafts).
+  // navigates from /reports/history -> /reports?tab=published).
   useEffect(() => {
-    if (tabFromUrl === "drafts" || tabFromUrl === "published") {
-      setTab(tabFromUrl);
-    }
+    setIncludeArchive(tabFromUrl === "published");
   }, [tabFromUrl]);
 
   return (
@@ -85,25 +69,9 @@ export default function ReportsPage() {
               History
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              {isLead
-                ? "Your report history and archived reports in one place."
-                : "Archived report history."}
+              {isLead ? "Your report history." : "Archived report history."}
             </p>
           </header>
-
-          <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)]">
-            <TabButton
-              label="My History"
-              active={tab === "drafts"}
-              disabled={!isLead}
-              onClick={() => selectTab("drafts")}
-            />
-            <TabButton
-              label="Archive"
-              active={tab === "published"}
-              onClick={() => selectTab("published")}
-            />
-          </div>
 
           {searchScope ? (
             <div>
@@ -118,14 +86,11 @@ export default function ReportsPage() {
             <div className="min-h-[44px]" aria-hidden="true" />
           )}
 
-          {tab === "drafts" ? (
-            isLead ? (
-              <LeadHistoryPanel archived={false} />
-            ) : (
-              <EmptyDraftsForNonLead />
-            )
-          ) : isLead ? (
-            <LeadHistoryPanel archived />
+          {isLead ? (
+            <LeadHistoryPanel
+              includeArchive={includeArchive}
+              onIncludeArchiveChange={toggleArchive}
+            />
           ) : (
             <ReportArchiveSection />
           )}
@@ -135,49 +100,13 @@ export default function ReportsPage() {
   );
 }
 
-function TabButton({
-  label,
-  active,
-  onClick,
-  disabled,
+function LeadHistoryPanel({
+  includeArchive,
+  onIncludeArchiveChange,
 }: {
-  readonly label: string;
-  readonly active: boolean;
-  readonly onClick: () => void;
-  readonly disabled?: boolean;
+  readonly includeArchive: boolean;
+  readonly onIncludeArchiveChange: (nextValue: boolean) => void;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-current={active ? "page" : undefined}
-      className={`relative -mb-px inline-flex min-h-[44px] items-center px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-        active
-          ? "border-b-2 border-[var(--color-starbucks-accent)] text-[var(--color-starbucks-accent)]"
-          : "border-b-2 border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function EmptyDraftsForNonLead() {
-  return (
-    <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center">
-      <p className="text-sm font-semibold text-[var(--color-foreground)]">
-        This tab is available to leads only.
-      </p>
-      <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-        Leads see their drafts and submitted reports here. Open Archive to view
-        archived compiled reports.
-      </p>
-    </div>
-  );
-}
-
-function LeadHistoryPanel({ archived }: { readonly archived: boolean }) {
   const trpc = useTRPC();
   const { data, isLoading, isError, error } = useQuery(
     trpc.reports.myHistory.queryOptions(),
@@ -190,14 +119,20 @@ function LeadHistoryPanel({ archived }: { readonly archived: boolean }) {
     }
   }, [isError, error]);
 
-  const entries = useMemo(() => {
+  useEffect(() => {
+    setShowAll(false);
+  }, [includeArchive]);
+
+  const allEntries = useMemo(() => {
     const history = Array.isArray(data)
       ? (data as readonly MyHistoryEntry[])
       : [];
-    return mapHistoryEntries(history).filter((entry) =>
-      archived ? entry.archived : !entry.archived,
-    );
-  }, [data, archived]);
+    return mapHistoryEntries(history);
+  }, [data]);
+  const archiveCount = allEntries.filter((entry) => entry.archived).length;
+  const entries = includeArchive
+    ? allEntries
+    : allEntries.filter((entry) => !entry.archived);
   const visibleEntries = showAll
     ? entries
     : entries.slice(0, HISTORY_INITIAL_VISIBLE);
@@ -210,14 +145,19 @@ function LeadHistoryPanel({ archived }: { readonly archived: boolean }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="space-y-6">
+        <HistoryArchiveToggle
+          checked={includeArchive}
+          archiveCount={archiveCount}
+          onChange={onIncludeArchiveChange}
+        />
         {entries.length > 0 ? (
           <LeadHistoryList entries={visibleEntries} />
         ) : (
           <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center">
             <p className="text-sm text-[var(--color-muted-foreground)]">
-              {archived
-                ? "No archived reports yet."
-                : "You have no report history yet."}
+              {includeArchive
+                ? "No report history yet."
+                : "No current history yet."}
             </p>
           </div>
         )}
@@ -227,9 +167,7 @@ function LeadHistoryPanel({ archived }: { readonly archived: boolean }) {
               type="button"
               className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
               onClick={() => setShowAll(true)}
-              aria-label={`Show all ${entries.length} ${
-                archived ? "archived reports" : "reports"
-              }`}
+              aria-label={`Show all ${entries.length} reports`}
             >
               Show all ({entries.length})
             </button>
@@ -239,10 +177,38 @@ function LeadHistoryPanel({ archived }: { readonly archived: boolean }) {
       <div className="space-y-4">
         <LeadHistorySidebar
           entries={entries}
-          summaryTitle={archived ? "Archive Summary" : "My History Summary"}
-          showStatus={!archived}
+          summaryTitle="My History Summary"
+          showStatus
         />
       </div>
+    </div>
+  );
+}
+
+function HistoryArchiveToggle({
+  checked,
+  archiveCount,
+  onChange,
+}: {
+  readonly checked: boolean;
+  readonly archiveCount: number;
+  readonly onChange: (nextValue: boolean) => void;
+}) {
+  return (
+    <div className="flex min-h-10 flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3">
+      <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          className="h-4 w-4 accent-[var(--color-starbucks-accent)]"
+          aria-label="Show archived reports"
+        />
+        <span>Show archive</span>
+        <span className="rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[11px] text-[var(--color-starbucks-accent)]">
+          {archiveCount}
+        </span>
+      </label>
     </div>
   );
 }
