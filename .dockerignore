@@ -40,6 +40,9 @@ apps/web/.tmp
 **/*.integration.test.ts
 **/*.tsbuildinfo
 .env
+.env.*
+**/.env
+**/.env.*
 .env.local
 **/.env.local
 .claude/

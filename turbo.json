@@ -3,6 +3,15 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build", "db:generate"],
+      "env": [
+        "API_URL",
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_APP_VERSION",
+        "NEXT_PUBLIC_AUTH_STUB",
+        "NEXT_PUBLIC_CLIENT_LOG_FORWARDING",
+        "NEXT_PUBLIC_DEV_ROLE_SWITCHER",
+        "NEXT_DIST_DIR"
+      ],
       "outputs": [".next/**", "dist/**"]
     },
     "db:generate": {
