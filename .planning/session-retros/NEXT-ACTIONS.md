@@ -1,24 +1,32 @@
 # NEXT ACTIONS
 
-updated: 2026-05-15T08:31:00+03:00 source: peo-retro
+updated: 2026-05-15T09:05:00+03:00 source: peo-retro
 
 ## RUN FIRST
 
-1. [ ] Re-check PR #5 CI when GitHub API responds:
+1. [ ] Re-check current branch and working tree:
+       `git status --short --branch`
+2. [ ] Re-check PR #5 CI when GitHub API responds:
        `gh run list --limit 5`
-2. [ ] If latest PR #5 checks are green, merge:
-       `gh pr merge 5 --merge`
+       `gh pr view 5 --json mergeStateStatus,statusCheckRollup,url`
 
 ## AGENT
 
-1. [ ] Re-run CI status check; current `gh` calls return EOF from
-       `ghe.example.org`, so the blocker is external API/Actions availability.
-2. [ ] After merge, verify `main` and tag/release only if the project policy
-       still expects v8.1 tagging.
-3. [ ] Keep Docker MVP stack running for manual UAT unless the user asks to stop
-       it.
-4. [ ] If the user says "продолжай", start from PR/CI status, not from another
-       planning loop.
+1. [ ] If latest PR #5 checks are green, merge:
+       `gh pr merge 5 --merge`
+2. [ ] Keep Docker MVP stack running for manual UAT unless the user asks to stop
+       it:
+       `docker compose ps postgres redis mailhog api web`
+3. [ ] Preserve the DB naming rule recovered from resume:
+   - local dev and Docker verifier: `customreport_dev`
+   - API integration: `customreport_test`
+   - web integration: `customreport_e2e`
+   - no active manual UAT/staging DB now; reserve `customreport_uat` only if
+     such an environment is explicitly created later
+   - production: `customreport`
+4. [ ] If changing DB/env docs again, keep `CLAUDE.md` abstract and put concrete
+       names only in operations docs/config examples.
+5. [ ] Do not create a new `git worktree`.
 
 ## HUMAN
 
@@ -36,8 +44,8 @@ updated: 2026-05-15T08:31:00+03:00 source: peo-retro
 ## VERIFY
 
 - `git status --short --branch`
+- `pnpm lint:md`
 - `docker compose ps postgres redis mailhog api web`
 - `curl -fsS http://localhost:3002/health/ready`
-- `curl -fsS -o /tmp/customreport-web.html -w '%{http_code} %{content_type} %{size_download}\\n' http://localhost:3000/`
-- `gh run list --limit 5`
-- `gh pr view 5 --json mergeStateStatus,statusCheckRollup,url`
+- `curl -fsS -o /tmp/customreport-web.html -w '%{http_code} %{content_type} %{size_download}\n' http://localhost:3000/`
+- `docker compose -f docker-compose.yml -f docker-compose.dev.yml config | rg -n "DATABASE_URL|DIRECT_URL|POSTGRES_DB|customreport_(dev|uat|test|e2e)" -C 1`
