@@ -52,8 +52,42 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
       text: "Vendor delay",
       impact: "Slips Q3",
       mitigation: "Escalate",
+      severity: "at-risk",
       // UFB-073 + R1: pre-fill saves as stageIds array (not joined CSV).
       stageIds: ["Dev", "Testing"],
+    });
+  });
+
+  it("saves selected Blocked severity", () => {
+    const onSave = vi.fn();
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={onSave}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: "Critical vendor outage" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Work is stopped" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Escalate immediately" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Blocked/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      text: "Critical vendor outage",
+      severity: "blocked",
     });
   });
 

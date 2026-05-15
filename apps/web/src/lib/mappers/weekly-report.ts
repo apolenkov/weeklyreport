@@ -226,7 +226,7 @@ function groupRisksByProject(
     for (const project of section.projects) {
       projectNames.set(project.projectId, project.projectName);
     }
-    // Detect blocked items per project for severity inference.
+    // Detect blocked items per project for legacy risk severity inference.
     const blockedProjects = new Set(
       section.items
         .filter((item) => item.workflowStatus === "blocked")
@@ -234,11 +234,9 @@ function groupRisksByProject(
     );
     for (const risk of section.risks) {
       const productName = projectNames.get(risk.projectId) ?? "Unknown";
-      const severity: "blocked" | "at-risk" = blockedProjects.has(
-        risk.projectId,
-      )
-        ? "blocked"
-        : "at-risk";
+      const severity: "blocked" | "at-risk" =
+        risk.severity ??
+        (blockedProjects.has(risk.projectId) ? "blocked" : "at-risk");
       const text = `${risk.risk} \u2014 Impact: ${risk.impact} \u2014 Mitigation: ${risk.mitigation}`;
       const list = map.get(risk.projectId) ?? [];
       list.push({

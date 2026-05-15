@@ -37,6 +37,7 @@ export const itemWorkflowStatusSchema = z.enum([
   "in_progress",
   "blocked",
 ]);
+export const riskSeveritySchema = z.enum(["at-risk", "blocked"]);
 export const reportSectionStatusSchema = z.enum(["draft", "submitted"]);
 export const reportStatusSchema = z.enum(["draft", "published"]);
 export const periodStatusSchema = z.enum(["open", "published", "reopened"]);
@@ -102,6 +103,7 @@ export const riskInputSchema = z.object({
   risk: safeText({ max: 500 }),
   impact: safeText({ max: 500 }),
   mitigation: safeText({ max: 500 }),
+  severity: riskSeveritySchema.optional(),
   stageIds: stageIdsField,
 });
 
