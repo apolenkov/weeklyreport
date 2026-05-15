@@ -25,8 +25,12 @@ COPY tsconfig.base.json ./tsconfig.base.json
 FROM installer AS builder
 ARG API_URL=http://api:3002
 ARG NEXT_PUBLIC_API_URL=http://localhost:3002
+ARG NEXT_PUBLIC_AUTH_STUB=true
+ARG NEXT_PUBLIC_DEV_ROLE_SWITCHER=true
 ENV API_URL=${API_URL}
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_AUTH_STUB=${NEXT_PUBLIC_AUTH_STUB}
+ENV NEXT_PUBLIC_DEV_ROLE_SWITCHER=${NEXT_PUBLIC_DEV_ROLE_SWITCHER}
 RUN pnpm turbo build --filter=@customreport/web
 
 # Stage 5: Production runner with Next.js standalone
