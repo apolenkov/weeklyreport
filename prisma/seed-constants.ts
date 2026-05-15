@@ -17,6 +17,7 @@
 
 export const HEAD_USER_ID = "a0000000-0000-4000-8000-000000000099";
 export const VIEWER_USER_ID = "a0000000-0000-4000-8000-000000000098";
+export const ADMIN_USER_ID = "a0000000-0000-4000-8000-000000000097";
 
 export const ACTIVE_REPORT_ID = "a0000000-0000-4000-8000-000000000001";
 export const PUBLISHED_REPORT_ID = "a0000000-0000-4000-8000-000000000002";
@@ -27,7 +28,7 @@ export type SeedUser = {
   id: string;
   email: string;
   name: string;
-  role: "head" | "viewer" | "lead";
+  role: "head" | "viewer" | "admin" | "lead";
   samlId: string;
   reportingGroupId: string | null;
 };
@@ -47,7 +48,7 @@ export const SEED_REPORTING_GROUPS: readonly SeedReportingGroup[] = [
 ] as const;
 
 /**
- * 8 seed users: 1 head, 1 viewer, 6 leads.
+ * 9 seed users: 1 head, 1 viewer, 1 admin, 6 leads.
  *
  * Lead names and roles come from apps/web/src/components/dashboard/mock-data.ts
  * MOCK_LEADS — these are canonical because 30+ E2E assertions reference them.
@@ -71,6 +72,14 @@ export const SEED_USERS: readonly SeedUser[] = [
     role: "viewer",
     samlId: "viewer-1",
     reportingGroupId: null,
+  },
+  {
+    id: ADMIN_USER_ID,
+    email: "admin@customreport.local",
+    name: "Михаил Б.",
+    role: "admin",
+    samlId: "admin-1",
+    reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
   },
   // Phase 35-08: lead names switched to RU Cyrillic so the dashboard +
   // forms match the rest of the demo content. Tests that pin against the

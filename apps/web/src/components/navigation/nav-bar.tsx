@@ -14,6 +14,7 @@ import {
   SheetTrigger,
 } from "@customreport/ui/components/ui/sheet";
 
+import { DevRoleSwitcher } from "../dev/role-switcher";
 import { roleHomePath } from "../../lib/role-home";
 import { useSession } from "../../lib/session-provider";
 
@@ -152,6 +153,13 @@ function ThemeComingSoonControl() {
         Soon
       </span>
     </button>
+  );
+}
+
+function shouldRenderDevRoleSwitcher() {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === "true"
   );
 }
 
@@ -350,6 +358,7 @@ export function NavBar() {
             the right-rail width is stable from first paint → zero CLS on
             reload. Skeleton dimensions match the resolved identity chrome. */}
         <div className="flex items-center gap-2.5">
+          {shouldRenderDevRoleSwitcher() && <DevRoleSwitcher />}
           <ThemeComingSoonControl />
           {visibleSessionLoading ? (
             <>
