@@ -63,7 +63,7 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
 ];
 
 const USER_IDENTITY_SLOT_CLASS =
-  "hidden h-8 min-w-0 max-w-[190px] flex-col justify-center xl:flex";
+  "hidden h-8 min-w-0 max-w-[260px] flex-col justify-center xl:flex";
 const BRAND_SLOT_CLASS = "flex w-10 shrink-0 items-center justify-center py-4";
 const RIGHT_RAIL_CLASS =
   "relative flex items-center justify-end gap-2.5 justify-self-end xl:w-[180px]";
@@ -268,8 +268,13 @@ export function NavBar() {
     ? visibleOrganization.shortName
     : DEFAULT_ORGANIZATION_IDENTITY.shortName;
   const homeLabel = visibleUser ? visibleUser.name + " home" : "Loading";
-  const identityMeta =
-    role && orgResolved ? orgShortName + " · " + roleLabel : roleLabel;
+  const identityMeta = [
+    orgResolved ? orgShortName : null,
+    visibleUser?.reportingGroupName,
+    roleLabel,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(" · ");
 
   return (
     <header className="w-full bg-[var(--color-card)]" data-testid="nav-bar">

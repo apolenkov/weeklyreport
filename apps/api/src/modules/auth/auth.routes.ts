@@ -249,6 +249,13 @@ export async function buildUserSession(
         },
       });
 
+  const reportingGroup = user.reportingGroupId
+    ? await prisma.reportingGroup.findUnique({
+        where: { id: user.reportingGroupId },
+        select: { name: true },
+      })
+    : null;
+
   // Lead users: find or auto-create their section in the active (draft) report
   let activeSection = await prisma.reportSection.findFirst({
     where: { authorId: user.id, report: { status: "draft" } },
@@ -284,6 +291,7 @@ export async function buildUserSession(
     // viewer sessions may have no owning group; their visibility hydrates
     // through `viewerGroupAccess` lazily in trpc.context.
     reportingGroupId: user.reportingGroupId ?? undefined,
+    reportingGroupName: reportingGroup?.name ?? undefined,
   };
 }
 
