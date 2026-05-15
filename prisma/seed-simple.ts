@@ -643,17 +643,6 @@ async function main() {
             : PeriodState.scheduled,
           publishedAt: r.publishedAt,
           publishedById: r.publishedAt ? HEAD_ID : null,
-          ...(isPublished && r.publishedAt
-            ? {
-                publishedSnapshot: demoPublishedSnapshot({
-                  reportId: r.id,
-                  periodStart: r.monday,
-                  periodEnd,
-                  deadline,
-                  publishedAt: r.publishedAt,
-                }),
-              }
-            : {}),
         };
       }),
     ],
@@ -1272,6 +1261,102 @@ async function main() {
         rank: 1,
       },
     });
+  }
+
+  console.log(
+    "[seed-simple] Creating archived lead history sections (4 periods)...",
+  );
+  const archivedReports = EXTRA_REPORTS.filter(
+    (report) => report.status === ReportStatus.published,
+  );
+  const archiveTrafficByPeriod = [
+    TrafficLightStatus.green,
+    TrafficLightStatus.yellow,
+    TrafficLightStatus.green,
+    TrafficLightStatus.red,
+  ] as const;
+
+  for (let reportIdx = 0; reportIdx < archivedReports.length; reportIdx++) {
+    const report = archivedReports[reportIdx]!;
+    const submittedAt =
+      report.publishedAt ?? endOfDayUTC(plusDaysUTC(report.monday, 6));
+    const createdAt = plusDaysUTC(report.monday, 1);
+
+    for (let i = 0; i < leads.length; i++) {
+      const lead = leads[i]!;
+      const archiveSectionId = `a0000000-0000-4000-8000-0000000005${reportIdx + 1}${i + 1}`;
+      const lightStatus =
+        i === 0 ? archiveTrafficByPeriod[reportIdx]! : TrafficLightStatus.green;
+
+      await prisma.reportSection.create({
+        data: {
+          id: archiveSectionId,
+          reportId: report.id,
+          authorId: lead.id,
+          status: ReportSectionStatus.submitted,
+          submittedAt,
+          createdAt,
+          updatedAt: submittedAt,
+        },
+      });
+
+      await prisma.projectStatus.create({
+        data: {
+          id: randomUUID(),
+          reportSectionId: archiveSectionId,
+          projectId: lead.productId,
+          status: lightStatus,
+          createdAt,
+          updatedAt: submittedAt,
+        },
+      });
+
+      await prisma.item.createMany({
+        data: [
+          {
+            id: randomUUID(),
+            reportSectionId: archiveSectionId,
+            type: ItemType.current,
+            projectId: lead.productId,
+            text: `Архив: закрыли ключевые задачи периода для команды ${lead.label}`,
+            tag: "feature",
+            workflowStatus: ItemWorkflowStatus.done,
+            carriedOver: false,
+            completed: true,
+            stageName: "Development",
+            createdAt,
+            updatedAt: submittedAt,
+          },
+          {
+            id: randomUUID(),
+            reportSectionId: archiveSectionId,
+            type: ItemType.next,
+            projectId: lead.productId,
+            text: `Архив: перенесли следующий фокус команды ${lead.label} в новый период`,
+            tag: "ops",
+            workflowStatus: ItemWorkflowStatus.done,
+            carriedOver: false,
+            completed: true,
+            stageName: "Development",
+            createdAt,
+            updatedAt: submittedAt,
+          },
+        ],
+      });
+
+      await prisma.priority.create({
+        data: {
+          id: randomUUID(),
+          reportSectionId: archiveSectionId,
+          productId: lead.productId,
+          text: `Архивный приоритет: ${lead.label}`,
+          rank: 1,
+          stageName: "Development",
+          createdAt,
+          updatedAt: submittedAt,
+        },
+      });
+    }
   }
 
   // UFB-039: backfill the seed group's headUserId to the seeded head user
