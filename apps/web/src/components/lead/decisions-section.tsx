@@ -154,8 +154,24 @@ export function DecisionsSection({
     setDialogState({ open: false });
   }
 
+  const addButton = !readOnly && (
+    <div className="flex justify-end">
+      <button
+        type="button"
+        className="btn-press inline-flex min-h-[40px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+        onClick={handleAdd}
+      >
+        + Add Decision
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-3">
+      {/* Keep the create action before the variable list so inserted cards
+          do not push the button the user just clicked. */}
+      {addButton}
+
       {decisions.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
           {readOnly
@@ -265,16 +281,6 @@ export function DecisionsSection({
             </div>
           );
         })
-      )}
-
-      {!readOnly && (
-        <button
-          type="button"
-          className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-          onClick={handleAdd}
-        >
-          + Add Decision
-        </button>
       )}
 
       <DecisionEditDialog

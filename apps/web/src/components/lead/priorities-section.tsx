@@ -230,7 +230,7 @@ export function PrioritiesSection({
   const addButton = !readOnly && (
     <button
       type="button"
-      className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+      className="btn-press inline-flex min-h-[40px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
       onClick={handleAdd}
     >
       + Add Priority
@@ -240,12 +240,12 @@ export function PrioritiesSection({
   if (sorted.length === 0) {
     return (
       <div className="space-y-3">
+        {addButton && <div className="flex justify-end">{addButton}</div>}
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
           {readOnly
             ? "No priorities reported."
             : "No priorities yet. Use “+ Add Priority” to list what matters most."}
         </div>
-        {addButton}
         <PriorityEditDialog
           key={
             dialogState.open && dialogState.mode === "create"
@@ -267,6 +267,10 @@ export function PrioritiesSection({
 
   return (
     <div className="space-y-3">
+      {/* Keep the create action before the variable list so inserted rows
+          do not push the button the user just clicked. */}
+      {addButton && <div className="flex justify-end">{addButton}</div>}
+
       {sorted.map((entry, idx) => {
         const tintKey =
           entry.rank === 1 || entry.rank === 2 || entry.rank === 3
@@ -349,8 +353,6 @@ export function PrioritiesSection({
           </div>
         );
       })}
-
-      {addButton}
 
       <PriorityEditDialog
         key={`${dialogState.open}-${dialogState.open && dialogState.mode === "edit" ? dialogState.priority.rank : "new"}`}

@@ -8,9 +8,18 @@
 
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
-function PlaceholderAccordion({ rows }: { readonly rows: number }) {
+function PlaceholderAccordion({
+  rows,
+  minHeight,
+}: {
+  readonly rows: number;
+  readonly minHeight?: number;
+}) {
   return (
-    <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
+    <div
+      className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]"
+      style={minHeight === undefined ? undefined : { minHeight }}
+    >
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Skeleton className="h-4 w-4" />
@@ -56,22 +65,22 @@ export function LeadFormSkeleton() {
       </div>
 
       {/* Pipeline (Product Status) */}
-      <PlaceholderAccordion rows={3} />
+      <PlaceholderAccordion rows={3} minHeight={244} />
 
       {/* Current Week */}
-      <PlaceholderAccordion rows={3} />
+      <PlaceholderAccordion rows={3} minHeight={256} />
 
       {/* Next Week */}
-      <PlaceholderAccordion rows={2} />
+      <PlaceholderAccordion rows={3} minHeight={272} />
 
       {/* Risks & Blockers */}
-      <PlaceholderAccordion rows={2} />
+      <PlaceholderAccordion rows={2} minHeight={322} />
 
       {/* Decisions */}
-      <PlaceholderAccordion rows={2} />
+      <PlaceholderAccordion rows={7} minHeight={490} />
 
       {/* Top 3 Priorities */}
-      <PlaceholderAccordion rows={3} />
+      <PlaceholderAccordion rows={6} minHeight={404} />
     </div>
   );
 }

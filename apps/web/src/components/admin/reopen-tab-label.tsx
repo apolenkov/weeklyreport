@@ -3,20 +3,21 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useTRPC } from "../../lib/trpc-context";
+import { TabCountPill } from "./tab-count-pill";
 
 type Props = {
-  readonly active: boolean;
+  readonly active?: boolean;
 };
 
 /**
- * Tab label for the Reopen Requests admin tab. Adds a numeric pill showing
- * the count of pending requests so heads see at a glance there's queue.
+ * Tab label for the Reopen Requests admin tab. The count is an absolute
+ * corner badge so async query hydration cannot move the tab row.
  *
  * Polling is intentionally absent — the count refreshes on tab focus +
  * after a respondReopenRequest mutation invalidates the query. New requests
  * arriving while the page is open are surfaced on the next interaction.
  */
-export function ReopenTabLabel({ active }: Props) {
+export function ReopenTabLabel(_props: Props) {
   const trpc = useTRPC();
   const countQuery = useQuery(
     trpc.admin.pendingReopenCount.queryOptions(undefined, {
@@ -26,22 +27,19 @@ export function ReopenTabLabel({ active }: Props) {
   );
 
   const count = countQuery.data?.count ?? 0;
+  const countLabel =
+    count === 1
+      ? "1 pending reopen request"
+      : `${count} pending reopen requests`;
 
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="relative inline-flex items-center">
       <span>reopen</span>
-      {count > 0 && (
-        <span
-          className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
-            active
-              ? "bg-white/25 text-white"
-              : "bg-[var(--color-destructive)] text-white"
-          }`}
-          aria-label={`${count} pending reopen requests`}
-        >
-          {count}
-        </span>
-      )}
+      <TabCountPill
+        ariaLabel={countLabel}
+        count={count}
+        testId="reopen-tab-count"
+      />
     </span>
   );
 }

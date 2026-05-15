@@ -39,6 +39,12 @@ export type ListFailedResult = {
 export type RetryFailedResult = {
   retried: boolean;
   jobId: string;
+  removed?: boolean;
+  reason?: string;
+};
+
+type JobsServiceOptions = {
+  reminderExecutionExists?: (executionId: string) => Promise<boolean>;
 };
 
 /**
@@ -53,6 +59,7 @@ export class JobsService {
   constructor(
     private readonly emailReminderQueue: Queue | undefined,
     logger?: AppLogger,
+    private readonly options: JobsServiceOptions = {},
   ) {
     this.logger = logger ?? createNullLogger();
   }
@@ -108,6 +115,27 @@ export class JobsService {
       return { retried: false, jobId: input.jobId };
     }
 
+    const executionId = getReminderExecutionId(job.data);
+    if (executionId && this.options.reminderExecutionExists) {
+      const exists = await this.options.reminderExecutionExists(executionId);
+      if (!exists) {
+        await job.remove();
+        const reason = `Reminder execution ${executionId} no longer exists.`;
+        this.logger.info("admin.jobs.retry — stale job removed", {
+          phase: "admin.jobs.retry",
+          queue: input.queue,
+          jobId: input.jobId,
+          executionId,
+        });
+        return {
+          retried: false,
+          removed: true,
+          reason,
+          jobId: input.jobId,
+        };
+      }
+    }
+
     await job.retry();
     this.logger.info("admin.jobs.retry — job requeued", {
       phase: "admin.jobs.retry",
@@ -116,4 +144,18 @@ export class JobsService {
     });
     return { retried: true, jobId: input.jobId };
   }
+}
+
+function getReminderExecutionId(data: unknown): string | null {
+  if (
+    data &&
+    typeof data === "object" &&
+    "executionId" in data &&
+    typeof data.executionId === "string" &&
+    data.executionId.trim().length > 0
+  ) {
+    return data.executionId;
+  }
+
+  return null;
 }

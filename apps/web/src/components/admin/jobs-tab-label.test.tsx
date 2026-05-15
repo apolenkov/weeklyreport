@@ -1,0 +1,92 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+
+const useQueryMock = vi.fn();
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: (opts: unknown) => useQueryMock(opts),
+}));
+vi.mock("../../lib/trpc-context", () => ({
+  useTRPC: () => ({
+    admin: {
+      dlqCount: {
+        queryOptions: () => ({ queryKey: ["admin", "dlqCount"] }),
+      },
+      pendingReopenCount: {
+        queryOptions: (_input: unknown, opts: Record<string, unknown>) => ({
+          queryKey: ["admin", "pendingReopenCount"],
+          ...opts,
+        }),
+      },
+    },
+  }),
+}));
+
+import { JobsTabLabel } from "./jobs-tab-label";
+import { ReopenTabLabel } from "./reopen-tab-label";
+
+describe("admin tab alert labels", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders no visible badge while reopen count is loading", () => {
+    useQueryMock.mockReturnValue({ data: undefined });
+
+    render(<ReopenTabLabel active={false} />);
+
+    expect(screen.getByText("reopen")).toBeInTheDocument();
+    expect(screen.queryByTestId("reopen-tab-count")).not.toBeInTheDocument();
+  });
+
+  it("renders no visible badge when reopen count is zero", () => {
+    useQueryMock.mockReturnValue({ data: { count: 0 } });
+
+    render(<ReopenTabLabel active />);
+
+    expect(screen.getByText("reopen")).toBeInTheDocument();
+    expect(screen.queryByTestId("reopen-tab-count")).not.toBeInTheDocument();
+  });
+
+  it("renders pending reopen count as an overlay badge", () => {
+    useQueryMock.mockReturnValue({ data: { count: 3 } });
+
+    render(<ReopenTabLabel active={false} />);
+
+    const count = screen.getByTestId("reopen-tab-count");
+    expect(count).toHaveTextContent("3");
+    expect(count).toHaveClass("absolute", "-right-3", "-top-2");
+    expect(count).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("3 pending reopen requests")).toHaveClass(
+      "sr-only",
+    );
+  });
+
+  it("renders DLQ count on the Jobs tab and keeps polling", () => {
+    useQueryMock.mockReturnValue({ data: { count: 2 } });
+
+    render(<JobsTabLabel active />);
+
+    const count = screen.getByTestId("jobs-tab-count");
+    expect(screen.getByText("jobs")).toBeInTheDocument();
+    expect(count).toHaveTextContent("2");
+    expect(count).toHaveClass("absolute", "-right-3", "-top-2");
+    expect(count).toHaveClass("bg-[var(--color-destructive)]", "text-white");
+    expect(screen.getByText("2 failed jobs in DLQ")).toHaveClass("sr-only");
+
+    const callArg = useQueryMock.mock.calls.at(-1)?.[0] as {
+      refetchInterval?: number;
+    };
+    expect(callArg?.refetchInterval).toBe(30_000);
+  });
+
+  it("caps large tab counts without growing the tab", () => {
+    useQueryMock.mockReturnValue({ data: { count: 142 } });
+
+    render(<JobsTabLabel active={false} />);
+
+    const count = screen.getByTestId("jobs-tab-count");
+    expect(count).toHaveTextContent("99+");
+    expect(count).toHaveClass("absolute");
+    expect(screen.getByText("142 failed jobs in DLQ")).toHaveClass("sr-only");
+  });
+});
