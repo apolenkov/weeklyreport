@@ -1,10 +1,11 @@
 name: CI
 
+# GitHub Enterprise has no runners assigned to this repository right now
+# (actions/runners total=0 on 2026-05-15). Automatic PR/push triggers
+# leave checks queued forever, so CI stays manual until a runner is
+# provisioned. Local pre-push gates remain the active quality gate.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
