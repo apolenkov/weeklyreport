@@ -5,7 +5,7 @@ milestone_name: Closure & Recovery
 status: blocked_by_ci
 stopped_at: v6.0 roadmap drafted (Phases 27-31)
 last_updated: "2026-05-14T18:20:00.000Z"
-last_activity: 2026-05-14 -- v8.1 scope repaired: dark mode/theme switching, MOB-PARKED mobile PDF/open-report sign-off, Telegram activation, and AI/telemetry/eval work are parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`; active GSD phases are 24/24 complete, while PR #5 merge/tag remain blocked until a real green CI run.
+last_activity: 2026-05-14 -- v8.1 scope repaired: dark mode/theme switching, I18N-PARKED translation framework, MOB-PARKED mobile PDF/open-report sign-off, Telegram activation, and AI/telemetry/eval work are parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`; active GSD phases are 24/24 complete, while PR #5 merge/tag remain blocked until a real green CI run.
 progress:
   total_phases: 24
   completed_phases: 24
@@ -40,8 +40,9 @@ Milestone: v8.1 Closure & Recovery (BLOCKED-BY-CI, tag parent v8.0.0)
 Active v8.1 phases: 24/24 complete by `gsd-sdk query init.milestone-op` after
 the 2026-05-14 scope repair. Phase 40/41/42 and deferred future tracks are
 closed for current scope as PARKED/DEFERRED, not as implemented features.
-Future dark mode, theme switching, UI screenshot review, MOB-PARKED mobile
-PDF/open-report sign-off, Telegram activation, and AI/telemetry/eval work are captured in
+Future dark mode, theme switching, i18n translation framework, UI screenshot
+review, MOB-PARKED mobile PDF/open-report sign-off, Telegram activation, and
+AI/telemetry/eval work are captured in
 `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
 Active v8.1 plan artifacts: 37/37 complete after parked/deferred closure plans.
 Filesystem inventory: 53 phase directories and 142 plan files still exist

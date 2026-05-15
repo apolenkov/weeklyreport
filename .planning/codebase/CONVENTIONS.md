@@ -9,6 +9,10 @@ Current closure conventions:
 - Chat/docs for the user stay Russian where appropriate; code, paths, commands,
   config keys, UI strings, and static product UI copy stay English.
 - Static UI strings in source remain English until an i18n phase exists.
+- I18N-PARKED is tracked in
+  `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`;
+  do not add translation dictionaries, locale routing, or language switching in
+  the current v8.1 closure.
 - Deferred features require code-visible TODO markers, loud stubs, and metrics
   when the touched surface is an activation path.
 - Planning edits must pass pnpm lint:md.
