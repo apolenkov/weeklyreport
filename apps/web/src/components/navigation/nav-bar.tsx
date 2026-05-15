@@ -358,7 +358,6 @@ export function NavBar() {
             the right-rail width is stable from first paint → zero CLS on
             reload. Skeleton dimensions match the resolved identity chrome. */}
         <div className="flex items-center gap-2.5">
-          {shouldRenderDevRoleSwitcher() && <DevRoleSwitcher />}
           <ThemeComingSoonControl />
           {visibleSessionLoading ? (
             <>
@@ -449,6 +448,7 @@ export function NavBar() {
               )}
             </>
           )}
+          {shouldRenderDevRoleSwitcher() && <DevRoleSwitcher />}
         </div>
       </div>
 
