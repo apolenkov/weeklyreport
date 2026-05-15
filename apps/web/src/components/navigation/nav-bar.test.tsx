@@ -194,11 +194,38 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
       "aria-label",
       "Theme selection is coming soon",
     );
-    expect(themeControl).toHaveAttribute(
-      "title",
-      "Theme selection is coming soon",
-    );
+    expect(themeControl).toHaveAttribute("title", "Coming Soon");
     expect(themeControl).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("renders the user initials in the compact home mark", () => {
+    setRole("lead");
+    const { container } = render(<NavBar />);
+
+    const brandLink = container.querySelector('a[aria-label="Test User home"]');
+
+    expect(brandLink).not.toBeNull();
+    expect(brandLink?.textContent).toBe("TU");
+  });
+
+  it("renders organization identity as restrained text metadata", () => {
+    setRole("lead");
+    const { container } = render(<NavBar />);
+
+    const header = container.querySelector<HTMLElement>(
+      '[data-testid="nav-bar"]',
+    );
+    const identity = container.querySelector('[data-testid="nav-identity"]');
+
+    expect(header).not.toBeNull();
+    expect(header).not.toHaveAttribute("data-organization-background");
+    expect(header?.style.backgroundImage).toBe("");
+    expect(identity?.textContent).toContain("Test User");
+    expect(identity?.textContent).toContain("PEO");
+    expect(identity?.textContent).toContain("Lead");
+    expect(
+      container.querySelector('[data-testid="organization-atmosphere"]'),
+    ).toBeNull();
   });
 
   it("null session (still loading) renders NO role-gated links", () => {

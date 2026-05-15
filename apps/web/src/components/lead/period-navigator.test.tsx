@@ -108,6 +108,7 @@ describe("PeriodNavigator (lead)", () => {
       "Select reporting period",
     ) as HTMLSelectElement;
 
+    expect(screen.getByText("Period")).toBeVisible();
     expect(select.selectedOptions[0]?.textContent).toBe(
       "Week 17, Apr 21–27, 2026",
     );

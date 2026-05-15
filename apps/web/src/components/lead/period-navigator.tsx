@@ -157,7 +157,7 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
         aria-hidden="true"
       >
         <CalendarIcon />
-        Week
+        Period
       </span>
 
       <button

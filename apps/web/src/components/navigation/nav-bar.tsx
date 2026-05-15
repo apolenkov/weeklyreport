@@ -62,6 +62,14 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   { href: "/admin", label: "Admin", roles: ["admin"] },
 ];
 
+const USER_IDENTITY_SLOT_CLASS =
+  "hidden h-8 min-w-0 max-w-[190px] flex-col justify-center xl:flex";
+const BRAND_SLOT_CLASS = "flex w-10 shrink-0 items-center justify-center py-4";
+const RIGHT_RAIL_CLASS =
+  "relative flex items-center justify-end gap-2.5 justify-self-end xl:w-[180px]";
+const LOGOUT_BUTTON_CLASS =
+  "inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] xl:w-[88px] xl:px-3";
+
 function getRoleLabel(role: Role): string {
   switch (role) {
     case "admin":
@@ -143,9 +151,9 @@ function ThemeComingSoonControl() {
       type="button"
       aria-disabled="true"
       aria-label="Theme selection is coming soon"
-      title="Theme selection is coming soon"
+      title="Coming Soon"
       data-testid="theme-coming-soon"
-      className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] cursor-default"
+      className="inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] cursor-default xl:w-[82px] xl:px-2.5"
     >
       <Moon size={14} strokeWidth={2} aria-hidden="true" />
       <span className="hidden xl:inline">Theme</span>
@@ -250,10 +258,6 @@ export function NavBar() {
 
   const initials = visibleUser ? initialsFromName(visibleUser.name) : "?";
   const roleLabel = role ? getRoleLabel(role) : "";
-  // Defensive: if a name happens to match the role label verbatim
-  // (legacy seed quirk), show only the name to avoid "X · X".
-  const nameRoleSame = visibleUser ? visibleUser.name === roleLabel : false;
-
   // UFB-066 (2026-05-11): show a skeleton placeholder for the brand pill
   // while the session query is in-flight, instead of flashing the
   // DEFAULT_ORGANIZATION_IDENTITY fallback ('ORG') and then swapping to the
@@ -263,58 +267,67 @@ export function NavBar() {
   const orgShortName = orgResolved
     ? visibleOrganization.shortName
     : DEFAULT_ORGANIZATION_IDENTITY.shortName;
-  // First letter of each word in shortName (up to 2 chars) for the round
-  // monogram badge. For a 2-3-letter shortName like 'PEO' the monogram is
-  // 'DT' / 'PE' — visually consistent with the legacy 'CR' monogram.
-  const orgMonogram =
-    orgShortName.length <= 2
-      ? orgShortName.toUpperCase()
-      : orgShortName
-          .split(/\s+/)
-          .map((w) => w.charAt(0))
-          .join("")
-          .slice(0, 2)
-          .toUpperCase() || orgShortName.slice(0, 2).toUpperCase();
+  const homeLabel = visibleUser ? visibleUser.name + " home" : "Loading";
+  const identityMeta =
+    role && orgResolved ? orgShortName + " · " + roleLabel : roleLabel;
 
   return (
     <header className="w-full bg-[var(--color-card)]" data-testid="nav-bar">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo — N-1: monogram on tealA. UFB-047 (Phase 48-A): the
-            brand text and monogram are sourced from the Organization
-            singleton (`session.organization.shortName`), falling back to
-            the seeded 'PEO' identity. */}
-        <a
-          href={role ? getLogoHref(role) : "/"}
-          className="flex items-center gap-2.5 py-4"
-          aria-label={orgResolved ? `${orgShortName} home` : "Loading"}
-        >
-          {orgResolved ? (
+      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-3 justify-self-start">
+          {/* Home mark — user initials carry identity in the compact left slot;
+              organization identity stays textual in the metadata line. */}
+          <a
+            href={role ? getLogoHref(role) : "/"}
+            className={BRAND_SLOT_CLASS}
+            aria-label={homeLabel}
+          >
+            {visibleUser ? (
+              <>
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)] shadow-[0_0_0_1px_rgba(0,98,65,0.08)]">
+                  <span className="font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none tracking-normal text-white">
+                    {initials}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* UFB-066: brand skeleton until session.organization resolves.
+                    Uses the same fixed brand slot as the resolved logo so
+                    the nav center line stays still while auth hydrates. */}
+                <div
+                  className="h-8 w-8 shrink-0 rounded-full bg-[var(--color-muted)]/40"
+                  aria-hidden="true"
+                />
+              </>
+            )}
+          </a>
+
+          {visibleSessionLoading ? (
             <>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)]">
-                <span className="font-[family-name:var(--font-sans)] text-[13px] font-bold tracking-tight text-white">
-                  {orgMonogram}
-                </span>
+              <div className={USER_IDENTITY_SLOT_CLASS} aria-hidden="true">
+                <div className="h-3 w-28 rounded bg-[var(--color-muted)]/40" />
+                <div className="mt-1 h-2.5 w-16 rounded bg-[var(--color-muted)]/30" />
               </div>
-              <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-tight text-[var(--color-foreground)]">
-                {orgShortName}
-              </span>
             </>
           ) : (
             <>
-              {/* UFB-066: brand skeleton until session.organization resolves.
-                  Matches real brand-pill dimensions (h-8 monogram + 80px
-                  text width) so the swap is zero-CLS. */}
-              <div
-                className="h-8 w-8 rounded-full bg-[var(--color-muted)]/40"
-                aria-hidden="true"
-              />
-              <div
-                className="h-4 w-20 rounded bg-[var(--color-muted)]/40"
-                aria-hidden="true"
-              />
+              {visibleUser && (
+                <div
+                  className={USER_IDENTITY_SLOT_CLASS}
+                  data-testid="nav-identity"
+                >
+                  <span className="min-w-0 max-w-full truncate whitespace-nowrap text-[13px] leading-4 text-[var(--color-foreground)]">
+                    <span className="font-semibold">{visibleUser.name}</span>
+                  </span>
+                  <span className="min-w-0 max-w-full truncate whitespace-nowrap text-[10px] font-semibold uppercase leading-3 tracking-normal text-[var(--color-muted-foreground)]">
+                    {identityMeta}
+                  </span>
+                </div>
+              )}
             </>
           )}
-        </a>
+        </div>
 
         {/* Navigation — N-2: pill active state, N-3: per-link icon.
             whitespace-nowrap on each pill prevents wrapping when the
@@ -343,70 +356,26 @@ export function NavBar() {
           })}
         </nav>
 
-        {/* User identity. Right-rail layout strategy:
-            - sm-xl (640-1279px): just the avatar circle (with aria-label for
-              screen readers carrying name + role)
-            - xl+ (1280px+): avatar + "Name · Role" text
-            Was previously lg+ (1024px) but at 1024 with 6 nav-link pills + a
-            longer role label ("Department Head") the row overflowed
-            ~110px. Bumping the threshold up keeps the chrome tidy while
-            preserving the identity signal at every width via the avatar.
+        {/* Right rail. Identity now lives in the left home mark + xl text:
+            the rail keeps only actions so the center nav has stable space.
             UFB-NEW-A1: show skeleton placeholders while session is loading so
-            the right-rail width is stable from first paint → zero CLS on
-            reload. Skeleton dimensions match the resolved identity chrome. */}
-        <div className="relative flex items-center gap-2.5">
-          <ThemeComingSoonControl />
+            the header width is stable from first paint → zero CLS on reload.
+            Theme and Logout stay grouped as the action rail. */}
+        <div className={RIGHT_RAIL_CLASS}>
           {visibleSessionLoading ? (
             <>
-              {/* xl+ skeleton: avatar circle + name pill */}
               <div
-                className="hidden items-center gap-2 xl:flex"
-                aria-hidden="true"
-              >
-                <div className="h-8 w-8 rounded-full bg-[var(--color-muted)]/40" />
-                <div className="h-4 w-24 rounded bg-[var(--color-muted)]/40" />
-              </div>
-              {/* sm-xl skeleton: avatar circle only */}
-              <div
-                className="h-8 w-8 rounded-full bg-[var(--color-muted)]/40 xl:hidden"
+                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[82px]"
                 aria-hidden="true"
               />
-              {/* logout button skeleton */}
               <div
-                className="h-8 w-20 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
+                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[88px]"
                 aria-hidden="true"
               />
             </>
           ) : (
             <>
-              {visibleUser && (
-                <div className="hidden items-center gap-2 xl:flex">
-                  <div
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)]"
-                    aria-hidden="true"
-                  >
-                    {initials}
-                  </div>
-                  <span className="whitespace-nowrap text-[13px] text-[var(--color-foreground)]">
-                    <span className="font-semibold">{visibleUser.name}</span>
-                    {!nameRoleSame && (
-                      <span className="text-[var(--color-muted-foreground)]">
-                        {" "}
-                        · {roleLabel}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-              {visibleUser && (
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-success)] text-[11px] font-semibold text-[var(--color-starbucks-accent)] xl:hidden"
-                  aria-label={`${visibleUser.name} (${roleLabel})`}
-                  title={`${visibleUser.name} · ${roleLabel}`}
-                >
-                  {initials}
-                </div>
-              )}
+              <ThemeComingSoonControl />
               {visibleUser && (
                 <button
                   type="button"
@@ -423,7 +392,7 @@ export function NavBar() {
                   data-testid="nav-logout"
                   aria-label="Sign out"
                   title="Sign out"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
+                  className={LOGOUT_BUTTON_CLASS}
                 >
                   <svg
                     width="14"
