@@ -60,7 +60,13 @@ function setRole(role: Role | null): void {
     });
   } else {
     useSessionMock.mockReturnValue({
-      user: { id: "u1", name: "Test User", email: "t@test.local", role },
+      user: {
+        id: "u1",
+        name: "Test User",
+        email: "t@test.local",
+        role,
+        reportingGroupName: "Core Development",
+      },
       // UFB-047 / Phase 48-A: realistic org hydration so the nav-bar
       // renders the brand strings consistently with the runtime.
       organization: {
@@ -222,6 +228,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expect(header?.style.backgroundImage).toBe("");
     expect(identity?.textContent).toContain("Test User");
     expect(identity?.textContent).toContain("PEO");
+    expect(identity?.textContent).toContain("Core Development");
     expect(identity?.textContent).toContain("Lead");
     expect(
       container.querySelector('[data-testid="organization-atmosphere"]'),

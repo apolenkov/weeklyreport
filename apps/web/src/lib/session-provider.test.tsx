@@ -65,6 +65,7 @@ describe("SessionProvider + useSession", () => {
         role: "head",
         activeReportId: "a0000000-0000-4000-8000-000000000001",
         activeReportSectionId: null,
+        reportingGroupName: "Core Development",
       },
       isLoading: false,
     });
@@ -78,6 +79,7 @@ describe("SessionProvider + useSession", () => {
       name: "Department Head",
       email: "head@customreport.local",
       role: "head",
+      reportingGroupName: "Core Development",
     });
   });
 
