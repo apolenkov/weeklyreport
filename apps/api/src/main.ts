@@ -256,15 +256,25 @@ async function bootstrap() {
     getBullMQOptions(),
   );
 
+  const prismaService = app.get(PrismaService);
+
   // Phase 35-06: thin wrapper around the email-reminder Queue handle for the
   // admin DLQ admin tab (`/admin?tab=jobs`). Stays out of the NestJS DI graph
   // for the same reason emailReminderQueue does — see the @nestjs/bullmq DI
   // bug note in bullmq.module.ts.
-  const jobsService = new JobsService(emailReminderQueue, logger);
+  const jobsService = new JobsService(emailReminderQueue, logger, {
+    reminderExecutionExists: async (executionId) => {
+      const execution = await prismaService.reminderExecution.findUnique({
+        where: { id: executionId },
+        select: { id: true },
+      });
+      return execution !== null;
+    },
+  });
 
   // Resolve all services from NestJS DI container
   const appRouter = createAppRouter({
-    prisma: app.get(PrismaService),
+    prisma: prismaService,
     reportSectionsService: app.get(ReportSectionsService),
     reviewService: app.get(ReviewService),
     publicationService: app.get(PublicationService),
@@ -331,7 +341,6 @@ async function bootstrap() {
   );
 
   // Mount SAML auth routes (login, callback, logout, dev-login)
-  const prismaService = app.get(PrismaService);
   const samlOptions = createSamlStrategyOptions(process.env);
   const samlStrategy = createSamlStrategy(samlOptions);
   const authCtrl = createAuthController(process.env);

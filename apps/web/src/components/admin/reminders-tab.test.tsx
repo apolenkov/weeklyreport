@@ -153,17 +153,26 @@ describe("RemindersTab (Phase 44-04)", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the policy list with kind, offset, audience, and validity window", () => {
+  it("renders policies as readable reminder schedules", () => {
     renderTab();
     const row = screen.getByTestId(`policy-row-${policyDeadline.id}`);
-    expect(row).toHaveTextContent("deadline");
-    expect(row).toHaveTextContent("T-24h");
-    expect(row).toHaveTextContent("lead-with-draft");
-    expect(row).toHaveTextContent("forever");
+    expect(row).toHaveTextContent("24 hours before deadline");
+    expect(row).toHaveTextContent("Leads with drafts");
+    expect(row).toHaveTextContent("Europe/Moscow");
+    expect(row).toHaveTextContent("Valid since 2026-05-01 · no end date");
+    expect(row).toHaveTextContent("1 scheduled period");
+    expect(row).not.toHaveTextContent("T-24h");
+    expect(row).not.toHaveTextContent("lead-with-draft");
+
     const row2 = screen.getByTestId(`policy-row-${policyEscalation.id}`);
-    expect(row2).toHaveTextContent("escalation");
-    expect(row2).toHaveTextContent("T+2h");
+    expect(row2).toHaveTextContent("2 hours after deadline");
+    expect(row2).toHaveTextContent("Head of late leads");
     expect(row2).toHaveTextContent("→");
+    expect(row2).not.toHaveTextContent("escalation");
+    expect(row2).not.toHaveTextContent("head-of-late");
+    expect(row2).not.toHaveTextContent("T+2h");
+    expect(row2).toHaveTextContent("No scheduled periods yet");
+    expect(screen.queryByText(/Coming Soon/i)).not.toBeInTheDocument();
   });
 
   it("shows the empty-state copy when policies is empty", () => {
@@ -246,10 +255,17 @@ describe("RemindersTab (Phase 44-04)", () => {
   it("shows derived-rules empty hint for a policy with no rules", async () => {
     const user = userEvent.setup();
     renderTab();
-    await user.click(screen.getByTestId(`expand-${policyEscalation.id}`));
     expect(
-      screen.getByTestId(`derived-rules-empty-${policyEscalation.id}`),
-    ).toBeInTheDocument();
+      screen.queryByText(/No matching report periods yet/i),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId(`expand-${policyEscalation.id}`));
+    const emptyHint = screen.getByTestId(
+      `derived-rules-empty-${policyEscalation.id}`,
+    );
+    expect(emptyHint).toHaveTextContent(/No matching report periods yet/i);
+    expect(screen.getByText("Generated schedule")).toBeInTheDocument();
+    expect(screen.getByText("Read-only")).toBeInTheDocument();
   });
 
   it("opens the remove confirm dialog and warns about derived rule count", async () => {

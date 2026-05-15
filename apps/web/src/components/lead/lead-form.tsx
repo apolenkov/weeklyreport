@@ -223,6 +223,7 @@ type AccordionSectionProps = {
    */
   readonly groupSyncKey?: number;
   readonly groupExpanded?: boolean;
+  readonly testId?: string;
   readonly children: React.ReactNode;
 };
 
@@ -236,6 +237,7 @@ function AccordionSection({
   defaultOpen = true,
   groupSyncKey,
   groupExpanded,
+  testId,
   children,
 }: AccordionSectionProps) {
   const [expanded, setExpanded] = useState(defaultOpen);
@@ -247,7 +249,10 @@ function AccordionSection({
   }, [groupSyncKey, groupExpanded]);
 
   return (
-    <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_0_0.5px_0_rgba(0,0,0,0.12),0_12px_26px_-18px_rgba(0,0,0,0.22),0_2px_4px_rgba(0,0,0,0.06)]">
+    <div
+      data-testid={testId}
+      className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_0_0.5px_0_rgba(0,0,0,0.12),0_12px_26px_-18px_rgba(0,0,0,0.22),0_2px_4px_rgba(0,0,0,0.06)]"
+    >
       <button
         type="button"
         className="flex w-full items-center justify-between p-5 transition-colors hover:bg-[var(--color-surface-hover)]"
@@ -1401,6 +1406,7 @@ export function LeadForm({
           <AccordionSection
             groupSyncKey={groupSyncKey}
             groupExpanded={groupExpanded}
+            testId="lead-section-product-status"
             icon={<GridIcon />}
             title="Product Status"
             badge={`${products.length} assigned products`}
@@ -1413,6 +1419,7 @@ export function LeadForm({
           <AccordionSection
             groupSyncKey={groupSyncKey}
             groupExpanded={groupExpanded}
+            testId="lead-section-current-week"
             icon={<CalendarIcon />}
             title="Current Week"
             badge={`${currentWeekItems.length} items`}
@@ -1431,6 +1438,7 @@ export function LeadForm({
           <AccordionSection
             groupSyncKey={groupSyncKey}
             groupExpanded={groupExpanded}
+            testId="lead-section-next-week"
             icon={<NextWeekIcon />}
             title="Next Week"
             badge={`${nextWeekItems.length} items`}
@@ -1449,6 +1457,7 @@ export function LeadForm({
           <AccordionSection
             groupSyncKey={groupSyncKey}
             groupExpanded={groupExpanded}
+            testId="lead-section-risks"
             icon={<AlertIcon />}
             title="Risks & Blockers"
             titleColor="var(--color-destructive)"
@@ -1466,6 +1475,7 @@ export function LeadForm({
         <AccordionSection
           groupSyncKey={groupSyncKey}
           groupExpanded={groupExpanded}
+          testId="lead-section-decisions"
           icon={<ChatIcon />}
           title="Decisions"
           titleColor="var(--color-starbucks-accent)"
@@ -1495,6 +1505,7 @@ export function LeadForm({
           <AccordionSection
             groupSyncKey={groupSyncKey}
             groupExpanded={groupExpanded}
+            testId="lead-section-priorities"
             icon={<StarIcon />}
             title="Priorities"
             titleColor="var(--color-starbucks-gold)"

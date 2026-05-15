@@ -54,7 +54,11 @@ export function JobsTab() {
   const retryMut = useMutation(
     trpc.admin.jobs.retryFailed.mutationOptions({
       onSuccess: (result) => {
-        if (result.retried) {
+        if (result.removed) {
+          toast.info(
+            result.reason ?? `Job ${result.jobId} removed from failed jobs.`,
+          );
+        } else if (result.retried) {
           toast.success(`Job ${result.jobId} queued for retry.`);
         } else {
           // The job no longer exists (e.g. pruned by removeOnFail or already
@@ -64,8 +68,8 @@ export function JobsTab() {
         void qc.invalidateQueries({
           queryKey: trpc.admin.jobs.listFailed.queryKey(),
         });
-        // Also nudge the DLQ count badge in the admin shell so it tracks
-        // the new failed-jobs total without waiting for its 30s poll.
+        // Also nudge the Jobs tab count so it tracks the new failed-jobs
+        // total without waiting for its 30s poll.
         void qc.invalidateQueries({
           queryKey: trpc.admin.dlqCount.queryKey(),
         });
