@@ -58,9 +58,9 @@ keep pre-fill
 | LF-01 | Item/Risk/Decision/Priority should pre-select all owned stages on create.          | CODE DONE            | `item-edit-dialog.tsx`, `risk-edit-dialog.tsx`, `decision-edit-dialog.tsx`, `priority-edit-dialog.tsx` initialize `stageIds` from `stagesForProduct` or `availableStages`. | Browser smoke all 4 dialogs, not only Risk.                                                                           |
 | LF-02 | Do not revert UFB-073; the bug was representation, not the pre-fill idea.          | RECOVERED            | Claude plan explicitly says `НЕ revert`; current dialogs keep pre-fill.                                                                                                    | Keep this file as guard against future mistaken revert.                                                               |
 | LF-03 | Store/send form scope as `stageIds[]`, not a long joined UI string.                | CODE DONE, DB LEGACY | Shared schemas accept `stageIds`; web saves arrays; API maps arrays. Prisma still stores legacy CSV in `stageName`.                                                        | Decide later whether DB normalization is worth a migration; not required for current MVP if API contract stays array. |
-| LF-04 | Compact chips and overflow `+N more` should prevent dialog overflow.               | UI DONE, TEST GAP    | `stage-multi-select.tsx` shows first 2 selected stages plus `+N more`.                                                                                                     | Add direct unit/browser assertion for `+N more`.                                                                      |
+| LF-04 | Compact chips and overflow `+N more` should prevent dialog overflow.               | DONE                 | `stage-multi-select.tsx` shows first 2 selected stages plus `+N more`; `stage-multi-select.test.tsx` asserts it.                                                           | Browser smoke in full form flow.                                                                                      |
 | LF-05 | Empty stage selection means "all assigned stages".                                 | CODE DONE            | `StageMultiSelect` helper says empty applies to all; saves `undefined` when `stageIds.length === 0`.                                                                       | Verify wording in browser; clarify whether explicit-all and omitted-all should render differently.                    |
-| LF-06 | If lead owns only one stage, pre-select it and hide the picker.                    | OPEN                 | UFB-073 says hide picker for one stage; current `StageMultiSelect` still renders a checkbox for one stage.                                                                 | Implement or consciously park. This was missed.                                                                       |
+| LF-06 | If lead owns only one stage, pre-select it and hide the picker.                    | DONE                 | `StageMultiSelect` now renders a static applied stage pill and no checkbox when only one assigned stage exists; unit test covers it.                                       | Browser smoke in full form flow.                                                                                      |
 | LF-07 | A13: typed text must not reset during parent rerender/autosave invalidation.       | TESTED               | Four dialog tests cover rerender text preservation; dialog code excludes unstable refs from effect deps.                                                                   | Browser smoke during autosave/reload flow.                                                                            |
 | LF-08 | D-12: Item dialog reopen should reset stale draft state correctly.                 | TESTED               | `item-edit-dialog.test.tsx` covers text/status/stageIds/errors reset on reopen.                                                                                            | Browser smoke.                                                                                                        |
 | LF-09 | A15: choosing `Blocked` in Risk should persist after save and refresh.             | DONE                 | Commit `f0b6d55`; shared schema, Prisma field, API mapping, web draft mapping; Docker smoke confirmed reload persists `Blocked`.                                           | Keep regression test and migrate any stale DBs.                                                                       |
@@ -77,8 +77,6 @@ Lead Form core business logic:
   mostly implemented
 
 Still not honestly closed:
-  LF-06 one-stage picker hide
-  LF-04 direct +N more test
   LF-12/LF-13 stage-label semantics
   LF-14 full browser UAT sweep for all 4 dialogs
 ```
@@ -90,10 +88,7 @@ Still not honestly closed:
    - Add Risk -> choose `Blocked` -> save -> reload.
    - Add Decision -> verify stages -> save -> reload.
    - Add Priority -> verify stages -> save -> reload.
-2. Decide LF-06:
-   - implement one-stage hidden picker now, or
-   - explicitly park it as future polish.
-3. Decide LF-12:
+2. Decide LF-12:
    - keep `All stages` when every owned stage is explicitly selected, or
    - show explicit chips so user can distinguish "selected all" from "left empty".
-4. Add missing tests for `+N more` and risk stage-label semantics.
+3. Add missing test for risk stage-label semantics.
