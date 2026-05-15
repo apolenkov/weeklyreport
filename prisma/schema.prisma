@@ -318,6 +318,7 @@ model Risk {
   risk            String
   impact          String
   mitigation      String
+  severity        String                   @default("at-risk")
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, ((((COALESCE(risk, ''::text) || ' '::text) || COALESCE(impact, ''::text)) || ' '::text) || COALESCE(mitigation, ''::text)))"))

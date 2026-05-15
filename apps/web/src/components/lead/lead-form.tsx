@@ -347,6 +347,7 @@ function sectionToDraftPayload(
         risk: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
+        severity: r.severity,
         stageIds: r.stageIds,
       })),
     decisions: section.decisions
@@ -1000,6 +1001,7 @@ export function LeadForm({
             risk: r.text,
             impact: r.impact,
             mitigation: r.mitigation,
+            severity: r.severity,
             stageName,
             stageIds: r.stageIds,
           };
@@ -1010,6 +1012,7 @@ export function LeadForm({
           risk: r.text,
           impact: r.impact,
           mitigation: r.mitigation,
+          severity: r.severity,
           stageName,
           stageIds: r.stageIds,
         };

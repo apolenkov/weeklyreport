@@ -31,8 +31,8 @@
  *
  * - `RiskEntry.productName` — looked up via `risk.projectId` -> `projectName`.
  *   `RiskEntry.stageName` — not on `riskInputSchema`; defaults to "—".
- *   `RiskEntry.severity` — not on `riskInputSchema`; defaults to `"at-risk"`.
- *   `text` is constructed as `risk` + " — Impact: " + impact + " — Mitigation: " + mitigation
+ *   `RiskEntry.severity` — persisted when present; legacy rows default to
+ *   `"at-risk"`.
  *
  * - `DecisionEntry.productId` / `.productName` — `decisionInputSchema` has no
  *   `projectId`. Defaults to `''` / 'Department'. Phase 22 may scope decisions
@@ -444,7 +444,7 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
       productName: project?.name ?? "Unknown",
       // UFB-073 (R1): stage array from DB; legacy rows fall back to undefined.
       stageIds: r.stageIds,
-      severity: "at-risk" as const,
+      severity: r.severity ?? "at-risk",
       text: r.risk,
       impact: r.impact,
       mitigation: r.mitigation,

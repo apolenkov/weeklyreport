@@ -309,6 +309,54 @@ describe("mapWeeklyReport", () => {
     expect(expectDefined(crmReport?.risks[0]).severity).toBe("blocked");
   });
 
+  it("honors persisted risk severity when no blocked item exists", () => {
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "CRM",
+          worstStatus: "yellow",
+          stageCount: 7,
+          leadNames: ["Тимлид 1"],
+        },
+      ],
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Тимлид 1",
+          status: "draft",
+          submittedAt: null,
+          projects: [
+            {
+              projectId: PROJECT_A,
+              projectName: "CRM",
+              trafficLight: "yellow",
+            },
+          ],
+          items: [],
+          risks: [
+            {
+              id: "r1",
+              projectId: PROJECT_A,
+              risk: "Vendor outage",
+              impact: "Work is stopped",
+              mitigation: "Escalate",
+              severity: "blocked",
+            },
+          ],
+          decisions: [],
+          priorities: [],
+        },
+      ],
+    });
+
+    const result = mapWeeklyReport(report);
+    const crmReport = result.products.find((p) => p.id === PROJECT_A);
+    expect(expectDefined(crmReport?.risks[0]).severity).toBe("blocked");
+  });
+
   it("attaches needsAttention from matching escalation", () => {
     const report = baseReport({
       portfolioOverview: [
