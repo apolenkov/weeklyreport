@@ -2,6 +2,24 @@
 
 **Analysis Date:** 2026-04-24
 
+## 2026-05-14 Refresh
+
+Current high-signal structure:
+
+- apps/api/src/modules/ contains active domain modules for activity, admin, AI,
+  analytics, archive, auth, carry-over, organization, PDF export, period,
+  publication, reminders, report sections, review, search, Telegram, telemetry,
+  and weekly report.
+- apps/api/src/infrastructure/trpc/ remains the central API gateway.
+- apps/web/src/app/(app)/ contains role routes for admin, head, lead, reports,
+  print, and presentation/slides flows.
+- apps/web/src/components/lead/ owns lead dialogs, StageMultiSelect, stage
+  chips, period navigator, autosave integration, and form sections.
+- apps/web/src/components/dashboard/ owns head dashboard KPI/status/activity
+  surfaces.
+- .planning/audits/ and .planning/phases/61-66-\* now own v8.1 closure and
+  recovery evidence.
+
 ## Directory Layout
 
 ```

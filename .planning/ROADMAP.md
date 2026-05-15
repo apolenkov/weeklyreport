@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: shipped 2026-05-06 (26 plan files, 27 summaries; 35-02 subsumed by 35-08) | v8.1: in-progress, closure-blocked on product-ready UAT (Phases 40-42: 0/13 plans; Phases 44/46-52/54-57/59-60: ~43 plans executing)
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: shipped 2026-05-06 (26 plan files, 27 summaries; 35-02 subsumed by 35-08) | v8.1: Closure & Recovery active; current release gate is UAT/recovery + PR #5 CI, with theme/i18n/MOB-PARKED/AI/telemetry work parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
 
 ---
 
@@ -17,7 +17,7 @@
 - [x] **v6.0 Roles, Quality, AI & Analytics** - Phases 27-31 (shipped 2026-04-29) + post-v6.0 UX-overhaul wave 2026-04-30..2026-05-04
 - [ ] ~~**v7.0 Stabilisation & Hardening**~~ — ABSORBED into v8.0 (Phases 32-33 became sub-plans of 34-35); see [v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md) for historical context
 - [x] **v8.0 Production Readiness** - Phases 34-39 (shipped 2026-05-06, 26 plan files, 27 summaries) — [details](milestones/v8.0-ROADMAP.md)
-- [ ] **v8.1 Visual Identity & AI Maturity** - Phases 40-42 (in progress) — [details](milestones/v8.1-ROADMAP.md)
+- [ ] **v8.1 Closure & Recovery** - consolidated UAT/recovery milestone; original Visual Identity, i18n translation framework, AI Maturity, MOB-PARKED mobile sign-off, Telegram activation, and telemetry scope is parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`, while final completion waits on PR #5 CI — [details](milestones/v8.1-ROADMAP.md)
 
 ## Phases
 
@@ -505,6 +505,148 @@ Full details: [v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md) and [v8.0-REQUIREMEN
 - [x] 39-02-PLAN.md — Turbopack experiment (PERF-02)
 - [x] 39-03-PLAN.md — pg_stat_statements + index audit (PERF-03)
 - [x] 39-04-PLAN.md — k6 load test baseline (PERF-04)
+
+</details>
+
+---
+
+<details open>
+<summary>v8.1 Closure & Recovery (Phases 40-44, 46-47, 61-66) - ACTIVE</summary>
+
+Full details: [v8.1-ROADMAP.md](milestones/v8.1-ROADMAP.md) and
+[v8.1-REQUIREMENTS.md](milestones/v8.1-REQUIREMENTS.md).
+
+### Phase 40: B2B Rebrand & Dark Mode
+
+**Goal**: Park full theme/rebrand implementation out of v8.1; keep only a
+top-menu `Theme` Coming Soon control as user-visible intent.
+**Plans**: parked complete for current scope; future work is captured in
+`.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
+
+### Phase 41: AI Eval & Monitoring
+
+**Goal**: Park AI eval, telemetry, integration metrics, and cost alert work out
+of v8.1; keep Phase 54 seeds-only artifacts as the current safe boundary.
+**Plans**: parked complete for current scope; future work is captured in
+`.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
+
+### Phase 42: MOB-PARKED Mobile Sign-off
+
+**Goal**: Park mobile PDF/open-report sign-off out of v8.1; current UAT repeats
+on Dockerized local stack plus Playwright/log evidence.
+**Plans**: parked complete for current scope; future UI/UAT work is captured
+in `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
+
+### Phase 44: Reminder Policies
+
+**Goal**: Global period-agnostic reminder policies and derived per-period rules.
+**Plans**: 5/5 complete by phase summary evidence.
+
+### Phase 46: Group-Scope Visibility
+
+**Goal**: Head/viewer group scoping across dashboards, archive, and reports.
+**Plans**: 5/5 complete by summary-file evidence.
+
+### Phase 47: Head Presentation Mode
+
+**Goal**: Fullscreen report presentation mode for head users.
+**Plans**: 3/3 complete by summary-file evidence.
+
+### Phase 48: Identity Settings Roles
+
+**Goal**: Identity and role settings closure.
+**Plans**: complete by summary-file evidence; tracked in closure audit because
+the phase exists on disk after the original roadmap snapshot.
+
+### Phase 49: Settings Consumers
+
+**Goal**: Settings consumer wiring closure.
+**Plans**: complete by summary-file evidence; tracked in closure audit because
+the phase exists on disk after the original roadmap snapshot.
+
+### Phase 50: Period Lifecycle
+
+**Goal**: Period lifecycle behavior and validation.
+**Plans**: complete by summary-file evidence.
+
+### Phase 51: Period Model Expansion
+
+**Goal**: Period model expansion and related UI/API wiring.
+**Plans**: complete by summary-file evidence.
+
+### Phase 52: Product Telemetry
+
+**Goal**: Product telemetry closure.
+**Plans**: complete by phase summary evidence.
+
+### Phase 53: Cloud Deploy
+
+**Goal**: Cloud deployment track.
+**Plans**: deferred complete for current scope; not required for repo-local v8.1 closure unless reopened.
+
+### Phase 54: AI/RAG
+
+**Goal**: AI/RAG seed-mode delivery.
+**Plans**: seeds-only closed; real provider activation remains deferred.
+
+### Phase 55: Telegram
+
+**Goal**: Telegram seed-mode delivery.
+**Plans**: seeds-only closed; real bot/provider activation remains deferred.
+
+### Phase 56: Group Products Model
+
+**Goal**: Group-product data model.
+**Plans**: complete by phase summary evidence.
+
+### Phase 57: Director Role
+
+**Goal**: Director-role research/default semantics.
+**Plans**: closed for planned scope; no runtime `director` role is added by
+default in v8.1 closure.
+
+### Phase 59: Multi Org Hierarchy
+
+**Goal**: Future multi-organization hierarchy.
+**Plans**: deferred complete for current scope; not required for repo-local v8.1 closure unless reopened.
+
+### Phase 60: Presentation Mode
+
+**Goal**: Presentation-mode continuation track.
+**Plans**: deferred complete for current scope; not required for repo-local v8.1 closure unless reopened.
+
+### Phase 61: Closure Source And Session Intake
+
+**Goal**: Consolidate repo markdown, Claude Code, Codex, OpenCode candidates,
+and Plannotator into one classified ledger.
+**Plans**: 1/1 complete.
+
+### Phase 62: Closure GSD Build And Codebase Map
+
+**Goal**: Refresh GSD codebase intelligence and graphify state.
+**Plans**: 1/1 complete.
+
+### Phase 63: Closure Git Audit And Metrics Repair
+
+**Goal**: Reconcile branch, PR, CI, dirty tree, tags, and planning counters.
+**Plans**: 1/1 complete.
+
+### Phase 64: Closure Regression Coverage Gaps
+
+**Goal**: Close D-12, UFB-011, and UFB-014 coverage without duplicating closed
+E-04, E-08, or UFB-024 work.
+**Plans**: 1/1 complete.
+
+### Phase 65: Closure Product Semantics Gaps
+
+**Goal**: ADR-first implementation of D-6, D-8, D-16, D-17, D-29, D-34, and
+A35 viewer-based director-facing flow where no external blocker exists.
+**Plans**: 1/1 complete.
+
+### Phase 66: Closure Final Audit, PR, And Tag
+
+**Goal**: Run final GSD audit, complete v8.1, and merge/tag only after green CI.
+**Plans**: 1/1 complete; final route is BLOCKED-BY-CI until PR checks are green.
 
 </details>
 

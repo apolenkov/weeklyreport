@@ -31,8 +31,8 @@
  *
  * - `RiskEntry.productName` — looked up via `risk.projectId` -> `projectName`.
  *   `RiskEntry.stageName` — not on `riskInputSchema`; defaults to "—".
- *   `RiskEntry.severity` — not on `riskInputSchema`; defaults to `"at-risk"`.
- *   `text` is constructed as `risk` + " — Impact: " + impact + " — Mitigation: " + mitigation
+ *   `RiskEntry.severity` — persisted when present; legacy rows default to
+ *   `"at-risk"`.
  *
  * - `DecisionEntry.productId` / `.productName` — `decisionInputSchema` has no
  *   `projectId`. Defaults to `''` / 'Department'. Phase 22 may scope decisions
@@ -63,6 +63,10 @@ import {
   type StageStatus,
   type TrafficLightStatus,
 } from "./traffic-light";
+import {
+  formatPeriodRangeWithYear,
+  isoWeekNumber as sharedIsoWeekNumber,
+} from "../format-date";
 
 // ---- Self-contained re-declarations of presentation types ----
 //
@@ -217,29 +221,11 @@ const MONTHS = [
 ] as const;
 
 function isoWeekNumber(d: Date): number {
-  const target = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
-  );
-  const dayNum = (target.getUTCDay() + 6) % 7;
-  target.setUTCDate(target.getUTCDate() - dayNum + 3);
-  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
-  const firstThursdayDayNum = (firstThursday.getUTCDay() + 6) % 7;
-  firstThursday.setUTCDate(
-    firstThursday.getUTCDate() - firstThursdayDayNum + 3,
-  );
-  const diffMs = target.getTime() - firstThursday.getTime();
-  return 1 + Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+  return sharedIsoWeekNumber(d);
 }
 
 function formatDateRange(start: Date, end: Date): string {
-  const sMonth = MONTHS[start.getUTCMonth()];
-  const sDay = start.getUTCDate();
-  const eMonth = MONTHS[end.getUTCMonth()];
-  const eDay = end.getUTCDate();
-  if (start.getUTCMonth() === end.getUTCMonth()) {
-    return `${sMonth} ${sDay}-${eDay}`;
-  }
-  return `${sMonth} ${sDay}-${eMonth} ${eDay}`;
+  return formatPeriodRangeWithYear(start, end);
 }
 
 function formatRelativeTimestamp(at: Date, now: Date): string {
@@ -458,7 +444,7 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
       productName: project?.name ?? "Unknown",
       // UFB-073 (R1): stage array from DB; legacy rows fall back to undefined.
       stageIds: r.stageIds,
-      severity: "at-risk" as const,
+      severity: r.severity ?? "at-risk",
       text: r.risk,
       impact: r.impact,
       mitigation: r.mitigation,

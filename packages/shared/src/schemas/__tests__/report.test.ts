@@ -6,6 +6,7 @@ import {
   submitSectionSchema,
   itemInputSchema,
   riskInputSchema,
+  riskSeveritySchema,
   decisionInputSchema,
   priorityInputSchema,
   trafficLightStatusSchema,
@@ -266,6 +267,20 @@ describe("riskInputSchema — safeText", () => {
   it("accepts a valid risk", () => {
     const result = riskInputSchema.safeParse(validRisk());
     expect(result.success).toBe(true);
+  });
+
+  it("accepts explicit blocked severity", () => {
+    const result = riskInputSchema.safeParse({
+      ...validRisk(),
+      severity: "blocked",
+    });
+    expect(result.success).toBe(true);
+    expect(result.data?.severity).toBe("blocked");
+  });
+
+  it("rejects unknown severity", () => {
+    const result = riskSeveritySchema.safeParse("critical");
+    expect(result.success).toBe(false);
   });
 
   it("rejects risk text with null byte", () => {

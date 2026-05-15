@@ -24,22 +24,22 @@ const baseEntry = (
 });
 
 describe("formatDateRange", () => {
-  it("formats a same-month range as 'Apr 14-20'", () => {
+  it("formats a same-month range as 'Apr 14–20, 2026'", () => {
     expect(
       formatDateRange(
         new Date("2026-04-14T00:00:00.000Z"),
         new Date("2026-04-20T00:00:00.000Z"),
       ),
-    ).toBe("Apr 14-20");
+    ).toBe("Apr 14–20, 2026");
   });
 
-  it("formats a cross-month range as 'Apr 28-May 4'", () => {
+  it("formats a cross-month range as 'Apr 28–May 4, 2026'", () => {
     expect(
       formatDateRange(
         new Date("2026-04-28T00:00:00.000Z"),
         new Date("2026-05-04T00:00:00.000Z"),
       ),
-    ).toBe("Apr 28-May 4");
+    ).toBe("Apr 28–May 4, 2026");
   });
 });
 
@@ -114,7 +114,7 @@ describe("mapHistoryEntries", () => {
     expect(result[0]?.submittedAt).toBe("2 min ago");
   });
 
-  it("computes dateRange 'Apr 14-20' for a same-month period", () => {
+  it("computes dateRange 'Apr 14–20, 2026' for a same-month period", () => {
     const result = mapHistoryEntries(
       [
         baseEntry({
@@ -124,10 +124,10 @@ describe("mapHistoryEntries", () => {
       ],
       now,
     );
-    expect(result[0]?.dateRange).toBe("Apr 14-20");
+    expect(result[0]?.dateRange).toBe("Apr 14–20, 2026");
   });
 
-  it("computes dateRange 'Apr 28-May 4' for a cross-month period", () => {
+  it("computes dateRange 'Apr 28–May 4, 2026' for a cross-month period", () => {
     const result = mapHistoryEntries(
       [
         baseEntry({
@@ -137,7 +137,7 @@ describe("mapHistoryEntries", () => {
       ],
       now,
     );
-    expect(result[0]?.dateRange).toBe("Apr 28-May 4");
+    expect(result[0]?.dateRange).toBe("Apr 28–May 4, 2026");
   });
 
   it("computes weekLabel 'Week 16' from periodStart in ISO week 16", () => {

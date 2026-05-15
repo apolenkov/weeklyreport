@@ -563,7 +563,7 @@ export class AdminService {
    * Defaulting rules (mirrors the scheduler's date math):
    *   - `periodEnd` defaults to `periodStart + (settings.periodLengthDays - 1)`
    *     calendar days at end-of-day (23:59:59.999) so a 7-day period
-   *     starting Mon spans Mon..Sun inclusive.
+   *     spans seven inclusive calendar dates from any chosen start day.
    *   - `deadline` defaults to `computeDeadline(periodStart, settings.defaultDeadlineDays,
    *     settings.workingDays, settings.defaultTimezone, hourFromDeadlineTime)`.
    *
@@ -595,9 +595,9 @@ export class AdminService {
 
     // -- Defaults -------------------------------------------------------
     // periodEnd defaults to (periodStart + periodLengthDays - 1) at the
-    // very end of that day (23:59:59.999 UTC) — matches the scheduler's
-    // (periodStart, periodEnd) shape (start = Monday 00:00:00, end =
-    // Sunday 23:59:59) for a 7-day cycle.
+    // very end of that day (23:59:59.999 UTC). The manual path accepts
+    // any calendar start day; the scheduler remains the only Monday-anchored
+    // creator.
     const periodEnd =
       input.periodEnd ??
       new Date(

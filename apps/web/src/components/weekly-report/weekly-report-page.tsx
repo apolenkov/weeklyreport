@@ -7,6 +7,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
+import { joinPeriodLabel } from "../../lib/format-date";
 
 import { useTRPC } from "../../lib/trpc-context";
 import { SessionContext } from "../../lib/session-provider";
@@ -263,6 +264,10 @@ export function WeeklyReportPage({
       isCurrent: view.period.isCurrent,
     },
   ];
+  const periodLabel = joinPeriodLabel(
+    view.period.weekLabel,
+    view.period.dateRange,
+  );
 
   return (
     <div className="space-y-4">
@@ -347,7 +352,7 @@ export function WeeklyReportPage({
           data-testid="empty-submissions-state"
         >
           <p className="text-base font-semibold text-[var(--color-foreground)]">
-            No submissions yet for {view.period.weekLabel}
+            No submissions yet for {periodLabel}
           </p>
           <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)]">
             Leads have not filed their sections for this period.

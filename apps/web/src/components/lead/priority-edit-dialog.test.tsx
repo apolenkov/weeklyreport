@@ -85,4 +85,59 @@ describe("PriorityEditDialog — A13 form-race regression", () => {
       text: "Ship auth feature this sprint",
     });
   });
+
+  it("saves selected stageIds with the priority payload (UFB-014)", () => {
+    const onSave = vi.fn();
+    render(
+      <PriorityEditDialog
+        open={true}
+        priority={null}
+        nextRank={1}
+        availableStages={["Planning", "Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Description \*/i), {
+      target: { value: "Ship auth feature this sprint" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
+    fireEvent.click(screen.getByRole("button", { name: /Save Priority/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      rank: 1,
+      text: "Ship auth feature this sprint",
+      stageIds: ["Dev"],
+    });
+  });
+
+  it("restores existing stageIds when editing a priority (UFB-014)", () => {
+    render(
+      <PriorityEditDialog
+        open={true}
+        priority={{
+          rank: 1,
+          text: "Ship auth feature this sprint",
+          productId: "p1",
+          productName: "CRM",
+          stageIds: ["Dev"],
+        }}
+        nextRank={2}
+        availableStages={["Planning", "Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByRole("checkbox", { name: "Planning" }),
+    ).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Dev" })).toBeChecked();
+  });
 });

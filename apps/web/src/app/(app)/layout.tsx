@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import type { ReactNode } from "react";
 
-import { DevRoleSwitcher } from "../../components/dev/role-switcher";
 import { NavBar } from "../../components/navigation/nav-bar";
 import { NavBarSkeleton } from "../../components/navigation/nav-bar-skeleton";
 import { SessionProvider } from "../../lib/session-provider";
@@ -31,7 +30,6 @@ export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
         <NavBar />
       </Suspense>
       {children}
-      <DevRoleSwitcher />
     </SessionProvider>
   );
 }

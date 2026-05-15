@@ -10,7 +10,7 @@ to confirm the cause and restore service.
 
 ## Architecture at a glance
 
-```
+```text
 ┌─────────────┐        ┌──────────────┐
 │  caddy:443  │───WS───│  next:3000   │  ← /lead, /head, /admin, /reports
 │   (TLS)     │        │  (RSC + SSR) │

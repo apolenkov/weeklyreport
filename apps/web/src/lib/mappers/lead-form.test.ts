@@ -285,13 +285,14 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
           risk: "OAuth delay",
           impact: "SSO slips",
           mitigation: "Escalate vendor",
+          severity: "blocked",
         },
       ],
     });
 
     const [mapped] = mapLeadRisks(section);
     expect(mapped?.productName).toBe("CRM");
-    expect(mapped?.severity).toBe("at-risk");
+    expect(mapped?.severity).toBe("blocked");
     // Phase 22+: text holds raw `risk` only; impact/mitigation surface as
     // separate fields in the edit dialog (avoids double-concat on save).
     expect(mapped?.text).toBe("OAuth delay");
@@ -366,7 +367,7 @@ describe("mapLeadPeriods", () => {
     expect(expectDefined(periods[0]).isSubmitted).toBe(false);
     expect(expectDefined(periods[1]).isCurrent).toBe(false);
     expect(expectDefined(periods[1]).isSubmitted).toBe(true);
-    expect(expectDefined(periods[0]).dateRange).toBe("Apr 14-20");
+    expect(expectDefined(periods[0]).dateRange).toBe("Apr 14–20, 2026");
   });
 });
 

@@ -262,16 +262,29 @@ export function createAppRouter(deps: RouterDeps) {
               : input.variant === "advanced"
                 ? reset + " && " + advancedSeed
                 : reset + " && " + simpleSeed;
-          // Resolve repo root from this file (apps/api/src/.../trpc.router.ts).
-          // The seed script needs to run with the monorepo root as cwd so
-          // pnpm picks up the correct workspace.
+          // Resolve repo root in both dev TS execution and built dist images.
+          // Built Docker paths include dist/apps/api/src/... so a fixed
+          // relative hop from import.meta.url can land under /app/apps. Prefer
+          // the real cwd/workspace candidates and verify by schema existence.
+          const fs = await import("node:fs");
           const path = await import("node:path");
           const url = await import("node:url");
           const __filename = url.fileURLToPath(import.meta.url);
-          const repoRoot = path.resolve(
-            path.dirname(__filename),
-            "../../../../..",
+          const repoRootCandidates = [
+            process.env["CUSTOMREPORT_REPO_ROOT"],
+            process.cwd(),
+            path.resolve(process.cwd(), "../.."),
+            path.resolve(path.dirname(__filename), "../../../../.."),
+          ].filter((candidate): candidate is string => Boolean(candidate));
+          const repoRoot = repoRootCandidates.find((candidate) =>
+            fs.existsSync(path.join(candidate, "prisma/schema.prisma")),
           );
+          if (!repoRoot) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Reseed failed: repository root was not found",
+            });
+          }
           try {
             const stdout = execSync(script, {
               cwd: repoRoot,

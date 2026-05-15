@@ -6,8 +6,9 @@
  * sessions should never see it even when canSendReminder=false.
  */
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { toast } from "sonner";
 
 const useQueryMock = vi.fn();
 const useMutationMock = vi.fn();
@@ -124,6 +125,28 @@ describe("AlertBar — Phase 48-C role gating", () => {
       "title",
       "Active reminder policy required — ask your admin",
     );
+  });
+
+  it("E-04: surfaces dispatch failures as an error toast", () => {
+    mockRole("head");
+    const mutate = vi.fn();
+    useMutationMock.mockImplementation(
+      (opts: { onError: (err: Error) => void }) => ({
+        mutate: (input: unknown) => {
+          mutate(input);
+          opts.onError(new Error("SMTP transport unavailable"));
+        },
+        isPending: false,
+      }),
+    );
+
+    render(<AlertBar {...baseProps} canSendReminder />);
+    fireEvent.click(screen.getByRole("button", { name: /send reminder/i }));
+
+    expect(mutate).toHaveBeenCalledWith({
+      reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+    expect(toast.error).toHaveBeenCalledWith("SMTP transport unavailable");
   });
 
   it("renders nothing when there are no pending leads", () => {

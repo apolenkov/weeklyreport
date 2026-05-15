@@ -166,9 +166,8 @@ body:has([role="dialog"]) [data-testid="dev-role-switcher-trigger"] {
   pointer-events: none;
 }
 
-/* D-27/D-36: move agentation devtools overlay from bottom-right to top-right
-   so it does not cover report action buttons at the bottom of the viewport. */
+/* Local MVP: keep the Agentation devtools below the top navigation. */
 .styles-module__toolbar___wNsdK {
-  bottom: auto !important;
-  top: 1rem !important;
+  top: auto !important;
+  bottom: 1rem !important;
 }

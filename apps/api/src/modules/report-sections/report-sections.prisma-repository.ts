@@ -91,6 +91,7 @@ type PrismaReportSectionWithRelations = NonNullable<
     risk: string;
     impact: string;
     mitigation: string;
+    severity: string;
     stageName: string | null;
   }>;
   decisions: Array<{
@@ -227,6 +228,7 @@ export function mapPrismaToReportSection(
       risk: r.risk,
       impact: r.impact,
       mitigation: r.mitigation,
+      severity: r.severity === "blocked" ? "blocked" : "at-risk",
       stageIds: r.stageName
         ? r.stageName.split(", ").filter(Boolean)
         : undefined,
@@ -383,6 +385,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
+              severity: r.severity ?? "at-risk",
               stageName: r.stageIds?.join(", ") ?? null,
             })),
           });

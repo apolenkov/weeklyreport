@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { Moon } from "lucide-react";
 
 import { DEFAULT_ORGANIZATION_IDENTITY, type Role } from "@customreport/shared";
 
@@ -13,6 +14,7 @@ import {
   SheetTrigger,
 } from "@customreport/ui/components/ui/sheet";
 
+import { DevRoleSwitcher } from "../dev/role-switcher";
 import { roleHomePath } from "../../lib/role-home";
 import { useSession } from "../../lib/session-provider";
 
@@ -130,6 +132,32 @@ function initialsFromName(name: string): string {
   if (parts.length === 1) return first.slice(0, 2).toUpperCase();
   const last = parts[parts.length - 1] ?? first;
   return (first.charAt(0) + last.charAt(0)).toUpperCase();
+}
+
+function ThemeComingSoonControl() {
+  // TODO(UFB-074): replace this inert control with a real theme switch only
+  // after .planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md
+  // is promoted into a new milestone.
+  return (
+    <button
+      type="button"
+      aria-disabled="true"
+      aria-label="Theme selection is coming soon"
+      title="Theme selection is coming soon"
+      data-testid="theme-coming-soon"
+      className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] cursor-default"
+    >
+      <Moon size={14} strokeWidth={2} aria-hidden="true" />
+      <span className="hidden xl:inline">Theme</span>
+    </button>
+  );
+}
+
+function shouldRenderDevRoleSwitcher() {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === "true"
+  );
 }
 
 // Per-link SVG icons matching mockup s1-s9. 14×14 monoline, currentColor.
@@ -326,7 +354,8 @@ export function NavBar() {
             UFB-NEW-A1: show skeleton placeholders while session is loading so
             the right-rail width is stable from first paint → zero CLS on
             reload. Skeleton dimensions match the resolved identity chrome. */}
-        <div className="flex items-center gap-2.5">
+        <div className="relative flex items-center gap-2.5">
+          <ThemeComingSoonControl />
           {visibleSessionLoading ? (
             <>
               {/* xl+ skeleton: avatar circle + name pill */}
@@ -415,6 +444,11 @@ export function NavBar() {
                 </button>
               )}
             </>
+          )}
+          {shouldRenderDevRoleSwitcher() && (
+            <div className="absolute left-full top-1/2 z-20 ml-2 hidden -translate-y-1/2 2xl:block">
+              <DevRoleSwitcher />
+            </div>
           )}
         </div>
       </div>

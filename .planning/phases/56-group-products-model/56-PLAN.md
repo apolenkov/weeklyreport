@@ -59,6 +59,7 @@ Migration flow (matches the 44-01 / 51-C convention — single inline migration.
 1. Edit `prisma/schema.prisma` with the three additions.
 2. `docker exec customreport-api-1 sh -c "cd /app && pnpm exec prisma migrate dev --create-only --name group_product_m2m"` — generates the timestamped folder.
 3. Append backfill SQL to the generated migration.sql:
+
    ```sql
    INSERT INTO "GroupProduct" (id, "groupId", "productId", "createdAt")
    SELECT gen_random_uuid(), u."reportingGroupId", p.id, NOW()
@@ -67,6 +68,7 @@ Migration flow (matches the 44-01 / 51-C convention — single inline migration.
    WHERE u."reportingGroupId" IS NOT NULL
    ON CONFLICT ("groupId", "productId") DO NOTHING;
    ```
+
 4. `docker exec customreport-api-1 sh -c "cd /app && pnpm exec prisma migrate dev"` — applies. Then `pnpm exec prisma generate` and `docker compose restart api`.
 5. Verify backfill row count.
 

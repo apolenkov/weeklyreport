@@ -17,6 +17,7 @@
 import { useTRPC } from "../../lib/trpc-context";
 import { mapArchiveSummary } from "../../lib/mappers";
 import { useCursorPagination } from "../../lib/use-cursor-pagination";
+import { joinPeriodLabel } from "../../lib/format-date";
 import type { ArchiveReportSummary } from "@customreport/shared";
 
 type StatusConfig = { bg: string; text: string; label: string };
@@ -96,6 +97,10 @@ export function ReportArchiveSection({
               (STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
               STATUS_CONFIG.draft;
             const cardConfig = isActive ? STATUS_CONFIG.active : config;
+            const periodLabel = joinPeriodLabel(
+              report.weekLabel,
+              report.dateRange,
+            );
 
             return (
               <a
@@ -117,7 +122,7 @@ export function ReportArchiveSection({
               >
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-sm font-semibold">
-                    {report.weekLabel}
+                    {periodLabel}
                   </span>
                   <span
                     className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
@@ -128,9 +133,6 @@ export function ReportArchiveSection({
                   >
                     {cardConfig.label}
                   </span>
-                </div>
-                <div className="text-xs text-[var(--color-muted-foreground)]">
-                  {report.dateRange}
                 </div>
               </a>
             );

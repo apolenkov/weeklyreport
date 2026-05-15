@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 import { resolve } from "node:path";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002";
+const API_URL =
+  process.env["API_URL"] ??
+  process.env["NEXT_PUBLIC_API_URL"] ??
+  "http://localhost:3002";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,

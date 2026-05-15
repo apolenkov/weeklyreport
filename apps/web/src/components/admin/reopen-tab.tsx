@@ -5,6 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
+import {
+  formatPeriodRangeWithYear,
+  joinPeriodLabel,
+} from "../../lib/format-date";
 import { TabHeader, TabSearch } from "./tab-header";
 
 type FilterStatus = "pending" | "approved" | "rejected" | "all";
@@ -33,13 +37,10 @@ function formatPeriod(
   periodEnd: string,
   label: string | null,
 ): string {
-  const start = new Date(periodStart);
-  const end = new Date(periodEnd);
-  const fmt = (d: Date) =>
-    `${d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" })}`;
-  return label
-    ? `${label} · ${fmt(start)}–${fmt(end)}`
-    : `${fmt(start)}–${fmt(end)}`;
+  return joinPeriodLabel(
+    label,
+    formatPeriodRangeWithYear(periodStart, periodEnd),
+  );
 }
 
 function formatTimestamp(iso: string): string {

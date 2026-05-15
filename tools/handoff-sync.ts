@@ -14,8 +14,8 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-const CHECKLIST_PATH = resolve(process.cwd(), "CHECKLIST.md");
-const HANDOFF_PATH = resolve(process.cwd(), "HANDOFF.md");
+const CHECKLIST_PATH = resolve(process.cwd(), ".planning/CHECKLIST.md");
+const HANDOFF_PATH = resolve(process.cwd(), ".planning/HANDOFF.md");
 const START_MARKER = "<!-- handoff-sync:start -->";
 const END_MARKER = "<!-- handoff-sync:end -->";
 
