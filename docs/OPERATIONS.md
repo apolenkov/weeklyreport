@@ -150,8 +150,9 @@ same suffixed database.
 
 Current naming split: local development, including the Docker verifier, uses
 `customreport_dev`; API integration uses `customreport_test`; web integration
-uses `customreport_e2e`; a dedicated manual UAT/staging environment should use
-`customreport_uat`; production remains `customreport`.
+uses `customreport_e2e`; there is no active manual UAT/staging database now.
+Reserve `customreport_uat` only if such an environment is explicitly created
+later; production remains `customreport`.
 
 Destructive local reset from the host:
 
