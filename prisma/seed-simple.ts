@@ -740,7 +740,6 @@ async function main() {
     risk?: { risk: string; impact: string; mitigation: string };
     decisions: {
       text: string;
-      owner: string;
       impact: string;
       deadline?: Date;
     }[];
@@ -781,12 +780,10 @@ async function main() {
       decisions: [
         {
           text: "Решение: переезд на новый IdP до конца месяца",
-          owner: "Василий И.",
           impact: "Закрывает риск устаревшего OAuth-провайдера",
         },
         {
           text: "Решение: согласовать наём двух middle-разработчиков на Q3",
-          owner: "Антон К.",
           impact: "Разгружает критический путь по интеграциям",
           deadline: plusDaysUTC(ACTIVE_MONDAY, 14),
         },
@@ -834,12 +831,10 @@ async function main() {
       decisions: [
         {
           text: "Решение: завести E2E-сьют чекаута в обязательный ночной прогон",
-          owner: "Мария К.",
           impact: "Снижает риск регрессий в проде на ~70%",
         },
         {
           text: "Решение: согласовать выделенный bug-bash день перед релизом",
-          owner: "Антон К.",
           impact: "Закрывает остаточные P2-баги до raise-the-floor",
           deadline: plusDaysUTC(ACTIVE_MONDAY, 10),
         },
@@ -883,13 +878,11 @@ async function main() {
       decisions: [
         {
           text: "Решение: утвердить maintenance-window для миграции PgBouncer (Сб 02:00 МСК)",
-          owner: "Антон К.",
           impact: "Закрывает tech-debt по пулу соединений",
           deadline: plusDaysUTC(ACTIVE_MONDAY, 5),
         },
         {
           text: "Решение: выделить бюджет на observability stack v2",
-          owner: "Антон К.",
           impact: "Снижает MTTR инцидентов в DevOps на 30%",
         },
       ],
@@ -929,12 +922,10 @@ async function main() {
       decisions: [
         {
           text: "Решение: дать зелёный свет фазовой раскатке WAF в shadow-mode",
-          owner: "Антон К.",
           impact: "Снижает риск инцидентов на проде, безопасный rollback",
         },
         {
           text: "Решение: выделить SDET-инженера на покрытие security-сценариев",
-          owner: "Дмитрий С.",
           impact: "Закрывает гэп по автотестам безопасности до релиза",
         },
       ],
@@ -983,13 +974,11 @@ async function main() {
       decisions: [
         {
           text: "Решение: раскатать 3DS v2 на 100% трафика после стабилизации",
-          owner: "Ольга Н.",
           impact: "Закрывает требование PSD2 для платёжного шлюза",
           deadline: plusDaysUTC(ACTIVE_MONDAY, 14),
         },
         {
           text: "Решение: согласовать UX-сценарий восстановления при отмене 3DS",
-          owner: "Антон К.",
           impact: "Снижает abandonment-rate на чекауте",
         },
       ],
@@ -1032,12 +1021,10 @@ async function main() {
       decisions: [
         {
           text: "Решение: выделить slot на интеграцию с корпоративным SSO для HR",
-          owner: "Антон К.",
           impact: "Снижает onboarding-трение для новых сотрудников",
         },
         {
           text: "Решение: согласовать архитектуру модуля 360-feedback",
-          owner: "Сергей Т.",
           impact: "Закрывает roadmap-цель Q3 по HR-аналитике",
         },
       ],
@@ -1170,7 +1157,7 @@ async function main() {
         reportSectionId: sectionId,
         productId: lead.productId,
         text: d.text,
-        owner: d.owner,
+        owner: lead.label,
         impact: d.impact,
         deadline: d.deadline ?? null,
         stageName: stageFor(dIdx),
