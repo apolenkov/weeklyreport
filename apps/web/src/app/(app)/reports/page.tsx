@@ -13,7 +13,7 @@ import { LeadHistorySkeleton } from "../../../components/lead/lead-history-skele
 import { ReportArchiveSection } from "../../../components/dashboard/report-archive-section";
 import { SearchInput } from "../../../components/search/search-input";
 import { useSession } from "../../../lib/session-provider";
-import { mapHistoryEntries } from "../../../lib/mappers";
+import { mapHistoryEntries, type HistoryEntry } from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
 
 /**
@@ -28,6 +28,7 @@ const HISTORY_INITIAL_VISIBLE = 10;
 
 export default function ReportsPage() {
   const { user } = useSession();
+  const trpc = useTRPC();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -57,6 +58,29 @@ export default function ReportsPage() {
     setIncludeArchive(tabFromUrl === "published");
   }, [tabFromUrl]);
 
+  const historyQ = useQuery({
+    ...trpc.reports.myHistory.queryOptions(),
+    enabled: isLead,
+  });
+
+  useEffect(() => {
+    if (isLead && historyQ.isError) {
+      toast.error(historyQ.error?.message ?? "Failed to load report history.");
+    }
+  }, [isLead, historyQ.isError, historyQ.error]);
+
+  const allEntries = useMemo(() => {
+    const history =
+      isLead && Array.isArray(historyQ.data)
+        ? (historyQ.data as readonly MyHistoryEntry[])
+        : [];
+    return mapHistoryEntries(history);
+  }, [historyQ.data, isLead]);
+  const archiveCount = allEntries.filter((entry) => entry.archived).length;
+  const entries = includeArchive
+    ? allEntries
+    : allEntries.filter((entry) => !entry.archived);
+
   return (
     <main
       id="main-content"
@@ -74,13 +98,24 @@ export default function ReportsPage() {
           </header>
 
           {searchScope ? (
-            <div>
-              <SearchInput
-                scope={searchScope}
-                placeholder={
-                  isLead ? "Search my reports…" : "Search reports and products…"
-                }
-              />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <SearchInput
+                  scope={searchScope}
+                  placeholder={
+                    isLead
+                      ? "Search my reports…"
+                      : "Search reports and products…"
+                  }
+                />
+              </div>
+              {isLead && (
+                <HistoryArchiveToggle
+                  checked={includeArchive}
+                  archiveCount={archiveCount}
+                  onChange={toggleArchive}
+                />
+              )}
             </div>
           ) : (
             <div className="min-h-[44px]" aria-hidden="true" />
@@ -88,8 +123,9 @@ export default function ReportsPage() {
 
           {isLead ? (
             <LeadHistoryPanel
+              entries={entries}
               includeArchive={includeArchive}
-              onIncludeArchiveChange={toggleArchive}
+              isLoading={historyQ.isLoading}
             />
           ) : (
             <ReportArchiveSection />
@@ -101,38 +137,20 @@ export default function ReportsPage() {
 }
 
 function LeadHistoryPanel({
+  entries,
   includeArchive,
-  onIncludeArchiveChange,
+  isLoading,
 }: {
+  readonly entries: HistoryEntry[];
   readonly includeArchive: boolean;
-  readonly onIncludeArchiveChange: (nextValue: boolean) => void;
+  readonly isLoading: boolean;
 }) {
-  const trpc = useTRPC();
-  const { data, isLoading, isError, error } = useQuery(
-    trpc.reports.myHistory.queryOptions(),
-  );
   const [showAll, setShowAll] = useState(false);
-
-  useEffect(() => {
-    if (isError) {
-      toast.error(error?.message ?? "Failed to load report history.");
-    }
-  }, [isError, error]);
 
   useEffect(() => {
     setShowAll(false);
   }, [includeArchive]);
 
-  const allEntries = useMemo(() => {
-    const history = Array.isArray(data)
-      ? (data as readonly MyHistoryEntry[])
-      : [];
-    return mapHistoryEntries(history);
-  }, [data]);
-  const archiveCount = allEntries.filter((entry) => entry.archived).length;
-  const entries = includeArchive
-    ? allEntries
-    : allEntries.filter((entry) => !entry.archived);
   const visibleEntries = showAll
     ? entries
     : entries.slice(0, HISTORY_INITIAL_VISIBLE);
@@ -145,11 +163,6 @@ function LeadHistoryPanel({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="space-y-6">
-        <HistoryArchiveToggle
-          checked={includeArchive}
-          archiveCount={archiveCount}
-          onChange={onIncludeArchiveChange}
-        />
         {entries.length > 0 ? (
           <LeadHistoryList entries={visibleEntries} />
         ) : (
@@ -195,19 +208,25 @@ function HistoryArchiveToggle({
   readonly onChange: (nextValue: boolean) => void;
 }) {
   return (
-    <div className="flex min-h-10 flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3">
+    <div className="flex min-h-10 shrink-0 items-center">
       <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]">
         <input
           type="checkbox"
           checked={checked}
           onChange={(event) => onChange(event.target.checked)}
           className="h-4 w-4 accent-[var(--color-starbucks-accent)]"
-          aria-label="Show archived reports"
+          aria-label={
+            archiveCount > 0
+              ? `Show archived reports (${archiveCount})`
+              : "Show archived reports"
+          }
         />
         <span>Show archive</span>
-        <span className="rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[11px] text-[var(--color-starbucks-accent)]">
-          {archiveCount}
-        </span>
+        {archiveCount > 0 && (
+          <span className="rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[11px] text-[var(--color-starbucks-accent)]">
+            {archiveCount}
+          </span>
+        )}
       </label>
     </div>
   );
