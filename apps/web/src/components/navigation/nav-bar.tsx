@@ -359,6 +359,7 @@ export function NavBar() {
             reload. Skeleton dimensions match the resolved identity chrome. */}
         <div className="flex items-center gap-2.5">
           <ThemeComingSoonControl />
+          {shouldRenderDevRoleSwitcher() && <DevRoleSwitcher />}
           {visibleSessionLoading ? (
             <>
               {/* xl+ skeleton: avatar circle + name pill */}
@@ -448,7 +449,6 @@ export function NavBar() {
               )}
             </>
           )}
-          {shouldRenderDevRoleSwitcher() && <DevRoleSwitcher />}
         </div>
       </div>
 
