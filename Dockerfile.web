@@ -23,6 +23,10 @@ COPY tsconfig.base.json ./tsconfig.base.json
 
 # Stage 4: Build for production
 FROM installer AS builder
+ARG API_URL=http://api:3002
+ARG NEXT_PUBLIC_API_URL=http://localhost:3002
+ENV API_URL=${API_URL}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN pnpm turbo build --filter=@customreport/web
 
 # Stage 5: Production runner with Next.js standalone

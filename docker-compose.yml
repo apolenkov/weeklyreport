@@ -129,9 +129,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
+      args:
+        API_URL: http://api:3002
+        NEXT_PUBLIC_API_URL: http://localhost:3002
     environment:
       API_URL: http://api:3002
-      NEXT_PUBLIC_API_URL: http://api:3002
+      NEXT_PUBLIC_API_URL: http://localhost:3002
       NEXT_PUBLIC_AUTH_STUB: "true"
       NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
     depends_on:
