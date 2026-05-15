@@ -149,9 +149,6 @@ function ThemeComingSoonControl() {
     >
       <Moon size={14} strokeWidth={2} aria-hidden="true" />
       <span className="hidden xl:inline">Theme</span>
-      <span className="rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-1.5 py-0.5 text-[10px] uppercase tracking-normal text-[var(--color-muted-foreground)]">
-        Soon
-      </span>
     </button>
   );
 }
@@ -357,9 +354,8 @@ export function NavBar() {
             UFB-NEW-A1: show skeleton placeholders while session is loading so
             the right-rail width is stable from first paint → zero CLS on
             reload. Skeleton dimensions match the resolved identity chrome. */}
-        <div className="flex items-center gap-2.5">
+        <div className="relative flex items-center gap-2.5">
           <ThemeComingSoonControl />
-          {shouldRenderDevRoleSwitcher() && <DevRoleSwitcher />}
           {visibleSessionLoading ? (
             <>
               {/* xl+ skeleton: avatar circle + name pill */}
@@ -448,6 +444,11 @@ export function NavBar() {
                 </button>
               )}
             </>
+          )}
+          {shouldRenderDevRoleSwitcher() && (
+            <div className="absolute left-full top-1/2 z-20 ml-2 hidden -translate-y-1/2 2xl:block">
+              <DevRoleSwitcher />
+            </div>
           )}
         </div>
       </div>
