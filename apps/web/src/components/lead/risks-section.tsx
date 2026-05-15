@@ -7,8 +7,6 @@ import { RiskEditDialog } from "./risk-edit-dialog";
 import type { Product, RiskEntry } from "./mock-data";
 import { splitStageNames } from "./stage-tags";
 
-const MAX_VISIBLE_RISK_STAGE_CHIPS = 3;
-
 type RisksSectionProps = {
   readonly risks: RiskEntry[];
   readonly readOnly?: boolean;
@@ -172,11 +170,8 @@ export function RisksSection({
               : splitStageNames(risk.stageName);
           // Empty means implicit all assigned stages. A non-empty stageIds
           // array is explicit user scope, even when it contains every stage.
-          const visibleStageTags = stageTags.slice(
-            0,
-            MAX_VISIBLE_RISK_STAGE_CHIPS,
-          );
-          const hiddenStageCount = stageTags.length - visibleStageTags.length;
+          // Keep every selected stage visible; seven SDLC chips fit better
+          // than hiding critical scope behind "+N".
           const stageTagsLabel = stageTags.join(", ");
           return (
             <div
@@ -211,7 +206,7 @@ export function RisksSection({
                     aria-label={`Risk stages: ${stageTagsLabel}`}
                     title={stageTagsLabel}
                   >
-                    {visibleStageTags.map((stage) => (
+                    {stageTags.map((stage) => (
                       <span
                         key={stage}
                         className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
@@ -219,11 +214,6 @@ export function RisksSection({
                         {stage}
                       </span>
                     ))}
-                    {hiddenStageCount > 0 && (
-                      <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-                        +{hiddenStageCount}
-                      </span>
-                    )}
                   </span>
                 )}
                 {!readOnly && (

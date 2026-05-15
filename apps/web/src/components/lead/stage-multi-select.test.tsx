@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { StageMultiSelect } from "./stage-multi-select";
 
 describe("StageMultiSelect", () => {
-  it("shows compact overflow with +N more", () => {
+  it("shows every selected stage in the scope summary", () => {
     render(
       <StageMultiSelect
         id="stages"
@@ -18,8 +18,11 @@ describe("StageMultiSelect", () => {
       />,
     );
 
-    expect(screen.getByText("+1 more")).toBeInTheDocument();
-    expect(screen.getByText(/Scope: Dev, Testing/i)).toBeInTheDocument();
+    expect(screen.getByText("Scope:")).toBeInTheDocument();
+    expect(screen.getAllByText("Dev").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("Testing").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("Release").length).toBeGreaterThan(1);
+    expect(screen.queryByText("+1 more")).not.toBeInTheDocument();
   });
 
   it("hides the picker when only one assigned stage exists", () => {
@@ -33,7 +36,7 @@ describe("StageMultiSelect", () => {
     );
 
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    expect(screen.getByText("Dev")).toBeInTheDocument();
+    expect(screen.getAllByText("Dev").length).toBeGreaterThan(0);
     expect(screen.getByText("Applied automatically")).toBeInTheDocument();
   });
 });

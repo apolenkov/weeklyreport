@@ -38,6 +38,39 @@
   }
 }
 
+@layer components {
+  .operational-paper-shell {
+    background-color: var(--color-background);
+    background-image:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.78) 0,
+        rgba(255, 255, 255, 0.34) 8rem,
+        rgba(255, 255, 255, 0) 24rem
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgba(0, 98, 65, 0.032) 0,
+        rgba(0, 98, 65, 0.032) 1px,
+        transparent 1px,
+        transparent 10rem
+      ),
+      repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.018) 0,
+        rgba(0, 0, 0, 0.018) 1px,
+        transparent 1px,
+        transparent 2rem
+      ),
+      linear-gradient(
+        90deg,
+        rgba(194, 154, 70, 0.045),
+        rgba(194, 154, 70, 0) 22rem
+      );
+    background-attachment: fixed;
+  }
+}
+
 /*
  * Force-generate utilities that Tailwind v4 scanner misses in packages/ui.
  * shadcn/ui components use these in cva() and cn() template literals.

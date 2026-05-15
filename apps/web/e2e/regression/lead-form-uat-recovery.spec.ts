@@ -40,7 +40,7 @@ async function expectPrefilledStages(dialog: Locator) {
   for (let i = 0; i < count; i += 1) {
     await expect(stageChecks.nth(i)).toBeChecked();
   }
-  await expect(dialog.getByText(/\+\d+ more/)).toBeVisible();
+  await expect(dialog.getByText(/\+\d+ more/)).toHaveCount(0);
 }
 
 async function saveAndWait(page: Page, buttonName: RegExp) {
@@ -82,7 +82,10 @@ test.describe("Lead Form UAT recovery", () => {
     await prepareManualUat(page);
 
     await expandSection(page, "Current Week");
-    await page.getByRole("button", { name: /Add item to/i }).first().click();
+    await page
+      .getByRole("button", { name: /Add item to/i })
+      .first()
+      .click();
     const itemDialog = page.getByRole("dialog", { name: /Add Item dialog/i });
     await expect(itemDialog).toBeVisible();
     await expectPrefilledStages(itemDialog);
