@@ -33,7 +33,7 @@ updated: 2026-05-15T09:05:00+03:00 source: peo-retro
 1. [ ] Repeat manual UAT in browser against the running MVP stack:
        `http://localhost:3000`.
 2. [ ] Choose the next milestone priority after PR #5 closes:
-       future UI/theme/Safari/Telegram/AI telemetry/perf work is parked in
+       future UI/theme/MOB-PARKED/Telegram/AI telemetry/perf work is parked in
        `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
 
 ## BLOCKED

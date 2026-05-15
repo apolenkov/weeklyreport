@@ -2,12 +2,12 @@
 phase: 42
 status: parked
 parent_milestone: v8.1
-title: "iOS Safari Sign-off"
+title: "MOB-PARKED Mobile Sign-off"
 ---
 
-# Phase 42: iOS Safari Sign-off
+# Phase 42: MOB-PARKED Mobile Sign-off
 
-**Goal:** Park real-device iOS Safari sign-off out of v8.1; keep current UAT repeatability on Dockerized local stack plus Playwright/log evidence.
+**Goal:** Park mobile PDF/open-report sign-off out of v8.1; keep current UAT repeatability on Dockerized local stack plus Playwright/log evidence.
 
 **Depends on:** none
 
