@@ -42,8 +42,9 @@
  *
  * - `ReportPeriod.isCurrent` is determined by matching the period entry's
  *   reportId against the active section's reportId. `isSubmitted` flows from
- *   `sectionStatus === 'submitted'`. Counts default to 0 (history endpoint
- *   doesn't expose them — same gap as `lead-history.ts`).
+ *   `sectionStatus === 'submitted'`. Counts flow through from
+ *   `reports.myHistory`; the FillFrom UI owns the display fallback when older
+ *   fixtures omit them.
  *
  * - `VersionSnapshot.timestamp` — formatted from `createdAt` via the same
  *   relative-time helper used in `lead-history.ts`. `itemCount`/`riskCount`/
@@ -493,7 +494,8 @@ export function mapLeadPriorities(
  * regardless of `section.createdAt` ordering (seed inserts can shuffle
  * createdAt; period date is the user-visible truth).
  *
- * The active reportId (if any) flags `isCurrent: true`; counts default to 0.
+ * The active reportId (if any) flags `isCurrent: true`; count fields are
+ * passed through from `MyHistoryEntry` without mapper-level fallback zeros.
  */
 export function mapLeadPeriods(
   history: readonly MyHistoryEntry[],
@@ -508,6 +510,9 @@ export function mapLeadPeriods(
       dateRange: formatDateRange(e.periodStart, e.periodEnd),
       isCurrent: activeReportId !== null && e.reportId === activeReportId,
       isSubmitted: e.sectionStatus === "submitted",
+      itemCount: e.itemCount,
+      riskCount: e.riskCount,
+      productCount: e.productCount,
     }));
 }
 

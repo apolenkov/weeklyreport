@@ -432,6 +432,80 @@ describe("mapWeeklyReport", () => {
     expect(expectDefined(crmReport?.priorities[0]).text).toBe("Ship OAuth");
   });
 
+  it("groups decisions and priorities by explicit productId when present", () => {
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "CRM",
+          worstStatus: "green",
+          stageCount: 7,
+          leadNames: ["Тимлид 1"],
+        },
+        {
+          productId: PROJECT_B,
+          productName: "Billing",
+          worstStatus: "yellow",
+          stageCount: 7,
+          leadNames: ["Тимлид 1"],
+        },
+      ],
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Тимлид 1",
+          status: "submitted",
+          submittedAt: new Date("2026-04-19T18:00:00Z"),
+          projects: [
+            { projectId: PROJECT_A, projectName: "CRM", trafficLight: "green" },
+            {
+              projectId: PROJECT_B,
+              projectName: "Billing",
+              trafficLight: "yellow",
+            },
+          ],
+          items: [],
+          risks: [],
+          decisions: [
+            {
+              id: "d1",
+              text: "Approve Billing migration",
+              owner: "Head",
+              impact: "Payment rollout",
+              productId: PROJECT_B,
+            },
+          ],
+          priorities: [
+            {
+              id: "p1",
+              rank: 1,
+              text: "Stabilize Billing jobs",
+              productId: PROJECT_B,
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = mapWeeklyReport(report);
+    const crmReport = result.products.find((p) => p.id === PROJECT_A);
+    const billingReport = result.products.find((p) => p.id === PROJECT_B);
+
+    expect(crmReport?.decisions).toHaveLength(0);
+    expect(crmReport?.priorities).toHaveLength(0);
+    expect(billingReport?.decisions).toHaveLength(1);
+    expect(expectDefined(billingReport?.decisions[0]).text).toBe(
+      "Approve Billing migration",
+    );
+    expect(expectDefined(billingReport?.decisions[0]).badge).toBe("Billing");
+    expect(billingReport?.priorities).toHaveLength(1);
+    expect(expectDefined(billingReport?.priorities[0]).text).toBe(
+      "Stabilize Billing jobs",
+    );
+  });
+
   it("preserves period info from the API", () => {
     const result = mapWeeklyReport(baseReport({ periodStatus: "published" }));
     expect(result.period.id).toBe(REPORT_ID);
