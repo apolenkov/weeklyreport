@@ -1,0 +1,466 @@
+import type {
+  ActivityLiveRow,
+  ReportSectionReadModel,
+} from "@customreport/shared";
+
+export type SlideTone = "ready" | "warning" | "blocked" | "empty";
+
+export type SlideReadinessItem = {
+  readonly id: string;
+  readonly label: string;
+  readonly status: "ready" | "needs-work" | "optional";
+  readonly detail: string;
+  readonly required: boolean;
+};
+
+export type SlideStageStatus = "green" | "yellow" | "red" | null;
+
+export type SlideStage = {
+  readonly id: string;
+  readonly name: string;
+  readonly status: SlideStageStatus;
+};
+
+export type SlideProduct = {
+  readonly id: string;
+  readonly name: string;
+  readonly status: SlideStageStatus;
+  readonly stages: SlideStage[];
+  readonly currentItems: string[];
+  readonly nextItems: string[];
+  readonly risks: string[];
+  readonly decisions: string[];
+  readonly priorities: string[];
+};
+
+export type SectionSlideModel = {
+  readonly id: string;
+  readonly ownerId: string;
+  readonly ownerName: string;
+  readonly ownerRole: string;
+  readonly status: ReportSectionReadModel["status"];
+  readonly submittedAt: Date | null;
+  readonly products: string[];
+  readonly productSlides: SlideProduct[];
+  readonly productCount: number;
+  readonly currentCount: number;
+  readonly nextCount: number;
+  readonly riskCount: number;
+  readonly decisionCount: number;
+  readonly priorityCount: number;
+  readonly blockedCount: number;
+  readonly atRiskCount: number;
+  readonly score: number;
+  readonly tone: SlideTone;
+  readonly readiness: SlideReadinessItem[];
+  readonly currentItems: string[];
+  readonly nextItems: string[];
+  readonly risks: string[];
+  readonly decisions: string[];
+  readonly priorities: string[];
+};
+
+function nonEmpty(text: string | null | undefined): boolean {
+  return typeof text === "string" && text.trim().length > 0;
+}
+
+function unique(values: readonly string[]): string[] {
+  return [...new Set(values.filter(nonEmpty))];
+}
+
+function statusTone(model: {
+  readonly currentCount: number;
+  readonly nextCount: number;
+  readonly riskCount: number;
+  readonly priorityCount: number;
+  readonly blockedCount: number;
+  readonly atRiskCount: number;
+}): SlideTone {
+  if (model.currentCount === 0 && model.nextCount === 0) return "empty";
+  if (model.blockedCount > 0) return "blocked";
+  if (
+    model.atRiskCount > 0 ||
+    model.riskCount > 0 ||
+    model.priorityCount === 0
+  ) {
+    return "warning";
+  }
+  return "ready";
+}
+
+function readinessScore(items: readonly SlideReadinessItem[]): number {
+  const required = items.filter((item) => item.required);
+  if (required.length === 0) return 100;
+  const ready = required.filter((item) => item.status === "ready").length;
+  return Math.round((ready / required.length) * 100);
+}
+
+function describeCount(
+  count: number,
+  singular: string,
+  plural = singular + "s",
+) {
+  return count === 1 ? "1 " + singular : count + " " + plural;
+}
+
+export function buildSectionSlideModel(
+  section: ReportSectionReadModel,
+): SectionSlideModel {
+  const projectRows: ReportSectionReadModel["projects"] = [];
+  const seenProjectIds = new Set<string>();
+  for (const project of section.projects) {
+    if (seenProjectIds.has(project.projectId)) continue;
+    seenProjectIds.add(project.projectId);
+    projectRows.push(project);
+  }
+  const products = unique(projectRows.map((project) => project.projectName));
+  const currentItems = section.items
+    .filter((item) => item.type === "current" && nonEmpty(item.text))
+    .map((item) => item.text.trim());
+  const nextItems = section.items
+    .filter((item) => item.type === "next" && nonEmpty(item.text))
+    .map((item) => item.text.trim());
+  const risks = section.risks
+    .filter((risk) => nonEmpty(risk.risk))
+    .map((risk) => risk.risk.trim());
+  const decisions = section.decisions
+    .filter((decision) => nonEmpty(decision.text))
+    .map((decision) => decision.text.trim());
+  const priorities = section.priorities
+    .filter((priority) => nonEmpty(priority.text))
+    .sort((a, b) => a.rank - b.rank)
+    .map((priority) => priority.text.trim());
+
+  const projectIds = new Set(projectRows.map((project) => project.projectId));
+  const productSlides: SlideProduct[] = projectRows.map((project) => ({
+    id: project.projectId,
+    name: project.projectName,
+    status: project.trafficLight,
+    stages: [...(project.ownedStages ?? [])]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((stage) => ({
+        id: stage.stageId,
+        name: stage.stageName,
+        status: stage.status ?? null,
+      })),
+    currentItems: section.items
+      .filter(
+        (item) =>
+          item.projectId === project.projectId &&
+          item.type === "current" &&
+          nonEmpty(item.text),
+      )
+      .map((item) => item.text.trim()),
+    nextItems: section.items
+      .filter(
+        (item) =>
+          item.projectId === project.projectId &&
+          item.type === "next" &&
+          nonEmpty(item.text),
+      )
+      .map((item) => item.text.trim()),
+    risks: section.risks
+      .filter(
+        (risk) => risk.projectId === project.projectId && nonEmpty(risk.risk),
+      )
+      .map((risk) => risk.risk.trim()),
+    decisions: section.decisions
+      .filter(
+        (decision) =>
+          decision.productId === project.projectId && nonEmpty(decision.text),
+      )
+      .map((decision) => decision.text.trim()),
+    priorities: section.priorities
+      .filter(
+        (priority) =>
+          priority.productId === project.projectId && nonEmpty(priority.text),
+      )
+      .sort((a, b) => a.rank - b.rank)
+      .map((priority) => priority.text.trim()),
+  }));
+
+  const crossProductDecisions = section.decisions
+    .filter(
+      (decision) =>
+        (!decision.productId || !projectIds.has(decision.productId)) &&
+        nonEmpty(decision.text),
+    )
+    .map((decision) => decision.text.trim());
+  const crossProductPriorities = section.priorities
+    .filter(
+      (priority) =>
+        (!priority.productId || !projectIds.has(priority.productId)) &&
+        nonEmpty(priority.text),
+    )
+    .sort((a, b) => a.rank - b.rank)
+    .map((priority) => priority.text.trim());
+  if (crossProductDecisions.length > 0 || crossProductPriorities.length > 0) {
+    productSlides.push({
+      id: "cross-product",
+      name: "Cross-product",
+      status: null,
+      stages: [],
+      currentItems: [],
+      nextItems: [],
+      risks: [],
+      decisions: crossProductDecisions,
+      priorities: crossProductPriorities,
+    });
+  }
+
+  const blockedProjectCount = section.projects.filter(
+    (project) => project.trafficLight === "red",
+  ).length;
+  const atRiskProjectCount = section.projects.filter(
+    (project) => project.trafficLight === "yellow",
+  ).length;
+  const blockedItemCount = section.items.filter(
+    (item) => item.workflowStatus === "blocked",
+  ).length;
+  const atRiskRiskCount = section.risks.filter(
+    (risk) => risk.severity === "at-risk",
+  ).length;
+  const blockedRiskCount = section.risks.filter(
+    (risk) => risk.severity === "blocked",
+  ).length;
+
+  const blockedCount =
+    blockedProjectCount + blockedItemCount + blockedRiskCount;
+  const atRiskCount = atRiskProjectCount + atRiskRiskCount;
+  const hasProjectStatuses =
+    section.projects.length > 0 &&
+    section.projects.every((project) => project.trafficLight !== null);
+  const hasRiskSignal = blockedCount > 0 || atRiskCount > 0;
+
+  const readiness: SlideReadinessItem[] = [
+    {
+      id: "scope",
+      label: "Scope",
+      status: products.length > 0 ? "ready" : "needs-work",
+      detail:
+        products.length > 0
+          ? describeCount(products.length, "product")
+          : "No product scope",
+      required: true,
+    },
+    {
+      id: "traffic",
+      label: "Traffic lights",
+      status: hasProjectStatuses ? "ready" : "needs-work",
+      detail: hasProjectStatuses
+        ? "Every product has a status"
+        : "Add status to every product",
+      required: true,
+    },
+    {
+      id: "current",
+      label: "Current work",
+      status: currentItems.length > 0 ? "ready" : "needs-work",
+      detail:
+        currentItems.length > 0
+          ? describeCount(currentItems.length, "item")
+          : "Add at least one current item",
+      required: true,
+    },
+    {
+      id: "next",
+      label: "Next focus",
+      status: nextItems.length > 0 ? "ready" : "needs-work",
+      detail:
+        nextItems.length > 0
+          ? describeCount(nextItems.length, "item")
+          : "Add next-period focus",
+      required: true,
+    },
+    {
+      id: "risks",
+      label: "Risk story",
+      status:
+        risks.length > 0 ? "ready" : hasRiskSignal ? "needs-work" : "optional",
+      detail:
+        risks.length > 0
+          ? describeCount(risks.length, "risk")
+          : hasRiskSignal
+            ? "Explain the red or yellow signal"
+            : "No active risk signal",
+      required: hasRiskSignal,
+    },
+    {
+      id: "priorities",
+      label: "Top priorities",
+      status: priorities.length > 0 ? "ready" : "needs-work",
+      detail:
+        priorities.length > 0
+          ? describeCount(priorities.length, "priority", "priorities")
+          : "Add at least one priority",
+      required: true,
+    },
+    {
+      id: "decisions",
+      label: "Decision context",
+      status: decisions.length > 0 ? "ready" : "optional",
+      detail:
+        decisions.length > 0
+          ? describeCount(decisions.length, "decision")
+          : "No decision this period",
+      required: false,
+    },
+  ];
+
+  const score = readinessScore(readiness);
+  const counts = {
+    currentCount: currentItems.length,
+    nextCount: nextItems.length,
+    riskCount: risks.length,
+    priorityCount: priorities.length,
+    blockedCount,
+    atRiskCount,
+  };
+
+  return {
+    id: section.reportSectionId,
+    ownerId: section.authorId,
+    ownerName: section.authorName,
+    ownerRole: section.authorRole ?? "lead",
+    status: section.status,
+    submittedAt: section.submittedAt,
+    products,
+    productSlides,
+    productCount: products.length,
+    currentCount: currentItems.length,
+    nextCount: nextItems.length,
+    riskCount: risks.length,
+    decisionCount: decisions.length,
+    priorityCount: priorities.length,
+    blockedCount,
+    atRiskCount,
+    score,
+    tone: statusTone(counts),
+    readiness,
+    currentItems,
+    nextItems,
+    risks,
+    decisions,
+    priorities,
+  };
+}
+
+export function buildActivitySlideModel(
+  row: ActivityLiveRow,
+): SectionSlideModel {
+  const hasSection = row.reportSectionId !== null;
+  const hasContent =
+    row.itemCount > 0 ||
+    row.riskCount > 0 ||
+    row.decisionCount > 0 ||
+    row.priorityCount > 0;
+  const readiness: SlideReadinessItem[] = [
+    {
+      id: "scope",
+      label: "Scope",
+      status: hasSection ? "ready" : "needs-work",
+      detail: hasSection ? "Section exists" : "Section not created yet",
+      required: true,
+    },
+    {
+      id: "traffic",
+      label: "Traffic lights",
+      status: hasSection ? "needs-work" : "optional",
+      detail: hasSection ? "Review product statuses" : "Waiting for section",
+      required: hasSection,
+    },
+    {
+      id: "current",
+      label: "Current work",
+      status: row.itemCount > 0 ? "ready" : "needs-work",
+      detail:
+        row.itemCount > 0
+          ? describeCount(row.itemCount, "item")
+          : "No current items yet",
+      required: true,
+    },
+    {
+      id: "next",
+      label: "Next focus",
+      status: hasContent ? "needs-work" : "optional",
+      detail: hasContent ? "Add next-period focus" : "Waiting for content",
+      required: hasContent,
+    },
+    {
+      id: "risks",
+      label: "Risk story",
+      status: row.riskCount > 0 ? "ready" : "optional",
+      detail:
+        row.riskCount > 0
+          ? describeCount(row.riskCount, "risk")
+          : "No risks raised",
+      required: false,
+    },
+    {
+      id: "priorities",
+      label: "Top priorities",
+      status: row.priorityCount > 0 ? "ready" : "needs-work",
+      detail:
+        row.priorityCount > 0
+          ? describeCount(row.priorityCount, "priority", "priorities")
+          : "No priorities yet",
+      required: true,
+    },
+    {
+      id: "decisions",
+      label: "Decision context",
+      status: row.decisionCount > 0 ? "ready" : "optional",
+      detail:
+        row.decisionCount > 0
+          ? describeCount(row.decisionCount, "decision")
+          : "No decision this period",
+      required: false,
+    },
+  ];
+  const score = readinessScore(readiness);
+
+  return {
+    id: row.reportSectionId ?? row.leadId,
+    ownerId: row.leadId,
+    ownerName: row.leadName,
+    ownerRole: "lead",
+    status: row.status,
+    submittedAt: row.submittedAt,
+    products: [],
+    productSlides: [],
+    productCount: 0,
+    currentCount: row.itemCount,
+    nextCount: 0,
+    riskCount: row.riskCount,
+    decisionCount: row.decisionCount,
+    priorityCount: row.priorityCount,
+    blockedCount: 0,
+    atRiskCount: row.riskCount > 0 ? 1 : 0,
+    score,
+    tone: hasContent ? "warning" : "empty",
+    readiness,
+    currentItems: [],
+    nextItems: [],
+    risks: [],
+    decisions: [],
+    priorities: [],
+  };
+}
+
+export function sortSlidesForReview(
+  slides: readonly SectionSlideModel[],
+): SectionSlideModel[] {
+  return [...slides].sort((a, b) => {
+    const toneWeight: Record<SlideTone, number> = {
+      blocked: 0,
+      warning: 1,
+      empty: 2,
+      ready: 3,
+    };
+    const toneDiff = toneWeight[a.tone] - toneWeight[b.tone];
+    if (toneDiff !== 0) return toneDiff;
+    const scoreDiff = a.score - b.score;
+    if (scoreDiff !== 0) return scoreDiff;
+    return a.ownerName.localeCompare(b.ownerName);
+  });
+}

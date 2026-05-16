@@ -1,10 +1,12 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
 import { LeadForm } from "../../../../../components/lead/lead-form";
 import { LeadFormSkeleton } from "../../../../../components/lead/lead-form-skeleton";
 
 type Props = {
   params: Promise<{ reportId: string }>;
+  searchParams: Promise<{ mode?: string }>;
 };
 
 /**
@@ -18,8 +20,23 @@ type Props = {
  * (the server returns `readOnly: true` from `leadForm.byPeriod` when the
  * pinned report doesn't match the lead's active section).
  */
-export default async function LeadReportByIdPage({ params }: Props) {
+export default async function LeadReportByIdPage({
+  params,
+  searchParams,
+}: Props) {
   const { reportId } = await params;
+  const { mode } = await searchParams;
+  const resolvedMode = mode === "slides" || mode === "edit" ? mode : "edit";
+
+  if (mode && resolvedMode !== mode) {
+    const normalizedMode = "edit";
+    redirect(
+      "/lead/report/" +
+        encodeURIComponent(reportId) +
+        "?mode=" +
+        encodeURIComponent(normalizedMode),
+    );
+  }
 
   return (
     <main
@@ -31,7 +48,7 @@ export default async function LeadReportByIdPage({ params }: Props) {
         style={{ paddingBottom: "88px" }}
       >
         <Suspense fallback={<LeadFormSkeleton />}>
-          <LeadForm reportId={reportId} />
+          <LeadForm reportId={reportId} mode={resolvedMode} />
         </Suspense>
       </div>
     </main>

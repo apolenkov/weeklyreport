@@ -4,7 +4,7 @@ import { LeadForm } from "../../../../components/lead/lead-form";
 import { LeadFormSkeleton } from "../../../../components/lead/lead-form-skeleton";
 
 type Props = {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; mode?: string }>;
 };
 
 /**
@@ -19,7 +19,8 @@ type Props = {
  * surfaces its existing empty / skeleton state — no hard redirect.
  */
 export default async function LeadReportPage({ searchParams }: Props) {
-  const { period } = await searchParams;
+  const { period, mode } = await searchParams;
+  const resolvedMode = mode === "slides" ? "slides" : "edit";
 
   return (
     <main
@@ -31,7 +32,7 @@ export default async function LeadReportPage({ searchParams }: Props) {
         style={{ paddingBottom: "88px" }}
       >
         <Suspense fallback={<LeadFormSkeleton />}>
-          <LeadForm period={period} redirectToCanonical />
+          <LeadForm period={period} redirectToCanonical mode={resolvedMode} />
         </Suspense>
       </div>
     </main>
