@@ -164,6 +164,7 @@ export type LeadReportPeriod = {
   dateRange: string;
   isCurrent: boolean;
   isSubmitted: boolean;
+  archived?: boolean;
   itemCount?: number;
   riskCount?: number;
   productCount?: number;
@@ -188,8 +189,8 @@ export type LeadCurrentUser = {
   role: string;
   /**
    * Authoritative role token (the Prisma `Role` enum) used for gating
-   * head/admin-only UI like "Revoke" vs "Request Reopen". Driven by the
-   * read model's `authorRole`.
+   * head/admin-only form actions like "Revoke". Driven by the read model's
+   * `authorRole`.
    */
   authorRole: "lead" | "head" | "admin" | "viewer";
 };
@@ -510,6 +511,7 @@ export function mapLeadPeriods(
       dateRange: formatDateRange(e.periodStart, e.periodEnd),
       isCurrent: activeReportId !== null && e.reportId === activeReportId,
       isSubmitted: e.sectionStatus === "submitted",
+      archived: e.archived ?? false,
       itemCount: e.itemCount,
       riskCount: e.riskCount,
       productCount: e.productCount,

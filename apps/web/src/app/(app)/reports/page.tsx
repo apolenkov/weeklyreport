@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Archive } from "lucide-react";
 import { toast } from "sonner";
 
 import type {
@@ -148,8 +149,8 @@ export default function ReportsPage() {
           </header>
 
           {role ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/75 px-3 py-3">
+              <div className="min-w-[220px] flex-1">
                 {searchScope ? (
                   <SearchInput
                     scope={searchScope}
@@ -258,7 +259,7 @@ function HistoryArchiveToggle({
 }) {
   return (
     <div className="flex min-h-10 shrink-0 items-center">
-      <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]">
+      <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-white px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] hover:text-[var(--color-starbucks-accent)]">
         <input
           type="checkbox"
           checked={checked}
@@ -270,7 +271,8 @@ function HistoryArchiveToggle({
               : "Show archived reports"
           }
         />
-        <span>Show archive </span>
+        <Archive className="h-4 w-4" aria-hidden="true" />
+        <span>Archive</span>
         {archiveCount > 0 && (
           <span className="rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[11px] text-[var(--color-starbucks-accent)]">
             {archiveCount}

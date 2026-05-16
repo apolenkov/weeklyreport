@@ -6,6 +6,7 @@ import {
   BarChart3,
   Clock,
   FileText,
+  Globe2,
   LayoutDashboard,
   Moon,
   Presentation,
@@ -53,13 +54,7 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
   { href: "/head/report", label: "Status", roles: ["head"] },
   // UFB-058 / Phase 60: Status Presentation surface — draft authoring
-  // slides remain lead/head-only. Viewer presentation access is
-  // exposed from the published report page under /reports/[reportId]/present.
-  {
-    href: "/lead/slides",
-    label: "Slides",
-    roles: ["lead"],
-  },
+  // stays in the lead report mode switch (`/lead/report/:id?mode=slides`).
   {
     href: "/head/slides",
     label: "Slides",
@@ -74,7 +69,7 @@ const USER_IDENTITY_SLOT_CLASS =
   "hidden h-8 min-w-0 max-w-[260px] flex-col justify-center xl:flex";
 const BRAND_SLOT_CLASS = "flex w-10 shrink-0 items-center justify-center py-4";
 const RIGHT_RAIL_CLASS =
-  "relative flex items-center justify-end gap-2.5 justify-self-end xl:w-[180px]";
+  "relative flex items-center justify-end gap-2.5 justify-self-end xl:w-[272px]";
 const LOGOUT_BUTTON_CLASS =
   "inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] xl:w-[88px] xl:px-3";
 
@@ -158,22 +153,56 @@ function initialsFromName(name: string): string {
   return (first.charAt(0) + last.charAt(0)).toUpperCase();
 }
 
+function LanguageComingSoonControl() {
+  // TODO(i18n-future): replace this inert control with a real locale switch
+  // when the dedicated i18n phase introduces dictionaries and routing.
+  return (
+    <div className="group relative inline-flex">
+    <button
+      type="button"
+      aria-disabled="true"
+      aria-label="Language selection is coming soon"
+      title="Coming Soon"
+      data-testid="language-coming-soon"
+      className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
+    >
+      <Globe2 size={14} strokeWidth={2} aria-hidden="true" />
+      <span className="hidden xl:inline">Language</span>
+    </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 whitespace-nowrap rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--color-muted-foreground)] opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        Coming Soon
+      </span>
+    </div>
+  );
+}
+
 function ThemeComingSoonControl() {
   // TODO(UFB-074): replace this inert control with a real theme switch only
   // after .planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md
   // is promoted into a new milestone.
   return (
-    <button
-      type="button"
-      aria-disabled="true"
-      aria-label="Theme selection is coming soon"
-      title="Coming Soon"
-      data-testid="theme-coming-soon"
-      className="inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] cursor-default xl:w-[82px] xl:px-2.5"
-    >
-      <Moon size={14} strokeWidth={2} aria-hidden="true" />
-      <span className="hidden xl:inline">Theme</span>
-    </button>
+    <div className="group relative inline-flex">
+      <button
+        type="button"
+        aria-disabled="true"
+        aria-label="Theme selection is coming soon"
+        title="Coming Soon"
+        data-testid="theme-coming-soon"
+        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
+      >
+        <Moon size={14} strokeWidth={2} aria-hidden="true" />
+        <span className="hidden xl:inline">Theme</span>
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 whitespace-nowrap rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--color-muted-foreground)] opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        Coming Soon
+      </span>
+    </div>
   );
 }
 
@@ -196,9 +225,8 @@ function NavIcon({ href }: { readonly href: string }) {
       return <LayoutDashboard {...common} />;
     case "/head/report":
       return <BarChart3 {...common} />;
-    case "/lead/slides":
     case "/head/slides":
-      return <Presentation {...common} />;
+     return <Presentation {...common} />;
     case "/admin":
       return <Settings {...common} />;
     default:
@@ -330,12 +358,16 @@ export function NavBar() {
             the rail keeps only actions so the center nav has stable space.
             UFB-NEW-A1: show skeleton placeholders while session is loading so
             the header width is stable from first paint → zero CLS on reload.
-            Theme and Logout stay grouped as the action rail. */}
+            Language, Theme and Logout stay grouped as the action rail. */}
         <div className={RIGHT_RAIL_CLASS}>
           {visibleSessionLoading ? (
             <>
               <div
-                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[82px]"
+                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[92px]"
+                aria-hidden="true"
+              />
+              <div
+                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[92px]"
                 aria-hidden="true"
               />
               <div
@@ -346,6 +378,7 @@ export function NavBar() {
           ) : (
             <>
               <ThemeComingSoonControl />
+              <LanguageComingSoonControl />
               {visibleUser && (
                 <button
                   type="button"
