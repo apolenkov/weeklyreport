@@ -1,109 +1,105 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-16T17:40:38Z",
-  "phase": "43",
-  "phase_name": "tooling-leaf-fix-plus-lead-report-ui-consolidation",
+  "timestamp": "2026-05-16T17:45:00Z",
+  "context": "default",
+  "phase": null,
+  "phase_name": "PRJ-2 UAT lead report UI feedback",
   "phase_dir": null,
-  "plan": 1,
-  "task": 1,
-  "total_tasks": 7,
+  "plan": null,
+  "task": "toolbar-compact",
+  "total_tasks": null,
   "status": "paused",
   "completed_tasks": [
     {
       "id": 1,
-      "name": "TOOL-01: next-env.d.ts clean-checkout fix",
+      "name": "Lead report toolbar compacting",
       "status": "done",
-      "commit": "d19a1b9"
+      "files": [
+        "apps/web/src/components/lead/lead-form.tsx",
+        "apps/web/src/components/lead/period-navigator.tsx",
+        "apps/web/src/components/lead/fill-from-button.tsx",
+        "apps/web/src/components/lead/version-history-nav.tsx"
+      ],
+      "note": "Latest .continue-here.md says toolbar is compacted into one line with P... period labels, icon-only archive, Fill label, and compact version controls."
     },
     {
       "id": 2,
-      "name": "TOOL-02: regression baseline measurement",
+      "name": "Handoff files written",
       "status": "done",
-      "commit": "not applicable - 179/179 already passing"
+      "files": [".planning/.continue-here.md", ".planning/HANDOFF.json"]
     },
     {
       "id": 3,
-      "name": "Lead report toolbar: merge fill/version controls into top context row",
+      "name": "Markdown handoff lint",
       "status": "done",
-      "commit": "local-uncommitted",
-      "note": "Context toolbar now keeps PeriodNavigator, Show archived, Fill from Previous, and VersionHistoryNav in one compact nowrap row with left divider before fill/version controls."
-    },
-    {
-      "id": 4,
-      "name": "Lead period selector cleanup",
-      "status": "done",
-      "commit": "local-uncommitted",
-      "note": "Lead-side PeriodNavigator option text now uses dateRange only, removing Period/Week numbering and Current/Submitted suffixes. period-navigator.test.tsx expectations updated."
-    },
-    {
-      "id": 5,
-      "name": "Version arrow style alignment",
-      "status": "done",
-      "commit": "local-uncommitted",
-      "note": "VersionHistoryNav arrows reuse PERIOD_NAV_ARROW_BUTTON_CLASS from PeriodNavigator and no longer render a separate visible Version label."
+      "commands": ["pnpm lint:md"],
+      "result": "PASS"
     }
   ],
   "remaining_tasks": [
     {
-      "id": 6,
-      "name": "Consolidate with parallel agents' edits",
-      "status": "in_progress",
-      "note": "Worktree has broad dirty state across API, lead UI, slides, nav, mapper, planning docs, plus untracked slides components. Do not assume all dirty files belong to this agent."
+      "id": 1,
+      "name": "Consolidate parallel-agent changes before any commit",
+      "status": "not_started",
+      "reason": "Dirty tree includes broad API/web/slides/nav/form changes and overlapping lead UI files."
     },
     {
-      "id": 7,
-      "name": "Manual/UI review of lead report toolbar at /lead/report/a0000000-0000-4000-8000-000000000002",
+      "id": 2,
+      "name": "Run verification after latest compact-toolbar edits",
       "status": "not_started",
-      "note": "Automated period navigator tests passed; no browser screenshot/manual visual pass was run after the last compact selector change."
+      "reason": "Earlier pnpm lint/test/build passed before later compact-toolbar edits; after pause handoff only pnpm lint:md was rerun."
+    },
+    {
+      "id": 3,
+      "name": "Visual check target lead report toolbar",
+      "status": "not_started",
+      "reason": "Latest compact toolbar state has not been browser-checked at 1728x962."
+    },
+    {
+      "id": 4,
+      "name": "Decide whether to run pnpm docker:local:verify",
+      "status": "human_decision",
+      "reason": "Script wipes/reseeds local compose DB via prisma migrate reset --force."
     }
   ],
   "blockers": [
     {
-      "description": "Large concurrent dirty worktree from parallel agents; final merge/commit must first reconcile ownership and avoid reverting unrelated edits.",
+      "description": "WIP commit skipped because parallel agents are modifying the same repo and dirty files overlap the lead UI surface.",
       "type": "human_action",
-      "workaround": "Start next session with git status --short --branch and git diff --name-status, then group dirty files by feature/agent before staging."
+      "workaround": "Next session should inspect and stage hunks intentionally after consolidation."
     },
     {
-      "description": "Phase 43 directory referenced by older HANDOFF.json does not exist; current pause handoff is written to .planning/.continue-here.md as default context.",
-      "type": "technical",
-      "workaround": "Use .planning/.continue-here.md plus this HANDOFF.json as the resume source unless a later agent creates a concrete phase directory."
-    },
-    {
-      "description": "PR #5 merge/check status may still be blocked by forge.example.org access/auth from earlier handoff.",
-      "type": "external",
-      "workaround": "Restore enterprise GitHub auth/network, then rerun gh pr view 5 --json statusCheckRollup and gh run list --limit 5 before merge."
+      "description": "docker:local:verify not run because it destructively resets local compose DB.",
+      "type": "human_action",
+      "workaround": "Run only after explicit approval that local compose DB wipe/reseed is acceptable."
     }
   ],
   "human_actions_pending": [
     {
-      "action": "Consolidate parallel agents' changes before final commit/push",
-      "context": "User explicitly warned that parallel agents are still adding work. Current handoff records dirty files but does not assign ownership for all of them.",
+      "action": "Consolidate parallel agents' work",
+      "context": "User explicitly warned that parallel agents are still adding changes.",
       "blocking": true
     },
     {
-      "action": "Visual check lead report toolbar in browser",
-      "context": "Toolbar changes were validated by unit tests only, not by Playwright screenshot or manual browser review after the final date-only selector edit.",
+      "action": "Approve or skip docker:local:verify",
+      "context": "Remaining primary gate is destructive to local compose DB.",
       "blocking": false
     }
   ],
   "decisions": [
     {
-      "decision": "Lead period selector displays dateRange only",
-      "rationale": "User rejected Period 19/20 and week-style numbering because periods can be abstract, not weekly ordinal entities.",
-      "phase": "ui-feedback"
+      "decision": "Pause without WIP commit",
+      "rationale": "File-level commit would risk bundling unrelated parallel-agent work.",
+      "phase": null
     },
     {
-      "decision": "Version label removed from toolbar",
-      "rationale": "The visible v# pill already communicates version state; the separate uppercase Version text was redundant.",
-      "phase": "ui-feedback"
-    },
-    {
-      "decision": "Do not stage broad dirty source files during pause",
-      "rationale": "User stated parallel agents are modifying the repo; staging all dirty files would mix ownership and risk losing or misattributing work.",
-      "phase": "pause"
+      "decision": "Preserve newer parallel .continue-here.md content",
+      "rationale": "It reflected a later compact-toolbar state; only markdownlint issues were fixed.",
+      "phase": null
     }
   ],
   "uncommitted_files": [
+    ".planning/.continue-here.md",
     ".planning/HANDOFF.json",
     ".planning/session-retros/NEXT-ACTIONS.md",
     "apps/api/src/modules/report-sections/lead-form.prisma-repository.integration.test.ts",
@@ -126,7 +122,7 @@
     "apps/web/src/components/lead/period-navigator.test.tsx",
     "apps/web/src/components/lead/period-navigator.tsx",
     "apps/web/src/components/lead/priorities-section.tsx",
-    "apps/web/src/components/lead/request-reopen-dialog.tsx",
+    "apps/web/src/components/lead/request-reopen-dialog.tsx (deleted)",
     "apps/web/src/components/lead/risk-edit-dialog.tsx",
     "apps/web/src/components/lead/risks-section.tsx",
     "apps/web/src/components/lead/sdlc-pipeline.tsx",
@@ -134,15 +130,8 @@
     "apps/web/src/components/navigation/nav-bar.test.tsx",
     "apps/web/src/components/navigation/nav-bar.tsx",
     "apps/web/src/lib/mappers/lead-form.ts",
-    "apps/web/src/components/slides/*"
+    "apps/web/src/components/slides/ (untracked)"
   ],
-  "verification": [
-    {
-      "command": "pnpm --filter @customreport/web test -- period-navigator.test.tsx",
-      "status": "passed",
-      "result": "Vitest reported 59 test files passed and 444 tests passed. Warnings only: Node module.register deprecation and localStorage experimental warnings."
-    }
-  ],
-  "next_action": "Start by reconciling parallel-agent dirty state: git status --short --branch, git diff --name-status, then review .planning/.continue-here.md. For this agent's latest UI slice, inspect period-navigator.tsx, period-navigator.test.tsx, version-history-nav.tsx, and lead-form.tsx, then run a browser check of /lead/report/a0000000-0000-4000-8000-000000000002.",
-  "context_notes": "User requested pause because tokens are ending and warned that parallel agents are still supplementing the work. This handoff intentionally records a consolidated state instead of claiming full repo completion. The lead report toolbar feedback addressed: merge Fill from Previous/Version into the top context row, remove redundant Version label, make version arrows match period arrows, shorten period selector, and remove period/week numbering."
+  "next_action": "Read .planning/.continue-here.md first, then inspect git status and targeted diffs for lead-form.tsx, period-navigator.tsx, fill-from-button.tsx, and version-history-nav.tsx. Consolidate parallel hunks before running verification or committing.",
+  "context_notes": "User paused with $gsd-pause-work because tokens are ending and warned about parallel agents. Handoff was written. pnpm lint:md initially failed on .planning/.continue-here.md, then passed after markdown spacing fixes. Earlier in this thread pnpm lint, pnpm test, and pnpm build passed before a later parallel compact-toolbar handoff appeared; do not claim final compact toolbar is fully verified until rerun."
 }
