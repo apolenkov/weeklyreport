@@ -120,7 +120,7 @@ test.describe("Route/report UAT smoke", () => {
     ).toBeVisible();
     await expectVisibleText(page, "Submissions");
     await expectVisibleText(page, "4/4");
-    await expectVisibleText(page, "Report Archive");
+    await expectVisibleText(page, "History");
     await expectStableAppPage(page, monitor);
     await expectNoReloadLoop(page);
 

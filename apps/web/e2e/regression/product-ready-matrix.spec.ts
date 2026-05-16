@@ -71,7 +71,7 @@ const ROLE_SCENARIOS: ReadonlyArray<Scenario> = [
     role: "viewer",
     route: "/reports?tab=published",
     expected: "loads",
-    heading: /Reports|Report Archive/i,
+    heading: /Reports|History/i,
   },
 ];
 
