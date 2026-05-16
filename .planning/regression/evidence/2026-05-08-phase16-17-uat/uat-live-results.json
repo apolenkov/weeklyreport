@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-05-14T12:43:49.935Z",
+  "generatedAt": "2026-05-16T19:29:35.522Z",
   "web": "http://localhost:3000",
   "api": "http://localhost:3002",
   "evidenceDir": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat",
   "counts": {
-    "PASS": 3,
-    "FAIL": 9,
+    "PASS": 1,
+    "FAIL": 11,
     "BLOCKED": 0,
     "SKIPPED": 0
   },
@@ -23,9 +23,8 @@
     },
     {
       "name": "SC-17-03 lead history surface",
-      "status": "PASS",
-      "detail": "verified canonical merged history surface at /reports?tab=drafts",
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-03-lead-history.png"
+      "status": "FAIL",
+      "detail": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: /^Reports$/ })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: /^Reports$/ })\u001b[22m\n"
     },
     {
       "name": "SC-17-04 dashboard page",
@@ -39,19 +38,18 @@
     },
     {
       "name": "SC-17-06 admin panel",
-      "status": "PASS",
-      "detail": "verified in live browser",
-      "screenshot": "../../.planning/regression/evidence/2026-05-08-phase16-17-uat/screenshots/sc-17-06-admin.png"
+      "status": "FAIL",
+      "detail": "apiRequestContext.get: Request context disposed.\nCall log:\n\u001b[2m  - → GET http://localhost:3000/auth/dev-login?role=admin&email=admin%40customreport.local&redirect=%2Fadmin%3Ftab%3Dusers\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.7727.15 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n"
     },
     {
       "name": "SC-17-07 print page",
       "status": "FAIL",
-      "detail": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('heading', { name: /Software Development.*Weekly Status Report/i })\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('heading', { name: /Software Development.*Weekly Status Report/i })\u001b[22m\n"
+      "detail": "browser.newContext: Target page, context or browser has been closed"
     },
     {
       "name": "SC-17-08 navigation active state",
       "status": "FAIL",
-      "detail": "\u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('nav[aria-label=\"Main navigation\"] a[aria-current=\"page\"]').first()\nExpected: visible\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('nav[aria-label=\"Main navigation\"] a[aria-current=\"page\"]').first()\u001b[22m\n"
+      "detail": "browser.newContext: Target page, context or browser has been closed"
     },
     {
       "name": "SC-17-09 design system consistency",
