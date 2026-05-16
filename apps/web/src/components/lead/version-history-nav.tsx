@@ -3,16 +3,11 @@
 import { useState } from "react";
 
 import type { VersionSnapshot } from "./mock-data";
+import { PERIOD_NAV_ARROW_BUTTON_CLASS } from "./period-navigator";
 
 type VersionHistoryNavProps = {
   readonly versions: VersionSnapshot[];
   readonly onRestore?: (version: number) => void;
-  /**
-   * Called when the user navigates to a different version via the prev/next
-   * arrows (without going through the Restore confirmation flow). The parent
-   * uses this to load the selected version's content into the form.
-   */
-  readonly onVersionChange?: (version: number) => void;
   /**
    * When provided, renders a "Save Version" button next to the v# pill.
    * Clicking creates an explicit checkpoint via leadForm.createSnapshot
@@ -136,7 +131,6 @@ function formatDiff(delta: number, label: string): string | null {
 export function VersionHistoryNav({
   versions,
   onRestore,
-  onVersionChange,
   onSaveVersion,
   canSaveVersion = true,
 }: VersionHistoryNavProps) {
@@ -153,16 +147,12 @@ export function VersionHistoryNav({
     if (!hasPrev) return;
     const nextIndex = currentIndex + 1;
     setCurrentIndex(nextIndex);
-    const targetVersion = versions[nextIndex];
-    if (targetVersion) onVersionChange?.(targetVersion.version);
   }
 
   function handleNext() {
     if (!hasNext) return;
     const nextIndex = currentIndex - 1;
     setCurrentIndex(nextIndex);
-    const targetVersion = versions[nextIndex];
-    if (targetVersion) onVersionChange?.(targetVersion.version);
   }
 
   function handleRestore(version: number) {
@@ -180,14 +170,10 @@ export function VersionHistoryNav({
 
   return (
     <>
-      <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-        <span className="truncate text-xs text-[var(--color-muted-foreground)]">
-          Editing version
-        </span>
-
+      <div className="flex min-w-0 items-center gap-1.5">
         <button
           type="button"
-          className="flex min-h-[var(--touch-target-min)] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+          className={PERIOD_NAV_ARROW_BUTTON_CLASS}
           onClick={handlePrev}
           disabled={!hasPrev}
           title={
@@ -202,7 +188,7 @@ export function VersionHistoryNav({
 
         <button
           type="button"
-          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-lg border border-[var(--color-muted)] bg-[var(--color-background)] px-2.5 font-[family-name:var(--font-sans)] text-[13px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
+          className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-[var(--color-muted)] bg-[var(--color-background)] px-2 font-[family-name:var(--font-sans)] text-[12px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
           onClick={() => setShowModal(true)}
           title="View version history — compare and roll back"
         >
@@ -211,7 +197,7 @@ export function VersionHistoryNav({
 
         <button
           type="button"
-          className="flex min-h-[var(--touch-target-min)] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+          className={PERIOD_NAV_ARROW_BUTTON_CLASS}
           onClick={handleNext}
           disabled={!hasNext}
           title={isLatest ? "Latest version" : "Next version"}
@@ -227,7 +213,7 @@ export function VersionHistoryNav({
         {onSaveVersion && (
           <button
             type="button"
-            className="flex min-h-[var(--touch-target-min)] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+            className="flex min-h-8 min-w-[34px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
             onClick={onSaveVersion}
             disabled={!canSaveVersion || !isLatest}
             title={
@@ -334,7 +320,7 @@ export function VersionHistoryNav({
                       )}
                     </div>
 
-                    {idx !== 0 && (
+                    {onRestore && idx !== 0 && (
                       <button
                         type="button"
                         className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"

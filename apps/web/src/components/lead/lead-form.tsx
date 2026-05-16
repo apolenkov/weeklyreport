@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Archive } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
@@ -33,6 +35,7 @@ import { DecisionsSection } from "./decisions-section";
 import { PrioritiesSection } from "./priorities-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RequestReopenDialog } from "./request-reopen-dialog";
+import { LeadSlidesClient } from "../slides/lead-slides-client";
 
 import type {
   Product,
@@ -63,6 +66,7 @@ type LeadFormProps = {
    * the bare route in read-only mode without a redirect (back-compat).
    */
   readonly reportId?: string;
+  readonly mode?: "edit" | "slides";
   /**
    * 35-07: when true, the form auto-redirects (router.replace) to the
    * canonical addressed URL once the active reportId is known. Off when
@@ -177,6 +181,25 @@ function StarIcon() {
   );
 }
 
+function SlidesViewIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 flex-shrink-0"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 4h18v16H3z" />
+      <path d="M9 4v16M15 4v16" />
+      <path d="M3 10h18" />
+    </svg>
+  );
+}
+
 function CollapseIcon() {
   return (
     <svg
@@ -224,6 +247,7 @@ type AccordionSectionProps = {
   readonly groupSyncKey?: number;
   readonly groupExpanded?: boolean;
   readonly testId?: string;
+  readonly actions?: React.ReactNode;
   readonly children: React.ReactNode;
 };
 
@@ -238,6 +262,7 @@ function AccordionSection({
   groupSyncKey,
   groupExpanded,
   testId,
+  actions,
   children,
 }: AccordionSectionProps) {
   const [expanded, setExpanded] = useState(defaultOpen);
@@ -253,13 +278,14 @@ function AccordionSection({
       data-testid={testId}
       className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_0_0.5px_0_rgba(0,0,0,0.12),0_12px_26px_-18px_rgba(0,0,0,0.22),0_2px_4px_rgba(0,0,0,0.06)]"
     >
-      <button
-        type="button"
-        className="flex w-full items-center justify-between p-5 transition-colors hover:bg-[var(--color-surface-hover)]"
-        onClick={() => setExpanded(!expanded)}
-        aria-expanded={expanded}
-      >
-        <div>
+      <div className="flex w-full items-center justify-between gap-3 p-5 transition-colors hover:bg-[var(--color-surface-hover)]">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+        >
+          <div className="min-w-0">
           <div className="flex items-center gap-3">
             {icon}
             <span
@@ -282,9 +308,24 @@ function AccordionSection({
               {subtitle}
             </span>
           )}
-        </div>
-        <ChevronDown expanded={expanded} />
-      </button>
+          </div>
+          {!actions && <ChevronDown expanded={expanded} />}
+        </button>
+        {actions ? (
+          <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        ) : null}
+        {actions ? (
+          <button
+            type="button"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-pill)] transition-colors hover:bg-white"
+            onClick={() => setExpanded(!expanded)}
+            aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
+            aria-expanded={expanded}
+          >
+            <ChevronDown expanded={expanded} />
+          </button>
+        ) : null}
+      </div>
 
       <div
         className="grid transition-[grid-template-rows] duration-300"
@@ -409,6 +450,7 @@ export function LeadForm({
   period,
   reportId: pinnedReportId,
   redirectToCanonical,
+  mode = "edit",
 }: LeadFormProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -416,6 +458,7 @@ export function LeadForm({
   const searchParams = useSearchParams();
   const requestedAuthorId = searchParams.get("authorId") ?? undefined;
   const requestedAuthorIdNormalized = requestedAuthorId?.trim() || undefined;
+  const isSlidesMode = mode === "slides";
   const sessionState = useContext(SessionContext);
   const sessionRole = sessionState?.user?.role ?? null;
   const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
@@ -485,16 +528,18 @@ export function LeadForm({
     if (pinnedReportId) return;
     if (shouldRouteHeadLikeAwayFromLeadForm) return;
     if (!activeReportId) return;
-    const authorQuery = requestedAuthorId
-      ? `?authorId=${encodeURIComponent(requestedAuthorId)}`
-      : "";
-    router.replace(`/lead/report/${activeReportId}${authorQuery}`);
+    const next = new URLSearchParams();
+    if (requestedAuthorId) next.set("authorId", requestedAuthorId);
+    if (isSlidesMode) next.set("mode", "slides");
+    const query = next.toString();
+    router.replace(`/lead/report/${activeReportId}${query ? `?${query}` : ""}`);
   }, [
     redirectToCanonical,
     period,
     pinnedReportId,
     activeReportId,
     requestedAuthorId,
+    isSlidesMode,
     shouldRouteHeadLikeAwayFromLeadForm,
     router,
   ]);
@@ -791,6 +836,8 @@ export function LeadForm({
   // its local state. Individual sections may then drift again via clicks.
   const [groupSyncKey, setGroupSyncKey] = useState(0);
   const [groupExpanded, setGroupExpanded] = useState(true);
+  const [currentWeekAddSignal, setCurrentWeekAddSignal] = useState(0);
+  const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);
 
   // Compute readOnly early (before hook; the autosave hook needs it). When
   // data isn't ready, treat as readOnly (autosave disabled).
@@ -859,6 +906,22 @@ export function LeadForm({
     };
   }, [titleHistoryEntry]);
 
+  const [showArchivePeriods, setShowArchivePeriods] = useState(false);
+  const selectedPeriodId =
+    pinnedReportId ||
+    searchParams.get("period") ||
+    activeQ.data?.reportId ||
+    "";
+  const selectedHistoryPeriod = historyQ.data?.find(
+    (entry) => entry.reportId === selectedPeriodId && entry.reportId !== "",
+  );
+
+  useEffect(() => {
+    if (selectedHistoryPeriod?.archived) {
+      setShowArchivePeriods(true);
+    }
+  }, [selectedHistoryPeriod?.reportId, selectedHistoryPeriod?.archived]);
+
   // Skeleton until all queries settle.
   if (
     isLoading ||
@@ -890,6 +953,19 @@ export function LeadForm({
   const periods: ReportPeriod[] = data.periods as ReportPeriod[];
   const versions: VersionSnapshot[] = data.versions as VersionSnapshot[];
   const currentUser = data.currentUser;
+  const selectedPeriod = periods.find(
+    (period) => period.id === selectedPeriodId && period.id !== "",
+  );
+  const hasArchivedPeriods = periods.some((period) => period.archived);
+  const visibleNonArchivedPeriods = periods.filter((period) => !period.archived);
+  const visiblePeriods =
+    !hasArchivedPeriods ||
+    showArchivePeriods ||
+    visibleNonArchivedPeriods.length === 0
+      ? periods
+      : selectedPeriod?.archived
+        ? [...visibleNonArchivedPeriods, selectedPeriod]
+        : visibleNonArchivedPeriods;
 
   const isReadOnly =
     data.readOnly || !!period || isSubmitted || isPinnedAuthorView;
@@ -1258,10 +1334,15 @@ export function LeadForm({
       <form className="space-y-6" data-testid="lead-report-form">
         {/* Page header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-              My Report
-            </h1>
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <div className="min-w-0">
+              <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+                My Report
+              </h1>
+              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                Your report draft and status context.
+              </p>
+            </div>
             {/* LF-3 (Phase 33-04): submitted state now uses the .b-ok variant
                 (light teal bg + dark teal text) — matches mockup s2 rather
                 than the heavier white-on-dark-teal `.b-done` look that read
@@ -1277,11 +1358,6 @@ export function LeadForm({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <FillFromButton
-              periods={periods}
-              disabled={isReadOnly || fillFromMut.isPending}
-              onFillFrom={handleFillFrom}
-            />
             {(currentWeekItems.length > 0 ||
               nextWeekItems.length > 0 ||
               risks.length > 0 ||
@@ -1297,15 +1373,42 @@ export function LeadForm({
                 Toggle All
               </button>
             )}
-            {/*
-              35-03: gate on the structured authorRole (Prisma `Role`
-              enum) carried by the read model. Pre-35-03 we string-
-              matched against the display label ("Dev Lead" ... "Lead")
-              which fell over for head/admin sessions viewing a lead's
-              section via /lead/report?period=X. Now: lead → Request
-              Reopen (polite), head/admin → Revoke (destructive).
-              Backend gates both anyway; this is the UX path.
-            */}
+            <Link
+              href={
+                targetReportId
+                  ? "/lead/report/" + encodeURIComponent(targetReportId)
+                  : "/lead/report"
+              }
+              scroll={false}
+              className={[
+                "inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors",
+                isSlidesMode
+                  ? "bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]"
+                  : "bg-[var(--color-starbucks-accent)] text-white",
+              ].join(" ")}
+            >
+              Edit
+            </Link>
+            <Link
+              href={
+                targetReportId
+                  ? "/lead/report/" +
+                    encodeURIComponent(targetReportId) +
+                    "?mode=slides"
+                  : "/lead/report"
+              }
+              scroll={false}
+              className={[
+                "inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors",
+                isSlidesMode
+                  ? "bg-[var(--color-starbucks-accent)] text-white"
+                  : "bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]",
+              ].join(" ")}
+              aria-label="Open slides mode"
+            >
+              <SlidesViewIcon />
+              Slides
+            </Link>
             {isSubmitted && currentUser.authorRole === "lead" && (
               <button
                 type="button"
@@ -1342,39 +1445,40 @@ export function LeadForm({
           </div>
         </header>
 
-        {/* Context shell: Period nav + User info + Version history */}
-        <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">
-          <PeriodNavigator periods={periods} />
+        {/* Context shell: period, archive, fill-from, and edit-version controls. */}
+        <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/75 px-2 py-1.5 whitespace-nowrap">
+          <PeriodNavigator periods={visiblePeriods} />
 
-          <div className="ml-auto">
+          <label
+            className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2 text-[13px] font-semibold text-[var(--color-foreground)]"
+            title="Show archived periods"
+          >
+            <input
+              type="checkbox"
+              checked={showArchivePeriods}
+              onChange={(event) =>
+                setShowArchivePeriods(event.currentTarget.checked)
+              }
+              className="h-4 w-4 accent-[var(--color-starbucks-accent)]"
+              aria-label="Show archived periods"
+            />
+            <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+          </label>
+
+          <div className="flex min-w-0 flex-nowrap items-center gap-1.5 border-l border-[rgba(0,0,0,0.08)] pl-2">
+            <FillFromButton
+              periods={periods}
+              disabled={isReadOnly || fillFromMut.isPending}
+              onFillFrom={handleFillFrom}
+            />
             <VersionHistoryNav
               versions={versions}
-              onRestore={handleRestoreVersion}
-              onVersionChange={handleRestoreVersion}
+              onRestore={isReadOnly ? undefined : handleRestoreVersion}
               onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
               canSaveVersion={!createSnapshotMut.isPending}
             />
           </div>
         </div>
-
-        {/* Submitted banner */}
-        {isSubmitted && (
-          <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)] bg-[var(--color-success)] p-4">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-5 w-5 flex-shrink-0"
-              stroke="var(--color-primary)"
-              fill="none"
-              strokeWidth={2}
-            >
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0110 0v4" />
-            </svg>
-            <span className="text-sm font-medium text-[var(--color-primary)]">
-              Report submitted. This form is now read-only.
-            </span>
-          </div>
-        )}
 
         {/* Read-only banner for past periods. Triggered by either the
             legacy `?period=` query (back-compat) or — 35-07 — when the
@@ -1393,6 +1497,13 @@ export function LeadForm({
             </div>
           )}
 
+        {isSlidesMode ? (
+          <LeadSlidesClient
+            initialReportId={targetReportId || pinnedReportId || null}
+            chrome="content"
+          />
+        ) : (
+          <>
         <LeadFormSyncBridge.Provider
           products={products}
           risks={risks}
@@ -1402,7 +1513,6 @@ export function LeadForm({
           stagesForProduct={stagesForProduct}
           {...(sectionIdForActions ? { sectionId: sectionIdForActions } : {})}
         >
-          {/* Product Status (SDLC Pipeline) */}
           <AccordionSection
             groupSyncKey={groupSyncKey}
             groupExpanded={groupExpanded}
@@ -1424,6 +1534,23 @@ export function LeadForm({
             title="Current Week"
             badge={`${currentWeekItems.length} items`}
             subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
+            actions={
+              !isReadOnly ? (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => setCurrentWeekAddSignal((value) => value + 1)}
+                  disabled={products.length === 0}
+                  title={
+                    products.length > 0
+                      ? `Add item to ${products[0]?.name}`
+                      : "No products assigned — contact admin"
+                  }
+                >
+                  + Add Item
+                </button>
+              ) : null
+            }
           >
             <CurrentWeekSection
               items={currentWeekItems}
@@ -1432,6 +1559,7 @@ export function LeadForm({
               currentUserName={currentUser.name}
               products={products}
               stagesForProduct={stagesForProduct}
+              addSignal={currentWeekAddSignal}
             />
           </AccordionSection>
 
@@ -1444,6 +1572,23 @@ export function LeadForm({
             title="Next Week"
             badge={`${nextWeekItems.length} items`}
             subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
+            actions={
+              !isReadOnly ? (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => setNextWeekAddSignal((value) => value + 1)}
+                  disabled={products.length === 0}
+                  title={
+                    products.length > 0
+                      ? `Add item to ${products[0]?.name}`
+                      : "No products assigned — contact admin"
+                  }
+                >
+                  + Add Item
+                </button>
+              ) : null
+            }
           >
             <NextWeekSection
               items={nextWeekItems}
@@ -1452,6 +1597,7 @@ export function LeadForm({
               currentUserName={currentUser.name}
               products={products}
               stagesForProduct={stagesForProduct}
+              addSignal={nextWeekAddSignal}
             />
           </AccordionSection>
 
@@ -1534,6 +1680,8 @@ export function LeadForm({
             )}
           </AccordionSection>
         </div>
+          </>
+        )}
       </form>
 
       {/* Submit Confirmation Dialog */}
