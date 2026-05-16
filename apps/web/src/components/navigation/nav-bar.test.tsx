@@ -134,6 +134,12 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/reports?tab=drafts");
   });
 
+  it("viewer sees read-only History", () => {
+    setRole("viewer");
+    const { container } = render(<NavBar />);
+    expectLinkExists(container, "/reports?tab=published");
+  });
+
   it("lead sees Report, History, and Slides but not the archive shortcut", () => {
     setRole("lead");
     const { container } = render(<NavBar />);
@@ -180,6 +186,8 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     setRole("admin");
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/admin");
+    expectLinkMissing(container, "/reports?tab=drafts");
+    expectLinkMissing(container, "/reports?tab=published");
   });
 
   it("renders the parked Theme control with Coming Soon in metadata", () => {
@@ -287,6 +295,6 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
 
     const { container } = render(<NavBar />);
 
-    expectLinkMissing(container, "/reports?tab=drafts");
+    expectInactiveLink(container, "/reports?tab=published");
   });
 });

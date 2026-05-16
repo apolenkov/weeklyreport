@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import type { MyHistoryEntry } from "@customreport/shared";
+import type {
+  CompiledHistoryEntry,
+  MyHistoryEntry,
+} from "@customreport/shared";
 
 import {
   formatDateRange,
   formatSubmittedAt,
   isoWeekNumber,
+  mapCompiledHistoryEntries,
   mapHistoryEntries,
 } from "./lead-history";
 
@@ -213,5 +217,60 @@ describe("mapHistoryEntries", () => {
       latestVersionAt: "2 hours ago",
       trafficLights: { green: 2, yellow: 0, red: 1 },
     });
+  });
+});
+
+describe("mapCompiledHistoryEntries", () => {
+  const now = new Date("2026-05-11T12:00:00.000Z");
+
+  const compiledEntry = (
+    overrides: Partial<CompiledHistoryEntry> = {},
+  ): CompiledHistoryEntry => ({
+    reportId: "55555555-5555-4555-8555-555555555555",
+    periodStart: new Date("2026-05-04T00:00:00.000Z"),
+    periodEnd: new Date("2026-05-10T23:59:59.000Z"),
+    publishedAt: new Date("2026-05-11T09:00:00.000Z"),
+    archived: false,
+    publishedByName: "Head User",
+    trafficLights: { green: 2, yellow: 1, red: 0 },
+    itemCount: 3,
+    riskCount: 1,
+    decisionCount: 2,
+    priorityCount: 1,
+    sectionCount: 2,
+    productCount: 2,
+    ...overrides,
+  });
+
+  it("maps compiled published reports to /reports/[reportId] history cards", () => {
+    const result = mapCompiledHistoryEntries([compiledEntry()], now);
+
+    expect(result[0]).toMatchObject({
+      id: "55555555-5555-4555-8555-555555555555",
+      periodId: "55555555-5555-4555-8555-555555555555",
+      href: "/reports/55555555-5555-4555-8555-555555555555",
+      weekLabel: "Week 19",
+      dateRange: "May 4–10, 2026",
+      status: "published",
+      archived: false,
+      submittedAt: null,
+      publishedAt: "3 hours ago",
+      trafficLights: { green: 2, yellow: 1, red: 0 },
+      itemCount: 3,
+      riskCount: 1,
+      decisionCount: 2,
+      priorityCount: 1,
+      productCount: 2,
+    });
+  });
+
+  it("marks compiled archived reports as archived", () => {
+    const result = mapCompiledHistoryEntries(
+      [compiledEntry({ archived: true })],
+      now,
+    );
+
+    expect(result[0]?.status).toBe("archived");
+    expect(result[0]?.archived).toBe(true);
   });
 });

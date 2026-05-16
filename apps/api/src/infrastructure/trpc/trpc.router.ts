@@ -6,6 +6,8 @@ import {
   submitSectionSchema,
   myHistoryEntrySchema,
   paginationInputSchema,
+  compiledHistoryInputSchema,
+  compiledHistoryResultSchema,
   adminCreatePeriodManualSchema,
   adminUpdatePeriodManualSchema,
   adminUserSchema,
@@ -40,7 +42,7 @@ import { mapDomainError } from "./trpc.error-mapper.js";
 import { clearOrgCache } from "./trpc.context.js";
 import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import type { Queue } from "bullmq";
 
 import type { ReportSectionsService } from "../../modules/report-sections/report-sections.service.js";
@@ -63,6 +65,7 @@ import {
   SearchAuthorizationError,
   type SearchService,
 } from "../../modules/search/search.service.js";
+import { groupScopeFilter } from "../../lib/group-scope.js";
 import type { ActivityService } from "../../modules/activity/activity.service.js";
 import type { TelemetryService } from "../../modules/telemetry/telemetry.service.js";
 import type { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
@@ -428,6 +431,119 @@ export function createAppRouter(deps: RouterDeps) {
           }),
         );
       }),
+
+      compiledHistory: anyRoleProcedure
+        .input(compiledHistoryInputSchema.optional())
+        .query(async ({ input, ctx }) => {
+          try {
+            const includeArchive = input?.includeArchive ?? false;
+            const sectionScope: Prisma.ReportSectionWhereInput =
+              ctx.session.role === "lead"
+                ? { authorId: ctx.session.userId }
+                : groupScopeFilter(ctx.session, "reportSection");
+            const visibleSectionWhere: Prisma.ReportWhereInput = {
+              sections: { some: sectionScope },
+            };
+            const listWhere: Prisma.ReportWhereInput = {
+              status: "published" as const,
+              ...(includeArchive ? {} : { archived: false }),
+              ...visibleSectionWhere,
+            };
+            const archiveCountWhere: Prisma.ReportWhereInput = {
+              status: "published" as const,
+              archived: true,
+              ...visibleSectionWhere,
+            };
+
+            const [reports, archiveCount] = await Promise.all([
+              deps.prisma.report.findMany({
+                where: listWhere,
+                orderBy: { periodStart: "desc" },
+                take: 100,
+                include: {
+                  publishedBy: { select: { name: true } },
+                  sections: {
+                    where: sectionScope,
+                    select: {
+                      items: { select: { projectId: true } },
+                      risks: { select: { projectId: true } },
+                      decisions: { select: { productId: true } },
+                      priorities: { select: { productId: true } },
+                      projectStatuses: {
+                        select: { projectId: true, status: true },
+                      },
+                      stageStatuses: { select: { projectId: true } },
+                    },
+                  },
+                },
+              }),
+              deps.prisma.report.count({ where: archiveCountWhere }),
+            ]);
+
+            const entries = reports
+              .filter((report) => report.sections.length > 0)
+              .map((report) => {
+                const trafficLights = { green: 0, yellow: 0, red: 0 };
+                const productIds = new Set<string>();
+                let itemCount = 0;
+                let riskCount = 0;
+                let decisionCount = 0;
+                let priorityCount = 0;
+
+                for (const section of report.sections) {
+                  itemCount += section.items.length;
+                  riskCount += section.risks.length;
+                  decisionCount += section.decisions.length;
+                  priorityCount += section.priorities.length;
+
+                  for (const row of section.projectStatuses) {
+                    productIds.add(row.projectId);
+                    if (row.status === "green") trafficLights.green += 1;
+                    if (row.status === "yellow") trafficLights.yellow += 1;
+                    if (row.status === "red") trafficLights.red += 1;
+                  }
+                  for (const row of section.stageStatuses) {
+                    productIds.add(row.projectId);
+                  }
+                  for (const row of section.items) {
+                    productIds.add(row.projectId);
+                  }
+                  for (const row of section.risks) {
+                    productIds.add(row.projectId);
+                  }
+                  for (const row of section.decisions) {
+                    productIds.add(row.productId);
+                  }
+                  for (const row of section.priorities) {
+                    productIds.add(row.productId);
+                  }
+                }
+
+                return {
+                  reportId: report.id,
+                  periodStart: report.periodStart,
+                  periodEnd: report.periodEnd,
+                  publishedAt: report.publishedAt,
+                  archived: report.archived,
+                  publishedByName: report.publishedBy?.name ?? "Unknown",
+                  trafficLights,
+                  itemCount,
+                  riskCount,
+                  decisionCount,
+                  priorityCount,
+                  sectionCount: report.sections.length,
+                  productCount: productIds.size,
+                };
+              });
+
+            return compiledHistoryResultSchema.parse({
+              entries,
+              archiveCount,
+            });
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
 
       saveDraft: protectedProcedure
         .input(draftSaveSchema)

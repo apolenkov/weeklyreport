@@ -19,6 +19,9 @@ import {
   reportPeriodSchema,
   projectStatusInputSchema,
   portfolioOverviewSchema,
+  compiledHistoryInputSchema,
+  compiledHistoryEntrySchema,
+  compiledHistoryResultSchema,
   archiveReportSummarySchema,
   periodStatusSchema,
   periodStateSchema,
@@ -1831,5 +1834,72 @@ describe("myHistoryEntrySchema", () => {
     expect(parsed.riskCount).toBe(1);
     expect(parsed.archived).toBe(false);
     expect(parsed.trafficLights).toEqual({ green: 2, yellow: 0, red: 1 });
+  });
+});
+
+describe("compiledHistoryInputSchema", () => {
+  it("accepts omitted includeArchive", () => {
+    expect(compiledHistoryInputSchema.parse({})).toEqual({});
+  });
+
+  it("accepts includeArchive", () => {
+    expect(compiledHistoryInputSchema.parse({ includeArchive: true })).toEqual({
+      includeArchive: true,
+    });
+  });
+});
+
+describe("compiledHistoryEntrySchema", () => {
+  it("accepts a compiled history entry", () => {
+    const parsed = compiledHistoryEntrySchema.parse({
+      reportId: uuid(),
+      periodStart: "2026-04-06T00:00:00.000Z",
+      periodEnd: "2026-04-12T23:59:59.000Z",
+      publishedAt: "2026-04-13T09:00:00.000Z",
+      archived: true,
+      publishedByName: "Head User",
+      trafficLights: { green: 3, yellow: 1, red: 0 },
+      itemCount: 4,
+      riskCount: 1,
+      decisionCount: 2,
+      priorityCount: 1,
+      sectionCount: 2,
+      productCount: 3,
+    });
+
+    expect(parsed.publishedAt).toBeInstanceOf(Date);
+    expect(parsed.archived).toBe(true);
+    expect(parsed.trafficLights.yellow).toBe(1);
+  });
+
+  it("rejects negative aggregate counts", () => {
+    expect(() =>
+      compiledHistoryEntrySchema.parse({
+        reportId: uuid(),
+        periodStart: "2026-04-06T00:00:00.000Z",
+        periodEnd: "2026-04-12T23:59:59.000Z",
+        publishedAt: null,
+        archived: false,
+        publishedByName: "Head User",
+        trafficLights: { green: 0, yellow: 0, red: 0 },
+        itemCount: -1,
+        riskCount: 0,
+        decisionCount: 0,
+        priorityCount: 0,
+        sectionCount: 0,
+        productCount: 0,
+      }),
+    ).toThrow();
+  });
+});
+
+describe("compiledHistoryResultSchema", () => {
+  it("requires a non-negative archiveCount", () => {
+    const parsed = compiledHistoryResultSchema.parse({
+      entries: [],
+      archiveCount: 4,
+    });
+
+    expect(parsed.archiveCount).toBe(4);
   });
 });

@@ -29,11 +29,25 @@ function TrafficDot({
   );
 }
 
-function StatusBadge({ status }: { readonly status: "submitted" | "draft" }) {
+function StatusBadge({ status }: { readonly status: HistoryEntry["status"] }) {
   if (status === "submitted") {
     return (
       <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-3 py-1 text-xs font-semibold text-[var(--color-primary)]">
         Submitted
+      </span>
+    );
+  }
+  if (status === "published") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-3 py-1 text-xs font-semibold text-[var(--color-primary)]">
+        Published
+      </span>
+    );
+  }
+  if (status === "archived") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-white">
+        Archived
       </span>
     );
   }
@@ -131,7 +145,7 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
           // 35-07 (UX-15): card clicks land on the addressed URL so the
           // browser tab can be bookmarked and shared. `entry.periodId`
           // already maps to the report id via mapHistoryEntries.
-          href={`/lead/report/${entry.periodId}`}
+          href={entry.href ?? `/lead/report/${entry.periodId}`}
           className="group block overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-[box-shadow,border-color,background-color] hover:shadow-[0_0_0.5px_0_rgba(0,0,0,0.12),0_12px_26px_-18px_rgba(0,0,0,0.22),0_2px_4px_rgba(0,0,0,0.06)]"
           // HIST-1 (Phase 33-04): 3px tealA left strip per mockup s9 — gives
           // submitted reports the same visual anchor as kanban current-week
@@ -146,7 +160,7 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
             <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-foreground)]">
               {joinPeriodLabel(entry.weekLabel, entry.dateRange)}
             </span>
-            <StatusBadge status={entry.status} />
+            <StatusBadge status={entry.archived ? "archived" : entry.status} />
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -180,6 +194,8 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
             )}
             {entry.submittedAt ? (
               <TimelineRow label="Submitted" value={entry.submittedAt} />
+            ) : entry.publishedAt ? (
+              <TimelineRow label="Published" value={entry.publishedAt} />
             ) : (
               <TimelineRow label="Submitted" value="Not submitted" muted />
             )}

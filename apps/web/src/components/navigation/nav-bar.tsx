@@ -43,7 +43,12 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   {
     href: "/reports?tab=drafts",
     label: "History",
-    roles: ["lead", "head", "admin"],
+    roles: ["lead", "head"],
+  },
+  {
+    href: "/reports?tab=published",
+    label: "History",
+    roles: ["viewer"],
   },
   { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
   { href: "/head/report", label: "Status", roles: ["head"] },
@@ -185,6 +190,7 @@ function NavIcon({ href }: { readonly href: string }) {
     case "/lead/report":
       return <FileText {...common} />;
     case "/reports?tab=drafts":
+    case "/reports?tab=published":
       return <Clock {...common} />;
     case "/head/dashboard":
       return <LayoutDashboard {...common} />;
