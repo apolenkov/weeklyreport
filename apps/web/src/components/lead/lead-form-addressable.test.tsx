@@ -222,18 +222,6 @@ function buildHarness(opts: {
         }),
         pathFilter: () => ({ queryKey: ["leadForm.restoreVersion"] }),
       },
-      requestReopen: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => ({
-          ...passed,
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
-      },
       createSnapshot: {
         mutationOptions: (
           passed: {
@@ -245,6 +233,18 @@ function buildHarness(opts: {
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
+      },
+      requestReopen: {
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => ({
+          ...passed,
+          mutationFn: async () => ({ ok: true }),
+        }),
+        pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
       },
     },
     ai: {
