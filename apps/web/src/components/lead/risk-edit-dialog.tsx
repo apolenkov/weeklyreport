@@ -141,6 +141,11 @@ export function RiskEditDialog({
     products.find((p) => p.id === productId)?.name ?? "";
   const headerVerb = isCreate ? "Add Risk" : "Edit Risk";
 
+  function setProductAndStages(nextProductId: string) {
+    setProductId(nextProductId);
+    setStageIds(stagesForProduct ? [...stagesForProduct(nextProductId)] : []);
+  }
+
   function handleSave() {
     const t = text.trim();
     const im = impact.trim();
@@ -378,7 +383,7 @@ export function RiskEditDialog({
                 id="risk-product"
                 className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
                 value={productId}
-                onChange={(e) => setProductId(e.target.value)}
+                onChange={(e) => setProductAndStages(e.target.value)}
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>

@@ -194,9 +194,9 @@ export function SdlcPipeline({
           </div>
 
           {/* Stages row */}
-          <div className="flex flex-wrap gap-2 pb-1">
+          <div className="flex flex-wrap items-center gap-2 pb-1">
             {product.stages.map((stage, idx) => (
-              <div key={stage.stageName} className="flex items-start gap-2">
+              <div key={stage.stageName} className="flex items-center gap-2">
                 {idx > 0 && (
                   <div
                     className="flex items-center text-lg font-bold"
@@ -206,7 +206,6 @@ export function SdlcPipeline({
                         product.stages[idx - 1]?.ownership === "mine"
                           ? "var(--color-starbucks-accent)"
                           : "var(--color-muted-foreground)",
-                      marginTop: "-14px",
                       alignSelf: "center",
                     }}
                   >
