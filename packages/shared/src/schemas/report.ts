@@ -610,6 +610,35 @@ export const archiveReportDetailSchema = z.object({
   report: assembledReportSchema,
 });
 
+export const compiledHistoryInputSchema = z.object({
+  includeArchive: z.boolean().optional(),
+});
+
+export const compiledHistoryEntrySchema = z.object({
+  reportId: z.string().uuid(),
+  periodStart: reportDate(),
+  periodEnd: reportDate(),
+  publishedAt: z.coerce.date().nullable(),
+  archived: z.boolean(),
+  publishedByName: z.string().min(1),
+  trafficLights: z.object({
+    green: z.number().int().min(0),
+    yellow: z.number().int().min(0),
+    red: z.number().int().min(0),
+  }),
+  itemCount: z.number().int().min(0),
+  riskCount: z.number().int().min(0),
+  decisionCount: z.number().int().min(0),
+  priorityCount: z.number().int().min(0),
+  sectionCount: z.number().int().min(0),
+  productCount: z.number().int().min(0),
+});
+
+export const compiledHistoryResultSchema = z.object({
+  entries: z.array(compiledHistoryEntrySchema),
+  archiveCount: z.number().int().min(0),
+});
+
 export const adminSnapshotSchema = z.object({
   users: z.array(adminUserSchema),
   groups: z.array(reportingGroupSchema).default([]),
@@ -904,6 +933,9 @@ export type CarryOverRecord = z.infer<typeof carryOverRecordSchema>;
 export type CarryOverExecution = z.infer<typeof carryOverExecutionSchema>;
 export type ArchiveReportSummary = z.infer<typeof archiveReportSummarySchema>;
 export type ArchiveReportDetail = z.infer<typeof archiveReportDetailSchema>;
+export type CompiledHistoryInput = z.infer<typeof compiledHistoryInputSchema>;
+export type CompiledHistoryEntry = z.infer<typeof compiledHistoryEntrySchema>;
+export type CompiledHistoryResult = z.infer<typeof compiledHistoryResultSchema>;
 
 export const myHistoryEntrySchema = z.object({
   sectionId: z.string().uuid(),

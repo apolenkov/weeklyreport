@@ -5,23 +5,29 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
-import type { MyHistoryEntry } from "@customreport/shared";
+import type {
+  CompiledHistoryResult,
+  MyHistoryEntry,
+} from "@customreport/shared";
 
 import { LeadHistoryList } from "../../../components/lead/lead-history-list";
 import { LeadHistorySidebar } from "../../../components/lead/lead-history-sidebar";
 import { LeadHistorySkeleton } from "../../../components/lead/lead-history-skeleton";
-import { ReportArchiveSection } from "../../../components/dashboard/report-archive-section";
 import { SearchInput } from "../../../components/search/search-input";
 import { useSession } from "../../../lib/session-provider";
-import { mapHistoryEntries, type HistoryEntry } from "../../../lib/mappers";
+import {
+  mapCompiledHistoryEntries,
+  mapHistoryEntries,
+  type HistoryEntry,
+} from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
 
 /**
  * UX-17 (Phase 35-08): merged Reports page.
  *
- * Lead users get a single History list. The legacy `?tab=published` URL is
- * treated as "include archive" so old links still reveal archived periods.
- * Non-lead roles keep the compiled archived report list on the same route.
+ * Lead users get personal History. Non-lead users get compiled History.
+ * The legacy `?tab=published` URL is treated as "include archive" so old
+ * links still reveal archived periods without a separate Archive surface.
  */
 
 const HISTORY_INITIAL_VISIBLE = 10;
@@ -34,6 +40,8 @@ export default function ReportsPage() {
 
   const role = user?.role ?? null;
   const isLead = role === "lead";
+  const usesCompiledHistory =
+    role === "head" || role === "viewer" || role === "admin";
   const searchScope = isLead
     ? "mine"
     : role === "head" || role === "admin"
@@ -56,19 +64,35 @@ export default function ReportsPage() {
     enabled: isLead,
   });
 
+  const compiledHistoryQ = useQuery({
+    ...trpc.reports.compiledHistory.queryOptions({ includeArchive }),
+    enabled: usesCompiledHistory,
+  });
+
   function toggleArchive(nextValue: boolean) {
     setIncludeArchive(nextValue);
     const params = new URLSearchParams(searchParams?.toString());
     params.set("tab", nextValue ? "published" : "drafts");
     router.push("/reports?" + params.toString(), { scroll: false });
-    void historyQ.refetch();
   }
 
   useEffect(() => {
     if (isLead && historyQ.isError) {
       toast.error(historyQ.error?.message ?? "Failed to load report history.");
     }
-  }, [isLead, historyQ.isError, historyQ.error]);
+    if (usesCompiledHistory && compiledHistoryQ.isError) {
+      toast.error(
+        compiledHistoryQ.error?.message ?? "Failed to load report history.",
+      );
+    }
+  }, [
+    compiledHistoryQ.error,
+    compiledHistoryQ.isError,
+    historyQ.error,
+    historyQ.isError,
+    isLead,
+    usesCompiledHistory,
+  ]);
 
   const allEntries = useMemo(() => {
     const history =
@@ -77,10 +101,35 @@ export default function ReportsPage() {
         : [];
     return mapHistoryEntries(history);
   }, [historyQ.data, isLead]);
-  const archiveCount = allEntries.filter((entry) => entry.archived).length;
-  const entries = includeArchive
-    ? allEntries
-    : allEntries.filter((entry) => !entry.archived);
+  const compiledData = usesCompiledHistory
+    ? (compiledHistoryQ.data as CompiledHistoryResult | undefined)
+    : undefined;
+  const compiledEntries = useMemo(
+    () => mapCompiledHistoryEntries(compiledData?.entries ?? []),
+    [compiledData?.entries],
+  );
+  const leadArchiveCount = allEntries.filter((entry) => entry.archived).length;
+  const archiveCount = isLead
+    ? leadArchiveCount
+    : (compiledData?.archiveCount ?? 0);
+  const entries = isLead
+    ? includeArchive
+      ? allEntries
+      : allEntries.filter((entry) => !entry.archived)
+    : compiledEntries;
+  const isLoading = isLead
+    ? historyQ.isLoading
+    : usesCompiledHistory
+      ? compiledHistoryQ.isLoading
+      : false;
+  const subtitle = isLead
+    ? "Your report history."
+    : role === "head"
+      ? "Compiled group report history."
+      : role === "viewer"
+        ? "Published report history."
+        : "Compiled report history.";
+  const summaryTitle = isLead ? "My History Summary" : "History Summary";
 
   return (
     <main
@@ -94,57 +143,56 @@ export default function ReportsPage() {
               History
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              {isLead ? "Your report history." : "Archived report history."}
+              {subtitle}
             </p>
           </header>
 
-          {searchScope ? (
+          {role ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 flex-1">
-                <SearchInput
-                  scope={searchScope}
-                  placeholder={
-                    isLead
-                      ? "Search my reports…"
-                      : "Search reports and products…"
-                  }
-                />
+                {searchScope ? (
+                  <SearchInput
+                    scope={searchScope}
+                    placeholder={
+                      isLead
+                        ? "Search my reports…"
+                        : "Search reports and products…"
+                    }
+                  />
+                ) : null}
               </div>
-              {isLead && (
-                <HistoryArchiveToggle
-                  checked={includeArchive}
-                  archiveCount={archiveCount}
-                  onChange={toggleArchive}
-                />
-              )}
+              <HistoryArchiveToggle
+                checked={includeArchive}
+                archiveCount={archiveCount}
+                onChange={toggleArchive}
+              />
             </div>
           ) : (
             <div className="min-h-[44px]" aria-hidden="true" />
           )}
 
-          {isLead ? (
-            <LeadHistoryPanel
-              entries={entries}
-              includeArchive={includeArchive}
-              isLoading={historyQ.isLoading}
-            />
-          ) : (
-            <ReportArchiveSection />
-          )}
+          <HistoryPanel
+            entries={entries}
+            includeArchive={includeArchive}
+            isLoading={isLoading}
+            summaryTitle={summaryTitle}
+          />
         </div>
       </div>
     </main>
   );
 }
 
-function LeadHistoryPanel({
+function HistoryPanel({
   entries,
   includeArchive,
   isLoading,
+  summaryTitle,
 }: {
   readonly entries: HistoryEntry[];
   readonly includeArchive: boolean;
   readonly isLoading: boolean;
+  readonly summaryTitle: string;
 }) {
   const [showAll, setShowAll] = useState(false);
 
@@ -191,7 +239,7 @@ function LeadHistoryPanel({
       <div className="space-y-4">
         <LeadHistorySidebar
           entries={entries}
-          summaryTitle="My History Summary"
+          summaryTitle={summaryTitle}
           showStatus
         />
       </div>
@@ -222,7 +270,7 @@ function HistoryArchiveToggle({
               : "Show archived reports"
           }
         />
-        <span>Show archive</span>
+        <span>Show archive </span>
         {archiveCount > 0 && (
           <span className="rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[11px] text-[var(--color-starbucks-accent)]">
             {archiveCount}

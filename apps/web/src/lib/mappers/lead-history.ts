@@ -6,7 +6,10 @@
  * stay unambiguous around year boundaries.
  */
 
-import type { MyHistoryEntry } from "@customreport/shared";
+import type {
+  CompiledHistoryEntry,
+  MyHistoryEntry,
+} from "@customreport/shared";
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber as sharedIsoWeekNumber,
@@ -21,11 +24,13 @@ import {
 export type HistoryEntry = {
   id: string;
   periodId: string;
+  href?: string;
   weekLabel: string;
   dateRange: string;
-  status: "submitted" | "draft";
+  status: "submitted" | "draft" | "published" | "archived";
   archived?: boolean;
   submittedAt: string | null;
+  publishedAt?: string | null;
   createdAt: string | null;
   lastEditAt: string | null;
   trafficLights: { green: number; yellow: number; red: number };
@@ -144,5 +149,33 @@ export function mapHistoryEntries(
     versionCount: e.versionCount ?? 0,
     latestVersion: e.latestVersion ?? null,
     latestVersionAt: formatHistoryTimestamp(e.latestVersionAt, now),
+  }));
+}
+
+export function mapCompiledHistoryEntries(
+  api: readonly CompiledHistoryEntry[],
+  now: Date = new Date(),
+): HistoryEntry[] {
+  return api.map((e) => ({
+    id: e.reportId,
+    periodId: e.reportId,
+    href: `/reports/${encodeURIComponent(e.reportId)}`,
+    weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
+    dateRange: formatDateRange(e.periodStart, e.periodEnd),
+    status: e.archived ? "archived" : "published",
+    archived: e.archived,
+    submittedAt: null,
+    publishedAt: formatHistoryTimestamp(e.publishedAt, now),
+    createdAt: null,
+    lastEditAt: null,
+    trafficLights: e.trafficLights,
+    itemCount: e.itemCount,
+    riskCount: e.riskCount,
+    decisionCount: e.decisionCount,
+    priorityCount: e.priorityCount,
+    productCount: e.productCount,
+    versionCount: 0,
+    latestVersion: null,
+    latestVersionAt: null,
   }));
 }
