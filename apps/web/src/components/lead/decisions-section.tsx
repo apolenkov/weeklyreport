@@ -158,7 +158,7 @@ export function DecisionsSection({
     <div className="flex justify-end">
       <button
         type="button"
-        className="btn-press inline-flex min-h-[40px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+        className="btn-press inline-flex min-h-[40px] min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
         onClick={handleAdd}
       >
         + Add Decision
@@ -195,21 +195,6 @@ export function DecisionsSection({
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
                   {decision.productName}
                 </span>
-                {/* 35-04: SDLC stage badge — surfaces scoping next to product. */}
-                {stageTags.length === 0 ? (
-                  <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
-                    All stages
-                  </span>
-                ) : (
-                  stageTags.map((stage) => (
-                    <span
-                      key={stage}
-                      className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
-                    >
-                      {stage}
-                    </span>
-                  ))
-                )}
                 {decision.deadline && (
                   <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-semibold text-[#8a6d1b]">
                     Due {formatDeadline(decision.deadline)}
@@ -225,8 +210,31 @@ export function DecisionsSection({
                     Owner: {decision.owner}
                   </span>
                 )}
+                <span
+                  className="ml-auto inline-flex flex-wrap items-center gap-1"
+                  aria-label={`Decision stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+                  title={
+                    stageTags.length === 0 ? "All stages" : stageTags.join(", ")
+                  }
+                >
+                  {/* 35-04: SDLC stage badge — surfaces scoping at the right rail. */}
+                  {stageTags.length === 0 ? (
+                    <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
+                      All stages
+                    </span>
+                  ) : (
+                    stageTags.map((stage) => (
+                      <span
+                        key={stage}
+                        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+                      >
+                        {stage}
+                      </span>
+                    ))
+                  )}
+                </span>
                 {!readOnly && mine && (
-                  <div className="ml-auto flex gap-1">
+                  <div className="flex gap-1">
                     <button
                       type="button"
                       className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
@@ -27,6 +27,7 @@ type NextWeekSectionProps = {
   readonly products?: readonly Product[];
   /** 35-04: forwarded to ItemEditDialog for the SDLC stage selector. */
   readonly stagesForProduct?: (productId: string) => readonly string[];
+  readonly addSignal?: number;
 };
 
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
@@ -54,6 +55,7 @@ export function NextWeekSection({
   currentUserName,
   products,
   stagesForProduct,
+  addSignal = 0,
 }: NextWeekSectionProps) {
   const grouped = groupByProduct(items);
   const [dialogState, setDialogState] = useState<
@@ -66,12 +68,37 @@ export function NextWeekSection({
   const [openSeq, setOpenSeq] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<KanbanItem | null>(null);
   const isEmpty = grouped.size === 0 && (!products || products.length === 0);
+  const hasProducts = products && products.length > 0;
+  const hasMultipleProducts = hasProducts && products.length > 1;
+  const defaultProduct = products?.[0];
+  const defaultProductId = defaultProduct?.id;
+
+  const globalAddButton = !readOnly && (
+    <div className="flex justify-end">
+      <button
+        type="button"
+        className="btn-press inline-flex min-h-[40px] min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={() => defaultProduct && handleAdd(defaultProduct.id)}
+        disabled={!hasProducts}
+        title={hasProducts ? `Add item to ${defaultProduct?.name}` : "No products assigned — contact admin"}
+      >
+        + Add Item
+      </button>
+    </div>
+  );
 
   function handleAdd(seedProductId: string) {
     if (readOnly) return;
     setOpenSeq((n) => n + 1);
     setDialogState({ open: true, mode: "create", seedProductId });
   }
+
+  useEffect(() => {
+    if (addSignal === 0) return;
+    if (readOnly || !defaultProductId) return;
+    setOpenSeq((n) => n + 1);
+    setDialogState({ open: true, mode: "create", seedProductId: defaultProductId });
+  }, [addSignal, defaultProductId, readOnly]);
 
   function handleDelete(id: string) {
     if (readOnly) return;
@@ -119,22 +146,12 @@ export function NextWeekSection({
         </div>
       );
     }
-    const product = products?.[0];
     return (
       <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-8 text-center">
         <p className="text-sm text-[var(--color-muted-foreground)]">
           No next-week items yet.
         </p>
-        <button
-          type="button"
-          className="btn-press inline-flex min-h-[40px] items-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-2 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => product && handleAdd(product.id)}
-          disabled={!product}
-          aria-label="Add first next-week item"
-          title={product ? undefined : "No products assigned — contact admin"}
-        >
-          + Add Item
-        </button>
+        {globalAddButton}
       </div>
     );
   }
@@ -167,6 +184,7 @@ export function NextWeekSection({
             },
           ];
         });
+  const visibleColumnCount = Math.min(Math.max(columns.length, 1), 3);
 
   return (
     <div
@@ -176,7 +194,7 @@ export function NextWeekSection({
       <div
         className="grid gap-4"
         style={{
-          gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${visibleColumnCount}, minmax(0, 1fr))`,
         }}
       >
         {columns.map((col) => (
@@ -185,7 +203,7 @@ export function NextWeekSection({
               <div className="flex-1 truncate font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                 {col.productName}
               </div>
-              {!readOnly && (
+              {!readOnly && hasMultipleProducts && (
                 <button
                   type="button"
                   // KB-5 (Phase 33-04): bumped to min-h 44 to satisfy the

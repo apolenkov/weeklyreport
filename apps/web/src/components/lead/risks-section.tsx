@@ -172,7 +172,8 @@ export function RisksSection({
           // array is explicit user scope, even when it contains every stage.
           // Keep every selected stage visible; seven SDLC chips fit better
           // than hiding critical scope behind "+N".
-          const stageTagsLabel = stageTags.join(", ");
+          const stageTagsLabel =
+            stageTags.length === 0 ? "All stages" : stageTags.join(", ");
           return (
             <div
               key={risk.id}
@@ -196,47 +197,7 @@ export function RisksSection({
                 <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
                   {risk.productName}
                 </span>
-                {stageTags.length === 0 ? (
-                  <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-                    All stages
-                  </span>
-                ) : (
-                  <span
-                    className="inline-flex flex-wrap items-center gap-1"
-                    aria-label={`Risk stages: ${stageTagsLabel}`}
-                    title={stageTagsLabel}
-                  >
-                    {stageTags.map((stage) => (
-                      <span
-                        key={stage}
-                        className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
-                      >
-                        {stage}
-                      </span>
-                    ))}
-                  </span>
-                )}
-                {!readOnly && (
-                  <div className="ml-auto flex gap-1">
-                    <button
-                      type="button"
-                      className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
-                      onClick={() => handleEdit(risk)}
-                      aria-label={`Edit risk for ${risk.productName}`}
-                    >
-                      <EditIcon />
-                    </button>
-                    <button
-                      type="button"
-                      className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
-                      onClick={() => handleDelete(risk.id)}
-                      aria-label={`Delete risk for ${risk.productName}`}
-                    >
-                      <DeleteIcon />
-                    </button>
-                  </div>
-                )}
-              </div>
+             </div>
               {/* Risk + impact + mitigation summary — read-only on the
                   card; the dialog is the only edit surface so we can
                   validate all three fields together. */}
@@ -253,7 +214,7 @@ export function RisksSection({
                     )}
                   </div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2 sm:grid-cols-2">
                   <div>
                     <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
                       Impact
@@ -270,6 +231,51 @@ export function RisksSection({
                       {risk.mitigation || "—"}
                     </div>
                   </div>
+                </div>
+              </div>
+              <div className="mt-3 flex justify-end">
+                <div className="flex flex-wrap items-center justify-end gap-1">
+                  <div
+                    className="inline-flex flex-wrap items-center gap-1"
+                    aria-label={"Risk stages: " + stageTagsLabel}
+                    title={stageTagsLabel}
+                  >
+                    {/* 35-04: stage chips should live at the right rail. */}
+                    {stageTags.length === 0 ? (
+                      <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+                        All stages
+                      </span>
+                    ) : (
+                      stageTags.map((stage) => (
+                        <span
+                          key={stage}
+                          className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+                        >
+                          {stage}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                  {!readOnly && (
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+                        onClick={() => handleEdit(risk)}
+                        aria-label={"Edit risk for " + risk.productName}
+                      >
+                        <EditIcon />
+                      </button>
+                      <button
+                        type="button"
+                        className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+                        onClick={() => handleDelete(risk.id)}
+                        aria-label={"Delete risk for " + risk.productName}
+                      >
+                        <DeleteIcon />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
