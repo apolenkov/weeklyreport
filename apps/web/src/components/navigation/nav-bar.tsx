@@ -38,10 +38,13 @@ type NavLink = {
 
 const NAV_LINKS: ReadonlyArray<NavLink> = [
   { href: "/lead/report", label: "Report", roles: ["lead"] },
-  // UX-17 (Phase 35-08): personal history and the archived report list live on
-  // one /reports page. The lead-specific link opens personal history; the
-  // shared link opens archived compiled reports.
-  { href: "/reports?tab=drafts", label: "History", roles: ["lead"] },
+  // UX-17 (Phase 35-08): one History page for both active and archived
+  // report periods; archived visibility is toggled inside the page.
+  {
+    href: "/reports?tab=drafts",
+    label: "History",
+    roles: ["lead", "head", "admin"],
+  },
   { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
   { href: "/head/report", label: "Status", roles: ["head"] },
   // UFB-058 / Phase 60: Status Presentation surface — draft authoring
@@ -56,13 +59,6 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
     href: "/head/slides",
     label: "Slides",
     roles: ["head"],
-  },
-  {
-    // UFB-022: admin role sees only the Admin section, not the
-    // department dashboard/report/archive surfaces.
-    href: "/reports?tab=published",
-    label: "History",
-    roles: ["head", "viewer"],
   },
   // UFB-038: admin tab is admin-only. heads have a dashboard, not an admin
   // panel. The /admin/layout.tsx role gate enforces the same on the route.
@@ -188,11 +184,7 @@ function NavIcon({ href }: { readonly href: string }) {
   switch (href) {
     case "/lead/report":
       return <FileText {...common} />;
-    case "/lead/history":
     case "/reports?tab=drafts":
-      return <Clock {...common} />;
-    case "/reports/history":
-    case "/reports?tab=published":
       return <Clock {...common} />;
     case "/head/dashboard":
       return <LayoutDashboard {...common} />;

@@ -134,12 +134,6 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/reports?tab=drafts");
   });
 
-  it("viewer DOES see /reports/* links (History)", () => {
-    setRole("viewer");
-    const { container } = render(<NavBar />);
-    expectLinkExists(container, "/reports?tab=published");
-  });
-
   it("lead sees Report, History, and Slides but not the archive shortcut", () => {
     setRole("lead");
     const { container } = render(<NavBar />);
@@ -169,7 +163,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkExists(container, "/head/dashboard");
     expectLinkExists(container, "/head/report");
     expectLinkExists(container, "/head/slides");
-    expectLinkExists(container, "/reports?tab=published");
+    expectLinkExists(container, "/reports?tab=drafts");
   });
 
   it("activates Status on addressed /head/report/[reportId] pages", () => {
@@ -265,7 +259,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     const { container } = render(<NavBar />);
 
     expectActiveLink(container, "/reports?tab=drafts");
-    expectInactiveLink(container, "/reports?tab=published");
+    expectLinkMissing(container, "/reports?tab=published");
   });
 
   it("activates only History on /reports?tab=published", () => {
@@ -274,8 +268,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
 
     const { container } = render(<NavBar />);
 
-    expectInactiveLink(container, "/reports?tab=drafts");
-    expectActiveLink(container, "/reports?tab=published");
+    expectActiveLink(container, "/reports?tab=drafts");
   });
 
   it("keeps the lead History link active on the Archive tab", () => {
@@ -294,6 +287,6 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
 
     const { container } = render(<NavBar />);
 
-    expectInactiveLink(container, "/reports?tab=published");
+    expectLinkMissing(container, "/reports?tab=drafts");
   });
 });
