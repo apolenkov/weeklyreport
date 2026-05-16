@@ -1,9 +1,9 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-14T14:23:53Z",
+  "timestamp": "2026-05-16T17:40:38Z",
   "phase": "43",
-  "phase_name": "tooling-leaf-fix",
-  "phase_dir": ".planning/phases/43-tooling-leaf-fix",
+  "phase_name": "tooling-leaf-fix-plus-lead-report-ui-consolidation",
+  "phase_dir": null,
   "plan": 1,
   "task": 1,
   "total_tasks": 7,
@@ -19,76 +19,130 @@
       "id": 2,
       "name": "TOOL-02: regression baseline measurement",
       "status": "done",
-      "commit": "not applicable — 179/179 already passing"
+      "commit": "not applicable - 179/179 already passing"
+    },
+    {
+      "id": 3,
+      "name": "Lead report toolbar: merge fill/version controls into top context row",
+      "status": "done",
+      "commit": "local-uncommitted",
+      "note": "Context toolbar now keeps PeriodNavigator, Show archived, Fill from Previous, and VersionHistoryNav in one compact nowrap row with left divider before fill/version controls."
+    },
+    {
+      "id": 4,
+      "name": "Lead period selector cleanup",
+      "status": "done",
+      "commit": "local-uncommitted",
+      "note": "Lead-side PeriodNavigator option text now uses dateRange only, removing Period/Week numbering and Current/Submitted suffixes. period-navigator.test.tsx expectations updated."
+    },
+    {
+      "id": 5,
+      "name": "Version arrow style alignment",
+      "status": "done",
+      "commit": "local-uncommitted",
+      "note": "VersionHistoryNav arrows reuse PERIOD_NAV_ARROW_BUTTON_CLASS from PeriodNavigator and no longer render a separate visible Version label."
     }
   ],
   "remaining_tasks": [
     {
-      "id": 3,
-      "name": "Merge PR #5 after CI green",
-      "status": "blocked_ci_queued"
+      "id": 6,
+      "name": "Consolidate with parallel agents' edits",
+      "status": "in_progress",
+      "note": "Worktree has broad dirty state across API, lead UI, slides, nav, mapper, planning docs, plus untracked slides components. Do not assume all dirty files belong to this agent."
     },
     {
-      "id": 4,
-      "name": "STATE.md update — close phases 44/46/47/48/49, recalculate percent",
-      "status": "done",
-      "commit": "local-uncommitted"
-    },
-    {
-      "id": 5,
-      "name": "Reconcile coverage gaps E-04, E-08, UFB-024",
-      "status": "done",
-      "commit": "45e1cac",
-      "note": "E-04 covered by alert-bar.test.tsx; E-08 and UFB-024 were already covered."
+      "id": 7,
+      "name": "Manual/UI review of lead report toolbar at /lead/report/a0000000-0000-4000-8000-000000000002",
+      "status": "not_started",
+      "note": "Automated period navigator tests passed; no browser screenshot/manual visual pass was run after the last compact selector change."
     }
   ],
   "blockers": [
     {
-      "description": "CI PR #5 previous runs were completed/startup_failure with jobs=[] and no logs; current post-fix runs now create queued jobs and still need a real green check before merge",
-      "type": "external",
-      "workaround": "Watch the latest PR run. If it stays queued, fix GitHub Actions runner availability or repository Actions policy; merge only after green."
+      "description": "Large concurrent dirty worktree from parallel agents; final merge/commit must first reconcile ownership and avoid reverting unrelated edits.",
+      "type": "human_action",
+      "workaround": "Start next session with git status --short --branch and git diff --name-status, then group dirty files by feature/agent before staging."
     },
     {
-      "description": "D-12 item-dialog status pill — react-compiler conflict",
+      "description": "Phase 43 directory referenced by older HANDOFF.json does not exist; current pause handoff is written to .planning/.continue-here.md as default context.",
       "type": "technical",
-      "workaround": "Needs react-compiler-safe technical design before re-implementation"
+      "workaround": "Use .planning/.continue-here.md plus this HANDOFF.json as the resume source unless a later agent creates a concrete phase directory."
+    },
+    {
+      "description": "PR #5 merge/check status may still be blocked by forge.example.org access/auth from earlier handoff.",
+      "type": "external",
+      "workaround": "Restore enterprise GitHub auth/network, then rerun gh pr view 5 --json statusCheckRollup and gh run list --limit 5 before merge."
     }
   ],
   "human_actions_pending": [
     {
-      "action": "Decide approach for D-12 item-dialog status pill reset",
-      "context": "Reverted due to react-compiler hook-call-order conflict",
-      "blocking": false
+      "action": "Consolidate parallel agents' changes before final commit/push",
+      "context": "User explicitly warned that parallel agents are still adding work. Current handoff records dirty files but does not assign ownership for all of them.",
+      "blocking": true
     },
     {
-      "action": "Choose next milestone after PR #5 merge",
-      "context": "Options: Phase 43 formal closure, Phase 50/53/59/60",
+      "action": "Visual check lead report toolbar in browser",
+      "context": "Toolbar changes were validated by unit tests only, not by Playwright screenshot or manual browser review after the final date-only selector edit.",
       "blocking": false
     }
   ],
   "decisions": [
     {
-      "decision": "Remove typedRoutes import from next-env.d.ts",
-      "rationale": "typedRoutes not enabled in next.config.ts; .next/ is gitignored; import was stale artifact",
-      "phase": "43"
+      "decision": "Lead period selector displays dateRange only",
+      "rationale": "User rejected Period 19/20 and week-style numbering because periods can be abstract, not weekly ordinal entities.",
+      "phase": "ui-feedback"
     },
     {
-      "decision": "TOOL-02 chunk plans not needed",
-      "rationale": "Regression suite already 179/179 PASS — no regression fix wave required",
-      "phase": "43"
+      "decision": "Version label removed from toolbar",
+      "rationale": "The visible v# pill already communicates version state; the separate uppercase Version text was redundant.",
+      "phase": "ui-feedback"
+    },
+    {
+      "decision": "Do not stage broad dirty source files during pause",
+      "rationale": "User stated parallel agents are modifying the repo; staging all dirty files would mix ownership and risk losing or misattributing work.",
+      "phase": "pause"
     }
   ],
   "uncommitted_files": [
-    ".planning/regression/evidence/2026-05-08-phase16-17-uat/uat-live-results.json",
-    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-002.json",
-    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-003.json",
-    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-004.json",
-    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-005.json",
-    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-007.json",
-    ".planning/regression/evidence/product-ready-matrix/UI-GEO-001.json",
-    ".planning/regression/evidence/product-ready-matrix/UI-GEO-002-003.json",
-    ".planning/regression/COVERAGE-GAP-2026-05-14.md"
+    ".planning/HANDOFF.json",
+    ".planning/session-retros/NEXT-ACTIONS.md",
+    "apps/api/src/modules/report-sections/lead-form.prisma-repository.integration.test.ts",
+    "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts",
+    "apps/web/src/app/(app)/head/slides/page.tsx",
+    "apps/web/src/app/(app)/lead/report/[reportId]/page.tsx",
+    "apps/web/src/app/(app)/lead/report/page.tsx",
+    "apps/web/src/app/(app)/lead/slides/page.tsx",
+    "apps/web/src/app/(app)/reports/page.tsx",
+    "apps/web/src/components/lead/current-week-section.tsx",
+    "apps/web/src/components/lead/decisions-section.tsx",
+    "apps/web/src/components/lead/fill-from-button.tsx",
+    "apps/web/src/components/lead/item-card.tsx",
+    "apps/web/src/components/lead/item-edit-dialog.tsx",
+    "apps/web/src/components/lead/lead-form-addressable.test.tsx",
+    "apps/web/src/components/lead/lead-form.test.tsx",
+    "apps/web/src/components/lead/lead-form.tsx",
+    "apps/web/src/components/lead/mock-data.ts",
+    "apps/web/src/components/lead/next-week-section.tsx",
+    "apps/web/src/components/lead/period-navigator.test.tsx",
+    "apps/web/src/components/lead/period-navigator.tsx",
+    "apps/web/src/components/lead/priorities-section.tsx",
+    "apps/web/src/components/lead/request-reopen-dialog.tsx",
+    "apps/web/src/components/lead/risk-edit-dialog.tsx",
+    "apps/web/src/components/lead/risks-section.tsx",
+    "apps/web/src/components/lead/sdlc-pipeline.tsx",
+    "apps/web/src/components/lead/version-history-nav.tsx",
+    "apps/web/src/components/navigation/nav-bar.test.tsx",
+    "apps/web/src/components/navigation/nav-bar.tsx",
+    "apps/web/src/lib/mappers/lead-form.ts",
+    "apps/web/src/components/slides/*"
   ],
-  "next_action": "Watch the latest PR #5 run via gh run list --limit 5 and gh pr view 5 --json statusCheckRollup. If green: gh pr merge 5 --merge. If queued/startup_failure persists: record runner/policy blocker evidence. Repo-only remaining work is in .planning/session-retros/CUSTOMREPORT-REPO-REMAINING-2026-05-14.md.",
-  "context_notes": "Post-marathon sprint continuation. TOOL-01 took 2 iterations — first fix was incomplete (still referenced gitignored path). Second fix removed the import entirely since typedRoutes is not enabled. CI action versions were restored in e4a6bfd and pnpm/action-setup was replaced by Corepack in ffb3a15. E-04 is covered by alert-bar.test.tsx in 45e1cac; E-08 and UFB-024 were already covered. Regression is clean. Coverage gap report ready at .planning/regression/COVERAGE-GAP-2026-05-14.md."
+  "verification": [
+    {
+      "command": "pnpm --filter @customreport/web test -- period-navigator.test.tsx",
+      "status": "passed",
+      "result": "Vitest reported 59 test files passed and 444 tests passed. Warnings only: Node module.register deprecation and localStorage experimental warnings."
+    }
+  ],
+  "next_action": "Start by reconciling parallel-agent dirty state: git status --short --branch, git diff --name-status, then review .planning/.continue-here.md. For this agent's latest UI slice, inspect period-navigator.tsx, period-navigator.test.tsx, version-history-nav.tsx, and lead-form.tsx, then run a browser check of /lead/report/a0000000-0000-4000-8000-000000000002.",
+  "context_notes": "User requested pause because tokens are ending and warned that parallel agents are still supplementing the work. This handoff intentionally records a consolidated state instead of claiming full repo completion. The lead report toolbar feedback addressed: merge Fill from Previous/Version into the top context row, remove redundant Version label, make version arrows match period arrows, shorten period selector, and remove period/week numbering."
 }
