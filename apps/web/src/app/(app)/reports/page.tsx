@@ -45,13 +45,6 @@ export default function ReportsPage() {
     tabFromUrl === "published",
   );
 
-  function toggleArchive(nextValue: boolean) {
-    setIncludeArchive(nextValue);
-    const params = new URLSearchParams(searchParams?.toString());
-    params.set("tab", nextValue ? "published" : "drafts");
-    router.push(`/reports?${params.toString()}`, { scroll: false });
-  }
-
   // Keep state in sync if the URL param changes after mount (e.g. user
   // navigates from /reports/history -> /reports?tab=published).
   useEffect(() => {
@@ -62,6 +55,14 @@ export default function ReportsPage() {
     ...trpc.reports.myHistory.queryOptions(),
     enabled: isLead,
   });
+
+  function toggleArchive(nextValue: boolean) {
+    setIncludeArchive(nextValue);
+    const params = new URLSearchParams(searchParams?.toString());
+    params.set("tab", nextValue ? "published" : "drafts");
+    router.push("/reports?" + params.toString(), { scroll: false });
+    void historyQ.refetch();
+  }
 
   useEffect(() => {
     if (isLead && historyQ.isError) {
