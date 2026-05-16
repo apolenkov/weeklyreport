@@ -140,13 +140,13 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkExists(container, "/reports?tab=published");
   });
 
-  it("lead sees Report, History, and Slides but not the archive shortcut", () => {
+  it("lead sees Report and History, with Slides folded into the report mode switch", () => {
     setRole("lead");
     const { container } = render(<NavBar />);
     expectLinkMissing(container, "/head/dashboard");
     expectLinkMissing(container, "/head/report");
     expectLinkExists(container, "/lead/report");
-    expectLinkExists(container, "/lead/slides");
+    expectLinkMissing(container, "/lead/slides");
     expectLinkExists(container, "/reports?tab=drafts");
     expectLinkMissing(container, "/reports?tab=published");
   });
@@ -207,6 +207,39 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     );
     expect(themeControl).toHaveAttribute("title", "Coming Soon");
     expect(themeControl).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("renders the parked Language control with Coming Soon metadata", () => {
+    setRole("lead");
+    const { container } = render(<NavBar />);
+
+    const languageControl = container.querySelector(
+      '[data-testid="language-coming-soon"]',
+    );
+
+    expect(languageControl).not.toBeNull();
+    expect(languageControl?.textContent).toMatch(/Language/i);
+    expect(languageControl?.textContent).not.toMatch(/Soon/i);
+    expect(languageControl).toHaveAttribute(
+      "aria-label",
+      "Language selection is coming soon",
+    );
+    expect(languageControl).toHaveAttribute("title", "Coming Soon");
+    expect(languageControl).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("renders Theme before Language in the right rail", () => {
+    setRole("lead");
+    const { container } = render(<NavBar />);
+
+    const comingSoonControls = Array.from(
+      container.querySelectorAll('button[data-testid$="coming-soon"]'),
+    ).map((element) => element.getAttribute("data-testid"));
+
+    expect(comingSoonControls).toEqual([
+      "theme-coming-soon",
+      "language-coming-soon",
+    ]);
   });
 
   it("renders the user initials in the compact home mark", () => {
