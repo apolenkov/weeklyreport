@@ -103,23 +103,26 @@ export function FillFromButton({
 
   return (
     <>
-      <div className="relative inline-flex" ref={wrapRef}>
+      <div
+        className="relative inline-flex overflow-hidden rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.28)] bg-white/70"
+        ref={wrapRef}
+      >
         {/* Primary button */}
         <button
           type="button"
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-l-[var(--radius-pill)] rounded-r-none border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold tracking-[-0.01em] text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-press inline-flex min-h-8 items-center gap-1 bg-transparent px-2.5 py-1 text-[13px] font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={handleFillPrevious}
           disabled={disabled || !previousPeriod}
           title="Fill from most recent submitted period"
         >
           <CopyIcon />
-          Fill from Previous
+          Fill
         </button>
 
         {/* Dropdown trigger */}
         <button
           type="button"
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] min-w-[44px] items-center justify-center rounded-l-none rounded-r-[var(--radius-pill)] border border-l-0 border-[var(--color-border)] bg-transparent px-3 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-press inline-flex min-h-8 min-w-[34px] items-center justify-center border-l border-[rgba(0,117,74,0.18)] bg-transparent px-1.5 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => setShowDropdown(!showDropdown)}
           disabled={disabled}
           title="Fill from a specific past report"
