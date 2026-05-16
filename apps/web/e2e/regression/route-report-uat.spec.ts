@@ -166,7 +166,7 @@ test.describe("Route/report UAT smoke", () => {
     });
 
     await waitForAppReady(page);
-    await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
     await expectVisibleText(page, "1 loaded");
     await expectStableAppPage(page, monitor);
 
