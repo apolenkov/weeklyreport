@@ -19,6 +19,11 @@ type PrioritiesSectionProps = {
   /** R4-B: products the lead is assigned to, passed through to the dialog. */
   readonly products?: readonly Product[];
   readonly defaultProductId?: string;
+  /**
+   * P5: Display name of the section author (the lead who owns this section).
+   * Shown at the bottom-left of each priority card in the unified meta-row.
+   */
+  readonly sectionAuthorName?: string;
 };
 
 function EditIcon() {
@@ -68,44 +73,6 @@ const RANK_TEXT: Record<1 | 2 | 3 | "rest", string> = {
   rest: "var(--color-muted-foreground)",
 };
 
-function PriorityStageScope({
-  rank,
-  stageTags,
-}: {
-  readonly rank: number;
-  readonly stageTags: readonly string[];
-}) {
-  if (stageTags.length === 0) {
-    return (
-      <span
-        className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]"
-        aria-label={`Priority ${rank} stages: all stages`}
-      >
-        All stages
-      </span>
-    );
-  }
-
-  const allStagesLabel = stageTags.join(", ");
-
-  return (
-    <span
-      className="inline-flex flex-wrap items-center gap-1"
-      aria-label={`Priority ${rank} stages: ${allStagesLabel}`}
-      title={allStagesLabel}
-    >
-      {stageTags.map((stage) => (
-        <span
-          key={stage}
-          className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
-        >
-          {stage}
-        </span>
-      ))}
-    </span>
-  );
-}
-
 /**
  * Variable-length priority list. Add / Edit go through PriorityEditDialog
  * so the interaction shape matches Item, Risk, and Decision (open modal
@@ -122,6 +89,7 @@ export function PrioritiesSection({
   availableStages,
   products,
   defaultProductId,
+  sectionAuthorName,
 }: PrioritiesSectionProps) {
   const sorted = [...priorities].sort((a, b) => a.rank - b.rank);
   const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
@@ -262,11 +230,6 @@ export function PrioritiesSection({
                       {entry.productName}
                     </span>
                   )}
-                  <div className="ml-auto">
-                    {/* Keep scoped stages readable and consistent with Decisions:
-                        full labels beat colored abbreviations for SDLC names. */}
-                    <PriorityStageScope rank={entry.rank} stageTags={stageTags} />
-                  </div>
                 </div>
                 {entry.text.trim().length > 0 ? (
                   <span className="block break-words text-[var(--color-foreground)]">
@@ -277,6 +240,36 @@ export function PrioritiesSection({
                     — pending
                   </span>
                 )}
+                {/* P5: unified [author …… chip] meta-row */}
+                <div
+                  className="flex items-center justify-between gap-2 pt-1"
+                  aria-label={`Priority ${entry.rank} stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+                >
+                  <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
+                    {sectionAuthorName ?? ""}
+                  </span>
+                  {/* Keep scoped stages readable and consistent with Decisions:
+                      full labels beat colored abbreviations for SDLC names. */}
+                  <span
+                    className="inline-flex flex-wrap items-center gap-1"
+                    title={stageTags.length === 0 ? "All stages" : stageTags.join(", ")}
+                  >
+                    {stageTags.length === 0 ? (
+                      <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+                        All stages
+                      </span>
+                    ) : (
+                      stageTags.map((stage) => (
+                        <span
+                          key={stage}
+                          className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+                        >
+                          {stage}
+                        </span>
+                      ))
+                    )}
+                  </span>
+                </div>
               </div>
             </button>
             {!readOnly && (

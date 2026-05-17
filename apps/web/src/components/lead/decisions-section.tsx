@@ -210,31 +210,8 @@ export function DecisionsSection({
                     Owner: {decision.owner}
                   </span>
                 )}
-                <span
-                  className="ml-auto inline-flex flex-wrap items-center gap-1"
-                  aria-label={`Decision stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
-                  title={
-                    stageTags.length === 0 ? "All stages" : stageTags.join(", ")
-                  }
-                >
-                  {/* 35-04: SDLC stage badge — surfaces scoping at the right rail. */}
-                  {stageTags.length === 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
-                      All stages
-                    </span>
-                  ) : (
-                    stageTags.map((stage) => (
-                      <span
-                        key={stage}
-                        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
-                      >
-                        {stage}
-                      </span>
-                    ))
-                  )}
-                </span>
                 {!readOnly && mine && (
-                  <div className="flex gap-1">
+                  <div className="ml-auto flex gap-1">
                     <button
                       type="button"
                       className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
@@ -267,24 +244,43 @@ export function DecisionsSection({
                     )}
                   </div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                      Owner
-                    </span>
-                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
-                      {decision.owner || "—"}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                      Impact
-                    </span>
-                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
-                      {decision.impact || "—"}
-                    </div>
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                    Impact
+                  </span>
+                  <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
+                    {decision.impact || "—"}
                   </div>
                 </div>
+              </div>
+              {/* P5: unified [author …… chip] meta-row */}
+              <div
+                className="mt-3 flex items-center justify-between gap-2"
+                aria-label={`Decision stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+              >
+                <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
+                  {decision.owner ?? ""}
+                </span>
+                <span
+                  className="inline-flex flex-wrap items-center gap-1"
+                  title={stageTags.length === 0 ? "All stages" : stageTags.join(", ")}
+                >
+                  {/* 35-04: SDLC stage badge — surfaces scoping at the right rail. */}
+                  {stageTags.length === 0 ? (
+                    <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
+                      All stages
+                    </span>
+                  ) : (
+                    stageTags.map((stage) => (
+                      <span
+                        key={stage}
+                        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+                      >
+                        {stage}
+                      </span>
+                    ))
+                  )}
+                </span>
               </div>
             </div>
           );
