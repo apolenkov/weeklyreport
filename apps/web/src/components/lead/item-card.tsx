@@ -230,7 +230,7 @@ export function ItemCard({
               visibleStageTags.map((stage) => (
                 <span
                   key={stage}
-                  className="inline-flex max-w-[92px] items-center truncate rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+                  className="inline-flex max-w-[92px] items-center truncate rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
                   title={stage}
                 >
                   {stage}
