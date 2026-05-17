@@ -7,6 +7,7 @@ import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 
 type Props = {
   readonly reportId: string;
+  readonly exitHref?: string;
 };
 
 /**
@@ -21,7 +22,7 @@ type Props = {
  * Sections are discovered from `[data-product-accordion-toggle]` elements
  * rendered inside the report — no separate API call needed.
  */
-export function HeadPresentClient({ reportId }: Props) {
+export function HeadPresentClient({ reportId, exitHref }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -117,7 +118,7 @@ export function HeadPresentClient({ reportId }: Props) {
             ? `← → or J/K · F to toggle fullscreen · ${currentIndex + 1} / ${sectionCount}`
             : "← → or J/K · F to toggle fullscreen"
         }
-        exitHref={`/head/report/${reportId}`}
+        exitHref={exitHref ?? `/head/report/${reportId}`}
         exitLabel="Report"
       />
       {sectionCount > 1 && (
