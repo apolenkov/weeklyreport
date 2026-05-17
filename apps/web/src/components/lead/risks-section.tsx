@@ -249,7 +249,7 @@ export function RisksSection({
                       stageTags.map((stage) => (
                         <span
                           key={stage}
-                          className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+                          className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
                         >
                           {stage}
                         </span>
