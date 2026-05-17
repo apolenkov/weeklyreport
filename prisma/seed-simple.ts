@@ -65,8 +65,7 @@ const LEAD_IGOR = "a0000000-0000-4000-8000-000000000013";
 const LEAD_DMITRY = "a0000000-0000-4000-8000-000000000014";
 const LEAD_OLGA = "a0000000-0000-4000-8000-000000000015";
 const LEAD_SERGEY = "a0000000-0000-4000-8000-000000000016";
-// P13: PM (non-technical) leads — one per CoreDev product, stage-based access diff
-const LEAD_CRM_PM = "a0000000-0000-4000-8000-000000000021";
+// P13: PM (non-technical) leads — MOBILE/CLOUD/DEVOPS only (CRM excluded: Vasily holds all 7 stages, @@unique([stageId,projectId]) prevents a second lead)
 const LEAD_MOBILE_PM = "a0000000-0000-4000-8000-000000000022";
 const LEAD_CLOUD_PM = "a0000000-0000-4000-8000-000000000023";
 const LEAD_DEVOPS_PM = "a0000000-0000-4000-8000-000000000024";
@@ -468,15 +467,7 @@ async function main() {
         samlId: "lead-sergey",
         reportingGroupId: FINANCE_GROUP_ID,
       },
-      // P13: non-technical PM leads in CoreDev group
-      {
-        id: LEAD_CRM_PM,
-        email: "anna@customreport.local",
-        name: "Анна П.",
-        role: Role.lead,
-        samlId: "lead-crm-pm",
-        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
-      },
+      // P13: non-technical PM leads in CoreDev group (MOBILE/CLOUD/DEVOPS only)
       {
         id: LEAD_MOBILE_PM,
         email: "boris@customreport.local",
@@ -626,9 +617,6 @@ async function main() {
         userId: LEAD_SERGEY,
       },
       // P13: PM leads — Plan/Analysis stages (non-tech focus)
-      // CRM-PM gets only Plan+Analysis (Vasily keeps all 7; constraint preserved)
-      { id: "b0000000-0000-4000-8000-000000000021", projectId: PROD_CRM, stageId: STAGE_PLAN, userId: LEAD_CRM_PM },
-      { id: "b0000000-0000-4000-8000-000000000022", projectId: PROD_CRM, stageId: STAGE_ANALYSIS, userId: LEAD_CRM_PM },
       // MOBILE-PM: Plan + Analysis + Design
       { id: "b0000000-0000-4000-8000-000000000023", projectId: PROD_MOBILE, stageId: STAGE_PLAN, userId: LEAD_MOBILE_PM },
       { id: "b0000000-0000-4000-8000-000000000024", projectId: PROD_MOBILE, stageId: STAGE_ANALYSIS, userId: LEAD_MOBILE_PM },
@@ -759,14 +747,7 @@ async function main() {
       lightStatus: TrafficLightStatus.green,
       label: "Сергей Т.",
     },
-    // P13: PM leads — non-technical, Plan/Analysis focus
-    {
-      id: LEAD_CRM_PM,
-      productId: PROD_CRM,
-      status: ReportSectionStatus.draft,
-      lightStatus: TrafficLightStatus.green,
-      label: "Анна П.",
-    },
+    // P13: PM leads — non-technical, Plan/Analysis/Design focus
     {
       id: LEAD_MOBILE_PM,
       productId: PROD_MOBILE,
@@ -1107,47 +1088,6 @@ async function main() {
       ],
     },
     // P13: PM leads — Plan/Analysis focus, non-technical vocabulary
-    [LEAD_CRM_PM]: {
-      currentItems: [
-        {
-          text: "Согласовала требования к новому модулю уведомлений с бизнесом",
-          tag: "analysis",
-          status: ItemWorkflowStatus.done,
-          completed: true,
-        },
-        {
-          text: "Провела анализ конкурентов по функционалу персонализации",
-          tag: "analysis",
-          status: ItemWorkflowStatus.in_progress,
-        },
-        {
-          text: "Актуализировала roadmap продукта на Q3",
-          tag: "ops",
-          status: ItemWorkflowStatus.done,
-          completed: true,
-        },
-      ],
-      nextItems: [
-        { text: "User story mapping для модуля уведомлений", tag: "analysis" },
-        { text: "Согласовать приоритеты Q3 с командой разработки", tag: "ops" },
-      ],
-      risk: {
-        risk: "Риск: требования к персонализации могут измениться по итогам UX-исследования",
-        impact: "Влияние: переработка backlog на 2 спринта",
-        mitigation: "Митигация: зафиксировать MVP scope до старта UX-исследования",
-      },
-      decisions: [
-        {
-          text: "Решение: утвердить MVP scope модуля уведомлений до UX-исследования",
-          impact: "Защищает команду от scope creep в Q3",
-        },
-      ],
-      priorities: [
-        "Завершить анализ конкурентов и передать команде",
-        "Зафиксировать MVP scope модуля уведомлений",
-        "Roadmap Q3 согласован со всеми стейкхолдерами",
-      ],
-    },
     [LEAD_MOBILE_PM]: {
       currentItems: [
         {
