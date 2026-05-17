@@ -1,0 +1,52 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DecisionsSection meta-row — pre-extract snapshot > renders All-stages pill when stageIds is absent 1`] = `
+<div
+  aria-label="Decision stages: all stages"
+  class="mt-3 flex items-center justify-between gap-2"
+>
+  <span
+    class="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]"
+  >
+    Vasily Lead
+  </span>
+  <span
+    class="inline-flex flex-wrap items-center gap-1"
+    title="All stages"
+  >
+    <span
+      class="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]"
+    >
+      All stages
+    </span>
+  </span>
+</div>
+`;
+
+exports[`DecisionsSection meta-row — pre-extract snapshot > renders specific stage chips alongside the owner in the meta-row 1`] = `
+<div
+  aria-label="Decision stages: Analysis, Dev"
+  class="mt-3 flex items-center justify-between gap-2"
+>
+  <span
+    class="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]"
+  >
+    Vasily Lead
+  </span>
+  <span
+    class="inline-flex flex-wrap items-center gap-1"
+    title="Analysis, Dev"
+  >
+    <span
+      class="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+    >
+      Analysis
+    </span>
+    <span
+      class="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+    >
+      Dev
+    </span>
+  </span>
+</div>
+`;

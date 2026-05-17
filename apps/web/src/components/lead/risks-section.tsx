@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RiskEditDialog } from "./risk-edit-dialog";
@@ -31,6 +31,7 @@ type RisksSectionProps = {
    * Shown at the bottom-left of each risk card in the unified meta-row.
    */
   readonly sectionAuthorName?: string;
+  readonly addSignal?: number;
 };
 
 function EditIcon() {
@@ -74,6 +75,7 @@ export function RisksSection({
   products,
   stagesForProduct,
   sectionAuthorName,
+  addSignal = 0,
 }: RisksSectionProps) {
   const [dialogState, setDialogState] = useState<
     | { open: false }
@@ -93,15 +95,6 @@ export function RisksSection({
     if (!pendingDelete) return;
     onChange?.(risks.filter((r) => r.id !== pendingDelete.id));
     setPendingDelete(null);
-  }
-
-  function handleAdd() {
-    if (readOnly) return;
-    setDialogState({
-      open: true,
-      mode: "create",
-      seedProductId: products?.[0]?.id,
-    });
   }
 
   function handleEdit(risk: RiskEntry) {
@@ -134,20 +127,13 @@ export function RisksSection({
     setDialogState({ open: false });
   }
 
-  const hasProducts = products && products.length > 0;
-  const addButton = !readOnly && (
-    <div className="flex justify-end">
-      <button
-        type="button"
-        className="btn-press inline-flex min-h-[40px] min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-        onClick={handleAdd}
-        disabled={!hasProducts}
-        title={hasProducts ? undefined : "No products assigned — contact admin"}
-      >
-        + Add Risk
-      </button>
-    </div>
-  );
+  const firstProductId = products?.[0]?.id;
+
+  useEffect(() => {
+    if (addSignal === 0) return;
+    if (readOnly) return;
+    setDialogState({ open: true, mode: "create", seedProductId: firstProductId });
+  }, [addSignal, readOnly, firstProductId]);
 
   return (
     <div className="space-y-4">
@@ -156,10 +142,6 @@ export function RisksSection({
           that's where the cause originates — colouring a chip red and
           getting the "describe it" nudge in the same surface reads
           better than asking the lead to scroll down. */}
-
-      {/* Keep the create action before the variable list so inserted cards
-          do not push the button the user just clicked. */}
-      {addButton}
 
       {risks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">

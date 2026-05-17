@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { DecisionEditDialog } from "./decision-edit-dialog";
@@ -31,6 +31,7 @@ type DecisionsSectionProps = {
   /** R4-B: products the lead is assigned to, passed through to the dialog. */
   readonly products?: readonly Product[];
   readonly defaultProductId?: string;
+  readonly addSignal?: number;
 };
 
 function isMine(owner: string | undefined, me: string | undefined): boolean {
@@ -100,6 +101,7 @@ export function DecisionsSection({
   availableStages,
   products,
   defaultProductId,
+  addSignal = 0,
 }: DecisionsSectionProps) {
   const [dialogState, setDialogState] = useState<
     | { open: false }
@@ -121,11 +123,6 @@ export function DecisionsSection({
     if (!pendingDelete) return;
     onChange?.(decisions.filter((d) => d.id !== pendingDelete.id));
     setPendingDelete(null);
-  }
-
-  function handleAdd() {
-    if (readOnly) return;
-    setDialogState({ open: true, mode: "create" });
   }
 
   function handleEdit(decision: DecisionEntry) {
@@ -154,24 +151,14 @@ export function DecisionsSection({
     setDialogState({ open: false });
   }
 
-  const addButton = !readOnly && (
-    <div className="flex justify-end">
-      <button
-        type="button"
-        className="btn-press inline-flex min-h-[40px] min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-        onClick={handleAdd}
-      >
-        + Add Decision
-      </button>
-    </div>
-  );
+  useEffect(() => {
+    if (addSignal === 0) return;
+    if (readOnly) return;
+    setDialogState({ open: true, mode: "create" });
+  }, [addSignal, readOnly]);
 
   return (
     <div className="space-y-3">
-      {/* Keep the create action before the variable list so inserted cards
-          do not push the button the user just clicked. */}
-      {addButton}
-
       {decisions.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
           {readOnly

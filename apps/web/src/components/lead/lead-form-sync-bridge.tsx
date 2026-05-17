@@ -64,6 +64,7 @@ type BridgeContextValue = {
    * for the unified [author …… chip] meta-row.
    */
   sectionAuthorName?: string;
+  risksAddSignal?: number;
   handleStageStatusChange: (
     productId: string,
     stageName: string,
@@ -118,6 +119,7 @@ export type LeadFormSyncBridgeProviderProps = {
    * for the unified [author …… chip] meta-row.
    */
   readonly sectionAuthorName?: string;
+  readonly risksAddSignal?: number;
   readonly children: ReactNode;
 };
 
@@ -130,6 +132,7 @@ function Provider({
   sectionId,
   stagesForProduct,
   sectionAuthorName,
+  risksAddSignal,
   children,
 }: LeadFormSyncBridgeProviderProps) {
   const [pendingSuggestion, setPendingSuggestion] =
@@ -245,6 +248,7 @@ function Provider({
       ...(sectionId !== undefined ? { sectionId } : {}),
       ...(stagesForProduct !== undefined ? { stagesForProduct } : {}),
       ...(sectionAuthorName !== undefined ? { sectionAuthorName } : {}),
+      ...(risksAddSignal !== undefined ? { risksAddSignal } : {}),
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -256,6 +260,7 @@ function Provider({
       sectionId,
       stagesForProduct,
       sectionAuthorName,
+      risksAddSignal,
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -354,6 +359,9 @@ function Risks() {
         : {})}
       {...(ctx.sectionAuthorName !== undefined
         ? { sectionAuthorName: ctx.sectionAuthorName }
+        : {})}
+      {...(ctx.risksAddSignal !== undefined
+        ? { addSignal: ctx.risksAddSignal }
         : {})}
     />
   );
