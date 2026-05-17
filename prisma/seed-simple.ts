@@ -65,6 +65,11 @@ const LEAD_IGOR = "a0000000-0000-4000-8000-000000000013";
 const LEAD_DMITRY = "a0000000-0000-4000-8000-000000000014";
 const LEAD_OLGA = "a0000000-0000-4000-8000-000000000015";
 const LEAD_SERGEY = "a0000000-0000-4000-8000-000000000016";
+// P13: PM (non-technical) leads — one per CoreDev product, stage-based access diff
+const LEAD_CRM_PM = "a0000000-0000-4000-8000-000000000021";
+const LEAD_MOBILE_PM = "a0000000-0000-4000-8000-000000000022";
+const LEAD_CLOUD_PM = "a0000000-0000-4000-8000-000000000023";
+const LEAD_DEVOPS_PM = "a0000000-0000-4000-8000-000000000024";
 
 const PROD_CRM = "a0000000-0000-4000-8000-000000000201";
 const PROD_MOBILE = "a0000000-0000-4000-8000-000000000203";
@@ -463,6 +468,39 @@ async function main() {
         samlId: "lead-sergey",
         reportingGroupId: FINANCE_GROUP_ID,
       },
+      // P13: non-technical PM leads in CoreDev group
+      {
+        id: LEAD_CRM_PM,
+        email: "anna@customreport.local",
+        name: "Анна П.",
+        role: Role.lead,
+        samlId: "lead-crm-pm",
+        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+      },
+      {
+        id: LEAD_MOBILE_PM,
+        email: "boris@customreport.local",
+        name: "Борис С.",
+        role: Role.lead,
+        samlId: "lead-mobile-pm",
+        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+      },
+      {
+        id: LEAD_CLOUD_PM,
+        email: "viktor@customreport.local",
+        name: "Виктор Л.",
+        role: Role.lead,
+        samlId: "lead-cloud-pm",
+        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+      },
+      {
+        id: LEAD_DEVOPS_PM,
+        email: "galina@customreport.local",
+        name: "Галина М.",
+        role: Role.lead,
+        samlId: "lead-devops-pm",
+        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+      },
     ],
   });
 
@@ -587,6 +625,22 @@ async function main() {
         stageId: STAGE_DEV,
         userId: LEAD_SERGEY,
       },
+      // P13: PM leads — Plan/Analysis stages (non-tech focus)
+      // CRM-PM gets only Plan+Analysis (Vasily keeps all 7; constraint preserved)
+      { id: "b0000000-0000-4000-8000-000000000021", projectId: PROD_CRM, stageId: STAGE_PLAN, userId: LEAD_CRM_PM },
+      { id: "b0000000-0000-4000-8000-000000000022", projectId: PROD_CRM, stageId: STAGE_ANALYSIS, userId: LEAD_CRM_PM },
+      // MOBILE-PM: Plan + Analysis + Design
+      { id: "b0000000-0000-4000-8000-000000000023", projectId: PROD_MOBILE, stageId: STAGE_PLAN, userId: LEAD_MOBILE_PM },
+      { id: "b0000000-0000-4000-8000-000000000024", projectId: PROD_MOBILE, stageId: STAGE_ANALYSIS, userId: LEAD_MOBILE_PM },
+      { id: "b0000000-0000-4000-8000-000000000025", projectId: PROD_MOBILE, stageId: STAGE_DESIGN, userId: LEAD_MOBILE_PM },
+      // CLOUD-PM: Plan + Analysis + Design
+      { id: "b0000000-0000-4000-8000-000000000026", projectId: PROD_CLOUD, stageId: STAGE_PLAN, userId: LEAD_CLOUD_PM },
+      { id: "b0000000-0000-4000-8000-000000000027", projectId: PROD_CLOUD, stageId: STAGE_ANALYSIS, userId: LEAD_CLOUD_PM },
+      { id: "b0000000-0000-4000-8000-000000000028", projectId: PROD_CLOUD, stageId: STAGE_DESIGN, userId: LEAD_CLOUD_PM },
+      // DEVOPS-PM: Plan + Analysis + Support
+      { id: "b0000000-0000-4000-8000-000000000029", projectId: PROD_DEVOPS, stageId: STAGE_PLAN, userId: LEAD_DEVOPS_PM },
+      { id: "b0000000-0000-4000-8000-000000000030", projectId: PROD_DEVOPS, stageId: STAGE_ANALYSIS, userId: LEAD_DEVOPS_PM },
+      { id: "b0000000-0000-4000-8000-000000000031", projectId: PROD_DEVOPS, stageId: STAGE_SUPPORT, userId: LEAD_DEVOPS_PM },
     ],
   });
 
@@ -704,6 +758,35 @@ async function main() {
       status: ReportSectionStatus.draft,
       lightStatus: TrafficLightStatus.green,
       label: "Сергей Т.",
+    },
+    // P13: PM leads — non-technical, Plan/Analysis focus
+    {
+      id: LEAD_CRM_PM,
+      productId: PROD_CRM,
+      status: ReportSectionStatus.draft,
+      lightStatus: TrafficLightStatus.green,
+      label: "Анна П.",
+    },
+    {
+      id: LEAD_MOBILE_PM,
+      productId: PROD_MOBILE,
+      status: ReportSectionStatus.draft,
+      lightStatus: TrafficLightStatus.yellow,
+      label: "Борис С.",
+    },
+    {
+      id: LEAD_CLOUD_PM,
+      productId: PROD_CLOUD,
+      status: ReportSectionStatus.draft,
+      lightStatus: TrafficLightStatus.green,
+      label: "Виктор Л.",
+    },
+    {
+      id: LEAD_DEVOPS_PM,
+      productId: PROD_DEVOPS,
+      status: ReportSectionStatus.draft,
+      lightStatus: TrafficLightStatus.yellow,
+      label: "Галина М.",
     },
   ];
 
@@ -1023,12 +1106,164 @@ async function main() {
         "Архитектура модуля 360-feedback",
       ],
     },
+    // P13: PM leads — Plan/Analysis focus, non-technical vocabulary
+    [LEAD_CRM_PM]: {
+      currentItems: [
+        {
+          text: "Согласовала требования к новому модулю уведомлений с бизнесом",
+          tag: "analysis",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+        {
+          text: "Провела анализ конкурентов по функционалу персонализации",
+          tag: "analysis",
+          status: ItemWorkflowStatus.in_progress,
+        },
+        {
+          text: "Актуализировала roadmap продукта на Q3",
+          tag: "ops",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+      ],
+      nextItems: [
+        { text: "User story mapping для модуля уведомлений", tag: "analysis" },
+        { text: "Согласовать приоритеты Q3 с командой разработки", tag: "ops" },
+      ],
+      risk: {
+        risk: "Риск: требования к персонализации могут измениться по итогам UX-исследования",
+        impact: "Влияние: переработка backlog на 2 спринта",
+        mitigation: "Митигация: зафиксировать MVP scope до старта UX-исследования",
+      },
+      decisions: [
+        {
+          text: "Решение: утвердить MVP scope модуля уведомлений до UX-исследования",
+          impact: "Защищает команду от scope creep в Q3",
+        },
+      ],
+      priorities: [
+        "Завершить анализ конкурентов и передать команде",
+        "Зафиксировать MVP scope модуля уведомлений",
+        "Roadmap Q3 согласован со всеми стейкхолдерами",
+      ],
+    },
+    [LEAD_MOBILE_PM]: {
+      currentItems: [
+        {
+          text: "Разработала концепт нового onboarding-флоу для мобильного приложения",
+          tag: "analysis",
+          status: ItemWorkflowStatus.in_progress,
+        },
+        {
+          text: "Провела интервью с 8 пользователями по болям чекаута",
+          tag: "analysis",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+        {
+          text: "Подготовила спецификацию для push-уведомлений",
+          tag: "feature",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+      ],
+      nextItems: [
+        { text: "Прототип онбординга на Figma для A/B теста", tag: "analysis" },
+        { text: "Составить acceptance-критерии для push-уведомлений", tag: "ops" },
+      ],
+      decisions: [
+        {
+          text: "Решение: запустить A/B тест нового онбординга на 10% аудитории",
+          impact: "Данные для решения о полном переходе через 4 недели",
+          deadline: plusDaysUTC(ACTIVE_MONDAY, 10),
+        },
+      ],
+      priorities: [
+        "Финализировать концепт онбординга и передать дизайнеру",
+        "Согласовать acceptance-критерии push-уведомлений с командой",
+        "Запуск A/B теста онбординга в течение двух недель",
+      ],
+    },
+    [LEAD_CLOUD_PM]: {
+      currentItems: [
+        {
+          text: "Документировала архитектуру data governance для внутреннего BI",
+          tag: "analysis",
+          status: ItemWorkflowStatus.in_progress,
+        },
+        {
+          text: "Согласовала требования к дашборду с 3 аналитическими командами",
+          tag: "analysis",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+        {
+          text: "Подготовила roadmap перехода на self-service BI",
+          tag: "ops",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+      ],
+      nextItems: [
+        { text: "Валидация data model с командой Data Engineering", tag: "analysis" },
+        { text: "Прототип нового дашборда для пилота с аналитиками", tag: "analysis" },
+      ],
+      decisions: [
+        {
+          text: "Решение: запустить пилот self-service BI с аналитической командой маркетинга",
+          impact: "Снижает нагрузку на DE-команду на 30%",
+          deadline: plusDaysUTC(ACTIVE_MONDAY, 21),
+        },
+      ],
+      priorities: [
+        "Финализировать data governance документацию",
+        "Запустить пилот self-service BI с маркетинговой командой",
+        "Валидация data model готова до начала разработки",
+      ],
+    },
+    [LEAD_DEVOPS_PM]: {
+      currentItems: [
+        {
+          text: "Согласовала стандарты документирования infrastructure-as-code",
+          tag: "ops",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+        {
+          text: "Провела анализ инцидентов Q2 и подготовила action plan",
+          tag: "analysis",
+          status: ItemWorkflowStatus.in_progress,
+        },
+        {
+          text: "Актуализировала SLA-соглашения со смежными командами",
+          tag: "ops",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+      ],
+      nextItems: [
+        { text: "Presentation action plan по инцидентам Q2 для CTO", tag: "ops" },
+        { text: "Составить план обучения по IaC-практикам для команды", tag: "ops" },
+      ],
+      decisions: [
+        {
+          text: "Решение: внедрить runbook-driven incident response для all P1/P2",
+          impact: "Снижает MTTR на 40% за счёт стандартизации response",
+        },
+      ],
+      priorities: [
+        "Завершить action plan по инцидентам Q2",
+        "Внедрить runbook-driven incident response",
+        "Обучение команды по IaC-стандартам",
+      ],
+    },
   };
 
   for (let i = 0; i < leads.length; i++) {
     const lead = leads[i]!;
     const content = contentByLead[lead.id]!;
-    const sectionId = `a0000000-0000-4000-8000-00000000040${i + 1}`;
+    const sectionId = `a0000000-0000-4000-8000-00000000040${(i + 1).toString(16)}`;
     await prisma.reportSection.create({
       data: {
         id: sectionId,
