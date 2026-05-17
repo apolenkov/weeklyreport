@@ -36,7 +36,7 @@ export default async function PublishedReportPresentPage({ params }: Props) {
         </header>
 
         <Suspense fallback={<WeeklyReportSkeleton />}>
-          <HeadPresentClient reportId={reportId} />
+          <HeadPresentClient reportId={reportId} exitHref={`/reports/${reportId}`} />
         </Suspense>
       </div>
     </main>
