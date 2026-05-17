@@ -387,25 +387,6 @@ function ProductSdlcGroups({
   );
 }
 
-function LeadSlideChecksStrip({ slide }: { readonly slide: SectionSlideModel }) {
-  return (
-    <section className="border-t border-[rgba(0,0,0,0.08)] pt-4">
-      <p className="text-[11px] font-bold uppercase text-[var(--color-muted-foreground)]">
-        Slide checks
-      </p>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-3">
-        {slide.readiness.map((item) => (
-          <div key={item.id} className="flex items-center gap-2">
-            {readinessDot(item.status)}
-            <span className="text-sm font-semibold text-[var(--color-foreground)]">
-              {item.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 function selectedSlide(slides: readonly SectionSlideModel[], index: number): SectionSlideModel | null {
   if (slides.length === 0) return null;
@@ -414,36 +395,8 @@ function selectedSlide(slides: readonly SectionSlideModel[], index: number): Sec
 
 function LeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
   return (
-    <article className="min-h-[680px] rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,249,246,0.92)_100%)] p-6 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_12px_24px_-18px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.05)]">
-      <div className="grid min-h-0 gap-6">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(0,0,0,0.08)] pb-4">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={[
-                  "rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold",
-                  toneClass[slide.tone],
-                ].join(" ")}
-              >
-                {toneLabel(slide.tone)}
-              </span>
-            </div>
-            <h2 className="mt-3 text-3xl font-semibold text-[var(--color-primary)]">
-              {slide.ownerName}
-            </h2>
-          </div>
-          <div className="min-w-24 text-right">
-            <p className="text-xs font-bold uppercase text-[var(--color-muted-foreground)]">
-              Completion
-            </p>
-            <p className="mt-1 text-4xl font-semibold leading-none text-[var(--color-primary)]">
-              {slide.score}%
-            </p>
-          </div>
-        </div>
-        <ProductSdlcGroups products={slide.productSlides} />
-        <LeadSlideChecksStrip slide={slide} />
-      </div>
+    <article className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <ProductSdlcGroups products={slide.productSlides} />
     </article>
   );
 }

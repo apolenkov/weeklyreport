@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { SlideHeader } from "../slides/slide-header";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 
 type Props = {
@@ -109,8 +110,18 @@ export function HeadPresentClient({ reportId }: Props) {
       data-testid="head-present-wrapper"
       className={isFullscreen ? "overflow-auto bg-white p-8" : undefined}
     >
+      <SlideHeader
+        title="Review Report"
+        subtitle={
+          sectionCount > 1
+            ? `← → or J/K · F to toggle fullscreen · ${currentIndex + 1} / ${sectionCount}`
+            : "← → or J/K · F to toggle fullscreen"
+        }
+        exitHref={`/head/report/${reportId}`}
+        exitLabel="Report"
+      />
       {sectionCount > 1 && (
-        <div className="mb-4 flex items-center gap-3">
+        <div className="mt-4 flex items-center gap-3">
           <button
             type="button"
             onClick={goPrev}
@@ -148,7 +159,9 @@ export function HeadPresentClient({ reportId }: Props) {
           </button>
         </div>
       )}
-      <WeeklyReportPage reportId={reportId} />
+      <div className="mt-5">
+        <WeeklyReportPage reportId={reportId} />
+      </div>
     </div>
   );
 }

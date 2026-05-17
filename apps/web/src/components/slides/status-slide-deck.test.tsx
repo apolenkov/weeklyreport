@@ -174,13 +174,15 @@ describe("StatusSlideDeck lead layout", () => {
     ).not.toHaveClass("overflow-hidden");
   });
 
-  it("labels the score as completion and keeps slide checks separate from health", () => {
+  it("renders product content directly without score header or slide checks strip", () => {
     renderLeadDeck([slide()]);
 
-    expect(screen.getByText("Blocked")).toBeInTheDocument();
-    expect(screen.getByText("Completion")).toBeInTheDocument();
-    expect(screen.getByText("Slide checks")).toBeInTheDocument();
+    // Flat read-only article: no score/completion header, no checks strip
+    expect(screen.queryByText("Completion")).not.toBeInTheDocument();
+    expect(screen.queryByText("Slide checks")).not.toBeInTheDocument();
     expect(screen.queryByText("Readiness")).not.toBeInTheDocument();
     expect(screen.queryByText("Readiness checks")).not.toBeInTheDocument();
+    // Product content is visible via ProductSdlcGroups
+    expect(screen.getByText("Marketing Portal")).toBeInTheDocument();
   });
 });
