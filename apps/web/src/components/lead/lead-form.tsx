@@ -1434,14 +1434,16 @@ export function LeadForm({
                 Revoke
               </button>
             )}
-            <button
-              type="button"
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={handleSubmit}
-              disabled={isReadOnly || submitMut.isPending}
-            >
-              Submit Report
-            </button>
+            {!isSubmitted && (
+              <button
+                type="button"
+                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleSubmit}
+                disabled={isReadOnly || submitMut.isPending}
+              >
+                Submit Report
+              </button>
+            )}
           </div>
         </header>
 
