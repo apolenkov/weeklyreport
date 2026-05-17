@@ -1433,7 +1433,7 @@ export function LeadForm({
         </header>
 
         {/* Context shell: period, archive, fill-from, and edit-version controls. */}
-        <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/75 px-2 py-1.5 whitespace-nowrap">
+        <div className="flex flex-nowrap items-center justify-between gap-3 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/75 px-2 py-1.5 whitespace-nowrap">
           <PeriodNavigator periods={visiblePeriods} />
 
           <label
@@ -1450,9 +1450,10 @@ export function LeadForm({
               aria-label="Show archived periods"
             />
             <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Show archived</span>
           </label>
 
-          <div className="flex min-w-0 flex-nowrap items-center gap-1.5 border-l border-[rgba(0,0,0,0.08)] pl-2">
+          <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
             <FillFromButton
               periods={periods}
               disabled={isReadOnly || fillFromMut.isPending}
