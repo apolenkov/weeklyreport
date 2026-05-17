@@ -170,7 +170,7 @@ export function VersionHistoryNav({
 
   return (
     <>
-      <div className="flex min-w-0 items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-3 px-3 py-2">
         <button
           type="button"
           className={PERIOD_NAV_ARROW_BUTTON_CLASS}
@@ -184,15 +184,18 @@ export function VersionHistoryNav({
           aria-label="Previous version"
         >
           <ChevronLeft />
+          <span className="text-xs font-medium">Previous</span>
         </button>
 
         <button
           type="button"
-          className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-[var(--color-muted)] bg-[var(--color-background)] px-2 font-[family-name:var(--font-sans)] text-[12px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
+          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-lg border border-[var(--color-muted)] bg-[var(--color-background)] px-2 font-[family-name:var(--font-sans)] text-[12px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
           onClick={() => setShowModal(true)}
           title="View version history — compare and roll back"
         >
-          <HistoryIcon />v{currentVersion?.version}
+          <HistoryIcon />
+          <span className="text-xs font-medium">Version</span>
+          {currentVersion?.version}
         </button>
 
         <button
@@ -203,6 +206,7 @@ export function VersionHistoryNav({
           title={isLatest ? "Latest version" : "Next version"}
           aria-label="Next version"
         >
+          <span className="text-xs font-medium">Next</span>
           <ChevronRight />
         </button>
 
@@ -213,7 +217,7 @@ export function VersionHistoryNav({
         {onSaveVersion && (
           <button
             type="button"
-            className="flex min-h-8 min-w-[34px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+            className="flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-lg border border-[var(--color-muted)] bg-transparent px-3 py-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
             onClick={onSaveVersion}
             disabled={!canSaveVersion || !isLatest}
             title={
@@ -224,6 +228,7 @@ export function VersionHistoryNav({
             aria-label="Save Version"
           >
             <SaveIcon />
+            <span className="text-xs font-medium">Save</span>
           </button>
         )}
       </div>
