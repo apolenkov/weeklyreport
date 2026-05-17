@@ -838,6 +838,9 @@ export function LeadForm({
   const [groupExpanded, setGroupExpanded] = useState(true);
   const [currentWeekAddSignal, setCurrentWeekAddSignal] = useState(0);
   const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);
+  const [risksAddSignal, setRisksAddSignal] = useState(0);
+  const [decisionsAddSignal, setDecisionsAddSignal] = useState(0);
+  const [prioritiesAddSignal, setPrioritiesAddSignal] = useState(0);
 
   // Compute readOnly early (before hook; the autosave hook needs it). When
   // data isn't ready, treat as readOnly (autosave disabled).
@@ -1502,6 +1505,7 @@ export function LeadForm({
               {...(currentUser.name
                 ? { sectionAuthorName: currentUser.name }
                 : {})}
+              risksAddSignal={risksAddSignal}
             >
               <AccordionSection
                 groupSyncKey={groupSyncKey}
@@ -1607,6 +1611,23 @@ export function LeadForm({
                   color: "var(--color-destructive)",
                 }}
                 subtitle="Risks and blockers that need attention, with impact, mitigation, and affected stages."
+                actions={
+                  !isReadOnly ? (
+                    <button
+                      type="button"
+                      className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => setRisksAddSignal((value) => value + 1)}
+                      disabled={products.length === 0}
+                      title={
+                        products.length > 0
+                          ? undefined
+                          : "No products assigned — contact admin"
+                      }
+                    >
+                      + Add Risk
+                    </button>
+                  ) : null
+                }
               >
                 <LeadFormSyncBridge.Risks />
               </AccordionSection>
@@ -1626,6 +1647,17 @@ export function LeadForm({
                 color: "var(--color-starbucks-accent)",
               }}
               subtitle="Decisions that need leadership attention, with owner, impact, and affected stages."
+              actions={
+                !isReadOnly ? (
+                  <button
+                    type="button"
+                    className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => setDecisionsAddSignal((value) => value + 1)}
+                  >
+                    + Add Decision
+                  </button>
+                ) : null
+              }
             >
               <DecisionsSection
                 decisions={decisions}
@@ -1635,6 +1667,7 @@ export function LeadForm({
                 availableStages={availableStages}
                 products={products}
                 defaultProductId={products[0]?.id}
+                addSignal={decisionsAddSignal}
               />
             </AccordionSection>
 
@@ -1653,6 +1686,17 @@ export function LeadForm({
                 titleColor="var(--color-starbucks-gold)"
                 badge={`${priorities.length}`}
                 subtitle="Top priorities for the week, tied back to product and SDLC stage where relevant."
+                actions={
+                  !isReadOnly ? (
+                    <button
+                      type="button"
+                      className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => setPrioritiesAddSignal((value) => value + 1)}
+                    >
+                      + Add Priority
+                    </button>
+                  ) : null
+                }
               >
                 <PrioritiesSection
                   priorities={priorities}
@@ -1662,6 +1706,7 @@ export function LeadForm({
                   products={products}
                   defaultProductId={products[0]?.id}
                   sectionAuthorName={currentUser.name ?? undefined}
+                  addSignal={prioritiesAddSignal}
                 />
                 {submitFieldError?.field === "priorities" && (
                   <p

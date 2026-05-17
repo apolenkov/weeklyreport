@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { PriorityEditDialog } from "./priority-edit-dialog";
@@ -24,6 +24,7 @@ type PrioritiesSectionProps = {
    * Shown at the bottom-left of each priority card in the unified meta-row.
    */
   readonly sectionAuthorName?: string;
+  readonly addSignal?: number;
 };
 
 function EditIcon() {
@@ -90,6 +91,7 @@ export function PrioritiesSection({
   products,
   defaultProductId,
   sectionAuthorName,
+  addSignal = 0,
 }: PrioritiesSectionProps) {
   const sorted = [...priorities].sort((a, b) => a.rank - b.rank);
   const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
@@ -105,11 +107,6 @@ export function PrioritiesSection({
     // UI is simpler when ranks have no gaps.
     const renumbered = next.map((p, idx) => ({ ...p, rank: idx + 1 }));
     onChange?.(renumbered);
-  }
-
-  function handleAdd() {
-    if (readOnly) return;
-    setDialogState({ open: true, mode: "create" });
   }
 
   function handleEdit(idx: number) {
@@ -133,6 +130,12 @@ export function PrioritiesSection({
     setDialogState({ open: false });
   }
 
+  useEffect(() => {
+    if (addSignal === 0) return;
+    if (readOnly) return;
+    setDialogState({ open: true, mode: "create" });
+  }, [addSignal, readOnly]);
+
   function handleDelete(idx: number) {
     if (readOnly) return;
     setPendingDeleteIdx(idx);
@@ -144,20 +147,9 @@ export function PrioritiesSection({
     setPendingDeleteIdx(null);
   }
 
-  const addButton = !readOnly && (
-    <button
-      type="button"
-      className="btn-press inline-flex min-h-[40px] min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-      onClick={handleAdd}
-    >
-      + Add Priority
-    </button>
-  );
-
   if (sorted.length === 0) {
     return (
       <div className="space-y-3">
-        {addButton && <div className="flex justify-end">{addButton}</div>}
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
           {readOnly
             ? "No priorities reported."
@@ -184,10 +176,6 @@ export function PrioritiesSection({
 
   return (
     <div className="space-y-3">
-      {/* Keep the create action before the variable list so inserted rows
-          do not push the button the user just clicked. */}
-      {addButton && <div className="flex justify-end">{addButton}</div>}
-
       {sorted.map((entry, idx) => {
         const tintKey =
           entry.rank === 1 || entry.rank === 2 || entry.rank === 3

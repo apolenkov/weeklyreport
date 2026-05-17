@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RisksSection meta-row — pre-extract snapshot > renders All-stages pill when stageIds is absent 1`] = `null`;
+
+exports[`RisksSection meta-row — pre-extract snapshot > renders specific stage chips and author together in the meta-row 1`] = `
+<div
+  aria-label="Risk stages: Dev, Testing"
+  class="inline-flex flex-wrap items-center gap-1"
+  title="Dev, Testing"
+>
+  <span
+    class="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+  >
+    Dev
+  </span>
+  <span
+    class="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+  >
+    Testing
+  </span>
+</div>
+`;
