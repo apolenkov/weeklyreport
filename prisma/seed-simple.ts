@@ -618,17 +618,62 @@ async function main() {
       },
       // P13: PM leads — Plan/Analysis stages (non-tech focus)
       // MOBILE-PM: Plan + Analysis + Design
-      { id: "b0000000-0000-4000-8000-000000000023", projectId: PROD_MOBILE, stageId: STAGE_PLAN, userId: LEAD_MOBILE_PM },
-      { id: "b0000000-0000-4000-8000-000000000024", projectId: PROD_MOBILE, stageId: STAGE_ANALYSIS, userId: LEAD_MOBILE_PM },
-      { id: "b0000000-0000-4000-8000-000000000025", projectId: PROD_MOBILE, stageId: STAGE_DESIGN, userId: LEAD_MOBILE_PM },
+      {
+        id: "b0000000-0000-4000-8000-000000000023",
+        projectId: PROD_MOBILE,
+        stageId: STAGE_PLAN,
+        userId: LEAD_MOBILE_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000024",
+        projectId: PROD_MOBILE,
+        stageId: STAGE_ANALYSIS,
+        userId: LEAD_MOBILE_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000025",
+        projectId: PROD_MOBILE,
+        stageId: STAGE_DESIGN,
+        userId: LEAD_MOBILE_PM,
+      },
       // CLOUD-PM: Plan + Analysis + Design
-      { id: "b0000000-0000-4000-8000-000000000026", projectId: PROD_CLOUD, stageId: STAGE_PLAN, userId: LEAD_CLOUD_PM },
-      { id: "b0000000-0000-4000-8000-000000000027", projectId: PROD_CLOUD, stageId: STAGE_ANALYSIS, userId: LEAD_CLOUD_PM },
-      { id: "b0000000-0000-4000-8000-000000000028", projectId: PROD_CLOUD, stageId: STAGE_DESIGN, userId: LEAD_CLOUD_PM },
+      {
+        id: "b0000000-0000-4000-8000-000000000026",
+        projectId: PROD_CLOUD,
+        stageId: STAGE_PLAN,
+        userId: LEAD_CLOUD_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000027",
+        projectId: PROD_CLOUD,
+        stageId: STAGE_ANALYSIS,
+        userId: LEAD_CLOUD_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000028",
+        projectId: PROD_CLOUD,
+        stageId: STAGE_DESIGN,
+        userId: LEAD_CLOUD_PM,
+      },
       // DEVOPS-PM: Plan + Analysis + Support
-      { id: "b0000000-0000-4000-8000-000000000029", projectId: PROD_DEVOPS, stageId: STAGE_PLAN, userId: LEAD_DEVOPS_PM },
-      { id: "b0000000-0000-4000-8000-000000000030", projectId: PROD_DEVOPS, stageId: STAGE_ANALYSIS, userId: LEAD_DEVOPS_PM },
-      { id: "b0000000-0000-4000-8000-000000000031", projectId: PROD_DEVOPS, stageId: STAGE_SUPPORT, userId: LEAD_DEVOPS_PM },
+      {
+        id: "b0000000-0000-4000-8000-000000000029",
+        projectId: PROD_DEVOPS,
+        stageId: STAGE_PLAN,
+        userId: LEAD_DEVOPS_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000030",
+        projectId: PROD_DEVOPS,
+        stageId: STAGE_ANALYSIS,
+        userId: LEAD_DEVOPS_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000031",
+        projectId: PROD_DEVOPS,
+        stageId: STAGE_DESIGN,
+        userId: LEAD_DEVOPS_PM,
+      },
     ],
   });
 
@@ -1110,7 +1155,10 @@ async function main() {
       ],
       nextItems: [
         { text: "Прототип онбординга на Figma для A/B теста", tag: "analysis" },
-        { text: "Составить acceptance-критерии для push-уведомлений", tag: "ops" },
+        {
+          text: "Составить acceptance-критерии для push-уведомлений",
+          tag: "ops",
+        },
       ],
       decisions: [
         {
@@ -1146,8 +1194,14 @@ async function main() {
         },
       ],
       nextItems: [
-        { text: "Валидация data model с командой Data Engineering", tag: "analysis" },
-        { text: "Прототип нового дашборда для пилота с аналитиками", tag: "analysis" },
+        {
+          text: "Валидация data model с командой Data Engineering",
+          tag: "analysis",
+        },
+        {
+          text: "Прототип нового дашборда для пилота с аналитиками",
+          tag: "analysis",
+        },
       ],
       decisions: [
         {
@@ -1183,8 +1237,14 @@ async function main() {
         },
       ],
       nextItems: [
-        { text: "Presentation action plan по инцидентам Q2 для CTO", tag: "ops" },
-        { text: "Составить план обучения по IaC-практикам для команды", tag: "ops" },
+        {
+          text: "Presentation action plan по инцидентам Q2 для CTO",
+          tag: "ops",
+        },
+        {
+          text: "Составить план обучения по IaC-практикам для команды",
+          tag: "ops",
+        },
       ],
       decisions: [
         {
