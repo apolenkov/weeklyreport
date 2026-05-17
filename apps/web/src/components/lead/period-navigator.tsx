@@ -54,7 +54,7 @@ function ChevronRight() {
 }
 
 export const PERIOD_NAV_ARROW_BUTTON_CLASS =
-  "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
+  "inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
 
 export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
   const router = useRouter();
@@ -139,7 +139,7 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
 
   return (
     <div
-      className="flex min-w-0 items-center gap-1.5"
+      className="flex min-w-0 items-center gap-3 px-3 py-2"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       role="group"
@@ -154,6 +154,7 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
         aria-label="Previous period"
       >
         <ChevronLeft />
+        <span className="text-xs font-medium">Previous</span>
       </button>
 
       <div
@@ -185,6 +186,7 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
         title={hasNext ? "Next period" : "Latest period"}
         aria-label="Next period"
       >
+        <span className="text-xs font-medium">Next</span>
         <ChevronRight />
       </button>
     </div>
