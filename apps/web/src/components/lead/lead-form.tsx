@@ -286,28 +286,28 @@ function AccordionSection({
           aria-expanded={expanded}
         >
           <div className="min-w-0">
-          <div className="flex items-center gap-3">
-            {icon}
-            <span
-              className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em]"
-              style={{ color: titleColor }}
-            >
-              {title}
-            </span>
-            {badge && (
+            <div className="flex items-center gap-3">
+              {icon}
               <span
-                className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]"
-                style={badgeStyle}
+                className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em]"
+                style={{ color: titleColor }}
               >
-                {badge}
+                {title}
+              </span>
+              {badge && (
+                <span
+                  className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]"
+                  style={badgeStyle}
+                >
+                  {badge}
+                </span>
+              )}
+            </div>
+            {subtitle && (
+              <span className="mt-1 block text-xs text-[var(--color-muted-foreground)]">
+                {subtitle}
               </span>
             )}
-          </div>
-          {subtitle && (
-            <span className="mt-1 block text-xs text-[var(--color-muted-foreground)]">
-              {subtitle}
-            </span>
-          )}
           </div>
           {!actions && <ChevronDown expanded={expanded} />}
         </button>
@@ -957,7 +957,9 @@ export function LeadForm({
     (period) => period.id === selectedPeriodId && period.id !== "",
   );
   const hasArchivedPeriods = periods.some((period) => period.archived);
-  const visibleNonArchivedPeriods = periods.filter((period) => !period.archived);
+  const visibleNonArchivedPeriods = periods.filter(
+    (period) => !period.archived,
+  );
   const visiblePeriods =
     !hasArchivedPeriods ||
     showArchivePeriods ||
@@ -1332,141 +1334,136 @@ export function LeadForm({
                 (light teal bg + dark teal text) — matches mockup s2 rather
                 than the heavier white-on-dark-teal `.b-done` look that read
                 as a destructive "locked" signal. */}
-            {isSubmitted ? (
-              <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">
-                ✓ Submitted
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
-                {autosaveLabel}
-              </span>
-            )}
+            {!isSlidesMode &&
+              (isSubmitted ? (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">
+                  ✓ Submitted
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
+                  {autosaveLabel}
+                </span>
+              ))}
           </div>
-          <div className="flex items-center gap-3">
-            {(currentWeekItems.length > 0 ||
-              nextWeekItems.length > 0 ||
-              risks.length > 0 ||
-              decisions.length > 0 ||
-              priorities.length > 0) && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-                onClick={handleToggleAll}
-                title="Toggle All"
+          {!isSlidesMode && (
+            <div className="flex items-center gap-3">
+              {(currentWeekItems.length > 0 ||
+                nextWeekItems.length > 0 ||
+                risks.length > 0 ||
+                decisions.length > 0 ||
+                priorities.length > 0) && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                  onClick={handleToggleAll}
+                  title="Toggle All"
+                >
+                  <CollapseIcon />
+                  Toggle All
+                </button>
+              )}
+              <Link
+                href={
+                  targetReportId
+                    ? "/lead/report/" + encodeURIComponent(targetReportId)
+                    : "/lead/report"
+                }
+                scroll={false}
+                className="inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3 text-sm font-semibold text-white transition-colors"
               >
-                <CollapseIcon />
-                Toggle All
-              </button>
-            )}
-            <Link
-              href={
-                targetReportId
-                  ? "/lead/report/" + encodeURIComponent(targetReportId)
-                  : "/lead/report"
-              }
-              scroll={false}
-              className={[
-                "inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors",
-                isSlidesMode
-                  ? "bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]"
-                  : "bg-[var(--color-starbucks-accent)] text-white",
-              ].join(" ")}
-            >
-              Edit
-            </Link>
-            <Link
-              href={
-                targetReportId
-                  ? "/lead/report/" +
-                    encodeURIComponent(targetReportId) +
-                    "?mode=slides"
-                  : "/lead/report"
-              }
-              scroll={false}
-              className={[
-                "inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors",
-                isSlidesMode
-                  ? "bg-[var(--color-starbucks-accent)] text-white"
-                  : "bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]",
-              ].join(" ")}
-              aria-label="Open slides mode"
-            >
-              <SlidesViewIcon />
-              Slides
-            </Link>
-            {isSubmitted && currentUser.authorRole === "lead" && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={() => {
-                  setReopenError(null);
-                  setShowReopenDialog(true);
-                }}
-                disabled={requestReopenMut.isPending}
-                title="Ask Head to unlock this section"
+                Edit
+              </Link>
+              <Link
+                href={
+                  targetReportId
+                    ? "/lead/report/" +
+                      encodeURIComponent(targetReportId) +
+                      "?mode=slides"
+                    : "/lead/report"
+                }
+                scroll={false}
+                className="inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-surface)] px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors"
+                aria-label="Open slides mode"
               >
-                Request Reopen
-              </button>
-            )}
-            {isSubmitted && currentUser.authorRole !== "lead" && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={handleRevoke}
-                disabled={revokeMut.isPending}
-                title="Revoke submission and unlock the section"
-              >
-                Revoke
-              </button>
-            )}
-            {!isSubmitted && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={handleSubmit}
-                disabled={isReadOnly || submitMut.isPending}
-              >
-                Submit Report
-              </button>
-            )}
-          </div>
+                <SlidesViewIcon />
+                Slides
+              </Link>
+              {isSubmitted && currentUser.authorRole === "lead" && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    setReopenError(null);
+                    setShowReopenDialog(true);
+                  }}
+                  disabled={requestReopenMut.isPending}
+                  title="Ask Head to unlock this section"
+                >
+                  Request Reopen
+                </button>
+              )}
+              {isSubmitted && currentUser.authorRole !== "lead" && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleRevoke}
+                  disabled={revokeMut.isPending}
+                  title="Revoke submission and unlock the section"
+                >
+                  Revoke
+                </button>
+              )}
+              {!isSubmitted && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleSubmit}
+                  disabled={isReadOnly || submitMut.isPending}
+                >
+                  Submit Report
+                </button>
+              )}
+            </div>
+          )}
         </header>
 
         {/* Context shell: period, archive, fill-from, and edit-version controls. */}
-        <div className="flex flex-nowrap items-center justify-between gap-3 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/75 px-2 py-1.5 whitespace-nowrap">
-          <PeriodNavigator periods={visiblePeriods} />
+        {!isSlidesMode && (
+          <div className="flex flex-nowrap items-center justify-between gap-3 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
+            <PeriodNavigator periods={visiblePeriods} />
 
-          <label
-            className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2 text-[13px] font-semibold text-[var(--color-foreground)]"
-            title="Show archived periods"
-          >
-            <input
-              type="checkbox"
-              checked={showArchivePeriods}
-              onChange={(event) =>
-                setShowArchivePeriods(event.currentTarget.checked)
-              }
-              className="h-4 w-4 accent-[var(--color-starbucks-accent)]"
-              aria-label="Show archived periods"
-            />
-            <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Show archived</span>
-          </label>
+            <label
+              className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2 text-[13px] font-semibold text-[var(--color-foreground)]"
+              title="Show archived periods"
+            >
+              <input
+                type="checkbox"
+                checked={showArchivePeriods}
+                onChange={(event) =>
+                  setShowArchivePeriods(event.currentTarget.checked)
+                }
+                className="h-4 w-4 accent-[var(--color-starbucks-accent)]"
+                aria-label="Show archived periods"
+              />
+              <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Show archived</span>
+            </label>
 
-          <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
-            <FillFromButton
-              periods={periods}
-              disabled={isReadOnly || fillFromMut.isPending}
-              onFillFrom={handleFillFrom}
-            />
-            <VersionHistoryNav
-              versions={versions}
-              onRestore={isReadOnly ? undefined : handleRestoreVersion}
-              onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
-              canSaveVersion={!createSnapshotMut.isPending}
-            />
+            <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
+              <FillFromButton
+                periods={periods}
+                disabled={isReadOnly || fillFromMut.isPending}
+                onFillFrom={handleFillFrom}
+              />
+              <VersionHistoryNav
+                versions={versions}
+                onRestore={isReadOnly ? undefined : handleRestoreVersion}
+                onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
+                canSaveVersion={!createSnapshotMut.isPending}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Read-only banner for past periods. Triggered by either the
             legacy `?period=` query (back-compat) or — 35-07 — when the
@@ -1492,184 +1489,190 @@ export function LeadForm({
           />
         ) : (
           <>
-        <LeadFormSyncBridge.Provider
-          products={products}
-          risks={risks}
-          onProductsChange={handleProductsChange}
-          onRisksChange={handleRisksChange}
-          readOnly={isReadOnly}
-          stagesForProduct={stagesForProduct}
-          {...(sectionIdForActions ? { sectionId: sectionIdForActions } : {})}
-          {...(currentUser.name ? { sectionAuthorName: currentUser.name } : {})}
-        >
-          <AccordionSection
-            groupSyncKey={groupSyncKey}
-            groupExpanded={groupExpanded}
-            testId="lead-section-product-status"
-            icon={<GridIcon />}
-            title="Product Status"
-            badge={`${products.length} assigned products`}
-            subtitle="Assigned stages are highlighted. Blocked and at-risk stages link to the context you need to resolve them."
-          >
-            <LeadFormSyncBridge.Pipeline />
-          </AccordionSection>
-
-          {/* Current Week */}
-          <AccordionSection
-            groupSyncKey={groupSyncKey}
-            groupExpanded={groupExpanded}
-            testId="lead-section-current-week"
-            icon={<CalendarIcon />}
-            title="Current Week"
-            badge={`${currentWeekItems.length} items`}
-            subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
-            actions={
-              !isReadOnly ? (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => setCurrentWeekAddSignal((value) => value + 1)}
-                  disabled={products.length === 0}
-                  title={
-                    products.length > 0
-                      ? `Add item to ${products[0]?.name}`
-                      : "No products assigned — contact admin"
-                  }
-                >
-                  + Add Item
-                </button>
-              ) : null
-            }
-          >
-            <CurrentWeekSection
-              items={currentWeekItems}
-              readOnly={isReadOnly}
-              onItemsChange={handleCurrentWeekItemsChange}
-              currentUserName={currentUser.name}
+            <LeadFormSyncBridge.Provider
               products={products}
+              risks={risks}
+              onProductsChange={handleProductsChange}
+              onRisksChange={handleRisksChange}
+              readOnly={isReadOnly}
               stagesForProduct={stagesForProduct}
-              addSignal={currentWeekAddSignal}
-            />
-          </AccordionSection>
-
-          {/* Next Week */}
-          <AccordionSection
-            groupSyncKey={groupSyncKey}
-            groupExpanded={groupExpanded}
-            testId="lead-section-next-week"
-            icon={<NextWeekIcon />}
-            title="Next Week"
-            badge={`${nextWeekItems.length} items`}
-            subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
-            actions={
-              !isReadOnly ? (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => setNextWeekAddSignal((value) => value + 1)}
-                  disabled={products.length === 0}
-                  title={
-                    products.length > 0
-                      ? `Add item to ${products[0]?.name}`
-                      : "No products assigned — contact admin"
-                  }
-                >
-                  + Add Item
-                </button>
-              ) : null
-            }
-          >
-            <NextWeekSection
-              items={nextWeekItems}
-              readOnly={isReadOnly}
-              onItemsChange={handleNextWeekItemsChange}
-              currentUserName={currentUser.name}
-              products={products}
-              stagesForProduct={stagesForProduct}
-              addSignal={nextWeekAddSignal}
-            />
-          </AccordionSection>
-
-          {/* Risks & Blockers */}
-          <AccordionSection
-            groupSyncKey={groupSyncKey}
-            groupExpanded={groupExpanded}
-            testId="lead-section-risks"
-            icon={<AlertIcon />}
-            title="Risks & Blockers"
-            titleColor="var(--color-destructive)"
-            badge={`${risks.length}`}
-            badgeStyle={{
-              background: "#fee2e2",
-              color: "var(--color-destructive)",
-            }}
-            subtitle="Risks and blockers that need attention, with impact, mitigation, and affected stages."
-          >
-            <LeadFormSyncBridge.Risks />
-          </AccordionSection>
-        </LeadFormSyncBridge.Provider>
-
-        {/* Decisions */}
-        <AccordionSection
-          groupSyncKey={groupSyncKey}
-          groupExpanded={groupExpanded}
-          testId="lead-section-decisions"
-          icon={<ChatIcon />}
-          title="Decisions"
-          titleColor="var(--color-starbucks-accent)"
-          badge={`${decisions.length}`}
-          badgeStyle={{
-            background: "var(--color-success)",
-            color: "var(--color-starbucks-accent)",
-          }}
-          subtitle="Decisions that need leadership attention, with owner, impact, and affected stages."
-        >
-          <DecisionsSection
-            decisions={decisions}
-            readOnly={isReadOnly}
-            onChange={handleDecisionsChange}
-            currentUserName={currentUser.name}
-            availableStages={availableStages}
-            products={products}
-            defaultProductId={products[0]?.id}
-          />
-        </AccordionSection>
-
-        {/* Priorities — variable-length list */}
-        <div
-          ref={prioritiesRef}
-          tabIndex={-1}
-          className="scroll-mt-24 outline-none"
-        >
-          <AccordionSection
-            groupSyncKey={groupSyncKey}
-            groupExpanded={groupExpanded}
-            testId="lead-section-priorities"
-            icon={<StarIcon />}
-            title="Priorities"
-            titleColor="var(--color-starbucks-gold)"
-            badge={`${priorities.length}`}
-            subtitle="Top priorities for the week, tied back to product and SDLC stage where relevant."
-          >
-            <PrioritiesSection
-              priorities={priorities}
-              readOnly={isReadOnly}
-              onChange={handlePrioritiesChange}
-              availableStages={availableStages}
-              products={products}
-              defaultProductId={products[0]?.id}
-              sectionAuthorName={currentUser.name ?? undefined}
-            />
-            {submitFieldError?.field === "priorities" && (
-              <p
-                role="alert"
-                className="mt-3 text-sm font-medium text-[var(--color-destructive)]"
+              {...(sectionIdForActions
+                ? { sectionId: sectionIdForActions }
+                : {})}
+              {...(currentUser.name
+                ? { sectionAuthorName: currentUser.name }
+                : {})}
+            >
+              <AccordionSection
+                groupSyncKey={groupSyncKey}
+                groupExpanded={groupExpanded}
+                testId="lead-section-product-status"
+                icon={<GridIcon />}
+                title="Product Status"
+                badge={`${products.length} assigned products`}
+                subtitle="Assigned stages are highlighted. Blocked and at-risk stages link to the context you need to resolve them."
               >
-                {submitFieldError.message}
-              </p>
-            )}
-          </AccordionSection>
-        </div>
+                <LeadFormSyncBridge.Pipeline />
+              </AccordionSection>
+
+              {/* Current Week */}
+              <AccordionSection
+                groupSyncKey={groupSyncKey}
+                groupExpanded={groupExpanded}
+                testId="lead-section-current-week"
+                icon={<CalendarIcon />}
+                title="Current Week"
+                badge={`${currentWeekItems.length} items`}
+                subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
+                actions={
+                  !isReadOnly ? (
+                    <button
+                      type="button"
+                      className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() =>
+                        setCurrentWeekAddSignal((value) => value + 1)
+                      }
+                      disabled={products.length === 0}
+                      title={
+                        products.length > 0
+                          ? `Add item to ${products[0]?.name}`
+                          : "No products assigned — contact admin"
+                      }
+                    >
+                      + Add Item
+                    </button>
+                  ) : null
+                }
+              >
+                <CurrentWeekSection
+                  items={currentWeekItems}
+                  readOnly={isReadOnly}
+                  onItemsChange={handleCurrentWeekItemsChange}
+                  currentUserName={currentUser.name}
+                  products={products}
+                  stagesForProduct={stagesForProduct}
+                  addSignal={currentWeekAddSignal}
+                />
+              </AccordionSection>
+
+              {/* Next Week */}
+              <AccordionSection
+                groupSyncKey={groupSyncKey}
+                groupExpanded={groupExpanded}
+                testId="lead-section-next-week"
+                icon={<NextWeekIcon />}
+                title="Next Week"
+                badge={`${nextWeekItems.length} items`}
+                subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
+                actions={
+                  !isReadOnly ? (
+                    <button
+                      type="button"
+                      className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => setNextWeekAddSignal((value) => value + 1)}
+                      disabled={products.length === 0}
+                      title={
+                        products.length > 0
+                          ? `Add item to ${products[0]?.name}`
+                          : "No products assigned — contact admin"
+                      }
+                    >
+                      + Add Item
+                    </button>
+                  ) : null
+                }
+              >
+                <NextWeekSection
+                  items={nextWeekItems}
+                  readOnly={isReadOnly}
+                  onItemsChange={handleNextWeekItemsChange}
+                  currentUserName={currentUser.name}
+                  products={products}
+                  stagesForProduct={stagesForProduct}
+                  addSignal={nextWeekAddSignal}
+                />
+              </AccordionSection>
+
+              {/* Risks & Blockers */}
+              <AccordionSection
+                groupSyncKey={groupSyncKey}
+                groupExpanded={groupExpanded}
+                testId="lead-section-risks"
+                icon={<AlertIcon />}
+                title="Risks & Blockers"
+                titleColor="var(--color-destructive)"
+                badge={`${risks.length}`}
+                badgeStyle={{
+                  background: "#fee2e2",
+                  color: "var(--color-destructive)",
+                }}
+                subtitle="Risks and blockers that need attention, with impact, mitigation, and affected stages."
+              >
+                <LeadFormSyncBridge.Risks />
+              </AccordionSection>
+            </LeadFormSyncBridge.Provider>
+
+            {/* Decisions */}
+            <AccordionSection
+              groupSyncKey={groupSyncKey}
+              groupExpanded={groupExpanded}
+              testId="lead-section-decisions"
+              icon={<ChatIcon />}
+              title="Decisions"
+              titleColor="var(--color-starbucks-accent)"
+              badge={`${decisions.length}`}
+              badgeStyle={{
+                background: "var(--color-success)",
+                color: "var(--color-starbucks-accent)",
+              }}
+              subtitle="Decisions that need leadership attention, with owner, impact, and affected stages."
+            >
+              <DecisionsSection
+                decisions={decisions}
+                readOnly={isReadOnly}
+                onChange={handleDecisionsChange}
+                currentUserName={currentUser.name}
+                availableStages={availableStages}
+                products={products}
+                defaultProductId={products[0]?.id}
+              />
+            </AccordionSection>
+
+            {/* Priorities — variable-length list */}
+            <div
+              ref={prioritiesRef}
+              tabIndex={-1}
+              className="scroll-mt-24 outline-none"
+            >
+              <AccordionSection
+                groupSyncKey={groupSyncKey}
+                groupExpanded={groupExpanded}
+                testId="lead-section-priorities"
+                icon={<StarIcon />}
+                title="Priorities"
+                titleColor="var(--color-starbucks-gold)"
+                badge={`${priorities.length}`}
+                subtitle="Top priorities for the week, tied back to product and SDLC stage where relevant."
+              >
+                <PrioritiesSection
+                  priorities={priorities}
+                  readOnly={isReadOnly}
+                  onChange={handlePrioritiesChange}
+                  availableStages={availableStages}
+                  products={products}
+                  defaultProductId={products[0]?.id}
+                  sectionAuthorName={currentUser.name ?? undefined}
+                />
+                {submitFieldError?.field === "priorities" && (
+                  <p
+                    role="alert"
+                    className="mt-3 text-sm font-medium text-[var(--color-destructive)]"
+                  >
+                    {submitFieldError.message}
+                  </p>
+                )}
+              </AccordionSection>
+            </div>
           </>
         )}
       </form>

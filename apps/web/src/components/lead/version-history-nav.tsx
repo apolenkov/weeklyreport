@@ -189,7 +189,7 @@ export function VersionHistoryNav({
 
         <button
           type="button"
-          className="inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-lg border border-[var(--color-muted)] bg-[var(--color-background)] px-2 font-[family-name:var(--font-sans)] text-[12px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
+          className="inline-flex min-h-8 items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-muted)] bg-[var(--color-background)] px-2 font-[family-name:var(--font-sans)] text-[12px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
           onClick={() => setShowModal(true)}
           title="View version history — compare and roll back"
         >
