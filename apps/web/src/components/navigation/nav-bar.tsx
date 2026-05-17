@@ -158,17 +158,17 @@ function LanguageComingSoonControl() {
   // when the dedicated i18n phase introduces dictionaries and routing.
   return (
     <div className="group relative inline-flex">
-    <button
-      type="button"
-      aria-disabled="true"
-      aria-label="Language selection is coming soon"
-      title="Coming Soon"
-      data-testid="language-coming-soon"
-      className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
-    >
-      <Globe2 size={14} strokeWidth={2} aria-hidden="true" />
-      <span className="hidden xl:inline">Language</span>
-    </button>
+      <button
+        type="button"
+        aria-disabled="true"
+        aria-label="Language selection is coming soon"
+        title="Coming Soon"
+        data-testid="language-coming-soon"
+        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
+      >
+        <Globe2 size={14} strokeWidth={2} aria-hidden="true" />
+        <span className="hidden xl:inline">Language</span>
+      </button>
       <span
         role="tooltip"
         className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 whitespace-nowrap rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--color-muted-foreground)] opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
@@ -226,7 +226,7 @@ function NavIcon({ href }: { readonly href: string }) {
     case "/head/report":
       return <BarChart3 {...common} />;
     case "/head/slides":
-     return <Presentation {...common} />;
+      return <Presentation {...common} />;
     case "/admin":
       return <Settings {...common} />;
     default:
@@ -377,6 +377,7 @@ export function NavBar() {
             </>
           ) : (
             <>
+              {shouldRenderDevRoleSwitcher() && <DevRoleSwitcher />}
               <ThemeComingSoonControl />
               <LanguageComingSoonControl />
               {visibleUser && (
@@ -416,11 +417,6 @@ export function NavBar() {
                 </button>
               )}
             </>
-          )}
-          {shouldRenderDevRoleSwitcher() && (
-            <div className="absolute left-full top-1/2 z-20 ml-2 hidden -translate-y-1/2 2xl:block">
-              <DevRoleSwitcher />
-            </div>
           )}
         </div>
       </div>
