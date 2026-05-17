@@ -194,7 +194,7 @@ export function SdlcPipeline({
           </div>
 
           {/* Stages row */}
-          <div className="flex flex-wrap items-center gap-2 pb-1">
+          <div className="flex flex-wrap justify-center items-center gap-2 pb-1">
             {product.stages.map((stage, idx) => (
               <div key={stage.stageName} className="flex items-center gap-2">
                 {idx > 0 && (
