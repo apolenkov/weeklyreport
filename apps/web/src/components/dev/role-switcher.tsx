@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { Button } from "@customreport/ui/components/ui/button";
+import { Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,10 +105,11 @@ export function DevRoleSwitcher() {
             variant="outline"
             size="sm"
             disabled={pending}
-            className="border-amber-400 bg-amber-50 text-amber-900 shadow-lg hover:bg-amber-100 dark:border-amber-600 dark:bg-amber-950 dark:text-amber-100"
+            className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)] shadow-none transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] data-[state=open]:border-amber-400 data-[state=open]:bg-amber-50 data-[state=open]:text-amber-900"
             data-testid="dev-role-switcher-trigger"
           >
-            DEV: switch role
+            <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="hidden xl:inline">Switch role</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
