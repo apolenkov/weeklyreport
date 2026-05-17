@@ -59,6 +59,11 @@ type BridgeContextValue = {
    * because the harness used in tests doesn't always feed it.
    */
   stagesForProduct?: (productId: string) => readonly string[];
+  /**
+   * P5: Display name of the section author. Forwarded into RisksSection
+   * for the unified [author …… chip] meta-row.
+   */
+  sectionAuthorName?: string;
   handleStageStatusChange: (
     productId: string,
     stageName: string,
@@ -108,6 +113,11 @@ export type LeadFormSyncBridgeProviderProps = {
    * Risks consumer into RiskEditDialog. Optional — tests can omit it.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
+  /**
+   * P5: Display name of the section author. Forwarded into RisksSection
+   * for the unified [author …… chip] meta-row.
+   */
+  readonly sectionAuthorName?: string;
   readonly children: ReactNode;
 };
 
@@ -119,6 +129,7 @@ function Provider({
   readOnly = false,
   sectionId,
   stagesForProduct,
+  sectionAuthorName,
   children,
 }: LeadFormSyncBridgeProviderProps) {
   const [pendingSuggestion, setPendingSuggestion] =
@@ -233,6 +244,7 @@ function Provider({
       readOnly,
       ...(sectionId !== undefined ? { sectionId } : {}),
       ...(stagesForProduct !== undefined ? { stagesForProduct } : {}),
+      ...(sectionAuthorName !== undefined ? { sectionAuthorName } : {}),
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -243,6 +255,7 @@ function Provider({
       readOnly,
       sectionId,
       stagesForProduct,
+      sectionAuthorName,
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -338,6 +351,9 @@ function Risks() {
       products={ctx.products}
       {...(ctx.stagesForProduct
         ? { stagesForProduct: ctx.stagesForProduct }
+        : {})}
+      {...(ctx.sectionAuthorName !== undefined
+        ? { sectionAuthorName: ctx.sectionAuthorName }
         : {})}
     />
   );

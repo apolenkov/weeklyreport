@@ -1512,6 +1512,7 @@ export function LeadForm({
           readOnly={isReadOnly}
           stagesForProduct={stagesForProduct}
           {...(sectionIdForActions ? { sectionId: sectionIdForActions } : {})}
+          {...(currentUser.name ? { sectionAuthorName: currentUser.name } : {})}
         >
           <AccordionSection
             groupSyncKey={groupSyncKey}
@@ -1669,6 +1670,7 @@ export function LeadForm({
               availableStages={availableStages}
               products={products}
               defaultProductId={products[0]?.id}
+              sectionAuthorName={currentUser.name ?? undefined}
             />
             {submitFieldError?.field === "priorities" && (
               <p

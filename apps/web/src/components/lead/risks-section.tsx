@@ -26,6 +26,11 @@ type RisksSectionProps = {
    * scoped per-project.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
+  /**
+   * P5: Display name of the section author (the lead who owns this section).
+   * Shown at the bottom-left of each risk card in the unified meta-row.
+   */
+  readonly sectionAuthorName?: string;
 };
 
 function EditIcon() {
@@ -68,6 +73,7 @@ export function RisksSection({
   onRiskFilled,
   products,
   stagesForProduct,
+  sectionAuthorName,
 }: RisksSectionProps) {
   const [dialogState, setDialogState] = useState<
     | { open: false }
@@ -233,8 +239,12 @@ export function RisksSection({
                   </div>
                 </div>
               </div>
-              <div className="mt-3 flex justify-end">
-                <div className="flex flex-wrap items-center justify-end gap-1">
+              {/* P5: unified [author …… chip] meta-row */}
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
+                  {sectionAuthorName ?? ""}
+                </span>
+                <div className="flex flex-wrap items-center gap-1">
                   <div
                     className="inline-flex flex-wrap items-center gap-1"
                     aria-label={"Risk stages: " + stageTagsLabel}
