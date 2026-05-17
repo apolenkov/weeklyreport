@@ -992,11 +992,6 @@ export function LeadForm({
       const merged = next.map((d) => {
         const existing = existingById.get(d.id);
         const deadline = d.deadline ? new Date(d.deadline) : null;
-        // 35-04: preserve the dialog-supplied stageName (or '—' fallback
-        // for legacy rows). Pass through to the raw section so saveDraft
-        // hits the new DB column.
-        const stageName =
-          d.stageName && d.stageName !== "—" ? d.stageName : null;
         if (existing) {
           return {
             ...existing,
@@ -1004,7 +999,7 @@ export function LeadForm({
             owner: d.owner,
             impact: d.impact,
             deadline,
-            stageName,
+            stageName: null,
             stageIds: d.stageIds,
             productId: d.productId || null,
           };
@@ -1016,7 +1011,7 @@ export function LeadForm({
           impact: d.impact,
           deadline,
           resolvedAt: null,
-          stageName,
+          stageName: null,
           stageIds: d.stageIds,
           productId: d.productId || null,
         };
@@ -1071,10 +1066,6 @@ export function LeadForm({
       );
       const merged = next.map((r) => {
         const existing = r.id ? existingById.get(r.id) : undefined;
-        // 35-04: '—' is the legacy placeholder shown for rows that pre-
-        // dated the column; treat it as null when saving.
-        const stageName =
-          r.stageName && r.stageName !== "—" ? r.stageName : null;
         if (existing) {
           return {
             ...existing,
@@ -1083,7 +1074,7 @@ export function LeadForm({
             impact: r.impact,
             mitigation: r.mitigation,
             severity: r.severity,
-            stageName,
+            stageName: null,
             stageIds: r.stageIds,
           };
         }
@@ -1094,7 +1085,7 @@ export function LeadForm({
           impact: r.impact,
           mitigation: r.mitigation,
           severity: r.severity,
-          stageName,
+          stageName: null,
           stageIds: r.stageIds,
         };
       });
@@ -1118,13 +1109,11 @@ export function LeadForm({
       );
       const merged = next.map((p) => {
         const existing = existingByRank.get(p.rank);
-        const stageName =
-          p.stageName && p.stageName !== "—" ? p.stageName : null;
         if (existing) {
           return {
             ...existing,
             text: p.text,
-            stageName,
+            stageName: null,
             stageIds: p.stageIds,
             productId: p.productId || null,
           };
@@ -1132,7 +1121,7 @@ export function LeadForm({
         return {
           rank: p.rank,
           text: p.text,
-          stageName,
+          stageName: null,
           stageIds: p.stageIds,
           productId: p.productId || null,
         };
@@ -1181,10 +1170,6 @@ export function LeadForm({
         const mergedTyped = next.map((kb) => {
           const raw = statusToRawFields(kb.status);
           const existing = existingById.get(kb.id);
-          // 35-04: kb.stageName is the dialog's selection. '—' is the
-          // legacy placeholder; treat as null on save.
-          const stageName =
-            kb.stageName && kb.stageName !== "—" ? kb.stageName : null;
           if (existing) {
             return {
               ...existing,
@@ -1192,7 +1177,7 @@ export function LeadForm({
               projectId: kb.productId,
               workflowStatus: raw.workflowStatus,
               completed: raw.completed,
-              stageName,
+              stageName: null,
               stageIds: kb.stageIds,
             };
           }
@@ -1207,7 +1192,7 @@ export function LeadForm({
             workflowStatus: raw.workflowStatus,
             carriedOver: false,
             completed: raw.completed,
-            stageName,
+            stageName: null,
             stageIds: kb.stageIds,
           };
         });
