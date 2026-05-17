@@ -243,7 +243,7 @@ export function LeadSlidesClient({
         next.set("reportId", reportId);
       }
       const query = next.toString();
-      router.push((pathname || "/lead/slides") + (query ? "?" + query : ""));
+      router.push((pathname || "/lead/report") + (query ? "?" + query : ""));
     },
     [activeReportId, inReportMode, pathname, router, searchParams],
   );
