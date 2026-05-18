@@ -59,10 +59,11 @@ test.describe("lead views foreign-author section via ?authorId (read-only)", () 
       page.getByRole("button", { name: "+ Add Priority" }),
     ).toHaveCount(0);
 
-    // (b) No Submit button in read-only mode
+    // (b) Submit button is present but disabled in read-only mode
+    // (the button renders with disabled={isReadOnly}, it is not hidden)
     await expect(
       page.getByRole("button", { name: "Submit Report" }),
-    ).not.toBeVisible();
+    ).toBeDisabled();
   });
 
   test("(c) section loads — accordion structure present, no error page", async ({
