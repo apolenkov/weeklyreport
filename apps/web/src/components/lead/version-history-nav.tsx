@@ -184,7 +184,7 @@ export function VersionHistoryNav({
           aria-label="Previous version"
         >
           <ChevronLeft />
-          <span className="text-xs font-medium">Previous</span>
+          <span className="text-xs font-medium xl:hidden">Previous</span>
         </button>
 
         <button
@@ -206,7 +206,7 @@ export function VersionHistoryNav({
           title={isLatest ? "Latest version" : "Next version"}
           aria-label="Next version"
         >
-          <span className="text-xs font-medium">Next</span>
+          <span className="text-xs font-medium xl:hidden">Next</span>
           <ChevronRight />
         </button>
 

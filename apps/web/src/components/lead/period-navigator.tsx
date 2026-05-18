@@ -162,7 +162,7 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
         aria-label="Previous period"
       >
         <ChevronLeft />
-        <span className="text-xs font-medium">Previous</span>
+        <span className="text-xs font-medium xl:hidden">Previous</span>
       </button>
 
       <div
@@ -194,7 +194,7 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
         title={hasNext ? "Next period" : "Latest period"}
         aria-label="Next period"
       >
-        <span className="text-xs font-medium">Next</span>
+        <span className="text-xs font-medium xl:hidden">Next</span>
         <ChevronRight />
       </button>
     </div>
