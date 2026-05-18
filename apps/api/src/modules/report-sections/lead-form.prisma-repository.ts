@@ -422,4 +422,19 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       }
     }
   }
+
+  async hasSharedProduct(userId1: string, userId2: string): Promise<boolean> {
+    const row = await this.prisma.stageAssignment.findFirst({
+      where: {
+        userId: userId1,
+        project: {
+          stageAssignments: {
+            some: { userId: userId2 },
+          },
+        },
+      },
+      select: { id: true },
+    });
+    return row !== null;
+  }
 }

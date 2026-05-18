@@ -104,6 +104,7 @@ function createMockRepository(
     restoreVersion: vi.fn().mockResolvedValue(1),
     createVersionSnapshot: vi.fn().mockResolvedValue(undefined),
     createReopenRequest: vi.fn().mockResolvedValue(undefined),
+    hasSharedProduct: vi.fn().mockResolvedValue(false),
     ...overrides,
   };
 }
@@ -386,7 +387,7 @@ describe("LeadFormService — getByPeriod", () => {
     expect(result.readOnly).toBe(true);
   });
 
-  it("lets lead view a requested author section as read-only", async () => {
+  it("lets lead view a requested author section as read-only when they share a product", async () => {
     const otherAuthorSection = {
       ...structuredClone(draftSection),
       authorId: OTHER_USER_ID,
@@ -397,6 +398,7 @@ describe("LeadFormService — getByPeriod", () => {
         section: otherAuthorSection,
         readOnly: false,
       }),
+      hasSharedProduct: vi.fn().mockResolvedValue(true),
     });
     const service = new LeadFormService(repo);
 
@@ -413,6 +415,28 @@ describe("LeadFormService — getByPeriod", () => {
     );
     expect(result.section.authorId).toBe(OTHER_USER_ID);
     expect(result.readOnly).toBe(true);
+  });
+
+  it("ignores requestedAuthorId for lead with no shared product", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi.fn().mockResolvedValue({
+        section: structuredClone(draftSection),
+        readOnly: false,
+      }),
+      hasSharedProduct: vi.fn().mockResolvedValue(false),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.getByPeriod(
+      REPORT_ID,
+      AUTHOR_ID,
+      "lead",
+      OTHER_USER_ID,
+    );
+
+    expect(repo.getSectionForPeriod).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
+    expect(result.section.authorId).toBe(AUTHOR_ID);
+    expect(result.readOnly).toBe(false);
   });
 
   it("fails when no section found for user in report", async () => {
