@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
 import { Separator } from "@customreport/ui/components/ui/separator";
@@ -1270,6 +1271,33 @@ export function LeadForm({
                   Submit Report
                 </button>
               )}
+            </div>
+          )}
+          {isSlidesMode && (
+            <div className="flex w-full items-center justify-between gap-2 border-t border-[rgba(0,0,0,0.08)] pt-3">
+              <p className="text-sm text-[var(--color-muted-foreground)]">
+                {currentUser.name}
+                {selectedPeriod
+                  ? ` · ${selectedPeriod.weekLabel}, ${selectedPeriod.dateRange}`
+                  : ""}
+              </p>
+              <div className="flex items-center gap-2">
+                {isSubmitted ? (
+                  <span className="inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.28)] bg-[rgba(229,245,237,0.74)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
+                    ✓ Submitted
+                  </span>
+                ) : null}
+                <Link
+                  href={
+                    targetReportId
+                      ? "/lead/report/" + encodeURIComponent(targetReportId)
+                      : "/lead/report"
+                  }
+                  className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
+                >
+                  ↩ Edit
+                </Link>
+              </div>
             </div>
           )}
         </header>

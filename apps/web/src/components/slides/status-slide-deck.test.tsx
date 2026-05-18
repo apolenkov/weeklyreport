@@ -185,4 +185,14 @@ describe("StatusSlideDeck lead layout", () => {
     // Product content is visible via ProductSdlcGroups
     expect(screen.getByText("Marketing Portal")).toBeInTheDocument();
   });
+
+  it("renders SDLC stages as dot-separated inline text instead of chip buttons", () => {
+    renderLeadDeck([slide()]);
+
+    // Inline text "Planning · Development" (no chip buttons)
+    expect(screen.getByText("Planning · Development")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Planning/i }),
+    ).not.toBeInTheDocument();
+  });
 });
