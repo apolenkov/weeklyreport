@@ -1,37 +1,43 @@
 # NEXT ACTIONS
 
-updated: 2026-05-18T09:55:00Z source: P17 + P17.1 + slides regression closeout
+updated: 2026-05-18T12:15:00Z source: Demo-retro (small-MVP seed + lead authorId fix)
 
 ## RUN FIRST
 
-1. [x] ~~`git push origin feat/head-report-history-slides`~~ — сделано 2026-05-18, PR #6 открыт
+1. [ ] В 13:26 MSK включить `stopReviewGate: true` в:
+       `~/.claude/plugins/data/codex-openai-codex/state/customreport-5aa77affdf95f161/state.json`
 
 ## AGENT
 
-1. [x] ~~Визуальный screenshot `?mode=slides`~~ — `review-slides-v2.png` 2026-05-18
-2. [x] ~~Открыть PR~~ — PR #6: https://forge.example.org/apolenkov/customreport/pull/6
-3. [x] ~~Playwright regression `lead-slides-read-only`~~ — 2/2 pass (networkidle→load fix, e189524)
-4. [x] ~~P17 plan → `done/`~~ — перемещено 2026-05-18
-5. [x] ~~STATE.md P17 marker~~ — добавлен 2026-05-18
+1. [ ] e2e спецификация `?authorId=<BORIS>` → read-only секция (нет кнопок Add/Edit)
+       файл: `apps/web/e2e/regression/lead-form-foreign-author.spec.ts`
+       автор Boris: `a0000000-0000-4000-8000-00000000002b`
+
+2. [ ] TODO(LOCK-01): UI-иконка-замочек на секции когда `isPinnedAuthorView=true`
+       точка входа: `apps/web/src/components/lead/lead-form.tsx` (комментарий LOCK-01 ~строка 832)
 
 ## HUMAN
 
-1. [x] ~~Визуальный sign-off slides-режима~~ — скриншот `review-slides-v2.png` готов к просмотру
-2. [ ] Approve + merge PR #6 в GitHub UI после CI green
-3. [ ] Восстановить сетевой доступ к forge.example.org (SSL) при необходимости повторного push
+1. [ ] Ручная UAT: `vasily@customreport.local` → `/lead/report`
+   - увидеть 4 продукта (switcher активен)
+   - переключить period ← → read-only submitted
+   - открыть `?authorId=a0000000-0000-4000-8000-00000000002b` → read-only секция Бориса
 
 ## BLOCKED
 
-нет активных блокеров на агентной стороне
+1. [ ] Codex quota до 13:26 MSK — stopReviewGate отключён вручную (state.json)
 
 ## VERIFY
 
 ```bash
-git log --oneline -6
-pnpm typecheck     # Tasks: 5 successful
-pnpm lint          # Tasks: 4 successful
-pnpm --filter @customreport/web test  # 472 passed
-pnpm --filter @customreport/web exec playwright test \
-  --config=e2e/regression/playwright.regression.config.ts \
-  --grep "lead-slides-read-only"  # 2 passed
+# stopReviewGate включён
+cat ~/.claude/plugins/data/codex-openai-codex/state/customreport-5aa77affdf95f161/state.json \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['config']['stopReviewGate'])"
+# expected: True
+
+# 4 продукта у Васи
+psql "$DATABASE_URL" -c "SELECT id, name FROM \"Project\" WHERE \"leadId\" = 'a0000000-0000-4000-8000-000000000011';"
+
+# overlay Бориса
+psql "$DATABASE_URL" -c "SELECT rs.id, rs.status FROM \"ReportSection\" rs WHERE rs.\"authorId\" = 'a0000000-0000-4000-8000-00000000002b';"
 ```
