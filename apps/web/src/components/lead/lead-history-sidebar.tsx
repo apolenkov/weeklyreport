@@ -4,6 +4,8 @@ import type { HistoryEntry } from "../../lib/mappers";
 
 type LeadHistorySidebarProps = {
   readonly entries: ReadonlyArray<HistoryEntry>;
+  readonly summaryTitle?: string;
+  readonly showStatus?: boolean;
 };
 
 /**
@@ -16,7 +18,11 @@ type LeadHistorySidebarProps = {
  * All numbers are derived from `entries` so the sidebar stays a pure
  * presentational fork of the same query result the list uses.
  */
-export function LeadHistorySidebar({ entries }: LeadHistorySidebarProps) {
+export function LeadHistorySidebar({
+  entries,
+  summaryTitle = "My History Summary",
+  showStatus = true,
+}: LeadHistorySidebarProps) {
   const total = entries.length;
   const submitted = entries.filter((e) => e.status === "submitted").length;
   const onTimeRate = total === 0 ? 0 : Math.round((submitted / total) * 100);
@@ -42,9 +48,9 @@ export function LeadHistorySidebar({ entries }: LeadHistorySidebarProps) {
   }
 
   return (
-    <aside aria-label="My history summary">
+    <aside aria-label={summaryTitle}>
       <div className="space-y-4">
-        <SidebarCard title="My History Summary">
+        <SidebarCard title={summaryTitle}>
           <StatGrid>
             <Stat
               label="Submissions"
@@ -87,38 +93,45 @@ export function LeadHistorySidebar({ entries }: LeadHistorySidebarProps) {
           </div>
         </SidebarCard>
 
-        <SidebarCard title="Submission Status">
-          {streak >= 2 ? (
-            <p className="text-[13px] text-[var(--color-foreground)]">
-              Submitted <strong>{streak}</strong>{" "}
-              {streak === 1 ? "week" : "weeks"} in a row.
-            </p>
-          ) : streak === 1 ? (
-            <p className="text-[13px] text-[var(--color-foreground)]">
-              Last week submitted. Keep the streak going.
-            </p>
-          ) : total === 0 ? (
-            <p className="text-[13px] text-[var(--color-muted-foreground)]">
-              No history yet — your first submission lands here.
-            </p>
-          ) : (
-            <p className="text-[13px] text-[var(--color-foreground)]">
-              Most recent week is still a draft. Submit to extend your streak.
-            </p>
-          )}
-          {totalRed > 0 && (
-            <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">
-              {totalRed} blocked traffic-light{totalRed === 1 ? "" : "s"} across
-              history — review the affected periods for repeat patterns.
-            </p>
-          )}
-        </SidebarCard>
-        <SidebarCard title="Draft History" comingSoon>
-          <p className="text-[13px] text-[var(--color-muted-foreground)]">
-            Draft version history — coming soon. Each save will create a
-            timestamped snapshot so you can review and restore earlier drafts.
-          </p>
-        </SidebarCard>
+        {showStatus && (
+          <>
+            <SidebarCard title="Submission Status">
+              {streak >= 2 ? (
+                <p className="text-[13px] text-[var(--color-foreground)]">
+                  Submitted <strong>{streak}</strong>{" "}
+                  {streak === 1 ? "week" : "weeks"} in a row.
+                </p>
+              ) : streak === 1 ? (
+                <p className="text-[13px] text-[var(--color-foreground)]">
+                  Last week submitted. Keep the streak going.
+                </p>
+              ) : total === 0 ? (
+                <p className="text-[13px] text-[var(--color-muted-foreground)]">
+                  No history yet — your first submission lands here.
+                </p>
+              ) : (
+                <p className="text-[13px] text-[var(--color-foreground)]">
+                  Most recent week is still a draft. Submit to extend your
+                  streak.
+                </p>
+              )}
+              {totalRed > 0 && (
+                <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">
+                  {totalRed} blocked traffic-light
+                  {totalRed === 1 ? "" : "s"} across history — review the
+                  affected periods for repeat patterns.
+                </p>
+              )}
+            </SidebarCard>
+            <SidebarCard title="Draft History" comingSoon>
+              <p className="text-[13px] text-[var(--color-muted-foreground)]">
+                Draft version history — coming soon. Each save will create a
+                timestamped snapshot so you can review and restore earlier
+                drafts.
+              </p>
+            </SidebarCard>
+          </>
+        )}
       </div>
     </aside>
   );

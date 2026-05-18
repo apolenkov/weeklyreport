@@ -1,52 +1,43 @@
 # NEXT ACTIONS
 
-updated: 2026-05-15T17:35:00+03:00 source: Demo-retro
+updated: 2026-05-18T12:15:00Z source: Demo-retro (small-MVP seed + lead authorId fix)
 
 ## RUN FIRST
 
-1. [ ] Confirm branch is still clean and ahead of origin:
-       git status --short --branch
-2. [ ] Push the five local commits to PR #5:
-       git push origin fix/PRJ-2/uat-v7-2026-05-12
-3. [ ] Re-check PR #5 CI after push:
-       gh pr view 5 --json mergeStateStatus,statusCheckRollup,url
+1. [ ] В 13:26 MSK включить `stopReviewGate: true` в:
+       `~/.claude/plugins/data/codex-openai-codex/state/customreport-5aa77affdf95f161/state.json`
 
 ## AGENT
 
-1. [ ] Keep the Docker MVP stack running for manual UAT unless the user asks to stop it:
-       docker compose ps postgres redis mailhog api web
-2. [ ] If PR #5 checks become green, merge:
-       gh pr merge 5 --merge
-3. [ ] Continue broader MVP UAT outside the now-closed Lead Form matrix:
-   - reports skeleton/right rail;
-   - route-level checks;
-   - head/dashboard route smoke;
-   - STATE.md phase metric verification.
-4. [ ] Keep future parked scope out of MVP unless user reopens it:
-   - dark mode / live theme switching;
-   - MOB-PARKED mobile signoff;
-   - Telegram real integration;
-   - i18n;
-   - AI telemetry/eval;
-   - observability/perf/index/Redis audit;
-   - screenshot UI review/background improvements.
-5. [ ] Do not create a new git worktree.
+1. [ ] e2e спецификация `?authorId=<BORIS>` → read-only секция (нет кнопок Add/Edit)
+       файл: `apps/web/e2e/regression/lead-form-foreign-author.spec.ts`
+       автор Boris: `a0000000-0000-4000-8000-00000000002b`
+
+2. [ ] TODO(LOCK-01): UI-иконка-замочек на секции когда `isPinnedAuthorView=true`
+       точка входа: `apps/web/src/components/lead/lead-form.tsx` (комментарий LOCK-01 ~строка 832)
 
 ## HUMAN
 
-1. [ ] Repeat manual UAT in browser against the running Docker MVP stack:
-       http://localhost:3000
-2. [ ] Decide next milestone priority after PR #5 is merged.
+1. [ ] Ручная UAT: `vasily@customreport.local` → `/lead/report`
+   - увидеть 4 продукта (switcher активен)
+   - переключить period ← → read-only submitted
+   - открыть `?authorId=a0000000-0000-4000-8000-00000000002b` → read-only секция Бориса
 
 ## BLOCKED
 
-1. [ ] PR #5 is still not mergeable: latest run 277310 is queued; PR mergeStateStatus is UNSTABLE.
+1. [ ] Codex quota до 13:26 MSK — stopReviewGate отключён вручную (state.json)
 
 ## VERIFY
 
-- git status --short --branch
-- docker compose ps postgres redis mailhog api web
-- curl -fsS http://localhost:3002/health/ready
-- pnpm --filter @customreport/web exec playwright test --config=playwright.regression.config.ts e2e/regression/lead-form-uat-recovery.spec.ts --reporter=list
-- pnpm --filter @customreport/web lint
-- pnpm lint:md
+```bash
+# stopReviewGate включён
+cat ~/.claude/plugins/data/codex-openai-codex/state/customreport-5aa77affdf95f161/state.json \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['config']['stopReviewGate'])"
+# expected: True
+
+# 4 продукта у Васи
+psql "$DATABASE_URL" -c "SELECT id, name FROM \"Project\" WHERE \"leadId\" = 'a0000000-0000-4000-8000-000000000011';"
+
+# overlay Бориса
+psql "$DATABASE_URL" -c "SELECT rs.id, rs.status FROM \"ReportSection\" rs WHERE rs.\"authorId\" = 'a0000000-0000-4000-8000-00000000002b';"
+```

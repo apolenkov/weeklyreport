@@ -39,7 +39,12 @@ type FailedJob = {
 
 type Captured = {
   retryOptions?: {
-    onSuccess?: (result: { retried: boolean; jobId: string }) => void;
+    onSuccess?: (result: {
+      retried: boolean;
+      jobId: string;
+      removed?: boolean;
+      reason?: string;
+    }) => void;
     onError?: (err: Error) => void;
   };
   retryMutationFn: ReturnType<typeof vi.fn>;
@@ -186,6 +191,27 @@ describe("JobsTab — Phase 35-06 BullMQ DLQ admin UI", () => {
 
     await waitFor(() => {
       expect(toastInfo).toHaveBeenCalled();
+    });
+  });
+
+  it("on retry result {removed: true}: info toast explains stale job cleanup", async () => {
+    const captured: Captured = {
+      retryMutationFn: vi.fn().mockResolvedValue({
+        retried: false,
+        removed: true,
+        reason: "Reminder execution missing.",
+        jobId: "job-stale",
+      }),
+    };
+    renderTab([makeJob("job-stale")], captured);
+
+    await screen.findByText("job-stale");
+    await userEvent.click(
+      screen.getByRole("button", { name: /Retry job job-stale/i }),
+    );
+
+    await waitFor(() => {
+      expect(toastInfo).toHaveBeenCalledWith("Reminder execution missing.");
     });
   });
 

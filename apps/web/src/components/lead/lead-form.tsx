@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ArchiveToggle } from "../report-shell/archive-toggle";
+import { Separator } from "@customreport/ui/components/ui/separator";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
@@ -33,6 +36,9 @@ import { DecisionsSection } from "./decisions-section";
 import { PrioritiesSection } from "./priorities-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RequestReopenDialog } from "./request-reopen-dialog";
+import { LeadSlidesClient } from "../slides/lead-slides-client";
+import { AccordionSection } from "../report-shell/accordion-section";
+import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 
 import type {
   Product,
@@ -63,6 +69,7 @@ type LeadFormProps = {
    * the bare route in read-only mode without a redirect (back-compat).
    */
   readonly reportId?: string;
+  readonly mode?: "edit" | "slides";
   /**
    * 35-07: when true, the form auto-redirects (router.replace) to the
    * canonical addressed URL once the active reportId is known. Off when
@@ -191,111 +198,6 @@ function CollapseIcon() {
   );
 }
 
-function ChevronDown({ expanded }: { readonly expanded: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 text-[var(--color-muted-foreground)] transition-transform duration-300"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
-
-type AccordionSectionProps = {
-  readonly icon: React.ReactNode;
-  readonly title: string;
-  readonly titleColor?: string;
-  readonly badge?: string;
-  readonly badgeStyle?: React.CSSProperties;
-  readonly subtitle?: string;
-  readonly defaultOpen?: boolean;
-  /**
-   * Bumped by the parent's "Toggle All" button to force every section
-   * into the same state. Each bump increments the number; the section
-   * mirrors `groupExpanded` into its local state on every change. Local
-   * clicks afterwards still toggle individual sections — the group sync
-   * only fires when the parent actively changes the signal.
-   */
-  readonly groupSyncKey?: number;
-  readonly groupExpanded?: boolean;
-  readonly children: React.ReactNode;
-};
-
-function AccordionSection({
-  icon,
-  title,
-  titleColor = "var(--color-primary)",
-  badge,
-  badgeStyle,
-  subtitle,
-  defaultOpen = true,
-  groupSyncKey,
-  groupExpanded,
-  children,
-}: AccordionSectionProps) {
-  const [expanded, setExpanded] = useState(defaultOpen);
-
-  useEffect(() => {
-    // Only react to actual group-toggle actions, not initial mount.
-    if (groupSyncKey === undefined || groupExpanded === undefined) return;
-    setExpanded(groupExpanded);
-  }, [groupSyncKey, groupExpanded]);
-
-  return (
-    <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_0_0.5px_0_rgba(0,0,0,0.12),0_12px_26px_-18px_rgba(0,0,0,0.22),0_2px_4px_rgba(0,0,0,0.06)]">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between p-5 transition-colors hover:bg-[var(--color-surface-hover)]"
-        onClick={() => setExpanded(!expanded)}
-        aria-expanded={expanded}
-      >
-        <div>
-          <div className="flex items-center gap-3">
-            {icon}
-            <span
-              className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em]"
-              style={{ color: titleColor }}
-            >
-              {title}
-            </span>
-            {badge && (
-              <span
-                className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]"
-                style={badgeStyle}
-              >
-                {badge}
-              </span>
-            )}
-          </div>
-          {subtitle && (
-            <span className="mt-1 block text-xs text-[var(--color-muted-foreground)]">
-              {subtitle}
-            </span>
-          )}
-        </div>
-        <ChevronDown expanded={expanded} />
-      </button>
-
-      <div
-        className="grid transition-[grid-template-rows] duration-300"
-        style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
-      >
-        <div className="min-h-0 overflow-hidden">
-          {/* pt-2 = breathing room between the section header (p-5) and the
-              first content row, otherwise the first card sits flush against
-              the chevron line and feels cramped. */}
-          <div className="px-5 pb-5 pt-2">{children}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /**
  * Build a `draftSaveSchema`-compatible payload from the raw API section. The
  * raw shape carries every field the schema requires (owner/impact on
@@ -404,6 +306,7 @@ export function LeadForm({
   period,
   reportId: pinnedReportId,
   redirectToCanonical,
+  mode = "edit",
 }: LeadFormProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -411,6 +314,7 @@ export function LeadForm({
   const searchParams = useSearchParams();
   const requestedAuthorId = searchParams.get("authorId") ?? undefined;
   const requestedAuthorIdNormalized = requestedAuthorId?.trim() || undefined;
+  const isSlidesMode = mode === "slides";
   const sessionState = useContext(SessionContext);
   const sessionRole = sessionState?.user?.role ?? null;
   const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
@@ -480,16 +384,18 @@ export function LeadForm({
     if (pinnedReportId) return;
     if (shouldRouteHeadLikeAwayFromLeadForm) return;
     if (!activeReportId) return;
-    const authorQuery = requestedAuthorId
-      ? `?authorId=${encodeURIComponent(requestedAuthorId)}`
-      : "";
-    router.replace(`/lead/report/${activeReportId}${authorQuery}`);
+    const next = new URLSearchParams();
+    if (requestedAuthorId) next.set("authorId", requestedAuthorId);
+    if (isSlidesMode) next.set("mode", "slides");
+    const query = next.toString();
+    router.replace(`/lead/report/${activeReportId}${query ? `?${query}` : ""}`);
   }, [
     redirectToCanonical,
     period,
     pinnedReportId,
     activeReportId,
     requestedAuthorId,
+    isSlidesMode,
     shouldRouteHeadLikeAwayFromLeadForm,
     router,
   ]);
@@ -786,6 +692,11 @@ export function LeadForm({
   // its local state. Individual sections may then drift again via clicks.
   const [groupSyncKey, setGroupSyncKey] = useState(0);
   const [groupExpanded, setGroupExpanded] = useState(true);
+  const [currentWeekAddSignal, setCurrentWeekAddSignal] = useState(0);
+  const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);
+  const [risksAddSignal, setRisksAddSignal] = useState(0);
+  const [decisionsAddSignal, setDecisionsAddSignal] = useState(0);
+  const [prioritiesAddSignal, setPrioritiesAddSignal] = useState(0);
 
   // Compute readOnly early (before hook; the autosave hook needs it). When
   // data isn't ready, treat as readOnly (autosave disabled).
@@ -854,6 +765,22 @@ export function LeadForm({
     };
   }, [titleHistoryEntry]);
 
+  const [showArchivePeriods, setShowArchivePeriods] = useState(false);
+  const selectedPeriodId =
+    pinnedReportId ||
+    searchParams.get("period") ||
+    activeQ.data?.reportId ||
+    "";
+  const selectedHistoryPeriod = historyQ.data?.find(
+    (entry) => entry.reportId === selectedPeriodId && entry.reportId !== "",
+  );
+
+  useEffect(() => {
+    if (selectedHistoryPeriod?.archived) {
+      setShowArchivePeriods(true);
+    }
+  }, [selectedHistoryPeriod?.reportId, selectedHistoryPeriod?.archived]);
+
   // Skeleton until all queries settle.
   if (
     isLoading ||
@@ -885,9 +812,27 @@ export function LeadForm({
   const periods: ReportPeriod[] = data.periods as ReportPeriod[];
   const versions: VersionSnapshot[] = data.versions as VersionSnapshot[];
   const currentUser = data.currentUser;
+  const selectedPeriod = periods.find(
+    (period) => period.id === selectedPeriodId && period.id !== "",
+  );
+  const hasArchivedPeriods = periods.some((period) => period.archived);
+  const visibleNonArchivedPeriods = periods.filter(
+    (period) => !period.archived,
+  );
+  const visiblePeriods =
+    !hasArchivedPeriods ||
+    showArchivePeriods ||
+    visibleNonArchivedPeriods.length === 0
+      ? periods
+      : selectedPeriod?.archived
+        ? [...visibleNonArchivedPeriods, selectedPeriod]
+        : visibleNonArchivedPeriods;
 
   const isReadOnly =
     data.readOnly || !!period || isSubmitted || isPinnedAuthorView;
+  // TODO(LOCK-01): when isPinnedAuthorView, show a lock badge / foreign-author
+  // indicator on the section header to distinguish «viewing Boris's section»
+  // from Vasily's own read-only view. Data is ready; UI indicator is deferred.
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
@@ -911,11 +856,6 @@ export function LeadForm({
       const merged = next.map((d) => {
         const existing = existingById.get(d.id);
         const deadline = d.deadline ? new Date(d.deadline) : null;
-        // 35-04: preserve the dialog-supplied stageName (or '—' fallback
-        // for legacy rows). Pass through to the raw section so saveDraft
-        // hits the new DB column.
-        const stageName =
-          d.stageName && d.stageName !== "—" ? d.stageName : null;
         if (existing) {
           return {
             ...existing,
@@ -923,7 +863,7 @@ export function LeadForm({
             owner: d.owner,
             impact: d.impact,
             deadline,
-            stageName,
+            stageName: null,
             stageIds: d.stageIds,
             productId: d.productId || null,
           };
@@ -935,7 +875,7 @@ export function LeadForm({
           impact: d.impact,
           deadline,
           resolvedAt: null,
-          stageName,
+          stageName: null,
           stageIds: d.stageIds,
           productId: d.productId || null,
         };
@@ -990,10 +930,6 @@ export function LeadForm({
       );
       const merged = next.map((r) => {
         const existing = r.id ? existingById.get(r.id) : undefined;
-        // 35-04: '—' is the legacy placeholder shown for rows that pre-
-        // dated the column; treat it as null when saving.
-        const stageName =
-          r.stageName && r.stageName !== "—" ? r.stageName : null;
         if (existing) {
           return {
             ...existing,
@@ -1002,7 +938,7 @@ export function LeadForm({
             impact: r.impact,
             mitigation: r.mitigation,
             severity: r.severity,
-            stageName,
+            stageName: null,
             stageIds: r.stageIds,
           };
         }
@@ -1013,7 +949,7 @@ export function LeadForm({
           impact: r.impact,
           mitigation: r.mitigation,
           severity: r.severity,
-          stageName,
+          stageName: null,
           stageIds: r.stageIds,
         };
       });
@@ -1037,13 +973,11 @@ export function LeadForm({
       );
       const merged = next.map((p) => {
         const existing = existingByRank.get(p.rank);
-        const stageName =
-          p.stageName && p.stageName !== "—" ? p.stageName : null;
         if (existing) {
           return {
             ...existing,
             text: p.text,
-            stageName,
+            stageName: null,
             stageIds: p.stageIds,
             productId: p.productId || null,
           };
@@ -1051,7 +985,7 @@ export function LeadForm({
         return {
           rank: p.rank,
           text: p.text,
-          stageName,
+          stageName: null,
           stageIds: p.stageIds,
           productId: p.productId || null,
         };
@@ -1100,10 +1034,6 @@ export function LeadForm({
         const mergedTyped = next.map((kb) => {
           const raw = statusToRawFields(kb.status);
           const existing = existingById.get(kb.id);
-          // 35-04: kb.stageName is the dialog's selection. '—' is the
-          // legacy placeholder; treat as null on save.
-          const stageName =
-            kb.stageName && kb.stageName !== "—" ? kb.stageName : null;
           if (existing) {
             return {
               ...existing,
@@ -1111,7 +1041,7 @@ export function LeadForm({
               projectId: kb.productId,
               workflowStatus: raw.workflowStatus,
               completed: raw.completed,
-              stageName,
+              stageName: null,
               stageIds: kb.stageIds,
             };
           }
@@ -1126,7 +1056,7 @@ export function LeadForm({
             workflowStatus: raw.workflowStatus,
             carriedOver: false,
             completed: raw.completed,
-            stageName,
+            stageName: null,
             stageIds: kb.stageIds,
           };
         });
@@ -1253,121 +1183,152 @@ export function LeadForm({
       <form className="space-y-6" data-testid="lead-report-form">
         {/* Page header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-              My Report
-            </h1>
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <div className="min-w-0">
+              <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+                My Report
+              </h1>
+              <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+                Your report draft and status context.
+              </p>
+            </div>
             {/* LF-3 (Phase 33-04): submitted state now uses the .b-ok variant
                 (light teal bg + dark teal text) — matches mockup s2 rather
                 than the heavier white-on-dark-teal `.b-done` look that read
                 as a destructive "locked" signal. */}
-            {isSubmitted ? (
-              <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">
-                ✓ Submitted
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
-                {autosaveLabel}
-              </span>
-            )}
+            {!isSlidesMode &&
+              (isSubmitted ? (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)]">
+                  ✓ Submitted
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
+                  {autosaveLabel}
+                </span>
+              ))}
           </div>
-          <div className="flex items-center gap-3">
-            <FillFromButton
-              periods={periods}
-              disabled={isReadOnly || fillFromMut.isPending}
-              onFillFrom={handleFillFrom}
-            />
-            {(currentWeekItems.length > 0 ||
-              nextWeekItems.length > 0 ||
-              risks.length > 0 ||
-              decisions.length > 0 ||
-              priorities.length > 0) && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-                onClick={handleToggleAll}
-                title="Toggle All"
-              >
-                <CollapseIcon />
-                Toggle All
-              </button>
-            )}
-            {/*
-              35-03: gate on the structured authorRole (Prisma `Role`
-              enum) carried by the read model. Pre-35-03 we string-
-              matched against the display label ("Dev Lead" ... "Lead")
-              which fell over for head/admin sessions viewing a lead's
-              section via /lead/report?period=X. Now: lead → Request
-              Reopen (polite), head/admin → Revoke (destructive).
-              Backend gates both anyway; this is the UX path.
-            */}
-            {isSubmitted && currentUser.authorRole === "lead" && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={() => {
-                  setReopenError(null);
-                  setShowReopenDialog(true);
-                }}
-                disabled={requestReopenMut.isPending}
-                title="Ask Head to unlock this section"
-              >
-                Request Reopen
-              </button>
-            )}
-            {isSubmitted && currentUser.authorRole !== "lead" && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={handleRevoke}
-                disabled={revokeMut.isPending}
-                title="Revoke submission and unlock the section"
-              >
-                Revoke
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={handleSubmit}
-              disabled={isReadOnly || submitMut.isPending}
-            >
-              Submit Report
-            </button>
-          </div>
+          {!isSlidesMode && (
+            <div className="flex items-center gap-3">
+              {(currentWeekItems.length > 0 ||
+                nextWeekItems.length > 0 ||
+                risks.length > 0 ||
+                decisions.length > 0 ||
+                priorities.length > 0) && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                  onClick={handleToggleAll}
+                  title="Toggle All"
+                >
+                  <CollapseIcon />
+                  Toggle All
+                </button>
+              )}
+              <ViewModeToggle
+                editHref={
+                  targetReportId
+                    ? "/lead/report/" + encodeURIComponent(targetReportId)
+                    : "/lead/report"
+                }
+                slidesHref={
+                  targetReportId
+                    ? "/lead/report/" +
+                      encodeURIComponent(targetReportId) +
+                      "?mode=slides"
+                    : "/lead/report"
+                }
+              />
+              {isSubmitted && currentUser.authorRole === "lead" && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    setReopenError(null);
+                    setShowReopenDialog(true);
+                  }}
+                  disabled={requestReopenMut.isPending}
+                  title="Ask Head to unlock this section"
+                >
+                  Request Reopen
+                </button>
+              )}
+              {isSubmitted && currentUser.authorRole !== "lead" && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleRevoke}
+                  disabled={revokeMut.isPending}
+                  title="Revoke submission and unlock the section"
+                >
+                  Revoke
+                </button>
+              )}
+              {!isSubmitted && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleSubmit}
+                  disabled={isReadOnly || submitMut.isPending}
+                >
+                  Submit Report
+                </button>
+              )}
+            </div>
+          )}
+          {isSlidesMode && (
+            <div className="flex w-full items-center justify-between gap-2 border-t border-[rgba(0,0,0,0.08)] pt-3">
+              <p className="text-sm text-[var(--color-muted-foreground)]">
+                {currentUser.name}
+                {selectedPeriod
+                  ? ` · ${selectedPeriod.weekLabel}, ${selectedPeriod.dateRange}`
+                  : ""}
+              </p>
+              <div className="flex items-center gap-2">
+                {isSubmitted ? (
+                  <span className="inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.28)] bg-[rgba(229,245,237,0.74)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
+                    ✓ Submitted
+                  </span>
+                ) : null}
+                <Link
+                  href={
+                    targetReportId
+                      ? "/lead/report/" + encodeURIComponent(targetReportId)
+                      : "/lead/report"
+                  }
+                  data-testid="slides-edit-link"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
+                >
+                  ↩ Edit
+                </Link>
+              </div>
+            </div>
+          )}
         </header>
 
-        {/* Context shell: Period nav + User info + Version history */}
-        <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">
-          <PeriodNavigator periods={periods} />
+        {/* Context shell: period, archive, fill-from, and edit-version controls. */}
+        {!isSlidesMode && (
+          <div className="flex flex-nowrap items-center justify-between gap-2 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
+            <PeriodNavigator periods={visiblePeriods} />
 
-          <div className="ml-auto">
-            <VersionHistoryNav
-              versions={versions}
-              onRestore={handleRestoreVersion}
-              onVersionChange={handleRestoreVersion}
-              onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
-              canSaveVersion={!createSnapshotMut.isPending}
-            />
-          </div>
-        </div>
-
-        {/* Submitted banner */}
-        {isSubmitted && (
-          <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)] bg-[var(--color-success)] p-4">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-5 w-5 flex-shrink-0"
-              stroke="var(--color-primary)"
-              fill="none"
-              strokeWidth={2}
-            >
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0110 0v4" />
-            </svg>
-            <span className="text-sm font-medium text-[var(--color-primary)]">
-              Report submitted. This form is now read-only.
-            </span>
+            <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
+              <Separator orientation="vertical" className="h-5 bg-[var(--color-border)]" />
+              <ArchiveToggle
+                checked={showArchivePeriods}
+                onChange={setShowArchivePeriods}
+              />
+              <FillFromButton
+                periods={periods}
+                disabled={isReadOnly || fillFromMut.isPending}
+                onFillFrom={handleFillFrom}
+              />
+              <Separator orientation="vertical" className="h-5 bg-[var(--color-border)]" />
+              <VersionHistoryNav
+                versions={versions}
+                onRestore={isReadOnly ? undefined : handleRestoreVersion}
+                onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
+                canSaveVersion={!createSnapshotMut.isPending}
+              />
+            </div>
           </div>
         )}
 
@@ -1388,136 +1349,243 @@ export function LeadForm({
             </div>
           )}
 
-        <LeadFormSyncBridge.Provider
-          products={products}
-          risks={risks}
-          onProductsChange={handleProductsChange}
-          onRisksChange={handleRisksChange}
-          readOnly={isReadOnly}
-          stagesForProduct={stagesForProduct}
-          {...(sectionIdForActions ? { sectionId: sectionIdForActions } : {})}
-        >
-          {/* Product Status (SDLC Pipeline) */}
-          <AccordionSection
-            groupSyncKey={groupSyncKey}
-            groupExpanded={groupExpanded}
-            icon={<GridIcon />}
-            title="Product Status"
-            badge={`${products.length} assigned products`}
-            subtitle="Assigned stages are highlighted. Blocked and at-risk stages link to the context you need to resolve them."
-          >
-            <LeadFormSyncBridge.Pipeline />
-          </AccordionSection>
-
-          {/* Current Week */}
-          <AccordionSection
-            groupSyncKey={groupSyncKey}
-            groupExpanded={groupExpanded}
-            icon={<CalendarIcon />}
-            title="Current Week"
-            badge={`${currentWeekItems.length} items`}
-          >
-            <CurrentWeekSection
-              items={currentWeekItems}
-              readOnly={isReadOnly}
-              onItemsChange={handleCurrentWeekItemsChange}
-              currentUserName={currentUser.name}
-              products={products}
-              stagesForProduct={stagesForProduct}
-            />
-          </AccordionSection>
-
-          {/* Next Week */}
-          <AccordionSection
-            groupSyncKey={groupSyncKey}
-            groupExpanded={groupExpanded}
-            icon={<NextWeekIcon />}
-            title="Next Week"
-            badge={`${nextWeekItems.length} items`}
-          >
-            <NextWeekSection
-              items={nextWeekItems}
-              readOnly={isReadOnly}
-              onItemsChange={handleNextWeekItemsChange}
-              currentUserName={currentUser.name}
-              products={products}
-              stagesForProduct={stagesForProduct}
-            />
-          </AccordionSection>
-
-          {/* Risks & Blockers */}
-          <AccordionSection
-            groupSyncKey={groupSyncKey}
-            groupExpanded={groupExpanded}
-            icon={<AlertIcon />}
-            title="Risks & Blockers"
-            titleColor="var(--color-destructive)"
-            badge={`${risks.length}`}
-            badgeStyle={{
-              background: "#fee2e2",
-              color: "var(--color-destructive)",
-            }}
-          >
-            <LeadFormSyncBridge.Risks />
-          </AccordionSection>
-        </LeadFormSyncBridge.Provider>
-
-        {/* Decisions */}
-        <AccordionSection
-          groupSyncKey={groupSyncKey}
-          groupExpanded={groupExpanded}
-          icon={<ChatIcon />}
-          title="Decisions"
-          titleColor="var(--color-starbucks-accent)"
-          badge={`${decisions.length}`}
-          badgeStyle={{
-            background: "var(--color-success)",
-            color: "var(--color-starbucks-accent)",
-          }}
-        >
-          <DecisionsSection
-            decisions={decisions}
-            readOnly={isReadOnly}
-            onChange={handleDecisionsChange}
-            currentUserName={currentUser.name}
-            availableStages={availableStages}
-            products={products}
-            defaultProductId={products[0]?.id}
+        {isSlidesMode ? (
+          <LeadSlidesClient
+            initialReportId={targetReportId || pinnedReportId || null}
+            chrome="content"
           />
-        </AccordionSection>
-
-        {/* Priorities — variable-length list */}
-        <div
-          ref={prioritiesRef}
-          tabIndex={-1}
-          className="scroll-mt-24 outline-none"
-        >
-          <AccordionSection
-            groupSyncKey={groupSyncKey}
-            groupExpanded={groupExpanded}
-            icon={<StarIcon />}
-            title="Priorities"
-            titleColor="var(--color-starbucks-gold)"
-            badge={`${priorities.length}`}
-          >
-            <PrioritiesSection
-              priorities={priorities}
-              readOnly={isReadOnly}
-              onChange={handlePrioritiesChange}
-              availableStages={availableStages}
+        ) : (
+          <>
+            <LeadFormSyncBridge.Provider
               products={products}
-              defaultProductId={products[0]?.id}
-            />
-            {submitFieldError?.field === "priorities" && (
-              <p
-                role="alert"
-                className="mt-3 text-sm font-medium text-[var(--color-destructive)]"
+              risks={risks}
+              onProductsChange={handleProductsChange}
+              onRisksChange={handleRisksChange}
+              readOnly={isReadOnly}
+              stagesForProduct={stagesForProduct}
+              {...(sectionIdForActions
+                ? { sectionId: sectionIdForActions }
+                : {})}
+              {...(currentUser.name
+                ? { sectionAuthorName: currentUser.name }
+                : {})}
+              risksAddSignal={risksAddSignal}
+            >
+              <AccordionSection
+                groupSyncKey={groupSyncKey}
+                groupExpanded={groupExpanded}
+                testId="lead-section-product-status"
+                icon={<GridIcon />}
+                title="Product Status"
+                badge={`${products.length} assigned products`}
+                subtitle="Assigned stages are highlighted. Blocked and at-risk stages link to the context you need to resolve them."
               >
-                {submitFieldError.message}
-              </p>
-            )}
-          </AccordionSection>
-        </div>
+                <LeadFormSyncBridge.Pipeline />
+              </AccordionSection>
+
+              {/* Current Week */}
+              <AccordionSection
+                groupSyncKey={groupSyncKey}
+                groupExpanded={groupExpanded}
+                testId="lead-section-current-week"
+                icon={<CalendarIcon />}
+                title="Current Week"
+                badge={`${currentWeekItems.length} items`}
+                subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
+                actions={
+                  !isReadOnly ? (
+                    <button
+                      type="button"
+                      className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() =>
+                        setCurrentWeekAddSignal((value) => value + 1)
+                      }
+                      disabled={products.length === 0}
+                      title={
+                        products.length > 0
+                          ? `Add item to ${products[0]?.name}`
+                          : "No products assigned — contact admin"
+                      }
+                    >
+                      + Add Item
+                    </button>
+                  ) : null
+                }
+              >
+                <CurrentWeekSection
+                  items={currentWeekItems}
+                  readOnly={isReadOnly}
+                  onItemsChange={handleCurrentWeekItemsChange}
+                  currentUserName={currentUser.name}
+                  products={products}
+                  stagesForProduct={stagesForProduct}
+                  addSignal={currentWeekAddSignal}
+                />
+              </AccordionSection>
+
+              {/* Next Week */}
+              <AccordionSection
+                groupSyncKey={groupSyncKey}
+                groupExpanded={groupExpanded}
+                testId="lead-section-next-week"
+                icon={<NextWeekIcon />}
+                title="Next Week"
+                badge={`${nextWeekItems.length} items`}
+                subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
+                actions={
+                  !isReadOnly ? (
+                    <button
+                      type="button"
+                      className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => setNextWeekAddSignal((value) => value + 1)}
+                      disabled={products.length === 0}
+                      title={
+                        products.length > 0
+                          ? `Add item to ${products[0]?.name}`
+                          : "No products assigned — contact admin"
+                      }
+                    >
+                      + Add Item
+                    </button>
+                  ) : null
+                }
+              >
+                <NextWeekSection
+                  items={nextWeekItems}
+                  readOnly={isReadOnly}
+                  onItemsChange={handleNextWeekItemsChange}
+                  currentUserName={currentUser.name}
+                  products={products}
+                  stagesForProduct={stagesForProduct}
+                  addSignal={nextWeekAddSignal}
+                />
+              </AccordionSection>
+
+              {/* Risks & Blockers */}
+              <AccordionSection
+                groupSyncKey={groupSyncKey}
+                groupExpanded={groupExpanded}
+                testId="lead-section-risks"
+                icon={<AlertIcon />}
+                title="Risks & Blockers"
+                titleColor="var(--color-destructive)"
+                badge={`${risks.length}`}
+                badgeStyle={{
+                  background: "#fee2e2",
+                  color: "var(--color-destructive)",
+                }}
+                subtitle="Risks and blockers that need attention, with impact, mitigation, and affected stages."
+                actions={
+                  !isReadOnly ? (
+                    <button
+                      type="button"
+                      className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => setRisksAddSignal((value) => value + 1)}
+                      disabled={products.length === 0}
+                      title={
+                        products.length > 0
+                          ? undefined
+                          : "No products assigned — contact admin"
+                      }
+                    >
+                      + Add Risk
+                    </button>
+                  ) : null
+                }
+              >
+                <LeadFormSyncBridge.Risks />
+              </AccordionSection>
+            </LeadFormSyncBridge.Provider>
+
+            {/* Decisions */}
+            <AccordionSection
+              groupSyncKey={groupSyncKey}
+              groupExpanded={groupExpanded}
+              testId="lead-section-decisions"
+              icon={<ChatIcon />}
+              title="Decisions"
+              titleColor="var(--color-starbucks-accent)"
+              badge={`${decisions.length}`}
+              badgeStyle={{
+                background: "var(--color-success)",
+                color: "var(--color-starbucks-accent)",
+              }}
+              subtitle="Decisions that need leadership attention, with owner, impact, and affected stages."
+              actions={
+                !isReadOnly ? (
+                  <button
+                    type="button"
+                    className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => setDecisionsAddSignal((value) => value + 1)}
+                  >
+                    + Add Decision
+                  </button>
+                ) : null
+              }
+            >
+              <DecisionsSection
+                decisions={decisions}
+                readOnly={isReadOnly}
+                onChange={handleDecisionsChange}
+                currentUserName={currentUser.name}
+                availableStages={availableStages}
+                products={products}
+                defaultProductId={products[0]?.id}
+                addSignal={decisionsAddSignal}
+              />
+            </AccordionSection>
+
+            {/* Priorities — variable-length list */}
+            <div
+              ref={prioritiesRef}
+              tabIndex={-1}
+              className="scroll-mt-24 outline-none"
+            >
+              <AccordionSection
+                groupSyncKey={groupSyncKey}
+                groupExpanded={groupExpanded}
+                testId="lead-section-priorities"
+                icon={<StarIcon />}
+                title="Priorities"
+                titleColor="var(--color-starbucks-gold)"
+                badge={`${priorities.length}`}
+                subtitle="Top priorities for the week, tied back to product and SDLC stage where relevant."
+                actions={
+                  !isReadOnly ? (
+                    <button
+                      type="button"
+                      className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() =>
+                        setPrioritiesAddSignal((value) => value + 1)
+                      }
+                    >
+                      + Add Priority
+                    </button>
+                  ) : null
+                }
+              >
+                <PrioritiesSection
+                  priorities={priorities}
+                  readOnly={isReadOnly}
+                  onChange={handlePrioritiesChange}
+                  availableStages={availableStages}
+                  products={products}
+                  defaultProductId={products[0]?.id}
+                  sectionAuthorName={currentUser.name ?? undefined}
+                  addSignal={prioritiesAddSignal}
+                />
+                {submitFieldError?.field === "priorities" && (
+                  <p
+                    role="alert"
+                    className="mt-3 text-sm font-medium text-[var(--color-destructive)]"
+                  >
+                    {submitFieldError.message}
+                  </p>
+                )}
+              </AccordionSection>
+            </div>
+          </>
+        )}
       </form>
 
       {/* Submit Confirmation Dialog */}

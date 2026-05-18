@@ -32,6 +32,7 @@ export type SessionUser = {
   name: string;
   email: string;
   role: "lead" | "head" | "viewer" | "admin";
+  reportingGroupName?: string;
 };
 
 /**
@@ -77,6 +78,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         name: data.name,
         email: data.email,
         role: data.role,
+        reportingGroupName: data.reportingGroupName,
       },
       // UFB-047 / Phase 48-A: `auth.me` carries the org identity hydrated
       // per-request by the tRPC context factory. Older JWTs minted before

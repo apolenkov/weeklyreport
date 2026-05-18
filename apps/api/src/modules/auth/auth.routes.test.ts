@@ -76,6 +76,9 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
         findFirst: vi.fn(async () => ({
           id: "a0000000-0000-4000-8000-000000000301",
         })),
+        findUnique: vi.fn(async () => ({
+          name: "Software Development",
+        })),
         upsert: vi.fn(async () => ({
           id: "a0000000-0000-4000-8000-000000000301",
         })),
@@ -97,6 +100,7 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
 
     expect(session.role).toBe("admin");
     expect(session.email).toBe("admin@customreport.local");
+    expect(session.reportingGroupName).toBe("Software Development");
     // The Prisma create call must have received role='admin' verbatim
     const createMock = prisma.user.create as unknown as ReturnType<
       typeof vi.fn

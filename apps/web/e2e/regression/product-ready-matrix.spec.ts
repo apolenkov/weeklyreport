@@ -71,7 +71,7 @@ const ROLE_SCENARIOS: ReadonlyArray<Scenario> = [
     role: "viewer",
     route: "/reports?tab=published",
     expected: "loads",
-    heading: /Reports|Report Archive/i,
+    heading: /Reports|History/i,
   },
 ];
 
@@ -301,7 +301,7 @@ test.describe("Product-ready role matrix and UI geometry", () => {
     });
 
     expect(
-      Math.abs((after?.top ?? 0) - (before?.top ?? 0)),
+      Math.abs((after?.y ?? 0) - (before?.y ?? 0)),
     ).toBeLessThanOrEqual(1);
     expect(
       Math.abs((after?.height ?? 0) - (before?.height ?? 0)),

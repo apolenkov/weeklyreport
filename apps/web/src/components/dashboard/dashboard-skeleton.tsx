@@ -2,8 +2,8 @@ import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
 /**
  * Loading-state skeleton for the head dashboard. Mirrors the dimensions of
- * Submission Activity / KpiCards / AlertBar / BlockedAtRiskTable /
- * ReportArchiveSection so the load-to-data transition has no layout shift.
+ * Submission Activity / KpiCards / AlertBar / BlockedAtRiskTable so the
+ * load-to-data transition has no layout shift.
  *
  * Stateless and hook-free — safe to render server-side.
  */
@@ -49,19 +49,6 @@ export function DashboardSkeleton() {
         <div className="space-y-2 px-4 pb-4">
           {[0, 1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-12 w-full rounded-lg" />
-          ))}
-        </div>
-      </div>
-
-      {/* Archive grid (4-up) */}
-      <div>
-        <div className="mt-6 flex items-center justify-between">
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-[var(--radius)]" />
           ))}
         </div>
       </div>

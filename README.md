@@ -132,6 +132,10 @@ Without `&email=...` the `lead` role uses the primary seeded lead,
   Products appear in a lead report only after SDLC stage assignments are configured.
   Terminal: `pnpm db:wipe:manual-uat`; inside Docker:
   `docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts`.
+- **Hard reset** — use `pnpm db:reset:hard` for host-mode development against
+  root `.env`. When the full Docker stack serves `localhost:3000`,
+  use `pnpm db:reset:hard:docker` so the reset runs inside the API container
+  against the same Postgres database and Redis service as the live app.
 - **Mailpit** — outbound email goes to a local catch-all SMTP. UI at http://localhost:8025 shows every reminder/escalation rendered as HTML. The Compose service is still named `mailhog` for backward-compatible env wiring.
 - **Observability** — `pnpm observability:up` starts Prometheus (http://localhost:9090), Grafana (http://localhost:3003, `admin`/`admin`), Postgres exporter, and Redis exporter against the running local stack.
 

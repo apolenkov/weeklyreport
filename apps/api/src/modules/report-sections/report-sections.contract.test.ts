@@ -214,6 +214,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
     );
 
     expect(saved.decisions).toHaveLength(1);
+    expect(saved.decisions[0]?.owner).toBe(baseSection.authorName);
   });
 
   it("updates priorities", async () => {

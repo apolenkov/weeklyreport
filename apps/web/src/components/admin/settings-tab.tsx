@@ -48,7 +48,7 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
       <Tabs defaultValue="identity" className="w-full">
         <TabsList
           variant="line"
-          className="border-b border-[var(--color-border)]"
+          className="max-w-full justify-start overflow-x-auto border-b border-[var(--color-border)]"
         >
           <TabsTrigger value="identity">Identity</TabsTrigger>
           <TabsTrigger value="periods">Periods</TabsTrigger>
@@ -1015,8 +1015,8 @@ function IntegrationsSubTab() {
         className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4"
         data-testid="integration-row-telegram"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
               Telegram
             </h3>
@@ -1026,7 +1026,7 @@ function IntegrationsSubTab() {
             </p>
           </div>
           <span
-            className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)]"
+            className="inline-flex shrink-0 self-start whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)] sm:self-auto"
             data-testid="integration-badge-telegram"
             data-state="coming-soon"
           >
@@ -1034,7 +1034,7 @@ function IntegrationsSubTab() {
           </span>
         </div>
 
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
+        <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
           <dt>Bot configured</dt>
           <dd
             className="font-mono"
@@ -1053,39 +1053,41 @@ function IntegrationsSubTab() {
         className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4"
         data-testid="integration-row-ci"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
               CI Integration
-              <span
-                className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-gold)]"
-                data-testid="integration-badge-ci-coming-soon"
-              >
-                Coming Soon
-              </span>
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
               Connect your CI/CD pipeline for automated report triggers.
               Configuration fields will be available in a follow-on phase.
             </p>
           </div>
-          {isCiConfigured ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto sm:justify-end">
             <span
-              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-primary)]"
-              data-testid="integration-badge-ci"
-              data-state="configured"
+              className="inline-flex shrink-0 items-center whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-gold)]"
+              data-testid="integration-badge-ci-coming-soon"
             >
-              Configured
+              Coming Soon
             </span>
-          ) : (
-            <span
-              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]"
-              data-testid="integration-badge-ci"
-              data-state="not-configured"
-            >
-              Not configured
-            </span>
-          )}
+            {isCiConfigured ? (
+              <span
+                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-primary)]"
+                data-testid="integration-badge-ci"
+                data-state="configured"
+              >
+                Configured
+              </span>
+            ) : (
+              <span
+                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]"
+                data-testid="integration-badge-ci"
+                data-state="not-configured"
+              >
+                Not configured
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1094,8 +1096,8 @@ function IntegrationsSubTab() {
         className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
         data-testid="integration-row-slack"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
               Slack
             </h3>
@@ -1105,7 +1107,7 @@ function IntegrationsSubTab() {
             </p>
           </div>
           <span
-            className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)]"
+            className="inline-flex shrink-0 self-start whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)] sm:self-auto"
             data-testid="integration-badge-slack"
             data-state="coming-soon"
           >
@@ -1120,8 +1122,8 @@ function IntegrationsSubTab() {
         className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
         data-testid="integration-row-ai"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
               AI Integration
             </h3>
@@ -1131,7 +1133,7 @@ function IntegrationsSubTab() {
             </p>
           </div>
           <span
-            className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)]"
+            className="inline-flex shrink-0 self-start whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)] sm:self-auto"
             data-testid="integration-badge-ai"
             data-state="coming-soon"
           >
@@ -1139,7 +1141,7 @@ function IntegrationsSubTab() {
           </span>
         </div>
 
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
+        <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
           <dt>Provider</dt>
           <dd className="font-mono" data-testid="integration-ai-provider">
             not configured

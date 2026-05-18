@@ -100,6 +100,13 @@ function mergeSection(
           ? "green"
           : null;
   };
+  const leadOwnedDecisions = input.decisions.map((decision) => ({
+    ...decision,
+    // The lead form owner input is read-only and represents the section owner.
+    // Persisting a stale display name here makes the lead's own rows look
+    // foreign and disables edit/delete in the UI.
+    owner: section.authorName,
+  }));
 
   return reportSectionReadModelSchema.parse({
     ...section,
@@ -127,7 +134,7 @@ function mergeSection(
       }),
     items: input.items,
     risks: input.risks,
-    decisions: input.decisions,
+    decisions: leadOwnedDecisions,
     priorities: input.priorities,
   });
 }

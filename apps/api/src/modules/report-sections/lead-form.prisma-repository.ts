@@ -102,7 +102,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
 
     await this.prisma.$transaction(
       async (tx) => {
-        // Delete current content from target
+        // Replace only the sections that Fill From owns. Priorities stay fresh
+        // for the current week and must not be copied or cleared here.
         await tx.item.deleteMany({
           where: { reportSectionId: targetSectionId },
         });
@@ -112,21 +113,19 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         await tx.decision.deleteMany({
           where: { reportSectionId: targetSectionId },
         });
-        await tx.priority.deleteMany({
-          where: { reportSectionId: targetSectionId },
-        });
 
-        // Copy items from source
+        // Copy items from source. Next Week source items become Current Week
+        // suggestions in the target period.
         if (source.items.length > 0) {
           await tx.item.createMany({
             data: source.items.map((i) => ({
               reportSectionId: targetSectionId,
               projectId: i.projectId,
-              type: i.type,
+              type: "current",
               text: i.text,
               tag: i.tag,
               workflowStatus: i.workflowStatus,
-              carriedOver: i.carriedOver,
+              carriedOver: false,
               completed: i.completed ?? null,
               stageName: i.stageName ?? null,
             })),
@@ -143,6 +142,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
+              severity: r.severity,
               stageName: r.stageName ?? null,
             })),
           });
@@ -150,38 +150,21 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         }
 
         // Copy decisions from source
-        if (source.decisions.length > 0) {
+        const decisionsToCopy = source.decisions.filter((d) => !!d.productId);
+        if (decisionsToCopy.length > 0) {
           await tx.decision.createMany({
-            data: source.decisions
-              .filter((d) => !!d.productId)
-              .map((d) => ({
-                reportSectionId: targetSectionId,
-                text: d.text,
-                owner: d.owner,
-                deadline: d.deadline ?? null,
-                impact: d.impact,
-                resolvedAt: d.resolvedAt ?? null,
-                stageName: d.stageName ?? null,
-                productId: d.productId as string,
-              })),
+            data: decisionsToCopy.map((d) => ({
+              reportSectionId: targetSectionId,
+              text: d.text,
+              owner: d.owner,
+              deadline: d.deadline ?? null,
+              impact: d.impact,
+              resolvedAt: d.resolvedAt ?? null,
+              stageName: d.stageName ?? null,
+              productId: d.productId as string,
+            })),
           });
-          copiedItems += source.decisions.length;
-        }
-
-        // Copy priorities from source
-        if (source.priorities.length > 0) {
-          await tx.priority.createMany({
-            data: source.priorities
-              .filter((p) => !!p.productId)
-              .map((p) => ({
-                reportSectionId: targetSectionId,
-                rank: p.rank,
-                text: p.text,
-                stageName: p.stageName ?? null,
-                productId: p.productId as string,
-              })),
-          });
-          copiedItems += source.priorities.length;
+          copiedItems += decisionsToCopy.length;
         }
       },
       { timeout: 15000 },
@@ -438,5 +421,20 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         });
       }
     }
+  }
+
+  async hasSharedProduct(userId1: string, userId2: string): Promise<boolean> {
+    const row = await this.prisma.stageAssignment.findFirst({
+      where: {
+        userId: userId1,
+        project: {
+          stageAssignments: {
+            some: { userId: userId2 },
+          },
+        },
+      },
+      select: { id: true },
+    });
+    return row !== null;
   }
 }

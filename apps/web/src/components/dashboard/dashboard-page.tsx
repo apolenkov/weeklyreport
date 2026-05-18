@@ -17,7 +17,6 @@ import { KpiCards } from "./kpi-cards";
 import { ProductKpiCard } from "./product-kpi-card";
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
-import { ReportArchiveSection } from "./report-archive-section";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { ActivityLivePanel } from "./activity-live-panel";
 import { LeadSummaryTable } from "./lead-summary-table";
@@ -34,7 +33,6 @@ export function DashboardPage() {
   const orgFullName = sessionState?.organization?.fullName ?? null;
 
   const reviewQ = useQuery(trpc.review.dashboard.queryOptions());
-  const archiveQ = useQuery(trpc.archive.list.queryOptions({ limit: 12 }));
   const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
 
   useEffect(() => {
@@ -50,19 +48,6 @@ export function DashboardPage() {
   }, [reviewQ.isError, reviewQ.error]);
 
   useEffect(() => {
-    if (archiveQ.isError) {
-      logClientError("dashboard.archive.load_failed", archiveQ.error, {
-        component: "DashboardPage",
-        procedure: "archive.list",
-        limit: 12,
-      });
-      toast.error(
-        formatClientErrorMessage("Failed to load archive", archiveQ.error),
-      );
-    }
-  }, [archiveQ.isError, archiveQ.error]);
-
-  useEffect(() => {
     if (weeklyQ.isError) {
       logClientError("dashboard.weeklyReport.load_failed", weeklyQ.error, {
         component: "DashboardPage",
@@ -75,33 +60,23 @@ export function DashboardPage() {
     }
   }, [weeklyQ.isError, weeklyQ.error]);
 
-  const isLoading =
-    reviewQ.isLoading || archiveQ.isLoading || weeklyQ.isLoading;
-  const queryError = reviewQ.error ?? archiveQ.error ?? weeklyQ.error;
+  const isLoading = reviewQ.isLoading || weeklyQ.isLoading;
+  const queryError = reviewQ.error ?? weeklyQ.error;
   const hasDashboardData =
-    reviewQ.data !== undefined &&
-    archiveQ.data !== undefined &&
-    weeklyQ.data !== undefined;
+    reviewQ.data !== undefined && weeklyQ.data !== undefined;
   const reviewRefetch = reviewQ.refetch;
-  const archiveRefetch = archiveQ.refetch;
   const weeklyRefetch = weeklyQ.refetch;
   const reviewStatus = reviewQ.status;
-  const archiveStatus = archiveQ.status;
   const weeklyStatus = weeklyQ.status;
   const reviewFetchStatus = reviewQ.fetchStatus;
-  const archiveFetchStatus = archiveQ.fetchStatus;
   const weeklyFetchStatus = weeklyQ.fetchStatus;
 
   const refetchDashboardQueries = useCallback(
     (resetStalled: boolean) => {
       if (resetStalled) setLoadStalled(false);
-      void Promise.allSettled([
-        reviewRefetch(),
-        archiveRefetch(),
-        weeklyRefetch(),
-      ]);
+      void Promise.allSettled([reviewRefetch(), weeklyRefetch()]);
     },
-    [archiveRefetch, reviewRefetch, weeklyRefetch],
+    [reviewRefetch, weeklyRefetch],
   );
 
   const retryDashboardLoad = useCallback(() => {
@@ -122,19 +97,10 @@ export function DashboardPage() {
       path: window.location.pathname,
       reviewStatus,
       reviewFetchStatus,
-      archiveStatus,
-      archiveFetchStatus,
       weeklyStatus,
       weeklyFetchStatus,
     });
-  }, [
-    archiveFetchStatus,
-    archiveStatus,
-    reviewFetchStatus,
-    reviewStatus,
-    weeklyFetchStatus,
-    weeklyStatus,
-  ]);
+  }, [reviewFetchStatus, reviewStatus, weeklyFetchStatus, weeklyStatus]);
 
   useEffect(() => {
     function handlePageShow(event: PageTransitionEvent) {
@@ -158,8 +124,6 @@ export function DashboardPage() {
         path: window.location.pathname,
         reviewStatus,
         reviewFetchStatus,
-        archiveStatus,
-        archiveFetchStatus,
         weeklyStatus,
         weeklyFetchStatus,
       });
@@ -169,8 +133,6 @@ export function DashboardPage() {
     window.addEventListener("pageshow", handlePageShow);
     return () => window.removeEventListener("pageshow", handlePageShow);
   }, [
-    archiveFetchStatus,
-    archiveStatus,
     hasDashboardData,
     markStalledAndRefetch,
     refetchDashboardQueries,
@@ -260,7 +222,7 @@ export function DashboardPage() {
 
   const dashboard = mapDashboardData({
     review: reviewQ.data,
-    archive: archiveQ.data,
+    archive: { items: [], nextCursor: null },
     weeklyReport: weeklyQ.data,
   });
   const { kpi, leads, blockedAtRisk, pendingLeads } = dashboard;
@@ -321,9 +283,6 @@ export function DashboardPage() {
 
       {/* Blocked & At Risk */}
       <BlockedAtRiskTable items={blockedAtRisk} />
-
-      {/* Report Archive — self-contained: owns its own cursor pagination */}
-      <ReportArchiveSection currentReportId={weeklyQ.data.reportId} />
     </div>
   );
 }

@@ -23,6 +23,7 @@ const DEV_SESSION: UserSession = {
   activeReportId: "a0000000-0000-4000-8000-000000000001",
   activeReportSectionId: null,
   reportingGroupId: "a0000000-0000-4000-8000-000000000301",
+  reportingGroupName: "Software Development",
 };
 
 /**
@@ -155,7 +156,8 @@ export function createContextFactory(
 
         const resolved = await resolveSectionId(session, prisma);
         const hydrated = await hydrateViewerGroupAccess(resolved, prisma);
-        const withOrg = await hydrateOrganization(hydrated, prisma);
+        const withGroup = await hydrateReportingGroupName(hydrated, prisma);
+        const withOrg = await hydrateOrganization(withGroup, prisma);
         return {
           session: withOrg,
           logger,
@@ -214,7 +216,8 @@ export function createContextFactory(
     if (devModeEnabled || allowTest) {
       const devResolved = await resolveSectionId({ ...DEV_SESSION }, prisma);
       const devHydrated = await hydrateViewerGroupAccess(devResolved, prisma);
-      const devWithOrg = await hydrateOrganization(devHydrated, prisma);
+      const devWithGroup = await hydrateReportingGroupName(devHydrated, prisma);
+      const devWithOrg = await hydrateOrganization(devWithGroup, prisma);
       return {
         session: devWithOrg,
         logger,
@@ -268,6 +271,19 @@ async function hydrateViewerGroupAccess(
     select: { groupId: true },
   });
   session.viewerGroupAccess = grants.map((g) => g.groupId);
+  return session;
+}
+
+async function hydrateReportingGroupName(
+  session: UserSession,
+  prisma: PrismaService,
+): Promise<UserSession> {
+  if (!session.reportingGroupId || session.reportingGroupName) return session;
+  const row = await prisma.reportingGroup.findUnique({
+    where: { id: session.reportingGroupId },
+    select: { name: true },
+  });
+  if (row) session.reportingGroupName = row.name;
   return session;
 }
 

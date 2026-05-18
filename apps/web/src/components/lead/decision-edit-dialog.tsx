@@ -228,9 +228,7 @@ export function DecisionEditDialog({
                 Owner *
               </label>
               <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-                Who is accountable. Defaults to you. If the owner is someone
-                else (e.g. Head, PM), you raise the decision but they make the
-                call.
+                Accountable lead for this section. Saved as the section owner.
               </p>
               <input
                 id="dec-owner"

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { PriorityEditDialog } from "./priority-edit-dialog";
 import type { PriorityEntry, Product } from "./mock-data";
@@ -19,6 +20,12 @@ type PrioritiesSectionProps = {
   /** R4-B: products the lead is assigned to, passed through to the dialog. */
   readonly products?: readonly Product[];
   readonly defaultProductId?: string;
+  /**
+   * P5: Display name of the section author (the lead who owns this section).
+   * Shown at the bottom-left of each priority card in the unified meta-row.
+   */
+  readonly sectionAuthorName?: string;
+  readonly addSignal?: number;
 };
 
 function EditIcon() {
@@ -68,95 +75,6 @@ const RANK_TEXT: Record<1 | 2 | 3 | "rest", string> = {
   rest: "var(--color-muted-foreground)",
 };
 
-const MAX_VISIBLE_PRIORITY_STAGE_CHIPS = 2;
-const STAGE_CHIP_PALETTE = [
-  { background: "#e8f0ee", color: "#0f5132" },
-  { background: "#edf2ff", color: "#24428f" },
-  { background: "#fff3cd", color: "#7a5a00" },
-  { background: "#fdebd3", color: "#8a4b00" },
-  { background: "#f8d7da", color: "#842029" },
-  { background: "#eee7ff", color: "#4c2a85" },
-] as const;
-
-function stageAbbreviation(stage: string): string {
-  const words = stage
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .split(/[^A-Za-z0-9]+/)
-    .filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return (words[0] ?? "?").slice(0, 3).toUpperCase();
-  return words
-    .map((word) => word.charAt(0))
-    .join("")
-    .slice(0, 3)
-    .toUpperCase();
-}
-
-function stageChipStyle(
-  stage: string,
-  fallbackIndex: number,
-  availableStages: readonly string[] | undefined,
-) {
-  const stageIndex = availableStages?.findIndex(
-    (candidate) => candidate === stage,
-  );
-  const paletteIndex =
-    stageIndex !== undefined && stageIndex >= 0 ? stageIndex : fallbackIndex;
-  return STAGE_CHIP_PALETTE[paletteIndex % STAGE_CHIP_PALETTE.length];
-}
-
-function PriorityStageScope({
-  rank,
-  stageTags,
-  availableStages,
-}: {
-  readonly rank: number;
-  readonly stageTags: readonly string[];
-  readonly availableStages?: readonly string[];
-}) {
-  if (stageTags.length === 0) {
-    return (
-      <span
-        className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]"
-        aria-label={`Priority ${rank} stages: all stages`}
-      >
-        All stages
-      </span>
-    );
-  }
-
-  const visibleTags = stageTags.slice(0, MAX_VISIBLE_PRIORITY_STAGE_CHIPS);
-  const hiddenCount = stageTags.length - visibleTags.length;
-  const allStagesLabel = stageTags.join(", ");
-
-  return (
-    <span
-      className="inline-flex flex-wrap items-center gap-1"
-      aria-label={`Priority ${rank} stages: ${allStagesLabel}`}
-      title={allStagesLabel}
-    >
-      {visibleTags.map((stage, stageIndex) => {
-        const style = stageChipStyle(stage, stageIndex, availableStages);
-        return (
-          <span
-            key={stage}
-            aria-label={"Stage " + stage}
-            className="inline-flex h-6 min-w-6 items-center justify-center rounded-[var(--radius-pill)] px-2 text-[10px] font-bold tabular-nums"
-            style={style}
-          >
-            {stageAbbreviation(stage)}
-          </span>
-        );
-      })}
-      {hiddenCount > 0 && (
-        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-          +{hiddenCount}
-        </span>
-      )}
-    </span>
-  );
-}
-
 /**
  * Variable-length priority list. Add / Edit go through PriorityEditDialog
  * so the interaction shape matches Item, Risk, and Decision (open modal
@@ -173,6 +91,8 @@ export function PrioritiesSection({
   availableStages,
   products,
   defaultProductId,
+  sectionAuthorName,
+  addSignal = 0,
 }: PrioritiesSectionProps) {
   const sorted = [...priorities].sort((a, b) => a.rank - b.rank);
   const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
@@ -188,11 +108,6 @@ export function PrioritiesSection({
     // UI is simpler when ranks have no gaps.
     const renumbered = next.map((p, idx) => ({ ...p, rank: idx + 1 }));
     onChange?.(renumbered);
-  }
-
-  function handleAdd() {
-    if (readOnly) return;
-    setDialogState({ open: true, mode: "create" });
   }
 
   function handleEdit(idx: number) {
@@ -216,6 +131,12 @@ export function PrioritiesSection({
     setDialogState({ open: false });
   }
 
+  useEffect(() => {
+    if (addSignal === 0) return;
+    if (readOnly) return;
+    setDialogState({ open: true, mode: "create" });
+  }, [addSignal, readOnly]);
+
   function handleDelete(idx: number) {
     if (readOnly) return;
     setPendingDeleteIdx(idx);
@@ -227,16 +148,6 @@ export function PrioritiesSection({
     setPendingDeleteIdx(null);
   }
 
-  const addButton = !readOnly && (
-    <button
-      type="button"
-      className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-      onClick={handleAdd}
-    >
-      + Add Priority
-    </button>
-  );
-
   if (sorted.length === 0) {
     return (
       <div className="space-y-3">
@@ -245,7 +156,6 @@ export function PrioritiesSection({
             ? "No priorities reported."
             : "No priorities yet. Use “+ Add Priority” to list what matters most."}
         </div>
-        {addButton}
         <PriorityEditDialog
           key={
             dialogState.open && dialogState.mode === "create"
@@ -297,33 +207,35 @@ export function PrioritiesSection({
             </span>
             <button
               type="button"
-              className="flex-1 cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
+              className="min-h-[68px] flex-1 cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-3 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
               onClick={() => handleEdit(idx)}
               disabled={readOnly}
               aria-label={`Edit priority ${entry.rank}`}
             >
-              <div className="flex flex-wrap items-center gap-2">
-                {entry.productName && (
-                  <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
-                    {entry.productName}
-                  </span>
-                )}
-                {/* 35-04 / D-16: keep scoped priority stages readable even
-                    when a priority spans many SDLC stages. */}
-                <PriorityStageScope
-                  rank={entry.rank}
-                  stageTags={stageTags}
-                  availableStages={availableStages}
-                />
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  {entry.productName && (
+                    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
+                      {entry.productName}
+                    </span>
+                  )}
+                </div>
                 {entry.text.trim().length > 0 ? (
-                  <span className="break-words text-[var(--color-foreground)]">
+                  <span className="block break-words text-[var(--color-foreground)]">
                     {entry.text}
                   </span>
                 ) : (
-                  <span className="text-[var(--color-muted-foreground)]">
+                  <span className="block text-[var(--color-muted-foreground)]">
                     — pending
                   </span>
                 )}
+                {/* P5: unified [author …… chip] meta-row */}
+                <MetaRow
+                  authorName={sectionAuthorName}
+                  stageTags={stageTags}
+                  ariaLabel={`Priority ${entry.rank} stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+                  className="pt-1"
+                />
               </div>
             </button>
             {!readOnly && (
@@ -349,8 +261,6 @@ export function PrioritiesSection({
           </div>
         );
       })}
-
-      {addButton}
 
       <PriorityEditDialog
         key={`${dialogState.open}-${dialogState.open && dialogState.mode === "edit" ? dialogState.priority.rank : "new"}`}

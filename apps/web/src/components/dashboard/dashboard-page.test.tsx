@@ -31,11 +31,6 @@ vi.mock("../../lib/trpc-context", () => ({
         queryOptions: () => ({ queryKey: ["review.dashboard"] }),
       },
     },
-    archive: {
-      list: {
-        queryOptions: () => ({ queryKey: ["archive.list"] }),
-      },
-    },
     weeklyReport: {
       get: {
         queryOptions: () => ({ queryKey: ["weeklyReport.get"] }),
@@ -62,10 +57,6 @@ vi.mock("./alert-bar", () => ({
 
 vi.mock("./blocked-at-risk-table", () => ({
   BlockedAtRiskTable: () => <div>Blocked</div>,
-}));
-
-vi.mock("./report-archive-section", () => ({
-  ReportArchiveSection: () => <div>Archive</div>,
 }));
 
 type QueryState = {
@@ -125,7 +116,6 @@ describe("DashboardPage loading guard", () => {
       isError: true,
       status: "error",
     });
-    setQueryState("archive.list", { data: { items: [], nextCursor: null } });
     setQueryState("weeklyReport.get", {
       data: { reportId: "report-1" },
     });
@@ -141,11 +131,6 @@ describe("DashboardPage loading guard", () => {
   it("logs, retries, and leaves the skeleton when dashboard queries stall", () => {
     vi.useFakeTimers();
     setQueryState("review.dashboard", {
-      status: "pending",
-      fetchStatus: "fetching",
-      refetch: vi.fn().mockResolvedValue({}),
-    });
-    setQueryState("archive.list", {
       status: "pending",
       fetchStatus: "fetching",
       refetch: vi.fn().mockResolvedValue({}),
@@ -177,17 +162,11 @@ describe("DashboardPage loading guard", () => {
     );
     expect(screen.queryByText("Dashboard skeleton")).not.toBeInTheDocument();
     expect(queryStates.get("review.dashboard")?.refetch).toHaveBeenCalled();
-    expect(queryStates.get("archive.list")?.refetch).toHaveBeenCalled();
     expect(queryStates.get("weeklyReport.get")?.refetch).toHaveBeenCalled();
   });
 
   it("recovers when the browser restores a pending dashboard from history", () => {
     setQueryState("review.dashboard", {
-      status: "pending",
-      fetchStatus: "fetching",
-      refetch: vi.fn().mockResolvedValue({}),
-    });
-    setQueryState("archive.list", {
       status: "pending",
       fetchStatus: "fetching",
       refetch: vi.fn().mockResolvedValue({}),
@@ -219,7 +198,6 @@ describe("DashboardPage loading guard", () => {
       "Dashboard is still loading",
     );
     expect(queryStates.get("review.dashboard")?.refetch).toHaveBeenCalled();
-    expect(queryStates.get("archive.list")?.refetch).toHaveBeenCalled();
     expect(queryStates.get("weeklyReport.get")?.refetch).toHaveBeenCalled();
   });
 });

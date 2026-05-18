@@ -15,7 +15,7 @@ type LeadHistorySkeletonProps = {
 export function LeadHistorySkeleton({ count = 6 }: LeadHistorySkeletonProps) {
   return (
     <div
-      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      className="grid gap-4 sm:grid-cols-2"
       aria-busy="true"
       aria-label="Loading history"
     >
@@ -40,16 +40,14 @@ export function LeadHistorySkeleton({ count = 6 }: LeadHistorySkeletonProps) {
             <Skeleton className="h-[14px] w-[14px] rounded-full" />
           </div>
 
-          {/* Metrics row */}
-          <div className="mt-3 flex flex-wrap gap-3">
-            <Skeleton className="h-3 w-14" />
-            <Skeleton className="h-3 w-14" />
-            <Skeleton className="h-3 w-20" />
-          </div>
+          {/* Summary */}
+          <Skeleton className="mt-3 h-5 w-full rounded-full" />
 
-          {/* Submitted timestamp */}
-          <div className="mt-3">
+          {/* Timeline */}
+          <div className="mt-4 space-y-2 border-t border-[rgba(0,0,0,0.07)] pt-3">
             <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-3 w-36" />
+            <Skeleton className="h-3 w-28" />
           </div>
         </div>
       ))}

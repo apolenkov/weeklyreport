@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 
 // Mock the @tanstack/react-query useQuery hook and the tRPC context so
 // the component reads from a stub instead of a real network round-trip.
-// Same pattern as DlqBadge.test.tsx.
+// Same pattern as other client query component tests.
 const useQueryMock = vi.fn();
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (opts: unknown) => useQueryMock(opts),

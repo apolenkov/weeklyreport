@@ -91,6 +91,9 @@ function createMockRepository(
     restoreVersion: restoreVersionFn,
     createVersionSnapshot: createSnapshotFn,
     async createReopenRequest() {},
+    async hasSharedProduct() {
+      return false;
+    },
   };
 }
 

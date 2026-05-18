@@ -8,7 +8,6 @@ import {
   type TouchEvent as ReactTouchEvent,
 } from "react";
 
-import { joinPeriodLabel } from "../../lib/format-date";
 import type { ReportPeriod } from "./mock-data";
 
 const SWIPE_THRESHOLD_PX = 50;
@@ -16,9 +15,17 @@ const SWIPE_THRESHOLD_PX = 50;
 // URLs (`/lead/report/<reportId>`) so each week is bookmarkable. Legacy
 // `?period=` links still resolve via the bare route's redirect path.
 const LEAD_REPORT_BASE = "/lead/report";
+const PERIOD_SELECT_WIDTH_CH = 24;
 
 type PeriodNavigatorProps = {
   readonly periods: ReportPeriod[];
+  /**
+   * Optional URL builder for navigation. When provided, replaces the default
+   * lead-specific `/lead/report/<periodId>` path construction so the navigator
+   * can be reused by other roles (e.g. head history with `?period=` query style).
+   * Receives the target periodId; must return the full href to push.
+   */
+  readonly urlBuilder?: (periodId: string) => string;
 };
 
 function ChevronLeft() {
@@ -53,28 +60,10 @@ function ChevronRight() {
   );
 }
 
-// Calendar icon anchors the period control group so it doesn't read as a
-// duplicate of the version chevrons sitting a few centimetres to the right.
-function CalendarIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  );
-}
+export const PERIOD_NAV_ARROW_BUTTON_CLASS =
+  "inline-flex min-h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
 
-export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
+export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -99,16 +88,28 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
   const selectedPeriod = periods[currentIndex];
   const hasPrev = currentIndex < periods.length - 1;
   const hasNext = currentIndex > 0;
+  const periodOptions = useMemo(
+    () =>
+      periods.map((p) => {
+        const label = p.dateRange;
+        return { id: p.id, label };
+      }),
+    [periods],
+  );
 
   const navigateTo = useCallback(
     (periodId: string) => {
-      // 35-07: emit path-segment URLs so each addressed period has a
-      // shareable / bookmarkable URL. We use `router.push` (not replace)
-      // so the browser back button walks the period history one week at
-      // a time, matching the user's expectation of "back goes one period".
-      router.push(`${LEAD_REPORT_BASE}/${periodId}`);
+      if (urlBuilder) {
+        router.push(urlBuilder(periodId));
+        return;
+      }
+      // Default: lead path-segment URLs — bookmarkable, back-button-friendly.
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("period");
+      const query = next.toString();
+      router.push(`${LEAD_REPORT_BASE}/${periodId}${query ? `?${query}` : ""}`);
     },
-    [router],
+    [router, searchParams, urlBuilder],
   );
 
   function handlePrev() {
@@ -146,68 +147,54 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
 
   return (
     <div
-      className="flex min-w-0 items-center gap-2"
+      className="flex min-w-0 items-center gap-3 px-3 py-2"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       role="group"
       aria-label="Period navigation (swipe left/right or use arrows)"
     >
-      <span
-        className="flex items-center gap-1 text-xs font-medium text-[var(--color-muted-foreground)]"
-        aria-hidden="true"
-      >
-        <CalendarIcon />
-        Week
-      </span>
-
       <button
         type="button"
-        className="flex min-h-[var(--touch-target-min)] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+        className={PERIOD_NAV_ARROW_BUTTON_CLASS}
         onClick={handlePrev}
         disabled={!hasPrev}
         title="Previous period"
         aria-label="Previous period"
       >
         <ChevronLeft />
+        <span className="text-xs font-medium xl:hidden">Previous</span>
       </button>
 
-      <select
-        aria-label="Select reporting period"
-        className="min-w-0 flex-1 cursor-pointer appearance-none truncate rounded-lg border border-[var(--color-muted)] bg-[var(--color-background)] px-2.5 py-1.5 pr-7 font-[family-name:var(--font-sans)] text-[13px] font-medium focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-        value={selectedPeriod?.id ?? ""}
-        onChange={handleSelect}
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "right 8px center",
-        }}
+      <div
+        className="relative max-w-full flex-none"
+        style={{ width: `${PERIOD_SELECT_WIDTH_CH}ch` }}
       >
-        {periods.map((p) => (
-          <option key={p.id} value={p.id}>
-            {joinPeriodLabel(p.weekLabel, p.dateRange)}
-          </option>
-        ))}
-      </select>
-
-      {selectedPeriod?.isCurrent && (
-        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]">
-          Current
+        <select
+          aria-label="Select reporting period"
+          className="min-h-8 w-full cursor-pointer appearance-none rounded-[var(--radius)] border border-[var(--color-border)] bg-white px-2 pr-7 text-[13px] font-semibold text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,117,74,0.16)]"
+          value={selectedPeriod?.id ?? ""}
+          onChange={handleSelect}
+        >
+          {periodOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">
+          <ChevronRight />
         </span>
-      )}
-      {selectedPeriod?.isSubmitted && (
-        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-          Submitted
-        </span>
-      )}
+      </div>
 
       <button
         type="button"
-        className="flex min-h-[var(--touch-target-min)] min-w-[44px] items-center justify-center rounded-lg border border-[var(--color-muted)] bg-transparent p-0 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+        className={PERIOD_NAV_ARROW_BUTTON_CLASS}
         onClick={handleNext}
         disabled={!hasNext}
         title={hasNext ? "Next period" : "Latest period"}
         aria-label="Next period"
       >
+        <span className="text-xs font-medium xl:hidden">Next</span>
         <ChevronRight />
       </button>
     </div>
