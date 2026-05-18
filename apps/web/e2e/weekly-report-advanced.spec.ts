@@ -63,13 +63,11 @@ test.describe("Weekly Report Advanced", () => {
     expect(await expandedButtons.count()).toBe(0);
   });
 
-  test.fixme("SC-200: Toggle All expands all collapsed sections", async ({
+  test("SC-200: Toggle All expands all collapsed sections", async ({
     headPage,
   }) => {
-    // TODO: handleToggleAll uses direct DOM .click() which doesn't reliably trigger React state updates
-    // All product accordions start collapsed (defaultOpen={false})
-    // Also Blocked & At Risk in the Dashboard starts expanded, but on /head/report
-    // all product accordions are collapsed by default
+    // handleToggleAll now uses pure React state (setGroupExpanded / setGroupSyncKey).
+    // All product accordions start collapsed (defaultOpen={false}).
 
     // Verify at least one is collapsed
     const collapsedBtn = headPage.locator(
