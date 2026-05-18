@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { DecisionEntry, Product } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 
@@ -134,7 +135,7 @@ export function DecisionEditDialog({
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}
@@ -331,6 +332,7 @@ export function DecisionEditDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
