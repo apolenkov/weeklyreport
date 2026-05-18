@@ -39,6 +39,10 @@ AGENTS.md
 .planning/regression/evidence/docker-compose-local/cookies.txt
 .planning/regression/evidence/docker-compose-local/failure-diagnostics.log
 apps/web/.planning/
+# UI review screenshots and session reports (binary artefacts, not source)
+.planning/ui-reviews/**/*.png
+.planning/ui-reviews/**/*.jpg
+.planning/ui-reviews/**/*.html
 # Local archive: keep docs but not binary evidence from old regression runs
 .planning/local-archive/**/*.png
 .planning/local-archive/**/*.jpg
