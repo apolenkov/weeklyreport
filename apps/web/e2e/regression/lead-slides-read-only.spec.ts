@@ -5,14 +5,24 @@
  *   (a) no period/version toolbar
  *   (b) no Submit / Request Reopen / Toggle All buttons
  *   (c) no carousel prev/next/counter (single-lead view)
- *   (d) product content is visible (SDLC inline text, product name)
- *   (e) ↩ Edit link is present in the header sub-row
+ *   (d) product content is visible (lead-slides-deck rendered)
+ *   (e) ↩ Edit link (data-testid="slides-edit-link") is present and
+ *       points back to edit mode (href without mode=slides)
  */
 
 import { test, expect } from "@playwright/test";
 import { loginByCookie } from "./helpers/dev-auth";
 
 const WEB = "http://localhost:3000";
+
+async function getSlidesUrl(page: Parameters<typeof loginByCookie>[0]) {
+  await page.goto(WEB + "/lead/report");
+  await page.waitForLoadState("load");
+  const reportUrl = page.url();
+  return reportUrl.includes("?")
+    ? reportUrl + "&mode=slides"
+    : reportUrl + "?mode=slides";
+}
 
 test.describe("lead slides read-only mode", () => {
   test.beforeEach(async ({ page }) => {
@@ -22,15 +32,7 @@ test.describe("lead slides read-only mode", () => {
   test("(a+b+c) no chrome in slides mode — no toolbar, no submit, no carousel", async ({
     page,
   }) => {
-    await page.goto(WEB + "/lead/report");
-    await page.waitForLoadState("load");
-
-    // Get the current URL after redirect (contains reportId)
-    const reportUrl = page.url();
-    const slidesUrl = reportUrl.includes("?")
-      ? reportUrl + "&mode=slides"
-      : reportUrl + "?mode=slides";
-
+    const slidesUrl = await getSlidesUrl(page);
     await page.goto(slidesUrl);
     await page.waitForLoadState("load");
 
@@ -66,26 +68,20 @@ test.describe("lead slides read-only mode", () => {
   test("(d+e) product content visible and ↩ Edit link present in slides mode", async ({
     page,
   }) => {
-    await page.goto(WEB + "/lead/report");
-    await page.waitForLoadState("load");
-
-    const reportUrl = page.url();
-    const slidesUrl = reportUrl.includes("?")
-      ? reportUrl + "&mode=slides"
-      : reportUrl + "?mode=slides";
-
+    const slidesUrl = await getSlidesUrl(page);
     await page.goto(slidesUrl);
     await page.waitForLoadState("load");
 
     // (d) Lead slide deck is rendered
-    const deck = page.locator('[data-testid="lead-slides-deck"]');
-    await expect(deck).toBeVisible();
+    await expect(
+      page.locator('[data-testid="lead-slides-deck"]'),
+    ).toBeVisible();
 
-    // (e) ↩ Edit link is in the page header sub-row
-    const editLink = page.getByRole("link", { name: /edit/i });
+    // (e) ↩ Edit link in the header sub-row (unambiguous selector)
+    const editLink = page.locator('[data-testid="slides-edit-link"]');
     await expect(editLink).toBeVisible();
     const href = await editLink.getAttribute("href");
-    expect(href).toMatch(/\/lead\/report\//);
+    expect(href).toMatch(/\/lead\/report/);
     expect(href).not.toMatch(/mode=slides/);
   });
 });

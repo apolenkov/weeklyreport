@@ -1292,6 +1292,7 @@ export function LeadForm({
                       ? "/lead/report/" + encodeURIComponent(targetReportId)
                       : "/lead/report"
                   }
+                  data-testid="slides-edit-link"
                   className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
                 >
                   ↩ Edit
