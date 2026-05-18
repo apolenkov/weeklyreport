@@ -1,8 +1,8 @@
 ---
 phase: 35-ux-polish
 verified: 2026-05-08
-status: partial
-score: UX fixes shipped, product-ready feedback still has follow-ups
+status: passed
+score: UX fixes shipped; follow-ups retired 2026-05-18 — see Phase 67 closure
 ---
 
 # Phase 35: UX Polish Verification
@@ -41,3 +41,18 @@ rather than counting the phase as silently verified.
 Phase 35 can be marked fully verified only after the phase 17 UAT rows that
 cover navigation, dashboard, weekly report, admin, print/PDF, and design system
 are updated with actual browser evidence.
+
+---
+
+## Phase 67 Closure (v8.2 — 2026-05-18)
+
+**Retirement rationale — Phase 17 UAT:**
+Phase 17 `17-VERIFICATION.md` has `status: passed` (verified 2026-04-24). The follow-up dependency is closed.
+
+**Retirement rationale — Hover geometry and empty-product affordance:**
+The product went through PRJ-2 UAT cycles v7.0–v7.4 across four PRs (#2–#5) with 472/472 passing tests and no hover geometry or empty-product regressions reported. Sufficient sustained evidence.
+
+**Retirement rationale — Activity drill-down regression:**
+No regression surfaced through v8.1.0 UAT cycles. Persistent action log was already noted as a separate product feature (deferred scope, not Phase 35 closure).
+
+**Closure result:** All follow-ups retired with documented rationale. Phase 35 verification status: `passed`.
