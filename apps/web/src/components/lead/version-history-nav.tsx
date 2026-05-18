@@ -189,7 +189,7 @@ export function VersionHistoryNav({
 
         <button
           type="button"
-          className="inline-flex min-h-8 items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-muted)] bg-[var(--color-background)] px-2 font-[family-name:var(--font-sans)] text-[12px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
+          className="inline-flex min-h-8 items-center gap-1 rounded-md border border-[var(--color-muted)] bg-[var(--color-background)] px-2 font-[family-name:var(--font-sans)] text-[12px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
           onClick={() => setShowModal(true)}
           title="View version history — compare and roll back"
         >
@@ -217,7 +217,7 @@ export function VersionHistoryNav({
         {onSaveVersion && (
           <button
             type="button"
-            className="flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-lg border border-[var(--color-muted)] bg-transparent px-3 py-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+            className="flex min-h-8 items-center gap-1.5 rounded-[var(--radius)] border border-[var(--color-primary)] bg-[var(--color-primary)] px-3 py-1.5 text-white transition-colors hover:bg-[var(--color-starbucks-accent)] hover:border-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
             onClick={onSaveVersion}
             disabled={!canSaveVersion || !isLatest}
             title={
