@@ -111,52 +111,9 @@ test.describe("Admin Panel — Products Tab", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Periods Tab (removed from Admin UI; period lifecycle is runtime-owned)
-// ---------------------------------------------------------------------------
-
-test.describe.skip("Admin Panel — Periods Tab", () => {
-  test.beforeEach(async ({ headPage }) => {
-    await headPage.goto("/admin?tab=periods");
-    await headPage.waitForSelector("#main-content", {
-      state: "visible",
-      timeout: 15_000,
-    });
-    await headPage.waitForLoadState("networkidle", { timeout: 15_000 });
-  });
-
-  test("periods tab shows week labels", async ({ headPage }) => {
-    await expect(headPage.getByText("Week 16")).toBeVisible();
-    await expect(headPage.getByText("Week 17")).toBeVisible();
-    await expect(headPage.getByText("Week 15")).toBeVisible();
-    await expect(headPage.getByText("Week 14")).toBeVisible();
-  });
-
-  test("periods table has correct columns", async ({ headPage }) => {
-    await expect(
-      headPage.getByRole("columnheader", { name: "Week" }),
-    ).toBeVisible();
-    await expect(
-      headPage.getByRole("columnheader", { name: "Start" }),
-    ).toBeVisible();
-    await expect(
-      headPage.getByRole("columnheader", { name: "End" }),
-    ).toBeVisible();
-    await expect(
-      headPage.getByRole("columnheader", { name: "Deadline" }),
-    ).toBeVisible();
-    await expect(
-      headPage.getByRole("columnheader", { name: "Status" }),
-    ).toBeVisible();
-  });
-
-  test("period rows show status badges", async ({ headPage }) => {
-    // 3 published + 1 open in mock data
-    const publishedBadges = headPage.getByText("published");
-    await expect(publishedBadges.first()).toBeVisible();
-    await expect(headPage.getByText("open")).toBeVisible();
-  });
-});
+// Periods Tab was removed from Admin UI in v8.1.
+// Period lifecycle is scheduler-owned (PeriodCreatorScheduler).
+// Manual period management is intentionally out of scope for v8.2+.
 
 // ---------------------------------------------------------------------------
 // Reminders Tab
