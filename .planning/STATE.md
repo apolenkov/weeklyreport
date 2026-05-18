@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.1
-milestone_name: Closure & Recovery
-status: blocked_by_ci
-stopped_at: v6.0 roadmap drafted (Phases 27-31)
-last_updated: "2026-05-18T00:00:00.000Z"
-last_activity: 2026-05-18 -- small-MVP seed patch: Vasily now has 4 products (PROD_CRM_SALES, PROD_CRM_DATA, PROD_CRM_360 added), Boris co-author overlay on PROD_CRM_SALES (1 Item + 1 Risk, read-only via ?authorId=BORIS), TODO(LOCK-01) filed for UI lock icon. Global Demo-plan rich-mode rule saved to memory + core-principles planning-discipline.md Section H. Commit 345f4f1 on feat/head-report-history-slides.
+milestone: v8.2
+milestone_name: Next Milestone
+status: between_milestones
+stopped_at: v8.1 shipped 2026-05-18 (tag v8.1.0)
+last_updated: "2026-05-18T14:30:00.000Z"
+last_activity: 2026-05-18 -- v8.1 SHIPPED. LOCK-01 done (lock badge for foreign-author view, commits fb9e138+0463aea). Tag v8.1.0 created and pushed. /gsd-complete-milestone v8.1 executed.
 progress:
   total_phases: 24
   completed_phases: 24
@@ -17,8 +17,8 @@ progress:
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** v8.1 CLOSURE & RECOVERY BLOCKED BY CI (v8.0 shipped)
-**Last Updated:** 2026-05-14
+**Status:** v8.1 SHIPPED 2026-05-18 (tag v8.1.0) — between milestones
+**Last Updated:** 2026-05-18
 
 ---
 
@@ -28,29 +28,53 @@ See: .planning/PROJECT.md
 
 **Core Value:** Leads fill their sections independently via structured forms; system auto-assembles a unified report -- no editing conflicts, with history and analytics.
 
-**Current Focus:** v8.1 closure and recovery: consolidate all repo-local Claude/Codex/OpenCode/Plannotator requests into one milestone, repair Git/GSD metrics, close regression and product semantics gaps, then finish through GSD.
+**Current Focus:** v8.2 — next milestone TBD. Start with `/gsd-new-milestone v8.2`.
 
-**Resume context:** Per-project Claude memory at `.planning/memory/`. v8.1 promote flow: `git mv .planning/backlog/v8.1-*.md .planning/milestones/` then `/gsd-new-milestone v8.1` and plan the first promoted v8.1 phase.
+**Resume context:** Per-project Claude memory at `.planning/memory/`. v8.1 closed: all PRs merged, tag v8.1.0 pushed, 19/19 requirements met.
 
 ---
 
 ## Current Position
 
-Milestone: v8.1 Closure & Recovery (BLOCKED-BY-CI, tag parent v8.0.0)
-Active v8.1 phases: 24/24 complete by `gsd-sdk query init.milestone-op` after
-the 2026-05-14 scope repair. Phase 40/41/42 and deferred future tracks are
-closed for current scope as PARKED/DEFERRED, not as implemented features.
-Future dark mode, theme switching, i18n translation framework, UI screenshot
-review, MOB-PARKED mobile PDF/open-report sign-off, Telegram activation, and
-AI/telemetry/eval work are captured in
-`.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
-Active v8.1 plan artifacts: 37/37 complete after parked/deferred closure plans.
-Filesystem inventory: 53 phase directories and 142 plan files still exist
-project-wide; this is not the active milestone denominator.
-Status: source/session intake, codebase map refresh, Git audit, metrics repair,
-regression gaps, product semantics gaps, and final audit are complete. PR #5
-cannot merge under the "CI green first" rule until GitHub Actions completes
-green for the pushed closure commit.
+Milestone: v8.1 SHIPPED 2026-05-18 (tag v8.1.0)
+24/24 phases complete. 37/37 plans complete. PRs #5 and #6 merged to main.
+
+Key deliverables in v8.1:
+
+- GSD state normalization (closure phases 61-66)
+- Phase 16/17 UAT resolved and verified
+- Regression baseline restored (472/472 tests)
+- Head report history + slides mode (Phase 61 head variant)
+- LOCK-01: foreign-author lock badge on /lead/report
+
+## Deferred Items
+
+Items acknowledged and deferred at v8.1 milestone close on 2026-05-18:
+
+| Category          | Item                                                | Status       |
+| ----------------- | --------------------------------------------------- | ------------ |
+| quick_task        | 260426-vxp-v5-0-tech-debt-integration-suite-first-r | missing      |
+| quick_task        | 260506-231028-regression-leaf-fix                   | missing      |
+| quick_task        | 260507-000000-docs-and-regression-cleanup           | missing      |
+| quick_task        | 260508-kfo-layout-empty-section-polish              | missing      |
+| quick_task        | 260508-mkb-v8-1-focused-observability-and-ui-polish | missing      |
+| quick_task        | 260509-gbi-phase16-pdf-uat-fixture-closure          | missing      |
+| quick_task        | debug-logging-audit                                 | missing      |
+| quick_task        | dom-coverage-2026-05-11                             | missing      |
+| quick_task        | period-cadence-abstraction                          | unknown      |
+| quick_task        | pulse-rebrand                                       | missing      |
+| quick_task        | schema-discovery                                    | missing      |
+| quick_task        | skeleton-dom-sync-last-role                         | missing      |
+| quick_task        | uat-feedback-2026-05-11                             | missing      |
+| todo              | 2026-05-14-future-ui-telemetry-coming-soon.md       | pending      |
+| todo              | 2026-05-16-fit2-v7-uat-verify-items.md              | pending      |
+| todo              | 2026-05-18-lock-icon-foreign-section.md             | done         |
+| uat_gap           | Phase 16: 16-HUMAN-UAT.md                           | partial      |
+| verification_gap  | Phase 16: 16-VERIFICATION.md                        | human_needed |
+| context_questions | Phases 52-60 (future backlog)                       | open         |
+
+Known deferred items at close: 26 (see above). Quick tasks with status "missing"
+are stale artifact slugs from archived sessions — not active work items.
 
 ### 2026-05-14 phase evidence correction
 
