@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { silenceStderr } from "../../test-utils/silence-logs";
 import type { Job } from "bullmq";
 
 // ---------------------------------------------------------------------------
@@ -229,6 +230,7 @@ describe("PdfExportProcessor.processJob", () => {
   });
 
   it("closes browser in finally block even if page.goto throws", async () => {
+    silenceStderr();
     const { mockPage, mockBrowser } = setupMocks();
     const mockService = createMockPdfExportService();
     const processor = new PdfExportProcessor(mockService as never);
