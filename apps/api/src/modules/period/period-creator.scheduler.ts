@@ -8,6 +8,7 @@ import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { computeDeadline } from "../../lib/business-date.js";
 import { getCurrentWeekBounds } from "../auth/auth.routes.js";
 import { initialPeriodState } from "../weekly-report/period-state.js";
+import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
 
 /**
  * UFB-049 / Phase 50-B: daily scheduler that creates the next Period when
@@ -38,6 +39,9 @@ export class PeriodCreatorScheduler {
     private readonly prisma: PrismaService,
     private readonly adminService: AdminService,
     auditLogger?: AuditLogger,
+    // TD-06: wire PolicyApplicator so auto-created periods materialise
+    // reminder rules just like admin-panel-created ones.
+    private readonly policyApplicator?: PolicyApplicatorService,
   ) {
     this.auditLogger = auditLogger ?? createNullAuditLogger();
   }
@@ -126,6 +130,11 @@ export class PeriodCreatorScheduler {
         periodState: true,
       },
     });
+
+    // TD-06: materialise reminder rules for the new period, mirroring the
+    // admin.prisma-repository path. Optional so tests that don't care about
+    // reminder wiring still pass without a full policyApplicator mock.
+    await this.policyApplicator?.applyToPeriod(created);
 
     this.logger.log(
       `auto-create period=${created.id} state=${created.periodState} (${created.periodStart.toISOString()} → ${created.periodEnd.toISOString()})`,

@@ -14,6 +14,7 @@ import { PublicationService } from "../publication/publication.service.js";
 import { AiModule } from "../ai/ai.module.js";
 import { AiIngestionService } from "../ai/ai-ingestion.service.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
 
 /**
  * UFB-049 / Phase 50-B: three scheduler classes (`PeriodCreatorScheduler`,
@@ -77,11 +78,18 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
     // Passing `undefined` makes the schedulers fall back to the null
     // audit logger, which routes structured signal through Nest's
     // built-in Logger anyway.
+    // TD-06: PolicyApplicatorService provided directly (depends only on
+    // PrismaService, no circular dep). Injected into the scheduler so that
+    // auto-created periods materialise reminder rules like admin-created ones.
+    PolicyApplicatorService,
     {
       provide: PeriodCreatorScheduler,
-      useFactory: (prisma: PrismaService, admin: AdminService) =>
-        new PeriodCreatorScheduler(prisma, admin),
-      inject: [PrismaService, AdminService],
+      useFactory: (
+        prisma: PrismaService,
+        admin: AdminService,
+        policyApplicator: PolicyApplicatorService,
+      ) => new PeriodCreatorScheduler(prisma, admin, undefined, policyApplicator),
+      inject: [PrismaService, AdminService, PolicyApplicatorService],
     },
     {
       provide: AutoPublisherScheduler,
