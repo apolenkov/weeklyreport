@@ -830,6 +830,9 @@ export function LeadForm({
 
   const isReadOnly =
     data.readOnly || !!period || isSubmitted || isPinnedAuthorView;
+  // TODO(LOCK-01): when isPinnedAuthorView, show a lock badge / foreign-author
+  // indicator on the section header to distinguish «viewing Boris's section»
+  // from Vasily's own read-only view. Data is ready; UI indicator is deferred.
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.

@@ -4,8 +4,8 @@ milestone: v8.1
 milestone_name: Closure & Recovery
 status: blocked_by_ci
 stopped_at: v6.0 roadmap drafted (Phases 27-31)
-last_updated: "2026-05-14T18:20:00.000Z"
-last_activity: 2026-05-14 -- v8.1 scope repaired: dark mode/theme switching, I18N-PARKED translation framework, MOB-PARKED mobile PDF/open-report sign-off, Telegram activation, and AI/telemetry/eval work are parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`; active GSD phases are 24/24 complete, while PR #5 merge/tag remain blocked until a real green CI run.
+last_updated: "2026-05-18T00:00:00.000Z"
+last_activity: 2026-05-18 -- small-MVP seed patch: Vasily now has 4 products (PROD_CRM_SALES, PROD_CRM_DATA, PROD_CRM_360 added), Boris co-author overlay on PROD_CRM_SALES (1 Item + 1 Risk, read-only via ?authorId=BORIS), TODO(LOCK-01) filed for UI lock icon. Global Demo-plan rich-mode rule saved to memory + core-principles planning-discipline.md Section H. Commit 345f4f1 on feat/head-report-history-slides.
 progress:
   total_phases: 24
   completed_phases: 24
