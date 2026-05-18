@@ -1094,8 +1094,12 @@ export function LeadForm({
       prioritiesRef.current?.focus();
       return;
     }
-    // F4: at-risk/blocked products must have explicit stages in each risk row
-    const coupling = computeCoupling(products, risks);
+    // F4: only check risks that will actually be submitted (same filter as
+    // sectionToDraftPayload). Empty/unsaved rows must not falsely block submit.
+    const committedRisks = risks.filter(
+      (r) => r.text.trim().length > 0 && r.mitigation.trim().length > 0,
+    );
+    const coupling = computeCoupling(products, committedRisks);
     const { missing } = validateCoupling(coupling);
     if (missing.length > 0) {
       toast.error(
