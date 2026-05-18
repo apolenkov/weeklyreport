@@ -830,9 +830,6 @@ export function LeadForm({
 
   const isReadOnly =
     data.readOnly || !!period || isSubmitted || isPinnedAuthorView;
-  // TODO(LOCK-01): when isPinnedAuthorView, show a lock badge / foreign-author
-  // indicator on the section header to distinguish «viewing Boris's section»
-  // from Vasily's own read-only view. Data is ready; UI indicator is deferred.
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
@@ -1192,6 +1189,24 @@ export function LeadForm({
                 Your report draft and status context.
               </p>
             </div>
+            {isPinnedAuthorView && !isSlidesMode && currentUser.name && (
+              <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-muted)] px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)]">
+                <svg
+                  viewBox="0 0 16 16"
+                  className="h-3 w-3 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="7" width="10" height="8" rx="1" />
+                  <path d="M5 7V5a3 3 0 016 0v2" />
+                </svg>
+                {currentUser.name}
+              </span>
+            )}
             {/* LF-3 (Phase 33-04): submitted state now uses the .b-ok variant
                 (light teal bg + dark teal text) — matches mockup s2 rather
                 than the heavier white-on-dark-teal `.b-done` look that read
