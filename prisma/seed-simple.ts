@@ -76,6 +76,10 @@ const PROD_CLOUD = "a0000000-0000-4000-8000-000000000205";
 const PROD_DEVOPS = "a0000000-0000-4000-8000-000000000207";
 const PROD_PAYMENTS = "a0000000-0000-4000-8000-000000000209";
 const PROD_HR = "a0000000-0000-4000-8000-00000000020b";
+// P61: Vasily's 3 extra products (small-MVP demo — product-switcher + co-author overlay)
+const PROD_CRM_SALES = "a0000000-0000-4000-8000-00000000020d";
+const PROD_CRM_DATA = "a0000000-0000-4000-8000-00000000020f";
+const PROD_CRM_360 = "a0000000-0000-4000-8000-000000000211";
 
 const STAGE_PLAN = "a0000000-0000-4000-8000-000000000701";
 const STAGE_ANALYSIS = "a0000000-0000-4000-8000-000000000702";
@@ -529,6 +533,25 @@ async function main() {
         archived: false,
       },
       { id: PROD_HR, name: "HR-система", leadId: LEAD_SERGEY, archived: false },
+      // P61: Vasily's extra products for small-MVP demo (product-switcher needs ≥2)
+      {
+        id: PROD_CRM_SALES,
+        name: "CRM-Sales Hub",
+        leadId: LEAD_1,
+        archived: false,
+      },
+      {
+        id: PROD_CRM_DATA,
+        name: "CRM-Data Lake",
+        leadId: LEAD_1,
+        archived: false,
+      },
+      {
+        id: PROD_CRM_360,
+        name: "CRM-Customer 360",
+        leadId: LEAD_1,
+        archived: false,
+      },
     ],
   });
 
@@ -543,6 +566,10 @@ async function main() {
       { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_DEVOPS },
       { groupId: FINANCE_GROUP_ID, productId: PROD_PAYMENTS },
       { groupId: FINANCE_GROUP_ID, productId: PROD_HR },
+      // P61: Vasily's extra products belong to the same group as PROD_CRM
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_SALES },
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_DATA },
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_360 },
     ],
     skipDuplicates: true,
   });
@@ -673,6 +700,39 @@ async function main() {
         projectId: PROD_DEVOPS,
         stageId: STAGE_DESIGN,
         userId: LEAD_DEVOPS_PM,
+      },
+      // P61: Vasily owns stages on his 3 extra products.
+      // On PROD_CRM_SALES Boris (LEAD_MOBILE_PM) owns STAGE_PLAN (co-author demo),
+      // so Vasily gets the remaining 6 stages (Analysis through Support).
+      // On PROD_CRM_DATA and PROD_CRM_360 Vasily owns all 7 stages.
+      ...allStageIds
+        .filter((s) => s !== STAGE_PLAN)
+        .map((stageId, idx) => ({
+          id: `b0000000-0000-4000-8000-0000000011${(idx + 1).toString().padStart(2, "0")}`,
+          projectId: PROD_CRM_SALES,
+          stageId,
+          userId: LEAD_1,
+        })),
+      ...allStageIds.map((stageId, idx) => ({
+        id: `b0000000-0000-4000-8000-0000000012${(idx + 1).toString().padStart(2, "0")}`,
+        projectId: PROD_CRM_DATA,
+        stageId,
+        userId: LEAD_1,
+      })),
+      ...allStageIds.map((stageId, idx) => ({
+        id: `b0000000-0000-4000-8000-0000000013${(idx + 1).toString().padStart(2, "0")}`,
+        projectId: PROD_CRM_360,
+        stageId,
+        userId: LEAD_1,
+      })),
+      // P61 co-author: Boris (LEAD_MOBILE_PM) owns Plan stage on PROD_CRM_SALES
+      // (@@unique([stageId, projectId]) — one owner per stage×product pair).
+      // Boris = PM → Planning; Vasily = tech lead → Analysis+Dev+Test+DevOps+Design+Support.
+      {
+        id: "b0000000-0000-4000-8000-000000000032",
+        projectId: PROD_CRM_SALES,
+        stageId: STAGE_PLAN,
+        userId: LEAD_MOBILE_PM,
       },
     ],
   });
@@ -823,6 +883,9 @@ async function main() {
     PROD_DEVOPS,
     PROD_PAYMENTS,
     PROD_HR,
+    PROD_CRM_SALES,
+    PROD_CRM_DATA,
+    PROD_CRM_360,
   ];
 
   // RU content for each lead. Realistic weekly status updates.
@@ -1279,11 +1342,17 @@ async function main() {
 
     // Each lead's section gets ProjectStatus rows for primary product +
     // 2 secondaries — keeps the SDLC pipeline + product picker varied.
-    const SECONDARY = ALL_PRODUCT_IDS.filter((p) => p !== lead.productId).slice(
-      0,
-      2,
-    );
-    const STATUS_PRODUCTS: readonly string[] = [lead.productId, ...SECONDARY];
+    // P61: Vasily uses his 3 extra products as SECONDARY so items/statuses
+    // reference PROD_CRM_SALES and PROD_CRM_DATA rather than other leads' products.
+    const SECONDARY =
+      lead.id === LEAD_1
+        ? ([PROD_CRM_SALES, PROD_CRM_DATA] as string[])
+        : ALL_PRODUCT_IDS.filter((p) => p !== lead.productId).slice(0, 2);
+    // P61: Vasily's section shows ProjectStatus for all 4 of his products.
+    const STATUS_PRODUCTS: readonly string[] =
+      lead.id === LEAD_1
+        ? [PROD_CRM, PROD_CRM_SALES, PROD_CRM_DATA, PROD_CRM_360]
+        : [lead.productId, ...SECONDARY];
     for (let pIdx = 0; pIdx < STATUS_PRODUCTS.length; pIdx++) {
       const pid = STATUS_PRODUCTS[pIdx]!;
       const isPrimary = pid === lead.productId;
@@ -1402,6 +1471,49 @@ async function main() {
       })),
     });
   }
+
+  // P61 co-author overlay: Boris (LEAD_MOBILE_PM, leads[6]) has a Risk + Item
+  // on PROD_CRM_SALES inside his own REPORT_ACTIVE section. Boris's section
+  // id = a0000000-0000-4000-8000-000000000407 (i=6, hex 7).
+  // When Vasily opens ?authorId=LEAD_MOBILE_PM the form shows Boris's section
+  // read-only (isPinnedAuthorView=true in lead-form.tsx:330).
+  // Boris's StageAssignment on PROD_CRM_SALES/STAGE_PLAN means data.products
+  // for his section includes PROD_CRM_SALES alongside PROD_MOBILE.
+  const borisSectionId = `a0000000-0000-4000-8000-000000000407`;
+  await prisma.projectStatus.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000006791",
+      reportSectionId: borisSectionId,
+      projectId: PROD_CRM_SALES,
+      status: TrafficLightStatus.yellow,
+    },
+  });
+  await prisma.item.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000007001",
+      reportSectionId: borisSectionId,
+      type: ItemType.next,
+      projectId: PROD_CRM_SALES,
+      text: "PM-обзор: подключить выгрузку sales-метрик в CRM-Sales Hub",
+      tag: "analysis",
+      workflowStatus: ItemWorkflowStatus.in_progress,
+      carriedOver: false,
+      completed: false,
+      stageName: "Planning",
+    },
+  });
+  await prisma.risk.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000009001",
+      reportSectionId: borisSectionId,
+      projectId: PROD_CRM_SALES,
+      risk: "Sales API rate-limit на пиках нагрузки",
+      impact: "Деградация дашборда для отдела продаж",
+      mitigation: "PM эскалирует задачу на инфра-команду",
+      severity: "at-risk",
+      stageName: "Planning",
+    },
+  });
 
   console.log(
     "[seed-simple] Creating version snapshots (primary lead section, 2 versions)...",
