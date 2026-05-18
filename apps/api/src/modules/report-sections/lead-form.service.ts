@@ -114,6 +114,7 @@ export class LeadFormService {
   async listVersions(
     sectionId: string,
     userId: string,
+    role?: Role,
   ): Promise<VersionSnapshot[]> {
     const section = await this.repository.getSectionById(sectionId);
 
@@ -121,7 +122,13 @@ export class LeadFormService {
       throw new LeadFormDomainError(`Section ${sectionId} not found.`);
     }
 
-    if (section.authorId !== userId) {
+    const isHeadLike = role === "head" || role === "admin";
+    const canView =
+      section.authorId === userId ||
+      isHeadLike ||
+      (role === "lead" &&
+        (await this.repository.hasSharedProduct(userId, section.authorId)));
+    if (!canView) {
       throw new LeadFormAccessError(
         "Can only list versions for your own section.",
       );

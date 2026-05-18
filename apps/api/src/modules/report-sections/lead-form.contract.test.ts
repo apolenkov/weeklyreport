@@ -264,6 +264,31 @@ describe("LeadFormService — listVersions", () => {
       service.listVersions(SECTION_ID, OTHER_USER_ID),
     ).rejects.toThrow("Can only list versions for your own section.");
   });
+
+  it("allows head role to list versions for another user's section", async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      listVersions: vi.fn().mockResolvedValue(structuredClone(sampleVersions)),
+    });
+    const service = new LeadFormService(repo);
+
+    const versions = await service.listVersions(SECTION_ID, OTHER_USER_ID, "head");
+
+    expect(versions).toHaveLength(3);
+  });
+
+  it("allows cross-author lead to list versions when sharing a product", async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      listVersions: vi.fn().mockResolvedValue(structuredClone(sampleVersions)),
+      hasSharedProduct: vi.fn().mockResolvedValue(true),
+    });
+    const service = new LeadFormService(repo);
+
+    const versions = await service.listVersions(SECTION_ID, OTHER_USER_ID, "lead");
+
+    expect(versions).toHaveLength(3);
+  });
 });
 
 // ---------------------------------------------------------------------------
