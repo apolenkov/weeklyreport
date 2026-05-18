@@ -54,25 +54,25 @@ green for the pushed closure commit.
 
 ### 2026-05-14 phase evidence correction
 
-| Phase                         | Evidence                                  | State                                                            |
-| ----------------------------- | ----------------------------------------- | ---------------------------------------------------------------- |
-| 40 Theme/Rebrand              | `40-SUMMARY.md`                           | parked; future todo                                              |
-| 41 AI Eval/Monitoring         | `41-SUMMARY.md`                           | parked; future todo                                              |
-| 42 MOB-PARKED Mobile Sign-off | `42-SUMMARY.md`                           | parked; future todo                                              |
-| 44 Reminder Policies          | `44-*-SUMMARY.md`, `PHASE-SUMMARY.md`     | closed                                                           |
-| 46 Group Scope Visibility     | `46-01..05-SUMMARY.md`                    | closed by summaries                                              |
-| 47 Developer Experience       | `47-01..03-SUMMARY.md`                    | closed by summaries                                              |
-| 48 Identity Settings Roles    | `48-*-SUMMARY.md`, `PHASE-SUMMARY.md`     | closed                                                           |
-| 49 Settings Consumers         | `49-01-SUMMARY.md`                        | closed for delivered scope                                       |
-| 52 Product Telemetry          | `52-PHASE-SUMMARY.md`                     | closed                                                           |
-| 53 Cloud Deploy               | `53-SUMMARY.md`                           | deferred                                                         |
-| 54 AI/RAG                     | `54-PHASE-SUMMARY.md`                     | seeds-only closed; activation deferred                           |
-| 55 Telegram                   | `55-PHASE-SUMMARY.md`                     | seeds-only closed; activation deferred                           |
-| 56 Group Products Model       | `56-PHASE-SUMMARY.md`                     | closed                                                           |
-| 57 Director Role              | `57-PHASE-SUMMARY.md`                     | closed for planned scope                                         |
-| 59 Multi Org Hierarchy        | `59-SUMMARY.md`                           | deferred                                                         |
-| 60 Presentation Mode          | `60-SUMMARY.md`                           | deferred                                                         |
-| 61 Head Report+History Slides | `.planning/plans/robust-baking-aurora.md` | in-progress (branch feat/head-report-history-slides, 2026-05-17) |
+| Phase                         | Evidence                                  | State                                                                                                                                                                     |
+| ----------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 40 Theme/Rebrand              | `40-SUMMARY.md`                           | parked; future todo                                                                                                                                                       |
+| 41 AI Eval/Monitoring         | `41-SUMMARY.md`                           | parked; future todo                                                                                                                                                       |
+| 42 MOB-PARKED Mobile Sign-off | `42-SUMMARY.md`                           | parked; future todo                                                                                                                                                       |
+| 44 Reminder Policies          | `44-*-SUMMARY.md`, `PHASE-SUMMARY.md`     | closed                                                                                                                                                                    |
+| 46 Group Scope Visibility     | `46-01..05-SUMMARY.md`                    | closed by summaries                                                                                                                                                       |
+| 47 Developer Experience       | `47-01..03-SUMMARY.md`                    | closed by summaries                                                                                                                                                       |
+| 48 Identity Settings Roles    | `48-*-SUMMARY.md`, `PHASE-SUMMARY.md`     | closed                                                                                                                                                                    |
+| 49 Settings Consumers         | `49-01-SUMMARY.md`                        | closed for delivered scope                                                                                                                                                |
+| 52 Product Telemetry          | `52-PHASE-SUMMARY.md`                     | closed                                                                                                                                                                    |
+| 53 Cloud Deploy               | `53-SUMMARY.md`                           | deferred                                                                                                                                                                  |
+| 54 AI/RAG                     | `54-PHASE-SUMMARY.md`                     | seeds-only closed; activation deferred                                                                                                                                    |
+| 55 Telegram                   | `55-PHASE-SUMMARY.md`                     | seeds-only closed; activation deferred                                                                                                                                    |
+| 56 Group Products Model       | `56-PHASE-SUMMARY.md`                     | closed                                                                                                                                                                    |
+| 57 Director Role              | `57-PHASE-SUMMARY.md`                     | closed for planned scope                                                                                                                                                  |
+| 59 Multi Org Hierarchy        | `59-SUMMARY.md`                           | deferred                                                                                                                                                                  |
+| 60 Presentation Mode          | `60-SUMMARY.md`                           | deferred                                                                                                                                                                  |
+| 61 Head Report+History Slides | `.planning/plans/robust-baking-aurora.md` | complete — branch `feat/head-report-history-slides`, 472/472 tests, 2026-05-18. TODO(HEAD-CONSOLIDATE-01) left in `/head/slides/page.tsx` for future route consolidation. |
 
 ### v8.0 phase progress
 

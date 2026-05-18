@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { HeadSlidesClient } from "../../../../components/slides/head-slides-client";
 import { SlideSkeleton } from "../../../../components/slides/slide-skeleton";
 
+// TODO(HEAD-CONSOLIDATE-01): consider redirecting /head/slides → /head/history?mode=slides
+// or /head/report?mode=slides in a future phase once UX consolidation is confirmed.
 export default async function HeadSlidesPage() {
   return (
     <main
