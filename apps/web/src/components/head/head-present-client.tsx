@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { SlideHeader } from "../slides/slide-header";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 
 type Props = {
@@ -22,7 +21,7 @@ type Props = {
  * Sections are discovered from `[data-product-accordion-toggle]` elements
  * rendered inside the report — no separate API call needed.
  */
-export function HeadPresentClient({ reportId, exitHref }: Props) {
+export function HeadPresentClient({ reportId }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -111,18 +110,8 @@ export function HeadPresentClient({ reportId, exitHref }: Props) {
       data-testid="head-present-wrapper"
       className={isFullscreen ? "overflow-auto bg-white p-8" : undefined}
     >
-      <SlideHeader
-        title="Review Report"
-        subtitle={
-          sectionCount > 1
-            ? `← → or J/K · F to toggle fullscreen · ${currentIndex + 1} / ${sectionCount}`
-            : "← → or J/K · F to toggle fullscreen"
-        }
-        exitHref={exitHref ?? `/head/report/${reportId}`}
-        exitLabel="Report"
-      />
       {sectionCount > 1 && (
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mb-5 flex items-center gap-3">
           <button
             type="button"
             onClick={goPrev}

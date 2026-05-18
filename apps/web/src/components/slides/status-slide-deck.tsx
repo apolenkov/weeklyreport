@@ -274,16 +274,7 @@ function ProductSdlcGroups({
             ].join(" ")}
             data-testid={"lead-slide-product-" + product.id}
           >
-            <div
-              className={[
-                "grid min-h-0 gap-5",
-                !isSharedContext && !hasMultipleRealProducts
-                  ? "xl:grid-cols-[minmax(260px,340px)_1fr]"
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
+            <div className="grid min-h-0 gap-5">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[11px] font-bold uppercase text-[var(--color-muted-foreground)]">
@@ -304,34 +295,17 @@ function ProductSdlcGroups({
                     </span>
                   ) : null}
                 </div>
-                <h3 className="mt-2 text-2xl font-semibold leading-tight text-[var(--color-primary)]">
+                <h3 className="mt-2 text-3xl font-bold leading-tight text-[var(--color-primary)]">
                   {product.name}
                 </h3>
-                {!isSharedContext ? (
-                  <div className="mt-5">
-                    <div className="text-[11px] font-bold uppercase text-[var(--color-muted-foreground)]">
-                      SDLC
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {product.stages.length > 0 ? (
-                        product.stages.map((stage) => (
-                          <span
-                            key={stage.id}
-                            className={[
-                              "inline-flex min-h-8 items-center rounded-[var(--radius-pill)] border px-3 text-xs font-semibold",
-                              statusClass(stage.status),
-                            ].join(" ")}
-                          >
-                            {stage.name}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-sm leading-6 text-[var(--color-muted-foreground)]">
-                          No owned SDLC stages
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                {!isSharedContext && product.stages.length > 0 ? (
+                  <p className="mt-3 text-sm font-medium text-[var(--color-muted-foreground)]">
+                    {product.stages.map((s) => s.name).join(" · ")}
+                  </p>
+                ) : !isSharedContext ? (
+                  <p className="mt-3 text-sm text-[var(--color-muted-foreground)]">
+                    No owned SDLC stages
+                  </p>
                 ) : null}
               </div>
 

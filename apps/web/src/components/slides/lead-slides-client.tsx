@@ -16,17 +16,9 @@ import {
   buildLeadSlidePeriodOptions,
   resolveLeadSlideReportId,
 } from "./lead-slide-periods";
-import { SlideHeader } from "./slide-header";
 import { SlideSkeleton } from "./slide-skeleton";
 import { StatusSlideDeck } from "./status-slide-deck";
 import { buildSectionSlideModel } from "./section-slide-utils";
-
-const TONE_LABEL: Record<string, string> = {
-  ready: "Ready",
-  warning: "Review",
-  blocked: "Blocked",
-  empty: "Empty",
-};
 
 function SlideEmptyState({
   title,
@@ -81,9 +73,6 @@ export function LeadSlidesClient({
       }),
     [periodOptions, requestedReportId, activeReportId],
   );
-  const selectedPeriod =
-    periodOptions.find((option) => option.reportId === targetReportId) ?? null;
-
   const byPeriodQ = useQuery({
     ...trpc.leadForm.byPeriod.queryOptions({ reportId: targetReportId }),
     enabled: targetReportId !== "",
@@ -133,45 +122,25 @@ export function LeadSlidesClient({
     );
   }
 
-  const slide = slides[0] ?? null;
-  const exitHref = targetReportId
-    ? "/lead/report/" + encodeURIComponent(targetReportId)
-    : "/lead/report";
-
   return (
-    <div className="space-y-5">
-      <SlideHeader
-        title={
-          slide?.ownerName ??
-          (inReportMode ? "Report slides" : "My Status Slides")
-        }
-        subtitle={selectedPeriod?.label}
-        statusBadge={
-          slide
-            ? { label: TONE_LABEL[slide.tone] ?? slide.tone, tone: slide.tone }
-            : null
-        }
-        exitHref={exitHref}
-      />
-      <StatusSlideDeck
-        slides={slides}
-        selectedIndex={selectedIndex}
-        onSelect={setSelectedIndex}
-        title={inReportMode ? "Report slides" : "My Status Slides"}
-        subtitle={
-          inReportMode
-            ? "Report sections grouped by product and SDLC stage."
-            : "Current section grouped by product and SDLC stage."
-        }
-        groupLabel={
-          inReportMode ? null : (session?.user?.reportingGroupName ?? null)
-        }
-        sourceHref={"/lead/report/" + encodeURIComponent(targetReportId)}
-        sourceLabel="Open source section"
-        hideSourceLink={inReportMode}
-        mode="lead"
-        showChrome={false}
-      />
-    </div>
+    <StatusSlideDeck
+      slides={slides}
+      selectedIndex={selectedIndex}
+      onSelect={setSelectedIndex}
+      title={inReportMode ? "Report slides" : "My Status Slides"}
+      subtitle={
+        inReportMode
+          ? "Report sections grouped by product and SDLC stage."
+          : "Current section grouped by product and SDLC stage."
+      }
+      groupLabel={
+        inReportMode ? null : (session?.user?.reportingGroupName ?? null)
+      }
+      sourceHref={"/lead/report/" + encodeURIComponent(targetReportId)}
+      sourceLabel="Open source section"
+      hideSourceLink={inReportMode}
+      mode="lead"
+      showChrome={false}
+    />
   );
 }
