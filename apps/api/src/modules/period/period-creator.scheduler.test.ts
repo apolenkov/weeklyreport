@@ -182,6 +182,32 @@ describe("PeriodCreatorScheduler", () => {
     });
   });
 
+  it("TD-06: policyApplicator.applyToPeriod called once when period is created", async () => {
+    const prisma = makePrismaStub({
+      mostRecent: {
+        id: "period-old",
+        periodEnd: new Date("2026-05-10T23:59:59.999Z"),
+      },
+      createdId: "period-td06",
+    });
+    const admin = { getSettings: vi.fn().mockResolvedValue(makeSettings()) };
+    const policyApplicator = { applyToPeriod: vi.fn().mockResolvedValue(undefined) };
+    const scheduler = new PeriodCreatorScheduler(
+      asAny(prisma),
+      asAny(admin),
+      undefined,
+      asAny(policyApplicator),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
+
+    expect(result).toMatchObject({ created: true, periodId: "period-td06" });
+    expect(policyApplicator.applyToPeriod).toHaveBeenCalledTimes(1);
+    expect(policyApplicator.applyToPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "period-td06" }),
+    );
+  });
+
   it("idempotent: future period already exists → skip, no create, no audit", async () => {
     const prisma = makePrismaStub({
       mostRecent: {
