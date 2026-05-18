@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { silenceNestLogger } from "../../test-utils/silence-logs";
 
 import type { AppSettings } from "@customreport/shared";
 
@@ -138,6 +139,7 @@ describe("AutoPublisherScheduler", () => {
   });
 
   it("single-period failure does not abort the tick (one bad report ≠ blocked queue)", async () => {
+    silenceNestLogger();
     const prisma = {
       report: {
         findMany: vi
