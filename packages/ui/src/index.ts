@@ -147,3 +147,4 @@ export {
   TrafficLightBadge,
   type TrafficLightStatus,
 } from "./components/traffic-light-badge";
+export { ComingSoonBadge } from "./components/coming-soon-badge";

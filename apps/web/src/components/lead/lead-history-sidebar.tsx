@@ -1,5 +1,7 @@
 "use client";
 
+import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+
 import type { HistoryEntry } from "../../lib/mappers";
 
 type LeadHistorySidebarProps = {
@@ -152,11 +154,7 @@ function SidebarCard({
         <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
           {title}
         </span>
-        {comingSoon && (
-          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-            Coming Soon
-          </span>
-        )}
+        {comingSoon && <ComingSoonBadge />}
       </div>
       {children}
     </div>
