@@ -1,94 +1,144 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-14T14:23:53Z",
-  "phase": "43",
-  "phase_name": "tooling-leaf-fix",
-  "phase_dir": ".planning/phases/43-tooling-leaf-fix",
-  "plan": 1,
-  "task": 1,
+  "timestamp": "2026-05-16T22:15:00Z",
+  "context": "default",
+  "phase": null,
+  "phase_name": "PRJ-2 UAT v7 — Lead UX Consolidation & Slides Polish",
+  "phase_dir": null,
+  "plan": ".planning/plans/retro-done-composed-swan.md",
+  "task": "consolidation-complete",
   "total_tasks": 7,
-  "status": "paused",
+  "status": "done",
   "completed_tasks": [
     {
-      "id": 1,
-      "name": "TOOL-01: next-env.d.ts clean-checkout fix",
+      "id": "E",
+      "name": "fix(web): restore request-reopen dialog test coverage",
       "status": "done",
-      "commit": "d19a1b9"
+      "commit": "c10e086",
+      "files": [
+        "apps/web/src/components/lead/lead-form.test.tsx",
+        "apps/web/src/components/lead/lead-form-addressable.test.tsx"
+      ]
     },
     {
-      "id": 2,
-      "name": "TOOL-02: regression baseline measurement",
+      "id": "F",
+      "name": "fix(api): fill-from copies items without overwriting priorities",
       "status": "done",
-      "commit": "not applicable — 179/179 already passing"
+      "commit": "dc06c4a",
+      "files": [
+        "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts",
+        "apps/api/src/modules/report-sections/lead-form.prisma-repository.integration.test.ts"
+      ]
+    },
+    {
+      "id": "G",
+      "name": "chore: update handoff for consolidation phase",
+      "status": "done",
+      "commit": "b5d51e7",
+      "files": [".planning/HANDOFF.json"]
+    },
+    {
+      "id": "A",
+      "name": "feat(web): compact lead report toolbar and restore reopen dialog",
+      "status": "done",
+      "commit": "bb194ae",
+      "files": [
+        "apps/web/src/components/lead/period-navigator.tsx",
+        "apps/web/src/components/lead/version-history-nav.tsx",
+        "apps/web/src/components/lead/fill-from-button.tsx",
+        "apps/web/src/components/lead/period-navigator.test.tsx",
+        "apps/web/src/components/lead/lead-form.tsx",
+        "apps/web/src/components/lead/request-reopen-dialog.tsx"
+      ]
+    },
+    {
+      "id": "B",
+      "name": "feat(web): polish lead report sections and item layout",
+      "status": "done",
+      "commit": "44f3cce",
+      "files": [
+        "apps/web/src/components/lead/item-edit-dialog.tsx",
+        "apps/web/src/components/lead/risk-edit-dialog.tsx",
+        "apps/web/src/components/lead/item-card.tsx",
+        "apps/web/src/components/lead/current-week-section.tsx",
+        "apps/web/src/components/lead/next-week-section.tsx",
+        "apps/web/src/components/lead/decisions-section.tsx",
+        "apps/web/src/components/lead/priorities-section.tsx",
+        "apps/web/src/components/lead/risks-section.tsx",
+        "apps/web/src/components/lead/sdlc-pipeline.tsx",
+        "apps/web/src/components/lead/mock-data.ts"
+      ]
+    },
+    {
+      "id": "C",
+      "name": "feat(web): lead and head presentation slides mode",
+      "status": "done",
+      "commit": "2086bbd",
+      "files": [
+        "apps/web/src/components/slides/ (9 new files)",
+        "apps/web/src/app/(app)/head/slides/page.tsx",
+        "apps/web/src/app/(app)/lead/slides/page.tsx",
+        "apps/web/src/app/(app)/lead/report/page.tsx",
+        "apps/web/src/app/(app)/lead/report/[reportId]/page.tsx"
+      ]
+    },
+    {
+      "id": "D",
+      "name": "feat(web): archive filter in lead form history and nav rail",
+      "status": "done",
+      "commit": "7e76788",
+      "files": [
+        "apps/web/src/app/(app)/reports/page.tsx",
+        "apps/web/src/lib/mappers/lead-form.ts",
+        "apps/web/src/components/navigation/nav-bar.tsx",
+        "apps/web/src/components/navigation/nav-bar.test.tsx"
+      ]
     }
   ],
-  "remaining_tasks": [
-    {
-      "id": 3,
-      "name": "Merge PR #5 after CI green",
-      "status": "blocked_ci_queued"
-    },
-    {
-      "id": 4,
-      "name": "STATE.md update — close phases 44/46/47/48/49, recalculate percent",
-      "status": "done",
-      "commit": "local-uncommitted"
-    },
-    {
-      "id": 5,
-      "name": "Reconcile coverage gaps E-04, E-08, UFB-024",
-      "status": "done",
-      "commit": "45e1cac",
-      "note": "E-04 covered by alert-bar.test.tsx; E-08 and UFB-024 were already covered."
-    }
-  ],
+  "remaining_tasks": [],
   "blockers": [
     {
-      "description": "CI PR #5 previous runs were completed/startup_failure with jobs=[] and no logs; current post-fix runs now create queued jobs and still need a real green check before merge",
+      "description": "git push blocked: ghe.example.org SSL_ERROR_SYSCALL — remote unreachable.",
       "type": "external",
-      "workaround": "Watch the latest PR run. If it stays queued, fix GitHub Actions runner availability or repository Actions policy; merge only after green."
-    },
-    {
-      "description": "D-12 item-dialog status pill — react-compiler conflict",
-      "type": "technical",
-      "workaround": "Needs react-compiler-safe technical design before re-implementation"
+      "workaround": "Run `git push origin fix/PRJ-2/uat-v7-2026-05-12` when ghe.example.org is accessible. PR #5 already open."
     }
   ],
   "human_actions_pending": [
     {
-      "action": "Decide approach for D-12 item-dialog status pill reset",
-      "context": "Reverted due to react-compiler hook-call-order conflict",
-      "blocking": false
-    },
-    {
-      "action": "Choose next milestone after PR #5 merge",
-      "context": "Options: Phase 43 formal closure, Phase 50/53/59/60",
+      "action": "git push origin fix/PRJ-2/uat-v7-2026-05-12 && approve + merge PR #5 in GitHub UI",
+      "context": "All 7 commits ready. typecheck + lint + vitest (76 tests) = green. Push blocked by SSL on ghe.example.org.",
       "blocking": false
     }
   ],
   "decisions": [
     {
-      "decision": "Remove typedRoutes import from next-env.d.ts",
-      "rationale": "typedRoutes not enabled in next.config.ts; .next/ is gitignored; import was stale artifact",
-      "phase": "43"
+      "decision": "Committed lead-form.tsx entirely in Commit A (not split per bucket A/C/D/E via git add -p)",
+      "rationale": "Interactive TTY not available for git add -p in agent context. Code is correct; atomicity sacrificed only in hunk-split, not in logical grouping.",
+      "phase": "A"
     },
     {
-      "decision": "TOOL-02 chunk plans not needed",
-      "rationale": "Regression suite already 179/179 PASS — no regression fix wave required",
-      "phase": "43"
+      "decision": "nav-bar.tsx committed entirely in Commit D (contains both C and D changes)",
+      "rationale": "Same TTY limitation. Logical owner is D (archive rail).",
+      "phase": "D"
+    },
+    {
+      "decision": ".planning/session-retros/NEXT-ACTIONS.md skipped from Commit G",
+      "rationale": "File is gitignored — confirmed via git add attempt.",
+      "phase": "G"
     }
   ],
-  "uncommitted_files": [
-    ".planning/regression/evidence/2026-05-08-phase16-17-uat/uat-live-results.json",
-    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-002.json",
-    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-003.json",
-    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-004.json",
-    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-005.json",
-    ".planning/regression/evidence/product-ready-matrix/ROLE-CTX-007.json",
-    ".planning/regression/evidence/product-ready-matrix/UI-GEO-001.json",
-    ".planning/regression/evidence/product-ready-matrix/UI-GEO-002-003.json",
-    ".planning/regression/COVERAGE-GAP-2026-05-14.md"
-  ],
-  "next_action": "Watch the latest PR #5 run via gh run list --limit 5 and gh pr view 5 --json statusCheckRollup. If green: gh pr merge 5 --merge. If queued/startup_failure persists: record runner/policy blocker evidence. Repo-only remaining work is in .planning/session-retros/CUSTOMREPORT-REPO-REMAINING-2026-05-14.md.",
-  "context_notes": "Post-marathon sprint continuation. TOOL-01 took 2 iterations — first fix was incomplete (still referenced gitignored path). Second fix removed the import entirely since typedRoutes is not enabled. CI action versions were restored in e4a6bfd and pnpm/action-setup was replaced by Corepack in ffb3a15. E-04 is covered by alert-bar.test.tsx in 45e1cac; E-08 and UFB-024 were already covered. Regression is clean. Coverage gap report ready at .planning/regression/COVERAGE-GAP-2026-05-14.md."
+  "verification": {
+    "typecheck": "PASS — 0 errors",
+    "lint": "PASS — 0 errors",
+    "vitest_web": "PASS — 76 tests across lead/, slides/, navigation/",
+    "vitest_api_integration": "PASS for lead-form.prisma-repository.integration.test.ts; 4 pre-existing failures in weekly-report.scope-filter.integration.test.ts (UniqueConstraintViolation on GroupProduct — unrelated to PRJ-2)",
+    "playwright": "NOT RUN — Docker not verified in this session"
+  },
+  "next_action": "When ghe.example.org SSL is restored: git push origin fix/PRJ-2/uat-v7-2026-05-12, then approve + merge PR #5. After merge: update project_uat_v74_2026_05_13 memory, run gsd-complete-milestone v8.1 if STATE.md confirms alignment.",
+  "git_state": {
+    "branch": "fix/PRJ-2/uat-v7-2026-05-12",
+    "head": "7e76788",
+    "commits_above_pause": 7,
+    "working_tree": "clean (only .planning/plans/retro-done-composed-swan.md untracked)"
+  }
 }

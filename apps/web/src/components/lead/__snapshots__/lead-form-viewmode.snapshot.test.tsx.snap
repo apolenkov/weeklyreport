@@ -1,0 +1,47 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`LeadForm view-mode toggle — pre-extract snapshot > shows Edit link and Slides link in edit mode 1`] = `
+<div
+  class="flex items-center gap-3"
+>
+  <a
+    class="inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3 text-sm font-semibold text-white transition-colors"
+    href="/lead/report/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+  >
+    Edit
+  </a>
+  <a
+    aria-label="Open slides mode"
+    class="inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-surface)] px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors"
+    href="/lead/report/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa?mode=slides"
+  >
+    <svg
+      aria-hidden="true"
+      class="h-4 w-4 flex-shrink-0"
+      fill="none"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M3 4h18v16H3z"
+      />
+      <path
+        d="M9 4v16M15 4v16"
+      />
+      <path
+        d="M3 10h18"
+      />
+    </svg>
+    Slides
+  </a>
+  <button
+    class="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+    type="button"
+  >
+    Submit Report
+  </button>
+</div>
+`;

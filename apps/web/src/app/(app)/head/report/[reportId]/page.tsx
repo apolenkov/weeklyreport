@@ -1,28 +1,25 @@
 import { Suspense } from "react";
 
-import { WeeklyReportPage } from "../../../../../components/weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../../../../../components/weekly-report/weekly-report-skeleton";
+import { HeadReportShell } from "../../../../../components/head/head-report-shell";
 
 type Props = {
   params: Promise<{ reportId: string }>;
-  searchParams: Promise<{ authorId?: string }>;
+  searchParams: Promise<{ authorId?: string; mode?: string }>;
 };
 
 /**
- * Phase 35-07 (UX-15): addressed head report. The `[reportId]` segment pins
- * the assembled weekly view to a specific report. The bare `/head/report`
- * route redirects here once the active reportId is known.
- *
- * `weeklyReport.get` accepts the reportId directly, so the same component
- * that powers the bare route handles the addressed surface — only the
- * source of `reportId` changes.
+ * Phase 35-07 (UX-15): addressed head report.
+ * Phase 61 (robust-baking-aurora): adds inline form ↔ slides mode toggle via
+ * HeadReportShell. `?mode=slides` shows the head slide deck; default is form.
  */
 export default async function HeadReportByIdPage({
   params,
   searchParams,
 }: Props) {
   const { reportId } = await params;
-  const { authorId } = await searchParams;
+  const { authorId, mode: modeParam } = await searchParams;
+  const mode = modeParam === "slides" ? "slides" : "form";
 
   return (
     <main
@@ -31,7 +28,7 @@ export default async function HeadReportByIdPage({
     >
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <Suspense fallback={<WeeklyReportSkeleton />}>
-          <WeeklyReportPage reportId={reportId} authorId={authorId} />
+          <HeadReportShell reportId={reportId} mode={mode} authorId={authorId} />
         </Suspense>
       </div>
     </main>

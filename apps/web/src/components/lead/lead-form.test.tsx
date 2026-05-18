@@ -35,9 +35,6 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Test Lead",
-    // 35-03: 'lead' is the gate for "Request Reopen" vs "Revoke"; default
-    // matches the harness's pre-35-03 behaviour of routing through the
-    // Lead branch.
     authorRole: "lead" as const,
     status: overrides.status ?? ("draft" as const),
     submittedAt: null,
@@ -113,11 +110,15 @@ function buildHarness(
     sectionStatus?: "draft" | "submitted";
     submitFn?: () => Promise<unknown>;
     revokeFn?: () => Promise<unknown>;
+    byPeriodReadOnly?: boolean;
     versions?: Array<{
       id: string;
       reportSectionId: string;
       version: number;
       createdAt: Date;
+      itemCount?: number;
+      riskCount?: number;
+      decisionCount?: number;
     }>;
   } = {},
 ) {
@@ -178,7 +179,7 @@ function buildHarness(
           queryKey: ["leadForm.byPeriod"],
           queryFn: async () => ({
             section: makeSection({ status: opts.sectionStatus }),
-            readOnly: false,
+            readOnly: opts.byPeriodReadOnly ?? false,
           }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
@@ -230,6 +231,27 @@ function buildHarness(
         },
         pathFilter: () => ({ queryKey: ["leadForm.restoreVersion"] }),
       },
+      // Save Version (Block 2): manual snapshot button + every-N-autosave
+      // hybrid policy. The component reads this mutation factory
+      // unconditionally, so the mock has to expose it even when no test
+      // exercises the path.
+      createSnapshot: {
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => {
+          return {
+            ...passed,
+            mutationFn: async (vars: unknown) => {
+              calls.push({ type: "createSnapshot", vars });
+              return { ok: true };
+            },
+          };
+        },
+        pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
+      },
       // M6 Lead-side reopen request — added after the original mock
       // shape was set. The component reads
       // `trpc.leadForm.requestReopen.mutationOptions` unconditionally
@@ -251,27 +273,6 @@ function buildHarness(
           };
         },
         pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
-      },
-      // Save Version (Block 2): manual snapshot button + every-N-autosave
-      // hybrid policy. The component reads this mutation factory
-      // unconditionally, so the mock has to expose it even when no test
-      // exercises the path.
-      createSnapshot: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => {
-          return {
-            ...passed,
-            mutationFn: async (vars: unknown) => {
-              calls.push({ type: "createSnapshot", vars });
-              return { ok: true };
-            },
-          };
-        },
-        pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
       },
     },
     ai: {
@@ -426,33 +427,6 @@ describe("LeadForm mutation wiring", () => {
     expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull();
   });
 
-  it("submitted-section action: Lead sees Request Reopen, not Revoke", async () => {
-    // The mapper hard-codes currentUser.role to 'Dev Lead' for now (the
-    // read model doesn't yet carry display role), so every harness-driven
-    // render takes the Lead branch of lead-form.tsx — Request Reopen,
-    // never Revoke. The Revoke wiring flows through the same revokeMut
-    // hook that this used to test, but the button that fires it only
-    // renders when role doesn't end in "Lead". Until the harness gains a
-    // role-override (or the mapper stops hard-coding), we assert the
-    // Lead-visible path: submitted section → Request Reopen surfaces.
-    const { Wrapper } = buildHarness({ sectionStatus: "submitted" });
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-    await act(async () => {
-      await flushAll();
-    });
-
-    // Request Reopen renders for Leads on submitted sections — Revoke is
-    // the Head/Admin-side variant.
-    expect(
-      await screen.findByRole("button", { name: /Request Reopen/i }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Revoke$/i })).toBeNull();
-  });
-
   it("fillFrom success: invalidates leadForm, fires toast.success", async () => {
     const { Wrapper, cap, queryClient } = buildHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
@@ -576,6 +550,94 @@ describe("LeadForm mutation wiring", () => {
     confirmSpy.mockRestore();
   });
 
+  it("version arrows change only the displayed version and do not restore", async () => {
+    const { Wrapper, calls } = buildHarness({
+      versions: [
+        {
+          id: "88888888-8888-8888-8888-888888888888",
+          reportSectionId: SECTION_ID,
+          version: 2,
+          createdAt: new Date("2026-04-20T10:00:00Z"),
+          itemCount: 2,
+          riskCount: 1,
+          decisionCount: 1,
+        },
+        {
+          id: "99999999-9999-9999-9999-999999999999",
+          reportSectionId: SECTION_ID,
+          version: 1,
+          createdAt: new Date("2026-04-19T10:00:00Z"),
+          itemCount: 1,
+          riskCount: 0,
+          decisionCount: 0,
+        },
+      ],
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await act(async () => {
+      await flushAll();
+    });
+
+    expect(screen.getByTitle(/View version history/i)).toHaveTextContent("v2");
+
+    act(() => {
+      screen.getByRole("button", { name: /^Previous version$/i }).click();
+    });
+    await act(async () => {
+      await flushAll();
+    });
+
+    expect(screen.getByTitle(/View version history/i)).toHaveTextContent("v1");
+    expect(calls.filter((c) => c.type === "restoreVersion")).toHaveLength(0);
+  });
+
+  it("read-only periods hide destructive version restore", async () => {
+    const { Wrapper } = buildHarness({
+      byPeriodReadOnly: true,
+      versions: [
+        {
+          id: "88888888-8888-8888-8888-888888888888",
+          reportSectionId: SECTION_ID,
+          version: 2,
+          createdAt: new Date("2026-04-20T10:00:00Z"),
+          itemCount: 2,
+          riskCount: 1,
+          decisionCount: 1,
+        },
+        {
+          id: "99999999-9999-9999-9999-999999999999",
+          reportSectionId: SECTION_ID,
+          version: 1,
+          createdAt: new Date("2026-04-19T10:00:00Z"),
+          itemCount: 1,
+          riskCount: 0,
+          decisionCount: 0,
+        },
+      ],
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await act(async () => {
+      await flushAll();
+    });
+
+    act(() => {
+      screen.getByTitle(/View version history/i).click();
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "Version history" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Restore$/ })).toBeNull();
+  });
+
   it("Save Version button: clicking fires leadForm.createSnapshot with the active sectionId", async () => {
     const { Wrapper, calls } = buildHarness({
       versions: [
@@ -609,5 +671,32 @@ describe("LeadForm mutation wiring", () => {
     expect(snapshotCalls[0]?.vars).toMatchObject({
       reportSectionId: SECTION_ID,
     });
+  });
+
+  it("submitted-section action: Lead sees Request Reopen, not Revoke", async () => {
+    // The mapper hard-codes currentUser.role to 'Dev Lead' for now (the
+    // read model doesn't yet carry display role), so every harness-driven
+    // render takes the Lead branch of lead-form.tsx — Request Reopen,
+    // never Revoke. The Revoke wiring flows through the same revokeMut
+    // hook that this used to test, but the button that fires it only
+    // renders when role doesn't end in "Lead". Until the harness gains a
+    // role-override (or the mapper stops hard-coding), we assert the
+    // Lead-visible path: submitted section → Request Reopen surfaces.
+    const { Wrapper } = buildHarness({ sectionStatus: "submitted" });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await act(async () => {
+      await flushAll();
+    });
+
+    // Request Reopen renders for Leads on submitted sections — Revoke is
+    // the Head/Admin-side variant.
+    expect(
+      await screen.findByRole("button", { name: /Request Reopen/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Revoke$/i })).toBeNull();
   });
 });

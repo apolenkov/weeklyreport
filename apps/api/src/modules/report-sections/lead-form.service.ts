@@ -39,6 +39,8 @@ export interface LeadFormRepository {
     userId: string,
     reason?: string,
   ): Promise<void>;
+  /** Returns true when both users share at least one assigned project. */
+  hasSharedProduct(userId1: string, userId2: string): Promise<boolean>;
 }
 
 export class LeadFormService {
@@ -211,7 +213,12 @@ export class LeadFormService {
     role?: Role,
     requestedAuthorId?: string,
   ): Promise<{ section: ReportSectionReadModel; readOnly: boolean }> {
-    const canViewOtherAuthor = role === "head" || role === "admin";
+    const isHeadLike = role === "head" || role === "admin";
+    const canViewOtherAuthor =
+      isHeadLike ||
+      (role === "lead" &&
+        requestedAuthorId !== undefined &&
+        (await this.repository.hasSharedProduct(userId, requestedAuthorId)));
     const sectionAuthorId =
       requestedAuthorId && canViewOtherAuthor ? requestedAuthorId : userId;
     const result = await this.repository.getSectionForPeriod(

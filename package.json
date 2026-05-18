@@ -27,6 +27,7 @@
     "db:seed:advanced": "tsx prisma/seed.ts",
     "db:wipe:manual-uat": "tsx prisma/wipe-manual-uat.ts",
     "db:reset:hard": "pnpm --filter @customreport/api exec tsx ../../prisma/reset-hard.ts",
+    "db:reset:hard:docker": "docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api pnpm --dir /app/apps/api exec tsx ../../prisma/reset-hard.ts",
     "db:backfill:reminder-policies": "pnpm --filter @customreport/api exec tsx ../../prisma/backfill-policy-rules.ts",
     "observability:up": "docker compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.observability.yml up -d prometheus grafana postgres-exporter redis-exporter",
     "observability:logs": "docker compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.observability.yml logs --tail=100 prometheus grafana",

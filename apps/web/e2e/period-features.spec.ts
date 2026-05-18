@@ -41,11 +41,11 @@ test.describe("Period Navigation", () => {
     await expect(periodSelect).toBeVisible();
   });
 
-  test("period navigator shows week label text", async ({ leadPage }) => {
+  test("period navigator shows period label text", async ({ leadPage }) => {
     const periodSelect = leadPage.getByLabel("Select reporting period");
     // Default selection is the current period (Week 16)
     await expect(periodSelect).toHaveValue("2026-W16");
-    // The select should contain options with week labels
+    // The select should contain concrete weekly period options.
     const options = leadPage.locator(
       'select[aria-label="Select reporting period"] option',
     );

@@ -65,6 +65,10 @@ const LEAD_IGOR = "a0000000-0000-4000-8000-000000000013";
 const LEAD_DMITRY = "a0000000-0000-4000-8000-000000000014";
 const LEAD_OLGA = "a0000000-0000-4000-8000-000000000015";
 const LEAD_SERGEY = "a0000000-0000-4000-8000-000000000016";
+// P13: PM (non-technical) leads — MOBILE/CLOUD/DEVOPS only (CRM excluded: Vasily holds all 7 stages, @@unique([stageId,projectId]) prevents a second lead)
+const LEAD_MOBILE_PM = "a0000000-0000-4000-8000-000000000022";
+const LEAD_CLOUD_PM = "a0000000-0000-4000-8000-000000000023";
+const LEAD_DEVOPS_PM = "a0000000-0000-4000-8000-000000000024";
 
 const PROD_CRM = "a0000000-0000-4000-8000-000000000201";
 const PROD_MOBILE = "a0000000-0000-4000-8000-000000000203";
@@ -72,6 +76,10 @@ const PROD_CLOUD = "a0000000-0000-4000-8000-000000000205";
 const PROD_DEVOPS = "a0000000-0000-4000-8000-000000000207";
 const PROD_PAYMENTS = "a0000000-0000-4000-8000-000000000209";
 const PROD_HR = "a0000000-0000-4000-8000-00000000020b";
+// P61: Vasily's 3 extra products (small-MVP demo — product-switcher + co-author overlay)
+const PROD_CRM_SALES = "a0000000-0000-4000-8000-00000000020d";
+const PROD_CRM_DATA = "a0000000-0000-4000-8000-00000000020f";
+const PROD_CRM_360 = "a0000000-0000-4000-8000-000000000211";
 
 const STAGE_PLAN = "a0000000-0000-4000-8000-000000000701";
 const STAGE_ANALYSIS = "a0000000-0000-4000-8000-000000000702";
@@ -463,6 +471,31 @@ async function main() {
         samlId: "lead-sergey",
         reportingGroupId: FINANCE_GROUP_ID,
       },
+      // P13: non-technical PM leads in CoreDev group (MOBILE/CLOUD/DEVOPS only)
+      {
+        id: LEAD_MOBILE_PM,
+        email: "boris@customreport.local",
+        name: "Борис С.",
+        role: Role.lead,
+        samlId: "lead-mobile-pm",
+        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+      },
+      {
+        id: LEAD_CLOUD_PM,
+        email: "viktor@customreport.local",
+        name: "Виктор Л.",
+        role: Role.lead,
+        samlId: "lead-cloud-pm",
+        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+      },
+      {
+        id: LEAD_DEVOPS_PM,
+        email: "galina@customreport.local",
+        name: "Галина М.",
+        role: Role.lead,
+        samlId: "lead-devops-pm",
+        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+      },
     ],
   });
 
@@ -500,6 +533,25 @@ async function main() {
         archived: false,
       },
       { id: PROD_HR, name: "HR-система", leadId: LEAD_SERGEY, archived: false },
+      // P61: Vasily's extra products for small-MVP demo (product-switcher needs ≥2)
+      {
+        id: PROD_CRM_SALES,
+        name: "CRM-Sales Hub",
+        leadId: LEAD_1,
+        archived: false,
+      },
+      {
+        id: PROD_CRM_DATA,
+        name: "CRM-Data Lake",
+        leadId: LEAD_1,
+        archived: false,
+      },
+      {
+        id: PROD_CRM_360,
+        name: "CRM-Customer 360",
+        leadId: LEAD_1,
+        archived: false,
+      },
     ],
   });
 
@@ -514,6 +566,10 @@ async function main() {
       { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_DEVOPS },
       { groupId: FINANCE_GROUP_ID, productId: PROD_PAYMENTS },
       { groupId: FINANCE_GROUP_ID, productId: PROD_HR },
+      // P61: Vasily's extra products belong to the same group as PROD_CRM
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_SALES },
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_DATA },
+      { groupId: DEFAULT_REPORTING_GROUP_ID, productId: PROD_CRM_360 },
     ],
     skipDuplicates: true,
   });
@@ -587,6 +643,97 @@ async function main() {
         stageId: STAGE_DEV,
         userId: LEAD_SERGEY,
       },
+      // P13: PM leads — Plan/Analysis stages (non-tech focus)
+      // MOBILE-PM: Plan + Analysis + Design
+      {
+        id: "b0000000-0000-4000-8000-000000000023",
+        projectId: PROD_MOBILE,
+        stageId: STAGE_PLAN,
+        userId: LEAD_MOBILE_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000024",
+        projectId: PROD_MOBILE,
+        stageId: STAGE_ANALYSIS,
+        userId: LEAD_MOBILE_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000025",
+        projectId: PROD_MOBILE,
+        stageId: STAGE_DESIGN,
+        userId: LEAD_MOBILE_PM,
+      },
+      // CLOUD-PM: Plan + Analysis + Design
+      {
+        id: "b0000000-0000-4000-8000-000000000026",
+        projectId: PROD_CLOUD,
+        stageId: STAGE_PLAN,
+        userId: LEAD_CLOUD_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000027",
+        projectId: PROD_CLOUD,
+        stageId: STAGE_ANALYSIS,
+        userId: LEAD_CLOUD_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000028",
+        projectId: PROD_CLOUD,
+        stageId: STAGE_DESIGN,
+        userId: LEAD_CLOUD_PM,
+      },
+      // DEVOPS-PM: Plan + Analysis + Support
+      {
+        id: "b0000000-0000-4000-8000-000000000029",
+        projectId: PROD_DEVOPS,
+        stageId: STAGE_PLAN,
+        userId: LEAD_DEVOPS_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000030",
+        projectId: PROD_DEVOPS,
+        stageId: STAGE_ANALYSIS,
+        userId: LEAD_DEVOPS_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000031",
+        projectId: PROD_DEVOPS,
+        stageId: STAGE_DESIGN,
+        userId: LEAD_DEVOPS_PM,
+      },
+      // P61: Vasily owns stages on his 3 extra products.
+      // On PROD_CRM_SALES Boris (LEAD_MOBILE_PM) owns STAGE_PLAN (co-author demo),
+      // so Vasily gets the remaining 6 stages (Analysis through Support).
+      // On PROD_CRM_DATA and PROD_CRM_360 Vasily owns all 7 stages.
+      ...allStageIds
+        .filter((s) => s !== STAGE_PLAN)
+        .map((stageId, idx) => ({
+          id: `b0000000-0000-4000-8000-0000000011${(idx + 1).toString().padStart(2, "0")}`,
+          projectId: PROD_CRM_SALES,
+          stageId,
+          userId: LEAD_1,
+        })),
+      ...allStageIds.map((stageId, idx) => ({
+        id: `b0000000-0000-4000-8000-0000000012${(idx + 1).toString().padStart(2, "0")}`,
+        projectId: PROD_CRM_DATA,
+        stageId,
+        userId: LEAD_1,
+      })),
+      ...allStageIds.map((stageId, idx) => ({
+        id: `b0000000-0000-4000-8000-0000000013${(idx + 1).toString().padStart(2, "0")}`,
+        projectId: PROD_CRM_360,
+        stageId,
+        userId: LEAD_1,
+      })),
+      // P61 co-author: Boris (LEAD_MOBILE_PM) owns Plan stage on PROD_CRM_SALES
+      // (@@unique([stageId, projectId]) — one owner per stage×product pair).
+      // Boris = PM → Planning; Vasily = tech lead → Analysis+Dev+Test+DevOps+Design+Support.
+      {
+        id: "b0000000-0000-4000-8000-000000000032",
+        projectId: PROD_CRM_SALES,
+        stageId: STAGE_PLAN,
+        userId: LEAD_MOBILE_PM,
+      },
     ],
   });
 
@@ -643,17 +790,6 @@ async function main() {
             : PeriodState.scheduled,
           publishedAt: r.publishedAt,
           publishedById: r.publishedAt ? HEAD_ID : null,
-          ...(isPublished && r.publishedAt
-            ? {
-                publishedSnapshot: demoPublishedSnapshot({
-                  reportId: r.id,
-                  periodStart: r.monday,
-                  periodEnd,
-                  deadline,
-                  publishedAt: r.publishedAt,
-                }),
-              }
-            : {}),
         };
       }),
     ],
@@ -716,6 +852,28 @@ async function main() {
       lightStatus: TrafficLightStatus.green,
       label: "Сергей Т.",
     },
+    // P13: PM leads — non-technical, Plan/Analysis/Design focus
+    {
+      id: LEAD_MOBILE_PM,
+      productId: PROD_MOBILE,
+      status: ReportSectionStatus.draft,
+      lightStatus: TrafficLightStatus.yellow,
+      label: "Борис С.",
+    },
+    {
+      id: LEAD_CLOUD_PM,
+      productId: PROD_CLOUD,
+      status: ReportSectionStatus.draft,
+      lightStatus: TrafficLightStatus.green,
+      label: "Виктор Л.",
+    },
+    {
+      id: LEAD_DEVOPS_PM,
+      productId: PROD_DEVOPS,
+      status: ReportSectionStatus.draft,
+      lightStatus: TrafficLightStatus.yellow,
+      label: "Галина М.",
+    },
   ];
 
   const ALL_PRODUCT_IDS: readonly string[] = [
@@ -725,6 +883,9 @@ async function main() {
     PROD_DEVOPS,
     PROD_PAYMENTS,
     PROD_HR,
+    PROD_CRM_SALES,
+    PROD_CRM_DATA,
+    PROD_CRM_360,
   ];
 
   // RU content for each lead. Realistic weekly status updates.
@@ -740,7 +901,6 @@ async function main() {
     risk?: { risk: string; impact: string; mitigation: string };
     decisions: {
       text: string;
-      owner: string;
       impact: string;
       deadline?: Date;
     }[];
@@ -781,12 +941,10 @@ async function main() {
       decisions: [
         {
           text: "Решение: переезд на новый IdP до конца месяца",
-          owner: "Василий И.",
           impact: "Закрывает риск устаревшего OAuth-провайдера",
         },
         {
           text: "Решение: согласовать наём двух middle-разработчиков на Q3",
-          owner: "Антон К.",
           impact: "Разгружает критический путь по интеграциям",
           deadline: plusDaysUTC(ACTIVE_MONDAY, 14),
         },
@@ -834,12 +992,10 @@ async function main() {
       decisions: [
         {
           text: "Решение: завести E2E-сьют чекаута в обязательный ночной прогон",
-          owner: "Мария К.",
           impact: "Снижает риск регрессий в проде на ~70%",
         },
         {
           text: "Решение: согласовать выделенный bug-bash день перед релизом",
-          owner: "Антон К.",
           impact: "Закрывает остаточные P2-баги до raise-the-floor",
           deadline: plusDaysUTC(ACTIVE_MONDAY, 10),
         },
@@ -883,13 +1039,11 @@ async function main() {
       decisions: [
         {
           text: "Решение: утвердить maintenance-window для миграции PgBouncer (Сб 02:00 МСК)",
-          owner: "Антон К.",
           impact: "Закрывает tech-debt по пулу соединений",
           deadline: plusDaysUTC(ACTIVE_MONDAY, 5),
         },
         {
           text: "Решение: выделить бюджет на observability stack v2",
-          owner: "Антон К.",
           impact: "Снижает MTTR инцидентов в DevOps на 30%",
         },
       ],
@@ -929,12 +1083,10 @@ async function main() {
       decisions: [
         {
           text: "Решение: дать зелёный свет фазовой раскатке WAF в shadow-mode",
-          owner: "Антон К.",
           impact: "Снижает риск инцидентов на проде, безопасный rollback",
         },
         {
           text: "Решение: выделить SDET-инженера на покрытие security-сценариев",
-          owner: "Дмитрий С.",
           impact: "Закрывает гэп по автотестам безопасности до релиза",
         },
       ],
@@ -983,13 +1135,11 @@ async function main() {
       decisions: [
         {
           text: "Решение: раскатать 3DS v2 на 100% трафика после стабилизации",
-          owner: "Ольга Н.",
           impact: "Закрывает требование PSD2 для платёжного шлюза",
           deadline: plusDaysUTC(ACTIVE_MONDAY, 14),
         },
         {
           text: "Решение: согласовать UX-сценарий восстановления при отмене 3DS",
-          owner: "Антон К.",
           impact: "Снижает abandonment-rate на чекауте",
         },
       ],
@@ -1032,12 +1182,10 @@ async function main() {
       decisions: [
         {
           text: "Решение: выделить slot на интеграцию с корпоративным SSO для HR",
-          owner: "Антон К.",
           impact: "Снижает onboarding-трение для новых сотрудников",
         },
         {
           text: "Решение: согласовать архитектуру модуля 360-feedback",
-          owner: "Сергей Т.",
           impact: "Закрывает roadmap-цель Q3 по HR-аналитике",
         },
       ],
@@ -1047,12 +1195,138 @@ async function main() {
         "Архитектура модуля 360-feedback",
       ],
     },
+    // P13: PM leads — Plan/Analysis focus, non-technical vocabulary
+    [LEAD_MOBILE_PM]: {
+      currentItems: [
+        {
+          text: "Разработала концепт нового onboarding-флоу для мобильного приложения",
+          tag: "analysis",
+          status: ItemWorkflowStatus.in_progress,
+        },
+        {
+          text: "Провела интервью с 8 пользователями по болям чекаута",
+          tag: "analysis",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+        {
+          text: "Подготовила спецификацию для push-уведомлений",
+          tag: "feature",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+      ],
+      nextItems: [
+        { text: "Прототип онбординга на Figma для A/B теста", tag: "analysis" },
+        {
+          text: "Составить acceptance-критерии для push-уведомлений",
+          tag: "ops",
+        },
+      ],
+      decisions: [
+        {
+          text: "Решение: запустить A/B тест нового онбординга на 10% аудитории",
+          impact: "Данные для решения о полном переходе через 4 недели",
+          deadline: plusDaysUTC(ACTIVE_MONDAY, 10),
+        },
+      ],
+      priorities: [
+        "Финализировать концепт онбординга и передать дизайнеру",
+        "Согласовать acceptance-критерии push-уведомлений с командой",
+        "Запуск A/B теста онбординга в течение двух недель",
+      ],
+    },
+    [LEAD_CLOUD_PM]: {
+      currentItems: [
+        {
+          text: "Документировала архитектуру data governance для внутреннего BI",
+          tag: "analysis",
+          status: ItemWorkflowStatus.in_progress,
+        },
+        {
+          text: "Согласовала требования к дашборду с 3 аналитическими командами",
+          tag: "analysis",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+        {
+          text: "Подготовила roadmap перехода на self-service BI",
+          tag: "ops",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+      ],
+      nextItems: [
+        {
+          text: "Валидация data model с командой Data Engineering",
+          tag: "analysis",
+        },
+        {
+          text: "Прототип нового дашборда для пилота с аналитиками",
+          tag: "analysis",
+        },
+      ],
+      decisions: [
+        {
+          text: "Решение: запустить пилот self-service BI с аналитической командой маркетинга",
+          impact: "Снижает нагрузку на DE-команду на 30%",
+          deadline: plusDaysUTC(ACTIVE_MONDAY, 21),
+        },
+      ],
+      priorities: [
+        "Финализировать data governance документацию",
+        "Запустить пилот self-service BI с маркетинговой командой",
+        "Валидация data model готова до начала разработки",
+      ],
+    },
+    [LEAD_DEVOPS_PM]: {
+      currentItems: [
+        {
+          text: "Согласовала стандарты документирования infrastructure-as-code",
+          tag: "ops",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+        {
+          text: "Провела анализ инцидентов Q2 и подготовила action plan",
+          tag: "analysis",
+          status: ItemWorkflowStatus.in_progress,
+        },
+        {
+          text: "Актуализировала SLA-соглашения со смежными командами",
+          tag: "ops",
+          status: ItemWorkflowStatus.done,
+          completed: true,
+        },
+      ],
+      nextItems: [
+        {
+          text: "Presentation action plan по инцидентам Q2 для CTO",
+          tag: "ops",
+        },
+        {
+          text: "Составить план обучения по IaC-практикам для команды",
+          tag: "ops",
+        },
+      ],
+      decisions: [
+        {
+          text: "Решение: внедрить runbook-driven incident response для all P1/P2",
+          impact: "Снижает MTTR на 40% за счёт стандартизации response",
+        },
+      ],
+      priorities: [
+        "Завершить action plan по инцидентам Q2",
+        "Внедрить runbook-driven incident response",
+        "Обучение команды по IaC-стандартам",
+      ],
+    },
   };
 
   for (let i = 0; i < leads.length; i++) {
     const lead = leads[i]!;
     const content = contentByLead[lead.id]!;
-    const sectionId = `a0000000-0000-4000-8000-00000000040${i + 1}`;
+    const sectionId = `a0000000-0000-4000-8000-00000000040${(i + 1).toString(16)}`;
     await prisma.reportSection.create({
       data: {
         id: sectionId,
@@ -1068,11 +1342,17 @@ async function main() {
 
     // Each lead's section gets ProjectStatus rows for primary product +
     // 2 secondaries — keeps the SDLC pipeline + product picker varied.
-    const SECONDARY = ALL_PRODUCT_IDS.filter((p) => p !== lead.productId).slice(
-      0,
-      2,
-    );
-    const STATUS_PRODUCTS: readonly string[] = [lead.productId, ...SECONDARY];
+    // P61: Vasily uses his 3 extra products as SECONDARY so items/statuses
+    // reference PROD_CRM_SALES and PROD_CRM_DATA rather than other leads' products.
+    const SECONDARY =
+      lead.id === LEAD_1
+        ? ([PROD_CRM_SALES, PROD_CRM_DATA] as string[])
+        : ALL_PRODUCT_IDS.filter((p) => p !== lead.productId).slice(0, 2);
+    // P61: Vasily's section shows ProjectStatus for all 4 of his products.
+    const STATUS_PRODUCTS: readonly string[] =
+      lead.id === LEAD_1
+        ? [PROD_CRM, PROD_CRM_SALES, PROD_CRM_DATA, PROD_CRM_360]
+        : [lead.productId, ...SECONDARY];
     for (let pIdx = 0; pIdx < STATUS_PRODUCTS.length; pIdx++) {
       const pid = STATUS_PRODUCTS[pIdx]!;
       const isPrimary = pid === lead.productId;
@@ -1170,7 +1450,7 @@ async function main() {
         reportSectionId: sectionId,
         productId: lead.productId,
         text: d.text,
-        owner: d.owner,
+        owner: lead.label,
         impact: d.impact,
         deadline: d.deadline ?? null,
         stageName: stageFor(dIdx),
@@ -1191,6 +1471,49 @@ async function main() {
       })),
     });
   }
+
+  // P61 co-author overlay: Boris (LEAD_MOBILE_PM, leads[6]) has a Risk + Item
+  // on PROD_CRM_SALES inside his own REPORT_ACTIVE section. Boris's section
+  // id = a0000000-0000-4000-8000-000000000407 (i=6, hex 7).
+  // When Vasily opens ?authorId=LEAD_MOBILE_PM the form shows Boris's section
+  // read-only (isPinnedAuthorView=true in lead-form.tsx:330).
+  // Boris's StageAssignment on PROD_CRM_SALES/STAGE_PLAN means data.products
+  // for his section includes PROD_CRM_SALES alongside PROD_MOBILE.
+  const borisSectionId = `a0000000-0000-4000-8000-000000000407`;
+  await prisma.projectStatus.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000006791",
+      reportSectionId: borisSectionId,
+      projectId: PROD_CRM_SALES,
+      status: TrafficLightStatus.yellow,
+    },
+  });
+  await prisma.item.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000007001",
+      reportSectionId: borisSectionId,
+      type: ItemType.next,
+      projectId: PROD_CRM_SALES,
+      text: "PM-обзор: подключить выгрузку sales-метрик в CRM-Sales Hub",
+      tag: "analysis",
+      workflowStatus: ItemWorkflowStatus.in_progress,
+      carriedOver: false,
+      completed: false,
+      stageName: "Planning",
+    },
+  });
+  await prisma.risk.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000009001",
+      reportSectionId: borisSectionId,
+      projectId: PROD_CRM_SALES,
+      risk: "Sales API rate-limit на пиках нагрузки",
+      impact: "Деградация дашборда для отдела продаж",
+      mitigation: "PM эскалирует задачу на инфра-команду",
+      severity: "at-risk",
+      stageName: "Planning",
+    },
+  });
 
   console.log(
     "[seed-simple] Creating version snapshots (primary lead section, 2 versions)...",
@@ -1285,6 +1608,102 @@ async function main() {
         rank: 1,
       },
     });
+  }
+
+  console.log(
+    "[seed-simple] Creating archived lead history sections (4 periods)...",
+  );
+  const archivedReports = EXTRA_REPORTS.filter(
+    (report) => report.status === ReportStatus.published,
+  );
+  const archiveTrafficByPeriod = [
+    TrafficLightStatus.green,
+    TrafficLightStatus.yellow,
+    TrafficLightStatus.green,
+    TrafficLightStatus.red,
+  ] as const;
+
+  for (let reportIdx = 0; reportIdx < archivedReports.length; reportIdx++) {
+    const report = archivedReports[reportIdx]!;
+    const submittedAt =
+      report.publishedAt ?? endOfDayUTC(plusDaysUTC(report.monday, 6));
+    const createdAt = plusDaysUTC(report.monday, 1);
+
+    for (let i = 0; i < leads.length; i++) {
+      const lead = leads[i]!;
+      const archiveSectionId = `a0000000-0000-4000-8000-0000000005${reportIdx + 1}${i + 1}`;
+      const lightStatus =
+        i === 0 ? archiveTrafficByPeriod[reportIdx]! : TrafficLightStatus.green;
+
+      await prisma.reportSection.create({
+        data: {
+          id: archiveSectionId,
+          reportId: report.id,
+          authorId: lead.id,
+          status: ReportSectionStatus.submitted,
+          submittedAt,
+          createdAt,
+          updatedAt: submittedAt,
+        },
+      });
+
+      await prisma.projectStatus.create({
+        data: {
+          id: randomUUID(),
+          reportSectionId: archiveSectionId,
+          projectId: lead.productId,
+          status: lightStatus,
+          createdAt,
+          updatedAt: submittedAt,
+        },
+      });
+
+      await prisma.item.createMany({
+        data: [
+          {
+            id: randomUUID(),
+            reportSectionId: archiveSectionId,
+            type: ItemType.current,
+            projectId: lead.productId,
+            text: `Архив: закрыли ключевые задачи периода для команды ${lead.label}`,
+            tag: "feature",
+            workflowStatus: ItemWorkflowStatus.done,
+            carriedOver: false,
+            completed: true,
+            stageName: "Development",
+            createdAt,
+            updatedAt: submittedAt,
+          },
+          {
+            id: randomUUID(),
+            reportSectionId: archiveSectionId,
+            type: ItemType.next,
+            projectId: lead.productId,
+            text: `Архив: перенесли следующий фокус команды ${lead.label} в новый период`,
+            tag: "ops",
+            workflowStatus: ItemWorkflowStatus.done,
+            carriedOver: false,
+            completed: true,
+            stageName: "Development",
+            createdAt,
+            updatedAt: submittedAt,
+          },
+        ],
+      });
+
+      await prisma.priority.create({
+        data: {
+          id: randomUUID(),
+          reportSectionId: archiveSectionId,
+          productId: lead.productId,
+          text: `Архивный приоритет: ${lead.label}`,
+          rank: 1,
+          stageName: "Development",
+          createdAt,
+          updatedAt: submittedAt,
+        },
+      });
+    }
   }
 
   // UFB-039: backfill the seed group's headUserId to the seeded head user

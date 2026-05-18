@@ -94,6 +94,7 @@ export type ReportPeriod = {
   dateRange: string;
   isCurrent: boolean;
   isSubmitted: boolean;
+  archived?: boolean;
   itemCount?: number;
   riskCount?: number;
   productCount?: number;

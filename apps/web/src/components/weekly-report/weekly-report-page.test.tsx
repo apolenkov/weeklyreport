@@ -419,7 +419,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
 
     // Archive link must point to the published tab.
     const archiveLink = screen.getByRole("link", {
-      name: /view last published report in archive/i,
+      name: /view archived reports in archive/i,
     });
     expect(archiveLink).toHaveAttribute("href", "/reports?tab=published");
 

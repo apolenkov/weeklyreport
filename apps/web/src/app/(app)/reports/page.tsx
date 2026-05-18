@@ -3,76 +3,134 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Archive } from "lucide-react";
 import { toast } from "sonner";
 
-import type { MyHistoryEntry } from "@customreport/shared";
+import type {
+  CompiledHistoryResult,
+  MyHistoryEntry,
+} from "@customreport/shared";
 
 import { LeadHistoryList } from "../../../components/lead/lead-history-list";
 import { LeadHistorySidebar } from "../../../components/lead/lead-history-sidebar";
 import { LeadHistorySkeleton } from "../../../components/lead/lead-history-skeleton";
-import { ReportArchiveSection } from "../../../components/dashboard/report-archive-section";
 import { SearchInput } from "../../../components/search/search-input";
 import { useSession } from "../../../lib/session-provider";
-import { mapHistoryEntries } from "../../../lib/mappers";
+import {
+  mapCompiledHistoryEntries,
+  mapHistoryEntries,
+  type HistoryEntry,
+} from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
 
 /**
  * UX-17 (Phase 35-08): merged Reports page.
  *
- * Two tabs: "My Drafts" (lead-only, the lead's authored sections —
- * includes drafts and submitted) and "Published" (the archive of
- * published periods, visible to every role).
- *
- * Tab default by role:
- *   - lead              → "My Drafts"
- *   - head/admin/viewer → "Published"
- * Override via `?tab=drafts|published`.
- *
- * The legacy `/lead/history` and `/reports/history` routes 307-redirect
- * here with the appropriate tab pre-selected.
+ * Lead users get personal History. Non-lead users get compiled History.
+ * The legacy `?tab=published` URL is treated as "include archive" so old
+ * links still reveal archived periods without a separate Archive surface.
  */
-type TabId = "drafts" | "published";
 
 const HISTORY_INITIAL_VISIBLE = 10;
 
 export default function ReportsPage() {
   const { user } = useSession();
+  const trpc = useTRPC();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const role = user?.role ?? null;
   const isLead = role === "lead";
+  const usesCompiledHistory =
+    role === "head" || role === "viewer" || role === "admin";
   const searchScope = isLead
     ? "mine"
     : role === "head" || role === "admin"
       ? "all"
       : null;
 
-  // Default tab logic mirrors the spec: lead → drafts; everyone else → published.
   const tabFromUrl = searchParams?.get("tab");
-  const initialTab: TabId =
-    tabFromUrl === "drafts" || tabFromUrl === "published"
-      ? tabFromUrl
-      : isLead
-        ? "drafts"
-        : "published";
-
-  const [tab, setTab] = useState<TabId>(initialTab);
-
-  function selectTab(nextTab: TabId) {
-    setTab(nextTab);
-    const params = new URLSearchParams(searchParams?.toString());
-    params.set("tab", nextTab);
-    router.push(`/reports?${params.toString()}`, { scroll: false });
-  }
+  const [includeArchive, setIncludeArchive] = useState(
+    tabFromUrl === "published",
+  );
 
   // Keep state in sync if the URL param changes after mount (e.g. user
-  // navigates from /lead/history → 307 → /reports?tab=drafts).
+  // navigates from /reports/history -> /reports?tab=published).
   useEffect(() => {
-    if (tabFromUrl === "drafts" || tabFromUrl === "published") {
-      setTab(tabFromUrl);
-    }
+    setIncludeArchive(tabFromUrl === "published");
   }, [tabFromUrl]);
+
+  const historyQ = useQuery({
+    ...trpc.reports.myHistory.queryOptions(),
+    enabled: isLead,
+  });
+
+  const compiledHistoryQ = useQuery({
+    ...trpc.reports.compiledHistory.queryOptions({ includeArchive }),
+    enabled: usesCompiledHistory,
+  });
+
+  function toggleArchive(nextValue: boolean) {
+    setIncludeArchive(nextValue);
+    const params = new URLSearchParams(searchParams?.toString());
+    params.set("tab", nextValue ? "published" : "drafts");
+    router.push("/reports?" + params.toString(), { scroll: false });
+  }
+
+  useEffect(() => {
+    if (isLead && historyQ.isError) {
+      toast.error(historyQ.error?.message ?? "Failed to load report history.");
+    }
+    if (usesCompiledHistory && compiledHistoryQ.isError) {
+      toast.error(
+        compiledHistoryQ.error?.message ?? "Failed to load report history.",
+      );
+    }
+  }, [
+    compiledHistoryQ.error,
+    compiledHistoryQ.isError,
+    historyQ.error,
+    historyQ.isError,
+    isLead,
+    usesCompiledHistory,
+  ]);
+
+  const allEntries = useMemo(() => {
+    const history =
+      isLead && Array.isArray(historyQ.data)
+        ? (historyQ.data as readonly MyHistoryEntry[])
+        : [];
+    return mapHistoryEntries(history);
+  }, [historyQ.data, isLead]);
+  const compiledData = usesCompiledHistory
+    ? (compiledHistoryQ.data as CompiledHistoryResult | undefined)
+    : undefined;
+  const compiledEntries = useMemo(
+    () => mapCompiledHistoryEntries(compiledData?.entries ?? []),
+    [compiledData?.entries],
+  );
+  const leadArchiveCount = allEntries.filter((entry) => entry.archived).length;
+  const archiveCount = isLead
+    ? leadArchiveCount
+    : (compiledData?.archiveCount ?? 0);
+  const entries = isLead
+    ? includeArchive
+      ? allEntries
+      : allEntries.filter((entry) => !entry.archived)
+    : compiledEntries;
+  const isLoading = isLead
+    ? historyQ.isLoading
+    : usesCompiledHistory
+      ? compiledHistoryQ.isLoading
+      : false;
+  const subtitle = isLead
+    ? "Your report history."
+    : role === "head"
+      ? "Compiled group report history."
+      : role === "viewer"
+        ? "Published report history."
+        : "Compiled report history.";
+  const summaryTitle = isLead ? "My History Summary" : "History Summary";
 
   return (
     <main
@@ -83,118 +141,66 @@ export default function ReportsPage() {
         <div className="space-y-6">
           <header>
             <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-              Reports
+              History
             </h1>
             <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              {isLead
-                ? "Your drafts and published group reports in one place."
-                : "Published group report archive."}
+              {subtitle}
             </p>
           </header>
 
-          <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)]">
-            <TabButton
-              label="My Drafts"
-              active={tab === "drafts"}
-              disabled={!isLead}
-              onClick={() => selectTab("drafts")}
-            />
-            <TabButton
-              label="Published"
-              active={tab === "published"}
-              onClick={() => selectTab("published")}
-            />
-          </div>
-
-          {searchScope ? (
-            <div>
-              <SearchInput
-                scope={searchScope}
-                placeholder={
-                  isLead ? "Search my reports…" : "Search reports and products…"
-                }
+          {role ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/75 px-3 py-3">
+              <div className="min-w-[220px] flex-1">
+                {searchScope ? (
+                  <SearchInput
+                    scope={searchScope}
+                    placeholder={
+                      isLead
+                        ? "Search my reports…"
+                        : "Search reports and products…"
+                    }
+                  />
+                ) : null}
+              </div>
+              <HistoryArchiveToggle
+                checked={includeArchive}
+                archiveCount={archiveCount}
+                onChange={toggleArchive}
               />
             </div>
           ) : (
             <div className="min-h-[44px]" aria-hidden="true" />
           )}
 
-          {tab === "drafts" ? (
-            isLead ? (
-              <LeadDraftsPanel />
-            ) : (
-              <EmptyDraftsForNonLead />
-            )
-          ) : (
-            <ReportArchiveSection />
-          )}
+          <HistoryPanel
+            entries={entries}
+            includeArchive={includeArchive}
+            isLoading={isLoading}
+            summaryTitle={summaryTitle}
+          />
         </div>
       </div>
     </main>
   );
 }
 
-function TabButton({
-  label,
-  active,
-  onClick,
-  disabled,
+function HistoryPanel({
+  entries,
+  includeArchive,
+  isLoading,
+  summaryTitle,
 }: {
-  readonly label: string;
-  readonly active: boolean;
-  readonly onClick: () => void;
-  readonly disabled?: boolean;
+  readonly entries: HistoryEntry[];
+  readonly includeArchive: boolean;
+  readonly isLoading: boolean;
+  readonly summaryTitle: string;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-current={active ? "page" : undefined}
-      className={`relative -mb-px inline-flex min-h-[44px] items-center px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-        active
-          ? "border-b-2 border-[var(--color-starbucks-accent)] text-[var(--color-starbucks-accent)]"
-          : "border-b-2 border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function EmptyDraftsForNonLead() {
-  return (
-    <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center">
-      <p className="text-sm font-semibold text-[var(--color-foreground)]">
-        This tab is available to leads only.
-      </p>
-      <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-        Leads see their drafts and submitted reports here. Open Published to
-        view the group archive.
-      </p>
-    </div>
-  );
-}
-
-function LeadDraftsPanel() {
-  const trpc = useTRPC();
-  const { data, isLoading, isError, error } = useQuery(
-    trpc.reports.myHistory.queryOptions(),
-  );
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    if (isError) {
-      toast.error(error?.message ?? "Failed to load report history.");
-    }
-  }, [isError, error]);
+    setShowAll(false);
+  }, [includeArchive]);
 
-  const entries = useMemo(() => {
-    const history = Array.isArray(data)
-      ? (data as readonly MyHistoryEntry[])
-      : [];
-    return mapHistoryEntries(history);
-  }, [data]);
   const visibleEntries = showAll
     ? entries
     : entries.slice(0, HISTORY_INITIAL_VISIBLE);
@@ -207,28 +213,72 @@ function LeadDraftsPanel() {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="space-y-6">
-        <LeadHistoryList entries={visibleEntries} />
+        {entries.length > 0 ? (
+          <LeadHistoryList entries={visibleEntries} />
+        ) : (
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] p-8 text-center">
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              {includeArchive
+                ? "No report history yet."
+                : "No current history yet."}
+            </p>
+          </div>
+        )}
         {hasMore && (
           <div className="flex items-center justify-center">
             <button
               type="button"
               className="btn-press inline-flex min-h-[44px] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
               onClick={() => setShowAll(true)}
-              aria-label={`Show all ${entries.length} submissions`}
+              aria-label={`Show all ${entries.length} reports`}
             >
               Show all ({entries.length})
             </button>
           </div>
         )}
-        {entries.length === 0 && (
-          <p className="text-center text-sm text-[var(--color-muted-foreground)]">
-            You have no submitted reports yet.
-          </p>
-        )}
       </div>
       <div className="space-y-4">
-        <LeadHistorySidebar entries={entries} />
+        <LeadHistorySidebar
+          entries={entries}
+          summaryTitle={summaryTitle}
+          showStatus
+        />
       </div>
+    </div>
+  );
+}
+
+function HistoryArchiveToggle({
+  checked,
+  archiveCount,
+  onChange,
+}: {
+  readonly checked: boolean;
+  readonly archiveCount: number;
+  readonly onChange: (nextValue: boolean) => void;
+}) {
+  return (
+    <div className="flex min-h-10 shrink-0 items-center">
+      <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-white px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] hover:text-[var(--color-starbucks-accent)]">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          className="h-4 w-4 accent-[var(--color-starbucks-accent)]"
+          aria-label={
+            archiveCount > 0
+              ? `Show archived reports (${archiveCount})`
+              : "Show archived reports"
+          }
+        />
+        <Archive className="h-4 w-4" aria-hidden="true" />
+        <span>Archive</span>
+        {archiveCount > 0 && (
+          <span className="rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[11px] text-[var(--color-starbucks-accent)]">
+            {archiveCount}
+          </span>
+        )}
+      </label>
     </div>
   );
 }

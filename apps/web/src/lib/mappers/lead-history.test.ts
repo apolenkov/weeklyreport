@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import type { MyHistoryEntry } from "@customreport/shared";
+import type {
+  CompiledHistoryEntry,
+  MyHistoryEntry,
+} from "@customreport/shared";
 
 import {
   formatDateRange,
   formatSubmittedAt,
   isoWeekNumber,
+  mapCompiledHistoryEntries,
   mapHistoryEntries,
 } from "./lead-history";
 
@@ -162,11 +166,111 @@ describe("mapHistoryEntries", () => {
     expect(result[0]?.periodId).toBe("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
   });
 
-  it("zero-stubs counts and trafficLights (router does not yet project them)", () => {
+  it("defaults missing aggregate fields to zeros", () => {
     const result = mapHistoryEntries([baseEntry()], now);
     expect(result[0]?.itemCount).toBe(0);
     expect(result[0]?.riskCount).toBe(0);
     expect(result[0]?.decisionCount).toBe(0);
+    expect(result[0]?.priorityCount).toBe(0);
+    expect(result[0]?.versionCount).toBe(0);
+    expect(result[0]?.latestVersion).toBeNull();
+    expect(result[0]?.latestVersionAt).toBeNull();
+    expect(result[0]?.archived).toBe(false);
+    expect(result[0]?.createdAt).toBeNull();
+    expect(result[0]?.lastEditAt).toBeNull();
     expect(result[0]?.trafficLights).toEqual({ green: 0, yellow: 0, red: 0 });
+  });
+
+  it("maps projected counts, traffic lights, and activity timestamps", () => {
+    const result = mapHistoryEntries(
+      [
+        baseEntry({
+          createdAt: new Date("2026-04-18T15:30:00.000Z"),
+          updatedAt: new Date("2026-04-20T10:30:00.000Z"),
+          lastEditAt: new Date("2026-04-20T11:00:00.000Z"),
+          itemCount: 5,
+          riskCount: 1,
+          decisionCount: 2,
+          priorityCount: 3,
+          productCount: 3,
+          versionCount: 2,
+          latestVersion: 2,
+          latestVersionAt: new Date("2026-04-20T10:00:00.000Z"),
+          archived: true,
+          trafficLights: { green: 2, yellow: 0, red: 1 },
+        }),
+      ],
+      now,
+    );
+
+    expect(result[0]).toMatchObject({
+      itemCount: 5,
+      riskCount: 1,
+      decisionCount: 2,
+      priorityCount: 3,
+      productCount: 3,
+      versionCount: 2,
+      latestVersion: 2,
+      archived: true,
+      createdAt: "Apr 18",
+      lastEditAt: "1 hour ago",
+      latestVersionAt: "2 hours ago",
+      trafficLights: { green: 2, yellow: 0, red: 1 },
+    });
+  });
+});
+
+describe("mapCompiledHistoryEntries", () => {
+  const now = new Date("2026-05-11T12:00:00.000Z");
+
+  const compiledEntry = (
+    overrides: Partial<CompiledHistoryEntry> = {},
+  ): CompiledHistoryEntry => ({
+    reportId: "55555555-5555-4555-8555-555555555555",
+    periodStart: new Date("2026-05-04T00:00:00.000Z"),
+    periodEnd: new Date("2026-05-10T23:59:59.000Z"),
+    publishedAt: new Date("2026-05-11T09:00:00.000Z"),
+    archived: false,
+    publishedByName: "Head User",
+    trafficLights: { green: 2, yellow: 1, red: 0 },
+    itemCount: 3,
+    riskCount: 1,
+    decisionCount: 2,
+    priorityCount: 1,
+    sectionCount: 2,
+    productCount: 2,
+    ...overrides,
+  });
+
+  it("maps compiled published reports to /reports/[reportId] history cards", () => {
+    const result = mapCompiledHistoryEntries([compiledEntry()], now);
+
+    expect(result[0]).toMatchObject({
+      id: "55555555-5555-4555-8555-555555555555",
+      periodId: "55555555-5555-4555-8555-555555555555",
+      href: "/reports/55555555-5555-4555-8555-555555555555",
+      weekLabel: "Week 19",
+      dateRange: "May 4–10, 2026",
+      status: "published",
+      archived: false,
+      submittedAt: null,
+      publishedAt: "3 hours ago",
+      trafficLights: { green: 2, yellow: 1, red: 0 },
+      itemCount: 3,
+      riskCount: 1,
+      decisionCount: 2,
+      priorityCount: 1,
+      productCount: 2,
+    });
+  });
+
+  it("marks compiled archived reports as archived", () => {
+    const result = mapCompiledHistoryEntries(
+      [compiledEntry({ archived: true })],
+      now,
+    );
+
+    expect(result[0]?.status).toBe("archived");
+    expect(result[0]?.archived).toBe(true);
   });
 });

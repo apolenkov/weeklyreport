@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RiskEditDialog } from "./risk-edit-dialog";
 import type { Product, RiskEntry } from "./mock-data";
 import { splitStageNames } from "./stage-tags";
-
-const MAX_VISIBLE_RISK_STAGE_CHIPS = 3;
 
 type RisksSectionProps = {
   readonly risks: RiskEntry[];
@@ -28,6 +27,12 @@ type RisksSectionProps = {
    * scoped per-project.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
+  /**
+   * P5: Display name of the section author (the lead who owns this section).
+   * Shown at the bottom-left of each risk card in the unified meta-row.
+   */
+  readonly sectionAuthorName?: string;
+  readonly addSignal?: number;
 };
 
 function EditIcon() {
@@ -70,6 +75,8 @@ export function RisksSection({
   onRiskFilled,
   products,
   stagesForProduct,
+  sectionAuthorName,
+  addSignal = 0,
 }: RisksSectionProps) {
   const [dialogState, setDialogState] = useState<
     | { open: false }
@@ -89,15 +96,6 @@ export function RisksSection({
     if (!pendingDelete) return;
     onChange?.(risks.filter((r) => r.id !== pendingDelete.id));
     setPendingDelete(null);
-  }
-
-  function handleAdd() {
-    if (readOnly) return;
-    setDialogState({
-      open: true,
-      mode: "create",
-      seedProductId: products?.[0]?.id,
-    });
   }
 
   function handleEdit(risk: RiskEntry) {
@@ -130,7 +128,17 @@ export function RisksSection({
     setDialogState({ open: false });
   }
 
-  const hasProducts = products && products.length > 0;
+  const firstProductId = products?.[0]?.id;
+
+  useEffect(() => {
+    if (addSignal === 0) return;
+    if (readOnly) return;
+    setDialogState({
+      open: true,
+      mode: "create",
+      seedProductId: firstProductId,
+    });
+  }, [addSignal, readOnly, firstProductId]);
 
   return (
     <div className="space-y-4">
@@ -155,12 +163,10 @@ export function RisksSection({
               : splitStageNames(risk.stageName);
           // Empty means implicit all assigned stages. A non-empty stageIds
           // array is explicit user scope, even when it contains every stage.
-          const visibleStageTags = stageTags.slice(
-            0,
-            MAX_VISIBLE_RISK_STAGE_CHIPS,
-          );
-          const hiddenStageCount = stageTags.length - visibleStageTags.length;
-          const stageTagsLabel = stageTags.join(", ");
+          // Keep every selected stage visible; seven SDLC chips fit better
+          // than hiding critical scope behind "+N".
+          const stageTagsLabel =
+            stageTags.length === 0 ? "All stages" : stageTags.join(", ");
           return (
             <div
               key={risk.id}
@@ -184,38 +190,13 @@ export function RisksSection({
                 <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
                   {risk.productName}
                 </span>
-                {stageTags.length === 0 ? (
-                  <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-                    All stages
-                  </span>
-                ) : (
-                  <span
-                    className="inline-flex flex-wrap items-center gap-1"
-                    aria-label={`Risk stages: ${stageTagsLabel}`}
-                    title={stageTagsLabel}
-                  >
-                    {visibleStageTags.map((stage) => (
-                      <span
-                        key={stage}
-                        className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
-                      >
-                        {stage}
-                      </span>
-                    ))}
-                    {hiddenStageCount > 0 && (
-                      <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-                        +{hiddenStageCount}
-                      </span>
-                    )}
-                  </span>
-                )}
                 {!readOnly && (
                   <div className="ml-auto flex gap-1">
                     <button
                       type="button"
                       className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                       onClick={() => handleEdit(risk)}
-                      aria-label={`Edit risk for ${risk.productName}`}
+                      aria-label={"Edit risk for " + risk.productName}
                     >
                       <EditIcon />
                     </button>
@@ -223,7 +204,7 @@ export function RisksSection({
                       type="button"
                       className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
                       onClick={() => handleDelete(risk.id)}
-                      aria-label={`Delete risk for ${risk.productName}`}
+                      aria-label={"Delete risk for " + risk.productName}
                     >
                       <DeleteIcon />
                     </button>
@@ -265,23 +246,15 @@ export function RisksSection({
                   </div>
                 </div>
               </div>
+              {/* P5: unified [author …… chip] meta-row */}
+              <MetaRow
+                authorName={sectionAuthorName}
+                stageTags={stageTags}
+                ariaLabel={"Risk stages: " + stageTagsLabel}
+              />
             </div>
           );
         })
-      )}
-
-      {!readOnly && (
-        <button
-          type="button"
-          className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={handleAdd}
-          disabled={!hasProducts}
-          title={
-            hasProducts ? undefined : "No products assigned — contact admin"
-          }
-        >
-          + Add Risk
-        </button>
       )}
 
       <RiskEditDialog

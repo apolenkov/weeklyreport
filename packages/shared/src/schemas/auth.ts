@@ -37,6 +37,12 @@ export const userSessionSchema = z.object({
    */
   reportingGroupId: z.string().uuid().optional(),
   /**
+   * Display name for the owning reporting group. Hydrated per request by the
+   * API context so long-lived JWTs can keep carrying only the stable group id
+   * while the navbar still reflects admin-side group renames.
+   */
+  reportingGroupName: z.string().min(1).max(200).optional(),
+  /**
    * UFB-040 / Phase 46-01: list of `ReportingGroup.id` values the viewer
    * has been granted access to via the `ViewerGroupAccess` join table.
    * Hydrated in `trpc.context.ts` for viewer sessions ONLY (head/lead/

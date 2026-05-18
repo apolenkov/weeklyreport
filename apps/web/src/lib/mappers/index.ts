@@ -30,6 +30,7 @@ export {
 
 export {
   mapHistoryEntries,
+  mapCompiledHistoryEntries,
   formatDateRange,
   formatSubmittedAt,
   isoWeekNumber,

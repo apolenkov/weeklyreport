@@ -6,6 +6,7 @@ import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 
 type Props = {
   readonly reportId: string;
+  readonly exitHref?: string;
 };
 
 /**
@@ -110,7 +111,7 @@ export function HeadPresentClient({ reportId }: Props) {
       className={isFullscreen ? "overflow-auto bg-white p-8" : undefined}
     >
       {sectionCount > 1 && (
-        <div className="mb-4 flex items-center gap-3">
+        <div className="mb-5 flex items-center gap-3">
           <button
             type="button"
             onClick={goPrev}
@@ -148,7 +149,9 @@ export function HeadPresentClient({ reportId }: Props) {
           </button>
         </div>
       )}
-      <WeeklyReportPage reportId={reportId} />
+      <div className="mt-5">
+        <WeeklyReportPage reportId={reportId} />
+      </div>
     </div>
   );
 }

@@ -132,10 +132,51 @@ function formatOffset(minutes: number): string {
   return `T${sign}${abs}m`;
 }
 
+function pluralize(value: number, singular: string, plural: string): string {
+  return value === 1 ? singular : plural;
+}
+
+function formatPolicyTiming(policy: MockReminderPolicy): string {
+  const minutes = policy.offsetMinutes;
+  if (minutes === 0) return "At deadline";
+
+  const abs = Math.abs(minutes);
+  const direction = minutes < 0 ? "before" : "after";
+
+  if (abs % 60 === 0 && abs <= 48 * 60) {
+    const hours = abs / 60;
+    return `${hours} ${pluralize(hours, "hour", "hours")} ${direction} deadline`;
+  }
+
+  if (abs % 1440 === 0) {
+    const days = abs / 1440;
+    return `${days} ${pluralize(days, "day", "days")} ${direction} deadline`;
+  }
+
+  return `${abs} ${pluralize(abs, "minute", "minutes")} ${direction} deadline`;
+}
+
+function formatPolicyAudience(
+  audience: MockReminderPolicy["audience"],
+): string {
+  switch (audience) {
+    case "lead-with-draft":
+      return "Leads with drafts";
+    case "head-of-late":
+      return "Head of late leads";
+  }
+}
+
+function formatGeneratedRulesSummary(count: number): string {
+  if (count === 0) return "No scheduled periods yet";
+  if (count === 1) return "1 scheduled period";
+  return `${count} scheduled periods`;
+}
+
 function formatValidityWindow(policy: MockReminderPolicy): string {
   const from = isoFromDate(policy.validFrom);
   if (policy.validUntil === null) {
-    return `since ${from} · forever`;
+    return `Valid since ${from} · no end date`;
   }
   const until = isoFromDate(policy.validUntil);
   return `${from} → ${until}`;
@@ -281,6 +322,8 @@ export function RemindersTab({
         p.kind,
         p.timezone,
         p.audience,
+        formatPolicyTiming(p),
+        formatPolicyAudience(p.audience),
         p.active ? "active" : "disabled",
         formatOffset(p.offsetMinutes),
       ]
@@ -388,40 +431,25 @@ export function RemindersTab({
         )}
 
         {filteredPolicies.length > 0 && (
-          <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)] bg-white">
-            <table className="w-full text-sm">
-              <thead className="bg-[var(--color-surface-empty)] text-left text-xs uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                <tr>
-                  <th className="px-4 py-3">Kind</th>
-                  <th className="px-4 py-3">Offset</th>
-                  <th className="px-4 py-3">Timezone</th>
-                  <th className="px-4 py-3">Audience</th>
-                  <th className="px-4 py-3">Validity</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPolicies.map((policy) => {
-                  const derivedRules = derivedRulesByPolicyId[policy.id] ?? [];
-                  const isExpanded = expanded.has(policy.id);
-                  return (
-                    <PolicyRow
-                      key={policy.id}
-                      policy={policy}
-                      derivedCount={derivedRules.length}
-                      isExpanded={isExpanded}
-                      isMutating={isMutating}
-                      derivedRules={derivedRules}
-                      periodById={periodById}
-                      onToggle={() => toggleExpanded(policy.id)}
-                      onEdit={() => handleEditPolicy(policy)}
-                      onRemove={() => setPendingDelete(policy)}
-                    />
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {filteredPolicies.map((policy) => {
+              const derivedRules = derivedRulesByPolicyId[policy.id] ?? [];
+              const isExpanded = expanded.has(policy.id);
+              return (
+                <PolicyRow
+                  key={policy.id}
+                  policy={policy}
+                  derivedCount={derivedRules.length}
+                  isExpanded={isExpanded}
+                  isMutating={isMutating}
+                  derivedRules={derivedRules}
+                  periodById={periodById}
+                  onToggle={() => toggleExpanded(policy.id)}
+                  onEdit={() => handleEditPolicy(policy)}
+                  onRemove={() => setPendingDelete(policy)}
+                />
+              );
+            })}
           </div>
         )}
       </div>
@@ -474,24 +502,31 @@ function PolicyRow({
   onEdit,
   onRemove,
 }: PolicyRowProps) {
+  const generatedSummary = formatGeneratedRulesSummary(derivedCount);
+
   return (
-    <>
-      <tr
-        data-testid={`policy-row-${policy.id}`}
-        className="border-t border-[var(--color-border)] hover:bg-[var(--color-surface-empty)]"
-      >
-        <td className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
-          {policy.kind}
-        </td>
-        <td className="px-4 py-3 font-mono text-xs">
-          {formatOffset(policy.offsetMinutes)}
-        </td>
-        <td className="px-4 py-3 text-xs">{policy.timezone}</td>
-        <td className="px-4 py-3 text-xs">{policy.audience}</td>
-        <td className="px-4 py-3 text-xs text-[var(--color-muted-foreground)]">
-          {formatValidityWindow(policy)}
-        </td>
-        <td className="px-4 py-3">
+    <div
+      data-testid={`policy-row-${policy.id}`}
+      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+    >
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div>
+            <h3 className="text-base font-semibold leading-6 text-[var(--color-foreground)]">
+              {formatPolicyTiming(policy)}
+            </h3>
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              {formatPolicyAudience(policy.audience)} · {policy.timezone}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
+            <span>{formatValidityWindow(policy)}</span>
+            <span aria-hidden="true">·</span>
+            <span>{generatedSummary}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           <span
             className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider"
             style={{
@@ -505,61 +540,62 @@ function PolicyRow({
           >
             {policy.active ? "Active" : "Disabled"}
           </span>
-        </td>
-        <td className="px-4 py-3 text-right">
-          <div className="inline-flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={onToggle}
-                data-testid={`expand-${policy.id}`}
-                aria-expanded={isExpanded}
-                className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)]"
-              >
-                {isExpanded ? "Hide" : "Show"} rules ({derivedCount})
-              </button>
-              {derivedCount === 0 && (
-                <span
-                  className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-gold)]"
-                  title="Derived rules are generated automatically once the policy is applied to a period. No rules yet — this policy has not been applied."
-                >
-                  Coming Soon
-                </span>
-              )}
-            </span>
-            <button
-              type="button"
-              onClick={onEdit}
-              disabled={isMutating}
-              data-testid={`edit-${policy.id}`}
-              className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={onRemove}
-              disabled={isMutating}
-              data-testid={`remove-${policy.id}`}
-              className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.1)] bg-white px-3 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Remove
-            </button>
-          </div>
-        </td>
-      </tr>
+          <button
+            type="button"
+            onClick={onToggle}
+            data-testid={`expand-${policy.id}`}
+            aria-expanded={isExpanded}
+            className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)]"
+          >
+            {isExpanded ? "Hide schedule" : "Schedule"}
+          </button>
+          <button
+            type="button"
+            onClick={onEdit}
+            disabled={isMutating}
+            data-testid={`edit-${policy.id}`}
+            className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Edit policy
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            disabled={isMutating}
+            data-testid={`remove-${policy.id}`}
+            className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-transparent bg-white px-3 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+
       {isExpanded && (
-        <tr className="bg-[var(--color-surface-empty)]">
-          <td colSpan={7} className="px-4 py-3">
-            <DerivedRulesPanel
-              policyId={policy.id}
-              rules={derivedRules}
-              periodById={periodById}
-            />
-          </td>
-        </tr>
+        <div
+          data-testid={`policy-details-${policy.id}`}
+          className="mt-3 border-t border-[var(--color-border)] pt-3"
+        >
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                Generated schedule
+              </span>
+              <span className="rounded-[var(--radius-pill)] bg-[var(--color-surface-empty)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                Read-only
+              </span>
+            </div>
+            <span className="text-[var(--color-muted-foreground)]">
+              {generatedSummary}
+            </span>
+          </div>
+          <DerivedRulesPanel
+            policyId={policy.id}
+            rules={derivedRules}
+            periodById={periodById}
+          />
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -579,6 +615,31 @@ type PolicyFormProps = {
   readonly onSave: () => void;
 };
 
+type OffsetUnit = "minutes" | "hours" | "days";
+
+function offsetUnitFactor(unit: OffsetUnit): number {
+  switch (unit) {
+    case "minutes":
+      return 1;
+    case "hours":
+      return 60;
+    case "days":
+      return 1440;
+  }
+}
+
+function getOffsetUnit(minutes: number): OffsetUnit {
+  const abs = Math.abs(minutes);
+  if (abs > 0 && abs % 60 === 0 && abs <= 48 * 60) return "hours";
+  if (abs > 0 && abs % 1440 === 0) return "days";
+  if (abs > 0 && abs % 60 === 0) return "hours";
+  return "minutes";
+}
+
+function getOffsetAmount(minutes: number, unit: OffsetUnit): number {
+  return Math.abs(minutes) / offsetUnitFactor(unit);
+}
+
 function PolicyForm({
   form,
   editing,
@@ -590,14 +651,27 @@ function PolicyForm({
 }: PolicyFormProps) {
   // Offset shown to admins as a positive number + before/after toggle.
   const offsetIsBeforeDeadline = form.offsetMinutes <= 0;
-  const offsetMagnitude = Math.abs(form.offsetMinutes);
+  const offsetUnit = getOffsetUnit(form.offsetMinutes);
+  const offsetMagnitude = getOffsetAmount(form.offsetMinutes, offsetUnit);
+
+  function applyOffset(
+    magnitude: number,
+    unit: OffsetUnit,
+    beforeDeadline: boolean,
+  ) {
+    const nextMinutes = magnitude * offsetUnitFactor(unit);
+    onChange((prev) => ({
+      ...prev,
+      offsetMinutes: beforeDeadline ? -nextMinutes : nextMinutes,
+    }));
+  }
 
   return (
     <div
       data-testid="policy-form"
       className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-4"
     >
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label
             htmlFor="policy-kind"
@@ -626,42 +700,78 @@ function PolicyForm({
 
         <div>
           <label
+            htmlFor="policy-audience"
+            className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+          >
+            Audience
+          </label>
+          <select
+            id="policy-audience"
+            value={form.audience}
+            onChange={(e) =>
+              onChange((prev) => ({
+                ...prev,
+                audience: e.target.value as MockReminderPolicy["audience"],
+              }))
+            }
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+          >
+            {AUDIENCE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="min-w-0 md:col-span-2">
+          <label
             htmlFor="policy-offset-minutes"
             className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
           >
-            Offset (minutes)
+            Send
           </label>
-          <div className="flex gap-2">
+          <div className="grid gap-2 sm:grid-cols-[88px_minmax(120px,1fr)_minmax(168px,1.2fr)]">
             <input
               id="policy-offset-minutes"
               type="number"
               min={0}
               value={offsetMagnitude}
               onChange={(e) => {
-                const raw = Number.parseInt(e.target.value, 10);
+                const raw = Number.parseFloat(e.target.value);
                 const magnitude = Number.isFinite(raw) && raw >= 0 ? raw : 0;
-                onChange((prev) => ({
-                  ...prev,
-                  offsetMinutes: offsetIsBeforeDeadline
-                    ? -magnitude
-                    : magnitude,
-                }));
+                applyOffset(magnitude, offsetUnit, offsetIsBeforeDeadline);
               }}
-              className="w-24 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+              aria-label="reminder offset amount"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
             />
+            <select
+              aria-label="reminder offset unit"
+              value={offsetUnit}
+              onChange={(e) =>
+                applyOffset(
+                  offsetMagnitude,
+                  e.target.value as OffsetUnit,
+                  offsetIsBeforeDeadline,
+                )
+              }
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+            >
+              <option value="minutes">minutes</option>
+              <option value="hours">hours</option>
+              <option value="days">days</option>
+            </select>
             <select
               aria-label="before or after deadline"
               value={offsetIsBeforeDeadline ? "before" : "after"}
               onChange={(e) =>
-                onChange((prev) => ({
-                  ...prev,
-                  offsetMinutes:
-                    e.target.value === "before"
-                      ? -Math.abs(prev.offsetMinutes)
-                      : Math.abs(prev.offsetMinutes),
-                }))
+                applyOffset(
+                  offsetMagnitude,
+                  offsetUnit,
+                  e.target.value === "before",
+                )
               }
-              className="flex-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
             >
               <option value="before">before deadline</option>
               <option value="after">after deadline</option>
@@ -692,32 +802,6 @@ function PolicyForm({
                   </option>
                 ))}
               </optgroup>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label
-            htmlFor="policy-audience"
-            className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-          >
-            Audience
-          </label>
-          <select
-            id="policy-audience"
-            value={form.audience}
-            onChange={(e) =>
-              onChange((prev) => ({
-                ...prev,
-                audience: e.target.value as MockReminderPolicy["audience"],
-              }))
-            }
-            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm"
-          >
-            {AUDIENCE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
             ))}
           </select>
         </div>
@@ -780,7 +864,7 @@ function PolicyForm({
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-4 flex flex-col gap-3 border-t border-[var(--color-border)] pt-3 sm:flex-row sm:items-center sm:justify-between">
         <label className="inline-flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -791,7 +875,7 @@ function PolicyForm({
           />
           <span>Active</span>
         </label>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {!validityValid && (
             <span
               data-testid="policy-validity-hint"

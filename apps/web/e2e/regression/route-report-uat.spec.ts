@@ -120,7 +120,7 @@ test.describe("Route/report UAT smoke", () => {
     ).toBeVisible();
     await expectVisibleText(page, "Submissions");
     await expectVisibleText(page, "4/4");
-    await expectVisibleText(page, "Report Archive");
+    await expectVisibleText(page, "History");
     await expectStableAppPage(page, monitor);
     await expectNoReloadLoop(page);
 
@@ -166,7 +166,7 @@ test.describe("Route/report UAT smoke", () => {
     });
 
     await waitForAppReady(page);
-    await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
     await expectVisibleText(page, "1 loaded");
     await expectStableAppPage(page, monitor);
 

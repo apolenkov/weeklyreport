@@ -102,24 +102,25 @@ describe("PeriodNavigator (lead)", () => {
     expect(select.value).toBe("2026-W15");
   });
 
-  it("D-17: renders the period label without embedding state in the option text", () => {
+  it("D-17: renders compact date range text without period numbering", () => {
     render(<PeriodNavigator periods={PERIODS} />);
     const select = screen.getByLabelText(
       "Select reporting period",
     ) as HTMLSelectElement;
 
-    expect(select.selectedOptions[0]?.textContent).toBe(
-      "Week 17, Apr 21–27, 2026",
-    );
-    expect(select.selectedOptions[0]?.textContent).not.toContain("(current)");
-    expect(select.selectedOptions[0]?.textContent).not.toContain("✓");
-    expect(screen.getByText("Current")).toBeVisible();
+    expect(select.selectedOptions[0]?.textContent).toBe("Apr 21–27, 2026");
+    expect(select.selectedOptions[0]?.textContent).not.toContain("Period");
+    expect(select.selectedOptions[0]?.textContent).not.toContain("Week");
+    expect(select.selectedOptions[0]?.textContent).not.toContain("Current");
   });
 
-  it("D-17: shows submitted state as a separate badge for past periods", () => {
+  it("D-17: keeps past-period option text to the date range", () => {
     mockPathname = "/lead/report/2026-W15";
     render(<PeriodNavigator periods={PERIODS} />);
+    const select = screen.getByLabelText(
+      "Select reporting period",
+    ) as HTMLSelectElement;
 
-    expect(screen.getByText("Submitted")).toBeVisible();
+    expect(select.selectedOptions[0]?.textContent).toBe("Apr 7–13, 2026");
   });
 });

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { DecisionEditDialog } from "./decision-edit-dialog";
 import type { DecisionEntry, Product } from "./mock-data";
@@ -31,6 +32,7 @@ type DecisionsSectionProps = {
   /** R4-B: products the lead is assigned to, passed through to the dialog. */
   readonly products?: readonly Product[];
   readonly defaultProductId?: string;
+  readonly addSignal?: number;
 };
 
 function isMine(owner: string | undefined, me: string | undefined): boolean {
@@ -100,6 +102,7 @@ export function DecisionsSection({
   availableStages,
   products,
   defaultProductId,
+  addSignal = 0,
 }: DecisionsSectionProps) {
   const [dialogState, setDialogState] = useState<
     | { open: false }
@@ -121,11 +124,6 @@ export function DecisionsSection({
     if (!pendingDelete) return;
     onChange?.(decisions.filter((d) => d.id !== pendingDelete.id));
     setPendingDelete(null);
-  }
-
-  function handleAdd() {
-    if (readOnly) return;
-    setDialogState({ open: true, mode: "create" });
   }
 
   function handleEdit(decision: DecisionEntry) {
@@ -154,6 +152,12 @@ export function DecisionsSection({
     setDialogState({ open: false });
   }
 
+  useEffect(() => {
+    if (addSignal === 0) return;
+    if (readOnly) return;
+    setDialogState({ open: true, mode: "create" });
+  }, [addSignal, readOnly]);
+
   return (
     <div className="space-y-3">
       {decisions.length === 0 ? (
@@ -176,24 +180,9 @@ export function DecisionsSection({
               style={{ background: "var(--color-background)" }}
             >
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
                   {decision.productName}
                 </span>
-                {/* 35-04: SDLC stage badge — surfaces scoping next to product. */}
-                {stageTags.length === 0 ? (
-                  <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
-                    All stages
-                  </span>
-                ) : (
-                  stageTags.map((stage) => (
-                    <span
-                      key={stage}
-                      className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
-                    >
-                      {stage}
-                    </span>
-                  ))
-                )}
                 {decision.deadline && (
                   <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-semibold text-[#8a6d1b]">
                     Due {formatDeadline(decision.deadline)}
@@ -243,38 +232,24 @@ export function DecisionsSection({
                     )}
                   </div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                      Owner
-                    </span>
-                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
-                      {decision.owner || "—"}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                      Impact
-                    </span>
-                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
-                      {decision.impact || "—"}
-                    </div>
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                    Impact
+                  </span>
+                  <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
+                    {decision.impact || "—"}
                   </div>
                 </div>
               </div>
+              {/* P5: unified [author …… chip] meta-row */}
+              <MetaRow
+                authorName={decision.owner}
+                stageTags={stageTags}
+                ariaLabel={`Decision stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+              />
             </div>
           );
         })
-      )}
-
-      {!readOnly && (
-        <button
-          type="button"
-          className="btn-press flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-          onClick={handleAdd}
-        >
-          + Add Decision
-        </button>
       )}
 
       <DecisionEditDialog

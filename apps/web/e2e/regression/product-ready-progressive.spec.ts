@@ -152,7 +152,7 @@ test.describe.serial("PRODUCT-READY — progressive role lifecycle", () => {
     );
     const pageTitle = page
       .locator("main")
-      .filter({ hasText: /report archive|отчет|отчёты|reports/i })
+      .filter({ hasText: /history|отчет|отчёты|reports/i })
       .first();
     const hasPageTitle = await pageTitle
       .isVisible({ timeout: 5_000 })

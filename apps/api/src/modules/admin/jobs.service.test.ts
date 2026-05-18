@@ -13,6 +13,7 @@ type FakeJob = {
   timestamp: number;
   data: unknown;
   retry: ReturnType<typeof vi.fn>;
+  remove: ReturnType<typeof vi.fn>;
 };
 
 function makeJob(overrides: Partial<FakeJob> & { id: string }): FakeJob {
@@ -24,6 +25,7 @@ function makeJob(overrides: Partial<FakeJob> & { id: string }): FakeJob {
     timestamp: 1_700_000_000_000,
     data: { recipient: "lead@example.com" },
     retry: vi.fn().mockResolvedValue(undefined),
+    remove: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -126,6 +128,49 @@ describe("JobsService — 35-06 BullMQ DLQ admin surface", () => {
 
     expect(job.retry).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ retried: true, jobId: "job-99" });
+  });
+
+  it("retryFailed: removes stale reminder jobs whose execution row no longer exists", async () => {
+    const job = makeJob({
+      id: "job-stale",
+      data: { executionId: "missing-execution" },
+    });
+    const service = new JobsService(makeQueue({ failed: [job] }), undefined, {
+      reminderExecutionExists: vi.fn().mockResolvedValue(false),
+    });
+
+    const result = await service.retryFailed({
+      queue: "email-reminder",
+      jobId: "job-stale",
+    });
+
+    expect(job.retry).not.toHaveBeenCalled();
+    expect(job.remove).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      retried: false,
+      removed: true,
+      reason: "Reminder execution missing-execution no longer exists.",
+      jobId: "job-stale",
+    });
+  });
+
+  it("retryFailed: retries reminder jobs when the execution row still exists", async () => {
+    const job = makeJob({
+      id: "job-live",
+      data: { executionId: "existing-execution" },
+    });
+    const service = new JobsService(makeQueue({ failed: [job] }), undefined, {
+      reminderExecutionExists: vi.fn().mockResolvedValue(true),
+    });
+
+    const result = await service.retryFailed({
+      queue: "email-reminder",
+      jobId: "job-live",
+    });
+
+    expect(job.remove).not.toHaveBeenCalled();
+    expect(job.retry).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ retried: true, jobId: "job-live" });
   });
 
   it("retryFailed: returns retried=false when the job no longer exists (pruned / parallel retry)", async () => {

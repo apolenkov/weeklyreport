@@ -26,11 +26,6 @@ export function StageMultiSelect({
     onChange(next);
   }
 
-  // Compact display: show first 2 selected labels + "+N more" badge
-  const MAX_VISIBLE = 2;
-  const visibleSelected = selected.slice(0, MAX_VISIBLE);
-  const hiddenCount =
-    selected.length > MAX_VISIBLE ? selected.length - MAX_VISIBLE : 0;
   const singleStage = stages.length === 1 ? stages[0] : undefined;
 
   return (
@@ -89,15 +84,17 @@ export function StageMultiSelect({
           Scope: all assigned stages.
         </p>
       ) : (
-        <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
-          Scope: {visibleSelected.join(", ")}
-          {hiddenCount > 0 && (
-            <span className="ml-1 inline-flex items-center rounded-full bg-[var(--color-muted)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-              +{hiddenCount} more
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-muted-foreground)]">
+          <span>Scope:</span>
+          {selected.map((stage) => (
+            <span
+              key={stage}
+              className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+            >
+              {stage}
             </span>
-          )}
-          .
-        </p>
+          ))}
+        </div>
       )}
       {error && (
         <p

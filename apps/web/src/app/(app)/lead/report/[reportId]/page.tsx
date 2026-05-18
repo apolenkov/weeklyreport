@@ -1,9 +1,12 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
 import { LeadForm } from "../../../../../components/lead/lead-form";
+import { LeadFormSkeleton } from "../../../../../components/lead/lead-form-skeleton";
 
 type Props = {
   params: Promise<{ reportId: string }>;
+  searchParams: Promise<{ mode?: string }>;
 };
 
 /**
@@ -17,8 +20,23 @@ type Props = {
  * (the server returns `readOnly: true` from `leadForm.byPeriod` when the
  * pinned report doesn't match the lead's active section).
  */
-export default async function LeadReportByIdPage({ params }: Props) {
+export default async function LeadReportByIdPage({
+  params,
+  searchParams,
+}: Props) {
   const { reportId } = await params;
+  const { mode } = await searchParams;
+  const resolvedMode = mode === "slides" || mode === "edit" ? mode : "edit";
+
+  if (mode && resolvedMode !== mode) {
+    const normalizedMode = "edit";
+    redirect(
+      "/lead/report/" +
+        encodeURIComponent(reportId) +
+        "?mode=" +
+        encodeURIComponent(normalizedMode),
+    );
+  }
 
   return (
     <main
@@ -29,16 +47,8 @@ export default async function LeadReportByIdPage({ params }: Props) {
         className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8"
         style={{ paddingBottom: "88px" }}
       >
-        <Suspense
-          fallback={
-            <div className="space-y-6">
-              <div className="h-10 w-48 animate-pulse rounded-lg bg-[var(--color-skeleton)]" />
-              <div className="h-16 w-full animate-pulse rounded-2xl bg-[var(--color-skeleton)]" />
-              <div className="h-64 w-full animate-pulse rounded-xl bg-[var(--color-skeleton)]" />
-            </div>
-          }
-        >
-          <LeadForm reportId={reportId} />
+        <Suspense fallback={<LeadFormSkeleton />}>
+          <LeadForm reportId={reportId} mode={resolvedMode} />
         </Suspense>
       </div>
     </main>

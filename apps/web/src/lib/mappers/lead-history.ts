@@ -1,21 +1,15 @@
 /**
  * Translate API `reports.myHistory` entries to the `HistoryEntry` shape the
- * existing `LeadHistoryList` component expects.
+ * `LeadHistoryList` component expects.
  *
  * D17: date formatting includes the year and uses an en dash so period labels
  * stay unambiguous around year boundaries.
- *
- * NOTE: The current `myHistory` router output (see
- * `packages/shared/src/schemas/report.ts -> myHistoryEntrySchema`) does
- * NOT yet expose `weekLabel`, `trafficLights`, `itemCount`, `riskCount`,
- * or `decisionCount`. For this proof-of-life migration:
- *  - `weekLabel` is computed from `periodStart` (ISO week number).
- *  - `trafficLights`/counts default to zero.
- * Extending the router to project these aggregates is deferred to a
- * follow-up plan (out of scope for the smallest-container proof-of-life).
  */
 
-import type { MyHistoryEntry } from "@customreport/shared";
+import type {
+  CompiledHistoryEntry,
+  MyHistoryEntry,
+} from "@customreport/shared";
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber as sharedIsoWeekNumber,
@@ -30,17 +24,25 @@ import {
 export type HistoryEntry = {
   id: string;
   periodId: string;
+  href?: string;
   weekLabel: string;
   dateRange: string;
-  status: "submitted" | "draft";
+  status: "submitted" | "draft" | "published" | "archived";
+  archived?: boolean;
   submittedAt: string | null;
+  publishedAt?: string | null;
+  createdAt: string | null;
+  lastEditAt: string | null;
   trafficLights: { green: number; yellow: number; red: number };
   itemCount: number;
   riskCount: number;
   decisionCount: number;
-  // HIST-4 (Phase 33-04): mockup s9 prefixes the metric line with the lead's
-  // assigned-product count for that period. Optional because the API endpoint
-  // doesn't always populate it (history aggregator vs the carry-over view).
+  priorityCount: number;
+  versionCount: number;
+  latestVersion: number | null;
+  latestVersionAt: string | null;
+  // HIST-4 (Phase 33-04): prefix the metric line with the lead's
+  // assigned-product count for that period when available.
   productCount?: number;
 };
 
@@ -99,6 +101,13 @@ export function formatSubmittedAt(
   return `${month} ${day}`;
 }
 
+function formatHistoryTimestamp(
+  value: Date | null | undefined,
+  now: Date,
+): string | null {
+  return formatSubmittedAt(value ?? null, now);
+}
+
 /**
  * Standard ISO 8601 week number (Mon-anchored), computed against UTC components
  * so the result is timezone-stable.
@@ -113,9 +122,6 @@ export function isoWeekNumber(d: Date): number {
 
 /**
  * Map API `MyHistoryEntry[]` to the presentation `HistoryEntry[]` shape.
- *
- * Defaults stub fields not yet projected by the router (counts, traffic
- * lights). See module JSDoc for follow-up.
  */
 export function mapHistoryEntries(
   api: readonly MyHistoryEntry[],
@@ -130,12 +136,46 @@ export function mapHistoryEntries(
     weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
     dateRange: formatDateRange(e.periodStart, e.periodEnd),
     status: e.sectionStatus,
+    archived: e.archived ?? false,
     submittedAt: formatSubmittedAt(e.submittedAt, now),
-    // Stubbed: not currently exposed by reports.myHistory. Follow-up plan
-    // will extend the router with aggregate counts.
-    trafficLights: { green: 0, yellow: 0, red: 0 },
-    itemCount: 0,
-    riskCount: 0,
-    decisionCount: 0,
+    createdAt: formatHistoryTimestamp(e.createdAt, now),
+    lastEditAt: formatHistoryTimestamp(e.lastEditAt ?? e.updatedAt, now),
+    trafficLights: e.trafficLights ?? { green: 0, yellow: 0, red: 0 },
+    itemCount: e.itemCount ?? 0,
+    riskCount: e.riskCount ?? 0,
+    decisionCount: e.decisionCount ?? 0,
+    priorityCount: e.priorityCount ?? 0,
+    productCount: e.productCount,
+    versionCount: e.versionCount ?? 0,
+    latestVersion: e.latestVersion ?? null,
+    latestVersionAt: formatHistoryTimestamp(e.latestVersionAt, now),
+  }));
+}
+
+export function mapCompiledHistoryEntries(
+  api: readonly CompiledHistoryEntry[],
+  now: Date = new Date(),
+): HistoryEntry[] {
+  return api.map((e) => ({
+    id: e.reportId,
+    periodId: e.reportId,
+    href: `/reports/${encodeURIComponent(e.reportId)}`,
+    weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
+    dateRange: formatDateRange(e.periodStart, e.periodEnd),
+    status: e.archived ? "archived" : "published",
+    archived: e.archived,
+    submittedAt: null,
+    publishedAt: formatHistoryTimestamp(e.publishedAt, now),
+    createdAt: null,
+    lastEditAt: null,
+    trafficLights: e.trafficLights,
+    itemCount: e.itemCount,
+    riskCount: e.riskCount,
+    decisionCount: e.decisionCount,
+    priorityCount: e.priorityCount,
+    productCount: e.productCount,
+    versionCount: 0,
+    latestVersion: null,
+    latestVersionAt: null,
   }));
 }

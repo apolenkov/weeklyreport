@@ -69,6 +69,9 @@ function createMockRepository(
     },
     createVersionSnapshot: createSnapshotFn,
     async createReopenRequest() {},
+    async hasSharedProduct() {
+      return false;
+    },
   };
 }
 

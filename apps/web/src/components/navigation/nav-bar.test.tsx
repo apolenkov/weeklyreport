@@ -60,7 +60,13 @@ function setRole(role: Role | null): void {
     });
   } else {
     useSessionMock.mockReturnValue({
-      user: { id: "u1", name: "Test User", email: "t@test.local", role },
+      user: {
+        id: "u1",
+        name: "Test User",
+        email: "t@test.local",
+        role,
+        reportingGroupName: "Core Development",
+      },
       // UFB-047 / Phase 48-A: realistic org hydration so the nav-bar
       // renders the brand strings consistently with the runtime.
       organization: {
@@ -114,34 +120,35 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/admin");
   });
 
-  it("viewer does NOT see /head/* links (Dashboard, Weekly Report)", () => {
+  it("viewer does NOT see /head/* links (Dashboard, Status)", () => {
     setRole("viewer");
     const { container } = render(<NavBar />);
     expectLinkMissing(container, "/head/dashboard");
     expectLinkMissing(container, "/head/report");
   });
 
-  it("viewer does NOT see /lead/* links (My Report, My History)", () => {
+  it("viewer does NOT see /lead/* links (Report, History)", () => {
     setRole("viewer");
     const { container } = render(<NavBar />);
     expectLinkMissing(container, "/lead/report");
     expectLinkMissing(container, "/reports?tab=drafts");
   });
 
-  it("viewer DOES see /reports/* links (Archive)", () => {
+  it("viewer sees read-only History", () => {
     setRole("viewer");
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/reports?tab=published");
   });
 
-  it("lead does NOT see /head/* links but DOES see /lead/* and /reports/*", () => {
+  it("lead sees Report and History, with Slides folded into the report mode switch", () => {
     setRole("lead");
     const { container } = render(<NavBar />);
     expectLinkMissing(container, "/head/dashboard");
     expectLinkMissing(container, "/head/report");
     expectLinkExists(container, "/lead/report");
+    expectLinkMissing(container, "/lead/slides");
     expectLinkExists(container, "/reports?tab=drafts");
-    expectLinkExists(container, "/reports?tab=published");
+    expectLinkMissing(container, "/reports?tab=published");
   });
 
   it("lead does NOT see /admin link", () => {
@@ -156,14 +163,17 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/admin");
   });
 
-  it("head sees /head/* links (Dashboard, Weekly Report)", () => {
+  it("head sees /head/* links (Dashboard, Status, Slides, History)", () => {
     setRole("head");
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/head/dashboard");
     expectLinkExists(container, "/head/report");
+    expectLinkExists(container, "/head/slides");
+    expectLinkExists(container, "/head/history");
+    expectLinkMissing(container, "/reports?tab=drafts");
   });
 
-  it("activates Weekly Report on addressed /head/report/[reportId] pages", () => {
+  it("activates Status on addressed /head/report/[reportId] pages", () => {
     setRole("head");
     setRoute("/head/report/a0000000-0000-4000-8000-000000000001");
 
@@ -177,6 +187,8 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     setRole("admin");
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/admin");
+    expectLinkMissing(container, "/reports?tab=drafts");
+    expectLinkMissing(container, "/reports?tab=published");
   });
 
   it("renders the parked Theme control with Coming Soon in metadata", () => {
@@ -194,11 +206,72 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
       "aria-label",
       "Theme selection is coming soon",
     );
-    expect(themeControl).toHaveAttribute(
-      "title",
-      "Theme selection is coming soon",
-    );
+    expect(themeControl).toHaveAttribute("title", "Coming Soon");
     expect(themeControl).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("renders the parked Language control with Coming Soon metadata", () => {
+    setRole("lead");
+    const { container } = render(<NavBar />);
+
+    const languageControl = container.querySelector(
+      '[data-testid="language-coming-soon"]',
+    );
+
+    expect(languageControl).not.toBeNull();
+    expect(languageControl?.textContent).toMatch(/Language/i);
+    expect(languageControl?.textContent).not.toMatch(/Soon/i);
+    expect(languageControl).toHaveAttribute(
+      "aria-label",
+      "Language selection is coming soon",
+    );
+    expect(languageControl).toHaveAttribute("title", "Coming Soon");
+    expect(languageControl).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("renders Theme before Language in the right rail", () => {
+    setRole("lead");
+    const { container } = render(<NavBar />);
+
+    const comingSoonControls = Array.from(
+      container.querySelectorAll('button[data-testid$="coming-soon"]'),
+    ).map((element) => element.getAttribute("data-testid"));
+
+    expect(comingSoonControls).toEqual([
+      "theme-coming-soon",
+      "language-coming-soon",
+    ]);
+  });
+
+  it("renders the user initials in the compact home mark", () => {
+    setRole("lead");
+    const { container } = render(<NavBar />);
+
+    const brandLink = container.querySelector('a[aria-label="Test User home"]');
+
+    expect(brandLink).not.toBeNull();
+    expect(brandLink?.textContent).toBe("TU");
+  });
+
+  it("renders organization identity as restrained text metadata", () => {
+    setRole("lead");
+    const { container } = render(<NavBar />);
+
+    const header = container.querySelector<HTMLElement>(
+      '[data-testid="nav-bar"]',
+    );
+    const identity = container.querySelector('[data-testid="nav-identity"]');
+
+    expect(header).not.toBeNull();
+    expect(header).not.toHaveAttribute("data-organization-background");
+    expect(header?.style.backgroundImage).toBe("");
+    expect(identity?.textContent).toContain("Test User");
+    expect(identity?.textContent).toContain("PEO");
+    expect(identity?.textContent).toContain("Core Development");
+    expect(identity?.textContent).toContain("Lead");
+    expect(
+      container.querySelector('[data-testid="organization-atmosphere"]'),
+    ).toBeNull();
   });
 
   it("null session (still loading) renders NO role-gated links", () => {
@@ -221,27 +294,37 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/lead/report");
   });
 
-  it("activates only My History on /reports?tab=drafts", () => {
+  it("activates only History on /reports?tab=drafts", () => {
     setRole("lead");
     setRoute("/reports", "tab=drafts");
 
     const { container } = render(<NavBar />);
 
     expectActiveLink(container, "/reports?tab=drafts");
-    expectInactiveLink(container, "/reports?tab=published");
+    expectLinkMissing(container, "/reports?tab=published");
   });
 
-  it("activates only Archive on /reports?tab=published", () => {
+  it("activates head History on /head/history", () => {
+    setRole("head");
+    setRoute("/head/history");
+
+    const { container } = render(<NavBar />);
+
+    expectActiveLink(container, "/head/history");
+    expectInactiveLink(container, "/head/dashboard");
+  });
+
+  it("keeps the lead History link active on the Archive tab", () => {
     setRole("lead");
     setRoute("/reports", "tab=published");
 
     const { container } = render(<NavBar />);
 
-    expectInactiveLink(container, "/reports?tab=drafts");
-    expectActiveLink(container, "/reports?tab=published");
+    expectActiveLink(container, "/reports?tab=drafts");
+    expectLinkMissing(container, "/reports?tab=published");
   });
 
-  it("does not activate Archive on report analytics routes", () => {
+  it("does not activate History on report analytics routes", () => {
     setRole("viewer");
     setRoute("/reports/trends");
 

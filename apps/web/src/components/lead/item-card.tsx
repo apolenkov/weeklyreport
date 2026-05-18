@@ -93,6 +93,10 @@ export function ItemCard({
     item.stageIds && item.stageIds.length > 0
       ? item.stageIds
       : splitStageNames(item.stageName);
+  const stageTagsLabel =
+    stageTags.length === 0 ? "All stages" : stageTags.join(", ");
+  const visibleStageTags = stageTags.slice(0, 2);
+  const hiddenStageCount = Math.max(stageTags.length - visibleStageTags.length, 0);
 
   // Local draft for the inline textarea. Reset every time edit mode opens so
   // the field tracks the latest committed text.
@@ -150,52 +154,35 @@ export function ItemCard({
         background: isBlocked ? "#fee2e2" : "var(--color-background)",
       }}
     >
-      {/* Action buttons — KB-3 (Phase 33-04): mockup s2 baselines them at 30%
-          opacity so touch users can spot the affordances without hovering.
-          On desktop hover bumps to 100%. The earlier "hidden until hover"
-          state hid the affordance entirely on touch devices. */}
-      {!readOnly && !isEditing && (
-        <div className="absolute right-2 top-2 flex gap-0.5 opacity-30 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
-            onClick={() => onEdit?.(item.id)}
-            aria-label="Edit"
-          >
-            <EditIcon />
-          </button>
-          <button
-            type="button"
-            className="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[#fee2e2] hover:text-[var(--color-destructive)]"
-            onClick={() => onDelete?.(item.id)}
-            aria-label="Delete"
-          >
-            <DeleteIcon />
-          </button>
-        </div>
-      )}
 
-      {/* Status badge */}
-      <span
-        className="mb-2 inline-flex w-fit items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[10px] font-semibold"
-        style={{ background: badge.bg, color: badge.text }}
-      >
-        {badge.label}
-      </span>
-      <div className="mb-2 flex flex-wrap gap-1">
-        {stageTags.length === 0 ? (
-          <span className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-            All stages
-          </span>
-        ) : (
-          stageTags.map((stage) => (
-            <span
-              key={stage}
-              className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
+      {/* Card top line: status on the left, item actions on the right. */}
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <span
+          className="inline-flex w-fit shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[10px] font-semibold"
+          style={{ background: badge.bg, color: badge.text }}
+        >
+          {badge.label}
+        </span>
+
+        {!readOnly && !isEditing && (
+          <div className="flex shrink-0 gap-1">
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+              onClick={() => onEdit?.(item.id)}
+              aria-label="Edit"
             >
-              {stage}
-            </span>
-          ))
+              <EditIcon />
+            </button>
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[#fee2e2] hover:text-[var(--color-destructive)]"
+              onClick={() => onDelete?.(item.id)}
+              aria-label="Delete"
+            >
+              <DeleteIcon />
+            </button>
+          </div>
         )}
       </div>
 
@@ -224,9 +211,42 @@ export function ItemCard({
         </div>
       )}
 
-      {/* Author */}
-      <div className="mt-auto pt-2 text-[11px] text-[var(--color-muted-foreground)]">
-        {item.author}
+      {/* Footer: author on the left, compact stage tags on the right. */}
+      <div className="mt-auto flex items-end justify-between gap-2 pt-2">
+        <div className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]">
+          {item.author}
+        </div>
+        <div className="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1">
+          <span
+            className="inline-flex min-w-0 flex-wrap items-center justify-end gap-1"
+            aria-label={"Item stages: " + stageTagsLabel}
+            title={stageTagsLabel}
+          >
+            {stageTags.length === 0 ? (
+              <span className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+                All stages
+              </span>
+            ) : (
+              visibleStageTags.map((stage) => (
+                <span
+                  key={stage}
+                  className="inline-flex max-w-[92px] items-center truncate rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+                  title={stage}
+                >
+                  {stage}
+                </span>
+              ))
+            )}
+            {hiddenStageCount > 0 && (
+              <span
+                className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]"
+                title={stageTagsLabel}
+              >
+                +{hiddenStageCount}
+              </span>
+            )}
+          </span>
+        </div>
       </div>
     </div>
   );
