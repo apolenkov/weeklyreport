@@ -2073,6 +2073,13 @@ export function createAppRouter(deps: RouterDeps) {
             return await deps.searchService.query(input, ctx.session);
           } catch (error) {
             if (error instanceof SearchAuthorizationError) {
+              ctx.auditLogger.scopeDenied({
+                userId: ctx.session.userId,
+                role: ctx.session.role,
+                ip: ctx.ip,
+                attemptedScope: "search",
+                resourceId: input.q,
+              });
               throw new TRPCError({
                 code: "FORBIDDEN",
                 message: error.message,
