@@ -190,36 +190,58 @@ export function PrioritiesSection({
           <div
             key={`${entry.rank}-${idx}`}
             data-testid="priority-row"
-            className="flex items-center gap-3 rounded-lg p-4"
+            className="rounded-lg p-4"
             // PRI-1 (Phase 33-04): mockup distinguishes the row tint between
             // top-2 (gold-light `#faf6ee`) and rank 3+ (canvas `#f4f1eb`).
             // Earlier every row used the same gold-light wash, blurring rank.
             style={{ background: entry.rank <= 2 ? "#faf6ee" : "#f4f1eb" }}
           >
-            <span
-              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[family-name:var(--font-sans)] text-sm font-bold tabular-nums"
-              style={{
-                background: RANK_TINT[tintKey],
-                color: RANK_TEXT[tintKey],
-              }}
-            >
-              {entry.rank}
-            </span>
+            {/* header row: rank badge + product chip + ml-auto Edit/Delete (parity with decisions-section) */}
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[family-name:var(--font-sans)] text-sm font-bold tabular-nums"
+                style={{
+                  background: RANK_TINT[tintKey],
+                  color: RANK_TEXT[tintKey],
+                }}
+              >
+                {entry.rank}
+              </span>
+              {entry.productName && (
+                <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
+                  {entry.productName}
+                </span>
+              )}
+              {!readOnly && (
+                <div className="ml-auto flex gap-1">
+                  <button
+                    type="button"
+                    className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+                    onClick={() => handleEdit(idx)}
+                    aria-label={`Edit priority ${entry.rank}`}
+                  >
+                    <EditIcon />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+                    onClick={() => handleDelete(idx)}
+                    aria-label={`Delete priority ${entry.rank}`}
+                  >
+                    <DeleteIcon />
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* body: clickable text area + meta-row */}
             <button
               type="button"
-              className="min-h-[68px] flex-1 cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-3 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
+              className="w-full cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-3 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
               onClick={() => handleEdit(idx)}
               disabled={readOnly}
               aria-label={`Edit priority ${entry.rank}`}
             >
               <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  {entry.productName && (
-                    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
-                      {entry.productName}
-                    </span>
-                  )}
-                </div>
                 {entry.text.trim().length > 0 ? (
                   <span className="block break-words text-[var(--color-foreground)]">
                     {entry.text}
@@ -238,26 +260,6 @@ export function PrioritiesSection({
                 />
               </div>
             </button>
-            {!readOnly && (
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
-                  onClick={() => handleEdit(idx)}
-                  aria-label={`Edit priority ${entry.rank}`}
-                >
-                  <EditIcon />
-                </button>
-                <button
-                  type="button"
-                  className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
-                  onClick={() => handleDelete(idx)}
-                  aria-label={`Delete priority ${entry.rank}`}
-                >
-                  <DeleteIcon />
-                </button>
-              </div>
-            )}
           </div>
         );
       })}
