@@ -1590,11 +1590,25 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ reportId: z.string().uuid() }))
         .query(async ({ input, ctx }) => {
           try {
-            return await deps.archiveService.getArchiveReport(
+            const detail = await deps.archiveService.getArchiveReport(
               input.reportId,
               ctx.session.role,
               ctx.session,
             );
+            // TD-01: probe detection — non-admin fetched a report but group
+            // scope filtered out all sections. May false-positive on reports
+            // that genuinely have no sections; acceptable given the low rate
+            // of empty published reports in this domain.
+            if (ctx.session.role !== "admin" && detail.report.sections.length === 0) {
+              ctx.auditLogger.scopeDenied({
+                userId: ctx.session.userId,
+                role: ctx.session.role,
+                ip: ctx.ip,
+                attemptedScope: "reportSection",
+                resourceId: input.reportId,
+              });
+            }
+            return detail;
           } catch (error) {
             throw mapDomainError(error);
           }
@@ -2056,10 +2070,7 @@ export function createAppRouter(deps: RouterDeps) {
         .input(searchQueryInputSchema)
         .query(async ({ input, ctx }) => {
           try {
-            return await deps.searchService.query(input, {
-              userId: ctx.session.userId,
-              role: ctx.session.role,
-            });
+            return await deps.searchService.query(input, ctx.session);
           } catch (error) {
             if (error instanceof SearchAuthorizationError) {
               throw new TRPCError({
