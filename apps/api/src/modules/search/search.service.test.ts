@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { SearchHit } from "@customreport/shared";
+import type { SearchHit, UserSession } from "@customreport/shared";
 
 import {
   SearchAuthorizationError,
@@ -10,12 +10,26 @@ import {
 
 const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const otherUserId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const groupA = "aaaaaaaa-aaaa-4aaa-8aaa-000000000001";
+const groupB = "bbbbbbbb-bbbb-4bbb-8bbb-000000000002";
 const reportId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const sectionId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const projectId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 const itemId = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 const riskId = "11111111-1111-4111-8111-111111111111";
 const decisionId = "22222222-2222-4222-8222-222222222222";
+
+function makeSession(overrides: Partial<UserSession> = {}): UserSession {
+  return {
+    userId,
+    email: "test@t.local",
+    name: "Test User",
+    role: "lead",
+    reportingGroupId: groupA,
+    viewerGroupAccess: [],
+    ...overrides,
+  };
+}
 
 function makeHit(overrides: Partial<SearchHit> = {}): SearchHit {
   return {
@@ -37,6 +51,7 @@ function createRepository(
     q: string;
     scope: "mine" | "all";
     userId: string;
+    groupIds: string[] | null;
     limit: number;
   }) => SearchHit[],
 ): SearchRepository {
@@ -57,7 +72,7 @@ describe("SearchService", () => {
 
     const result = await service.query(
       { q: "PR", scope: "mine", limit: 20 },
-      { userId, role: "lead" },
+      makeSession({ role: "lead" }),
     );
 
     expect(result).toHaveLength(1);
@@ -71,7 +86,7 @@ describe("SearchService", () => {
     await expect(
       service.query(
         { q: "release", scope: "all", limit: 20 },
-        { userId, role: "lead" },
+        makeSession({ role: "lead" }),
       ),
     ).rejects.toBeInstanceOf(SearchAuthorizationError);
 
@@ -85,7 +100,7 @@ describe("SearchService", () => {
     await expect(
       service.query(
         { q: "release", scope: "all", limit: 20 },
-        { userId, role: "viewer" },
+        makeSession({ role: "viewer", viewerGroupAccess: [groupA] }),
       ),
     ).rejects.toBeInstanceOf(SearchAuthorizationError);
   });
@@ -99,7 +114,7 @@ describe("SearchService", () => {
 
     const result = await service.query(
       { q: "release", scope: "all", limit: 20 },
-      { userId, role: "head" },
+      makeSession({ role: "head" }),
     );
 
     expect(result).toHaveLength(1);
@@ -114,7 +129,7 @@ describe("SearchService", () => {
 
     const result = await service.query(
       { q: "release", scope: "all", limit: 20 },
-      { userId: otherUserId, role: "admin" },
+      makeSession({ userId: otherUserId, role: "admin" }),
     );
 
     expect(result).toHaveLength(1);
@@ -130,7 +145,7 @@ describe("SearchService", () => {
 
     await service.query(
       { q: "release", scope: "mine", limit: 20 },
-      { userId, role: "lead" },
+      makeSession({ role: "lead" }),
     );
   });
 
@@ -139,7 +154,7 @@ describe("SearchService", () => {
 
     const result = await service.query(
       { q: "unmatched", scope: "mine", limit: 20 },
-      { userId, role: "lead" },
+      makeSession({ role: "lead" }),
     );
 
     expect(result).toEqual([]);
@@ -167,7 +182,7 @@ describe("SearchService", () => {
 
     const result = await service.query(
       { q: "rel", scope: "mine", limit: 20 },
-      { userId, role: "lead" },
+      makeSession({ role: "lead" }),
     );
 
     expect(result.map((r) => r.title)).toEqual(["high", "mid", "low"]);
@@ -193,7 +208,7 @@ describe("SearchService", () => {
 
     const result = await service.query(
       { q: "rel", scope: "mine", limit: 20 },
-      { userId, role: "lead" },
+      makeSession({ role: "lead" }),
     );
 
     expect(result.map((r) => r.title)).toEqual(["newer", "older"]);
@@ -214,7 +229,7 @@ describe("SearchService", () => {
 
     const result = await service.query(
       { q: "foo", scope: "mine", limit: 5 },
-      { userId, role: "lead" },
+      makeSession({ role: "lead" }),
     );
 
     expect(result).toHaveLength(5);
@@ -228,7 +243,7 @@ describe("SearchService", () => {
     await expect(
       service.query(
         { q: "a", scope: "mine", limit: 20 },
-        { userId, role: "lead" },
+        makeSession({ role: "lead" }),
       ),
     ).rejects.toThrow();
   });
@@ -239,8 +254,74 @@ describe("SearchService", () => {
     await expect(
       service.query(
         { q: "x".repeat(201), scope: "mine", limit: 20 },
-        { userId, role: "lead" },
+        makeSession({ role: "lead" }),
       ),
     ).rejects.toThrow();
+  });
+
+  // TD-03: group-scope filtering tests
+  it("TD-03: head session passes own reportingGroupId as groupIds", async () => {
+    const repo = createRepository((params) => {
+      expect(params.groupIds).toEqual([groupA]);
+      return [];
+    });
+    const service = new SearchService(repo);
+
+    await service.query(
+      { q: "release", scope: "mine", limit: 20 },
+      makeSession({ role: "head", reportingGroupId: groupA }),
+    );
+  });
+
+  it("TD-03: admin session passes null groupIds (no group filter)", async () => {
+    const repo = createRepository((params) => {
+      expect(params.groupIds).toBeNull();
+      return [];
+    });
+    const service = new SearchService(repo);
+
+    await service.query(
+      { q: "release", scope: "all", limit: 20 },
+      makeSession({ role: "admin" }),
+    );
+  });
+
+  it("TD-03: viewer with granted groups passes those groupIds", async () => {
+    const repo = createRepository((params) => {
+      expect(params.groupIds).toEqual([groupA, groupB]);
+      return [];
+    });
+    const service = new SearchService(repo);
+
+    await service.query(
+      { q: "release", scope: "mine", limit: 20 },
+      makeSession({ role: "viewer", viewerGroupAccess: [groupA, groupB] }),
+    );
+  });
+
+  it("TD-03: viewer with no granted groups returns empty without calling repository", async () => {
+    const spy = vi.fn(() => [] as SearchHit[]);
+    const service = new SearchService(createRepository(spy));
+
+    const result = await service.query(
+      { q: "release", scope: "mine", limit: 20 },
+      makeSession({ role: "viewer", viewerGroupAccess: [] }),
+    );
+
+    expect(result).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("TD-03: head with no reportingGroupId returns empty without calling repository", async () => {
+    const spy = vi.fn(() => [] as SearchHit[]);
+    const service = new SearchService(createRepository(spy));
+
+    const result = await service.query(
+      { q: "release", scope: "mine", limit: 20 },
+      makeSession({ role: "head", reportingGroupId: undefined }),
+    );
+
+    expect(result).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
   });
 });

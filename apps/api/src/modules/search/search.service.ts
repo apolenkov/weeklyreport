@@ -1,7 +1,7 @@
 import {
   searchQueryInputSchema,
   searchQueryOutputSchema,
-  type Role,
+  type UserSession,
   type SearchHit,
   type SearchQueryInput,
   type SearchQueryOutput,
@@ -23,6 +23,14 @@ export interface SearchRepository {
      * calling this. */
     scope: "mine" | "all";
     userId: string;
+    /**
+     * TD-03: group IDs derived via groupScopeFilter logic.
+     *   null  → admin; no group filter (see all groups).
+     *   [...] → non-admin; filter rows to these reporting-group IDs.
+     * An empty array is rejected upstream (early-return empty result) so
+     * the repository never receives an empty groupIds array.
+     */
+    groupIds: string[] | null;
     limit: number;
   }): Promise<SearchHit[]>;
 }
@@ -56,7 +64,7 @@ export class SearchService {
    */
   async query(
     input: SearchQueryInput,
-    session: { userId: string; role: Role },
+    session: UserSession,
   ): Promise<SearchQueryOutput> {
     const parsed = searchQueryInputSchema.parse(input);
 
@@ -70,10 +78,30 @@ export class SearchService {
       );
     }
 
+    // TD-03: derive allowed group IDs matching groupScopeFilter semantics:
+    //   admin → null (no group filter; sees all groups)
+    //   head/lead → [reportingGroupId] (own group only)
+    //   viewer → viewerGroupAccess (granted groups, may be empty)
+    const groupIds: string[] | null =
+      session.role === "admin"
+        ? null
+        : session.role === "viewer"
+          ? (session.viewerGroupAccess ?? [])
+          : session.reportingGroupId
+            ? [session.reportingGroupId]
+            : [];
+
+    // Viewer (or head/lead) with no group access → zero-row result,
+    // consistent with groupScopeFilter({ id: { in: [] } }) semantics.
+    if (groupIds !== null && groupIds.length === 0) {
+      return searchQueryOutputSchema.parse([]);
+    }
+
     const hits = await this.repository.search({
       q: parsed.q,
       scope: parsed.scope,
       userId: session.userId,
+      groupIds,
       limit: parsed.limit,
     });
 

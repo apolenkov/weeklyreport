@@ -51,9 +51,10 @@ export class SearchPrismaRepository implements SearchRepository {
     q: string;
     scope: "mine" | "all";
     userId: string;
+    groupIds: string[] | null;
     limit: number;
   }): Promise<SearchHit[]> {
-    const { q, scope, userId, limit } = params;
+    const { q, scope, userId, groupIds, limit } = params;
 
     // Per-type limit BEFORE the union — keeps the worker query bounded
     // even when one type matches thousands of rows.
@@ -80,6 +81,18 @@ export class SearchPrismaRepository implements SearchRepository {
     const projectMineFilter =
       scope === "mine" ? Prisma.sql`AND p."leadId" = ${userId}` : Prisma.empty;
 
+    // TD-03: group-scope filters derived from the session's allowed group IDs.
+    // null (admin) → no filter. Non-empty array → subquery against User.reportingGroupId.
+    // The service guarantees groupIds is never an empty array here.
+    const sectionGroupFilter =
+      groupIds === null
+        ? Prisma.empty
+        : Prisma.sql`AND rs."authorId" IN (SELECT "id" FROM "User" WHERE "reportingGroupId" IN (${Prisma.join(groupIds)}))`;
+    const projectGroupFilter =
+      groupIds === null
+        ? Prisma.empty
+        : Prisma.sql`AND p."leadId" IN (SELECT "id" FROM "User" WHERE "reportingGroupId" IN (${Prisma.join(groupIds)}))`;
+
     const rows = await this.prisma.$queryRaw<RawHit[]>(Prisma.sql`
       SELECT * FROM (
         (
@@ -98,6 +111,7 @@ export class SearchPrismaRepository implements SearchRepository {
           INNER JOIN "ReportSection" rs ON rs."id" = i."reportSectionId"
           WHERE i."searchTsv" @@ plainto_tsquery('russian', ${q})
           ${itemMineFilter}
+          ${sectionGroupFilter}
           ORDER BY "rank" DESC, i."createdAt" DESC
           LIMIT ${perType}
         )
@@ -122,6 +136,7 @@ export class SearchPrismaRepository implements SearchRepository {
           INNER JOIN "ReportSection" rs ON rs."id" = r."reportSectionId"
           WHERE r."searchTsv" @@ plainto_tsquery('russian', ${q})
           ${riskMineFilter}
+          ${sectionGroupFilter}
           ORDER BY "rank" DESC, r."createdAt" DESC
           LIMIT ${perType}
         )
@@ -141,6 +156,7 @@ export class SearchPrismaRepository implements SearchRepository {
           INNER JOIN "ReportSection" rs ON rs."id" = d."reportSectionId"
           WHERE d."searchTsv" @@ plainto_tsquery('russian', ${q})
           ${decisionMineFilter}
+          ${sectionGroupFilter}
           ORDER BY "rank" DESC, d."createdAt" DESC
           LIMIT ${perType}
         )
@@ -159,6 +175,7 @@ export class SearchPrismaRepository implements SearchRepository {
           FROM "Project" p
           WHERE p."searchTsv" @@ plainto_tsquery('russian', ${q})
           ${projectMineFilter}
+          ${projectGroupFilter}
           ORDER BY "rank" DESC, p."createdAt" DESC
           LIMIT ${perType}
         )
