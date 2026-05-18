@@ -869,7 +869,32 @@ export function LeadForm({
     history: historyQ.data,
   });
 
-  const products: Product[] = data.products as Product[];
+  // F8: enrich unassigned stages with cross-author names.
+  // crossAuthorsQ.data has { projectId, stageNames, authorName } per shared product.
+  // Stages not owned by the current user but assigned to another lead become
+  // ownership:"locked" with their name instead of "— unassigned".
+  const _crossAuthorStageMap = new Map<string, Map<string, string>>();
+  for (const ca of crossAuthorsQ.data ?? []) {
+    let _sm = _crossAuthorStageMap.get(ca.projectId);
+    if (!_sm) {
+      _sm = new Map();
+      _crossAuthorStageMap.set(ca.projectId, _sm);
+    }
+    for (const sn of ca.stageNames) _sm.set(sn.toLowerCase(), ca.authorName);
+  }
+  const products: Product[] = (data.products as Product[]).map((product) => {
+    const stageMap = _crossAuthorStageMap.get(product.id);
+    if (!stageMap) return product;
+    return {
+      ...product,
+      stages: product.stages.map((stage) => {
+        if (stage.ownership !== "unassigned") return stage;
+        const assignee = stageMap.get(stage.stageName.toLowerCase());
+        if (!assignee) return stage;
+        return { ...stage, ownership: "locked" as const, assignee };
+      }),
+    };
+  });
   const currentWeekItems: KanbanItem[] = data.currentWeekItems as KanbanItem[];
   const nextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
   const risks: RiskEntry[] = data.risks as RiskEntry[];
