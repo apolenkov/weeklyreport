@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
+import { Separator } from "@customreport/ui/components/ui/separator";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
@@ -1275,19 +1276,26 @@ export function LeadForm({
 
         {/* Context shell: period, archive, fill-from, and edit-version controls. */}
         {!isSlidesMode && (
-          <div className="flex flex-nowrap items-center justify-between gap-3 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
+          <div className="flex flex-nowrap items-center justify-between gap-2 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
             <PeriodNavigator periods={visiblePeriods} />
 
-            <ArchiveToggle
-              checked={showArchivePeriods}
-              onChange={setShowArchivePeriods}
-            />
-
             <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
+              <Separator
+                orientation="vertical"
+                className="h-5 opacity-40"
+              />
+              <ArchiveToggle
+                checked={showArchivePeriods}
+                onChange={setShowArchivePeriods}
+              />
               <FillFromButton
                 periods={periods}
                 disabled={isReadOnly || fillFromMut.isPending}
                 onFillFrom={handleFillFrom}
+              />
+              <Separator
+                orientation="vertical"
+                className="h-5 opacity-40"
               />
               <VersionHistoryNav
                 versions={versions}
