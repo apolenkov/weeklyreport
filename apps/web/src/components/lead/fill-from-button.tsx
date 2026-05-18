@@ -104,13 +104,13 @@ export function FillFromButton({
   return (
     <>
       <div
-        className="relative inline-flex overflow-hidden rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.28)] bg-white/70"
+        className="relative inline-flex overflow-hidden rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white/70"
         ref={wrapRef}
       >
         {/* Primary button */}
         <button
           type="button"
-          className="btn-press inline-flex min-h-8 items-center gap-1 bg-transparent px-2.5 py-1 text-[13px] font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="btn-press inline-flex min-h-8 items-center gap-1 bg-transparent px-2.5 py-1 text-[13px] font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={handleFillPrevious}
           disabled={disabled || !previousPeriod}
           title="Fill from most recent submitted period"
