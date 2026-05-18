@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { DecisionEditDialog } from "./decision-edit-dialog";
 import type { DecisionEntry, Product } from "./mock-data";
@@ -241,34 +242,11 @@ export function DecisionsSection({
                 </div>
               </div>
               {/* P5: unified [author …… chip] meta-row */}
-              <div
-                className="mt-3 flex items-center justify-between gap-2"
-                aria-label={`Decision stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
-              >
-                <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
-                  {decision.owner ?? ""}
-                </span>
-                <span
-                  className="inline-flex flex-wrap items-center gap-1"
-                  title={stageTags.length === 0 ? "All stages" : stageTags.join(", ")}
-                >
-                  {/* 35-04: SDLC stage badge — surfaces scoping at the right rail. */}
-                  {stageTags.length === 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
-                      All stages
-                    </span>
-                  ) : (
-                    stageTags.map((stage) => (
-                      <span
-                        key={stage}
-                        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
-                      >
-                        {stage}
-                      </span>
-                    ))
-                  )}
-                </span>
-              </div>
+              <MetaRow
+                authorName={decision.owner}
+                stageTags={stageTags}
+                ariaLabel={`Decision stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+              />
             </div>
           );
         })

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { PriorityEditDialog } from "./priority-edit-dialog";
 import type { PriorityEntry, Product } from "./mock-data";
@@ -195,23 +196,23 @@ export function PrioritiesSection({
             // Earlier every row used the same gold-light wash, blurring rank.
             style={{ background: entry.rank <= 2 ? "#faf6ee" : "#f4f1eb" }}
           >
-              <span
-                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[family-name:var(--font-sans)] text-sm font-bold tabular-nums"
-                style={{
-                  background: RANK_TINT[tintKey],
-                  color: RANK_TEXT[tintKey],
-                }}
-              >
-                {entry.rank}
-              </span>
-              <button
-                type="button"
-                className="min-h-[68px] flex-1 cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-3 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
-                onClick={() => handleEdit(idx)}
-                disabled={readOnly}
-                aria-label={`Edit priority ${entry.rank}`}
-              >
-                <div className="space-y-1.5">
+            <span
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[family-name:var(--font-sans)] text-sm font-bold tabular-nums"
+              style={{
+                background: RANK_TINT[tintKey],
+                color: RANK_TEXT[tintKey],
+              }}
+            >
+              {entry.rank}
+            </span>
+            <button
+              type="button"
+              className="min-h-[68px] flex-1 cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-3 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
+              onClick={() => handleEdit(idx)}
+              disabled={readOnly}
+              aria-label={`Edit priority ${entry.rank}`}
+            >
+              <div className="space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   {entry.productName && (
                     <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
@@ -229,35 +230,12 @@ export function PrioritiesSection({
                   </span>
                 )}
                 {/* P5: unified [author …… chip] meta-row */}
-                <div
-                  className="flex items-center justify-between gap-2 pt-1"
-                  aria-label={`Priority ${entry.rank} stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
-                >
-                  <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
-                    {sectionAuthorName ?? ""}
-                  </span>
-                  {/* Keep scoped stages readable and consistent with Decisions:
-                      full labels beat colored abbreviations for SDLC names. */}
-                  <span
-                    className="inline-flex flex-wrap items-center gap-1"
-                    title={stageTags.length === 0 ? "All stages" : stageTags.join(", ")}
-                  >
-                    {stageTags.length === 0 ? (
-                      <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-                        All stages
-                      </span>
-                    ) : (
-                      stageTags.map((stage) => (
-                        <span
-                          key={stage}
-                          className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
-                        >
-                          {stage}
-                        </span>
-                      ))
-                    )}
-                  </span>
-                </div>
+                <MetaRow
+                  authorName={sectionAuthorName}
+                  stageTags={stageTags}
+                  ariaLabel={`Priority ${entry.rank} stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+                  className="pt-1"
+                />
               </div>
             </button>
             {!readOnly && (

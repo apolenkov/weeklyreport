@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RiskEditDialog } from "./risk-edit-dialog";
 import type { Product, RiskEntry } from "./mock-data";
@@ -132,7 +133,11 @@ export function RisksSection({
   useEffect(() => {
     if (addSignal === 0) return;
     if (readOnly) return;
-    setDialogState({ open: true, mode: "create", seedProductId: firstProductId });
+    setDialogState({
+      open: true,
+      mode: "create",
+      seedProductId: firstProductId,
+    });
   }, [addSignal, readOnly, firstProductId]);
 
   return (
@@ -205,7 +210,7 @@ export function RisksSection({
                     </button>
                   </div>
                 )}
-             </div>
+              </div>
               {/* Risk + impact + mitigation summary — read-only on the
                   card; the dialog is the only edit surface so we can
                   validate all three fields together. */}
@@ -222,7 +227,7 @@ export function RisksSection({
                     )}
                   </div>
                 </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-2">
                   <div>
                     <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
                       Impact
@@ -242,34 +247,11 @@ export function RisksSection({
                 </div>
               </div>
               {/* P5: unified [author …… chip] meta-row */}
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
-                  {sectionAuthorName ?? ""}
-                </span>
-                <div className="flex flex-wrap items-center gap-1">
-                  <div
-                    className="inline-flex flex-wrap items-center gap-1"
-                    aria-label={"Risk stages: " + stageTagsLabel}
-                    title={stageTagsLabel}
-                  >
-                    {/* 35-04: stage chips should live at the right rail. */}
-                    {stageTags.length === 0 ? (
-                      <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-                        All stages
-                      </span>
-                    ) : (
-                      stageTags.map((stage) => (
-                        <span
-                          key={stage}
-                          className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
-                        >
-                          {stage}
-                        </span>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
+              <MetaRow
+                authorName={sectionAuthorName}
+                stageTags={stageTags}
+                ariaLabel={"Risk stages: " + stageTagsLabel}
+              />
             </div>
           );
         })
