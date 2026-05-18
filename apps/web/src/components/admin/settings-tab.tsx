@@ -10,6 +10,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@customreport/ui/components/ui/tabs";
+import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { useTRPC } from "../../lib/trpc-context";
@@ -1012,7 +1013,7 @@ function IntegrationsSubTab() {
       {/* Telegram — Phase 55 seeds-only; always shows Coming Soon until the
           full activation phase ships (user binding + real outbound bot). */}
       <div
-        className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4"
+        className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
         data-testid="integration-row-telegram"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1021,17 +1022,14 @@ function IntegrationsSubTab() {
               Telegram
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Notifications via Telegram bot — user binding and outbound
-              delivery will be enabled in a follow-on phase.
+              Push notifications and quick-reply via Telegram bot — replaces
+              email reminders for mobile-first teams.
             </p>
           </div>
-          <span
-            className="inline-flex shrink-0 self-start whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)] sm:self-auto"
+          <ComingSoonBadge
+            className="self-start sm:self-auto"
             data-testid="integration-badge-telegram"
-            data-state="coming-soon"
-          >
-            Coming Soon
-          </span>
+          />
         </div>
 
         <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
@@ -1050,7 +1048,7 @@ function IntegrationsSubTab() {
       </div>
 
       <div
-        className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-4"
+        className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
         data-testid="integration-row-ci"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1059,17 +1057,12 @@ function IntegrationsSubTab() {
               CI Integration
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Connect your CI/CD pipeline for automated report triggers.
-              Configuration fields will be available in a follow-on phase.
+              Trigger report generation automatically from CI/CD pipelines —
+              no manual deadline tracking needed.
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto sm:justify-end">
-            <span
-              className="inline-flex shrink-0 items-center whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-gold)]"
-              data-testid="integration-badge-ci-coming-soon"
-            >
-              Coming Soon
-            </span>
+            <ComingSoonBadge data-testid="integration-badge-ci-coming-soon" />
             {isCiConfigured ? (
               <span
                 className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-primary)]"
@@ -1102,17 +1095,14 @@ function IntegrationsSubTab() {
               Slack
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Channel notifications and digest delivery via Slack incoming
-              webhooks — planned for a future phase.
+              Daily digest and deadline alerts to a team Slack channel —
+              keeps everyone updated without checking the dashboard.
             </p>
           </div>
-          <span
-            className="inline-flex shrink-0 self-start whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)] sm:self-auto"
+          <ComingSoonBadge
+            className="self-start sm:self-auto"
             data-testid="integration-badge-slack"
-            data-state="coming-soon"
-          >
-            Coming Soon
-          </span>
+          />
         </div>
       </div>
 
@@ -1125,20 +1115,17 @@ function IntegrationsSubTab() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-              AI Integration
+              AI Summary
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Automatic report summarization, risk extraction and decision
-              drafts via LLM. Provider will be selected in a follow-on phase.
+              Auto-summary of statuses and extracted risks — 5-second
+              read instead of reviewing 30 minutes of section data.
             </p>
           </div>
-          <span
-            className="inline-flex shrink-0 self-start whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-starbucks-gold)]/15 px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-gold)] sm:self-auto"
+          <ComingSoonBadge
+            className="self-start sm:self-auto"
             data-testid="integration-badge-ai"
-            data-state="coming-soon"
-          >
-            Coming Soon
-          </span>
+          />
         </div>
 
         <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">

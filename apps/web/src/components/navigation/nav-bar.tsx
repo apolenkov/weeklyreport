@@ -22,6 +22,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@customreport/ui/components/ui/sheet";
+import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 
 import { DevRoleSwitcher } from "../dev/role-switcher";
 import { roleHomePath } from "../../lib/role-home";
@@ -177,12 +178,10 @@ function LanguageComingSoonControl() {
         <Globe2 size={14} strokeWidth={2} aria-hidden="true" />
         <span className="hidden xl:inline">Language</span>
       </button>
-      <span
+      <ComingSoonBadge
         role="tooltip"
-        className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 whitespace-nowrap rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--color-muted-foreground)] opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-      >
-        Coming Soon
-      </span>
+        className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+      />
     </div>
   );
 }
@@ -204,12 +203,10 @@ function ThemeComingSoonControl() {
         <Moon size={14} strokeWidth={2} aria-hidden="true" />
         <span className="hidden xl:inline">Theme</span>
       </button>
-      <span
+      <ComingSoonBadge
         role="tooltip"
-        className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 whitespace-nowrap rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--color-muted-foreground)] opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-      >
-        Coming Soon
-      </span>
+        className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+      />
     </div>
   );
 }
