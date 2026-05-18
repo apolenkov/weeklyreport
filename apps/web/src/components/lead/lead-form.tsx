@@ -390,14 +390,27 @@ export function LeadForm({
   // so we aggregate counts by authorId to produce unique entries.
   const crossAuthors = crossAuthorsQ.data ?? [];
   const crossAuthorsByAuthor = crossAuthors.reduce<
-    Map<string, { authorId: string; authorName: string; riskCount: number; itemCount: number }>
+    Map<
+      string,
+      {
+        authorId: string;
+        authorName: string;
+        riskCount: number;
+        itemCount: number;
+      }
+    >
   >((acc, ca) => {
     const existing = acc.get(ca.authorId);
     if (existing) {
       existing.riskCount += ca.riskCount;
       existing.itemCount += ca.itemCount;
     } else {
-      acc.set(ca.authorId, { authorId: ca.authorId, authorName: ca.authorName, riskCount: ca.riskCount, itemCount: ca.itemCount });
+      acc.set(ca.authorId, {
+        authorId: ca.authorId,
+        authorName: ca.authorName,
+        riskCount: ca.riskCount,
+        itemCount: ca.itemCount,
+      });
     }
     return acc;
   }, new Map());
@@ -1289,12 +1302,12 @@ export function LeadForm({
               ))}
           </div>
           <div className="flex items-center gap-3">
-              {!isSlidesMode &&
-                (currentWeekItems.length > 0 ||
-                  nextWeekItems.length > 0 ||
-                  risks.length > 0 ||
-                  decisions.length > 0 ||
-                  priorities.length > 0) && (
+            {!isSlidesMode &&
+              (currentWeekItems.length > 0 ||
+                nextWeekItems.length > 0 ||
+                risks.length > 0 ||
+                decisions.length > 0 ||
+                priorities.length > 0) && (
                 <button
                   type="button"
                   className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
@@ -1305,83 +1318,89 @@ export function LeadForm({
                   Toggle All
                 </button>
               )}
-              <ViewModeToggle
-                mode={isSlidesMode ? "slides" : "edit"}
-                editHref={
-                  targetReportId
-                    ? "/lead/report/" + encodeURIComponent(targetReportId)
-                    : "/lead/report"
-                }
-                slidesHref={
-                  targetReportId
-                    ? "/lead/report/" +
-                      encodeURIComponent(targetReportId) +
-                      "?mode=slides"
-                    : "/lead/report"
-                }
-              />
-              {isSubmitted && currentUser.authorRole === "lead" && (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => {
-                    setReopenError(null);
-                    setShowReopenDialog(true);
-                  }}
-                  disabled={requestReopenMut.isPending}
-                  title="Ask Head to unlock this section"
-                >
-                  Request Reopen
-                </button>
-              )}
-              {isSubmitted && currentUser.authorRole !== "lead" && (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={handleRevoke}
-                  disabled={revokeMut.isPending}
-                  title="Revoke submission and unlock the section"
-                >
-                  Revoke
-                </button>
-              )}
-              {!isSubmitted && (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={handleSubmit}
-                  disabled={isReadOnly || submitMut.isPending}
-                >
-                  Submit Report
-                </button>
-              )}
-            </div>
+            <ViewModeToggle
+              mode={isSlidesMode ? "slides" : "edit"}
+              editHref={
+                targetReportId
+                  ? "/lead/report/" + encodeURIComponent(targetReportId)
+                  : "/lead/report"
+              }
+              slidesHref={
+                targetReportId
+                  ? "/lead/report/" +
+                    encodeURIComponent(targetReportId) +
+                    "?mode=slides"
+                  : "/lead/report"
+              }
+            />
+            {isSubmitted && currentUser.authorRole === "lead" && (
+              <button
+                type="button"
+                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => {
+                  setReopenError(null);
+                  setShowReopenDialog(true);
+                }}
+                disabled={requestReopenMut.isPending}
+                title="Ask Head to unlock this section"
+              >
+                Request Reopen
+              </button>
+            )}
+            {isSubmitted && currentUser.authorRole !== "lead" && (
+              <button
+                type="button"
+                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleRevoke}
+                disabled={revokeMut.isPending}
+                title="Revoke submission and unlock the section"
+              >
+                Revoke
+              </button>
+            )}
+            {!isSubmitted && (
+              <button
+                type="button"
+                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleSubmit}
+                disabled={isReadOnly || submitMut.isPending}
+              >
+                Submit Report
+              </button>
+            )}
+          </div>
         </header>
 
         {/* Context shell: period, archive, fill-from, and edit-version controls. */}
         <div className="flex flex-nowrap items-center justify-between gap-2 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
-            <PeriodNavigator periods={visiblePeriods} />
+          <PeriodNavigator periods={visiblePeriods} />
 
-            <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
-              <Separator orientation="vertical" className="h-5 bg-[var(--color-border)]" />
-              <ArchiveToggle
-                checked={showArchivePeriods}
-                onChange={setShowArchivePeriods}
-              />
-              <FillFromButton
-                periods={periods}
-                disabled={isReadOnly || fillFromMut.isPending}
-                onFillFrom={handleFillFrom}
-              />
-              <Separator orientation="vertical" className="h-5 bg-[var(--color-border)]" />
-              <VersionHistoryNav
-                versions={versions}
-                onRestore={isReadOnly ? undefined : handleRestoreVersion}
-                onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
-                canSaveVersion={!createSnapshotMut.isPending}
-              />
-            </div>
+          <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
+            <Separator
+              orientation="vertical"
+              className="h-5 bg-[var(--color-border)]"
+            />
+            <ArchiveToggle
+              checked={showArchivePeriods}
+              onChange={setShowArchivePeriods}
+            />
+            <FillFromButton
+              periods={periods}
+              disabled={isReadOnly || fillFromMut.isPending}
+              onFillFrom={handleFillFrom}
+            />
+            <Separator
+              orientation="vertical"
+              className="h-5 bg-[var(--color-border)]"
+            />
+            <VersionHistoryNav
+              versions={versions}
+              onRestore={isReadOnly ? undefined : handleRestoreVersion}
+              onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
+              canSaveVersion={!createSnapshotMut.isPending}
+            />
           </div>
+        </div>
 
         {/* Read-only banner for past periods. Triggered by either the
             legacy `?period=` query (back-compat) or — 35-07 — when the
