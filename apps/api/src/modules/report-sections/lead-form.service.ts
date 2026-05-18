@@ -211,7 +211,8 @@ export class LeadFormService {
     role?: Role,
     requestedAuthorId?: string,
   ): Promise<{ section: ReportSectionReadModel; readOnly: boolean }> {
-    const canViewOtherAuthor = role === "head" || role === "admin";
+    const canViewOtherAuthor =
+      role === "head" || role === "admin" || role === "lead";
     const sectionAuthorId =
       requestedAuthorId && canViewOtherAuthor ? requestedAuthorId : userId;
     const result = await this.repository.getSectionForPeriod(

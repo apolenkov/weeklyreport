@@ -386,10 +386,15 @@ describe("LeadFormService — getByPeriod", () => {
     expect(result.readOnly).toBe(true);
   });
 
-  it("ignores requestedAuthorId for lead sessions", async () => {
+  it("lets lead view a requested author section as read-only", async () => {
+    const otherAuthorSection = {
+      ...structuredClone(draftSection),
+      authorId: OTHER_USER_ID,
+      authorName: "Lead 2",
+    };
     const repo = createMockRepository({
       getSectionForPeriod: vi.fn().mockResolvedValue({
-        section: structuredClone(draftSection),
+        section: otherAuthorSection,
         readOnly: false,
       }),
     });
@@ -402,9 +407,12 @@ describe("LeadFormService — getByPeriod", () => {
       OTHER_USER_ID,
     );
 
-    expect(repo.getSectionForPeriod).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
-    expect(result.section.authorId).toBe(AUTHOR_ID);
-    expect(result.readOnly).toBe(false);
+    expect(repo.getSectionForPeriod).toHaveBeenCalledWith(
+      REPORT_ID,
+      OTHER_USER_ID,
+    );
+    expect(result.section.authorId).toBe(OTHER_USER_ID);
+    expect(result.readOnly).toBe(true);
   });
 
   it("fails when no section found for user in report", async () => {
