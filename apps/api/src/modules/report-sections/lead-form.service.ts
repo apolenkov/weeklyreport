@@ -41,6 +41,21 @@ export interface LeadFormRepository {
   ): Promise<void>;
   /** Returns true when both users share at least one assigned project. */
   hasSharedProduct(userId1: string, userId2: string): Promise<boolean>;
+  /** Returns other authors who share at least one project with userId, with per-project stats. */
+  getCrossAuthors(
+    reportId: string,
+    userId: string,
+  ): Promise<
+    {
+      projectId: string;
+      projectName: string;
+      authorId: string;
+      authorName: string;
+      stageNames: string[];
+      itemCount: number;
+      riskCount: number;
+    }[]
+  >;
 }
 
 export class LeadFormService {
@@ -236,5 +251,22 @@ export class LeadFormService {
       ...result,
       readOnly: result.readOnly || sectionAuthorId !== userId,
     };
+  }
+
+  async getCrossAuthors(
+    reportId: string,
+    userId: string,
+  ): Promise<
+    {
+      projectId: string;
+      projectName: string;
+      authorId: string;
+      authorName: string;
+      stageNames: string[];
+      itemCount: number;
+      riskCount: number;
+    }[]
+  > {
+    return this.repository.getCrossAuthors(reportId, userId);
   }
 }

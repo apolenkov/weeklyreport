@@ -72,6 +72,9 @@ function createMockRepository(
     async hasSharedProduct() {
       return false;
     },
+    async getCrossAuthors() {
+      return [];
+    },
   };
 }
 

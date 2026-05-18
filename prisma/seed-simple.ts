@@ -65,7 +65,9 @@ const LEAD_IGOR = "a0000000-0000-4000-8000-000000000013";
 const LEAD_DMITRY = "a0000000-0000-4000-8000-000000000014";
 const LEAD_OLGA = "a0000000-0000-4000-8000-000000000015";
 const LEAD_SERGEY = "a0000000-0000-4000-8000-000000000016";
-// P13: PM (non-technical) leads — MOBILE/CLOUD/DEVOPS only (CRM excluded: Vasily holds all 7 stages, @@unique([stageId,projectId]) prevents a second lead)
+// P13: PM (non-technical) leads — MOBILE/CLOUD/DEVOPS only
+// F1 (v8.3): Boris (LEAD_MOBILE_PM) also owns Plan+Analysis+Design on PROD_CRM,
+// Vasily owns Dev+Test+DevOps+Support (4/7) — enables cross-author readonly UAT demo.
 const LEAD_MOBILE_PM = "a0000000-0000-4000-8000-000000000022";
 const LEAD_CLOUD_PM = "a0000000-0000-4000-8000-000000000023";
 const LEAD_DEVOPS_PM = "a0000000-0000-4000-8000-000000000024";
@@ -594,7 +596,7 @@ async function main() {
   // assignment from before — the dashboard variety they provide is
   // still useful and the all-7 case only needs one fixture.
   console.log(
-    "[seed-simple] Creating stage assignments (primary lead owns 7/7 on CRM, others own Development of their product)...",
+    "[seed-simple] Creating stage assignments (F1 v8.3: Vasily owns Dev+Test+DevOps+Support on CRM, Boris owns Plan+Analysis+Design on CRM)...",
   );
   const allStageIds = [
     STAGE_PLAN,
@@ -605,9 +607,12 @@ async function main() {
     STAGE_DEVOPS,
     STAGE_SUPPORT,
   ];
+  // F1 (v8.3): Vasily owns only the tech stages (4/7) on PROD_CRM.
+  // Boris (LEAD_MOBILE_PM) owns the PM stages (3/7) — enables cross-author readonly UAT demo.
+  const vasilyCrmStages = [STAGE_DEV, STAGE_TEST, STAGE_DEVOPS, STAGE_SUPPORT];
   await prisma.stageAssignment.createMany({
     data: [
-      ...allStageIds.map((stageId, idx) => ({
+      ...vasilyCrmStages.map((stageId, idx) => ({
         id: `b0000000-0000-4000-8000-0000000010${(idx + 1).toString().padStart(2, "0")}`,
         projectId: PROD_CRM,
         stageId,
@@ -700,6 +705,26 @@ async function main() {
         projectId: PROD_DEVOPS,
         stageId: STAGE_DESIGN,
         userId: LEAD_DEVOPS_PM,
+      },
+      // F1 (v8.3): Boris owns Plan+Analysis+Design on PROD_CRM (cross-author UAT demo).
+      // @@unique([stageId, projectId]) — Vasily was moved off these 3 stages above.
+      {
+        id: "b0000000-0000-4000-8000-000000000033",
+        projectId: PROD_CRM,
+        stageId: STAGE_PLAN,
+        userId: LEAD_MOBILE_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000034",
+        projectId: PROD_CRM,
+        stageId: STAGE_ANALYSIS,
+        userId: LEAD_MOBILE_PM,
+      },
+      {
+        id: "b0000000-0000-4000-8000-000000000035",
+        projectId: PROD_CRM,
+        stageId: STAGE_DESIGN,
+        userId: LEAD_MOBILE_PM,
       },
       // P61: Vasily owns stages on his 3 extra products.
       // On PROD_CRM_SALES Boris (LEAD_MOBILE_PM) owns STAGE_PLAN (co-author demo),
@@ -1366,8 +1391,10 @@ async function main() {
       });
     }
 
+    // F1 (v8.3): Vasily owns Dev+Test on PROD_CRM for StageStatus rows.
+    // Plan/Analysis/Design belong to Boris — no StageStatus rows for those here.
     const ownedStageIds =
-      lead.id === LEAD_1 ? [STAGE_PLAN, STAGE_DEV, STAGE_TEST] : [STAGE_DEV];
+      lead.id === LEAD_1 ? [STAGE_DEV, STAGE_TEST] : [STAGE_DEV];
     await prisma.stageStatus.createMany({
       data: ownedStageIds.map((stageId, sIdx) => ({
         id: `a0000000-0000-4000-8000-0000000f0${i + 1}1${sIdx + 1}`,
@@ -1472,13 +1499,14 @@ async function main() {
     });
   }
 
-  // P61 co-author overlay: Boris (LEAD_MOBILE_PM, leads[6]) has a Risk + Item
-  // on PROD_CRM_SALES inside his own REPORT_ACTIVE section. Boris's section
-  // id = a0000000-0000-4000-8000-000000000407 (i=6, hex 7).
+  // Co-author overlay: Boris (LEAD_MOBILE_PM, leads[6]) has extra content on
+  // PROD_CRM_SALES and PROD_CRM inside his own REPORT_ACTIVE section.
+  // Boris's section id = a0000000-0000-4000-8000-000000000407 (i=6, hex 7).
   // When Vasily opens ?authorId=LEAD_MOBILE_PM the form shows Boris's section
   // read-only (isPinnedAuthorView=true in lead-form.tsx:330).
-  // Boris's StageAssignment on PROD_CRM_SALES/STAGE_PLAN means data.products
-  // for his section includes PROD_CRM_SALES alongside PROD_MOBILE.
+  // F1 (v8.3): Boris now owns Plan+Analysis+Design on PROD_CRM, so his section
+  // products array includes PROD_CRM. Adding 2 items + 1 risk on PROD_CRM here
+  // so Vasily sees meaningful cross-author content when drilling in.
   const borisSectionId = `a0000000-0000-4000-8000-000000000407`;
   await prisma.projectStatus.create({
     data: {
@@ -1510,6 +1538,48 @@ async function main() {
       risk: "Sales API rate-limit на пиках нагрузки",
       impact: "Деградация дашборда для отдела продаж",
       mitigation: "PM эскалирует задачу на инфра-команду",
+      severity: "at-risk",
+      stageName: "Planning",
+    },
+  });
+  // F1 (v8.3): Boris's PROD_CRM content — visible when Vasily drills into Boris's section.
+  // ProjectStatus for PROD_CRM is already created in the main leads loop (SECONDARY=[PROD_CRM,...]).
+  await prisma.item.createMany({
+    data: [
+      {
+        id: "a0000000-0000-4000-8000-000000007002",
+        reportSectionId: borisSectionId,
+        type: ItemType.current,
+        projectId: PROD_CRM,
+        text: "PM: согласование требований к модулю портальной аналитики",
+        tag: "analysis",
+        workflowStatus: ItemWorkflowStatus.in_progress,
+        carriedOver: false,
+        completed: false,
+        stageName: "Planning",
+      },
+      {
+        id: "a0000000-0000-4000-8000-000000007003",
+        reportSectionId: borisSectionId,
+        type: ItemType.next,
+        projectId: PROD_CRM,
+        text: "Стартовать дискавери-сессию с командой дизайна",
+        tag: "feature",
+        workflowStatus: ItemWorkflowStatus.in_progress,
+        carriedOver: false,
+        completed: false,
+        stageName: "Analysis",
+      },
+    ],
+  });
+  await prisma.risk.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000009002",
+      reportSectionId: borisSectionId,
+      projectId: PROD_CRM,
+      risk: "Требования к аналитическому модулю не финализированы до старта разработки",
+      impact: "Задержка Design-спринта на 1 неделю",
+      mitigation: "PM фасилитирует воркшоп с заказчиком до пятницы",
       severity: "at-risk",
       stageName: "Planning",
     },

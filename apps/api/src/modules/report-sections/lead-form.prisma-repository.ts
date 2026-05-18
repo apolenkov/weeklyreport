@@ -437,4 +437,93 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
     return row !== null;
   }
+
+  async getCrossAuthors(
+    reportId: string,
+    userId: string,
+  ): Promise<
+    {
+      projectId: string;
+      projectName: string;
+      authorId: string;
+      authorName: string;
+      stageNames: string[];
+      itemCount: number;
+      riskCount: number;
+    }[]
+  > {
+    const myAssignments = await this.prisma.stageAssignment.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+    const myProjectIds = [...new Set(myAssignments.map((r) => r.projectId))];
+    if (myProjectIds.length === 0) return [];
+
+    // Other users' stage assignments on shared projects
+    const others = await this.prisma.stageAssignment.findMany({
+      where: { projectId: { in: myProjectIds }, userId: { not: userId } },
+      select: {
+        projectId: true,
+        project: { select: { id: true, name: true, archived: true } },
+        stage: { select: { name: true } },
+        user: { select: { id: true, name: true } },
+      },
+    });
+
+    // Section stats for other authors in this report
+    const otherUserIds = [...new Set(others.map((o) => o.user.id))];
+    const sections = await this.prisma.reportSection.findMany({
+      where: { reportId, authorId: { in: otherUserIds } },
+      select: {
+        authorId: true,
+        items: { select: { projectId: true } },
+        risks: { select: { projectId: true } },
+      },
+    });
+    const sectionByAuthor = new Map(sections.map((s) => [s.authorId, s]));
+
+    // Group by (projectId, authorId)
+    const grouped = new Map<
+      string,
+      {
+        projectId: string;
+        projectName: string;
+        authorId: string;
+        authorName: string;
+        stageNames: Set<string>;
+        itemCount: number;
+        riskCount: number;
+      }
+    >();
+
+    for (const row of others) {
+      if (row.project.archived) continue;
+      const key = `${row.projectId}::${row.user.id}`;
+      if (!grouped.has(key)) {
+        const section = sectionByAuthor.get(row.user.id);
+        const itemCount = section
+          ? section.items.filter((i) => i.projectId === row.projectId).length
+          : 0;
+        const riskCount = section
+          ? section.risks.filter((r) => r.projectId === row.projectId).length
+          : 0;
+        grouped.set(key, {
+          projectId: row.projectId,
+          projectName: row.project.name,
+          authorId: row.user.id,
+          authorName: row.user.name,
+          stageNames: new Set([row.stage.name]),
+          itemCount,
+          riskCount,
+        });
+      } else {
+        grouped.get(key)?.stageNames.add(row.stage.name);
+      }
+    }
+
+    return [...grouped.values()].map((g) => ({
+      ...g,
+      stageNames: [...g.stageNames],
+    }));
+  }
 }
