@@ -140,6 +140,18 @@ describe("LeadFormService — listVersions (integration)", () => {
       "Can only list versions for your own section",
     );
   });
+
+  it("allows head role to list versions for a foreign section", async () => {
+    const section = makeSection();
+    const versions = makeVersions(2);
+    const sections = new Map([[sectionId, section]]);
+    const repo = createMockRepository(sections, versions);
+    const service = new LeadFormService(repo);
+
+    const result = await service.listVersions(sectionId, otherUserId, "head");
+
+    expect(result).toHaveLength(2);
+  });
 });
 
 describe("LeadFormService — restoreVersion (integration)", () => {

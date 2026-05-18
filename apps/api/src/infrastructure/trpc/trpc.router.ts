@@ -1949,6 +1949,7 @@ export function createAppRouter(deps: RouterDeps) {
             return await deps.leadFormService.listVersions(
               input.reportSectionId,
               ctx.session.userId,
+              ctx.session.role,
             );
           } catch (error) {
             throw mapDomainError(error);
