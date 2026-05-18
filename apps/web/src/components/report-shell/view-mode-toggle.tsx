@@ -24,22 +24,32 @@ function SlidesViewIcon() {
 type ViewModeToggleProps = {
   readonly editHref: string;
   readonly slidesHref: string;
+  readonly mode?: "edit" | "slides";
 };
 
-export function ViewModeToggle({ editHref, slidesHref }: ViewModeToggleProps) {
+export function ViewModeToggle({
+  editHref,
+  slidesHref,
+  mode = "edit",
+}: ViewModeToggleProps) {
+  const activeClass =
+    "bg-[var(--color-starbucks-accent)] text-white";
+  const inactiveClass =
+    "bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]";
+
   return (
     <>
       <Link
         href={editHref}
         scroll={false}
-        className="inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3 text-sm font-semibold text-white transition-colors"
+        className={`inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors ${mode === "edit" ? activeClass : inactiveClass}`}
       >
         Edit
       </Link>
       <Link
         href={slidesHref}
         scroll={false}
-        className="inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-surface)] px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors"
+        className={`inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors ${mode === "slides" ? activeClass : inactiveClass}`}
         aria-label="Open slides mode"
       >
         <SlidesViewIcon />

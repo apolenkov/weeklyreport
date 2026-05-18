@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
 import { Separator } from "@customreport/ui/components/ui/separator";
@@ -1244,13 +1243,13 @@ export function LeadForm({
                 </span>
               ))}
           </div>
-          {!isSlidesMode && (
-            <div className="flex items-center gap-3">
-              {(currentWeekItems.length > 0 ||
-                nextWeekItems.length > 0 ||
-                risks.length > 0 ||
-                decisions.length > 0 ||
-                priorities.length > 0) && (
+          <div className="flex items-center gap-3">
+              {!isSlidesMode &&
+                (currentWeekItems.length > 0 ||
+                  nextWeekItems.length > 0 ||
+                  risks.length > 0 ||
+                  decisions.length > 0 ||
+                  priorities.length > 0) && (
                 <button
                   type="button"
                   className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
@@ -1262,6 +1261,7 @@ export function LeadForm({
                 </button>
               )}
               <ViewModeToggle
+                mode={isSlidesMode ? "slides" : "edit"}
                 editHref={
                   targetReportId
                     ? "/lead/report/" + encodeURIComponent(targetReportId)
@@ -1311,40 +1311,10 @@ export function LeadForm({
                 </button>
               )}
             </div>
-          )}
-          {isSlidesMode && (
-            <div className="flex w-full items-center justify-between gap-2 border-t border-[rgba(0,0,0,0.08)] pt-3">
-              <p className="text-sm text-[var(--color-muted-foreground)]">
-                {currentUser.name}
-                {selectedPeriod
-                  ? ` · ${selectedPeriod.weekLabel}, ${selectedPeriod.dateRange}`
-                  : ""}
-              </p>
-              <div className="flex items-center gap-2">
-                {isSubmitted ? (
-                  <span className="inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.28)] bg-[rgba(229,245,237,0.74)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
-                    ✓ Submitted
-                  </span>
-                ) : null}
-                <Link
-                  href={
-                    targetReportId
-                      ? "/lead/report/" + encodeURIComponent(targetReportId)
-                      : "/lead/report"
-                  }
-                  data-testid="slides-edit-link"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
-                >
-                  ↩ Edit
-                </Link>
-              </div>
-            </div>
-          )}
         </header>
 
         {/* Context shell: period, archive, fill-from, and edit-version controls. */}
-        {!isSlidesMode && (
-          <div className="flex flex-nowrap items-center justify-between gap-2 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
+        <div className="flex flex-nowrap items-center justify-between gap-2 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
             <PeriodNavigator periods={visiblePeriods} />
 
             <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
@@ -1367,7 +1337,6 @@ export function LeadForm({
               />
             </div>
           </div>
-        )}
 
         {/* Read-only banner for past periods. Triggered by either the
             legacy `?period=` query (back-compat) or — 35-07 — when the
