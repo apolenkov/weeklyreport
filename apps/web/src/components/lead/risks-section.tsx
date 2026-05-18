@@ -167,6 +167,16 @@ export function RisksSection({
           // than hiding critical scope behind "+N".
           const stageTagsLabel =
             stageTags.length === 0 ? "All stages" : stageTags.join(", ");
+          // F4: warn when the linked product is at-risk/blocked but no
+          // explicit stage is selected for this risk row.
+          const linkedProductStatus = products?.find(
+            (p) => p.id === risk.productId,
+          )?.overallStatus;
+          const needsStage =
+            !readOnly &&
+            (linkedProductStatus === "at-risk" ||
+              linkedProductStatus === "blocked") &&
+            stageTags.length === 0;
           return (
             <div
               key={risk.id}
@@ -246,6 +256,12 @@ export function RisksSection({
                   </div>
                 </div>
               </div>
+              {/* F4: required-mark when product is at-risk/blocked but no stage selected */}
+              {needsStage && (
+                <p className="mt-2 text-[11px] font-semibold text-[#8a6d1b]">
+                  ⚠ Select at least one stage — required for at-risk/blocked products.
+                </p>
+              )}
               {/* P5: unified [author …… chip] meta-row */}
               <MetaRow
                 authorName={sectionAuthorName}

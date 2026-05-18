@@ -206,10 +206,9 @@ export function NextWeekSection({
               {!readOnly && hasMultipleProducts && (
                 <button
                   type="button"
-                  // KB-5 (Phase 33-04): bumped to min-h 44 to satisfy the
-                  // global tap-target rule (mockup spec); padding tightened so
-                  // the chip still reads like an inline action, not a CTA bar.
-                  className="btn-press inline-flex min-h-[var(--touch-target-min)] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[rgba(0,117,74,0.28)] hover:bg-[var(--color-success)]"
+                  // KB-5 (Phase 33-04): mobile keeps 44px tap-target for a11y;
+                  // md+ (≥768px) matches Current Week etalon at 28px (UAT v8.3).
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[28px] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-3 py-1.5 md:px-2.5 md:py-0.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[rgba(0,117,74,0.28)] hover:bg-[var(--color-success)]"
                   onClick={() => handleAdd(col.productId)}
                   aria-label={`Add item to ${col.productName}`}
                 >
