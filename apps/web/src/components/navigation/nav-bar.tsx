@@ -44,7 +44,14 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   {
     href: "/reports?tab=drafts",
     label: "History",
-    roles: ["lead", "head"],
+    roles: ["lead"],
+  },
+  // Phase 61 (robust-baking-aurora): head gets its own history page with
+  // period navigator and inline form ↔ slides mode toggle.
+  {
+    href: "/head/history",
+    label: "History",
+    roles: ["head"],
   },
   {
     href: "/reports?tab=published",
@@ -107,6 +114,7 @@ function isActiveLink(
 ): boolean {
   if (href === "/admin") return pathname.startsWith("/admin");
   if (href === "/head/report") return pathname.startsWith("/head/report");
+  if (href === "/head/history") return pathname.startsWith("/head/history");
   if (href === "/head/dashboard") return pathname === "/head/dashboard";
   if (href.startsWith("/reports?")) {
     const hrefTab = reportsTabFromHref(href);
@@ -220,6 +228,7 @@ function NavIcon({ href }: { readonly href: string }) {
       return <FileText {...common} />;
     case "/reports?tab=drafts":
     case "/reports?tab=published":
+    case "/head/history":
       return <Clock {...common} />;
     case "/head/dashboard":
       return <LayoutDashboard {...common} />;
