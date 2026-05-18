@@ -12,7 +12,7 @@ import {
   resolveLeadSlideReportId,
 } from "./lead-slide-periods";
 import { SlideSkeleton } from "./slide-skeleton";
-import { StatusSlideDeck } from "./status-slide-deck";
+import { ReportSlides } from "./report-slides";
 import { buildSectionSlideModel } from "./section-slide-utils";
 
 function SlideEmptyState({
@@ -118,10 +118,11 @@ export function LeadSlidesClient({
   }
 
   return (
-    <StatusSlideDeck
+    <ReportSlides
       slides={slides}
       selectedIndex={selectedIndex}
       onSelect={setSelectedIndex}
+      variant="lead"
       title={inReportMode ? "Report slides" : "My Status Slides"}
       subtitle={
         inReportMode
@@ -134,8 +135,6 @@ export function LeadSlidesClient({
       sourceHref={"/lead/report/" + encodeURIComponent(targetReportId)}
       sourceLabel="Open source section"
       hideSourceLink={inReportMode}
-      mode="lead"
-      showChrome={false}
     />
   );
 }
