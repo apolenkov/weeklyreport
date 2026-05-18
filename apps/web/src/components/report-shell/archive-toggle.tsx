@@ -23,7 +23,7 @@ export function ArchiveToggle({ checked, onChange }: ArchiveToggleProps) {
       }`}
     >
       <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-      <span>Show archived</span>
+      <span className="hidden xl:inline">Show archived</span>
     </button>
   );
 }
