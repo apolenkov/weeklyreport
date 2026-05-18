@@ -39,6 +39,7 @@ import { DecisionsSection } from "./decisions-section";
 import { PrioritiesSection } from "./priorities-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RequestReopenDialog } from "./request-reopen-dialog";
+import { CrossAuthorHint } from "./cross-author-hint";
 import { LeadSlidesClient } from "../slides/lead-slides-client";
 import { AccordionSection } from "../report-shell/accordion-section";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
@@ -383,6 +384,31 @@ export function LeadForm({
     }),
     enabled: targetReportId !== "" && !requestedAuthorIdNormalized,
   });
+
+  // F9: derive per-section contributors from crossAuthors data.
+  const crossAuthors = crossAuthorsQ.data ?? [];
+  const risksContributors = crossAuthors
+    .filter((ca) => ca.riskCount > 0)
+    .map((ca) => ({
+      authorId: ca.authorId,
+      authorName: ca.authorName,
+      count: ca.riskCount,
+      label: ca.riskCount === 1 ? "risk" : "risks",
+    }));
+  const itemsContributors = crossAuthors
+    .filter((ca) => ca.itemCount > 0)
+    .map((ca) => ({
+      authorId: ca.authorId,
+      authorName: ca.authorName,
+      count: ca.itemCount,
+      label: ca.itemCount === 1 ? "item" : "items",
+    }));
+  const allSectionContributors = crossAuthors.map((ca) => ({
+    authorId: ca.authorId,
+    authorName: ca.authorName,
+    count: -1,
+    label: "",
+  }));
 
   // 35-07: bare route → replace URL with the canonical addressed form once
   // the active reportId is known. Skipped when:
@@ -1426,6 +1452,10 @@ export function LeadForm({
                   ) : null
                 }
               >
+                <CrossAuthorHint
+                  contributors={itemsContributors}
+                  reportId={targetReportId}
+                />
                 <CurrentWeekSection
                   items={currentWeekItems}
                   readOnly={isReadOnly}
@@ -1464,6 +1494,10 @@ export function LeadForm({
                   ) : null
                 }
               >
+                <CrossAuthorHint
+                  contributors={itemsContributors}
+                  reportId={targetReportId}
+                />
                 <NextWeekSection
                   items={nextWeekItems}
                   readOnly={isReadOnly}
@@ -1507,6 +1541,10 @@ export function LeadForm({
                   ) : null
                 }
               >
+                <CrossAuthorHint
+                  contributors={risksContributors}
+                  reportId={targetReportId}
+                />
                 <LeadFormSyncBridge.Risks />
               </AccordionSection>
             </LeadFormSyncBridge.Provider>
@@ -1537,6 +1575,10 @@ export function LeadForm({
                 ) : null
               }
             >
+              <CrossAuthorHint
+                contributors={allSectionContributors}
+                reportId={targetReportId}
+              />
               <DecisionsSection
                 decisions={decisions}
                 readOnly={isReadOnly}
@@ -1578,6 +1620,10 @@ export function LeadForm({
                   ) : null
                 }
               >
+                <CrossAuthorHint
+                  contributors={allSectionContributors}
+                  reportId={targetReportId}
+                />
                 <PrioritiesSection
                   priorities={priorities}
                   readOnly={isReadOnly}
