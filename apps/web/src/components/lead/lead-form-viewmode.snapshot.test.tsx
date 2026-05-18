@@ -129,6 +129,13 @@ function buildTRPC() {
         }),
         pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
       },
+      crossAuthors: {
+        queryOptions: () => ({
+          queryKey: ["leadForm.crossAuthors"],
+          queryFn: async () => [] as never[],
+        }),
+        pathFilter: () => ({ queryKey: ["leadForm.crossAuthors"] }),
+      },
     },
     ai: {
       onTrack: {

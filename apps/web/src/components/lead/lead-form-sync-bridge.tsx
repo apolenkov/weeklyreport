@@ -14,6 +14,7 @@ import { useStatusRiskSync } from "../../hooks/use-status-risk-sync";
 import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { RisksSection } from "./risks-section";
 import { SdlcPipeline } from "./sdlc-pipeline";
+import type { CrossAuthorEntry } from "./sdlc-pipeline";
 import { splitStageNames, stageNameMatches } from "./stage-tags";
 
 /**
@@ -65,6 +66,10 @@ type BridgeContextValue = {
    */
   sectionAuthorName?: string;
   risksAddSignal?: number;
+  /** F1: cross-author entries for the current report period. */
+  crossAuthors?: readonly CrossAuthorEntry[];
+  /** F1: active reportId for building drill-in URL. */
+  reportId?: string;
   handleStageStatusChange: (
     productId: string,
     stageName: string,
@@ -120,6 +125,10 @@ export type LeadFormSyncBridgeProviderProps = {
    */
   readonly sectionAuthorName?: string;
   readonly risksAddSignal?: number;
+  /** F1: cross-author entries for shared products. */
+  readonly crossAuthors?: readonly CrossAuthorEntry[];
+  /** F1: active reportId for building drill-in URL. */
+  readonly reportId?: string;
   readonly children: ReactNode;
 };
 
@@ -133,6 +142,8 @@ function Provider({
   stagesForProduct,
   sectionAuthorName,
   risksAddSignal,
+  crossAuthors,
+  reportId,
   children,
 }: LeadFormSyncBridgeProviderProps) {
   const [pendingSuggestion, setPendingSuggestion] =
@@ -249,6 +260,8 @@ function Provider({
       ...(stagesForProduct !== undefined ? { stagesForProduct } : {}),
       ...(sectionAuthorName !== undefined ? { sectionAuthorName } : {}),
       ...(risksAddSignal !== undefined ? { risksAddSignal } : {}),
+      ...(crossAuthors !== undefined ? { crossAuthors } : {}),
+      ...(reportId !== undefined ? { reportId } : {}),
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -261,6 +274,8 @@ function Provider({
       stagesForProduct,
       sectionAuthorName,
       risksAddSignal,
+      crossAuthors,
+      reportId,
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -341,6 +356,10 @@ function Pipeline() {
       risks={ctx.risks}
       unbackedStages={unbackedStages}
       {...(ctx.sectionId !== undefined ? { sectionId: ctx.sectionId } : {})}
+      {...(ctx.crossAuthors !== undefined
+        ? { crossAuthors: ctx.crossAuthors }
+        : {})}
+      {...(ctx.reportId !== undefined ? { reportId: ctx.reportId } : {})}
     />
   );
 }

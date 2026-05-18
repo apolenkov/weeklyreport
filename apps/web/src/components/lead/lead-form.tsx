@@ -24,6 +24,10 @@ import {
   useLeadFormAutosave,
   stableStringify,
 } from "../../hooks/use-lead-form-autosave";
+import {
+  computeCoupling,
+  validateCoupling,
+} from "../../hooks/use-status-risk-coupling";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
 import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
@@ -371,6 +375,15 @@ export function LeadForm({
     enabled: sectionIdForActions !== "",
   });
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
+
+  // F1: load other authors who share a product with the current user.
+  // Only relevant when viewing your own section (not a foreign-author view).
+  const crossAuthorsQ = useQuery({
+    ...trpc.leadForm.crossAuthors.queryOptions({
+      reportId: targetReportId,
+    }),
+    enabled: targetReportId !== "" && !requestedAuthorIdNormalized,
+  });
 
   // 35-07: bare route → replace URL with the canonical addressed form once
   // the active reportId is known. Skipped when:
@@ -1082,6 +1095,15 @@ export function LeadForm({
       prioritiesRef.current?.focus();
       return;
     }
+    // F4: at-risk/blocked products must have explicit stages in each risk row
+    const coupling = computeCoupling(products, risks);
+    const { missing } = validateCoupling(coupling);
+    if (missing.length > 0) {
+      toast.error(
+        "Specify stages for at-risk/blocked products in Risks & Blockers.",
+      );
+      return;
+    }
     setSubmitFieldError(null);
     setShowSubmitConfirm(true);
   }
@@ -1385,6 +1407,10 @@ export function LeadForm({
                 ? { sectionAuthorName: currentUser.name }
                 : {})}
               risksAddSignal={risksAddSignal}
+              {...(crossAuthorsQ.data
+                ? { crossAuthors: crossAuthorsQ.data }
+                : {})}
+              {...(targetReportId ? { reportId: targetReportId } : {})}
             >
               <AccordionSection
                 groupSyncKey={groupSyncKey}

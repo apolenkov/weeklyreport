@@ -5,6 +5,16 @@ import { StageChip } from "./stage-chip";
 import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { splitStageNames } from "./stage-tags";
 
+export type CrossAuthorEntry = {
+  projectId: string;
+  projectName: string;
+  authorId: string;
+  authorName: string;
+  stageNames: string[];
+  itemCount: number;
+  riskCount: number;
+};
+
 type SdlcPipelineProps = {
   readonly products: Product[];
   readonly readOnly?: boolean;
@@ -41,6 +51,16 @@ type SdlcPipelineProps = {
     stageName: string;
     severity: "at-risk" | "blocked";
   }[];
+  /**
+   * F1: Cross-author entries for shared products. Grouped by projectId;
+   * rendered as a subtle "Other contributors" row below each product card.
+   * Link drills into foreign-author readonly view (P63 LOCK-01).
+   */
+  readonly crossAuthors?: readonly CrossAuthorEntry[];
+  /**
+   * F1: Active report ID — used to build the ?authorId= drill-in URL.
+   */
+  readonly reportId?: string;
 };
 
 function getProductBackground(status: StageStatus): string {
@@ -62,6 +82,8 @@ export function SdlcPipeline({
   sectionId,
   risks,
   unbackedStages = [],
+  crossAuthors = [],
+  reportId,
 }: SdlcPipelineProps) {
   function handleStatusChange(
     productId: string,
@@ -228,6 +250,47 @@ export function SdlcPipeline({
               </div>
             ))}
           </div>
+
+          {/* F1: cross-author summary — other leads who share this product */}
+          {crossAuthors.filter((ca) => ca.projectId === product.id).length >
+            0 && (
+            <div className="mt-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                Other contributors
+              </p>
+              <ul className="space-y-0.5">
+                {crossAuthors
+                  .filter((ca) => ca.projectId === product.id)
+                  .map((ca) => (
+                    <li
+                      key={`${ca.projectId}::${ca.authorId}`}
+                      className="flex items-center gap-1.5 text-[12px] text-[var(--color-muted-foreground)]"
+                    >
+                      <span className="font-medium text-[var(--color-foreground)]">
+                        {ca.authorName}
+                      </span>
+                      <span aria-hidden="true">·</span>
+                      <span>{ca.stageNames.join(", ")}</span>
+                      <span aria-hidden="true">—</span>
+                      <span>
+                        {ca.itemCount} item{ca.itemCount !== 1 ? "s" : ""}
+                        {ca.riskCount > 0 ? `, ${ca.riskCount} risk` : ""}
+                        {ca.riskCount > 1 ? "s" : ""}
+                      </span>
+                      {reportId && (
+                        <a
+                          href={`/lead/report/${reportId}?authorId=${ca.authorId}`}
+                          className="ml-auto inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)] hover:underline"
+                          aria-label={`View ${ca.authorName}'s section in read-only`}
+                        >
+                          readonly ↗
+                        </a>
+                      )}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
         </div>
       ))}
     </div>
