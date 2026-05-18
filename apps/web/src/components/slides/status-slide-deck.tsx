@@ -179,10 +179,7 @@ function productStoryList({
   }[tone];
 
   return (
-    <section
-      className="min-w-0"
-      data-testid={"lead-slide-story-" + id}
-    >
+    <section className="min-w-0" data-testid={"lead-slide-story-" + id}>
       <div
         className={[
           "flex items-center gap-2 text-[11px] font-bold uppercase",
@@ -246,10 +243,7 @@ function ProductSdlcGroups({
     .join(" ");
 
   return (
-    <div
-      className={productGridClass}
-      data-testid="lead-slide-products"
-    >
+    <div className={productGridClass} data-testid="lead-slide-products">
       {orderedProducts.map((product) => {
         const isSharedContext = product.id === "cross-product";
         const productNumber = realProducts.findIndex(
@@ -361,8 +355,10 @@ function ProductSdlcGroups({
   );
 }
 
-
-function selectedSlide(slides: readonly SectionSlideModel[], index: number): SectionSlideModel | null {
+function selectedSlide(
+  slides: readonly SectionSlideModel[],
+  index: number,
+): SectionSlideModel | null {
   if (slides.length === 0) return null;
   return slides[Math.min(Math.max(index, 0), slides.length - 1)] ?? null;
 }
@@ -519,38 +515,37 @@ export function StatusSlideDeck({
     <section className="space-y-5" data-testid={mode + "-slides-deck"}>
       {showChrome ? (
         <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold text-[var(--color-primary)]">
-            {title}
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--color-muted-foreground)]">
-            {subtitle}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {groupLabel ? (
-            <span className="inline-flex min-h-[2rem] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-medium text-[var(--color-foreground)]">
-              <Layers className="h-4 w-4" aria-hidden="true" />
-              {groupLabel}
-            </span>
-          ) : null}
-          {reportLabel ? (
-            <span className="inline-flex min-h-[2rem] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-medium text-[var(--color-muted-foreground)]">
-              <FileText className="h-4 w-4" aria-hidden="true" />
-              {reportLabel}
-            </span>
-          ) : null}
-          {!hideSourceLink && sourceHref ? (
-            <Link
-              href={sourceHref}
-              className="btn-press inline-flex min-h-[2rem] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)]"
-            >
-              {sourceLabel}
-            </Link>
-          ) : null}
-        </div>
-      </header>
-
+          <div>
+            <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold text-[var(--color-primary)]">
+              {title}
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--color-muted-foreground)]">
+              {subtitle}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {groupLabel ? (
+              <span className="inline-flex min-h-[2rem] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-medium text-[var(--color-foreground)]">
+                <Layers className="h-4 w-4" aria-hidden="true" />
+                {groupLabel}
+              </span>
+            ) : null}
+            {reportLabel ? (
+              <span className="inline-flex min-h-[2rem] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-medium text-[var(--color-muted-foreground)]">
+                <FileText className="h-4 w-4" aria-hidden="true" />
+                {reportLabel}
+              </span>
+            ) : null}
+            {!hideSourceLink && sourceHref ? (
+              <Link
+                href={sourceHref}
+                className="btn-press inline-flex min-h-[2rem] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)]"
+              >
+                {sourceLabel}
+              </Link>
+            ) : null}
+          </div>
+        </header>
       ) : null}
 
       {showChrome && toolbar ? <div>{toolbar}</div> : null}
