@@ -8,7 +8,7 @@ import { logClientError } from "../../lib/client-error-reporting";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { SlideSkeleton } from "./slide-skeleton";
-import { StatusSlideDeck } from "./status-slide-deck";
+import { ReportSlides } from "./report-slides";
 import {
   buildActivitySlideModel,
   buildSectionSlideModel,
@@ -120,17 +120,17 @@ export function HeadSlidesClient({ reportId }: HeadSlidesClientProps = {}) {
   }
 
   return (
-    <StatusSlideDeck
+    <ReportSlides
       slides={slides}
       selectedIndex={selectedIndex}
       onSelect={setSelectedIndex}
+      variant="head"
       title="Group Status Slides"
       subtitle="Group deck ordered by review risk before publishing."
       groupLabel={session?.user?.reportingGroupName ?? "Group scope"}
       reportLabel={reportLabel}
       sourceHref={sourceHref}
       sourceLabel="Open focused report"
-      mode="head"
     />
   );
 }
