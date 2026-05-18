@@ -34,12 +34,20 @@ function SlideEmptyState({
   );
 }
 
-export function HeadSlidesClient() {
+type HeadSlidesClientProps = {
+  /** When provided, loads slides for that specific report period instead of
+   * the current active period. Used by HeadReportShell slides mode. */
+  readonly reportId?: string;
+};
+
+export function HeadSlidesClient({ reportId }: HeadSlidesClientProps = {}) {
   const trpc = useTRPC();
   const session = useContext(SessionContext);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
+  const weeklyQ = useQuery(
+    trpc.weeklyReport.get.queryOptions(reportId ? { reportId } : {}),
+  );
   const activityQ = useQuery(trpc.activity.live.queryOptions());
 
   useEffect(() => {
@@ -71,7 +79,7 @@ export function HeadSlidesClient() {
 
   const selectedSlide =
     slides[Math.min(Math.max(selectedIndex, 0), slides.length - 1)] ?? null;
-  const reportId =
+  const activeReportId =
     weeklyQ.data && weeklyQ.data.status === "active"
       ? weeklyQ.data.reportId
       : null;
@@ -82,9 +90,9 @@ export function HeadSlidesClient() {
         formatWeekRange(weeklyQ.data.periodStart, weeklyQ.data.periodEnd)
       : null;
   const sourceHref =
-    reportId && selectedSlide
+    activeReportId && selectedSlide
       ? "/head/report/" +
-        encodeURIComponent(reportId) +
+        encodeURIComponent(activeReportId) +
         "?authorId=" +
         encodeURIComponent(selectedSlide.ownerId)
       : undefined;
