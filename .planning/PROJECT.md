@@ -8,7 +8,21 @@
 
 Лиды заполняют свои секции независимо через удобную форму, система автоматически собирает единый отчёт — без конфликтов редактирования, с историей и аналитикой.
 
-## Current State: v5.0 SHIPPED (2026-04-25)
+## Current State: v8.2 SHIPPED (2026-05-18)
+
+**v8.2 GSD Closure & Quality** — 5 phases (67-71), 18 commits, 472/472 tests, tag `v8.2.0`.
+
+- All v8.1 verification gaps closed (P14, P16, P35, P37, P39 → all `passed`)
+- All 6 tech debt items from v8.1 audit resolved (TD-01..06 — audit events, group-scope, perf tests, scheduler wiring)
+- Dead `describe.skip` e2e blocks retired (Period UI removed in v8.1); `e2e/README.md` added
+- Planning hygiene: 7 plans archived, PNG artefacts cleaned, `HEAD-CONSOLIDATE-01` + `UFB-061` resolved
+- `ComingSoonBadge` shared component in `packages/ui` — 6 call-sites migrated
+
+**Next milestone:** v8.3 (UAT + deferred items: E2E-04/05 stubs, CS-02 role-gate, CS-08 screenshots)
+
+---
+
+## Previous: v5.0 SHIPPED (2026-04-25)
 
 **What was delivered (Phases 20-26, 15 plans, 50 commits, +23,646/-2,443 LOC across 170 files):**
 
