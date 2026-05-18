@@ -394,12 +394,11 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
 
           <div className="mx-auto my-10 h-px w-full max-w-[320px] bg-[#ece8e2]" />
 
-          {/* TODO(UFB-061): version string hardcoded. Surface from
-              build-time env (NEXT_PUBLIC_APP_VERSION) injected by CI
-              so the footer never lies about prod. CLAUDE.md TODO
-              discipline rule applies. */}
           <p className="text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
             {orgFullName}
+            {process.env.NEXT_PUBLIC_APP_VERSION && (
+              <> · v{process.env.NEXT_PUBLIC_APP_VERSION}</>
+            )}
           </p>
         </div>
       </div>
