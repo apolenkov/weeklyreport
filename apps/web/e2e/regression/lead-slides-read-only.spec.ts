@@ -23,7 +23,7 @@ test.describe("lead slides read-only mode", () => {
     page,
   }) => {
     await page.goto(WEB + "/lead/report");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     // Get the current URL after redirect (contains reportId)
     const reportUrl = page.url();
@@ -32,7 +32,7 @@ test.describe("lead slides read-only mode", () => {
       : reportUrl + "?mode=slides";
 
     await page.goto(slidesUrl);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     // (a) No period navigator / version history toolbar
     await expect(
@@ -67,7 +67,7 @@ test.describe("lead slides read-only mode", () => {
     page,
   }) => {
     await page.goto(WEB + "/lead/report");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     const reportUrl = page.url();
     const slidesUrl = reportUrl.includes("?")
@@ -75,7 +75,7 @@ test.describe("lead slides read-only mode", () => {
       : reportUrl + "?mode=slides";
 
     await page.goto(slidesUrl);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     // (d) Lead slide deck is rendered
     const deck = page.locator('[data-testid="lead-slides-deck"]');
