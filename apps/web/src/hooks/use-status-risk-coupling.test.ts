@@ -10,8 +10,9 @@ function makeProduct(
   id: string,
   status: Product["overallStatus"],
   name = "Product " + id,
+  stages: Product["stages"] = [],
 ): Product {
-  return { id, name, overallStatus: status, stages: [] };
+  return { id, name, overallStatus: status, stages };
 }
 
 function makeRisk(
@@ -105,6 +106,44 @@ describe("computeCoupling", () => {
   });
 });
 
+describe("computeCoupling — stagesWithoutRiskCoverage (F10)", () => {
+  it("flags blocked stage with no covering risk row", () => {
+    const product = makeProduct("p1", "blocked", "P1", [
+      { stageName: "dev", status: "blocked", ownership: "mine", assignee: null },
+    ]);
+    const result = computeCoupling([product], []);
+    expect(result[0].stagesWithoutRiskCoverage).toEqual([
+      { stageName: "dev", severity: "blocked" },
+    ]);
+  });
+
+  it("clears flag when risk row covers the stage via stageIds", () => {
+    const product = makeProduct("p1", "at-risk", "P1", [
+      { stageName: "planning", status: "at-risk", ownership: "mine", assignee: null },
+    ]);
+    const risk = makeRisk("r1", "p1", ["planning"]);
+    const result = computeCoupling([product], [risk]);
+    expect(result[0].stagesWithoutRiskCoverage).toEqual([]);
+  });
+
+  it("clears flag when risk row has empty stageIds (covers all stages)", () => {
+    const product = makeProduct("p1", "blocked", "P1", [
+      { stageName: "dev", status: "blocked", ownership: "mine", assignee: null },
+    ]);
+    const risk = makeRisk("r1", "p1", []);
+    const result = computeCoupling([product], [risk]);
+    expect(result[0].stagesWithoutRiskCoverage).toEqual([]);
+  });
+
+  it("ignores on-track stages", () => {
+    const product = makeProduct("p1", "at-risk", "P1", [
+      { stageName: "qa", status: "on-track", ownership: "mine", assignee: null },
+    ]);
+    const result = computeCoupling([product], []);
+    expect(result[0].stagesWithoutRiskCoverage).toEqual([]);
+  });
+});
+
 describe("validateCoupling", () => {
   it("returns empty missing when no coupling issues", () => {
     const coupling = [
@@ -113,6 +152,7 @@ describe("validateCoupling", () => {
         productName: "P1",
         status: "at-risk" as const,
         riskRowsWithoutStages: [],
+        stagesWithoutRiskCoverage: [],
       },
     ];
     expect(validateCoupling(coupling).missing).toEqual([]);
@@ -125,12 +165,14 @@ describe("validateCoupling", () => {
         productName: "P1",
         status: "blocked" as const,
         riskRowsWithoutStages: ["r1", "r2"],
+        stagesWithoutRiskCoverage: [],
       },
       {
         productId: "p2",
         productName: "P2",
         status: "at-risk" as const,
         riskRowsWithoutStages: [],
+        stagesWithoutRiskCoverage: [],
       },
     ];
     expect(validateCoupling(coupling).missing).toEqual(["p1"]);
