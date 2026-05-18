@@ -582,9 +582,7 @@ describe("LeadForm mutation wiring", () => {
       await flushAll();
     });
 
-    expect(screen.getByTitle(/View version history/i)).toHaveTextContent(
-      "Version2",
-    );
+    expect(screen.getByTitle(/View version history/i)).toHaveTextContent("v2");
 
     act(() => {
       screen.getByRole("button", { name: /^Previous version$/i }).click();
@@ -593,9 +591,7 @@ describe("LeadForm mutation wiring", () => {
       await flushAll();
     });
 
-    expect(screen.getByTitle(/View version history/i)).toHaveTextContent(
-      "Version1",
-    );
+    expect(screen.getByTitle(/View version history/i)).toHaveTextContent("v1");
     expect(calls.filter((c) => c.type === "restoreVersion")).toHaveLength(0);
   });
 
