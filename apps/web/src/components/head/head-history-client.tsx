@@ -85,27 +85,32 @@ export function HeadHistoryClient() {
     return <WeeklyReportSkeleton />;
   }
 
-  if (!periods.length) {
-    return (
-      <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-12 text-center text-sm text-[var(--color-muted-foreground)]">
-        No published reports found.
-      </div>
-    );
-  }
-
+  // Always render the toolbar so the ArchiveToggle is reachable even when all
+  // periods are archived and the current filter returns nothing. The empty state
+  // is scoped to the content area only.
   return (
     <div className="space-y-4">
-      {/* Toolbar: period nav + archive toggle + mode toggle */}
+      {/* Toolbar: period nav (only when periods exist) + archive toggle + mode toggle */}
       <div className="flex flex-wrap items-center justify-between gap-3 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
-        <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
+        {periods.length > 0 && (
+          <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
+        )}
         <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
-        <div className="flex gap-1">
-          <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
-        </div>
+        {periods.length > 0 && (
+          <div className="flex gap-1">
+            <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
+          </div>
+        )}
       </div>
 
       {/* Content */}
-      {selectedPeriodId ? (
+      {periods.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-12 text-center text-sm text-[var(--color-muted-foreground)]">
+          {includeArchive
+            ? "No published reports found."
+            : "No published reports found. Try enabling archived periods."}
+        </div>
+      ) : selectedPeriodId ? (
         mode === "slides" ? (
           <Suspense fallback={<SlideSkeleton />}>
             <HeadSlidesClient reportId={selectedPeriodId} />
