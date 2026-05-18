@@ -198,7 +198,6 @@ function CollapseIcon() {
   );
 }
 
-
 /**
  * Build a `draftSaveSchema`-compatible payload from the raw API section. The
  * raw shape carries every field the schema requires (owner/impact on
@@ -1308,10 +1307,7 @@ export function LeadForm({
             <PeriodNavigator periods={visiblePeriods} />
 
             <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
-              <Separator
-                orientation="vertical"
-                className="h-5 opacity-40"
-              />
+              <Separator orientation="vertical" className="h-5 opacity-40" />
               <ArchiveToggle
                 checked={showArchivePeriods}
                 onChange={setShowArchivePeriods}
@@ -1321,10 +1317,7 @@ export function LeadForm({
                 disabled={isReadOnly || fillFromMut.isPending}
                 onFillFrom={handleFillFrom}
               />
-              <Separator
-                orientation="vertical"
-                className="h-5 opacity-40"
-              />
+              <Separator orientation="vertical" className="h-5 opacity-40" />
               <VersionHistoryNav
                 versions={versions}
                 onRestore={isReadOnly ? undefined : handleRestoreVersion}
