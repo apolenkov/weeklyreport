@@ -3,7 +3,7 @@
 **Project:** Team Status Reporting Web App
 **Created:** 2026-04-06
 **Granularity:** Coarse
-**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: shipped 2026-05-06 (26 plan files, 27 summaries; 35-02 subsumed by 35-08) | v8.1: Closure & Recovery active; current release gate is UAT/recovery + PR #5 CI, with theme/i18n/MOB-PARKED/AI/telemetry work parked to `.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
+**Coverage:** v1.0: 29/29 | v2.0: 55/55 | v4.0: 46/46 | v5.0: 48/48 | v6.0: 37/37 | v7.0: ABSORBED into v8.0 | v8.0: shipped 2026-05-06 (26 plan files, 27 summaries; 35-02 subsumed by 35-08) | v8.1: shipped 2026-05-18 (tag v8.1.0), 24 phases, 37 plans, 19/19 requirements, 472/472 tests | v8.2: GSD Closure & Quality — Phases 67-71 (active)
 
 ---
 
@@ -18,6 +18,7 @@
 - [ ] ~~**v7.0 Stabilisation & Hardening**~~ — ABSORBED into v8.0 (Phases 32-33 became sub-plans of 34-35); see [v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md) for historical context
 - [x] **v8.0 Production Readiness** - Phases 34-39 (shipped 2026-05-06, 26 plan files, 27 summaries) — [details](milestones/v8.0-ROADMAP.md)
 - [x] **v8.1 Closure & Recovery** - shipped 2026-05-18 (tag v8.1.0); 24 phases, 37 plans, 19/19 requirements, 472/472 tests — [details](milestones/v8.1-ROADMAP.md)
+- [ ] **v8.2 GSD Closure & Quality** - Phases 67-71 (active 2026-05-18)
 
 ## Phases
 
@@ -650,6 +651,76 @@ A35 viewer-based director-facing flow where no external blocker exists.
 
 </details>
 
+<details>
+<summary>v8.2 GSD Closure &amp; Quality (Phases 67-71) — ACTIVE 2026-05-18</summary>
+
+### Phase 67: Verification Closure
+
+**Goal**: Close all 5 phases with verification gaps (P14, P16, P35, P37, P39) to `status: passed`.
+**Requirements**: VER-01, VER-02, VER-03, VER-04, VER-05, VER-06, VER-07, VER-08, VER-09
+**Success Criteria**:
+
+1. Zero VERIFICATION.md files with `status:` other than `passed` across phases 14/16/35/37/39
+2. Each retired gap has written rationale in SUMMARY.md or VERIFICATION.md
+3. V1/V3/V5 todos from `2026-05-16-fit2-v7-uat-verify-items.md` resolved or deferred with rationale
+4. `pnpm typecheck && pnpm lint && pnpm test` all green
+   **Plans**: 0/1 complete.
+
+### Phase 68: Tech Debt Sweep
+
+**Goal**: Close TD-01..06 from v8.1-MILESTONE-AUDIT.md — each with code change + test.
+**Requirements**: TD-01, TD-02, TD-03, TD-04, TD-05, TD-06
+**Success Criteria**:
+
+1. `scopeDenied` audit event fires in group-scope deny path (TD-01)
+2. Cross-group Prisma integration test exists and passes (TD-02)
+3. `search.service.ts` uses `groupScopeFilter` helper (TD-03)
+4. ReminderPolicy editor Playwright spec runs in regression config (TD-04)
+5. PolicyApplicator fan-out perf test exists (TD-05)
+6. Period creation via scheduler + period.service triggers `.applyToPeriod()` (TD-06)
+   **Plans**: 0/1 complete.
+
+### Phase 69: E2E Coverage
+
+**Goal**: Unblock 3 `describe.skip` in admin e2e; implement critical-path TODO stubs; verify foreign-author spec.
+**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, E2E-07
+**Success Criteria**:
+
+1. Zero `describe.skip` in admin-advanced.spec.ts and admin-panel.spec.ts (or retired with rationale)
+2. Reopen+Revoke flow stubs implemented and green in regression
+3. page-title / Esc / focus-trap a11y stubs implemented
+4. `lead-form-foreign-author.spec.ts` included in regression config and passes
+5. `e2e/README.md` exists with mandatory vs advisory classification
+   **Plans**: 0/1 complete.
+
+### Phase 70: Planning Hygiene
+
+**Goal**: Archive historical plans, clean .png artefacts, fix MEMORY drift, resolve HEAD-CONSOLIDATE-01 and UFB-061.
+**Requirements**: HYG-01, HYG-02, HYG-03, HYG-04, HYG-05, HYG-06, HYG-07
+**Success Criteria**:
+
+1. `.planning/plans/*.md` top-level count ≤ 1 (only pure-mist plan file)
+2. Repo root has zero `.png` files
+3. `TODO(HEAD-CONSOLIDATE-01)` resolved — `/head/slides` redirects to `/head/history?mode=slides`
+4. Login footer shows build version via `NEXT_PUBLIC_APP_VERSION`
+5. Phase 43 has SUMMARY.md in `.planning/phases/43-tooling-leaf-fix-sweep/`
+   **Plans**: 0/1 complete.
+
+### Phase 71: Coming Soon Visibility
+
+**Goal**: Consistent role-gated `<ComingSoonCard>` component replacing 6+ inline placeholders; screenshots for management.
+**Requirements**: CS-01, CS-02, CS-03, CS-04, CS-05, CS-06, CS-07, CS-08
+**Success Criteria**:
+
+1. `packages/ui` exports `<ComingSoonCard>` with all required props
+2. 6 call-sites use the shared component (verified via `git grep -c "ComingSoonCard" apps/web/src/`)
+3. Role-gate works: admin-only cards not visible to lead role
+4. Screenshots in `.planning/ui-reviews/v8.2/` showing all 6 card states
+5. `pnpm typecheck && pnpm test` green after component introduction
+   **Plans**: 0/1 complete.
+
+</details>
+
 ---
 
 _Roadmap created: 2026-04-06_
@@ -660,3 +731,5 @@ _v4.0 shipped: 2026-04-25_
 _v5.0 shipped: 2026-04-25_
 _v6.0 planning started: 2026-04-28_
 _v8.0 planning started: 2026-05-05_
+_v8.1 shipped: 2026-05-18_
+_v8.2 planning started: 2026-05-18_

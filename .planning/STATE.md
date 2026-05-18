@@ -1,23 +1,22 @@
 ---
 gsd_state_version: 1.0
 milestone: v8.2
-milestone_name: Next Milestone
-status: between_milestones
-stopped_at: v8.1 shipped 2026-05-18 (tag v8.1.0)
-last_updated: "2026-05-18T14:30:00.000Z"
-last_activity: 2026-05-18 -- v8.1 SHIPPED. LOCK-01 done (lock badge for foreign-author view, commits fb9e138+0463aea). Tag v8.1.0 created and pushed. /gsd-complete-milestone v8.1 executed.
+milestone_name: GSD Closure & Quality
+status: in_progress
+last_updated: "2026-05-18T14:45:00.000Z"
+last_activity: 2026-05-18 -- Milestone v8.2 started. REQUIREMENTS.md + ROADMAP.md phases 67-71 written. Starting Phase 67 Verification Closure.
 progress:
-  total_phases: 24
-  completed_phases: 24
-  total_plans: 37
-  completed_plans: 37
-  percent: 100
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** v8.1 SHIPPED 2026-05-18 (tag v8.1.0) — between milestones
+**Status:** v8.2 GSD Closure & Quality — IN PROGRESS (Phase 67 starting)
 **Last Updated:** 2026-05-18
 
 ---
@@ -36,16 +35,10 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Milestone: v8.1 SHIPPED 2026-05-18 (tag v8.1.0)
-24/24 phases complete. 37/37 plans complete. PRs #5 and #6 merged to main.
-
-Key deliverables in v8.1:
-
-- GSD state normalization (closure phases 61-66)
-- Phase 16/17 UAT resolved and verified
-- Regression baseline restored (472/472 tests)
-- Head report history + slides mode (Phase 61 head variant)
-- LOCK-01: foreign-author lock badge on /lead/report
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-18 — Milestone v8.2 started
 
 ## Deferred Items
 
@@ -198,6 +191,7 @@ are stale artifact slugs from archived sessions — not active work items.
 - **Phase 16 PDF/theme deferred to backlog** — PDF export gate and theme toggle are product
   decisions, not sprint blockers. Moved to v8.1 backlog phase as explicit ADR items.
   Phase 17 UAT: 10 PASS / 0 FAIL — closed 2026-05-14.
+
 - **Regression gate partially incomplete** — phase 17 live role/route UAT now has
   scenario-correlated screenshots/log capture, but action-log evidence, correlation-id UX,
   and background/surface token batch remain planned work.
@@ -207,6 +201,7 @@ are stale artifact slugs from archived sessions — not active work items.
 - **Product-ready gate** — domain-model regressions (StageAssignment, per-stage status,
   multi-stage tagging) were addressed in v8.0 polish waves. Phase 17 UAT confirms 10/0.
   Gate closed.
+
 - **260426-vxp** — Integration suite first-run completed (8/21 pass, 5 classified for
   v6.0 backlog). Vitest mock fix green (172/0). Phase 24 proxy matcher closed.
   See `.planning/quick/260426-vxp-*/RESOLUTION.md`.
