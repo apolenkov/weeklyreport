@@ -14,3 +14,4 @@
 - [Phase 61 head history+slides 2026-05-18](project_phase61_head_history_2026_05_18.md) — head gets /head/history + /head/report ?mode toggle; nav History → /head/history; push blocked SSL
 - [peo-plan rich-mode (global)](feedback_peo_plan_richmode_global.md) — every plan ≥3 steps or multi-file must use peo-plan rich-mode with 15-section template + 3 Mermaid TB diagrams, applies ALL repos
 - [LOCK-01 + data source lesson 2026-05-18](project_lock01_2026_05_18.md) — lock badge on foreign-author view done; currentUser.name ≠ section author; use draftSection.authorName
+- [v8.2 milestone closed 2026-05-18](project_v8_2_closed_2026_05_18.md) — v8.2 SHIPPED (tag v8.2.0), 5 phases/19 commits, push pending SSL; next v8.3 UAT
