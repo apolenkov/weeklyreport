@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Archive } from "lucide-react";
+import { ArchiveToggle } from "../report-shell/archive-toggle";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
@@ -1278,22 +1278,10 @@ export function LeadForm({
           <div className="flex flex-nowrap items-center justify-between gap-3 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
             <PeriodNavigator periods={visiblePeriods} />
 
-            <label
-              className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2 text-[13px] font-semibold text-[var(--color-foreground)]"
-              title="Show archived periods"
-            >
-              <input
-                type="checkbox"
-                checked={showArchivePeriods}
-                onChange={(event) =>
-                  setShowArchivePeriods(event.currentTarget.checked)
-                }
-                className="h-4 w-4 accent-[var(--color-starbucks-accent)]"
-                aria-label="Show archived periods"
-              />
-              <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Show archived</span>
-            </label>
+            <ArchiveToggle
+              checked={showArchivePeriods}
+              onChange={setShowArchivePeriods}
+            />
 
             <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
               <FillFromButton

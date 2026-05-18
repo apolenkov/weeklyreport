@@ -19,6 +19,13 @@ const PERIOD_SELECT_WIDTH_CH = 24;
 
 type PeriodNavigatorProps = {
   readonly periods: ReportPeriod[];
+  /**
+   * Optional URL builder for navigation. When provided, replaces the default
+   * lead-specific `/lead/report/<periodId>` path construction so the navigator
+   * can be reused by other roles (e.g. head history with `?period=` query style).
+   * Receives the target periodId; must return the full href to push.
+   */
+  readonly urlBuilder?: (periodId: string) => string;
 };
 
 function ChevronLeft() {
@@ -56,7 +63,7 @@ function ChevronRight() {
 export const PERIOD_NAV_ARROW_BUTTON_CLASS =
   "inline-flex min-h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
 
-export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
+export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -92,16 +99,17 @@ export function PeriodNavigator({ periods }: PeriodNavigatorProps) {
 
   const navigateTo = useCallback(
     (periodId: string) => {
-      // 35-07: emit path-segment URLs so each addressed period has a
-      // shareable / bookmarkable URL. We use `router.push` (not replace)
-      // so the browser back button walks the period history one week at
-      // a time, matching the user's expectation of "back goes one period".
+      if (urlBuilder) {
+        router.push(urlBuilder(periodId));
+        return;
+      }
+      // Default: lead path-segment URLs — bookmarkable, back-button-friendly.
       const next = new URLSearchParams(searchParams.toString());
       next.delete("period");
       const query = next.toString();
       router.push(`${LEAD_REPORT_BASE}/${periodId}${query ? `?${query}` : ""}`);
     },
-    [router, searchParams],
+    [router, searchParams, urlBuilder],
   );
 
   function handlePrev() {
