@@ -84,6 +84,25 @@ describe("computeCoupling", () => {
     expect(result[0].productId).toBe("p2");
     expect(result[0].riskRowsWithoutStages).toEqual(["r2"]);
   });
+
+  it("does not falsely reject when staged risk exists alongside an empty row", () => {
+    // Caller is responsible for filtering out uncommitted (empty text) rows
+    // before passing to computeCoupling — this test verifies that once the
+    // caller filters them, a staged row is not rejected.
+    const products = [makeProduct("p1", "at-risk")];
+    // Simulate what handleSubmit does: filter out empty rows before coupling check.
+    const allRisks = [
+      makeRisk("r1", "p1", ["planning"]), // filled + staged
+      { ...makeRisk("r2", "p1"), text: "", mitigation: "" }, // empty, not committed
+    ];
+    const committedRisks = allRisks.filter(
+      (r) => r.text.trim().length > 0 && r.mitigation.trim().length > 0,
+    );
+    const result = computeCoupling(products, committedRisks);
+    // Only r1 remains after filter; r1 has stageIds → no coupling violation
+    expect(result[0].riskRowsWithoutStages).toEqual([]);
+    expect(validateCoupling(result).missing).toEqual([]);
+  });
 });
 
 describe("validateCoupling", () => {
