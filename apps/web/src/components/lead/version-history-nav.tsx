@@ -177,7 +177,7 @@ export function VersionHistoryNav({
           title="View version history — compare and roll back"
           aria-label={`Version ${currentVersion?.version ?? "—"} — open history`}
         >
-          <span className="text-xs font-medium">
+          <span className="inline-block w-[36px] text-center text-xs font-medium tabular-nums">
             v{currentVersion?.version}
           </span>
         </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Product, RiskEntry } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 
@@ -141,9 +142,33 @@ export function RiskEditDialog({
     products.find((p) => p.id === productId)?.name ?? "";
   const headerVerb = isCreate ? "Add Risk" : "Edit Risk";
 
+  function deriveSeverityFromStages(
+    selectedStageIds: string[],
+    forProductId: string,
+  ): "at-risk" | "blocked" {
+    if (selectedStageIds.length === 0) return "at-risk";
+    const product = products.find((p) => p.id === forProductId);
+    if (!product) return "at-risk";
+    const matched = product.stages.filter((s) =>
+      selectedStageIds.includes(s.stageName),
+    );
+    if (matched.some((s) => s.status === "blocked")) return "blocked";
+    if (matched.some((s) => s.status === "at-risk")) return "at-risk";
+    return "at-risk";
+  }
+
+  function handleStageChange(nextStageIds: string[]) {
+    setStageIds(nextStageIds);
+    if (isCreate) setSeverity(deriveSeverityFromStages(nextStageIds, productId));
+  }
+
   function setProductAndStages(nextProductId: string) {
+    const nextStageIds = stagesForProduct
+      ? [...stagesForProduct(nextProductId)]
+      : [];
     setProductId(nextProductId);
-    setStageIds(stagesForProduct ? [...stagesForProduct(nextProductId)] : []);
+    setStageIds(nextStageIds);
+    if (isCreate) setSeverity(deriveSeverityFromStages(nextStageIds, nextProductId));
   }
 
   function handleSave() {
@@ -186,7 +211,7 @@ export function RiskEditDialog({
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}
@@ -334,7 +359,7 @@ export function RiskEditDialog({
             id="risk-stage"
             value={stageIds}
             stages={stagesForProduct?.(productId) ?? []}
-            onChange={setStageIds}
+            onChange={handleStageChange}
           />
 
           {/* Severity chips */}
@@ -412,6 +437,7 @@ export function RiskEditDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
