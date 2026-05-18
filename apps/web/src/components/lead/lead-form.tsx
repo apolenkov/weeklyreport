@@ -1189,7 +1189,7 @@ export function LeadForm({
                 Your report draft and status context.
               </p>
             </div>
-            {isPinnedAuthorView && !isSlidesMode && currentUser.name && (
+            {isPinnedAuthorView && !isSlidesMode && draftSection.authorName && (
               <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-muted)] px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)]">
                 <svg
                   viewBox="0 0 16 16"
@@ -1204,7 +1204,7 @@ export function LeadForm({
                   <rect x="3" y="7" width="10" height="8" rx="1" />
                   <path d="M5 7V5a3 3 0 016 0v2" />
                 </svg>
-                {currentUser.name}
+                {draftSection.authorName}
               </span>
             )}
             {/* LF-3 (Phase 33-04): submitted state now uses the .b-ok variant
