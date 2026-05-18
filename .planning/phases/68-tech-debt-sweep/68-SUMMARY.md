@@ -16,9 +16,9 @@ Close TD-01..TD-06 accumulated in the v8.1 milestone audit. Each item was deferr
 
 ### TD-01 — `scopeDenied` audit event wired (Phase 46 audit emit)
 
-`apps/api/src/modules/search/search.service.ts`: added `scopeDenied` audit emission for `SearchAuthorizationError` path. The `scopeAccessed` envelope in `weekly-report.prisma-repository.ts` depends on TD-01 being present; both are now live.
+`apps/api/src/infrastructure/trpc/trpc.router.ts`: `ctx.auditLogger.scopeDenied()` emitted before `throw new TRPCError(FORBIDDEN)` in the `search.query` handler's `SearchAuthorizationError` catch block. `resourceId` carries the search query string so SIEM rules can detect cross-scope probing patterns.
 
-Commit: `feat(api): TD-01 — wire scopeDenied audit event in SearchService`
+Commit: `b1859ba fix(api): TD-01 — emit scopeDenied on SearchAuthorizationError in search path`
 
 ### TD-02 — Cross-group Prisma integration test matrix
 
