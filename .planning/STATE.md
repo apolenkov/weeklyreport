@@ -73,6 +73,7 @@ green for the pushed closure commit.
 | 59 Multi Org Hierarchy        | `59-SUMMARY.md`                           | deferred                                                                                                                                                                  |
 | 60 Presentation Mode          | `60-SUMMARY.md`                           | deferred                                                                                                                                                                  |
 | 61 Head Report+History Slides | `.planning/plans/robust-baking-aurora.md` | complete — branch `feat/head-report-history-slides`, 472/472 tests, 2026-05-18. TODO(HEAD-CONSOLIDATE-01) left in `/head/slides/page.tsx` for future route consolidation. |
+| 61b V2 Slides read-only       | `.planning/plans/image-1-velvet-pixel.md` | CLOSED locally, awaiting push + visual sign-off. 472/472 tests, typecheck + lint clean. SSL blocks push to forge.example.org.                                              |
 
 ### v8.0 phase progress
 
