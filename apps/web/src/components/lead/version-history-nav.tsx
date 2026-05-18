@@ -57,23 +57,6 @@ function ChevronRight() {
   );
 }
 
-function HistoryIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M1 4v6h6" />
-      <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
-    </svg>
-  );
-}
-
 function SaveIcon() {
   // Floppy-disk save icon — leans into the "checkpoint" mental model that
   // sits well next to the v# pill. Same stroke-width as the rest of the
@@ -192,10 +175,11 @@ export function VersionHistoryNav({
           className="inline-flex min-h-8 items-center gap-1 rounded-md border border-[var(--color-muted)] bg-[var(--color-background)] px-2 font-[family-name:var(--font-sans)] text-[12px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
           onClick={() => setShowModal(true)}
           title="View version history — compare and roll back"
+          aria-label={`Version ${currentVersion?.version ?? "—"} — open history`}
         >
-          <HistoryIcon />
-          <span className="text-xs font-medium">Version</span>
-          {currentVersion?.version}
+          <span className="text-xs font-medium">
+            v{currentVersion?.version}
+          </span>
         </button>
 
         <button
