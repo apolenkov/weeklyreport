@@ -3,4 +3,12 @@
 - [Docker dev stale code](feedback_docker_dev_stale_code.md) — api/web контейнеры с `node --watch` после 24h+ uptime молча перестают перезагружаться; перед UAT всегда `docker compose restart api web`
 - [Night UAT + R4-B 2026-05-11/12](project_night_uat_2026_05_11.md) — PR #2 готов (152 коммита), R4-B productId полностью закрыт (5 мест записи)
 - [UAT v7.4 + .jira rework 2026-05-13](project_uat_v74_2026_05_13.md) — PR #3 готов (49 коммитов), 45/45 тестов, H-1/H-2/H-3 блокируют prod-деплой
+- [Jira PRJ лейблы + Tempo не используется](feedback_jira_prj_labels.md) — prj:pulse (не customreport), Tempo/worklog/ФНС убрать из .jira
+- [Prettier debt cleared 2026-05-13](project_prettier_debt_cleared.md) — apps/web/src/ baseline чистый с 2026-05-13; новые нарушения = свежие, не pre-existing
 - [Night marathon 2026-05-14](2026-05-14-night-marathon.md) — PR #4 открыт (50 коммитов); 25+ D-\* точек закрыты; docker DB → customreport_uat; Playwright spec создан
+- [Post-marathon sprint 2026-05-14](2026-05-14-grafana-audit.md) — Grafana :3003 (не :3000!); Prometheus healthy; API down; Turbopack уже adopted (Phase 39)
+- [Post-marathon sprint closure 2026-05-14](../../work/customreport/.planning/memory/2026-05-14-post-marathon-sprint.md) — CI baseline (6 jobs), markdownlint (0 err/572 files), .planning/ consolidated, GSD aligned, phase 40/41/42 CONTEXT.md
+- [UI visual research-first rule](feedback_ui_visual_research_first.md) — фоны/gradient/тёмная тема реализуются ТОЛЬКО после research memo + явного user sign-off
+- [Phase 43 + coverage gap handoff 2026-05-14](2026-05-14-session-handoff.md) — TOOL-01 fixed (d19a1b9), regression 179/179 PASS, coverage gap report ready, CI pending for PR #5
+- [Slides mode architecture 2026-05-17](project_slides_architecture_2026_05_17.md) — SlideHeader shared visual-only; Lead = flat read-only article (vertical scroll, no carousel); Head = keyboard nav preserved unchanged
+- [Phase 61 head history+slides 2026-05-18](project_phase61_head_history_2026_05_18.md) — head gets /head/history + /head/report ?mode toggle; nav History → /head/history; push blocked SSL

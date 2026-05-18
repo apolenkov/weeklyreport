@@ -58,10 +58,29 @@ tsc + eslint + vitest (382 web / 909 api) — все зелёные.
 - Phase 54 AI: TODO остаётся в коде, пользователь выберет провайдера по метрикам сам
 - Коммит: `e42e272`, ветка `main`, запушено в origin
 
+## Ночной бросок 2026-05-13 — UAT v7.4 ЗАВЕРШЁН
+
+Ветка: `fix/PRJ-11/uat-v7-2026-05-12` — **39 коммитов** ahead of main. PR #3 запушен.
+
+- 37/39 A-багов закрыты
+- 2 locked-deferred: Phase 54 (AI) + Phase 55 (Telegram)
+- 3 hardening items H-1/H-2/H-3 задокументированы (`[hardening: pre-prod-deploy]`)
+- 1 integration blocker I-1 задокументирован (Prisma AI safety gate — нужен человек)
+- Phase F: Codex RED → revalidate-org auth + Cyrillic literals исправлены
+- Тесты финальные: 392 web + 914 api, TypeScript 0 ошибок
+
+### Утренние задачи для человека
+
+1. Запустить integration tests (команда в UAT-MATRIX-RUN-2026-05-13.md)
+2. Смерджить PR #3 → main
+3. Решить H-1 (DB rename vs isTrulyLocal split)
+4. Исправить H-3 перед prod-миграцией (CTID dedup вместо hardcoded UUID)
+
 ## Осталось
 
 - Phase 54: выбор AI-провайдера (TODO(Phase-54-activation) в коде, активируется когда нужно)
 - Phase 55: реализация SSO-binding flow для Telegram (TODO(Phase-55-activation))
+- A35: тестирование роли Director — следующий UAT-цикл
 
 ## Sweep-команда для новых полей (LEARNED)
 
