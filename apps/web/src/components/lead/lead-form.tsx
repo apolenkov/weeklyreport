@@ -1307,7 +1307,7 @@ export function LeadForm({
             <PeriodNavigator periods={visiblePeriods} />
 
             <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
-              <Separator orientation="vertical" className="h-5 opacity-40" />
+              <Separator orientation="vertical" className="h-5 bg-[var(--color-border)]" />
               <ArchiveToggle
                 checked={showArchivePeriods}
                 onChange={setShowArchivePeriods}
@@ -1317,7 +1317,7 @@ export function LeadForm({
                 disabled={isReadOnly || fillFromMut.isPending}
                 onFillFrom={handleFillFrom}
               />
-              <Separator orientation="vertical" className="h-5 opacity-40" />
+              <Separator orientation="vertical" className="h-5 bg-[var(--color-border)]" />
               <VersionHistoryNav
                 versions={versions}
                 onRestore={isReadOnly ? undefined : handleRestoreVersion}
