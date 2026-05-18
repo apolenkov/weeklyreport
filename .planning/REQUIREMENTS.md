@@ -1,135 +1,88 @@
-# CustomReport v6.0 Requirements
+# CustomReport v8.2 Requirements
 
-**Milestone:** v6.0 — Roles, Quality, AI & Analytics
-**Date:** 2026-04-28
-**Source:** `.planning/research/SUMMARY.md` (4 research dimensions + synthesis)
-
----
-
-## v1 Requirements (this milestone)
-
-### A — Auth & Roles
-
-- [ ] **AUTH-01**: Real Keycloak SAML SSO replaces `AUTH_DEV_MODE` in production; staged via `AUTH_DEV_MODE_ALLOW_TEST=true` for integration suite + mock IdP container in `docker-compose.test.yml`
-- [ ] **AUTH-02**: JWT carries `role` claim (`lead` | `head` | `admin` | `viewer`) extracted from Keycloak SAML assertion; SAML attribute mapper verified to send `role`
-- [ ] **AUTH-03**: `requireRole(allowed)` tRPC middleware factory in `packages/shared/src/trpc/middleware/role.ts`; emits `leadProcedure` / `headProcedure` / `adminProcedure` / `viewerProcedure`; default-deny — coverage test fails CI if any procedure lacks role declaration
-- [ ] **AUTH-04**: Service-layer role filtering — `archive.list` / `archive.detail` / `weeklyReport.get` viewer-scoped to `status: 'published'`; `review.dashboard` becomes `headProcedure`
-- [ ] **AUTH-05**: PDF export cookie injection — `requestPdfExport(reportId, requestedBy?, authToken)` signs 5-min scoped JWT at tRPC entry; `pdf-export.processor.ts:69-72` calls `page.context().addCookies(...)` before `page.goto`. **Must ship in same plan as AUTH-01 (PDF-only enable, Phase 28) to avoid silent 401 retry storm.**
-- [ ] **AUTH-06**: Frontend role-aware navigation — `app-shell.tsx` hides `/admin`, `/head/*` for non-head; `/lead/*` for viewers; uses existing `useSession()` hook
-- [ ] **AUTH-07**: SSR layout-level role gates — `apps/web/src/app/(app)/{admin,head,lead,reports}/layout.tsx` reads session via `cookies()` + tRPC `auth.me`, renders `403` page if role missing (proxy.ts stays cookie-presence only — no JWT verification in Edge runtime)
-- [ ] **AUTH-08**: Audit log of role-effecting events (login success/fail, logout, role-denied request) — emitted via `AppLoggerImpl` with structured fields `{event, userId, role, attemptedRole?, ip}`
-
-### B — Quality Polish
-
-- [ ] **QA-01**: Root-cause investigation + fix of 5 Playwright integration test timeouts (`admin-crud:94`, `cross-role-lifecycle:24`, `lead-journey:92`, `lead-journey:143`, `status-risk-sync:23`); all share `TimeoutError: page.waitForResponse 15000ms` on tRPC POST — likely autosave debounce racing test assertions; fix the root cause, NOT 5 bandages
-- [ ] **QA-02**: `prisma generate` postinstall hook in `apps/api/package.json` (NOT root) so `pnpm install` on fresh checkout produces working `@prisma/client` types; `turbo.json` has `prisma generate` as `build` predecessor for CI runs that skip postinstall
-- [ ] **QA-03**: Delete dead `apps/web/src/proxy.ts` (verified unused via grep); active proxy is `apps/web/proxy.ts`; leave a comment in active file: `// Next.js 16 proxy.ts must live here, NOT under src/`
-- [ ] **QA-04**: Doc-sync — rename `userId` → `_userId` in `apps/api/src/modules/period/period.contract.test.ts:65`; flip `.planning/phases/22-*/22-VERIFICATION.md` frontmatter `status: gaps_found` → `status: passed`
-
-### C — AI Features (gated by AI-SPEC.md)
-
-- [ ] **AI-01**: Auto-generated 2-3 sentence executive summary card on assembled report — appears ABOVE head's narrative textarea, never overwrites it; dismissible per session; "Regenerate" button (head-only)
-- [ ] **AI-02**: Sentiment badge (`low` / `medium` / `high`) on each Risk row; computed via Haiku 4.5 with structured `betaZodTool` output (no free-text from LLM); cached per Risk content hash
-- [ ] **AI-03**: Smart "on-track" advisory icon overlaying lead's traffic-light cell — shows ✓ / ⚠ / ✗ alongside (NOT replacing) lead's chosen colour; computed via Sonnet 4.6 with pre-computed counts in system prompt ("DO NOT change these numbers")
-
-### D — Trend Analytics
-
-- [ ] **ANAL-01**: `analytics.trafficLightHistory` tRPC procedure — input `{projectId?, leadId?, periodFrom, periodTo}`, returns `[{periodStart: ISOString, status, projectId}]`; aggregated server-side with `GROUP BY` over `Report` × `ReportSection` × `ProjectStatus`; cached in Redis 1h TTL, invalidated on `period.publish` / `period.reopen`
-- [ ] **ANAL-02**: `analytics.leadVelocity` tRPC procedure — `[{periodStart, completedItems, plannedItems, completionRate}]`; sourced from `Item where type='current' AND completed=true` grouped by report
-- [ ] **ANAL-03**: `analytics.periodComparison` tRPC procedure — diff metrics between two specific reports (risk delta, traffic-light delta, velocity delta)
-- [ ] **ANAL-04**: `/reports/trends` page — RSC page with three client-boundary chart components in `apps/web/src/components/charts/`: `traffic-light-history.chart.tsx` (sparkline of last 12 periods), `lead-velocity.chart.tsx` (stacked bar), `period-comparison.chart.tsx` (delta table); built with shadcn-ui Chart wrapping `recharts`; null-vs-zero distinction visualised as gaps not zero-values
-
-### E — Email Reminders (extend existing)
-
-- [ ] **NOTIF-01**: T-24h pre-deadline reminder for each lead with `ReportSection.status='draft'` — extends existing `reminders.service.ts` BullMQ pipeline; `kind='deadline'` enum value
-- [ ] **NOTIF-02**: T+2h escalation digest to head — fires when lead's section is still `draft` 2h after deadline; aggregates ALL late leads in one email; `kind='escalation'` (NEW enum value); idempotent per `${rule.id}:escalation:${cycleDate}:${recipientEmail}` dedupe key
-- [ ] **NOTIF-03**: react-email `.tsx` templates in `apps/api/src/modules/email/templates/` — `deadline.template.ts`, `follow-up.template.ts`, `escalation.template.ts`; each renders both HTML and plaintext (corporate spam filters score multipart higher); `<Tailwind>` wrapper compiles utility classes to inline styles
-- [ ] **NOTIF-04**: NestJS `@Cron` scheduler in `apps/api/src/modules/reminders/reminders.scheduler.ts` (`@nestjs/schedule` install) — runs hourly, reads `WHERE status='active' AND fireAt <= now()`, calls existing `requestReminderExecution`; reuses existing dedupeKey
-- [ ] **NOTIF-05**: Per-user opt-out flag on `User` model for NOTIF-01 deadline reminders only; **NOTIF-02 escalation NOT opt-outable** (heads must always be notified of misses)
-- [ ] **NOTIF-06**: BullMQ rate-limiter on `email-reminder` queue (`{ max: 5, duration: 60_000 }`) below corporate SMTP quota; failed deliveries route to DLQ with admin badge in UI
-
-### F — Mobile Polish
-
-- [ ] **MOB-01**: All 7 pages (`/lead/report`, `/lead/history`, `/head/dashboard`, `/head/report`, `/reports/history`, `/reports/[reportId]`, `/admin/*`) have **no horizontal scroll** at 375px viewport width
-- [ ] **MOB-02**: Tap targets ≥44px (iOS HIG) — add `size='touch'` button variant to `packages/ui/src/components/ui/button.tsx` (`h-11 min-w-11`); replaces `h-9` defaults on mobile breakpoints
-- [ ] **MOB-03**: `head/dashboard` portfolio table converts to card list at narrow widths (md and below) — desktop wide-table preserved at `lg+`
-- [ ] **MOB-04**: `admin/*` tabs convert to native `<select>` dropdown at narrow widths; full tab strip at `md+`
-- [ ] **MOB-05**: `lead/report` side-panel risk editor opens as full-screen `Dialog` on mobile (current desktop pattern is a side-panel that overflows)
-- [ ] **MOB-06**: PDF preview embed replaced with "Open PDF" button on mobile (8.5×11" embedded PDF unreadable at 375px); real-device iOS Safari pass required before sign-off
-- [ ] **MOB-07**: Top app shell — sticky nav becomes hamburger on mobile; brand mark stays visible
-
-### G — Release Checklist
-
-- [ ] **REL-01**: Root `/CHECKLIST.md` template — markdown with sections (Functional Smoke, Auth, PDF, Email, Mobile, AI Insights, Analytics) and signoff line
-- [ ] **REL-02**: Per-milestone fill stored under `.planning/milestones/v{N}-CHECKLIST.md` with date-stamp + signoff line
-- [ ] **REL-03**: Each checklist item maps 1:1 to a row in `.planning/REGRESSION-TEST-SCENARIOS.md` (cross-link by ID, e.g. `[ ] AUTH-LOGIN-001 — Login as lead`)
-- [ ] **REL-04**: At least one checklist item gated by CI (e.g. `pnpm test:ai-eval` green for AI insights row) — prevents pure rubber-stamp culture (G-2 anti-pattern)
-- [ ] **REL-05**: HANDOFF.md `## Pending Manual Smoke` section auto-generated from CHECKLIST.md unticked items via small script in `tools/handoff-sync.ts`
+**Milestone:** v8.2 — GSD Closure & Quality
+**Date:** 2026-05-18
+**Source:** `.planning/v8.1-MILESTONE-AUDIT.md` (TD-01..06) + verification gap analysis + approved plan `pure-mist.md`
 
 ---
 
-## Future Requirements (deferred to v6.1+)
+## v8.2 Requirements
 
-### Differentiators (not table stakes)
+### Verification Closure (Phase 67)
 
-- **AUTH-09**: Delegated admin (head can promote viewer → lead) — not justified for ~6 leads
-- **AUTH-10**: MFA in our app — delegated to Keycloak
-- **AI-04**: Period-over-period diff narrative — depends on stable AI-01..03 first
-- **AI-05**: Risk theme clustering across leads
-- **AI-06**: Head's narrative auto-draft (lead-side equivalent: NEVER)
-- **ANAL-05**: Custom dashboard builder
-- **ANAL-06**: Item-level drilldown
-- **ANAL-07**: Cross-departmental comparison
-- **NOTIF-07**: Telegram/Slack channels
-- **NOTIF-08**: Recurrence patterns (weekly/biweekly cycles)
-- **MOB-08**: Native iOS/Android app
-- **MOB-09**: Offline mode
+- [ ] **VER-01**: All 5 phases with verification gaps (P14, P16, P35, P37, P39) reach `status: passed` in their VERIFICATION.md files
+- [ ] **VER-02**: Phase 14 (Backend Containerization) — gaps from audit closed or retired with documented rationale
+- [ ] **VER-03**: Phase 16 (Backend Hardening) — SC2 PDF runtime gap retired (low ROI vs manual PDF flow) with SUMMARY.md rationale
+- [ ] **VER-04**: Phase 35 (UX Polish) — hover geometry + activity drill-down regression gaps closed
+- [ ] **VER-05**: Phase 37 (Observability) — metrics/traces validation evidence provided or retired
+- [ ] **VER-06**: Phase 39 (Performance) — k6/perf benchmarks evidence provided or retired
+- [ ] **VER-07**: V1 todo (skeleton/right-rail smoke) addressed or explicitly deferred with rationale
+- [ ] **VER-08**: V3 todo (DevRoleSwitcher prod guard) verified or explicitly deferred
+- [ ] **VER-09**: V5 todo (admin group-period wipe/preview UX decision) documented
 
-### Plan-time gaps surfaced by research
+### Tech Debt Sweep (Phase 68)
 
-- **AI-SPEC.md outstanding** — required before C-phase planning. Owner: `/gsd-ai-integration-phase` workflow. Decisions: cost-vs-confidentiality, model assignment confirmation, prompt rubric ≥1024 tokens, golden-set fixtures (8–12 reports), eval-step CI threshold.
-- **Real-device iOS Safari pass for MOB-06** — Playwright `devices['iPhone 14']` covers most but PDF embed needs human-on-device confirmation.
-- **Golden-set rubric (C-5)** — head/Barkhanov domain-expert sign-off required before AI quality CI gate locks in.
+- [ ] **TD-01**: `scopeDenied` audit event wired in Phase 46-05 audit emit path
+- [ ] **TD-02**: Prisma cross-group integration matrix test added (Phase 46-05)
+- [ ] **TD-03**: `search.service.ts:63` refactored to use canonical `groupScopeFilter` helper
+- [ ] **TD-04**: Playwright e2e spec for ReminderPolicy editor UI flow created (Phase 44)
+- [ ] **TD-05**: Performance test for `PolicyApplicatorService` fan-out with many active policies (Phase 47)
+- [ ] **TD-06**: `PolicyApplicatorService` injected in `period.service.ts` + `period-creator.scheduler.ts`; `.applyToPeriod()` called after `prisma.report.create(...)` (line 119 in scheduler)
+
+### E2E Coverage (Phase 69)
+
+- [ ] **E2E-01**: `admin-advanced.spec.ts:358` describe.skip SC-227 (Create New Period) resolved or retired with documented reason
+- [ ] **E2E-02**: `admin-advanced.spec.ts:422` describe.skip SC-228 (Period Date Entry) resolved or retired
+- [ ] **E2E-03**: `admin-panel.spec.ts:118` describe.skip (Admin Panel — Periods Tab) resolved or retired
+- [ ] **E2E-04**: Critical-path TODO stubs implemented: Reopen+Revoke flow (`publish-revoke.spec.ts`, 11 stubs)
+- [ ] **E2E-05**: Critical-path TODO stubs implemented: page-title / Esc / focus-trap (`a11y-advanced.spec.ts`, 7 stubs)
+- [ ] **E2E-06**: `lead-form-foreign-author.spec.ts` runs in regression config and passes
+- [ ] **E2E-07**: `e2e/README.md` created with mandatory vs advisory scenario inventory (V4 todo)
+
+### Planning Hygiene (Phase 70)
+
+- [ ] **HYG-01**: 7 historical plans moved from `.planning/plans/` to `.planning/plans/done/`
+- [ ] **HYG-02**: `.planning/todos/pending/2026-05-18-lock-icon-foreign-section.md` moved to `done/`
+- [ ] **HYG-03**: `.png` artefacts from repo root moved to `.planning/ui-reviews/2026-05-17-18/`
+- [ ] **HYG-04**: `NEXT-ACTIONS.md` refreshed with current timestamp and accurate items
+- [ ] **HYG-05**: `TODO(HEAD-CONSOLIDATE-01)` resolved — redirect `/head/slides → /head/history?mode=slides`
+- [ ] **HYG-06**: `TODO(UFB-061)` — version surfacing in login footer via `NEXT_PUBLIC_APP_VERSION` build-time inject
+- [ ] **HYG-07**: Phase 43 GAP-01 — retroactive SUMMARY.md created in `.planning/phases/43-tooling-leaf-fix-sweep/`
+
+### Coming Soon Visibility (Phase 71)
+
+- [ ] **CS-01**: Shared `<ComingSoonCard>` component created in `packages/ui` with `feature`, `role`, `icon`, `title`, `description`, `status` props
+- [ ] **CS-02**: Role-gate logic: component renders only when current user role is in the `role` prop array
+- [ ] **CS-03**: AI Integration card (`settings-tab.tsx:1140`) migrated to shared component
+- [ ] **CS-04**: Telegram cards (`settings-tab.tsx:1033,1071`) migrated to shared component
+- [ ] **CS-05**: Slack integration card (`settings-tab.tsx:1114`) migrated to shared component
+- [ ] **CS-06**: Draft version history sidebar (`lead-history-sidebar.tsx:128,157`) migrated to shared component
+- [ ] **CS-07**: Language switcher parked badge (`nav-bar.tsx:184`) migrated to shared component
+- [ ] **CS-08**: Screenshots of Coming Soon cards captured to `.planning/ui-reviews/v8.2/`
 
 ---
 
-## Out of Scope (this milestone)
+## Out of Scope (v8.2)
 
-- Self-service role request UI (anti-feature — overkill for internal tool)
-- Custom user CRUD beyond samlId-cache (Keycloak owns user identity)
-- Password reset (Keycloak)
-- Real-time dashboards (poll-based is sufficient)
-- AI replacing or auto-filling human narrative textareas (anti-feature — head's narrative is sacred)
-- AI changing traffic-light colour autonomously (anti-feature — lead owns colour)
-- Sentiment auto-escalation (anti-feature — false positives kill trust)
-- Director-level escalation (out-of-scope organisationally)
-- "Nag mode" multi-reminder spam (anti-feature)
-- Storybook (200+ MB; Playwright projects cover visual regression)
-- LangChain.js / Vercel AI SDK / separate Python AI service (use Anthropic SDK directly)
-- MJML / hand-rolled email HTML (use react-email)
-- Tremor / Plotly / D3 / raw SVG charts (use shadcn-ui Chart over recharts)
-- `trpc-shield` (custom middleware factory is simpler)
-- Materialised SQL view for analytics (1h Redis cache + GROUP BY is sufficient at 6 leads × 100 periods)
+| Feature                       | Why deferred                                   |
+| ----------------------------- | ---------------------------------------------- |
+| AI/RAG activation (P54)       | Budget, LLM choice not made                    |
+| Telegram bot activation (P55) | Bot identity, auth binding                     |
+| Dark mode / rebrand (P40)     | UX research, brand decisions                   |
+| CSP/k8s deploy (P53)          | Infra cost, k8s ops                            |
+| Multi-org hierarchy (P59)     | BU model decision pending                      |
+| i18n / language switching     | Translation lane not started                   |
+| CI/CD расширения beyond P38   | auto-deploy/GitOps/matrix builds — infra scope |
+| Slack integration activation  | Slack app registration pending                 |
 
 ---
 
 ## Traceability
 
-Phases → REQ-IDs map (locked by roadmapper 2026-04-28).
-
-| Phase | Wave | REQs                                                                                                                                               |
-| ----- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 27    | 1    | QA-01, QA-02, QA-03, QA-04, AUTH-03                                                                                                                |
-| 28    | 2    | AUTH-04, AUTH-05, AUTH-01 _(PDF-only enable via `AUTH_DEV_MODE_ALLOW_TEST`)_, NOTIF-01, NOTIF-03, NOTIF-04, REL-01, REL-02, REL-03, REL-04, REL-05 |
-| 29    | 3    | AUTH-01 _(full Keycloak SAML in production)_, AUTH-02, AUTH-06, AUTH-07, AUTH-08, NOTIF-02, NOTIF-05, NOTIF-06                                     |
-| 30    | 3    | MOB-01, MOB-02, MOB-03, MOB-04, MOB-05, MOB-06, MOB-07, ANAL-01, ANAL-02, ANAL-03, ANAL-04                                                         |
-| 31    | 4    | AI-01, AI-02, AI-03 _(gated by AI-SPEC.md)_                                                                                                        |
-
-**Note on AUTH-01 split:** AUTH-01 spans two phases by design. Phase 28 enables `AUTH_DEV_MODE_ALLOW_TEST=true` so the PDF cookie path (AUTH-05) and integration suite can run against a mock IdP container without flipping production. Phase 29 performs the actual Keycloak SAML cut-over and removes `AUTH_DEV_MODE` from non-test code paths. Both halves are required to consider AUTH-01 satisfied.
-
-**Coverage:** 37/37 v1 REQ-IDs mapped. Each REQ-ID appears in exactly one phase (AUTH-01 split is one requirement spanning two phases — counted once).
-
----
-
-\*v1 requirement count: 8 (A) + 4 (B) + 3 (C) + 4 (D) + 6 (E) + 7 (F) + 5 (G) = **37 REQ-IDs\***
-_Future deferred: 12 differentiators + 3 plan-time gaps_
+| REQ-ID     | Phase    |
+| ---------- | -------- |
+| VER-01..09 | Phase 67 |
+| TD-01..06  | Phase 68 |
+| E2E-01..07 | Phase 69 |
+| HYG-01..07 | Phase 70 |
+| CS-01..08  | Phase 71 |

@@ -35,16 +35,17 @@
 
 **Audit:** `.planning/v5.0-MILESTONE-AUDIT.md` (status: tech_debt — structurally complete, runtime verification deferred per user)
 
-## Current Milestone: v6.0 Roles, Quality, AI & Analytics
+## Current Milestone: v8.2 GSD Closure & Quality
 
-**Goal:** Закрыть auth-долг v5.0, стабилизировать integration-тесты, добавить AI-инсайты + аналитику тренда + email-напоминания + mobile polish, формализовать release-day checklist.
+**Goal:** Закрыть все GSD-gaps (verification, tech debt, e2e), навести порядок в planning, добавить Coming Soon visibility — после чего начинается ручной UAT.
 
 **Target features:**
 
-- **A — Auth & roles:** real Keycloak SAML + role separation (lead/head/admin/viewer) + cookie injection в pdf-export
-- **B — Quality polish:** 5 integration test fails (один root cause likely) + `prisma generate` postinstall + удаление dead `apps/web/src/proxy.ts`
-- **C — AI features:** auto-summarization отчётов / sentiment по risks / smart "on track" суждение по traffic lights (требует AI-SPEC)
-- **D — Trend analytics:** history графики traffic lights, velocity metrics, period-over-period
+- **Phase 67 — Verification closure:** 5 фаз с gaps (P14, P16, P35, P37, P39) → все `passed`
+- **Phase 68 — Tech debt sweep:** TD-01..06 из v8.1-MILESTONE-AUDIT.md
+- **Phase 69 — E2E coverage:** 3 `describe.skip` + critical-path TODO stubs + foreign-author verify
+- **Phase 70 — Planning hygiene:** 7 plans → done/, .png artefacts, MEMORY drift, HEAD-CONSOLIDATE-01
+- **Phase 71 — Coming Soon visibility:** shared `<ComingSoonCard>` + role-gate + 6 call-sites
 - **E — Email reminders:** BullMQ job — weekly deadline + escalation
 - **F — Mobile polish:** 7 страниц проверить на mobile breakpoints, fix layouts
 - **G — Release checklist:** формализовать HANDOFF #2/#3 как commit-able CHECKLIST.md
@@ -238,4 +239,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-25 after milestone v5.0 SHIPPED_
+_Last updated: 2026-05-18 — milestone v8.2 GSD Closure & Quality started_
