@@ -880,7 +880,13 @@ export function LeadForm({
       _sm = new Map();
       _crossAuthorStageMap.set(ca.projectId, _sm);
     }
-    for (const sn of ca.stageNames) _sm.set(sn.toLowerCase(), ca.authorName);
+    for (const sn of ca.stageNames) {
+      const lower = sn.toLowerCase();
+      _sm.set(lower, ca.authorName);
+      // Mirror the dev ↔ development alias used in ownedStagesForProject mapper.
+      if (lower === "dev") _sm.set("development", ca.authorName);
+      if (lower === "development") _sm.set("dev", ca.authorName);
+    }
   }
   const products: Product[] = (data.products as Product[]).map((product) => {
     const stageMap = _crossAuthorStageMap.get(product.id);
