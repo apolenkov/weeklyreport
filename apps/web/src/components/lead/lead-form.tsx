@@ -386,8 +386,23 @@ export function LeadForm({
   });
 
   // F9: derive per-section contributors from crossAuthors data.
+  // crossAuthors may contain multiple entries per author (one per shared product),
+  // so we aggregate counts by authorId to produce unique entries.
   const crossAuthors = crossAuthorsQ.data ?? [];
-  const risksContributors = crossAuthors
+  const crossAuthorsByAuthor = crossAuthors.reduce<
+    Map<string, { authorId: string; authorName: string; riskCount: number; itemCount: number }>
+  >((acc, ca) => {
+    const existing = acc.get(ca.authorId);
+    if (existing) {
+      existing.riskCount += ca.riskCount;
+      existing.itemCount += ca.itemCount;
+    } else {
+      acc.set(ca.authorId, { authorId: ca.authorId, authorName: ca.authorName, riskCount: ca.riskCount, itemCount: ca.itemCount });
+    }
+    return acc;
+  }, new Map());
+  const uniqueCrossAuthors = Array.from(crossAuthorsByAuthor.values());
+  const risksContributors = uniqueCrossAuthors
     .filter((ca) => ca.riskCount > 0)
     .map((ca) => ({
       authorId: ca.authorId,
@@ -395,7 +410,7 @@ export function LeadForm({
       count: ca.riskCount,
       label: ca.riskCount === 1 ? "risk" : "risks",
     }));
-  const itemsContributors = crossAuthors
+  const itemsContributors = uniqueCrossAuthors
     .filter((ca) => ca.itemCount > 0)
     .map((ca) => ({
       authorId: ca.authorId,
@@ -403,7 +418,7 @@ export function LeadForm({
       count: ca.itemCount,
       label: ca.itemCount === 1 ? "item" : "items",
     }));
-  const allSectionContributors = crossAuthors.map((ca) => ({
+  const allSectionContributors = uniqueCrossAuthors.map((ca) => ({
     authorId: ca.authorId,
     authorName: ca.authorName,
     count: -1,
