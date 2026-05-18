@@ -229,64 +229,86 @@ test.describe("Publish & Lock Flow", () => {
 });
 
 // ==========================================================================
-// Reopen Flow (SC-156..SC-158) -- UI not yet implemented
+// Reopen Flow (SC-156..SC-158)
 // ==========================================================================
 
 test.describe("Reopen Flow", () => {
-  test.fixme("SC-156: Reopen button appears after publish and allows leads to edit again", async ({
+  test("SC-156: Reopen Period button visible on a published report", async ({
     headPage,
   }) => {
-    // TODO: Implement when Reopen button is added to publish-lock-button.tsx
-    // Expected flow:
-    // 1. After publish, a "Reopen" button appears
-    // 2. Click Reopen -> confirmation dialog
-    // 3. After reopen, leads can edit their forms again
-    // 4. Published badge is removed, Live badge returns
-    await headPage.goto("/head/report");
+    // Published period: "Reopen Period" is the only available lifecycle action.
+    await headPage.goto("/head/report/a0000000-0000-4000-8000-000000000002");
     await headPage.waitForSelector("#main-content", {
       state: "visible",
       timeout: 15_000,
     });
+    await headPage.waitForLoadState("networkidle", { timeout: 15_000 });
+
+    await expect(
+      headPage.getByRole("button", { name: "Reopen Period" }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
-  test.fixme("SC-157: Re-publish after reopen works correctly", async ({
+  test("SC-157: Reopen confirm dialog cancel leaves period as published", async ({
     headPage,
   }) => {
-    // TODO: Implement when Reopen + Re-publish flow exists
-    // Expected flow:
-    // 1. Publish -> Reopen -> leads edit -> Re-publish
-    // 2. Report returns to Published state
-    await headPage.goto("/head/report");
+    // Cancel out of the Reopen dialog — published state must be preserved.
+    await headPage.goto("/head/report/a0000000-0000-4000-8000-000000000002");
     await headPage.waitForSelector("#main-content", {
       state: "visible",
       timeout: 15_000,
     });
+    await headPage.waitForLoadState("networkidle", { timeout: 15_000 });
+
+    const reopenBtn = headPage.getByRole("button", { name: "Reopen Period" });
+    await expect(reopenBtn).toBeVisible({ timeout: 10_000 });
+
+    // Open the reopen confirmation dialog
+    await reopenBtn.click();
+    const dialogTitle = headPage.getByText("Reopen this period?");
+    await expect(dialogTitle).toBeVisible({ timeout: 5_000 });
+
+    // Cancel — dialog closes, period remains published
+    await headPage.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialogTitle).not.toBeVisible({ timeout: 5_000 });
+
+    // Reopen Period button still visible — period is still published
+    await expect(reopenBtn).toBeVisible();
+    await expect(
+      headPage.getByRole("button", { name: /Publish/ }),
+    ).not.toBeVisible();
   });
 
-  test.fixme("SC-158: Double publish attempt shows already-published state", async ({
+  test("SC-158: Published report shows Reopen — not Publish & Lock", async ({
     headPage,
   }) => {
-    // TODO: Implement when Published state has proper guard
-    // Expected: after publish, attempting to publish again is blocked
-    // (currently the button disappears, so this is partially handled)
-    await headPage.goto("/head/report");
+    // When period is already published, "Publish & Lock" must not be shown.
+    await headPage.goto("/head/report/a0000000-0000-4000-8000-000000000002");
     await headPage.waitForSelector("#main-content", {
       state: "visible",
       timeout: 15_000,
     });
+    await headPage.waitForLoadState("networkidle", { timeout: 15_000 });
+
+    await expect(
+      headPage.getByRole("button", { name: "Reopen Period" }),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      headPage.getByRole("button", { name: /Publish/ }),
+    ).not.toBeVisible();
   });
 });
 
 // ==========================================================================
-// Revoke Flow (SC-160..SC-167) -- UI not yet implemented
+// Revoke Flow (SC-160..SC-167)
 // ==========================================================================
 
 test.describe("Revoke Submission Flow", () => {
   test.fixme("SC-160: Revoke button visible on submitted lead cards in dashboard", async ({
     headPage,
   }) => {
-    // TODO: Implement when Revoke button is added to lead-report-card.tsx
-    // Expected: Head sees "Revoke" action on each submitted lead card
+    // Dashboard-level Revoke button in lead-report-card.tsx: DESIGN DECISION pending.
+    // See e2e/README.md § UI-gated stubs.
     await headPage.goto("/head/dashboard");
     await headPage.waitForSelector("#main-content", {
       state: "visible",
@@ -294,16 +316,25 @@ test.describe("Revoke Submission Flow", () => {
     });
   });
 
-  test.fixme("SC-161: After revoke, lead form becomes editable again", async ({
+  test("SC-161: Revoke button visible when head views a submitted section", async ({
     headPage,
   }) => {
-    // TODO: Implement when Revoke flow is wired
-    // Expected: Revoking a lead's submission unlocks their form
-    await headPage.goto("/head/dashboard");
+    // Seed: LEAD_MARIA (a0000000-0000-4000-8000-000000000012) has status=submitted
+    // in REPORT_ACTIVE (a0000000-0000-4000-8000-000000000001).
+    // Head navigates via foreign-author URL — Revoke button must be visible.
+    await headPage.goto(
+      "/lead/report/a0000000-0000-4000-8000-000000000001" +
+        "?authorId=a0000000-0000-4000-8000-000000000012",
+    );
     await headPage.waitForSelector("#main-content", {
       state: "visible",
       timeout: 15_000,
     });
+    await headPage.waitForLoadState("networkidle", { timeout: 15_000 });
+
+    await expect(
+      headPage.getByRole("button", { name: "Revoke" }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test.fixme("SC-162: After revoke, KPI submissions count updates", async ({
@@ -366,15 +397,24 @@ test.describe("Revoke Submission Flow", () => {
     });
   });
 
-  test.fixme("SC-167: Revoke button not shown for non-submitted leads", async ({
+  test("SC-167: Revoke button not shown when head views a non-submitted (draft) section", async ({
     headPage,
   }) => {
-    // TODO: Implement when Revoke button exists
-    // Expected: Pending/Draft leads do not show Revoke action
-    await headPage.goto("/head/dashboard");
+    // Seed: LEAD_1 / Vasily (a0000000-0000-4000-8000-000000000011) has status=draft
+    // in REPORT_ACTIVE (a0000000-0000-4000-8000-000000000001).
+    // Revoke must not be shown for sections that haven't been submitted yet.
+    await headPage.goto(
+      "/lead/report/a0000000-0000-4000-8000-000000000001" +
+        "?authorId=a0000000-0000-4000-8000-000000000011",
+    );
     await headPage.waitForSelector("#main-content", {
       state: "visible",
       timeout: 15_000,
     });
+    await headPage.waitForLoadState("networkidle", { timeout: 15_000 });
+
+    await expect(
+      headPage.getByRole("button", { name: "Revoke" }),
+    ).not.toBeVisible();
   });
 });

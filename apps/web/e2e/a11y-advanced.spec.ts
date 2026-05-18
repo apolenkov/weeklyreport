@@ -284,10 +284,9 @@ test.describe("SC-283: Escape closes modals", () => {
     ).toBeVisible();
   });
 
-  test.fixme("pressing Escape closes the publish confirmation dialog", async ({
+  test("pressing Escape closes the publish confirmation dialog", async ({
     headPage,
   }) => {
-    // TODO: Inline publish dialog in publish-lock-button.tsx lacks Escape key handler
     await headPage.goto("/head/report");
     await headPage.waitForSelector("#main-content", {
       state: "visible",
@@ -604,12 +603,11 @@ base.describe("SC-287: Color contrast meets WCAG AA 4.5:1", () => {
 // ---------------------------------------------------------------------------
 
 base.describe("SC-288: Reduced motion disables animations", () => {
-  base.fixme(
+  base(
     "animations are suppressed with prefers-reduced-motion",
     async ({ page }) => {
-      // TODO: base test context does not inherit reducedMotion config from project settings
-      // Playwright config already sets reducedMotion: 'reduce'
-      // This test verifies the effect
+      // Playwright regression config sets reducedMotion: "reduce" — this verifies the emulation
+      // is active so CSS respects prefers-reduced-motion during tests.
       await page.goto("/lead/report");
       await page.waitForSelector("#main-content", {
         state: "visible",
@@ -625,10 +623,11 @@ base.describe("SC-288: Reduced motion disables animations", () => {
     },
   );
 
-  base.fixme(
+  base(
     "transition durations are zero or near-zero with reduced motion",
     async ({ page }) => {
-      // TODO: base test context does not inherit reducedMotion config; SVG className is SVGAnimatedString not string
+      // Playwright regression config sets reducedMotion: "reduce" — verifies that
+      // animated elements either have no animation or short transitions.
       await page.goto("/lead/report");
       await page.waitForSelector("#main-content", {
         state: "visible",

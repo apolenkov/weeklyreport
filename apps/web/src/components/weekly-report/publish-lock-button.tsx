@@ -114,6 +114,11 @@ export function PublishLockButton({
             role="dialog"
             aria-modal="true"
             aria-label="Confirm publish"
+            tabIndex={-1}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setShowDialog(false);
+            }}
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
               Publish & Lock Report?

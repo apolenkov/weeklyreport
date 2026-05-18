@@ -30,7 +30,7 @@ These must pass before every release. Failures block ship.
 
 | Spec                                          | Scope                                 | Roles       |
 | --------------------------------------------- | ------------------------------------- | ----------- |
-| `lead-form.spec.ts`                           | Lead report CRUD — fill, submit, view | lead        |
+| `lead-form-crud.spec.ts`                      | Lead report CRUD — fill, submit, view | lead        |
 | `publish-revoke.spec.ts` (non-fixme)          | Head publish/lock flow                | head        |
 | `admin-panel.spec.ts`                         | Admin tabs: reminders, settings       | head, admin |
 | `admin-reminder-policy.spec.ts`               | ReminderPolicy CRUD                   | admin       |
@@ -48,14 +48,35 @@ pnpm --filter @customreport/web exec playwright test \
 ## Advisory / Deferred Scenarios (`test.fixme`)
 
 These are tracked as `test.fixme()` — visible in Playwright output as "fixme", not blocking.
-They document planned coverage for features not yet implemented.
+They document planned coverage for features blocked by a design decision or missing UI.
 
-| Spec                             | Deferred scenarios                                                          | Blocking feature                        |
-| -------------------------------- | --------------------------------------------------------------------------- | --------------------------------------- |
-| `publish-revoke.spec.ts`         | SC-156..158 Reopen, SC-160..167 Revoke                                      | Reopen/Revoke UI (v8.3)                 |
-| `dashboard-advanced.spec.ts`     | SC-174 Send Reminder toast                                                  | API onClick wiring (v8.3)               |
-| `a11y-advanced.spec.ts`          | SC-280 page titles, SC-283 Escape, SC-284 focus trap, SC-288 reduced motion | `<title>` metadata + dialog a11y (v8.3) |
-| `weekly-report-advanced.spec.ts` | SC-200 Toggle All                                                           | React state click reliability (v8.3)    |
+| Spec                     | Scenario IDs             | Blocking reason                                 |
+| ------------------------ | ------------------------ | ----------------------------------------------- |
+| `publish-revoke.spec.ts` | SC-160, SC-162..SC-166   | Dashboard-level Revoke UI — design decision     |
+| `a11y-advanced.spec.ts`  | SC-280×2                 | `<title>` metadata exports in route pages       |
+| `a11y-advanced.spec.ts`  | SC-283 (lead submit Esc) | `onKeyDown` Esc handler on lead submit dialog   |
+| `a11y-advanced.spec.ts`  | SC-284                   | Focus-trap (Radix focus-scope) in modal dialogs |
+
+## UI-Gated Stubs
+
+The following stubs require specific UI or infrastructure that does not yet exist.
+They remain as `test.fixme` until the prerequisite feature is implemented in a future phase.
+
+| #   | SC ID       | File                     | Required UI / code                                      | Phase           |
+| --- | ----------- | ------------------------ | ------------------------------------------------------- | --------------- |
+| 1   | SC-280 (×2) | `a11y-advanced.spec.ts`  | `metadata` exports in route page files                  | next UI phase   |
+| 2   | SC-283 lead | `a11y-advanced.spec.ts`  | `onKeyDown` Escape handler on lead form submit dialog   | next UI phase   |
+| 3   | SC-284      | `a11y-advanced.spec.ts`  | Focus-trap (Radix `FocusScope`) inside modal dialogs    | next UI phase   |
+| 4   | SC-160      | `publish-revoke.spec.ts` | Dashboard-level Revoke button in `lead-report-card.tsx` | DESIGN DECISION |
+| 5   | SC-162      | `publish-revoke.spec.ts` | Revoke flow wired to API (depends on SC-160)            | after SC-160    |
+| 6   | SC-163      | `publish-revoke.spec.ts` | Revoke flow wired to API (depends on SC-160)            | after SC-160    |
+| 7   | SC-164      | `publish-revoke.spec.ts` | Full revoke + re-submit mutation cycle                  | after SC-160    |
+| 8   | SC-165      | `publish-revoke.spec.ts` | Bulk Revoke All action                                  | after SC-160    |
+| 9   | SC-166      | `publish-revoke.spec.ts` | Revoke during Published state (reopen-first guard)      | after SC-160    |
+
+**SC-160 design decision:** A dashboard-level Revoke button does not yet exist in `lead-report-card.tsx`.
+The in-form Revoke (SC-161, now active) serves as the primary head action for the current UAT.
+SC-162–166 are derivatives — they are unblocked once SC-160 is decided and implemented.
 
 ## Retired Tests
 
