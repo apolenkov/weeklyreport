@@ -39,6 +39,7 @@ export async function navigateTo(page: Page, path: string) {
 type Fixtures = {
   leadPage: Page;
   headPage: Page;
+  adminPage: Page;
 };
 
 export const test = base.extend<Fixtures>({
@@ -54,6 +55,15 @@ export const test = base.extend<Fixtures>({
   headPage: async ({ browser }, use) => {
     const ctx = await browser.newContext({
       storageState: path.join(AUTH_DIR, "head.json"),
+    });
+    const page = await ctx.newPage();
+    await use(page);
+    await ctx.close();
+  },
+
+  adminPage: async ({ browser }, use) => {
+    const ctx = await browser.newContext({
+      storageState: path.join(AUTH_DIR, "admin.json"),
     });
     const page = await ctx.newPage();
     await use(page);
