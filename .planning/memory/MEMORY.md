@@ -13,3 +13,4 @@
 - [Slides mode architecture 2026-05-17](project_slides_architecture_2026_05_17.md) — SlideHeader shared visual-only; Lead = flat read-only article (vertical scroll, no carousel); Head = keyboard nav preserved unchanged
 - [Phase 61 head history+slides 2026-05-18](project_phase61_head_history_2026_05_18.md) — head gets /head/history + /head/report ?mode toggle; nav History → /head/history; push blocked SSL
 - [peo-plan rich-mode (global)](feedback_peo_plan_richmode_global.md) — every plan ≥3 steps or multi-file must use peo-plan rich-mode with 15-section template + 3 Mermaid TB diagrams, applies ALL repos
+- [LOCK-01 + data source lesson 2026-05-18](project_lock01_2026_05_18.md) — lock badge on foreign-author view done; currentUser.name ≠ section author; use draftSection.authorName
