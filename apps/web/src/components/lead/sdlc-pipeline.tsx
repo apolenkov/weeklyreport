@@ -13,6 +13,10 @@ export type CrossAuthorEntry = {
   stageNames: string[];
   itemCount: number;
   riskCount: number;
+  /** Per-risk details when crossAuthorSections data is loaded; null = loading. */
+  risks: { severity: "blocked" | "at-risk"; text: string }[] | null;
+  /** True when the author has no items and no risks for this product. */
+  isEmpty: boolean;
 };
 
 type SdlcPipelineProps = {
@@ -258,33 +262,54 @@ export function SdlcPipeline({
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
                 Other contributors
               </p>
-              <ul className="space-y-0.5">
+              <ul className="space-y-1">
                 {crossAuthors
                   .filter((ca) => ca.projectId === product.id)
                   .map((ca) => (
                     <li
                       key={`${ca.projectId}::${ca.authorId}`}
-                      className="flex items-center gap-1.5 text-[12px] text-[var(--color-muted-foreground)]"
+                      className="text-[12px] text-[var(--color-muted-foreground)]"
                     >
-                      <span className="font-medium text-[var(--color-foreground)]">
-                        {ca.authorName}
-                      </span>
-                      <span aria-hidden="true">·</span>
-                      <span>{ca.stageNames.join(", ")}</span>
-                      <span aria-hidden="true">—</span>
-                      <span>
-                        {ca.itemCount} item{ca.itemCount !== 1 ? "s" : ""}
-                        {ca.riskCount > 0 ? `, ${ca.riskCount} risk` : ""}
-                        {ca.riskCount > 1 ? "s" : ""}
-                      </span>
-                      {reportId && (
-                        <a
-                          href={`/lead/report/${reportId}?authorId=${ca.authorId}`}
-                          className="ml-auto inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)] hover:underline"
-                          aria-label={`View ${ca.authorName}'s section in read-only`}
-                        >
-                          readonly ↗
-                        </a>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-[var(--color-foreground)]">
+                          {ca.authorName}
+                        </span>
+                        <span aria-hidden="true">·</span>
+                        <span>{ca.stageNames.join(", ")}</span>
+                        {ca.isEmpty && (
+                          <span className="ml-1 rounded px-1 py-0.5 text-[11px] text-[var(--color-muted-foreground)] opacity-60">
+                            ⊘ not started
+                          </span>
+                        )}
+                        {!ca.isEmpty && ca.itemCount > 0 && (
+                          <span className="ml-1 text-[11px]">
+                            {ca.itemCount} item{ca.itemCount !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {reportId && (
+                          <a
+                            href={`/lead/report/${reportId}?authorId=${ca.authorId}`}
+                            className="ml-auto inline-flex items-center rounded px-1 py-0.5 text-[11px] font-semibold text-[var(--color-primary)] opacity-70 hover:opacity-100 hover:underline"
+                            aria-label={`Open ${ca.authorName}'s section`}
+                          >
+                            ↗
+                          </a>
+                        )}
+                      </div>
+                      {ca.risks && ca.risks.length > 0 && (
+                        <ul className="mt-0.5 space-y-0.5 pl-3">
+                          {ca.risks.map((r, i) => (
+                            <li
+                              key={i}
+                              className={`flex items-start gap-1 text-[11px] ${r.severity === "blocked" ? "text-[var(--color-destructive)]" : "text-[var(--color-warning,#b45309)]"}`}
+                            >
+                              <span aria-hidden="true" className="mt-px shrink-0">
+                                {r.severity === "blocked" ? "⛔" : "⚠"}
+                              </span>
+                              <span className="line-clamp-2">{r.text}</span>
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </li>
                   ))}
