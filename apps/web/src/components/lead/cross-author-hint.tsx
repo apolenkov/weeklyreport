@@ -14,31 +14,15 @@ export type SectionContributor = {
 type Props = {
   readonly contributors: readonly SectionContributor[];
   readonly reportId: string;
-  /**
-   * F14: when true, renders a "Show details ▾ / Hide ▴" toggle button
-   * after the "readonly ↗" link so the parent can expand an inline embed.
-   */
-  readonly expandable?: boolean;
-  /** F14: controlled expanded state — ignored when expandable is false. */
-  readonly expanded?: boolean;
-  /** F14: called when the user clicks the expand/collapse toggle. */
-  readonly onToggleExpand?: () => void;
 };
 
 /**
- * F9: Compact "Other contributors" strip rendered at the top of each section
+ * Compact "Other contributors" strip rendered at the top of each section
  * when a cross-author lead is also contributing to the same section type.
  * Links to the foreign-author readonly view (P63 LOCK-01).
- *
- * F14: when expandable=true, adds a toggle button to show/hide inline embeds.
+ * Foreign rows are always rendered inline below this hint (no toggle).
  */
-export function CrossAuthorHint({
-  contributors,
-  reportId,
-  expandable = false,
-  expanded = false,
-  onToggleExpand,
-}: Props) {
+export function CrossAuthorHint({ contributors, reportId }: Props) {
   if (contributors.length === 0) return null;
   return (
     <div className="mb-3 flex flex-col gap-1">
@@ -69,16 +53,6 @@ export function CrossAuthorHint({
           >
             readonly ↗
           </Link>
-          {expandable && (
-            <button
-              type="button"
-              aria-expanded={expanded}
-              onClick={onToggleExpand}
-              className="ml-1 whitespace-nowrap font-medium text-[var(--color-muted-foreground)] underline-offset-2 hover:text-[var(--color-foreground)] hover:underline"
-            >
-              {expanded ? "Hide ▴" : "Show details ▾"}
-            </button>
-          )}
         </div>
       ))}
     </div>

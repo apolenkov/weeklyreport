@@ -291,6 +291,41 @@ async function main() {
     }
   }
 
+  // --- 4b. Cross-author stage assignments (demo: Igor + Maria on LEAD_1 products) ---
+  // This makes LEAD_IGOR and LEAD_MARIA appear as cross-contributors in
+  // LEAD_1's report view, so the "Other contributors" strip shows ≥2 entries.
+  const crossAuthorAssignments: {
+    id: string;
+    userId: string;
+    stageId: string;
+    projectId: string;
+  }[] = [
+    // Igor on Маркетинговый портал (product 201) — Testing stage (sortOrder 4)
+    // LEAD_1 owns Planning/Analysis/Design (0–2), so Testing/DevOps are free.
+    {
+      id: "a0000000-0000-4000-8000-00000000ca01",
+      userId: LEAD_IGOR_ID,
+      stageId: "a0000000-0000-4000-8000-000000000705",
+      projectId: "a0000000-0000-4000-8000-000000000201",
+    },
+    // Maria on Маркетинговый портал (product 201) — DevOps stage (sortOrder 5)
+    {
+      id: "a0000000-0000-4000-8000-00000000ca02",
+      userId: LEAD_MARIA_ID,
+      stageId: "a0000000-0000-4000-8000-000000000706",
+      projectId: "a0000000-0000-4000-8000-000000000201",
+    },
+  ];
+  for (const ca of crossAuthorAssignments) {
+    await prisma.stageAssignment.upsert({
+      where: {
+        stageId_projectId: { stageId: ca.stageId, projectId: ca.projectId },
+      },
+      update: { userId: ca.userId },
+      create: ca,
+    });
+  }
+
   // --- 5. Active report (Week 16) ---
   const activeReport = SEED_REPORTS.active;
   await prisma.report.upsert({

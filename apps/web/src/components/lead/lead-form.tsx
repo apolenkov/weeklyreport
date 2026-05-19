@@ -386,24 +386,12 @@ export function LeadForm({
     enabled: targetReportId !== "" && !requestedAuthorIdNormalized,
   });
 
-  // F14: per-section toggle states for cross-author inline embeds.
-  // Must be declared before crossAuthorSectionsQ which reads them in `enabled`.
-  const [showCAItems, setShowCAItems] = useState(false);
-  const [showCARisks, setShowCARisks] = useState(false);
-  const [showCADecisions, setShowCADecisions] = useState(false);
-  const [showCAPriorities, setShowCAPriorities] = useState(false);
-
-  // F14: load full cross-author section data for inline readonly embeds.
-  // Only fetched when at least one section embed is toggled open and we have
-  // a valid reportId. Not loaded for foreign-author views (read-only pages).
+  // F-shiny-3: cross-author section data is always loaded (always-on).
   const crossAuthorSectionsQ = useQuery({
     ...trpc.leadForm.crossAuthorSections.queryOptions({
       reportId: targetReportId,
     }),
-    enabled:
-      targetReportId !== "" &&
-      !requestedAuthorIdNormalized &&
-      (showCAItems || showCARisks || showCADecisions || showCAPriorities),
+    enabled: targetReportId !== "" && !requestedAuthorIdNormalized,
   });
 
   // F9: derive per-section contributors from crossAuthors data.
@@ -458,6 +446,30 @@ export function LeadForm({
     count: -1,
     label: "",
   }));
+
+  // F-shiny-1: enrich crossAuthors with per-risk details and isEmpty flag
+  // sourced from crossAuthorSectionsQ (always loaded).
+  const enrichedCrossAuthors: import("./sdlc-pipeline").CrossAuthorEntry[] =
+    crossAuthors.map((ca) => {
+      const caSection = crossAuthorSectionsQ.data?.find(
+        (s) => s.authorId === ca.authorId,
+      );
+      const projectRisks =
+        caSection?.risks
+          .filter((r) => r.projectId === ca.projectId)
+          .slice(0, 3)
+          .map((r) => ({
+            severity: (r.severity === "blocked" ? "blocked" : "at-risk") as
+              | "blocked"
+              | "at-risk",
+            text: r.risk,
+          })) ?? null;
+      return {
+        ...ca,
+        risks: projectRisks,
+        isEmpty: ca.itemCount === 0 && ca.riskCount === 0,
+      };
+    });
 
   // 35-07: bare route → replace URL with the canonical addressed form once
   // the active reportId is known. Skipped when:
@@ -1494,9 +1506,7 @@ export function LeadForm({
                 ? { sectionAuthorName: currentUser.name }
                 : {})}
               risksAddSignal={risksAddSignal}
-              {...(crossAuthorsQ.data
-                ? { crossAuthors: crossAuthorsQ.data }
-                : {})}
+              crossAuthors={enrichedCrossAuthors}
               {...(targetReportId ? { reportId: targetReportId } : {})}
             >
               <AccordionSection
@@ -1543,59 +1553,46 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={itemsContributors}
                   reportId={targetReportId}
-                  expandable={itemsContributors.length > 0}
-                  expanded={showCAItems}
-                  onToggleExpand={() => setShowCAItems((v) => !v)}
                 />
-                {showCAItems &&
-                  crossAuthorSectionsQ.data &&
-                  crossAuthorSectionsQ.data.some(
-                    (ca) => ca.items.filter((i) => i.type === "current").length > 0,
-                  ) && (
-                    <div className="mt-2 space-y-2">
-                      {crossAuthorSectionsQ.data.map((ca) => {
-                        const caItems = ca.items
-                          .filter((i) => i.type === "current")
-                          .map(
-                            (i): import("./mock-data").KanbanItem => ({
-                              id: i.id,
-                              productId: i.projectId,
-                              productName:
-                                productNameById.get(i.projectId) ?? i.projectId,
-                              stageName: i.stageName ?? undefined,
-                              status: (
-                                i.workflowStatus === "in_progress"
-                                  ? "in-progress"
-                                  : i.workflowStatus === "done"
-                                    ? "completed"
-                                    : i.workflowStatus === "blocked"
-                                      ? "blocked"
-                                      : "planned"
-                              ) as import("./mock-data").ItemStatus,
-                              text: i.text,
-                              author: ca.authorName,
-                            }),
-                          );
-                        if (caItems.length === 0) return null;
-                        return (
-                          <div
-                            key={ca.authorId}
-                            className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-muted-tint,rgba(0,0,0,0.02))] p-3"
-                          >
-                            <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
-                              <span aria-hidden="true">🔒</span>
-                              <span className="font-medium">{ca.authorName}</span>{" "}
-                              — readonly
-                            </p>
-                            <CurrentWeekSection
-                              items={caItems}
-                              readOnly
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                {crossAuthorSectionsQ.data &&
+                  itemsContributors.length > 0 &&
+                  crossAuthorSectionsQ.data.map((ca) => {
+                    const caItems = ca.items
+                      .filter((i) => i.type === "current")
+                      .map(
+                        (i): import("./mock-data").KanbanItem => ({
+                          id: i.id,
+                          productId: i.projectId,
+                          productName:
+                            productNameById.get(i.projectId) ?? i.projectId,
+                          stageName: i.stageName ?? undefined,
+                          status: (
+                            i.workflowStatus === "in_progress"
+                              ? "in-progress"
+                              : i.workflowStatus === "done"
+                                ? "completed"
+                                : i.workflowStatus === "blocked"
+                                  ? "blocked"
+                                  : "planned"
+                          ) as import("./mock-data").ItemStatus,
+                          text: i.text,
+                          author: ca.authorName,
+                        }),
+                      );
+                    if (caItems.length === 0) return null;
+                    return (
+                      <div key={ca.authorId} className="opacity-70">
+                        <p className="mb-1 mt-2 flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)]">
+                          <span aria-hidden="true">🔒</span>
+                          <span className="font-medium">{ca.authorName}</span>
+                        </p>
+                        <CurrentWeekSection
+                          items={caItems}
+                          readOnly
+                        />
+                      </div>
+                    );
+                  })}
                 <CurrentWeekSection
                   items={currentWeekItems}
                   readOnly={isReadOnly}
@@ -1637,59 +1634,46 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={itemsContributors}
                   reportId={targetReportId}
-                  expandable={itemsContributors.length > 0}
-                  expanded={showCAItems}
-                  onToggleExpand={() => setShowCAItems((v) => !v)}
                 />
-                {showCAItems &&
-                  crossAuthorSectionsQ.data &&
-                  crossAuthorSectionsQ.data.some(
-                    (ca) => ca.items.filter((i) => i.type === "next").length > 0,
-                  ) && (
-                    <div className="mt-2 space-y-2">
-                      {crossAuthorSectionsQ.data.map((ca) => {
-                        const caItems = ca.items
-                          .filter((i) => i.type === "next")
-                          .map(
-                            (i): import("./mock-data").KanbanItem => ({
-                              id: i.id,
-                              productId: i.projectId,
-                              productName:
-                                productNameById.get(i.projectId) ?? i.projectId,
-                              stageName: i.stageName ?? undefined,
-                              status: (
-                                i.workflowStatus === "in_progress"
-                                  ? "in-progress"
-                                  : i.workflowStatus === "done"
-                                    ? "completed"
-                                    : i.workflowStatus === "blocked"
-                                      ? "blocked"
-                                      : "planned"
-                              ) as import("./mock-data").ItemStatus,
-                              text: i.text,
-                              author: ca.authorName,
-                            }),
-                          );
-                        if (caItems.length === 0) return null;
-                        return (
-                          <div
-                            key={ca.authorId}
-                            className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-muted-tint,rgba(0,0,0,0.02))] p-3"
-                          >
-                            <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
-                              <span aria-hidden="true">🔒</span>
-                              <span className="font-medium">{ca.authorName}</span>{" "}
-                              — readonly
-                            </p>
-                            <NextWeekSection
-                              items={caItems}
-                              readOnly
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                {crossAuthorSectionsQ.data &&
+                  itemsContributors.length > 0 &&
+                  crossAuthorSectionsQ.data.map((ca) => {
+                    const caItems = ca.items
+                      .filter((i) => i.type === "next")
+                      .map(
+                        (i): import("./mock-data").KanbanItem => ({
+                          id: i.id,
+                          productId: i.projectId,
+                          productName:
+                            productNameById.get(i.projectId) ?? i.projectId,
+                          stageName: i.stageName ?? undefined,
+                          status: (
+                            i.workflowStatus === "in_progress"
+                              ? "in-progress"
+                              : i.workflowStatus === "done"
+                                ? "completed"
+                                : i.workflowStatus === "blocked"
+                                  ? "blocked"
+                                  : "planned"
+                          ) as import("./mock-data").ItemStatus,
+                          text: i.text,
+                          author: ca.authorName,
+                        }),
+                      );
+                    if (caItems.length === 0) return null;
+                    return (
+                      <div key={ca.authorId} className="opacity-70">
+                        <p className="mb-1 mt-2 flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)]">
+                          <span aria-hidden="true">🔒</span>
+                          <span className="font-medium">{ca.authorName}</span>
+                        </p>
+                        <NextWeekSection
+                          items={caItems}
+                          readOnly
+                        />
+                      </div>
+                    );
+                  })}
                 <NextWeekSection
                   items={nextWeekItems}
                   readOnly={isReadOnly}
@@ -1736,49 +1720,38 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={risksContributors}
                   reportId={targetReportId}
-                  expandable={risksContributors.length > 0}
-                  expanded={showCARisks}
-                  onToggleExpand={() => setShowCARisks((v) => !v)}
                 />
-                {showCARisks &&
-                  crossAuthorSectionsQ.data &&
-                  crossAuthorSectionsQ.data.some((ca) => ca.risks.length > 0) && (
-                    <div className="mt-2 space-y-2">
-                      {crossAuthorSectionsQ.data.map((ca) => {
-                        if (ca.risks.length === 0) return null;
-                        const caRisks = ca.risks.map(
-                          (r): import("./mock-data").RiskEntry => ({
-                            id: r.id,
-                            productId: r.projectId,
-                            productName:
-                              productNameById.get(r.projectId) ?? r.projectId,
-                            stageName: r.stageName ?? undefined,
-                            severity: r.severity === "blocked" ? "blocked" : "at-risk",
-                            text: r.risk,
-                            impact: r.impact,
-                            mitigation: r.mitigation,
-                          }),
-                        );
-                        return (
-                          <div
-                            key={ca.authorId}
-                            className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-muted-tint,rgba(0,0,0,0.02))] p-3"
-                          >
-                            <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
-                              <span aria-hidden="true">🔒</span>
-                              <span className="font-medium">{ca.authorName}</span>{" "}
-                              — readonly
-                            </p>
-                            <RisksSection
-                              risks={caRisks}
-                              readOnly
-                              sectionAuthorName={ca.authorName}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                {crossAuthorSectionsQ.data &&
+                  risksContributors.length > 0 &&
+                  crossAuthorSectionsQ.data.map((ca) => {
+                    if (ca.risks.length === 0) return null;
+                    const caRisks = ca.risks.map(
+                      (r): import("./mock-data").RiskEntry => ({
+                        id: r.id,
+                        productId: r.projectId,
+                        productName:
+                          productNameById.get(r.projectId) ?? r.projectId,
+                        stageName: r.stageName ?? undefined,
+                        severity: r.severity === "blocked" ? "blocked" : "at-risk",
+                        text: r.risk,
+                        impact: r.impact,
+                        mitigation: r.mitigation,
+                      }),
+                    );
+                    return (
+                      <div key={ca.authorId} className="opacity-70">
+                        <p className="mb-1 mt-2 flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)]">
+                          <span aria-hidden="true">🔒</span>
+                          <span className="font-medium">{ca.authorName}</span>
+                        </p>
+                        <RisksSection
+                          risks={caRisks}
+                          readOnly
+                          sectionAuthorName={ca.authorName}
+                        />
+                      </div>
+                    );
+                  })}
                 <LeadFormSyncBridge.Risks />
               </AccordionSection>
             </LeadFormSyncBridge.Provider>
@@ -1812,52 +1785,39 @@ export function LeadForm({
               <CrossAuthorHint
                 contributors={allSectionContributors}
                 reportId={targetReportId}
-                expandable={allSectionContributors.length > 0}
-                expanded={showCADecisions}
-                onToggleExpand={() => setShowCADecisions((v) => !v)}
               />
-              {showCADecisions &&
-                crossAuthorSectionsQ.data &&
-                crossAuthorSectionsQ.data.some(
-                  (ca) => ca.decisions.length > 0,
-                ) && (
-                  <div className="mt-2 space-y-2">
-                    {crossAuthorSectionsQ.data.map((ca) => {
-                      if (ca.decisions.length === 0) return null;
-                      const caDecisions = ca.decisions.map(
-                        (d): import("./mock-data").DecisionEntry => ({
-                          id: d.id,
-                          productId: d.productId,
-                          productName:
-                            productNameById.get(d.productId) ?? d.productId,
-                          text: d.text,
-                          owner: d.owner,
-                          impact: d.impact,
-                          deadline: d.deadline
-                            ? d.deadline.toISOString().slice(0, 10)
-                            : null,
-                          stageName: d.stageName ?? undefined,
-                        }),
-                      );
-                      return (
-                        <div
-                          key={ca.authorId}
-                          className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-muted-tint,rgba(0,0,0,0.02))] p-3"
-                        >
-                          <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
-                            <span aria-hidden="true">🔒</span>
-                            <span className="font-medium">{ca.authorName}</span>{" "}
-                            — readonly
-                          </p>
-                          <DecisionsSection
-                            decisions={caDecisions}
-                            readOnly
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+              {crossAuthorSectionsQ.data &&
+                allSectionContributors.length > 0 &&
+                crossAuthorSectionsQ.data.map((ca) => {
+                  if (ca.decisions.length === 0) return null;
+                  const caDecisions = ca.decisions.map(
+                    (d): import("./mock-data").DecisionEntry => ({
+                      id: d.id,
+                      productId: d.productId,
+                      productName:
+                        productNameById.get(d.productId) ?? d.productId,
+                      text: d.text,
+                      owner: d.owner,
+                      impact: d.impact,
+                      deadline: d.deadline
+                        ? d.deadline.toISOString().slice(0, 10)
+                        : null,
+                      stageName: d.stageName ?? undefined,
+                    }),
+                  );
+                  return (
+                    <div key={ca.authorId} className="opacity-70">
+                      <p className="mb-1 mt-2 flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)]">
+                        <span aria-hidden="true">🔒</span>
+                        <span className="font-medium">{ca.authorName}</span>
+                      </p>
+                      <DecisionsSection
+                        decisions={caDecisions}
+                        readOnly
+                      />
+                    </div>
+                  );
+                })}
               <DecisionsSection
                 decisions={decisions}
                 readOnly={isReadOnly}
@@ -1902,48 +1862,35 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={allSectionContributors}
                   reportId={targetReportId}
-                  expandable={allSectionContributors.length > 0}
-                  expanded={showCAPriorities}
-                  onToggleExpand={() => setShowCAPriorities((v) => !v)}
                 />
-                {showCAPriorities &&
-                  crossAuthorSectionsQ.data &&
-                  crossAuthorSectionsQ.data.some(
-                    (ca) => ca.priorities.length > 0,
-                  ) && (
-                    <div className="mt-2 space-y-2">
-                      {crossAuthorSectionsQ.data.map((ca) => {
-                        if (ca.priorities.length === 0) return null;
-                        const caPriorities = ca.priorities.map(
-                          (p): import("./mock-data").PriorityEntry => ({
-                            rank: p.rank,
-                            text: p.text,
-                            stageName: p.stageName ?? undefined,
-                            productId: p.productId,
-                            productName:
-                              productNameById.get(p.productId) ?? p.productId,
-                          }),
-                        );
-                        return (
-                          <div
-                            key={ca.authorId}
-                            className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-muted-tint,rgba(0,0,0,0.02))] p-3"
-                          >
-                            <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
-                              <span aria-hidden="true">🔒</span>
-                              <span className="font-medium">{ca.authorName}</span>{" "}
-                              — readonly
-                            </p>
-                            <PrioritiesSection
-                              priorities={caPriorities}
-                              readOnly
-                              sectionAuthorName={ca.authorName}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                {crossAuthorSectionsQ.data &&
+                  allSectionContributors.length > 0 &&
+                  crossAuthorSectionsQ.data.map((ca) => {
+                    if (ca.priorities.length === 0) return null;
+                    const caPriorities = ca.priorities.map(
+                      (p): import("./mock-data").PriorityEntry => ({
+                        rank: p.rank,
+                        text: p.text,
+                        stageName: p.stageName ?? undefined,
+                        productId: p.productId,
+                        productName:
+                          productNameById.get(p.productId) ?? p.productId,
+                      }),
+                    );
+                    return (
+                      <div key={ca.authorId} className="opacity-70">
+                        <p className="mb-1 mt-2 flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)]">
+                          <span aria-hidden="true">🔒</span>
+                          <span className="font-medium">{ca.authorName}</span>
+                        </p>
+                        <PrioritiesSection
+                          priorities={caPriorities}
+                          readOnly
+                          sectionAuthorName={ca.authorName}
+                        />
+                      </div>
+                    );
+                  })}
                 <PrioritiesSection
                   priorities={priorities}
                   readOnly={isReadOnly}
