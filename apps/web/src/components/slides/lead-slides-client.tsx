@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
@@ -20,6 +20,7 @@ import {
   type SlideProduct,
 } from "./section-slide-utils";
 import { LeadScopeToggle } from "./lead-scope-toggle";
+import { SlideFullscreenButton } from "./slide-fullscreen-button";
 
 function SlideEmptyState({
   title,
@@ -146,6 +147,7 @@ export function LeadSlidesClient({
   const session = useContext(SessionContext);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scope, setScope] = useState<"own" | "product">("own");
+  const deckRef = useRef<HTMLDivElement>(null);
 
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
@@ -232,34 +234,39 @@ export function LeadSlidesClient({
   }
 
   return (
-    <ReportSlides
-      slides={slides}
-      selectedIndex={selectedIndex}
-      onSelect={setSelectedIndex}
-      variant="lead"
-      title={inReportMode ? "Report slides" : "My Status Slides"}
-      subtitle={
-        inReportMode
-          ? "Report sections grouped by product and SDLC stage."
-          : "Current section grouped by product and SDLC stage."
-      }
-      groupLabel={
-        inReportMode ? null : (session?.user?.reportingGroupName ?? null)
-      }
-      sourceHref={"/lead/report/" + encodeURIComponent(targetReportId)}
-      sourceLabel="Open source section"
-      hideSourceLink={inReportMode}
-      toolbar={
-        !inReportMode ? (
-          <LeadScopeToggle
-            scope={scope}
-            onChange={(s) => {
-              setScope(s);
-              setSelectedIndex(0);
-            }}
-          />
-        ) : undefined
-      }
-    />
+    <div ref={deckRef}>
+      <ReportSlides
+        slides={slides}
+        selectedIndex={selectedIndex}
+        onSelect={setSelectedIndex}
+        variant="lead"
+        title={inReportMode ? "Report slides" : "My Status Slides"}
+        subtitle={
+          inReportMode
+            ? "Report sections grouped by product and SDLC stage."
+            : "Current section grouped by product and SDLC stage."
+        }
+        groupLabel={
+          inReportMode ? null : (session?.user?.reportingGroupName ?? null)
+        }
+        sourceHref={"/lead/report/" + encodeURIComponent(targetReportId)}
+        sourceLabel="Open source section"
+        hideSourceLink={inReportMode}
+        toolbar={
+          <div className="flex flex-wrap items-center gap-2">
+            {!inReportMode ? (
+              <LeadScopeToggle
+                scope={scope}
+                onChange={(s) => {
+                  setScope(s);
+                  setSelectedIndex(0);
+                }}
+              />
+            ) : null}
+            <SlideFullscreenButton targetRef={deckRef} />
+          </div>
+        }
+      />
+    </div>
   );
 }

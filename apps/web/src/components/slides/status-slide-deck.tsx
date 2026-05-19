@@ -159,6 +159,7 @@ function productStoryList({
   empty,
   icon,
   tone = "neutral",
+  compact = false,
 }: {
   readonly id: string;
   readonly label: string;
@@ -166,6 +167,7 @@ function productStoryList({
   readonly empty: string;
   readonly icon: ReactNode;
   readonly tone?: "neutral" | "risk" | "priority" | "decision";
+  readonly compact?: boolean;
 }) {
   const toneClassName = {
     neutral: "text-[var(--color-muted-foreground)]",
@@ -179,9 +181,16 @@ function productStoryList({
     priority: "border-[rgba(212,160,23,0.34)]",
     decision: "border-[rgba(0,117,74,0.28)]",
   }[tone];
+  const bodyClass = compact
+    ? "min-w-0 break-words border-l-2 pl-3 text-[12px] leading-[1.4] text-[var(--color-foreground)]"
+    : "min-w-0 break-words border-l-2 pl-3 text-[13px] leading-snug text-[var(--color-foreground)]";
+  const emptyClass = "mt-2 text-[12px] leading-5 text-[var(--color-muted-foreground)]";
 
   return (
-    <section className="min-w-0" data-testid={"lead-slide-story-" + id}>
+    <section
+      className="min-w-0 min-h-[var(--slide-row-min)]"
+      data-testid={"lead-slide-story-" + id}
+    >
       <div
         className={[
           "flex items-center gap-2 text-[11px] font-bold uppercase",
@@ -196,19 +205,14 @@ function productStoryList({
           {items.map((item, index) => (
             <li
               key={item + "-" + index}
-              className={[
-                "min-w-0 break-words border-l-2 pl-3 text-[15px] leading-6 text-[var(--color-foreground)]",
-                lineClassName,
-              ].join(" ")}
+              className={[bodyClass, lineClassName].join(" ")}
             >
               {item}
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-          {empty}
-        </p>
+        <p className={emptyClass}>{empty}</p>
       )}
     </section>
   );
@@ -237,12 +241,22 @@ function ProductSdlcGroups({
   );
   const orderedProducts = [...realProducts, ...sharedProducts];
   const hasMultipleRealProducts = realProducts.length > 1;
-  const productGridClass = [
-    "grid min-h-0 gap-6",
-    hasMultipleRealProducts ? "xl:grid-cols-2" : "",
-  ]
+
+  // N≤4 → 2-col; N≥5 → 3-col with compact typography
+  const compact = realProducts.length >= 5;
+  const colClass = compact
+    ? "xl:grid-cols-3"
+    : hasMultipleRealProducts
+      ? "xl:grid-cols-2"
+      : "";
+  const productGridClass = ["grid min-h-0 gap-6", colClass]
     .filter(Boolean)
     .join(" ");
+
+  const titleClass = compact
+    ? "mt-2 text-[22px] font-bold leading-tight text-[var(--color-primary)]"
+    : "mt-2 text-[28px] font-bold leading-tight text-[var(--color-primary)]";
+  const stagesClass = "mt-3 text-[12px] font-medium text-[var(--color-muted-foreground)]";
 
   return (
     <div className={productGridClass} data-testid="lead-slide-products">
@@ -271,85 +285,85 @@ function ProductSdlcGroups({
             ].join(" ")}
             data-testid={"lead-slide-product-" + product.id}
           >
-            <div className="grid min-h-0 gap-5">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase text-[var(--color-muted-foreground)]">
-                    {isSharedContext
-                      ? "Shared context"
-                      : realProducts.length > 1
-                        ? "Product " + (productNumber + 1)
-                        : "Product"}
+            {/* Header: label + status badge + title + stages */}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold uppercase text-[var(--color-muted-foreground)]">
+                  {isSharedContext
+                    ? "Shared context"
+                    : realProducts.length > 1
+                      ? "Product " + (productNumber + 1)
+                      : "Product"}
+                </span>
+                {!isSharedContext ? (
+                  <span
+                    className={[
+                      "inline-flex min-h-7 items-center rounded-[var(--radius-pill)] border px-2 text-[11px] font-semibold",
+                      statusClass(product.status),
+                    ].join(" ")}
+                  >
+                    {statusLabel(product.status)}
                   </span>
-                  {!isSharedContext ? (
-                    <span
-                      className={[
-                        "inline-flex min-h-7 items-center rounded-[var(--radius-pill)] border px-2 text-[11px] font-semibold",
-                        statusClass(product.status),
-                      ].join(" ")}
-                    >
-                      {statusLabel(product.status)}
-                    </span>
-                  ) : null}
-                </div>
-                <h3 className="mt-2 text-3xl font-bold leading-tight text-[var(--color-primary)]">
-                  {product.name}
-                </h3>
-                {!isSharedContext && product.stages.length > 0 ? (
-                  <p className="mt-3 text-sm font-medium text-[var(--color-muted-foreground)]">
-                    {product.stages.map((s) => s.name).join(" · ")}
-                  </p>
-                ) : !isSharedContext ? (
-                  <p className="mt-3 text-sm text-[var(--color-muted-foreground)]">
-                    No owned SDLC stages
-                  </p>
                 ) : null}
               </div>
+              <h3 className={titleClass}>{product.name}</h3>
+              {!isSharedContext && product.stages.length > 0 ? (
+                <p className={stagesClass}>
+                  {product.stages.map((s) => s.name).join(" · ")}
+                </p>
+              ) : !isSharedContext ? (
+                <p className={stagesClass}>No owned SDLC stages</p>
+              ) : null}
+            </div>
 
-              <div className="grid min-w-0 gap-x-8 gap-y-5 md:grid-cols-2">
-                {productStoryList({
-                  id: product.id + "-current",
-                  label: "Current work",
-                  items: product.currentItems,
-                  empty: "No current work",
-                  icon: <Target className="h-4 w-4" aria-hidden="true" />,
-                })}
-                {productStoryList({
-                  id: product.id + "-next",
-                  label: "Next focus",
-                  items: product.nextItems,
-                  empty: "No next focus",
-                  icon: <ArrowRight className="h-4 w-4" aria-hidden="true" />,
-                })}
-                {productStoryList({
-                  id: product.id + "-risks",
-                  label: "Risks",
-                  items: product.risks,
-                  empty: "No active risks",
-                  icon: (
-                    <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                  ),
-                  tone: "risk",
-                })}
-                {productStoryList({
-                  id: product.id + "-priorities",
-                  label: "Priorities",
-                  items: product.priorities,
-                  empty: "No priorities set",
-                  icon: <ListChecks className="h-4 w-4" aria-hidden="true" />,
-                  tone: "priority",
-                })}
-                <div className="md:col-span-2">
-                  {productStoryList({
-                    id: product.id + "-decisions",
-                    label: "Decisions",
-                    items: product.decisions,
-                    empty: "No decisions",
-                    icon: <FileText className="h-4 w-4" aria-hidden="true" />,
-                    tone: "decision",
-                  })}
-                </div>
-              </div>
+            {/* 5-row band grid — all products use identical min-h rows so bands
+                align horizontally across columns at every breakpoint */}
+            <div className="mt-5 grid gap-y-5">
+              {productStoryList({
+                id: product.id + "-current",
+                label: "Current work",
+                items: product.currentItems,
+                empty: "No current work",
+                icon: <Target className="h-4 w-4" aria-hidden="true" />,
+                compact,
+              })}
+              {productStoryList({
+                id: product.id + "-next",
+                label: "Next focus",
+                items: product.nextItems,
+                empty: "No next focus",
+                icon: <ArrowRight className="h-4 w-4" aria-hidden="true" />,
+                compact,
+              })}
+              {productStoryList({
+                id: product.id + "-risks",
+                label: "Risks",
+                items: product.risks,
+                empty: "No active risks",
+                icon: (
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                ),
+                tone: "risk",
+                compact,
+              })}
+              {productStoryList({
+                id: product.id + "-priorities",
+                label: "Priorities",
+                items: product.priorities,
+                empty: "No priorities set",
+                icon: <ListChecks className="h-4 w-4" aria-hidden="true" />,
+                tone: "priority",
+                compact,
+              })}
+              {productStoryList({
+                id: product.id + "-decisions",
+                label: "Decisions",
+                items: product.decisions,
+                empty: "No decisions",
+                icon: <FileText className="h-4 w-4" aria-hidden="true" />,
+                tone: "decision",
+                compact,
+              })}
             </div>
           </section>
         );
@@ -591,7 +605,7 @@ export function StatusSlideDeck({
         </header>
       ) : null}
 
-      {showChrome && toolbar ? <div>{toolbar}</div> : null}
+      {toolbar ? <div>{toolbar}</div> : null}
 
       {!slide ? (
         <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-16 text-center">
