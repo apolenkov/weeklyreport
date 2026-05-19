@@ -200,7 +200,6 @@ export function RisksSection({
                   {isBlocked ? "Blocked" : "At Risk"}
                 </span>
                 <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
-                  {risk.foreign && <span aria-hidden="true">{"🔒 "}</span>}
                   {risk.productName}
                 </span>
                 {!locked && (
@@ -270,6 +269,7 @@ export function RisksSection({
                 authorName={risk.authorName ?? sectionAuthorName}
                 stageTags={stageTags}
                 ariaLabel={"Risk stages: " + stageTagsLabel}
+                foreign={risk.foreign === true}
               />
             </div>
           );

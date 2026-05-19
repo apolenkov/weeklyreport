@@ -201,11 +201,6 @@ export function DecisionsSection({
                     Owner: {decision.owner}
                   </span>
                 )}
-                {decision.foreign && (
-                  <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
-                    {"🔒 Locked"}
-                  </span>
-                )}
                 {!readOnly && mine && !decision.foreign && (
                   <div className="ml-auto flex gap-1">
                     <button
@@ -254,6 +249,7 @@ export function DecisionsSection({
                 authorName={decision.owner}
                 stageTags={stageTags}
                 ariaLabel={`Decision stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+                foreign={decision.foreign === true}
               />
             </div>
           );

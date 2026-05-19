@@ -216,16 +216,15 @@ export function ItemCard({
       {/* Footer: author on the left, compact stage tags on the right. */}
       <div className="mt-auto flex items-end justify-between gap-2 pt-2">
         <div className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]">
-          {item.foreign && (
-            <span
-              aria-label={`Locked — authored by ${item.author}`}
-              title={`Locked — ${item.author}`}
-              aria-hidden="true"
-            >
-              {"🔒 "}
-            </span>
-          )}
           {item.author}
+          {item.foreign ? (
+            <span
+              aria-label="Read-only — authored by another lead"
+              title="Read-only — authored by another lead"
+            >
+              {" 🔒"}
+            </span>
+          ) : null}
         </div>
         <div className="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1">
           <span
