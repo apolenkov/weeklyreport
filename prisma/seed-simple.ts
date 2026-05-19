@@ -1600,7 +1600,7 @@ async function main() {
       reportSectionId: borisSectionId,
       productId: PROD_CRM,
       text: "Завершить дискавери и утвердить MVP-скоуп с заказчиком",
-      rank: 1,
+      rank: 4,
       stageName: "Planning",
     },
   });
@@ -1665,7 +1665,7 @@ async function main() {
       reportSectionId: victorSectionId,
       productId: PROD_CRM,
       text: "Финализировать схему данных до конца спринта",
-      rank: 1,
+      rank: 4,
       stageName: "Analysis",
     },
   });
@@ -1730,7 +1730,7 @@ async function main() {
       reportSectionId: galinaSectionId,
       productId: PROD_CRM,
       text: "Сдать финальный макет дашборда до следующего спринта",
-      rank: 1,
+      rank: 4,
       stageName: "Design",
     },
   });
