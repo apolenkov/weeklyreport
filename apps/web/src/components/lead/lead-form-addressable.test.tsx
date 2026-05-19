@@ -253,6 +253,13 @@ function buildHarness(opts: {
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthors"] }),
       },
+      crossAuthorSections: {
+        queryOptions: () => ({
+          queryKey: ["leadForm.crossAuthorSections"],
+          queryFn: async () => [] as never[],
+        }),
+        pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
+      },
     },
     ai: {
       onTrack: {

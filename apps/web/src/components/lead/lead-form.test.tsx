@@ -281,6 +281,13 @@ function buildHarness(
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthors"] }),
       },
+      crossAuthorSections: {
+        queryOptions: () => ({
+          queryKey: ["leadForm.crossAuthorSections"],
+          queryFn: async () => [] as never[],
+        }),
+        pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
+      },
     },
     ai: {
       // Phase 31 (AI-03): OnTrackIcon is mounted in SdlcPipeline; provide a
