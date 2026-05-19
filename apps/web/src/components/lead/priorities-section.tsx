@@ -103,10 +103,14 @@ export function PrioritiesSection({
   >({ open: false });
 
   function emit(next: PriorityEntry[]) {
-    // Always renumber so ranks stay 1..N contiguous regardless of how the
-    // caller mutates the array. The schema accepts any positive int but the
-    // UI is simpler when ranks have no gaps.
-    const renumbered = next.map((p, idx) => ({ ...p, rank: idx + 1 }));
+    // Renumber own entries 1..N while leaving foreign entries at their
+    // original ranks. The mixed sorted array includes foreign read-only rows
+    // from other authors; renumbering them would corrupt own-rank lookups in
+    // the draft mutation handler (existingByRank map).
+    let ownRank = 1;
+    const renumbered = next.map((p) =>
+      p.foreign ? p : { ...p, rank: ownRank++ },
+    );
     onChange?.(renumbered);
   }
 
