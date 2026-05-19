@@ -1543,26 +1543,22 @@ export function LeadForm({
                   crossAuthorSectionsQ.data.map((ca) => {
                     const caItems = ca.items
                       .filter((i) => i.type === "current")
-                      .map(
-                        (i): import("./mock-data").KanbanItem => ({
-                          id: i.id,
-                          productId: i.projectId,
-                          productName:
-                            productNameById.get(i.projectId) ?? i.projectId,
-                          stageName: i.stageName ?? undefined,
-                          status: (
-                            i.workflowStatus === "in_progress"
-                              ? "in-progress"
-                              : i.workflowStatus === "done"
-                                ? "completed"
-                                : i.workflowStatus === "blocked"
-                                  ? "blocked"
-                                  : "planned"
-                          ) as import("./mock-data").ItemStatus,
-                          text: i.text,
-                          author: ca.authorName,
-                        }),
-                      );
+                      .map((i): import("./mock-data").KanbanItem => ({
+                        id: i.id,
+                        productId: i.projectId,
+                        productName:
+                          productNameById.get(i.projectId) ?? i.projectId,
+                        stageName: i.stageName ?? undefined,
+                        status: (i.workflowStatus === "in_progress"
+                          ? "in-progress"
+                          : i.workflowStatus === "done"
+                            ? "completed"
+                            : i.workflowStatus === "blocked"
+                              ? "blocked"
+                              : "planned") as import("./mock-data").ItemStatus,
+                        text: i.text,
+                        author: ca.authorName,
+                      }));
                     if (caItems.length === 0) return null;
                     return (
                       <div key={ca.authorId} className="opacity-70">
@@ -1570,10 +1566,7 @@ export function LeadForm({
                           <span aria-hidden="true">🔒</span>
                           <span className="font-medium">{ca.authorName}</span>
                         </p>
-                        <CurrentWeekSection
-                          items={caItems}
-                          readOnly
-                        />
+                        <CurrentWeekSection items={caItems} readOnly />
                       </div>
                     );
                   })}
@@ -1624,26 +1617,22 @@ export function LeadForm({
                   crossAuthorSectionsQ.data.map((ca) => {
                     const caItems = ca.items
                       .filter((i) => i.type === "next")
-                      .map(
-                        (i): import("./mock-data").KanbanItem => ({
-                          id: i.id,
-                          productId: i.projectId,
-                          productName:
-                            productNameById.get(i.projectId) ?? i.projectId,
-                          stageName: i.stageName ?? undefined,
-                          status: (
-                            i.workflowStatus === "in_progress"
-                              ? "in-progress"
-                              : i.workflowStatus === "done"
-                                ? "completed"
-                                : i.workflowStatus === "blocked"
-                                  ? "blocked"
-                                  : "planned"
-                          ) as import("./mock-data").ItemStatus,
-                          text: i.text,
-                          author: ca.authorName,
-                        }),
-                      );
+                      .map((i): import("./mock-data").KanbanItem => ({
+                        id: i.id,
+                        productId: i.projectId,
+                        productName:
+                          productNameById.get(i.projectId) ?? i.projectId,
+                        stageName: i.stageName ?? undefined,
+                        status: (i.workflowStatus === "in_progress"
+                          ? "in-progress"
+                          : i.workflowStatus === "done"
+                            ? "completed"
+                            : i.workflowStatus === "blocked"
+                              ? "blocked"
+                              : "planned") as import("./mock-data").ItemStatus,
+                        text: i.text,
+                        author: ca.authorName,
+                      }));
                     if (caItems.length === 0) return null;
                     return (
                       <div key={ca.authorId} className="opacity-70">
@@ -1651,10 +1640,7 @@ export function LeadForm({
                           <span aria-hidden="true">🔒</span>
                           <span className="font-medium">{ca.authorName}</span>
                         </p>
-                        <NextWeekSection
-                          items={caItems}
-                          readOnly
-                        />
+                        <NextWeekSection items={caItems} readOnly />
                       </div>
                     );
                   })}
@@ -1716,7 +1702,8 @@ export function LeadForm({
                         productName:
                           productNameById.get(r.projectId) ?? r.projectId,
                         stageName: r.stageName ?? undefined,
-                        severity: r.severity === "blocked" ? "blocked" : "at-risk",
+                        severity:
+                          r.severity === "blocked" ? "blocked" : "at-risk",
                         text: r.risk,
                         impact: r.impact,
                         mitigation: r.mitigation,
@@ -1795,10 +1782,7 @@ export function LeadForm({
                         <span aria-hidden="true">🔒</span>
                         <span className="font-medium">{ca.authorName}</span>
                       </p>
-                      <DecisionsSection
-                        decisions={caDecisions}
-                        readOnly
-                      />
+                      <DecisionsSection decisions={caDecisions} readOnly />
                     </div>
                   );
                 })}
