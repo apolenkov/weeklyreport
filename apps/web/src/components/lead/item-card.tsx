@@ -89,6 +89,7 @@ export function ItemCard({
     STATUS_BADGE["in-progress"];
   const isBlocked = item.status === "blocked";
   const isPlanned = item.status === "planned";
+  const locked = readOnly || item.foreign === true;
   const stageTags =
     item.stageIds && item.stageIds.length > 0
       ? item.stageIds
@@ -152,6 +153,7 @@ export function ItemCard({
           ? `3px dashed var(--color-starbucks-accent)`
           : `3px solid ${isBlocked ? "var(--color-destructive)" : "var(--color-starbucks-accent)"}`,
         background: isBlocked ? "#fee2e2" : "var(--color-background)",
+        opacity: item.foreign ? 0.7 : 1,
       }}
     >
 
@@ -164,7 +166,7 @@ export function ItemCard({
           {badge.label}
         </span>
 
-        {!readOnly && !isEditing && (
+        {!locked && !isEditing && (
           <div className="flex shrink-0 gap-1">
             <button
               type="button"
@@ -187,7 +189,7 @@ export function ItemCard({
       </div>
 
       {/* Item text — editable when in edit mode, static otherwise */}
-      {isEditing && !readOnly ? (
+      {isEditing && !locked ? (
         <textarea
           ref={textareaRef}
           className="w-full resize-y rounded-md border border-[var(--color-starbucks-accent)] bg-white px-2 py-1.5 text-sm text-[var(--color-foreground)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
@@ -214,6 +216,15 @@ export function ItemCard({
       {/* Footer: author on the left, compact stage tags on the right. */}
       <div className="mt-auto flex items-end justify-between gap-2 pt-2">
         <div className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]">
+          {item.foreign && (
+            <span
+              aria-label={`Locked — authored by ${item.author}`}
+              title={`Locked — ${item.author}`}
+              aria-hidden="true"
+            >
+              {"🔒 "}
+            </span>
+          )}
           {item.author}
         </div>
         <div className="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1">

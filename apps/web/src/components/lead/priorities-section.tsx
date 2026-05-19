@@ -194,7 +194,10 @@ export function PrioritiesSection({
             // PRI-1 (Phase 33-04): mockup distinguishes the row tint between
             // top-2 (gold-light `#faf6ee`) and rank 3+ (canvas `#f4f1eb`).
             // Earlier every row used the same gold-light wash, blurring rank.
-            style={{ background: entry.rank <= 2 ? "#faf6ee" : "#f4f1eb" }}
+            style={{
+              background: entry.rank <= 2 ? "#faf6ee" : "#f4f1eb",
+              opacity: entry.foreign ? 0.7 : 1,
+            }}
           >
             {/* header row: rank badge + product chip + ml-auto Edit/Delete (parity with decisions-section) */}
             <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -209,10 +212,11 @@ export function PrioritiesSection({
               </span>
               {entry.productName && (
                 <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
+                  {entry.foreign && <span aria-hidden="true">{"🔒 "}</span>}
                   {entry.productName}
                 </span>
               )}
-              {!readOnly && (
+              {!readOnly && !entry.foreign && (
                 <div className="ml-auto flex gap-1">
                   <button
                     type="button"
@@ -238,7 +242,7 @@ export function PrioritiesSection({
               type="button"
               className="w-full cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-3 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
               onClick={() => handleEdit(idx)}
-              disabled={readOnly}
+              disabled={readOnly || entry.foreign === true}
               aria-label={`Edit priority ${entry.rank}`}
             >
               <div className="space-y-1.5">
@@ -253,7 +257,7 @@ export function PrioritiesSection({
                 )}
                 {/* P5: unified [author …… chip] meta-row */}
                 <MetaRow
-                  authorName={sectionAuthorName}
+                  authorName={entry.authorName ?? sectionAuthorName}
                   stageTags={stageTags}
                   ariaLabel={`Priority ${entry.rank} stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
                   className="pt-1"
