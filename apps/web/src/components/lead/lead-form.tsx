@@ -922,6 +922,8 @@ export function LeadForm({
       }),
     };
   });
+  // Lookup map for resolving productName from productId in cross-author embeds.
+  const productNameById = new Map(products.map((p) => [p.id, p.name]));
   const currentWeekItems: KanbanItem[] = data.currentWeekItems as KanbanItem[];
   const nextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
   const risks: RiskEntry[] = data.risks as RiskEntry[];
@@ -1558,9 +1560,18 @@ export function LeadForm({
                             (i): import("./mock-data").KanbanItem => ({
                               id: i.id,
                               productId: i.projectId,
-                              productName: i.projectId,
+                              productName:
+                                productNameById.get(i.projectId) ?? i.projectId,
                               stageName: i.stageName ?? undefined,
-                              status: i.workflowStatus as import("./mock-data").ItemStatus,
+                              status: (
+                                i.workflowStatus === "in_progress"
+                                  ? "in-progress"
+                                  : i.workflowStatus === "done"
+                                    ? "completed"
+                                    : i.workflowStatus === "blocked"
+                                      ? "blocked"
+                                      : "planned"
+                              ) as import("./mock-data").ItemStatus,
                               text: i.text,
                               author: ca.authorName,
                             }),
@@ -1643,9 +1654,18 @@ export function LeadForm({
                             (i): import("./mock-data").KanbanItem => ({
                               id: i.id,
                               productId: i.projectId,
-                              productName: i.projectId,
+                              productName:
+                                productNameById.get(i.projectId) ?? i.projectId,
                               stageName: i.stageName ?? undefined,
-                              status: i.workflowStatus as import("./mock-data").ItemStatus,
+                              status: (
+                                i.workflowStatus === "in_progress"
+                                  ? "in-progress"
+                                  : i.workflowStatus === "done"
+                                    ? "completed"
+                                    : i.workflowStatus === "blocked"
+                                      ? "blocked"
+                                      : "planned"
+                              ) as import("./mock-data").ItemStatus,
                               text: i.text,
                               author: ca.authorName,
                             }),
@@ -1730,7 +1750,8 @@ export function LeadForm({
                           (r): import("./mock-data").RiskEntry => ({
                             id: r.id,
                             productId: r.projectId,
-                            productName: r.projectId,
+                            productName:
+                              productNameById.get(r.projectId) ?? r.projectId,
                             stageName: r.stageName ?? undefined,
                             severity: r.severity === "blocked" ? "blocked" : "at-risk",
                             text: r.risk,
@@ -1807,7 +1828,8 @@ export function LeadForm({
                         (d): import("./mock-data").DecisionEntry => ({
                           id: d.id,
                           productId: d.productId,
-                          productName: d.productId,
+                          productName:
+                            productNameById.get(d.productId) ?? d.productId,
                           text: d.text,
                           owner: d.owner,
                           impact: d.impact,
@@ -1898,7 +1920,8 @@ export function LeadForm({
                             text: p.text,
                             stageName: p.stageName ?? undefined,
                             productId: p.productId,
-                            productName: p.productId,
+                            productName:
+                              productNameById.get(p.productId) ?? p.productId,
                           }),
                         );
                         return (
