@@ -186,13 +186,16 @@ function Provider({
   const handleRisksChange = useCallback(
     (next: RiskEntry[]) => {
       if (readOnly) return;
+      // Strip foreign entries so they don't bleed into draft mutations or
+      // skew the stage-clear count (foreign risks belong to other authors).
+      const ownNext = next.filter((r) => !r.foreign);
       // Detect (productId, stageName) tuples that were present in `risks` but
       // have zero remaining entries after this change. For each, reset the
       // matching stage's status back to 'on-track' so the "× Blocked" / risk
       // marker on the SDLC pipeline disappears symmetrically with the
       // existing additive auto-sync (handleStageStatusChange + handleRiskFilled).
       const nextCounts = new Map<string, number>();
-      for (const r of next) {
+      for (const r of ownNext) {
         for (const key of riskStageKeys(products, r)) {
           nextCounts.set(key, (nextCounts.get(key) ?? 0) + 1);
         }
@@ -212,7 +215,7 @@ function Provider({
         }
       }
 
-      onRisksChange(next);
+      onRisksChange(ownNext);
 
       if (stagesToClear.length > 0) {
         // Reset the affected stages to 'on-track' via the same

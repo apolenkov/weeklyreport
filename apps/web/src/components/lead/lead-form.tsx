@@ -1009,6 +1009,8 @@ export function LeadForm({
       const existingById = new Map(
         prev.decisions.flatMap((d) => (d.id ? [[d.id, d] as const] : [])),
       );
+      // Strip foreign entries — they are read-only and must not bleed into the draft.
+      next = next.filter((d) => !d.foreign);
       const merged = next.map((d) => {
         const existing = existingById.get(d.id);
         const deadline = d.deadline ? new Date(d.deadline) : null;
@@ -1081,6 +1083,8 @@ export function LeadForm({
       // Merge presentation risks back into raw section. RiskEntry now
       // carries impact + mitigation (filled by the modal-edit dialog), so
       // we propagate all three text fields onto raw rows.
+      // Strip foreign entries — they are read-only and must not bleed into the draft.
+      next = next.filter((r) => !r.foreign);
       const existingById = new Map(
         prev.risks.flatMap((r) => (r.id ? [[r.id, r] as const] : [])),
       );
@@ -1114,6 +1118,8 @@ export function LeadForm({
   }
 
   function handlePrioritiesChange(next: PriorityEntry[]) {
+    // Strip foreign entries before any validation or draft write.
+    next = next.filter((p) => !p.foreign);
     if (next.some((p) => p.text.trim().length > 0)) {
       setSubmitFieldError(null);
     }
@@ -1180,6 +1186,8 @@ export function LeadForm({
 
   function makeItemsChangeHandler(itemType: "current" | "next") {
     return (next: KanbanItem[]) => {
+      // Strip foreign entries — they are read-only and must not bleed into the draft.
+      next = next.filter((kb) => !kb.foreign);
       setDraftSection((prev) => {
         if (!prev) return prev;
         const existingById = new Map(
