@@ -106,6 +106,7 @@ function createMockRepository(
     createReopenRequest: vi.fn().mockResolvedValue(undefined),
     hasSharedProduct: vi.fn().mockResolvedValue(false),
     getCrossAuthors: vi.fn().mockResolvedValue([]),
+    getCrossAuthorSections: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }
