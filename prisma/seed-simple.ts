@@ -596,7 +596,7 @@ async function main() {
   // assignment from before — the dashboard variety they provide is
   // still useful and the all-7 case only needs one fixture.
   console.log(
-    "[seed-simple] Creating stage assignments (F1 v8.3: Vasily owns Dev+Test+DevOps+Support on CRM, Boris owns Plan+Analysis+Design on CRM)...",
+    "[seed-simple] Creating stage assignments (W6: Vasily=Dev/Test/DevOps/Support, Boris=Plan, Victor=Analysis, Galina=Design on PROD_CRM)...",
   );
   const allStageIds = [
     STAGE_PLAN,
@@ -706,8 +706,9 @@ async function main() {
         stageId: STAGE_DESIGN,
         userId: LEAD_DEVOPS_PM,
       },
-      // F1 (v8.3): Boris owns Plan+Analysis+Design on PROD_CRM (cross-author UAT demo).
-      // @@unique([stageId, projectId]) — Vasily was moved off these 3 stages above.
+      // W6: 3-contributor split on PROD_CRM for cross-author UAT demo.
+      // Boris=Planning, Victor=Analysis, Galina=Design (@@unique([stageId, projectId])).
+      // Vasily retains Dev+Test+DevOps+Support (4/7 stages).
       {
         id: "b0000000-0000-4000-8000-000000000033",
         projectId: PROD_CRM,
@@ -718,13 +719,13 @@ async function main() {
         id: "b0000000-0000-4000-8000-000000000034",
         projectId: PROD_CRM,
         stageId: STAGE_ANALYSIS,
-        userId: LEAD_MOBILE_PM,
+        userId: LEAD_CLOUD_PM,
       },
       {
         id: "b0000000-0000-4000-8000-000000000035",
         projectId: PROD_CRM,
         stageId: STAGE_DESIGN,
-        userId: LEAD_MOBILE_PM,
+        userId: LEAD_DEVOPS_PM,
       },
       // P61: Vasily owns stages on his 3 extra products.
       // On PROD_CRM_SALES Boris (LEAD_MOBILE_PM) owns STAGE_PLAN (co-author demo),
@@ -1499,14 +1500,12 @@ async function main() {
     });
   }
 
-  // Co-author overlay: Boris (LEAD_MOBILE_PM, leads[6]) has extra content on
-  // PROD_CRM_SALES and PROD_CRM inside his own REPORT_ACTIVE section.
-  // Boris's section id = a0000000-0000-4000-8000-000000000407 (i=6, hex 7).
-  // When Vasily opens ?authorId=LEAD_MOBILE_PM the form shows Boris's section
-  // read-only (isPinnedAuthorView=true in lead-form.tsx:330).
-  // F1 (v8.3): Boris now owns Plan+Analysis+Design on PROD_CRM, so his section
-  // products array includes PROD_CRM. Adding 2 items + 1 risk on PROD_CRM here
-  // so Vasily sees meaningful cross-author content when drilling in.
+  // W6: 3-contributor cross-author overlay on PROD_CRM.
+  // Boris (section 407, Planning) — CW item + NW item + Risk + Decision + Priority.
+  // Victor (section 408, Analysis) — same 5-section spread.
+  // Galina (section 409, Design) — same 5-section spread.
+  // When Vasily opens /lead/report/<id> he sees all 3 contributors' content
+  // merged inline in each of the 5 accordion sections with 🔒 next to author name.
   const borisSectionId = `a0000000-0000-4000-8000-000000000407`;
   await prisma.projectStatus.create({
     data: {
@@ -1542,7 +1541,7 @@ async function main() {
       stageName: "Planning",
     },
   });
-  // F1 (v8.3): Boris's PROD_CRM content — visible when Vasily drills into Boris's section.
+  // Boris PROD_CRM — CW + NW items (already seeded), Risk, Decision, Priority.
   // ProjectStatus for PROD_CRM is already created in the main leads loop (SECONDARY=[PROD_CRM,...]).
   await prisma.item.createMany({
     data: [
@@ -1568,7 +1567,7 @@ async function main() {
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
         completed: false,
-        stageName: "Analysis",
+        stageName: "Planning",
       },
     ],
   });
@@ -1582,6 +1581,157 @@ async function main() {
       mitigation: "PM фасилитирует воркшоп с заказчиком до пятницы",
       severity: "at-risk",
       stageName: "Planning",
+    },
+  });
+  await prisma.decision.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000007004",
+      reportSectionId: borisSectionId,
+      productId: PROD_CRM,
+      text: "Утвердить структуру аналитического API до начала разработки",
+      owner: "Борис С.",
+      impact: "Позволяет Design-команде начать прототипирование немедленно",
+      stageName: "Planning",
+    },
+  });
+  await prisma.priority.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000008004",
+      reportSectionId: borisSectionId,
+      productId: PROD_CRM,
+      text: "Завершить дискавери и утвердить MVP-скоуп с заказчиком",
+      rank: 1,
+      stageName: "Planning",
+    },
+  });
+
+  // Victor (LEAD_CLOUD_PM) owns Analysis on PROD_CRM (section 408).
+  // ProjectStatus for PROD_CRM already exists (SECONDARY=[PROD_CRM, PROD_MOBILE] from loop).
+  const victorSectionId = `a0000000-0000-4000-8000-000000000408`;
+  await prisma.item.createMany({
+    data: [
+      {
+        id: "a0000000-0000-4000-8000-000000007010",
+        reportSectionId: victorSectionId,
+        type: ItemType.current,
+        projectId: PROD_CRM,
+        text: "Анализ пользовательских сценариев для нового дашборда",
+        tag: "analysis",
+        workflowStatus: ItemWorkflowStatus.in_progress,
+        carriedOver: false,
+        completed: false,
+        stageName: "Analysis",
+      },
+      {
+        id: "a0000000-0000-4000-8000-000000007011",
+        reportSectionId: victorSectionId,
+        type: ItemType.next,
+        projectId: PROD_CRM,
+        text: "Согласовать схему данных с бэкенд-командой",
+        tag: "feature",
+        workflowStatus: ItemWorkflowStatus.in_progress,
+        carriedOver: false,
+        completed: false,
+        stageName: "Analysis",
+      },
+    ],
+  });
+  await prisma.risk.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000009010",
+      reportSectionId: victorSectionId,
+      projectId: PROD_CRM,
+      risk: "Нет согласованной модели данных — аналитика блокирует разработку",
+      impact: "Задержка старта Dev-фазы на 2 недели",
+      mitigation: "Виктор организует межкомандный воркшоп по схеме данных",
+      severity: "blocked",
+      stageName: "Analysis",
+    },
+  });
+  await prisma.decision.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000007012",
+      reportSectionId: victorSectionId,
+      productId: PROD_CRM,
+      text: "Использовать GraphQL вместо REST для аналитического слоя",
+      owner: "Виктор Л.",
+      impact: "Единая точка доступа, меньше over-fetching",
+      stageName: "Analysis",
+    },
+  });
+  await prisma.priority.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000008010",
+      reportSectionId: victorSectionId,
+      productId: PROD_CRM,
+      text: "Финализировать схему данных до конца спринта",
+      rank: 1,
+      stageName: "Analysis",
+    },
+  });
+
+  // Galina (LEAD_DEVOPS_PM) owns Design on PROD_CRM (section 409).
+  // ProjectStatus for PROD_CRM already exists (SECONDARY=[PROD_CRM, PROD_MOBILE] from loop).
+  const galinaSectionId = `a0000000-0000-4000-8000-000000000409`;
+  await prisma.item.createMany({
+    data: [
+      {
+        id: "a0000000-0000-4000-8000-000000007020",
+        reportSectionId: galinaSectionId,
+        type: ItemType.current,
+        projectId: PROD_CRM,
+        text: "Разработка UI-kit для нового портала — компоненты форм и таблиц",
+        tag: "feature",
+        workflowStatus: ItemWorkflowStatus.in_progress,
+        carriedOver: false,
+        completed: false,
+        stageName: "Design",
+      },
+      {
+        id: "a0000000-0000-4000-8000-000000007021",
+        reportSectionId: galinaSectionId,
+        type: ItemType.next,
+        projectId: PROD_CRM,
+        text: "Провести usability-тест с 5 пользователями по прототипу",
+        tag: "analysis",
+        workflowStatus: ItemWorkflowStatus.in_progress,
+        carriedOver: false,
+        completed: false,
+        stageName: "Design",
+      },
+    ],
+  });
+  await prisma.risk.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000009020",
+      reportSectionId: galinaSectionId,
+      projectId: PROD_CRM,
+      risk: "Figma-прототип не согласован с PM — риск переработки верстки",
+      impact: "Переработка компонентов на этапе Dev",
+      mitigation: "Галина организует review с Boris и стейкхолдерами",
+      severity: "at-risk",
+      stageName: "Design",
+    },
+  });
+  await prisma.decision.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000007022",
+      reportSectionId: galinaSectionId,
+      productId: PROD_CRM,
+      text: "Принять Material Design 3 как базовую дизайн-систему для портала",
+      owner: "Галина М.",
+      impact: "Ускоряет разработку компонентов на 30%",
+      stageName: "Design",
+    },
+  });
+  await prisma.priority.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000008020",
+      reportSectionId: galinaSectionId,
+      productId: PROD_CRM,
+      text: "Сдать финальный макет дашборда до следующего спринта",
+      rank: 1,
+      stageName: "Design",
     },
   });
 
