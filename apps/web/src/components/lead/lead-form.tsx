@@ -35,6 +35,7 @@ import { FillFromButton } from "./fill-from-button";
 import { VersionHistoryNav } from "./version-history-nav";
 import { CurrentWeekSection } from "./current-week-section";
 import { NextWeekSection } from "./next-week-section";
+import { RisksSection } from "./risks-section";
 import { DecisionsSection } from "./decisions-section";
 import { PrioritiesSection } from "./priorities-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
@@ -383,6 +384,26 @@ export function LeadForm({
       reportId: targetReportId,
     }),
     enabled: targetReportId !== "" && !requestedAuthorIdNormalized,
+  });
+
+  // F14: per-section toggle states for cross-author inline embeds.
+  // Must be declared before crossAuthorSectionsQ which reads them in `enabled`.
+  const [showCAItems, setShowCAItems] = useState(false);
+  const [showCARisks, setShowCARisks] = useState(false);
+  const [showCADecisions, setShowCADecisions] = useState(false);
+  const [showCAPriorities, setShowCAPriorities] = useState(false);
+
+  // F14: load full cross-author section data for inline readonly embeds.
+  // Only fetched when at least one section embed is toggled open and we have
+  // a valid reportId. Not loaded for foreign-author views (read-only pages).
+  const crossAuthorSectionsQ = useQuery({
+    ...trpc.leadForm.crossAuthorSections.queryOptions({
+      reportId: targetReportId,
+    }),
+    enabled:
+      targetReportId !== "" &&
+      !requestedAuthorIdNormalized &&
+      (showCAItems || showCARisks || showCADecisions || showCAPriorities),
   });
 
   // F9: derive per-section contributors from crossAuthors data.
@@ -1520,7 +1541,50 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={itemsContributors}
                   reportId={targetReportId}
+                  expandable={itemsContributors.length > 0}
+                  expanded={showCAItems}
+                  onToggleExpand={() => setShowCAItems((v) => !v)}
                 />
+                {showCAItems &&
+                  crossAuthorSectionsQ.data &&
+                  crossAuthorSectionsQ.data.some(
+                    (ca) => ca.items.filter((i) => i.type === "current").length > 0,
+                  ) && (
+                    <div className="mt-2 space-y-2">
+                      {crossAuthorSectionsQ.data.map((ca) => {
+                        const caItems = ca.items
+                          .filter((i) => i.type === "current")
+                          .map(
+                            (i): import("./mock-data").KanbanItem => ({
+                              id: i.id,
+                              productId: i.projectId,
+                              productName: i.projectId,
+                              stageName: i.stageName ?? undefined,
+                              status: i.workflowStatus as import("./mock-data").ItemStatus,
+                              text: i.text,
+                              author: ca.authorName,
+                            }),
+                          );
+                        if (caItems.length === 0) return null;
+                        return (
+                          <div
+                            key={ca.authorId}
+                            className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-muted-tint,rgba(0,0,0,0.02))] p-3"
+                          >
+                            <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
+                              <span aria-hidden="true">🔒</span>
+                              <span className="font-medium">{ca.authorName}</span>{" "}
+                              — readonly
+                            </p>
+                            <CurrentWeekSection
+                              items={caItems}
+                              readOnly
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 <CurrentWeekSection
                   items={currentWeekItems}
                   readOnly={isReadOnly}
@@ -1562,7 +1626,50 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={itemsContributors}
                   reportId={targetReportId}
+                  expandable={itemsContributors.length > 0}
+                  expanded={showCAItems}
+                  onToggleExpand={() => setShowCAItems((v) => !v)}
                 />
+                {showCAItems &&
+                  crossAuthorSectionsQ.data &&
+                  crossAuthorSectionsQ.data.some(
+                    (ca) => ca.items.filter((i) => i.type === "next").length > 0,
+                  ) && (
+                    <div className="mt-2 space-y-2">
+                      {crossAuthorSectionsQ.data.map((ca) => {
+                        const caItems = ca.items
+                          .filter((i) => i.type === "next")
+                          .map(
+                            (i): import("./mock-data").KanbanItem => ({
+                              id: i.id,
+                              productId: i.projectId,
+                              productName: i.projectId,
+                              stageName: i.stageName ?? undefined,
+                              status: i.workflowStatus as import("./mock-data").ItemStatus,
+                              text: i.text,
+                              author: ca.authorName,
+                            }),
+                          );
+                        if (caItems.length === 0) return null;
+                        return (
+                          <div
+                            key={ca.authorId}
+                            className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-muted-tint,rgba(0,0,0,0.02))] p-3"
+                          >
+                            <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
+                              <span aria-hidden="true">🔒</span>
+                              <span className="font-medium">{ca.authorName}</span>{" "}
+                              — readonly
+                            </p>
+                            <NextWeekSection
+                              items={caItems}
+                              readOnly
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 <NextWeekSection
                   items={nextWeekItems}
                   readOnly={isReadOnly}
@@ -1609,7 +1716,48 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={risksContributors}
                   reportId={targetReportId}
+                  expandable={risksContributors.length > 0}
+                  expanded={showCARisks}
+                  onToggleExpand={() => setShowCARisks((v) => !v)}
                 />
+                {showCARisks &&
+                  crossAuthorSectionsQ.data &&
+                  crossAuthorSectionsQ.data.some((ca) => ca.risks.length > 0) && (
+                    <div className="mt-2 space-y-2">
+                      {crossAuthorSectionsQ.data.map((ca) => {
+                        if (ca.risks.length === 0) return null;
+                        const caRisks = ca.risks.map(
+                          (r): import("./mock-data").RiskEntry => ({
+                            id: r.id,
+                            productId: r.projectId,
+                            productName: r.projectId,
+                            stageName: r.stageName ?? undefined,
+                            severity: r.severity === "blocked" ? "blocked" : "at-risk",
+                            text: r.risk,
+                            impact: r.impact,
+                            mitigation: r.mitigation,
+                          }),
+                        );
+                        return (
+                          <div
+                            key={ca.authorId}
+                            className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-muted-tint,rgba(0,0,0,0.02))] p-3"
+                          >
+                            <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
+                              <span aria-hidden="true">🔒</span>
+                              <span className="font-medium">{ca.authorName}</span>{" "}
+                              — readonly
+                            </p>
+                            <RisksSection
+                              risks={caRisks}
+                              readOnly
+                              sectionAuthorName={ca.authorName}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 <LeadFormSyncBridge.Risks />
               </AccordionSection>
             </LeadFormSyncBridge.Provider>
@@ -1643,7 +1791,51 @@ export function LeadForm({
               <CrossAuthorHint
                 contributors={allSectionContributors}
                 reportId={targetReportId}
+                expandable={allSectionContributors.length > 0}
+                expanded={showCADecisions}
+                onToggleExpand={() => setShowCADecisions((v) => !v)}
               />
+              {showCADecisions &&
+                crossAuthorSectionsQ.data &&
+                crossAuthorSectionsQ.data.some(
+                  (ca) => ca.decisions.length > 0,
+                ) && (
+                  <div className="mt-2 space-y-2">
+                    {crossAuthorSectionsQ.data.map((ca) => {
+                      if (ca.decisions.length === 0) return null;
+                      const caDecisions = ca.decisions.map(
+                        (d): import("./mock-data").DecisionEntry => ({
+                          id: d.id,
+                          productId: d.productId,
+                          productName: d.productId,
+                          text: d.text,
+                          owner: d.owner,
+                          impact: d.impact,
+                          deadline: d.deadline
+                            ? d.deadline.toISOString().slice(0, 10)
+                            : null,
+                          stageName: d.stageName ?? undefined,
+                        }),
+                      );
+                      return (
+                        <div
+                          key={ca.authorId}
+                          className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-muted-tint,rgba(0,0,0,0.02))] p-3"
+                        >
+                          <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
+                            <span aria-hidden="true">🔒</span>
+                            <span className="font-medium">{ca.authorName}</span>{" "}
+                            — readonly
+                          </p>
+                          <DecisionsSection
+                            decisions={caDecisions}
+                            readOnly
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               <DecisionsSection
                 decisions={decisions}
                 readOnly={isReadOnly}
@@ -1688,7 +1880,47 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={allSectionContributors}
                   reportId={targetReportId}
+                  expandable={allSectionContributors.length > 0}
+                  expanded={showCAPriorities}
+                  onToggleExpand={() => setShowCAPriorities((v) => !v)}
                 />
+                {showCAPriorities &&
+                  crossAuthorSectionsQ.data &&
+                  crossAuthorSectionsQ.data.some(
+                    (ca) => ca.priorities.length > 0,
+                  ) && (
+                    <div className="mt-2 space-y-2">
+                      {crossAuthorSectionsQ.data.map((ca) => {
+                        if (ca.priorities.length === 0) return null;
+                        const caPriorities = ca.priorities.map(
+                          (p): import("./mock-data").PriorityEntry => ({
+                            rank: p.rank,
+                            text: p.text,
+                            stageName: p.stageName ?? undefined,
+                            productId: p.productId,
+                            productName: p.productId,
+                          }),
+                        );
+                        return (
+                          <div
+                            key={ca.authorId}
+                            className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-muted-tint,rgba(0,0,0,0.02))] p-3"
+                          >
+                            <p className="mb-2 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
+                              <span aria-hidden="true">🔒</span>
+                              <span className="font-medium">{ca.authorName}</span>{" "}
+                              — readonly
+                            </p>
+                            <PrioritiesSection
+                              priorities={caPriorities}
+                              readOnly
+                              sectionAuthorName={ca.authorName}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 <PrioritiesSection
                   priorities={priorities}
                   readOnly={isReadOnly}
