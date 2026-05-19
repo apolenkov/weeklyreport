@@ -13,7 +13,12 @@ import {
 } from "./lead-slide-periods";
 import { SlideSkeleton } from "./slide-skeleton";
 import { ReportSlides } from "./report-slides";
-import { buildSectionSlideModel } from "./section-slide-utils";
+import {
+  buildSectionSlideModel,
+  paginateSectionSlides,
+  type SectionSlideModel,
+} from "./section-slide-utils";
+import { LeadScopeToggle } from "./lead-scope-toggle";
 
 function SlideEmptyState({
   title,
@@ -39,6 +44,83 @@ type LeadSlidesClientProps = {
   readonly chrome?: "full" | "content";
 };
 
+type CrossAuthorRow = {
+  authorId: string;
+  authorName: string;
+  sharedProductIds: string[];
+  items: {
+    id: string;
+    projectId: string;
+    type: string;
+    text: string;
+    workflowStatus: string;
+  }[];
+  risks: { id: string; projectId: string; risk: string; severity: string }[];
+  decisions: { id: string; productId: string; text: string }[];
+  priorities: { id: string; productId: string; rank: number; text: string }[];
+};
+
+/** Build a minimal SectionSlideModel from a cross-author row for display. */
+function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
+  const currentItems = ca.items
+    .filter((i) => i.type === "current" && i.text.trim())
+    .map((i) => i.text.trim());
+  const nextItems = ca.items
+    .filter((i) => i.type === "next" && i.text.trim())
+    .map((i) => i.text.trim());
+  const risks = ca.risks
+    .filter((r) => r.risk.trim())
+    .map((r) => r.risk.trim());
+  const decisions = ca.decisions
+    .filter((d) => d.text.trim())
+    .map((d) => d.text.trim());
+  const priorities = [...ca.priorities]
+    .sort((a, b) => a.rank - b.rank)
+    .filter((p) => p.text.trim())
+    .map((p) => p.text.trim());
+
+  const blockedCount = ca.items.filter((i) => i.workflowStatus === "blocked").length
+    + ca.risks.filter((r) => r.severity === "blocked").length;
+  const atRiskCount = ca.risks.filter((r) => r.severity === "at-risk").length;
+
+  const tone: SectionSlideModel["tone"] =
+    currentItems.length === 0 && nextItems.length === 0
+      ? "empty"
+      : blockedCount > 0
+        ? "blocked"
+        : atRiskCount > 0 || risks.length > 0
+          ? "warning"
+          : "ready";
+
+  const model: SectionSlideModel = {
+    id: ca.authorId + "-cross",
+    ownerId: ca.authorId,
+    ownerName: ca.authorName,
+    ownerRole: "lead",
+    status: "submitted",
+    submittedAt: null,
+    products: [],
+    productSlides: [],
+    productCount: 0,
+    currentCount: currentItems.length,
+    nextCount: nextItems.length,
+    riskCount: risks.length,
+    decisionCount: decisions.length,
+    priorityCount: priorities.length,
+    blockedCount,
+    atRiskCount,
+    score: currentItems.length > 0 && nextItems.length > 0 ? 80 : 40,
+    tone,
+    readiness: [],
+    currentItems,
+    nextItems,
+    risks,
+    decisions,
+    priorities,
+  };
+  return [model];
+}
+
 export function LeadSlidesClient({
   initialReportId = null,
 }: LeadSlidesClientProps) {
@@ -47,6 +129,7 @@ export function LeadSlidesClient({
   const searchParams = useSearchParams();
   const session = useContext(SessionContext);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scope, setScope] = useState<"own" | "product">("own");
 
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
@@ -55,6 +138,7 @@ export function LeadSlidesClient({
   const requestedReportId = inReportMode
     ? initialReportId
     : searchParams.get("reportId");
+  const authorId = searchParams.get("authorId") ?? undefined;
   const periodOptions = useMemo(
     () => buildLeadSlidePeriodOptions(historyQ.data ?? [], activeReportId),
     [historyQ.data, activeReportId],
@@ -69,8 +153,15 @@ export function LeadSlidesClient({
     [periodOptions, requestedReportId, activeReportId],
   );
   const byPeriodQ = useQuery({
-    ...trpc.leadForm.byPeriod.queryOptions({ reportId: targetReportId }),
+    ...trpc.leadForm.byPeriod.queryOptions({
+      reportId: targetReportId,
+      authorId,
+    }),
     enabled: targetReportId !== "",
+  });
+  const crossAuthorQ = useQuery({
+    ...trpc.leadForm.crossAuthorSections.queryOptions({ reportId: targetReportId }),
+    enabled: scope === "product" && targetReportId !== "",
   });
 
   useEffect(() => {
@@ -92,8 +183,15 @@ export function LeadSlidesClient({
 
   const slides = useMemo(() => {
     if (!byPeriodQ.data?.section) return [];
-    return [buildSectionSlideModel(byPeriodQ.data.section)];
-  }, [byPeriodQ.data]);
+    const ownSlides = paginateSectionSlides(
+      buildSectionSlideModel(byPeriodQ.data.section),
+    );
+    if (scope !== "product" || !crossAuthorQ.data?.length) return ownSlides;
+    const foreignSlides = crossAuthorQ.data.flatMap((ca) =>
+      buildCrossAuthorSlideModel(ca),
+    );
+    return [...ownSlides, ...foreignSlides];
+  }, [byPeriodQ.data, scope, crossAuthorQ.data]);
 
   if (activeQ.isLoading || byPeriodQ.isLoading || historyQ.isLoading) {
     return <SlideSkeleton />;
@@ -135,6 +233,17 @@ export function LeadSlidesClient({
       sourceHref={"/lead/report/" + encodeURIComponent(targetReportId)}
       sourceLabel="Open source section"
       hideSourceLink={inReportMode}
+      toolbar={
+        !inReportMode ? (
+          <LeadScopeToggle
+            scope={scope}
+            onChange={(s) => {
+              setScope(s);
+              setSelectedIndex(0);
+            }}
+          />
+        ) : undefined
+      }
     />
   );
 }

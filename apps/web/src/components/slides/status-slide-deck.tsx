@@ -21,6 +21,8 @@ import type {
   SlideStageStatus,
   SlideTone,
 } from "./section-slide-utils";
+import { LeadSlideHero } from "./lead-slide-hero";
+import { type ProductChipEntry, SlideProductChips } from "./slide-product-chips";
 
 type StatusSlideDeckProps = {
   readonly slides: readonly SectionSlideModel[];
@@ -261,6 +263,7 @@ function ProductSdlcGroups({
         return (
           <section
             key={product.id}
+            id={"product-card-" + product.id}
             className={[
               "min-w-0 border-t border-[rgba(0,0,0,0.08)] pt-5 first:border-t-0 first:pt-0",
               productAccentClass,
@@ -364,9 +367,33 @@ function selectedSlide(
 }
 
 function LeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
+  const productChips: ProductChipEntry[] = slide.productSlides
+    .filter((p) => p.id !== "cross-product")
+    .map((p) => ({
+      productId: p.id,
+      productName: p.name,
+      worstStatus:
+        p.status === "red"
+          ? "blocked"
+          : p.status === "yellow"
+            ? "at-risk"
+            : p.status === "green"
+              ? "on-track"
+              : "empty",
+    }));
+
   return (
-    <article className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-      <ProductSdlcGroups products={slide.productSlides} />
+    <article className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <div
+        key={String(slide.pageIndex ?? 0)}
+        className="animate-fade-in space-y-5"
+      >
+        <LeadSlideHero slide={slide} />
+        {productChips.length > 1 ? (
+          <SlideProductChips products={productChips} />
+        ) : null}
+        <ProductSdlcGroups products={slide.productSlides} />
+      </div>
     </article>
   );
 }
@@ -511,8 +538,24 @@ export function StatusSlideDeck({
   const isLead = mode === "lead";
   const showLeadControls = isLead && slides.length > 1;
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      onSelect(Math.min(selectedIndex + 1, slides.length - 1));
+    }
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      onSelect(Math.max(selectedIndex - 1, 0));
+    }
+  }
+
   return (
-    <section className="space-y-5" data-testid={mode + "-slides-deck"}>
+    <section
+      className="space-y-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+      data-testid={mode + "-slides-deck"}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+    >
       {showChrome ? (
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -575,7 +618,10 @@ export function StatusSlideDeck({
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               </button>
-              <span className="min-w-14 text-center text-sm font-semibold text-[var(--color-muted-foreground)]">
+              <span
+                aria-live="polite"
+                className="min-w-14 text-center text-sm font-semibold text-[var(--color-muted-foreground)]"
+              >
                 {selectedIndex + 1} / {slides.length}
               </span>
               <button

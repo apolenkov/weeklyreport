@@ -1487,3 +1487,456 @@ pnpm --filter @customreport/web exec playwright test \
 - `apps/web/e2e/README.md` — mandatory/advisory + новый UI-gated блок (WS-C)
 - `apps/api/src/modules/telegram/__tests__/mock-telegram.adapter.test.ts:6-14` — silence pattern (WS-A)
 - `apps/api/vitest.config.ts` — coverage thresholds (WS-D)
+
+---
+
+## 18. F14 — Inline cross-author elements per section (NEW, UAT v8.3-2 feedback)
+
+> [!IMPORTANT]
+> Цель: вместо одной строки-подсказки `🔒 Также contributes: Борис С. → readonly ↗` в каждой секции (Current Week / Next Week / Risks / Decisions / Priorities) рисовать **embedded readonly-копию** секции другого лида прямо в edit-mode. По умолчанию скрыто. У каждой секции — собственный toggle `Show cross-author ▾ / Hide ▴`. Без Edit/Delete, с замочком, без drill-out.
+
+### 18.1 Context
+
+После F1/F9 пользователь увидел drill-link «`Boris (3 items) → readonly ↗`» и явно сказал: «давай сразу будем показывать элементы тут в секции, без возможности удаления / редактирования, но с замочком». Это перевод cross-author из «teaser» в «inline read». Drill-out (`?authorId=...`) остаётся как альтернативный full-screen путь, но больше не единственный способ увидеть, что делает соавтор.
+
+### 18.2 Design (verified)
+
+#### Бэкенд — новый endpoint
+
+| Где                                                                                                                     | Что                                                                                                                                                                                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/api/src/modules/report-sections/lead-form.prisma-repository.ts:441-528` — текущий `getCrossAuthors` (counts-only) | **Не трогаем.** Сводный пайплайн-индикатор и `<CrossAuthorHint>` continue использовать compact-payload.                                                                                                                                                                              |
+| `apps/api/src/modules/report-sections/lead-form.prisma-repository.ts` (NEW: `getCrossAuthorSections`)                   | Параллельный метод. SQL: тот же `stageAssignment` join, что в `getCrossAuthors` (L441-471), но финальный `reportSection.findMany` (L475-482) расширяем `select` до full items/risks/decisions/priorities (Findings #2 — «extension cost is cheap, same query, no extra round-trip»). |
+| `apps/api/src/modules/report-sections/lead-form.service.ts` (NEW method `getCrossAuthorSections(reportId, userId)`)     | Wraps repo. Авторизация через тот же `hasSharedProduct`-эффект (запрос already filtered by `stageAssignment` overlap).                                                                                                                                                               |
+| `apps/api/src/infrastructure/trpc/trpc.router.ts` (NEW `leadForm.crossAuthorSections`)                                  | `protectedProcedure.query`. Input `{ reportId: uuid }`. Output `{ authorId, authorName, sections: { items, risks, decisions, priorities } }[]`.                                                                                                                                      |
+
+Возвращаемая форма (черновик):
+
+```ts
+type CrossAuthorSectionsRow = {
+  authorId: string;
+  authorName: string;
+  sharedProductIds: string[]; // products this viewer и author оба touch
+  items: ItemEntry[]; // только из shared products
+  risks: RiskEntry[]; // только из shared products
+  decisions: DecisionEntry[]; // только из shared products
+  priorities: PriorityEntry[]; // только из shared products
+};
+```
+
+Фильтрация по `sharedProductIds` — серверная: viewer не должен видеть строки автора по продуктам, которые они не делят. Это уже фактически гарантируется `stageAssignment` join'ом из L455-471 (получаем pairs только по shared projects), нужно только дополнительно фильтровать вложенные коллекции `items[].projectId in sharedProductIds`.
+
+> [!NOTE]
+> **Decision D21 (locked)**: новый endpoint, не extension `crossAuthors`. Причина: `crossAuthors` нужен для compact pipeline-индикатора в SDLC card (1 раз на страницу, дёшево); новый `crossAuthorSections` — тяжёлый payload, имеет смысл fetch ТОЛЬКО когда хотя бы один toggle открыт. Разделение endpoint'ов даёт lazy-fetch.
+
+#### Фронтенд — toggle + render
+
+**State plumbing** в `apps/web/src/components/lead/lead-form.tsx:761-765` (mirror `*AddSignal` pattern из Findings #4):
+
+```ts
+const [showCAItems, setShowCAItems] = useState(false); // Current+Next share
+const [showCARisks, setShowCARisks] = useState(false);
+const [showCADecisions, setShowCADecisions] = useState(false);
+const [showCAPriorities, setShowCAPriorities] = useState(false);
+```
+
+> [!NOTE]
+> **Decision D22 (locked)**: 4 toggle'а (не 5). Current Week + Next Week делят `itemsContributors` (Findings #1), поэтому toggle общий. Если UAT покажет, что хочется раздельно — split в follow-up.
+
+**Lazy fetch** — `useQuery(trpc.leadForm.crossAuthorSections.queryOptions({ reportId }), { enabled: showCAItems || showCARisks || showCADecisions || showCAPriorities })`.
+
+**Render** — в каждой из 5 точек (`lead-form.tsx:1520-1532`, `:1562-1574`, `:1609-1614`, `:1643-1657`, `:1688-1701`) после существующего `<CrossAuthorHint>`:
+
+1. Hint получает новый prop `expandable: boolean` + `expanded: boolean` + `onToggleExpand: () => void`. Кнопка «Show details ▾ / Hide ▴» — добавляется в строку справа, после drill-link.
+2. Когда `expanded === true` и `crossAuthorSectionsQ.data` доступно — рендерим для каждого автора блок:
+
+   ```tsx
+   <div className="rounded-xl border border-dashed border-[var(--color-border-muted)] bg-[var(--color-surface-subtle)] p-3">
+     <div className="mb-2 flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
+       <LockIcon /> {author.authorName} — readonly
+     </div>
+     {/* для items section: */}
+     <CurrentWeekSection
+       items={author.items.filter((i) => i.kind === "current")}
+       readOnly
+       /* НЕ передаём onChange — section уже хорошо строит read-only-вариант (Findings #2) */
+     />
+   </div>
+   ```
+
+3. Для Risks/Decisions/Priorities — те же section-компоненты с `readOnly={true}`. Каждый уже строит correct read-only branch (Findings #2: «Every section ALREADY accepts `readOnly?: boolean` and CORRECTLY strips Edit/Delete + Add affordances»).
+
+#### `<CrossAuthorHint>` extension
+
+`apps/web/src/components/lead/cross-author-hint.tsx:24-59` — добавить:
+
+```ts
+type CrossAuthorHintProps = {
+  // ...existing
+  expandable?: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
+};
+```
+
+Внутри хинта новая кнопка с aria-expanded, рядом с drill-link. `expandable=false` по умолчанию — backwards-compat для SDLC pipeline и других мест, где он рендерится без embed-режима.
+
+### 18.3 Risks
+
+| #   | Risk                                                                                                          | Severity | Mitigation                                                                                                                   |
+| --- | ------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| R18 | Payload size: 10 авторов × full sections → 100s of KB                                                         | ▼ medium | Server-side фильтр `sharedProductIds`; trim irrelevant fields (`authorRole`, `submittedAt`) в response                       |
+| R19 | Race: viewer редактирует свою секцию, в это же время cross-author endpoint fetched stale data → mismatch в UI | ▼ low    | Single `reportId` snapshot, React Query stale-time 30s, no re-fetch на каждый keystroke                                      |
+| R20 | `readOnly` на section компонентах ломает что-то редкое (например, drag-handle render)                         | ▼ low    | snapshot-тесты для каждой секции с `readOnly={true}` (Findings #2 показал, что эта ветка уже есть в каждой секции)           |
+| R21 | Toggle открыт + cross-author удалил/изменил → `crossAuthorSectionsQ` invalidate strategy неясна               | ▼ low    | Inherit standard React Query refetchOnWindowFocus; не enforce real-time sync (acceptable lag ≤30s для cross-author readonly) |
+
+### 18.4 Files
+
+| File                                                                                               | Change                                                                                               |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `apps/api/src/modules/report-sections/lead-form.prisma-repository.ts`                              | NEW `getCrossAuthorSections(reportId, userId)`                                                       |
+| `apps/api/src/modules/report-sections/lead-form.service.ts`                                        | NEW `LeadFormService.getCrossAuthorSections`                                                         |
+| `apps/api/src/modules/report-sections/lead-form.service.ts:23-58` (`LeadFormRepository` interface) | Add method signature                                                                                 |
+| `apps/api/src/infrastructure/trpc/trpc.router.ts:~2034` (after `crossAuthors` procedure)           | NEW `leadForm.crossAuthorSections` procedure                                                         |
+| `apps/web/src/components/lead/lead-form.tsx:761-765`                                               | 4 new `useState<boolean>` toggles                                                                    |
+| `apps/web/src/components/lead/lead-form.tsx:~388`                                                  | NEW `crossAuthorSectionsQ = useQuery({ ...trpc.leadForm.crossAuthorSections..., enabled: anyOpen })` |
+| `apps/web/src/components/lead/lead-form.tsx:1520, 1562, 1609, 1643, 1688`                          | Pass `expandable + expanded + onToggleExpand` to each `<CrossAuthorHint>`                            |
+| `apps/web/src/components/lead/lead-form.tsx` (5 new render blocks after each Hint)                 | Map `crossAuthorSectionsQ.data` → readonly section components                                        |
+| `apps/web/src/components/lead/cross-author-hint.tsx:24-59`                                         | Add `expandable / expanded / onToggleExpand` props + toggle button                                   |
+| `apps/web/src/components/lead/cross-author-hint.test.tsx`                                          | Snapshot expanded vs collapsed                                                                       |
+
+### 18.5 Verify F14
+
+```bash
+# 1. UAT BIG seed (F11) — Vasily + Boris share PROD_CRM
+# 2. Open /lead/report/<id> as Vasily → Risks section показывает
+#    «🔒 Also contributing: Борис С. (1 risk) → readonly ↗   [ Show details ▾ ]»
+# 3. Click «Show details ▾» → разворачивается dashed-border block:
+#       🔒 Борис С. — readonly
+#       <RisksSection readOnly items=[Boris's risks on PROD_CRM] />
+#    Никаких Edit/Delete кнопок. + Add button скрыт (readOnly gate).
+# 4. Same pattern для Current+Next Items (общий toggle), Decisions, Priorities.
+# 5. Toggle hidden by default; localStorage НЕ персистит.
+# 6. crossAuthorSectionsQ fetch only when хотя бы один toggle open (Network tab).
+# 7. Saving own section → no race with cross-author block.
+
+pnpm --filter @customreport/web test cross-author-hint
+pnpm --filter @customreport/web test risks-section.snapshot   # readOnly branch
+pnpm --filter @customreport/api test lead-form                 # new repo method
+```
+
+---
+
+## 19. F15 — Slides scope toggle (own / all-by-product, NEW UAT v8.3-2)
+
+> [!IMPORTANT]
+> Цель: в slides-mode добавить toggle `Own | By product`. По умолчанию — `Own` (текущее поведение). При `By product` — слайды покрывают current user + всех cross-author на shared products.
+
+### 19.1 Context
+
+UAT feedback: «но слайд собирается только на данный конкретного лида». Пользователь хочет видеть consolidated picture per product, а не только свою часть. Это естественное продолжение F3 (unified slides) — head уже видит multi-author slides, lead тоже должен мочь.
+
+### 19.2 Design (verified)
+
+| Где                                                                 | Сейчас                                                                                                | Станет                                                                                                                                             |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/components/slides/lead-slides-client.tsx:71-74`       | `byPeriodQ = useQuery(trpc.leadForm.byPeriod.queryOptions({ reportId }))` — hard-coded single section | Branch on `scope`. `scope=own` → текущее поведение. `scope=product` → дополнительно `crossAuthorSectionsQ` (reuse F14 endpoint) или `useQueries`   |
+| `apps/web/src/components/slides/lead-slides-client.tsx:93-96`       | `slides = [buildSectionSlideModel(byPeriodQ.data.section)]`                                           | `slides = [ownSection, ...foreignSections].map(buildSectionSlideModel)` (Findings F15 #1, #3 — head pattern: `weeklyQ.data.leadSections.map(...)`) |
+| `apps/web/src/components/slides/lead-slides-client.tsx` (URL param) | reads only `mode=slides`                                                                              | `searchParams.get("scope") ?? "own"`                                                                                                               |
+| `apps/web/src/components/slides/report-slides.tsx:52`               | `showChrome={variant === "lead" ? false : undefined}` — toolbar suppressed для lead                   | `showChrome={variant === "lead" ? Boolean(toolbar) : undefined}` — позволяет toolbar когда передан                                                 |
+| `apps/web/src/components/slides/lead-slides-client.tsx:120-139`     | `<ReportSlides slides={slides} variant="lead" />` — no toolbar                                        | Pass `toolbar={<ScopeToggle value={scope} onChange={setScope} />}`                                                                                 |
+| `apps/web/src/components/slides/lead-slides-client.tsx:71`          | ignores `authorId` from URL                                                                           | Forward `authorId` to `byPeriod` (foreign-author readonly drill compatibility — `?authorId=<other>&mode=slides`)                                   |
+
+**Toggle UI** — простой 2-pill toggle, mirror `ViewModeToggle` (`apps/web/src/components/report-shell/view-mode-toggle.tsx`):
+
+```tsx
+<div className="inline-flex rounded-[var(--radius-pill)] border ...">
+  <button data-state={scope === "own"}>Own</button>
+  <button data-state={scope === "product"}>By product</button>
+</div>
+```
+
+URL update — `router.replace(?mode=slides&scope=product, { scroll: false })`, не push (mirror F2 pattern для ViewModeToggle).
+
+**Composition order** (`scope=product`):
+
+1. Own section first (anchor — viewer-as-author).
+2. Foreign sections — `sortSlidesForReview` (head pattern, sorts by risk severity), либо просто alphabetical by author name. Default — alphabetical, как minimal disruption.
+
+> [!NOTE]
+> **Decision D23 (locked)**: `scope=product` слайды ПРОСТО объединяют sections, без agregation per-product. Если у Vasily + Boris есть items на PROD_CRM, рендерятся 2 отдельные section slides (Vasily's view of PROD_CRM, Boris's view of PROD_CRM), а не одна merged. Reason: проще, mirror head pattern, не теряет ownership-context. Per-product aggregation — отдельная фича в follow-up если UAT попросит.
+
+### 19.3 Risks
+
+| #   | Risk                                                                                                                     | Severity | Mitigation                                                                              |
+| --- | ------------------------------------------------------------------------------------------------------------------------ | -------- | --------------------------------------------------------------------------------------- |
+| R22 | `scope=product` без F14 endpoint → нужен fan-out `byPeriod` × N authors                                                  | ▼ low    | Ship F14 + F15 together (same wave). Если F14 откладывается — fallback на `useQueries`  |
+| R23 | `showChrome=false` для lead snippет sub-header (period/save). Surface toolbar теперь рендерит ScopeToggle. Layout shift? | ▼ low    | Toolbar — узкий pill, помещается рядом с ViewModeToggle (Edit/Slides). Visual diff test |
+| R24 | Foreign-author drill `?authorId=<X>&mode=slides` уже broken (Findings F15 #6 — `authorId` игнорируется)                  | ▲ medium | Fix в той же commit: `byPeriod({ reportId, authorId: searchParams.get("authorId") })`   |
+
+### 19.4 Files
+
+| File                                                         | Change                                                                                          |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `apps/web/src/components/slides/lead-slides-client.tsx`      | Read `scope` + `authorId` from URL; conditional fetch; multi-section slides build; pass toolbar |
+| `apps/web/src/components/slides/report-slides.tsx:52`        | Loosen `showChrome` gate for lead+toolbar case                                                  |
+| `apps/web/src/components/slides/lead-scope-toggle.tsx` (NEW) | 2-pill toggle, mirrors ViewModeToggle                                                           |
+| `apps/web/src/components/lead/lead-form.tsx:1453-1457`       | Forward `scope` + `authorId` props to `<LeadSlidesClient>` (or let client read URL directly)    |
+
+### 19.5 Verify F15
+
+```bash
+# 1. /lead/report/<id>?mode=slides → ScopeToggle visible (Own pill highlighted)
+# 2. Click By product → URL = ?mode=slides&scope=product, deck расширяется до own + foreign sections
+# 3. /lead/report/<id>?authorId=<boris-id>&mode=slides → opens Boris's section в readonly slides
+#    (foreign-author drill сейчас broken, починили в той же commit)
+# 4. /lead/report/<id>?authorId=<boris-id>&mode=slides&scope=product → same as #3, scope ignored
+#    when viewing foreign author (no double indirection)
+# 5. Slide count: scope=own → 1, scope=product → 1 + N foreign
+
+pnpm --filter @customreport/web test lead-slides-client
+pnpm --filter @customreport/web exec playwright test --grep "slides scope"
+```
+
+---
+
+## 20. F14 + F15 sequencing
+
+| Wave                      | Owner  | Output                                                                       | Depends on  |
+| ------------------------- | ------ | ---------------------------------------------------------------------------- | ----------- |
+| F14-be (backend endpoint) | Sonnet | `leadForm.crossAuthorSections` procedure + service + repo + contract tests   | none        |
+| F14-fe (frontend embed)   | Sonnet | 4 toggles + cross-author render blocks + `<CrossAuthorHint>` expandable prop | F14-be      |
+| F15 (slides scope)        | Sonnet | URL `scope`, multi-section build, ScopeToggle, authorId-in-slides fix        | F14-be      |
+| F14 + F15 verify          | Sonnet | Snapshot tests + Playwright `?mode=slides&scope=product` spec                | F14-fe, F15 |
+
+F14-be — единственная тяжёлая часть (новый Prisma query path + auth gate). После неё F14-fe и F15 параллельны (independent files).
+
+### 20.1 Decision additions to §9 Decision log
+
+| #   | Decision                                                                                | Date       | Rationale                                                                                          |
+| --- | --------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------- |
+| D21 | F14 = новый endpoint `leadForm.crossAuthorSections`, не extend `crossAuthors`           | 2026-05-18 | `crossAuthors` дешёвый, всегда fetched; `crossAuthorSections` heavy payload, lazy on toggle        |
+| D22 | F14 = 4 toggle'а (items shared между Current+Next, risks, decisions, priorities) — не 5 | 2026-05-18 | UI consistency: Current/Next уже делят `itemsContributors` в `<CrossAuthorHint>` (Findings #1)     |
+| D23 | F15 `scope=product` = объединение sections, не per-product aggregation                  | 2026-05-18 | Mirror head pattern, preserves ownership context, проще; aggregation — follow-up если UAT попросит |
+| D24 | F14 + F15 ship together — F14-be unblocks both                                          | 2026-05-18 | F15 без F14-be требует fan-out `byPeriod` × N (Findings F-data #6 ругает этот путь как «avoid»)    |
+
+---
+
+## 21. F16 — Slide visualization quality (UAT v8.3-3 feedback)
+
+> [!IMPORTANT]
+> Цель: слайды лидов выглядят как формализованный, одинаковый по геометрии и эстетически целостный артефакт. Разные лиды дают слайды одного размера (или серия слайдов, если продуктов больше 4). Появляется carousel топ-продуктов как навигация. Дизайн поднимается до уровня головной презентации (head slides) с использованием 6-pillar design gate.
+
+> [!WARNING]
+> **Verified против live-кода (2 parallel Explore agents, 2026-05-18).** Найден единый chokepoint для пагинации (`lead-slides-client.tsx:93-96`), мёртвый `showLeadControls` activation path в `StatusSlideDeck`, отсутствие aspect-ratio frame, и asymmetric polish между head-gradient и lead-flat.
+
+### 21.1 Context
+
+UAT feedback на `/lead/report/<id>?mode=slides` (`status-slide-deck.tsx:511:72`, элемент 1088×951 px): «размеры слайдов должны быть одинаковыми для разных лидов или распределяться на несколько слайдов при 4+ продуктов по 4 на слайд. также нужны топ-продукт карусель как их смотреть. нужно более красиво и элегантно сделать дизайн слайда. плюс используй фронт-дизайнера и другие скилы».
+
+Три проблемы под одним feedback:
+
+1. **Размер слайда зависит от количества продуктов.** `LeadSlideArticle` (status-slide-deck.tsx:366-372) — pure-content, никаких `aspect-ratio` / `min-h` / `max-h`. Высота линейно растёт с `ceil(realProducts/2)` строк → один лид с 2 продуктами = ~600 px, другой с 7 продуктами = ~1400 px. Слайды разных лидов в head-режиме (или scope=product F15) выглядят как разнопогонные карточки.
+2. **Нет навигации между продуктами.** `StatusSlideDeck` уже имеет prev/next + counter (`status-slide-deck.tsx:564-591`) — но `showLeadControls = isLead && slides.length > 1` (line 512) **никогда не true** на lead-пути, потому что `lead-slides-client.tsx:93-96` всегда строит ровно один слайд. Carousel UI существует, но dead-coded.
+3. **Дизайн «whispered».** 6-pillar audit показал: lead-slide плоский (head gradient line 376, lead — flat), нет hero band (head — есть), traffic-light status whispered (11 px pill, 4 px border), product name shouts (`text-3xl font-bold`), нет mode-specific typography scale, нет slide-swap animation, нет ←/→ keyboard nav, нет aria-live на counter, нет focus-visible:ring, status by color only.
+
+### 21.2 6-pillar findings (compressed)
+
+| Pillar        | Verdict   | Что не так                                                                                                                          | Фикс                                                                                                                            |
+| ------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Direction     | ▼ weak    | Нет headline/hero на lead-слайде. Head имеет lead name + period + KPI tiles, lead — сразу `ProductSdlcGroups`                       | Hero band: lead name + period + tone pill + 4 KPI tiles (currentCount/riskCount/priorityCount/score)                            |
+| Hierarchy     | ▼ weak    | Status whispered (`status-slide-deck.tsx:254-260`, 11 px pill + `border-l-4`), product name shouts (line 292, `text-3xl font-bold`) | Промоут status до 28-32 px badge; демоут product name до `text-2xl`; перерисовать priority                                      |
+| Typography    | ▼ missing | Нет slide-specific scale; всё inherit от --font-sans                                                                                | Tokens: `--font-size-slide-display: 2.5rem`, `--font-size-slide-headline: 1.5rem`                                               |
+| Motion        | ▼ none    | Instant re-render slides на switch; `.animate-fade-in` (globals.css:127-170) определён но не применён                               | `key={slide.id}` + `.animate-fade-in`; уважать `prefers-reduced-motion` (globals.css:227-241)                                   |
+| Accessibility | ▼ partial | Нет ←/→ key, нет `aria-live` на counter, нет `focus-visible:ring`, status by color only                                             | `tabIndex={0}`, `onKeyDown`, `aria-live="polite"`, `focus-visible:ring-2`, добавить иконки Check/AlertTriangle/Circle к статусу |
+| Taste         | ▼ asymm   | Head — gradient + KPI tiles (lines 374-491); lead — flat без hero                                                                   | Поднять lead до симметрии с head, переиспользуя `metricLabel` helper (lines 86-97)                                              |
+
+### 21.3 Sizing & Pagination — 4 products/page + 16:10 frame
+
+> [!NOTE]
+> **Single chokepoint найден**: `lead-slides-client.tsx:93-96`:
+>
+> ```tsx
+> const slides = useMemo(() => {
+>   if (!byPeriodQ.data?.section) return [];
+>   return [buildSectionSlideModel(byPeriodQ.data.section)];
+> }, [byPeriodQ.data]);
+> ```
+>
+> Один section → один slide. Заменить на section → 1..N slides через pagination на data-уровне.
+
+#### Что добавляем
+
+| Файл                                                                                  | Изменение                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/components/slides/section-slide-utils.ts` (NEW `paginateSectionSlides`) | Чистая функция: `paginateSectionSlides(model: SectionSlideModel, productsPerPage = 4): SectionSlideModel[]`. Разбивает `productSlides` (lines 135-180) по 4. Cross-product synthetic block (lines 197-209) — **только на последней странице**. KPI counts (lines 311-318) — global (не пересчитываются per-page), но `pageIndex` / `pageTotal` добавляются в модель для UI. |
+| `apps/web/src/components/slides/lead-slides-client.tsx:93-96`                         | `slides = useMemo(() => buildSectionSlideModel(section).flatMap(paginateSectionSlides), [...])` для own; для scope=product (F15) — `flatMap` через все секции                                                                                                                                                                                                               |
+| `apps/web/src/components/slides/head-slides-client.tsx:61-73`                         | Тот же `paginateSectionSlides` после `buildSectionSlideModel`, перед `sortSlidesForReview`. Sort применяется к page-уровню, не section-уровню — чтобы blocked страница автора всплывала перед его ready-страницей                                                                                                                                                           |
+| `packages/ui/src/styles/globals.css`                                                  | NEW tokens: `--slide-aspect: 16 / 10`, `--slide-max-products-per-page: 4`, `--font-size-slide-display: 2.5rem`, `--font-size-slide-headline: 1.5rem`. NEW utility: `.slide-frame { aspect-ratio: var(--slide-aspect); overflow: hidden; }`                                                                                                                                  |
+| `apps/web/src/components/slides/status-slide-deck.tsx:366-372` (`LeadSlideArticle`)   | Add `className="slide-frame ..."` на article; внутри — overflow-y если контент длиннее. 4 продукта × 2 колонки = 2 строки, помещается в 16:10 без скролла на 1280 px ширине                                                                                                                                                                                                 |
+
+> [!NOTE]
+> **Decision D25 (locked)**: pagination на data-уровне, не render-уровне. Reason: sort/scoring/sequencing идут уже по slide-array; render-level pagination конфликтует с `sortSlidesForReview`. Data-layer pagination даёт единое API для lead + head.
+
+### 21.4 Top-product chip carousel (ARIA tablist)
+
+> [!IMPORTANT]
+> Carousel = chip tablist под hero band, НЕ традиционные dots. Каждый chip = product name (truncated 20 chars) + traffic-light dot (green/yellow/red/grey). Active chip — bold + brand-accent underline. Scroll-snap-x для overflow > 5 продуктов.
+
+#### Layout
+
+```text
+┌─ Hero band ───────────────────────────────────────────────┐
+│ Vasily Ivanov · Week 19, 2026         [▲ 2 blocked]      │
+│ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐                       │
+│ │ 18   │ │  3   │ │  5   │ │ 78%  │                       │
+│ │items │ │risks │ │prio  │ │score │                       │
+│ └──────┘ └──────┘ └──────┘ └──────┘                       │
+├───────────────────────────────────────────────────────────┤
+│ ● CRM portal   ◐ Data lake   ● Sales hub   ○ Support  →  │ ← chip tablist
+├───────────────────────────────────────────────────────────┤
+│ < ProductSdlcGroups page 1/2 (4 of 7 products) >          │
+└───────────────────────────────────────────────────────────┘
+                       [<]    1 / 2    [>]                  ← deck controls
+```
+
+#### Implementation
+
+| Где                                                            | Что                                                                                                                                                                                                                          |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/components/slides/slide-product-chips.tsx` (NEW) | `<SlideProductChips products={page.productSlides} activeProductId={...} onSelect={(id) => scrollToProduct(id)} />`. ARIA `role="tablist"`, каждый chip `role="tab"` + `aria-selected` + `aria-controls="product-card-<id>"`. |
+| `LeadSlideArticle` (`status-slide-deck.tsx:366-372`)           | Wrap content: `<HeroBand /> + <SlideProductChips /> + <ProductSdlcGroups />`. Внутри `<ProductSdlcGroups>` каждой product card — `id="product-card-<productId>"` для scroll-to                                               |
+| `StatusSlideDeck.tsx:512`                                      | `showLeadControls = isLead && slides.length > 1` уже работает корректно — после pagination активируется автоматически                                                                                                        |
+| `StatusSlideDeck.tsx:493-679` (outer shell)                    | Add `tabIndex={0}`, `onKeyDown` (Arrow left/right → prev/next slide), `aria-live="polite"` на counter (line 564), `focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]`                                           |
+
+> [!NOTE]
+> **Decision D26 (locked)**: chip tablist, не plain dots. Reason: dots — anonymous (1/4, 2/4...), chips — content-aware (product name + status). Решает Direction pillar (видишь что внутри слайда до клика) + Carousel UX feedback одной фичей.
+
+### 21.5 Hero band on LeadSlideArticle
+
+```text
+Vasily Ivanov · Week 19, 2026
+[▲ 2 blocked]  [⚠ 1 at-risk]   ← tone pill (worst-of all products on slide)
+
+┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐
+│ 18  │ │  3  │ │  5  │ │ 78% │
+│items│ │risks│ │prio │ │score│
+└─────┘ └─────┘ └─────┘ └─────┘
+```
+
+- Lead name + period: `text-[var(--font-size-slide-display)] font-bold`
+- Tone pill: derive worst severity across products на этой странице (blocked → red, at-risk → yellow, иначе green/grey)
+- KPI tiles: переиспользовать `metricLabel` helper (`status-slide-deck.tsx:86-97`) — head уже использует. 4 фиксированных метрики: currentCount, riskCount, priorityCount, score (% on-track stages)
+- Padding: `p-6 md:p-8` — те же tokens, что head hero (`status-slide-deck.tsx:376`)
+
+### 21.6 Motion + a11y polish
+
+| Что                                           | Где                                                                                                                                                                        |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Slide swap fade-in                            | `key={slide.id}` на `<article>` inside `LeadSlideArticle` / `HeadSlideArticle` + `className="... animate-fade-in"` (globals.css:127-170). Уважает `prefers-reduced-motion` |
+| ←/→ keyboard nav                              | `onKeyDown` на outer deck (status-slide-deck.tsx:493-510): `Arrow{Left,Right}` → `setCurrentIndex(i ∓ 1)`. Не перехватывать когда `e.target` — `<input>` / `<textarea>`    |
+| `aria-live="polite"` на counter               | `status-slide-deck.tsx:564-591` — counter "1 / N"                                                                                                                          |
+| `focus-visible:ring-2` на nav buttons + chips | Существующая `.btn-press` utility (globals.css:222-224) — расширить или новая `.slide-nav-focus`                                                                           |
+| Non-color status iconography                  | Импортированы `Check` / `AlertTriangle` / `Circle` (status-slide-deck.tsx imports) — добавить рядом с traffic-light dots в `<SlideProductChips>` и status pills            |
+
+### 21.7 Token additions + cleanup
+
+#### NEW (4 tokens, minimal scope)
+
+```css
+/* packages/ui/src/styles/globals.css — добавить в :root после line 103 */
+--slide-aspect: 16 / 10;
+--slide-max-products-per-page: 4;
+--font-size-slide-display: 2.5rem;
+--font-size-slide-headline: 1.5rem;
+```
+
+#### NEW utility
+
+```css
+.slide-frame {
+  aspect-ratio: var(--slide-aspect);
+  overflow: hidden;
+}
+```
+
+#### Cleanup (consolidate ad-hoc rgba)
+
+Существующие inline `rgba(0,0,0,0.10)` / `rgba(0,0,0,0.06)` (status-slide-deck.tsx lines 43-49, 143-151, 178-181, 254-260) — заменить на `color-mix(in oklch, var(--color-foreground) 10%, transparent)` или existing semantic tokens `--color-border` / `--color-border-muted`. **Out-of-scope для F16**, но добавить как follow-up TODO в коде.
+
+> [!NOTE]
+> **Decision D27 (locked)**: всего 4 новых токена, не 12+. Reason: design system уже богатый (globals.css:11-103). Slides — это композиция существующих токенов плюс минимум новых для aspect-ratio frame и slide-specific typography.
+
+### 21.8 Files to modify
+
+| File                                                                           | Change                                                                                                          |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/components/slides/section-slide-utils.ts`                        | NEW `paginateSectionSlides(model, productsPerPage = 4)`; extend `SectionSlideModel` с `pageIndex` + `pageTotal` |
+| `apps/web/src/components/slides/lead-slides-client.tsx:93-96`                  | `flatMap(paginateSectionSlides)`                                                                                |
+| `apps/web/src/components/slides/head-slides-client.tsx:61-73`                  | Same `flatMap` insertion перед `sortSlidesForReview`                                                            |
+| `apps/web/src/components/slides/status-slide-deck.tsx:366-372`                 | `LeadSlideArticle` → add `slide-frame`, hero band, chips, key+animate-fade-in                                   |
+| `apps/web/src/components/slides/status-slide-deck.tsx:493-510`                 | Outer deck `tabIndex`, `onKeyDown`, `aria-live`, `focus-visible:ring`                                           |
+| `apps/web/src/components/slides/slide-product-chips.tsx` (NEW)                 | ARIA tablist chip carousel                                                                                      |
+| `apps/web/src/components/slides/lead-slide-hero.tsx` (NEW)                     | Hero band: lead name + period + tone pill + 4 KPI tiles (reuse `metricLabel`)                                   |
+| `packages/ui/src/styles/globals.css`                                           | 4 tokens + `.slide-frame` utility                                                                               |
+| `apps/web/src/components/slides/__tests__/section-slide-utils.test.ts`         | NEW unit: `paginateSectionSlides` (5 cases: 0/1/3/4/9 products, cross-product on last page only)                |
+| `apps/web/src/components/slides/__tests__/status-slide-deck.snapshot.test.tsx` | Snapshot expand для multi-page lead + chip tablist                                                              |
+
+### 21.9 Risks
+
+| #   | Risk                                                                                                                                               | Severity | Mitigation                                                                                                                 |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| R25 | Pagination ломает `sortSlidesForReview` (sort применяется к page-уровню, blocked-page одного автора может попасть перед ready-page того же автора) | ▼ medium | Acceptable: severity-first surface правильнее audience-needs, чем strict author grouping. Snapshot tests confirm new order |
+| R26 | 16:10 frame обрезает контент у автора с очень длинными product names / stage names                                                                 | ▼ medium | `overflow-y` внутри `.slide-frame` если контент длиннее; truncate names с tooltip                                          |
+| R27 | KPI tiles в hero band дублируют info в `<ProductSdlcGroups>` (over-design)                                                                         | ▼ low    | Hero = at-a-glance summary, ProductSdlcGroups = drill-down. Парная иерархия, не дубль                                      |
+| R28 | Chip carousel при 8+ продуктах теряет читаемость даже с scroll-snap                                                                                | ▼ low    | Pagination режет до 4/page → chip tablist max 4 chips per slide → проблема не возникает                                    |
+
+### 21.10 Decision log additions
+
+| #   | Decision                                                                         | Date       | Rationale                                                                           |
+| --- | -------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------- |
+| D25 | F16 pagination на data-уровне (`paginateSectionSlides`), не render-уровне        | 2026-05-18 | Sort/scoring уже работает с slide-array; data-layer даёт единое API для lead + head |
+| D26 | F16 carousel = chip tablist (product name + status dot), не plain dots           | 2026-05-18 | Решает Direction pillar и UX feedback одной фичей; content-aware navigation         |
+| D27 | F16 = 4 новых tokens (slide-aspect, max-products-per-page, 2 font sizes), не 12+ | 2026-05-18 | Design system уже богатый; slides — композиция существующих токенов                 |
+| D28 | F16 включает hero band на lead-слайдах (asymmetry fix с head)                    | 2026-05-18 | Direction + Taste pillars; reuse `metricLabel` helper минимизирует код              |
+
+### 21.11 F16 verify
+
+```bash
+# Unit
+pnpm --filter @customreport/web test section-slide-utils
+pnpm --filter @customreport/web test status-slide-deck.snapshot
+
+# Manual UAT
+# 1. /lead/report/<id>?mode=slides → автор с 2 продуктами: 1 slide
+#    автор с 5 продуктами: 2 slides (4 + 1+cross-product synthetic)
+#    автор с 9 продуктами: 3 slides (4 + 4 + 1+cross-product)
+# 2. Размер слайда: измерить — все слайды идентичной геометрии 16:10
+# 3. Chip tablist под hero: 4 chips на странице, активный bold+underline
+# 4. Click chip → scroll-into-view к product-card (smooth)
+# 5. Arrow left/right (без focus в input) → prev/next slide
+# 6. Tab → focus visible:ring-2 на nav buttons и chips
+# 7. Counter "2 / 3" имеет aria-live="polite" (DevTools Accessibility tree)
+# 8. prefers-reduced-motion = reduce → нет fade-in на slide swap
+# 9. Visual diff: lead slide vs head slide — оба имеют hero, типографика идентична
+
+# Playwright
+pnpm --filter @customreport/web exec playwright test --grep "slide pagination"
+pnpm --filter @customreport/web exec playwright test --grep "slide a11y"
+```
+
+### 21.12 F16 sequencing (subagent waves)
+
+| Wave  | Owner  | Scope                                                                                         | Depends on   |
+| ----- | ------ | --------------------------------------------------------------------------------------------- | ------------ |
+| F16-1 | Sonnet | `paginateSectionSlides` data layer + unit tests                                               | none         |
+| F16-2 | Sonnet | Tokens + `.slide-frame` utility in globals.css                                                | none         |
+| F16-3 | Sonnet | `<SlideProductChips>` + `<LeadSlideHero>` NEW components                                      | F16-2        |
+| F16-4 | Sonnet | Wire `LeadSlideArticle`: hero + chips + frame + key+fade; wire `lead-slides-client.tsx:93-96` | F16-1, F16-3 |
+| F16-5 | Sonnet | Wire `head-slides-client.tsx`: pagination перед sort                                          | F16-1        |
+| F16-6 | Sonnet | Outer deck a11y: tabIndex, onKeyDown, aria-live, focus-visible                                | none         |
+| F16-7 | Sonnet | Playwright spec: pagination + a11y + visual diff                                              | F16-4, F16-5 |
+
+F16-1 + F16-2 + F16-6 — параллельно (независимые файлы). F16-3 после F16-2 (нужны tokens). F16-4 + F16-5 после F16-1 и F16-3 (нужна data API и компоненты). F16-7 — последняя.
+
+---

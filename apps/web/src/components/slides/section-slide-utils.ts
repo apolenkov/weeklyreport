@@ -58,6 +58,10 @@ export type SectionSlideModel = {
   readonly risks: string[];
   readonly decisions: string[];
   readonly priorities: string[];
+  /** Pagination: 0-based index of this page within the section. Undefined = no pagination. */
+  readonly pageIndex?: number;
+  /** Pagination: total number of pages for this section. Undefined = no pagination. */
+  readonly pageTotal?: number;
 };
 
 function nonEmpty(text: string | null | undefined): boolean {
@@ -445,6 +449,53 @@ export function buildActivitySlideModel(
     decisions: [],
     priorities: [],
   };
+}
+
+/**
+ * Splits a section slide model into pages of `productsPerPage` products each.
+ * The cross-product synthetic slide (id === "cross-product", if any) is placed
+ * ONLY on the last page. KPI counts are copied to every page (section-global,
+ * not per-page).
+ */
+export function paginateSectionSlides(
+  model: SectionSlideModel,
+  productsPerPage = 4,
+): SectionSlideModel[] {
+  // Separate real product slides from the synthetic cross-product entry.
+  const crossProduct = model.productSlides.find(
+    (p) => p.id === "cross-product",
+  );
+  const productOnly = model.productSlides.filter(
+    (p) => p.id !== "cross-product",
+  );
+
+  if (productOnly.length <= productsPerPage && !crossProduct) {
+    // No pagination needed — single page, no cross-product entry.
+    return [model];
+  }
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(productOnly.length / productsPerPage),
+  );
+
+  if (pageCount === 1) {
+    // All products fit on one page (with possible cross-product entry).
+    return [model];
+  }
+
+  const pages: SectionSlideModel[] = [];
+  for (let i = 0; i < productOnly.length; i += productsPerPage) {
+    const chunk = productOnly.slice(i, i + productsPerPage);
+    const isLast = i + productsPerPage >= productOnly.length;
+    pages.push({
+      ...model,
+      productSlides: isLast && crossProduct ? [...chunk, crossProduct] : chunk,
+      pageIndex: pages.length,
+      pageTotal: pageCount,
+    });
+  }
+  return pages;
 }
 
 export function sortSlidesForReview(
