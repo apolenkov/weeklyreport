@@ -4,6 +4,760 @@
 **Mode:** Demo-plan rich-mode (parallel subagents, balanced cost).
 **Plan id:** `shiny-eagle` (continuation of `pure-mist` UAT closure).
 
+> **2026-05-19 PIVOT (post-W2 user feedback).** W1/W3/W4 закоммичены и приняты. W2 в текущем виде («отдельная секция чужих строк ниже» с `<div opacity-70><CurrentWeekSection readOnly/>`) **отвергнут**. Новая постановка → `§ W5` ниже. Старое описание W2 оставлено как историческое.
+
+---
+
+## W5 — Interleaved foreign items (post-W2 pivot) ⭐ ACTIVE
+
+> Эта секция — самостоятельный rich-mode Demo-plan для pivot’а после отказа от W2. Использует 13 подсекций по канону, включая визуальный TL;DR (Было/Проблема/Станет в схемах **и** прозой), Mermaid pipeline, subagent roadmap, token economy, self-review.
+
+---
+
+### W5 · §0 — TL;DR (визуально + проза)
+
+#### Было (текущий main, w2-rejected)
+
+```text
+┌── /lead/report (edit mode) ────────────────────────────────────────────┐
+│                                                                        │
+│ ╴ SDLC pipeline: ✓ W1 — per-risk chips, no "readonly ↗" текст         │
+│                                                                        │
+│ ▼ Current Week                                                         │
+│   🔒 Also contributing: Boris (4 items)             readonly ↗         │
+│   🔒 Also contributing: Igor  (1 item)              readonly ↗         │
+│                                                                        │
+│   ┌─ opacity-70 wrapper ─────────────┐  ← W2-rejected: отдельная       │
+│   │ 🔒 Boris S.                       │     секция ПОД основной        │
+│   │ ┌── <CurrentWeekSection readOnly>│                                  │
+│   │ │  ┌─ Marketing Portal ──┐       │                                  │
+│   │ │  │ ▣ Boris item 1      │       │                                  │
+│   │ │  └─────────────────────┘       │                                  │
+│   │ └──────────────────────────────┘ │                                  │
+│   └──────────────────────────────────┘                                  │
+│                                                                        │
+│   ┌── <CurrentWeekSection editable> (моя секция) ──────────────────┐   │
+│   │ ┌─ Marketing Portal ──┐  ┌─ CRM-360 ──┐                       │   │
+│   │ │ ▣ Vasily item 1 [✎] │  │ ▣ Vasily…  │                       │   │
+│   │ │ ▣ Vasily item 2 [✎] │  │ [+ Add]    │                       │   │
+│   │ └─────────────────────┘  └────────────┘                       │   │
+│   └────────────────────────────────────────────────────────────────┘   │
+│                                                                        │
+│ ▼ Next Week — та же конструкция × 1                                    │
+│ ▼ Risks    — та же конструкция × 1 (но через LeadFormSyncBridge)       │
+│ ▼ Decisions— та же конструкция × 1                                     │
+│ ▼ Priorities — та же конструкция × 1                                   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+**Прозой.** Сейчас в `lead-form.tsx` для каждой из 5 секций есть **два** компонент-инстанса: один редактируемый со своими items, второй readonly с чужими, обёрнут в `<div className="opacity-70">`. Это значит — Boris’овы items живут в **своей** копии `CurrentWeekSection` со **своей** колоночной раскладкой по продуктам, отрезанные от Vasily’ы items. Визуально это два независимых блока, между ними воздушный зазор + лейбл «Boris S.» сверху.
+
+#### Проблема (пользовательский тест 2026-05-19)
+
+```text
+        ┌────────────────────────────────────┐
+        │  user feedback (Plan Mode quote)   │
+        │  «Зачем ты делаешь отдельную       │
+        │   секцию? Просто мы добавляем в    │
+        │   те места, где я ввожу вручную,   │
+        │   те элементы — readonly. И при    │
+        │   кнопке "Показать, что делал      │
+        │   другой контрибьютор" всё это     │
+        │   показывается.»                   │
+        └─────────────────┬──────────────────┘
+                          │
+       ┌──────────────────┼──────────────────┐
+       ▼                  ▼                  ▼
+   P1 fragmentation   P2 no toggle      P3 wrong cardinality
+   ─────────────      ─────────────     ─────────────────────
+   Boris-items НЕ     показываются      readonly-state на
+   рядом с Vasily-    всегда (always-   уровне всей секции,
+   items в той же     on после W3),     а не отдельной строки
+   колонке Marketing  пользователь не   → нет UX-pattern «my
+   Portal — они в     может скрыть      column with their
+   соседнем блоке     если мешает       items mixed in»
+```
+
+**Прозой.** Пользователь смотрит на колонку «Маркетинговый портал». Он ожидает увидеть **всё**, что относится к этому продукту — и свои items, и чужие, помеченные «readonly». Сейчас же он видит **только свои**, а чужие лежат в отдельной коробке снизу. Это два разных ментальных места хранения для одного и того же продукта. Дополнительно — пользователь сейчас не может «спрятать» чужие items (always-on после W3); хочет toggle с default-скрытием.
+
+#### Станет (W5 target)
+
+```text
+┌── /lead/report (edit mode, after W5) ──────────────────────────────────┐
+│                                                                        │
+│ ▼ Current Week                                                         │
+│   🔒 Also contributing: Boris (4 items)            readonly ↗          │
+│   🔒 Also contributing: Igor  (1 item)             readonly ↗          │
+│                          [ Show contributors ▼ ]  ← controlled toggle  │
+│                                                                        │
+│   ┌── <CurrentWeekSection items={[...own, ...foreign]}> ───────────┐   │
+│   │ ┌─ Marketing Portal ──┐  ┌─ CRM-360 ──┐                       │   │
+│   │ │ ▣ Vasily item 1 [✎] │  │ ▣ Vasily…  │                       │   │
+│   │ │ ▣ Vasily item 2 [✎] │  │ [+ Add]    │                       │   │
+│   │ │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │  └────────────┘                       │   │
+│   │ │ 🔒 Boris item 1     │   ← merged inline                     │   │
+│   │ │ 🔒 Boris item 2     │     opacity-70 per-item               │   │
+│   │ │ 🔒 Igor  item 1     │     no [✎] / [×] buttons              │   │
+│   │ └─────────────────────┘                                       │   │
+│   └────────────────────────────────────────────────────────────────┘   │
+│                                                                        │
+│ ▼ Next Week / Risks / Decisions / Priorities — same merge pattern      │
+│   ↑ единая кнопка «Show contributors» переключает все 5 одновременно   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+**Прозой.** После W5 пользователь нажимает «Show contributors» — и в колонке «Маркетинговый портал» под его двумя items появляются три чужих, помеченных 🔒. Edit-кнопки на чужих скрыты, opacity 0.7. Нажал ещё раз — чужие исчезли, остались только свои. По default — скрыты (как просил «при кнопке»). Одна кнопка на все 5 секций (CW, NW, Risks, Decisions, Priorities).
+
+#### Pipeline фаз (Mermaid `flowchart TB` + ASCII fallback)
+
+```mermaid
+flowchart TB
+    P0[P0 self-review: проверить старый план<br/>и закоммитить старый W2-revert если нужно]
+    P1[P1 types: mock-data.ts<br/>+foreign?: boolean<br/>+authorId/authorName]
+    P2[P2 row UI: item-card.tsx<br/>risks/decisions/priorities-section.tsx<br/>per-row lock + opacity + hide actions]
+    P3[P3 orchestration: lead-form.tsx<br/>state + useMemo foreign* arrays<br/>delete 5 wrapper blocks<br/>CrossAuthorHint controlled toggle]
+    P4[P4 bridge split: lead-form-sync-bridge.tsx<br/>displayRisks vs risks split<br/>sync hook keeps own only]
+    P5[P5 verify: typecheck + lint<br/>snapshot updates<br/>e2e cross-author<br/>chrome-devtools visual smoke]
+    P6[P6 commit + push: 3-4 atomic commits<br/>fix/PRJ-2/shiny-eagle]
+
+    P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6
+    P2 -. parallel possible .-> P3
+```
+
+ASCII fallback (если Mermaid не рендерится):
+
+```text
+[P0 self-review]──[P1 types]──[P2 row UI]──[P3 orchestration]──[P4 bridge]──[P5 verify]──[P6 commit/push]
+                                  │           ▲
+                                  └ parallel ─┘  (P2 и P3 можно вести параллельно
+                                                   только если P3 не трогает row-level lock)
+```
+
+**От человека (1 строка):** approve этот pivot-plan через ExitPlanMode → дальше всё делаю я (типы, UI, тесты, smoke, коммиты).
+
+---
+
+### W5 · §1 — Контекст
+
+W5 — pivot после фидбэка пользователя на коммитах `7adfbb2` + `8957a85` (W2 из shiny-eagle main-plan). W1 (SdlcPipeline per-risk chips), W3 (CrossAuthorHint без toggle), W4 (slides redesign) **остаются как есть** — приняты. Меняем только способ рендера foreign-items: «отдельная секция ниже» → «interleaved внутри той же секции по колонкам продуктов + controlled toggle».
+
+User feedback dump 2026-05-19 (в Plan Mode):
+
+> «Так тебе нужно прописать это в том месте, где есть непосредственно маркетинг и про портал. Просто заблокировано. Зачем ты делаешь отдельную секцию?»
+
+> «Просто мы добавляем в те места, где обычно я ввожу вручную в те элементы, показываю элементы, которые в тупо readonly. И при кнопке "Показать то, что делал контрибьютор другой", все это показывается.»
+
+> «Лучше, кстати, для примера с минимальным UAT-ом два контрибьютора дополнительно.»
+
+Последнее уже выполнено в `7adfbb2` (Igor + Maria в `prisma/seed.ts` на product 201).
+
+---
+
+### W5 · §2 — Сейчас (live repo state)
+
+```text
+branch       : fix/PRJ-2/shiny-eagle (или main — проверить git status)
+last commits : 1b3d1d4 F15 productSlides fix
+               ffbdb3a F14 DB→UI shape mapping
+               7815c58 F15+F16 slides scope toggle + visual
+               3652ef6 F14 inline cross-author embeds (rejected)
+               7fbe2fd crossAuthorSections tRPC endpoint
+               7adfbb2 shiny-eagle W1-W3 commit (W2 = rejected design)
+               8957a85 shiny-eagle W3 always-on rows (rejected)
+dirty (ok)   : .planning/memory/*.md (auto-mirror)
+                .planning/plans/page-feedback-lead-report-a0000000-0000-shiny-eagle.md
+                .planning/session-retros/NEXT-ACTIONS.md
+clean        : apps/web, apps/api, packages/shared, prisma
+target files : apps/web/src/components/lead/* (5 секций + item-card + sync-bridge + cross-author-hint + lead-form + mock-data)
+```
+
+---
+
+### W5 · §3 — Architecture context
+
+```text
+                /lead/report/<id>
+                       │
+                       ▼
+       apps/web/.../lead/report/[reportId]/page.tsx
+                       │
+                       ▼
+       <LeadForm mode="edit"> ── trpc.leadForm.read
+                       │             trpc.leadForm.crossAuthors    (W1 enriched)
+                       │             trpc.leadForm.crossAuthorSections (per-author items[]/risks[]/decisions[]/priorities[])
+                       │
+                       ▼
+       state: useState showForeignItems (default false)
+              useMemo foreignCurrentItems/foreignNextItems/foreignRisks/foreignDecisions/foreignPriorities
+              [ guard: isOwnView = !requestedAuthorIdNormalized ]
+                       │
+                       ▼
+       merged arrays = showForeignItems ? [...own, ...foreign] : own
+                       │
+       ┌───────────────┼──────────────────────┬─────────────────────┬─────────────────────────┐
+       ▼               ▼                      ▼                     ▼                         ▼
+  <SdlcPipeline>  <CurrentWeekSection   <NextWeekSection      <LeadFormSyncBridge.Risks>  <DecisionsSection
+   (no change)    items={mergedCurrent}> items={mergedNext}>   ← displayRisks override     decisions={mergedDecisions}>
+                       │                      │                     │                         │
+                       ▼                      ▼                     ▼                         ▼
+                  <ItemCard               <ItemCard            <RisksSection                <PrioritiesSection
+                   item                    item                 risks={renderRisks}>          priorities={mergedPriorities}>
+                   readOnly                readOnly              per-row lock                  per-row lock
+                   locked = readOnly       locked = readOnly     icon prefix                   icon prefix
+                   || item.foreign>        || item.foreign>      opacity 0.7                   opacity 0.7
+                       │                      │
+                       ▼                      ▼
+                   if item.foreign:       same
+                     opacity 0.7
+                     🔒 prefix
+                     no edit/delete
+```
+
+**Backend contracts (no change).** `getCrossAuthors` уже расширен в W1 (`risks: [{severity, text}]`, `isEmpty`). `getCrossAuthorSections` отдаёт per-author flat `items[]/risks[]/decisions[]/priorities[]` (см. `lead-form.service.ts:67-108`). Меняем **только** клиентский маппинг — server contracts стабильны.
+
+---
+
+### W5 · §4 — Recovered intent (mapping feedback → workstream)
+
+| #   | User signal                     | Source DOM                                      | Solved by      |
+| --- | ------------------------------- | ----------------------------------------------- | -------------- |
+| FB1 | «отдельную секцию не делать»    | `lead-form.tsx:1541-1572` (CW wrapper, +4 ana.) | W5.5 delete    |
+| FB2 | «в местах, где я ввожу вручную» | `current-week-section.tsx:268-277`              | W5.5 merge     |
+| FB3 | «элементы в тупо readonly»      | `item-card.tsx:167-186, 215-218`                | W5.2 lock      |
+| FB4 | «при кнопке "Показать"»         | `cross-author-hint.tsx` (W3 removed toggle)     | W5.4 toggle    |
+| FB5 | «два контрибьютора для UAT»     | `prisma/seed.ts` Igor+Maria                     | ✓ done 7adfbb2 |
+
+---
+
+### W5 · §5 — Boundaries
+
+- **Не трогаем:** W1 SDLC pipeline (принято), W4 slides (принято), backend `getCrossAuthors*` контракты, темизацию (research-only по UI-policy), `?authorId=` foreign-view path (только guard `isOwnView` добавляем).
+- **Out-of-scope:** drag-and-drop foreign-items, edit-as-suggestion, foreign-item commenting. Если всплывёт — отдельная фаза.
+- **Stale directions:** «agреgate count chip» вместо per-item чипов (W1 уже решил), dashed-frame embed (W2 — заменяется), Hide/Show per-section (заменяется единым toggle).
+
+---
+
+### W5 · §6 — Workstreams (file-level)
+
+#### W5.6.1 · Type extensions
+
+**File:** `apps/web/src/components/lead/mock-data.ts`
+
+```ts
+// L31  KanbanItem
+export type KanbanItem = {
+  // …existing fields…
+  author: string;
+  foreign?: boolean;
+  authorId?: string;
+};
+
+// L43  RiskEntry
+export type RiskEntry = { …; foreign?: boolean; authorId?: string; authorName?: string };
+
+// L59  DecisionEntry
+export type DecisionEntry = { …; foreign?: boolean; authorId?: string };
+
+// L75  PriorityEntry
+export type PriorityEntry = { …; foreign?: boolean; authorId?: string; authorName?: string };
+```
+
+**Rationale.** `foreign?: boolean` + optional `authorId` ─ минимальный аддитив, ноль изменений в существующих mock-fixtures. Альтернативы `kind: "own"|"foreign"` отвергнуты (взрывной радиус по call-sites).
+
+#### W5.6.2 · Per-item lock UI
+
+**Files:**
+
+- `apps/web/src/components/lead/item-card.tsx` — diff в §0 W5.2 prior version (см. ниже §W5.7)
+- `apps/web/src/components/lead/risks-section.tsx` — per-row `locked` + 🔒 + opacity + gate L176/L203/L267
+- `apps/web/src/components/lead/decisions-section.tsx` — coexist with `isMine` (L38-48) → `locked = readOnly || decision.foreign || !mine`; lock-icon только если `decision.foreign`
+- `apps/web/src/components/lead/priorities-section.tsx` — same per-row pattern, `MetaRow authorName ?? sectionAuthorName`
+
+#### W5.6.3 · Orchestration
+
+**File:** `apps/web/src/components/lead/lead-form.tsx`
+
+- L922 → `useMemo productNameById` keyed on `[products]`
+- L923-927 area → 5 `useMemo` для `foreignCurrentItems/...` keyed на `[isOwnView, crossAuthorSectionsQ.data, productNameById]`
+- L1541-1572, L1615-1646, L1694-1725, L1760-1788, L1834-1861 → **DELETE** 5 wrapper blocks
+- L1573, L1647, L1726 (bridge), L1789, L1862 → `items={mergedCurrent}` (с inline `showForeignItems ? [...own, ...foreign] : own`)
+- L1537, L1611, L1690, L1756, L1830 → `<CrossAuthorHint … expanded={showForeignItems} onToggle={() => setShowForeignItems((v) => !v)} />`
+
+#### W5.6.4 · Bridge split
+
+**File:** `apps/web/src/components/lead/lead-form-sync-bridge.tsx`
+
+- Provider props (L48 area): добавить `displayRisks?: RiskEntry[]`
+- `<Risks />` consumer: `const renderRisks = displayRisks ?? risks;` render через `renderRisks`, `onRisksChange` остаётся на `risks` (own only) — иначе sync-hook ложно сорвёт stage-status reset на foreign-items.
+
+#### W5.6.5 · Controlled hint toggle
+
+**File:** `apps/web/src/components/lead/cross-author-hint.tsx`
+
+- Props: `+ expanded: boolean; + onToggle: () => void`
+- Под loop’ом contributors добавить кнопку «Show contributors ▼ / Hide contributors ▲» с `aria-expanded={expanded}`
+- JSDoc обновить: «Foreign rows render INLINE inside each product column when `expanded` is true. Default collapsed.»
+
+---
+
+### W5 · §7 — Subagent roadmap
+
+| Stage | Agent         | Model               | Scope (read/write)                                                            | Output contract                                        |
+| ----- | ------------- | ------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 0     | Orchestrator  | Sonnet (этот)       | live state, dirty files, plan                                                 | этот план + final commit chain                         |
+| 1     | impl-types    | Sonnet              | write `mock-data.ts` (5 type extensions)                                      | commit `feat(lead): add foreign+authorId to row types` |
+| 2A    | impl-itemcard | Sonnet              | write `item-card.tsx`                                                         | inline lock + opacity + button gate                    |
+| 2B    | impl-rows     | Sonnet              | write `risks/decisions/priorities-section.tsx` (3 files, similar)             | per-row lock + meta passthrough                        |
+| 3     | impl-form     | Sonnet              | write `lead-form.tsx` + `lead-form-sync-bridge.tsx` + `cross-author-hint.tsx` | state + memos + delete 5 wrappers + toggle wiring      |
+| 4     | reviewer      | `/codex:review`     | pre-commit advisory на каждый коммит                                          | PASS/BLOCK + findings                                  |
+| 5     | verify        | Sonnet (этот)       | `pnpm typecheck && lint && test && test:e2e --grep cross-author`              | final report                                           |
+| 6     | visual-smoke  | chrome-devtools MCP | `/lead/report/<seeded-id>`, toggle ON/OFF, foreign-author view                | screenshots + DOM rect verification                    |
+
+**Parallelism.** 2A + 2B можно вести параллельно (разные файлы). 1, 3 — sequential (3 зависит от типов из 1). Stage 4 — после каждого commit.
+
+---
+
+### W5 · §8 — Token economy
+
+| Work                         | Model             | Rationale                                          |
+| ---------------------------- | ----------------- | -------------------------------------------------- |
+| 4 impl agents (1, 2A, 2B, 3) | Sonnet            | scoped writes ≤300 строк каждый                    |
+| Type extension               | Sonnet            | mock-data.ts тривиально, но Sonnet нужен для guard |
+| `/codex:review` ×4           | Codex GPT-5       | advisory pre-commit                                |
+| Synthesis (этот план)        | Sonnet            | без deep                                           |
+| Opus                         | **не используем** | нет verified architecture conflict                 |
+
+Iteration reserve: ~15% контекста под self-review шаги + один follow-up Haiku запрос на snapshot fixture update, если e2e упадёт.
+
+---
+
+### W5 · §9 — Я делаю сам / От тебя
+
+```text
+─────────────────────────────────────
+✓ Я ДЕЛАЮ САМ
+─────────────────────────────────────
+  ├── impl типов (mock-data.ts)                            ← P1
+  ├── impl per-row lock (item-card + 3 section)             ← P2 (2A || 2B)
+  ├── impl orchestration (lead-form + bridge + hint)        ← P3
+  ├── /codex:review на каждый коммит                        ← P4
+  ├── pnpm typecheck + lint + test + e2e                    ← P5
+  ├── chrome-devtools MCP visual smoke                      ← P5
+  ├── 3-4 atomic commits на fix/PRJ-2/shiny-eagle           ← P6
+  └── push origin (если SSL пропустит)                      ← P6
+
+─────────────────────────────────────
+▲ ОТ ТЕБЯ
+─────────────────────────────────────
+  └── approve этот pivot-plan через ExitPlanMode (текущий шаг)
+     остальное автономно
+```
+
+---
+
+### W5 · §10 — Open questions with defaults
+
+| #   | Question                                           | Default / Status                                  | Когда эскалирую                            |
+| --- | -------------------------------------------------- | ------------------------------------------------- | ------------------------------------------ |
+| Q1  | Foreign items с продуктом не в моём списке         | **тихо drop**, hint строка остаётся               | если user попросит «catch-all» column      |
+| Q2  | Position foreign items в колонке (выше/ниже своих) | **ниже своих** (own first, foreign after)         | если user попросит alphabetical/by-stage   |
+| Q3  | Разделитель между own и foreign в колонке          | **тонкая dashed `border-t`** между группами       | если user попросит без разделителя         |
+| Q4  | One toggle на все 5 секций vs per-section          | **one global toggle**                             | если user попросит per-section granularity |
+| Q5  | Toggle button label EN vs RU                       | **EN ("Show/Hide contributors")** per i18n-policy | если user явно попросит RU                 |
+| Q6  | Ветка для коммитов                                 | **fix/PRJ-2/shiny-eagle** (продолжение)           | если user скажет «новую `fix/PRJ-3/...`»   |
+
+---
+
+### W5 · §11 — Verification
+
+```bash
+# 1. Static gates
+pnpm typecheck                            # 0 errors
+pnpm lint                                 # exit 0
+pnpm lint:md                              # planning surface clean
+
+# 2. Unit / snapshot
+pnpm test                                 # 485+ web tests
+pnpm --filter @customreport/web test -- item-card cross-author-hint \
+  current-week-section next-week-section \
+  risks-section decisions-section priorities-section \
+  lead-form lead-form-sync-bridge
+
+# 3. Regression e2e
+pnpm test:e2e --grep "cross-author|readonly|foreign"
+
+# 4. Visual smoke (Chrome DevTools MCP)
+#   а) /lead/report/<id>           → default: чужие items НЕ видны
+#   б) Click "Show contributors"   → foreign appear inline, 🔒, opacity 0.7
+#   в) Foreign cards: no [✎] no [×]
+#   г) Click again                 → foreign исчезают
+#   д) /lead/report/<id>?authorId=<Igor>  → Igor видит свои items без 🔒
+```
+
+**Acceptance gates.**
+
+- Все 4 коммита проходят `/codex:review` без BLOCK.
+- В DOM нет элемента `<div class="opacity-70"><CurrentWeekSection readOnly>` (5 wrappers удалены).
+- Foreign items видны **только** когда `showForeignItems === true` (initial state).
+- В колонке «Маркетинговый портал» при toggle ON: ≥2 foreign-cards (Igor + Maria) с `🔒` префиксом и opacity 0.7.
+- `pnpm lint` показывает `grep -nE '[а-яА-Я]'` совпадения только в data/comments/tests.
+
+---
+
+### W5 · §12 — Iteration reserve / self-review checklist
+
+- [x] TL;DR читается без чтения остального? (Было/Проблема/Станет — да, ASCII + проза)
+- [x] Pipeline визуализирован? (Mermaid `flowchart TB` + ASCII fallback)
+- [x] Каждая workstream имеет file:line якоря? (W5.6.1-W5.6.5 ✓)
+- [x] Subagent roadmap содержит model tier + scope + output? (§7 ✓)
+- [x] Token economy без Opus без verified conflict? (§8 ✓)
+- [x] Open questions имеют defaults? (Q1-Q6 ✓)
+- [x] Verification содержит конкретные команды + acceptance? (§11 ✓)
+- [x] Не возрождает stale directions (dark mode, director flow)? (§5 explicitly out-of-scope ✓)
+- [x] Не пересекается с W1/W3/W4 принятым scope? (§5 не трогаем ✓)
+- [x] Edge cases покрыты? (foreign-view guard, sync-hook split, key collisions — §13 ✓)
+
+---
+
+### W5 · §13 — Skill routing
+
+| Skill                   | Зачем                                        | Возвращает                                 |
+| ----------------------- | -------------------------------------------- | ------------------------------------------ |
+| `Demo-plan` rich-mode    | каркас плана + Mermaid/ASCII discipline      | этот документ                              |
+| `web-design-guidelines` | typography ramp, brand palette для lock-icon | размер/цвет 🔒 prefix                      |
+| `react-best-practices`  | `useMemo` keying, controlled-toggle pattern  | memoization stable refs, no stale closures |
+| `chrome-devtools-mcp`   | visual smoke до/после на /lead/report        | screenshots + DOM rect verification        |
+| `/codex:review`         | pre-commit advisory на 3-4 коммита           | PASS/BLOCK + findings                      |
+| `Demo-retro`             | session closeout после P6 push               | DONE/FRAGILE/LEFT блоки                    |
+
+Сознательно **не используем**: `gsd-*` (это не GSD phase, ad-hoc fix), `Demo-confluence`/`Demo-jira` (нет ticket-binding на W5), Opus/deep model (нет verified architecture conflict).
+
+### W5 · §14 — Edge cases (carry-over from prior design)
+
+| Случай                                       | Поведение                                                                         |
+| -------------------------------------------- | --------------------------------------------------------------------------------- |
+| Foreign item `productId` не в `products`     | drop’ается per-product filter’ом (`current-week-section.tsx:210`). Hint остаётся. |
+| Toggle off, query продолжает poll            | OK. `useMemo` пересчитывается только при `crossAuthorSectionsQ.data` change.      |
+| Foreign-автор открывает `?authorId=<his-id>` | `isOwnView === false` → `foreign*` массивы возвращают `[]`. Без замка.            |
+| Edit вызвался на foreign card                | Кнопки скрыты per-row → `onItemsChange` не получит foreign id.                    |
+| `PriorityEntry` без `id`                     | Composite key `${p.authorId ?? "me"}:${p.rank}:${idx}`.                           |
+| DecisionEntry id collision свой ↔ foreign    | Namespace foreign id: `foreign:${ca.authorId}:${d.id}`.                           |
+| Bridge sync hook видит foreign risks как add | Split: `risks` (own → sync), `displayRisks` (merged → render).                    |
+| Stale `productNameById` Map в `useMemo` deps | Memoize `productNameById` на `[products]` ДО foreign builders.                    |
+| A11y `aria-expanded` отсутствует на кнопке   | Добавить + опционально `aria-controls` space-separated id’ы 5 секций.             |
+
+---
+
+### W5 · §15 — Commit plan
+
+```text
+[1] feat(lead): add foreign+authorId fields to row types
+    ├── mock-data.ts (5 type extensions)
+    └── pnpm typecheck ✓ (все optional, no breaking change)
+
+[2] feat(lead): render per-item lock for foreign rows
+    ├── item-card.tsx (lock derived from item.foreign)
+    ├── risks-section.tsx (per-row gate + 🔒)
+    ├── decisions-section.tsx (coexist with isMine)
+    ├── priorities-section.tsx (per-row gate + 🔒)
+    └── pnpm test ✓ (foreign:undefined → no behavioral change yet)
+
+[3] feat(lead): toggleable inline foreign items, remove duplicate blocks
+    ├── cross-author-hint.tsx (controlled toggle)
+    ├── lead-form-sync-bridge.tsx (displayRisks split)
+    ├── lead-form.tsx (state + 5 useMemo + delete 5 wrappers + toggle wiring)
+    ├── snapshot updates (4 files)
+    └── pnpm test ✓ + e2e ✓ + visual smoke ✓
+
+[4] test(lead): cross-author toggle snapshots + e2e (if needed)
+    └── only if existing tests under e2e/regression/*cross-author* break
+```
+
+---
+
+## W1-W4 — Original Plan (historical, accepted)
+
+The 4 original workstreams below were drafted before the W5 pivot. **W1, W3, W4 were committed and accepted** in `7adfbb2`, `8957a85`, `f031c43`. **W2 design (dashed-frame removal + separate `<div opacity-70>` foreign section) was rejected** — W5 supersedes it. Sections W1-W4 are preserved unchanged below for audit trail.
+
+---
+
+## 0. TL;DR
+
+Решение: **`foreign?: boolean` + `authorId?: string`** (опциональный аддитив, без дискриминатора `kind`).
+
+Причина: все альтернативы (`kind: "own"|"foreign"`, `lockedByAuthorId`) ломают много мест построения items (mocks, fixtures, mappers, snapshot-тесты). Опциональный флаг = ноль изменений в существующих местах, авто-defaults к `undefined`.
+
+Diff:
+
+```ts
+// L31  KanbanItem
+export type KanbanItem = {
+  // …existing fields…
+  author: string;
+  foreign?: boolean;       // true → запись от другого автора, viewer-side
+  authorId?: string;
+};
+
+// L43  RiskEntry
+export type RiskEntry = { …; foreign?: boolean; authorId?: string; authorName?: string };
+
+// L59  DecisionEntry (owner уже есть — НЕ заменяем, добавляем foreign рядом)
+export type DecisionEntry = { …; foreign?: boolean; authorId?: string };
+
+// L75  PriorityEntry
+export type PriorityEntry = { …; foreign?: boolean; authorId?: string; authorName?: string };
+```
+
+`authorName` на Risks/Priorities — потому что в этих типах нет существующего поля автора (у KanbanItem есть `author`, у DecisionEntry — `owner`).
+
+### W5.2 — ItemCard self-derives lock (`item-card.tsx`)
+
+Правило: `const locked = readOnly || item.foreign === true;` Сечения дальше передают section-level `readOnly` без изменений.
+
+```diff
+@@ L83
+- const { item, onEdit, onDelete, readOnly = false, isEditing = false, onTextSave } = props;
++ const { item, onEdit, onDelete, readOnly = false, isEditing = false, onTextSave } = props;
++ const locked = readOnly || item.foreign === true;
+
+@@ L133 outer div
+- <div className="… group relative …" style={{…}}>
++ <div className="… group relative …" style={{ ..., opacity: item.foreign ? 0.7 : 1 }}>
+
+@@ L167  edit/delete buttons
+- {!readOnly && !isEditing && (
++ {!locked && !isEditing && (
+
+@@ L190  inline edit
+- {isEditing && !readOnly ? (textarea) : (<div>{item.text}</div>)}
++ {isEditing && !locked ? (textarea) : (<div>{item.text}</div>)}
+
+@@ L215  author footer (где сейчас просто `{item.author}`)
+- <div className="… text-[11px] text-[var(--color-muted-foreground)]">{item.author}</div>
++ <div className="… text-[11px] text-[var(--color-muted-foreground)]">
++   {item.foreign && (
++     <span aria-label={`Locked — authored by ${item.author}`} title={`Locked — ${item.author}`}>🔒 </span>
++   )}
++   {item.author}
++ </div>
+```
+
+### W5.3 — Section rows mirror the pattern
+
+| Файл                       | Что меняется                                                                                                                                                                                                                                                                 |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `current-week-section.tsx` | НИЧЕГО в JSX. `item.foreign` уже течёт через `item` в `<ItemCard>`. Per-product-column filter (`it.productId === p.id` на L210) сам направит чужие items в нужную колонку.                                                                                                   |
+| `next-week-section.tsx`    | Аналогично — без изменений в JSX.                                                                                                                                                                                                                                            |
+| `risks-section.tsx`        | Per-row `const locked = readOnly                                                                                                                                                                                                                                             |     | risk.foreign === true;`Заменить`!readOnly`на`!locked`на L176, L203. Префикс`🔒`перед product-chip когда`risk.foreign`. Outer-row `opacity: risk.foreign ? 0.7 : 1`. `MetaRow`(L267) —`authorName={risk.authorName ?? sectionAuthorName}`. |
+| `decisions-section.tsx`    | `isMine` (L38-48) — owner-based, ортогональна foreign. Сосуществуют: `locked = readOnly \|\| decision.foreign \|\| !mine`. Замок (🔒) только когда `decision.foreign === true` (не когда просто `!mine`). Edit/delete gate (L201): `!readOnly && mine && !decision.foreign`. |
+| `priorities-section.tsx`   | Same pattern. `MetaRow authorName` принимает `priority.authorName ?? sectionAuthorName`.                                                                                                                                                                                     |
+
+### W5.4 — CrossAuthorHint controlled toggle (`cross-author-hint.tsx`)
+
+Возвращаем кнопку Show/Hide как controlled-проп (state поднят в lead-form.tsx, один на 5 секций).
+
+```ts
+type Props = {
+  readonly contributors: readonly SectionContributor[];
+  readonly reportId: string;
+  readonly expanded: boolean;
+  readonly onToggle: () => void;
+};
+```
+
+JSX shape (под списком contributors):
+
+```tsx
+<button
+  type="button"
+  onClick={onToggle}
+  aria-expanded={expanded}
+  className="…compact pill…"
+>
+  {expanded ? "Hide contributors ▲" : "Show contributors ▼"}
+</button>
+```
+
+JSDoc обновить: «Foreign rows render INLINE inside each product column when `expanded` is true. Default collapsed.»
+
+### W5.5 — lead-form.tsx orchestration
+
+**a.** Локальный state:
+
+```tsx
+const [showForeignItems, setShowForeignItems] = useState(false);
+const isOwnView = !requestedAuthorIdNormalized; // guard: foreign author видит свои данные без лока
+```
+
+**b.** Сначала **мемоизируем `productNameById`** (сейчас на L922 строится `new Map(...)` каждый render):
+
+```tsx
+const productNameById = useMemo(
+  () => new Map(products.map((p) => [p.id, p.name])),
+  [products],
+);
+```
+
+**c.** 5 foreign-builder’ов через `useMemo`:
+
+```tsx
+const foreignCurrentItems = useMemo<KanbanItem[]>(() => {
+  if (!isOwnView || !crossAuthorSectionsQ.data) return [];
+  return crossAuthorSectionsQ.data.flatMap((ca) =>
+    ca.items
+      .filter((i) => i.type === "current")
+      .map((i) => ({
+        id: `foreign:${ca.authorId}:${i.id}`, // namespace id чтобы не конфликтовало со своими
+        productId: i.projectId,
+        productName: productNameById.get(i.projectId) ?? i.projectId,
+        stageName: i.stageName ?? undefined,
+        status: mapStatus(i.workflowStatus),
+        text: i.text,
+        author: ca.authorName,
+        authorId: ca.authorId,
+        foreign: true,
+      })),
+  );
+}, [isOwnView, crossAuthorSectionsQ.data, productNameById]);
+```
+
+Аналогично: `foreignNextItems` (filter `i.type === "next"`), `foreignRisks`, `foreignDecisions`, `foreignPriorities`. Все нормализуются под существующий `KanbanItem`/`RiskEntry`/`DecisionEntry`/`PriorityEntry` shape (с добавленным `foreign: true`).
+
+**d.** Merge на месте использования:
+
+```tsx
+const mergedCurrent = showForeignItems
+  ? [...currentWeekItems, ...foreignCurrentItems]
+  : currentWeekItems;
+const mergedNext = showForeignItems
+  ? [...nextWeekItems, ...foreignNextItems]
+  : nextWeekItems;
+const mergedRisks = showForeignItems ? [...risks, ...foreignRisks] : risks;
+const mergedDecisions = showForeignItems
+  ? [...decisions, ...foreignDecisions]
+  : decisions;
+const mergedPriorities = showForeignItems
+  ? [...priorities, ...foreignPriorities]
+  : priorities;
+```
+
+**e.** Удалить 5 wrapper-блоков:
+
+```
+L1541-1572  ── DELETE  (CurrentWeek foreign wrapper)
+L1615-1646  ── DELETE  (NextWeek foreign wrapper)
+L1694-1725  ── DELETE  (Risks foreign wrapper)
+L1760-1788  ── DELETE  (Decisions foreign wrapper)
+L1834-1861  ── DELETE  (Priorities foreign wrapper)
+```
+
+Заменить `items={currentWeekItems}` (L1573) → `items={mergedCurrent}` и аналогично для остальных 4 секций.
+
+**f.** 5 мест с `<CrossAuthorHint contributors=… reportId=…/>` (L1537, L1611, L1690, L1756, L1830) → добавить `expanded={showForeignItems}` + `onToggle={() => setShowForeignItems((v) => !v)}`. Любой клик по любой из 5 кнопок переключает все секции одновременно.
+
+### W5.6 — Sync-bridge split (`lead-form-sync-bridge.tsx`)
+
+RisksSection идёт через `<LeadFormSyncBridge.Risks />`. `useStatusRiskSync` (внутри bridge) diff’ает `risks[]` чтобы синхронизировать stage status — если просто передать `mergedRisks`, foreign-строки будут выглядеть как add/remove и спровоцируют ложные мутации.
+
+Решение: добавить optional prop `displayRisks?: RiskEntry[]`:
+
+```ts
+// Provider props (L48 area)
+risks: RiskEntry[];                  // own only — drives sync hook
+displayRisks?: RiskEntry[];          // optional render-only override
+
+// Inside <LeadFormSyncBridge.Risks /> consumer:
+const renderRisks = displayRisks ?? risks;
+return <RisksSection risks={renderRisks} … onRisksChange={…} />;
+```
+
+В `lead-form.tsx` Provider:
+
+```tsx
+<LeadFormSyncBridge.Provider
+  risks={risks}                       // own only → sync hook
+  displayRisks={mergedRisks}          // merged → visual render
+  // …
+>
+```
+
+Edits на foreign-rows недостижимы (per-row `locked` скрывает кнопки), так что `onRisksChange` никогда не получит foreign id — sync hook остаётся консистентным.
+
+### W5.7 — Edge cases
+
+| Случай                                                  | Поведение                                                                                                                                                                                        |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Foreign item имеет `productId`, которого нет у viewer’а | Тихо drop’ается per-product filter’ом (документировать комментарием). CrossAuthorHint всё равно покажет «Also contributing: <name>» + ссылку на readonly view.                                   |
+| Toggle off → query продолжает poll’ить                  | OK. `useMemo` пересчитывается только при изменении `crossAuthorSectionsQ.data`.                                                                                                                  |
+| Foreign-автор открывает `?authorId=<his-id>`            | `isOwnView === false` → все `foreign*` массивы возвращают `[]`. Foreign-автор видит свои данные без замка.                                                                                       |
+| DnD/edit срабатывает на foreign card                    | Кнопки скрыты per-row, `onItemsChange` не вызывается на foreign id. Дополнительно: проверить что drag-handler на card root тоже gate’ится на `!item.foreign` (сейчас drag нет — нечего трогать). |
+| PriorityEntry без `id`                                  | Composite key `${p.authorId ?? "me"}:${p.rank}:${idx}` в map-key.                                                                                                                                |
+| DecisionEntry id collision свой↔foreign                 | Namespace foreign id: `foreign:${ca.authorId}:${d.id}`.                                                                                                                                          |
+
+### W5.8 — Commit plan (top of `fix/PRJ-2/shiny-eagle`)
+
+```text
+[1] feat(lead): add foreign+authorId to row types (mock-data.ts)
+[2] feat(lead): per-item lock for foreign rows (item-card, risks/decisions/priorities-section)
+[3] feat(lead): toggleable inline foreign items, remove duplicate blocks
+     (cross-author-hint controlled toggle, lead-form merge+state, bridge displayRisks)
+[4] test(lead): cross-author toggle snapshots + e2e (optional, if regression breaks)
+```
+
+### W5.9 — Verification
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test -- --runInBand cross-author
+pnpm test -- lead-form lead-form-sync-bridge item-card \
+            risks-section decisions-section priorities-section
+pnpm test:e2e --grep "cross-author"
+```
+
+Снапшоты к обновлению (известные хиты):
+
+- `lead-form-viewmode.snapshot.test.tsx`
+- `risks-section.snapshot.test.tsx`
+- `priorities-section.snapshot.test.tsx`
+- `decisions-section.snapshot.test.tsx`
+
+Visual smoke (Chrome DevTools MCP):
+
+1. `/lead/report/<seeded-id>` → default: чужие items НЕ видны, видны только hint-полоски «Also contributing: Igor / Maria».
+2. Click «Show contributors» → в колонке product 201 появляются Igor+Maria items с 🔒, opacity 0.7, без edit/delete.
+3. Toggle off → исчезают.
+4. `?authorId=<Igor-id>` → Igor видит свои items без замка.
+
+### W5.10 — Risks
+
+| Riзк                                 | Митигация                                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------ |
+| Sync-hook false-positives на risks   | `displayRisks` split в bridge (§W5.6).                                         |
+| `groupByProduct` key collisions      | Namespace foreign id `foreign:${authorId}:${id}`.                              |
+| PriorityEntry react-key warnings     | Composite key.                                                                 |
+| Snapshot churn                       | Концентрированно в 4 файлах; обновить + добавить foreign-row case в один.      |
+| Stale `useMemo` на `productNameById` | Мемоизировать на `[products]` ДО foreign-builders.                             |
+| A11y `aria-expanded` отсутствует     | Добавить на кнопку; опционально `aria-controls` space-separated id’ы 5 секций. |
+
+### W5.11 — От человека
+
+```text
+─────────────────────────────────────
+✓ Я ДЕЛАЮ САМ
+─────────────────────────────────────
+  ├── 4 коммита по плану §W5.8
+  ├── snapshot updates
+  ├── chrome-devtools smoke на /lead/report/<id>
+  ├── pnpm typecheck / lint / test / e2e
+  └── push на fix/PRJ-2/shiny-eagle (если SSL пропустит)
+
+─────────────────────────────────────
+▲ ОТ ТЕБЯ
+─────────────────────────────────────
+  └── approve plan → /exit-plan-mode (текущий шаг)
+```
+
 ---
 
 ## 0. TL;DR
@@ -247,6 +1001,7 @@ Old (текст):                          New (визуальный chip-list):
   ```
 
   Каждая ячейка `overflow: hidden`, текст с `text-clamp: 3`.
+
 - Typography ramp (status-slide-deck.tsx:187, 200, 295, 299):
 
   ```text

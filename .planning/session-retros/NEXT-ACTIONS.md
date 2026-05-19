@@ -1,6 +1,6 @@
 # NEXT ACTIONS
 
-updated: 2026-05-19T20:20:00Z source: Demo-retro shiny-eagle session
+updated: 2026-05-19T21:20:00Z source: Demo-retro shiny-eagle W5 session
 
 ## RUN FIRST
 
@@ -18,8 +18,8 @@ updated: 2026-05-19T20:20:00Z source: Demo-retro shiny-eagle session
 4. [ ] Ручной UAT — Г: "By product" → слайды Vasily + слайды Boris (cross-author)
 5. [ ] Ручной UAT — Д: hero band (имя + KPI tiles), chip carousel, 16:10 frame
 6. [ ] Ручной UAT — Е: автор с 5+ продуктами → пагинация (1/2, стрелки)
-7. [ ] Ручной UAT — Ж (shiny-eagle): `/lead/report/<id>` → в SdlcPipeline "Other contributors" видны ⛔/⚠ чипы
-8. [ ] Ручной UAT — З (shiny-eagle): Risks/CW/NW/Dec/Prio → inline строки Игоря и Марии видны сразу без клика (`pnpm db:seed` нужен)
+7. [x] Ручной UAT — Ж (shiny-eagle): `/lead/report/<id>` → в SdlcPipeline "Other contributors" видны ⛔/⚠ чипы <!-- done: 7adfbb2 — W1 shipped -->
+8. [ ] Ручной UAT — З (shiny-eagle W5): CW/NW/Risks/Dec/Prio → кнопка "Show contributors ▼" (default hidden); по клику foreign items появляются inline с 🔒 без кнопок edit/delete
 9. [ ] Ручной UAT — И (shiny-eagle): `?mode=slides` → выравнивание CURRENT/NEXT/RISKS по строкам, body 13px, кнопка ⛶
 10. [ ] Решение: закрывать milestone v8.3 или добавлять scope
 
@@ -68,6 +68,9 @@ updated: 2026-05-19T20:20:00Z source: Demo-retro shiny-eagle session
 - [x] shiny-eagle F2: dashed-frame embed removed, always-on inline rows (5 секций) <!-- done: 7adfbb2 + 8957a85 -->
 - [x] shiny-eagle F3: CrossAuthorHint toggle removed, seed +Igor/Maria cross-authors <!-- done: 7adfbb2 -->
 - [x] shiny-eagle F4: slide grid + typography 13px + fullscreen button <!-- done: f031c43 -->
+- [x] shiny-eagle W5 commit 1: foreign+authorId fields on 4 row types <!-- done: c059621 -->
+- [x] shiny-eagle W5 commit 2: per-item lock (item-card, risks/decisions/priorities-section) <!-- done: 64a70d7 -->
+- [x] shiny-eagle W5 commit 3: toggleable inline foreign items, delete 5 wrapper blocks, bridge displayRisks <!-- done: f63aeb2 -->
 - [x] Night-marathon D-2..D-36 frame <!-- done: archived in retro memo 3a17656 -->
 
 ## BLOCKED
