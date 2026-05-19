@@ -424,22 +424,6 @@ export function LeadForm({
     return acc;
   }, new Map());
   const uniqueCrossAuthors = Array.from(crossAuthorsByAuthor.values());
-  const risksContributors = uniqueCrossAuthors
-    .filter((ca) => ca.riskCount > 0)
-    .map((ca) => ({
-      authorId: ca.authorId,
-      authorName: ca.authorName,
-      count: ca.riskCount,
-      label: ca.riskCount === 1 ? "risk" : "risks",
-    }));
-  const itemsContributors = uniqueCrossAuthors
-    .filter((ca) => ca.itemCount > 0)
-    .map((ca) => ({
-      authorId: ca.authorId,
-      authorName: ca.authorName,
-      count: ca.itemCount,
-      label: ca.itemCount === 1 ? "item" : "items",
-    }));
   const allSectionContributors = uniqueCrossAuthors.map((ca) => ({
     authorId: ca.authorId,
     authorName: ca.authorName,
@@ -1551,11 +1535,11 @@ export function LeadForm({
                 }
               >
                 <CrossAuthorHint
-                  contributors={itemsContributors}
+                  contributors={allSectionContributors}
                   reportId={targetReportId}
                 />
                 {crossAuthorSectionsQ.data &&
-                  itemsContributors.length > 0 &&
+                  allSectionContributors.length > 0 &&
                   crossAuthorSectionsQ.data.map((ca) => {
                     const caItems = ca.items
                       .filter((i) => i.type === "current")
@@ -1632,11 +1616,11 @@ export function LeadForm({
                 }
               >
                 <CrossAuthorHint
-                  contributors={itemsContributors}
+                  contributors={allSectionContributors}
                   reportId={targetReportId}
                 />
                 {crossAuthorSectionsQ.data &&
-                  itemsContributors.length > 0 &&
+                  allSectionContributors.length > 0 &&
                   crossAuthorSectionsQ.data.map((ca) => {
                     const caItems = ca.items
                       .filter((i) => i.type === "next")
@@ -1718,11 +1702,11 @@ export function LeadForm({
                 }
               >
                 <CrossAuthorHint
-                  contributors={risksContributors}
+                  contributors={allSectionContributors}
                   reportId={targetReportId}
                 />
                 {crossAuthorSectionsQ.data &&
-                  risksContributors.length > 0 &&
+                  allSectionContributors.length > 0 &&
                   crossAuthorSectionsQ.data.map((ca) => {
                     if (ca.risks.length === 0) return null;
                     const caRisks = ca.risks.map(
