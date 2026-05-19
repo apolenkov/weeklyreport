@@ -58,13 +58,8 @@ type SdlcPipelineProps = {
   /**
    * F1: Cross-author entries for shared products. Grouped by projectId;
    * rendered as a subtle "Other contributors" row below each product card.
-   * Link drills into foreign-author readonly view (P63 LOCK-01).
    */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
-  /**
-   * F1: Active report ID — used to build the ?authorId= drill-in URL.
-   */
-  readonly reportId?: string;
 };
 
 function getProductBackground(status: StageStatus): string {
@@ -87,7 +82,6 @@ export function SdlcPipeline({
   risks,
   unbackedStages = [],
   crossAuthors = [],
-  reportId,
 }: SdlcPipelineProps) {
   function handleStatusChange(
     productId: string,
@@ -258,7 +252,7 @@ export function SdlcPipeline({
           {/* F1: cross-author summary — other leads who share this product */}
           {crossAuthors.filter((ca) => ca.projectId === product.id).length >
             0 && (
-            <div className="mt-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
+            <div className="-mb-3 -mx-3 mt-3 rounded-b-xl bg-[rgba(0,0,0,0.02)] px-3 pb-3 pt-2.5 border-t-2 border-dashed border-[rgba(0,0,0,0.10)]">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
                 Other contributors
               </p>
@@ -286,22 +280,13 @@ export function SdlcPipeline({
                             {ca.itemCount} item{ca.itemCount !== 1 ? "s" : ""}
                           </span>
                         )}
-                        {reportId && (
-                          <a
-                            href={`/lead/report/${reportId}?authorId=${ca.authorId}`}
-                            className="ml-auto inline-flex items-center rounded px-1 py-0.5 text-[11px] font-semibold text-[var(--color-primary)] opacity-70 hover:opacity-100 hover:underline"
-                            aria-label={`Open ${ca.authorName}'s section`}
-                          >
-                            ↗
-                          </a>
-                        )}
                       </div>
                       {ca.risks && ca.risks.length > 0 && (
                         <ul className="mt-0.5 space-y-0.5 pl-3">
                           {ca.risks.map((r, i) => (
                             <li
                               key={i}
-                              className={`flex items-start gap-1 text-[11px] ${r.severity === "blocked" ? "text-[var(--color-destructive)]" : "text-[var(--color-warning,#b45309)]"}`}
+                              className="flex items-start gap-1 text-[11px]"
                             >
                               <span
                                 aria-hidden="true"
@@ -309,7 +294,15 @@ export function SdlcPipeline({
                               >
                                 {r.severity === "blocked" ? "⛔" : "⚠"}
                               </span>
-                              <span className="line-clamp-2">{r.text}</span>
+                              <span
+                                className={`line-clamp-2 rounded-md px-1.5 py-0.5 font-medium ${
+                                  r.severity === "blocked"
+                                    ? "bg-[#fee2e2] text-[#7f1d1d]"
+                                    : "bg-[#fef3c7] text-[#78350f]"
+                                }`}
+                              >
+                                {r.text}
+                              </span>
                             </li>
                           ))}
                         </ul>

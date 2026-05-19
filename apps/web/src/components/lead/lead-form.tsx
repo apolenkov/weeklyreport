@@ -315,24 +315,12 @@ export function LeadForm({
   const qc = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const requestedAuthorId = searchParams.get("authorId") ?? undefined;
-  const requestedAuthorIdNormalized = requestedAuthorId?.trim() || undefined;
   const isSlidesMode = mode === "slides";
   const sessionState = useContext(SessionContext);
   const sessionRole = sessionState?.user?.role ?? null;
   const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
-  const shouldRouteHeadLikeAwayFromLeadForm =
-    isHeadLikeSession && !requestedAuthorIdNormalized;
+  const shouldRouteHeadLikeAwayFromLeadForm = isHeadLikeSession;
   const shouldDeferForSession = Boolean(sessionState && sessionState.isLoading);
-  const isPinnedAuthorOwnView = Boolean(
-    pinnedReportId &&
-    requestedAuthorIdNormalized &&
-    sessionState?.user?.id &&
-    requestedAuthorIdNormalized === sessionState.user.id,
-  );
-  const isPinnedAuthorView = Boolean(
-    pinnedReportId && requestedAuthorIdNormalized && !isPinnedAuthorOwnView,
-  );
 
   // Four queries compose the lead-form view. `byPeriod` and `versions` depend
   // on identifiers from `getActive` (or — 35-07 — the pinned `reportId` from
@@ -350,9 +338,6 @@ export function LeadForm({
   const byPeriodQ = useQuery({
     ...trpc.leadForm.byPeriod.queryOptions({
       reportId: targetReportId,
-      ...(requestedAuthorIdNormalized
-        ? { authorId: requestedAuthorIdNormalized }
-        : {}),
     }),
     enabled:
       targetReportId !== "" &&
@@ -381,7 +366,7 @@ export function LeadForm({
     ...trpc.leadForm.crossAuthors.queryOptions({
       reportId: targetReportId,
     }),
-    enabled: targetReportId !== "" && !requestedAuthorIdNormalized,
+    enabled: targetReportId !== "",
   });
 
   // F-shiny-3: cross-author section data is always loaded (always-on).
@@ -389,7 +374,7 @@ export function LeadForm({
     ...trpc.leadForm.crossAuthorSections.queryOptions({
       reportId: targetReportId,
     }),
-    enabled: targetReportId !== "" && !requestedAuthorIdNormalized,
+    enabled: targetReportId !== "",
   });
 
   const crossAuthors = crossAuthorsQ.data ?? [];
@@ -431,7 +416,6 @@ export function LeadForm({
     if (shouldRouteHeadLikeAwayFromLeadForm) return;
     if (!activeReportId) return;
     const next = new URLSearchParams();
-    if (requestedAuthorId) next.set("authorId", requestedAuthorId);
     if (isSlidesMode) next.set("mode", "slides");
     const query = next.toString();
     router.replace(`/lead/report/${activeReportId}${query ? `?${query}` : ""}`);
@@ -440,7 +424,6 @@ export function LeadForm({
     period,
     pinnedReportId,
     activeReportId,
-    requestedAuthorId,
     isSlidesMode,
     shouldRouteHeadLikeAwayFromLeadForm,
     router,
@@ -461,7 +444,6 @@ export function LeadForm({
         component: "LeadForm",
         procedure: "reports.getActive",
         reportId: pinnedReportId ?? null,
-        authorId: requestedAuthorIdNormalized ?? null,
       });
       toast.error(
         activeQ.error instanceof Error
@@ -469,12 +451,7 @@ export function LeadForm({
           : "Failed to load active report",
       );
     }
-  }, [
-    activeQ.isError,
-    activeQ.error,
-    pinnedReportId,
-    requestedAuthorIdNormalized,
-  ]);
+  }, [activeQ.isError, activeQ.error, pinnedReportId]);
 
   useEffect(() => {
     if (byPeriodQ.isError) {
@@ -482,7 +459,6 @@ export function LeadForm({
         component: "LeadForm",
         procedure: "leadForm.byPeriod",
         reportId: targetReportId || null,
-        authorId: requestedAuthorIdNormalized ?? null,
         role: sessionRole,
       });
       toast.error(
@@ -491,13 +467,7 @@ export function LeadForm({
           : "Failed to load form",
       );
     }
-  }, [
-    byPeriodQ.isError,
-    byPeriodQ.error,
-    targetReportId,
-    requestedAuthorIdNormalized,
-    sessionRole,
-  ]);
+  }, [byPeriodQ.isError, byPeriodQ.error, targetReportId, sessionRole]);
 
   useEffect(() => {
     if (versionsQ.isError) {
@@ -889,8 +859,7 @@ export function LeadForm({
   const decisions: DecisionEntry[] = data.decisions as DecisionEntry[];
   const priorities: PriorityEntry[] = data.priorities as PriorityEntry[];
 
-  // W5: build foreign item arrays from crossAuthorSectionsQ; empty when viewing
-  // another author (query is disabled via enabled:!requestedAuthorIdNormalized).
+  // W5/W6: build foreign item arrays from crossAuthorSectionsQ (always-on).
   const foreignCurrentItems: KanbanItem[] =
     crossAuthorSectionsQ.data?.flatMap((ca) =>
       ca.items
@@ -1019,8 +988,7 @@ export function LeadForm({
         ? [...visibleNonArchivedPeriods, selectedPeriod]
         : visibleNonArchivedPeriods;
 
-  const isReadOnly =
-    data.readOnly || !!period || isSubmitted || isPinnedAuthorView;
+  const isReadOnly = data.readOnly || !!period || isSubmitted;
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
@@ -1393,24 +1361,6 @@ export function LeadForm({
                 Your report draft and status context.
               </p>
             </div>
-            {isPinnedAuthorView && !isSlidesMode && draftSection.authorName && (
-              <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-muted)] px-2.5 py-1 text-xs font-medium text-[var(--color-muted-foreground)]">
-                <svg
-                  viewBox="0 0 16 16"
-                  className="h-3 w-3 shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="3" y="7" width="10" height="8" rx="1" />
-                  <path d="M5 7V5a3 3 0 016 0v2" />
-                </svg>
-                {draftSection.authorName}
-              </span>
-            )}
             {/* LF-3 (Phase 33-04): submitted state now uses the .b-ok variant
                 (light teal bg + dark teal text) — matches mockup s2 rather
                 than the heavier white-on-dark-teal `.b-done` look that read
@@ -1566,7 +1516,6 @@ export function LeadForm({
                 : {})}
               risksAddSignal={risksAddSignal}
               crossAuthors={enrichedCrossAuthors}
-              {...(targetReportId ? { reportId: targetReportId } : {})}
               displayRisks={mergedRisks}
             >
               <AccordionSection
