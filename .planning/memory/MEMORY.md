@@ -15,3 +15,5 @@
 - [Demo-plan rich-mode (global)](feedback_demo_plan_richmode_global.md) — every plan ≥3 steps or multi-file must use Demo-plan rich-mode with 15-section template + 3 Mermaid TB diagrams, applies ALL repos
 - [LOCK-01 + data source lesson 2026-05-18](project_lock01_2026_05_18.md) — lock badge on foreign-author view done; currentUser.name ≠ section author; use draftSection.authorName
 - [v8.2 milestone closed 2026-05-18](project_v8_2_closed_2026_05_18.md) — v8.2 SHIPPED (tag v8.2.0), 5 phases/19 commits, push pending SSL; next v8.3 UAT
+- [v8.3 F14-F16 closure 2026-05-19](project_v83_f14_f16_2026_05_19.md) — F14 inline cross-author embeds, F15 scope toggle (Own/By product), F16 hero+chips+pagination — pushed origin/main; ready for manual UAT
+- [shiny-eagle F1/F2/F3 2026-05-19](project_shiny_eagle_f1f2f3_2026_05_19.md) — always-on foreign rows, per-risk chips in sdlc-pipeline, dashed-frame removed; seed +2 contributors; F4 slides done earlier
