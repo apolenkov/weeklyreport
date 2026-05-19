@@ -68,8 +68,6 @@ type BridgeContextValue = {
   risksAddSignal?: number;
   /** F1: cross-author entries for the current report period. */
   crossAuthors?: readonly CrossAuthorEntry[];
-  /** F1: active reportId for building drill-in URL. */
-  reportId?: string;
   /** W5: merged risks (own + foreign) for visual rendering only. The sync hook
    * still operates on `risks` (own-only) to avoid false-positive mutations. */
   displayRisks?: RiskEntry[];
@@ -130,8 +128,6 @@ export type LeadFormSyncBridgeProviderProps = {
   readonly risksAddSignal?: number;
   /** F1: cross-author entries for shared products. */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
-  /** F1: active reportId for building drill-in URL. */
-  readonly reportId?: string;
   /** W5: merged risks for visual rendering; own-only risks drive sync hook. */
   readonly displayRisks?: RiskEntry[];
   readonly children: ReactNode;
@@ -148,7 +144,6 @@ function Provider({
   sectionAuthorName,
   risksAddSignal,
   crossAuthors,
-  reportId,
   displayRisks,
   children,
 }: LeadFormSyncBridgeProviderProps) {
@@ -267,7 +262,6 @@ function Provider({
       ...(sectionAuthorName !== undefined ? { sectionAuthorName } : {}),
       ...(risksAddSignal !== undefined ? { risksAddSignal } : {}),
       ...(crossAuthors !== undefined ? { crossAuthors } : {}),
-      ...(reportId !== undefined ? { reportId } : {}),
       ...(displayRisks !== undefined ? { displayRisks } : {}),
       handleStageStatusChange,
       handleRisksChange,
@@ -282,7 +276,6 @@ function Provider({
       sectionAuthorName,
       risksAddSignal,
       crossAuthors,
-      reportId,
       displayRisks,
       handleStageStatusChange,
       handleRisksChange,
@@ -367,7 +360,6 @@ function Pipeline() {
       {...(ctx.crossAuthors !== undefined
         ? { crossAuthors: ctx.crossAuthors }
         : {})}
-      {...(ctx.reportId !== undefined ? { reportId: ctx.reportId } : {})}
     />
   );
 }
