@@ -459,7 +459,7 @@ export function buildActivitySlideModel(
  */
 export function paginateSectionSlides(
   model: SectionSlideModel,
-  productsPerPage = 4,
+  productsPerPage = 9,
 ): SectionSlideModel[] {
   // Separate real product slides from the synthetic cross-product entry.
   const crossProduct = model.productSlides.find(
