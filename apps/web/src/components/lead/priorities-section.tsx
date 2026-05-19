@@ -212,8 +212,7 @@ export function PrioritiesSection({
               </span>
               {entry.productName && (
                 <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
-                  {entry.foreign && <span aria-hidden="true">{"🔒 "}</span>}
-                  {entry.productName}
+                    {entry.productName}
                 </span>
               )}
               {!readOnly && !entry.foreign && (
@@ -261,6 +260,7 @@ export function PrioritiesSection({
                   stageTags={stageTags}
                   ariaLabel={`Priority ${entry.rank} stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
                   className="pt-1"
+                  foreign={entry.foreign === true}
                 />
               </div>
             </button>
