@@ -39,7 +39,6 @@ import { DecisionsSection } from "./decisions-section";
 import { PrioritiesSection } from "./priorities-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RequestReopenDialog } from "./request-reopen-dialog";
-import { CrossAuthorHint } from "./cross-author-hint";
 import { LeadSlidesClient } from "../slides/lead-slides-client";
 import { AccordionSection } from "../report-shell/accordion-section";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
@@ -393,42 +392,7 @@ export function LeadForm({
     enabled: targetReportId !== "" && !requestedAuthorIdNormalized,
   });
 
-  // F9: derive per-section contributors from crossAuthors data.
-  // crossAuthors may contain multiple entries per author (one per shared product),
-  // so we aggregate counts by authorId to produce unique entries.
   const crossAuthors = crossAuthorsQ.data ?? [];
-  const crossAuthorsByAuthor = crossAuthors.reduce<
-    Map<
-      string,
-      {
-        authorId: string;
-        authorName: string;
-        riskCount: number;
-        itemCount: number;
-      }
-    >
-  >((acc, ca) => {
-    const existing = acc.get(ca.authorId);
-    if (existing) {
-      existing.riskCount += ca.riskCount;
-      existing.itemCount += ca.itemCount;
-    } else {
-      acc.set(ca.authorId, {
-        authorId: ca.authorId,
-        authorName: ca.authorName,
-        riskCount: ca.riskCount,
-        itemCount: ca.itemCount,
-      });
-    }
-    return acc;
-  }, new Map());
-  const uniqueCrossAuthors = Array.from(crossAuthorsByAuthor.values());
-  const allSectionContributors = uniqueCrossAuthors.map((ca) => ({
-    authorId: ca.authorId,
-    authorName: ca.authorName,
-    count: -1,
-    label: "",
-  }));
 
   // F-shiny-1: enrich crossAuthors with per-risk details and isEmpty flag
   // sourced from crossAuthorSectionsQ (always loaded).
@@ -848,7 +812,6 @@ export function LeadForm({
   }, [titleHistoryEntry]);
 
   const [showArchivePeriods, setShowArchivePeriods] = useState(false);
-  const [showForeignItems, setShowForeignItems] = useState(false);
   const selectedPeriodId =
     pinnedReportId ||
     searchParams.get("period") ||
@@ -1031,19 +994,11 @@ export function LeadForm({
       ),
     ) ?? [];
 
-  const mergedCurrentItems = showForeignItems
-    ? [...currentWeekItems, ...foreignCurrentItems]
-    : currentWeekItems;
-  const mergedNextItems = showForeignItems
-    ? [...nextWeekItems, ...foreignNextItems]
-    : nextWeekItems;
-  const mergedRisks = showForeignItems ? [...risks, ...foreignRisks] : risks;
-  const mergedDecisions = showForeignItems
-    ? [...decisions, ...foreignDecisions]
-    : decisions;
-  const mergedPriorities = showForeignItems
-    ? [...priorities, ...foreignPriorities]
-    : priorities;
+  const mergedCurrentItems = [...currentWeekItems, ...foreignCurrentItems];
+  const mergedNextItems = [...nextWeekItems, ...foreignNextItems];
+  const mergedRisks = [...risks, ...foreignRisks];
+  const mergedDecisions = [...decisions, ...foreignDecisions];
+  const mergedPriorities = [...priorities, ...foreignPriorities];
 
   const periods: ReportPeriod[] = data.periods as ReportPeriod[];
   const versions: VersionSnapshot[] = data.versions as VersionSnapshot[];
@@ -1655,12 +1610,6 @@ export function LeadForm({
                   ) : null
                 }
               >
-                <CrossAuthorHint
-                  contributors={allSectionContributors}
-                  reportId={targetReportId}
-                  expanded={showForeignItems}
-                  onToggle={() => setShowForeignItems((v) => !v)}
-                />
                 <CurrentWeekSection
                   items={mergedCurrentItems}
                   readOnly={isReadOnly}
@@ -1699,12 +1648,6 @@ export function LeadForm({
                   ) : null
                 }
               >
-                <CrossAuthorHint
-                  contributors={allSectionContributors}
-                  reportId={targetReportId}
-                  expanded={showForeignItems}
-                  onToggle={() => setShowForeignItems((v) => !v)}
-                />
                 <NextWeekSection
                   items={mergedNextItems}
                   readOnly={isReadOnly}
@@ -1748,12 +1691,6 @@ export function LeadForm({
                   ) : null
                 }
               >
-                <CrossAuthorHint
-                  contributors={allSectionContributors}
-                  reportId={targetReportId}
-                  expanded={showForeignItems}
-                  onToggle={() => setShowForeignItems((v) => !v)}
-                />
                 <LeadFormSyncBridge.Risks />
               </AccordionSection>
             </LeadFormSyncBridge.Provider>
@@ -1784,12 +1721,6 @@ export function LeadForm({
                 ) : null
               }
             >
-              <CrossAuthorHint
-                contributors={allSectionContributors}
-                reportId={targetReportId}
-                expanded={showForeignItems}
-                onToggle={() => setShowForeignItems((v) => !v)}
-              />
               <DecisionsSection
                 decisions={mergedDecisions}
                 readOnly={isReadOnly}
@@ -1831,12 +1762,6 @@ export function LeadForm({
                   ) : null
                 }
               >
-                <CrossAuthorHint
-                  contributors={allSectionContributors}
-                  reportId={targetReportId}
-                  expanded={showForeignItems}
-                  onToggle={() => setShowForeignItems((v) => !v)}
-                />
                 <PrioritiesSection
                   priorities={mergedPriorities}
                   readOnly={isReadOnly}
