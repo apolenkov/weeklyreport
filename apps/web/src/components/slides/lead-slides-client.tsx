@@ -17,6 +17,7 @@ import {
   buildSectionSlideModel,
   paginateSectionSlides,
   type SectionSlideModel,
+  type SlideProduct,
 } from "./section-slide-utils";
 import { LeadScopeToggle } from "./lead-scope-toggle";
 
@@ -92,6 +93,21 @@ function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
           ? "warning"
           : "ready";
 
+  // Synthetic product card so LeadSlideArticle renders actual content via
+  // ProductSdlcGroups. "cross-product" id receives special neutral styling in
+  // ProductSdlcGroups (no status accent) and is excluded from chip generation.
+  const syntheticProduct: SlideProduct = {
+    id: "cross-product",
+    name: ca.authorName,
+    status: null,
+    stages: [],
+    currentItems,
+    nextItems,
+    risks,
+    decisions,
+    priorities,
+  };
+
   const model: SectionSlideModel = {
     id: ca.authorId + "-cross",
     ownerId: ca.authorId,
@@ -99,9 +115,9 @@ function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
     ownerRole: "lead",
     status: "submitted",
     submittedAt: null,
-    products: [],
-    productSlides: [],
-    productCount: 0,
+    products: [ca.authorName],
+    productSlides: [syntheticProduct],
+    productCount: 1,
     currentCount: currentItems.length,
     nextCount: nextItems.length,
     riskCount: risks.length,
