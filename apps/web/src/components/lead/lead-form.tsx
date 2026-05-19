@@ -35,7 +35,6 @@ import { FillFromButton } from "./fill-from-button";
 import { VersionHistoryNav } from "./version-history-nav";
 import { CurrentWeekSection } from "./current-week-section";
 import { NextWeekSection } from "./next-week-section";
-import { RisksSection } from "./risks-section";
 import { DecisionsSection } from "./decisions-section";
 import { PrioritiesSection } from "./priorities-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
@@ -849,6 +848,7 @@ export function LeadForm({
   }, [titleHistoryEntry]);
 
   const [showArchivePeriods, setShowArchivePeriods] = useState(false);
+  const [showForeignItems, setShowForeignItems] = useState(false);
   const selectedPeriodId =
     pinnedReportId ||
     searchParams.get("period") ||
@@ -925,6 +925,126 @@ export function LeadForm({
   const risks: RiskEntry[] = data.risks as RiskEntry[];
   const decisions: DecisionEntry[] = data.decisions as DecisionEntry[];
   const priorities: PriorityEntry[] = data.priorities as PriorityEntry[];
+
+  // W5: build foreign item arrays from crossAuthorSectionsQ; empty when viewing
+  // another author (query is disabled via enabled:!requestedAuthorIdNormalized).
+  const foreignCurrentItems: KanbanItem[] =
+    crossAuthorSectionsQ.data?.flatMap((ca) =>
+      ca.items
+        .filter((i) => i.type === "current")
+        .map(
+          (i): KanbanItem => ({
+            id: `foreign:${ca.authorId}:${i.id}`,
+            productId: i.projectId,
+            productName: productNameById.get(i.projectId) ?? i.projectId,
+            stageName: i.stageName ?? undefined,
+            status: (i.workflowStatus === "in_progress"
+              ? "in-progress"
+              : i.workflowStatus === "done"
+                ? "completed"
+                : i.workflowStatus === "blocked"
+                  ? "blocked"
+                  : "planned") as import("./mock-data").ItemStatus,
+            text: i.text,
+            author: ca.authorName,
+            authorId: ca.authorId,
+            foreign: true,
+          }),
+        ),
+    ) ?? [];
+
+  const foreignNextItems: KanbanItem[] =
+    crossAuthorSectionsQ.data?.flatMap((ca) =>
+      ca.items
+        .filter((i) => i.type === "next")
+        .map(
+          (i): KanbanItem => ({
+            id: `foreign:${ca.authorId}:${i.id}`,
+            productId: i.projectId,
+            productName: productNameById.get(i.projectId) ?? i.projectId,
+            stageName: i.stageName ?? undefined,
+            status: (i.workflowStatus === "in_progress"
+              ? "in-progress"
+              : i.workflowStatus === "done"
+                ? "completed"
+                : i.workflowStatus === "blocked"
+                  ? "blocked"
+                  : "planned") as import("./mock-data").ItemStatus,
+            text: i.text,
+            author: ca.authorName,
+            authorId: ca.authorId,
+            foreign: true,
+          }),
+        ),
+    ) ?? [];
+
+  const foreignRisks: RiskEntry[] =
+    crossAuthorSectionsQ.data?.flatMap((ca) =>
+      ca.risks.map(
+        (r): RiskEntry => ({
+          id: `foreign:${ca.authorId}:${r.id}`,
+          productId: r.projectId,
+          productName: productNameById.get(r.projectId) ?? r.projectId,
+          stageName: r.stageName ?? undefined,
+          severity: r.severity === "blocked" ? "blocked" : "at-risk",
+          text: r.risk,
+          impact: r.impact,
+          mitigation: r.mitigation,
+          authorName: ca.authorName,
+          authorId: ca.authorId,
+          foreign: true,
+        }),
+      ),
+    ) ?? [];
+
+  const foreignDecisions: DecisionEntry[] =
+    crossAuthorSectionsQ.data?.flatMap((ca) =>
+      ca.decisions.map(
+        (d): DecisionEntry => ({
+          id: `foreign:${ca.authorId}:${d.id}`,
+          productId: d.productId,
+          productName: productNameById.get(d.productId) ?? d.productId,
+          text: d.text,
+          owner: d.owner,
+          impact: d.impact,
+          deadline: d.deadline ? d.deadline.toISOString().slice(0, 10) : null,
+          stageName: d.stageName ?? undefined,
+          authorId: ca.authorId,
+          foreign: true,
+        }),
+      ),
+    ) ?? [];
+
+  const foreignPriorities: PriorityEntry[] =
+    crossAuthorSectionsQ.data?.flatMap((ca) =>
+      ca.priorities.map(
+        (p): PriorityEntry => ({
+          rank: p.rank,
+          text: p.text,
+          stageName: p.stageName ?? undefined,
+          productId: p.productId,
+          productName: productNameById.get(p.productId) ?? p.productId,
+          authorName: ca.authorName,
+          authorId: ca.authorId,
+          foreign: true,
+        }),
+      ),
+    ) ?? [];
+
+  const mergedCurrentItems = showForeignItems
+    ? [...currentWeekItems, ...foreignCurrentItems]
+    : currentWeekItems;
+  const mergedNextItems = showForeignItems
+    ? [...nextWeekItems, ...foreignNextItems]
+    : nextWeekItems;
+  const mergedRisks = showForeignItems ? [...risks, ...foreignRisks] : risks;
+  const mergedDecisions = showForeignItems
+    ? [...decisions, ...foreignDecisions]
+    : decisions;
+  const mergedPriorities = showForeignItems
+    ? [...priorities, ...foreignPriorities]
+    : priorities;
+
   const periods: ReportPeriod[] = data.periods as ReportPeriod[];
   const versions: VersionSnapshot[] = data.versions as VersionSnapshot[];
   const currentUser = data.currentUser;
@@ -1492,6 +1612,7 @@ export function LeadForm({
               risksAddSignal={risksAddSignal}
               crossAuthors={enrichedCrossAuthors}
               {...(targetReportId ? { reportId: targetReportId } : {})}
+              displayRisks={mergedRisks}
             >
               <AccordionSection
                 groupSyncKey={groupSyncKey}
@@ -1537,41 +1658,11 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={allSectionContributors}
                   reportId={targetReportId}
+                  expanded={showForeignItems}
+                  onToggle={() => setShowForeignItems((v) => !v)}
                 />
-                {crossAuthorSectionsQ.data &&
-                  allSectionContributors.length > 0 &&
-                  crossAuthorSectionsQ.data.map((ca) => {
-                    const caItems = ca.items
-                      .filter((i) => i.type === "current")
-                      .map((i): import("./mock-data").KanbanItem => ({
-                        id: i.id,
-                        productId: i.projectId,
-                        productName:
-                          productNameById.get(i.projectId) ?? i.projectId,
-                        stageName: i.stageName ?? undefined,
-                        status: (i.workflowStatus === "in_progress"
-                          ? "in-progress"
-                          : i.workflowStatus === "done"
-                            ? "completed"
-                            : i.workflowStatus === "blocked"
-                              ? "blocked"
-                              : "planned") as import("./mock-data").ItemStatus,
-                        text: i.text,
-                        author: ca.authorName,
-                      }));
-                    if (caItems.length === 0) return null;
-                    return (
-                      <div key={ca.authorId} className="opacity-70">
-                        <p className="mb-1 mt-2 flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)]">
-                          <span aria-hidden="true">🔒</span>
-                          <span className="font-medium">{ca.authorName}</span>
-                        </p>
-                        <CurrentWeekSection items={caItems} readOnly />
-                      </div>
-                    );
-                  })}
                 <CurrentWeekSection
-                  items={currentWeekItems}
+                  items={mergedCurrentItems}
                   readOnly={isReadOnly}
                   onItemsChange={handleCurrentWeekItemsChange}
                   currentUserName={currentUser.name}
@@ -1611,41 +1702,11 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={allSectionContributors}
                   reportId={targetReportId}
+                  expanded={showForeignItems}
+                  onToggle={() => setShowForeignItems((v) => !v)}
                 />
-                {crossAuthorSectionsQ.data &&
-                  allSectionContributors.length > 0 &&
-                  crossAuthorSectionsQ.data.map((ca) => {
-                    const caItems = ca.items
-                      .filter((i) => i.type === "next")
-                      .map((i): import("./mock-data").KanbanItem => ({
-                        id: i.id,
-                        productId: i.projectId,
-                        productName:
-                          productNameById.get(i.projectId) ?? i.projectId,
-                        stageName: i.stageName ?? undefined,
-                        status: (i.workflowStatus === "in_progress"
-                          ? "in-progress"
-                          : i.workflowStatus === "done"
-                            ? "completed"
-                            : i.workflowStatus === "blocked"
-                              ? "blocked"
-                              : "planned") as import("./mock-data").ItemStatus,
-                        text: i.text,
-                        author: ca.authorName,
-                      }));
-                    if (caItems.length === 0) return null;
-                    return (
-                      <div key={ca.authorId} className="opacity-70">
-                        <p className="mb-1 mt-2 flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)]">
-                          <span aria-hidden="true">🔒</span>
-                          <span className="font-medium">{ca.authorName}</span>
-                        </p>
-                        <NextWeekSection items={caItems} readOnly />
-                      </div>
-                    );
-                  })}
                 <NextWeekSection
-                  items={nextWeekItems}
+                  items={mergedNextItems}
                   readOnly={isReadOnly}
                   onItemsChange={handleNextWeekItemsChange}
                   currentUserName={currentUser.name}
@@ -1690,39 +1751,9 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={allSectionContributors}
                   reportId={targetReportId}
+                  expanded={showForeignItems}
+                  onToggle={() => setShowForeignItems((v) => !v)}
                 />
-                {crossAuthorSectionsQ.data &&
-                  allSectionContributors.length > 0 &&
-                  crossAuthorSectionsQ.data.map((ca) => {
-                    if (ca.risks.length === 0) return null;
-                    const caRisks = ca.risks.map(
-                      (r): import("./mock-data").RiskEntry => ({
-                        id: r.id,
-                        productId: r.projectId,
-                        productName:
-                          productNameById.get(r.projectId) ?? r.projectId,
-                        stageName: r.stageName ?? undefined,
-                        severity:
-                          r.severity === "blocked" ? "blocked" : "at-risk",
-                        text: r.risk,
-                        impact: r.impact,
-                        mitigation: r.mitigation,
-                      }),
-                    );
-                    return (
-                      <div key={ca.authorId} className="opacity-70">
-                        <p className="mb-1 mt-2 flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)]">
-                          <span aria-hidden="true">🔒</span>
-                          <span className="font-medium">{ca.authorName}</span>
-                        </p>
-                        <RisksSection
-                          risks={caRisks}
-                          readOnly
-                          sectionAuthorName={ca.authorName}
-                        />
-                      </div>
-                    );
-                  })}
                 <LeadFormSyncBridge.Risks />
               </AccordionSection>
             </LeadFormSyncBridge.Provider>
@@ -1756,38 +1787,11 @@ export function LeadForm({
               <CrossAuthorHint
                 contributors={allSectionContributors}
                 reportId={targetReportId}
+                expanded={showForeignItems}
+                onToggle={() => setShowForeignItems((v) => !v)}
               />
-              {crossAuthorSectionsQ.data &&
-                allSectionContributors.length > 0 &&
-                crossAuthorSectionsQ.data.map((ca) => {
-                  if (ca.decisions.length === 0) return null;
-                  const caDecisions = ca.decisions.map(
-                    (d): import("./mock-data").DecisionEntry => ({
-                      id: d.id,
-                      productId: d.productId,
-                      productName:
-                        productNameById.get(d.productId) ?? d.productId,
-                      text: d.text,
-                      owner: d.owner,
-                      impact: d.impact,
-                      deadline: d.deadline
-                        ? d.deadline.toISOString().slice(0, 10)
-                        : null,
-                      stageName: d.stageName ?? undefined,
-                    }),
-                  );
-                  return (
-                    <div key={ca.authorId} className="opacity-70">
-                      <p className="mb-1 mt-2 flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)]">
-                        <span aria-hidden="true">🔒</span>
-                        <span className="font-medium">{ca.authorName}</span>
-                      </p>
-                      <DecisionsSection decisions={caDecisions} readOnly />
-                    </div>
-                  );
-                })}
               <DecisionsSection
-                decisions={decisions}
+                decisions={mergedDecisions}
                 readOnly={isReadOnly}
                 onChange={handleDecisionsChange}
                 currentUserName={currentUser.name}
@@ -1830,37 +1834,11 @@ export function LeadForm({
                 <CrossAuthorHint
                   contributors={allSectionContributors}
                   reportId={targetReportId}
+                  expanded={showForeignItems}
+                  onToggle={() => setShowForeignItems((v) => !v)}
                 />
-                {crossAuthorSectionsQ.data &&
-                  allSectionContributors.length > 0 &&
-                  crossAuthorSectionsQ.data.map((ca) => {
-                    if (ca.priorities.length === 0) return null;
-                    const caPriorities = ca.priorities.map(
-                      (p): import("./mock-data").PriorityEntry => ({
-                        rank: p.rank,
-                        text: p.text,
-                        stageName: p.stageName ?? undefined,
-                        productId: p.productId,
-                        productName:
-                          productNameById.get(p.productId) ?? p.productId,
-                      }),
-                    );
-                    return (
-                      <div key={ca.authorId} className="opacity-70">
-                        <p className="mb-1 mt-2 flex items-center gap-1 text-[11px] text-[var(--color-muted-foreground)]">
-                          <span aria-hidden="true">🔒</span>
-                          <span className="font-medium">{ca.authorName}</span>
-                        </p>
-                        <PrioritiesSection
-                          priorities={caPriorities}
-                          readOnly
-                          sectionAuthorName={ca.authorName}
-                        />
-                      </div>
-                    );
-                  })}
                 <PrioritiesSection
-                  priorities={priorities}
+                  priorities={mergedPriorities}
                   readOnly={isReadOnly}
                   onChange={handlePrioritiesChange}
                   availableStages={availableStages}

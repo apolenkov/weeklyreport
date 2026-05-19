@@ -14,15 +14,28 @@ export type SectionContributor = {
 type Props = {
   readonly contributors: readonly SectionContributor[];
   readonly reportId: string;
+  /**
+   * When provided, the hint renders a Show/Hide toggle button.
+   * Foreign rows render inline inside each product column when true.
+   * Default collapsed (false).
+   */
+  readonly expanded?: boolean;
+  readonly onToggle?: () => void;
 };
 
 /**
  * Compact "Other contributors" strip rendered at the top of each section
  * when a cross-author lead is also contributing to the same section type.
  * Links to the foreign-author readonly view (P63 LOCK-01).
- * Foreign rows are always rendered inline below this hint (no toggle).
+ * When `onToggle` is provided, the hint includes a Show/Hide button that
+ * controls inline foreign-row visibility across all 5 sections at once.
  */
-export function CrossAuthorHint({ contributors, reportId }: Props) {
+export function CrossAuthorHint({
+  contributors,
+  reportId,
+  expanded,
+  onToggle,
+}: Props) {
   if (contributors.length === 0) return null;
   return (
     <div className="mb-3 flex flex-col gap-1">
@@ -55,6 +68,16 @@ export function CrossAuthorHint({ contributors, reportId }: Props) {
           </Link>
         </div>
       ))}
+      {onToggle !== undefined && (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded ?? false}
+          className="self-end text-xs font-medium text-[var(--color-primary)] underline-offset-2 hover:underline"
+        >
+          {expanded ? "Hide contributors ▲" : "Show contributors ▼"}
+        </button>
+      )}
     </div>
   );
 }

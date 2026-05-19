@@ -70,6 +70,9 @@ type BridgeContextValue = {
   crossAuthors?: readonly CrossAuthorEntry[];
   /** F1: active reportId for building drill-in URL. */
   reportId?: string;
+  /** W5: merged risks (own + foreign) for visual rendering only. The sync hook
+   * still operates on `risks` (own-only) to avoid false-positive mutations. */
+  displayRisks?: RiskEntry[];
   handleStageStatusChange: (
     productId: string,
     stageName: string,
@@ -129,6 +132,8 @@ export type LeadFormSyncBridgeProviderProps = {
   readonly crossAuthors?: readonly CrossAuthorEntry[];
   /** F1: active reportId for building drill-in URL. */
   readonly reportId?: string;
+  /** W5: merged risks for visual rendering; own-only risks drive sync hook. */
+  readonly displayRisks?: RiskEntry[];
   readonly children: ReactNode;
 };
 
@@ -144,6 +149,7 @@ function Provider({
   risksAddSignal,
   crossAuthors,
   reportId,
+  displayRisks,
   children,
 }: LeadFormSyncBridgeProviderProps) {
   const [pendingSuggestion, setPendingSuggestion] =
@@ -262,6 +268,7 @@ function Provider({
       ...(risksAddSignal !== undefined ? { risksAddSignal } : {}),
       ...(crossAuthors !== undefined ? { crossAuthors } : {}),
       ...(reportId !== undefined ? { reportId } : {}),
+      ...(displayRisks !== undefined ? { displayRisks } : {}),
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -276,6 +283,7 @@ function Provider({
       risksAddSignal,
       crossAuthors,
       reportId,
+      displayRisks,
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -366,9 +374,12 @@ function Pipeline() {
 
 function Risks() {
   const ctx = useBridgeContext("LeadFormSyncBridge.Risks");
+  // displayRisks (own + foreign merged) for visual render; sync hook still
+  // uses ctx.risks (own-only) via handleRisksChange to avoid false mutations.
+  const renderRisks = ctx.displayRisks ?? ctx.risks;
   return (
     <RisksSection
-      risks={ctx.risks}
+      risks={renderRisks}
       readOnly={ctx.readOnly}
       onChange={ctx.handleRisksChange}
       onRiskFilled={ctx.handleRiskFilled}
