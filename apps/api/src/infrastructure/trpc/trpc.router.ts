@@ -2032,6 +2032,19 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+
+      crossAuthorSections: protectedProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .query(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.getCrossAuthorSections(
+              input.reportId,
+              ctx.session.userId,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
 
     // === Analytics namespace (Phase 30-01..02) ===

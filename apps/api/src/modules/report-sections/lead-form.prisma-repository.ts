@@ -11,7 +11,10 @@ import {
   reportSectionFullInclude,
   mapPrismaToReportSection,
 } from "./report-sections.prisma-repository";
-import type { LeadFormRepository } from "./lead-form.service";
+import type {
+  LeadFormRepository,
+  CrossAuthorSectionRow,
+} from "./lead-form.service";
 
 const MAX_SNAPSHOTS = 50;
 
@@ -525,5 +528,130 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       ...g,
       stageNames: [...g.stageNames],
     }));
+  }
+
+  async getCrossAuthorSections(
+    reportId: string,
+    userId: string,
+  ): Promise<CrossAuthorSectionRow[]> {
+    // Step 1: Resolve shared project IDs (same join as getCrossAuthors)
+    const myAssignments = await this.prisma.stageAssignment.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+    const myProjectIds = [...new Set(myAssignments.map((r) => r.projectId))];
+    if (myProjectIds.length === 0) return [];
+
+    // Other users' assignments on shared projects (excluding self)
+    const others = await this.prisma.stageAssignment.findMany({
+      where: {
+        projectId: { in: myProjectIds },
+        userId: { not: userId },
+        project: { archived: false },
+      },
+      select: {
+        projectId: true,
+        user: { select: { id: true, name: true } },
+      },
+    });
+
+    // Build per-author sets of shared projectIds
+    const authorProjectMap = new Map<
+      string,
+      { authorId: string; authorName: string; sharedProjectIds: Set<string> }
+    >();
+    for (const row of others) {
+      const existing = authorProjectMap.get(row.user.id);
+      if (existing) {
+        existing.sharedProjectIds.add(row.projectId);
+      } else {
+        authorProjectMap.set(row.user.id, {
+          authorId: row.user.id,
+          authorName: row.user.name,
+          sharedProjectIds: new Set([row.projectId]),
+        });
+      }
+    }
+
+    if (authorProjectMap.size === 0) return [];
+
+    const otherUserIds = [...authorProjectMap.keys()];
+
+    // Step 2: Fetch sections for all foreign authors in this report
+    const sections = await this.prisma.reportSection.findMany({
+      where: { reportId, authorId: { in: otherUserIds } },
+      select: {
+        authorId: true,
+        items: {
+          select: {
+            id: true,
+            projectId: true,
+            type: true,
+            text: true,
+            tag: true,
+            workflowStatus: true,
+            carriedOver: true,
+            completed: true,
+            stageName: true,
+          },
+        },
+        risks: {
+          select: {
+            id: true,
+            projectId: true,
+            risk: true,
+            impact: true,
+            mitigation: true,
+            severity: true,
+            stageName: true,
+          },
+        },
+        decisions: {
+          select: {
+            id: true,
+            productId: true,
+            text: true,
+            owner: true,
+            deadline: true,
+            impact: true,
+            resolvedAt: true,
+            stageName: true,
+          },
+        },
+        priorities: {
+          select: {
+            id: true,
+            productId: true,
+            rank: true,
+            text: true,
+            stageName: true,
+          },
+          orderBy: { rank: "asc" },
+        },
+      },
+    });
+
+    // Step 3: Build result — filter each collection to shared products only
+    const result: CrossAuthorSectionRow[] = [];
+    for (const section of sections) {
+      const authorEntry = authorProjectMap.get(section.authorId);
+      if (!authorEntry) continue;
+
+      const sharedIds = authorEntry.sharedProjectIds;
+
+      result.push({
+        authorId: authorEntry.authorId,
+        authorName: authorEntry.authorName,
+        sharedProductIds: [...sharedIds],
+        items: section.items.filter((i) => sharedIds.has(i.projectId)),
+        risks: section.risks.filter((r) => sharedIds.has(r.projectId)),
+        decisions: section.decisions.filter((d) => sharedIds.has(d.productId)),
+        priorities: section.priorities.filter((p) =>
+          sharedIds.has(p.productId),
+        ),
+      });
+    }
+
+    return result;
   }
 }

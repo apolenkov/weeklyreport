@@ -97,6 +97,9 @@ function createMockRepository(
     async getCrossAuthors() {
       return [];
     },
+    async getCrossAuthorSections() {
+      return [];
+    },
   };
 }
 

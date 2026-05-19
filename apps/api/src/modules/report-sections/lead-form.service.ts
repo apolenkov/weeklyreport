@@ -56,6 +56,55 @@ export interface LeadFormRepository {
       riskCount: number;
     }[]
   >;
+  /** Returns full section content (items/risks/decisions/priorities) for cross-author leads
+   *  who share at least one product with the requesting user, filtered to shared products only. */
+  getCrossAuthorSections(
+    reportId: string,
+    userId: string,
+  ): Promise<CrossAuthorSectionRow[]>;
+}
+
+export interface CrossAuthorSectionRow {
+  authorId: string;
+  authorName: string;
+  sharedProductIds: string[];
+  items: {
+    id: string;
+    projectId: string;
+    type: string;
+    text: string;
+    tag: string;
+    workflowStatus: string;
+    carriedOver: boolean;
+    completed: boolean | null;
+    stageName: string | null;
+  }[];
+  risks: {
+    id: string;
+    projectId: string;
+    risk: string;
+    impact: string;
+    mitigation: string;
+    severity: string;
+    stageName: string | null;
+  }[];
+  decisions: {
+    id: string;
+    productId: string;
+    text: string;
+    owner: string;
+    deadline: Date | null;
+    impact: string;
+    resolvedAt: Date | null;
+    stageName: string | null;
+  }[];
+  priorities: {
+    id: string;
+    productId: string;
+    rank: number;
+    text: string;
+    stageName: string | null;
+  }[];
 }
 
 export class LeadFormService {
@@ -275,5 +324,12 @@ export class LeadFormService {
     }[]
   > {
     return this.repository.getCrossAuthors(reportId, userId);
+  }
+
+  async getCrossAuthorSections(
+    reportId: string,
+    userId: string,
+  ): Promise<CrossAuthorSectionRow[]> {
+    return this.repository.getCrossAuthorSections(reportId, userId);
   }
 }
