@@ -12,6 +12,7 @@ import { ReportSlides } from "./report-slides";
 import {
   buildActivitySlideModel,
   buildSectionSlideModel,
+  paginateSectionSlides,
   sortSlidesForReview,
 } from "./section-slide-utils";
 
@@ -62,9 +63,9 @@ export function HeadSlidesClient({ reportId }: HeadSlidesClientProps = {}) {
     if (!weeklyQ.data || weeklyQ.data.status === "no-period") return [];
     if (weeklyQ.data.leadSections.length > 0) {
       return sortSlidesForReview(
-        weeklyQ.data.leadSections.map((section) =>
-          buildSectionSlideModel(section),
-        ),
+        weeklyQ.data.leadSections
+          .map((section) => buildSectionSlideModel(section))
+          .flatMap((model) => paginateSectionSlides(model)),
       );
     }
     return sortSlidesForReview(

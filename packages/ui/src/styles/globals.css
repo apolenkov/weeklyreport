@@ -100,6 +100,12 @@
    * Item/Risk/Decision/Priority dialog Save/Cancel). Raise here to
    * lift the whole product in one place. */
   --touch-target-min: 44px;
+
+  /* ---- Slide visualization (F16) ---- */
+  --slide-aspect: 16 / 10;
+  --slide-max-products-per-page: 4;
+  --font-size-slide-display: 2.5rem;
+  --font-size-slide-headline: 1.5rem;
 }
 
 /* ---- Skeleton animation (shimmer) ---- */
@@ -221,6 +227,12 @@
 /* ---- Button active press effect ---- */
 .btn-press:active {
   transform: scale(0.95);
+}
+
+/* ---- Slide frame utility (F16) ---- */
+.slide-frame {
+  aspect-ratio: var(--slide-aspect);
+  overflow: hidden;
 }
 
 /* ---- Reduced motion: disable all custom animations ---- */

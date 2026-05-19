@@ -146,8 +146,10 @@ describe("StatusSlideDeck lead layout", () => {
     expect(screen.getByTestId("lead-slide-product-cross-product")).toHaveClass(
       "xl:col-span-2",
     );
-    expect(screen.getByText("Marketing Portal")).toBeInTheDocument();
-    expect(screen.getByText("Data Portal")).toBeInTheDocument();
+    // With multiple products, SlideProductChips also renders product names,
+    // so use getAllByText to handle the expected duplicates.
+    expect(screen.getAllByText("Marketing Portal").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Data Portal").length).toBeGreaterThan(0);
     expect(screen.getByText("Keep one release train")).toBeInTheDocument();
   });
 
