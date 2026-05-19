@@ -303,7 +303,10 @@ export function SdlcPipeline({
                               key={i}
                               className={`flex items-start gap-1 text-[11px] ${r.severity === "blocked" ? "text-[var(--color-destructive)]" : "text-[var(--color-warning,#b45309)]"}`}
                             >
-                              <span aria-hidden="true" className="mt-px shrink-0">
+                              <span
+                                aria-hidden="true"
+                                className="mt-px shrink-0"
+                              >
                                 {r.severity === "blocked" ? "⛔" : "⚠"}
                               </span>
                               <span className="line-clamp-2">{r.text}</span>
