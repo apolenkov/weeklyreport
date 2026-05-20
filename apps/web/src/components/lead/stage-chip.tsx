@@ -218,7 +218,7 @@ export function StageChip({
         onFocus={handleEnter}
         onBlur={handleLeave}
         aria-disabled={!isEditable}
-        tabIndex={isEditable ? 0 : -1}
+        tabIndex={isEditable || isLocked ? 0 : -1}
       >
         {config.icon} {stage.stageName}
         {isLocked && (
