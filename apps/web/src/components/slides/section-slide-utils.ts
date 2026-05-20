@@ -521,7 +521,9 @@ export type UnifiedSlideModel = {
   };
 };
 
-export function buildUnifiedSlideModel(slide: SectionSlideModel): UnifiedSlideModel {
+export function buildUnifiedSlideModel(
+  slide: SectionSlideModel,
+): UnifiedSlideModel {
   const products = [...slide.productSlides].sort((a, b) =>
     a.name.localeCompare(b.name),
   );
@@ -540,14 +542,19 @@ export function buildUnifiedSlideModel(slide: SectionSlideModel): UnifiedSlideMo
   };
 
   for (const product of products) {
-    const name = product.id === "cross-product" ? "Shared context" : product.name;
+    const name =
+      product.id === "cross-product" ? "Shared context" : product.name;
     if (product.currentItems.length > 0) {
-      product.currentItems.forEach((text) => current.push({ text, productName: name }));
+      product.currentItems.forEach((text) =>
+        current.push({ text, productName: name }),
+      );
     } else {
       emptyProducts.current.push(name);
     }
     if (product.nextItems.length > 0) {
-      product.nextItems.forEach((text) => next.push({ text, productName: name }));
+      product.nextItems.forEach((text) =>
+        next.push({ text, productName: name }),
+      );
     } else {
       emptyProducts.next.push(name);
     }
@@ -557,12 +564,16 @@ export function buildUnifiedSlideModel(slide: SectionSlideModel): UnifiedSlideMo
       emptyProducts.risks.push(name);
     }
     if (product.priorities.length > 0) {
-      product.priorities.forEach((text) => priorities.push({ text, productName: name }));
+      product.priorities.forEach((text) =>
+        priorities.push({ text, productName: name }),
+      );
     } else {
       emptyProducts.priorities.push(name);
     }
     if (product.decisions.length > 0) {
-      product.decisions.forEach((text) => decisions.push({ text, productName: name }));
+      product.decisions.forEach((text) =>
+        decisions.push({ text, productName: name }),
+      );
     } else {
       emptyProducts.decisions.push(name);
     }

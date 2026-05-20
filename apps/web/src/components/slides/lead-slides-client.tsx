@@ -1,6 +1,13 @@
 "use client";
 
-import { useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
@@ -73,9 +80,7 @@ function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
   const nextItems = ca.items
     .filter((i) => i.type === "next" && i.text.trim())
     .map((i) => i.text.trim());
-  const risks = ca.risks
-    .filter((r) => r.risk.trim())
-    .map((r) => r.risk.trim());
+  const risks = ca.risks.filter((r) => r.risk.trim()).map((r) => r.risk.trim());
   const decisions = ca.decisions
     .filter((d) => d.text.trim())
     .map((d) => d.text.trim());
@@ -84,8 +89,9 @@ function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
     .filter((p) => p.text.trim())
     .map((p) => p.text.trim());
 
-  const blockedCount = ca.items.filter((i) => i.workflowStatus === "blocked").length
-    + ca.risks.filter((r) => r.severity === "blocked").length;
+  const blockedCount =
+    ca.items.filter((i) => i.workflowStatus === "blocked").length +
+    ca.risks.filter((r) => r.severity === "blocked").length;
   const atRiskCount = ca.risks.filter((r) => r.severity === "at-risk").length;
 
   const tone: SectionSlideModel["tone"] =
@@ -183,7 +189,9 @@ export function LeadSlidesClient({
     enabled: targetReportId !== "",
   });
   const crossAuthorQ = useQuery({
-    ...trpc.leadForm.crossAuthorSections.queryOptions({ reportId: targetReportId }),
+    ...trpc.leadForm.crossAuthorSections.queryOptions({
+      reportId: targetReportId,
+    }),
     enabled: scope === "product" && targetReportId !== "",
   });
 

@@ -1,9 +1,18 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, FileText, ListChecks, Target } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  FileText,
+  ListChecks,
+  Target,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { UnifiedSectionRow, UnifiedSlideModel } from "./section-slide-utils";
+import type {
+  UnifiedSectionRow,
+  UnifiedSlideModel,
+} from "./section-slide-utils";
 
 type Props = { readonly model: UnifiedSlideModel };
 
