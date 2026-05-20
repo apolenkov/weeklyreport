@@ -87,7 +87,7 @@ function SectionBlock({
 export function LeadUnifiedSlide({ model }: Props) {
   return (
     <div
-      className="flex flex-col gap-5 [:fullscreen_&]:flex-1 [:fullscreen_&]:justify-between"
+      className="flex flex-col gap-5 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:justify-between"
       data-testid="lead-unified-slide"
     >
       <SectionBlock
