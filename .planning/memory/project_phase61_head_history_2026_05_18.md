@@ -23,3 +23,23 @@ Phase 61 (robust-baking-aurora) — complete 2026-05-18.
 Push blocked by SSL on `forge.example.org` (verified blocker, pre-existing).
 
 **How to apply:** Push manually when SSL is restored, then open PR against `main`. All 472 vitest tests pass; typecheck clean.
+
+---
+
+## W14 — Unified Lead Slide Visual Refinements (2026-05-20)
+
+**Branch:** `fix/PRJ-2/shiny-eagle` — commit `7678cf0`
+
+**Why:** W12/W13 delivered unified by-section layout, but design review identified 3 problems: right-aligned product chips caused visual jump, "— empty for:" rows were noisy, "— none" was a tech placeholder, fullscreen left lower half empty.
+
+**DONE:**
+
+- W14.A: Replaced right-aligned `productChip` with inline `inlineProductMarker` — small dot + first word of product name, left of item text. Full name in `title`/`aria-label`.
+- W14.B: Removed `emptyForBand` function entirely. Empty sections render header-only (no "— none"). `UnifiedSlideModel.emptyProducts` preserved in model for future telemetry.
+- W14.C: Root div changed from `space-y-5` to `flex flex-col gap-5` + `[:fullscreen_&]:flex-1 [:fullscreen_&]:justify-between` for Tailwind 4.2 fullscreen distribution.
+- Unit test for `emptyForBand` flipped to negative (`queryByText(/empty for:/).not`). Product chip assertions migrated to `getAllByTitle()`.
+- 485/485 tests pass. typecheck + lint + prettier clean. DOM-verified via chrome-devtools MCP.
+
+**WORKED:** Tailwind 4.2 `[:fullscreen_&]:` arbitrary variant (CSS nesting); `getAllByTitle()` for full-name attribute testing.
+
+**FRAGILE:** `[:fullscreen_&]:flex-1` requires parent chain to be flex for height propagation — visually verified normal mode only; fullscreen distribution depends on CSS nesting browser support. First-word truncation at 12 chars may look short for long single-word product names.
