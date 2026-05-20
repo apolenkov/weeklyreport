@@ -217,134 +217,55 @@ export function SdlcPipeline({
 
           {/* Stages row */}
           <div className="flex flex-wrap justify-center items-center gap-2 pb-1">
-            {product.stages.map((stage, idx) => (
-              <div key={stage.stageName} className="flex items-center gap-2">
-                {idx > 0 && (
-                  <div
-                    className="flex items-center text-lg font-bold"
-                    style={{
-                      color:
-                        stage.ownership === "mine" ||
-                        product.stages[idx - 1]?.ownership === "mine"
-                          ? "var(--color-starbucks-accent)"
-                          : "var(--color-muted-foreground)",
-                      alignSelf: "center",
-                    }}
-                  >
-                    &rarr;
-                  </div>
-                )}
-                <div className="relative">
-                  <StageChip
-                    stage={stage}
-                    readOnly={readOnly}
-                    linkedRiskCount={
-                      riskCountByKey.get(`${product.id}::${stage.stageName}`) ??
-                      0
-                    }
-                    onStatusChange={(name, status) =>
-                      handleStatusChange(product.id, name, status)
-                    }
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* F1: cross-author summary — other leads who share this product */}
-          {crossAuthors.filter((ca) => ca.projectId === product.id).length >
-            0 && (
-            <div className="-mb-3 -mx-3 mt-3 rounded-b-xl bg-[rgba(0,0,0,0.02)] px-3 pb-3 pt-2.5 border-t-2 border-dashed border-[rgba(0,0,0,0.10)]">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                Other contributors
-              </p>
-              <ul className="space-y-1">
-                {crossAuthors
-                  .filter((ca) => ca.projectId === product.id)
-                  .map((ca) => (
-                    <li
-                      key={`${ca.projectId}::${ca.authorId}`}
-                      className="text-[12px] text-[var(--color-muted-foreground)]"
+            {product.stages.map((stage, idx) => {
+              const crossAuthorForStage = crossAuthors.find(
+                (ca) =>
+                  ca.projectId === product.id &&
+                  ca.stageNames.includes(stage.stageName),
+              );
+              return (
+                <div key={stage.stageName} className="flex items-center gap-2">
+                  {idx > 0 && (
+                    <div
+                      className="flex items-center text-lg font-bold"
+                      style={{
+                        color:
+                          stage.ownership === "mine" ||
+                          product.stages[idx - 1]?.ownership === "mine"
+                            ? "var(--color-starbucks-accent)"
+                            : "var(--color-muted-foreground)",
+                        alignSelf: "center",
+                      }}
                     >
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="font-medium text-[var(--color-foreground)]">
-                          {ca.authorName}
-                        </span>
-                        <span aria-hidden="true">·</span>
-                        {/* W10: render real status colors on cross-author stage chips */}
-                        <div className="flex flex-wrap gap-1">
-                          {(
-                            ca.stages ??
-                            ca.stageNames.map((sn) => ({ stageName: sn, status: null as "green" | "yellow" | "red" | null }))
-                          ).map((stage) => {
-                            const cfg =
-                              stage.status === "red"
-                                ? { icon: "✕", bg: "#fee2e2", text: "var(--color-destructive)", border: "var(--color-destructive)" }
-                                : stage.status === "yellow"
-                                  ? { icon: "!", bg: "#fef3c7", text: "#8a6d1b", border: "#d4a017" }
-                                  : stage.status === "green"
-                                    ? { icon: "✓", bg: "var(--color-success)", text: "var(--color-primary)", border: "var(--color-starbucks-accent)" }
-                                    : { icon: "○", bg: "#f8f6f2", text: "var(--color-muted-foreground)", border: "rgba(0,0,0,0.15)" };
-                            return (
-                              <span
-                                key={stage.stageName}
-                                className="inline-flex items-center gap-0.5 rounded-lg px-2 py-1 text-[11px] font-semibold"
-                                style={{
-                                  background: cfg.bg,
-                                  color: cfg.text,
-                                  border: `1.5px solid ${cfg.border}`,
-                                }}
-                                aria-label={`${stage.stageName} — ${stage.status ?? "no status"} — locked, authored by ${ca.authorName}`}
-                                title={`Authored by ${ca.authorName} — read-only`}
-                              >
-                                {cfg.icon} {stage.stageName}
-                                <span className="ml-0.5 opacity-50" aria-hidden="true">🔒</span>
-                              </span>
-                            );
-                          })}
-                        </div>
-                        {ca.isEmpty && (
-                          <span className="rounded px-1 py-0.5 text-[11px] text-[var(--color-muted-foreground)] opacity-60">
-                            ⊘ not started
-                          </span>
-                        )}
-                        {!ca.isEmpty && ca.itemCount > 0 && (
-                          <span className="text-[11px]">
-                            {ca.itemCount} item{ca.itemCount !== 1 ? "s" : ""}
-                          </span>
-                        )}
-                      </div>
-                      {ca.risks && ca.risks.length > 0 && (
-                        <ul className="mt-0.5 space-y-0.5 pl-3">
-                          {ca.risks.map((r, i) => (
-                            <li
-                              key={i}
-                              className="flex items-start gap-1 text-[11px]"
-                            >
-                              <span
-                                aria-hidden="true"
-                                className="mt-px shrink-0"
-                              >
-                                {r.severity === "blocked" ? "⛔" : "⚠"}
-                              </span>
-                              <span
-                                className={`line-clamp-2 rounded-md px-1.5 py-0.5 font-medium ${
-                                  r.severity === "blocked"
-                                    ? "bg-[#fee2e2] text-[#7f1d1d]"
-                                    : "bg-[#fef3c7] text-[#78350f]"
-                                }`}
-                              >
-                                {r.text}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          )}
+                      &rarr;
+                    </div>
+                  )}
+                  <div className="relative">
+                    <StageChip
+                      stage={stage}
+                      readOnly={readOnly}
+                      linkedRiskCount={
+                        riskCountByKey.get(
+                          `${product.id}::${stage.stageName}`,
+                        ) ?? 0
+                      }
+                      onStatusChange={(name, status) =>
+                        handleStatusChange(product.id, name, status)
+                      }
+                      crossAuthorInfo={
+                        crossAuthorForStage
+                          ? {
+                              itemCount: crossAuthorForStage.itemCount,
+                              riskCount: crossAuthorForStage.riskCount,
+                            }
+                          : undefined
+                      }
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       ))}
     </div>
