@@ -5,10 +5,12 @@ import { Maximize2, Minimize2 } from "lucide-react";
 
 type SlideFullscreenButtonProps = {
   readonly targetRef: React.RefObject<HTMLElement | null>;
+  readonly variant?: "default" | "floating";
 };
 
 export function SlideFullscreenButton({
   targetRef,
+  variant = "default",
 }: SlideFullscreenButtonProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -43,12 +45,19 @@ export function SlideFullscreenButton({
     };
   }, [toggle]);
 
+  if (variant === "floating" && !isFullscreen) return null;
+
+  const floatingClass =
+    variant === "floating"
+      ? " fixed top-4 right-4 z-50 bg-[var(--color-card)] shadow-lg"
+      : "";
+
   return (
     <button
       type="button"
       onClick={toggle}
       aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-      className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+      className={`btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]${floatingClass}`}
     >
       {isFullscreen ? (
         <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
