@@ -112,8 +112,8 @@ describe("StatusSlideDeck lead layout", () => {
     expect(
       screen.getByText("Completed authentication module refactor"),
     ).toBeInTheDocument();
-    // Product attribution chip visible
-    expect(screen.getAllByText("Marketing Portal").length).toBeGreaterThan(0);
+    // Inline product marker visible (full name in title attribute)
+    expect(screen.getAllByTitle("Marketing Portal").length).toBeGreaterThan(0);
   });
 
   it("shows items from all products in the same unified section", () => {
@@ -136,9 +136,9 @@ describe("StatusSlideDeck lead layout", () => {
       screen.getByText("Completed authentication module refactor"),
     ).toBeInTheDocument();
     expect(screen.getByText("Close API parity")).toBeInTheDocument();
-    // Both product names appear as attribution chips
-    expect(screen.getAllByText("Marketing Portal").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Data Portal").length).toBeGreaterThan(0);
+    // Both product names appear as inline markers (full name in title attribute)
+    expect(screen.getAllByTitle("Marketing Portal").length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle("Data Portal").length).toBeGreaterThan(0);
     // Cross-section content also visible
     expect(screen.getByText("Keep one release train")).toBeInTheDocument();
   });
@@ -160,7 +160,7 @@ describe("StatusSlideDeck lead layout", () => {
     expect(
       screen.getByText("Coordinated release notes with support"),
     ).toBeInTheDocument();
-    // No count-based truncation at item level ("+N more" only appears in emptyForBand)
+    // No count-based truncation at item level ("+N more" appears only when items exceed MAX_ITEMS_PER_SECTION)
     expect(screen.queryByText("+3 more")).not.toBeInTheDocument();
   });
 
@@ -178,7 +178,7 @@ describe("StatusSlideDeck lead layout", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows empty-for band when a product has no items in a section", () => {
+  it("does not show empty-for bands when a product has no items in a section", () => {
     renderLeadDeck([
       slide([
         product({ currentItems: ["My item"] }),
@@ -191,8 +191,8 @@ describe("StatusSlideDeck lead layout", () => {
       ]),
     ]);
 
-    // My item visible; Data Portal has no current items → empty-for band
+    // My item visible; "empty for:" noise band is suppressed
     expect(screen.getByText("My item")).toBeInTheDocument();
-    expect(screen.getByText(/empty for:.*Data Portal/)).toBeInTheDocument();
+    expect(screen.queryByText(/empty for:/)).not.toBeInTheDocument();
   });
 });

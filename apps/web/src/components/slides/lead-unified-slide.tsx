@@ -16,23 +16,20 @@ import type {
 
 type Props = { readonly model: UnifiedSlideModel };
 
-function productChip(productName: string): ReactNode {
+function inlineProductMarker(productName: string): ReactNode {
+  const short = (productName.split(/\s+/)[0] ?? productName).slice(0, 12);
   return (
-    <span className="ml-2 inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-muted-foreground)]">
-      {productName}
+    <span
+      aria-label={`Product: ${productName}`}
+      className="mr-1 inline-flex shrink-0 items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]"
+      title={productName}
+    >
+      <span
+        aria-hidden="true"
+        className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]"
+      />
+      {short}
     </span>
-  );
-}
-
-function emptyForBand(names: readonly string[]): ReactNode {
-  if (names.length === 0) return null;
-  const shown = names.slice(0, 3);
-  const rest = names.length - shown.length;
-  return (
-    <p className="mt-1 text-[12px] italic text-[var(--color-muted-foreground)]">
-      — empty for: {shown.join(", ")}
-      {rest > 0 ? `, +${rest} more` : ""}
-    </p>
   );
 }
 
@@ -42,14 +39,12 @@ function SectionBlock({
   icon,
   label,
   items,
-  emptyNames,
   toneClass = "text-[var(--color-muted-foreground)]",
   borderClass = "border-[rgba(0,117,74,0.22)]",
 }: {
   readonly icon: ReactNode;
   readonly label: string;
   readonly items: readonly UnifiedSectionRow[];
-  readonly emptyNames: readonly string[];
   readonly toneClass?: string;
   readonly borderClass?: string;
 }) {
@@ -61,24 +56,20 @@ function SectionBlock({
         {icon}
         {label}
       </div>
-      {items.length === 0 ? (
-        <p className="mt-1 text-[12px] italic text-[var(--color-muted-foreground)]">
-          — none
-        </p>
-      ) : (
+      {items.length > 0 ? (
         <>
           <ul className="mt-2 space-y-1.5">
             {items.slice(0, MAX_ITEMS_PER_SECTION).map((row, idx) => (
               <li
                 key={row.text + "-" + String(idx)}
-                className="flex min-w-0 items-baseline justify-between gap-2"
+                className="flex min-w-0 items-baseline gap-2"
               >
+                {inlineProductMarker(row.productName)}
                 <span
                   className={`min-w-0 line-clamp-3 border-l-2 ${borderClass} pl-3 text-[13px] leading-snug text-[var(--color-foreground)]`}
                 >
                   {row.text}
                 </span>
-                {productChip(row.productName)}
               </li>
             ))}
           </ul>
@@ -87,33 +78,32 @@ function SectionBlock({
               +{items.length - MAX_ITEMS_PER_SECTION} more
             </p>
           ) : null}
-          {emptyForBand(emptyNames)}
         </>
-      )}
+      ) : null}
     </section>
   );
 }
 
 export function LeadUnifiedSlide({ model }: Props) {
   return (
-    <div className="space-y-5" data-testid="lead-unified-slide">
+    <div
+      className="flex flex-col gap-5 [:fullscreen_&]:flex-1 [:fullscreen_&]:justify-between"
+      data-testid="lead-unified-slide"
+    >
       <SectionBlock
         icon={<Target className="h-4 w-4" aria-hidden="true" />}
         label="Current work"
         items={model.current}
-        emptyNames={model.emptyProducts.current}
       />
       <SectionBlock
         icon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
         label="Next focus"
         items={model.next}
-        emptyNames={model.emptyProducts.next}
       />
       <SectionBlock
         icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
         label="Risks"
         items={model.risks}
-        emptyNames={model.emptyProducts.risks}
         toneClass="text-[var(--color-destructive)]"
         borderClass="border-[rgba(200,32,20,0.28)]"
       />
@@ -121,7 +111,6 @@ export function LeadUnifiedSlide({ model }: Props) {
         icon={<ListChecks className="h-4 w-4" aria-hidden="true" />}
         label="Priorities"
         items={model.priorities}
-        emptyNames={model.emptyProducts.priorities}
         toneClass="text-[var(--color-starbucks-gold)]"
         borderClass="border-[rgba(212,160,23,0.34)]"
       />
@@ -129,7 +118,6 @@ export function LeadUnifiedSlide({ model }: Props) {
         icon={<FileText className="h-4 w-4" aria-hidden="true" />}
         label="Decisions"
         items={model.decisions}
-        emptyNames={model.emptyProducts.decisions}
         toneClass="text-[var(--color-starbucks-accent)]"
         borderClass="border-[rgba(0,117,74,0.28)]"
       />
