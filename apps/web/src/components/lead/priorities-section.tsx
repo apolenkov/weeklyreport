@@ -83,6 +83,12 @@ const RANK_TEXT: Record<1 | 2 | 3 | "rest", string> = {
  * inconsistency with the other CRUD surfaces was confusing the user.
  * Ranks renumber sequentially on add / delete so adjacent slots are
  * always 1..N (the schema allows up to 50 per `draftSaveSchema`).
+ *
+ * TODO(PRIORITY-REDESIGN-01): consider making priority an attribute of
+ *   CW/NW items (items[].priorityRank?: 1|2|3) and dropping this section.
+ *   Eliminates cross-author rank collisions, reduces 5→4 sections.
+ *   Touches: schema (Prisma Priority model), 5 read paths (lead-form, head,
+ *   director, slides, exports), seed-simple.ts, ~12 tests.
  */
 export function PrioritiesSection({
   priorities,
@@ -95,6 +101,22 @@ export function PrioritiesSection({
   addSignal = 0,
 }: PrioritiesSectionProps) {
   const sorted = [...priorities].sort((a, b) => a.rank - b.rank);
+
+  // W8.B: group by productName so own [1]/[2]/[3] ranks are unambiguous
+  const productGroups = new Map<string, PriorityEntry[]>();
+  for (const entry of sorted) {
+    const key = entry.productName ?? "(no product)";
+    let bucket = productGroups.get(key);
+    if (!bucket) {
+      bucket = [];
+      productGroups.set(key, bucket);
+    }
+    bucket.push(entry);
+  }
+  const sortedGroupKeys = [...productGroups.keys()].sort((a, b) =>
+    a.localeCompare(b),
+  );
+
   const [pendingDeleteIdx, setPendingDeleteIdx] = useState<number | null>(null);
   const [dialogState, setDialogState] = useState<
     | { open: false }
@@ -181,93 +203,116 @@ export function PrioritiesSection({
 
   return (
     <div className="space-y-3">
-      {sorted.map((entry, idx) => {
-        const tintKey =
-          entry.rank === 1 || entry.rank === 2 || entry.rank === 3
-            ? entry.rank
-            : "rest";
-        const stageTags =
-          entry.stageIds && entry.stageIds.length > 0
-            ? entry.stageIds
-            : splitStageNames(entry.stageName);
+      {sortedGroupKeys.map((productName, groupIdx) => {
+        const group = productGroups.get(productName) ?? [];
         return (
-          <div
-            key={`${entry.rank}-${idx}`}
-            data-testid="priority-row"
-            className="rounded-lg p-4"
-            // PRI-1 (Phase 33-04): mockup distinguishes the row tint between
-            // top-2 (gold-light `#faf6ee`) and rank 3+ (canvas `#f4f1eb`).
-            // Earlier every row used the same gold-light wash, blurring rank.
-            style={{
-              background: entry.rank <= 2 ? "#faf6ee" : "#f4f1eb",
-              opacity: entry.foreign ? 0.7 : 1,
-            }}
-          >
-            {/* header row: rank badge + product chip + ml-auto Edit/Delete (parity with decisions-section) */}
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span
-                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[family-name:var(--font-sans)] text-sm font-bold tabular-nums"
-                style={{
-                  background: RANK_TINT[tintKey],
-                  color: RANK_TEXT[tintKey],
-                }}
-              >
-                {entry.rank}
-              </span>
-              {entry.productName && (
-                <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-starbucks-accent)]">
-                    {entry.productName}
-                </span>
-              )}
-              {!readOnly && !entry.foreign && (
-                <div className="ml-auto flex gap-1">
-                  <button
-                    type="button"
-                    className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
-                    onClick={() => handleEdit(idx)}
-                    aria-label={`Edit priority ${entry.rank}`}
-                  >
-                    <EditIcon />
-                  </button>
-                  <button
-                    type="button"
-                    className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
-                    onClick={() => handleDelete(idx)}
-                    aria-label={`Delete priority ${entry.rank}`}
-                  >
-                    <DeleteIcon />
-                  </button>
-                </div>
-              )}
-            </div>
-            {/* body: clickable text area + meta-row */}
-            <button
-              type="button"
-              className="w-full cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-3 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
-              onClick={() => handleEdit(idx)}
-              disabled={readOnly || entry.foreign === true}
-              aria-label={`Edit priority ${entry.rank}`}
+          <div key={productName}>
+            <h3
+              className={`mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]${groupIdx > 0 ? " mt-4" : ""}`}
             >
-              <div className="space-y-1.5">
-                {entry.text.trim().length > 0 ? (
-                  <span className="block break-words text-[var(--color-foreground)]">
-                    {entry.text}
-                  </span>
-                ) : (
-                  <span className="block text-[var(--color-muted-foreground)]">
-                    — pending
-                  </span>
-                )}
-                {/* P5: unified [author …… chip] meta-row */}
-                <MetaRow
-                  authorName={entry.authorName ?? sectionAuthorName}
-                  stageTags={stageTags}
-                  ariaLabel={`Priority ${entry.rank} stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
-                  className="pt-1"
-                  foreign={entry.foreign === true}
-                />
-              </div>
-            </button>
+              {productName === "(no product)" ? "Unassigned" : productName}
+            </h3>
+            <div className="space-y-3">
+              {group.map((entry) => {
+                const sortedIdx = sorted.indexOf(entry);
+                const tintKey =
+                  entry.rank === 1 || entry.rank === 2 || entry.rank === 3
+                    ? entry.rank
+                    : "rest";
+                const stageTags =
+                  entry.stageIds && entry.stageIds.length > 0
+                    ? entry.stageIds
+                    : splitStageNames(entry.stageName);
+                return (
+                  <div
+                    key={
+                      entry.foreign
+                        ? `foreign:${entry.authorId ?? ""}:${entry.rank}`
+                        : `own:${entry.rank}`
+                    }
+                    data-testid="priority-row"
+                    className="rounded-lg p-4"
+                    // PRI-1 (Phase 33-04): mockup distinguishes the row tint between
+                    // top-2 (gold-light `#faf6ee`) and rank 3+ (canvas `#f4f1eb`).
+                    style={{
+                      background: entry.rank <= 2 ? "#faf6ee" : "#f4f1eb",
+                      opacity: entry.foreign ? 0.7 : 1,
+                    }}
+                  >
+                    {/* header row: rank badge + ml-auto Edit/Delete */}
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      {/* W8.A: foreign rows show lock placeholder; own rows show numeric rank */}
+                      {entry.foreign ? (
+                        <span
+                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)] text-sm text-[var(--color-muted-foreground)]"
+                          aria-label="Foreign priority — authored by another lead"
+                        >
+                          🔒
+                        </span>
+                      ) : (
+                        <span
+                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[family-name:var(--font-sans)] text-sm font-bold tabular-nums"
+                          style={{
+                            background: RANK_TINT[tintKey],
+                            color: RANK_TEXT[tintKey],
+                          }}
+                        >
+                          {entry.rank}
+                        </span>
+                      )}
+                      {!readOnly && !entry.foreign && (
+                        <div className="ml-auto flex gap-1">
+                          <button
+                            type="button"
+                            className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+                            onClick={() => handleEdit(sortedIdx)}
+                            aria-label={`Edit priority ${entry.rank}`}
+                          >
+                            <EditIcon />
+                          </button>
+                          <button
+                            type="button"
+                            className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+                            onClick={() => handleDelete(sortedIdx)}
+                            aria-label={`Delete priority ${entry.rank}`}
+                          >
+                            <DeleteIcon />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {/* body: clickable text area + meta-row */}
+                    <button
+                      type="button"
+                      className="w-full cursor-text rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-3 text-left text-sm transition-colors hover:border-[var(--color-starbucks-accent)] hover:bg-[var(--color-surface-hover)] disabled:cursor-default disabled:hover:border-[rgba(0,0,0,0.2)] disabled:hover:bg-white"
+                      onClick={() => handleEdit(sortedIdx)}
+                      disabled={readOnly || entry.foreign === true}
+                      aria-label={`Edit priority ${entry.rank}`}
+                    >
+                      <div className="space-y-1.5">
+                        {entry.text.trim().length > 0 ? (
+                          <span className="block break-words text-[var(--color-foreground)]">
+                            {entry.text}
+                          </span>
+                        ) : (
+                          <span className="block text-[var(--color-muted-foreground)]">
+                            — pending
+                          </span>
+                        )}
+                        {/* P5: unified [author …… chip] meta-row */}
+                        <MetaRow
+                          authorName={entry.authorName ?? sectionAuthorName}
+                          stageTags={stageTags}
+                          ariaLabel={`Priority ${entry.rank} stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+                          className="pt-1"
+                          foreign={entry.foreign === true}
+                        />
+                      </div>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       })}
