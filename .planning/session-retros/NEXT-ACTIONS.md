@@ -1,16 +1,27 @@
 # NEXT ACTIONS
 
-updated: 2026-05-20T21:40:00Z source: Demo-retro shiny-eagle W15
+updated: 2026-05-20T22:55:00Z source: Demo-retro kurzweil-plan session
 
 ## RUN FIRST
 
 1. [x] `pnpm db:wipe:manual-uat` <!-- done: 2026-05-19 — Week 21 активен -->
-2. [ ] `git push origin fix/PRJ-2/shiny-eagle` — W15 не запушен
+2. [x] `git push origin fix/PRJ-2/shiny-eagle` — W15 запушен <!-- done: 3d69f21 pushed f05499e..3d69f21 -->
+3. [ ] Context7 lookup: `prisma@7` partial index syntax + nullable column (перед F1 coding)
+4. [ ] Context7 lookup: `zod@4` `.nullable()` + `z.number().int()` API (перед F1 coding)
+5. [ ] F1: `prisma/schema.prisma` — добавить `Item.priorityRank Int?`, удалить модель `Priority`, новая миграция
+6. [ ] F1: `packages/shared/src/schemas/report.ts` — расширить `itemInputSchema`, удалить `priorityInputSchema`
+7. [ ] F1: API write/read — `lead-form.prisma-repository.ts`, `weekly-report.ts` aggregation
+8. [ ] F1: UI — `priorities-section.tsx` (read-only derived), `item-edit-dialog.tsx` (rank field), `item-card.tsx` (P{N} chip)
+9. [ ] F1: Slides — `section-slide-utils.ts` sort by rank, `lead-unified-slide.tsx` P{N} marker
+10. [ ] F1: seed + tests (priorities-section._, item-edit-dialog._, new e2e)
+11. [ ] F2: backend status resolver — locked stage возвращает реальный StageStatus в sdlc-pipeline
+12. [ ] F3: debounced snapshot 5s после saveDraft, `leadForm.getVersion(v)` tRPC, viewer read-only, StageStatus в snapshot
 
 ## AGENT
 
+1. [ ] `git push origin stash-uat-v7-2026-05-14` — ветка создана локально, не запушена (опционально — для backup)
 1. [x] Smoke W13 via chrome-devtools MCP: `/lead/report/<id>?mode=slides` → DECISIONS секция видна полностью + ⛶ click → floating Exit-кнопка в top-right оверлея <!-- done: 969d29f — W14 DOM-verified via chrome-devtools MCP -->
-2. [x] `git push origin fix/PRJ-2/shiny-eagle` после W14 smoke green <!-- done: 203bc67 — W14 pushed -->
+1. [x] `git push origin fix/PRJ-2/shiny-eagle` после W14 smoke green <!-- done: 203bc67 — W14 pushed -->
 
 ## HUMAN
 
@@ -101,6 +112,8 @@ updated: 2026-05-20T21:40:00Z source: Demo-retro shiny-eagle W15
 - [x] shiny-eagle W15 fix2: test selectors updated .disabled → aria-disabled (2 files) <!-- done: 7c4a338 -->
 - [x] shiny-eagle W15 fix3: Dev↔Development alias in crossAuthorForStage lookup <!-- done: ee34b33 -->
 - [x] shiny-eagle W15 fix4: tabIndex=0 for locked chips (keyboard-reachable tooltip) <!-- done: f05499e -->
+- [x] F0 git cleanup: stash → branch stash-uat-v7-2026-05-14, memory normalize, twinkly-milner + kurzweil plan committed, screenshots committed, pushed to origin <!-- done: cf46f0c + 3d69f21 -->
+- [x] kurzweil plan F0-F5 написан и утверждён c CLAUDE.md compliance audit (§18) <!-- done: 3d69f21 .planning/plans/graceful-coalescing-kurzweil.md -->
 
 ## BLOCKED
 
