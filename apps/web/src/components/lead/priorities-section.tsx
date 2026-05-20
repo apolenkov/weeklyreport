@@ -241,14 +241,12 @@ export function PrioritiesSection({
                   >
                     {/* header row: rank badge + ml-auto Edit/Delete */}
                     <div className="mb-2 flex flex-wrap items-center gap-2">
-                      {/* W8.A: foreign rows show lock placeholder; own rows show numeric rank */}
+                      {/* W8.A: foreign rows show empty muted circle (grid slot); own rows show numeric rank */}
                       {entry.foreign ? (
                         <span
-                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)] text-sm text-[var(--color-muted-foreground)]"
+                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)]"
                           aria-label="Foreign priority — authored by another lead"
-                        >
-                          🔒
-                        </span>
+                        />
                       ) : (
                         <span
                           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-[family-name:var(--font-sans)] text-sm font-bold tabular-nums"
