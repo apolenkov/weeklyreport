@@ -185,9 +185,9 @@ describe("LeadFormSyncBridge", () => {
       <Harness initialProducts={[product]} initialRisks={[risk]} readOnly />,
     );
 
-    // Stage chip is disabled (popover cannot open).
+    // Stage chip is non-interactive in readOnly mode (popover cannot open).
     const devChip = screen.getByRole("button", { name: "Dev: on-track" });
-    expect(devChip).toBeDisabled();
+    expect(devChip).toHaveAttribute("aria-disabled", "true");
 
     // Risk text rendered as plain preview, not a form control.
     expect(screen.getByText("existing")).toBeInTheDocument();
