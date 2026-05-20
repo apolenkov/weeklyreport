@@ -52,6 +52,7 @@ export interface LeadFormRepository {
       authorId: string;
       authorName: string;
       stageNames: string[];
+      stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
       itemCount: number;
       riskCount: number;
     }[]
@@ -320,6 +321,7 @@ export class LeadFormService {
       authorId: string;
       authorName: string;
       stageNames: string[];
+      stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
       itemCount: number;
       riskCount: number;
     }[]
