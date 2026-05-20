@@ -354,6 +354,7 @@ model Decision {
   @@index([searchTsv], type: Gin)
 }
 
+// TODO(PRIORITY-REDESIGN-01): see priorities-section.tsx for refactor sketch
 model Priority {
   id              String        @id @default(uuid())
   reportSectionId String

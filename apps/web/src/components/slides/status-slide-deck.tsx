@@ -346,6 +346,7 @@ function ProductSdlcGroups({
                 tone: "risk",
                 compact,
               })}
+              {/* TODO(PRIORITY-REDESIGN-01): see priorities-section.tsx for refactor sketch */}
               {productStoryList({
                 id: product.id + "-priorities",
                 label: "Priorities",
