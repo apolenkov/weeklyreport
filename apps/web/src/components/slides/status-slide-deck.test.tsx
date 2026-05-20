@@ -104,19 +104,19 @@ function renderLeadDeck(slides: readonly SectionSlideModel[]) {
 }
 
 describe("StatusSlideDeck lead layout", () => {
-  it("uses the full product grid for a single real product", () => {
+  it("renders the unified by-section layout", () => {
     renderLeadDeck([slide()]);
 
-    expect(screen.getByTestId("lead-slide-products")).not.toHaveClass(
-      "xl:grid-cols-2",
-    );
+    expect(screen.getByTestId("lead-unified-slide")).toBeInTheDocument();
+    // Item content visible in Current work section
     expect(
-      screen.getByTestId("lead-slide-product-" + PRODUCT_ID),
-    ).not.toHaveClass("xl:col-span-2");
-    expect(screen.getByText("Marketing Portal")).toBeInTheDocument();
+      screen.getByText("Completed authentication module refactor"),
+    ).toBeInTheDocument();
+    // Product attribution chip visible
+    expect(screen.getAllByText("Marketing Portal").length).toBeGreaterThan(0);
   });
 
-  it("groups multiple products while keeping shared context full width", () => {
+  it("shows items from all products in the same unified section", () => {
     renderLeadDeck([
       slide([
         product(),
@@ -125,35 +125,25 @@ describe("StatusSlideDeck lead layout", () => {
           name: "Data Portal",
           status: "yellow",
           currentItems: ["Close API parity"],
-        }),
-        product({
-          id: "cross-product",
-          name: "Cross-product",
-          status: null,
-          stages: [],
-          currentItems: [],
-          nextItems: [],
-          risks: [],
           decisions: ["Keep one release train"],
           priorities: ["Protect launch date"],
         }),
       ]),
     ]);
 
-    expect(screen.getByTestId("lead-slide-products")).toHaveClass(
-      "xl:grid-cols-2",
-    );
-    expect(screen.getByTestId("lead-slide-product-cross-product")).toHaveClass(
-      "xl:col-span-2",
-    );
-    // With multiple products, SlideProductChips also renders product names,
-    // so use getAllByText to handle the expected duplicates.
+    // Both products' current items appear in unified Current work section
+    expect(
+      screen.getByText("Completed authentication module refactor"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Close API parity")).toBeInTheDocument();
+    // Both product names appear as attribution chips
     expect(screen.getAllByText("Marketing Portal").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Data Portal").length).toBeGreaterThan(0);
+    // Cross-section content also visible
     expect(screen.getByText("Keep one release train")).toBeInTheDocument();
   });
 
-  it("keeps long lead story content visible instead of clipping or summarizing it", () => {
+  it("shows all items without count-based truncation", () => {
     const currentItems = [
       "Completed authentication module refactor",
       "Validated production migration checklist",
@@ -170,31 +160,39 @@ describe("StatusSlideDeck lead layout", () => {
     expect(
       screen.getByText("Coordinated release notes with support"),
     ).toBeInTheDocument();
-    expect(screen.queryByText("+1 more")).not.toBeInTheDocument();
-    expect(
-      screen.getByTestId("lead-slide-story-" + PRODUCT_ID + "-current"),
-    ).not.toHaveClass("overflow-hidden");
+    // No count-based truncation at item level ("+N more" only appears in emptyForBand)
+    expect(screen.queryByText("+3 more")).not.toBeInTheDocument();
   });
 
-  it("renders product content directly without score header or slide checks strip", () => {
+  it("renders product content without score header or slide checks strip", () => {
     renderLeadDeck([slide()]);
 
-    // Flat read-only article: no score/completion header, no checks strip
+    // Flat by-section article: no score/completion header, no checks strip
     expect(screen.queryByText("Completion")).not.toBeInTheDocument();
     expect(screen.queryByText("Slide checks")).not.toBeInTheDocument();
     expect(screen.queryByText("Readiness")).not.toBeInTheDocument();
     expect(screen.queryByText("Readiness checks")).not.toBeInTheDocument();
-    // Product content is visible via ProductSdlcGroups
-    expect(screen.getByText("Marketing Portal")).toBeInTheDocument();
+    // Item content is visible
+    expect(
+      screen.getByText("Completed authentication module refactor"),
+    ).toBeInTheDocument();
   });
 
-  it("renders SDLC stages as dot-separated inline text instead of chip buttons", () => {
-    renderLeadDeck([slide()]);
+  it("shows empty-for band when a product has no items in a section", () => {
+    renderLeadDeck([
+      slide([
+        product({ currentItems: ["My item"] }),
+        product({
+          id: PRODUCT_TWO_ID,
+          name: "Data Portal",
+          status: "green",
+          currentItems: [],
+        }),
+      ]),
+    ]);
 
-    // Inline text "Planning · Development" (no chip buttons)
-    expect(screen.getByText("Planning · Development")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Planning/i }),
-    ).not.toBeInTheDocument();
+    // My item visible; Data Portal has no current items → empty-for band
+    expect(screen.getByText("My item")).toBeInTheDocument();
+    expect(screen.getByText(/empty for:.*Data Portal/)).toBeInTheDocument();
   });
 });

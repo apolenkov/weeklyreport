@@ -98,8 +98,8 @@ function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
           : "ready";
 
   // Synthetic product card so LeadSlideArticle renders actual content via
-  // ProductSdlcGroups. "cross-product" id receives special neutral styling in
-  // ProductSdlcGroups (no status accent) and is excluded from chip generation.
+  // LeadUnifiedSlide. "cross-product" id receives no status accent and is
+  // excluded from chip generation.
   const syntheticProduct: SlideProduct = {
     id: "cross-product",
     name: ca.authorName,
