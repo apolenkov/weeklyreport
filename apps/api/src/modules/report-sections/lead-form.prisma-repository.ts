@@ -451,6 +451,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       authorId: string;
       authorName: string;
       stageNames: string[];
+      stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
       itemCount: number;
       riskCount: number;
     }[]
@@ -467,13 +468,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       where: { projectId: { in: myProjectIds }, userId: { not: userId } },
       select: {
         projectId: true,
+        stageId: true,
         project: { select: { id: true, name: true, archived: true } },
         stage: { select: { name: true } },
         user: { select: { id: true, name: true } },
       },
     });
 
-    // Section stats for other authors in this report
+    // Section stats + stage statuses for other authors in this report
     const otherUserIds = [...new Set(others.map((o) => o.user.id))];
     const sections = await this.prisma.reportSection.findMany({
       where: { reportId, authorId: { in: otherUserIds } },
@@ -481,9 +483,20 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorId: true,
         items: { select: { projectId: true } },
         risks: { select: { projectId: true } },
+        stageStatuses: { select: { projectId: true, stageId: true, status: true } },
       },
     });
     const sectionByAuthor = new Map(sections.map((s) => [s.authorId, s]));
+
+    // Build status lookup: "(authorId)::projectId::stageId" → status
+    const statusMap = new Map<string, "green" | "yellow" | "red">();
+    for (const s of sections) {
+      for (const ss of s.stageStatuses) {
+        if (ss.status !== null) {
+          statusMap.set(`${s.authorId}::${ss.projectId}::${ss.stageId}`, ss.status);
+        }
+      }
+    }
 
     // Group by (projectId, authorId)
     const grouped = new Map<
@@ -494,6 +507,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorId: string;
         authorName: string;
         stageNames: Set<string>;
+        stageEntries: { stageName: string; status: "green" | "yellow" | "red" | null }[];
         itemCount: number;
         riskCount: number;
       }
@@ -502,6 +516,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     for (const row of others) {
       if (row.project.archived) continue;
       const key = `${row.projectId}::${row.user.id}`;
+      const stageStatus =
+        statusMap.get(`${row.user.id}::${row.projectId}::${row.stageId}`) ?? null;
       if (!grouped.has(key)) {
         const section = sectionByAuthor.get(row.user.id);
         const itemCount = section
@@ -516,17 +532,26 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           authorId: row.user.id,
           authorName: row.user.name,
           stageNames: new Set([row.stage.name]),
+          stageEntries: [{ stageName: row.stage.name, status: stageStatus }],
           itemCount,
           riskCount,
         });
       } else {
-        grouped.get(key)?.stageNames.add(row.stage.name);
+        const entry = grouped.get(key);
+        entry?.stageNames.add(row.stage.name);
+        entry?.stageEntries.push({ stageName: row.stage.name, status: stageStatus });
       }
     }
 
     return [...grouped.values()].map((g) => ({
-      ...g,
+      projectId: g.projectId,
+      projectName: g.projectName,
+      authorId: g.authorId,
+      authorName: g.authorName,
       stageNames: [...g.stageNames],
+      stages: g.stageEntries,
+      itemCount: g.itemCount,
+      riskCount: g.riskCount,
     }));
   }
 

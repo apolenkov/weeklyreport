@@ -11,6 +11,8 @@ export type CrossAuthorEntry = {
   authorId: string;
   authorName: string;
   stageNames: string[];
+  /** Per-stage status from backend StageStatus records; undefined = legacy data without status. */
+  stages?: { stageName: string; status: "green" | "yellow" | "red" | null }[];
   itemCount: number;
   riskCount: number;
   /** Per-risk details when crossAuthorSections data is loaded; null = loading. */
@@ -264,19 +266,50 @@ export function SdlcPipeline({
                       key={`${ca.projectId}::${ca.authorId}`}
                       className="text-[12px] text-[var(--color-muted-foreground)]"
                     >
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-medium text-[var(--color-foreground)]">
                           {ca.authorName}
                         </span>
                         <span aria-hidden="true">·</span>
-                        <span>{ca.stageNames.join(", ")}</span>
+                        {/* W10: render real status colors on cross-author stage chips */}
+                        <div className="flex flex-wrap gap-1">
+                          {(
+                            ca.stages ??
+                            ca.stageNames.map((sn) => ({ stageName: sn, status: null as "green" | "yellow" | "red" | null }))
+                          ).map((stage) => {
+                            const cfg =
+                              stage.status === "red"
+                                ? { icon: "✕", bg: "#fee2e2", text: "var(--color-destructive)", border: "var(--color-destructive)" }
+                                : stage.status === "yellow"
+                                  ? { icon: "!", bg: "#fef3c7", text: "#8a6d1b", border: "#d4a017" }
+                                  : stage.status === "green"
+                                    ? { icon: "✓", bg: "var(--color-success)", text: "var(--color-primary)", border: "var(--color-starbucks-accent)" }
+                                    : { icon: "○", bg: "#f8f6f2", text: "var(--color-muted-foreground)", border: "rgba(0,0,0,0.15)" };
+                            return (
+                              <span
+                                key={stage.stageName}
+                                className="inline-flex items-center gap-0.5 rounded-lg px-2 py-1 text-[11px] font-semibold"
+                                style={{
+                                  background: cfg.bg,
+                                  color: cfg.text,
+                                  border: `1.5px solid ${cfg.border}`,
+                                }}
+                                aria-label={`${stage.stageName} — ${stage.status ?? "no status"} — locked, authored by ${ca.authorName}`}
+                                title={`Authored by ${ca.authorName} — read-only`}
+                              >
+                                {cfg.icon} {stage.stageName}
+                                <span className="ml-0.5 opacity-50" aria-hidden="true">🔒</span>
+                              </span>
+                            );
+                          })}
+                        </div>
                         {ca.isEmpty && (
-                          <span className="ml-1 rounded px-1 py-0.5 text-[11px] text-[var(--color-muted-foreground)] opacity-60">
+                          <span className="rounded px-1 py-0.5 text-[11px] text-[var(--color-muted-foreground)] opacity-60">
                             ⊘ not started
                           </span>
                         )}
                         {!ca.isEmpty && ca.itemCount > 0 && (
-                          <span className="ml-1 text-[11px]">
+                          <span className="text-[11px]">
                             {ca.itemCount} item{ca.itemCount !== 1 ? "s" : ""}
                           </span>
                         )}
