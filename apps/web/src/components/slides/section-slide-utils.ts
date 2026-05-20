@@ -499,6 +499,78 @@ export function paginateSectionSlides(
   return pages;
 }
 
+// ---- Unified by-section slide model (W12) ----
+
+export type UnifiedSectionRow = {
+  readonly text: string;
+  readonly productName: string;
+};
+
+export type UnifiedSlideModel = {
+  readonly current: readonly UnifiedSectionRow[];
+  readonly next: readonly UnifiedSectionRow[];
+  readonly risks: readonly UnifiedSectionRow[];
+  readonly priorities: readonly UnifiedSectionRow[];
+  readonly decisions: readonly UnifiedSectionRow[];
+  readonly emptyProducts: {
+    readonly current: readonly string[];
+    readonly next: readonly string[];
+    readonly risks: readonly string[];
+    readonly priorities: readonly string[];
+    readonly decisions: readonly string[];
+  };
+};
+
+export function buildUnifiedSlideModel(slide: SectionSlideModel): UnifiedSlideModel {
+  const products = [...slide.productSlides].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+
+  const current: UnifiedSectionRow[] = [];
+  const next: UnifiedSectionRow[] = [];
+  const risks: UnifiedSectionRow[] = [];
+  const priorities: UnifiedSectionRow[] = [];
+  const decisions: UnifiedSectionRow[] = [];
+  const emptyProducts = {
+    current: [] as string[],
+    next: [] as string[],
+    risks: [] as string[],
+    priorities: [] as string[],
+    decisions: [] as string[],
+  };
+
+  for (const product of products) {
+    const name = product.id === "cross-product" ? "Shared context" : product.name;
+    if (product.currentItems.length > 0) {
+      product.currentItems.forEach((text) => current.push({ text, productName: name }));
+    } else {
+      emptyProducts.current.push(name);
+    }
+    if (product.nextItems.length > 0) {
+      product.nextItems.forEach((text) => next.push({ text, productName: name }));
+    } else {
+      emptyProducts.next.push(name);
+    }
+    if (product.risks.length > 0) {
+      product.risks.forEach((text) => risks.push({ text, productName: name }));
+    } else {
+      emptyProducts.risks.push(name);
+    }
+    if (product.priorities.length > 0) {
+      product.priorities.forEach((text) => priorities.push({ text, productName: name }));
+    } else {
+      emptyProducts.priorities.push(name);
+    }
+    if (product.decisions.length > 0) {
+      product.decisions.forEach((text) => decisions.push({ text, productName: name }));
+    } else {
+      emptyProducts.decisions.push(name);
+    }
+  }
+
+  return { current, next, risks, priorities, decisions, emptyProducts };
+}
+
 export function sortSlidesForReview(
   slides: readonly SectionSlideModel[],
 ): SectionSlideModel[] {
