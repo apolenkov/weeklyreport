@@ -30,8 +30,9 @@ function toneConfig(tone: ToneVariant): {
     case "blocked":
       return {
         label: "Blockers",
+        // red-100 bg + red-950 text → WCAG AA pass for small text
         className:
-          "border-[rgba(200,32,20,0.24)] bg-[#fff1f0] text-[var(--color-destructive)]",
+          "border-[rgba(200,32,20,0.24)] bg-[#fee2e2] text-[#7f1d1d]",
         icon: (
           <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
         ),
@@ -39,8 +40,9 @@ function toneConfig(tone: ToneVariant): {
     case "at-risk":
       return {
         label: "At risk",
+        // amber-100 bg + amber-900 text → WCAG AA pass for small text
         className:
-          "border-[rgba(212,160,23,0.38)] bg-[#fff7df] text-[#725313]",
+          "border-[rgba(212,160,23,0.38)] bg-[#fef3c7] text-[#78350f]",
         icon: (
           <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
         ),
