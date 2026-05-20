@@ -248,6 +248,7 @@ export function LeadSlidesClient({
 
   return (
     <div ref={deckRef}>
+      <SlideFullscreenButton targetRef={deckRef} variant="floating" />
       <ReportSlides
         slides={slides}
         selectedIndex={selectedIndex}
