@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Lock } from "lucide-react";
 
 import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
@@ -17,6 +18,8 @@ type StageChipProps = {
    * — clearing a stage implicitly orphans those risks, so we ask first.
    */
   readonly linkedRiskCount?: number;
+  /** Cross-author stats shown in the tooltip when the stage is locked. */
+  readonly crossAuthorInfo?: { itemCount: number; riskCount: number };
 };
 
 const STATUS_CONFIG: Record<
@@ -61,6 +64,7 @@ export function StageChip({
   onStatusChange,
   readOnly = false,
   linkedRiskCount = 0,
+  crossAuthorInfo,
 }: StageChipProps) {
   const [showPopover, setShowPopover] = useState(false);
   // Confirm modal for the only case that warrants a second click —
@@ -121,7 +125,7 @@ export function StageChip({
     isEmpty
       ? "cursor-pointer border-dashed animate-[sdlc-pulse_3s_infinite] motion-reduce:animate-none hover:animate-none hover:shadow-[0_0_0_2px_rgba(0,117,74,0.2)]"
       : "",
-    isLocked ? "opacity-35 cursor-not-allowed grayscale-[0.5]" : "",
+    isLocked ? "cursor-not-allowed" : "",
     isUnassigned ? "cursor-not-allowed" : "",
   ]
     .filter(Boolean)
@@ -162,8 +166,23 @@ export function StageChip({
     setShowPopover(false);
   }
 
+  const lockSuffix =
+    isLocked && crossAuthorInfo
+      ? [
+          crossAuthorInfo.itemCount > 0
+            ? `${crossAuthorInfo.itemCount} item${crossAuthorInfo.itemCount !== 1 ? "s" : ""}`
+            : null,
+          crossAuthorInfo.riskCount > 0
+            ? `${crossAuthorInfo.riskCount} risk${crossAuthorInfo.riskCount !== 1 ? "s" : ""}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : null;
   const title = isLocked
-    ? `${stage.assignee ?? "Unknown"} · No edit permissions`
+    ? [stage.assignee ?? "Unknown", lockSuffix, "No edit permissions"]
+        .filter(Boolean)
+        .join(" · ")
     : isUnassigned
       ? "Unassigned · Contact admin"
       : (stage.tooltip ?? `${stage.stageName} · ${stage.status}`);
@@ -202,6 +221,12 @@ export function StageChip({
         tabIndex={isEditable ? 0 : -1}
       >
         {config.icon} {stage.stageName}
+        {isLocked && (
+          <Lock
+            className="ml-1 inline-block h-[11px] w-[11px] opacity-50"
+            aria-hidden="true"
+          />
+        )}
       </button>
 
       {/* Assignee label */}
