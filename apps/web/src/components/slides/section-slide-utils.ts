@@ -130,6 +130,7 @@ export function buildSectionSlideModel(
   const decisions = section.decisions
     .filter((decision) => nonEmpty(decision.text))
     .map((decision) => decision.text.trim());
+  // TODO(PRIORITY-REDESIGN-01): see priorities-section.tsx for refactor sketch
   const priorities = section.priorities
     .filter((priority) => nonEmpty(priority.text))
     .sort((a, b) => a.rank - b.rank)

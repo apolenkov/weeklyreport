@@ -98,6 +98,7 @@ export interface CrossAuthorSectionRow {
     resolvedAt: Date | null;
     stageName: string | null;
   }[];
+  // TODO(PRIORITY-REDESIGN-01): see priorities-section.tsx for refactor sketch
   priorities: {
     id: string;
     productId: string;
