@@ -46,7 +46,7 @@ export function SlideFullscreenButton({ targetRef }: SlideFullscreenButtonProps)
       type="button"
       onClick={toggle}
       aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-      className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] px-3 py-1.5 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)]"
+      className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
     >
       {isFullscreen ? (
         <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
