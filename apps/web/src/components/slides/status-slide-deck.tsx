@@ -144,9 +144,11 @@ function statusClass(status: SlideStageStatus): string {
     case "green":
       return "border-[rgba(0,117,74,0.24)] bg-[rgba(229,245,237,0.72)] text-[var(--color-primary)]";
     case "yellow":
-      return "border-[rgba(212,160,23,0.34)] bg-[#fff7df] text-[#725313]";
+      // amber-100 bg + amber-900 text → WCAG AA pass for small text
+      return "border-[rgba(212,160,23,0.34)] bg-[#fef3c7] text-[#78350f]";
     case "red":
-      return "border-[rgba(200,32,20,0.24)] bg-[#fff1f0] text-[var(--color-destructive)]";
+      // red-100 bg + red-950 text → WCAG AA pass for small text
+      return "border-[rgba(200,32,20,0.24)] bg-[#fee2e2] text-[#7f1d1d]";
     default:
       return "border-[rgba(0,0,0,0.12)] bg-[var(--color-muted)] text-[var(--color-muted-foreground)]";
   }
@@ -265,15 +267,16 @@ function ProductSdlcGroups({
         const productNumber = realProducts.findIndex(
           (item) => item.id === product.id,
         );
+        // W9.B: top accent bar for quick status glance (border-t instead of border-l)
         const productAccentClass = isSharedContext
-          ? "border-l-4 border-l-[rgba(0,0,0,0.16)]"
+          ? "border-t-4 border-t-[rgba(0,0,0,0.16)]"
           : product.status === "green"
-            ? "border-l-4 border-l-[rgba(0,117,74,0.5)]"
+            ? "border-t-4 border-t-[rgba(0,117,74,0.5)]"
             : product.status === "yellow"
-              ? "border-l-4 border-l-[rgba(212,160,23,0.62)]"
+              ? "border-t-4 border-t-[rgba(212,160,23,0.62)]"
               : product.status === "red"
-                ? "border-l-4 border-l-[rgba(200,32,20,0.55)]"
-                : "border-l-4 border-l-[rgba(0,0,0,0.2)]";
+                ? "border-t-4 border-t-[rgba(200,32,20,0.55)]"
+                : "border-t-4 border-t-[rgba(0,0,0,0.2)]";
         return (
           <section
             key={product.id}
@@ -317,8 +320,10 @@ function ProductSdlcGroups({
             </div>
 
             {/* 5-row band grid — all products use identical min-h rows so bands
-                align horizontally across columns at every breakpoint */}
-            <div className="mt-5 grid gap-y-5">
+                align horizontally across columns at every breakpoint.
+                grid-rows sets named tracks for semantic structure; min-h on each
+                section enforces uniform row heights across product columns. */}
+            <div className="mt-5 grid gap-y-5" style={{gridTemplateRows: "[current] minmax(var(--slide-row-min),auto) [next] minmax(var(--slide-row-min),auto) [risks] minmax(var(--slide-row-min),auto) [priorities] minmax(var(--slide-row-min),auto) [decisions] minmax(var(--slide-row-min),auto)"}}>
               {productStoryList({
                 id: product.id + "-current",
                 label: "Current work",
