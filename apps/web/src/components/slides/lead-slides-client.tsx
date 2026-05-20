@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
@@ -44,6 +44,9 @@ function SlideEmptyState({
 type LeadSlidesClientProps = {
   readonly initialReportId?: string | null;
   readonly chrome?: "full" | "content";
+  /** W9.A: when provided, this ref is applied to the deck root div so the
+   *  caller (lead-form header) can host the fullscreen button. */
+  readonly deckRef?: RefObject<HTMLDivElement | null>;
 };
 
 type CrossAuthorRow = {
@@ -140,6 +143,7 @@ function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
 
 export function LeadSlidesClient({
   initialReportId = null,
+  deckRef: externalDeckRef,
 }: LeadSlidesClientProps) {
   const trpc = useTRPC();
   const pathname = usePathname();
@@ -147,7 +151,8 @@ export function LeadSlidesClient({
   const session = useContext(SessionContext);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scope, setScope] = useState<"own" | "product">("own");
-  const deckRef = useRef<HTMLDivElement>(null);
+  const internalDeckRef = useRef<HTMLDivElement>(null);
+  const deckRef = externalDeckRef ?? internalDeckRef;
 
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
@@ -263,7 +268,8 @@ export function LeadSlidesClient({
                 }}
               />
             ) : null}
-            <SlideFullscreenButton targetRef={deckRef} />
+            {/* W9.A: fullscreen button moves to lead-form header when inReportMode */}
+            {!inReportMode && <SlideFullscreenButton targetRef={deckRef} />}
           </div>
         }
       />

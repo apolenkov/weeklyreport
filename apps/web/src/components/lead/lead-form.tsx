@@ -40,6 +40,7 @@ import { PrioritiesSection } from "./priorities-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RequestReopenDialog } from "./request-reopen-dialog";
 import { LeadSlidesClient } from "../slides/lead-slides-client";
+import { SlideFullscreenButton } from "../slides/slide-fullscreen-button";
 import { AccordionSection } from "../report-shell/accordion-section";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 
@@ -316,6 +317,8 @@ export function LeadForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const isSlidesMode = mode === "slides";
+  // W9.A: ref shared between lead-form header (SlideFullscreenButton) and LeadSlidesClient (deck root div)
+  const deckRef = useRef<HTMLDivElement>(null);
   const sessionState = useContext(SessionContext);
   const sessionRole = sessionState?.user?.role ?? null;
   const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
@@ -1401,6 +1404,7 @@ export function LeadForm({
                   Toggle All
                 </button>
               )}
+            {isSlidesMode && <SlideFullscreenButton targetRef={deckRef} />}
             <ViewModeToggle
               mode={isSlidesMode ? "slides" : "edit"}
               editHref={
@@ -1506,6 +1510,7 @@ export function LeadForm({
           <LeadSlidesClient
             initialReportId={targetReportId || pinnedReportId || null}
             chrome="content"
+            deckRef={deckRef}
           />
         ) : (
           <>
