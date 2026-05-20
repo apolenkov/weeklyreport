@@ -6,9 +6,1878 @@
 
 > **2026-05-19 PIVOT (post-W2 user feedback).** W1/W3/W4 закоммичены и приняты. W2 в текущем виде («отдельная секция чужих строк ниже» с `<div opacity-70><CurrentWeekSection readOnly/>`) **отвергнут**. Новая постановка → `§ W5` ниже. Старое описание W2 оставлено как историческое.
 
+> **2026-05-19 SECOND PIVOT (post-W5 visual UAT).** W5 закоммичен и принят, но при визуальном UAT всплыли 4 новых проблемы — hint-полоска лгала («Also contributing: Boris S.» при пустом наборе items от Boris), toggle стал лишним, 🔒 должен жить рядом с автором, а seed-simple содержит только 1 cross-author. Новая постановка → `§ W6` ниже.
+
+> **2026-05-19 THIRD PIVOT (post-W6 drafting, FB5).** Пятый фидбэк во время самого W6: с inline merged foreign items в каждой секции, **отдельный read-only view через `?authorId=<X>` тоже потерял смысл** — Vasily теперь видит контент Бориса/Виктора/Галины прямо в своей view с замком возле автора, отдельная страница «открыть как Boris» становится дублирующим путём. Добавлено как `W6.6.4` ниже: дропаем `?authorId=` query-param handling, `isOwnView` guard, и любые UI-ссылки на foreign-view drill-in.
+
+> **2026-05-19 FOURTH PIVOT (post-W6 drafting, FB6 + FB7).** Шестой и седьмой фидбэк по `<SdlcPipeline>` визуальной читаемости: (FB6) при наличии cross-author info вся карточка продукта стала слишком серой, пользователь не видит **свой** at-risk/blocked этап; (FB7) per-risk chips в «Other contributors» (cross-author риски) — простой цветной текст без фона, плохо читается на светлой подложке. Добавлено как `W6.6.5` ниже: уменьшить grey на own контенте, добавить тёмный pill-фон под per-risk chip text для AA-контраста.
+
 ---
 
-## W5 — Interleaved foreign items (post-W2 pivot) ⭐ ACTIVE
+## W6 — Always-show foreign items + lock-by-author + multi-contributor seed ⭐ ACTIVE
+
+> Финальная итерация после W5. Удаляем `CrossAuthorHint` целиком, делаем merged-массивы безусловными, перевешиваем 🔒 с продуктового чипа на authorName в `MetaRow`, и расширяем `seed-simple.ts` до 3 контрибьюторов с равномерным контентом по 5 секциям × SDLC-стадиям.
+
+---
+
+### W6 · §0 — TL;DR (визуально + проза)
+
+#### Было (после W5, текущий main)
+
+```text
+┌── /lead/report?authorId=<Boris> (edit-view) ────────────────────────────┐
+│                                                                          │
+│ ▼ Current Week                                                           │
+│   🔒 Also contributing: Boris S. (— items)        readonly ↗  ← лжёт:    │
+│                                  [ Show contributors ▼ ]      строка     │
+│                                                                ↑ есть, а  │
+│   ┌─ Marketing Portal ──┐                                       items от  │
+│   │ ▣ Vasily item 1 [✎] │                                       Boris    │
+│   │ ▣ Vasily item 2 [✎] │                                       в этой   │
+│   │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │  (видно ТОЛЬКО при toggle ON)         секции   │
+│   │ 🔒 Boris item 1     │  ← 🔒 рядом с productName             может    │
+│   │ 🔒 Boris item 2     │     (top row на mb-3),                не быть. │
+│   └─────────────────────┘     authorName внизу без замка                  │
+│                                                                          │
+│ Risks card top row:                                                      │
+│   ┌─ [At Risk] [🔒 Marketing Portal]  ────────────────────────┐         │
+│   │  Risk: …                                                  │         │
+│   │  Impact / Mitigation                                      │         │
+│   │  ──── meta-row ────                                       │         │
+│   │   Boris S.                                  [Design][Dev] │ ← здесь │
+│   │   ↑ автор без 🔒                                          │   нужен │
+│   └────────────────────────────────────────────────────────────┘   замок │
+│                                                                          │
+│ seed-simple.ts:                                                          │
+│   leads[6] = Boris S. → 1 single cross-author content на PROD_CRM       │
+│   Igor / Maria / другие → не имеют seeded items для cross-author UAT    │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+**Прозой.** После W5 в `lead-form.tsx` живёт `<CrossAuthorHint>` в каждой из 5 секций с кнопкой Show/Hide и `showForeignItems` state (default false). Hint-строка показывает имя контрибьютора и количество (`(4 items)` или просто имя без count), но это агрегат на уровне ВСЕЙ секции — реально в конкретной CW/NW/Risks/Decisions/Priorities может не быть items этого контрибьютора, и строка лжёт. 🔒 рендерится в верхней строке риск-карточки рядом с productName, а имя автора (Boris S.) живёт ниже в `MetaRow` без визуальной привязки к замку. В `seed-simple.ts` (минимальный MVP) сейчас только Boris имеет cross-author content — UAT с 2+ контрибьюторами не получается.
+
+#### Проблема (visual UAT 2026-05-19, после W5)
+
+```text
+P1 lying hint strip            P2 redundant toggle             P3 lock far from author
+─────────────────────          ─────────────────────           ──────────────────────────
+«Also contributing: Boris»     «Show contributors ▼»           🔒 живёт в top row рядом
+показано всегда когда у        был осмыслен пока был           с productName, а имя
+секции есть автор-              wrapper-блок ниже. Теперь       контрибьютора (Boris S.)
+контрибьютор, даже когда       items всегда смешаны → toggle    висит в нижнем MetaRow.
+в ЭТОЙ секции у него 0          скрывает СВОИ же items тоже,    Глаз не связывает их —
+items.                          либо просто шумит.              «чей это замок?»
+
+P4 single-contributor seed
+──────────────────────────
+В seed-simple.ts только Boris имеет cross-author items. UAT не показывает «как
+выглядит секция с 3 разными контрибьюторами по разным SDLC-стадиям».
+```
+
+**Прозой.** Пользователь увидел строку «Also contributing: Boris S.» и решил, что в Current Week будут items от Boris. Открыл — пусто. Это потому что hint-строка считает контрибьюторов на уровне секции `ReportSection`, а не на уровне конкретного типа (CW/NW/Risks/Decisions/Priorities). Toggle потерял смысл сам по себе — items больше не в отдельном блоке. Замок 🔒 должен сидеть рядом с тем, кого он идентифицирует, — то есть рядом с фамилией автора («Boris S. 🔒»), а не рядом с названием продукта. И для нормального UAT нужно 3 контрибьютора, чтобы видеть «как это выглядит в реальности», а не «один Boris + пустые секции».
+
+#### Станет (W6 target)
+
+```text
+┌── /lead/report?authorId=<Boris> (edit-view, after W6) ──────────────────┐
+│                                                                          │
+│ ▼ Current Week                                                           │
+│   (никакой hint-строки, никакого toggle)                                │
+│                                                                          │
+│   ┌─ Marketing Portal ──┐  ┌─ Mobile App ──┐                            │
+│   │ ▣ Vasily item 1 [✎] │  │ ▣ Vasily…     │                            │
+│   │ ▣ Vasily item 2 [✎] │  │ ▣ Boris item  │                            │
+│   │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │  │   ──meta──    │                            │
+│   │ ▣ Boris item 1      │  │   Boris S. 🔒  [Plan]                       │
+│   │   ──meta──          │  └────────────────┘                            │
+│   │   Boris S. 🔒 [Plan] │  ← 🔒 теперь рядом с автором                  │
+│   │ ▣ Galina item       │     opacity 0.7, no edit/delete                │
+│   │   ──meta──          │                                                │
+│   │   Galina M. 🔒 [Dev] │                                               │
+│   └─────────────────────┘                                                │
+│                                                                          │
+│ Risks card top row:                                                      │
+│   ┌─ [At Risk] Marketing Portal  ─────────────────────────────┐         │
+│   │  (без 🔒 в top row)                                       │         │
+│   │  Risk: …                                                  │         │
+│   │  ──── meta-row ────                                       │         │
+│   │   Boris S. 🔒                              [Design][Dev]  │         │
+│   │   ↑ замок на конце authorName                             │         │
+│   └────────────────────────────────────────────────────────────┘         │
+│                                                                          │
+│ seed-simple.ts (W6):                                                     │
+│   Boris S.    → Planning + Analysis stages → items/risks/decisions/      │
+│                                                priorities на PROD_CRM    │
+│   Galina M.   → Dev + Test stages → same 5-section spread на PROD_CRM   │
+│   Victor L.   → DevOps + Support stages → same 5-section spread          │
+│                                                                          │
+│ → когда Vasily открывает свою секцию, в каждой из 5 секций видит:       │
+│    свои items + 3 чужих, помеченных 🔒 рядом с именем автора            │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+**Прозой.** Удаляем `<CrossAuthorHint>` (компонент и все 5 вызовов), удаляем `showForeignItems` state, делаем 5 merged-массивов безусловными (`[...own, ...foreign]` всегда). На уровне отдельной строки/карточки замок переезжает с productName в `MetaRow` справа от authorName: «Boris S. 🔒». В `seed-simple.ts` Boris (LEAD_MOBILE_PM) уже есть; добавляем cross-author content на PROD_CRM от Galina (LEAD_DEVOPS_PM) и Victor (LEAD_CLOUD_PM), распределяя по разным SDLC-стадиям. Когда Vasily открывает `/lead/report/<id>`, во всех 5 секциях видит свои items + items от Boris/Galina/Victor с замком рядом с их фамилиями.
+
+#### Pipeline фаз
+
+```text
+[P0 self-review]──[P1 lead-form simplify]──[P2 lock-relocation]──[P3 seed extend]──[P4 verify]──[P5 commit]
+                  │                          │                    │                 │            │
+                  │ remove CrossAuthorHint   │ add `foreign` prop │ seed-simple.ts  │ typecheck  │ 3 atomic
+                  │ import + state +         │ to MetaRow;        │ + Galina/Victor │ + lint +   │ commits
+                  │ 5 JSX + simplify         │ swap 🔒 site in    │ items/risks/    │ test +     │
+                  │ 5 merged arrays          │ 4 section files +  │ decisions/      │ smoke      │
+                  │                          │ item-card.tsx      │ priorities      │            │
+                  │                          │ + delete cross-    │                 │            │
+                  │                          │ author-hint.tsx    │                 │            │
+                  │                          │ if unused          │                 │            │
+                  ▼                          ▼                    ▼                 ▼            ▼
+                  P2 parallel with P3 (разные файлы; нет конфликтов)
+```
+
+**От человека (1 строка):** approve этот W6 через ExitPlanMode → дальше всё делаю я (код, seed, тесты, smoke, коммиты).
+
+---
+
+### W6 · §1 — Контекст
+
+W6 — итерация после визуального UAT W5. W5 закоммичен (commits f63aeb2 W5.3, 64a70d7 W5.2, c059621 W5.1) и приняты. Пользователь дал 4 новых фидбэка при просмотре `/lead/report/a0000000-0000-4000-8000-000000000001?authorId=a0000000-0000-4000-8000-000000000022` (Boris):
+
+1. «Давай, наверное, это уберём» — про `<CrossAuthorHint>` hint-строку.
+2. «Нет, соответственно, тоже не нужно будет» — про toggle button.
+3. «Давай замочек поставим после фамилии Contributor, то есть Boris S.» — про позицию 🔒 (DOM target `risks-section.tsx:106:72`).
+4. «Сделай в примере, который занимается минимальным MVP, чтобы было два контрибьютора, Бориса и ещё кто-нибудь, пусть будет три человека, логически, по стадиям SDLC, и чтобы и Борис что-то написал по всем элементам» — расширить `seed-simple.ts` до 3 контрибьюторов с контентом по всем 5 секциям и разным SDLC-стадиям.
+
+W1/W4/W5 остаются. Меняем только клиентский орчестр + позицию иконки + seed.
+
+---
+
+### W6 · §2 — Сейчас (live repo state)
+
+```text
+branch       : main (или fix/PRJ-2/shiny-eagle — проверить git status)
+last W5 cmts : f63aeb2 W5.3 toggleable inline + delete 5 wrappers + bridge
+               64a70d7 W5.2 per-item lock (item-card + risks/decisions/priorities)
+               c059621 W5.1 foreign+authorId+authorName fields on 4 row types
+dirty (ok)   : .planning/memory/*.md
+               .planning/plans/page-feedback-lead-report-a0000000-0000-shiny-eagle.md
+               .planning/session-retros/NEXT-ACTIONS.md
+clean        : apps/web, apps/api, packages/shared, prisma
+target files :
+  apps/web/src/components/lead/lead-form.tsx          (orchestr.: remove hint+toggle)
+  apps/web/src/components/lead/cross-author-hint.tsx  (DELETE if not used elsewhere)
+  apps/web/src/components/lead/risks-section.tsx      (🔒 move from L203 → MetaRow)
+  apps/web/src/components/lead/decisions-section.tsx  (same lock relocation)
+  apps/web/src/components/lead/priorities-section.tsx (same)
+  apps/web/src/components/lead/item-card.tsx          (move 🔒 from L215 → MetaRow attach)
+  apps/web/src/components/report-shell/meta-row.tsx   (add `foreign?: boolean` prop)
+  prisma/seed-simple.ts                                (extend Boris + add Galina + Victor)
+```
+
+---
+
+### W6 · §3 — Architecture context
+
+```text
+                /lead/report/<id>?authorId=<Vasily>  (мой view, edit mode)
+                       │
+                       ▼
+       <LeadForm> ── trpc.leadForm.read (own section)
+                       │  trpc.leadForm.crossAuthorSections (per-author items/risks/decisions/priorities)
+                       │
+                       ▼
+       state: (showForeignItems REMOVED)
+              5× useMemo foreign* (UNCHANGED — already keyed on crossAuthorSectionsQ.data + isOwnView)
+              5× merged arrays: ALWAYS [...own, ...foreign]  ← W6 simplification
+                       │
+       ┌───────────────┼──────────────────────┬─────────────────────┬────────────────────────┐
+       ▼               ▼                      ▼                     ▼                        ▼
+  <SdlcPipeline>  <CurrentWeekSection   <NextWeekSection      <LeadFormSyncBridge.Risks>  <DecisionsSection
+   (W1, unchanged) items={mergedCW}>     items={mergedNext}>   ← displayRisks={mergedR}     decisions={mergedD}>
+                       │                      │                     │                        │
+                       ▼                      ▼                     ▼                        ▼
+                  <ItemCard               <ItemCard            <RisksSection                <PrioritiesSection
+                   item                    item                 risks={mergedR}>             priorities={mergedP}>
+                   locked = readOnly       same                 per-row locked = …           same
+                   || item.foreign>                              foreign:                     foreign:
+                       │                                          - 🔒 RELOCATED:              - 🔒 RELOCATED to
+                       ▼                                            from L203 (top row,         MetaRow next to
+                   <MetaRow                                          left of productName)        authorName
+                     authorName={item.author}                       → MetaRow next to
+                     foreign={item.foreign}  ← W6 new prop           authorName
+                     stageTags={…}/>
+                       │
+                       ▼
+                  renders: «Boris S. 🔒  [stage] [stage]»
+                  (🔒 inline after authorName when foreign === true)
+
+(no <CrossAuthorHint> anywhere)
+```
+
+**Backend contracts.** Без изменений. `crossAuthorSections` отдаёт per-author flat `items[]/risks[]/decisions[]/priorities[]`. `crossAuthors` (aggregate) больше нигде не нужен — `enrichedCrossAuthors` и `allSectionContributors` в `lead-form.tsx` становятся подкандидатами на удаление (см. §W6.6.3).
+
+---
+
+### W6 · §4 — Recovered intent (mapping feedback → tasks)
+
+| #   | User signal                                             | Source DOM / file                                                                                   | Solved by          |
+| --- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------ |
+| FB1 | «уберём» hint-строку                                    | `cross-author-hint.tsx` + 5 callsites                                                               | W6.6.1 delete      |
+| FB2 | «тоже не нужно» toggle                                  | `cross-author-hint.tsx` button + state                                                              | W6.6.1 delete      |
+| FB3 | 🔒 после фамилии Contributor («Boris S. 🔒»)            | `risks-section.tsx:203`, `priorities-section.tsx:215`, `decisions-section.tsx`, `item-card.tsx:215` | W6.6.2 relocate    |
+| FB4 | seed: 3 контрибьютора, контент по всем 5 секциям × SDLC | `prisma/seed-simple.ts` (currently 1 cross-author)                                                  | W6.6.3 seed extend |
+
+---
+
+### W6 · §5 — Boundaries
+
+- **Не трогаем:** W1 SDLC pipeline, W4 slides, W5.1 типы (`foreign?`/`authorId?`/`authorName?` остаются), W5.2 per-row `locked` логика, бэкенд `crossAuthorSections`, бэкенд `crossAuthors` (но можем перестать использовать), `useStatusRiskSync` hook contract, `displayRisks` split в bridge.
+- **Out-of-scope:** редактирование чужих items (W5 уже блокирует), отдельные toggle per-section, миграция Prisma schema (только `seed-simple.ts` content), seed для full `seed.ts` (только simple-MVP per FB4).
+- **Stale directions:** W2 (separate wrapper section), W3 dashed-frame embed, dark mode, theme tokens — research-only.
+
+---
+
+### W6 · §6 — Workstreams (file-level)
+
+#### W6.6.1 · Remove CrossAuthorHint and toggle (lead-form.tsx)
+
+**File:** `apps/web/src/components/lead/lead-form.tsx`
+
+Текущие места (по grep):
+
+```
+L42   import { CrossAuthorHint } from "./cross-author-hint";        ← REMOVE
+L851  const [showForeignItems, setShowForeignItems] = useState(false); ← REMOVE
+L1034 const mergedCurrentItems = showForeignItems ? [...curr, ...foreignCW] : curr;
+L1037 const mergedNextItems    = showForeignItems ? [...next, ...foreignNW] : next;
+L1040 const mergedRisks        = showForeignItems ? [...risks, ...foreignR] : risks;
+L1041 const mergedDecisions    = showForeignItems ? [...dec, ...foreignD] : dec;
+L1044 const mergedPriorities   = showForeignItems ? [...pri, ...foreignP] : pri;
+L1658 <CrossAuthorHint … expanded={showForeignItems} onToggle={…}/>  ← REMOVE (CW)
+L1702 same                                                            ← REMOVE (NW)
+L1751 same                                                            ← REMOVE (Risks)
+L1787 same                                                            ← REMOVE (Decisions)
+L1834 same                                                            ← REMOVE (Priorities)
+```
+
+Целевое состояние:
+
+```ts
+// no import for CrossAuthorHint
+// no showForeignItems state
+
+const mergedCurrentItems = [...currentWeekItems, ...foreignCurrentItems];
+const mergedNextItems = [...nextWeekItems, ...foreignNextItems];
+const mergedRisks = [...risks, ...foreignRisks];
+const mergedDecisions = [...decisions, ...foreignDecisions];
+const mergedPriorities = [...priorities, ...foreignPriorities];
+
+// JSX: 5 секций больше не имеют <CrossAuthorHint .../> над ними
+```
+
+После удаления проверить:
+
+- `enrichedCrossAuthors` (W1 enrichment for SdlcPipeline) — оставить если `<SdlcPipeline crossAuthors={…}/>` ещё его использует;
+- `allSectionContributors`, `currentItemsContributors`, `nextItemsContributors`, `risksContributors`, `decisionsContributors`, `prioritiesContributors` — становятся unused → удалить полностью;
+- `SectionContributor` type-импорт из `./cross-author-hint` — оставить только если нужен SdlcPipeline'у, иначе drop.
+
+**File:** `apps/web/src/components/lead/cross-author-hint.tsx`
+
+Проверить grep `import.*cross-author-hint` по всему apps/web; если нет других импортов → **DELETE file**. Если SdlcPipeline или другая часть импортирует `SectionContributor` тип — оставить файл, но опустошить компонент до type-export.
+
+#### W6.6.2 · Relocate 🔒 from product/top-row into MetaRow next to authorName
+
+**File:** `apps/web/src/components/report-shell/meta-row.tsx`
+
+Add prop:
+
+```diff
+ type MetaRowProps = {
+   readonly authorName: string | null | undefined;
+   readonly stageTags: readonly string[];
+   readonly ariaLabel?: string;
+   readonly className?: string;
++  /** When true, render a 🔒 after authorName to signal a foreign (read-only) row. */
++  readonly foreign?: boolean;
+ };
+
+ export function MetaRow({
+-  authorName, stageTags, ariaLabel, className = "mt-3",
++  authorName, stageTags, ariaLabel, className = "mt-3", foreign = false,
+ }: MetaRowProps) {
+   …
+   <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
+-    {authorName ?? ""}
++    {authorName ?? ""}
++    {foreign && authorName ? <span aria-label="Read-only — authored by another lead" title="Read-only — authored by another lead"> 🔒</span> : null}
+   </span>
+```
+
+**Files (4):**
+
+```
+apps/web/src/components/lead/item-card.tsx        L215 — drop {item.foreign && "🔒 "}{item.author}
+                                                    pass foreign={item.foreign} to whichever
+                                                    surface renders authorName
+apps/web/src/components/lead/risks-section.tsx   L203 — drop {risk.foreign && "🔒 "}{risk.productName}
+                                                    L269 — pass foreign={risk.foreign === true}
+                                                          to <MetaRow ...>
+apps/web/src/components/lead/decisions-section.tsx — drop 🔒 from product chip / top row
+                                                    add foreign={decision.foreign === true} to MetaRow
+apps/web/src/components/lead/priorities-section.tsx L215 — drop {entry.foreign && "🔒 "}{entry.productName}
+                                                    L259 — pass foreign={entry.foreign === true} to MetaRow
+```
+
+`item-card.tsx` сейчас не использует `MetaRow` напрямую (item-card имеет свой собственный author footer L215). Решение: либо (а) переписать footer на `MetaRow`, либо (б) встроить inline `{item.foreign && " 🔒"}` после `{item.author}` в footer span. Default — (б), минимальный диффкуск; mention в PR description.
+
+#### W6.6.3 · Multi-contributor seed extension (seed-simple.ts)
+
+**File:** `prisma/seed-simple.ts`
+
+Current cross-author content (L1502–L1586):
+
+- Boris (LEAD_MOBILE_PM, section `…00000407`) → 2 items + 1 risk on PROD_CRM, 1 item + 1 risk on PROD_CRM_SALES.
+
+W6 target: 3 контрибьютора на PROD_CRM (продукт Vasily), каждый пишет в **все 5 секций** (CW item, NW item, Risk, Decision, Priority), стадии распределены логически:
+
+```text
+Vasily (LEAD_1, owner of PROD_CRM):
+  → owns Dev + Test + DevOps + Support stages (already in seed)
+  → his items appear under his own section
+
+Boris (LEAD_MOBILE_PM):
+  → SDLC focus: Planning + Analysis
+  → cross-author content on PROD_CRM:
+      - CW item @ Planning
+      - NW item @ Analysis
+      - Risk @ Planning (severity: at-risk)
+      - Decision @ Planning
+      - Priority @ Planning, rank=1 (PM agenda)
+
+Galina (LEAD_DEVOPS_PM, leads[8]):
+  → SDLC focus: Design
+  → cross-author content on PROD_CRM (need to add Design stage assignment first):
+      - CW item @ Design
+      - NW item @ Design
+      - Risk @ Design (severity: at-risk)
+      - Decision @ Design
+      - Priority @ Design, rank=2
+
+Victor (LEAD_CLOUD_PM, leads[7]):
+  → SDLC focus: Analysis (secondary владелец)
+  → cross-author content on PROD_CRM:
+      - CW item @ Analysis
+      - NW item @ Analysis
+      - Risk @ Analysis
+      - Decision @ Analysis
+      - Priority @ Analysis, rank=3
+```
+
+**Изменения в seed-simple.ts:**
+
+1. Добавить stage assignments для Galina (DEVOPS_PM) и Victor (CLOUD_PM) на PROD_CRM (текущий seed раздаёт им только PROD_DEVOPS и PROD_CLOUD соответственно). Конкретно:
+   - Galina: STAGE_DESIGN на PROD_CRM (Vasily сейчас владеет Dev+Test+DevOps+Support, Boris — Plan+Analysis+Design; перенесём Design к Galina или дадим co-author overlap, выбрать по результатам smoke).
+   - Victor: дополнительный Analysis на PROD_CRM (co-author с Boris допустим, если schema позволяет; иначе разнести Plan/Analysis между Boris и Victor).
+
+   **Уточнение (Q1 ниже).** Текущий `StageAssignment.@@unique([stageId, projectId])` ограничивает одного user на stage-product. Решение: разнести стадии — Boris владеет Planning, Victor владеет Analysis, Galina владеет Design (Vasily сохраняет Dev+Test+DevOps+Support — 4/7).
+
+2. Создать 3 секции `ReportSection` в REPORT_ACTIVE для авторов Boris/Galina/Victor (Boris уже есть = section 407; Galina и Victor нужно создать), либо переиспользовать existing if leads[7]/leads[8] секции уже создаются в loop'е.
+
+   Из grep: `lead-form.tsx` уже создаёт секции для всех leads[0..8] в loop L?? через `…00000040<i+1>`. Boris = section 407 (`i=6`). Victor (leads[7]) и Galina (leads[8]) → 408 и 409 — уже существуют.
+
+3. Добавить в section 408 (Victor) и 409 (Galina) items/risks/decisions/priorities на PROD_CRM по схеме выше. Boris (section 407) уже имеет 2 items + 1 risk на PROD_CRM — расширить до 5 секций (добавить Decision + Priority на PROD_CRM, добавить недостающий CW item если только NW есть).
+
+4. Обновить comment-блок на L1502 с упоминанием нового состава.
+
+Acceptance: после `pnpm db:wipe:manual-uat` + `pnpm db:seed:simple` (или эквивалентного), Vasily в `/lead/report/<active>` видит во ВСЕХ 5 секциях минимум 3 foreign rows (по одной от Boris/Galina/Victor) с 🔒 рядом с фамилией каждого автора.
+
+#### W6.6.4 · Drop `?authorId=` foreign-view path (FB5)
+
+**Контекст.** После W6.6.1-W6.6.3 у Vasily в собственной view (`/lead/report/<id>`) **уже видны** все foreign items от Boris/Victor/Galina с замком возле имени автора. Отдельная страница «открыть как Boris read-only» через `?authorId=<X>` становится дублирующим путём без новой информации: тот же merged view + read-only режим уже доступен на основной странице.
+
+**Цель.** Удалить `?authorId=` query-param handling и связанные guard-ы. После — единственный валидный путь для лидов: `/lead/report/<id>` без query-параметров, всегда показывает собственную секцию + merged foreign.
+
+**Файлы и места.**
+
+```
+apps/web/src/components/lead/lead-form.tsx
+  - L? requestedAuthorIdNormalized — derived из searchParams.authorId → DROP
+  - L? isOwnView = !requestedAuthorIdNormalized → DROP
+  - L? 5 foreign-builder useMemo: убрать guard `if (!isOwnView)` → теперь
+        всегда строят merged массивы (когда есть crossAuthorSectionsQ.data)
+
+apps/web/src/app/(app)/lead/report/[reportId]/page.tsx
+  - если есть чтение searchParams.authorId / pass-through в LeadForm → DROP
+
+apps/web/src/components/lead/sdlc-pipeline.tsx
+  - W1 «Other contributors» row: если оставался drill-in link/icon на
+        `?authorId=<X>` → DROP. Контрибьюторы видны inline в SDLC chip’ах
+        + per-risk chips, отдельный foreign-view не нужен
+
+apps/api/src/modules/report-sections/lead-form.service.ts
+  apps/api/src/modules/report-sections/lead-form.prisma-repository.ts
+  - метод `read` принимающий authorId-override → consider DROP, либо
+        пометить deprecated. Если используется только из foreign-view path
+        (который удаляется) — убрать параметр.
+
+packages/shared/src/contracts/lead-form.ts (или схема tRPC)
+  - убрать поле authorId из input-схемы leadForm.read если оно там есть.
+```
+
+**Edge cases.**
+
+- Существующие закладки на `?authorId=<X>` → 301 redirect на тот же URL без query, либо просто игнорировать параметр. Default: игнорировать (без redirect — минимум кода).
+- E2E/regression тесты на foreign-view (`/lead/report/<id>?authorId=<x>`): обновить на `/lead/report/<id>` без query, либо удалить если они проверяли только read-only режим (теперь покрывается inline locked rows).
+- Head/director-view (`/head/report/<id>`) — НЕ трогаем, у них собственный read-only path и собственные query-параметры.
+
+**Acceptance.**
+
+- В DOM нет ссылок с `?authorId=` (grep по `href.*authorId=`).
+- Прямой ввод `/lead/report/<id>?authorId=<Boris>` рендерит **собственную** секцию Vasily (query игнорируется).
+- В коде нет `requestedAuthorIdNormalized` / `isOwnView` / `searchParams.authorId`.
+- `crossAuthorSectionsQ.data` остаётся источником foreign items, как и был.
+
+#### W6.6.5 · SdlcPipeline visual polish — own at-risk visibility + dark-pill risk chips (FB6 + FB7)
+
+**Контекст.** После W1 «Other contributors» рендерятся под собственным product-card в `<SdlcPipeline>`. Два визуальных дефекта:
+
+- **FB6 (own at-risk visibility).** Пользователь смотрит на product card и не может быстро понять, какой **его** этап под риском — карточка целиком кажется приглушённой, потому что cross-author блок снизу занимает много места и `text-[var(--color-muted-foreground)]` распространяется на восприятие всей карточки. Цитата: «слишком засерил, потому что я не вижу, какой этап у меня под риском».
+- **FB7 (risk-chip contrast).** Per-risk chips в cross-author блоке — это просто цветной текст (`text-[var(--color-destructive)]` для blocked, `text-[var(--color-warning,#b45309)]` для at-risk) на светлой product-card подложке (`#fdf8f8` для blocked продукта, `#fffcf5` для at-risk). Низкий контраст, не читается. Цитата: «надо... с тёмным фоном».
+
+**Файл.** `apps/web/src/components/lead/sdlc-pipeline.tsx`
+
+**FB6 fix — preserve own at-risk visibility.**
+
+Сейчас (L255-326) cross-author блок рендерится как `<div className="mt-3 border-t border-[rgba(0,0,0,0.06)] pt-2">` внутри того же product-card. Проблема — он визуально сливается с верхней частью (own stages), хотя по смыслу это отдельная зона.
+
+Решение — визуально разделить две зоны внутри карточки:
+
+1. **Own stages зона (верх карточки):** убедиться, что at-risk/blocked stage chips сохраняют полную насыщенность цвета (нет `opacity`, нет `text-muted-foreground` на родителе). Если product card имеет `overallStatus === "at-risk" | "blocked"` — фон карточки уже подсвечен (`#fdf8f8` / `#fffcf5`), но stage chips внутри должны быть **ещё** ярче, не теряться.
+2. **Cross-author зона (низ карточки):** усилить визуальный отрыв — заменить `border-t border-[rgba(0,0,0,0.06)]` на более выраженный разделитель `border-t-2 border-dashed border-[rgba(0,0,0,0.10)]` + добавить чуть-чуть padding-top сверху (`pt-3` вместо `pt-2`) + сам блок завернуть в `bg-[rgba(0,0,0,0.02)] -mx-3 px-3 -mb-3 pb-3 rounded-b-xl` чтобы он сидел как «подвал» карточки, а не как продолжение own контента.
+
+Acceptance: на product card с `overallStatus="blocked"` пользователь сразу видит, **какой** свой stage chip (Dev/Test/etc.) красный/оранжевый — он не «утоплен» в общей серости карточки. Cross-author блок визуально читается как отдельная подсекция «информация от других».
+
+**FB7 fix — dark pill background for per-risk chips.**
+
+Сейчас (L301-313):
+
+```tsx
+<li
+  className={`flex items-start gap-1 text-[11px] ${r.severity === "blocked" ? "text-[var(--color-destructive)]" : "text-[var(--color-warning,#b45309)]"}`}
+>
+  <span aria-hidden="true" className="mt-px shrink-0">
+    {r.severity === "blocked" ? "⛔" : "⚠"}
+  </span>
+  <span className="line-clamp-2">{r.text}</span>
+</li>
+```
+
+Цвет текста сам по себе на светлой product-card подложке даёт contrast ratio < 4.5 (WCAG AA fail для small text).
+
+Решение — обернуть текст в pill с тёмно-тонированным фоном и тёмным текстом:
+
+```tsx
+<li className="flex items-start gap-1 text-[11px]">
+  <span aria-hidden="true" className="mt-px shrink-0">
+    {r.severity === "blocked" ? "⛔" : "⚠"}
+  </span>
+  <span
+    className={`line-clamp-2 rounded-md px-1.5 py-0.5 font-medium ${
+      r.severity === "blocked"
+        ? "bg-[#fee2e2] text-[#7f1d1d]" // red-100 bg + red-950 text → AA pass
+        : "bg-[#fef3c7] text-[#78350f]" // amber-100 bg + amber-950 text → AA pass
+    }`}
+  >
+    {r.text}
+  </span>
+</li>
+```
+
+Цветовые токены те же, что уже используются в `risks-section.tsx` для top-row severity pill (L194-200), — палитра консистентна. Текст становится `text-[#7f1d1d]` / `text-[#78350f]` (тёмный) на `bg-[#fee2e2]` / `bg-[#fef3c7]` (светло-тонированный) — это даёт contrast ratio ≥ 7:1 (AAA для small text).
+
+**Acceptance.**
+
+- На product card с `overallStatus="blocked"` свой at-risk/blocked stage chip визуально читается **до** прочтения cross-author блока.
+- Per-risk chip text имеет contrast ratio ≥ 4.5 (WCAG AA для 11px text) — проверяется через DevTools accessibility audit или Chrome DevTools MCP `lighthouse_audit`.
+- Cross-author блок визуально отделён от own stages (dashed border + tinted background).
+- Никакая своя строка/chip/иконка не теряет цвет/контраст из-за изменений.
+
+---
+
+### W6 · §7 — Subagent roadmap
+
+| Stage | Agent         | Model         | Scope                                                                                                    | Output                                                                                |
+| ----- | ------------- | ------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 0     | Orchestrator  | Sonnet (этот) | live state, plan                                                                                         | этот план + commit chain                                                              |
+| 1     | impl-leadform | Sonnet        | `lead-form.tsx` (remove import/state/5 JSX/simplify 5 merged) + delete `cross-author-hint.tsx` if unused | commit `feat(lead): remove CrossAuthorHint, always show foreign`                      |
+| 2     | impl-lock     | Sonnet        | `meta-row.tsx` (+ foreign prop) + 4 section files lock relocation                                        | commit `feat(lead): move 🔒 next to authorName in MetaRow`                            |
+| 3     | impl-seed     | Sonnet        | `seed-simple.ts` extend (Boris fill 5 secs + Galina + Victor + stage reassign)                           | commit `feat(seed): 3-contributor cross-author MVP seed`                              |
+| 4     | impl-sdlc-vis | Sonnet        | `sdlc-pipeline.tsx` (own at-risk visibility + dark-pill risk chips)                                      | commit `fix(lead): SdlcPipeline visual polish for own at-risk and risk-chip contrast` |
+| 5     | verify        | Sonnet (этот) | `pnpm typecheck && lint && test && db:wipe:manual-uat && db:seed:simple` + chrome smoke                  | final report                                                                          |
+
+Stage 1, 2, 3, 4 — 1 sequential по lead-form.tsx; 2, 3, 4 могут идти parallel (разные файлы).
+
+---
+
+### W6 · §8 — Token economy
+
+| Work          | Model         | Rationale                          |
+| ------------- | ------------- | ---------------------------------- |
+| impl agents   | Sonnet        | scoped writes ≤300 строк каждый    |
+| seed extend   | Sonnet        | требует понимания leads/stages map |
+| /codex:review | Codex GPT-5   | advisory pre-commit                |
+| Opus          | не используем | нет verified conflict              |
+
+Reserve ~10% контекста на UAT smoke iteration.
+
+---
+
+### W6 · §9 — Я делаю сам / От тебя
+
+```text
+─────────────────────────────────────
+✓ Я ДЕЛАЮ САМ
+─────────────────────────────────────
+  ├── impl W6.6.1 (lead-form simplify + delete CrossAuthorHint if unused)
+  ├── impl W6.6.2 (MetaRow foreign prop + 4 section files lock relocation)
+  ├── impl W6.6.3 (seed-simple.ts — 3 contributors × 5 sections)
+  ├── impl W6.6.4 (drop ?authorId= foreign-view path)
+  ├── impl W6.6.5 (SdlcPipeline visual polish — own at-risk + dark-pill risk chips)
+  ├── /codex:review на каждый коммит
+  ├── pnpm typecheck + lint + test
+  ├── pnpm db:wipe:manual-uat + pnpm db:seed:simple (если есть)
+  ├── chrome-devtools MCP visual smoke на /lead/report/<id>
+  ├── 5 atomic commits на fix/PRJ-2/shiny-eagle (или main)
+  └── push origin (если SSL пропустит)
+
+─────────────────────────────────────
+▲ ОТ ТЕБЯ
+─────────────────────────────────────
+  └── approve W6 через ExitPlanMode (текущий шаг)
+     остальное автономно
+```
+
+---
+
+### W6 · §10 — Open questions with defaults
+
+| #   | Question                                                                         | Default                                                                                                    | Когда эскалирую                                                       |
+| --- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Q1  | Stage assignment unique constraint: как раздать 3 авторов на PROD_CRM            | **разнести стадии**: Boris=Plan, Victor=Analysis, Galina=Design (Vasily оставляет Dev/Test/DevOps/Support) | если smoke покажет другие конфликты                                   |
+| Q2  | item-card.tsx footer: переписать на MetaRow или inline `{item.foreign && " 🔒"}` | **inline** в существующем footer — минимальный дифф                                                        | если user явно попросит унифицировать через MetaRow                   |
+| Q3  | `cross-author-hint.tsx` — удалять файл или оставлять пустым с type-export        | **удалить полностью** если grep не найдёт других импортов                                                  | если SectionContributor нужен SdlcPipeline'у — оставить как type-only |
+| Q4  | Перевести seed на `seed.ts` (полный) тоже?                                       | **нет** — только seed-simple.ts (фидбэк явно про minimal MVP)                                              | если user попросит распространить                                     |
+| Q5  | Aria-label для замка в MetaRow                                                   | `"Read-only — authored by another lead"`                                                                   | если a11y review предложит другую формулировку                        |
+| Q6  | Ветка для коммитов                                                               | **fix/PRJ-2/shiny-eagle** (продолжение)                                                                    | если user скажет «новую ветку»                                        |
+
+---
+
+### W6 · §11 — Verification
+
+```bash
+# 1. Static gates
+pnpm typecheck                            # 0 errors
+pnpm lint                                 # exit 0
+
+# 2. Unit / snapshot
+pnpm test                                 # 485+ web tests
+pnpm --filter @customreport/web test -- \
+  item-card meta-row \
+  risks-section decisions-section priorities-section \
+  lead-form lead-form-sync-bridge
+
+# 3. Regression e2e
+pnpm test:e2e --grep "cross-author|readonly|foreign"
+
+# 4. Seed regen + visual smoke
+pnpm db:wipe:manual-uat
+pnpm db:seed:simple   # или: pnpm prisma db seed (проверить package.json)
+
+# 5. Chrome DevTools MCP visual smoke
+#   а) /lead/report/<active>      → нет <CrossAuthorHint> в DOM (grep className)
+#   б) в каждой из 5 секций ≥3 foreign cards (Boris + Galina + Victor)
+#   в) каждая foreign card: 🔒 идёт ПОСЛЕ authorName в MetaRow (нет 🔒 на верхней строке рядом с productName)
+#   г) own cards: 🔒 НЕ показывается ни в MetaRow ни в top row
+#   д) DOM поиск "Also contributing" → 0 совпадений
+```
+
+**Acceptance gates.**
+
+- В DOM нет `<CrossAuthorHint>` (grep по class/data-attr) на всех 5 секциях.
+- В DOM нет кнопки «Show contributors ▼» / «Hide contributors ▲».
+- В MetaRow foreign-карточки рендерится `<span> 🔒</span>` ПОСЛЕ authorName.
+- В top row riskcard/prioritycard/decisioncard НЕТ 🔒 перед productName.
+- В каждой из 5 секций (CW/NW/Risks/Decisions/Priorities) в edit-view от Vasily — ≥3 foreign rows от 3 разных авторов (Boris/Galina/Victor).
+- `pnpm typecheck && pnpm lint && pnpm test` все exit 0.
+
+---
+
+### W6 · §12 — Iteration reserve / self-review
+
+- [x] TL;DR содержит Было/Проблема/Станет в ASCII + проза?
+- [x] Pipeline визуализирован? (§0 ASCII)
+- [x] Каждая workstream имеет file:line якоря? (§6 ✓)
+- [x] Subagent roadmap содержит model tier + scope? (§7 ✓)
+- [x] Token economy без Opus без verified conflict? (§8 ✓)
+- [x] Open questions имеют defaults? (Q1–Q6 ✓)
+- [x] Verification содержит конкретные команды + acceptance? (§11 ✓)
+- [x] Не пересекается с W1/W4/W5 принятым scope? (§5 ✓)
+- [x] Edge cases: unique stage constraint (Q1), item-card footer без MetaRow (Q2), удалить ли cross-author-hint.tsx (Q3) — все имеют defaults
+
+---
+
+### W6 · §13 — Commit plan
+
+```text
+[1] feat(lead): always show foreign items inline, remove CrossAuthorHint
+    ├── lead-form.tsx (drop import, state, 5 JSX, simplify 5 merged arrays)
+    ├── lead-form.tsx (drop allSectionContributors and 5 per-section contributors arrays)
+    └── cross-author-hint.tsx (DELETE if no other imports, else keep type-only)
+
+[2] feat(lead): move 🔒 next to authorName in MetaRow
+    ├── meta-row.tsx (+foreign prop)
+    ├── risks-section.tsx (drop top-row 🔒, pass foreign to MetaRow)
+    ├── decisions-section.tsx (same)
+    ├── priorities-section.tsx (same)
+    └── item-card.tsx (drop top-row 🔒, inline 🔒 after author in footer)
+
+[3] feat(seed): 3-contributor cross-author MVP seed
+    ├── seed-simple.ts (stage assignments: Boris=Plan, Victor=Analysis, Galina=Design)
+    ├── seed-simple.ts (Boris section 407 +decisions/priorities to fill all 5 sections)
+    ├── seed-simple.ts (Victor section 408 +items/risks/decisions/priorities on PROD_CRM)
+    └── seed-simple.ts (Galina section 409 +items/risks/decisions/priorities on PROD_CRM)
+
+[4] refactor(lead): drop ?authorId= foreign-view path
+    ├── lead-form.tsx (drop requestedAuthorIdNormalized, isOwnView, guard from 5 useMemo)
+    ├── app/(app)/lead/report/[reportId]/page.tsx (drop searchParams.authorId pass-through if any)
+    ├── sdlc-pipeline.tsx (drop drill-in link L289-296 to ?authorId=)
+    ├── apps/api/.../lead-form.service.ts + lead-form.prisma-repository.ts (drop authorId param on read if unused)
+    └── packages/shared/.../lead-form.ts contract (drop authorId from read input if present)
+
+[5] fix(lead): SdlcPipeline visual polish — own at-risk + dark-pill risk chips
+    ├── sdlc-pipeline.tsx (visual separation: dashed border-t-2 + tinted bg for cross-author zone)
+    ├── sdlc-pipeline.tsx (preserve full color saturation on own stage chips when crossAuthors present)
+    └── sdlc-pipeline.tsx (per-risk chip dark pill: bg-[#fee2e2] text-[#7f1d1d] / bg-[#fef3c7] text-[#78350f])
+```
+
+---
+
+## W8 — Priority rank visual collision cosmetic fix + redesign TODO ⭐ ACTIVE
+
+> Пост-W6 cosmetic fix. После merge own + foreign priorities в одной секции (W6.6.1) в листе появляются визуальные коллизии rank — у Vasily priority rank=1, у Boris priority rank=1 на том же продукте. Schema корректна (`@@unique([reportSectionId, rank])` — per-section), коллизии только визуальные. User locked: «сделать пока по-простому, да, а потом уже просто в туду добавить то, что я проговорил по поводу моей переделки».
+
+### W8 · §0 — TL;DR
+
+#### Было (после W6.6.x)
+
+```text
+▼ Priorities
+  ┌─ [1] [Marketing Portal] ──────────────┐
+  │  Vasily priority text…                 │
+  │  Vasily И · 🔒=no  [Plan]              │ ← own, gold-1
+  └────────────────────────────────────────┘
+  ┌─ [1] [Marketing Portal] ──────────────┐ ← collision: ещё один [1]
+  │  Boris priority text…                  │   на том же продукте,
+  │  Boris С. 🔒  [Plan]                   │   opacity 0.7, gold-1
+  └────────────────────────────────────────┘
+  ┌─ [2] [Mobile App] ────────────────────┐
+  │  Vasily another priority…              │
+  └────────────────────────────────────────┘
+  ┌─ [1] [CRM] ───────────────────────────┐ ← ещё одна [1] (Galina)
+  │  Galina priority text…                 │
+  └────────────────────────────────────────┘
+```
+
+**Прозой.** После всегда-merge в `priorities-section.tsx` rank badges от разных авторов выглядят как «несколько первых мест». User: «не понятно, кто реально первый» — это семантически верно (rank per section), но визуально вводит в заблуждение.
+
+#### Проблема
+
+```text
+P1 collision                  P2 deferred bigger redesign
+─────────────                  ───────────────────────────
+несколько [1]/[2]/[3]          User считает, что priority
+на одном экране ≡              должна быть атрибутом item
+«несколько первых»             (CW/NW) а не отдельной секцией.
+                               Но это полноценный refactor:
+                               schema + UI + slides + seed.
+```
+
+#### Станет (W8 target — only A+B cosmetic)
+
+```text
+▼ Priorities
+  ── Marketing Portal ──────────────────────  ← H3 product header (W8.B)
+  ┌─ [1] ─────────────────────────────────┐
+  │  Vasily priority text…                 │
+  │  Vasily И.  [Plan]                     │
+  └────────────────────────────────────────┘
+  ┌─ [🔒] ────────────────────────────────┐ ← W8.A: no rank badge for foreign
+  │  Boris priority text…                  │   replaced with lock-icon placeholder
+  │  Boris С. 🔒  [Plan]                   │   to preserve card geometry
+  └────────────────────────────────────────┘
+
+  ── Mobile App ───────────────────────────
+  ┌─ [2] ─────────────────────────────────┐
+  │  Vasily another priority…              │
+  └────────────────────────────────────────┘
+
+  ── CRM ──────────────────────────────────
+  ┌─ [🔒] ────────────────────────────────┐
+  │  Galina priority text…                 │
+  │  Galina М. 🔒  [Design]                │
+  └────────────────────────────────────────┘
+```
+
+**Прозой.** Foreign rows теряют numeric rank badge — вместо него ставим compact 🔒-placeholder того же размера, сохраняя сетку карточки. Cards группируются под H3-header по `productName`. Свои `[1]/[2]/[3]` остаются — теперь они однозначно отражают порядок Vasily внутри его секции. Замок в author-row остаётся (W6.6.2 не меняем).
+
+### W8 · §6 — Workstreams (file-level)
+
+#### W8.A · Drop rank badge for foreign rows
+
+**File:** `apps/web/src/components/lead/priorities-section.tsx`
+
+```text
+L208-216  rank circle:
+            entry.foreign === true → render compact 🔒 placeholder
+                                      (same 32×32 circle, neutral bg, no number)
+            entry.foreign !== true → existing RANK_TINT/RANK_TEXT
+L184      key: keep `${entry.rank}-${idx}` — id namespace уже разделён
+            (foreign rank originates from author's own section)
+```
+
+#### W8.B · Group by productName via H3 headers
+
+**File:** `apps/web/src/components/lead/priorities-section.tsx`
+
+```text
+L97       sorted (existing): kept as-is for stable order
++         useMemo groupedByProduct: Map<productName | "(no product)", PriorityEntry[]>
+L182-273  return map: вместо `sorted.map(...)`,
+            Array.from(groupedByProduct.entries()).map(([productName, group]) =>
+              <>
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)] mt-4">
+                  {productName ?? "Unassigned"}
+                </h3>
+                {group.map((entry, idx) => …existing card render…)}
+              </>
+            )
+```
+
+Order strategy: products sorted alphabetically by name; внутри — by rank ascending (foreign and own intermixed naturally — foreign ranks may equal own, что и было до W8).
+
+#### W8.C · TODO marker for deferred Priority→Item refactor
+
+**Locations:**
+
+```text
+apps/web/src/components/lead/priorities-section.tsx (file-top JSDoc, above L11)
+  // TODO(PRIORITY-REDESIGN-01): consider making priority an attribute of
+  //   CW/NW items (e.g. items[].priorityRank?: 1|2|3) and dropping the
+  //   separate Priorities section. This would eliminate cross-author rank
+  //   collisions, reduce 5→4 sections, and align with how user mentally
+  //   models priorities ("первое, что я делаю на этой неделе" === priority CW item).
+  //   Touches: schema (Prisma Priority model), 5 read paths (lead-form, head,
+  //   director, slides, exports), seed-simple.ts, ~12 tests.
+
+prisma/schema.prisma (above `model Priority`)
+  // TODO(PRIORITY-REDESIGN-01): see priorities-section.tsx for refactor sketch
+
+apps/web/src/components/slides/section-slide-utils.ts (where priorities[] is read)
+  // TODO(PRIORITY-REDESIGN-01)
+
+apps/web/src/components/slides/status-slide-deck.tsx (priority block render)
+  // TODO(PRIORITY-REDESIGN-01)
+
+apps/api/src/modules/report-sections/lead-form.service.ts (priorities mapper)
+  // TODO(PRIORITY-REDESIGN-01)
+```
+
+Verify discoverability:
+
+```bash
+pnpm run todo-metrix 2>/dev/null | grep PRIORITY-REDESIGN-01
+# Expected: ≥4 hits (file-top + schema + 2-3 read paths)
+```
+
+### W8 · §11 — Verification
+
+```bash
+pnpm typecheck && pnpm lint
+pnpm --filter @customreport/web test -- priorities-section
+
+# Manual: /lead/report/<id>
+#   ✓ Vasily ranks visible as [1]/[2]/[3]…
+#   ✓ Foreign rows show 🔒-placeholder вместо rank badge
+#   ✓ Cards grouped under product H3 headers
+#   ✓ 🔒 после authorName в MetaRow остаётся (W6.6.2)
+#   ✓ `pnpm run todo-metrix | grep PRIORITY-REDESIGN-01` ≥4 hits
+```
+
+### W8 · §13 — Commit plan
+
+```text
+[1] feat(lead): group priorities by product + drop rank badge for foreign rows
+    └── priorities-section.tsx (W8.A + W8.B)
+
+[2] docs(todo): add PRIORITY-REDESIGN-01 markers for future refactor
+    ├── priorities-section.tsx (file-top JSDoc)
+    ├── prisma/schema.prisma
+    ├── slides/section-slide-utils.ts
+    ├── slides/status-slide-deck.tsx
+    └── apps/api/.../lead-form.service.ts
+```
+
+---
+
+## W9 — Fullscreen-in-header + slide design pass ⭐ ACTIVE
+
+> Два связанных изменения по фидбэку 2026-05-20: (A) перенести `<SlideFullscreenButton/>` из slides-toolbar в место Toggle All на header lead-form, чтобы в `?mode=slides` слот не пустовал и был «как раз чётко»; (B) дизайн-пасс по слайдам — user отметил «слабая визуальная иерархия, пустоты/неровные ряды между колонками, цвет/контраст/типографика».
+
+### W9 · §0 — TL;DR
+
+#### Было
+
+```text
+/lead/report (edit mode header):
+  [Report period: ▼]    [Toggle All ▼] [Edit | Slides]
+                          ↑ visible
+                          when !isSlidesMode
+
+/lead/report?mode=slides:
+  [Report period: ▼]    (пусто)         [Edit | Slides]
+                          ↑ Toggle All
+                          скрыт, слот
+                          ничего не показывает
+
+(внизу, в slides toolbar:)
+  [ScopeToggle (only outside /lead/report)]  [⛶ Fullscreen]
+                                                ↑ currently здесь
+```
+
+#### Проблема (визуальные дефекты слайдов)
+
+```text
+D1 hierarchy           D2 alignment           D3 typography/contrast
+──────────────         ─────────────          ──────────────────────
+title/body/section-    Product columns не     body 13/15/16 hops;
+header — все смотрят   выровнены по строкам;  severity chips на
+почти одного веса;     CURRENT/NEXT/RISKS у   светлой подложке —
+glance scan тяжёл      разных продуктов не    contrast < AA;
+                       начинаются на одной    section-header в
+                       horizontal линии       lower-case = weak signal
+```
+
+#### Станет
+
+```text
+/lead/report (edit mode header):
+  [Period ▼]   [Toggle All ▼]            [Edit | Slides]
+
+/lead/report?mode=slides header:
+  [Period ▼]   [⛶ Fullscreen]            [Edit | Slides]
+                ↑ та же позиция,
+                одинаковые footprints
+
+(slides toolbar внизу — без Fullscreen, только ScopeToggle когда применимо)
+
+slide design pass:
+  ┌─ Marketing Portal ──────────┐  ┌─ Mobile App ────────────┐
+  │ NAME           28/600        │  │ NAME           28/600    │ ← title row
+  │ Plan→Dev→Test (stage chips)  │  │ Plan→Dev→Test            │ ← stage row
+  │ ▲▲▲ 2 blocked · 1 at-risk    │  │ ✓ on-track               │ ← KPI chip row
+  │ ────────────────────────     │  │ ────────────────────     │
+  │ CURRENT WEEK  11/700 UPPER   │  │ CURRENT WEEK             │ ← aligned row
+  │ • item 1  (13px)             │  │ • item 1                 │
+  │ • item 2                     │  │ — empty                  │
+  │ ────────────────────────     │  │ ────────────────────     │
+  │ NEXT WEEK                    │  │ NEXT WEEK                │ ← aligned row
+  │ …                            │  │ …                        │
+  │ ────────────────────────     │  │ ────────────────────     │
+  │ RISKS (dark-pill chips)      │  │ RISKS                    │ ← aligned row
+  │ ⛔ Blocked: API down         │  │ — none                   │
+  │ ⚠  At-risk: load test miss   │  │                          │
+  │ ────────────────────────     │  │ ────────────────────     │
+  │ PRIORITIES                   │  │ PRIORITIES               │
+  │ [1] item · [2] item          │  │ — none                   │
+  │ ────────────────────────     │  │ ────────────────────     │
+  │ DECISIONS                    │  │ DECISIONS                │
+  │ • decided X                  │  │ — none                   │
+  └──────────────────────────────┘  └──────────────────────────┘
+   ↑ grid-template-rows: named rows гарантируют выравнивание
+```
+
+#### Pipeline
+
+```text
+[scan slide DOM]──[design audit]──[W9.A header relocate]──[W9.B grid+typo]──[smoke]──[commit]
+                   ↑ chrome-devtools                       ↑ status-slide-deck.tsx
+                     screenshot                              + globals.css tokens
+```
+
+### W9 · §6.A — Fullscreen relocate
+
+**Files:**
+
+```text
+apps/web/src/components/slides/lead-slides-client.tsx
+  L150          deckRef remains (used by SlideFullscreenButton internally)
+  L255-268      toolbar prop: REMOVE <SlideFullscreenButton/>
+                keep LeadScopeToggle conditional (когда !inReportMode)
+  prop drill    expose deckRef upward OR keep button in this file but
+                portal/render into parent slot via context.
+                Decision: simpler — lift fullscreen into a небольшой
+                shared hook useSlideFullscreen() и mount кнопку
+                в lead-form.tsx header. Hook owns ref creation + state.
+
+apps/web/src/components/slides/slide-fullscreen-button.tsx
+  Component unchanged; accepts `targetRef` prop. Will be mounted from
+  lead-form.tsx (passing the same deck root ref that LeadSlidesClient uses).
+
+apps/web/src/components/lead/lead-form.tsx
+  L1387 area:
+    {!isSlidesMode ? (
+       <ToggleAllButton .../>
+    ) : (
+       <SlideFullscreenButton targetRef={…} />
+    )}
+  Ref source: lead-form renders LeadSlidesClient (либо siblings); add
+  a shared ref through new hook/context OR query DOM:
+    document.querySelector('[data-slide-deck-root]')
+  Default: новый `useRef<HTMLElement>(null)` в lead-form, передаётся в
+  LeadSlidesClient как prop (LeadSlidesClient applies ref to deck div),
+  и тот же ref передаётся в SlideFullscreenButton в header.
+```
+
+### W9 · §6.B — Slide design pass
+
+**File:** `apps/web/src/components/slides/status-slide-deck.tsx`
+
+```text
+1. Typography ramp (replace ad-hoc text-* with tokens):
+   product name H2     → text-[28px] font-semibold tracking-tight leading-[1.1]
+   stage chip row      → text-[12px] font-medium tracking-[0.02em]
+   KPI summary chip    → text-[11px] font-semibold uppercase tracking-[0.08em]
+   section header      → text-[11px] font-bold uppercase tracking-[0.08em]
+                          + accent color var(--color-starbucks-accent) для own,
+                            muted для empty состояния
+   body item           → text-[13px] leading-snug
+   empty state         → text-[12px] italic muted-foreground
+
+2. Grid alignment (named rows):
+   ProductSdlcGroups container:
+     display: grid
+     grid-template-columns: repeat(<N>, minmax(0, 1fr))
+     grid-template-rows:
+       [title] auto
+       [stages] auto
+       [kpi] auto
+       [current] minmax(72px, auto)
+       [next] minmax(72px, auto)
+       [risks] minmax(72px, auto)
+       [priorities] minmax(72px, auto)
+       [decisions] minmax(72px, auto)
+   Each product column places its sub-blocks in the matching named row →
+   CURRENT всех колонок начинается на одной y-координате.
+   Empty section renders `— none` placeholder того же row-height.
+
+3. Severity chip contrast (carry-over from W6.6.5 — extend to slides):
+   blocked  → bg-[#fee2e2] text-[#7f1d1d] (red-100 / red-900) — AA pass
+   at-risk  → bg-[#fef3c7] text-[#78350f] (amber-100 / amber-900) — AA pass
+   on-track → bg-[var(--color-success)] text-[var(--color-starbucks-accent)]
+
+4. Visual hierarchy:
+   product card outer:
+     borderTop: 4px solid <accent-by-overall-status>
+        blocked → red-500
+        at-risk → amber-500
+        ready   → starbucks accent (green)
+   что даёт быстрый glance: «у Marketing Portal красная полоса сверху».
+
+5. Whitespace + dividers:
+   between sections (CURRENT/NEXT/RISKS/PRIORITIES/DECISIONS): 1px var(--color-border)
+   between products: 24px column gap (responsive: 16px на <1280px)
+```
+
+**File:** `apps/web/src/app/globals.css`
+
+```css
+:root {
+  --slide-pad: 24px;
+  --slide-row-min: 72px;
+  --slide-title-size: 28px;
+  --slide-body-size: 13px;
+  --slide-section-header-size: 11px;
+}
+```
+
+### W9 · §10 — Open questions with defaults
+
+| #   | Question                                     | Default                                                                       |
+| --- | -------------------------------------------- | ----------------------------------------------------------------------------- |
+| Q1  | Ref-передача fullscreen                      | `useRef` в `lead-form.tsx` → prop to LeadSlidesClient + SlideFullscreenButton |
+| Q2  | Border-top accent on `overallStatus="ready"` | `var(--color-starbucks-accent)` 4px                                           |
+| Q3  | Empty section placeholder copy               | `— none` (italic muted, 12px)                                                 |
+| Q4  | KPI chip строка обязательна?                 | да, всегда — даже если нет blocked/at-risk: `✓ on-track`                      |
+
+### W9 · §11 — Verification
+
+```bash
+pnpm typecheck && pnpm lint
+pnpm --filter @customreport/web test -- status-slide-deck lead-slides-client lead-form
+
+# Manual (chrome-devtools MCP):
+# 1. /lead/report/<id>?mode=slides
+#    ✓ header: [Period] [⛶] [Edit|Slides]  (Toggle All hidden)
+#    ✓ slides toolbar: no fullscreen button
+#    ✓ keyboard `f` toggles fullscreen
+# 2. /lead/report/<id> (edit mode)
+#    ✓ header: [Period] [Toggle All] [Edit|Slides]
+# 3. Visual smoke:
+#    ✓ CURRENT/NEXT/RISKS у двух колонок на одной y-координате (getBoundingClientRect)
+#    ✓ Severity chip text-color contrast > 4.5:1 (Lighthouse)
+#    ✓ product card has border-top 4px accent
+```
+
+### W9 · §13 — Commit plan
+
+```text
+[1] refactor(slides): lift fullscreen button into lead-form header
+    ├── lead-slides-client.tsx (remove from toolbar, accept ref prop)
+    ├── lead-form.tsx (mount button in Toggle All slot when isSlidesMode)
+    └── slide-fullscreen-button.tsx (no change or minimal prop tweak)
+
+[2] feat(slides): grid-aligned product columns + typography ramp
+    ├── status-slide-deck.tsx (CSS Grid named rows, typography tokens)
+    ├── globals.css (slide-* tokens)
+    └── section-slide-utils.ts (empty-placeholder helper if needed)
+```
+
+---
+
+## W10 — SDLC cross-author stages: render real status color ⭐ ACTIVE
+
+> Feedback 2026-05-20 (image annotation на SdlcPipeline cross-author row): «Этапы, которые с SDLC, которые контрибутит другой человек, грубо говоря, они сейчас просто засерены, а может быть мы всё-таки будем их показывать, окрашивание реально». То есть: stage chips от Boris/Victor/Galina в блоке «Other contributors» рендерятся neutral grey (out-of-view статуса), а нужно показывать их **реальный** статус — on-track / at-risk / blocked — теми же цветами, что и собственные stage chips.
+
+### W10 · §0 — TL;DR
+
+#### Было
+
+```text
+┌── Marketing Portal (product card) ─────────────────────┐
+│ own stages: [● Plan blocked] [● Dev at-risk] [○ Test]  │ ← полноцветные
+│ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─    │
+│ Other contributors (W1 row):                           │
+│   ( O Planning ) → ( O Analysis ) → ( O Design )       │ ← all grey
+│      Борис С.       Виктор Л.         Галина М.        │   (status lost)
+└────────────────────────────────────────────────────────┘
+```
+
+**Прозой.** Backend `getCrossAuthors` уже отдаёт per-stage статус (W1 enrichment), но визуальный рендер в `sdlc-pipeline.tsx` стилизует cross-author chips как neutral (`opacity 0.5`, `bg-muted`), игнорируя status. Пользователь хочет: чужие stage chips окрашиваются по статусу так же, как свои, чтобы glance-pattern «red bar поперёк продукта» работал кроссавторно.
+
+#### Проблема
+
+```text
+P1 status invisible        P2 false read «всё ок»        P3 inconsistent with risks
+───────────────────        ──────────────────────        ─────────────────────────
+Boris's blocked stage      Vasily смотрит на свой        cross-author RISKS уже
+выглядит так же как        Marketing Portal: own         показываются полноцветно
+on-track — серый pill      Plan blocked (красный),       (W6.6.5 dark-pill chips),
+                           Boris Planning тоже           но сами stages — grey.
+                           blocked, но в UI грей →       Asymmetric → confusing.
+                           пользователь думает «у
+                           Boris всё нормально».
+```
+
+#### Станет
+
+```text
+┌── Marketing Portal (after W10) ────────────────────────┐
+│ own:    [● Plan blocked] [● Dev at-risk] [○ Test]      │
+│ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─    │
+│ Other contributors:                                     │
+│   [● Plan blocked]🔒 → [⚠ Analysis at-risk]🔒 → [○ Design ready]🔒 │
+│     Борис С.            Виктор Л.                Галина М.         │
+└────────────────────────────────────────────────────────┘
+                                                ↑ полноцветные status chips,
+                                                  с inline lock-icon (🔒)
+                                                  чтобы visual ≠ confusable
+                                                  с own ownership
+```
+
+**Прозой.** Cross-author stage chips теряют грей-overlay, рендерятся теми же `STATUS_TINT`/`STATUS_TEXT` токенами, что и own stages. Чтобы не путать ownership, добавляем маленький 🔒 (12px) **в углу** chip-а или после stage name — visual marker «не моё, но я вижу настоящий статус». Это согласовано с W6.6.2 lock-pattern (🔒 после authorName).
+
+#### Pipeline
+
+```text
+[read getCrossAuthors shape]──[verify status in payload]──[impl chip color]──[add lock corner]──[smoke]──[commit]
+                                ↑ W1 уже расширил                ↑ sdlc-pipeline.tsx
+                                  shape, но проверить              cross-author block
+                                  что status передаётся
+```
+
+### W10 · §6 — Workstreams (file-level)
+
+#### W10.A · Verify backend shape
+
+**File:** `apps/api/src/modules/report-sections/lead-form.prisma-repository.ts:444-531`
+
+```text
+Confirm `getCrossAuthors` payload includes per-stage status:
+  CrossAuthorEntry {
+    authorId, authorName,
+    stages: [{ stageName, status: "on-track"|"at-risk"|"blocked"|"" }]
+  }
+W1 уже расширил shape под risks per-chip; нужно убедиться что stages
+также имеют `status`, а не только `stageName`. Если нет — добавить
+в include + return shape.
+```
+
+#### W10.B · Render cross-author chips with real status
+
+**File:** `apps/web/src/components/lead/sdlc-pipeline.tsx`
+
+```text
+Locate the cross-author block (W6.6.5 region — currently uses
+border-t-2 dashed + tinted bg для визуального отделения).
+
+Inside each contributor row, where stage chips render:
+  before:
+    <span className="bg-muted text-muted-foreground opacity-50">
+      ○ {stage.stageName}
+    </span>
+
+  after:
+    const STATUS_TINT = { /* shared with own chips */ }
+    const STATUS_TEXT = { /* shared */ }
+    <span
+      className="…pill base classes…"
+      style={{ background: STATUS_TINT[stage.status], color: STATUS_TEXT[stage.status] }}
+    >
+      <StatusIcon status={stage.status} />  ← ● ⚠ ○ etc.
+      {stage.stageName}
+      <Lock className="ml-1 inline h-2.5 w-2.5 opacity-60" aria-hidden="true" />
+    </span>
+
+Extract STATUS_TINT/STATUS_TEXT into module-scope const (or shared file
+если уже есть own-stage equivalent) и переиспользовать.
+```
+
+#### W10.C · Disambiguate ownership
+
+Lock-icon inside chip (12px, position end of label, opacity 0.6). Aria-label на chip: `${stage.stageName} — ${stage.status} — locked, authored by ${authorName}`.
+
+Tooltip on hover: `Authored by ${authorName} — read-only`.
+
+### W10 · §10 — Open questions with defaults
+
+| #   | Question                             | Default                                               |
+| --- | ------------------------------------ | ----------------------------------------------------- |
+| Q1  | Lock-icon position в chip            | inline в конце label, 12px, opacity 0.6               |
+| Q2  | Visual diff от own chips — нужен ли? | да: lock-icon достаточно; не уменьшать saturation     |
+| Q3  | `status === ""` (no data)            | render как `○` outline + neutral border, без fill     |
+| Q4  | Migration with W9.B grid pass        | независимы: W10 — внутри sdlc-pipeline, W9.B — slides |
+
+### W10 · §11 — Verification
+
+```bash
+pnpm typecheck && pnpm lint
+pnpm --filter @customreport/web test -- sdlc-pipeline
+
+# Manual:
+# /lead/report/<id>
+# ✓ Marketing Portal cross-author row:
+#     [● Plan blocked]🔒 → [⚠ Analysis at-risk]🔒 → [○ Design ready]🔒
+# ✓ Lock-icon visible на каждом cross-author chip
+# ✓ Hover показывает «Authored by <name>»
+# ✓ Tab/keyboard focus: aria-label включает author + status
+# ✓ Contrast: at-risk/blocked AA pass (Lighthouse audit)
+```
+
+### W10 · §13 — Commit plan
+
+```text
+[1] feat(lead): render cross-author SDLC stage chips with real status color
+    ├── sdlc-pipeline.tsx (cross-author block: drop grey, apply STATUS_TINT/TEXT)
+    └── sdlc-pipeline.tsx (inline lock-icon at chip end, aria-label, tooltip)
+
+[2] (conditional) feat(api): include stage.status in getCrossAuthors payload
+    └── only if W10.A reveals missing field
+        ├── lead-form.prisma-repository.ts
+        └── lead-form.service.ts
+```
+
+---
+
+## W11 — Slide header button style + Priorities double-lock cleanup ⭐ ACTIVE
+
+> Постфидбэк UAT 2026-05-20 на `?mode=slides`. Два косметических, но bite-sized дефекта: (A) `<SlideFullscreenButton>` после W9.A висит в header lead-form рядом с Toggle All, но стиль рассинхронизирован — другая высота, другие классы, другая семантика hover-цвета. User указал на Toggle All как референс: «вот тут хороший дизайн … сделай стиль аналогичный». (B) В Priorities после W6.6.2 (🔒 после authorName в MetaRow) + W8.A (foreign rank placeholder с literal 🔒 внутри) получается **два замка на одной строке** — один в rank-плейсхолдере слева, второй после имени автора в MetaRow внизу. User: «два замка получается, может просто какой-то, просто, не знаю, без символов, просто кругляшок».
+
+---
+
+### W11 · §0 — TL;DR
+
+#### Было
+
+```text
+header lead-form (?mode=slides):
+  [Period ▼]  [Toggle All ▼ ──pill, h≈36, btn-press, hover bg]   [⛶ Fullscreen ── pill, h≈32, no btn-press, hover text-color]   [Edit | Slides]
+                ↑ референс                                          ↑ рассинхрон: ниже, легче, hover меняет цвет текста
+                                                                       вместо hover bg
+
+Priorities (W6.6.2 + W8.A):
+  ┌─ [🔒] ─────────────────────────────┐   ← W8.A: foreign rank placeholder
+  │   ↑ literal lock-emoji в 32×32      │
+  │      muted-circle (left)            │
+  │  Boris priority text…               │
+  │  Boris С. 🔒  [Plan]                │   ← W6.6.2: lock после authorName
+  └─────────────────────────────────────┘   = два замка на одну строку
+```
+
+#### Проблема
+
+```text
+P1 fullscreen button style drift     P2 priorities double-lock
+─────────────────────────────        ──────────────────────────────
+- h≈32 vs Toggle All h≈36           - W8.A ставил 🔒 как «no-rank»
+- text-xs vs text-sm                  маркер до того, как W6.6.2
+- no btn-press (no active anim)       перевесил замок к authorName
+- no min-h touch-target               - после W6.6.2 второй 🔒
+- hover меняет text color,            избыточен, путает читателя
+  Toggle All меняет bg                — «что-то заблокировано
+- font без --font-sans family         дважды?»
+```
+
+#### Станет
+
+```text
+header lead-form (?mode=slides):
+  [Period ▼]   [⛶ Fullscreen ──pill, h≥var(--touch-target-min), btn-press,    [Edit | Slides]
+                font-sans, hover bg-[var(--color-surface-hover)]]
+                ↑ одинаковая геометрия и hover-семантика с Toggle All
+
+Priorities:
+  ┌─ ( · ) ────────────────────────────┐   ← W8.A: empty muted-circle
+  │     ↑ 32×32 muted bg, no glyph,    │     (no glyph), aria-label сохранён
+  │        aria-label="Foreign         │
+  │        priority — authored by      │
+  │        another lead"               │
+  │  Boris priority text…              │
+  │  Boris С. 🔒  [Plan]               │   ← единственный 🔒 в строке
+  └────────────────────────────────────┘
+```
+
+---
+
+### W11 · §6 — Workstreams (file-level)
+
+#### W11.A · Restyle SlideFullscreenButton to mirror Toggle All
+
+**File:** `apps/web/src/components/slides/slide-fullscreen-button.tsx:49`
+
+Reference: Toggle All chip в `apps/web/src/components/lead/lead-form.tsx:1397-1405`.
+
+```text
+Current (slide-fullscreen-button.tsx:49):
+  inline-flex items-center gap-1 rounded-[var(--radius-pill)]
+  border border-[rgba(0,0,0,0.2)] px-3 py-1.5 text-xs font-semibold
+  text-[var(--color-muted-foreground)]
+  transition-colors hover:text-[var(--color-foreground)]
+
+Target (mirror Toggle All):
+  btn-press inline-flex items-center gap-1
+  min-h-[var(--touch-target-min)]
+  rounded-[var(--radius-pill)]
+  border border-[rgba(0,0,0,0.2)] bg-transparent
+  px-4 py-1.5 text-sm font-semibold
+  font-[family-name:var(--font-sans)]
+  text-[var(--color-foreground)]
+  transition-colors hover:bg-[var(--color-surface-hover)]
+```
+
+Changes (6 deltas):
+
+1. - `btn-press` (active-state press animation token)
+2. - `min-h-[var(--touch-target-min)]` (a11y touch target)
+3. - `bg-transparent` (явный фон вместо implicit)
+4. - `font-[family-name:var(--font-sans)]` (унификация шрифта)
+5. `px-3` → `px-4` ; `text-xs` → `text-sm` (геометрия Toggle All)
+6. `text-muted-foreground` → `text-foreground` ; `hover:text-…` → `hover:bg-[var(--color-surface-hover)]` (hover-семантика Toggle All — меняем bg, не color)
+
+Icon size остаётся `h-3.5 w-3.5`; label «Fullscreen / Exit fullscreen» без изменений.
+
+#### W11.B · Drop literal 🔒 from W8.A foreign rank placeholder
+
+**File:** `apps/web/src/components/lead/priorities-section.tsx:245-251`
+
+```diff
+- {entry.foreign ? (
+-   <span
+-     className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)] text-sm text-[var(--color-muted-foreground)]"
+-     aria-label="Foreign priority — authored by another lead"
+-   >
+-     🔒
+-   </span>
+- ) : (
++ {entry.foreign ? (
++   <span
++     className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)]"
++     aria-label="Foreign priority — authored by another lead"
++   />
++ ) : (
+```
+
+Изменения:
+
+- Drop literal `🔒` content (was line 250).
+- Drop `text-sm text-[var(--color-muted-foreground)]` (нечего раскрашивать без glyph).
+- Convert to self-closing `<span ... />`.
+- Keep 32×32 muted-circle (gridding/выравнивание не плывёт).
+- Keep `aria-label` — screen-reader-у нужен явный маркер «foreign».
+
+---
+
+### W11 · §10 — Open questions with defaults
+
+| #   | Question                                            | Default                                         |
+| --- | --------------------------------------------------- | ----------------------------------------------- |
+| Q1  | Заменить empty-circle на dot (·) или оставить пусто | **пусто** — visual «вес» без noise              |
+| Q2  | Удалить muted-circle полностью                      | **нет** — нужен для grid stability (32×32 slot) |
+
+---
+
+### W11 · §11 — Verification
+
+```bash
+pnpm typecheck && pnpm lint
+pnpm --filter @customreport/web test -- slide-fullscreen-button priorities-section
+
+# Manual smoke:
+# 1. /lead/report/<id>?mode=slides → header кнопка ⛶ имеет ту же высоту, что Toggle All в edit-mode
+# 2. hover на ⛶ → меняется bg, не text-color
+# 3. /lead/report/<id> → в Priorities у foreign row слева пустой muted-кружок,
+#    справа в MetaRow — единственный 🔒 после authorName
+# 4. screen-reader (VoiceOver) → "Foreign priority — authored by another lead" озвучивается
+```
+
+---
+
+### W11 · §13 — Commit plan
+
+```text
+[1] fix(slides): restyle SlideFullscreenButton to match Toggle All
+    └── slide-fullscreen-button.tsx (6 className deltas)
+
+[2] fix(lead): drop redundant 🔒 from foreign priority rank placeholder
+    └── priorities-section.tsx (empty muted-circle, aria-label preserved)
+```
+
+---
+
+## W13 — Slide overflow fix + fullscreen exit visibility ⭐ ACTIVE
+
+> Post-W12 visual UAT (2026-05-20, chrome-devtools MCP, viewport 1728×871).
+> Два дефекта на `?mode=slides`:
+> (D1) После Full Replace на `LeadUnifiedSlide` секция **Decisions** не помещается
+> на слайде — `.slide-frame` имеет `aspect-ratio: 16/10 + overflow: hidden`,
+> и контент молча обрезается. User: «Почему десижнсы не поместились на слайде?»
+> (D2) Кнопка ⛶ Fullscreen после W9.A смонтирована в **header** lead-form (вне
+> `deckRef`). При `requestFullscreen()` на `deckRef.current` оверлей
+> показывает ТОЛЬКО subtree deckRef → header пропадает из видимой зоны →
+> кнопка Exit fullscreen невидима. User: «Как мне из слайда, режим
+> фуллскрин, выйти из слайда?» (приходится жать Esc, но это не очевидно).
+
+---
+
+### W13 · §0 — TL;DR
+
+#### Было (после W12, текущий main)
+
+```text
+?mode=slides @ 1728×871 (normal):
+
+  header lead-form: [Period ▼]  [⛶ Fullscreen]   [Edit | Slides]
+                                  ↑ единственная кнопка
+                                    (mounted in header, outside deckRef)
+
+  ┌── .slide-frame (16:10, overflow:hidden) ───────────────────┐
+  │ CURRENT WEEK                                                │
+  │  • item A   [Marketing · Plan]                              │
+  │  • item B   [Mobile · Dev]                                  │
+  │  — empty for: CRM                                           │
+  │ NEXT WEEK                                                   │
+  │  • item C   …                                               │
+  │ RISKS & BLOCKERS                                            │
+  │  ⛔ blocker  …                                              │
+  │ PRIORITIES                                                  │
+  │  [1] item   …                                               │
+  │ DECISIONS                                                   │ ← header виден
+  │  • decided  …                                               │ ← первая строка
+  └─────────────────────────────────────────────────────────────┘
+  ╳ DECISIONS второй item   ← обрезано: за пределами .slide-frame, overflow:hidden
+  ╳ + ещё items                  ничего не подсвечивает что обрезано
+
+?mode=slides → ⛶ click → fullscreen overlay:
+
+  ┌──── overlay (subtree of deckRef ONLY) ─────────────────────┐
+  │ ReportSlides content                                        │
+  │  (CURRENT/NEXT/RISKS/PRIORITIES/DECISIONS …)                │
+  │                                                             │
+  │  (НЕТ кнопки ⛶ Exit — она физически в header lead-form,   │
+  │   header не входит в deckRef subtree → невидим в overlay)   │
+  └─────────────────────────────────────────────────────────────┘
+  exit only via keyboard Esc — user doesn't know
+```
+
+#### Проблема
+
+```text
+D1 silent content clipping            D2 exit button DOM-scope mismatch
+─────────────────────────             ──────────────────────────────────
+LeadUnifiedSlide.SectionBlock         deckRef.current = только <ReportSlides>
+рендерит ВСЕ items секции             wrapper (lead-slides-client.tsx:250)
+без cap. `.slide-frame` имеет         SlideFullscreenButton mounted в
+fixed 16:10 + overflow:hidden →       header lead-form (sibling, не child)
+если сумма строк превышает            requestFullscreen(deckRef) показывает
+height — последние секции просто      ТОЛЬКО subtree deckRef → header
+обрезаются без визуального            пропадает → exit-кнопка невидима
+сигнала пользователю                  → user не знает как выйти из
+                                       fullscreen (Esc не подсказан)
+
+W9.A inviolable: «fullscreen          W9.A intent: button next to Toggle All
+button in lead-form header»           location — нельзя просто унести
+                                       единственную кнопку внутрь deckRef
+```
+
+#### Станет (W13 target)
+
+```text
+?mode=slides normal:
+
+  header: [Period ▼]  [⛶ Fullscreen]   [Edit | Slides]   ← без изменений (W9.A)
+
+  ┌── .slide-frame ────────────────────────────────────────────┐
+  │ CURRENT WEEK                                                │
+  │  • item A   • item B   • item C   • item D                  │
+  │  +2 more in: Marketing, Mobile        ← per-section cap=4   │
+  │ NEXT WEEK …                            with overflow band   │
+  │ RISKS & BLOCKERS …                                          │
+  │ PRIORITIES …                                                │
+  │ DECISIONS                                                   │
+  │  • decided A   • decided B   • decided C   • decided D      │
+  │  +1 more                                                    │ ← виден band
+  └─────────────────────────────────────────────────────────────┘
+
+?mode=slides → ⛶ click → fullscreen overlay:
+
+  ┌──── overlay ──────────────────────────────── [⛶ Exit] ─────┐
+  │                                                ↑ floating  │
+  │ ReportSlides content                            top-right  │
+  │                                                 visible    │
+  │  CURRENT / NEXT / RISKS / PRIORITIES / DECISIONS           │
+  │                                                             │
+  └─────────────────────────────────────────────────────────────┘
+  ↑ второй экземпляр SlideFullscreenButton с variant="floating"
+    mounted ВНУТРИ deckRef div, виден только когда isFullscreen===true
+```
+
+#### Pipeline
+
+```text
+[W13.A cap items per section]──[W13.B variant prop + floating mount]──[smoke]──[2 commits]
+   ↑ lead-unified-slide.tsx       ↑ slide-fullscreen-button.tsx +
+     items.slice(0,4) + band         lead-slides-client.tsx +mount
+```
+
+---
+
+### W13 · §6 — Workstreams (file-level)
+
+#### W13.A · Cap items per section + overflow band
+
+**File:** `apps/web/src/components/slides/lead-unified-slide.tsx:54-88`
+
+Текущий `SectionBlock` рендерит `items.map(...)` без cap. Меняем на:
+
+```tsx
+const MAX_ITEMS_PER_SECTION = 4;
+const shown = items.slice(0, MAX_ITEMS_PER_SECTION);
+const overflowCount = items.length - shown.length;
+// …
+<ul className="mt-2 space-y-1.5">
+  {shown.map((row, idx) => ( /* existing row render */ ))}
+</ul>
+{overflowCount > 0 ? (
+  <p className="mt-1 text-[12px] italic text-[var(--color-muted-foreground)]">
+    +{overflowCount} more
+  </p>
+) : null}
+{emptyForBand(emptyNames)}
+```
+
+Cap = **4** (Q1 default ниже): typical 5-секционный слайд @ 16:10 на 1728×871
+поместит 4 items × 5 секций + headers без переполнения. «+N more» сохраняет
+информированность пользователя что контент обрезан (в отличие от silent
+`overflow:hidden`).
+
+#### W13.B · Floating fullscreen-exit button inside deckRef
+
+**File 1:** `apps/web/src/components/slides/slide-fullscreen-button.tsx`
+
+Добавить optional `variant` prop:
+
+```tsx
+type SlideFullscreenButtonProps = {
+  readonly targetRef: React.RefObject<HTMLElement | null>;
+  readonly variant?: "default" | "floating";
+};
+```
+
+Логика рендера по variant:
+
+- `variant === "default"` (existing W9.A path): рендер как сейчас — кнопка
+  всегда видна (normal или fullscreen), live в header lead-form.
+- `variant === "floating"`: рендер ТОЛЬКО когда `isFullscreen === true`,
+  c позиционированием `fixed top-4 right-4 z-50` + slight bg для AA-контраста
+  поверх любого слайда:
+
+```tsx
+if (variant === "floating" && !isFullscreen) return null;
+
+const positionClass =
+  variant === "floating"
+    ? "fixed top-4 right-4 z-50 bg-[var(--color-card)] shadow-lg"
+    : "";
+
+return (
+  <button
+    type="button"
+    onClick={toggle}
+    aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+    className={`btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] ${positionClass}`}
+  >
+    {/* existing icon+label */}
+  </button>
+);
+```
+
+**File 2:** `apps/web/src/components/slides/lead-slides-client.tsx:249-285`
+
+Внутри `<div ref={deckRef}>` (L250) смонтировать ВТОРОЙ экземпляр кнопки c
+`variant="floating"`:
+
+```tsx
+return (
+  <div ref={deckRef}>
+    <SlideFullscreenButton targetRef={deckRef} variant="floating" />
+    <ReportSlides … />
+  </div>
+);
+```
+
+Header-кнопка (L280, `{!inReportMode && <SlideFullscreenButton targetRef={deckRef} />}`)
+**остаётся как есть** — это W9.A инвариант. Floating-вариант скрыт по
+`isFullscreen === false`, поэтому в normal режиме видна одна кнопка (в header),
+в fullscreen — одна кнопка (плавающая в top-right overlay).
+
+---
+
+### W13 · §10 — Open questions with defaults
+
+| #   | Question                                     | Default                                                                    |
+| --- | -------------------------------------------- | -------------------------------------------------------------------------- |
+| Q1  | Cap items per section                        | **4** (помещается @ 1728×871 16:10)                                        |
+| Q2  | Floating exit-button position                | **fixed top-4 right-4 z-50**                                               |
+| Q3  | Floating button visible in normal mode тоже? | **нет** — только при `isFullscreen===true`; header-кнопка покрывает normal |
+| Q4  | Показывать «+1 more» когда items.length===5? | **да** — единый pattern, без edge-case                                     |
+| Q5  | Уменьшить cap до 3 для compact density mode  | **нет в этой итерации** — сначала smoke с cap=4                            |
+
+---
+
+### W13 · §11 — Verification
+
+```bash
+pnpm typecheck && pnpm lint
+pnpm --filter @customreport/web test -- lead-unified-slide slide-fullscreen-button
+
+# Manual smoke (chrome-devtools MCP):
+# 1. /lead/report/<id>?mode=slides @ 1728×871
+#    ✓ DECISIONS секция полностью видна
+#    ✓ если items > 4 — видна строка «+N more» italic muted
+# 2. Click ⛶ в header → fullscreen overlay
+#    ✓ в top-right overlay видна floating-кнопка ⛶ Exit fullscreen
+#    ✓ click on it → выход из fullscreen
+#    ✓ после выхода floating-кнопка исчезает, header-кнопка снова актуальна
+# 3. Keyboard `f`/`F` toggles — без регрессии (existing W9.A behavior)
+# 4. Esc exit → floating-кнопка исчезает синхронно с fullscreenchange event
+```
+
+---
+
+### W13 · §13 — Commit plan
+
+```text
+[1] fix(slides): cap items per section + overflow band to prevent silent clipping
+    └── lead-unified-slide.tsx (MAX_ITEMS_PER_SECTION=4, slice+«+N more» band)
+
+[2] fix(slides): floating fullscreen-exit button visible in fullscreen overlay
+    ├── slide-fullscreen-button.tsx (+variant?: "default"|"floating"
+    │                                 floating renders only when isFullscreen===true
+    │                                 positioned fixed top-4 right-4 z-50)
+    └── lead-slides-client.tsx (mount second instance with variant="floating"
+                                 inside <div ref={deckRef}>; header button untouched)
+```
+
+---
+
+## W12 — Slide unified by-section layout (Full Replace) ⭐ ACTIVE
+
+> UAT 2026-05-20T09:36 на `?mode=slides`, viewport 1728×871, 4 продукта в одной странице. Три связанные жалобы: (F1) «Не все помещается» — body items в карточке продукта 201 наезжают на нижний край (y:880, h:90px); (F2 + F3) row drift — в product 211 секция Risks на y:804, в product 201 та же Risks на y:780 (Δ24px). Несмотря на W9.B comment «all products use identical min-h rows so bands align horizontally», по факту лента сдвигается, потому что `gridTemplateRows` сидит на per-product grid, а не cross-product. Четвёртая жалоба (F4) — крупный пивот UX: «может подумать, все просто сделать, все как бы объединить для слайда … если 4 продукта, ну пусть эти 4 продукта будут просто не делать, например, пустоту типа NextFocus, но NextFocus, да, то есть как-то это сгруппировать … но при этом обозначались продукты, по которым возникает эта проблема, дальняя проблема, этап sdlc».
+>
+> **LOCKED decision (user 2026-05-20):** Full Replace — только «By section». Per-product columns удаляются целиком; единственный layout — unified, где первичная ось `CURRENT/NEXT/RISKS/PRIORITIES/DECISIONS`, а product становится chip-атрибутом на item-row. Это автоматически решает (F2/F3) row drift (рядов больше нет — секции вертикально стэкаются) и (F1) overflow (единый column wide enough для 13px body), а также (F4) — пустые продукты схлопываются в «— empty for: …» строку.
+
+---
+
+### W12 · §0 — TL;DR
+
+#### Было (W9.B target intent vs реальность)
+
+```text
+status-slide-deck.tsx:254-377  (по факту):
+
+  ┌─ outer grid (productGridClass) ── columns only ───────────────┐
+  │ <div className="grid gap-6 grid-cols-2">                       │
+  │                                                                 │
+  │   ┌── <section product 201> ──┐    ┌── <section product 211> ──┐ │
+  │   │ header (own height)       │    │ header (own height)       │ │
+  │   │ ────── inner grid ──────  │    │ ────── inner grid ──────  │ │
+  │   │ [current] minmax(min,a)   │    │ [current] minmax(min,a)   │ │
+  │   │ [next]    minmax(min,a)   │    │ [next]    minmax(min,a)   │ │
+  │   │ [risks]   minmax(min,a)   │ ←  │ [risks]   minmax(min,a)   │ │ ← rows
+  │   │ [priorit] minmax(min,a)   │   /│ [priorit] minmax(min,a)   │ │   независимы:
+  │   │ [decis]   minmax(min,a)   │  / │ [decis]   minmax(min,a)   │ │   y(risks)
+  │   └───────────────────────────┘ /  └───────────────────────────┘ │   201≠211
+  │                                /                                   │
+  │                          24px Δ на Risks (UAT y:780 vs y:804)      │
+  └────────────────────────────────────────────────────────────────────┘
+```
+
+Comment L322-325 утверждает «all products use identical min-h rows so bands align horizontally across columns at every breakpoint». Это **ложь**: `gridTemplateRows` сидит на **внутреннем per-product** grid (L326), а не на внешнем cross-product (L254/L264). Каждая колонка растёт независимо.
+
+#### Проблема
+
+```text
+P1 row alignment defect         P2 content overflow             P3 layout cardinality
+─────────────────────────        ──────────────────────          ──────────────────────
+- named grid-rows на             - body items 13px без          - per-product columns
+  per-product grid, не на          line-clamp                     не масштабируются
+  cross-product → каждая         - текущий --slide-row-min       - 4 продукта = 4 узких
+  колонка растёт независимо        достаточен для 1-2 items,     колонки; 6+ продуктов
+- Δ24px на Risks в UAT             но переполняется на 4-5       — overflow / pagination
+- comment лжёт, что rows           item rows                     - user: «может всё
+  одинаковые                                                       объединить»
+```
+
+#### Станет (Full Replace target)
+
+```text
+═══════════════════════════════════════════════════════════════════
+Single unified slide — section primary axis, product as chip
+═══════════════════════════════════════════════════════════════════
+
+header: [Period ▼]  [Toggle All / ⛶]                  [Edit | Slides]
+        ↑ NO layout toggle — by-section is the only mode
+
+┌─ CURRENT WEEK ────────────────────────────────────────────────┐
+│ • item text                          [Marketing Portal · Plan] │
+│ • item text                          [Mobile App · Dev]        │
+│ • item text                          [Marketing Portal · Test] │
+│ — empty for: CRM, Reports                                      │
+├─ NEXT WEEK ───────────────────────────────────────────────────┤
+│ • item text                          [Marketing Portal · Plan] │
+│ — empty for: Mobile App, CRM, Reports                          │
+├─ RISKS & BLOCKERS ────────────────────────────────────────────┤
+│ ⛔ blocked: «API down»               [Marketing Portal · Dev]  │
+│ ⚠ at-risk: «load test miss»          [Mobile App · Test]       │
+├─ PRIORITIES ──────────────────────────────────────────────────┤
+│ [1] item                             [Marketing Portal]        │
+│ [🔒] item                            [Mobile App · Boris S.]   │
+├─ DECISIONS ───────────────────────────────────────────────────┤
+│ • decided: rollback v2               [CRM]                     │
+└────────────────────────────────────────────────────────────────┘
+  ↑ ось = section. Product = chip-атрибут справа на каждой строке.
+  ↑ Пустые продукты не получают отдельной карточки — попадают в
+    «— empty for: …» строку под секцией (truncate до 3 + «+N more»).
+  ↑ Решает F1 (overflow → широкая колонка вертикального стэка),
+    F2/F3 (row drift → секции — отдельные блоки, не grid-row),
+    F4 (4 продукта в 4 узких колонках → единый поток).
+```
+
+#### Pipeline
+
+```text
+[buildUnifiedSlideModel]──[<LeadUnifiedSlide>]──[mount swap in lead-slides-client]──[delete ProductSdlcGroups path]──[line-clamp body items]──[smoke]──[2 commits]
+   ↑ section-slide-utils.ts    ↑ NEW component       ↑ замена в одном        ↑ status-slide-deck.tsx       ↑ globals.css
+     helper: own + foreign       читает model,         месте — без            ProductSdlcGroups (L254-377)    --slide-line-clamp
+     по 5 секциям, чипы          рендерит секции +     toggle, без            становится мертвым кодом,       token
+     product/stage, empty list   product chips +       state, без URL         удаляется в том же коммите
+                                 empty bands           param
+```
+
+---
+
+### W12 · §6 — Workstreams (file-level)
+
+#### W12.A · Build unified slide model + render component
+
+**New files:**
+
+- `apps/web/src/components/slides/section-slide-utils.ts` — добавить `buildUnifiedSlideModel(sections: SectionSlideModel[]): UnifiedSlideModel` helper.
+- `apps/web/src/components/slides/lead-unified-slide.tsx` — новый компонент. Единственный layout для `<LeadSlideArticle>`.
+
+**UnifiedSlideModel shape:**
+
+```ts
+type UnifiedSlideModel = {
+  current: Array<{ text: string; productName: string; stageName?: string }>;
+  next: Array<{ text: string; productName: string; stageName?: string }>;
+  risks: Array<{
+    severity: "blocked" | "at-risk";
+    text: string;
+    productName: string;
+    stageName?: string;
+  }>;
+  priorities: Array<{
+    rank: number | null;
+    foreign: boolean;
+    text: string;
+    productName: string;
+  }>;
+  decisions: Array<{ text: string; productName: string }>;
+  emptyProducts: {
+    current: string[];
+    next: string[];
+    risks: string[];
+    priorities: string[];
+    decisions: string[];
+  };
+};
+```
+
+**`<LeadUnifiedSlide>` render contract:**
+
+- 5 section headers stacked vertically: `CURRENT WEEK / NEXT WEEK / RISKS & BLOCKERS / PRIORITIES / DECISIONS`.
+- Each row = item text (line-clamped, см. W12.B) + right-aligned product chip.
+- Product-attribution chip markup:
+
+  ```tsx
+  <span className="ml-2 inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-muted-foreground)]">
+    {productName}
+    {stageName && (
+      <>
+        <span aria-hidden="true">·</span>
+        <span>{stageName}</span>
+      </>
+    )}
+  </span>
+  ```
+
+- Empty-products band под секцией: «— empty for: A, B, C» (truncate до 3 имён + `+N more`). Если ВСЕ продукты пустые — секция целиком схлопывается в `— none`.
+- Sort order: items внутри секции — alpha по `productName`, затем по SDLC stage order.
+
+#### W12.B · Replace per-product layout in mount point + delete dead code
+
+**File:** `apps/web/src/components/slides/lead-slides-client.tsx`
+
+```text
+- import { ProductSdlcGroups } from "./status-slide-deck" (или путь до component)
++ import { LeadUnifiedSlide } from "./lead-unified-slide"
+
+  В месте рендера слайда:
+- <ProductSdlcGroups products={...} ... />
++ <LeadUnifiedSlide model={buildUnifiedSlideModel(sections)} />
+```
+
+**File:** `apps/web/src/components/slides/status-slide-deck.tsx`
+
+Полностью удалить `ProductSdlcGroups` (текущие L254-377): per-product columns больше не рендерятся. Helpers, использовавшиеся ТОЛЬКО внутри `ProductSdlcGroups` (`productGridClass`, per-product `productStoryList` калеры, density-grid math) — удаляются вместе. Helpers, переиспользуемые в head/director surfaces (если есть) — оставить, не трогать.
+
+После удаления `pnpm typecheck` должен сразу подсветить любые забытые callers — это и есть страховка от перехода (нет dual-path drift'а).
+
+#### W12.C · Body content fit (line-clamp)
+
+**Files:**
+
+- `apps/web/src/components/slides/lead-unified-slide.tsx` — item-row span (W12.A)
+- `apps/web/src/app/globals.css` — добавить `--slide-line-clamp: 3` token (compact: 2)
+
+```text
+body item span:
+  className="line-clamp-3 text-[13px] leading-snug"
+  (densityMode === "compact" → "line-clamp-2 text-[12px]")
+```
+
+Empty state остаётся «— none» italic muted 12px.
+
+---
+
+### W12 · §10 — Open questions with defaults
+
+| #   | Question                                                                        | Default                                                                         |
+| --- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Q1  | line-clamp при densityMode === "compact"                                        | **clamp-2** (одна-две строки на item; всё что не помещается → tooltip on hover) |
+| Q2  | empty-products row показывать всегда или скрывать когда `length===productCount` | **скрывать когда ВСЕ продукты пустые** (секция тогда просто «— none»)           |
+| Q3  | Сортировка items внутри секции                                                  | **по продукту → по stage** (alpha by productName, then SDLC stage order)        |
+
+---
+
+### W12 · §11 — Verification
+
+```bash
+pnpm typecheck && pnpm lint
+pnpm --filter @customreport/web test -- section-slide-utils lead-unified-slide lead-slides-client status-slide-deck
+
+# Visual smoke via chrome-devtools MCP:
+# 1. /lead/report/<id>?mode=slides → DOM содержит ОДИН <LeadUnifiedSlide>;
+#    нет per-product колонок, нет [data-band="risks"]-ов параллельных;
+#    нет элемента ProductSdlcGroups в дереве.
+#
+# 2. На слайде с 4 продуктами видны 5 секций (CURRENT/NEXT/RISKS/PRIORITIES/
+#    DECISIONS) вертикально стэком; каждая item-строка имеет product-chip
+#    справа с productName + опционально stageName.
+#
+# 3. Пустые продукты для конкретной секции рендерятся как
+#    «— empty for: A, B, C» (truncate до 3 + «+N more»). Если ВСЕ продукты
+#    пустые — секция схлопывается в «— none».
+#
+# 4. body item text > 3 строк → line-clamp обрезает с ellipsis (не overflow
+#    карточки слайда).
+#
+# 5. URL без `?layout=...` параметров — других режимов рендера слайда нет.
+```
+
+---
+
+### W12 · §13 — Commit plan
+
+```text
+[1] feat(slides): replace per-product layout with unified by-section view
+    ├── section-slide-utils.ts (buildUnifiedSlideModel helper + UnifiedSlideModel type)
+    ├── lead-unified-slide.tsx (new component — 5 stacked sections + product chips
+    │                            + empty-products band + alpha/SDLC sort)
+    ├── lead-slides-client.tsx (mount swap: <ProductSdlcGroups> → <LeadUnifiedSlide>)
+    └── status-slide-deck.tsx (DELETE ProductSdlcGroups + private helpers
+                                productGridClass / per-product story list /
+                                density-grid math)
+
+[2] feat(slides): line-clamp body items in unified view
+    ├── lead-unified-slide.tsx (item span: line-clamp-3 text-[13px] leading-snug;
+    │                            compact mode → line-clamp-2 text-[12px])
+    └── globals.css (--slide-line-clamp: 3 token; compact override: 2)
+```
+
+---
+
+## W5 — Interleaved foreign items (post-W2 pivot) ⭐ SHIPPED
 
 > Эта секция — самостоятельный rich-mode Demo-plan для pivot’а после отказа от W2. Использует 13 подсекций по канону, включая визуальный TL;DR (Было/Проблема/Станет в схемах **и** прозой), Mermaid pipeline, subagent roadmap, token economy, self-review.
 

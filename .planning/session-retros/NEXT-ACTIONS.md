@@ -1,15 +1,16 @@
 # NEXT ACTIONS
 
-updated: 2026-05-20T20:32:00Z source: Demo-retro shiny-eagle W14
+updated: 2026-05-20T21:40:00Z source: Demo-retro shiny-eagle W15
 
 ## RUN FIRST
 
 1. [x] `pnpm db:wipe:manual-uat` <!-- done: 2026-05-19 — Week 21 активен -->
+2. [ ] `git push origin fix/PRJ-2/shiny-eagle` — W15 не запушен
 
 ## AGENT
 
 1. [x] Smoke W13 via chrome-devtools MCP: `/lead/report/<id>?mode=slides` → DECISIONS секция видна полностью + ⛶ click → floating Exit-кнопка в top-right оверлея <!-- done: 969d29f — W14 DOM-verified via chrome-devtools MCP -->
-2. [x] `git push origin fix/PRJ-2/shiny-eagle` после smoke green <!-- done: 969d29f -->
+2. [x] `git push origin fix/PRJ-2/shiny-eagle` после W14 smoke green <!-- done: 203bc67 — W14 pushed -->
 
 ## HUMAN
 
@@ -94,6 +95,12 @@ updated: 2026-05-20T20:32:00Z source: Demo-retro shiny-eagle W14
 - [x] shiny-eagle W14.A: inline product marker (dot + first word) left of item text <!-- done: 7678cf0 -->
 - [x] shiny-eagle W14.B: drop emptyForBand + "— none" stub, hide empty section body <!-- done: 7678cf0 -->
 - [x] shiny-eagle W14.C: distribute unified slide sections in fullscreen via min-h-[60dvh] <!-- done: 969d29f -->
+- [x] shiny-eagle W15.A: remove Other contributors panel, move to StageChip tooltip (crossAuthorInfo), Lock icon on locked chips <!-- done: 38fa2e7 -->
+- [x] shiny-eagle W15.B: equal-width product chips (grid), fixed marker column w-[110px], undefined toolbar in inReportMode, click-to-exit fullscreen <!-- done: 9d8fe4c -->
+- [x] shiny-eagle W15 fix1: disabled → aria-disabled so hover/focus events fire on locked chips <!-- done: a02c169 -->
+- [x] shiny-eagle W15 fix2: test selectors updated .disabled → aria-disabled (2 files) <!-- done: 7c4a338 -->
+- [x] shiny-eagle W15 fix3: Dev↔Development alias in crossAuthorForStage lookup <!-- done: ee34b33 -->
+- [x] shiny-eagle W15 fix4: tabIndex=0 for locked chips (keyboard-reachable tooltip) <!-- done: f05499e -->
 
 ## BLOCKED
 
