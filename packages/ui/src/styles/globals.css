@@ -112,6 +112,7 @@
   --slide-row-min: 80px;
   --slide-title-size: 28px;
   --slide-body-size: 13px;
+  --slide-line-clamp: 3;
 }
 
 /* ---- Skeleton animation (shimmer) ---- */
