@@ -218,11 +218,20 @@ export function SdlcPipeline({
           {/* Stages row */}
           <div className="flex flex-wrap justify-center items-center gap-2 pb-1">
             {product.stages.map((stage, idx) => {
-              const crossAuthorForStage = crossAuthors.find(
-                (ca) =>
-                  ca.projectId === product.id &&
-                  ca.stageNames.includes(stage.stageName),
-              );
+              const crossAuthorForStage = crossAuthors.find((ca) => {
+                if (ca.projectId !== product.id) return false;
+                const lower = stage.stageName.toLowerCase();
+                // Mirror the "Dev" ↔ "Development" alias from lead-form.ts:
+                // DB stage name is "Development"; chip label is "Dev".
+                return ca.stageNames.some((n) => {
+                  const nl = n.toLowerCase();
+                  return (
+                    nl === lower ||
+                    (lower === "dev" && nl === "development") ||
+                    (lower === "development" && nl === "dev")
+                  );
+                });
+              });
               return (
                 <div key={stage.stageName} className="flex items-center gap-2">
                   {idx > 0 && (
