@@ -151,7 +151,14 @@ function LeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
     }));
 
   return (
-    <article className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+    <article
+      className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+      onClick={() => {
+        if (typeof document !== "undefined" && document.fullscreenElement) {
+          void document.exitFullscreen();
+        }
+      }}
+    >
       <div
         key={String(slide.pageIndex ?? 0)}
         className="animate-fade-in space-y-5"

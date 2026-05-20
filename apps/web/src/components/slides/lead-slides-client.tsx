@@ -248,7 +248,6 @@ export function LeadSlidesClient({
 
   return (
     <div ref={deckRef}>
-      <SlideFullscreenButton targetRef={deckRef} variant="floating" />
       <ReportSlides
         slides={slides}
         selectedIndex={selectedIndex}
@@ -267,8 +266,8 @@ export function LeadSlidesClient({
         sourceLabel="Open source section"
         hideSourceLink={inReportMode}
         toolbar={
-          <div className="flex flex-wrap items-center gap-2">
-            {!inReportMode ? (
+          !inReportMode ? (
+            <div className="flex flex-wrap items-center gap-2">
               <LeadScopeToggle
                 scope={scope}
                 onChange={(s) => {
@@ -276,10 +275,10 @@ export function LeadSlidesClient({
                   setSelectedIndex(0);
                 }}
               />
-            ) : null}
-            {/* W9.A: fullscreen button moves to lead-form header when inReportMode */}
-            {!inReportMode && <SlideFullscreenButton targetRef={deckRef} />}
-          </div>
+              {/* W9.A: fullscreen button in standalone slides mode */}
+              <SlideFullscreenButton targetRef={deckRef} />
+            </div>
+          ) : undefined
         }
       />
     </div>
