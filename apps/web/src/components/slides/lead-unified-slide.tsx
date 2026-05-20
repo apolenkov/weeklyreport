@@ -36,6 +36,8 @@ function emptyForBand(names: readonly string[]): ReactNode {
   );
 }
 
+const MAX_ITEMS_PER_SECTION = 4;
+
 function SectionBlock({
   icon,
   label,
@@ -66,7 +68,7 @@ function SectionBlock({
       ) : (
         <>
           <ul className="mt-2 space-y-1.5">
-            {items.map((row, idx) => (
+            {items.slice(0, MAX_ITEMS_PER_SECTION).map((row, idx) => (
               <li
                 key={row.text + "-" + String(idx)}
                 className="flex min-w-0 items-baseline justify-between gap-2"
@@ -80,6 +82,11 @@ function SectionBlock({
               </li>
             ))}
           </ul>
+          {items.length > MAX_ITEMS_PER_SECTION ? (
+            <p className="mt-1 text-[12px] italic text-[var(--color-muted-foreground)]">
+              +{items.length - MAX_ITEMS_PER_SECTION} more
+            </p>
+          ) : null}
           {emptyForBand(emptyNames)}
         </>
       )}
