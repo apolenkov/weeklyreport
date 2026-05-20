@@ -15,14 +15,14 @@ import {
   Target,
 } from "lucide-react";
 
-import type {
-  SectionSlideModel,
-  SlideTone,
-} from "./section-slide-utils";
+import type { SectionSlideModel, SlideTone } from "./section-slide-utils";
 import { buildUnifiedSlideModel } from "./section-slide-utils";
 import { LeadUnifiedSlide } from "./lead-unified-slide";
 import { LeadSlideHero } from "./lead-slide-hero";
-import { type ProductChipEntry, SlideProductChips } from "./slide-product-chips";
+import {
+  type ProductChipEntry,
+  SlideProductChips,
+} from "./slide-product-chips";
 
 type StatusSlideDeckProps = {
   readonly slides: readonly SectionSlideModel[];

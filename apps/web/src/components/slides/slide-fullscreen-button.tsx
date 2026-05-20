@@ -7,7 +7,9 @@ type SlideFullscreenButtonProps = {
   readonly targetRef: React.RefObject<HTMLElement | null>;
 };
 
-export function SlideFullscreenButton({ targetRef }: SlideFullscreenButtonProps) {
+export function SlideFullscreenButton({
+  targetRef,
+}: SlideFullscreenButtonProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggle = useCallback(() => {
