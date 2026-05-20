@@ -1,6 +1,6 @@
 # NEXT ACTIONS
 
-updated: 2026-05-19T21:20:00Z source: peo-retro shiny-eagle W5 session
+updated: 2026-05-20T20:32:00Z source: peo-retro shiny-eagle W14
 
 ## RUN FIRST
 
@@ -8,7 +8,8 @@ updated: 2026-05-19T21:20:00Z source: peo-retro shiny-eagle W5 session
 
 ## AGENT
 
-(пусто — F1-F16 + WS-A/B/C/D закоммичены и запушены на origin/main)
+1. [x] Smoke W13 via chrome-devtools MCP: `/lead/report/<id>?mode=slides` → DECISIONS секция видна полностью + ⛶ click → floating Exit-кнопка в top-right оверлея <!-- done: 969d29f — W14 DOM-verified via chrome-devtools MCP -->
+2. [x] `git push origin fix/PRJ-2/shiny-eagle` после smoke green <!-- done: 969d29f -->
 
 ## HUMAN
 
@@ -19,8 +20,8 @@ updated: 2026-05-19T21:20:00Z source: peo-retro shiny-eagle W5 session
 5. [ ] Ручной UAT — Д: hero band (имя + KPI tiles), chip carousel, 16:10 frame
 6. [ ] Ручной UAT — Е: автор с 5+ продуктами → пагинация (1/2, стрелки)
 7. [x] Ручной UAT — Ж (shiny-eagle): `/lead/report/<id>` → в SdlcPipeline "Other contributors" видны ⛔/⚠ чипы <!-- done: 7adfbb2 — W1 shipped -->
-8. [ ] Ручной UAT — З (shiny-eagle W5): CW/NW/Risks/Dec/Prio → кнопка "Show contributors ▼" (default hidden); по клику foreign items появляются inline с 🔒 без кнопок edit/delete
-9. [ ] Ручной UAT — И (shiny-eagle): `?mode=slides` → выравнивание CURRENT/NEXT/RISKS по строкам, body 13px, кнопка ⛶
+8. [x] Ручной UAT — З (shiny-eagle W6): CW/NW/Risks/Dec/Prio → foreign items always inline с 🔒 после authorName, без toggle <!-- done: d501f44 W6.6.1 + bf9e119 W6.6.2 -->
+9. [x] Ручной UAT — И (shiny-eagle): `?mode=slides` → выравнивание CURRENT/NEXT/RISKS по строкам, body 13px, кнопка ⛶ <!-- done: 80076a2 W9.A + 331252a W9.B -->
 10. [ ] Решение: закрывать milestone v8.3 или добавлять scope
 
 ## STILL-PENDING (восстановлено forensic-сканом сессий 2026-05-12..2026-05-19)
@@ -71,7 +72,28 @@ updated: 2026-05-19T21:20:00Z source: peo-retro shiny-eagle W5 session
 - [x] shiny-eagle W5 commit 1: foreign+authorId fields on 4 row types <!-- done: c059621 -->
 - [x] shiny-eagle W5 commit 2: per-item lock (item-card, risks/decisions/priorities-section) <!-- done: 64a70d7 -->
 - [x] shiny-eagle W5 commit 3: toggleable inline foreign items, delete 5 wrapper blocks, bridge displayRisks <!-- done: f63aeb2 -->
+- [x] shiny-eagle W6.6.1: remove CrossAuthorHint + showForeignItems, always-merge 5 arrays <!-- done: d501f44 -->
+- [x] shiny-eagle W6.6.2: MetaRow foreign prop, 🔒 after authorName in 4 section files + item-card <!-- done: bf9e119 -->
+- [x] shiny-eagle W6.6.3: 3-contributor seed (Boris rank fix) — Boris=Planning, Victor=Analysis, Galina=Design on PROD_CRM <!-- done: 464aa9c + b39d810 -->
+- [x] shiny-eagle W6.6.4: drop ?authorId= foreign-view path, isOwnView, requestedAuthorId\* <!-- done: 8440f28 -->
+- [x] shiny-eagle W6.6.5: SdlcPipeline visual polish — dashed separator, dark-pill risk chips <!-- done: 8440f28 -->
 - [x] Night-marathon D-2..D-36 frame <!-- done: archived in retro memo 3a17656 -->
+- [x] shiny-eagle post-W6 fix: Priority rank collision in seed (Boris/Victor/Galina rank→4) <!-- done: b39d810 -->
+- [x] shiny-eagle post-W6 fix: foreign rows leaking into draft mutation handlers (4 places, lead-form.tsx + bridge) <!-- done: adbfa82 -->
+- [x] shiny-eagle post-W6 fix: emit() renumbering foreign priorities corrupting own ranks <!-- done: 89ecfd5 -->
+- [x] shiny-eagle W8: group priorities by product + 🔒 placeholder for foreign rank badges <!-- done: c7b98e4 -->
+- [x] shiny-eagle W9.A: lift SlideFullscreenButton into lead-form header (Toggle All slot) <!-- done: 80076a2 -->
+- [x] shiny-eagle W9.B: slide visual polish — border-t accent, AA contrast chips, named grid rows <!-- done: 331252a -->
+- [x] shiny-eagle W10: cross-author SDLC stage chips with real status colors + 🔒 icon <!-- done: 5edcea4 -->
+- [x] shiny-eagle W11.A: restyle SlideFullscreenButton to match Toggle All geometry/hover <!-- done: 8f89682 -->
+- [x] shiny-eagle W11.B: drop redundant 🔒 glyph from foreign priority rank placeholder <!-- done: 12563fa -->
+- [x] shiny-eagle W12: Full Replace per-product layout with unified by-section view <!-- done: 37f6b37 -->
+- [x] shiny-eagle W12: Prettier formatting on W11/W12 changed files <!-- done: efcb127 -->
+- [x] shiny-eagle W13.A: cap items per section at 4 + «+N more» overflow band in lead-unified-slide <!-- done: 47119b8 -->
+- [x] shiny-eagle W13.B: floating fullscreen-exit button inside deckRef (variant="floating") <!-- done: 7e150e7 -->
+- [x] shiny-eagle W14.A: inline product marker (dot + first word) left of item text <!-- done: 7678cf0 -->
+- [x] shiny-eagle W14.B: drop emptyForBand + "— none" stub, hide empty section body <!-- done: 7678cf0 -->
+- [x] shiny-eagle W14.C: distribute unified slide sections in fullscreen via min-h-[60dvh] <!-- done: 969d29f -->
 
 ## BLOCKED
 
