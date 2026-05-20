@@ -21,14 +21,14 @@ function inlineProductMarker(productName: string): ReactNode {
   return (
     <span
       aria-label={`Product: ${productName}`}
-      className="mr-1 inline-flex shrink-0 items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]"
+      className="inline-flex w-[110px] shrink-0 items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]"
       title={productName}
     >
       <span
         aria-hidden="true"
-        className="h-1.5 w-1.5 rounded-full bg-[var(--color-muted-foreground)]"
+        className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-muted-foreground)]"
       />
-      {short}
+      <span className="truncate">{short}</span>
     </span>
   );
 }

@@ -42,7 +42,7 @@ export function SlideProductChips({
     <div
       role="tablist"
       aria-label="Products"
-      className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1"
+      className="grid grid-flow-col auto-cols-fr gap-2"
     >
       {products.map((product) => {
         const isActive = product.productId === activeProductId;
@@ -53,16 +53,17 @@ export function SlideProductChips({
             type="button"
             aria-selected={isActive}
             aria-controls={"product-card-" + product.productId}
+            title={product.productName}
             onClick={() => onSelect?.(product.productId)}
             className={[
-              "inline-flex shrink-0 snap-start items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm transition-colors",
+              "inline-flex min-w-0 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm transition-colors",
               isActive
                 ? "border-[var(--color-primary)] bg-white font-semibold text-[var(--color-primary)] underline underline-offset-2 decoration-[var(--color-primary)]"
                 : "border-[rgba(0,0,0,0.10)] bg-white/70 font-normal text-[var(--color-foreground)] hover:border-[var(--color-border)] hover:bg-white",
             ].join(" ")}
           >
             {statusDot(product.worstStatus)}
-            {product.productName}
+            <span className="truncate">{product.productName}</span>
           </button>
         );
       })}
