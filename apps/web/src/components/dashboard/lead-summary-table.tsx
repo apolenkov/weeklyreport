@@ -1,4 +1,22 @@
 import type { LeadInfo } from "../../lib/mappers/dashboard";
+import { RemindLeadButton } from "./remind-lead-button";
+
+const MS_24H = 24 * 60 * 60 * 1000;
+
+/**
+ * Returns true when `lastActivity` is an ISO-date string whose parsed time is
+ * more than 24 hours ago, or when it is a non-date sentinel ("Not started" /
+ * "In progress") meaning no timestamped activity exists at all.
+ */
+function isInactive24h(lastActivity: string): boolean {
+  // Sentinel strings: no activity ever recorded.
+  if (lastActivity === "Not started" || lastActivity === "In progress") {
+    return true;
+  }
+  const parsed = Date.parse(lastActivity);
+  if (Number.isNaN(parsed)) return false;
+  return Date.now() - parsed > MS_24H;
+}
 
 const STATUS_LABELS: Record<LeadInfo["status"], string> = {
   submitted: "Submitted",
@@ -16,9 +34,10 @@ const STATUS_CLASSES: Record<LeadInfo["status"], string> = {
 
 type LeadSummaryTableProps = {
   readonly leads: readonly LeadInfo[];
+  readonly reportId?: string;
 };
 
-export function LeadSummaryTable({ leads }: LeadSummaryTableProps) {
+export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
   if (leads.length === 0) {
     return (
       <section
@@ -88,13 +107,22 @@ export function LeadSummaryTable({ leads }: LeadSummaryTableProps) {
               <th scope="col" className="px-5 py-3">
                 Submitted
               </th>
+              <th scope="col" className="px-5 py-3 text-right">
+                Action
+              </th>
             </tr>
           </thead>
           <tbody>
-            {leads.map((lead) => (
+            {leads.map((lead) => {
+              const inactive = isInactive24h(lead.lastActivity);
+              return (
               <tr
                 key={lead.id}
-                className="border-b border-[var(--color-border)] last:border-0"
+                className={
+                  "border-b border-[var(--color-border)] last:border-0" +
+                  (inactive ? " bg-muted/30 opacity-60" : "")
+                }
+                data-testid={inactive ? "lead-row-inactive-24h" : undefined}
               >
                 <th scope="row" className="px-5 py-3 text-left">
                   <div className="flex items-center gap-3">
@@ -142,8 +170,25 @@ export function LeadSummaryTable({ leads }: LeadSummaryTableProps) {
                 <td className="px-5 py-3 text-[var(--color-muted-foreground)]">
                   {lead.submittedAtLabel ?? "-"}
                 </td>
+                <td className="px-5 py-3 text-right">
+                  {reportId && lead.status !== "submitted" ? (
+                    <RemindLeadButton
+                      reportId={reportId}
+                      leadId={lead.id}
+                      leadName={lead.name}
+                    />
+                  ) : (
+                    <span
+                      className="text-xs text-[var(--color-muted-foreground)]"
+                      aria-hidden="true"
+                    >
+                      —
+                    </span>
+                  )}
+                </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
