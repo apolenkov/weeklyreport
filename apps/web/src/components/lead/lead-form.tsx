@@ -43,6 +43,7 @@ import { LeadSlidesClient } from "../slides/lead-slides-client";
 import { SlideFullscreenButton } from "../slides/slide-fullscreen-button";
 import { AccordionSection } from "../report-shell/accordion-section";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
+import { ReportToolbar } from "../report-shell/report-toolbar";
 
 import type {
   Product,
@@ -1508,37 +1509,42 @@ export function LeadForm({
         </header>
 
         {/* Context shell: period, archive, fill-from, and edit-version controls. */}
-        <div className="flex flex-nowrap items-center justify-between gap-2 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
-          <PeriodNavigator periods={visiblePeriods} />
-
-          <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
-            <Separator
-              orientation="vertical"
-              className="h-5 bg-[var(--color-border)]"
-            />
-            <ArchiveToggle
-              checked={showArchivePeriods}
-              onChange={setShowArchivePeriods}
-            />
-            <FillFromButton
-              periods={periods}
-              disabled={isReadOnly || fillFromMut.isPending}
-              onFillFrom={handleFillFrom}
-            />
-            <Separator
-              orientation="vertical"
-              className="h-5 bg-[var(--color-border)]"
-            />
-            <VersionHistoryNav
-              versions={versions}
-              onRestore={isReadOnly ? undefined : handleRestoreVersion}
-              onSaveVersion={isViewingSnapshot ? undefined : (isReadOnly ? undefined : handleSaveVersion)}
-              canSaveVersion={!createSnapshotMut.isPending}
-              onViewVersion={setViewedSnapshotVersion}
-              viewedVersion={viewedSnapshotVersion}
-            />
-          </div>
-        </div>
+        <ReportToolbar
+          periodNavigator={<PeriodNavigator periods={visiblePeriods} />}
+          archiveToggle={
+            <>
+              <Separator
+                orientation="vertical"
+                className="h-5 bg-[var(--color-border)]"
+              />
+              <ArchiveToggle
+                checked={showArchivePeriods}
+                onChange={setShowArchivePeriods}
+              />
+            </>
+          }
+          trailingExtras={
+            <>
+              <FillFromButton
+                periods={periods}
+                disabled={isReadOnly || fillFromMut.isPending}
+                onFillFrom={handleFillFrom}
+              />
+              <Separator
+                orientation="vertical"
+                className="h-5 bg-[var(--color-border)]"
+              />
+              <VersionHistoryNav
+                versions={versions}
+                onRestore={isReadOnly ? undefined : handleRestoreVersion}
+                onSaveVersion={isViewingSnapshot ? undefined : (isReadOnly ? undefined : handleSaveVersion)}
+                canSaveVersion={!createSnapshotMut.isPending}
+                onViewVersion={setViewedSnapshotVersion}
+                viewedVersion={viewedSnapshotVersion}
+              />
+            </>
+          }
+        />
 
         {/* Read-only banner for past periods. Triggered by either the
             legacy `?period=` query (back-compat) or — 35-07 — when the
