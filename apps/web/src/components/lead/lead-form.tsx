@@ -1561,6 +1561,7 @@ export function LeadForm({
               onSaveVersion={isViewingSnapshot ? undefined : (isReadOnly ? undefined : handleSaveVersion)}
               canSaveVersion={!createSnapshotMut.isPending}
               onViewVersion={setViewedSnapshotVersion}
+              viewedVersion={viewedSnapshotVersion}
             />
           </div>
         </div>
@@ -1588,7 +1589,9 @@ export function LeadForm({
         {isViewingSnapshot && (
           <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)]/40 bg-[var(--color-success)] p-3">
             <span className="text-sm font-medium text-[var(--color-starbucks-accent)]">
-              Viewing snapshot v{viewedSnapshotVersion} — read-only. Stage statuses reflect this version.
+              {getVersionQ.isLoading
+                ? `Loading snapshot v${viewedSnapshotVersion}…`
+                : `Viewing snapshot v${viewedSnapshotVersion} — read-only. Stage statuses reflect this version.`}
             </span>
             <button
               type="button"
@@ -1600,7 +1603,11 @@ export function LeadForm({
           </div>
         )}
 
-        {isSlidesMode ? (
+        {/* F3.4: while snapshot data is in flight, show skeleton to prevent
+            the current draft content from flashing under the snapshot banner. */}
+        {isViewingSnapshot && getVersionQ.isLoading ? (
+          <LeadFormSkeleton />
+        ) : isSlidesMode ? (
           <LeadSlidesClient
             initialReportId={targetReportId || pinnedReportId || null}
             chrome="content"

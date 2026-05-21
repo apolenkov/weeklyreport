@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import type { VersionSnapshot } from "./mock-data";
 import { PERIOD_NAV_ARROW_BUTTON_CLASS } from "./period-navigator";
@@ -23,6 +23,12 @@ type VersionHistoryNavProps = {
    * into snapshot read-only view mode.
    */
   readonly onViewVersion?: (version: number | null) => void;
+  /**
+   * F3.4: When the parent resets the snapshot view (e.g. "Back to current"
+   * button), pass null here so the nav pill syncs back to the latest version.
+   * Pass the current version number to keep the nav in sync after a restore.
+   */
+  readonly viewedVersion?: number | null;
 };
 
 // Chevron icons — same family used by PeriodNavigator. The two control
@@ -123,8 +129,17 @@ export function VersionHistoryNav({
   onSaveVersion,
   canSaveVersion = true,
   onViewVersion,
+  viewedVersion,
 }: VersionHistoryNavProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // F3.4: when the parent resets viewedVersion to null (e.g. "Back to current"
+  // button), sync the nav pill back to the latest version (index 0).
+  useEffect(() => {
+    if (viewedVersion == null && currentIndex !== 0) {
+      setCurrentIndex(0);
+    }
+  }, [viewedVersion, currentIndex]);
   const [showModal, setShowModal] = useState(false);
   const [showAllVersions, setShowAllVersions] = useState(false);
 
