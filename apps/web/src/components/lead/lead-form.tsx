@@ -508,11 +508,6 @@ export function LeadForm({
   // ---- Local UI + draft state ----
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [submitFieldError, setSubmitFieldError] = useState<{
-    field: "priorities";
-    message: string;
-  } | null>(null);
-  const prioritiesRef = useRef<HTMLDivElement>(null);
 
   // Draft mirror of the raw API section. Saving + submitting use this; child
   // edits merge field-level changes back by id while preserving every required
@@ -549,45 +544,12 @@ export function LeadForm({
         toast.success("Report submitted");
       },
       onError: (err: unknown) => {
-        // Intercept Zod validation errors from the server and surface
-        // human-readable messages instead of raw JSON.
+        // Surface server-side errors as a toast; submitSectionSchema no
+        // longer enforces a per-field "needs at least one priority" rule,
+        // so we drop the field-targeted scroll/inline-error path that used
+        // to handle priorities.too_small. Generic message covers the rest.
         if (err instanceof Error) {
-          const raw = err.message;
-          // Server may return serialized Zod issues as a JSON array string.
-          // Detect priorities.too_small specifically and guide the user.
-          try {
-            const parsed: unknown = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              const hasPrioritiesMin = parsed.some(
-                (issue) =>
-                  typeof issue === "object" &&
-                  issue !== null &&
-                  "path" in issue &&
-                  Array.isArray((issue as { path: unknown[] }).path) &&
-                  (issue as { path: unknown[] }).path.includes("priorities") &&
-                  "code" in issue &&
-                  (issue as { code: string }).code === "too_small",
-              );
-              if (hasPrioritiesMin) {
-                toast.error(
-                  "Please add at least one priority before submitting.",
-                );
-                setShowSubmitConfirm(false);
-                setSubmitFieldError({
-                  field: "priorities",
-                  message: "Add at least one priority before submitting.",
-                });
-                prioritiesRef.current?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "center",
-                });
-                return;
-              }
-            }
-          } catch {
-            // Not JSON — fall through to the generic message.
-          }
-          toast.error(raw);
+          toast.error(err.message);
         } else {
           toast.error("Submit failed");
         }
@@ -1358,7 +1320,6 @@ export function LeadForm({
       );
       return;
     }
-    setSubmitFieldError(null);
     setShowSubmitConfirm(true);
   }
 
@@ -1809,36 +1770,22 @@ export function LeadForm({
               />
             </AccordionSection>
 
-            {/* Priorities — variable-length list */}
-            <div
-              ref={prioritiesRef}
-              tabIndex={-1}
-              className="scroll-mt-24 outline-none"
+            {/* Priorities — read-only derived view of items with rank set. */}
+            <AccordionSection
+              groupSyncKey={groupSyncKey}
+              groupExpanded={groupExpanded}
+              testId="lead-section-priorities"
+              icon={<StarIcon />}
+              title="Priorities"
+              titleColor="var(--color-starbucks-gold)"
+              badge={`${priorities.length}`}
+              subtitle="Top priorities for the week, tied back to product and SDLC stage where relevant."
             >
-              <AccordionSection
-                groupSyncKey={groupSyncKey}
-                groupExpanded={groupExpanded}
-                testId="lead-section-priorities"
-                icon={<StarIcon />}
-                title="Priorities"
-                titleColor="var(--color-starbucks-gold)"
-                badge={`${priorities.length}`}
-                subtitle="Top priorities for the week, tied back to product and SDLC stage where relevant."
-              >
-                <PrioritiesSection
-                  priorities={mergedPriorities}
-                  sectionAuthorName={currentUser.name ?? undefined}
-                />
-                {submitFieldError?.field === "priorities" && (
-                  <p
-                    role="alert"
-                    className="mt-3 text-sm font-medium text-[var(--color-destructive)]"
-                  >
-                    {submitFieldError.message}
-                  </p>
-                )}
-              </AccordionSection>
-            </div>
+              <PrioritiesSection
+                priorities={mergedPriorities}
+                sectionAuthorName={currentUser.name ?? undefined}
+              />
+            </AccordionSection>
           </>
         )}
       </form>
