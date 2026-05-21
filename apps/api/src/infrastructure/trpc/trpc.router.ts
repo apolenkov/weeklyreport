@@ -1708,8 +1708,15 @@ export function createAppRouter(deps: RouterDeps) {
             reason: z.string().optional(),
           }),
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
           try {
+            const activeReportId = ctx.session.activeReportId;
+            if (!activeReportId || activeReportId !== input.reportId) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "report-not-active",
+              });
+            }
             const rule = await deps.prisma.reminderRule.findFirst({
               where: {
                 reportId: input.reportId,
