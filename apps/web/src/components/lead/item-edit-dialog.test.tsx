@@ -6,6 +6,7 @@
  *             setText(initial.text) wipes user input.
  * After fix:  stagesForProduct removed from deps → text preserved.
  */
+import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
@@ -136,6 +137,80 @@ describe("ItemEditDialog — D-12 reopen reset", () => {
     expect(
       screen.queryByText("Description is required"),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("ItemEditDialog — T-D12 save+reopen status reset", () => {
+  it("shows updated item.status on reopen after save, not the previously-edited draft status", () => {
+    const onSave = vi.fn();
+    const onCancel = vi.fn();
+    const baseItem: KanbanItem = {
+      id: "item-d12",
+      productId: "p1",
+      productName: "DevOps Tools",
+      text: "Deploy pipeline",
+      status: "completed",
+      author: "Test Lead",
+    };
+
+    const { rerender } = render(
+      <ItemEditDialog
+        open={true}
+        item={baseItem}
+        products={products}
+        week="current"
+        onSave={onSave}
+        onCancel={onCancel}
+      />,
+    );
+
+    // Verify initial status chip reflects item.status = "completed"
+    expect(
+      screen.getByRole("button", { name: /Completed/i }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    // User clicks "In Progress" chip then saves
+    fireEvent.click(screen.getByRole("button", { name: /In Progress/i }));
+    expect(
+      screen.getByRole("button", { name: /In Progress/i }),
+    ).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    // Parent receives saved item and updates its own state to status:"in-progress"
+    const savedItem: KanbanItem = { ...baseItem, status: "in-progress" };
+
+    // Parent closes dialog
+    rerender(
+      <ItemEditDialog
+        open={false}
+        item={savedItem}
+        products={products}
+        week="current"
+        onSave={onSave}
+        onCancel={onCancel}
+      />,
+    );
+
+    // Parent reopens dialog with the updated item
+    rerender(
+      <ItemEditDialog
+        open={true}
+        item={savedItem}
+        products={products}
+        week="current"
+        onSave={onSave}
+        onCancel={onCancel}
+      />,
+    );
+
+    // T-D12 assertion: dialog must reflect the CURRENT item.status ("in-progress"),
+    // not the stale draft ("completed" from the previous open session).
+    expect(
+      screen.getByRole("button", { name: /In Progress/i }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: /Completed/i }),
+    ).toHaveAttribute("aria-pressed", "false");
   });
 });
 

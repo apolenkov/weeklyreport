@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { KanbanItem, ItemStatus, Product } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 
@@ -88,7 +88,21 @@ const NEXT_WEEK_CHOICES: readonly Choice[] = [
   },
 ];
 
-export function ItemEditDialog({
+/**
+ * D12 fix (react-compiler-safe): outer shell conditionally mounts the inner
+ * content component. Mount = fresh useState from props; unmount on close.
+ * No useEffect reset needed — structural guarantee via mount/unmount.
+ *
+ * A13 invariant preserved: stagesForProduct is NOT in any deps array.
+ * useState initialises once at mount from the stable `initial` snapshot, so
+ * parent re-renders with a new stagesForProduct reference don't wipe typed text.
+ */
+export function ItemEditDialog(props: ItemEditDialogProps) {
+  if (!props.open) return null;
+  return <ItemEditDialogContent {...props} />;
+}
+
+function ItemEditDialogContent({
   open,
   item,
   products,
@@ -99,12 +113,12 @@ export function ItemEditDialog({
   onSave,
   onCancel,
 }: ItemEditDialogProps) {
-  "use no memo";
   const isCreate = item === null;
 
-  // Local form state — initialize from the bound item (or defaults for create).
-  // Reset every time the dialog is reopened or the bound item changes so a
-  // second "Edit" click on a different row doesn't carry stale draft values.
+  // Local form state — initialised once at mount from the bound item (or
+  // create-mode defaults). The parent unmounts this component on close and
+  // mounts a fresh instance on reopen, so state is always in sync with the
+  // current item — no useEffect reset required.
   const seedProduct = isCreate
     ? (products.find((p) => p.id === defaultProductId) ?? products[0])
     : null;
@@ -131,37 +145,6 @@ export function ItemEditDialog({
         : [],
   );
   const [errors, setErrors] = useState<{ text?: string }>({});
-
-  // A13 fix: stagesForProduct excluded from deps — unstable parent ref (new arrow fn
-  // each render) causes form-race on autosave → React Query invalidate cycle.
-  // Dialog is key-reset by parent on open-transition instead.
-  useEffect(() => {
-    if (open) {
-      setText(initial.text);
-      setStatus(initial.status);
-      setProductId(initial.productId);
-      setPriorityRank(item?.priorityRank ?? null);
-      setStageIds(
-        item?.stageIds
-          ? [...item.stageIds]
-          : isCreate
-            ? [...(stagesForProduct?.(initial.productId) ?? [])]
-            : [],
-      );
-      setErrors({});
-    }
-    // eslint-disable-next-line react-compiler/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    open,
-    item?.id,
-    item?.stageIds,
-    initial.text,
-    initial.status,
-    initial.productId,
-    defaultProductId,
-    isCreate,
-  ]);
 
   if (!open) return null;
 
