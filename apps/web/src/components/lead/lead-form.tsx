@@ -859,7 +859,11 @@ export function LeadForm({
           if (s.ownership === "locked") return s;
           const snap = pm.get(s.stageName.toLowerCase());
           if (snap === undefined) return s;
-          return { ...s, status: snap as import("../../lib/mappers/traffic-light").StageStatus };
+          // snap is a raw Prisma TrafficLight value ("green"/"yellow"/"red"/null-ish).
+          // Must map through trafficToStageStatus before passing to StageChip which
+          // indexes STATUS_CONFIG by dash-case StageStatus ("on-track"/"at-risk"/"blocked"/"empty").
+          // Casting directly caused "Cannot read properties of undefined (reading 'border')".
+          return { ...s, status: trafficToStageStatus(snap as import("../../lib/mappers/traffic-light").TrafficLightStatus | null) };
         }),
       };
     });
