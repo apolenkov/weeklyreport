@@ -13,6 +13,7 @@ import type { ReportPeriod } from "../lead/mock-data";
 import { PeriodNavigator } from "../lead/period-navigator";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
+import { ReportToolbar } from "../report-shell/report-toolbar";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
 import { HeadSlidesClient } from "../slides/head-slides-client";
@@ -91,17 +92,21 @@ export function HeadHistoryClient() {
   return (
     <div className="space-y-4">
       {/* Toolbar: period nav (only when periods exist) + archive toggle + mode toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-3 overflow-x-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5 whitespace-nowrap">
-        {periods.length > 0 && (
-          <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
-        )}
-        <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
-        {periods.length > 0 && (
-          <div className="flex gap-1">
+      <ReportToolbar
+        periodNavigator={
+          periods.length > 0 ? (
+            <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
+          ) : undefined
+        }
+        archiveToggle={
+          <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
+        }
+        trailingExtras={
+          periods.length > 0 ? (
             <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
-          </div>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
 
       {/* Content */}
       {periods.length === 0 ? (
