@@ -1,10 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.2
-milestone_name: GSD Closure & Quality
-status: between_milestones
-last_updated: "2026-05-18T23:25:00.000Z"
-last_activity: 2026-05-18 -- v8.3 pre-UAT closure done. F1-F13 + WS-A/B/C/D all committed (13 commits). Push pending SSL.
+milestone: v8.3
+milestone_name: UAT Final Review
+status: in_review
+last_updated: "2026-05-21T00:00:00.000Z"
+last_activity: 2026-05-21 -- §22+§23+§24 done (graceful-coalescing-kurzweil plan). PR #7 open (fix/PRJ-2/shiny-eagle, 70+ commits ahead of main).
+active_pr:
+  number: 7
+  url: https://ghe.example.org/apolenkov/customreport/pull/7
+  branch: fix/PRJ-2/shiny-eagle
+  commits_ahead: 70+
 progress:
   total_phases: 5
   completed_phases: 5
@@ -16,8 +21,15 @@ progress:
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** v8.3 pre-UAT closure DONE — all 13 workstreams committed (2026-05-18). Push pending SSL. Ready for manual UAT.
-**Last Updated:** 2026-05-18
+**Status:** v8.3 in-review — PR #7 open (fix/PRJ-2/shiny-eagle). §22+§23+§24 done. 70+ commits ahead of main.
+**Last Updated:** 2026-05-21
+
+## Active PR
+
+- **PR #7:** <https://ghe.example.org/apolenkov/customreport/pull/7>
+- **Branch:** `fix/PRJ-2/shiny-eagle`
+- **Plan:** graceful-coalescing-kurzweil — §22, §23, §24 closed
+- **Commits ahead of main:** 70+
 
 ---
 

@@ -14,7 +14,7 @@ customreport/
 ├── packages/
 │   ├── shared/       Zod schemas, TypeScript types, tRPC router definition
 │   └── ui/           shadcn/ui components, Tailwind CSS v4 design tokens
-├── prisma/           Schema (20 models), migrations, seed data
+├── prisma/           Schema (28 models), migrations, seed data
 └── docker-compose.yml  PostgreSQL 15 + Redis 7
 ```
 
@@ -227,19 +227,24 @@ open http://localhost:3003
 | Route                    | Role       | Description                                                                  |
 | ------------------------ | ---------- | ---------------------------------------------------------------------------- |
 | `/lead/report`           | lead       | Report section form with traffic lights, items, risks, decisions, priorities |
+| `/lead/history`          | lead       | Lead's own report history                                                    |
 | `/head/dashboard`        | head       | Review dashboard showing all lead submissions                                |
 | `/head/report`           | head       | Assembled report with publish action                                         |
+| `/head/history`          | head       | Head report history list                                                     |
 | `/admin`                 | head       | User, project, period, and reminder management                               |
 | `/reports?tab=published` | any        | Published report archive                                                     |
 | `/reports/[id]`          | any        | Single published report detail                                               |
+| `/reports/history`       | any        | Report history archive                                                       |
 | `/print/[id]`            | PDF worker | Print-optimized report for PDF export                                        |
 
 ## Data Model
 
-20 Prisma models: User, Project, Report, ReportSection, ProjectStatus, Item,
-Risk, Decision, Priority, PdfExportJob, ReminderRule, ReminderExecution,
+28 Prisma models: User, Project, Report, ReportSection, ProjectStatus, Item,
+Risk, Decision, PdfExportJob, ReminderRule, ReminderExecution,
 CarryOverExecution, CarryOverRecord, VersionSnapshot, Stage,
-StageAssignment, ReopenRequest, AppSettings, AiInsight.
+StageAssignment, ReopenRequest, AppSettings, AiInsight, ReportingGroup,
+ViewerGroupAccess, UserActionLog, GroupProduct, StageStatus, ReminderPolicy,
+Organization, AiIngestionJob, TelegramBinding.
 
 ## API
 
@@ -260,15 +265,13 @@ Kubernetes migration mapping.
 
 ### Test Coverage
 
-| Category          | Tests   | What's covered                                                 |
-| ----------------- | ------- | -------------------------------------------------------------- |
-| Schema boundary   | 115     | Zod validation: safeText, UUID, dates, arrays, enums, ranks    |
-| API service       | 68      | Business rules, error handling, state transitions, auth        |
-| E2E journeys      | 26      | Lead report, head publication, admin CRUD, carry-over, archive |
-| E2E visual        | 8       | Screenshot regression for key pages                            |
-| E2E accessibility | 8       | axe-core WCAG 2.1 AA audit, keyboard navigation                |
-| E2E responsive    | 16      | 5 viewports (320-1920px) for lead and admin pages              |
-| **Total**         | **268** |                                                                |
+| Category           | Tests     | What's covered                                                 |
+| ------------------ | --------- | -------------------------------------------------------------- |
+| Shared / schema    | 587       | Zod validation: safeText, UUID, dates, arrays, enums, ranks    |
+| API (unit + int)   | 921       | Business rules, error handling, state transitions, auth        |
+| Web (vitest)       | 500       | Component and hook unit tests                                  |
+| E2E (Playwright)   | see suite | Lead report, head publication, admin CRUD, carry-over, archive |
+| **Total (vitest)** | **2008**  |                                                                |
 
 ## Environment Variables
 
