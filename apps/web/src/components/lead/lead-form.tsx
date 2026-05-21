@@ -904,10 +904,89 @@ export function LeadForm({
 
   // Lookup map for resolving productName from productId in cross-author embeds.
   const productNameById = new Map(displayProducts.map((p) => [p.id, p.name]));
-  const currentWeekItems: KanbanItem[] = data.currentWeekItems as KanbanItem[];
-  const nextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
-  const risks: RiskEntry[] = data.risks as RiskEntry[];
-  const decisions: DecisionEntry[] = data.decisions as DecisionEntry[];
+  // F3.4: when viewing a historical snapshot, substitute items/risks/decisions
+  // from the snapshot payload instead of the current draft.
+  type SnapPayload = {
+    items?: Array<{
+      projectId: string; type: string; text: string; workflowStatus: string;
+      stageName?: string | null; priorityRank?: number | null;
+    }>;
+    risks?: Array<{
+      projectId: string; risk: string; impact: string; mitigation: string;
+      severity?: string; stageName?: string | null;
+    }>;
+    decisions?: Array<{
+      productId?: string | null; text: string; owner: string;
+      impact: string; deadline?: string | null; stageName?: string | null;
+    }>;
+  };
+
+  function snapWorkflowToStatus(ws: string): import("./mock-data").ItemStatus {
+    if (ws === "in_progress") return "in-progress";
+    if (ws === "done") return "completed";
+    if (ws === "blocked") return "blocked";
+    return "planned";
+  }
+
+  const snapRaw = viewedSnapshotVersion !== null ? (getVersionQ.data as SnapPayload | null) : null;
+  const snapshotAuthor = draftSection.authorName ?? "";
+
+  const currentWeekItems: KanbanItem[] = snapRaw?.items
+    ? snapRaw.items
+        .filter((i) => i.type === "current")
+        .map((i, idx): KanbanItem => ({
+          id: `snap:cw:${idx}`,
+          productId: i.projectId,
+          productName: productNameById.get(i.projectId) ?? i.projectId,
+          stageName: i.stageName ?? undefined,
+          status: snapWorkflowToStatus(i.workflowStatus),
+          text: i.text,
+          author: snapshotAuthor,
+          priorityRank: i.priorityRank ?? null,
+        }))
+    : (data.currentWeekItems as KanbanItem[]);
+
+  const nextWeekItems: KanbanItem[] = snapRaw?.items
+    ? snapRaw.items
+        .filter((i) => i.type === "next")
+        .map((i, idx): KanbanItem => ({
+          id: `snap:nw:${idx}`,
+          productId: i.projectId,
+          productName: productNameById.get(i.projectId) ?? i.projectId,
+          stageName: i.stageName ?? undefined,
+          status: snapWorkflowToStatus(i.workflowStatus),
+          text: i.text,
+          author: snapshotAuthor,
+          priorityRank: i.priorityRank ?? null,
+        }))
+    : (data.nextWeekItems as KanbanItem[]);
+
+  const risks: RiskEntry[] = snapRaw?.risks
+    ? snapRaw.risks.map((r, idx): RiskEntry => ({
+        id: `snap:risk:${idx}`,
+        productId: r.projectId,
+        productName: productNameById.get(r.projectId) ?? r.projectId,
+        stageName: r.stageName ?? undefined,
+        severity: r.severity === "blocked" ? "blocked" : "at-risk",
+        text: r.risk,
+        impact: r.impact,
+        mitigation: r.mitigation,
+      }))
+    : (data.risks as RiskEntry[]);
+
+  const decisions: DecisionEntry[] = snapRaw?.decisions
+    ? snapRaw.decisions.map((d, idx): DecisionEntry => ({
+        id: `snap:dec:${idx}`,
+        productId: d.productId ?? "",
+        productName: productNameById.get(d.productId ?? "") ?? "",
+        text: d.text,
+        owner: d.owner,
+        impact: d.impact,
+        deadline: d.deadline ?? null,
+        stageName: d.stageName ?? undefined,
+      }))
+    : (data.decisions as DecisionEntry[]);
+
   const priorities: PriorityEntry[] = data.priorities as PriorityEntry[];
 
   // W5/W6: build foreign item arrays from crossAuthorSectionsQ (always-on).

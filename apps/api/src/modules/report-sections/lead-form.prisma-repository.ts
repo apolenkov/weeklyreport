@@ -370,6 +370,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         risk: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
+        severity: r.severity,
         stageName: r.stageName ?? null,
       })),
       decisions: section.decisions.map((d) => ({
