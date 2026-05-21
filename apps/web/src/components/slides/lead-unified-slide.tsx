@@ -33,6 +33,18 @@ function inlineProductMarker(productName: string): ReactNode {
   );
 }
 
+function priorityChip(rank: number): ReactNode {
+  return (
+    <span
+      aria-label={`Priority ${rank}`}
+      className="inline-flex shrink-0 items-center justify-center rounded-sm bg-[var(--color-starbucks-gold)] px-1 text-[10px] font-bold leading-4 text-white"
+      title={`Priority rank ${rank}`}
+    >
+      P{rank}
+    </span>
+  );
+}
+
 const MAX_ITEMS_PER_SECTION = 4;
 
 function SectionBlock({
@@ -65,6 +77,9 @@ function SectionBlock({
                 className="flex min-w-0 items-baseline gap-2"
               >
                 {inlineProductMarker(row.productName)}
+                {row.priorityRank != null
+                  ? priorityChip(row.priorityRank)
+                  : null}
                 <span
                   className={`min-w-0 line-clamp-3 border-l-2 ${borderClass} pl-3 text-[13px] leading-snug text-[var(--color-foreground)]`}
                 >
