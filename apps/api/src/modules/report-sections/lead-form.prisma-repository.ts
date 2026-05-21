@@ -234,6 +234,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         workflowStatus: string;
         carriedOver: boolean;
         completed: boolean | null;
+        priorityRank?: number | null;
         stageName?: string | null;
         stageIds?: string[];
       }>;
@@ -242,6 +243,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         risk: string;
         impact: string;
         mitigation: string;
+        severity?: string | null;
         stageName?: string | null;
         stageIds?: string[];
       }>;
@@ -255,6 +257,12 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         stageIds?: string[];
         productId?: string | null;
       }>;
+      stageStatuses?: Array<{
+        projectId: string;
+        stageId: string;
+        stageName?: string;
+        status: "green" | "yellow" | "red" | null;
+      }>;
     };
 
     await this.prisma.$transaction(
@@ -262,6 +270,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.decision.deleteMany({ where: { reportSectionId: sectionId } });
+        // F3.3 (T-G5): wipe + rebuild stage statuses so chip colors track the
+        // restored snapshot. Snapshots created before this field was added
+        // simply leave `stageStatuses` undefined → keep current statuses.
+        if (data.stageStatuses !== undefined) {
+          await tx.stageStatus.deleteMany({
+            where: { reportSectionId: sectionId },
+          });
+        }
 
         if (data.items.length > 0) {
           await tx.item.createMany({
@@ -274,6 +290,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               workflowStatus: i.workflowStatus as ItemWorkflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
+              priorityRank: i.priorityRank ?? null,
               stageName: i.stageIds?.join(", ") ?? i.stageName ?? null,
             })),
           });
@@ -287,6 +304,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
+              severity: r.severity ?? "at-risk",
               stageName: r.stageIds?.join(", ") ?? r.stageName ?? null,
             })),
           });
@@ -308,6 +326,16 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           });
         }
 
+        if (data.stageStatuses && data.stageStatuses.length > 0) {
+          await tx.stageStatus.createMany({
+            data: data.stageStatuses.map((ss) => ({
+              reportSectionId: sectionId,
+              projectId: ss.projectId,
+              stageId: ss.stageId,
+              status: ss.status,
+            })),
+          });
+        }
       },
       { timeout: 15000 },
     );
