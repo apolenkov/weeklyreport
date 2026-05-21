@@ -17,7 +17,7 @@ import { SessionContext } from "../../lib/session-provider";
 import { logClientError } from "../../lib/client-error-reporting";
 import { mapLeadFormData } from "../../lib/mappers";
 import { ownedStagesForProject } from "../../lib/mappers/lead-form";
-import { stageStatusToTraffic } from "../../lib/mappers/traffic-light";
+import { stageStatusToTraffic, trafficToStageStatus } from "../../lib/mappers/traffic-light";
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
 import {
   useLeadFormAutosave,
@@ -812,11 +812,14 @@ export function LeadForm({
     history: historyQ.data,
   });
 
-  // F8: enrich unassigned stages with cross-author names.
-  // crossAuthorsQ.data has { projectId, stageNames, authorName } per shared product.
+  // F8: enrich unassigned stages with cross-author names and real status.
+  // crossAuthorsQ.data has { projectId, stageNames, authorName, stages } per shared product.
   // Stages not owned by the current user but assigned to another lead become
-  // ownership:"locked" with their name instead of "— unassigned".
-  const _crossAuthorStageMap = new Map<string, Map<string, string>>();
+  // ownership:"locked" with their name and real risk color instead of gray "empty".
+  const _crossAuthorStageMap = new Map<
+    string,
+    Map<string, { assignee: string; status: import("../../lib/mappers/traffic-light").StageStatus }>
+  >();
   for (const ca of crossAuthorsQ.data ?? []) {
     let _sm = _crossAuthorStageMap.get(ca.projectId);
     if (!_sm) {
@@ -825,10 +828,18 @@ export function LeadForm({
     }
     for (const sn of ca.stageNames) {
       const lower = sn.toLowerCase();
-      _sm.set(lower, ca.authorName);
+      const stageEntry = ca.stages?.find(
+        (s) =>
+          s.stageName.toLowerCase() === lower ||
+          (lower === "dev" && s.stageName.toLowerCase() === "development") ||
+          (lower === "development" && s.stageName.toLowerCase() === "dev"),
+      );
+      const status = trafficToStageStatus(stageEntry?.status ?? null);
+      const entry = { assignee: ca.authorName, status };
+      _sm.set(lower, entry);
       // Mirror the dev ↔ development alias used in ownedStagesForProject mapper.
-      if (lower === "dev") _sm.set("development", ca.authorName);
-      if (lower === "development") _sm.set("dev", ca.authorName);
+      if (lower === "dev") _sm.set("development", entry);
+      if (lower === "development") _sm.set("dev", entry);
     }
   }
   const products: Product[] = (data.products as Product[]).map((product) => {
@@ -838,9 +849,9 @@ export function LeadForm({
       ...product,
       stages: product.stages.map((stage) => {
         if (stage.ownership !== "unassigned") return stage;
-        const assignee = stageMap.get(stage.stageName.toLowerCase());
-        if (!assignee) return stage;
-        return { ...stage, ownership: "locked" as const, assignee };
+        const entry = stageMap.get(stage.stageName.toLowerCase());
+        if (!entry) return stage;
+        return { ...stage, ownership: "locked" as const, assignee: entry.assignee, status: entry.status };
       }),
     };
   });
