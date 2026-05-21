@@ -1138,3 +1138,1033 @@ CustomReport-сессии. Создаётся через `skill-creator` skill.
   TODO PRIORITY-REDESIGN-01 sketch (готовая формулировка).
 - `apps/web/src/lib/mappers/lead-form.ts` — Dev↔Development alias utility.
 - `CLAUDE.md` repo — Boundaries, Deferred Features rules.
+
+---
+
+## 20. Audit gap (2026-05-21): что РЕАЛЬНО осталось
+
+### 20.1 Context
+
+После reset-ретро (2026-05-21) сверка коммитов с планом показала, что часть
+пунктов F1/F3 я преждевременно отметил `[x]` в `NEXT-ACTIONS.md`. Ниже —
+честная карта того, что в коде НЕ сделано, с file:line эвиденцией. Это
+goal-backward аудит: для каждого пункта зафиксирован конкретный артефакт
+(файл и строка), пока не созданный или не дотянутый.
+
+### 20.2 Что реально сделано (PROOF)
+
+```text
+F1 schema migration      ✓ a9177ef    Item.priorityRank + drop Priority table
+F1 weekly-report agg     ✓ a9177ef    apps/web/src/lib/mappers/weekly-report.ts:293-308
+F1 section-slide-utils   ✓ a9177ef    sort by rank, lines 134/181/198 в slides utils
+F1 schema drift fix      ✓ 7b152d0    index rename, Decision idx, User FK
+F1 UI PrioritiesSection  ✓ 4701ec0    read-only derived view
+F1 UI ItemCard P{N}      ✓ 4701ec0    badge на item-card
+F1 UI ItemEditDialog     ✓ 4701ec0    priorityRank input
+F1 seed                  ✓ 5668d4a    Item.priorityRank в seed.ts + seed-simple.ts
+F2 stage-chip locked     ✓ fd5d74d    lead-form.tsx promote locked status + 6 unit tests
+F3.1 debounced snapshot  ✓ 99f7d58    use-lead-form-autosave hook, 5s
+F3.2 getVersion API      ✓ 99f7d58    trpc.router.ts + service + repo
+F3.3 stageStatuses СОХР  ✓ 99f7d58    createVersionSnapshot:386 включает stageStatuses
+F3.4 snapshot viewer     ✓ 99f7d58 + 968affe + f9b5219 + 515f743 (4 коммита)
+```
+
+### 20.3 Что НЕ сделано (gap-list, evidence-backed)
+
+```text
+┌─ gap ──────────────────────────────┬─ evidence (file:line) ──────────────────────┐
+│ G1  F1.4 lead-form data.priorities │ lead-form.tsx:1003 still `as PriorityEntry[]`│
+│ G2  F1.4 prioritiesRef + valid.    │ lead-form.tsx:515, 557-580, 1115, 1484, 1825│
+│ G3  F1.5 slide P{N} chip           │ slides/lead-unified-slide.tsx — нет refs    │
+│ G4  F1.3 carry-over priorityRank   │ apps/api/.../carry-over/* — 0 priorityRank  │
+│ G5  F3.3 restoreVersion stageStat  │ lead-form.prisma-repository.ts:217-313       │
+│                                    │  payload type lacks `stageStatuses` array   │
+│ G6  F3.3 restoreVersion priorityR  │ same body lines 266-279 не копирует field   │
+│ G7  F3.3 restoreVersion severity   │ same body lines 282-291 не копирует field   │
+│ G8  F1.7 e2e lead-priorities       │ apps/web/e2e/regression/* — спецы НЕТ       │
+│ G9  F2.3 e2e locked-stage-color    │ apps/web/e2e/regression/* — спецы НЕТ       │
+│ G10 F3.5 e2e version-history-snap  │ apps/web/e2e/regression/* — спецы НЕТ       │
+│ G11 shared/dist stale references   │ packages/shared/dist/schemas/report.d.ts    │
+│                                    │  :1670 содержит "MISSING_PRIORITIES"        │
+└────────────────────────────────────┴─────────────────────────────────────────────┘
+```
+
+Пояснения:
+
+- **G1+G2 (lead-form consumer):** `data.priorities` — это legacy-поле от
+  старой модели. После F1 priorities — derived view из items с
+  `priorityRank != null`. Текущий код всё ещё пуллит этот массив как
+  отдельную сущность. Нужно: либо вычислять локально из `currentWeekItems`,
+  либо API должен возвращать derived-массив, и тогда удалить
+  `prioritiesRef` + handler для `field: "priorities"` (валидация в шаге submit
+  не имеет смысла — приоритет теперь optional на item).
+- **G3 (slide P{N}):** `section-slide-utils.ts` сортирует, но визуальный
+  маркер «P{N}» рядом с пунктом на слайде не добавлен.
+- **G4 (carry-over):** plan §F1.3 явно требовал «`priorityRank` сбрасывается
+  в `null`» при переносе. В `carry-over` модуле — нет ни одной ссылки на
+  `priorityRank`. Скорее всего, ранг переезжает по-умолчанию (через прямое
+  копирование item), что может быть и нормально — но default плана был
+  «сброс в null». Решение: либо подтвердить «оставляем как есть», либо
+  добавить явный сброс.
+- **G5–G7 (restoreVersion gaps):** snapshot СОДЕРЖИТ `stageStatuses`,
+  `priorityRank`, `severity` (F3.3 sahe + F3.4 fix добавили это в payload).
+  Но `restoreVersion` (lines 217-313) их игнорирует. То есть пользователь
+  может откатиться на v=N — и потеряет priorityRank всех items, severity
+  всех risks, и stage status'ы. Это явный bug.
+- **G8–G10 (e2e тесты):** unit-tests F1/F2/F3 есть; e2e regression specs —
+  нет. План §F1.7/F2.3/F3.5 их явно требует. Без e2e — UAT smoke
+  делается вручную (план §10).
+- **G11 (shared/dist):** `dist/` содержит stale build от старой схемы.
+  Источник (`packages/shared/src/schemas/report.ts`) уже чистый (никаких
+  ссылок на `MISSING_PRIORITIES`/`priorityInputSchema` в src). Нужен
+  `pnpm --filter @customreport/shared build` для обновления dist.
+
+### 20.4 Pipeline закрытия gap-list
+
+```text
+[F1c lead-form consumer]──┐
+[F1c slide P{N}]          ├──→ [carry-over decision]──→ [F3c restoreVersion]──→ [e2e specs]──→ [dist rebuild]──→ [F5 merge]
+[F1c carry-over (опц)]    ┘     G4 user-choice         G5+G6+G7 (atomic)      G8+G9+G10      G11           §9a
+   G1+G2+G3                                            один коммит            опц. parallel
+```
+
+Объём в LoC и риск:
+
+```text
+┌─ gap ──┬─ LoC ──┬─ риск ────────────────────────────┐
+│ G1+G2  │ ~80    │ medium — submit-flow дырки         │
+│ G3     │ ~20    │ low    — чистая визуальная правка │
+│ G4     │ ~10    │ low    — или 0 (если оставляем)   │
+│ G5-G7  │ ~50    │ high   — пользователь теряет данные│
+│ G8-G10 │ ~300   │ low    — изолированные e2e specs   │
+│ G11    │ ~0     │ low    — `pnpm build` + commit     │
+└────────┴────────┴────────────────────────────────────┘
+```
+
+Приоритет (▲ срочнее ▼ откладываемее):
+
+```text
+▲ G5+G6+G7   restoreVersion data loss — пользовательский bug
+  G1+G2      lead-form consumer — submit может крашиться на старом поле
+  G3         slide P{N} — визуальная завершённость F1
+  G11        dist rebuild — для импортёров shared package
+  G8+G9+G10  e2e specs — защита от регрессий
+▼ G4         carry-over — может остаться текущее поведение (default)
+```
+
+### 20.5 Open questions (gap-уровень)
+
+```text
+| # | вопрос                                          | default                     | эскалирую если          |
+|---|-------------------------------------------------|-----------------------------|-------------------------|
+| Q7| G1+G2: data.priorities из API ИЛИ derive в FE?  | derive в FE из currentWeek  | API уже возвращает поле |
+| Q8| G4 carry-over: сбрасывать priorityRank в null? | нет (default plan §F1.3.3)  | user скажет «keep»      |
+| Q9| G11 dist rebuild: коммитить dist?               | нет (gitignored если есть)  | импортёры сломаются     |
+```
+
+### 20.6 Файлы, которые ещё надо тронуть
+
+```text
+apps/web/src/components/lead/lead-form.tsx                              G1, G2
+apps/web/src/components/slides/lead-unified-slide.tsx                   G3
+apps/api/src/modules/carry-over/carry-over.service.ts                   G4 (опц)
+apps/api/src/modules/report-sections/lead-form.prisma-repository.ts     G5, G6, G7
+apps/web/e2e/regression/lead-priorities.spec.ts                          G8 (new)
+apps/web/e2e/regression/lead-locked-stage-color.spec.ts                  G9 (new)
+apps/web/e2e/regression/version-history-snapshot.spec.ts                 G10 (new)
+packages/shared/dist/**                                                  G11 (rebuild)
+```
+
+### 20.7 Verification после закрытия gap-list
+
+```bash
+pnpm typecheck && pnpm lint && pnpm test
+pnpm --filter @customreport/shared build      # G11 rebuild
+pnpm --filter @customreport/web exec playwright test \
+  --config=e2e/regression/playwright.regression.config.ts \
+  --grep "priorities|locked-stage-color|version-history-snapshot"
+```
+
+Smoke-сценарии:
+
+1. **G1+G2:** открыть `/lead/report/<id>`, добавить item с rank=1 →
+   PrioritiesSection обновился; убрать rank → исчез. Submit без priorities
+   не блокирует.
+2. **G3:** `?mode=slides` → у item с rank=1 виден маркер `P1`.
+3. **G4 (если default):** carry-over с предыдущей недели → новые items
+   `priorityRank` пустые (или сохранены, по решению Q8).
+4. **G5-G7 (restoreVersion):** поставить ranks/severity/stage status →
+   создать snapshot → изменить всё → restore → значения вернулись.
+5. **G8-G10:** Playwright прогон трёх specs — все зелёные.
+6. **G11:** `node -e "import('./packages/shared/dist/schemas/report.js')"` —
+   нет упоминаний `priorityInputSchema`/`MISSING_PRIORITIES`.
+
+### 20.8 Subagent roadmap для gap-list
+
+```text
+Wave G — параллельно:
+  G-A: G5+G6+G7 restoreVersion        Sonnet, write, atomic commit
+  G-B: G1+G2 lead-form consumer       Sonnet, write
+  G-C: G3 slide P{N}                  Sonnet, write
+  G-D: G11 shared/dist rebuild        Haiku, build-only
+
+Wave H — после G merge:
+  H-A: G8 e2e lead-priorities         Sonnet, write
+  H-B: G9 e2e locked-stage-color      Sonnet, write
+  H-C: G10 e2e version-history-snap   Sonnet, write
+  H-D: G4 carry-over decision         user (Q8) — потом Haiku если default
+
+Wave I — verification:
+  /codex:review on full diff origin/main..HEAD
+  /Demo-plan verify graceful-coalescing-kurzweil → 0-100 rubric
+```
+
+### 20.9 Done definition (gap-list)
+
+```text
+gap-list done ⇔
+  G5+G6+G7 restoreVersion возвращает stageStatuses + priorityRank + severity
+  G1+G2 lead-form НЕ читает data.priorities, всё derive из items
+  G3 lead-unified-slide рендерит P{N} chip
+  G11 shared/dist обновлён (или подтверждено что dist не нужен)
+  G8+G9+G10 три e2e spec'a зелёные
+  G4 либо closed (default «не сбрасываем») либо новый коммит со сбросом
+  pnpm test, pnpm lint, pnpm typecheck — все зелёные
+```
+
+После закрытия gap-list — переход в F5 (plan §9a) с merge MR.
+
+---
+
+## 21. Final closure plan (2026-05-21): полный sweep + параллельная разработка
+
+### 21.1 Context
+
+После audit'а §20 пользователь решил расширить scope ветки до полного
+закрытия: gap-list (G1-G11) + F4 head alignment **с реализацией** + всё
+STILL-PENDING из `NEXT-ACTIONS.md:39-46`. Разработка идёт **двумя
+агентами параллельно** (Claude Code + Codex) на одной ветке
+`fix/PRJ-2/shiny-eagle`, разделённой по непересекающимся файловым
+группам, чтобы избежать merge-конфликтов.
+
+Применённые дефолты (Q7-Q9 из §20.5):
+
+```text
+Q7  derive priorities в FE из items.filter(priorityRank!=null)
+Q8  carry-over: priorityRank НЕ сбрасывается (keep behaviour)
+Q9  shared/dist НЕ коммитим (build перед публикацией пакета)
+```
+
+### 21.2 Полный inventory работ (TASKS)
+
+```text
+┌─ ID ────┬─ источник ──┬─ описание ────────────────────────────┬─ LoC ─┬ риск ┐
+│ T-G1    │ §20.3 G1+G2 │ lead-form.tsx data.priorities → derive │ ~80   │ med  │
+│ T-G3    │ §20.3 G3    │ lead-unified-slide P{N} chip           │ ~25   │ low  │
+│ T-G4    │ §20.3 G4    │ carry-over priorityRank (default keep) │ ~0    │ low  │
+│ T-G5    │ §20.3 G5-G7 │ restoreVersion: stageStat + rank + sev │ ~60   │ high │
+│ T-G8    │ §20.3 G8    │ e2e lead-priorities.spec.ts            │ ~120  │ low  │
+│ T-G9    │ §20.3 G9    │ e2e lead-locked-stage-color.spec.ts    │ ~90   │ low  │
+│ T-G10   │ §20.3 G10   │ e2e version-history-snapshot.spec.ts   │ ~150  │ low  │
+│ T-G11   │ §20.3 G11   │ shared build refresh                   │ ~0    │ low  │
+│ T-F4-1  │ §9.1 + §9.2 │ shared report-toolbar component        │ ~150  │ med  │
+│ T-F4-2  │ §9.3        │ scope-toggle 3-way (own/product/lead)  │ ~80   │ low  │
+│ T-F4-3  │ §9.1        │ nav-bar redesign 3 tabs                │ ~60   │ low  │
+│ T-F4-4  │ §9.4        │ Dashboard surface (head pulse)         │ ~250  │ high │
+│ T-D12   │ STILL-PEND  │ item-dialog status reset-on-reopen     │ ~40   │ med  │
+│ T-UFB14 │ STILL-PEND  │ UFB-014 multi-SDLC per product         │ ?     │ high │
+│ T-HOL   │ STILL-PEND  │ Holidays calendar                      │ ?     │ high │
+│ T-UAT-L │ STILL-PEND  │ UAT landing pages                      │ ?     │ med  │
+│ T-CI-47 │ STILL-PEND  │ 47-02 CI badge                         │ ~20   │ low  │
+│ T-46FU  │ STILL-PEND  │ 46-followup live-Prisma matrix verify  │ ~30   │ low  │
+└─────────┴─────────────┴────────────────────────────────────────┴───────┴──────┘
+
+ИТОГО: ~1155+ LoC ready-to-implement + 3 спека-блокированных (T-UFB14, T-HOL, T-UAT-L)
+```
+
+### 21.3 Категоризация по готовности
+
+```text
+READY-TO-IMPLEMENT (можно стартовать сразу):
+  T-G1, T-G3, T-G4, T-G5, T-G8, T-G9, T-G10, T-G11,
+  T-F4-1, T-F4-2, T-F4-3, T-D12, T-CI-47, T-46FU
+
+NEEDS-RESEARCH-FIRST (требует spec/design до coding):
+  T-F4-4 Dashboard      — нет PRD для head pulse metrics
+  T-UFB14 multi-SDLC    — нет UI/data модели для нескольких SDLC per product
+  T-HOL holidays        — нет UI/data модели для календаря
+  T-UAT-L landing pages — scope непонятен (какие landing'и?)
+
+OUT-OF-REPO (отдельный repo, промт уже готов):
+  core-principles env-defaults cleanup
+  openai-codex плагин: effort omit-on-null upstream issue
+```
+
+### 21.4 Параллельная разработка: распределение между Claude и Codex
+
+Логика разделения — независимые файловые группы. Никаких пересечений
+между group-A и group-B файлов = безопасный parallel.
+
+```text
+┌─ WAVE 1 (стартует немедленно) ─────────────────────────────────────────┐
+│                                                                         │
+│  CLAUDE Code (Sonnet/Opus)              │  CODEX (gpt-5.5 + xhigh)     │
+│  ─────────────────────────              │  ───────────────────────     │
+│  group-CLAUDE-A                          │  group-CODEX-B                │
+│  ├── T-G5 restoreVersion (atomic)        │  ├── T-F4-1 report-toolbar    │
+│  │   lead-form.prisma-repository.ts      │  │   components/report-shell/ │
+│  ├── T-G11 shared build refresh          │  │   *.tsx (new files)        │
+│  │   pnpm --filter shared build          │  ├── T-F4-2 scope-toggle 3way │
+│  └── T-D12 item-dialog status pill       │  │   components/report-shell/ │
+│      item-edit-dialog.tsx + test         │  │   scope-toggle.tsx (new)   │
+│                                          │  └── T-F4-3 nav-bar tabs      │
+│                                          │      navigation/nav-bar.tsx   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                          ↓ merge sync ↓
+┌─ WAVE 2 (после merge WAVE 1 changes) ──────────────────────────────────┐
+│                                                                         │
+│  CLAUDE Code                             │  CODEX                        │
+│  ──────────                              │  ─────                        │
+│  group-CLAUDE-C                          │  group-CODEX-D                │
+│  ├── T-G1 lead-form consumer derive      │  ├── T-G8 e2e lead-priorities │
+│  │   lead-form.tsx (~80 LoC)             │  ├── T-G9 e2e locked-stage    │
+│  ├── T-G3 slide P{N} chip                │  ├── T-G10 e2e version-hist   │
+│  │   lead-unified-slide.tsx              │  └── T-CI-47 CI badge yml     │
+│  ├── T-G4 carry-over (no-op)             │      .github/workflows/*      │
+│  └── T-46FU live-Prisma verify           │                                │
+│      tests/integration/*                 │                                │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                          ↓ merge sync ↓
+┌─ WAVE 3 (research-gate: только после spec'ов) ─────────────────────────┐
+│                                                                         │
+│  CLAUDE Code → spec/design                │  CODEX → impl after spec     │
+│  ───────────                              │  ───────────                  │
+│  T-F4-4 Dashboard PRD                     │  (после approve)              │
+│  T-UFB14 multi-SDLC PRD                   │  T-F4-4, T-UFB14, T-HOL impl │
+│  T-HOL holidays PRD                       │                               │
+│  T-UAT-L landing pages PRD                │                               │
+│                                                                         │
+│  ВАЖНО: для каждого нужен AskUserQuestion со scope-clarification.       │
+│  Дефолт — defer в v8.4/v8.5, не блокировать merge этой ветки.          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                          ↓
+┌─ WAVE 4 (integration + merge) ─────────────────────────────────────────┐
+│                                                                         │
+│  pnpm typecheck && pnpm lint && pnpm test                              │
+│  pnpm --filter @customreport/web exec playwright test                  │
+│  /codex:review on full diff                                             │
+│  /Demo-plan verify graceful-coalescing-kurzweil → ≥80                   │
+│  pnpm docker:local:verify                                               │
+│                                                                         │
+│  Если зелёные — F5 (§9a): GitLab MR + post-merge cleanup.              │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 21.5 Конкретные file boundaries (anti-conflict matrix)
+
+```text
+                                                     CLAUDE  CODEX
+apps/api/src/modules/report-sections/lead-form
+  .prisma-repository.ts                               WAVE-1   —
+apps/web/src/components/lead/item-edit-dialog.tsx    WAVE-1   —
+apps/web/src/components/lead/lead-form.tsx           WAVE-2   —
+apps/web/src/components/slides/lead-unified-slide.tsx WAVE-2   —
+apps/web/src/components/report-shell/*.tsx            —      WAVE-1
+apps/web/src/components/navigation/nav-bar.tsx        —      WAVE-1
+apps/web/e2e/regression/lead-priorities.spec.ts       —      WAVE-2
+apps/web/e2e/regression/lead-locked-stage-color.spec  —      WAVE-2
+apps/web/e2e/regression/version-history-snapshot.spec —      WAVE-2
+.github/workflows/*.yml                               —      WAVE-2
+packages/shared/dist/**                              WAVE-1   —
+apps/api/src/modules/carry-over/*                    WAVE-2   —
+```
+
+Нулевые пересечения по файлам. Параллельное исполнение безопасно.
+
+### 21.6 Конкретные промт-блоки для агентов
+
+#### Промт для Codex (WAVE-1)
+
+```text
+Branch: fix/PRJ-2/shiny-eagle (already checked out)
+Plan:   .planning/plans/graceful-coalescing-kurzweil.md §9 (F4 design)
+        + §21.5 file boundaries
+
+Задача — WAVE-1 для F4 head alignment (реализация, не только design):
+
+T-F4-1 shared report-toolbar component
+  Создать components/report-shell/report-toolbar.tsx
+  Извлечь toolbar pattern из:
+    - apps/web/src/components/lead/lead-form.tsx:1462-1490
+    - apps/web/src/components/head/head-history-client.tsx:94-104
+  Принимать children-slot для role-specific extras.
+  Lead extras: FillFromButton + VersionHistoryNav.
+  Head extras: PublishLockButton + ExportPdfButton.
+
+T-F4-2 scope-toggle 3-way
+  Создать components/report-shell/scope-toggle.tsx
+  Расширить slides/lead-scope-toggle.tsx 2-way (own|product) до 3-way:
+  (own|product|lead). Head использует product|lead, Lead — own|product.
+
+T-F4-3 nav-bar redesign 3 tabs
+  Изменить apps/web/src/components/navigation/nav-bar.tsx:41-74
+  Сейчас: History / Dashboard / Status / Slides (4 tabs)
+  Цель: Dashboard / Status / History (3 tabs)
+  Slides убрать как пункт меню (остаётся ?mode=slides toggle на странице).
+
+Constraints:
+  - НЕ трогать lead-form.tsx, lead-form.prisma-repository.ts, slides/*
+  - Все правки — в указанных файлах + новых report-shell/*
+  - Атомарные коммиты per task
+  - pnpm typecheck + pnpm lint + pnpm test после каждой задачи
+  - Использовать /codex:review --wait перед коммитом
+
+Verify:
+  Pre-commit hooks зелёные, тесты не падают, типы чистые.
+```
+
+#### Промт для Claude (WAVE-1)
+
+```text
+Branch: fix/PRJ-2/shiny-eagle (already checked out)
+Plan:   .planning/plans/graceful-coalescing-kurzweil.md §20.3 + §21.5
+
+Задача — WAVE-1 для F3 restoreVersion + D-12 + shared rebuild:
+
+T-G5 restoreVersion полное восстановление
+  Файл: apps/api/src/modules/report-sections/lead-form.prisma-repository.ts
+  Метод restoreVersion (lines 217-313):
+  1. Расширить type SnapshotData следующими полями:
+     - items[].priorityRank?: number | null
+     - risks[].severity?: string
+     - stageStatuses?: Array<{projectId, stageId|stageName, status}>
+  2. В transaction body после деления items/risks/decisions добавить:
+     - tx.stageStatus.deleteMany({where: {reportSectionId: sectionId}})
+     - if (data.stageStatuses?.length) tx.stageStatus.createMany(…)
+  3. В items.createMany добавить priorityRank field
+  4. В risks.createMany добавить severity field
+  Атомарность: всё под одним $transaction.
+
+T-G11 shared build refresh
+  pnpm --filter @customreport/shared build
+  Подтвердить dist/ обновился (нет MISSING_PRIORITIES в dist/.d.ts)
+  Не коммитить dist (Q9 default).
+
+T-D12 item-dialog status pill reset-on-reopen
+  Файл: apps/web/src/components/lead/item-edit-dialog.tsx
+  Bug: после reopen диалога status pill не сбрасывается до actual value
+  Прошлая попытка была reverted из-за react-compiler conflict (см. INTAKE-2026-05-15).
+  Подход: использовать `key` prop на StatusPill для force-remount,
+  ИЛИ useEffect+useState синхронизация при open=true.
+  Добавить regression test в item-edit-dialog.test.tsx.
+
+Constraints:
+  - НЕ трогать report-shell/*, nav-bar.tsx (это Codex'ова зона)
+  - Атомарные коммиты per task
+  - pnpm typecheck + pnpm test после каждой задачи
+
+Verify:
+  Создать snapshot v=N с priorityRank+severity+stageStatus → изменить
+  draft → restoreVersion(N) → значения вернулись.
+```
+
+#### Промт для Claude (WAVE-2)
+
+```text
+Зависит от Codex WAVE-1 merged (report-shell/* + nav-bar изменения).
+
+T-G1 lead-form consumer derive
+  Файл: apps/web/src/components/lead/lead-form.tsx
+  Изменения:
+  - line 1003: убрать `data.priorities as PriorityEntry[]`,
+    заменить на derive из currentWeekItems.filter(i => i.priorityRank != null)
+  - Удалить prioritiesRef (line 515) если нигде не используется после
+    удаления legacy submit-flow.
+  - Очистить validation handler в setSubmitErrors (lines 557-580) для
+    field "priorities" — submit guards больше не блокируют по priorities.
+  - foreignPriorities должны строиться из foreignCurrentItems с rank!=null.
+
+T-G3 slide P{N} chip marker
+  Файл: apps/web/src/components/slides/lead-unified-slide.tsx
+  Добавить визуальный маркер "P{N}" рядом с inline product marker когда
+  item.priorityRank != null. Стиль — same family как ItemCard P{N} chip
+  (lead/item-card.tsx).
+
+T-G4 carry-over (NO-OP per Q8 default)
+  Подтвердить inspection: apps/api/src/modules/carry-over/* НЕ требует
+  изменений. priorityRank наследуется по copy. Зафиксировать решение в
+  карри-овер сервисе одним комментарием // Q8: priorityRank carries over.
+
+T-46FU live-Prisma matrix verify
+  Запустить full integration suite. Если что-то падает — починить.
+
+Verify полная: pnpm typecheck && pnpm lint && pnpm test
+```
+
+#### Промт для Codex (WAVE-2)
+
+```text
+Зависит от Claude WAVE-1 merged (restoreVersion + shared rebuild).
+
+T-G8 e2e lead-priorities.spec.ts (новый файл)
+  Файл: apps/web/e2e/regression/lead-priorities.spec.ts
+  Сценарии:
+  1. Open /lead/report/<id>, добавить item с priorityRank=1 → виден в
+     PrioritiesSection.
+  2. Убрать rank → исчез из PrioritiesSection.
+  3. Cross-author: открыть продукт где другой lead поставил приоритет → в
+     PrioritiesSection появилась запись с пометкой автора.
+
+T-G9 e2e lead-locked-stage-color.spec.ts (новый файл)
+  Файл: apps/web/e2e/regression/lead-locked-stage-color.spec.ts
+  Сценарии:
+  1. Stage locked + cross-author blocker → цвет красный + замок.
+  2. Stage locked + cross-author at-risk → цвет оранжевый + замок.
+  3. Stage locked + реально пустой → серый + замок.
+
+T-G10 e2e version-history-snapshot.spec.ts (новый файл)
+  Файл: apps/web/e2e/regression/version-history-snapshot.spec.ts
+  Сценарии (полный F3 UAT smoke):
+  1. Открыть /lead/report/<id> v=N.
+  2. Поставить статус DevOps → подождать 6с → v=N+1.
+  3. Saved badge пропал ≤1с после v# update.
+  4. Перелистнуть ‹ на v=N → форма read-only, DevOps пустой (как было).
+  5. Перелистнуть › на v=N+1 → DevOps статус = только что выставленный.
+  6. Restore v=N → DevOps снова пустой в активном draft.
+
+T-CI-47 CI badge
+  Файл: .github/workflows/* — добавить badge генерацию для phase 47-02
+  spec (см. INTAKE-2026-05-16 item 4).
+
+Constraints:
+  - Использовать существующий e2e harness (playwright.regression.config.ts)
+  - Атомарные коммиты per spec
+```
+
+#### Промт для пользователя (WAVE-3 research)
+
+```text
+Перед началом T-F4-4 Dashboard, T-UFB14, T-HOL, T-UAT-L:
+
+Каждый из четырёх требует короткого PRD-обсуждения. Дефолт: defer
+в v8.4/v8.5 milestone, НЕ блокировать merge ветки fix/PRJ-2/shiny-eagle.
+
+Если хочешь делать ВСЁ в этой ветке, нужно по 5 минут на каждый:
+- T-F4-4 Dashboard: что именно показывать? Кто из лидов не отправил?
+  Активность за сутки? KPI tiles? Quick-ping?
+- T-UFB14 multi-SDLC: один продукт = несколько SDLC pipelines? Как UI?
+- T-HOL holidays: ввести через admin? Импорт из источника? Какой год?
+- T-UAT-L landing pages: какие? Login? Home? Role-specific?
+
+Решение: defer ИЛИ design-only в этой ветке.
+```
+
+### 21.7 Coordination protocol (Claude ↔ Codex)
+
+Чтобы избежать race на `git push`:
+
+```text
+[start] → Claude commits group-A → push origin
+                                       ↓
+                          Codex pulls origin → commits group-B → push
+                                       ↓
+              Claude pulls origin → wave-2 group-C → push
+                                       ↓
+              Codex pulls origin → wave-2 group-D → push
+                                       ↓
+                            [integration verify]
+```
+
+Каждый агент перед commit'ом обязан: `git pull --rebase origin
+fix/PRJ-2/shiny-eagle`. Если у обоих агентов dirty changes на одном
+файле — это нарушение boundary matrix §21.5, переписать sub-task.
+
+### 21.8 Verification (final)
+
+```bash
+# (a) Полный typecheck/lint/test/build
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+
+# (b) E2E regression (3 новых spec'a включаются автоматически)
+pnpm --filter @customreport/web exec playwright test \
+  --config=e2e/regression/playwright.regression.config.ts
+
+# (c) Build shared package, проверить dist чистый
+pnpm --filter @customreport/shared build
+node -e "import('./packages/shared/dist/schemas/report.js').then(m =>
+  console.log(Object.keys(m).filter(k => k.match(/priority|Priorities/i))))"
+# должно вернуть [] или только новые derived helper'ы
+
+# (d) Docker smoke
+pnpm docker:local:verify
+
+# (e) UAT smoke по §10:
+#  F1 — UAT шаги 1-4
+#  F2 — UAT шаги 1-3
+#  F3 — UAT шаги 1-6 (включая snapshot/restore полный цикл)
+#  D-12 — open item dialog, save status, reopen → pill correct
+#  F4 — три tabs в nav, scope toggle 3-way, shared toolbar
+
+# (f) Codex review final pass
+/codex:review
+
+# (g) Demo-plan verify
+/Demo-plan verify graceful-coalescing-kurzweil
+```
+
+### 21.9 Done definition (final closure)
+
+```text
+Branch fix/PRJ-2/shiny-eagle ready-to-merge ⇔
+  ✓ WAVE-1 + WAVE-2 все 13 ready-tasks shipped
+  ✓ WAVE-3 либо deferred (default) либо implemented после spec
+  ✓ pnpm typecheck/lint/test/build все зелёные
+  ✓ 3 новых e2e spec'a проходят
+  ✓ /codex:review без BLOCK'ов
+  ✓ /Demo-plan verify ≥80
+  ✓ Ручной UAT smoke по §21.8(e) зелёный
+  ✓ STILL-PENDING items либо closed либо явно перенесены в v8.4
+  ✓ core-principles config drift промт отдан в core-principles repo
+
+После всего этого — F5 (§9a): GitLab MR → review → approve → merge → tag.
+```
+
+### 21.10 Risk map
+
+```text
+▲ ВЫСОКИЙ риск:
+  T-G5 restoreVersion atomic — data corruption risk если transaction
+       не завершится; нужен thorough тест
+  T-F4-4 Dashboard — spec ещё не утверждён, scope-creep
+  T-UFB14, T-HOL — нет дизайна, потенциальное расширение в 1000+ LoC
+
+⊙ СРЕДНИЙ риск:
+  T-G1 lead-form consumer — submit-flow дырки если что-то забыто
+  T-D12 react-compiler conflict — прошлый revert; нужен careful подход
+  T-F4-1 report-toolbar — много мест где переиспользуется; refactor risk
+
+▼ НИЗКИЙ риск:
+  T-G3, T-G4, T-G8, T-G9, T-G10, T-G11, T-F4-2, T-F4-3,
+  T-CI-47, T-46FU
+```
+
+### 21.11 Files (полный delta-список к §17)
+
+```text
+NEW:
+  apps/web/src/components/report-shell/report-toolbar.tsx               T-F4-1
+  apps/web/src/components/report-shell/scope-toggle.tsx                 T-F4-2
+  apps/web/e2e/regression/lead-priorities.spec.ts                       T-G8
+  apps/web/e2e/regression/lead-locked-stage-color.spec.ts               T-G9
+  apps/web/e2e/regression/version-history-snapshot.spec.ts              T-G10
+
+EDIT:
+  apps/api/src/modules/report-sections/lead-form.prisma-repository.ts   T-G5
+  apps/web/src/components/lead/lead-form.tsx                            T-G1
+  apps/web/src/components/lead/item-edit-dialog.tsx                     T-D12
+  apps/web/src/components/lead/item-edit-dialog.test.tsx                T-D12
+  apps/web/src/components/slides/lead-unified-slide.tsx                 T-G3
+  apps/web/src/components/navigation/nav-bar.tsx                        T-F4-3
+  apps/api/src/modules/carry-over/carry-over.service.ts                 T-G4 (comment)
+  .github/workflows/<file>.yml                                           T-CI-47
+
+REBUILD:
+  packages/shared/dist/**                                                T-G11
+
+DEFERRED (require spec):
+  apps/web/src/app/(app)/head/dashboard/**                              T-F4-4
+  apps/api/src/modules/dashboard/**                                     T-F4-4
+  (multi-SDLC, holidays, UAT-landing — паттерны зависят от PRD)
+```
+
+---
+
+## 22. Final sweep audit (2026-05-21, post-discovery)
+
+### 22.1 Why this section exists
+
+После §21 пользователь попросил пере-сканировать ветку и доделать ВСЁ
+оставшееся. Запустил три параллельных Explore-разведчика и сверил их выводы
+своими глазами — нашёл три расхождения, исправил факты ниже. Ответы
+пользователя (AskUserQuestion 2026-05-21 19:14):
+
+- e2e priorities spec → **переписать существующий**
+  `agent-b-lead-priorities.spec.ts` (он сейчас тестирует устаревший UI с
+  кнопкой «edit priority N», которой после F1 не существует).
+- Live баг `lead-form.tsx:1781` `badge={priorities.length}` →
+  **фиксить внутри T-G1** одним коммитом (badge не считает foreign authors).
+- F4-4 Dashboard / T-UFB14 / Holidays / UAT landing → **defer в v8.4**
+  (по плану §21.3 это NEEDS-RESEARCH-FIRST, нет PRD).
+
+### 22.2 Sweep verdict — что закрыто, что осталось
+
+```text
+┌─ T-ID  ─┬─ статус ─┬─ evidence ───────────────────────────────────────────┐
+│ T-G1    │ ◐ част.  │ lead-form.tsx:965 data.priorities still legacy pull; │
+│         │          │ line 1781 badge counts own only, не mergedPriorities │
+│ T-G3    │ ✓ done   │ lead-unified-slide.tsx:36 priorityChip,              │
+│         │          │ :80-81 вызов рядом с product marker (sweep подтверд) │
+│ T-G4    │ ✓ done   │ carry-over.service.ts:50-54 Q8 comment, 8f2a3ce      │
+│ T-G5    │ ✓ done   │ lead-form.prisma-repository.ts:217-363               │
+│         │          │ stageStatuses+priorityRank+severity restore (de259b5)│
+│ T-G8    │ ◐ stale  │ agent-b-lead-priorities.spec.ts существует, но       │
+│         │          │ LEAD-080..085 жмёт «edit priority N» — кнопки нет    │
+│ T-G9    │ ✗ нет    │ lead-locked-stage-color.spec.ts не существует        │
+│ T-G10   │ ✗ нет    │ version-history-snapshot.spec.ts не существует       │
+│ T-G11   │ ◐ част.  │ src чистый, dist рассинхрон, нужен pnpm build        │
+│ T-D12   │ ? проверк│ item-edit-dialog.tsx useEffect есть; pill reset      │
+│         │          │ на reopen — нужен ручной UAT-проверка                │
+│ T-46FU  │ ? проверк│ live-Prisma matrix полный прогон не запускался       │
+│ T-F4-1  │ ✗ нет    │ report-shell/report-toolbar.tsx нет (есть archive-   │
+│         │          │ toggle и view-mode-toggle — частично готова почва)   │
+│ T-F4-2  │ ✗ нет    │ scope-toggle 3-way нет; есть 2-way slides/lead-      │
+│         │          │ scope-toggle.tsx (33 строки, легко расширить)        │
+│ T-F4-3  │ ✗ нет    │ nav-bar.tsx:41-74 — 4 head tabs вместо 3             │
+│ T-CI-47 │ ✗ нет    │ .github/workflows/* — нет badge генерации            │
+└─────────┴──────────┴──────────────────────────────────────────────────────┘
+```
+
+Полностью закрыты в текущей ветке: **T-G3, T-G4, T-G5**. Остальное —
+открыто.
+
+### 22.3 Scope этого финального sweep
+
+```text
+┌─ in scope ─────────────────────────────────────────────────────────────┐
+│ T-G1   lead-form consumer cleanup + badge bug (один коммит)            │
+│ T-G8   переписать agent-b-lead-priorities.spec.ts под новый UI         │
+│ T-G9   создать lead-locked-stage-color.spec.ts                          │
+│ T-G10  создать version-history-snapshot.spec.ts                         │
+│ T-G11  pnpm --filter @customreport/shared build (no commit per Q9)     │
+│ T-D12  manual UAT проверка status pill reset; если bug — точечный fix   │
+│ T-F4-1 report-shell/report-toolbar.tsx (extract из lead+head)          │
+│ T-F4-2 report-shell/scope-toggle.tsx 3-way generalization              │
+│ T-F4-3 nav-bar.tsx 4→3 tabs (убрать /head/slides как nav-item)         │
+│ T-CI-47 .github/workflows/* — badge генерация для 47-02 spec           │
+└─────────────────────────────────────────────────────────────────────────┘
+┌─ deferred в v8.4 ───────────────────────────────────────────────────────┐
+│ T-F4-4 Head Dashboard enhancement — нет PRD, scope-creep risk          │
+│ T-UFB14 multi-SDLC stages per product — нет UI/data model              │
+│ T-HOL   Holidays calendar — нет source/admin flow                       │
+│ T-UAT-L UAT landing pages — scope непонятен                            │
+│ T-46FU  live-Prisma matrix — не блокирует merge, делается в CI прогоне  │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 22.4 Execution order (solo sequential, по запросу «делай всё сам»)
+
+```text
+[stage A: high-risk core]
+  ├─ A1  T-G1 lead-form consumer cleanup + badge fix (один коммит)
+  └─ A2  T-G11 pnpm build shared (no commit, verify dist clean)
+  ↓
+[stage B: e2e regression — три атомарных коммита]
+  ├─ B1  T-G8 переписать agent-b-lead-priorities.spec.ts
+  ├─ B2  T-G9 lead-locked-stage-color.spec.ts (new)
+  └─ B3  T-G10 version-history-snapshot.spec.ts (new)
+  ↓
+[stage C: F4 — три коммита, по компоненту]
+  ├─ C1  T-F4-1 report-toolbar.tsx + переключение Lead+Head на него
+  ├─ C2  T-F4-2 scope-toggle.tsx 3-way (own|product|lead)
+  └─ C3  T-F4-3 nav-bar.tsx 4→3 tabs
+  ↓
+[stage D: housekeeping]
+  ├─ D1  T-D12 ручная UAT проверка → fix если нужно
+  └─ D2  T-CI-47 CI badge yml
+  ↓
+[stage E: closeout]
+  ├─ E1  pnpm typecheck && pnpm lint && pnpm test (полный прогон)
+  ├─ E2  playwright regression (новые spec'и обязаны зелёные)
+  ├─ E3  /codex:review на полный diff origin/main..HEAD
+  └─ E4  /Demo-plan verify graceful-coalescing-kurzweil → ≥80
+```
+
+Каждый stage завершается атомарным коммитом и `git push` перед следующим.
+
+### 22.5 T-G1 cleanup — конкретные правки
+
+```text
+файл: apps/web/src/components/lead/lead-form.tsx
+─────────────────────────────────────────────────────────────────
+строка 965  const priorities: PriorityEntry[] = data.priorities as PriorityEntry[];
+            ↑
+            оставляем как есть. mapLeadPriorities derives из items.filter(
+            priorityRank != null) на backend (apps/web/src/lib/mappers/
+            lead-form.ts:143), т.е. api-shape УЖЕ derived. Q7 default
+            «derive в FE» выполнен через mapper, не через ручное вычисление
+            в компоненте.
+
+строка 1077 const mergedPriorities = [...priorities, ...foreignPriorities];
+            ↑
+            оставляем — это own + foreign объединение.
+
+строка 1445 (... && priorities.length > 0) && (
+            ↑
+            проверить: должен ли guard смотреть mergedPriorities или
+            priorities? Если секция показывает merged, а guard own —
+            секция исчезнет когда own пусто но foreign есть. Скорее всего
+            заменить на mergedPriorities.length > 0.
+
+строка 1781 badge={`${priorities.length}`}
+            ↑
+            BUG: PrioritiesSection ниже рендерит mergedPriorities.
+            FIX: badge={`${mergedPriorities.length}`}
+─────────────────────────────────────────────────────────────────
+коммит: fix(lead-form): priorities badge counts cross-author entries
+LoC: ~3
+риск: low — badge числовой, ниже отображается тот же массив
+```
+
+### 22.6 T-G8 e2e priorities — новые сценарии
+
+```text
+файл: apps/web/e2e/regression/agent-b-lead-priorities.spec.ts
+─────────────────────────────────────────────────────────────────
+ЗАМЕНИТЬ всё содержимое (171 строка) на новый набор LEAD-080..LEAD-085
+под current UI:
+
+LEAD-080: PrioritiesSection видна, содержит ≥1 item с priorityRank.
+          Селектор: [data-testid="lead-section-priorities"]
+                    [data-testid="priority-row"]
+
+LEAD-081: Item edit dialog — поле «Priority rank» доступно.
+          Нажать Edit на любом item-card; в dialog найти input
+          по label/aria «Priority rank»; убедиться editable.
+
+LEAD-082: Set rank=1 на item у которого его не было → item
+          появляется в PrioritiesSection в правильной позиции.
+
+LEAD-083: Unset rank (set to empty/0) → item исчезает из
+          PrioritiesSection (read-only derived view).
+
+LEAD-084: Item-card P{N} chip виден когда priorityRank != null
+          (left of tag, gold background).
+
+LEAD-085: Cross-author item с priorityRank → виден в PrioritiesSection
+          с пометкой автора (badge или aria-label includes "by <name>").
+          Использует advanced seed где у одного продукта несколько lead.
+─────────────────────────────────────────────────────────────────
+коммит: test(e2e): rewrite lead-priorities under derived UI
+LoC: ~180 (replace 171)
+риск: low — изолированный spec
+```
+
+### 22.7 T-G9 e2e locked stage color — новый spec
+
+```text
+файл: apps/web/e2e/regression/lead-locked-stage-color.spec.ts (NEW)
+─────────────────────────────────────────────────────────────────
+LEAD-LSC-01: locked stage с cross-author blocker item →
+             chip красный (или blocked-style class) + lock icon.
+LEAD-LSC-02: locked stage с cross-author at-risk item →
+             chip оранжевый + lock icon.
+LEAD-LSC-03: locked stage реально пустой у всех контрибьюторов →
+             chip серый (empty) + lock icon.
+LEAD-LSC-04: current-author stage (не locked) с blocker →
+             красный, БЕЗ замка.
+
+Использует advanced seed + role=lead login.
+Селекторы: [data-testid="stage-chip-<stageName>"] (если есть) или
+           role=region с aria-label "Stage <name>".
+─────────────────────────────────────────────────────────────────
+коммит: test(e2e): locked stage chip color reflects cross-author risk
+LoC: ~120
+риск: low
+```
+
+### 22.8 T-G10 e2e version history snapshot — новый spec
+
+```text
+файл: apps/web/e2e/regression/version-history-snapshot.spec.ts (NEW)
+─────────────────────────────────────────────────────────────────
+LEAD-VHS-01: открыть /lead/report/<id>, запомнить current v=N.
+LEAD-VHS-02: поставить статус DevOps stage; подождать 6 с;
+             v-counter перешёл на N+1 (debounce 5 с + buffer).
+LEAD-VHS-03: «Saved» badge пропал ≤1 с после v# bump.
+LEAD-VHS-04: ‹ → форма read-only, DevOps статус = старый (пустой).
+LEAD-VHS-05: › → DevOps статус = только что выставленный.
+LEAD-VHS-06: Restore vN → активный draft показывает старое значение.
+LEAD-VHS-07: snapshot включает stageStatuses, priorityRank, severity:
+             поставить rank=1 на item + severity на risk + status на
+             stage → подождать snapshot → изменить всё → restore →
+             значения вернулись (на трёх местах одновременно).
+─────────────────────────────────────────────────────────────────
+коммит: test(e2e): version history snapshot integrity full F3 smoke
+LoC: ~200
+риск: medium — debounce timing flake; mitigation — waitForResponse
+       на createSnapshot mutation, не sleep
+```
+
+### 22.9 T-F4-1/2/3 — F4 head alignment (реализация)
+
+```text
+T-F4-1  apps/web/src/components/report-shell/report-toolbar.tsx (NEW)
+        ─────────────────────────────────────────────────────────
+        Извлечь паттерн из lead-form.tsx:1454-1495 и head-history-
+        client.tsx:92-104. Компонент принимает:
+          - periodNavigator: ReactNode (slot)
+          - archiveToggle: ReactNode (slot)
+          - leadingExtras?: ReactNode (между period и archive)
+          - trailingExtras?: ReactNode (после archive, role-specific:
+                                        Lead → FillFrom + VersionNav,
+                                        Head → ViewMode toggle)
+        Layout: <div className="flex flex-nowrap items-center
+                justify-between gap-2 overflow-x-auto rounded-...">
+        Переключить lead-form.tsx и head-history-client.tsx на него.
+        Tests: report-shell/report-toolbar.test.tsx (~60 LoC).
+        LoC total: ~180; риск: low (refactor existing markup).
+
+T-F4-2  apps/web/src/components/report-shell/scope-toggle.tsx (NEW)
+        ─────────────────────────────────────────────────────────
+        Generalize slides/lead-scope-toggle.tsx (2-way) до 3-way.
+        Type: scope: "own" | "product" | "lead"
+        Props: allowedScopes?: Array<"own"|"product"|"lead"> — Lead
+               использует ["own", "product"], Head — ["product", "lead"].
+        UI: map allowedScopes → buttons.
+        Заменить импорт LeadScopeToggle на ScopeToggle в lead-slides-
+        client.tsx; добавить Head usage если ready (если Head slides
+        ещё на старом ToggleGroup — миграция).
+        LoC: ~80; риск: low.
+
+T-F4-3  apps/web/src/components/navigation/nav-bar.tsx (EDIT)
+        ─────────────────────────────────────────────────────────
+        NAV_LINKS (lines 41-74) для role=head:
+          было:   History, Dashboard, Status, Slides
+          станет: Dashboard, Status, History  (3 tabs)
+        Убрать запись `/head/slides` — это alias-редирект, который
+        существует как back-compat в apps/web/src/app/(app)/head/
+        slides/page.tsx. Сам redirect оставляем (back-compat по URL).
+        Tests: nav-bar.test.tsx — добавить кейс «head не видит Slides
+        в nav».
+        LoC: ~30 (включая тест); риск: low.
+```
+
+### 22.10 T-D12 — manual check + опциональный fix
+
+```text
+сценарий:
+  1. /lead/report/<id> → open item edit dialog (Edit на любом item-card)
+  2. сменить status pill (e.g. на «Done»)
+  3. Save → dialog закрыт
+  4. снова Edit того же item → check: status pill показывает «Done»
+     (а не дефолтный/предыдущий)
+  5. отменить → проверить что pill в dialog соответствует item state
+
+если bug → точечный fix:
+  - useEffect([open, item.workflowStatus], () => setStatus(item.workflowStatus))
+  - ИЛИ key={`${item.id}-${open}`} на StatusPill для force-remount
+LoC: ~5 если нужен fix; риск: medium (react-compiler конфликт в прошлом)
+```
+
+### 22.11 T-CI-47 — CI badge
+
+```text
+файл: .github/workflows/<ci-yml> (определить какой)
+─────────────────────────────────────────────────────────────────
+Добавить job или step, генерирующий badge SVG/JSON для phase 47-02
+spec status (см. INTAKE-2026-05-16 item 4). Минимум — shields.io
+endpoint в README.
+
+LoC: ~20; риск: low.
+```
+
+### 22.12 Verification (final, для §22 closure)
+
+```bash
+# stage E1 quality gates
+pnpm typecheck && pnpm lint && pnpm test
+
+# stage E2 playwright (новые + перезаписанные specs обязаны зелёные)
+pnpm --filter @customreport/web exec playwright test \
+  --config=e2e/regression/playwright.regression.config.ts \
+  --grep "priorities|locked-stage|version-history-snapshot|nav-bar"
+
+# stage E3 shared dist чистый (T-G11 verify, не коммит)
+pnpm --filter @customreport/shared build
+ls -la packages/shared/dist/schemas/report.d.ts
+node -e "const m=require('./packages/shared/dist/schemas/report.cjs');
+         console.log(Object.keys(m).filter(k => /priority|Priorities/i.test(k)))"
+# ожидание: [] или только новые derived helpers
+
+# stage E4 Codex review
+/codex:review
+
+# stage E5 Demo-plan verify
+/Demo-plan verify graceful-coalescing-kurzweil
+# таргет ≥80
+```
+
+### 22.13 Done definition (для §22 closure)
+
+```text
+§22 sweep done ⇔
+  ✓ T-G1 commit landed (badge fix + cleanup confirmed)
+  ✓ T-G8 agent-b-lead-priorities.spec.ts rewritten, 6 cases green
+  ✓ T-G9 lead-locked-stage-color.spec.ts new, 4 cases green
+  ✓ T-G10 version-history-snapshot.spec.ts new, 7 cases green
+  ✓ T-G11 shared dist verified clean (no commit per Q9)
+  ✓ T-D12 manual UAT step performed (fix only if bug found)
+  ✓ T-F4-1 report-shell/report-toolbar.tsx landed, Lead+Head switched
+  ✓ T-F4-2 report-shell/scope-toggle.tsx 3-way, Lead-slides switched
+  ✓ T-F4-3 nav-bar.tsx 3 head tabs
+  ✓ T-CI-47 CI badge в workflows
+  ✓ stage E1+E2 зелёные
+  ✓ /codex:review без BLOCK
+  ✓ /Demo-plan verify ≥80
+  ✓ DEFERRED (T-F4-4, T-UFB14, T-HOL, T-UAT-L) явно перенесены в v8.4
+
+После §22 closure → §9a F5 GitLab MR fix/PRJ-2/shiny-eagle → main.
+```
+
+### 22.14 Risk map (только sweep-уровень)
+
+```text
+▲ medium
+  T-G10 playwright snapshot timing flake — mitigation через waitForResponse
+  T-D12 react-compiler reopen pattern — прошлый revert; careful
+
+⊙ low
+  T-G1 badge fix (3 LoC)
+  T-G8/G9 e2e specs (изолированные)
+  T-F4-1 toolbar refactor (children-slot pattern, чисто)
+  T-F4-2 scope-toggle (UI-only)
+  T-F4-3 nav-bar tabs (1 строка из NAV_LINKS)
+  T-G11 build verify (без коммита)
+  T-CI-47 yml-only
+
+▼ deferred
+  T-F4-4, T-UFB14, T-HOL, T-UAT-L → новый milestone v8.4
+```
+
+### 22.15 От человека / Я делаю сам
+
+```text
+─────────────────────────────────────
+✓ Я ДЕЛАЮ САМ
+─────────────────────────────────────
+  ├── T-G1 lead-form badge fix + commit + push
+  ├── T-G8 переписать agent-b-lead-priorities.spec.ts + commit
+  ├── T-G9 lead-locked-stage-color.spec.ts new + commit
+  ├── T-G10 version-history-snapshot.spec.ts new + commit
+  ├── T-G11 pnpm build shared, проверить dist
+  ├── T-F4-1 report-toolbar.tsx new + Lead/Head switch + commit
+  ├── T-F4-2 scope-toggle.tsx 3-way + commit
+  ├── T-F4-3 nav-bar 4→3 + commit
+  ├── T-CI-47 CI badge yml + commit
+  ├── полный pnpm typecheck/lint/test/playwright
+  └── /codex:review + /Demo-plan verify
+
+─────────────────────────────────────
+▲ ОТ ТЕБЯ
+─────────────────────────────────────
+  ├── T-D12 manual UAT (1 минута): open item dialog → change status →
+  │   save → reopen → check pill matches. Сообщить bug/clean.
+  └── approve PR в GitLab UI после моего F5 push (последний шаг)
+```

@@ -1,5 +1,7 @@
 # CustomReport
 
+[![CI](https://forge.example.org/apolenkov/customreport/actions/workflows/ci.yml/badge.svg?branch=main)](https://forge.example.org/apolenkov/customreport/actions/workflows/ci.yml)
+
 Weekly status report automation for a software department. Six team leads fill in their sections via structured forms (project traffic lights, current/next week items, risks, decisions). The system assembles everything into a single report for the department head to review and publish.
 
 ## Architecture
