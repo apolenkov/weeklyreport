@@ -288,6 +288,14 @@ function buildHarness(
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
       },
+      // F3.4: snapshot viewer — returns null (no snapshot loaded in unit tests).
+      getVersion: {
+        queryOptions: () => ({
+          queryKey: ["leadForm.getVersion"],
+          queryFn: async () => null,
+        }),
+        pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),
+      },
     },
     ai: {
       // Phase 31 (AI-03): OnTrackIcon is mounted in SdlcPipeline; provide a

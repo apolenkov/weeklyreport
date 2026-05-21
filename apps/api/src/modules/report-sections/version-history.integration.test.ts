@@ -87,6 +87,7 @@ function createMockRepository(
       return 0;
     },
     listVersions: listVersionsFn,
+    async getVersion() { return null; },
     restoreVersion: restoreVersionFn,
     createVersionSnapshot: createSnapshotFn,
     async createReopenRequest() {},

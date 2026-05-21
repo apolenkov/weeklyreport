@@ -63,6 +63,9 @@ function createMockRepository(
     async listVersions() {
       return [];
     },
+    async getVersion() {
+      return null;
+    },
     async restoreVersion() {
       return 1;
     },

@@ -100,6 +100,7 @@ function createMockRepository(
     revokeSectionSubmission: vi.fn().mockResolvedValue(undefined),
     fillFromSection: vi.fn().mockResolvedValue(5),
     listVersions: vi.fn().mockResolvedValue([]),
+    getVersion: vi.fn().mockResolvedValue(null),
     restoreVersion: vi.fn().mockResolvedValue(1),
     createVersionSnapshot: vi.fn().mockResolvedValue(undefined),
     createReopenRequest: vi.fn().mockResolvedValue(undefined),

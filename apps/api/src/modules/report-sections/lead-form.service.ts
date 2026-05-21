@@ -32,6 +32,7 @@ export interface LeadFormRepository {
     sourceSectionId: string,
   ): Promise<number>;
   listVersions(sectionId: string): Promise<VersionSnapshot[]>;
+  getVersion(sectionId: string, version: number): Promise<Record<string, unknown> | null>;
   restoreVersion(sectionId: string, version: number): Promise<number>;
   createVersionSnapshot(sectionId: string): Promise<void>;
   createReopenRequest(
@@ -179,6 +180,28 @@ export class LeadFormService {
     }
 
     return this.repository.listVersions(sectionId);
+  }
+
+  async getVersion(
+    sectionId: string,
+    version: number,
+    userId: string,
+    role?: Role,
+  ): Promise<Record<string, unknown> | null> {
+    const section = await this.repository.getSectionById(sectionId);
+    if (!section) {
+      throw new LeadFormDomainError(`Section ${sectionId} not found.`);
+    }
+    const isHeadLike = role === "head" || role === "admin";
+    const canView =
+      section.authorId === userId ||
+      isHeadLike ||
+      (role === "lead" &&
+        (await this.repository.hasSharedProduct(userId, section.authorId)));
+    if (!canView) {
+      throw new LeadFormAccessError("Access denied.");
+    }
+    return this.repository.getVersion(sectionId, version);
   }
 
   /** API-09: Restore a section to a specific version. */

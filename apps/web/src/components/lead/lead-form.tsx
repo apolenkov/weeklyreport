@@ -371,6 +371,19 @@ export function LeadForm({
     enabled: targetReportId !== "",
   });
 
+  // F3.4: non-null when user navigates to a historical snapshot via ← › arrows.
+  const [viewedSnapshotVersion, setViewedSnapshotVersion] = useState<number | null>(null);
+
+  // F3.4: fetch full snapshot data for a historical version when the user
+  // navigates to it via VersionHistoryNav ← › arrows.
+  const getVersionQ = useQuery({
+    ...trpc.leadForm.getVersion.queryOptions({
+      reportSectionId: sectionIdForActions,
+      version: viewedSnapshotVersion ?? 1,
+    }),
+    enabled: viewedSnapshotVersion !== null && sectionIdForActions !== "",
+  });
+
   const crossAuthors = crossAuthorsQ.data ?? [];
 
   // F-shiny-1: enrich crossAuthors with per-risk details and isEmpty flag
@@ -673,9 +686,8 @@ export function LeadForm({
     }),
   );
 
-  // A16: auto-versioning — track saves; snapshot once per minute if new saves occurred.
-  const autosaveCountRef = useRef(0);
-  const lastSnapshotCountRef = useRef(0);
+  // F3.1: debounced snapshot — fires 5 s after each successful autosave.
+  const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---- Build draft payload ----
   const draftPayload = useMemo(
@@ -728,26 +740,25 @@ export function LeadForm({
     enabled: !isReadOnlyEarly && !isSubmitted && draftSection !== null,
     initialSavedKey,
     onSaveSuccess: () => {
-      autosaveCountRef.current += 1;
+      // Debounce: reset the 5 s window each time a new save lands so rapid
+      // edits coalesce into one snapshot instead of queuing N snapshots.
+      if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
+      if (!sectionIdForActions) return;
+      const sid = sectionIdForActions;
+      snapshotTimerRef.current = setTimeout(() => {
+        snapshotMutateRef.current({ reportSectionId: sid });
+      }, 5_000);
     },
   });
 
-  // A16: snapshot once per minute when there are new autosaves since the
-  // last snapshot. Uses a stable ref for mutate so the interval is not
-  // reset on every mutation-state change (isPending, isSuccess, etc.).
+  // Keep mutate ref stable so the timer closure always calls the latest version.
   const snapshotMutateRef = useRef(createSnapshotMut.mutate);
   snapshotMutateRef.current = createSnapshotMut.mutate;
 
-  useEffect(() => {
-    if (!sectionIdForActions || isReadOnlyEarly || isSubmitted) return;
-    const id = setInterval(() => {
-      if (autosaveCountRef.current > lastSnapshotCountRef.current) {
-        lastSnapshotCountRef.current = autosaveCountRef.current;
-        snapshotMutateRef.current({ reportSectionId: sectionIdForActions });
-      }
-    }, 60_000);
-    return () => clearInterval(id);
-  }, [sectionIdForActions, isReadOnlyEarly, isSubmitted]);
+  // Cleanup pending snapshot timer on unmount.
+  useEffect(() => () => {
+    if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
+  }, []);
 
   // 35-07: set document.title to surface the addressed week in the browser
   // tab. Format: "Week 19, May 4-10 - CustomReport". Resolved from the
@@ -855,8 +866,44 @@ export function LeadForm({
       }),
     };
   });
+  // F3.4: build a lookup from snapshot stageStatuses so own-author stage chips
+  // reflect the status captured at snapshot time, not the current draft state.
+  // Plain const — must stay after the early-return guard; not a hook.
+  const snapshotStageMap = (() => {
+    if (!getVersionQ.data) return null;
+    const raw = getVersionQ.data as {
+      stageStatuses?: Array<{ projectId: string; stageName: string; status: string }>;
+    };
+    const map = new Map<string, Map<string, string>>();
+    for (const ss of raw.stageStatuses ?? []) {
+      let pm = map.get(ss.projectId);
+      if (!pm) { pm = new Map(); map.set(ss.projectId, pm); }
+      pm.set(ss.stageName.toLowerCase(), ss.status);
+    }
+    return map;
+  })();
+
+  // F3.4: when viewing a historical snapshot, override own-author stage statuses
+  // with snapshot values so chips reflect the captured state.
+  const displayProducts: Product[] = (() => {
+    if (!snapshotStageMap) return products;
+    return products.map((p) => {
+      const pm = snapshotStageMap.get(p.id);
+      if (!pm) return p;
+      return {
+        ...p,
+        stages: p.stages.map((s) => {
+          if (s.ownership === "locked") return s;
+          const snap = pm.get(s.stageName.toLowerCase());
+          if (snap === undefined) return s;
+          return { ...s, status: snap as import("../../lib/mappers/traffic-light").StageStatus };
+        }),
+      };
+    });
+  })();
+
   // Lookup map for resolving productName from productId in cross-author embeds.
-  const productNameById = new Map(products.map((p) => [p.id, p.name]));
+  const productNameById = new Map(displayProducts.map((p) => [p.id, p.name]));
   const currentWeekItems: KanbanItem[] = data.currentWeekItems as KanbanItem[];
   const nextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
   const risks: RiskEntry[] = data.risks as RiskEntry[];
@@ -994,7 +1041,9 @@ export function LeadForm({
         ? [...visibleNonArchivedPeriods, selectedPeriod]
         : visibleNonArchivedPeriods;
 
-  const isReadOnly = data.readOnly || !!period || isSubmitted;
+  // F3.4: viewing a historical snapshot forces read-only mode.
+  const isViewingSnapshot = viewedSnapshotVersion !== null;
+  const isReadOnly = data.readOnly || !!period || isSubmitted || isViewingSnapshot;
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
@@ -1283,8 +1332,8 @@ export function LeadForm({
   function handleSaveVersion() {
     if (!sectionIdForActions) return;
     isManualSaveRef.current = true;
-    // Sync lastSnapshotCount so the 1-min interval doesn't double-snapshot.
-    lastSnapshotCountRef.current = autosaveCountRef.current;
+    // Cancel pending debounced snapshot — manual save already creates one.
+    if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
     createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
   }
 
@@ -1430,8 +1479,9 @@ export function LeadForm({
             <VersionHistoryNav
               versions={versions}
               onRestore={isReadOnly ? undefined : handleRestoreVersion}
-              onSaveVersion={isReadOnly ? undefined : handleSaveVersion}
+              onSaveVersion={isViewingSnapshot ? undefined : (isReadOnly ? undefined : handleSaveVersion)}
               canSaveVersion={!createSnapshotMut.isPending}
+              onViewVersion={setViewedSnapshotVersion}
             />
           </div>
         </div>
@@ -1453,6 +1503,24 @@ export function LeadForm({
             </div>
           )}
 
+        {/* F3.4: snapshot preview banner — shown when user navigates to a
+            historical version via VersionHistoryNav ← ›. Stages reflect
+            status captured at snapshot time; content is read-only. */}
+        {isViewingSnapshot && (
+          <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)]/40 bg-[var(--color-success)] p-3">
+            <span className="text-sm font-medium text-[var(--color-starbucks-accent)]">
+              Viewing snapshot v{viewedSnapshotVersion} — read-only. Stage statuses reflect this version.
+            </span>
+            <button
+              type="button"
+              className="rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)] hover:bg-[var(--color-starbucks-accent)]/10 transition-colors"
+              onClick={() => setViewedSnapshotVersion(null)}
+            >
+              Back to current
+            </button>
+          </div>
+        )}
+
         {isSlidesMode ? (
           <LeadSlidesClient
             initialReportId={targetReportId || pinnedReportId || null}
@@ -1462,7 +1530,7 @@ export function LeadForm({
         ) : (
           <>
             <LeadFormSyncBridge.Provider
-              products={products}
+              products={displayProducts}
               risks={risks}
               onProductsChange={handleProductsChange}
               onRisksChange={handleRisksChange}

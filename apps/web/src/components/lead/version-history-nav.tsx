@@ -17,6 +17,12 @@ type VersionHistoryNavProps = {
   readonly onSaveVersion?: () => void;
   /** Set false to gray out the Save Version button (e.g. mid-mutation). */
   readonly canSaveVersion?: boolean;
+  /**
+   * F3.4: Called when the user navigates to a historical version (version
+   * number) or back to the latest (null). Used by lead-form.tsx to switch
+   * into snapshot read-only view mode.
+   */
+  readonly onViewVersion?: (version: number | null) => void;
 };
 
 // Chevron icons — same family used by PeriodNavigator. The two control
@@ -116,6 +122,7 @@ export function VersionHistoryNav({
   onRestore,
   onSaveVersion,
   canSaveVersion = true,
+  onViewVersion,
 }: VersionHistoryNavProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
@@ -130,12 +137,16 @@ export function VersionHistoryNav({
     if (!hasPrev) return;
     const nextIndex = currentIndex + 1;
     setCurrentIndex(nextIndex);
+    // F3.4: notify parent — navigating away from latest → snapshot view mode.
+    onViewVersion?.(versions[nextIndex]?.version ?? null);
   }
 
   function handleNext() {
     if (!hasNext) return;
     const nextIndex = currentIndex - 1;
     setCurrentIndex(nextIndex);
+    // F3.4: notify parent — nextIndex 0 = latest (exit snapshot mode).
+    onViewVersion?.(nextIndex === 0 ? null : (versions[nextIndex]?.version ?? null));
   }
 
   function handleRestore(version: number) {

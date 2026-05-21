@@ -1968,6 +1968,26 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      getVersion: protectedProcedure
+        .input(
+          z.object({
+            reportSectionId: z.string().uuid(),
+            version: z.number().int().positive(),
+          }),
+        )
+        .query(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.getVersion(
+              input.reportSectionId,
+              input.version,
+              ctx.session.userId,
+              ctx.session.role,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
       createSnapshot: protectedProcedure
         .input(z.object({ reportSectionId: z.string().uuid() }))
         .mutation(async ({ input, ctx }) => {
