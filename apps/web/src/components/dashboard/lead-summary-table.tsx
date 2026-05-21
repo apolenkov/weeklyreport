@@ -7,13 +7,20 @@ const MS_24H = 24 * 60 * 60 * 1000;
  * Returns true when `lastActivity` is an ISO-date string whose parsed time is
  * more than 24 hours ago, or when it is a non-date sentinel ("Not started" /
  * "In progress") meaning no timestamped activity exists at all.
+ *
+ * Date-only strings ("2026-05-21") are parsed as local midnight to avoid the
+ * Date.parse UTC-midnight pitfall, which mis-flagged active leads as inactive
+ * in eastern timezones during the early morning local time.
  */
 function isInactive24h(lastActivity: string): boolean {
   // Sentinel strings: no activity ever recorded.
   if (lastActivity === "Not started" || lastActivity === "In progress") {
     return true;
   }
-  const parsed = Date.parse(lastActivity);
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(lastActivity);
+  const parsed = Date.parse(
+    isDateOnly ? `${lastActivity}T00:00:00` : lastActivity,
+  );
   if (Number.isNaN(parsed)) return false;
   return Date.now() - parsed > MS_24H;
 }
@@ -171,7 +178,7 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
                   {lead.submittedAtLabel ?? "-"}
                 </td>
                 <td className="px-5 py-3 text-right">
-                  {reportId && lead.status !== "submitted" ? (
+                  {reportId && lead.status === "draft" ? (
                     <RemindLeadButton
                       reportId={reportId}
                       leadId={lead.id}
