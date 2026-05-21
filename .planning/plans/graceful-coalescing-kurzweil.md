@@ -2791,3 +2791,142 @@ pnpm --filter @customreport/web exec playwright test \
    ├─ /Demo-jira transition PRJ-2 → next state
    └─ tag v8.3.x если milestone v8.3 целиком закрыт
 ```
+
+---
+
+## 24. Session closeout (2026-05-21, post-§23 retro)
+
+### 24.1 Retro (DONE / WORKED / FRAGILE)
+
+```text
+┌─ DONE ─────────────────────────────────────────────────────────┐
+│ §22 final sweep (9 коммитов):                                  │
+│   T-G1   badge + Toggle-All guard mergedPriorities             │
+│   T-G8   agent-b-lead-priorities.spec rewrite under new UI     │
+│   T-G9   lead-locked-stage-color.spec new (4 cases)            │
+│   T-G10  version-history-snapshot.spec new (7 cases)           │
+│   T-G11  shared dist verified clean                            │
+│   T-F4-1 report-shell/report-toolbar shared component          │
+│   T-F4-2 scope-toggle 3-way generalization                     │
+│   T-F4-3 nav-bar 4→3 head tabs                                 │
+│   T-CI-47 README CI badge                                      │
+│ §23 extension (4 коммита + Codex fix):                         │
+│   T-F4-4 pulse: Remind + 24h row + 24h KPI                     │
+│   T-UAT-L landing-public + landing-role-redirect specs         │
+│   T-HOL  Holidays Coming Soon tab + TODO                       │
+│   CLAUDE.md UI-deferred (ComingSoonBadge) rule                 │
+│   559a891 Codex review fixes: HIGH + 4 MEDIUM                  │
+│ Codex setup --disable-review-gate                              │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ WORKED ───────────────────────────────────────────────────────┐
+│ Subagent fan-out                                                │
+│   wave-(-1) Haiku×3 BP research → отличный signal-to-cost      │
+│   wave-0 Haiku×2 PD/LD discovery → конкретика для Sonnet      │
+│   wave-1 Sonnet×2 + Haiku×1 implementation → 3 parallel        │
+│   wave-3 Haiku×3 review gate (react/tests/docs) → 3 PASS       │
+│   total tool_uses ~150, total parallel time ~7 мин wall-clock  │
+│ Demo rich-mode plan §23 (15+ sections) — каждое решение         │
+│   evidence-backed; rich-mode дал «cold-readable» plan          │
+│ TOCTOU race fix через service-first + post-read createdAt      │
+│ ComingSoon pattern reuse через готовый snippet от Haiku        │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ FRAGILE ──────────────────────────────────────────────────────┐
+│ Codex stop-hook (review-gate) — drained usage limits;          │
+│   итеративно сломался дважды до /codex:setup disable           │
+│ Sonnet-1 partial completion (T-F4-4 заблокирован на email      │
+│   exposure) → потребовал orchestrator override + backend       │
+│   dispatchPending extension                                    │
+│ HIGH finding всплыл только в Codex review, не в Haiku-RV-react │
+│   — review gates по умолчанию miss business-logic semantics    │
+│ Playwright specs не прогонялись локально (нет dev server) —   │
+│   green-or-flaky неизвестно до CI/local run                    │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### 24.2 Осталось (TODO / BLOCKED / VERIFY / NEXT / FILES / COMMANDS / RISK)
+
+```text
+┌─ TODO ─────────────────────────────────────────────────────────┐
+│ T-D12 manual UAT — item-edit-dialog status pill reset-on-      │
+│       reopen (1 минута от пользователя)                        │
+│ F5    GitLab MR fix/PRJ-2/shiny-eagle → main                   │
+│ Backlog LOW/NIT findings от Codex:                             │
+│   - authorId reportId-binding silent empty result              │
+│   - activity-24h-card queryKey dedup assertion                 │
+│   - LeadInfo["status"] proper union narrowing                  │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ BLOCKED ──────────────────────────────────────────────────────┐
+│ MR approve — ждёт человека в GitLab UI                         │
+│ T-F4-4 Dashboard advanced (PRD) — defer в v8.4                 │
+│ T-UFB14 multi-SDLC — DROPPED (locked stage lock-icon достаточно)│
+│ T-HOL full impl — Holiday table + admin CRUD в v8.4             │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ VERIFY (manual smoke) ────────────────────────────────────────┐
+│ /head/dashboard:                                                │
+│   - 24h Activity KPI card видна                                 │
+│   - LeadSummaryTable Action колонка                             │
+│   - Remind button только на lead.status === "draft"            │
+│   - Click Remind → Mailpit :8025 получает email                │
+│   - Inactive 24h row → opacity-60 + bg-muted/30                │
+│ /admin:                                                         │
+│   - Holidays tab + Coming Soon tooltip on hover                 │
+│ /lead/report:                                                   │
+│   - T-D12 status pill reset (manual)                            │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ NEXT (after merge) ───────────────────────────────────────────┐
+│ 1. /Demo-jira transition PRJ-2 → next state                     │
+│ 2. tag v8.3.x если v8.3 milestone готов к закрытию             │
+│ 3. backlog LOW/NIT findings → v8.4 milestone                   │
+│ 4. Holidays full impl → v8.4 (.planning/todos/pending/         │
+│    2026-05-21-holidays-calendar.md уже создан)                 │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ FILES (последние правки) ─────────────────────────────────────┐
+│ apps/web/src/components/dashboard/                              │
+│   ├─ remind-lead-button.tsx (NEW + Codex fix)                  │
+│   ├─ activity-24h-card.tsx (NEW)                                │
+│   ├─ lead-summary-table.tsx (Action col + 24h + Codex fix)     │
+│   └─ dashboard-page.tsx (reportId pass)                         │
+│ apps/api/src/infrastructure/trpc/trpc.router.ts                │
+│   └─ dispatchPending +leadId + race-safe attribution           │
+│ apps/web/e2e/regression/                                        │
+│   ├─ landing-public.spec.ts (NEW, 4)                            │
+│   ├─ landing-role-redirect.spec.ts (NEW, 3)                     │
+│   ├─ agent-b-lead-priorities.spec.ts (REWRITE, 6)              │
+│   ├─ lead-locked-stage-color.spec.ts (NEW, 4)                   │
+│   └─ version-history-snapshot.spec.ts (NEW, 7)                  │
+│ apps/web/src/components/report-shell/ (NEW dir)                 │
+│   ├─ report-toolbar.tsx                                         │
+│   ├─ report-toolbar.test.tsx                                    │
+│   ├─ scope-toggle.tsx                                           │
+│   └─ scope-toggle.test.tsx                                      │
+│ apps/web/src/components/admin/settings-tab.tsx                  │
+│ apps/web/src/components/navigation/nav-bar.tsx                  │
+│ CLAUDE.md (repo) — Deferred Features UI-pattern rule            │
+│ .planning/todos/pending/2026-05-21-holidays-calendar.md (NEW)   │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ COMMANDS (resume from here) ──────────────────────────────────┐
+│ git status --short && git log --oneline origin/main..HEAD       │
+│ pnpm typecheck && pnpm lint && pnpm test                        │
+│ pnpm --filter @customreport/web exec playwright test \          │
+│   --config=e2e/regression/playwright.regression.config.ts       │
+│ /Demo-gitlab create-mr                                            │
+│ /Demo-jira PRJ-2                                                  │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ RISK ─────────────────────────────────────────────────────────┐
+│ Playwright specs unrun локально → возможен flake при           │
+│   первом полном прогоне в CI                                    │
+│ Codex review-gate отключён → теряем automated review на stop;   │
+│   при необходимости /codex:review запускать вручную            │
+│ dashboard.reportId optional chain → если weeklyQ.data === null,│
+│   Action колонка скрыта (graceful degrade, acceptable)         │
+│ next-env.d.ts постоянно dirty — авто-генерация, не коммит      │
+└────────────────────────────────────────────────────────────────┘
+```
