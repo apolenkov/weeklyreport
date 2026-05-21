@@ -16,9 +16,15 @@ plannotator-фидбэка пользователя. Lead-роль — этал�
 │                 │ требует ручного merge в weekly-report.ts   │
 │ Stage chip      │ locked → status="empty" → серая, теряем    │
 │  (locked)       │ цвет реального риска другого автора        │
-│ Version save    │ Saved → версия дёргается ≤60 с позже;      │
-│ Version viewer  │ перелистывание v# показывает draft, а не   │
-│                 │ snapshot; StageStatus вообще не в snapshot │
+│ Version save    │ Saved пропал, а v# двигалась только ≤60 с  │
+│                 │ позже (interval-таймер); пользователь видел │
+│                 │ рассинхрон Saved → v# update.              │
+│ Version viewer  │ при клике ‹ на v=N форма ТИХО подменяла    │
+│                 │ snapshot текущим draft (fall-back ternary):│
+│                 │ label «Snapshot v=N» рендерился, а данные  │
+│                 │ были live-draft. StageStatus вообще не     │
+│                 │ попадал в snapshot payload, restore терял  │
+│                 │ цвета стадий.                              │
 │ Head menu       │ status / dashboard / slides / history —    │
 │                 │ четыре пункта, дублирование, не выровнен   │
 │                 │ с Lead-эталоном                            │
@@ -2167,4 +2173,621 @@ node -e "const m=require('./packages/shared/dist/schemas/report.cjs');
   ├── T-D12 manual UAT (1 минута): open item dialog → change status →
   │   save → reopen → check pill matches. Сообщить bug/clean.
   └── approve PR в GitLab UI после моего F5 push (последний шаг)
+```
+
+---
+
+## 23. Extension: добиваем deferred (2026-05-21, post-§22, rich-mode)
+
+### 23.0 TL;DR (Было / Проблема / Станет)
+
+```text
+┌─ Было ─────────────────────────────────────────────────────────┐
+│ Head Dashboard  │ KPI + activity + table — нет действия из UI, │
+│                 │ нет visible пинга молчащих лидов              │
+│ Landing pages   │ /, /auth/dev-login, role-redirects работают,  │
+│                 │ Playwright их не покрывает (UAT-SCENARIO [ ]) │
+│ Holidays        │ business-date.ts ждёт holidays?: Set, но      │
+│                 │ feature только в плане, нет visible маркера   │
+│ Multi-SDLC      │ Уже сделано как «замок на locked stage» в F2  │
+│                 │ — оригинальный UX-запрос закрыт               │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ Проблема ─────────────────────────────────────────────────────┐
+│ pulse: [head видит таблицу] → [нет one-click reminder]         │
+│         → [нет визуального сигнала «лид молчит»]               │
+│ UAT-L: [landing меняется] → [нет e2e gate] → [регрессии]       │
+│ holidays: [уже фьючер обсуждался] → [нет следа в UI]           │
+│            → [пользователь забудет об идее]                    │
+└────────────────────────────────────────────────────────────────┘
+
+┌─ Станет ───────────────────────────────────────────────────────┐
+│ pulse     │ Remind кнопка per lead, 24h highlight, 24h KPI     │
+│ UAT-L     │ landing-public + landing-role-redirect specs (7)   │
+│ holidays  │ Coming Soon секция в admin + tooltip + TODO файл   │
+│ CLAUDE.md │ правило: UI deferred → ComingSoonBadge + tooltip   │
+└────────────────────────────────────────────────────────────────┘
+
+Пайплайн:
+[wave-0 Haiku scan]──[wave-1 Sonnet workers ×3]──[wave-2 commit/verify]
+   ~3 мин                ~10 мин                       ~5 мин
+```
+
+### 23.1 Context
+
+После §22 closure пользователь решил доделать ранее deferred-в-v8.4 пункты
+прямо в этой ветке. Разведка тремя Explore-агентами + три ответа
+AskUserQuestion (включая один Other в свободной форме) дали финальный
+scope:
+
+- **Pulse (T-F4-4)** — полный enhancement Head Dashboard.
+- **UAT-L (T-UAT-L)** — полный набор e2e specs для landing.
+- **Holidays (T-HOL)** — только Coming Soon UI + TODO. Идея «классная,
+  но в фон». Никакой data model в этой ветке.
+- **Multi-SDLC (T-UFB14 / UFB-058)** — DROP. Оригинальная идея
+  «визуально показать фазы, в которых я не контрибутил, в виде замка» уже
+  закрыта в F2 (lock-icon на locked stage chip) + sweep T-G9 e2e её
+  покрывает. Дополнительный product-level multi-pipeline data refactor
+  не нужен.
+
+Side-deliverable от пользователя: дописать в `CLAUDE.md` правило про
+ComingSoonBadge + tooltip как канонический паттерн для deferred UI
+(вместо `throw new Error` loud stub для UI-фич).
+
+### 23.2 Final scope
+
+```text
+┌─ in this branch ────────────────────────────────────────────────┐
+│ T-F4-4 Head Dashboard pulse                          ~180 LoC   │
+│ T-UAT-L Landing pages e2e regression                  ~250 LoC   │
+│ T-HOL Holidays Coming Soon UI + TODO markers           ~30 LoC   │
+│ CLAUDE.md rule: ComingSoonBadge pattern (side)         ~15 LoC   │
+└─────────────────────────────────────────────────────────────────┘
+┌─ dropped (already shipped) ─────────────────────────────────────┐
+│ T-UFB14 multi-SDLC — locked-stage lock icon уже даёт нужный UX  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Итого ~475 LoC, без миграций БД.
+
+### 23.3 Subagent strategy (Sonnet + Haiku fan-out)
+
+```text
+[wave 0: pre-flight Haiku discovery — параллельно]
+  ├─ Haiku-PD: pulse data — селекторы LeadSummaryTable/ActivityLivePanel,
+  │   trpc.notifications/email-reminder mutation, 24h activity heuristic
+  └─ Haiku-LD: landing discovery — что в /, /auth/dev-login, role redirects,
+      существующие visual/regression specs (landing.spec.ts, agent-a-landing)
+
+[wave 1: Sonnet workers — три параллельных задачи]
+  ├─ Sonnet-1: T-F4-4 pulse (UI + new tRPC pingLead mutation если нужна)
+  ├─ Sonnet-2: T-UAT-L 5–7 e2e specs
+  └─ Haiku-3: T-HOL Coming Soon badge + TODO маркеры (мини-задача)
+
+[wave 2: оркестратор]
+  ├─ верификация typecheck/lint/test
+  ├─ конкретный CLAUDE.md edit под ComingSoonBadge правило
+  ├─ атомарные коммиты per task
+  └─ git push origin
+```
+
+Distribution rationale:
+
+- **Haiku**: pre-flight grep/read + крошечная мини-задача (T-HOL = 30 LoC
+  чисто UI-обвес).
+- **Sonnet**: основная имплементация — нужна aware-конкретики, JSX
+  composition, e2e selectors.
+- **Opus (я)**: маршрутизация, integration, commits, conflict resolution.
+
+### 23.4 T-F4-4 Head Dashboard pulse
+
+**Файлы (EDIT):**
+
+- `apps/web/src/components/dashboard/lead-summary-table.tsx` — добавить
+  колонку «Last activity» (relative time) + кнопку «Remind» рядом с
+  лидами в статусе draft/pending (status !== submitted).
+- `apps/web/src/components/dashboard/activity-live-panel.tsx` — добавить
+  визуальный highlight для лидов, у которых `lastEditAt > 24h ago`
+  (border-left red + subtle pulse animation или просто бейдж «No activity»).
+- `apps/web/src/components/dashboard/dashboard-page.tsx` — новая
+  карточка «24h Activity» в KPI ряд: `count of changes last 24h`.
+
+**Файлы (NEW):**
+
+- `apps/web/src/components/dashboard/remind-lead-button.tsx` — small
+  button с loading state, вызывает существующий `email-reminder` BullMQ
+  путь через новый или существующий tRPC mutation.
+
+**API:**
+
+- Если `trpc.notifications.remindLead({leadId, reportId})` не существует —
+  добавить в `apps/api/src/modules/notifications/` (или похожем модуле).
+  Использует существующую `EmailService.sendMailMultipart()` +
+  `escalation.template.ts`.
+
+**Tests:**
+
+- `apps/web/src/components/dashboard/lead-summary-table.test.tsx` —
+  расширить: кнопка Remind видна для не-отправивших, не видна для
+  submitted.
+- `apps/web/src/components/dashboard/remind-lead-button.test.tsx` (NEW)
+  — vitest: click → mutation called.
+
+**Done criteria:**
+
+- Кнопка Remind отправляет email через mailpit, виден в UI :8025.
+- Highlight на лидах без активности > 24ч присутствует.
+- 24h Activity KPI карточка показывает `count` событий.
+
+Размер: ~180 LoC.
+
+### 23.5 T-UAT-L landing pages e2e
+
+**Контекст:** landing pages работают (root `/`, `/auth/dev-login`,
+role-based redirects), но Playwright их не покрывает в regression suite.
+
+**Файлы (NEW):**
+
+- `apps/web/e2e/regression/landing-public.spec.ts` — 4 кейса:
+  - LAND-01: `/` без сессии → видны brand + Sign-in кнопка.
+  - LAND-02: `/` в AUTH_STUB режиме → dev-login picker рендерит N user-карт
+    (≥ количество лидов в seed).
+  - LAND-03: click на lead-карту → редирект на `/lead/report`.
+  - LAND-04: click на head-карту → редирект на `/head/dashboard`.
+- `apps/web/e2e/regression/landing-role-redirect.spec.ts` — 3 кейса:
+  - LRR-01: viewer login → `/reports?tab=published`.
+  - LRR-02: lead session, `/` → редирект на `/lead/report`.
+  - LRR-03: head session, `/` → редирект на `/head/dashboard`.
+
+**Шаблон:** `agent-b-lead-items.spec.ts` (loginByCookie + retry beforeEach).
+
+**Done criteria:** 7 кейсов зелёные локально, screenshots в
+`.planning/regression/screenshots/landing-*/`.
+
+Размер: ~250 LoC.
+
+### 23.6 T-HOL Holidays Coming Soon UI + TODO
+
+**Pattern reference:** apps/web/src/components/navigation/nav-bar.tsx
+имеет `LanguageComingSoonControl` и `ThemeComingSoonControl` —
+канонический паттерн (inert button с aria-disabled + ComingSoonBadge
+tooltip on hover).
+
+**Файлы (EDIT):**
+
+- `apps/web/src/app/(app)/admin/page.tsx` (или ближайший admin settings
+  surface) — добавить секцию «Holidays Calendar» с inert control
+  - ComingSoonBadge tooltip + TODO comment с ссылкой на
+    `business-date.ts` где будет integration point.
+
+**Файлы (NEW):**
+
+- `.planning/todos/pending/2026-05-21-holidays-calendar.md` — todo с
+  описанием scope (Holiday table, seed RU 2026, computeDeadline
+  integration) для будущего milestone.
+
+**Done criteria:**
+
+- В админке видна секция «Holidays» с Coming Soon badge.
+- Hover показывает tooltip.
+- TODO файл создан со ссылкой на `.planning/plans/graceful-
+coalescing-kurzweil.md#23.6`.
+
+Размер: ~30 LoC.
+
+### 23.7 Side deliverable — CLAUDE.md ComingSoon pattern
+
+**Файл (EDIT):** `/Users/ap/work/customreport/CLAUDE.md` секция «Deferred
+Features».
+
+**Текущий текст:**
+
+```text
+When a feature is deliberately deferred, leave physical traces in code:
+- TODO(<ref>) near the activation point.
+- Loud stub: throw new Error('Not implemented -- see TODO(<ref>)').
+- Metric name declared up front when the future path affects observability.
+```
+
+**Добавить новый bullet** (между TODO и Loud stub):
+
+```text
+- For deferred USER-FACING features (admin panels, settings, nav items),
+  prefer a ComingSoonBadge tooltip on an inert control over a hidden
+  feature flag. Pattern: see `nav-bar.tsx` LanguageComingSoonControl /
+  ThemeComingSoonControl. Shows user that the feature is acknowledged
+  + roadmapped without exposing half-working UI. Loud stub stays for
+  backend/non-UI deferred paths.
+```
+
+**Done criteria:** правило в CLAUDE.md, ссылка на конкретный pattern
+файл, разделение UI-deferred vs backend-deferred явное.
+
+### 23.8 Verification
+
+```bash
+pnpm typecheck && pnpm lint && pnpm test
+pnpm --filter @customreport/web exec playwright test \
+  --config=e2e/regression/playwright.regression.config.ts \
+  --grep "landing|pulse|remind"
+
+# UAT smoke:
+# 1. Open /head/dashboard → видна KPI «24h Activity», кнопка Remind на
+#    лидах в статусе draft.
+# 2. Click Remind → mailpit :8025 показывает new email.
+# 3. ActivityLivePanel highlight'ит лидов без активности 24ч+.
+# 4. Open /admin → Coming Soon секция «Holidays» с tooltip.
+# 5. CLAUDE.md содержит новое правило про ComingSoonBadge.
+```
+
+### 23.9 Done definition
+
+```text
+§23 extension done ⇔
+  ✓ Head Dashboard pulse: Remind button + 24h highlight + 24h KPI card
+  ✓ landing-public.spec.ts + landing-role-redirect.spec.ts (7 cases)
+  ✓ Holidays Coming Soon UI в admin + TODO файл
+  ✓ CLAUDE.md ComingSoonBadge правило записано
+  ✓ pnpm typecheck/lint/test зелёные
+  ✓ Playwright landing+pulse specs зелёные локально
+  ✓ Атомарные коммиты per task + push
+```
+
+После §23 closure → §9a F5 GitLab MR (теперь с pulse + UAT-L + holidays
+coming-soon + claude rule).
+
+### 23.10 Сейчас (live state, 2026-05-21 19:30+)
+
+```text
+branch:   fix/PRJ-2/shiny-eagle
+ahead:    9 commits после §22 (621d2f2..e4e277d), все pushed origin
+dirty:    M  CLAUDE.md   (авто-генерация managed runtime, не моя правка)
+          M  .planning/plans/graceful-coalescing-kurzweil.md (этот файл)
+tests:    typecheck 5/5 ✓  lint 4/4 ✓  test web 494/494 ✓  api 928 ✓
+playwright не запускался в этом sweep (нет live dev server в окружении)
+TaskList: 12 completed F-* + G-* + P6-*; 1 pending (T-D12 manual UAT)
+```
+
+### 23.11 Git audit
+
+```text
+HEAD = e4e277d  docs(ci): add CI badge + finalize kurzweil plan
+origin/main = 8f2a3ce..родитель ветки
+ahead origin/main: 41 commit (full PRJ-2 milestone span)
+behind origin/main: 0
+no detached HEAD, no force-push history, no stale worktrees.
+git stash list: пуст.
+```
+
+### 23.12 GSD audit
+
+```text
+.planning/STATE.md     → milestone v8.3 active, PRJ-2 stream
+.planning/ROADMAP.md   → текущий milestone: pulse + UAT-L + holidays
+                         только в виде "deferred to v8.4"
+.planning/MILESTONES.md → v8.2 closed (tag v8.2.0), v8.3 in progress
+.planning/HANDOFF.json  → не trigger'ит pause (контекст в норме)
+INTAKE-*.md            → ничего нового после 2026-05-19 v8.3 closure
+
+Расхождение: §23 расширяет scope текущего активного milestone (v8.3)
+без открытия нового — это safe, plan §22 уже зафиксирован, §23 идёт
+как extension того же PRJ-2 stream.
+```
+
+### 23.13 Recovered intent (источники)
+
+```text
+user message 1 → "доделаем deferred"      → scope extension
+user message 2 → "не понял"               → simplify, перевыспросить
+user message 3 → free-form Other (voice)  → дроп multi-SDLC, holidays
+                                            только Coming Soon
+user message 4 → "Holiday в ToDo,         → Coming Soon pattern +
+                  Coming Soon в настройках"  TODO маркер
+user message 5 → "пропиши в клаудио репо" → CLAUDE.md rule update
+user message 6 → "Использую PEO план для  → этот rich-mode rewrite
+                  максимальности"
+user message 7 → "почему перелисты НЕ     → §0 баг описание уточнено
+                  показывают снапшоты?"     (фикс уже в коде, §0
+                                            описывал ДО-состояние)
+```
+
+### 23.14 Boundaries
+
+**Трогаем:**
+
+```text
+apps/web/src/components/dashboard/                     T-F4-4 pulse
+apps/web/src/components/dashboard/dashboard-page.tsx   pulse KPI card
+apps/web/src/app/(app)/admin/                          T-HOL coming-soon
+apps/web/e2e/regression/landing-*.spec.ts (NEW × 2)    T-UAT-L
+apps/api/src/modules/notifications/  (или ближайший)   pulse mutation
+CLAUDE.md (repo, не runtime)                           ComingSoon rule
+.planning/todos/pending/2026-05-21-holidays-calendar.md (NEW)
+```
+
+**Не трогаем:**
+
+```text
+prisma/schema.prisma                  никаких миграций
+prisma/migrations/                    никаких миграций
+~/.claude/CLAUDE.md (managed runtime) — только repo CLAUDE.md
+apps/api/src/lib/business-date.ts     holidays integration → v8.4
+director-* / Holiday* модели          вне scope
+ProductSDLC модель                    DROPPED полностью
+.planning/memory/*.md dirty           pre-existing, оставляем
+```
+
+### 23.15 Skill routing
+
+```text
+skill                  применение                       output
+─────────────────────  ──────────────────────────────   ────────────
+peo-plan (этот)        rich-mode разметка §23           этот файл
+react-best-practices   pulse component composition      JSX patterns
+typescript-pro         tRPC mutation typing для         schema +
+                       pingLead                         types
+nestjs-expert          backend mutation если нужна      service ref
+                       новая в notifications/
+test-quality           vitest для pulse                 test patterns
+gsd-execute-phase      НЕ нужен (extension в той же     —
+                       ветке, не новая phase)
+peo-gitlab             в финальном F5 MR (§9a)          MR создание
+peo-jira               PRJ-2 transition после merge     issue update
+
+Сознательно пропущено: gsd-ai-integration-phase (нет AI),
+peo-confluence (не публикуем), security-audit (трогаем только UI +
+existing tRPC paths без auth changes).
+```
+
+### 23.16 Subagent roadmap (Sonnet + Haiku + research + review)
+
+Расширено по feedback пользователя: добавлен wave-(-1) best-practices research
+и wave-3 review gate как отдельная фаза до коммитов.
+
+```text
+Stage 0: Orchestrator (Claude Opus 4.7 — я)
+  scope: live repo truth, intake, plan-write, integration, commits.
+
+Stage 0a: Wave-(-1) best-practices research (Haiku × 3 параллельно)
+  ┌─ Haiku-BP-pulse ──────────────────────────────────────────────┐
+  │ scope: Context7 + WebSearch — «head dashboard remind UI 2026»,│
+  │   «activity heatmap 24h React», «email reminder pattern       │
+  │   tRPC + BullMQ» — best-practice references для UI            │
+  │ output: 40-line — recommended patterns + anti-patterns        │
+  │ NO writes                                                      │
+  └────────────────────────────────────────────────────────────────┘
+  ┌─ Haiku-BP-uat ────────────────────────────────────────────────┐
+  │ scope: Context7 @playwright/test 1.55 — 2026 best practice    │
+  │   landing e2e (auth helpers, retry, race-free seed, screenshot│
+  │   baseline, role-based redirect coverage)                      │
+  │ output: 40-line pattern cheatsheet                            │
+  │ NO writes                                                      │
+  └────────────────────────────────────────────────────────────────┘
+  ┌─ Haiku-BP-coming-soon ────────────────────────────────────────┐
+  │ scope: внутренний — найти существующий ComingSoon-pattern     │
+  │   (nav-bar.tsx Language/Theme), сравнить с UI guidelines,     │
+  │   составить копипаст-template                                 │
+  │ output: 30-line — pattern + ready-to-paste snippet            │
+  │ NO writes                                                      │
+  └────────────────────────────────────────────────────────────────┘
+
+Stage 1: Wave-0 pre-flight discovery (Haiku × 2 параллельно)
+  ┌─ Haiku-PD (pulse-discovery) ──────────────────────────────────┐
+  │ scope: read-only grep + Read                                  │
+  │ files: dashboard-page.tsx, lead-summary-table.tsx,             │
+  │        activity-live-panel.tsx, trpc.router.ts notifications  │
+  │ output: 80-line report — селекторы, mutation paths,           │
+  │         24h activity heuristic, existing testids              │
+  │ NO writes                                                      │
+  └────────────────────────────────────────────────────────────────┘
+  ┌─ Haiku-LD (landing-discovery) ────────────────────────────────┐
+  │ scope: read-only grep + Read                                  │
+  │ files: apps/web/src/app/page.tsx, /auth/, login-page.client,  │
+  │        existing e2e: landing.spec, agent-a-landing,           │
+  │        helpers/dev-auth.ts                                    │
+  │ output: 80-line report — landing flows, redirect rules,       │
+  │         seed flavors, testids                                 │
+  │ NO writes                                                      │
+  └────────────────────────────────────────────────────────────────┘
+
+Stage 2: Wave-1 implementation (3 параллельных worker-агента)
+  ┌─ Sonnet-1 (T-F4-4 pulse) ─────────────────────────────────────┐
+  │ scope: write — pulse UI + Remind button + 24h logic + tests   │
+  │ owns: components/dashboard/* (+ NEW remind-lead-button.tsx),  │
+  │       trpc.router.ts (notifications.pingLead если нужна)      │
+  │ input: brief от Haiku-PD                                      │
+  │ output: одна строка статуса + изменённые файлы                │
+  │ NO commit                                                      │
+  └────────────────────────────────────────────────────────────────┘
+  ┌─ Sonnet-2 (T-UAT-L) ──────────────────────────────────────────┐
+  │ scope: write — 2 NEW e2e spec файла                           │
+  │ owns: apps/web/e2e/regression/landing-public.spec.ts,         │
+  │       apps/web/e2e/regression/landing-role-redirect.spec.ts   │
+  │ input: brief от Haiku-LD                                      │
+  │ output: одна строка статуса                                   │
+  │ NO commit                                                      │
+  └────────────────────────────────────────────────────────────────┘
+  ┌─ Haiku-3 (T-HOL coming-soon) ─────────────────────────────────┐
+  │ scope: write — Coming Soon UI block + TODO файл               │
+  │ owns: apps/web/src/app/(app)/admin/page.tsx (или ближайший    │
+  │       admin settings surface), pattern из nav-bar.tsx         │
+  │       LanguageComingSoonControl;                              │
+  │       .planning/todos/pending/2026-05-21-holidays-calendar.md │
+  │ input: nav-bar.tsx pattern reference (прямая ссылка)          │
+  │ output: одна строка статуса                                   │
+  │ NO commit                                                      │
+  └────────────────────────────────────────────────────────────────┘
+
+Stage 3: Wave-2 orchestrator integration (pre-commit)
+  ├─ полный pnpm typecheck && pnpm lint && pnpm test
+  ├─ CLAUDE.md edit ComingSoonBadge правило (Opus вручную)
+  ├─ playwright spec'и компилируются, run откладывается (нет dev-server)
+  └─ stage worker outputs ready-to-commit, НО commit ещё нет
+
+Stage 4: Wave-3 Review Gate (PEO review разделён по доменам)
+  ┌─ Haiku-RV-react (react domain) ───────────────────────────────┐
+  │ scope: read-only review pulse changes против react-best-      │
+  │   practices skill rubric (composition, Hooks rules, useMemo   │
+  │   misuse, accessibility)                                       │
+  │ input: file list от Sonnet-1                                  │
+  │ output: PASS / BLOCK + конкретные file:line                   │
+  └────────────────────────────────────────────────────────────────┘
+  ┌─ Haiku-RV-tests (tests domain) ───────────────────────────────┐
+  │ scope: read-only review UAT-L specs + pulse tests:            │
+  │   coverage чисто проверяет F-3 поведение, нет fragile         │
+  │   timeouts, нет dead code, нет skipped без TODO                │
+  │ output: PASS / BLOCK                                          │
+  └────────────────────────────────────────────────────────────────┘
+  ┌─ Haiku-RV-claude-md (docs domain) ────────────────────────────┐
+  │ scope: проверить новое правило в CLAUDE.md на согласованность │
+  │   с существующим Deferred Features блоком; lint markdown      │
+  │ output: PASS / BLOCK                                          │
+  └────────────────────────────────────────────────────────────────┘
+  Опция fork: если ревью найдёт BLOCK с большим объёмом fix —
+  отдать fix как fork subagent (`isolation: worktree`), Opus
+  смерджит результат после.
+
+Stage 5: Post-review actions
+  ├─ если ревью PASS — 3 атомарных коммита: pulse, UAT-L, holidays+CLAUDE.md
+  ├─ если ревью BLOCK — Sonnet-fix worker (scoped) → re-review
+  ├─ git push origin fix/PRJ-2/shiny-eagle
+  ├─ /codex:review на полный diff origin/main..HEAD (внешнее second-opinion)
+  └─ /peo-plan verify graceful-coalescing-kurzweil → ≥80
+```
+
+### 23.17 Token economy
+
+| Work                            | Model  | Writes         |
+| ------------------------------- | ------ | -------------- |
+| best-practice research (×3)     | Haiku  | no             |
+| pre-flight grep/read scan (×2)  | Haiku  | no             |
+| classification, status          | Haiku  | no             |
+| pulse implementation            | Sonnet | yes, scoped    |
+| UAT-L e2e specs                 | Sonnet | yes, scoped    |
+| holidays coming-soon            | Haiku  | yes, micro     |
+| review per domain (×3)          | Haiku  | no (read-only) |
+| BLOCK-driven fix worker         | Sonnet | yes, scoped    |
+| optional fork subagent worktree | Sonnet | yes, isolated  |
+| plan synthesis                  | Opus   | only plan.md   |
+| CLAUDE.md rule edit             | Opus   | only CLAUDE.md |
+| integration commits + push      | Opus   | git ops        |
+
+Iteration reserve: ≈15% контекста под Wave-2 fix-ups + Wave-3 review fix loop.
+Deep model (Opus) активирован только для оркестрации и плана.
+
+**Fork subagent policy:** worktree-isolation использовать ТОЛЬКО когда
+review-loop требует параллельного fix-а на тех же файлах, что и активный
+implementation worker (race по `apps/web/src/components/dashboard/*`).
+В обычном случае scoped Sonnet справляется без worktree.
+
+### 23.18 Open questions с defaults
+
+```text
+| #   | Вопрос                                | Default                  | Эскалирую если              |
+| --- | ------------------------------------- | ------------------------ | --------------------------- |
+| Q10 | Новый tRPC namespace notifications или| ближайший существующий   | conflict с existing module  |
+|     | extend existing                       | (review/email)           |                             |
+| Q11 | 24h activity threshold — фикс или    | фикс 24h                 | пользователь хочет slider   |
+|     | конфиг?                              |                          |                             |
+| Q12 | Remind button — confirm modal?       | без confirm (один клик)  | юзер жалуется на случайные  |
+| Q13 | Holidays todo destination            | .planning/todos/pending/ | user указал другой путь     |
+| Q14 | CLAUDE.md правило — repo only или    | repo CLAUDE.md only      | пользователь явно расширит  |
+|     | global ~/.claude/CLAUDE.md?          |                          | в global                    |
+```
+
+Применяю дефолты автономно.
+
+### 23.19 Agent does / Human does
+
+```text
+─────────────────────────────────────
+✓ Я ДЕЛАЮ САМ
+─────────────────────────────────────
+  ├── spawn Haiku ×3 wave-(-1) best-practice research
+  ├── spawn Haiku ×2 wave-0 internal discovery
+  ├── spawn Sonnet ×2 + Haiku ×1 wave-1 workers
+  ├── integration check (typecheck/lint/test)
+  ├── spawn Haiku ×3 wave-3 review gate (react/tests/docs)
+  ├── BLOCK-driven Sonnet fix-loop если нужно
+  │   (fork worktree только при race на одном файле)
+  ├── CLAUDE.md ComingSoon rule edit
+  ├── 3 атомарных коммита + push
+  ├── /codex:review на diff (внешнее second-opinion)
+  └── /peo-plan verify finally
+
+─────────────────────────────────────
+▲ ОТ ТЕБЯ
+─────────────────────────────────────
+  ├── T-D12 manual UAT (по §22.10) — open item dialog → change
+  │   status → save → reopen → check pill. 1 минута.
+  ├── (опционально) запустить локально playwright для smoke 7
+  │   новых landing specs + pulse smoke, если есть dev-server
+  └── approve MR в GitLab UI после моего F5 push
+```
+
+### 23.20 Iteration reserve
+
+```text
+plan hardening: §0 баг описания уточнено по feedback пользователя
+self-review:    perform pillar review (§23.22) перед ExitPlanMode
+feedback loop:  если worker-агенты дадут несовместимые changes,
+                merge сам (Opus) с приоритетом read-write-исхода
+evidence refresh: перед wave-1 сделать git pull (origin может уйти
+                  вперёд)
+token reserve:  ~15% контекста на integration fix-ups
+```
+
+### 23.21 Verification (final, §23)
+
+```bash
+# (a) Полные гейты
+pnpm typecheck
+pnpm lint
+pnpm test
+
+# (b) Playwright (если есть dev-server)
+pnpm --filter @customreport/web exec playwright test \
+  --config=e2e/regression/playwright.regression.config.ts \
+  --grep "landing|pulse|remind"
+
+# (c) Mailpit smoke (manual)
+# Open http://localhost:8025
+# в UI Head dashboard → Remind кнопка на draft-лиде
+# → подтвердить email появился в Mailpit
+# (только если есть локальный stack)
+
+# (d) Coming Soon UI smoke
+# /admin → секция Holidays → hover показывает tooltip
+# (или /head/dashboard если admin не доступен)
+
+# (e) peo-plan verify
+/peo-plan verify graceful-coalescing-kurzweil
+# target ≥80
+```
+
+### 23.22 Pillar review self-check (перед ExitPlanMode)
+
+```text
+| Pillar          | Verdict                                              |
+| --------------- | ---------------------------------------------------- |
+| Workflow        | ✓ соответствует docs/core/WORKFLOW.md                |
+| Git/TTT         | ✓ task PRJ-2 / branch fix/PRJ-2/shiny-eagle          |
+| Source of truth | ✓ правим repo CLAUDE.md, не runtime managed         |
+| Tests           | ✓ команды + критерии PASS определены                |
+| Skills/docs     | ✓ lint:md и typecheck в verify-секции               |
+| Token economy   | ✓ Haiku для scan, Sonnet для writes, Opus оркестр.  |
+| Visual quality  | ✓ ASCII frames + один pipeline без широких Mermaid  |
+| Iteration       | ✓ §0 уточнён по feedback, self-review этот блок     |
+```
+
+### 23.23 Closeout (что после wave-2)
+
+```text
+└─ §22 + §23 закрыты → переход в §9a F5:
+   ├─ /peo-gitlab create-mr (source fix/PRJ-2/shiny-eagle → main)
+   ├─ MR описание включает §22 + §23 deltas
+   ├─ ручной approve в GitLab UI (от пользователя)
+   ├─ merge --no-ff (preserve commit history per §F5.2 default)
+   ├─ /peo-jira transition PRJ-2 → next state
+   └─ tag v8.3.x если milestone v8.3 целиком закрыт
 ```
