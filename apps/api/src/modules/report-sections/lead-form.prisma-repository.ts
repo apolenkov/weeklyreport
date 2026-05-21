@@ -176,6 +176,19 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     return copiedItems;
   }
 
+  async getVersion(
+    sectionId: string,
+    version: number,
+  ): Promise<Record<string, unknown> | null> {
+    const snapshot = await this.prisma.versionSnapshot.findUnique({
+      where: {
+        reportSectionId_version: { reportSectionId: sectionId, version },
+      },
+      select: { data: true },
+    });
+    return (snapshot?.data as Record<string, unknown>) ?? null;
+  }
+
   async listVersions(sectionId: string): Promise<VersionSnapshot[]> {
     const rows = await this.prisma.versionSnapshot.findMany({
       where: { reportSectionId: sectionId },
@@ -367,6 +380,13 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         resolvedAt: d.resolvedAt?.toISOString() ?? null,
         stageName: d.stageName ?? null,
         productId: d.productId,
+      })),
+      // F3.3: include stage statuses so version viewer can restore chip colors.
+      stageStatuses: section.stageStatuses.map((ss) => ({
+        projectId: ss.projectId,
+        stageId: ss.stageId,
+        stageName: (ss as { stage?: { name: string } }).stage?.name ?? ss.stageId,
+        status: ss.status,
       })),
     };
 
