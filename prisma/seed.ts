@@ -97,14 +97,6 @@ function projectStatusId(
   return `a0000000-0000-4000-8000-000000006${reportSuffix}${leadIndex}${prodSeq}`;
 }
 
-function priorityId(
-  reportSuffix: "1" | "2",
-  leadIndex: number,
-  rank: number,
-): string {
-  return `a0000000-0000-4000-8000-000000008${reportSuffix}${leadIndex}${rank}`;
-}
-
 function riskId(seq: number): string {
   // 0000000009 (10) + 2-digit seq = 12
   return `a0000000-0000-4000-8000-0000000009${seq.toString().padStart(2, "0")}`;
@@ -552,7 +544,6 @@ async function main() {
   let totalItems = 0;
   let totalProjectStatuses = 0;
   let totalStageStatuses = 0;
-  let totalPriorities = 0;
 
   for (const cfg of activeLeadConfigs) {
     const secId = sectionId("1", cfg.leadIndex);
@@ -747,33 +738,11 @@ async function main() {
       ];
     })();
 
-    const firstProductId = cfg.products[0]?.id ?? "";
     for (let r = 0; r < priorityTexts.length; r++) {
-      const rank = r + 1;
-      const id = priorityId("1", cfg.leadIndex, rank);
-      await prisma.priority.upsert({
-        where: {
-          reportSectionId_rank: {
-            reportSectionId: secId,
-            rank,
-          },
-        },
-        update: {
-          id,
-          productId: firstProductId,
-          text: priorityTexts[r]!,
-          stageName: stageNameFor(cfg.leadIndex + r),
-        },
-        create: {
-          id,
-          reportSectionId: secId,
-          productId: firstProductId,
-          rank,
-          text: priorityTexts[r]!,
-          stageName: stageNameFor(cfg.leadIndex + r),
-        },
+      await prisma.item.update({
+        where: { id: itemId("1", cfg.leadIndex, r + 1) },
+        data: { priorityRank: r + 1 },
       });
-      totalPriorities++;
     }
   }
 
@@ -1021,32 +990,11 @@ async function main() {
       totalItems++;
     }
 
-    // One priority per published section
-    const id = priorityId("2", cfg.leadIndex, 1);
-    const firstProdId = cfg.products[0]?.id ?? "";
-    await prisma.priority.upsert({
-      where: {
-        reportSectionId_rank: {
-          reportSectionId: secId,
-          rank: 1,
-        },
-      },
-      update: {
-        id,
-        productId: firstProdId,
-        text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}`,
-        stageName: stageNameFor(cfg.leadIndex),
-      },
-      create: {
-        id,
-        reportSectionId: secId,
-        productId: firstProdId,
-        rank: 1,
-        text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}`,
-        stageName: stageNameFor(cfg.leadIndex),
-      },
+    // One priority per published section — mark first item
+    await prisma.item.update({
+      where: { id: itemId("2", cfg.leadIndex, 1) },
+      data: { priorityRank: 1 },
     });
-    totalPriorities++;
   }
 
   // ----- Admin review/action examples -----
@@ -1254,7 +1202,7 @@ async function main() {
       `${SEED_STAGES.length} stages, ${stageAssignmentCount} assignments, ` +
       `2 reports, ${totalSections} sections, ${totalItems} items, ` +
       `${totalProjectStatuses} project statuses, ${totalStageStatuses} stage statuses, ${risks.length} risks, ` +
-      `${decisions.length} decisions, ${totalPriorities} priorities, ` +
+      `${decisions.length} decisions, ` +
       `${reminderPolicies.length} reminder policies, ` +
       `${reminderRules.length} reminder rules, ${versionSnapshots.length} version snapshots, ` +
       `2 viewer group accesses, 1 reopen request, 1 action log`,

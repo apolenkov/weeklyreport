@@ -301,7 +301,6 @@ async function main() {
   await prisma.reminderRule.deleteMany({});
   await prisma.reminderPolicy.deleteMany({});
   await prisma.aiInsight.deleteMany({});
-  await prisma.priority.deleteMany({});
   await prisma.decision.deleteMany({});
   await prisma.risk.deleteMany({});
   await prisma.item.deleteMany({});
@@ -1438,6 +1437,7 @@ async function main() {
         carriedOver: it.carriedOver ?? false,
         completed: it.completed ?? false,
         stageName: stageFor(idx),
+        priorityRank: idx < content.priorities.length ? idx + 1 : null,
       })),
       ...content.nextItems.map((it, idx) => ({
         id: `a0000000-0000-4000-8000-00000005${i + 1}01${idx + 1}`,
@@ -1485,19 +1485,6 @@ async function main() {
       })),
     });
 
-    await prisma.priority.createMany({
-      data: content.priorities.map((text, idx) => ({
-        id:
-          idx === 0
-            ? `a0000000-0000-4000-8000-00000000080${i + 1}`
-            : randomUUID(),
-        reportSectionId: sectionId,
-        productId: lead.productId,
-        text,
-        rank: idx + 1,
-        stageName: stageFor(idx),
-      })),
-    });
   }
 
   // W6: 3-contributor cross-author overlay on PROD_CRM.
@@ -1556,6 +1543,7 @@ async function main() {
         carriedOver: false,
         completed: false,
         stageName: "Planning",
+        priorityRank: 1,
       },
       {
         id: "a0000000-0000-4000-8000-000000007003",
@@ -1594,17 +1582,6 @@ async function main() {
       stageName: "Planning",
     },
   });
-  await prisma.priority.create({
-    data: {
-      id: "a0000000-0000-4000-8000-000000008004",
-      reportSectionId: borisSectionId,
-      productId: PROD_CRM,
-      text: "Завершить дискавери и утвердить MVP-скоуп с заказчиком",
-      rank: 4,
-      stageName: "Planning",
-    },
-  });
-
   // Victor (LEAD_CLOUD_PM) owns Analysis on PROD_CRM (section 408).
   // ProjectStatus for PROD_CRM already exists (SECONDARY=[PROD_CRM, PROD_MOBILE] from loop).
   const victorSectionId = `a0000000-0000-4000-8000-000000000408`;
@@ -1621,6 +1598,7 @@ async function main() {
         carriedOver: false,
         completed: false,
         stageName: "Analysis",
+        priorityRank: 1,
       },
       {
         id: "a0000000-0000-4000-8000-000000007011",
@@ -1659,17 +1637,6 @@ async function main() {
       stageName: "Analysis",
     },
   });
-  await prisma.priority.create({
-    data: {
-      id: "a0000000-0000-4000-8000-000000008010",
-      reportSectionId: victorSectionId,
-      productId: PROD_CRM,
-      text: "Финализировать схему данных до конца спринта",
-      rank: 4,
-      stageName: "Analysis",
-    },
-  });
-
   // Galina (LEAD_DEVOPS_PM) owns Design on PROD_CRM (section 409).
   // ProjectStatus for PROD_CRM already exists (SECONDARY=[PROD_CRM, PROD_MOBILE] from loop).
   const galinaSectionId = `a0000000-0000-4000-8000-000000000409`;
@@ -1686,6 +1653,7 @@ async function main() {
         carriedOver: false,
         completed: false,
         stageName: "Design",
+        priorityRank: 1,
       },
       {
         id: "a0000000-0000-4000-8000-000000007021",
@@ -1724,17 +1692,6 @@ async function main() {
       stageName: "Design",
     },
   });
-  await prisma.priority.create({
-    data: {
-      id: "a0000000-0000-4000-8000-000000008020",
-      reportSectionId: galinaSectionId,
-      productId: PROD_CRM,
-      text: "Сдать финальный макет дашборда до следующего спринта",
-      rank: 4,
-      stageName: "Design",
-    },
-  });
-
   console.log(
     "[seed-simple] Creating version snapshots (primary lead section, 2 versions)...",
   );
@@ -1750,7 +1707,6 @@ async function main() {
           items: [],
           risks: [],
           decisions: [],
-          priorities: [],
         },
       },
       {
@@ -1762,7 +1718,6 @@ async function main() {
           items: [],
           risks: [],
           decisions: [],
-          priorities: [],
         },
       },
     ],
@@ -1805,6 +1760,7 @@ async function main() {
           workflowStatus: ItemWorkflowStatus.done,
           carriedOver: false,
           completed: true,
+          priorityRank: 1,
         },
         {
           id: randomUUID(),
@@ -1817,16 +1773,6 @@ async function main() {
           carriedOver: false,
         },
       ],
-    });
-
-    await prisma.priority.create({
-      data: {
-        id: randomUUID(),
-        reportSectionId: prevSectionId,
-        productId: lead.productId,
-        text: `Приоритет прошлой недели: ${lead.label}`,
-        rank: 1,
-      },
     });
   }
 
@@ -1891,6 +1837,7 @@ async function main() {
             carriedOver: false,
             completed: true,
             stageName: "Development",
+            priorityRank: 1,
             createdAt,
             updatedAt: submittedAt,
           },
@@ -1909,19 +1856,6 @@ async function main() {
             updatedAt: submittedAt,
           },
         ],
-      });
-
-      await prisma.priority.create({
-        data: {
-          id: randomUUID(),
-          reportSectionId: archiveSectionId,
-          productId: lead.productId,
-          text: `Архивный приоритет: ${lead.label}`,
-          rank: 1,
-          stageName: "Development",
-          createdAt,
-          updatedAt: submittedAt,
-        },
       });
     }
   }
@@ -2047,7 +1981,7 @@ async function main() {
     statuses: await prisma.projectStatus.count(),
     risks: await prisma.risk.count(),
     decisions: await prisma.decision.count(),
-    priorities: await prisma.priority.count(),
+    priorityItems: await prisma.item.count({ where: { priorityRank: { not: null } } }),
     versionSnapshots: await prisma.versionSnapshot.count(),
     reminderPolicies: await prisma.reminderPolicy.count(),
     reminders: await prisma.reminderRule.count(),
