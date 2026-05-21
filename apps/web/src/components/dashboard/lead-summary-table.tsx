@@ -5,18 +5,23 @@ const MS_24H = 24 * 60 * 60 * 1000;
 
 /**
  * Returns true when `lastActivity` is an ISO-date string whose parsed time is
- * more than 24 hours ago, or when it is a non-date sentinel ("Not started" /
- * "In progress") meaning no timestamped activity exists at all.
+ * more than 24 hours ago, or when it is the "Not started" sentinel meaning no
+ * section or content has been created yet.
+ *
+ * "In progress" means the lead has an open draft (section exists, contentCount
+ * > 0, no submittedAt). That lead is actively working — treat as active.
  *
  * Date-only strings ("2026-05-21") are parsed as local midnight to avoid the
  * Date.parse UTC-midnight pitfall, which mis-flagged active leads as inactive
  * in eastern timezones during the early morning local time.
  */
 function isInactive24h(lastActivity: string): boolean {
-  // Sentinel strings: no activity ever recorded.
-  if (lastActivity === "Not started" || lastActivity === "In progress") {
-    return true;
-  }
+  // "Not started" → no section exists yet; definitively idle.
+  if (lastActivity === "Not started") return true;
+  // "In progress" → lead has an open draft (dashboard.ts:281-282 sets this
+  // sentinel when status !== "pending" and submittedAt is null). Treat as
+  // active regardless of timestamp absence.
+  if (lastActivity === "In progress") return false;
   const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(lastActivity);
   const parsed = Date.parse(
     isDateOnly ? `${lastActivity}T00:00:00` : lastActivity,

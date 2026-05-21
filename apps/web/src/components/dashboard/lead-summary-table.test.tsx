@@ -78,7 +78,10 @@ describe("LeadSummaryTable", () => {
       expect(inactiveRows[0]).toHaveClass("opacity-60");
     });
 
-    it("marks an 'In progress' row with no date as inactive", () => {
+    it("does NOT mark an 'In progress' draft row as inactive (lead is actively editing)", () => {
+      // dashboard.ts:281-282 sets "In progress" when the lead has a draft
+      // section with content but has not yet submitted. That lead is actively
+      // working — the 24h-inactive gate must NOT fire.
       const lead: LeadInfo = {
         ...baseLeadPending,
         id: "lead-3",
@@ -89,7 +92,9 @@ describe("LeadSummaryTable", () => {
 
       render(<LeadSummaryTable leads={[lead]} />);
 
-      expect(screen.getByTestId("lead-row-inactive-24h")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("lead-row-inactive-24h"),
+      ).not.toBeInTheDocument();
     });
 
     it("marks a row with an old ISO-date (> 24h ago) as inactive", () => {
