@@ -26,7 +26,7 @@ import {
   type SectionSlideModel,
   type SlideProduct,
 } from "./section-slide-utils";
-import { LeadScopeToggle } from "./lead-scope-toggle";
+import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
 
 function SlideEmptyState({
@@ -164,7 +164,7 @@ export function LeadSlidesClient({
   const searchParams = useSearchParams();
   const session = useContext(SessionContext);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scope, setScope] = useState<"own" | "product">("own");
+  const [scope, setScope] = useState<ScopeValue>("own");
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const deckRef = externalDeckRef ?? internalDeckRef;
 
@@ -276,12 +276,13 @@ export function LeadSlidesClient({
         toolbar={
           !inReportMode ? (
             <div className="flex flex-wrap items-center gap-2">
-              <LeadScopeToggle
-                scope={scope}
+              <ScopeToggle
+                value={scope}
                 onChange={(s) => {
                   setScope(s);
                   setSelectedIndex(0);
                 }}
+                allowedScopes={["own", "product"]}
               />
               {/* W9.A: fullscreen button in standalone slides mode */}
               <SlideFullscreenButton targetRef={deckRef} />

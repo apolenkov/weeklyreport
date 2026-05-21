@@ -1,31 +1,50 @@
 "use client";
 
-type Props = {
-  readonly scope: "own" | "product";
-  readonly onChange: (scope: "own" | "product") => void;
+export type ScopeValue = "own" | "product" | "lead";
+
+interface ScopeToggleProps {
+  value: ScopeValue;
+  onChange: (next: ScopeValue) => void;
+  allowedScopes?: ReadonlyArray<ScopeValue>;
+}
+
+const DEFAULT_SCOPES: ReadonlyArray<ScopeValue> = [
+  "own",
+  "product",
+  "lead",
+] as const;
+
+const LABELS: Record<ScopeValue, string> = {
+  own: "Own",
+  product: "By product",
+  lead: "By lead",
 };
 
-export function LeadScopeToggle({ scope, onChange }: Props) {
+export function ScopeToggle({
+  value,
+  onChange,
+  allowedScopes = DEFAULT_SCOPES,
+}: ScopeToggleProps) {
   return (
     <div
       role="group"
       aria-label="Slide scope"
       className="inline-flex rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-surface)] p-0.5"
     >
-      {(["own", "product"] as const).map((s) => (
+      {allowedScopes.map((s) => (
         <button
           key={s}
           type="button"
           role="radio"
-          aria-checked={scope === s}
+          aria-checked={value === s}
           onClick={() => onChange(s)}
           className={`rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors ${
-            scope === s
+            value === s
               ? "bg-[var(--color-primary)] text-white"
               : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
           }`}
         >
-          {s === "own" ? "Own" : "By product"}
+          {LABELS[s]}
         </button>
       ))}
     </div>
