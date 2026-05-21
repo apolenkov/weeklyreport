@@ -931,6 +931,11 @@ export function LeadForm({
   const snapRaw = viewedSnapshotVersion !== null ? (getVersionQ.data as SnapPayload | null) : null;
   const snapshotAuthor = draftSection.authorName ?? "";
 
+  // When in snapshot mode but snapRaw is null (still loading or API returned
+  // no data for this version), use empty arrays — never fall back to the
+  // current draft, which would misrepresent historical state.
+  const inSnapMode = viewedSnapshotVersion !== null;
+
   const currentWeekItems: KanbanItem[] = snapRaw?.items
     ? snapRaw.items
         .filter((i) => i.type === "current")
@@ -944,7 +949,9 @@ export function LeadForm({
           author: snapshotAuthor,
           priorityRank: i.priorityRank ?? null,
         }))
-    : (data.currentWeekItems as KanbanItem[]);
+    : inSnapMode
+      ? []
+      : (data.currentWeekItems as KanbanItem[]);
 
   const nextWeekItems: KanbanItem[] = snapRaw?.items
     ? snapRaw.items
@@ -959,7 +966,9 @@ export function LeadForm({
           author: snapshotAuthor,
           priorityRank: i.priorityRank ?? null,
         }))
-    : (data.nextWeekItems as KanbanItem[]);
+    : inSnapMode
+      ? []
+      : (data.nextWeekItems as KanbanItem[]);
 
   const risks: RiskEntry[] = snapRaw?.risks
     ? snapRaw.risks.map((r, idx): RiskEntry => ({
@@ -972,7 +981,9 @@ export function LeadForm({
         impact: r.impact,
         mitigation: r.mitigation,
       }))
-    : (data.risks as RiskEntry[]);
+    : inSnapMode
+      ? []
+      : (data.risks as RiskEntry[]);
 
   const decisions: DecisionEntry[] = snapRaw?.decisions
     ? snapRaw.decisions.map((d, idx): DecisionEntry => ({
@@ -985,7 +996,9 @@ export function LeadForm({
         deadline: d.deadline ?? null,
         stageName: d.stageName ?? undefined,
       }))
-    : (data.decisions as DecisionEntry[]);
+    : inSnapMode
+      ? []
+      : (data.decisions as DecisionEntry[]);
 
   const priorities: PriorityEntry[] = data.priorities as PriorityEntry[];
 
