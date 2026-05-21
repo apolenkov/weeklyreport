@@ -15,7 +15,7 @@
     "postinstall": "prisma generate --schema=../../prisma/schema.prisma"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.91.1",
+    "@anthropic-ai/sdk": "^0.98.0",
     "@bull-board/api": "^6.21.0",
     "@bull-board/express": "^6.21.0",
     "@customreport/shared": "workspace:*",
@@ -63,16 +63,15 @@
   "devDependencies": {
     "@swc-node/register": "^1.11.1",
     "@swc/core": "^1.15.24",
-    "@types/cookie": "^0.6.0",
+    "@types/cookie": "^1.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
-    "@types/ioredis": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/luxon": "^3.7.1",
     "@types/nodemailer": "^8.0.0",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
-    "samlify": "^2.12.0",
+    "samlify": "^2.13.1",
     "tsx": "^4.22.3"
   }
 }
