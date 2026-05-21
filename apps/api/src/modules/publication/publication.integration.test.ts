@@ -51,15 +51,6 @@ describe("PublicationPrismaRepository (integration)", () => {
       },
     });
 
-    await prisma.priority.create({
-      data: {
-        reportSectionId: testData.section.id,
-        productId: testData.project.id,
-        rank: 1,
-        text: "Top priority",
-      },
-    });
-
     const result = await repo.getAssembledReport(testData.report.id);
 
     expect(result).not.toBeNull();
@@ -71,9 +62,6 @@ describe("PublicationPrismaRepository (integration)", () => {
     );
     expect(
       expectDefined(expectDefined(result).sections[0]).projects,
-    ).toHaveLength(1);
-    expect(
-      expectDefined(expectDefined(result).sections[0]).priorities,
     ).toHaveLength(1);
   });
 

@@ -248,18 +248,14 @@ function groupRisksByProject(
 }
 
 /**
- * Group decisions and priorities by their explicit productId when present.
+ * Group decisions by their explicit productId when present.
  * Legacy entries without productId fall back to the section author's first
  * project. If neither exists, the entry is dropped (no place to render it).
  */
-function groupDecisionsAndPrioritiesByProject(
+function groupDecisionsByProject(
   sections: readonly ReportSectionReadModel[],
-): {
-  decisions: Map<string, WeeklyReportDecision[]>;
-  priorities: Map<string, WeeklyReportPriority[]>;
-} {
+): Map<string, WeeklyReportDecision[]> {
   const decisions = new Map<string, WeeklyReportDecision[]>();
-  const priorities = new Map<string, WeeklyReportPriority[]>();
 
   for (const section of sections) {
     const firstProject = section.projects[0];
@@ -288,17 +284,33 @@ function groupDecisionsAndPrioritiesByProject(
       });
       decisions.set(targetProduct.projectId, decisionList);
     });
-
-    section.priorities.forEach((p) => {
-      const targetProduct = resolveProduct(p.productId);
-      if (!targetProduct) return;
-      const priorityList = priorities.get(targetProduct.projectId) ?? [];
-      priorityList.push({ rank: p.rank, text: p.text });
-      priorities.set(targetProduct.projectId, priorityList);
-    });
   }
 
-  return { decisions, priorities };
+  return decisions;
+}
+
+/**
+ * Derive priorities from items with priorityRank set, grouped by projectId,
+ * sorted by rank ASC within each product.
+ */
+function groupPrioritiesByProject(
+  sections: readonly ReportSectionReadModel[],
+): Map<string, WeeklyReportPriority[]> {
+  const map = new Map<string, WeeklyReportPriority[]>();
+
+  for (const section of sections) {
+    const priorityItems = section.items
+      .filter((i) => i.priorityRank != null)
+      .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0));
+
+    for (const item of priorityItems) {
+      const list = map.get(item.projectId) ?? [];
+      list.push({ rank: item.priorityRank ?? 1, text: item.text });
+      map.set(item.projectId, list);
+    }
+  }
+
+  return map;
 }
 
 /**
@@ -380,8 +392,8 @@ export function mapWeeklyReport(
 ): MapWeeklyReportResult {
   const itemsByProject = groupItemsByProject(api.leadSections);
   const risksByProject = groupRisksByProject(api.leadSections);
-  const { decisions: decisionsByProject, priorities: prioritiesByProject } =
-    groupDecisionsAndPrioritiesByProject(api.leadSections);
+  const decisionsByProject = groupDecisionsByProject(api.leadSections);
+  const prioritiesByProject = groupPrioritiesByProject(api.leadSections);
   const sectionByProject = buildProductToSectionMap(api.leadSections);
   const authorsByProject = buildProductToAuthorMap(api.leadSections);
 

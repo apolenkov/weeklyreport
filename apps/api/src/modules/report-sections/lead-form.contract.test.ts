@@ -46,7 +46,6 @@ const draftSection: ReportSectionReadModel = {
   ],
   risks: [],
   decisions: [],
-  priorities: [{ rank: 1, text: "Priority 1" }],
 };
 
 const submittedSection: ReportSectionReadModel = {

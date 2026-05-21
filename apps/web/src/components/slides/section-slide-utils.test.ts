@@ -56,6 +56,7 @@ function makeSection(
         workflowStatus: "done",
         carriedOver: false,
         completed: true,
+        priorityRank: 1,
       },
       {
         id: "66666666-6666-4666-8666-666666666666",
@@ -70,14 +71,6 @@ function makeSection(
     ],
     risks: [],
     decisions: [],
-    priorities: [
-      {
-        id: "77777777-7777-4777-8777-777777777777",
-        rank: 1,
-        text: "Ship the release summary",
-        productId: PRODUCT_ID,
-      },
-    ],
     ...overrides,
   };
 }
@@ -99,7 +92,7 @@ describe("section slide utilities", () => {
         name: "Core Product",
         currentItems: ["Closed release blockers"],
         nextItems: ["Prepare rollout notes"],
-        priorities: ["Ship the release summary"],
+        priorities: ["Closed release blockers"],
         stages: [
           expect.objectContaining({ name: "Discovery", status: "yellow" }),
           expect.objectContaining({ name: "Build", status: "green" }),
@@ -142,6 +135,7 @@ describe("section slide utilities", () => {
             workflowStatus: "done",
             carriedOver: false,
             completed: true,
+            priorityRank: 1,
           },
           {
             id: "66666666-6666-4666-8666-666666666666",
@@ -152,6 +146,17 @@ describe("section slide utilities", () => {
             workflowStatus: "in_progress",
             carriedOver: false,
             completed: null,
+          },
+          {
+            id: "77777777-7777-4777-8777-777777777777",
+            projectId: PRODUCT_TWO_ID,
+            type: "next",
+            text: "Protect launch date",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+            priorityRank: 2,
           },
         ],
         risks: [
@@ -175,20 +180,6 @@ describe("section slide utilities", () => {
             productId: null,
           },
         ],
-        priorities: [
-          {
-            id: "77777777-7777-4777-8777-777777777777",
-            rank: 1,
-            text: "Stabilize API",
-            productId: PRODUCT_ID,
-          },
-          {
-            id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
-            rank: 2,
-            text: "Protect launch date",
-            productId: PRODUCT_TWO_ID,
-          },
-        ],
       }),
     );
 
@@ -198,14 +189,14 @@ describe("section slide utilities", () => {
         name: "Core Product",
         currentItems: ["Close API parity"],
         nextItems: [],
-        priorities: ["Stabilize API"],
+        priorities: ["Close API parity"],
       }),
     );
     expect(slide.productSlides[1]).toEqual(
       expect.objectContaining({
         name: "Data Portal",
         currentItems: [],
-        nextItems: ["Prepare portal rollout"],
+        nextItems: ["Prepare portal rollout", "Protect launch date"],
         risks: ["Release scope may slip"],
         priorities: ["Protect launch date"],
       }),
@@ -253,7 +244,6 @@ describe("section slide utilities", () => {
             completed: true,
           },
         ],
-        priorities: [],
       }),
     );
 
@@ -294,7 +284,28 @@ describe("section slide utilities", () => {
     const warning = buildSectionSlideModel(
       makeSection({
         authorName: "Warning",
-        priorities: [],
+        items: [
+          {
+            id: "55555555-5555-4555-8555-555555555555",
+            projectId: PRODUCT_ID,
+            type: "current",
+            text: "Closed release blockers",
+            tag: "delivery",
+            workflowStatus: "done",
+            carriedOver: false,
+            completed: true,
+          },
+          {
+            id: "66666666-6666-4666-8666-666666666666",
+            projectId: PRODUCT_ID,
+            type: "next",
+            text: "Prepare rollout notes",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+          },
+        ],
       }),
     );
     const blocked = buildSectionSlideModel(

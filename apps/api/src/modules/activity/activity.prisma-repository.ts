@@ -59,10 +59,9 @@ export class ActivityPrismaRepository implements ActivityRepository {
         ...groupScopeFilter(session, "reportSection"),
       },
       include: {
-        items: { select: { id: true, updatedAt: true } },
+        items: { select: { id: true, updatedAt: true, priorityRank: true } },
         risks: { select: { id: true, updatedAt: true } },
         decisions: { select: { id: true, updatedAt: true } },
-        priorities: { select: { id: true, updatedAt: true } },
       },
     });
 
@@ -89,14 +88,13 @@ export class ActivityPrismaRepository implements ActivityRepository {
         };
       }
 
-      // lastEditAt = max(section.updatedAt, item/risk/decision/priority.updatedAt).
+      // lastEditAt = max(section.updatedAt, item/risk/decision.updatedAt).
       // submittedAt acts as a stronger floor when present.
       const childTimestamps: Date[] = [
         section.updatedAt,
         ...section.items.map((x) => x.updatedAt),
         ...section.risks.map((x) => x.updatedAt),
         ...section.decisions.map((x) => x.updatedAt),
-        ...section.priorities.map((x) => x.updatedAt),
       ];
       const lastEditAt =
         childTimestamps.length > 0
@@ -113,7 +111,7 @@ export class ActivityPrismaRepository implements ActivityRepository {
         itemCount: section.items.length,
         riskCount: section.risks.length,
         decisionCount: section.decisions.length,
-        priorityCount: section.priorities.length,
+        priorityCount: section.items.filter((x) => x.priorityRank != null).length,
         lastEditAt,
         submittedAt: section.submittedAt,
       };

@@ -69,11 +69,6 @@ const sourceSection: ReportSectionReadModel = {
       resolvedAt: new Date("2026-04-08T12:00:00.000Z"),
     },
   ],
-  priorities: [
-    { rank: 1, text: "Priority 1" },
-    { rank: 2, text: "Priority 2" },
-    { rank: 3, text: "Priority 3" },
-  ],
 };
 
 function createRepository(

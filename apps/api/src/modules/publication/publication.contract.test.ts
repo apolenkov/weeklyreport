@@ -48,11 +48,6 @@ function makeSection(
     items: [],
     risks: [],
     decisions: [],
-    priorities: [
-      { rank: 1, text: "Priority 1" },
-      { rank: 2, text: "Priority 2" },
-      { rank: 3, text: "Priority 3" },
-    ],
     ...overrides,
   };
 }
@@ -470,11 +465,6 @@ describe("PublicationService — contract tests", () => {
         items: [],
         risks: [],
         decisions: [],
-        priorities: [
-          { rank: 1, text: "P1" },
-          { rank: 2, text: "P2" },
-          { rank: 3, text: "P3" },
-        ],
       };
       await expect(
         service.updateSectionForReview(reportId, update),
@@ -533,11 +523,6 @@ describe("PublicationService — contract tests", () => {
         items: [],
         risks: [],
         decisions: [],
-        priorities: [
-          { rank: 1, text: "Priority 1" },
-          { rank: 2, text: "Priority 2" },
-          { rank: 3, text: "Priority 3" },
-        ],
       };
 
       const service = new PublicationService(createRepository(report));
@@ -571,11 +556,6 @@ describe("PublicationService — contract tests", () => {
         items: [],
         risks: [],
         decisions: [],
-        priorities: [
-          { rank: 1, text: "Priority 1" },
-          { rank: 2, text: "Priority 2" },
-          { rank: 3, text: "Priority 3" },
-        ],
       };
 
       const service = new PublicationService(createRepository(report));
@@ -614,11 +594,6 @@ describe("PublicationService — contract tests", () => {
         ],
         risks: [],
         decisions: [],
-        priorities: [
-          { rank: 1, text: "Priority 1" },
-          { rank: 2, text: "Priority 2" },
-          { rank: 3, text: "Priority 3" },
-        ],
       };
 
       const service = new PublicationService(createRepository(report));
@@ -657,11 +632,6 @@ describe("PublicationService — contract tests", () => {
         items: [],
         risks: [],
         decisions: [],
-        priorities: [
-          { rank: 1, text: "Priority 1" },
-          { rank: 2, text: "Priority 2" },
-          { rank: 3, text: "Priority 3" },
-        ],
       };
 
       const result = await service.updateSectionForReview(reportId, update);

@@ -67,20 +67,10 @@ describe("mapDomainError", () => {
       expect(mapped.code).toBe("BAD_REQUEST");
     });
 
-    it("maps MISSING_PRIORITIES to BAD_REQUEST", () => {
-      const error = new ReportSectionDomainError(
-        "MISSING_PRIORITIES",
-        "Top 3 priorities must be filled before submit.",
-      );
-      const mapped = mapDomainError(error);
-
-      expect(mapped.code).toBe("BAD_REQUEST");
-    });
-
     it("preserves cause reference", () => {
       const error = new ReportSectionDomainError(
-        "MISSING_PRIORITIES",
-        "Priorities missing",
+        "MISSING_CURRENT_ITEM",
+        "Project X needs at least one Current Week item.",
       );
       const mapped = mapDomainError(error);
 

@@ -38,7 +38,6 @@ function baseSection(
     items: [],
     risks: [],
     decisions: [],
-    priorities: [],
     ...overrides,
   };
 }
@@ -317,21 +316,48 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     expect(mapped?.productName).toBe("Group");
   });
 
-  it("preserves arbitrary positive ranks (variable-length list) and floors invalid ranks to 1", () => {
+  it("derives priorities from items with priorityRank, sorted by rank, floors invalid ranks to 1", () => {
     const section = baseSection({
-      priorities: [
-        { id: "p1", rank: 1, text: "P1" },
-        { id: "p2", rank: 5, text: "P5" },
-        { id: "p3", rank: 0, text: "invalid-zero" },
+      items: [
+        {
+          id: "i1",
+          projectId: PROJECT_A,
+          type: "current",
+          text: "P1",
+          tag: "feature",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          priorityRank: 1,
+        },
+        {
+          id: "i2",
+          projectId: PROJECT_A,
+          type: "current",
+          text: "P5",
+          tag: "feature",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          priorityRank: 5,
+        },
+        {
+          id: "i3",
+          projectId: PROJECT_A,
+          type: "current",
+          text: "invalid-zero",
+          tag: "feature",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          priorityRank: 0,
+        },
       ],
     });
 
     const mapped = mapLeadPriorities(section);
     expect(expectDefined(mapped[0]).rank).toBe(1);
-    // Earlier variant clamped to 1|2|3 for a fixed-slot UI; the variable-length
-    // priorities list now keeps the user's rank as-is when ≥ 1.
+    // Variable-length list keeps rank as-is when ≥ 1.
     expect(expectDefined(mapped[1]).rank).toBe(5);
     expect(expectDefined(mapped[1]).text).toBe("P5");
+    // rank=0 is clamped to 1 (clampRank guard).
     expect(expectDefined(mapped[2]).rank).toBe(1);
   });
 });

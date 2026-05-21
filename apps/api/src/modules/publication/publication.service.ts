@@ -156,7 +156,6 @@ export class PublicationService {
         items: parsedInput.items,
         risks: parsedInput.risks,
         decisions: parsedInput.decisions,
-        priorities: parsedInput.priorities,
       };
     });
 

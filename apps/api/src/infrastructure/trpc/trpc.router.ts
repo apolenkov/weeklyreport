@@ -349,15 +349,12 @@ export function createAppRouter(deps: RouterDeps) {
               },
             },
             items: {
-              select: { projectId: true, updatedAt: true },
+              select: { projectId: true, updatedAt: true, priorityRank: true },
             },
             risks: {
               select: { projectId: true, updatedAt: true },
             },
             decisions: {
-              select: { productId: true, updatedAt: true },
-            },
-            priorities: {
               select: { productId: true, updatedAt: true },
             },
             projectStatuses: {
@@ -388,14 +385,12 @@ export function createAppRouter(deps: RouterDeps) {
             for (const row of s.items) productIds.add(row.projectId);
             for (const row of s.risks) productIds.add(row.projectId);
             for (const row of s.decisions) productIds.add(row.productId);
-            for (const row of s.priorities) productIds.add(row.productId);
 
             const editDates = [
               s.updatedAt,
               ...s.items.map((row) => row.updatedAt),
               ...s.risks.map((row) => row.updatedAt),
               ...s.decisions.map((row) => row.updatedAt),
-              ...s.priorities.map((row) => row.updatedAt),
               ...s.projectStatuses.map((row) => row.updatedAt),
               ...s.stageStatuses.map((row) => row.updatedAt),
               ...s.versionSnapshots.map((row) => row.createdAt),
@@ -421,7 +416,7 @@ export function createAppRouter(deps: RouterDeps) {
               itemCount: s.items.length,
               riskCount: s.risks.length,
               decisionCount: s.decisions.length,
-              priorityCount: s.priorities.length,
+              priorityCount: s.items.filter((i) => i.priorityRank != null).length,
               productCount: productIds.size,
               versionCount: s.versionSnapshots.length,
               latestVersion: latestVersion?.version ?? null,
@@ -465,10 +460,9 @@ export function createAppRouter(deps: RouterDeps) {
                   sections: {
                     where: sectionScope,
                     select: {
-                      items: { select: { projectId: true } },
+                      items: { select: { projectId: true, priorityRank: true } },
                       risks: { select: { projectId: true } },
                       decisions: { select: { productId: true } },
-                      priorities: { select: { productId: true } },
                       projectStatuses: {
                         select: { projectId: true, status: true },
                       },
@@ -494,7 +488,9 @@ export function createAppRouter(deps: RouterDeps) {
                   itemCount += section.items.length;
                   riskCount += section.risks.length;
                   decisionCount += section.decisions.length;
-                  priorityCount += section.priorities.length;
+                  priorityCount += section.items.filter(
+                    (i) => i.priorityRank != null,
+                  ).length;
 
                   for (const row of section.projectStatuses) {
                     productIds.add(row.projectId);
@@ -512,9 +508,6 @@ export function createAppRouter(deps: RouterDeps) {
                     productIds.add(row.projectId);
                   }
                   for (const row of section.decisions) {
-                    productIds.add(row.productId);
-                  }
-                  for (const row of section.priorities) {
                     productIds.add(row.productId);
                   }
                 }

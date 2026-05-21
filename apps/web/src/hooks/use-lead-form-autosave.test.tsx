@@ -36,7 +36,6 @@ function makePayload(text = "first"): DraftSavePayload {
     ],
     risks: [],
     decisions: [],
-    priorities: [{ rank: 1, text: "p" }],
   };
 }
 

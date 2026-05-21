@@ -130,11 +130,10 @@ export function buildSectionSlideModel(
   const decisions = section.decisions
     .filter((decision) => nonEmpty(decision.text))
     .map((decision) => decision.text.trim());
-  // TODO(PRIORITY-REDESIGN-01): see priorities-section.tsx for refactor sketch
-  const priorities = section.priorities
-    .filter((priority) => nonEmpty(priority.text))
-    .sort((a, b) => a.rank - b.rank)
-    .map((priority) => priority.text.trim());
+  const priorities = section.items
+    .filter((item) => item.priorityRank != null && nonEmpty(item.text))
+    .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+    .map((item) => item.text.trim());
 
   const projectIds = new Set(projectRows.map((project) => project.projectId));
   const productSlides: SlideProduct[] = projectRows.map((project) => ({
@@ -175,13 +174,15 @@ export function buildSectionSlideModel(
           decision.productId === project.projectId && nonEmpty(decision.text),
       )
       .map((decision) => decision.text.trim()),
-    priorities: section.priorities
+    priorities: section.items
       .filter(
-        (priority) =>
-          priority.productId === project.projectId && nonEmpty(priority.text),
+        (item) =>
+          item.projectId === project.projectId &&
+          item.priorityRank != null &&
+          nonEmpty(item.text),
       )
-      .sort((a, b) => a.rank - b.rank)
-      .map((priority) => priority.text.trim()),
+      .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+      .map((item) => item.text.trim()),
   }));
 
   const crossProductDecisions = section.decisions
@@ -191,14 +192,15 @@ export function buildSectionSlideModel(
         nonEmpty(decision.text),
     )
     .map((decision) => decision.text.trim());
-  const crossProductPriorities = section.priorities
+  const crossProductPriorities = section.items
     .filter(
-      (priority) =>
-        (!priority.productId || !projectIds.has(priority.productId)) &&
-        nonEmpty(priority.text),
+      (item) =>
+        item.priorityRank != null &&
+        (!item.projectId || !projectIds.has(item.projectId)) &&
+        nonEmpty(item.text),
     )
-    .sort((a, b) => a.rank - b.rank)
-    .map((priority) => priority.text.trim());
+    .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+    .map((item) => item.text.trim());
   if (crossProductDecisions.length > 0 || crossProductPriorities.length > 0) {
     productSlides.push({
       id: "cross-product",
