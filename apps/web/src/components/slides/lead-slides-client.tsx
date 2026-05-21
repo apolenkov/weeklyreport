@@ -88,6 +88,13 @@ function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
     .filter((i) => i.priorityRank != null && i.text.trim())
     .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
     .map((i) => i.text.trim());
+  // T-G3: text→rank map so cross-author slides also pick up P{N} chips.
+  const itemRanks = ca.items.reduce<Record<string, number>>((acc, i) => {
+    if (i.priorityRank != null && i.text.trim()) {
+      acc[i.text.trim()] = i.priorityRank;
+    }
+    return acc;
+  }, {});
 
   const blockedCount =
     ca.items.filter((i) => i.workflowStatus === "blocked").length +
@@ -116,6 +123,7 @@ function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
     risks,
     decisions,
     priorities,
+    itemRanks,
   };
 
   const model: SectionSlideModel = {

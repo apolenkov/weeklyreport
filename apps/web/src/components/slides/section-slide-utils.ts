@@ -31,6 +31,17 @@ export type SlideProduct = {
   readonly risks: string[];
   readonly decisions: string[];
   readonly priorities: string[];
+  /**
+   * T-G3: map of item-text → priorityRank for THIS product, populated for
+   * items whose priorityRank is non-null. Sparse — items without a rank
+   * simply have no key. Lookup is used by the unified slide renderer to
+   * stamp a P{N} chip next to bullets when the item carries a rank.
+   *
+   * Keyed by trimmed text because (text, productId) is unique within a
+   * lead's section; rank can change between weeks so per-text lookup is
+   * preferable to threading rank through every string array.
+   */
+  readonly itemRanks?: Readonly<Record<string, number>>;
 };
 
 export type SectionSlideModel = {
@@ -183,6 +194,14 @@ export function buildSectionSlideModel(
       )
       .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
       .map((item) => item.text.trim()),
+    // T-G3: capture per-text rank so the unified slide can render P{N}
+    // chips on whichever bullet bucket the item lands in.
+    itemRanks: section.items.reduce<Record<string, number>>((acc, item) => {
+      if (item.projectId === project.projectId && item.priorityRank != null && nonEmpty(item.text)) {
+        acc[item.text.trim()] = item.priorityRank;
+      }
+      return acc;
+    }, {}),
   }));
 
   const crossProductDecisions = section.decisions
@@ -506,6 +525,8 @@ export function paginateSectionSlides(
 export type UnifiedSectionRow = {
   readonly text: string;
   readonly productName: string;
+  /** T-G3: present when the source item carries a priorityRank. */
+  readonly priorityRank?: number;
 };
 
 export type UnifiedSlideModel = {
@@ -546,29 +567,31 @@ export function buildUnifiedSlideModel(
   for (const product of products) {
     const name =
       product.id === "cross-product" ? "Shared context" : product.name;
+    const ranks = product.itemRanks ?? {};
+    const withRank = (text: string): UnifiedSectionRow => {
+      const rank = ranks[text];
+      return rank != null
+        ? { text, productName: name, priorityRank: rank }
+        : { text, productName: name };
+    };
     if (product.currentItems.length > 0) {
-      product.currentItems.forEach((text) =>
-        current.push({ text, productName: name }),
-      );
+      product.currentItems.forEach((text) => current.push(withRank(text)));
     } else {
       emptyProducts.current.push(name);
     }
     if (product.nextItems.length > 0) {
-      product.nextItems.forEach((text) =>
-        next.push({ text, productName: name }),
-      );
+      product.nextItems.forEach((text) => next.push(withRank(text)));
     } else {
       emptyProducts.next.push(name);
     }
     if (product.risks.length > 0) {
+      // Risks don't carry priorityRank, but keep the row shape uniform.
       product.risks.forEach((text) => risks.push({ text, productName: name }));
     } else {
       emptyProducts.risks.push(name);
     }
     if (product.priorities.length > 0) {
-      product.priorities.forEach((text) =>
-        priorities.push({ text, productName: name }),
-      );
+      product.priorities.forEach((text) => priorities.push(withRank(text)));
     } else {
       emptyProducts.priorities.push(name);
     }
