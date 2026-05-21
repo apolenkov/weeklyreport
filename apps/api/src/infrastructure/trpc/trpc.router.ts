@@ -1736,12 +1736,16 @@ export function createAppRouter(deps: RouterDeps) {
                 author: { select: { email: true, notificationOptOut: true } },
               },
             });
-            // Compute the dedupeKey shape requestReminderExecution would derive
-            // for the legacy (no-payload) path — `${rule.id}:${fireAt}:${email}`
-            // — and look up existing executions BEFORE calling the service so
-            // we can tell new dispatches apart from dedupe hits. Without this,
-            // every click reported "Reminder sent" even when the cron-driven
-            // scheduler had already sent the same recipient inside the cycle.
+            // Race-safe attribution (Codex review fix): call the service
+            // first — it atomically inserts via the dedupeKey @unique index,
+            // so two concurrent clicks never produce two emails. Then read
+            // the execution back and compare `createdAt` to the call's
+            // start. If it lies inside the call window it is genuinely new,
+            // otherwise the service deduplicated against a prior dispatch.
+            // Old pattern (pre-read + service call) had a TOCTOU race where
+            // both concurrent callers saw `existing === null` and both
+            // incremented `dispatched`, mis-reporting the counter even
+            // though only one email actually went out.
             const fireAtIso = rule.fireAt.toISOString();
             let dispatched = 0;
             let alreadySent = 0;
@@ -1752,15 +1756,20 @@ export function createAppRouter(deps: RouterDeps) {
                 continue;
               }
               const dedupeKey = `${rule.id}:${fireAtIso}:${sec.author.email}`;
-              const existing = await deps.prisma.reminderExecution.findUnique({
-                where: { dedupeKey },
-              });
+              const beforeMs = Date.now();
               await deps.remindersService.requestReminderExecution(
                 rule.id,
                 sec.author.email,
               );
-              if (existing) alreadySent++;
-              else dispatched++;
+              const after = await deps.prisma.reminderExecution.findUnique({
+                where: { dedupeKey },
+                select: { createdAt: true },
+              });
+              if (after && after.createdAt.getTime() >= beforeMs) {
+                dispatched++;
+              } else {
+                alreadySent++;
+              }
             }
             return { dispatched, alreadySent, skipped };
           } catch (error) {
