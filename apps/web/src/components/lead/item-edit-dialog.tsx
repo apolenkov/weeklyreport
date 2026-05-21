@@ -119,6 +119,9 @@ export function ItemEditDialog({
   const [text, setText] = useState(initial.text);
   const [status, setStatus] = useState<ItemStatus>(initial.status);
   const [productId, setProductId] = useState(initial.productId);
+  const [priorityRank, setPriorityRank] = useState<number | null>(
+    item?.priorityRank ?? null,
+  );
   // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
   const [stageIds, setStageIds] = useState<string[]>(
     item?.stageIds
@@ -137,6 +140,7 @@ export function ItemEditDialog({
       setText(initial.text);
       setStatus(initial.status);
       setProductId(initial.productId);
+      setPriorityRank(item?.priorityRank ?? null);
       setStageIds(
         item?.stageIds
           ? [...item.stageIds]
@@ -192,6 +196,7 @@ export function ItemEditDialog({
       text: trimmed,
       status,
       author: item?.author ?? currentUserName ?? "You",
+      priorityRank: priorityRank ?? null,
     };
     onSave(out);
   }
@@ -272,6 +277,29 @@ export function ItemEditDialog({
                 {errors.text}
               </p>
             )}
+          </div>
+
+          {/* Priority rank — optional; set to mark this item as a top priority */}
+          <div>
+            <label
+              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+              htmlFor="item-priority-rank"
+            >
+              Priority rank{" "}
+              <span className="font-normal">(optional — leave blank if not a priority)</span>
+            </label>
+            <input
+              id="item-priority-rank"
+              type="number"
+              min={1}
+              className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              value={priorityRank ?? ""}
+              placeholder="e.g. 1, 2, 3…"
+              onChange={(e) => {
+                const v = e.target.value;
+                setPriorityRank(v === "" ? null : Math.max(1, parseInt(v, 10)));
+              }}
+            />
           </div>
 
           <StageMultiSelect

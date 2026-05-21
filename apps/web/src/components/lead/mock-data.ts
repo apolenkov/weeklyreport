@@ -41,6 +41,8 @@ export type KanbanItem = {
   /** When true, this item belongs to another author (viewer-side, read-only). */
   foreign?: boolean;
   authorId?: string;
+  /** Derived from Item.priorityRank. Null = not a priority item. */
+  priorityRank?: number | null;
 };
 
 export type RiskEntry = {

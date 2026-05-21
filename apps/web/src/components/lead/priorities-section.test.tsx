@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { PrioritiesSection } from "./priorities-section";
 import type { PriorityEntry } from "./mock-data";
@@ -17,14 +17,7 @@ describe("PrioritiesSection", () => {
       },
     ];
 
-    render(
-      <PrioritiesSection
-        priorities={priorities}
-        readOnly={true}
-        onChange={vi.fn()}
-        availableStages={["Planning", "DevOps", "Release"]}
-      />,
-    );
+    render(<PrioritiesSection priorities={priorities} />);
 
     expect(screen.getByText("Planning")).toBeVisible();
     expect(screen.getByText("DevOps")).toBeVisible();
@@ -40,7 +33,6 @@ describe("PrioritiesSection", () => {
     render(
       <PrioritiesSection
         priorities={[{ rank: 1, text: "Coordinate release readiness" }]}
-        readOnly={true}
       />,
     );
 
