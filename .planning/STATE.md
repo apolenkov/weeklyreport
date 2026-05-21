@@ -77,6 +77,16 @@ Items acknowledged and deferred at v8.1 milestone close on 2026-05-18:
 | uat_gap           | Phase 16: 16-HUMAN-UAT.md                           | partial      |
 | verification_gap  | Phase 16: 16-VERIFICATION.md                        | human_needed |
 | context_questions | Phases 52-60 (future backlog)                       | open         |
+| ufb               | UFB-014 multi-SDLC per product                      | dropped      |
+
+UFB-014 dropped at v8.3 close (2026-05-22, confirmed by user): the
+original UX request — visually flag SDLC stages the lead did not
+contribute to — is fully covered by the lock-icon work shipped in F2
+(commit fd5d74d) and the lead-locked-stage-color regression spec
+(ae93078). Product-level multi-SDLC pipeline data refactor is not
+needed. Item-level multi-stage tagging via stageIds remains the
+canonical multi-stage field per ADR
+`.planning/tickets/session-leftovers-2026-05-14/ADR.md`.
 
 Known deferred items at close: 26 (see above). Quick tasks with status "missing"
 are stale artifact slugs from archived sessions — not active work items.
