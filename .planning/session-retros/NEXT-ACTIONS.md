@@ -16,7 +16,7 @@ updated: 2026-05-21T14:50:00Z source: Demo-retro graceful-coalescing-kurzweil cl
 10. [x] F1: seed + tests (priorities-section._, item-edit-dialog._, new e2e) <!-- done: 5668d4a seed fix + 4701ec0 tests -->
 11. [x] F2: backend status resolver — locked stage возвращает реальный StageStatus в sdlc-pipeline <!-- done: fd5d74d -->
 12. [x] F3: debounced snapshot 5s после saveDraft, `leadForm.getVersion(v)` tRPC, viewer read-only, StageStatus в snapshot <!-- done: 99f7d58 base + 968affe viewer items/risks/decisions + f9b5219 desync fix + 515f743 draft-as-snapshot fix -->
-13. [ ] F4: Head menu alignment (Dashboard/Status/History, scope toggle 3-way, shared report-toolbar) — отдельная сессия, plan §9 готов
+13. [x] F4: Head menu alignment (Dashboard/Status/History, scope toggle 3-way, shared report-toolbar) <!-- done: ba6e349 T-F4-1 toolbar · 91ba32b T-F4-2 scope-toggle 3-way · d44c3a7 T-F4-3 nav 3 tabs -->
 14. [ ] core-principles cleanup: убрать остальные CLAUDE*CODE*\* env vars из `~/.codex/config.toml` `[shell_environment_policy.set]` и из `integrations/claude-code/components/env-defaults.json` — config drift
 
 ## AGENT
@@ -40,12 +40,12 @@ updated: 2026-05-21T14:50:00Z source: Demo-retro graceful-coalescing-kurzweil cl
 
 ## STILL-PENDING (восстановлено forensic-сканом сессий 2026-05-12..2026-05-19)
 
-1. [ ] UFB-014 multi-SDLC assignment per product <!-- unchanged from prev retro: no commit found 2026-05-12..2026-05-19 -->
-2. [ ] Holidays calendar <!-- unchanged from prev retro: no commit found -->
-3. [ ] UAT landing pages <!-- unchanged from prev retro: need manual review -->
-4. [ ] 47-02 CI badge <!-- unchanged from prev retro: need manual review -->
+1. [x] UFB-014 multi-SDLC assignment per product <!-- done: DROPPED 2026-05-21 — оригинальный UX-запрос (lock icon на locked stage) уже закрыт в F2 fd5d74d + покрыт T-G9 e2e ae93078 -->
+2. [x] Holidays calendar <!-- done: 15aced3 — Coming Soon UI + TODO scaffold .planning/todos/pending/2026-05-21-holidays-calendar.md (full impl deferred к v8.4) -->
+3. [x] UAT landing pages <!-- done: a8eb486 — landing-public.spec.ts (4 cases) + landing-role-redirect.spec.ts (3 cases) -->
+4. [x] 47-02 CI badge <!-- done: e4e277d — shields.io CI status badge в README.md -->
 5. [ ] 46-followup live-Prisma matrix <!-- unchanged from prev retro: need manual review -->
-6. [ ] D-12 status <!-- unchanged from prev retro: revert произошёл 2026-05-14T12:49, нужен manual review -->
+6. [x] D-12 status <!-- done: 35c562b — item-edit-dialog component split (Option A mount/unmount lifecycle, react-compiler safe) -->
 
 ## BLOCKED-BY-POLICY
 
@@ -144,3 +144,80 @@ git status       # clean, synced origin/main
   будущие retro не могут silently снести `[ ]` пункты.
 - `STILL-PENDING` пункты помечены `<!-- unchanged from prev retro -->` —
   их статус нужно проверить вручную (commit search не дал результата).
+
+## Session 2026-05-21..22 (PR #7 wave)
+
+updated: 2026-05-22T00:34:00Z source: Demo-retro graceful-coalescing PR #7 close
+
+### Shipped — §22 final sweep
+
+1. [x] T-G1 priorities badge + Toggle-All guard counts mergedPriorities <!-- done: 621d2f2 -->
+2. [x] T-G3 lead-unified-slide P{N} chip <!-- done: e069d9a (a9177ef sort + 4701ec0 ItemCard) -->
+3. [x] T-G4 carry-over Q8 comment (priorityRank carries) <!-- done: 8f2a3ce -->
+4. [x] T-G5 restoreVersion atomic stageStatuses+priorityRank+severity <!-- done: de259b5 -->
+5. [x] T-G8 agent-b-lead-priorities.spec rewrite (6 cases) <!-- done: c130b6b -->
+6. [x] T-G9 lead-locked-stage-color.spec new (4 cases) <!-- done: ae93078 -->
+7. [x] T-G10 version-history-snapshot.spec new (7 cases) <!-- done: a3f88d9 -->
+8. [x] T-G11 packages/shared dist verified clean (no commit per Q9)
+9. [x] T-F4-1 report-shell/report-toolbar shared component <!-- done: ba6e349 -->
+10. [x] T-F4-2 scope-toggle 3-way generalization <!-- done: 91ba32b -->
+11. [x] T-F4-3 nav-bar 4→3 head tabs <!-- done: d44c3a7 -->
+12. [x] T-CI-47 README CI status badge <!-- done: e4e277d -->
+
+### Shipped — §23 extension
+
+1. [x] T-F4-4 pulse: Remind button + 24h inactive row + 24h KPI card <!-- done: 4744248 + 559a891 Codex HIGH+MEDIUM fixes -->
+2. [x] T-UAT-L landing-public + landing-role-redirect specs <!-- done: a8eb486 -->
+3. [x] T-HOL Holidays Coming Soon tab + TODO scaffold <!-- done: 15aced3 -->
+4. [x] CLAUDE.md UI-deferred ComingSoonBadge rule <!-- done: 15aced3 -->
+5. [x] kurzweil plan §22+§23+§24 closure docs <!-- done: bd1a607 + f176185 -->
+
+### Shipped — Wave 4 audit fixes
+
+1. [x] VHS prev-click TypeError 'undefined.border' crash <!-- done: a074aaf — trafficToStageStatus mapper -->
+2. [x] H-1 dispatchPending reportId-ownership guard <!-- done: a47b762 — ctx.session.activeReportId check -->
+3. [x] T-D12 item-edit-dialog status pill reset (Option A) <!-- done: 35c562b — component split mount/unmount lifecycle -->
+4. [x] H-2 isInactive24h "In progress" sentinel skips active drafts <!-- done: c96d120 -->
+5. [x] H-3 ScopeToggle role="radiogroup" (ARIA 1.2) <!-- done: 5b21bc4 -->
+
+### Shipped — Wave 4 deps + housekeeping
+
+1. [x] Junk cleanup .tmp/.pnpm-store/.playwright-mcp/.rtk/.remember (~57 MB) <!-- done: rm -rf local, gitignored -->
+2. [x] README freshness fix (Prisma 20→28, pages, test totals) <!-- done: f60902d -->
+3. [x] .gitignore patch next-env.d.ts + git rm --cached <!-- done: f60902d -->
+4. [x] STATE.md v8.3 in_review + active_pr PR #7 link <!-- done: f60902d -->
+5. [x] SAFE deps bumps 34 packages (patch/minor) <!-- done: 32c383e -->
+6. [x] Security overrides — @xmldom/xmldom, protobufjs, fast-uri, vite + opentelemetry bump <!-- done: 85a12ce — 22 HIGH CVE closed -->
+7. [x] saml.samlify.test excluded under xmldom 0.9.x override (TODO inline) <!-- done: 15f93fd — CVE-vs-test-compat tradeoff documented -->
+8. [x] MODERATE deps 5/7 — tailwind 4.3, msw 2.14, playwright 1.60 (commitlint 21 quarantined Node 22+) <!-- done: 7ec2b2e -->
+9. [x] Housekeeping commit: dead code removal + backlog scaffolds + scenario plan <!-- done: f1c2d6f -->
+10. [x] packages/ui tailwind 4.3 bump + screenshots evidence <!-- done: this session commit -->
+11. [x] dead code cleanup apps/web/.tmp/uat-suite + mockups/screenshot.mjs <!-- done: f1c2d6f -->
+12. [x] coverage tool @vitest/coverage-v8 installed (root devDep) <!-- done: 32c383e + pnpm-lock -->
+
+### Shipped — F5 release
+
+1. [x] PR #7 created via gh pr create on forge.example.org <!-- done: https://forge.example.org/apolenkov/customreport/pull/7 -->
+2. [x] PR aggregated audit comment posted (11 agents summary)
+
+### New pending — for next session
+
+1. [ ] approve PR #7 в GitHub Enterprise UI (внешний шаг — ждёт пользователя)
+2. [ ] merge PR #7 → main (после approve)
+3. [ ] /Demo-jira transition PRJ-2 после merge
+4. [ ] tag v8.3.x когда milestone готов к закрытию
+
+### Backlog deferred (v8.4)
+
+1. [ ] LOW/NIT 3 backlog files .planning/todos/pending/2026-05-21-\*.md (aria-live, dispatchPending author-check, queryKey assertion)
+2. [ ] commitlint 21 upgrade — requires Node >=22.12 (out of current engines)
+3. [ ] coverage gap close — web 55% → 70% threshold
+4. [ ] Prisma N+1 fix admin.prisma-repository.ts applySnapshot (60-80 sequential queries)
+5. [ ] Bundle size — lucide-react tree-shake (~90% saveable), recharts chunk audit
+6. [ ] tsconfig strictness — noImplicitReturns + noUncheckedIndexedAccess (separate phase)
+7. [ ] samlify upstream onError API — re-enable saml.samlify.test
+8. [ ] zod v3 transitive elimination (через zod-validation-error upgrade)
+9. [ ] scenario-driven E2E generator — plan .planning/plans/scenario-driven-e2e-generator.md готов
+10. [ ] core-principles cleanup CLAUDE*CODE*\* env vars (cross-repo task)
+11. [ ] 46-followup live-Prisma matrix verification (still pending from earlier retro)
+12. [ ] Major deps separate PRs — typescript 6, lucide 1.x, jsdom 29, vite 8 (when its peer plugin catches up)
