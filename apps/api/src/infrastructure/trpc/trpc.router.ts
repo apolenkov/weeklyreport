@@ -1692,6 +1692,12 @@ export function createAppRouter(deps: RouterDeps) {
           z.object({
             reportId: z.string().uuid(),
             ruleId: z.string().uuid().optional(),
+            // T-F4-4 (plan §23.4): scope dispatch to a single lead so the
+            // Head Dashboard Remind button can ping one author without
+            // exposing emails to the client. When undefined, falls back to
+            // the original "every draft author" behaviour used by the
+            // bulk AlertBar action.
+            leadId: z.string().uuid().optional(),
           }),
         )
         .output(
@@ -1721,7 +1727,11 @@ export function createAppRouter(deps: RouterDeps) {
               };
             }
             const draftSections = await deps.prisma.reportSection.findMany({
-              where: { reportId: input.reportId, status: "draft" },
+              where: {
+                reportId: input.reportId,
+                status: "draft",
+                ...(input.leadId ? { authorId: input.leadId } : {}),
+              },
               include: {
                 author: { select: { email: true, notificationOptOut: true } },
               },

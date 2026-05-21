@@ -20,6 +20,7 @@ import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { ActivityLivePanel } from "./activity-live-panel";
 import { LeadSummaryTable } from "./lead-summary-table";
+import { Activity24hCard } from "./activity-24h-card";
 
 export const DASHBOARD_LOAD_STALL_MS = 8_000;
 
@@ -263,9 +264,14 @@ export function DashboardPage() {
       {/* KPI Cards */}
       <KpiCards data={kpi} />
 
+      {/* T-F4-4 §23.4: 24h Activity KPI card — count of lead sections edited
+          in the last 24 hours. Uses the activity.live feed (same poll as
+          ActivityLivePanel above, no extra request). */}
+      <Activity24hCard />
+
       {/* D-29: head/admin need the per-lead submission table on the dashboard,
           not only the aggregate cards and alert row. */}
-      <LeadSummaryTable leads={leads} />
+      <LeadSummaryTable leads={leads} reportId={weeklyQ.data?.reportId} />
 
       {/* Phase 52 (UFB-054): product-KPI card — leadership-readable
           numbers backed by telemetry.summary. Pulls its own data and
