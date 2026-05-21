@@ -1,21 +1,23 @@
 # NEXT ACTIONS
 
-updated: 2026-05-20T22:55:00Z source: Demo-retro kurzweil-plan session
+updated: 2026-05-21T14:50:00Z source: Demo-retro graceful-coalescing-kurzweil close
 
 ## RUN FIRST
 
 1. [x] `pnpm db:wipe:manual-uat` <!-- done: 2026-05-19 — Week 21 активен -->
 2. [x] `git push origin fix/PRJ-2/shiny-eagle` — W15 запушен <!-- done: 3d69f21 pushed f05499e..3d69f21 -->
-3. [ ] Context7 lookup: `prisma@7` partial index syntax + nullable column (перед F1 coding)
-4. [ ] Context7 lookup: `zod@4` `.nullable()` + `z.number().int()` API (перед F1 coding)
-5. [ ] F1: `prisma/schema.prisma` — добавить `Item.priorityRank Int?`, удалить модель `Priority`, новая миграция
-6. [ ] F1: `packages/shared/src/schemas/report.ts` — расширить `itemInputSchema`, удалить `priorityInputSchema`
-7. [ ] F1: API write/read — `lead-form.prisma-repository.ts`, `weekly-report.ts` aggregation
-8. [ ] F1: UI — `priorities-section.tsx` (read-only derived), `item-edit-dialog.tsx` (rank field), `item-card.tsx` (P{N} chip)
-9. [ ] F1: Slides — `section-slide-utils.ts` sort by rank, `lead-unified-slide.tsx` P{N} marker
-10. [ ] F1: seed + tests (priorities-section._, item-edit-dialog._, new e2e)
-11. [ ] F2: backend status resolver — locked stage возвращает реальный StageStatus в sdlc-pipeline
-12. [ ] F3: debounced snapshot 5s после saveDraft, `leadForm.getVersion(v)` tRPC, viewer read-only, StageStatus в snapshot
+3. [x] Context7 lookup: `prisma@7` partial index syntax + nullable column (перед F1 coding) <!-- done: bypassed — F1 schema landed via a9177ef without explicit Context7 round, all 487/487 tests green, no syntax issues -->
+4. [x] Context7 lookup: `zod@4` `.nullable()` + `z.number().int()` API (перед F1 coding) <!-- done: bypassed — Zod schema accepted in itemInputSchema без правок, тесты зелёные -->
+5. [x] F1: `prisma/schema.prisma` — добавить `Item.priorityRank Int?`, удалить модель `Priority`, новая миграция <!-- done: a9177ef + 7b152d0 schema drift fix -->
+6. [x] F1: `packages/shared/src/schemas/report.ts` — расширить `itemInputSchema`, удалить `priorityInputSchema` <!-- done: a9177ef (часть full stack migration) -->
+7. [x] F1: API write/read — `lead-form.prisma-repository.ts`, `weekly-report.ts` aggregation <!-- done: a9177ef -->
+8. [x] F1: UI — `priorities-section.tsx` (read-only derived), `item-edit-dialog.tsx` (rank field), `item-card.tsx` (P{N} chip) <!-- done: 4701ec0 -->
+9. [x] F1: Slides — `section-slide-utils.ts` sort by rank, `lead-unified-slide.tsx` P{N} marker <!-- done: 4701ec0 (часть F1-ui) -->
+10. [x] F1: seed + tests (priorities-section._, item-edit-dialog._, new e2e) <!-- done: 5668d4a seed fix + 4701ec0 tests -->
+11. [x] F2: backend status resolver — locked stage возвращает реальный StageStatus в sdlc-pipeline <!-- done: fd5d74d -->
+12. [x] F3: debounced snapshot 5s после saveDraft, `leadForm.getVersion(v)` tRPC, viewer read-only, StageStatus в snapshot <!-- done: 99f7d58 base + 968affe viewer items/risks/decisions + f9b5219 desync fix + 515f743 draft-as-snapshot fix -->
+13. [ ] F4: Head menu alignment (Dashboard/Status/History, scope toggle 3-way, shared report-toolbar) — отдельная сессия, plan §9 готов
+14. [ ] core-principles cleanup: убрать остальные CLAUDE*CODE*\* env vars из `~/.codex/config.toml` `[shell_environment_policy.set]` и из `integrations/claude-code/components/env-defaults.json` — config drift
 
 ## AGENT
 
