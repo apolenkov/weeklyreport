@@ -478,15 +478,20 @@ export function mapLeadPriorities(
   section: ReportSectionReadModel,
 ): LeadPriorityEntry[] {
   const projectIndex = buildProjectIndex(section);
-  return section.priorities.map((p) => ({
-    rank: clampRank(p.rank),
-    text: p.text,
-    stageIds: p.stageIds,
-    productId: p.productId ?? undefined,
-    productName:
-      (p.productId ? projectIndex.get(p.productId)?.name : undefined) ??
-      undefined,
-  }));
+  return section.items
+    .filter((i) => i.priorityRank != null)
+    .sort((a, b) => {
+      const ra = (a.priorityRank ?? 0) >= 1 ? (a.priorityRank ?? 0) : Infinity;
+      const rb = (b.priorityRank ?? 0) >= 1 ? (b.priorityRank ?? 0) : Infinity;
+      return ra - rb;
+    })
+    .map((i) => ({
+      rank: clampRank(i.priorityRank ?? 0),
+      text: i.text,
+      stageIds: i.stageIds,
+      productId: i.projectId,
+      productName: projectIndex.get(i.projectId)?.name ?? undefined,
+    }));
 }
 
 /**

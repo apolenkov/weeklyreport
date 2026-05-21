@@ -53,11 +53,6 @@ function makeSection(
     items: [],
     risks: [],
     decisions: [],
-    priorities: [
-      { id: crypto.randomUUID(), rank: 1, text: "Priority one" },
-      { id: crypto.randomUUID(), rank: 2, text: "Priority two" },
-      { id: crypto.randomUUID(), rank: 3, text: "Priority three" },
-    ],
     ...overrides,
   };
 }

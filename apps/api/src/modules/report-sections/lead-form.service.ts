@@ -57,7 +57,7 @@ export interface LeadFormRepository {
       riskCount: number;
     }[]
   >;
-  /** Returns full section content (items/risks/decisions/priorities) for cross-author leads
+  /** Returns full section content (items/risks/decisions) for cross-author leads
    *  who share at least one product with the requesting user, filtered to shared products only. */
   getCrossAuthorSections(
     reportId: string,
@@ -78,6 +78,7 @@ export interface CrossAuthorSectionRow {
     workflowStatus: string;
     carriedOver: boolean;
     completed: boolean | null;
+    priorityRank: number | null;
     stageName: string | null;
   }[];
   risks: {
@@ -97,14 +98,6 @@ export interface CrossAuthorSectionRow {
     deadline: Date | null;
     impact: string;
     resolvedAt: Date | null;
-    stageName: string | null;
-  }[];
-  // TODO(PRIORITY-REDESIGN-01): see priorities-section.tsx for refactor sketch
-  priorities: {
-    id: string;
-    productId: string;
-    rank: number;
-    text: string;
     stageName: string | null;
   }[];
 }

@@ -268,15 +268,6 @@ function sectionToDraftPayload(
         stageIds: d.stageIds,
         productId: d.productId ?? null,
       })),
-    priorities: section.priorities
-      .filter((p) => hasText(p.text))
-      .map((p) => ({
-        id: p.id,
-        rank: p.rank,
-        text: p.text,
-        stageIds: p.stageIds,
-        productId: p.productId ?? null,
-      })),
   };
 }
 
@@ -715,7 +706,6 @@ export function LeadForm({
   const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);
   const [risksAddSignal, setRisksAddSignal] = useState(0);
   const [decisionsAddSignal, setDecisionsAddSignal] = useState(0);
-  const [prioritiesAddSignal, setPrioritiesAddSignal] = useState(0);
 
   // Compute readOnly early (before hook; the autosave hook needs it). When
   // data isn't ready, treat as readOnly (autosave disabled).
@@ -952,18 +942,20 @@ export function LeadForm({
 
   const foreignPriorities: PriorityEntry[] =
     crossAuthorSectionsQ.data?.flatMap((ca) =>
-      ca.priorities.map(
-        (p): PriorityEntry => ({
-          rank: p.rank,
-          text: p.text,
-          stageName: p.stageName ?? undefined,
-          productId: p.productId,
-          productName: productNameById.get(p.productId) ?? p.productId,
-          authorName: ca.authorName,
-          authorId: ca.authorId,
-          foreign: true,
-        }),
-      ),
+      ca.items
+        .filter((i) => i.priorityRank != null)
+        .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+        .map(
+          (i): PriorityEntry => ({
+            rank: i.priorityRank ?? 1,
+            text: i.text,
+            productId: i.projectId,
+            productName: productNameById.get(i.projectId) ?? i.projectId,
+            authorName: ca.authorName,
+            authorId: ca.authorId,
+            foreign: true,
+          }),
+        ),
     ) ?? [];
 
   const mergedCurrentItems = [...currentWeekItems, ...foreignCurrentItems];
@@ -1120,45 +1112,6 @@ export function LeadForm({
     });
   }
 
-  function handlePrioritiesChange(next: PriorityEntry[]) {
-    // Strip foreign entries before any validation or draft write.
-    next = next.filter((p) => !p.foreign);
-    if (next.some((p) => p.text.trim().length > 0)) {
-      setSubmitFieldError(null);
-    }
-    setDraftSection((prev) => {
-      if (!prev) return prev;
-      // The UI now owns the full priority list (variable length, ranks
-      // renumbered to 1..N on every change). The next array IS the new
-      // state — preserving "missing" ranks would resurrect deleted rows.
-      // Match by rank when an existing raw entry has the same rank so we
-      // keep its server-assigned id; otherwise insert a fresh row.
-      const existingByRank = new Map(
-        prev.priorities.map((p) => [p.rank, p] as const),
-      );
-      const merged = next.map((p) => {
-        const existing = existingByRank.get(p.rank);
-        if (existing) {
-          return {
-            ...existing,
-            text: p.text,
-            stageName: null,
-            stageIds: p.stageIds,
-            productId: p.productId || null,
-          };
-        }
-        return {
-          rank: p.rank,
-          text: p.text,
-          stageName: null,
-          stageIds: p.stageIds,
-          productId: p.productId || null,
-        };
-      });
-      return { ...prev, priorities: merged };
-    });
-  }
-
   // Items: the section emits a presentation `KanbanItem[]` for one type
   // (current or next). Merge it back into raw `draftSection.items` while
   // preserving cross-type entries.
@@ -1240,18 +1193,6 @@ export function LeadForm({
 
   // ---- Action handlers ----
   function handleSubmit() {
-    if (!draftPayload?.priorities.some((p) => p.text.trim().length > 0)) {
-      setSubmitFieldError({
-        field: "priorities",
-        message: "Add at least one priority before submitting.",
-      });
-      prioritiesRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-      prioritiesRef.current?.focus();
-      return;
-    }
     // F4: only check risks that will actually be submitted (same filter as
     // sectionToDraftPayload). Empty/unsaved rows must not falsely block submit.
     const committedRisks = risks.filter(
@@ -1271,11 +1212,6 @@ export function LeadForm({
 
   function handleConfirmSubmit() {
     if (!draftPayload) return;
-    if (!draftPayload.priorities.some((p) => p.text.trim().length > 0)) {
-      setShowSubmitConfirm(false);
-      handleSubmit();
-      return;
-    }
     // submitSectionSchema requires every projectStatus to have a non-null
     // status. Coerce undefined -> green optimistically; the server will
     // reject if any are still invalid and toast the error.
@@ -1710,29 +1646,14 @@ export function LeadForm({
                 titleColor="var(--color-starbucks-gold)"
                 badge={`${priorities.length}`}
                 subtitle="Top priorities for the week, tied back to product and SDLC stage where relevant."
-                actions={
-                  !isReadOnly ? (
-                    <button
-                      type="button"
-                      className="btn-press inline-flex min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={() =>
-                        setPrioritiesAddSignal((value) => value + 1)
-                      }
-                    >
-                      + Add Priority
-                    </button>
-                  ) : null
-                }
               >
                 <PrioritiesSection
                   priorities={mergedPriorities}
                   readOnly={isReadOnly}
-                  onChange={handlePrioritiesChange}
                   availableStages={availableStages}
                   products={products}
                   defaultProductId={products[0]?.id}
                   sectionAuthorName={currentUser.name ?? undefined}
-                  addSignal={prioritiesAddSignal}
                 />
                 {submitFieldError?.field === "priorities" && (
                   <p

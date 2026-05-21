@@ -68,19 +68,6 @@ const sectionLead1: ReportSectionReadModel = {
       resolvedAt: null,
     },
   ],
-  priorities: [
-    {
-      id: "f1f1f1f1-f1f1-4f1f-8f1f-f1f1f1f1f1f1",
-      rank: 1,
-      text: "Ship API gateway",
-    },
-    {
-      id: "f2f2f2f2-f2f2-4f2f-8f2f-f2f2f2f2f2f2",
-      rank: 2,
-      text: "Fix auth flow",
-    },
-    { id: "f3f3f3f3-f3f3-4f3f-8f3f-f3f3f3f3f3f3", rank: 3, text: "Write docs" },
-  ],
 };
 
 function makeSummary(
@@ -426,7 +413,6 @@ describe("ArchiveService — contract tests", () => {
       expect(expectDefined(section.decisions[0]).text).toBe(
         "Upgrade to Node 22",
       );
-      expect(section.priorities).toHaveLength(3);
     });
   });
 });

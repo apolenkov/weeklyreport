@@ -242,13 +242,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         stageIds?: string[];
         productId?: string | null;
       }>;
-      priorities: Array<{
-        rank: number;
-        text: string;
-        stageName?: string | null;
-        stageIds?: string[];
-        productId?: string | null;
-      }>;
     };
 
     await this.prisma.$transaction(
@@ -256,7 +249,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.decision.deleteMany({ where: { reportSectionId: sectionId } });
-        await tx.priority.deleteMany({ where: { reportSectionId: sectionId } });
 
         if (data.items.length > 0) {
           await tx.item.createMany({
@@ -303,20 +295,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           });
         }
 
-        const prioritiesToRestore = data.priorities.filter(
-          (p) => !!p.productId,
-        );
-        if (prioritiesToRestore.length > 0) {
-          await tx.priority.createMany({
-            data: prioritiesToRestore.map((p) => ({
-              reportSectionId: sectionId,
-              rank: p.rank,
-              text: p.text,
-              stageName: p.stageIds?.join(", ") ?? p.stageName ?? null,
-              productId: p.productId as string,
-            })),
-          });
-        }
       },
       { timeout: 15000 },
     );
@@ -371,6 +349,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         workflowStatus: i.workflowStatus,
         carriedOver: i.carriedOver,
         completed: i.completed ?? null,
+        priorityRank: i.priorityRank ?? null,
         stageName: i.stageName ?? null,
       })),
       risks: section.risks.map((r) => ({
@@ -388,12 +367,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         resolvedAt: d.resolvedAt?.toISOString() ?? null,
         stageName: d.stageName ?? null,
         productId: d.productId,
-      })),
-      priorities: section.priorities.map((p) => ({
-        rank: p.rank,
-        text: p.text,
-        stageName: p.stageName ?? null,
-        productId: p.productId,
       })),
     };
 
@@ -617,6 +590,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
             workflowStatus: true,
             carriedOver: true,
             completed: true,
+            priorityRank: true,
             stageName: true,
           },
         },
@@ -643,16 +617,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
             stageName: true,
           },
         },
-        priorities: {
-          select: {
-            id: true,
-            productId: true,
-            rank: true,
-            text: true,
-            stageName: true,
-          },
-          orderBy: { rank: "asc" },
-        },
       },
     });
 
@@ -671,9 +635,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         items: section.items.filter((i) => sharedIds.has(i.projectId)),
         risks: section.risks.filter((r) => sharedIds.has(r.projectId)),
         decisions: section.decisions.filter((d) => sharedIds.has(d.productId)),
-        priorities: section.priorities.filter((p) =>
-          sharedIds.has(p.productId),
-        ),
       });
     }
 

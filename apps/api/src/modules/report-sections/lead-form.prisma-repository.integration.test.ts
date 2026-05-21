@@ -28,7 +28,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
     await disconnectTestPrisma();
   });
 
-  it("snapshots and restores decision and priority productId", async () => {
+  it("snapshots and restores decision productId", async () => {
     await prisma.decision.create({
       data: {
         reportSectionId: testData.section.id,
@@ -38,20 +38,9 @@ describe("LeadFormPrismaRepository (integration)", () => {
         impact: "High",
       },
     });
-    await prisma.priority.create({
-      data: {
-        reportSectionId: testData.section.id,
-        productId: testData.project.id,
-        rank: 1,
-        text: "Snapshot priority",
-      },
-    });
 
     await repo.createVersionSnapshot(testData.section.id);
     await prisma.decision.deleteMany({
-      where: { reportSectionId: testData.section.id },
-    });
-    await prisma.priority.deleteMany({
       where: { reportSectionId: testData.section.id },
     });
 
@@ -60,14 +49,10 @@ describe("LeadFormPrismaRepository (integration)", () => {
     const decision = await prisma.decision.findFirstOrThrow({
       where: { reportSectionId: testData.section.id },
     });
-    const priority = await prisma.priority.findFirstOrThrow({
-      where: { reportSectionId: testData.section.id },
-    });
     expect(decision.productId).toBe(testData.project.id);
-    expect(priority.productId).toBe(testData.project.id);
   });
 
-  it("fills from a source section without copying or clearing priorities", async () => {
+  it("fills from a source section", async () => {
     const sourceReport = await prisma.report.create({
       data: {
         periodStart: new Date("2026-03-31T00:00:00.000Z"),
@@ -130,14 +115,6 @@ describe("LeadFormPrismaRepository (integration)", () => {
         stageName: "Testing",
       },
     });
-    await prisma.priority.create({
-      data: {
-        reportSectionId: sourceSection.id,
-        productId: testData.project.id,
-        rank: 2,
-        text: "Source priority must not copy",
-      },
-    });
 
     await prisma.item.create({
       data: {
@@ -167,30 +144,19 @@ describe("LeadFormPrismaRepository (integration)", () => {
         impact: "Old",
       },
     });
-    await prisma.priority.create({
-      data: {
-        reportSectionId: testData.section.id,
-        productId: testData.project.id,
-        rank: 1,
-        text: "Target fresh priority",
-      },
-    });
 
     const copiedCount = await repo.fillFromSection(
       testData.section.id,
       sourceSection.id,
     );
 
-    const [items, risks, decisions, priorities] = await Promise.all([
+    const [items, risks, decisions] = await Promise.all([
       prisma.item.findMany({
         where: { reportSectionId: testData.section.id },
         orderBy: { text: "asc" },
       }),
       prisma.risk.findMany({ where: { reportSectionId: testData.section.id } }),
       prisma.decision.findMany({
-        where: { reportSectionId: testData.section.id },
-      }),
-      prisma.priority.findMany({
         where: { reportSectionId: testData.section.id },
       }),
     ]);
@@ -207,7 +173,5 @@ describe("LeadFormPrismaRepository (integration)", () => {
     expect(expectDefined(risks[0]).stageName).toBe("Dev");
     expect(decisions).toHaveLength(1);
     expect(expectDefined(decisions[0]).text).toBe("Source decision");
-    expect(priorities).toHaveLength(1);
-    expect(expectDefined(priorities[0]).text).toBe("Target fresh priority");
   });
 });

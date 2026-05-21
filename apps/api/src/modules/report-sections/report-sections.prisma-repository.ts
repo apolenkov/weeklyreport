@@ -9,7 +9,7 @@ import type { ReportSectionsRepository } from "./report-sections.service";
 
 /**
  * Shared Prisma include constant for the full ReportSection aggregate.
- * Loads all 6 nested relations: author, projectStatuses+project, items, risks, decisions, priorities.
+ * Loads 5 nested relations: author, projectStatuses+project, items, risks, decisions.
  *
  * 35-03/04: also loads `author.role` (so the read model can carry
  * `authorRole`) and the project's stage assignments scoped to the
@@ -41,7 +41,6 @@ export const reportSectionFullInclude = {
   items: true,
   risks: true,
   decisions: true,
-  priorities: { orderBy: { rank: "asc" as const } },
 } as const;
 
 type PrismaReportSectionWithRelations = NonNullable<
@@ -83,6 +82,7 @@ type PrismaReportSectionWithRelations = NonNullable<
     workflowStatus: string;
     carriedOver: boolean;
     completed: boolean | null;
+    priorityRank: number | null;
     stageName: string | null;
   }>;
   risks: Array<{
@@ -101,13 +101,6 @@ type PrismaReportSectionWithRelations = NonNullable<
     deadline: Date | null;
     impact: string;
     resolvedAt: Date | null;
-    stageName: string | null;
-    productId: string | null;
-  }>;
-  priorities: Array<{
-    id: string;
-    rank: number;
-    text: string;
     stageName: string | null;
     productId: string | null;
   }>;
@@ -218,6 +211,7 @@ export function mapPrismaToReportSection(
       workflowStatus: i.workflowStatus,
       carriedOver: i.carriedOver,
       completed: i.completed,
+      priorityRank: i.priorityRank ?? null,
       stageIds: i.stageName
         ? i.stageName.split(", ").filter(Boolean)
         : undefined,
@@ -244,15 +238,6 @@ export function mapPrismaToReportSection(
         ? d.stageName.split(", ").filter(Boolean)
         : undefined,
       productId: d.productId ?? undefined,
-    })),
-    priorities: row.priorities.map((p) => ({
-      id: p.id,
-      rank: p.rank,
-      text: p.text,
-      stageIds: p.stageName
-        ? p.stageName.split(", ").filter(Boolean)
-        : undefined,
-      productId: p.productId ?? undefined,
     })),
   });
 }
@@ -334,7 +319,6 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
         await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.decision.deleteMany({ where: { reportSectionId: sectionId } });
-        await tx.priority.deleteMany({ where: { reportSectionId: sectionId } });
 
         const projectData = section.projects.map((p) => ({
           reportSectionId: sectionId,
@@ -371,6 +355,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               workflowStatus: i.workflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
+              priorityRank: i.priorityRank ?? null,
               stageName: i.stageIds?.join(", ") ?? null,
             })),
           });
@@ -408,21 +393,6 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
           });
         }
 
-        const prioritiesToSave = section.priorities.filter(
-          (p) => !!p.productId,
-        );
-        if (prioritiesToSave.length > 0) {
-          await tx.priority.createMany({
-            data: prioritiesToSave.map((p) => ({
-              ...(p.id ? { id: p.id } : {}),
-              reportSectionId: sectionId,
-              rank: p.rank,
-              text: p.text,
-              stageName: p.stageIds?.join(", ") ?? null,
-              productId: p.productId as string,
-            })),
-          });
-        }
       },
       { timeout: 15000 },
     );

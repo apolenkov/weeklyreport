@@ -94,6 +94,7 @@ export const itemInputSchema = z.object({
   workflowStatus: itemWorkflowStatusSchema,
   carriedOver: z.boolean().default(false),
   completed: z.boolean().nullable().optional(),
+  priorityRank: z.number().int().min(1).nullable().optional(),
   stageIds: stageIdsField,
 });
 
@@ -118,14 +119,6 @@ export const decisionInputSchema = z.object({
   productId: z.string().uuid().nullable().optional(),
 });
 
-export const priorityInputSchema = z.object({
-  id: z.string().uuid().optional(),
-  rank: z.number().int().min(1),
-  text: safeText({ max: 200 }),
-  stageIds: stageIdsField,
-  productId: z.string().uuid().nullable().optional(),
-});
-
 export const draftSaveSchema = z.object({
   reportSectionId: z.string().uuid(),
   status: reportSectionStatusSchema.default("draft"),
@@ -134,7 +127,6 @@ export const draftSaveSchema = z.object({
   items: z.array(itemInputSchema).max(100),
   risks: z.array(riskInputSchema).max(100),
   decisions: z.array(decisionInputSchema).max(100),
-  priorities: z.array(priorityInputSchema).max(50),
 });
 
 export const submitSectionSchema = draftSaveSchema.extend({
@@ -146,16 +138,6 @@ export const submitSectionSchema = draftSaveSchema.extend({
       }),
     )
     .min(1),
-  priorities: z
-    .array(priorityInputSchema)
-    .min(1)
-    .refine(
-      (priorities) => {
-        const ranks = priorities.map((p) => p.rank);
-        return new Set(ranks).size === ranks.length;
-      },
-      { message: "Priority ranks must be unique" },
-    ),
 });
 
 // 35-04: per-project list of stages owned by the section author on this
@@ -214,7 +196,6 @@ export const reportSectionReadModelSchema = z.object({
   items: z.array(itemInputSchema),
   risks: z.array(riskInputSchema),
   decisions: z.array(decisionInputSchema),
-  priorities: z.array(priorityInputSchema),
 });
 
 export const submissionDashboardRowSchema = z.object({
@@ -230,7 +211,7 @@ export const submissionDashboardRowSchema = z.object({
  * UX-18 (Phase 35-08): row shape for the head/admin "Активность за текущий
  * период" panel. One row per lead's section in the open report period;
  * `lastEditAt` is the most-recent updatedAt across the section's rows
- * (items + risks + decisions + priorities). Polled every 15s on the
+ * (items + risks + decisions). Polled every 15s on the
  * dashboard.
  */
 export const activityLiveRowSchema = z.object({
@@ -988,8 +969,7 @@ export type PaginatedResult<T> = {
 export type DraftSaveValidationErrorCode =
   | "SECTION_ALREADY_SUBMITTED"
   | "MISSING_TRAFFIC_LIGHT"
-  | "MISSING_CURRENT_ITEM"
-  | "MISSING_PRIORITIES";
+  | "MISSING_CURRENT_ITEM";
 
 export type DraftSaveValidationError = {
   code: DraftSaveValidationErrorCode;
@@ -1033,20 +1013,6 @@ export function validateSubmitInput(
         message: `Project ${project.projectName} needs at least one Current Week item.`,
       });
     }
-  }
-
-  if (input.priorities.length === 0) {
-    errors.push({
-      code: "MISSING_PRIORITIES",
-      message: "At least one priority must be added before submit.",
-    });
-  } else if (
-    input.priorities.some((priority) => priority.text.trim().length === 0)
-  ) {
-    errors.push({
-      code: "MISSING_PRIORITIES",
-      message: "All priorities must be filled before submit.",
-    });
   }
 
   return errors;

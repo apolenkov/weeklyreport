@@ -66,10 +66,10 @@ type CrossAuthorRow = {
     type: string;
     text: string;
     workflowStatus: string;
+    priorityRank?: number | null;
   }[];
   risks: { id: string; projectId: string; risk: string; severity: string }[];
   decisions: { id: string; productId: string; text: string }[];
-  priorities: { id: string; productId: string; rank: number; text: string }[];
 };
 
 /** Build a minimal SectionSlideModel from a cross-author row for display. */
@@ -84,10 +84,10 @@ function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
   const decisions = ca.decisions
     .filter((d) => d.text.trim())
     .map((d) => d.text.trim());
-  const priorities = [...ca.priorities]
-    .sort((a, b) => a.rank - b.rank)
-    .filter((p) => p.text.trim())
-    .map((p) => p.text.trim());
+  const priorities = ca.items
+    .filter((i) => i.priorityRank != null && i.text.trim())
+    .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+    .map((i) => i.text.trim());
 
   const blockedCount =
     ca.items.filter((i) => i.workflowStatus === "blocked").length +

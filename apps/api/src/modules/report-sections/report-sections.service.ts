@@ -135,7 +135,6 @@ function mergeSection(
     items: input.items,
     risks: input.risks,
     decisions: leadOwnedDecisions,
-    priorities: input.priorities,
   });
 }
 
