@@ -61,13 +61,10 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   },
   { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
   { href: "/head/report", label: "Status", roles: ["head"] },
-  // UFB-058 / Phase 60: Status Presentation surface — draft authoring
-  // stays in the lead report mode switch (`/lead/report/:id?mode=slides`).
-  {
-    href: "/head/slides",
-    label: "Slides",
-    roles: ["head"],
-  },
+  // T-F4-3 (plan §22.9): Slides removed from head nav — slides is a mode
+  // toggle inside Status/History, not a separate destination. The
+  // /head/slides URL still redirects to /head/history?mode=slides
+  // (back-compat in head/slides/page.tsx).
   // UFB-038: admin tab is admin-only. heads have a dashboard, not an admin
   // panel. The /admin/layout.tsx role gate enforces the same on the route.
   { href: "/admin", label: "Admin", roles: ["admin"] },

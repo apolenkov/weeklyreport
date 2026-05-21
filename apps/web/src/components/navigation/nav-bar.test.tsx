@@ -163,13 +163,13 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/admin");
   });
 
-  it("head sees /head/* links (Dashboard, Status, Slides, History)", () => {
+  it("head sees three tabs: Dashboard, Status, History (no Slides — T-F4-3)", () => {
     setRole("head");
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/head/dashboard");
     expectLinkExists(container, "/head/report");
-    expectLinkExists(container, "/head/slides");
     expectLinkExists(container, "/head/history");
+    expectLinkMissing(container, "/head/slides");
     expectLinkMissing(container, "/reports?tab=drafts");
   });
 
