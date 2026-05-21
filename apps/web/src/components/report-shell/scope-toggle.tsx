@@ -27,7 +27,7 @@ export function ScopeToggle({
 }: ScopeToggleProps) {
   return (
     <div
-      role="group"
+      role="radiogroup"
       aria-label="Slide scope"
       className="inline-flex rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-surface)] p-0.5"
     >
