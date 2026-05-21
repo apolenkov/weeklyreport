@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`PrioritiesSection meta-row — pre-extract snapshot > renders All-stages pill when stageIds is absent 1`] = `
+exports[`PrioritiesSection meta-row — snapshot > renders All-stages pill when stageIds is absent 1`] = `
 <div
   aria-label="Priority 1 stages: all stages"
   class="pt-1 flex items-center justify-between gap-2"
@@ -23,7 +23,7 @@ exports[`PrioritiesSection meta-row — pre-extract snapshot > renders All-stage
 </div>
 `;
 
-exports[`PrioritiesSection meta-row — pre-extract snapshot > renders specific stage chips alongside the author in the meta-row 1`] = `
+exports[`PrioritiesSection meta-row — snapshot > renders specific stage chips alongside the author in the meta-row 1`] = `
 <div
   aria-label="Priority 1 stages: Design, Testing"
   class="pt-1 flex items-center justify-between gap-2"

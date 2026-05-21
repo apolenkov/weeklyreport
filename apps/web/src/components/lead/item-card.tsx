@@ -159,12 +159,24 @@ export function ItemCard({
 
       {/* Card top line: status on the left, item actions on the right. */}
       <div className="mb-2 flex items-start justify-between gap-2">
-        <span
-          className="inline-flex w-fit shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[10px] font-semibold"
-          style={{ background: badge.bg, color: badge.text }}
-        >
-          {badge.label}
-        </span>
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+          <span
+            className="inline-flex w-fit shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[10px] font-semibold"
+            style={{ background: badge.bg, color: badge.text }}
+          >
+            {badge.label}
+          </span>
+          {item.priorityRank != null && (
+            <span
+              className="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-bold tabular-nums"
+              style={{ background: "#cba258", color: "#fff" }}
+              aria-label={`Priority ${item.priorityRank}`}
+              title={`Priority rank ${item.priorityRank}`}
+            >
+              P{item.priorityRank}
+            </span>
+          )}
+        </div>
 
         {!locked && !isEditing && (
           <div className="flex shrink-0 gap-1">

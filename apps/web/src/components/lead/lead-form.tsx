@@ -1649,10 +1649,6 @@ export function LeadForm({
               >
                 <PrioritiesSection
                   priorities={mergedPriorities}
-                  readOnly={isReadOnly}
-                  availableStages={availableStages}
-                  products={products}
-                  defaultProductId={products[0]?.id}
                   sectionAuthorName={currentUser.name ?? undefined}
                 />
                 {submitFieldError?.field === "priorities" && (

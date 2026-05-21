@@ -1,9 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * Pre-extract snapshot: MetaRow [author | stage chips] in PrioritiesSection.
- * Baseline before Wave 1 A2 extracts this markup to report-shell/meta-row.tsx.
- * After extraction, these tests must pass without changes.
+ * Snapshot: MetaRow [author | stage chips] in PrioritiesSection (read-only derived view).
  */
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
@@ -16,13 +14,12 @@ const BASE_PRIORITY = {
   text: "Ship API v2",
 };
 
-describe("PrioritiesSection meta-row — pre-extract snapshot", () => {
+describe("PrioritiesSection meta-row — snapshot", () => {
   it("renders author name in the left slot of the meta-row", () => {
     render(
       <PrioritiesSection
         priorities={[BASE_PRIORITY]}
         sectionAuthorName="Anna Lead"
-        readOnly
       />,
     );
     expect(screen.getByText("Anna Lead")).toBeInTheDocument();
@@ -33,7 +30,6 @@ describe("PrioritiesSection meta-row — pre-extract snapshot", () => {
       <PrioritiesSection
         priorities={[BASE_PRIORITY]}
         sectionAuthorName="Anna Lead"
-        readOnly
       />,
     );
     expect(screen.getByText("All stages")).toBeInTheDocument();
@@ -46,7 +42,6 @@ describe("PrioritiesSection meta-row — pre-extract snapshot", () => {
       <PrioritiesSection
         priorities={[{ ...BASE_PRIORITY, stageIds: ["Design", "Testing"] }]}
         sectionAuthorName="Anna Lead"
-        readOnly
       />,
     );
     expect(screen.getByText("Anna Lead")).toBeInTheDocument();
