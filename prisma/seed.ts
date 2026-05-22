@@ -307,6 +307,20 @@ async function main() {
       stageId: "a0000000-0000-4000-8000-000000000706",
       projectId: "a0000000-0000-4000-8000-000000000201",
     },
+    // LSC-01: LEAD_1 on Платёжный шлюз (209) — Support stage → locked+blocked chip for Olga
+    {
+      id: "a0000000-0000-4000-8000-00000000ca03",
+      userId: LEAD_1_ID,
+      stageId: "a0000000-0000-4000-8000-000000000707",
+      projectId: "a0000000-0000-4000-8000-000000000209",
+    },
+    // LSC-02: LEAD_1 on Платёжный шлюз (209) — Planning stage → locked+at-risk chip for Olga
+    {
+      id: "a0000000-0000-4000-8000-00000000ca04",
+      userId: LEAD_1_ID,
+      stageId: "a0000000-0000-4000-8000-000000000701",
+      projectId: "a0000000-0000-4000-8000-000000000209",
+    },
   ];
   for (const ca of crossAuthorAssignments) {
     await prisma.stageAssignment.upsert({
@@ -315,6 +329,31 @@ async function main() {
       },
       update: { userId: ca.userId },
       create: ca,
+    });
+  }
+
+  // LSC-05/06: Olga owns Testing + DevOps on product 209 with no stageStatus.
+  // After deriveEffectiveStageStatus fix, risk/item severity drives the chip color.
+  for (const lscSa of [
+    {
+      id: "a0000000-0000-4000-8000-00000000ca05",
+      userId: LEAD_OLGA_ID,
+      stageId: "a0000000-0000-4000-8000-000000000705", // Testing
+      projectId: "a0000000-0000-4000-8000-000000000209",
+    },
+    {
+      id: "a0000000-0000-4000-8000-00000000ca06",
+      userId: LEAD_OLGA_ID,
+      stageId: "a0000000-0000-4000-8000-000000000706", // DevOps
+      projectId: "a0000000-0000-4000-8000-000000000209",
+    },
+  ]) {
+    await prisma.stageAssignment.upsert({
+      where: {
+        stageId_projectId: { stageId: lscSa.stageId, projectId: lscSa.projectId },
+      },
+      update: { userId: lscSa.userId },
+      create: lscSa,
     });
   }
 
@@ -841,6 +880,17 @@ async function main() {
       mitigation: "Раскатка через shadow-mode + кнопка мгновенного rollback",
       stageName: "Support",
     },
+    // LSC-05: Olga's section — risk on Testing stage (no explicit stageStatus).
+    // After deriveEffectiveStageStatus fix the Testing chip shows at-risk (#fef3c7).
+    {
+      id: riskId(5),
+      reportSectionId: sectionId("1", 5),
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      risk: "Нестабильность Testing-окружения при нагрузочных прогонах",
+      impact: "Задержка валидации релиза",
+      mitigation: "Изолированный стенд для нагрузки запланирован на следующий спринт",
+      stageName: "Testing",
+    },
   ];
 
   for (const r of risks) {
@@ -860,6 +910,62 @@ async function main() {
 
   // Quiet unused-warning for mariaSec (may not be used by risks above)
   void mariaSec;
+
+  // LSC-01/02: LEAD_1 stageStatus on Olga's product 209 so cross-author locked
+  // chips appear in Olga's view. Support=red (blocked), Planning=yellow (at-risk).
+  for (const lscSS of [
+    {
+      id: "a0000000-0000-4000-8000-00000000f901",
+      reportSectionId: primaryLeadSec,
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      stageId: "a0000000-0000-4000-8000-000000000707", // Support → red → blocked
+      status: TrafficLightStatus.red,
+    },
+    {
+      id: "a0000000-0000-4000-8000-00000000f902",
+      reportSectionId: primaryLeadSec,
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      stageId: "a0000000-0000-4000-8000-000000000701", // Planning → yellow → at-risk
+      status: TrafficLightStatus.yellow,
+    },
+  ]) {
+    await prisma.stageStatus.upsert({
+      where: {
+        reportSectionId_projectId_stageId: {
+          reportSectionId: lscSS.reportSectionId,
+          projectId: lscSS.projectId,
+          stageId: lscSS.stageId,
+        },
+      },
+      update: { status: lscSS.status },
+      create: lscSS,
+    });
+  }
+
+  // LSC-06: Olga blocked item on DevOps stage (no explicit stageStatus).
+  // After deriveEffectiveStageStatus fix the DevOps chip shows blocked (#fee2e2).
+  await prisma.item.upsert({
+    where: { id: "a0000000-0000-4000-8000-000000005156" },
+    update: {
+      reportSectionId: sectionId("1", 5),
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      type: ItemType.current,
+      text: "Настройка DevOps-конвейера для Платёжного шлюза",
+      tag: "infra",
+      workflowStatus: ItemWorkflowStatus.blocked,
+      stageName: "DevOps",
+    },
+    create: {
+      id: "a0000000-0000-4000-8000-000000005156",
+      reportSectionId: sectionId("1", 5),
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      type: ItemType.current,
+      text: "Настройка DevOps-конвейера для Платёжного шлюза",
+      tag: "infra",
+      workflowStatus: ItemWorkflowStatus.blocked,
+      stageName: "DevOps",
+    },
+  });
 
   // ----- Decisions (2-3 across active sections) -----
   // Russian-language decisions for the head to action.
