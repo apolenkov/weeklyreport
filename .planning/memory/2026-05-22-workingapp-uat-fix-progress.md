@@ -45,10 +45,21 @@ Goal: `goals/working-app-uat-fix/goal.md` (10 done-conditions). Branch
 
 ## Remaining (do head/viewer SURGICALLY, not long agents)
 
-- #333/#324 Head↔lead parity: mirror report surface to head, READ-ONLY, action
-  row Submit→export/log, grouping toggle product↔lead. Head slides come from
-  `weeklyReport.get`. Reuse the LeadSlidesPreview pattern (a query-free preview
-  fed the already-fetched data) + a side-by-side at xl.
+- #333/#324 Head↔lead parity: Phase A DONE (committed) — `head-report-shell.tsx`
+  form-mode now renders WeeklyReportPage (left) + read-only HeadSlidesClient
+  preview (right) at xl, shared weeklyReport.get deduped.
+  Phase B PENDING (new UI, do surgically with fresh context):
+  - Grouping toggle product↔lead. `weekly-report-page.tsx`: render is
+    `products.map(report => <ProductAccordion/>)` at ~line 374; data is
+    `ProductReport[]` from `mapWeeklyReport(weeklyQ.data)`, each carrying
+    `authorIds?: string[]`. "By lead" = group `products` by author (resolve
+    author names from `weeklyQ.data.leadSections`), render per-author group
+    containers. Add `scope?: "product"|"lead"` prop (default product) + a
+    `ScopeToggle` (values product|lead) in `head-report-shell.tsx` local state,
+    pass `scope` to BOTH WeeklyReportPage and the slides preview.
+  - Action-row parity: head shows Submit→export/log instead of edit Submit
+    (head is read-only). Export/PDF path already exists (pdf-export); wire the
+    button row in the head shell header to match the lead toolbar shape.
 - #337 Viewer: read-only status+history, group-scoped via `viewerGroupAccess`
   (sees all products of its group). No edit/action controls.
 - #325 SDLC grey: VERDICT A (by-design). Backend `lead-form.prisma-repository.ts:562`
