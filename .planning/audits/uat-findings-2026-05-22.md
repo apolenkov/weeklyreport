@@ -68,6 +68,16 @@ the user). Findings + status:
   numbers). Enforce in the priority picker + autosave/validation.
 - [▼ roadmap/frozen] **Jira linkage** — defer like dark-theme/i18n/holidays:
   add a roadmap TODO + ComingSoon trace, do NOT build now.
+- [✓ verified-by-trace] **SDLC stage colour (cross-author)** — code trace
+  (sdlc-confirm agent) confirms the path is already correct: backend
+  `lead-form.prisma-repository.ts:562` returns a real status (green/yellow/red)
+  whenever the foreign author has saved one, the frontend `trafficToStageStatus`
+  maps it to the real colour, and `StageChip` never suppresses colour for a
+  locked stage (lock is icon-only, `opacity-50`). Grey (`status:"empty"`) appears
+  ONLY when no status exists yet — which matches the spec's "cell coloured when
+  ≥1 stage/risk/block". No code change. IF UAT shows grey on a stage that DOES
+  have a saved status, that is a separate save-path bug (stageStatuses not
+  persisted) — file it then; do not change the mapping.
 
 ## Remaining (roadmap W2/W3)
 
