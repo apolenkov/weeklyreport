@@ -18,6 +18,7 @@ import { logClientError } from "../../lib/client-error-reporting";
 import { mapLeadFormData } from "../../lib/mappers";
 import { ownedStagesForProject } from "../../lib/mappers/lead-form";
 import { stageStatusToTraffic, trafficToStageStatus } from "../../lib/mappers/traffic-light";
+import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
 import {
   useLeadFormAutosave,
@@ -39,11 +40,11 @@ import { DecisionsSection } from "./decisions-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RequestReopenDialog } from "./request-reopen-dialog";
 import { LeadSlidesClient } from "../slides/lead-slides-client";
-import { LeadSlidesPreview } from "../slides/lead-slides-preview";
 import { SlideFullscreenButton } from "../slides/slide-fullscreen-button";
 import { AccordionSection } from "../report-shell/accordion-section";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { ReportToolbar } from "../report-shell/report-toolbar";
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 
 import type {
   Product,
@@ -780,6 +781,12 @@ export function LeadForm({
     string,
     Map<string, { assignee: string; status: import("../../lib/mappers/traffic-light").StageStatus }>
   >();
+  // Join with crossAuthorSectionsQ to incorporate risk severity and blocked items
+  // into stage chip color. enrichedCrossAuthors drops stageName so we use the
+  // raw crossAuthorSectionsQ data here keyed by authorId.
+  const _caSectionByAuthorId = new Map(
+    (crossAuthorSectionsQ.data ?? []).map((s) => [s.authorId, s] as const),
+  );
   for (const ca of crossAuthorsQ.data ?? []) {
     let _sm = _crossAuthorStageMap.get(ca.projectId);
     if (!_sm) {
@@ -794,7 +801,20 @@ export function LeadForm({
           (lower === "dev" && s.stageName.toLowerCase() === "development") ||
           (lower === "development" && s.stageName.toLowerCase() === "dev"),
       );
-      const status = trafficToStageStatus(stageEntry?.status ?? null);
+      const caSection = _caSectionByAuthorId.get(ca.authorId);
+      const stageRisks = (caSection?.risks ?? []).filter(
+        (r) => r.projectId === ca.projectId && r.stageName != null &&
+          normalizeStageName(r.stageName) === lower,
+      );
+      const stageItems = (caSection?.items ?? []).filter(
+        (i) => i.projectId === ca.projectId && i.stageName != null &&
+          normalizeStageName(i.stageName) === lower,
+      );
+      const status = deriveEffectiveStageStatus(
+        trafficToStageStatus(stageEntry?.status ?? null),
+        stageRisks,
+        stageItems,
+      );
       const entry = { assignee: ca.authorName, status };
       _sm.set(lower, entry);
       // Mirror the dev ↔ development alias used in ownedStagesForProject mapper.
@@ -815,6 +835,7 @@ export function LeadForm({
       }),
     };
   });
+  // TODO(STAGE-COLOR-SNAPSHOT): apply deriveEffectiveStageStatus to snapshotStageMap path
   // F3.4: build a lookup from snapshot stageStatuses so own-author stage chips
   // reflect the status captured at snapshot time, not the current draft state.
   // Plain const — must stay after the early-return guard; not a hook.
@@ -1440,6 +1461,7 @@ export function LeadForm({
                 </button>
               )}
             {isSlidesMode && <SlideFullscreenButton targetRef={deckRef} />}
+            <AgentReviewComingSoon />
             <ViewModeToggle
               mode={isSlidesMode ? "slides" : "edit"}
               editHref={
@@ -1583,8 +1605,7 @@ export function LeadForm({
           // preview (right) fed from the same draftSection — one source, no
           // extra fetch. Below xl it stays single-column; ?mode=slides handles
           // the standalone deck.
-          <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] xl:items-start xl:gap-6">
-            <div className="min-w-0 space-y-6">
+          <div className="min-w-0 space-y-6">
             <LeadFormSyncBridge.Provider
               products={displayProducts}
               risks={risks}
@@ -1767,13 +1788,6 @@ export function LeadForm({
                 addSignal={decisionsAddSignal}
               />
             </AccordionSection>
-            </div>
-            <aside
-              aria-label="Slide preview"
-              className="hidden min-w-0 xl:sticky xl:top-4 xl:block"
-            >
-              <LeadSlidesPreview section={draftSection} />
-            </aside>
           </div>
         )}
       </form>
