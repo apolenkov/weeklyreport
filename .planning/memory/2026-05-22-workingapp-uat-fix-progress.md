@@ -48,15 +48,20 @@ Goal: `goals/working-app-uat-fix/goal.md` (10 done-conditions). Branch
 - #333/#324 Head↔lead parity: Phase A DONE (committed) — `head-report-shell.tsx`
   form-mode now renders WeeklyReportPage (left) + read-only HeadSlidesClient
   preview (right) at xl, shared weeklyReport.get deduped.
-  Phase B PENDING (new UI, do surgically with fresh context):
-  - Grouping toggle product↔lead. `weekly-report-page.tsx`: render is
-    `products.map(report => <ProductAccordion/>)` at ~line 374; data is
-    `ProductReport[]` from `mapWeeklyReport(weeklyQ.data)`, each carrying
-    `authorIds?: string[]`. "By lead" = group `products` by author (resolve
-    author names from `weeklyQ.data.leadSections`), render per-author group
-    containers. Add `scope?: "product"|"lead"` prop (default product) + a
-    `ScopeToggle` (values product|lead) in `head-report-shell.tsx` local state,
-    pass `scope` to BOTH WeeklyReportPage and the slides preview.
+  Phase B grouping toggle DONE (commit "feat(head): grouping toggle
+  product<->lead"): `weekly-report-page.tsx` has a `scope?: "product"|"lead"`
+  prop; "lead" buckets products under each author (names from
+  `weeklyQ.data.leadSections`), rendered as per-lead `<section>`s.
+  `head-report-shell.tsx` has a `ScopeToggle(product|lead)` driving it (form
+  mode only). Shared product appears under each lead (per UAT: leads own their
+  own phases). Verified typecheck + tests; visual pending user.
+  Phase B REMAINING (fresh context, surgical):
+  - Slide-scope: pass the same `scope` to the head slide-preview pane so the
+    deck regroups too. `head-slides-client.tsx` builds slides from
+    `weeklyReport.get` leadSections (per-lead already); add a `scope` prop +
+    product-grouped ordering for scope="product". Add the dedicated grouping
+    unit test in `weekly-report-page.test.tsx` (extend `renderPage` with a
+    `scope` arg; default fixture author is "Alice").
   - Action-row parity: head shows Submit→export/log instead of edit Submit
     (head is read-only). Export/PDF path already exists (pdf-export); wire the
     button row in the head shell header to match the lead toolbar shape.
