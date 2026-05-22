@@ -48,6 +48,27 @@ stale-server restart (the prior "broken/grey" was the dead bundle).
 - Dev overlays in snapshots (Next.js Dev Tools, Plannotator MCP panel) are not app problems.
 - 2 warnings on head dashboard (non-error) — low priority, not investigated.
 
+## Live manual UAT session (user-driven, 2026-05-22 ~14:44+)
+
+User runs manual UAT in the browser and streams findings via Plannotator.
+Automated sweep retired for this session (single shared browser contends with
+the user). Findings + status:
+
+- [✓ fixed] lead/report toolbar: `ArchiveToggle` moved next to the period
+  selector (shared `ReportToolbar`; lead + head history). commit done.
+- [✓ env] "нет выбранных продуктов, как сохранять версию" — addressed by
+  `db:wipe:manual-uat` minimal reseed (6 products, 12 stage assignments, Week 21
+  open report). User to reload. Re-confirm version-save with products present.
+- [▲ build] Standalone **Priorities section is redundant** now that priority
+  rank attaches to items/positions — remove the separate accordion section
+  (`accordion-section.tsx` consumer in `lead-form.tsx`). Verify priorities are
+  truly item-level before removing.
+- [▲ build] **Unique priority ranks within the period** — a rank value must be
+  unique across the current week + next-week plans (no duplicate priority
+  numbers). Enforce in the priority picker + autosave/validation.
+- [▼ roadmap/frozen] **Jira linkage** — defer like dark-theme/i18n/holidays:
+  add a roadmap TODO + ComingSoon trace, do NOT build now.
+
 ## Remaining (roadmap W2/W3)
 
 - Submit a lead → re-check head dashboard Revoke + Revoke All live (P6/P7 functional proof).
