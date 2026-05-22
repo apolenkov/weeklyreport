@@ -119,10 +119,14 @@ history) + CLS measurement remain for a focused browser pass.
 ```
 
 Both in the "good" band → done-condition 4 CLS satisfied. The dashboard's 0.0817
-is near the threshold: likely the lazy `ProductKpiCard` (`next/dynamic ssr:false`)
-mounting client-side and popping in. Follow-up (next session): give the lazy card
-a fixed-height placeholder / `loading` skeleton of matching dimensions to push
-dashboard CLS toward 0.
+is near the threshold. Tested hypothesis: added a fixed-height `loading`
+placeholder to the lazy `ProductKpiCard` — **CLS stayed 0.0817**, so the lazy
+card is NOT the source (placeholder kept anyway as correct hardening for the
+ssr:false mount). Real source is therefore the dashboard **skeleton→content
+swap** (`DashboardSkeleton` height ≠ populated content height) and/or
+ActivityLivePanel/KpiCards settling. Follow-up (next session): align
+`DashboardSkeleton` block dimensions with the populated layout to push dashboard
+CLS toward 0.
 
 ## Remaining (roadmap W2/W3)
 
