@@ -99,6 +99,18 @@ the org name / week label (generateMetadata win confirmed live, e.g. "Week 21,
 May 18–24, 2026 - CustomReport"). Deep per-tab walks (admin sub-tabs, viewer
 history) + CLS measurement remain for a focused browser pass.
 
+## Split-view live verification (run 3, 1728px viewport)
+
+- **lead /lead/report** — `aside[aria-label="Slide preview"]` present + visible at
+  xl, inside an `xl:grid grid-cols` split; the preview renders a live deck from
+  the draft section ("Lead 1 · lead / 0 Current / 0 Risks / 100 On-track %") →
+  done-condition 2 split-view confirmed (edit + live preview, single source).
+- **head /head/report** — split grid + read-only `HeadSlidesClient` preview at
+  xl; `ScopeToggle` shows "By product" / "By lead" and is clickable → grouping
+  toggle confirmed (done-condition 3 / 10). Per-lead group headings are empty on
+  the current seed because lead sections have no submitted content yet (correct —
+  empty groups are filtered); grouping logic itself is pinned by a unit test.
+
 ## Remaining (roadmap W2/W3)
 
 - Submit a lead → re-check head dashboard Revoke + Revoke All live (P6/P7 functional proof).
