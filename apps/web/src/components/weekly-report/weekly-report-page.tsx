@@ -237,23 +237,31 @@ export function WeeklyReportPage({
   // Head split-view "by lead" grouping (UAT 2026-05-22): resolve author names
   // from the period's lead sections, then bucket products under each lead they
   // authored. Empty leads are dropped so the view never shows blank groups.
-  const authorNameById = new Map<string, string>();
-  for (const section of weeklyQ.data.leadSections ?? []) {
-    if (section.authorId) {
-      authorNameById.set(section.authorId, section.authorName ?? section.authorId);
-    }
-  }
+  // Computed only in "lead" scope to keep the default product path cheap.
   const leadGroups =
     scope === "lead"
-      ? [...authorNameById.entries()]
-          .map(([id, name]) => ({
-            id,
-            name,
-            products: products.filter((report) =>
-              report.authorIds?.includes(id),
-            ),
-          }))
-          .filter((group) => group.products.length > 0)
+      ? (() => {
+          const nameById = new Map<string, string>();
+          for (const section of weeklyQ.data.leadSections ?? []) {
+            if (section.authorId) {
+              nameById.set(
+                section.authorId,
+                section.authorName ?? section.authorId,
+              );
+            }
+          }
+          return [...nameById.entries()]
+            .map(([id, name]) => ({
+              id,
+              name,
+              // authorIds is typed optional on ProductReport but the mapper
+              // always emits an array; guard defensively all the same.
+              products: products.filter((report) =>
+                report.authorIds?.includes(id),
+              ),
+            }))
+            .filter((group) => group.products.length > 0);
+        })()
       : [];
   // UFB-047 / Phase 49-01: department label is exclusively
   // `auth.me.organization.fullName`. PDF-worker / non-session callers
