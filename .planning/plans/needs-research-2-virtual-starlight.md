@@ -83,24 +83,25 @@ classifies the rest so nothing is silently dropped or falsely marked done.
 
 ## 5. Classification of the undone set
 
-| Item                                                               | Type                                              | Verdict                 |
-| ------------------------------------------------------------------ | ------------------------------------------------- | ----------------------- |
-| `wipe-manual-uat.ts:185` `tx.priority` crash (F1 dropped Priority) | regression bug                                    | P0.5 — URGENT, fix now  |
-| Commit audit tool (`.planning/scripts/`, `package.json`)           | chore                                             | P0 — do now             |
-| revoke-downstream SC-162/163/164/166                               | test gap (feature exists)                         | P1 — write              |
-| head-dashboard deeper KPI asserts                                  | test gap                                          | P3 — write              |
-| viewer full-route walk                                             | test gap                                          | P3 — write              |
-| deactivate-user TODO asserts                                       | test gap                                          | P3 — write              |
-| AI-summary structure assert                                        | test gap                                          | P3 — write              |
-| `activity24h-querykey-assertion`                                   | test nit (~20 LoC)                                | P2 — write              |
-| `dispatch-pending-author-check`                                    | code+test (`reason` field + toast)                | P2 — write              |
-| `remind-aria-live`                                                 | manual screen-reader QA                           | HUMAN-ONLY              |
-| `holidays-calendar`                                                | large feature (schema+seed+logic+UI)              | OUT — needs own phase   |
-| i18n switcher                                                      | large feature, frozen by CLAUDE.md UI-string rule | OUT — frozen            |
-| `future-ui-telemetry-coming-soon`                                  | research/coming-soon                              | OUT — frozen            |
-| SC-160 dashboard revoke btn / SC-165 bulk revoke                   | feature gap                                       | OUT — feature           |
-| email-dispatch e2e (Mailpit)                                       | heavier integration                               | OUT — separate decision |
-| AI/RAG, dark theme                                                 | NEEDS-RESEARCH                                    | OUT — frozen by user    |
+| Item                                                               | Type                                              | Verdict                      |
+| ------------------------------------------------------------------ | ------------------------------------------------- | ---------------------------- |
+| `wipe-manual-uat.ts:185` `tx.priority` crash (F1 dropped Priority) | regression bug                                    | P0.5 — URGENT, fix now       |
+| Commit audit tool (`.planning/scripts/`, `package.json`)           | chore                                             | P0 — do now                  |
+| revoke-downstream SC-162/163/164/166                               | test gap (feature exists)                         | P1 — write                   |
+| head-dashboard deeper KPI asserts                                  | test gap                                          | P3 — write                   |
+| viewer full-route walk                                             | test gap                                          | P3 — write                   |
+| deactivate-user TODO asserts                                       | test gap                                          | P3 — write                   |
+| AI-summary structure assert                                        | test gap                                          | P3 — write                   |
+| `activity24h-querykey-assertion`                                   | test nit (~20 LoC)                                | P2 — write                   |
+| `dispatch-pending-author-check`                                    | code+test (`reason` field + toast)                | P2 — write                   |
+| `remind-aria-live`                                                 | manual screen-reader QA                           | HUMAN-ONLY                   |
+| `holidays-calendar`                                                | large feature (schema+seed+logic+UI)              | FROZEN (user 2026-05-22)     |
+| i18n switcher                                                      | large feature, frozen by CLAUDE.md UI-string rule | OUT — frozen                 |
+| `future-ui-telemetry-coming-soon`                                  | research/coming-soon                              | OUT — frozen                 |
+| SC-160 dashboard revoke btn                                        | feature                                           | P6 — build (user 2026-05-22) |
+| SC-165 bulk "Revoke All"                                           | feature                                           | P7 — build (user 2026-05-22) |
+| email-dispatch e2e (local Mailpit/MailHog)                         | integration test                                  | P8 — build (user 2026-05-22) |
+| AI/RAG, dark theme                                                 | NEEDS-RESEARCH                                    | OUT — frozen by user         |
 
 [!NOTE] Decisive evidence for P1: `revokeSectionSubmission`
 (`apps/api/src/modules/report-sections/lead-form.prisma-repository.ts:76`) sets
@@ -183,6 +184,51 @@ missed → `tx.priority` is `undefined`. Confirmed: only stale ref in `prisma/`;
 
 - Run the verification block; update `.planning/todos/` (move closed todos);
   note holidays/i18n as backlog; surface `remind-aria-live` as human QA.
+
+### P6 — SC-160 dashboard Revoke button (feature, user-approved)
+
+- Add a Revoke control to the head dashboard lead view (the submitted lead
+  card/row), reusing the existing `admin/lead revoke` mutation `revoke`
+  (`trpc.router.ts:2030`) — same pattern as the section-view button (SC-161).
+  Confirm dialog before revoke; toast on success; row reflects draft after.
+- Find the dashboard lead card component (grep apps/web/src/components/dashboard
+  for lead-report-card / submitted). Reuse `confirmation-dialog.tsx`.
+- Un-`fixme` SC-160 in `publish-revoke.spec.ts` (done by orchestrator at integration).
+- Verify: web unit + tsc green; e2e live run flagged if stack down.
+
+### P7 — SC-165 bulk "Revoke All" (feature, user-approved)
+
+- New backend mutation `revokeAllSubmitted(reportId)` (headProcedure) that
+  revokes every submitted section of a report in one transaction (status→draft,
+  revokedAt set) — mirror `revokeSubmission` semantics. Service + repository +
+  contract test.
+- UI: "Revoke All" action on the head dashboard/report with a confirm dialog
+  ("revoke N submitted leads").
+- Un-`fixme` SC-165 in `publish-revoke.spec.ts` (orchestrator at integration).
+- Verify: api unit (new mutation) + web tsc green; e2e live run flagged if stack down.
+
+### P8 — email-dispatch e2e via local Mailpit (user-approved)
+
+- Local mail catcher is available: Mailpit UI `http://localhost:8025`, compose
+  service name still `mailhog`. Write an integration test that triggers a
+  reminder dispatch and asserts the email lands in Mailpit via its HTTP API
+  (`GET http://localhost:8025/api/v1/messages`), then clears it.
+- Reuse reminder dispatch path (`apps/api/src/modules/reminders/`). Place under
+  `apps/web/e2e/integration/` or an api integration test, whichever matches the
+  existing reminder test harness.
+- Bring up Mailpit if the compose stack exposes it; if unreachable, write the
+  test + skip-guard on Mailpit availability and flag for live run.
+- Verify: tsc green; live assertion if Mailpit reachable.
+
+### P3.1 — deactivate/activate-user regression (real spec, not the auto-gen stub)
+
+- Extend the hand-written `apps/web/e2e/regression/agent-b-admin-users.spec.ts`
+  (ADM-010..020) with deactivate→reactivate: click `Deactivate {name}` →
+  `admin.deactivateUser` 200 + toast "User deactivated"; switch status filter
+  (`TabFilter testId="users-status-filter"`, a native `<select>`, use
+  `selectOption`) to show inactive; assert "Inactive user" badge + `Activate`
+  button; click → `admin.activateUser` 200 + toast "User activated".
+- Verify: tsc green; e2e live run flagged if stack down.
 
 ## 8. Skill routing
 
