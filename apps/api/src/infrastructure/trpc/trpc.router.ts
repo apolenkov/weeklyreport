@@ -1743,6 +1743,14 @@ export function createAppRouter(deps: RouterDeps) {
                 author: { select: { email: true, notificationOptOut: true } },
               },
             });
+            if (input.leadId !== undefined && draftSections.length === 0) {
+              return {
+                dispatched: 0,
+                alreadySent: 0,
+                skipped: 0,
+                reason: "no-matching-section",
+              };
+            }
             // Race-safe attribution (Codex review fix): call the service
             // first — it atomically inserts via the dedupeKey @unique index,
             // so two concurrent clicks never produce two emails. Then read

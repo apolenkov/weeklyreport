@@ -12,7 +12,7 @@ type RemindLeadButtonProps = {
   readonly leadName: string;
 };
 
-type ConfirmState = "idle" | "sent" | "already" | "error";
+type ConfirmState = "idle" | "sent" | "already" | "no-section" | "error";
 
 const CONFIRM_HOLD_MS = 2400;
 
@@ -56,7 +56,9 @@ export function RemindLeadButton({
   const mutation = useMutation(
     trpc.reminders.dispatchPending.mutationOptions({
       onSuccess: (result) => {
-        if (result.dispatched > 0) {
+        if (result.reason === "no-matching-section") {
+          setConfirm("no-section");
+        } else if (result.dispatched > 0) {
           setConfirm("sent");
         } else if (result.alreadySent > 0) {
           setConfirm("already");
@@ -82,11 +84,13 @@ export function RemindLeadButton({
       ? "Sent"
       : confirm === "already"
         ? "Already sent"
-        : confirm === "error"
-          ? "Retry"
-          : busy
-            ? "Sending"
-            : "Remind";
+        : confirm === "no-section"
+          ? "No sections matched"
+          : confirm === "error"
+            ? "Retry"
+            : busy
+              ? "Sending"
+              : "Remind";
 
   // aria-live surfaces sent/error transitions to assistive tech without
   // duplicating the button label (sr-only sibling avoids visual noise).
@@ -95,16 +99,18 @@ export function RemindLeadButton({
       ? `Reminder sent to ${leadName}`
       : confirm === "already"
         ? `Reminder already sent to ${leadName} this cycle`
-        : confirm === "error"
-          ? `Reminder to ${leadName} failed; retry available`
-          : "";
+        : confirm === "no-section"
+          ? `No sections matched this lead for ${leadName}`
+          : confirm === "error"
+            ? `Reminder to ${leadName} failed; retry available`
+            : "";
 
   return (
     <>
       <button
         type="button"
         onClick={handleClick}
-        disabled={busy || confirm === "sent" || confirm === "already"}
+        disabled={busy || confirm === "sent" || confirm === "already" || confirm === "no-section"}
         aria-busy={busy}
         aria-label={`Send reminder to ${leadName}`}
         title={`Send reminder to ${leadName}`}
