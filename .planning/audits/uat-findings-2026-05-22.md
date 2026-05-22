@@ -111,6 +111,19 @@ history) + CLS measurement remain for a focused browser pass.
   the current seed because lead sections have no submitted content yet (correct —
   empty groups are filtered); grouping logic itself is pinned by a unit test.
 
+## CLS measurement (run 3, layout-shift PerformanceObserver, 1728px)
+
+```text
+/lead/report   CLS 0.0000  good
+/head/dashboard CLS 0.0817  good (close to the 0.10 threshold)
+```
+
+Both in the "good" band → done-condition 4 CLS satisfied. The dashboard's 0.0817
+is near the threshold: likely the lazy `ProductKpiCard` (`next/dynamic ssr:false`)
+mounting client-side and popping in. Follow-up (next session): give the lazy card
+a fixed-height placeholder / `loading` skeleton of matching dimensions to push
+dashboard CLS toward 0.
+
 ## Remaining (roadmap W2/W3)
 
 - Submit a lead → re-check head dashboard Revoke + Revoke All live (P6/P7 functional proof).
