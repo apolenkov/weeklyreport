@@ -21,7 +21,17 @@ import { KpiCards } from "./kpi-cards";
 // initial dashboard chunk.
 const ProductKpiCard = dynamic(
   () => import("./product-kpi-card").then((m) => m.ProductKpiCard),
-  { ssr: false },
+  {
+    ssr: false,
+    // Reserve the card's height while the lazy chunk loads so the client-side
+    // mount doesn't push content down (keeps dashboard CLS near 0).
+    loading: () => (
+      <div
+        aria-hidden="true"
+        className="min-h-[173px] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)]"
+      />
+    ),
+  },
 );
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
