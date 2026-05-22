@@ -80,9 +80,11 @@ export const stageStatusInputSchema = z.object({
   status: trafficLightStatusSchema.nullable().optional(),
 });
 
-// UFB-073 (R1): SDLC stage selection stored as array of stage IDs.
-// Replaces the legacy joined-string `stageName` field.
+// UFB-073 (R1): SDLC stage selection stored as array of stage NAMES (split from
+// the comma-joined Risk.stageName / KanbanItem.stageName DB column on read in the
+// prisma repo). Field is misnamed `stageIds` for legacy reasons — see TODO below.
 // max(20) guards against pathological payloads; normal is 1–7 stages.
+// TODO(STAGE-NAMING-01): rename stageIds→stageNames (~125 sites, 28 files — deferred)
 const stageIdsField = z.array(z.string()).max(20).optional();
 
 export const itemInputSchema = z.object({
