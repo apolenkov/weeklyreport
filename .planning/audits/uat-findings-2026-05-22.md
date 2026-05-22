@@ -128,9 +128,44 @@ ActivityLivePanel/KpiCards settling. Follow-up (next session): align
 `DashboardSkeleton` block dimensions with the populated layout to push dashboard
 CLS toward 0.
 
-## Remaining (roadmap W2/W3)
+## Session 2 closure (2026-05-22 ~17:2x — head parity + viewer + slide-scope)
+
+- [✓ built] **Head action-row parity (#333, done-condition 10)** — head report
+  shell now renders `Export PDF` + `Presentation` beside the scope / view-mode
+  toggles, replacing the lead `Submit` slot (head is read-only). Same toolbar
+  shape as the lead header. commit `a79dc02`.
+- [✓ built] **Head slide-scope transposition (#333, done-condition 3/10)** —
+  the `ScopeToggle` (product↔lead) now regroups the slide deck, not only the
+  status pane. "By product" transposes the per-lead deck into one slide per
+  product, aggregating every lead's items/risks/decisions (worst traffic light,
+  contributing leads as subtitle); cross-product content → synthetic "Shared
+  context" slide. `ScopeToggle` shown in both form + slides modes. Pinned by a
+  unit test in `section-slide-utils.test.ts`. commit `0c72e48`.
+  - NOTE (visual gate): the current seed has no submitted lead sections, so the
+    live deck is empty until the user submits sample sections. Behaviour is
+    proven by the unit test; live visual confirm is a user-driven follow-up.
+- [✓ verified-by-trace] **Viewer read-only status + history (#337)** — viewer
+  is served by the merged `/reports` surface: history via `reports.compiledHistory`
+  (group-scoped backend-side through the viewer's reporting group), current
+  status via `/reports/[reportId]` → read-only `WeeklyReportPage` (no edit /
+  action controls — editing lives only in `lead-form`). `proxy.ts` gates the
+  `/reports` prefix at auth level; group scoping is enforced in the tRPC
+  procedures, not the route. No code change required. Live screenshot is a
+  user-driven follow-up (single shared browser).
+- [▼ deferred-with-reason] **next/font migration (#328, VERCEL-FONT)** — the
+  three Google families still load via `<link rel=stylesheet>` with
+  `preconnect` + `display=swap` (acceptable interim). Migrating to
+  `next/font/google` (self-host, size-adjust fallback metrics, lower CLS)
+  touches the `--font-*` CSS token system and needs a visual sign-off, so it is
+  held behind the theme/visual gate. `TODO(VERCEL-FONT)` left at the activation
+  point in `apps/web/src/app/layout.tsx`. Other Vercel wins (staleTime,
+  generateMetadata, lazy-Recharts, next/script bfcache) already applied.
+
+## Remaining (user-driven / roadmap W2/W3)
 
 - Submit a lead → re-check head dashboard Revoke + Revoke All live (P6/P7 functional proof).
+  Same submit unblocks the live product-scope deck + by-lead grouping visuals.
 - locked stage chip colour confirm; layout/skeleton CLS measurement.
 - admin per-tab + viewer history deep walks.
+- `next/font` migration (`TODO(VERCEL-FONT)`) once a visual pass is scheduled.
 - Screenshots: `.playwright-mcp/sweep-head-dashboard.yml` + `/tmp/uat-*.png` (partial).
