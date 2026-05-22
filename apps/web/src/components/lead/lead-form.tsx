@@ -39,6 +39,7 @@ import { DecisionsSection } from "./decisions-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RequestReopenDialog } from "./request-reopen-dialog";
 import { LeadSlidesClient } from "../slides/lead-slides-client";
+import { LeadSlidesPreview } from "../slides/lead-slides-preview";
 import { SlideFullscreenButton } from "../slides/slide-fullscreen-button";
 import { AccordionSection } from "../report-shell/accordion-section";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
@@ -1578,7 +1579,12 @@ export function LeadForm({
             deckRef={deckRef}
           />
         ) : (
-          <>
+          // Split-view: at xl the edit form (left) sits beside a live slide
+          // preview (right) fed from the same draftSection — one source, no
+          // extra fetch. Below xl it stays single-column; ?mode=slides handles
+          // the standalone deck.
+          <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] xl:items-start xl:gap-6">
+            <div className="min-w-0 space-y-6">
             <LeadFormSyncBridge.Provider
               products={displayProducts}
               risks={risks}
@@ -1761,8 +1767,14 @@ export function LeadForm({
                 addSignal={decisionsAddSignal}
               />
             </AccordionSection>
-
-          </>
+            </div>
+            <aside
+              aria-label="Slide preview"
+              className="hidden min-w-0 xl:sticky xl:top-4 xl:block"
+            >
+              <LeadSlidesPreview section={draftSection} />
+            </aside>
+          </div>
         )}
       </form>
 
