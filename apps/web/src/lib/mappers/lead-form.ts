@@ -315,6 +315,11 @@ export function ownedStagesForProject(
 
 // ---- Mappers ----
 
+export function normalizeStageName(stageName: string): string {
+  const lower = stageName.toLowerCase();
+  return lower === "development" ? "dev" : lower;
+}
+
 /**
  * Build the 7-stage grid for one project from the read model's `ownedStages`.
  *
@@ -336,14 +341,15 @@ function buildStageGrid(
     stageName: string;
     status?: TrafficLightStatus | null;
   }[],
-  risks: readonly { stageName?: string | null; severity: string }[] = [],
-  items: readonly { stageName?: string | null; workflowStatus: string }[] = [],
+  risks: readonly { stageIds?: readonly string[]; severity?: string }[] = [],
+  items: readonly { stageIds?: readonly string[]; workflowStatus: string }[] = [],
 ): LeadStageAssignment[] {
   const owned = new Map(
     ownedStages.map((stage) => [stage.stageName.toLowerCase(), stage] as const),
   );
   return STAGE_NAMES.map((stageName) => {
     const lower = stageName.toLowerCase();
+    const norm = normalizeStageName(stageName);
     const ownedStage =
       owned.get(lower) ??
       // Aliases between the canonical seeded stage name ("Development") and
@@ -355,8 +361,8 @@ function buildStageGrid(
         stageName,
         status: deriveEffectiveStageStatus(
           trafficToStageStatus(ownedStage.status ?? null),
-          risks.filter((r) => r.stageName != null && r.stageName.toLowerCase() === lower),
-          items.filter((i) => i.stageName != null && i.stageName.toLowerCase() === lower),
+          risks.filter((r) => r.stageIds?.some((s) => normalizeStageName(s) === norm)),
+          items.filter((i) => i.stageIds?.some((s) => normalizeStageName(s) === norm)),
         ),
         ownership: "mine" as const,
         assignee: ownerLabel,
@@ -393,7 +399,12 @@ export function mapLeadProducts(
       id: p.projectId,
       name: p.projectName,
       overallStatus,
-      stages: buildStageGrid(section.authorName, ownedStages),
+      stages: buildStageGrid(
+        section.authorName,
+        ownedStages,
+        section.risks.filter((r) => r.projectId === p.projectId),
+        section.items.filter((it) => it.projectId === p.projectId),
+      ),
     };
   });
 }

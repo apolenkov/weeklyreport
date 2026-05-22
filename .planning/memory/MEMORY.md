@@ -17,3 +17,4 @@
 - [v8.2 milestone closed 2026-05-18](project_v8_2_closed_2026_05_18.md) — v8.2 SHIPPED (tag v8.2.0), 5 phases/19 commits, push pending SSL; next v8.3 UAT
 - [v8.3 F14-F16 closure 2026-05-19](project_v83_f14_f16_2026_05_19.md) — F14 inline cross-author embeds, F15 scope toggle (Own/By product), F16 hero+chips+pagination — pushed origin/main; ready for manual UAT
 - [Plan Mode = Demo-plan rich-mode (always)](feedback_plan_mode_demo_richmode.md) — любой EnterPlanMode → полный 15-секционный Demo-plan, TL;DR с Было/Проблема/Станет в схемах + проза, эксперимент Mermaid/ASCII/HTML, self-review чеклист перед ExitPlanMode
+- [Session 3 closeout 2026-05-22](project_session3_2026_05_22.md) — deriveEffectiveStageStatus, lead↔head parity, history redirect, agent slots (b014a42); open: item-1 live, LSC-05/06 mine-path, #322

@@ -702,6 +702,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorName: authorEntry.authorName,
         sharedProductIds: [...sharedIds],
         items: section.items.filter((i) => sharedIds.has(i.projectId)),
+        // TODO(STAGE-CROSS-AUTHOR-MULTI): risks carry scalar stageName (comma-joined
+        // from DB), not stageIds[]. A multi-stage risk "Testing, DevOps" won't match
+        // individual stages in the cross-author chip path. Mine-path uses stageIds[]
+        // membership (split in report-sections.prisma-repository.ts) instead.
         risks: section.risks.filter((r) => sharedIds.has(r.projectId)),
         decisions: section.decisions.filter((d) => sharedIds.has(d.productId)),
       });

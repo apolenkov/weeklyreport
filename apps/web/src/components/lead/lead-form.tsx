@@ -16,7 +16,7 @@ import {
 import { SessionContext } from "../../lib/session-provider";
 import { logClientError } from "../../lib/client-error-reporting";
 import { mapLeadFormData } from "../../lib/mappers";
-import { ownedStagesForProject } from "../../lib/mappers/lead-form";
+import { ownedStagesForProject, normalizeStageName } from "../../lib/mappers/lead-form";
 import { stageStatusToTraffic, trafficToStageStatus } from "../../lib/mappers/traffic-light";
 import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
@@ -259,10 +259,6 @@ function sectionToDraftPayload(
   };
 }
 
-function normalizeStageName(stageName: string): string {
-  const lower = stageName.toLowerCase();
-  return lower === "development" ? "dev" : lower;
-}
 
 function aggregateTrafficLight(
   stages: readonly { status?: "green" | "yellow" | "red" | null }[],
