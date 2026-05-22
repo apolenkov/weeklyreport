@@ -11,7 +11,6 @@ import {
   FileText,
   Gauge,
   Layers,
-  ListChecks,
   Target,
 } from "lucide-react";
 
@@ -19,6 +18,7 @@ import type { SectionSlideModel, SlideTone } from "./section-slide-utils";
 import { buildUnifiedSlideModel } from "./section-slide-utils";
 import { LeadUnifiedSlide } from "./lead-unified-slide";
 import { LeadSlideHero } from "./lead-slide-hero";
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import {
   type ProductChipEntry,
   SlideProductChips,
@@ -202,11 +202,14 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
                   : "No products assigned"}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {metricLabel(slide.currentCount, "Current")}
-              {metricLabel(slide.nextCount, "Next")}
-              {metricLabel(slide.riskCount, "Risks")}
-              {metricLabel(slide.priorityCount, "Priority")}
+            <div className="flex flex-col items-end gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {metricLabel(slide.currentCount, "Current")}
+                {metricLabel(slide.nextCount, "Next")}
+                {metricLabel(slide.riskCount, "Risks")}
+                {metricLabel(slide.priorityCount, "Priority")}
+              </div>
+              <AgentReviewComingSoon />
             </div>
           </div>
 
@@ -235,13 +238,6 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
               {textList(slide.risks, "No risks raised")}
             </section>
 
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase text-[var(--color-starbucks-gold)]">
-                <ListChecks className="h-4 w-4" aria-hidden="true" />
-                Top priorities
-              </div>
-              {textList(slide.priorities, "No priorities set")}
-            </section>
           </div>
 
           {slide.decisions.length > 0 ? (

@@ -1,12 +1,8 @@
 "use client";
 
-import {
-  AlertTriangle,
-  ArrowRight,
-  FileText,
-  ListChecks,
-  Target,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, FileText, Target } from "lucide-react";
+
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import type { ReactNode } from "react";
 
 import type {
@@ -105,6 +101,9 @@ export function LeadUnifiedSlide({ model }: Props) {
       className="flex flex-col gap-5 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:justify-between"
       data-testid="lead-unified-slide"
     >
+      <div className="flex justify-end">
+        <AgentReviewComingSoon />
+      </div>
       <SectionBlock
         icon={<Target className="h-4 w-4" aria-hidden="true" />}
         label="Current work"
@@ -121,13 +120,6 @@ export function LeadUnifiedSlide({ model }: Props) {
         items={model.risks}
         toneClass="text-[var(--color-destructive)]"
         borderClass="border-[rgba(200,32,20,0.28)]"
-      />
-      <SectionBlock
-        icon={<ListChecks className="h-4 w-4" aria-hidden="true" />}
-        label="Priorities"
-        items={model.priorities}
-        toneClass="text-[var(--color-starbucks-gold)]"
-        borderClass="border-[rgba(212,160,23,0.34)]"
       />
       <SectionBlock
         icon={<FileText className="h-4 w-4" aria-hidden="true" />}
