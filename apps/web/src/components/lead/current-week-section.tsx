@@ -34,6 +34,13 @@ type CurrentWeekSectionProps = {
    * the SDLC stage dropdown is scoped to the active project.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
+  /**
+   * All priority ranks already in use by own items for the full period
+   * (current + next week). Forwarded to ItemEditDialog so taken ranks are
+   * disabled in the picker. The dialog subtracts the edited item's own
+   * current rank before computing the disabled set.
+   */
+  readonly ownPeriodRanks?: readonly number[];
   readonly addSignal?: number;
 };
 
@@ -62,6 +69,7 @@ export function CurrentWeekSection({
   currentUserName,
   products,
   stagesForProduct,
+  ownPeriodRanks,
   addSignal = 0,
 }: CurrentWeekSectionProps) {
   const grouped = groupByProduct(items);
@@ -299,6 +307,7 @@ export function CurrentWeekSection({
               : undefined
           }
           stagesForProduct={stagesForProduct}
+          ownPeriodRanks={ownPeriodRanks}
           onSave={handleDialogSave}
           onCancel={handleDialogCancel}
         />

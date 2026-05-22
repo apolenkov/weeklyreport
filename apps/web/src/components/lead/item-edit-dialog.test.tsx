@@ -214,6 +214,93 @@ describe("ItemEditDialog — T-D12 save+reopen status reset", () => {
   });
 });
 
+describe("ItemEditDialog — P-RANK-01 unique rank picker", () => {
+  it("disables taken ranks in the select while keeping the own current rank selectable", () => {
+    const item: KanbanItem = {
+      id: "item-rank",
+      productId: "p1",
+      productName: "DevOps Tools",
+      text: "Deploy pipeline",
+      status: "in-progress",
+      author: "Test Lead",
+      priorityRank: 2,
+    };
+    // ownPeriodRanks includes item's own rank (2) plus a foreign taken rank (3).
+    // The dialog must NOT disable rank 2 (own item's rank) but MUST disable rank 3.
+    render(
+      <ItemEditDialog
+        open={true}
+        item={item}
+        products={products}
+        week="current"
+        ownPeriodRanks={[2, 3]}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const select = screen.getByLabelText(/Priority rank/i) as HTMLSelectElement;
+    const opt2 = Array.from(select.options).find((o) => o.value === "2");
+    const opt3 = Array.from(select.options).find((o) => o.value === "3");
+    const opt1 = Array.from(select.options).find((o) => o.value === "1");
+
+    expect(opt2?.disabled).toBe(false); // own rank — selectable
+    expect(opt3?.disabled).toBe(true);  // taken by another item — disabled
+    expect(opt1?.disabled).toBe(false); // free rank — selectable
+  });
+
+  it("allows creating an item with a free rank when other ranks are taken", () => {
+    const onSave = vi.fn();
+    render(
+      <ItemEditDialog
+        open={true}
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        ownPeriodRanks={[1, 2]}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/Description \*/i), {
+      target: { value: "New priority item" },
+    });
+    // Select rank 3 (not taken)
+    fireEvent.change(screen.getByLabelText(/Priority rank/i), {
+      target: { value: "3" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({ priorityRank: 3 });
+  });
+
+  it("does not crash when legacy data has duplicate ranks in ownPeriodRanks", () => {
+    // Legacy: two items both have rank 1 — collision must not throw.
+    render(
+      <ItemEditDialog
+        open={true}
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        ownPeriodRanks={[1, 1, 2]}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const select = screen.getByLabelText(/Priority rank/i) as HTMLSelectElement;
+    // rank 1 is taken (even with duplicates), rank 3 is free
+    const opt1 = Array.from(select.options).find((o) => o.value === "1");
+    const opt3 = Array.from(select.options).find((o) => o.value === "3");
+    expect(opt1?.disabled).toBe(true);
+    expect(opt3?.disabled).toBe(false);
+  });
+});
+
 describe("ItemEditDialog — UFB-014 stageIds", () => {
   it("saves selected stageIds from the create dialog", () => {
     const onSave = vi.fn();

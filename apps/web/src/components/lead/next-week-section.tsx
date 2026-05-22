@@ -27,6 +27,12 @@ type NextWeekSectionProps = {
   readonly products?: readonly Product[];
   /** 35-04: forwarded to ItemEditDialog for the SDLC stage selector. */
   readonly stagesForProduct?: (productId: string) => readonly string[];
+  /**
+   * All priority ranks already in use by own items for the full period
+   * (current + next week). Forwarded to ItemEditDialog so taken ranks are
+   * disabled in the picker.
+   */
+  readonly ownPeriodRanks?: readonly number[];
   readonly addSignal?: number;
 };
 
@@ -55,6 +61,7 @@ export function NextWeekSection({
   currentUserName,
   products,
   stagesForProduct,
+  ownPeriodRanks,
   addSignal = 0,
 }: NextWeekSectionProps) {
   const grouped = groupByProduct(items);
@@ -258,6 +265,7 @@ export function NextWeekSection({
             : undefined
         }
         stagesForProduct={stagesForProduct}
+        ownPeriodRanks={ownPeriodRanks}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
       />

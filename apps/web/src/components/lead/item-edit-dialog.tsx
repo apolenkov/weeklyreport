@@ -35,6 +35,15 @@ type ItemEditDialogProps = {
    * owns on the given project. Constrains the "SDLC Stage" select.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
+  /**
+   * All priority ranks currently in use by own items for the full period
+   * (current + next week combined). The dialog excludes the edited item's
+   * own existing rank from this set before marking options as taken, so
+   * the user can keep the same rank without seeing it disabled.
+   * Legacy rank collisions (multiple items sharing a rank) are handled
+   * gracefully — the collision set is visible but the dialog never crashes.
+   */
+  readonly ownPeriodRanks?: readonly number[];
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
 };
@@ -110,6 +119,7 @@ function ItemEditDialogContent({
   currentUserName,
   defaultProductId,
   stagesForProduct,
+  ownPeriodRanks,
   onSave,
   onCancel,
 }: ItemEditDialogProps) {
@@ -145,6 +155,22 @@ function ItemEditDialogContent({
         : [],
   );
   const [errors, setErrors] = useState<{ text?: string }>({});
+
+  // Ranks already taken by OTHER items. The item's own current rank is
+  // excluded so the user can keep it without seeing a false "taken" marker.
+  // Legacy data with duplicate ranks is tolerated: the Set deduplicates.
+  const takenRanks = new Set(
+    (ownPeriodRanks ?? []).filter((r) => r !== (item?.priorityRank ?? null)),
+  );
+  // Offer options 1..10 plus any legacy rank above 10 already on the item.
+  const MAX_RANK = 10;
+  const rankOptions = Array.from({ length: MAX_RANK }, (_, i) => i + 1);
+  if (
+    item?.priorityRank != null &&
+    item.priorityRank > MAX_RANK
+  ) {
+    rankOptions.push(item.priorityRank);
+  }
 
   if (!open) return null;
 
@@ -271,18 +297,25 @@ function ItemEditDialogContent({
               Priority rank{" "}
               <span className="font-normal">(optional — leave blank if not a priority)</span>
             </label>
-            <input
+            <select
               id="item-priority-rank"
-              type="number"
-              min={1}
-              className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
               value={priorityRank ?? ""}
-              placeholder="e.g. 1, 2, 3…"
               onChange={(e) => {
                 const v = e.target.value;
-                setPriorityRank(v === "" ? null : Math.max(1, parseInt(v, 10)));
+                setPriorityRank(v === "" ? null : parseInt(v, 10));
               }}
-            />
+            >
+              <option value="">— none —</option>
+              {rankOptions.map((r) => {
+                const taken = takenRanks.has(r);
+                return (
+                  <option key={r} value={r} disabled={taken}>
+                    {r}{taken ? " (taken)" : ""}
+                  </option>
+                );
+              })}
+            </select>
           </div>
 
           <StageMultiSelect
