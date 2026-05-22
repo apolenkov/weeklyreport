@@ -46,9 +46,10 @@ export function DevRoleSwitcher() {
   const wipeAndReseedMut = useMutation(
     trpc.dev.wipeAndReseed.mutationOptions({
       onSuccess: () => {
-        // Hard-reload so every query refetches against the freshly-seeded
-        // database. Soft invalidate would race with the in-flight seed.
-        window.location.reload();
+        // Logout then redirect to landing so the next role pick starts clean.
+        void fetch("/auth/logout", { method: "POST", credentials: "include" }).finally(() => {
+          window.location.href = "/";
+        });
       },
       onError: (error) => {
         setPending(false);
@@ -68,7 +69,9 @@ export function DevRoleSwitcher() {
       role: identity.role,
       email: identity.email,
     });
-    window.location.href = `/auth/dev-login?${params.toString()}`;
+    void fetch("/auth/logout", { method: "POST", credentials: "include" }).finally(() => {
+      window.location.href = `/auth/dev-login?${params.toString()}`;
+    });
   };
 
   const usersByRole = (usersQ.data ?? []).reduce<

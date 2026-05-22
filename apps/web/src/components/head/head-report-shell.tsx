@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useMemo, useState } from "react";
+import { FileDown, Presentation } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import type { CompiledHistoryResult } from "@customreport/shared";
@@ -116,19 +117,23 @@ export function HeadReportShell({
         <AgentReviewComingSoon />
         <a
           href={presentHref}
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-1.5 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2.5 py-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
           aria-label="Open presentation"
+          title="Presentation"
         >
-          Presentation
+          <Presentation className="h-4 w-4" aria-hidden="true" />
+          <span className="sr-only">Presentation</span>
         </a>
         <a
           href={printHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2.5 py-1.5 text-white transition-colors hover:bg-[var(--color-primary)]"
           aria-label="Export PDF"
+          title="Export PDF"
         >
-          Export PDF
+          <FileDown className="h-4 w-4" aria-hidden="true" />
+          <span className="sr-only">Export PDF</span>
         </a>
       </div>
       {mode === "slides" ? (
