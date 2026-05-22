@@ -5,17 +5,17 @@
  * - SC-150: Full lifecycle -- open, leads submit, publish & lock
  * - SC-152: Publish with partial submissions -- warning with names
  * - SC-155: After publish -- Weekly Report shows Published badge
- * - SC-156: Reopen -- leads can edit again (fixme: UI not yet implemented)
- * - SC-157: Re-publish after reopen (fixme: UI not yet implemented)
- * - SC-158: Double publish attempt -- already published (fixme: UI not yet implemented)
- * - SC-160: Revoke specific lead's submission (fixme: UI not yet implemented)
- * - SC-161: After revoke -- lead's form becomes editable (fixme: UI not yet implemented)
- * - SC-162: After revoke -- KPI submissions count updates (fixme: UI not yet implemented)
- * - SC-163: After revoke -- Weekly Report removes revoked data (fixme: UI not yet implemented)
- * - SC-164: Revoke + lead re-submits (fixme: UI not yet implemented)
- * - SC-165: Revoke all leads simultaneously (fixme: UI not yet implemented)
- * - SC-166: Revoke during Published state (fixme: UI not yet implemented)
- * - SC-167: Revoke non-submitted lead -- button not shown (fixme: UI not yet implemented)
+ * - SC-156: Reopen -- leads can edit again (LIVE — Reopen Period button wired)
+ * - SC-157: Re-publish after reopen (LIVE — Reopen Period confirmation dialog wired)
+ * - SC-158: Double publish attempt -- already published (LIVE — published state shows Reopen, not Publish)
+ * - SC-160: Revoke button on dashboard lead-card (fixme: design decision pending)
+ * - SC-161: After revoke -- lead's form becomes editable (LIVE — Revoke button wired)
+ * - SC-162: After revoke -- KPI submissions count updates (MIGRATED → revoke-downstream.integration.spec.ts)
+ * - SC-163: After revoke -- Weekly Report removes revoked data (MIGRATED → revoke-downstream.integration.spec.ts)
+ * - SC-164: Revoke + lead re-submits (MIGRATED → revoke-downstream.integration.spec.ts)
+ * - SC-165: Revoke all leads simultaneously (fixme: bulk-revoke feature not built)
+ * - SC-166: Revoke during Published state (MIGRATED → revoke-downstream.integration.spec.ts)
+ * - SC-167: Revoke non-submitted lead -- button not shown (LIVE — Revoke not shown for draft sections)
  *
  * All data is currently mock; tests verify UI rendering and interactions.
  */
@@ -307,8 +307,11 @@ test.describe("Revoke Submission Flow", () => {
   test.fixme("SC-160: Revoke button visible on submitted lead cards in dashboard", async ({
     headPage,
   }) => {
-    // Dashboard-level Revoke button in lead-report-card.tsx: DESIGN DECISION pending.
-    // See e2e/README.md § UI-gated stubs.
+    // DOCUMENTED GAP — DESIGN DECISION PENDING.
+    // Dashboard-level Revoke button in lead-report-card.tsx has not been
+    // added; placement and UX are unresolved. This stub remains until the
+    // design decision is made. The per-section Revoke path (/lead/report
+    // foreign-author view) is LIVE and covered by SC-161 / SC-167 below.
     await headPage.goto("/head/dashboard");
     await headPage.waitForSelector("#main-content", {
       state: "visible",
@@ -337,60 +340,18 @@ test.describe("Revoke Submission Flow", () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test.fixme("SC-162: After revoke, KPI submissions count updates", async ({
-    headPage,
-  }) => {
-    // TODO: Implement when Revoke flow is wired
-    // Expected: Submissions count decreases (e.g., 4/6 -> 3/6)
-    await headPage.goto("/head/dashboard");
-    await headPage.waitForSelector("#main-content", {
-      state: "visible",
-      timeout: 15_000,
-    });
-  });
-
-  test.fixme("SC-163: After revoke, Weekly Report removes revoked lead data", async ({
-    headPage,
-  }) => {
-    // TODO: Implement when Revoke flow is wired
-    // Expected: Product accordions no longer show revoked lead's items
-    await headPage.goto("/head/report");
-    await headPage.waitForSelector("#main-content", {
-      state: "visible",
-      timeout: 15_000,
-    });
-  });
-
-  test.fixme("SC-164: Revoke + lead re-submits full cycle", async ({
-    headPage,
-  }) => {
-    // TODO: Implement when Revoke flow is wired
-    // Expected: Revoke -> lead edits -> lead re-submits -> data reappears
-    await headPage.goto("/head/dashboard");
-    await headPage.waitForSelector("#main-content", {
-      state: "visible",
-      timeout: 15_000,
-    });
-  });
+  // SC-162, SC-163, SC-164, SC-166 migrated to DB-backed integration suite:
+  //   apps/web/e2e/integration/revoke-downstream.integration.spec.ts
+  // They require a live API + E2E_DATABASE_URL and use direct Prisma assertions.
 
   test.fixme("SC-165: Revoke all leads simultaneously", async ({
     headPage,
   }) => {
-    // TODO: Implement when bulk Revoke action exists
-    // Expected: "Revoke All" action revokes all submitted leads at once
+    // DOCUMENTED GAP — FEATURE NOT BUILT.
+    // Bulk-revoke ("Revoke All") action does not exist. No UI, no tRPC
+    // procedure, no service method. This stub stays until the feature is
+    // scoped and built.
     await headPage.goto("/head/dashboard");
-    await headPage.waitForSelector("#main-content", {
-      state: "visible",
-      timeout: 15_000,
-    });
-  });
-
-  test.fixme("SC-166: Revoke during Published state requires reopen first", async ({
-    headPage,
-  }) => {
-    // TODO: Implement when Revoke + Reopen flow exists
-    // Expected: Cannot revoke while report is published; must reopen first
-    await headPage.goto("/head/report");
     await headPage.waitForSelector("#main-content", {
       state: "visible",
       timeout: 15_000,
