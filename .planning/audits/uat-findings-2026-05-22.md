@@ -54,4 +54,3 @@ stale-server restart (the prior "broken/grey" was the dead bundle).
 - locked stage chip colour confirm; layout/skeleton CLS measurement.
 - admin per-tab + viewer history deep walks.
 - Screenshots: `.playwright-mcp/sweep-head-dashboard.yml` + `/tmp/uat-*.png` (partial).
-  </content>
