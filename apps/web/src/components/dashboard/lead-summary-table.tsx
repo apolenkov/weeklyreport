@@ -1,5 +1,6 @@
 import type { LeadInfo } from "../../lib/mappers/dashboard";
 import { RemindLeadButton } from "./remind-lead-button";
+import { RevokeSectionButton } from "./revoke-lead-button";
 
 const MS_24H = 24 * 60 * 60 * 1000;
 
@@ -187,6 +188,11 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
                     <RemindLeadButton
                       reportId={reportId}
                       leadId={lead.id}
+                      leadName={lead.name}
+                    />
+                  ) : lead.status === "submitted" && lead.reportSectionId ? (
+                    <RevokeSectionButton
+                      reportSectionId={lead.reportSectionId}
                       leadName={lead.name}
                     />
                   ) : (

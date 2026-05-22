@@ -64,6 +64,11 @@ export interface LeadFormRepository {
     reportId: string,
     userId: string,
   ): Promise<CrossAuthorSectionRow[]>;
+  /** SC-165: Revoke every submitted section in a report in one transaction. */
+  revokeAllSubmitted(
+    reportId: string,
+    revokedBy: string,
+  ): Promise<number>;
 }
 
 export interface CrossAuthorSectionRow {
@@ -350,5 +355,17 @@ export class LeadFormService {
     userId: string,
   ): Promise<CrossAuthorSectionRow[]> {
     return this.repository.getCrossAuthorSections(reportId, userId);
+  }
+
+  /** SC-165: Revoke every submitted section in a report in one transaction. */
+  async revokeAllSubmitted(
+    reportId: string,
+    revokedByUserId: string,
+  ): Promise<{ success: true; revokedCount: number }> {
+    const count = await this.repository.revokeAllSubmitted(
+      reportId,
+      revokedByUserId,
+    );
+    return { success: true, revokedCount: count };
   }
 }

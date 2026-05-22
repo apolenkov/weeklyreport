@@ -2048,6 +2048,19 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      revokeAllSubmitted: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.revokeAllSubmitted(
+              input.reportId,
+              ctx.session.userId,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
       requestReopen: protectedProcedure
         .input(
           z.object({
