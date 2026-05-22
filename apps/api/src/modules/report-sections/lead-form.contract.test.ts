@@ -107,6 +107,7 @@ function createMockRepository(
     hasSharedProduct: vi.fn().mockResolvedValue(false),
     getCrossAuthors: vi.fn().mockResolvedValue([]),
     getCrossAuthorSections: vi.fn().mockResolvedValue([]),
+    revokeAllSubmitted: vi.fn().mockResolvedValue(0),
     ...overrides,
   };
 }
@@ -151,6 +152,38 @@ describe("LeadFormService — revokeSubmission", () => {
     await expect(
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID),
     ).rejects.toThrow(`Section ${SECTION_ID} not found.`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// revokeAllSubmitted (SC-165)
+// ---------------------------------------------------------------------------
+
+describe("LeadFormService — revokeAllSubmitted", () => {
+  it("returns success with revokedCount from repository", async () => {
+    const repo = createMockRepository({
+      revokeAllSubmitted: vi.fn().mockResolvedValue(3),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.revokeAllSubmitted(REPORT_ID, OTHER_USER_ID);
+
+    expect(result).toEqual({ success: true, revokedCount: 3 });
+    expect(repo.revokeAllSubmitted).toHaveBeenCalledWith(
+      REPORT_ID,
+      OTHER_USER_ID,
+    );
+  });
+
+  it("returns revokedCount 0 when no submitted sections exist", async () => {
+    const repo = createMockRepository({
+      revokeAllSubmitted: vi.fn().mockResolvedValue(0),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.revokeAllSubmitted(REPORT_ID, OTHER_USER_ID);
+
+    expect(result).toEqual({ success: true, revokedCount: 0 });
   });
 });
 

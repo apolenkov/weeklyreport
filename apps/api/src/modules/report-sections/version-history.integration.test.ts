@@ -100,6 +100,9 @@ function createMockRepository(
     async getCrossAuthorSections() {
       return [];
     },
+    async revokeAllSubmitted() {
+      return 0;
+    },
   };
 }
 

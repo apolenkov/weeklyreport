@@ -88,6 +88,26 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
   }
 
+  /** SC-165: Revoke every submitted section in a report atomically. */
+  async revokeAllSubmitted(
+    reportId: string,
+    revokedBy: string,
+  ): Promise<number> {
+    const now = new Date();
+    const result = await this.prisma.$transaction(async (tx) => {
+      return tx.reportSection.updateMany({
+        where: { reportId, status: "submitted" },
+        data: {
+          status: "draft",
+          revokedAt: now,
+          revokedBy,
+          submittedAt: null,
+        },
+      });
+    });
+    return result.count;
+  }
+
   async fillFromSection(
     targetSectionId: string,
     sourceSectionId: string,

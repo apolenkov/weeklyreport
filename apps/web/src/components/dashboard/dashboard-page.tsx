@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useContext, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, RefreshCw, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
@@ -21,12 +21,15 @@ import { DashboardSkeleton } from "./dashboard-skeleton";
 import { ActivityLivePanel } from "./activity-live-panel";
 import { LeadSummaryTable } from "./lead-summary-table";
 import { Activity24hCard } from "./activity-24h-card";
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
 
 export const DASHBOARD_LOAD_STALL_MS = 8_000;
 
 export function DashboardPage() {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const [loadStalled, setLoadStalled] = useState(false);
+  const [revokeAllOpen, setRevokeAllOpen] = useState(false);
   // UFB-047 / Phase 49-01: brand label sourced from `auth.me.organization`
   // (the singleton's `fullName`). Replaces the legacy
   // `weeklyReport.get.departmentName` field that was dropped with the column.
@@ -35,6 +38,22 @@ export function DashboardPage() {
 
   const reviewQ = useQuery(trpc.review.dashboard.queryOptions());
   const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
+
+  const revokeAllMutation = useMutation(
+    trpc.leadForm.revokeAllSubmitted.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(
+          `${result.revokedCount} submission${result.revokedCount === 1 ? "" : "s"} revoked.`,
+        );
+        void queryClient.invalidateQueries(
+          trpc.weeklyReport.get.queryOptions({}),
+        );
+      },
+      onError: (err) => {
+        toast.error(`Revoke All failed: ${err.message}`);
+      },
+    }),
+  );
 
   useEffect(() => {
     if (reviewQ.isError) {
@@ -232,6 +251,10 @@ export function DashboardPage() {
   const canSendReminder =
     weeklyQ.data.periodStatus !== "published" &&
     weeklyQ.data.hasActiveReminderRule;
+  const submittedCount = leads.filter((l) => l.status === "submitted").length;
+  const activeReportId = weeklyQ.data.reportId;
+  const canRevokeAll =
+    weeklyQ.data.periodStatus !== "published" && submittedCount > 0;
 
   return (
     <div className="space-y-6">
@@ -247,6 +270,20 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* SC-165: Revoke All submitted leads at once */}
+          {canRevokeAll && (
+            <button
+              type="button"
+              onClick={() => setRevokeAllOpen(true)}
+              disabled={revokeAllMutation.isPending}
+              aria-busy={revokeAllMutation.isPending}
+              data-testid="revoke-all-button"
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-red-300 bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-default disabled:opacity-60"
+            >
+              <RotateCcw aria-hidden="true" className="h-4 w-4" />
+              Revoke All ({submittedCount})
+            </button>
+          )}
           <a
             href={`/head/report/${encodeURIComponent(weeklyQ.data.reportId)}`}
             className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
@@ -255,6 +292,20 @@ export function DashboardPage() {
           </a>
         </div>
       </header>
+
+      {/* SC-165: Revoke All confirm dialog */}
+      <ConfirmationDialog
+        open={revokeAllOpen}
+        onClose={() => setRevokeAllOpen(false)}
+        onConfirm={() => {
+          setRevokeAllOpen(false);
+          revokeAllMutation.mutate({ reportId: activeReportId });
+        }}
+        title="Revoke All Submissions?"
+        description={`Revoke all ${submittedCount} submitted lead${submittedCount === 1 ? "" : "s"}? Their forms return to Draft status.`}
+        confirmLabel={`Revoke ${submittedCount} Submission${submittedCount === 1 ? "" : "s"}`}
+        variant="revoke"
+      />
 
       {/* UX-18 (Phase 35-08): live activity feed at the top of the
           dashboard so head/admin sees who's already filed and who hasn't
