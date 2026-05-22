@@ -31,6 +31,12 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* TODO(VERCEL-FONT): migrate the three Google families to
+            next/font/google for self-hosting (drops the render-blocking
+            external stylesheet + adds size-adjust fallback metrics for lower
+            CLS). Deferred: touches the --font-* CSS token system and needs a
+            visual sign-off pass, so it is held behind the theme/visual gate.
+            Current preconnect + display=swap is an acceptable interim. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
