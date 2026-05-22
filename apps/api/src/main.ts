@@ -378,11 +378,20 @@ async function bootstrap() {
   mountBullBoard(app);
 
   process.on("uncaughtException", (err) => {
-    logger.error("uncaught exception", { name: err.name, message: err.message });
+    logger.error("uncaught exception", {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+    });
     process.exit(1);
   });
   process.on("unhandledRejection", (reason) => {
-    logger.error("unhandled rejection", { reason: String(reason) });
+    logger.error("unhandled rejection", {
+      reason:
+        reason instanceof Error
+          ? { name: reason.name, message: reason.message, stack: reason.stack }
+          : String(reason),
+    });
   });
 
   await app.listen(env.PORT);

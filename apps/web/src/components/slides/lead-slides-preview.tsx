@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { ReportSectionReadModel } from "@customreport/shared";
 
@@ -31,6 +31,12 @@ export function LeadSlidesPreview({ section }: LeadSlidesPreviewProps) {
       section ? paginateSectionSlides(buildSectionSlideModel(section)) : [],
     [section],
   );
+
+  // Reset the selection when the deck shrinks past the current index, so a
+  // later grow-back doesn't re-expand a stale (out-of-range) selection.
+  useEffect(() => {
+    setSelectedIndex((index) => (index >= slides.length ? 0 : index));
+  }, [slides.length]);
 
   if (slides.length === 0) {
     return (
