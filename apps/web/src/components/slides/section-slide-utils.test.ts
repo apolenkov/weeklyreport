@@ -4,6 +4,7 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 
 import {
   buildActivitySlideModel,
+  buildProductScopedSlides,
   buildSectionSlideModel,
   sortSlidesForReview,
 } from "./section-slide-utils";
@@ -325,6 +326,127 @@ describe("section slide utilities", () => {
     expect(
       sortSlidesForReview([ready, warning, blocked]).map((s) => s.tone),
     ).toEqual(["blocked", "warning", "ready"]);
+  });
+
+  it("transposes per-lead sections into one slide per product (product scope)", () => {
+    const SECTION_TWO_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    const AUTHOR_TWO_ID = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+
+    const alice = makeSection({
+      reportSectionId: SECTION_ID,
+      authorId: AUTHOR_ID,
+      authorName: "Alice",
+      status: "submitted",
+      submittedAt: new Date("2026-05-20T10:00:00Z"),
+      projects: [
+        {
+          projectId: PRODUCT_ID,
+          projectName: "Core Product",
+          trafficLight: "green",
+          ownedStages: [],
+        },
+        {
+          projectId: PRODUCT_TWO_ID,
+          projectName: "Data Portal",
+          trafficLight: "yellow",
+          ownedStages: [],
+        },
+      ],
+      items: [
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+          projectId: PRODUCT_ID,
+          type: "current",
+          text: "Alice core work",
+          tag: "delivery",
+          workflowStatus: "done",
+          carriedOver: false,
+          completed: true,
+        },
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002",
+          projectId: PRODUCT_TWO_ID,
+          type: "next",
+          text: "Alice portal next",
+          tag: "delivery",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          completed: null,
+        },
+      ],
+      risks: [],
+      decisions: [],
+    });
+
+    const bob = makeSection({
+      reportSectionId: SECTION_TWO_ID,
+      authorId: AUTHOR_TWO_ID,
+      authorName: "Bob",
+      status: "draft",
+      submittedAt: null,
+      projects: [
+        {
+          projectId: PRODUCT_ID,
+          projectName: "Core Product",
+          trafficLight: "red",
+          ownedStages: [],
+        },
+      ],
+      items: [
+        {
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0003",
+          projectId: PRODUCT_ID,
+          type: "current",
+          text: "Bob core work",
+          tag: "delivery",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          completed: null,
+        },
+      ],
+      risks: [],
+      decisions: [
+        {
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0004",
+          text: "Shared roadmap call",
+          owner: "Head",
+          deadline: null,
+          impact: "Cross-product",
+          resolvedAt: null,
+          productId: null,
+        },
+      ],
+    });
+
+    const slides = buildProductScopedSlides([alice, bob]);
+    const byName = Object.fromEntries(slides.map((s) => [s.ownerName, s]));
+
+    expect(slides.map((s) => s.ownerName).sort()).toEqual([
+      "Core Product",
+      "Data Portal",
+      "Shared context",
+    ]);
+
+    // Shared product aggregates both leads' items; worst traffic (green+red)
+    // drives the blocked tone; contributing leads replace the product subtitle.
+    const core = byName["Core Product"];
+    expect(core.ownerRole).toBe("product");
+    expect(core.products).toEqual(["Alice", "Bob"]);
+    expect([...core.currentItems].sort()).toEqual([
+      "Alice core work",
+      "Bob core work",
+    ]);
+    expect(core.tone).toBe("blocked");
+
+    // Single-owner product carries only that lead's content.
+    const portal = byName["Data Portal"];
+    expect(portal.products).toEqual(["Alice"]);
+    expect(portal.nextItems).toEqual(["Alice portal next"]);
+
+    // Cross-product decisions land in a synthetic Shared context slide.
+    const shared = byName["Shared context"];
+    expect(shared.decisions).toEqual(["Shared roadmap call"]);
+    expect(shared.products).toEqual(["Bob"]);
   });
 
   it("builds an empty owner slide from activity rows before a section exists", () => {

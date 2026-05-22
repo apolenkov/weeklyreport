@@ -624,3 +624,188 @@ export function sortSlidesForReview(
     return a.ownerName.localeCompare(b.ownerName);
   });
 }
+
+// ---- Product-scoped slide transposition (UAT 2026-05-22, done-condition 3/10) ----
+//
+// The default head deck is per-lead: one slide per lead's report section.
+// "By product" scope transposes that into one slide per product, aggregating
+// every lead's items / risks / decisions for that product into a single
+// product-centric slide. Cross-product content (items/decisions with no
+// product, or referencing a product the author does not own in their section)
+// is collected into a synthetic "Shared context" slide, mirroring the
+// per-section cross-product entry that buildSectionSlideModel already emits.
+//
+// Implementation reuses buildSectionSlideModel by synthesising one pseudo
+// ReportSectionReadModel per product, so tone / score / readiness / counts are
+// computed by the exact same logic as the per-lead path.
+
+type SectionItem = ReportSectionReadModel["items"][number];
+type SectionRisk = ReportSectionReadModel["risks"][number];
+type SectionDecision = ReportSectionReadModel["decisions"][number];
+type OwnedStage = NonNullable<
+  ReportSectionReadModel["projects"][number]["ownedStages"]
+>[number];
+
+const SHARED_PRODUCT_ID = "shared-context";
+const SHARED_PRODUCT_NAME = "Shared context";
+
+const TRAFFIC_RANK: Record<"green" | "yellow" | "red", number> = {
+  green: 0,
+  yellow: 1,
+  red: 2,
+};
+
+function worstTraffic(a: SlideStageStatus, b: SlideStageStatus): SlideStageStatus {
+  if (a == null) return b;
+  if (b == null) return a;
+  return TRAFFIC_RANK[a] >= TRAFFIC_RANK[b] ? a : b;
+}
+
+type ProductAcc = {
+  projectId: string;
+  projectName: string;
+  trafficLight: SlideStageStatus;
+  ownedStages: Map<string, OwnedStage>;
+  items: SectionItem[];
+  risks: SectionRisk[];
+  decisions: SectionDecision[];
+  contributors: string[];
+  contributorSet: Set<string>;
+  seenSections: Set<string>;
+  anySubmitted: boolean;
+  allSubmitted: boolean;
+  latestSubmittedAt: Date | null;
+};
+
+export function buildProductScopedSlides(
+  sections: readonly ReportSectionReadModel[],
+): SectionSlideModel[] {
+  const products = new Map<string, ProductAcc>();
+
+  const ensure = (id: string, name: string): ProductAcc => {
+    let acc = products.get(id);
+    if (!acc) {
+      acc = {
+        projectId: id,
+        projectName: name,
+        trafficLight: null,
+        ownedStages: new Map(),
+        items: [],
+        risks: [],
+        decisions: [],
+        contributors: [],
+        contributorSet: new Set(),
+        seenSections: new Set(),
+        anySubmitted: false,
+        allSubmitted: true,
+        latestSubmittedAt: null,
+      };
+      products.set(id, acc);
+    }
+    return acc;
+  };
+
+  // Register a (product, section) contribution exactly once: tracks the
+  // contributing lead name and folds the section's submitted state into the
+  // product's aggregate status.
+  const register = (acc: ProductAcc, section: ReportSectionReadModel) => {
+    if (acc.seenSections.has(section.reportSectionId)) return;
+    acc.seenSections.add(section.reportSectionId);
+    if (!acc.contributorSet.has(section.authorName)) {
+      acc.contributorSet.add(section.authorName);
+      acc.contributors.push(section.authorName);
+    }
+    const submitted = section.status === "submitted";
+    acc.anySubmitted = acc.anySubmitted || submitted;
+    acc.allSubmitted = acc.allSubmitted && submitted;
+    if (submitted && section.submittedAt) {
+      if (
+        !acc.latestSubmittedAt ||
+        section.submittedAt > acc.latestSubmittedAt
+      ) {
+        acc.latestSubmittedAt = section.submittedAt;
+      }
+    }
+  };
+
+  for (const section of sections) {
+    // A product is "owned" by the section iff it appears in section.projects.
+    // Items/risks/decisions pointing elsewhere fall through to Shared context,
+    // matching buildSectionSlideModel's per-section cross-product handling.
+    const owned = new Set(section.projects.map((p) => p.projectId));
+
+    for (const project of section.projects) {
+      const acc = ensure(project.projectId, project.projectName);
+      acc.trafficLight = worstTraffic(acc.trafficLight, project.trafficLight);
+      for (const stage of project.ownedStages ?? []) {
+        const prev = acc.ownedStages.get(stage.stageId);
+        acc.ownedStages.set(
+          stage.stageId,
+          prev
+            ? {
+                ...prev,
+                status: worstTraffic(prev.status ?? null, stage.status ?? null),
+              }
+            : stage,
+        );
+      }
+      register(acc, section);
+    }
+
+    const bucketFor = (productId: string | null | undefined): ProductAcc =>
+      productId && owned.has(productId)
+        ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          products.get(productId)!
+        : ensure(SHARED_PRODUCT_ID, SHARED_PRODUCT_NAME);
+
+    for (const item of section.items) {
+      const acc = bucketFor(item.projectId);
+      acc.items.push(item);
+      register(acc, section);
+    }
+    for (const risk of section.risks) {
+      const acc = bucketFor(risk.projectId);
+      acc.risks.push(risk);
+      register(acc, section);
+    }
+    for (const decision of section.decisions) {
+      const acc = bucketFor(decision.productId);
+      acc.decisions.push(decision);
+      register(acc, section);
+    }
+  }
+
+  const fallbackReportId = sections[0]?.reportId ?? SHARED_PRODUCT_ID;
+
+  return [...products.values()].map((acc) => {
+    const pseudoSection: ReportSectionReadModel = {
+      reportSectionId: "product-" + acc.projectId,
+      reportId: fallbackReportId,
+      authorId: acc.projectId,
+      authorName: acc.projectName,
+      // authorRole intentionally omitted (no "product" role exists); the
+      // resulting ownerRole is overridden below to label the slide source.
+      status: acc.anySubmitted && acc.allSubmitted ? "submitted" : "draft",
+      submittedAt: acc.latestSubmittedAt,
+      projects: [
+        {
+          projectId: acc.projectId,
+          projectName: acc.projectName,
+          trafficLight: acc.trafficLight,
+          ownedStages: [...acc.ownedStages.values()],
+        },
+      ],
+      items: acc.items,
+      risks: acc.risks,
+      decisions: acc.decisions,
+    };
+    const model = buildSectionSlideModel(pseudoSection);
+    return {
+      ...model,
+      ownerRole: "product",
+      // Subtitle / nav rail show contributing leads instead of the (single)
+      // product name, which the h2 owner heading already displays.
+      products: acc.contributors.length > 0 ? [...acc.contributors] : model.products,
+    };
+  });
+}
