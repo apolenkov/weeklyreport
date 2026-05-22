@@ -245,6 +245,9 @@ function sectionToDraftPayload(
         carriedOver: it.carriedOver ?? false,
         completed: it.completed ?? null,
         stageIds: it.stageIds,
+        // F1: include priorityRank in the autosave payload (was omitted, so the
+        // dialog's rank never reached the backend → "doesn't save").
+        priorityRank: it.priorityRank ?? null,
       })),
     risks: section.risks
       .filter((r) => hasText(r.risk) && hasText(r.mitigation))
@@ -1282,6 +1285,9 @@ export function LeadForm({
               completed: raw.completed,
               stageName: null,
               stageIds: kb.stageIds,
+              // F1: carry the priority rank from the dialog into the draft so
+              // autosave persists it (was silently dropped here).
+              priorityRank: kb.priorityRank ?? null,
             };
           }
           return {
@@ -1297,6 +1303,7 @@ export function LeadForm({
             completed: raw.completed,
             stageName: null,
             stageIds: kb.stageIds,
+            priorityRank: kb.priorityRank ?? null,
           };
         });
         // Keep all items of the OTHER type unchanged; replace this type with
