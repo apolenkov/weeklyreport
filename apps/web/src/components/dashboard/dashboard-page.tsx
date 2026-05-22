@@ -36,8 +36,17 @@ export function DashboardPage() {
   const sessionState = useContext(SessionContext);
   const orgFullName = sessionState?.organization?.fullName ?? null;
 
-  const reviewQ = useQuery(trpc.review.dashboard.queryOptions());
-  const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
+  // Perf (Vercel audit 2026-05-22): both are expensive portfolio aggregations;
+  // a 60s staleTime avoids redundant refetches on remount/focus vs the 30s
+  // global default. Shared query keys keep React Query dedup intact.
+  const reviewQ = useQuery({
+    ...trpc.review.dashboard.queryOptions(),
+    staleTime: 60_000,
+  });
+  const weeklyQ = useQuery({
+    ...trpc.weeklyReport.get.queryOptions({}),
+    staleTime: 60_000,
+  });
 
   const revokeAllMutation = useMutation(
     trpc.leadForm.revokeAllSubmitted.mutationOptions({
