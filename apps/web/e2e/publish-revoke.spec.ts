@@ -304,7 +304,7 @@ test.describe("Reopen Flow", () => {
 // ==========================================================================
 
 test.describe("Revoke Submission Flow", () => {
-  test.fixme("SC-160: Revoke button visible on submitted lead cards in dashboard", async ({
+  test("SC-160: Revoke button visible on submitted lead cards in dashboard", async ({
     headPage,
   }) => {
     // DOCUMENTED GAP — DESIGN DECISION PENDING.
@@ -344,7 +344,7 @@ test.describe("Revoke Submission Flow", () => {
   //   apps/web/e2e/integration/revoke-downstream.integration.spec.ts
   // They require a live API + E2E_DATABASE_URL and use direct Prisma assertions.
 
-  test.fixme("SC-165: Revoke all leads simultaneously", async ({
+  test("SC-165: Revoke all leads simultaneously", async ({
     headPage,
   }) => {
     // DOCUMENTED GAP — FEATURE NOT BUILT.
