@@ -61,6 +61,13 @@ type WeeklyReportPageProps = {
   readonly redirectToCanonical?: boolean;
   readonly canonicalBasePath?: string;
   readonly authorId?: string;
+  /**
+   * Grouping axis (head split-view parity, UAT 2026-05-22). "product" (default)
+   * is the classic per-product accordion list; "lead" groups products under
+   * each authoring lead. A product shared by several leads appears under each —
+   * leads own their own phases, so the duplication is expected.
+   */
+  readonly scope?: "product" | "lead";
 };
 
 export function WeeklyReportPage({
@@ -69,6 +76,7 @@ export function WeeklyReportPage({
   redirectToCanonical,
   canonicalBasePath = "/head/report",
   authorId,
+  scope = "product",
 }: WeeklyReportPageProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -226,6 +234,27 @@ export function WeeklyReportPage({
   // mock-data presentation types so children keep their imports unchanged.
   const portfolio: PortfolioProduct[] = view.portfolio as PortfolioProduct[];
   const products: ProductReport[] = view.products as ProductReport[];
+  // Head split-view "by lead" grouping (UAT 2026-05-22): resolve author names
+  // from the period's lead sections, then bucket products under each lead they
+  // authored. Empty leads are dropped so the view never shows blank groups.
+  const authorNameById = new Map<string, string>();
+  for (const section of weeklyQ.data.leadSections ?? []) {
+    if (section.authorId) {
+      authorNameById.set(section.authorId, section.authorName ?? section.authorId);
+    }
+  }
+  const leadGroups =
+    scope === "lead"
+      ? [...authorNameById.entries()]
+          .map(([id, name]) => ({
+            id,
+            name,
+            products: products.filter((report) =>
+              report.authorIds?.includes(id),
+            ),
+          }))
+          .filter((group) => group.products.length > 0)
+      : [];
   // UFB-047 / Phase 49-01: department label is exclusively
   // `auth.me.organization.fullName`. PDF-worker / non-session callers
   // get a sensible default — the brand never blanks out.
@@ -369,18 +398,45 @@ export function WeeklyReportPage({
           {/* Portfolio Overview */}
           <PortfolioOverviewTable products={portfolio} />
 
-          {/* Per-product accordion sections */}
-          <div className="space-y-3">
-            {products.map((report) => (
-              <ProductAccordion
-                key={report.id}
-                report={report}
-                defaultOpen={focusedProductId === report.id}
-                highlighted={focusedProductId === report.id}
-                scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
-              />
-            ))}
-          </div>
+          {/* Accordion sections — by product (default) or grouped by lead */}
+          {scope === "lead" ? (
+            <div className="space-y-6">
+              {leadGroups.map((group) => (
+                <section
+                  key={group.id}
+                  aria-label={group.name}
+                  className="space-y-3"
+                >
+                  <h3 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
+                    {group.name}
+                  </h3>
+                  {group.products.map((report) => (
+                    <ProductAccordion
+                      key={report.id}
+                      report={report}
+                      defaultOpen={focusedProductId === report.id}
+                      highlighted={focusedProductId === report.id}
+                      scrollIntoViewOnHighlight={
+                        scrollTargetProductId === report.id
+                      }
+                    />
+                  ))}
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {products.map((report) => (
+                <ProductAccordion
+                  key={report.id}
+                  report={report}
+                  defaultOpen={focusedProductId === report.id}
+                  highlighted={focusedProductId === report.id}
+                  scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

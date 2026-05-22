@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
+import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
 import { HeadSlidesClient } from "../slides/head-slides-client";
@@ -31,9 +32,21 @@ export function HeadReportShell({
     `/head/report/${encodeURIComponent(reportId)}?mode=slides` +
     (authorId ? `&authorId=${encodeURIComponent(authorId)}` : "");
 
+  // Grouping axis for the form-mode status pane (UAT 2026-05-22): product (the
+  // classic per-product list) or lead (products bucketed under each lead).
+  const [scope, setScope] = useState<ScopeValue>("product");
+  const reportScope = scope === "lead" ? "lead" : "product";
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {mode === "form" && (
+          <ScopeToggle
+            value={scope}
+            onChange={setScope}
+            allowedScopes={["product", "lead"]}
+          />
+        )}
         <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
       </div>
       {mode === "slides" ? (
@@ -48,7 +61,11 @@ export function HeadReportShell({
         <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] xl:items-start xl:gap-6">
           <div className="min-w-0">
             <Suspense fallback={<WeeklyReportSkeleton />}>
-              <WeeklyReportPage reportId={reportId} authorId={authorId} />
+              <WeeklyReportPage
+                reportId={reportId}
+                authorId={authorId}
+                scope={reportScope}
+              />
             </Suspense>
           </div>
           <aside
