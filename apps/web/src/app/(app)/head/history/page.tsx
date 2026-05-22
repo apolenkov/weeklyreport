@@ -1,24 +1,13 @@
-import { Suspense } from "react";
-
-import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
-import { HeadHistoryClient } from "../../../../components/head/head-history-client";
+import { redirect } from "next/navigation";
 
 /**
- * Phase 61 (robust-baking-aurora): head history page — period navigator with
- * inline form ↔ slides mode toggle. Mirrors /lead/report/[id] UX for the head
- * role. Reads published periods via compiledHistory; no new DB tables.
+ * UAT 2026-05-22 (user decision): /head/history collapses into the shared
+ * /reports page (tab=published) — the same surface the viewer role uses for
+ * compiled history. This matches how /lead/history redirects to
+ * /reports?tab=drafts (Phase 35-08 / UX-17).
+ *
+ * Next 16: redirect() issues a 307 by default for this server-component path.
  */
-export default async function HeadHistoryPage() {
-  return (
-    <main
-      id="main-content"
-      className="min-h-screen bg-[var(--color-background)]"
-    >
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        <Suspense fallback={<WeeklyReportSkeleton />}>
-          <HeadHistoryClient />
-        </Suspense>
-      </div>
-    </main>
-  );
+export default function HeadHistoryRedirect() {
+  redirect("/reports?tab=published");
 }

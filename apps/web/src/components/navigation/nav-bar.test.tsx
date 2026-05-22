@@ -168,7 +168,9 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/head/dashboard");
     expectLinkExists(container, "/head/report");
-    expectLinkExists(container, "/head/history");
+    // UAT 2026-05-22: head History now points to /reports?tab=published
+    expectLinkExists(container, "/reports?tab=published");
+    expectLinkMissing(container, "/head/history");
     expectLinkMissing(container, "/head/slides");
     expectLinkMissing(container, "/reports?tab=drafts");
   });
@@ -304,13 +306,13 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/reports?tab=published");
   });
 
-  it("activates head History on /head/history", () => {
+  it("activates head History on /reports (tab=published)", () => {
     setRole("head");
-    setRoute("/head/history");
+    setRoute("/reports", "tab=published");
 
     const { container } = render(<NavBar />);
 
-    expectActiveLink(container, "/head/history");
+    expectActiveLink(container, "/reports?tab=published");
     expectInactiveLink(container, "/head/dashboard");
   });
 
