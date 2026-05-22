@@ -47,13 +47,11 @@ export function HeadReportShell({
           replaced by export / presentation actions. Same toolbar shape,
           scope + view-mode toggles share the row. */}
       <div className="flex flex-wrap items-center justify-end gap-2">
-        {mode === "form" && (
-          <ScopeToggle
-            value={scope}
-            onChange={setScope}
-            allowedScopes={["product", "lead"]}
-          />
-        )}
+        <ScopeToggle
+          value={scope}
+          onChange={setScope}
+          allowedScopes={["product", "lead"]}
+        />
         <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
         <a
           href={presentHref}
@@ -74,7 +72,7 @@ export function HeadReportShell({
       </div>
       {mode === "slides" ? (
         <Suspense fallback={<SlideSkeleton />}>
-          <HeadSlidesClient reportId={reportId} />
+          <HeadSlidesClient reportId={reportId} scope={reportScope} />
         </Suspense>
       ) : (
         // Split-view parity with the lead report: at xl the aggregated status
@@ -96,7 +94,7 @@ export function HeadReportShell({
             className="hidden min-w-0 xl:sticky xl:top-4 xl:block"
           >
             <Suspense fallback={<SlideSkeleton />}>
-              <HeadSlidesClient reportId={reportId} />
+              <HeadSlidesClient reportId={reportId} scope={reportScope} />
             </Suspense>
           </aside>
         </div>

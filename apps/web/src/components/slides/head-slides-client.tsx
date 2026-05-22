@@ -11,6 +11,7 @@ import { SlideSkeleton } from "./slide-skeleton";
 import { ReportSlides } from "./report-slides";
 import {
   buildActivitySlideModel,
+  buildProductScopedSlides,
   buildSectionSlideModel,
   paginateSectionSlides,
   sortSlidesForReview,
@@ -39,9 +40,18 @@ type HeadSlidesClientProps = {
   /** When provided, loads slides for that specific report period instead of
    * the current active period. Used by HeadReportShell slides mode. */
   readonly reportId?: string;
+  /**
+   * Grouping axis for the deck. "lead" (default) = one slide per lead section;
+   * "product" transposes into one slide per product, aggregating every lead's
+   * content for that product. Driven by the head shell ScopeToggle.
+   */
+  readonly scope?: "lead" | "product";
 };
 
-export function HeadSlidesClient({ reportId }: HeadSlidesClientProps = {}) {
+export function HeadSlidesClient({
+  reportId,
+  scope = "lead",
+}: HeadSlidesClientProps = {}) {
   const trpc = useTRPC();
   const session = useContext(SessionContext);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -62,16 +72,20 @@ export function HeadSlidesClient({ reportId }: HeadSlidesClientProps = {}) {
   const slides = useMemo(() => {
     if (!weeklyQ.data || weeklyQ.data.status === "no-period") return [];
     if (weeklyQ.data.leadSections.length > 0) {
+      const base =
+        scope === "product"
+          ? buildProductScopedSlides(weeklyQ.data.leadSections)
+          : weeklyQ.data.leadSections.map((section) =>
+              buildSectionSlideModel(section),
+            );
       return sortSlidesForReview(
-        weeklyQ.data.leadSections
-          .map((section) => buildSectionSlideModel(section))
-          .flatMap((model) => paginateSectionSlides(model)),
+        base.flatMap((model) => paginateSectionSlides(model)),
       );
     }
     return sortSlidesForReview(
       (activityQ.data?.rows ?? []).map((row) => buildActivitySlideModel(row)),
     );
-  }, [weeklyQ.data, activityQ.data]);
+  }, [weeklyQ.data, activityQ.data, scope]);
 
   useEffect(() => {
     if (selectedIndex < slides.length) return;
