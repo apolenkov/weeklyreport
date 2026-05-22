@@ -41,9 +41,25 @@ export function HeadReportShell({
           <HeadSlidesClient reportId={reportId} />
         </Suspense>
       ) : (
-        <Suspense fallback={<WeeklyReportSkeleton />}>
-          <WeeklyReportPage reportId={reportId} authorId={authorId} />
-        </Suspense>
+        // Split-view parity with the lead report: at xl the aggregated status
+        // (left) sits beside a read-only slide preview (right). Both read the
+        // shared weeklyReport.get query (React Query dedupes the fetch). Below
+        // xl it stays single-column; ?mode=slides drives the standalone deck.
+        <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] xl:items-start xl:gap-6">
+          <div className="min-w-0">
+            <Suspense fallback={<WeeklyReportSkeleton />}>
+              <WeeklyReportPage reportId={reportId} authorId={authorId} />
+            </Suspense>
+          </div>
+          <aside
+            aria-label="Slide preview"
+            className="hidden min-w-0 xl:sticky xl:top-4 xl:block"
+          >
+            <Suspense fallback={<SlideSkeleton />}>
+              <HeadSlidesClient reportId={reportId} />
+            </Suspense>
+          </aside>
+        </div>
       )}
     </div>
   );
