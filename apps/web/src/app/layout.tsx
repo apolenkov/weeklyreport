@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AgentationDevtools } from "../components/agentation-devtools";
@@ -9,6 +10,18 @@ import "../styles/app.css";
 type RootLayoutProps = Readonly<{
   children: ReactNode;
 }>;
+
+// Vercel audit 2026-05-22: titles were blank on SSR (set later by a client
+// effect). Set them server-side via the Metadata API so the document title is
+// correct on first paint and shareable links resolve a real title.
+export async function generateMetadata(): Promise<Metadata> {
+  const org = await getOrgPublic();
+  const name = org?.fullName ?? "CustomReport";
+  return {
+    title: { default: name, template: `%s · ${name}` },
+    description: "Weekly status reporting for the CoreDev department.",
+  };
+}
 
 export default async function RootLayout({ children }: RootLayoutProps) {
   // UFB-070: pre-fetch org identity server-side so the landing page can read
