@@ -27,6 +27,9 @@ export default defineConfig([
     // A38: tools/uat-extractor/*.ts run via `tsx` and aren't part of
     // any tsconfig project — same pattern as prisma/seed*.ts above.
     "tools/uat-extractor/*.ts",
+    // accumulated-work-audit tool runs via `node --experimental-strip-types`
+    // and isn't in any tsconfig project — same pattern as the scripts above.
+    ".planning/scripts/**",
     "**/e2e/**",
   ]),
   {

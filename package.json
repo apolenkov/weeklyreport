@@ -42,7 +42,8 @@
     "uat:coverage": "pnpm --filter @customreport/api exec tsx ../../tools/uat-extractor/coverage.ts",
     "lint:md": "markdownlint-cli2 \".planning/**/*.md\" \"!.planning/local-archive/**\" \"README.md\"",
     "lint:md:fix": "markdownlint-cli2 --fix \".planning/**/*.md\" \"!.planning/local-archive/**\" \"README.md\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "audit-work": "node --experimental-strip-types .planning/scripts/accumulated-work-audit.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.1",
