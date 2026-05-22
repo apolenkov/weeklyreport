@@ -13,8 +13,16 @@ import {
   logClientError,
 } from "../../lib/client-error-reporting";
 
+import dynamic from "next/dynamic";
+
 import { KpiCards } from "./kpi-cards";
-import { ProductKpiCard } from "./product-kpi-card";
+// Vercel audit win #3: ProductKpiCard pulls the full Recharts bundle (~130kB)
+// for a below-fold card. Load it lazily (client-only) so it stays out of the
+// initial dashboard chunk.
+const ProductKpiCard = dynamic(
+  () => import("./product-kpi-card").then((m) => m.ProductKpiCard),
+  { ssr: false },
+);
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import { DashboardSkeleton } from "./dashboard-skeleton";
