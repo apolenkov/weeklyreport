@@ -422,6 +422,10 @@ export function mapLeadItems(
         status,
         text: item.text,
         author: section.authorName,
+        // F1: carry priorityRank into the bound KanbanItem so ItemEditDialog
+        // re-populates the field on reopen (was dropped → empty field after
+        // reload even though the value persisted + showed in the priorities view).
+        priorityRank: item.priorityRank ?? null,
       };
     });
 }
