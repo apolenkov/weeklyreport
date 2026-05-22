@@ -37,8 +37,15 @@ export function HeadReportShell({
   const [scope, setScope] = useState<ScopeValue>("product");
   const reportScope = scope === "lead" ? "lead" : "product";
 
+  const presentHref = `/head/report/${encodeURIComponent(reportId)}/present`;
+  const printHref = `/print/${encodeURIComponent(reportId)}`;
+
   return (
     <div className="space-y-4">
+      {/* Action row parity with the lead report header (UAT 2026-05-22,
+          done-condition 10): head is read-only, so the lead Submit slot is
+          replaced by export / presentation actions. Same toolbar shape,
+          scope + view-mode toggles share the row. */}
       <div className="flex flex-wrap items-center justify-end gap-2">
         {mode === "form" && (
           <ScopeToggle
@@ -48,6 +55,22 @@ export function HeadReportShell({
           />
         )}
         <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
+        <a
+          href={presentHref}
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-1.5 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+          aria-label="Open presentation"
+        >
+          Presentation
+        </a>
+        <a
+          href={printHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+          aria-label="Export PDF"
+        >
+          Export PDF
+        </a>
       </div>
       {mode === "slides" ? (
         <Suspense fallback={<SlideSkeleton />}>
