@@ -163,11 +163,21 @@ async function bootstrap() {
       const start = performance.now();
       res.on("finish", () => {
         const duration = Math.round(performance.now() - start);
-        // 4xx/5xx → warn so they show up at info-level prod logs;
-        // 1xx/2xx/3xx → debug so a quiet endpoint doesn't drown logs.
+        // 4xx/5xx → warn/error so they show up at info-level prod logs;
+        // 2xx/3xx health/readiness/liveness → debug (high-frequency, low signal);
+        // other 2xx/3xx → info so successful non-tRPC requests are visible in prod.
         const status = res.statusCode;
+        const isHealthPath =
+          req.path === "/health" ||
+          req.path.startsWith("/health/");
         const level =
-          status >= 500 ? "error" : status >= 400 ? "warn" : "debug";
+          status >= 500
+            ? "error"
+            : status >= 400
+              ? "warn"
+              : isHealthPath
+                ? "debug"
+                : "info";
         logger[level]("http request", {
           phase: "http.request",
           method: req.method,
@@ -366,6 +376,14 @@ async function bootstrap() {
   );
 
   mountBullBoard(app);
+
+  process.on("uncaughtException", (err) => {
+    logger.error("uncaught exception", { name: err.name, message: err.message });
+    process.exit(1);
+  });
+  process.on("unhandledRejection", (reason) => {
+    logger.error("unhandled rejection", { reason: String(reason) });
+  });
 
   await app.listen(env.PORT);
   logger.info(`API server listening on port ${env.PORT}`);

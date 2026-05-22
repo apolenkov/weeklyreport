@@ -48,6 +48,8 @@ const t = initTRPC.context<TrpcContext>().create({
   },
 });
 
+const SLOW_TRPC_MS = 500;
+
 const TRPC_ERROR_HTTP_STATUS: Record<string, string> = {
   BAD_REQUEST: "400",
   UNAUTHORIZED: "401",
@@ -150,6 +152,15 @@ export const loggingMiddleware = t.middleware(
 
     if (result.ok) {
       observeTrpcDuration(type, path, "200", duration);
+      if (duration > SLOW_TRPC_MS) {
+        ctx.logger.warn("slow trpc procedure", {
+          phase: "trpc.request",
+          stage: "slow",
+          procedure: path,
+          type,
+          duration,
+        });
+      }
       ctx.logger.info("trpc request end", {
         phase: "trpc.request",
         stage: "end",
