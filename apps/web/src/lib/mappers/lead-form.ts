@@ -64,6 +64,7 @@ import {
   type StageStatus,
   type TrafficLightStatus,
 } from "./traffic-light";
+import { deriveEffectiveStageStatus } from "../stage-status";
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber as sharedIsoWeekNumber,
@@ -335,6 +336,8 @@ function buildStageGrid(
     stageName: string;
     status?: TrafficLightStatus | null;
   }[],
+  risks: readonly { stageName?: string | null; severity: string }[] = [],
+  items: readonly { stageName?: string | null; workflowStatus: string }[] = [],
 ): LeadStageAssignment[] {
   const owned = new Map(
     ownedStages.map((stage) => [stage.stageName.toLowerCase(), stage] as const),
@@ -350,7 +353,11 @@ function buildStageGrid(
     if (ownedStage) {
       return {
         stageName,
-        status: trafficToStageStatus(ownedStage.status ?? null),
+        status: deriveEffectiveStageStatus(
+          trafficToStageStatus(ownedStage.status ?? null),
+          risks.filter((r) => r.stageName != null && r.stageName.toLowerCase() === lower),
+          items.filter((i) => i.stageName != null && i.stageName.toLowerCase() === lower),
+        ),
         ownership: "mine" as const,
         assignee: ownerLabel,
       };
