@@ -36,7 +36,6 @@ import { VersionHistoryNav } from "./version-history-nav";
 import { CurrentWeekSection } from "./current-week-section";
 import { NextWeekSection } from "./next-week-section";
 import { DecisionsSection } from "./decisions-section";
-import { PrioritiesSection } from "./priorities-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RequestReopenDialog } from "./request-reopen-dialog";
 import { LeadSlidesClient } from "../slides/lead-slides-client";
@@ -50,7 +49,6 @@ import type {
   KanbanItem,
   RiskEntry,
   DecisionEntry,
-  PriorityEntry,
   ReportPeriod,
   VersionSnapshot,
 } from "./mock-data";
@@ -169,22 +167,6 @@ function ChatIcon() {
       strokeLinejoin="round"
     >
       <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-    </svg>
-  );
-}
-
-function StarIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 flex-shrink-0"
-      stroke="var(--color-starbucks-gold)"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   );
 }
@@ -970,8 +952,6 @@ export function LeadForm({
       ? []
       : (data.decisions as DecisionEntry[]);
 
-  const priorities: PriorityEntry[] = data.priorities as PriorityEntry[];
-
   // W5/W6: build foreign item arrays from crossAuthorSectionsQ (always-on).
   const foreignCurrentItems: KanbanItem[] =
     crossAuthorSectionsQ.data?.flatMap((ca) =>
@@ -1060,29 +1040,23 @@ export function LeadForm({
       ),
     ) ?? [];
 
-  const foreignPriorities: PriorityEntry[] =
-    crossAuthorSectionsQ.data?.flatMap((ca) =>
-      ca.items
-        .filter((i) => i.priorityRank != null)
-        .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
-        .map(
-          (i): PriorityEntry => ({
-            rank: i.priorityRank ?? 1,
-            text: i.text,
-            productId: i.projectId,
-            productName: productNameById.get(i.projectId) ?? i.projectId,
-            authorName: ca.authorName,
-            authorId: ca.authorId,
-            foreign: true,
-          }),
-        ),
-    ) ?? [];
-
   const mergedCurrentItems = [...currentWeekItems, ...foreignCurrentItems];
   const mergedNextItems = [...nextWeekItems, ...foreignNextItems];
   const mergedRisks = [...risks, ...foreignRisks];
   const mergedDecisions = [...decisions, ...foreignDecisions];
-  const mergedPriorities = [...priorities, ...foreignPriorities];
+
+  /**
+   * All priority ranks already assigned to own (non-foreign) items for the
+   * entire period (current + next week). Passed to each week section so the
+   * ItemEditDialog can disable taken ranks in the picker. Foreign items are
+   * intentionally excluded — they are read-only and cannot be edited.
+   */
+  const ownPeriodRanks: readonly number[] = [
+    ...currentWeekItems,
+    ...nextWeekItems,
+  ]
+    .map((i) => i.priorityRank)
+    .filter((r): r is number => r != null);
 
   const periods: ReportPeriod[] = data.periods as ReportPeriod[];
   const versions: VersionSnapshot[] = data.versions as VersionSnapshot[];
@@ -1453,8 +1427,7 @@ export function LeadForm({
               (currentWeekItems.length > 0 ||
                 nextWeekItems.length > 0 ||
                 risks.length > 0 ||
-                decisions.length > 0 ||
-                mergedPriorities.length > 0) && (
+                decisions.length > 0) && (
                 <button
                   type="button"
                   className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
@@ -1671,6 +1644,7 @@ export function LeadForm({
                   currentUserName={currentUser.name}
                   products={products}
                   stagesForProduct={stagesForProduct}
+                  ownPeriodRanks={ownPeriodRanks}
                   addSignal={currentWeekAddSignal}
                 />
               </AccordionSection>
@@ -1709,6 +1683,7 @@ export function LeadForm({
                   currentUserName={currentUser.name}
                   products={products}
                   stagesForProduct={stagesForProduct}
+                  ownPeriodRanks={ownPeriodRanks}
                   addSignal={nextWeekAddSignal}
                 />
               </AccordionSection>
@@ -1787,22 +1762,6 @@ export function LeadForm({
               />
             </AccordionSection>
 
-            {/* Priorities — read-only derived view of items with rank set. */}
-            <AccordionSection
-              groupSyncKey={groupSyncKey}
-              groupExpanded={groupExpanded}
-              testId="lead-section-priorities"
-              icon={<StarIcon />}
-              title="Priorities"
-              titleColor="var(--color-starbucks-gold)"
-              badge={`${mergedPriorities.length}`}
-              subtitle="Top priorities for the week, tied back to product and SDLC stage where relevant."
-            >
-              <PrioritiesSection
-                priorities={mergedPriorities}
-                sectionAuthorName={currentUser.name ?? undefined}
-              />
-            </AccordionSection>
           </>
         )}
       </form>
