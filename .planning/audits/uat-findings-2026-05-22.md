@@ -79,6 +79,26 @@ the user). Findings + status:
   have a saved status, that is a separate save-path bug (stageStatuses not
   persisted) — file it then; do not change the mapping.
 
+## Re-sweep on the feature build (run 3, 2026-05-22 ~16:4x via Playwright MCP)
+
+Live console-error sweep on the running dev server reflecting all session
+commits (split-views, grouping toggle, priorities, logging, Vercel wins):
+
+```text
+console errors by role/screen:
+  lead   /lead/report               0
+  head   /head/dashboard            0
+  head   /head/report               0
+  admin  /admin                     0
+  viewer /reports?tab=published     0
+```
+
+All four roles render their primary screens with **zero console errors** on the
+feature build → done-condition 1 satisfied. SSR document titles now resolve to
+the org name / week label (generateMetadata win confirmed live, e.g. "Week 21,
+May 18–24, 2026 - CustomReport"). Deep per-tab walks (admin sub-tabs, viewer
+history) + CLS measurement remain for a focused browser pass.
+
 ## Remaining (roadmap W2/W3)
 
 - Submit a lead → re-check head dashboard Revoke + Revoke All live (P6/P7 functional proof).
