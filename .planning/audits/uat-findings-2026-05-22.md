@@ -169,3 +169,68 @@ CLS toward 0.
 - admin per-tab + viewer history deep walks.
 - `next/font` migration (`TODO(VERCEL-FONT)`) once a visual pass is scheduled.
 - Screenshots: `.playwright-mcp/sweep-head-dashboard.yml` + `/tmp/uat-*.png` (partial).
+
+## Session 3 closure (2026-05-22 ~22:3x — StageChip fix + lead↔head parity + closeout)
+
+### Core changes landed (all committed on `fix/PRJ-2/shiny-eagle`)
+
+- [✓ built] **`deriveEffectiveStageStatus` 3-source helper** — pure function, max
+  over explicit TrafficLight, Risk.severity ("blocked"→blocked, else→at-risk),
+  KanbanItem.workflowStatus==="blocked"→blocked. Precedence: `blocked(3) >
+at-risk(2) > on-track(1) > empty(0)`. 6 unit tests. Single source of truth
+  for SDLC chip color. commits `c97f6dc` + `018d8c4`.
+- [✓ built] **Cross-author chip color fix** — `lead-form.tsx` cross-author loop
+  (~line 783) now calls `deriveEffectiveStageStatus(explicit, stageRisks, stageItems)`
+  so locked chips turn red/orange when a cross-author risk or blocked item is
+  present even with no explicit TrafficLight. Mine-path `buildStageGrid` signature
+  extended; `mapLeadProducts` NOT yet wired (stageIds↔stageName gap, backend
+  change needed). `TODO(STAGE-COLOR-SNAPSHOT)` on snapshotStageMap path.
+- [✓ built] **Lead form full-width** — `LeadSlidesPreview` aside removed from
+  lead-form; component + test deleted. `?mode=slides` URL still renders full-screen
+  slides. commit `9718e25`.
+- [✓ built] **Remove duplicate Priorities block** — from `LeadUnifiedSlide` and
+  independently from `HeadSlideArticle` (`status-slide-deck.tsx`). Priorities
+  already shown as P-rank chips in the status grid. commit `391ac63`.
+- [✓ built] **Head period toolbar parity** — `HeadReportShell` gains
+  `compiledHistory` query, `PeriodNavigator` (week-switching), `ArchiveToggle`
+  (show/hide archived), `AgentReviewComingSoon` slot in action row. Head remains
+  read-only. commit `95c4e00`.
+- [✓ built] **Head history redirect** — `/head/history` 307s to
+  `/reports?tab=published` (same pattern as `/lead/history`). `HeadHistoryClient`
+  deleted. Nav-bar link updated. E2E spec updated. commit `40a6d22`.
+- [✓ built] **AgentReviewComingSoon badge** — inert slot on all 4 UAT surfaces
+  (lead form, lead slide, head form, head slide). Follows
+  `LanguageComingSoonControl` pattern from `nav-bar.tsx`. `TODO(AGENT-REVIEW-01)`
+  in component; `TODO(AGENT-REVIEW-02)` near `AiSummaryService` stub. commit
+  `eab98df`.
+- [✓ built] **Dashboard skeleton CLS hardening** — added height reservations for
+  `Activity24hCard` (~88px), `LeadSummaryTable` (~380px), `ProductKpiCard`
+  (min-h-[173px]). ~640px of previously unreserved space now has stable geometry.
+  Pre-paint CLS expected to drop from 0.0817. commit `3f4cb01`.
+- [✓ built] **LSC-01..06 + SC-160/165 specs ready** — seed now provides at-risk
+  risk on Testing stage, blocked risk on Support+Planning (cross-author), blocked
+  items on DevOps (for Olga). LSC-01..04 conditional skips become live assertions
+  when seed data is present. LSC-05/06 self-skip if mine-path not wired. SC-160/165
+  `test.fixme` removed. commit `712d9c8`.
+
+### Gates (session 3 final)
+
+```
+pnpm typecheck   → 0 errors
+pnpm lint        → 4/4 tasks clean
+pnpm test        → 508/508 pass (67 test files, incl. 6 new stage-status tests)
+pnpm lint:md     → 677 files, 0 errors
+```
+
+### Open (user-driven / deferred)
+
+- **item-1 live verify** — toggle Blocked in `RiskEditDialog` → Save → reload →
+  severity persists in DB AND cross-author chip turns red. Requires live session
+  with submitted lead sections. Spec LSC-01 will catch regression automatically.
+- **LSC-05/06 mine-path** — `buildStageGrid` needs `section.risks` plumbing by
+  stageName (backend currently exposes `stageIds[]`). Self-skip in spec until wired.
+- **CLS live trace after** — `DashboardSkeleton` geometry fix committed; measured
+  baseline 0.0817; live re-trace needed to confirm improvement.
+- **priorityRank + Revoke P6/P7** — submit lead sections first, then verify in
+  head dashboard (task #322, user-driven).
+- **next/font migration** — `TODO(VERCEL-FONT)` deferred, visual sign-off needed.
