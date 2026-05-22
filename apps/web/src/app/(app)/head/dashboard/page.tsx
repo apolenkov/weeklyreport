@@ -1,3 +1,5 @@
+import Script from "next/script";
+
 import { DashboardPage } from "../../../../components/dashboard/dashboard-page";
 
 const DASHBOARD_BFCACHE_RECOVERY_SCRIPT = `
@@ -17,11 +19,9 @@ const DASHBOARD_BFCACHE_RECOVERY_SCRIPT = `
 export default function HeadDashboardPage() {
   return (
     <>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: DASHBOARD_BFCACHE_RECOVERY_SCRIPT,
-        }}
-      />
+      <Script id="dashboard-bfcache-recovery" strategy="afterInteractive">
+        {DASHBOARD_BFCACHE_RECOVERY_SCRIPT}
+      </Script>
       <main
         id="main-content"
         className="min-h-screen bg-[var(--color-background)]"
