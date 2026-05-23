@@ -32,7 +32,10 @@ scrape_configs:
     metrics_path: /metrics
     scrape_interval: 15s
     static_configs:
-      - targets: [api:3002]
+      # host.docker.internal: api is in customreport_default network,
+      # otel-lgtm is in customreport-obs_default (different compose projects).
+      # host.docker.internal resolves to the Docker host on Mac/Windows.
+      - targets: [host.docker.internal:3002]
         labels:
           service: api
 
