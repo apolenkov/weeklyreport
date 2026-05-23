@@ -10,7 +10,7 @@ exports[`LeadForm view-mode toggle — pre-extract snapshot > shows Edit link an
     <button
       aria-disabled="true"
       aria-label="Agent review is coming soon"
-      class="inline-flex h-8 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
+      class="inline-flex min-h-[var(--touch-target-min)] cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-4 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)]"
       data-testid="agent-review-coming-soon"
       title="Coming Soon"
       type="button"

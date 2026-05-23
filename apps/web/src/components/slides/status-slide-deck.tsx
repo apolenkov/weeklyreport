@@ -37,6 +37,7 @@ type StatusSlideDeckProps = {
   readonly hideSourceLink?: boolean;
   readonly mode: "lead" | "head";
   readonly toolbar?: ReactNode;
+  readonly heroControls?: ReactNode;
   readonly showChrome?: boolean;
 };
 
@@ -134,7 +135,13 @@ function selectedSlide(
   return slides[Math.min(Math.max(index, 0), slides.length - 1)] ?? null;
 }
 
-function LeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
+function LeadSlideArticle({
+  slide,
+  heroControls,
+}: {
+  readonly slide: SectionSlideModel;
+  readonly heroControls?: ReactNode;
+}) {
   const productChips: ProductChipEntry[] = slide.productSlides
     .filter((p) => p.id !== "cross-product")
     .map((p) => ({
@@ -163,7 +170,7 @@ function LeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
         key={String(slide.pageIndex ?? 0)}
         className="animate-fade-in space-y-5"
       >
-        <LeadSlideHero slide={slide} />
+        <LeadSlideHero slide={slide} heroControls={heroControls} />
         {productChips.length > 1 ? (
           <SlideProductChips products={productChips} />
         ) : null}
@@ -301,6 +308,7 @@ export function StatusSlideDeck({
   hideSourceLink = false,
   mode,
   toolbar,
+  heroControls,
   showChrome = true,
 }: StatusSlideDeckProps) {
   const slide = selectedSlide(slides, selectedIndex);
@@ -461,7 +469,7 @@ export function StatusSlideDeck({
             ) : null}
 
             {isLead ? (
-              <LeadSlideArticle slide={slide} />
+              <LeadSlideArticle slide={slide} heroControls={heroControls} />
             ) : (
               <HeadSlideArticle slide={slide} />
             )}
