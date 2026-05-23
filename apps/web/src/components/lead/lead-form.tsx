@@ -632,9 +632,6 @@ export function LeadForm({
     }),
   );
 
-  // F3.1: debounced snapshot — fires 5 s after each successful autosave.
-  const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // ---- Build draft payload ----
   const draftPayload = useMemo(
     () => (draftSection ? sectionToDraftPayload(draftSection) : null),
@@ -685,26 +682,7 @@ export function LeadForm({
     payload: draftPayload,
     enabled: !isReadOnlyEarly && !isSubmitted && draftSection !== null,
     initialSavedKey,
-    onSaveSuccess: () => {
-      // Debounce: reset the 5 s window each time a new save lands so rapid
-      // edits coalesce into one snapshot instead of queuing N snapshots.
-      if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
-      if (!sectionIdForActions) return;
-      const sid = sectionIdForActions;
-      snapshotTimerRef.current = setTimeout(() => {
-        snapshotMutateRef.current({ reportSectionId: sid });
-      }, 5_000);
-    },
   });
-
-  // Keep mutate ref stable so the timer closure always calls the latest version.
-  const snapshotMutateRef = useRef(createSnapshotMut.mutate);
-  snapshotMutateRef.current = createSnapshotMut.mutate;
-
-  // Cleanup pending snapshot timer on unmount.
-  useEffect(() => () => {
-    if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
-  }, []);
 
   // 35-07: set document.title to surface the addressed week in the browser
   // tab. Format: "Week 19, May 4-10 - CustomReport". Resolved from the
@@ -1404,8 +1382,6 @@ export function LeadForm({
   function handleSaveVersion() {
     if (!sectionIdForActions) return;
     isManualSaveRef.current = true;
-    // Cancel pending debounced snapshot — manual save already creates one.
-    if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
     createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
   }
 
@@ -1414,16 +1390,16 @@ export function LeadForm({
     setGroupSyncKey((k) => k + 1);
   }
 
-  // Autosave indicator label.
+  // Autosave indicator label — 4-state badge.
   const autosaveLabel =
     autosave.state === "saving"
-      ? "Saving…"
+      ? "↻ Saving…"
       : autosave.state === "pending"
-        ? "Pending…"
+        ? "● Pending…"
         : autosave.state === "saved" && autosave.lastSavedAt
-          ? `Saved at ${autosave.lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+          ? `✓ Saved at ${autosave.lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
           : autosave.state === "error"
-            ? "Save failed"
+            ? "⚠ Save failed"
             : "Autosaved";
 
   return (

@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useTRPC } from "../lib/trpc-context";
-import { invalidateLeadForm } from "../lib/cache-keys";
 
 import type { DraftSavePayload } from "@customreport/shared";
 
@@ -40,7 +39,7 @@ export type UseLeadFormAutosaveArgs = {
   readonly onSaveSuccess?: () => void;
 };
 
-const DEFAULT_DEBOUNCE_MS = 3000;
+const DEFAULT_DEBOUNCE_MS = 5000;
 
 /**
  * Stable JSON serialization with sorted keys so payload diffs are deterministic
@@ -80,7 +79,6 @@ export function useLeadFormAutosave(
   const initialSavedKey = args.initialSavedKey ?? null;
 
   const trpc = useTRPC();
-  const qc = useQueryClient();
 
   const [state, setState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -109,7 +107,6 @@ export function useLeadFormAutosave(
         lastSavedRef.current = inFlightRef.current;
         setState("saved");
         setLastSavedAt(new Date());
-        invalidateLeadForm(qc, trpc);
         onSaveSuccessRef.current?.();
       },
       onError: (err: unknown) => {
