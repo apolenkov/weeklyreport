@@ -45,12 +45,24 @@ const COLOR = {
 // so we read the style attribute directly — avoids CSS variable resolution
 // issues in headless mode.
 // ────────────────────────────────────────────────────────────────────────────
+function rgbToHex(value: string): string {
+  // Chromium normalizes hex colors to rgb() in the style attribute; convert back.
+  const m = value.match(/^rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\)$/);
+  if (!m) return value;
+  return (
+    "#" +
+    [m[1], m[2], m[3]]
+      .map((n) => Number(n).toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
 async function getChipBgStyle(
   chip: import("@playwright/test").Locator,
 ): Promise<string> {
   const style = (await chip.getAttribute("style")) ?? "";
-  const match = /background:\s*([^;]+)/i.exec(style);
-  return match ? match[1].trim() : "";
+  const match = style.match(/background:\s*([^;]+)/i);
+  return match ? rgbToHex(match[1].trim()) : "";
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -70,6 +82,12 @@ async function chipHasLockIcon(
 // ────────────────────────────────────────────────────────────────────────────
 
 test.describe("LEAD-LSC-01..06: Locked Stage Color (F2 cross-author + mine derive)", () => {
+  // Serial mode: all 6 tests run in a single worker so that the shared
+  // beforeAll seed runs exactly once. Without this, fullyParallel spawns a
+  // worker per test, each worker executes beforeAll independently, and the
+  // concurrent migrate-reset + db-seed calls race each other.
+  test.describe.configure({ mode: "serial" });
+
   test.beforeAll(() => {
     // CLI-seed once before any login. 300 s budget covers the ~2 m 48 s
     // advanced seed that the API-mediated path kills at 120 s, leaving the DB
@@ -217,11 +235,18 @@ test.describe("LEAD-LSC-01..06: Locked Stage Color (F2 cross-author + mine deriv
       });
       const count = await emptyCandidates.count();
 
+      // cursor-not-allowed is shared by both isLocked and isUnassigned chips
+      // (stage-chip.tsx:128-129). Only truly locked chips also carry the Lock
+      // SVG icon (stage-chip.tsx:224). Check for both to avoid matching an
+      // unassigned-empty chip.
       let lockedEmptyChip: import("@playwright/test").Locator | null = null;
       for (let i = 0; i < count; i++) {
         const chip = emptyCandidates.nth(i);
         const cls = (await chip.getAttribute("class")) ?? "";
-        if (cls.includes("cursor-not-allowed")) {
+        if (
+          cls.includes("cursor-not-allowed") &&
+          (await chipHasLockIcon(chip))
+        ) {
           lockedEmptyChip = chip;
           break;
         }
@@ -229,7 +254,8 @@ test.describe("LEAD-LSC-01..06: Locked Stage Color (F2 cross-author + mine deriv
 
       if (!lockedEmptyChip) {
         // TODO(LEAD-LSC-03): seed "advanced" does not produce a locked+empty
-        // chip for olga's view. Re-enable once seed provides that state.
+        // chip (vs unassigned-empty) for olga's view. Re-enable once seed
+        // provides that state.
         test.skip(
           true,
           "TODO(LEAD-LSC-03): no locked+empty chip in advanced seed — skip until seed covers this state",
