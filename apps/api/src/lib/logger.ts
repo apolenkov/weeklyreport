@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { createGzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
 
+import { trace } from "@opentelemetry/api";
 import type { ClsService } from "nestjs-cls";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
@@ -21,6 +22,8 @@ type LogEntry = {
   level: LogLevel;
   message: string;
   correlationId: string;
+  traceId?: string;
+  spanId?: string;
   [key: string]: unknown;
 };
 
@@ -235,6 +238,13 @@ class AppLoggerImpl implements AppLogger {
       ...this.baseContext,
       ...context,
     };
+
+    const span = trace.getActiveSpan();
+    const spanCtx = span?.spanContext();
+    if (spanCtx && trace.isSpanContextValid(spanCtx)) {
+      entry.traceId = spanCtx.traceId;
+      entry.spanId = spanCtx.spanId;
+    }
 
     const formatted = JSON.stringify(entry);
 

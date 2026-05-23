@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AgentationDevtools } from "../components/agentation-devtools";
+import { WebVitalsReporter } from "../components/web-vitals-reporter";
 import { QueryErrorBoundary } from "../components/error-boundary";
 import { TRPCProvider } from "../lib/trpc-provider";
 import { getOrgPublic } from "../lib/server/get-org-public";
@@ -64,6 +65,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <TRPCProvider>
           <QueryErrorBoundary>{children}</QueryErrorBoundary>
         </TRPCProvider>
+        <WebVitalsReporter />
         <AgentationDevtools />
       </body>
     </html>

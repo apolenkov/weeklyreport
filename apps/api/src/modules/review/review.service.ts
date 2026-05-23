@@ -3,6 +3,7 @@ import {
   type SubmissionDashboardRow,
   type UserSession,
 } from "@customreport/shared";
+import { createAppLogger } from "../../lib/logger.js";
 
 export class ReviewAccessError extends Error {
   constructor(message: string) {
@@ -48,6 +49,14 @@ function sortRows(rows: SubmissionDashboardRow[]): SubmissionDashboardRow[] {
 }
 
 export class ReviewService {
+  private readonly logger = createAppLogger({
+    service: "ReviewService",
+    logDir: process.env["LOG_DIR"],
+    minLevel:
+      (process.env["LOG_LEVEL"] as "debug" | "info" | "warn" | "error") ??
+      "info",
+  });
+
   constructor(private readonly repository: ReviewRepository) {}
 
   async getSubmissionDashboard(
@@ -59,6 +68,11 @@ export class ReviewService {
       session,
     );
 
-    return submissionDashboardRowSchema.array().parse(sortRows(rows));
+    const result = submissionDashboardRowSchema.array().parse(sortRows(rows));
+    this.logger.info("submission dashboard fetched", {
+      activeReportId,
+      count: result.length,
+    });
+    return result;
   }
 }

@@ -1,0 +1,16 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: webhook-stub
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: webhook-stub
+    webhook_configs:
+      # Stub: POST to the API's /api/alerts endpoint (to be implemented when alerting is activated).
+      # Replace with Slack/PagerDuty/email config for production use.
+      - url: "http://api:3002/api/alerts"
+        send_resolved: true

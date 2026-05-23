@@ -1,60 +1,42 @@
 # Optional observability stack for local or production-like Compose runs.
 #
-# Brings up Prometheus + Grafana for local validation of the API's /metrics
-# surface, Postgres exporter, Redis exporter, and the CustomReport dashboard.
-# Not part of the prod-default compose — the org typically has a managed
-# Prometheus/Grafana already.
+# Brings up grafana/otel-lgtm (Grafana + Loki + Tempo + Prometheus + OTel Collector)
+# alongside Postgres exporter, Redis exporter, and CustomReport dashboards.
+# Bugsink (Sentry-compatible error tracking) is in docker-compose.errors.yml.
+# Not part of the prod-default compose — the org typically has a managed stack already.
 #
 # Usage:
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.observability.yml up -d
 #   docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
 #
-# Grafana login: admin / admin (forced password change on first login).
+# Grafana login: admin / admin  →  http://localhost:3003
 
 services:
-  prometheus:
-    image: prom/prometheus:v2.51.0
-    volumes:
-      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - promdata:/prometheus
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=30d
-      - --web.console.libraries=/usr/share/prometheus/console_libraries
-      - --web.console.templates=/usr/share/prometheus/consoles
+  otel-lgtm:
+    image: grafana/otel-lgtm:latest
     ports:
+      - "${GRAFANA_PORT:-3003}:3000"
+      - "4317:4317"
+      - "4318:4318"
       - "9090:9090"
-    depends_on:
-      - postgres-exporter
-      - redis-exporter
-    restart: unless-stopped
-
-  grafana:
-    image: grafana/grafana:10.4.0
     volumes:
-      - grafanadata:/var/lib/grafana
-      - ./deploy/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./deploy/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - lgtmdata:/data
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./deploy/grafana/customreport-dashboard.json:/var/lib/grafana/dashboards/customreport/customreport-dashboard.json:ro
-      # 47-03 (DX-03): tRPC latency dashboard — p50/p95/p99 by procedure,
-      # error rate, top-10 slow, request volume. Mounted into the same
-      # provisioning folder as the ops dashboard so Grafana picks it up
-      # on container start.
+      # 47-03 (DX-03): tRPC latency dashboard
       - ./deploy/grafana/trpc-latency-dashboard.json:/var/lib/grafana/dashboards/customreport/trpc-latency-dashboard.json:ro
-      # Phase 52 (UFB-054): product-KPI dashboard. Provisioned under a
-      # separate folder ("Product KPIs") via deploy/grafana/provisioning/
-      # dashboards/product-telemetry.yml so the leadership audience does
-      # not have to dig under the engineering folder to find it.
+      # Phase 52 (UFB-054): product-KPI dashboard
       - ./deploy/grafana/product-telemetry-dashboard.json:/var/lib/grafana/dashboards/customreport/product-telemetry-dashboard.json:ro
+      - ./deploy/prometheus-otel-lgtm.yml:/otel-lgtm/prometheus.yaml:ro
+      - ./deploy/alert-rules.yml:/otel-lgtm/alert-rules.yml:ro
     environment:
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
-    ports:
-      - "${GRAFANA_PORT:-3003}:3000"
     depends_on:
-      - prometheus
+      - postgres-exporter
+      - redis-exporter
     restart: unless-stopped
 
   postgres-exporter:
@@ -76,5 +58,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  promdata:
-  grafanadata:
+  lgtmdata:
