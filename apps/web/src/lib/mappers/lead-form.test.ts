@@ -189,6 +189,87 @@ describe("mapLeadProducts", () => {
       true,
     );
   });
+
+  it("linked risks do NOT override explicit chip status in the edit form (PRJ-2 chip-click stability)", () => {
+    // Reproduces the seeded-risk override bug: a risk with
+    // stageIds=["Development"] and severity="at-risk" was causing
+    // deriveEffectiveStageStatus to return "at-risk" even when the
+    // ownedStage.status was "green" (on-track). The user's chip click
+    // reverted on every re-render. Fix: pass [] to buildStageGrid so
+    // explicit stage status always wins; use-status-risk-sync owns
+    // the risk→chip signal path.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Integration blocker",
+          impact: "Delays release",
+          mitigation: "Escalate to PM",
+          severity: "at-risk",
+          stageIds: ["Development"],
+        },
+      ],
+    });
+
+    const products = mapLeadProducts(section);
+    const devStage = products[0]?.stages.find((s) => s.stageName === "Dev");
+    expect(devStage?.status).toBe("on-track");
+  });
+
+  it("risks for project A do not affect project B chip status (cross-project isolation)", () => {
+    // Regression guard: projectId filter in mapLeadProducts must ensure
+    // a risk scoped to project A never leaks into project B's stage grid.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            { stageId: "s-dev-a", stageName: "Development", sortOrder: 3, status: "green" },
+          ],
+        },
+        {
+          projectId: PROJECT_B,
+          projectName: "Portal",
+          trafficLight: "green",
+          ownedStages: [
+            { stageId: "s-dev-b", stageName: "Development", sortOrder: 3, status: "green" },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Critical path issue",
+          impact: "Blocks delivery",
+          mitigation: "Rescheduling",
+          severity: "blocked",
+          stageIds: ["Development"],
+        },
+      ],
+    });
+
+    const products = mapLeadProducts(section);
+    const productB = products.find((p) => p.id === PROJECT_B);
+    const devStageB = productB?.stages.find((s) => s.stageName === "Dev");
+    expect(devStageB?.status).toBe("on-track");
+  });
 });
 
 describe("mapLeadItems", () => {

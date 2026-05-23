@@ -402,8 +402,12 @@ export function mapLeadProducts(
       stages: buildStageGrid(
         section.authorName,
         ownedStages,
-        section.risks.filter((r) => r.projectId === p.projectId),
-        section.items.filter((it) => it.projectId === p.projectId),
+        // Explicit chip status must win in the edit form. Passing risks and
+        // items here caused deriveEffectiveStageStatus to override the
+        // user's chip clicks on every re-render (PRJ-2). The sync hook
+        // (use-status-risk-sync) owns the risk→chip signal path.
+        [],
+        [],
       ),
     };
   });
