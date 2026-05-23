@@ -24,6 +24,7 @@ services:
       - ./packages/shared/src:/app/packages/shared/src
       - ./prisma:/app/prisma
       - ./tsconfig.base.json:/app/tsconfig.base.json:ro
+      - apilogs:/app/logs
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://customreport:${DB_PASSWORD:-localdev}@postgres:5432/customreport_dev
@@ -38,6 +39,10 @@ services:
       PDF_OUTPUT_DIR: /app/data/pdfs
       SMTP_HOST: mailhog
       LOG_LEVEL: debug
+      LOG_DIR: /app/logs
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
+      OTEL_SERVICE_NAME: customreport-api
+      OTEL_TRACES_SAMPLER_ARG: "1.0"
     depends_on:
       postgres:
         condition: service_healthy
@@ -83,3 +88,6 @@ services:
           path: ./apps/web/src
         - action: restart
           path: ./packages/shared/src
+
+volumes:
+  apilogs:
