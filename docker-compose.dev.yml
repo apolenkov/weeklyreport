@@ -40,9 +40,13 @@ services:
       SMTP_HOST: mailhog
       LOG_LEVEL: debug
       LOG_DIR: /app/logs
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
+      # host.docker.internal resolves to the Docker host on Mac/Windows —
+      # otel-lgtm and bugsink run in a separate compose project (customreport-obs)
+      # so they are on a different Docker network and not reachable by service name.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4318
       OTEL_SERVICE_NAME: customreport-api
       OTEL_TRACES_SAMPLER_ARG: "1.0"
+      SENTRY_DSN: ${SENTRY_DSN_DOCKER:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -78,6 +82,9 @@ services:
       AUTH_DEV_MODE: "true"
       NEXT_PUBLIC_AUTH_STUB: "true"
       NEXT_PUBLIC_DEV_ROLE_SWITCHER: "true"
+      # Sentry/Bugsink error tracking — reads from host .env via ${} interpolation
+      SENTRY_DSN: ${SENTRY_DSN_DOCKER:-}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN_DOCKER:-}
     depends_on:
       - api
     ports:
