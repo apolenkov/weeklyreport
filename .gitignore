@@ -1,5 +1,8 @@
 node_modules/
 .pnpm-store/
+# MCP secret token files (local credentials, never commit)
+.grafana-mcp-token
+.bugsink-mcp-token
 .turbo/
 .next/
 dist/

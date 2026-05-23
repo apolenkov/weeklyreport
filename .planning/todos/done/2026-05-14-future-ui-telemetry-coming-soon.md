@@ -35,3 +35,5 @@ tracks as future work / Coming Soon until explicitly promoted:
 
 Current code may show inert Coming Soon UI only; do not implement the real
 systems until this todo is promoted into a new milestone.
+
+<!-- Promoted into Phase 68 — obs/v8.3-full-observability, 2026-05-23 -->

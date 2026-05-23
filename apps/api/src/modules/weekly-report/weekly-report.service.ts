@@ -4,6 +4,7 @@ import type {
   WeeklyReportGetResponse,
   WeeklyReportReadModel,
 } from "@customreport/shared";
+import { createAppLogger } from "../../lib/logger.js";
 
 export class WeeklyReportDomainError extends Error {
   constructor(message: string) {
@@ -31,6 +32,14 @@ export interface WeeklyReportRepository {
 }
 
 export class WeeklyReportService {
+  private readonly logger = createAppLogger({
+    service: "WeeklyReportService",
+    logDir: process.env["LOG_DIR"],
+    minLevel:
+      (process.env["LOG_LEVEL"] as "debug" | "info" | "warn" | "error") ??
+      "info",
+  });
+
   constructor(private readonly repository: WeeklyReportRepository) {}
 
   /**
@@ -67,6 +76,7 @@ export class WeeklyReportService {
 
     if (!resolvedId) {
       // R3a: no active period — return sentinel instead of throwing NOT_FOUND.
+      this.logger.info("weekly report: no active period");
       return { status: "no-period", report: null };
     }
 
@@ -80,6 +90,7 @@ export class WeeklyReportService {
       throw new WeeklyReportDomainError(`Report ${resolvedId} not found.`);
     }
 
+    this.logger.info("weekly report fetched", { reportId: resolvedId, role });
     return { status: "active", ...report };
   }
 }

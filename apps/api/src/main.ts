@@ -1,5 +1,17 @@
 import "reflect-metadata";
 
+// Phase 68: Sentry Node SDK init BEFORE OTel (http module hook order).
+// Sentry hooks Node's `http` module for error context; OTel also patches it.
+// Sentry must run first so its instrumentation wraps the original http, not OTel's wrapper.
+import * as Sentry from "@sentry/nestjs";
+if (process.env["SENTRY_DSN"]) {
+  Sentry.init({
+    dsn: process.env["SENTRY_DSN"],
+    tracesSampleRate: 0, // traces via OTel/Tempo, not Sentry
+    environment: process.env["NODE_ENV"] ?? "development",
+  });
+}
+
 // 37-01: OTel bootstrap MUST run before any module that imports http /
 // express / prisma so the SDK can monkey-patch them. startOtel() is a
 // no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set and OTEL_SDK_DISABLED
@@ -11,7 +23,11 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { NestFactory } from "@nestjs/core";
+import { HttpAdapterHost } from "@nestjs/core";
 import { ClsMiddleware, ClsService } from "nestjs-cls";
+
+import { SentryExceptionFilter } from "./infrastructure/filters/sentry-exception.filter";
+import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
 
 import { CorrelationIdMiddleware } from "./infrastructure/middleware/correlation-id.middleware";
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -83,11 +99,23 @@ async function bootstrap() {
   // see the validated/defaulted value instead of undefined.
   process.env["PDF_EXPORT_JWT_SECRET"] ??= env.PDF_EXPORT_JWT_SECRET;
 
-  // We resolve ClsService from the container, so the app must exist first.
-  // Pre-Nest output goes to console (no logger available yet).
+  // Phase 68: pre-bootstrap logger (no CLS yet) routed through NestAppLoggerAdapter
+  // so all NestJS Logger(context) calls in services/schedulers land in app.log.
+  // After CLS is resolved, the adapter is upgraded to the CLS-aware instance.
+  const preBootLogger = createAppLogger({
+    service: "customreport-api",
+    minLevel: env.LOG_LEVEL,
+    logDir: env.LOG_DIR,
+  });
+  const nestLoggerAdapter = new NestAppLoggerAdapter(preBootLogger);
+
   console.log("[bootstrap] starting customreport-api");
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { logger: nestLoggerAdapter });
+
+  // Phase 68: global Sentry exception filter — captures 5xx and non-HTTP errors.
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
 
   const cls = app.get(ClsService);
   const logger = createAppLogger({
@@ -97,6 +125,7 @@ async function bootstrap() {
     clsService: cls,
   });
 
+  nestLoggerAdapter.setLogger(logger);
   logger.info("bootstrap started");
   // 37-01: log OTel decision for ops visibility (one line, structured).
   if (otelDecision.started) {
