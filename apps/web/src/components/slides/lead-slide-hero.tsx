@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { AlertTriangle, Check, Circle } from "lucide-react";
 
 import type { SectionSlideModel } from "./section-slide-utils";
@@ -88,9 +89,11 @@ type Props = {
   readonly slide: SectionSlideModel;
   readonly authorName?: string;
   readonly periodLabel?: string;
+  /** Rendered inline with the tone badge, e.g. scope toggle + agent review. */
+  readonly heroControls?: ReactNode;
 };
 
-export function LeadSlideHero({ slide, authorName, periodLabel }: Props) {
+export function LeadSlideHero({ slide, authorName, periodLabel, heroControls }: Props) {
   const tone = worstProductTone(slide.productSlides);
   const { label: toneLabel, className: toneClassName, icon: toneIcon } =
     toneConfig(tone);
@@ -111,6 +114,7 @@ export function LeadSlideHero({ slide, authorName, periodLabel }: Props) {
             {toneIcon}
             {toneLabel}
           </span>
+          {heroControls}
         </div>
         <p className="mt-2 text-sm font-medium text-[var(--color-muted-foreground)]">
           {displayName}

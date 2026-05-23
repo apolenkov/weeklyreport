@@ -23,12 +23,11 @@ import { ReportSlides } from "./report-slides";
 import {
   buildSectionSlideModel,
   paginateSectionSlides,
-  type SectionSlideModel,
-  type SlideProduct,
 } from "./section-slide-utils";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
+import { LeadProductGrid } from "./lead-product-grid";
 
 function SlideEmptyState({
   title,
@@ -57,104 +56,6 @@ type LeadSlidesClientProps = {
   readonly deckRef?: RefObject<HTMLDivElement | null>;
 };
 
-type CrossAuthorRow = {
-  authorId: string;
-  authorName: string;
-  sharedProductIds: string[];
-  items: {
-    id: string;
-    projectId: string;
-    type: string;
-    text: string;
-    workflowStatus: string;
-    priorityRank?: number | null;
-  }[];
-  risks: { id: string; projectId: string; risk: string; severity: string }[];
-  decisions: { id: string; productId: string; text: string }[];
-};
-
-/** Build a minimal SectionSlideModel from a cross-author row for display. */
-function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
-  const currentItems = ca.items
-    .filter((i) => i.type === "current" && i.text.trim())
-    .map((i) => i.text.trim());
-  const nextItems = ca.items
-    .filter((i) => i.type === "next" && i.text.trim())
-    .map((i) => i.text.trim());
-  const risks = ca.risks.filter((r) => r.risk.trim()).map((r) => r.risk.trim());
-  const decisions = ca.decisions
-    .filter((d) => d.text.trim())
-    .map((d) => d.text.trim());
-  const priorities = ca.items
-    .filter((i) => i.priorityRank != null && i.text.trim())
-    .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
-    .map((i) => i.text.trim());
-  // T-G3: text→rank map so cross-author slides also pick up P{N} chips.
-  const itemRanks = ca.items.reduce<Record<string, number>>((acc, i) => {
-    if (i.priorityRank != null && i.text.trim()) {
-      acc[i.text.trim()] = i.priorityRank;
-    }
-    return acc;
-  }, {});
-
-  const blockedCount =
-    ca.items.filter((i) => i.workflowStatus === "blocked").length +
-    ca.risks.filter((r) => r.severity === "blocked").length;
-  const atRiskCount = ca.risks.filter((r) => r.severity === "at-risk").length;
-
-  const tone: SectionSlideModel["tone"] =
-    currentItems.length === 0 && nextItems.length === 0
-      ? "empty"
-      : blockedCount > 0
-        ? "blocked"
-        : atRiskCount > 0 || risks.length > 0
-          ? "warning"
-          : "ready";
-
-  // Synthetic product card so LeadSlideArticle renders actual content via
-  // LeadUnifiedSlide. "cross-product" id receives no status accent and is
-  // excluded from chip generation.
-  const syntheticProduct: SlideProduct = {
-    id: "cross-product",
-    name: ca.authorName,
-    status: null,
-    stages: [],
-    currentItems,
-    nextItems,
-    risks,
-    decisions,
-    priorities,
-    itemRanks,
-  };
-
-  const model: SectionSlideModel = {
-    id: ca.authorId + "-cross",
-    ownerId: ca.authorId,
-    ownerName: ca.authorName,
-    ownerRole: "lead",
-    status: "submitted",
-    submittedAt: null,
-    products: [ca.authorName],
-    productSlides: [syntheticProduct],
-    productCount: 1,
-    currentCount: currentItems.length,
-    nextCount: nextItems.length,
-    riskCount: risks.length,
-    decisionCount: decisions.length,
-    priorityCount: priorities.length,
-    blockedCount,
-    atRiskCount,
-    score: currentItems.length > 0 && nextItems.length > 0 ? 80 : 40,
-    tone,
-    readiness: [],
-    currentItems,
-    nextItems,
-    risks,
-    decisions,
-    priorities,
-  };
-  return [model];
-}
 
 export function LeadSlidesClient({
   initialReportId = null,
@@ -197,12 +98,6 @@ export function LeadSlidesClient({
     }),
     enabled: targetReportId !== "",
   });
-  const crossAuthorQ = useQuery({
-    ...trpc.leadForm.crossAuthorSections.queryOptions({
-      reportId: targetReportId,
-    }),
-    enabled: scope === "product" && targetReportId !== "",
-  });
 
   useEffect(() => {
     if (!activeQ.isError) return;
@@ -221,17 +116,18 @@ export function LeadSlidesClient({
     });
   }, [byPeriodQ.isError, byPeriodQ.error, targetReportId]);
 
-  const slides = useMemo(() => {
-    if (!byPeriodQ.data?.section) return [];
-    const ownSlides = paginateSectionSlides(
-      buildSectionSlideModel(byPeriodQ.data.section),
-    );
-    if (scope !== "product" || !crossAuthorQ.data?.length) return ownSlides;
-    const foreignSlides = crossAuthorQ.data.flatMap((ca) =>
-      buildCrossAuthorSlideModel(ca),
-    );
-    return [...ownSlides, ...foreignSlides];
-  }, [byPeriodQ.data, scope, crossAuthorQ.data]);
+  const sectionModel = useMemo(
+    () =>
+      byPeriodQ.data?.section
+        ? buildSectionSlideModel(byPeriodQ.data.section)
+        : null,
+    [byPeriodQ.data],
+  );
+
+  const slides = useMemo(
+    () => (sectionModel ? paginateSectionSlides(sectionModel) : []),
+    [sectionModel],
+  );
 
   if (activeQ.isLoading || byPeriodQ.isLoading || historyQ.isLoading) {
     return <SlideSkeleton />;
@@ -255,6 +151,32 @@ export function LeadSlidesClient({
     );
   }
 
+  const scopeControls = (
+    <>
+      <ScopeToggle
+        value={scope}
+        onChange={(s) => {
+          setScope(s);
+          setSelectedIndex(0);
+        }}
+        allowedScopes={["own", "product"]}
+      />
+      <AgentReviewComingSoon />
+    </>
+  );
+
+  if (scope === "product") {
+    return (
+      <div ref={deckRef} className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">{scopeControls}</div>
+          {!inReportMode && <SlideFullscreenButton targetRef={deckRef} />}
+        </div>
+        <LeadProductGrid products={sectionModel?.productSlides ?? []} />
+      </div>
+    );
+  }
+
   return (
     <div ref={deckRef}>
       <ReportSlides
@@ -274,19 +196,13 @@ export function LeadSlidesClient({
         sourceHref={"/lead/report/" + encodeURIComponent(targetReportId)}
         sourceLabel="Open source section"
         hideSourceLink={inReportMode}
+        heroControls={
+          <div className="flex flex-wrap items-center gap-2">{scopeControls}</div>
+        }
         toolbar={
-          <div className="flex flex-wrap items-center gap-2">
-            <ScopeToggle
-              value={scope}
-              onChange={(s) => {
-                setScope(s);
-                setSelectedIndex(0);
-              }}
-              allowedScopes={["own", "product"]}
-            />
-            <AgentReviewComingSoon />
-            {!inReportMode && <SlideFullscreenButton targetRef={deckRef} />}
-          </div>
+          !inReportMode ? (
+            <SlideFullscreenButton targetRef={deckRef} />
+          ) : undefined
         }
       />
     </div>
