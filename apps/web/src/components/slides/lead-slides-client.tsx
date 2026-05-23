@@ -26,6 +26,7 @@ import {
   type SectionSlideModel,
   type SlideProduct,
 } from "./section-slide-utils";
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
 
@@ -274,20 +275,18 @@ export function LeadSlidesClient({
         sourceLabel="Open source section"
         hideSourceLink={inReportMode}
         toolbar={
-          !inReportMode ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <ScopeToggle
-                value={scope}
-                onChange={(s) => {
-                  setScope(s);
-                  setSelectedIndex(0);
-                }}
-                allowedScopes={["own", "product"]}
-              />
-              {/* W9.A: fullscreen button in standalone slides mode */}
-              <SlideFullscreenButton targetRef={deckRef} />
-            </div>
-          ) : undefined
+          <div className="flex flex-wrap items-center gap-2">
+            <ScopeToggle
+              value={scope}
+              onChange={(s) => {
+                setScope(s);
+                setSelectedIndex(0);
+              }}
+              allowedScopes={["own", "product"]}
+            />
+            <AgentReviewComingSoon />
+            {!inReportMode && <SlideFullscreenButton targetRef={deckRef} />}
+          </div>
         }
       />
     </div>

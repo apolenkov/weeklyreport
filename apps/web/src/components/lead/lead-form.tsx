@@ -1472,7 +1472,7 @@ export function LeadForm({
                 </button>
               )}
             {isSlidesMode && <SlideFullscreenButton targetRef={deckRef} />}
-            <AgentReviewComingSoon />
+            {!isSlidesMode && <AgentReviewComingSoon />}
             <ViewModeToggle
               mode={isSlidesMode ? "slides" : "edit"}
               editHref={
