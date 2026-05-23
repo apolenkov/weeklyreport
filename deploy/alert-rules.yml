@@ -1,0 +1,32 @@
+groups:
+  - name: customreport
+    rules:
+      # Fire when the DLQ has had failed jobs for more than 5 minutes.
+      - alert: DLQFailuresActive
+        expr: cr_dlq_failed_total > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "BullMQ DLQ has failed jobs"
+          description: "{{ $value }} failed jobs in DLQ for >5m. Check /admin/queues."
+
+      # Fire when the API scrape target disappears.
+      - alert: ApiDown
+        expr: up{job="customreport-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CustomReport API is unreachable"
+          description: "Prometheus cannot scrape /metrics — API may be down."
+
+      # Fire when p95 CLS reported via web_vital_cls exceeds 0.25 (poor threshold).
+      - alert: ClsPoor
+        expr: web_vital_cls > 0.25
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CLS above poor threshold"
+          description: "web_vital_cls={{ $value | humanize }} — Cumulative Layout Shift is in the 'poor' range (>0.25)."
