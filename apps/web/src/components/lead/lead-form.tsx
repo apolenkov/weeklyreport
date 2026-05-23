@@ -321,6 +321,11 @@ export function LeadForm({
       targetReportId !== "" &&
       !shouldRouteHeadLikeAwayFromLeadForm &&
       !shouldDeferForSession,
+    // Prevent window-focus refetches from overwriting in-flight local edits.
+    // Every mutation that changes server state calls invalidateLeadForm(), so
+    // explicit invalidation is the only freshness path — no background polling
+    // needed.
+    staleTime: Infinity,
   });
 
   // The section id for actions (autosave / submit / revoke) comes from the
@@ -605,9 +610,8 @@ export function LeadForm({
     }),
   );
 
-  // createSnapshot is reused for both manual ("Save Version" button) and
-  // auto (every 10 autosaves) paths. The toast is keyed on a ref so the
-  // auto-path can fire silently while the manual path confirms.
+  // createSnapshot is triggered by the "Save Version" manual button only.
+  // The toast is keyed on a ref so future automated paths can fire silently.
   const isManualSaveRef = useRef(false);
   const createSnapshotMut = useMutation(
     trpc.leadForm.createSnapshot.mutationOptions({
