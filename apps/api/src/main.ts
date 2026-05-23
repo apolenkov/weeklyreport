@@ -1,5 +1,17 @@
 import "reflect-metadata";
 
+// Phase 68: Sentry Node SDK init BEFORE OTel (http module hook order).
+// Sentry hooks Node's `http` module for error context; OTel also patches it.
+// Sentry must run first so its instrumentation wraps the original http, not OTel's wrapper.
+import * as Sentry from "@sentry/nestjs";
+if (process.env["SENTRY_DSN"]) {
+  Sentry.init({
+    dsn: process.env["SENTRY_DSN"],
+    tracesSampleRate: 0, // traces via OTel/Tempo, not Sentry
+    environment: process.env["NODE_ENV"] ?? "development",
+  });
+}
+
 // 37-01: OTel bootstrap MUST run before any module that imports http /
 // express / prisma so the SDK can monkey-patch them. startOtel() is a
 // no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set and OTEL_SDK_DISABLED
@@ -11,7 +23,10 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { NestFactory } from "@nestjs/core";
+import { HttpAdapterHost } from "@nestjs/core";
 import { ClsMiddleware, ClsService } from "nestjs-cls";
+
+import { SentryExceptionFilter } from "./infrastructure/filters/sentry-exception.filter";
 
 import { CorrelationIdMiddleware } from "./infrastructure/middleware/correlation-id.middleware";
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -88,6 +103,10 @@ async function bootstrap() {
   console.log("[bootstrap] starting customreport-api");
 
   const app = await NestFactory.create(AppModule);
+
+  // Phase 68: global Sentry exception filter — captures 5xx and non-HTTP errors.
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
 
   const cls = app.get(ClsService);
   const logger = createAppLogger({
