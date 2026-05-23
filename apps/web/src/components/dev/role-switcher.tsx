@@ -112,7 +112,6 @@ export function DevRoleSwitcher() {
             data-testid="dev-role-switcher-trigger"
           >
             <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="hidden xl:inline">Switch role</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
