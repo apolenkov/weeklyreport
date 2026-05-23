@@ -169,10 +169,9 @@ function LanguageComingSoonControl() {
         aria-label="Language selection is coming soon"
         title="Coming Soon"
         data-testid="language-coming-soon"
-        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
+        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
       >
         <Globe2 size={14} strokeWidth={2} aria-hidden="true" />
-        <span className="hidden xl:inline">Language</span>
       </button>
       <ComingSoonBadge
         role="tooltip"
@@ -194,10 +193,9 @@ function ThemeComingSoonControl() {
         aria-label="Theme selection is coming soon"
         title="Coming Soon"
         data-testid="theme-coming-soon"
-        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
+        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
       >
         <Moon size={14} strokeWidth={2} aria-hidden="true" />
-        <span className="hidden xl:inline">Theme</span>
       </button>
       <ComingSoonBadge
         role="tooltip"
@@ -368,11 +366,11 @@ export function NavBar() {
                 aria-hidden="true"
               />
               <div
-                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[92px]"
+                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
                 aria-hidden="true"
               />
               <div
-                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[88px]"
+                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
                 aria-hidden="true"
               />
             </>
@@ -414,7 +412,6 @@ export function NavBar() {
                     <polyline points="16 17 21 12 16 7" />
                     <line x1="21" y1="12" x2="9" y2="12" />
                   </svg>
-                  <span className="hidden xl:inline">Logout</span>
                 </button>
               )}
             </>
