@@ -19,7 +19,10 @@
  */
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { TraceIdRatioBasedSampler } from "@opentelemetry/sdk-trace-base";
+import { LoggerProvider, BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
+import { logs } from "@opentelemetry/api-logs";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
   ATTR_SERVICE_NAME,
@@ -56,6 +59,7 @@ export function decideOtelBootstrap(
 }
 
 let sdk: NodeSDK | null = null;
+let loggerProvider: LoggerProvider | null = null;
 
 export function startOtel(
   env: NodeJS.ProcessEnv = process.env,
@@ -65,15 +69,16 @@ export function startOtel(
     return decision;
   }
 
+  const base = decision.endpoint.replace(/\/$/, "");
+  const resource = resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: env.OTEL_SERVICE_NAME ?? "customreport-api",
+    [ATTR_SERVICE_VERSION]: env.OTEL_SERVICE_VERSION ?? "dev",
+  });
+
   sdk = new NodeSDK({
-    resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: env.OTEL_SERVICE_NAME ?? "customreport-api",
-      [ATTR_SERVICE_VERSION]: env.OTEL_SERVICE_VERSION ?? "dev",
-    }),
+    resource,
     sampler: new TraceIdRatioBasedSampler(decision.samplingRatio),
-    traceExporter: new OTLPTraceExporter({
-      url: `${decision.endpoint.replace(/\/$/, "")}/v1/traces`,
-    }),
+    traceExporter: new OTLPTraceExporter({ url: `${base}/v1/traces` }),
     instrumentations: [
       new HttpInstrumentation(),
       new ExpressInstrumentation(),
@@ -90,9 +95,23 @@ export function startOtel(
     );
   }
 
-  // Best-effort shutdown on SIGTERM — flush pending spans within ~5s.
+  // Register global log provider so AppLogger can forward logs to Loki via OTLP.
+  loggerProvider = new LoggerProvider({
+    resource,
+    processors: [
+      new BatchLogRecordProcessor(
+        new OTLPLogExporter({ url: `${base}/v1/logs` }),
+      ),
+    ],
+  });
+  logs.setGlobalLoggerProvider(loggerProvider);
+
+  // Best-effort shutdown on SIGTERM — flush pending spans + logs within ~5s.
   const shutdown = () => {
-    void sdk?.shutdown().catch((err) => {
+    void Promise.all([
+      sdk?.shutdown(),
+      loggerProvider?.shutdown(),
+    ]).catch((err) => {
       process.stderr.write(
         `[otel] shutdown error: ${err instanceof Error ? err.message : String(err)}\n`,
       );
@@ -105,6 +124,8 @@ export function startOtel(
 }
 
 export function shutdownOtel(): Promise<void> {
-  if (!sdk) return Promise.resolve();
-  return sdk.shutdown();
+  return Promise.all([
+    sdk?.shutdown() ?? Promise.resolve(),
+    loggerProvider?.shutdown() ?? Promise.resolve(),
+  ]).then(() => undefined);
 }
